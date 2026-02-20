@@ -1,0 +1,63 @@
+import { cn } from "@/lib/utils";
+import type {
+  StatusProspect,
+  StatusAluno,
+  StatusMatricula,
+  StatusPagamento,
+} from "@/lib/types";
+
+type AnyStatus =
+  | StatusProspect
+  | StatusAluno
+  | StatusMatricula
+  | StatusPagamento;
+
+const STATUS_MAP: Record<
+  AnyStatus,
+  { label: string; className: string }
+> = {
+  // Prospect
+  NOVO: { label: "Novo", className: "bg-blue-500/15 text-blue-400" },
+  EM_CONTATO: { label: "Em contato", className: "bg-yellow-500/15 text-yellow-400" },
+  AGENDOU_VISITA: { label: "Agendou visita", className: "bg-orange-500/15 text-orange-400" },
+  VISITOU: { label: "Visitou", className: "bg-purple-500/15 text-purple-400" },
+  CONVERTIDO: { label: "Convertido", className: "bg-gym-teal/15 text-gym-teal" },
+  PERDIDO: { label: "Perdido", className: "bg-gym-danger/15 text-gym-danger" },
+  // Aluno
+  ATIVO: { label: "Ativo", className: "bg-gym-teal/15 text-gym-teal" },
+  INATIVO: { label: "Inativo", className: "bg-muted text-muted-foreground" },
+  BLOQUEADO: { label: "Bloqueado", className: "bg-gym-danger/15 text-gym-danger" },
+  CANCELADO: { label: "Cancelado", className: "bg-muted text-muted-foreground" },
+  // Matrícula
+  ATIVA: { label: "Ativa", className: "bg-gym-teal/15 text-gym-teal" },
+  VENCIDA: { label: "Vencida", className: "bg-gym-danger/15 text-gym-danger" },
+  CANCELADA: { label: "Cancelada", className: "bg-muted text-muted-foreground" },
+  SUSPENSA: { label: "Suspensa", className: "bg-gym-warning/15 text-gym-warning" },
+  // Pagamento
+  PENDENTE: { label: "Pendente", className: "bg-yellow-500/15 text-yellow-400" },
+  PAGO: { label: "Pago", className: "bg-gym-teal/15 text-gym-teal" },
+  VENCIDO: { label: "Vencido", className: "bg-gym-danger/15 text-gym-danger" },
+};
+
+interface StatusBadgeProps {
+  status: AnyStatus;
+  className?: string;
+}
+
+export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const config = STATUS_MAP[status] ?? {
+    label: status,
+    className: "bg-muted text-muted-foreground",
+  };
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+        config.className,
+        className
+      )}
+    >
+      {config.label}
+    </span>
+  );
+}
