@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn, maskCPF, maskPhone } from "@/lib/utils";
 import type { Aluno, StatusAluno, Plano, FormaPagamento, Sexo, TipoFormaPagamento } from "@/lib/types";
 
 const STATUS_FILTERS: { value: StatusAluno | "TODOS"; label: string }[] = [
@@ -311,7 +311,7 @@ function NovoAlunoWizard({ open, onClose, onDone }: { open: boolean; onClose: ()
       <DialogContent className="bg-card border-border sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">
-            {step < 4 ? "Novo Aluno" : "Cadastro concluído"}
+            {step < 4 ? "Novo aluno com matrícula" : "Cadastro concluído"}
           </DialogTitle>
         </DialogHeader>
 
@@ -376,12 +376,15 @@ export default function AlunosPage() {
 
   useEffect(() => { load(); }, []);
 
+  const buscaDigits = busca.replace(/\D/g, "");
+
   const filtered = alunos.filter((a) => {
     const matchStatus = filtro === "TODOS" || a.status === filtro;
     const matchBusca = !busca
       || a.nome.toLowerCase().includes(busca.toLowerCase())
-      || a.cpf.includes(busca)
-      || a.email.toLowerCase().includes(busca.toLowerCase());
+      || a.email.toLowerCase().includes(busca.toLowerCase())
+      || (buscaDigits && a.cpf.replace(/\D/g, "").includes(buscaDigits))
+      || (buscaDigits && a.telefone.replace(/\D/g, "").includes(buscaDigits));
     return matchStatus && matchBusca;
   });
 
@@ -392,11 +395,13 @@ export default function AlunosPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Alunos</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{alunos.length} alunos cadastrados</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {alunos.length} alunos cadastrados · cadastro direto já cria matrícula e pagamento
+          </p>
         </div>
         <Button onClick={() => setWizardOpen(true)}>
           <Plus className="size-4" />
-          Novo Aluno
+          Novo aluno + matrícula
         </Button>
       </div>
 
@@ -418,8 +423,22 @@ export default function AlunosPage() {
         <div className="relative ml-auto">
           <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, CPF ou e-mail..."
-            value={busca} onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por nome, CPF, telefone ou e-mail..."
+            value={busca}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const hasLetters = /[a-zA-Z@]/.test(raw);
+              if (hasLetters) {
+                setBusca(raw);
+                return;
+              }
+              const digits = raw.replace(/\D/g, "");
+              if (digits.length >= 11) {
+                setBusca(maskCPF(raw));
+              } else {
+                setBusca(maskPhone(raw));
+              }
+            }}
             className="w-72 bg-secondary border-border pl-8 text-sm"
           />
         </div>

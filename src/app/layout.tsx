@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import { Syne, Inter, Geist_Mono } from "next/font/google";
+import { Space_Grotesk, IBM_Plex_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const syne = Syne({
+const display = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-syne",
-  weight: ["400", "600", "700", "800"],
+  variable: "--font-display-face",
+  weight: ["500", "600", "700"],
 });
 
-const inter = Inter({
+const body = IBM_Plex_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
-  weight: ["400", "500", "600"],
+  variable: "--font-body",
+  weight: ["400", "500", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -32,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="dark">
       <body
-        className={`${syne.variable} ${inter.variable} ${geistMono.variable} antialiased`}
+        className={`${display.variable} ${body.variable} ${geistMono.variable} font-sans antialiased`}
       >
         {children}
       </body>

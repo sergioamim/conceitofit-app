@@ -33,6 +33,7 @@ import type {
   OrigemProspect,
   CreateProspectInput,
 } from "@/lib/types";
+import { maskPhone } from "@/lib/utils";
 
 const STATUS_OPTIONS: { value: StatusProspect | "TODOS"; label: string }[] = [
   { value: "TODOS", label: "Todos" },
@@ -186,12 +187,15 @@ export default function ProspectsPage() {
     load();
   }, []);
 
+  const buscaDigits = busca.replace(/\D/g, "");
+
   const filtered = prospects.filter((p) => {
     const matchStatus = filtroStatus === "TODOS" || p.status === filtroStatus;
     const matchBusca =
       !busca ||
       p.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      p.telefone.includes(busca);
+      (buscaDigits &&
+        p.telefone.replace(/\D/g, "").includes(buscaDigits));
     return matchStatus && matchBusca;
   });
 
@@ -265,7 +269,15 @@ export default function ProspectsPage() {
           <Input
             placeholder="Buscar por nome ou telefone..."
             value={busca}
-            onChange={(e) => setBusca(e.target.value)}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const hasLetters = /[a-zA-Z@]/.test(raw);
+              if (hasLetters) {
+                setBusca(raw);
+                return;
+              }
+              setBusca(maskPhone(raw));
+            }}
             className="w-60 bg-secondary border-border pl-8 text-sm"
           />
         </div>
