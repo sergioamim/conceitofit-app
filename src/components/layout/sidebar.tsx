@@ -20,6 +20,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getCurrentTenant } from "@/lib/mock/services";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -37,6 +38,7 @@ const crmItems = [
 
 const administrativoItems = [
   { href: "/administrativo/formas-pagamento", label: "Formas de Pagamento", icon: Settings },
+  { href: "/administrativo/bandeiras", label: "Bandeiras de Cartão", icon: Settings },
   { href: "/administrativo/academia", label: "Academia", icon: Settings },
   { href: "/administrativo/funcionarios", label: "Funcionários", icon: Settings },
   { href: "/administrativo/horarios", label: "Horários", icon: Settings },
@@ -51,6 +53,7 @@ export function Sidebar() {
   const [administrativoOpen, setAdministrativoOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const [tenantName, setTenantName] = useState("Academia");
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -61,6 +64,23 @@ export function Sidebar() {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    async function load() {
+      const tenant = await getCurrentTenant();
+      setTenantName(tenant.nome);
+    }
+    load();
+    function handleUpdate() {
+      load();
+    }
+    window.addEventListener("academia-store-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("academia-store-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
   }, []);
 
   return (
@@ -79,7 +99,7 @@ export function Sidebar() {
             </div>
             {!collapsed && (
               <div className="mt-0.5 text-[11px] uppercase tracking-widest text-muted-foreground">
-                Academia Força Total
+                {tenantName}
               </div>
             )}
           </div>
@@ -231,23 +251,21 @@ export function Sidebar() {
                 Conta
               </p>
               {[
-                { label: "Meu perfil" },
-                { label: "Trocar senha" },
-                { label: "Trocar academia" },
-                { label: "Preferências" },
-                { label: "Notificações" },
-                { label: "Sair" },
+                { label: "Meu perfil", href: "/conta/perfil" },
+                { label: "Trocar senha", href: "/conta/seguranca" },
+                { label: "Trocar academia", href: "/conta/academia" },
+                { label: "Preferências", href: "/conta/preferencias" },
+                { label: "Notificações", href: "/conta/notificacoes" },
+                { label: "Sair", href: "/conta/sair" },
               ].map((item) => (
-                <button
+                <Link
                   key={item.label}
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    alert("Em breve.");
-                  }}
-                  className="w-full rounded-md px-2 py-2 text-left text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  href={item.href}
+                  onClick={() => setUserMenuOpen(false)}
+                  className="block w-full rounded-md px-2 py-2 text-left text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground"
                 >
                   {item.label}
-                </button>
+                </Link>
               ))}
             </div>
           )}

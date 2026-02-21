@@ -217,6 +217,26 @@ export interface Funcionario {
   ativo: boolean;
 }
 
+export interface BandeiraCartao {
+  id: UUID;
+  nome: string;
+  taxaPercentual: number;
+  diasRepasse: number;
+  ativo: boolean;
+}
+
+export interface CartaoCliente {
+  id: UUID;
+  alunoId: UUID;
+  bandeiraId: UUID;
+  titular: string;
+  cpfTitular?: string;
+  ultimos4: string;
+  validade: string;
+  ativo: boolean;
+  padrao?: boolean;
+}
+
 export interface Servico {
   id: UUID;
   tenantId: UUID;

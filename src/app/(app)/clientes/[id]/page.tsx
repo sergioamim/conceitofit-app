@@ -21,6 +21,7 @@ import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-mod
 import { Button } from "@/components/ui/button";
 import { SuspenderClienteModal } from "@/components/shared/suspender-cliente-modal";
 import { cn } from "@/lib/utils";
+import { CreditCard } from "lucide-react";
 
 function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
@@ -214,6 +215,13 @@ export default function ClienteDetalhePage() {
           </p>
         </div>
         <div className="flex items-start gap-3">
+          <Button
+            variant="outline"
+            className="h-9"
+            onClick={() => router.push(`/clientes/${aluno.id}/cartoes`)}
+          >
+            <CreditCard className="size-4" />
+          </Button>
           {!planoAtivo && (
             <Button
               onClick={() => setNovaMatriculaOpen(true)}

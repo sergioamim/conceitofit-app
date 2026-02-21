@@ -8,6 +8,8 @@ import type {
   Pagamento,
   Funcionario,
   Servico,
+  BandeiraCartao,
+  CartaoCliente,
   Presenca,
   Tenant,
   HorarioFuncionamento,
@@ -18,9 +20,13 @@ const TENANT_ID = "550e8400-e29b-41d4-a716-446655440000";
 
 interface Store {
   tenant: Tenant;
+  tenants: Tenant[];
+  currentTenantId: string;
   horarios: HorarioFuncionamento[];
   convenios: Convenio[];
   servicos: Servico[];
+  bandeirasCartao: BandeiraCartao[];
+  cartoesCliente: CartaoCliente[];
   atividades: Atividade[];
   planos: Plano[];
   formasPagamento: FormaPagamento[];
@@ -58,6 +64,39 @@ function makeInitialStore(): Store {
       estado: "SP",
     },
   };
+  const tenants: Tenant[] = [
+    tenant,
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      nome: "Academia Vila Nova",
+      subdomain: "vilanova",
+      email: "contato@vilanova.com.br",
+      telefone: "(11) 98888-1122",
+      endereco: {
+        cep: "04567-000",
+        logradouro: "Rua das Flores",
+        numero: "120",
+        bairro: "Vila Nova",
+        cidade: "São Paulo",
+        estado: "SP",
+      },
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440002",
+      nome: "Academia Jardins",
+      subdomain: "jardins",
+      email: "contato@jardins.com.br",
+      telefone: "(11) 97777-3344",
+      endereco: {
+        cep: "01400-000",
+        logradouro: "Alameda Central",
+        numero: "500",
+        bairro: "Jardins",
+        cidade: "São Paulo",
+        estado: "SP",
+      },
+    },
+  ];
 
   const horarios: HorarioFuncionamento[] = [
     { dia: "SEG", abre: "06:00", fecha: "22:00" },
@@ -100,6 +139,16 @@ function makeInitialStore(): Store {
     { id: "cv-001", nome: "Empresa Alpha", ativo: true, descontoPercentual: 15, planoIds: ["pln-002", "pln-003"] },
     { id: "cv-002", nome: "Sindicato Beta", ativo: true, descontoPercentual: 10 },
     { id: "cv-003", nome: "Convênio Inativo", ativo: false, descontoPercentual: 20, planoIds: ["pln-001"] },
+  ];
+
+  const bandeirasCartao: BandeiraCartao[] = [
+    { id: "bc-001", nome: "Visa", taxaPercentual: 2.9, diasRepasse: 30, ativo: true },
+    { id: "bc-002", nome: "Mastercard", taxaPercentual: 2.95, diasRepasse: 30, ativo: true },
+    { id: "bc-003", nome: "Elo", taxaPercentual: 3.1, diasRepasse: 30, ativo: true },
+  ];
+
+  const cartoesCliente: CartaoCliente[] = [
+    { id: "cc-001", alunoId: "al-001", bandeiraId: "bc-001", titular: "Carlos Oliveira", ultimos4: "4321", validade: "12/28", ativo: true, padrao: true },
   ];
 
   const planos: Plano[] = [
@@ -400,7 +449,7 @@ function makeInitialStore(): Store {
     { id: "prc-012", alunoId: "al-003", data: "2026-02-01", horario: "18:00", origem: "ACESSO" },
   ];
 
-  return { tenant, horarios, convenios, servicos, atividades, planos, formasPagamento, funcionarios, presencas, prospects, alunos, matriculas, pagamentos };
+  return { tenant, tenants, currentTenantId: tenant.id, horarios, convenios, servicos, bandeirasCartao, cartoesCliente, atividades, planos, formasPagamento, funcionarios, presencas, prospects, alunos, matriculas, pagamentos };
 }
 
 let store: Store = makeInitialStore();
@@ -442,9 +491,13 @@ function normalizeStore(data: Store): Store {
       id: TENANT_ID,
       nome: "Academia Força Total",
     },
+    tenants: data.tenants ?? (data.tenant ? [data.tenant] : []),
+    currentTenantId: data.currentTenantId ?? data.tenant?.id ?? TENANT_ID,
     horarios: data.horarios ?? [],
     convenios: data.convenios ?? [],
     servicos: data.servicos ?? [],
+    bandeirasCartao: data.bandeirasCartao ?? [],
+    cartoesCliente: data.cartoesCliente ?? [],
     funcionarios: data.funcionarios ?? [],
     presencas: data.presencas ?? [],
     prospects: data.prospects.map((p) => ({

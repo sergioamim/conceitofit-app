@@ -9,6 +9,8 @@ import type {
   FormaPagamento,
   Funcionario,
   Servico,
+  BandeiraCartao,
+  CartaoCliente,
   Presenca,
   Tenant,
   HorarioFuncionamento,
@@ -134,6 +136,28 @@ export async function getDashboard(params?: { month?: number; year?: number }): 
         aluno: store.alunos.find((a) => a.id === p.alunoId),
       })),
   };
+}
+
+// ─── TENANT ────────────────────────────────────────────────────────────────
+
+export async function listTenants(): Promise<Tenant[]> {
+  return getStore().tenants;
+}
+
+export async function getCurrentTenant(): Promise<Tenant> {
+  const store = getStore();
+  return store.tenants.find((t) => t.id === store.currentTenantId) ?? store.tenant;
+}
+
+export async function setCurrentTenant(id: string): Promise<void> {
+  setStore((s) => {
+    const tenant = s.tenants.find((t) => t.id === id) ?? s.tenant;
+    return {
+      ...s,
+      currentTenantId: tenant.id,
+      tenant,
+    };
+  });
 }
 
 // ─── PROSPECTS ──────────────────────────────────────────────────────────────
@@ -701,6 +725,107 @@ export async function deleteServico(id: string): Promise<void> {
   setStore((s) => ({
     ...s,
     servicos: s.servicos.filter((sv) => sv.id !== id),
+  }));
+}
+
+// ─── BANDEIRAS DE CARTÃO ───────────────────────────────────────────────────
+
+export async function listBandeirasCartao(params?: {
+  apenasAtivas?: boolean;
+}): Promise<BandeiraCartao[]> {
+  const { bandeirasCartao } = getStore();
+  const all = [...bandeirasCartao].reverse();
+  if (params?.apenasAtivas) return all.filter((b) => b.ativo);
+  return all;
+}
+
+export async function createBandeiraCartao(
+  data: Omit<BandeiraCartao, "id" | "ativo">
+): Promise<BandeiraCartao> {
+  const bandeira: BandeiraCartao = {
+    ...data,
+    id: genId(),
+    ativo: true,
+  };
+  setStore((s) => ({ ...s, bandeirasCartao: [bandeira, ...s.bandeirasCartao] }));
+  return bandeira;
+}
+
+export async function updateBandeiraCartao(
+  id: string,
+  data: Partial<Omit<BandeiraCartao, "id">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    bandeirasCartao: s.bandeirasCartao.map((b) =>
+      b.id === id ? { ...b, ...data } : b
+    ),
+  }));
+}
+
+export async function toggleBandeiraCartao(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    bandeirasCartao: s.bandeirasCartao.map((b) =>
+      b.id === id ? { ...b, ativo: !b.ativo } : b
+    ),
+  }));
+}
+
+export async function deleteBandeiraCartao(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    bandeirasCartao: s.bandeirasCartao.filter((b) => b.id !== id),
+  }));
+}
+
+// ─── CARTÕES DO CLIENTE ────────────────────────────────────────────────────
+
+export async function listCartoesCliente(alunoId: string): Promise<CartaoCliente[]> {
+  return getStore().cartoesCliente.filter((c) => c.alunoId === alunoId);
+}
+
+export async function createCartaoCliente(
+  data: Omit<CartaoCliente, "id" | "ativo">
+): Promise<CartaoCliente> {
+  const cartao: CartaoCliente = {
+    ...data,
+    id: genId(),
+    ativo: true,
+  };
+  setStore((s) => {
+    const jaTemPadrao = s.cartoesCliente.some((c) => c.alunoId === data.alunoId && c.padrao);
+    const novo = jaTemPadrao ? cartao : { ...cartao, padrao: true };
+    return {
+      ...s,
+      cartoesCliente: [
+        novo,
+        ...s.cartoesCliente.map((c) =>
+          !jaTemPadrao && c.alunoId === data.alunoId ? { ...c, padrao: false } : c
+        ),
+      ],
+    };
+  });
+  return cartao;
+}
+
+export async function setCartaoPadrao(id: string): Promise<void> {
+  setStore((s) => {
+    const alvo = s.cartoesCliente.find((c) => c.id === id);
+    if (!alvo) return s;
+    return {
+      ...s,
+      cartoesCliente: s.cartoesCliente.map((c) =>
+        c.alunoId === alvo.alunoId ? { ...c, padrao: c.id === id } : c
+      ),
+    };
+  });
+}
+
+export async function deleteCartaoCliente(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    cartoesCliente: s.cartoesCliente.filter((c) => c.id !== id),
   }));
 }
 
