@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, Plus, ChevronDown } from "lucide-react";
 import {
   listProspects,
   createProspect,
+  updateProspect,
   updateProspectStatus,
   marcarProspectPerdido,
   deleteProspect,
   checkProspectDuplicate,
+  listFuncionarios,
 } from "@/lib/mock/services";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { MonthYearPicker } from "@/components/shared/month-year-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,12 +37,22 @@ import type {
   StatusProspect,
   OrigemProspect,
   CreateProspectInput,
+  Funcionario,
 } from "@/lib/types";
 import { maskPhone } from "@/lib/utils";
 
 const STATUS_OPTIONS: { value: StatusProspect | "TODOS"; label: string }[] = [
   { value: "TODOS", label: "Todos" },
   { value: "NOVO", label: "Novo" },
+  { value: "EM_CONTATO", label: "Em contato" },
+  { value: "AGENDOU_VISITA", label: "Agendou visita" },
+  { value: "VISITOU", label: "Visitou" },
+  { value: "CONVERTIDO", label: "Convertido" },
+  { value: "PERDIDO", label: "Perdido" },
+];
+
+const STATUS_LABELS: { value: StatusProspect; label: string }[] = [
+  { value: "NOVO", label: "Novos" },
   { value: "EM_CONTATO", label: "Em contato" },
   { value: "AGENDOU_VISITA", label: "Agendou visita" },
   { value: "VISITOU", label: "Visitou" },
@@ -68,10 +81,14 @@ function NovoProspectModal({
   open,
   onClose,
   onSave,
+  funcionarios,
+  initial,
 }: {
   open: boolean;
   onClose: () => void;
   onSave: (data: CreateProspectInput) => void;
+  funcionarios: Funcionario[];
+  initial?: Prospect | null;
 }) {
   const [form, setForm] = useState<CreateProspectInput>({
     nome: "",
@@ -80,7 +97,32 @@ function NovoProspectModal({
     cpf: "",
     origem: "INSTAGRAM",
     observacoes: "",
+    responsavelId: "",
   });
+
+  useEffect(() => {
+    if (initial) {
+      setForm({
+        nome: initial.nome,
+        telefone: initial.telefone,
+        email: initial.email ?? "",
+        cpf: initial.cpf ?? "",
+        origem: initial.origem,
+        observacoes: initial.observacoes ?? "",
+        responsavelId: initial.responsavelId ?? "",
+      });
+    } else {
+      setForm({
+        nome: "",
+        telefone: "",
+        email: "",
+        cpf: "",
+        origem: "INSTAGRAM",
+        observacoes: "",
+        responsavelId: "",
+      });
+    }
+  }, [initial, open]);
 
   function set(key: keyof CreateProspectInput) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -89,15 +131,11 @@ function NovoProspectModal({
 
   function handleSubmit() {
     if (!form.nome || !form.telefone) return;
-    onSave(form);
-    setForm({
-      nome: "",
-      telefone: "",
-      email: "",
-      cpf: "",
-      origem: "INSTAGRAM",
-      observacoes: "",
-    });
+    const payload: CreateProspectInput = {
+      ...form,
+      responsavelId: form.responsavelId ? form.responsavelId : undefined,
+    };
+    onSave(payload);
     onClose();
   }
 
@@ -106,7 +144,7 @@ function NovoProspectModal({
       <DialogContent className="bg-card border-border sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">
-            Novo Prospect
+            {initial ? "Editar Prospect" : "Novo Prospect"}
           </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2">
@@ -173,6 +211,29 @@ function NovoProspectModal({
           </div>
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Responsável
+            </label>
+            <Select
+              value={form.responsavelId ?? ""}
+              onValueChange={(v) =>
+                setForm((f) => ({ ...f, responsavelId: v || "" }))
+              }
+            >
+              <SelectTrigger className="w-full bg-secondary border-border">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="">Sem responsável</SelectItem>
+                {funcionarios.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               E-mail
             </label>
             <Input
@@ -210,14 +271,20 @@ function NovoProspectModal({
 
 export default function ProspectsPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<StatusProspect | "TODOS">("TODOS");
   const [filtroOrigem, setFiltroOrigem] = useState<OrigemProspect | "TODAS">("TODAS");
   const [busca, setBusca] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Prospect | null>(null);
+  const [timeline, setTimeline] = useState<Prospect | null>(null);
+  const [mes, setMes] = useState(new Date().getMonth());
+  const [ano, setAno] = useState(new Date().getFullYear());
 
   async function load() {
-    const data = await listProspects();
+    const [data, funcs] = await Promise.all([listProspects(), listFuncionarios()]);
     setProspects(data);
+    setFuncionarios(funcs);
   }
 
   useEffect(() => {
@@ -237,6 +304,33 @@ export default function ProspectsPage() {
     return matchStatus && matchOrigem && matchBusca;
   });
 
+  const statusTotals = useMemo(() => {
+    const totals: Record<StatusProspect, number> = {
+      NOVO: 0,
+      EM_CONTATO: 0,
+      AGENDOU_VISITA: 0,
+      VISITOU: 0,
+      CONVERTIDO: 0,
+      PERDIDO: 0,
+    };
+
+    prospects.forEach((p) => {
+      const logs = p.statusLog ?? [{ status: p.status, data: p.dataCriacao }];
+      const occurred = new Set<StatusProspect>();
+      logs.forEach((log) => {
+        const d = new Date(log.data);
+        if (d.getFullYear() === ano && d.getMonth() === mes) {
+          occurred.add(log.status);
+        }
+      });
+      occurred.forEach((s) => {
+        totals[s] += 1;
+      });
+    });
+
+    return totals;
+  }, [prospects, mes, ano]);
+
   async function handleSave(data: CreateProspectInput) {
     const isDup = await checkProspectDuplicate({
       telefone: data.telefone,
@@ -248,6 +342,16 @@ export default function ProspectsPage() {
       return;
     }
     await createProspect(data);
+    load();
+  }
+
+  async function handleEditSave(data: CreateProspectInput) {
+    if (!editing) return;
+    await updateProspect(editing.id, {
+      ...data,
+      responsavelId: data.responsavelId || undefined,
+    });
+    setEditing(null);
     load();
   }
 
@@ -278,7 +382,44 @@ export default function ProspectsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
+        funcionarios={funcionarios}
       />
+      <NovoProspectModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        onSave={handleEditSave}
+        funcionarios={funcionarios}
+        initial={editing}
+      />
+      {timeline && (
+        <Dialog open onOpenChange={() => setTimeline(null)}>
+          <DialogContent className="bg-card border-border sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg font-bold">
+                Timeline · {timeline.nome}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              {(timeline.statusLog ?? []).length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Sem interações registradas.
+                </p>
+              )}
+              {(timeline.statusLog ?? [])
+                .slice()
+                .sort((a, b) => (a.data > b.data ? -1 : 1))
+                .map((log, i) => (
+                  <div key={`${log.status}-${i}`} className="flex items-center justify-between rounded-md border border-border bg-secondary px-3 py-2 text-sm">
+                    <span>{STATUS_LABELS.find((s) => s.value === log.status)?.label ?? log.status}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(log.data).toLocaleString("pt-BR")}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <div className="flex items-center justify-between">
         <div>
@@ -286,13 +427,38 @@ export default function ProspectsPage() {
             Prospects
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie leads e converta em alunos
+            Gerencie leads e converta em clientes
           </p>
         </div>
+        <MonthYearPicker
+          month={mes}
+          year={ano}
+          onChange={(next) => {
+            setMes(next.month);
+            setAno(next.year);
+          }}
+        />
         <Button onClick={() => setModalOpen(true)}>
           <Plus className="size-4" />
           Novo Prospect
         </Button>
+      </div>
+
+      {/* Totals by status */}
+      <div className="grid grid-cols-6 gap-3">
+        {STATUS_LABELS.map((s) => (
+          <div
+            key={s.value}
+            className="rounded-lg border border-border bg-card p-3"
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {s.label}
+            </p>
+            <p className="mt-1 font-display text-xl font-bold text-gym-accent">
+              {statusTotals[s.value]}
+            </p>
+          </div>
+        ))}
       </div>
 
       {/* Filters */}
@@ -442,6 +608,18 @@ export default function ProspectsPage() {
                         </Button>
                       </Link>
                     )}
+                    <button
+                      onClick={() => setEditing(p)}
+                      className="rounded border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => setTimeline(p)}
+                      className="rounded border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                    >
+                      Timeline
+                    </button>
                     {p.status !== "PERDIDO" && (
                       <button
                         onClick={() => handlePerdido(p.id)}

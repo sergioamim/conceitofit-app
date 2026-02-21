@@ -1,30 +1,20 @@
   "use client";
 
 import { useEffect, useState } from "react";
-import { listPagamentos, receberPagamento, listFormasPagamento } from "@/lib/mock/services";
+import { useSearchParams } from "next/navigation";
+import { listPagamentos, receberPagamento, listFormasPagamento, listAlunos, listMatriculas, listConvenios } from "@/lib/mock/services";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
+import { MonthYearPicker } from "@/components/shared/month-year-picker";
 import type {
   Pagamento,
   Aluno,
   StatusPagamento,
   TipoFormaPagamento,
   FormaPagamento,
+  Matricula,
+  Convenio,
 } from "@/lib/types";
 
 type PagamentoWithAluno = Pagamento & { aluno?: Aluno };
@@ -53,133 +43,57 @@ function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
-function ReceberModal({
-  pagamento,
-  formasPagamento,
-  onClose,
-  onConfirm,
-}: {
-  pagamento: PagamentoWithAluno;
-  formasPagamento: FormaPagamento[];
-  onClose: () => void;
-  onConfirm: (data: { dataPagamento: string; formaPagamento: TipoFormaPagamento; observacoes?: string }) => void;
-}) {
-  const [dataPagamento, setDataPagamento] = useState(
-    new Date().toISOString().split("T")[0]
-  );
-  const [formaPagamento, setFormaPagamento] = useState<TipoFormaPagamento | "">("");
-  const [observacoes, setObservacoes] = useState("");
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="bg-card border-border sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
-            Registrar recebimento
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="rounded-lg bg-secondary p-3 text-sm">
-            <p className="font-medium">{pagamento.aluno?.nome ?? "—"}</p>
-            <p className="text-muted-foreground">{pagamento.descricao}</p>
-            <p className="mt-1 font-display text-lg font-bold text-gym-accent">
-              {formatBRL(pagamento.valorFinal)}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Data de pagamento
-            </label>
-            <Input
-              type="date"
-              value={dataPagamento}
-              onChange={(e) => setDataPagamento(e.target.value)}
-              className="bg-secondary border-border"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Forma de pagamento
-            </label>
-            <Select
-              value={formaPagamento}
-              onValueChange={(v) => setFormaPagamento(v as TipoFormaPagamento)}
-            >
-              <SelectTrigger className="w-full bg-secondary border-border">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {formasPagamento.map((fp) => (
-                  <SelectItem key={fp.id} value={fp.tipo}>
-                    {fp.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Observações
-            </label>
-            <Input
-              placeholder="Observações do recebimento"
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              className="bg-secondary border-border"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="border-border">
-            Cancelar
-          </Button>
-          <Button
-            disabled={!formaPagamento || !dataPagamento}
-            onClick={() =>
-              onConfirm({
-                dataPagamento,
-                formaPagamento: formaPagamento as TipoFormaPagamento,
-                observacoes: observacoes || undefined,
-              })
-            }
-          >
-            Confirmar recebimento
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 export default function PagamentosPage() {
+  const searchParams = useSearchParams();
   const [pagamentos, setPagamentos] = useState<PagamentoWithAluno[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
+  const [clientes, setClientes] = useState<Aluno[]>([]);
+  const [matriculas, setMatriculas] = useState<Matricula[]>([]);
+  const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [filtro, setFiltro] = useState<StatusPagamento | "TODOS">("TODOS");
   const [recebendo, setRecebendo] = useState<PagamentoWithAluno | null>(null);
+  const [mes, setMes] = useState(new Date().getMonth());
+  const [ano, setAno] = useState(new Date().getFullYear());
+  const [clienteFiltro, setClienteFiltro] = useState<string>("TODOS");
 
   async function load() {
-    const [pags, fps] = await Promise.all([
+    const [pags, fps, cls, mats, cvs] = await Promise.all([
       listPagamentos(),
       listFormasPagamento(),
+      listAlunos(),
+      listMatriculas(),
+      listConvenios(),
     ]);
     setPagamentos(pags);
     setFormasPagamento(fps);
+    setClientes(cls);
+    setMatriculas(mats);
+    setConvenios(cvs);
   }
 
   useEffect(() => {
     load();
   }, []);
 
-  const filtered =
+  const alunoId = searchParams.get("clienteId") ?? searchParams.get("alunoId");
+  const filteredBase =
     filtro === "TODOS"
       ? pagamentos
       : pagamentos.filter((p) => p.status === filtro);
 
-  const totalRecebido = pagamentos
+  const filtered = filteredBase.filter((p) => {
+    if (alunoId && p.alunoId !== alunoId) return false;
+    if (clienteFiltro !== "TODOS" && p.alunoId !== clienteFiltro) return false;
+    const d = new Date(p.dataVencimento + "T00:00:00");
+    return d.getMonth() === mes && d.getFullYear() === ano;
+  });
+
+  const totalRecebido = filtered
     .filter((p) => p.status === "PAGO")
     .reduce((s, p) => s + p.valorFinal, 0);
 
-  const totalPendente = pagamentos
+  const totalPendente = filtered
     .filter((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
     .reduce((s, p) => s + p.valorFinal, 0);
 
@@ -199,9 +113,15 @@ export default function PagamentosPage() {
   return (
     <div className="space-y-6">
       {recebendo && (
-        <ReceberModal
+        <ReceberPagamentoModal
           pagamento={recebendo}
           formasPagamento={formasPagamento}
+          convenio={(() => {
+            const mat = matriculas.find((m) => m.id === recebendo.matriculaId);
+            if (!mat?.convenioId) return undefined;
+            const conv = convenios.find((c) => c.id === mat.convenioId);
+            return conv ? { nome: conv.nome, descontoPercentual: conv.descontoPercentual } : undefined;
+          })()}
           onClose={() => setRecebendo(null)}
           onConfirm={handleConfirmRecebimento}
         />
@@ -242,26 +162,51 @@ export default function PagamentosPage() {
             Total de cobranças
           </p>
           <p className="mt-2 font-display text-2xl font-extrabold text-gym-accent">
-            {pagamentos.length}
+            {filtered.length}
           </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-1.5">
-        {STATUS_FILTERS.map((s) => (
-          <button
-            key={s.value}
-            onClick={() => setFiltro(s.value)}
-            className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-              filtro === s.value
-                ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex gap-1.5">
+          {STATUS_FILTERS.map((s) => (
+            <button
+              key={s.value}
+              onClick={() => setFiltro(s.value)}
+              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                filtro === s.value
+                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-3">
+          <Select value={clienteFiltro} onValueChange={setClienteFiltro}>
+            <SelectTrigger className="w-52 bg-secondary border-border text-xs">
+              <SelectValue placeholder="Cliente" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="TODOS">Todos clientes</SelectItem>
+              {clientes.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <MonthYearPicker
+            month={mes}
+            year={ano}
+            onChange={(next) => {
+              setMes(next.month);
+              setAno(next.year);
+            }}
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -270,7 +215,7 @@ export default function PagamentosPage() {
           <thead>
             <tr className="border-b border-border bg-secondary">
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Aluno
+                Cliente
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Descrição

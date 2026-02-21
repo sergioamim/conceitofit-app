@@ -362,7 +362,7 @@ function Step3({
             Motivo do desconto
           </label>
           <Input
-            placeholder="Ex: aluno indicado"
+            placeholder="Ex: cliente indicado"
             value={data.motivoDesconto}
             onChange={(e) =>
               onChange({ ...data, motivoDesconto: e.target.value })
@@ -423,14 +423,14 @@ function Step4({
       <div>
         <h3 className="font-display text-2xl font-bold">Conversão realizada!</h3>
         <p className="mt-1 text-muted-foreground">
-          {result.aluno.nome} agora é um aluno ativo.
+          {result.aluno.nome} agora é um cliente ativo.
         </p>
       </div>
 
       <div className="grid grid-cols-3 gap-3 text-left">
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Aluno
+            Cliente
           </p>
           <p className="mt-1 font-bold">{result.aluno.nome}</p>
           <p className="text-xs text-muted-foreground">CPF: {result.aluno.cpf}</p>
@@ -464,8 +464,8 @@ function Step4({
         >
           Ver pagamentos
         </Button>
-        <Button onClick={() => router.push("/alunos")}>
-          Ver alunos
+        <Button onClick={() => router.push("/clientes")}>
+          Ver clientes
         </Button>
       </div>
     </div>

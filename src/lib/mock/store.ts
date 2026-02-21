@@ -6,14 +6,26 @@ import type {
   Prospect,
   Matricula,
   Pagamento,
+  Funcionario,
+  Servico,
+  Presenca,
+  Tenant,
+  HorarioFuncionamento,
+  Convenio,
 } from "../types";
 
 const TENANT_ID = "550e8400-e29b-41d4-a716-446655440000";
 
 interface Store {
+  tenant: Tenant;
+  horarios: HorarioFuncionamento[];
+  convenios: Convenio[];
+  servicos: Servico[];
   atividades: Atividade[];
   planos: Plano[];
   formasPagamento: FormaPagamento[];
+  funcionarios: Funcionario[];
+  presencas: Presenca[];
   prospects: Prospect[];
   alunos: Aluno[];
   matriculas: Matricula[];
@@ -29,6 +41,65 @@ function makeInitialStore(): Store {
     { id: "atv-005", tenantId: TENANT_ID, nome: "Funcional", categoria: "COLETIVA", icone: "🏋️", cor: "#2ECC71", ativo: true },
     { id: "atv-006", tenantId: TENANT_ID, nome: "Natação", categoria: "AQUATICA", icone: "🏊", cor: "#3498DB", ativo: true },
     { id: "atv-007", tenantId: TENANT_ID, nome: "Pilates", categoria: "COLETIVA", icone: "🤸", cor: "#F39C12", ativo: true },
+  ];
+
+  const tenant: Tenant = {
+    id: TENANT_ID,
+    nome: "Academia Força Total",
+    subdomain: "forcatotal",
+    email: "contato@forcatotal.com.br",
+    telefone: "(11) 99999-0000",
+    endereco: {
+      cep: "01000-000",
+      logradouro: "Av. Paulista",
+      numero: "1000",
+      bairro: "Bela Vista",
+      cidade: "São Paulo",
+      estado: "SP",
+    },
+  };
+
+  const horarios: HorarioFuncionamento[] = [
+    { dia: "SEG", abre: "06:00", fecha: "22:00" },
+    { dia: "TER", abre: "06:00", fecha: "22:00" },
+    { dia: "QUA", abre: "06:00", fecha: "22:00" },
+    { dia: "QUI", abre: "06:00", fecha: "22:00" },
+    { dia: "SEX", abre: "06:00", fecha: "22:00" },
+    { dia: "SAB", abre: "08:00", fecha: "14:00" },
+    { dia: "DOM", abre: "00:00", fecha: "00:00", fechado: true },
+  ];
+
+  const servicos: Servico[] = [
+    {
+      id: "srv-001",
+      tenantId: TENANT_ID,
+      nome: "Avaliação física",
+      descricao: "Avaliação inicial completa",
+      sessoes: 1,
+      ativo: true,
+    },
+    {
+      id: "srv-002",
+      tenantId: TENANT_ID,
+      nome: "Bioimpedância",
+      descricao: "Avaliação de composição corporal",
+      sessoes: 1,
+      ativo: true,
+    },
+    {
+      id: "srv-003",
+      tenantId: TENANT_ID,
+      nome: "Aula com personal",
+      descricao: "Acompanhamento individual",
+      sessoes: 10,
+      ativo: true,
+    },
+  ];
+
+  const convenios: Convenio[] = [
+    { id: "cv-001", nome: "Empresa Alpha", ativo: true, descontoPercentual: 15, planoIds: ["pln-002", "pln-003"] },
+    { id: "cv-002", nome: "Sindicato Beta", ativo: true, descontoPercentual: 10 },
+    { id: "cv-003", nome: "Convênio Inativo", ativo: false, descontoPercentual: 20, planoIds: ["pln-001"] },
   ];
 
   const planos: Plano[] = [
@@ -94,11 +165,73 @@ function makeInitialStore(): Store {
     { id: "fp-005", tenantId: TENANT_ID, nome: "Boleto", tipo: "BOLETO", taxaPercentual: 0, parcelasMax: 1, ativo: true },
   ];
 
+  const funcionarios = [
+    { id: "fn-001", nome: "Sergio Amim", cargo: "Administrador", ativo: true },
+    { id: "fn-002", nome: "Larissa Costa", cargo: "Consultora", ativo: true },
+    { id: "fn-003", nome: "Bruno Silva", cargo: "Vendas", ativo: true },
+  ];
+
   const prospects: Prospect[] = [
-    { id: "pr-001", tenantId: TENANT_ID, nome: "Maria Silva", telefone: "(11) 99988-7766", email: "maria@email.com", origem: "INSTAGRAM", status: "NOVO", dataCriacao: "2026-02-18T10:00:00" },
-    { id: "pr-002", tenantId: TENANT_ID, nome: "João Santos", telefone: "(11) 98877-6655", origem: "VISITA_PRESENCIAL", status: "AGENDOU_VISITA", dataCriacao: "2026-02-17T14:30:00", dataUltimoContato: "2026-02-18T09:00:00" },
-    { id: "pr-003", tenantId: TENANT_ID, nome: "Ana Costa", telefone: "(11) 97766-5544", email: "ana@email.com", origem: "INDICACAO", status: "VISITOU", dataCriacao: "2026-02-15T09:00:00" },
-    { id: "pr-004", tenantId: TENANT_ID, nome: "Pedro Alves", telefone: "(11) 96655-4433", origem: "WHATSAPP", status: "EM_CONTATO", dataCriacao: "2026-02-10T11:00:00", dataUltimoContato: "2026-02-12T11:30:00" },
+    {
+      id: "pr-001",
+      tenantId: TENANT_ID,
+      responsavelId: "fn-002",
+      nome: "Maria Silva",
+      telefone: "(11) 99988-7766",
+      email: "maria@email.com",
+      origem: "INSTAGRAM",
+      status: "NOVO",
+      dataCriacao: "2026-02-18T10:00:00",
+      statusLog: [{ status: "NOVO", data: "2026-02-18T10:00:00" }],
+    },
+    {
+      id: "pr-002",
+      tenantId: TENANT_ID,
+      responsavelId: "fn-003",
+      nome: "João Santos",
+      telefone: "(11) 98877-6655",
+      origem: "VISITA_PRESENCIAL",
+      status: "AGENDOU_VISITA",
+      dataCriacao: "2026-02-17T14:30:00",
+      dataUltimoContato: "2026-02-18T09:00:00",
+      statusLog: [
+        { status: "NOVO", data: "2026-02-17T14:30:00" },
+        { status: "EM_CONTATO", data: "2026-02-17T16:00:00" },
+        { status: "AGENDOU_VISITA", data: "2026-02-18T09:00:00" },
+      ],
+    },
+    {
+      id: "pr-003",
+      tenantId: TENANT_ID,
+      responsavelId: "fn-002",
+      nome: "Ana Costa",
+      telefone: "(11) 97766-5544",
+      email: "ana@email.com",
+      origem: "INDICACAO",
+      status: "VISITOU",
+      dataCriacao: "2026-02-15T09:00:00",
+      statusLog: [
+        { status: "NOVO", data: "2026-02-15T09:00:00" },
+        { status: "EM_CONTATO", data: "2026-02-16T10:00:00" },
+        { status: "AGENDOU_VISITA", data: "2026-02-17T11:00:00" },
+        { status: "VISITOU", data: "2026-02-18T18:30:00" },
+      ],
+    },
+    {
+      id: "pr-004",
+      tenantId: TENANT_ID,
+      responsavelId: "fn-001",
+      nome: "Pedro Alves",
+      telefone: "(11) 96655-4433",
+      origem: "WHATSAPP",
+      status: "EM_CONTATO",
+      dataCriacao: "2026-02-10T11:00:00",
+      dataUltimoContato: "2026-02-12T11:30:00",
+      statusLog: [
+        { status: "NOVO", data: "2026-02-10T11:00:00" },
+        { status: "EM_CONTATO", data: "2026-02-12T11:30:00" },
+      ],
+    },
   ];
 
   const alunos: Aluno[] = [
@@ -136,7 +269,7 @@ function makeInitialStore(): Store {
       cpf: "123.456.789-00",
       dataNascimento: "1988-03-10",
       sexo: "M",
-      status: "BLOQUEADO",
+      status: "INATIVO",
       dataCadastro: "2025-06-01T10:00:00",
     },
   ];
@@ -252,7 +385,22 @@ function makeInitialStore(): Store {
     },
   ];
 
-  return { atividades, planos, formasPagamento, prospects, alunos, matriculas, pagamentos };
+  const presencas: Presenca[] = [
+    { id: "prc-001", alunoId: "al-001", data: "2026-02-15", horario: "08:10", origem: "CHECKIN" },
+    { id: "prc-002", alunoId: "al-001", data: "2026-02-15", horario: "18:40", origem: "AULA", atividade: "Spinning" },
+    { id: "prc-003", alunoId: "al-001", data: "2026-02-16", horario: "07:50", origem: "CHECKIN" },
+    { id: "prc-004", alunoId: "al-001", data: "2026-02-18", horario: "19:00", origem: "AULA", atividade: "Funcional" },
+    { id: "prc-005", alunoId: "al-001", data: "2026-02-20", horario: "06:55", origem: "ACESSO" },
+    { id: "prc-006", alunoId: "al-001", data: "2026-02-21", horario: "10:15", origem: "AULA", atividade: "Yoga" },
+    { id: "prc-007", alunoId: "al-002", data: "2026-02-14", horario: "09:20", origem: "CHECKIN" },
+    { id: "prc-008", alunoId: "al-002", data: "2026-02-17", horario: "18:10", origem: "AULA", atividade: "Pilates" },
+    { id: "prc-009", alunoId: "al-002", data: "2026-02-19", horario: "07:30", origem: "ACESSO" },
+    { id: "prc-010", alunoId: "al-002", data: "2026-02-21", horario: "19:30", origem: "AULA", atividade: "Muay Thai" },
+    { id: "prc-011", alunoId: "al-003", data: "2026-01-20", horario: "08:05", origem: "CHECKIN" },
+    { id: "prc-012", alunoId: "al-003", data: "2026-02-01", horario: "18:00", origem: "ACESSO" },
+  ];
+
+  return { tenant, horarios, convenios, servicos, atividades, planos, formasPagamento, funcionarios, presencas, prospects, alunos, matriculas, pagamentos };
 }
 
 let store: Store = makeInitialStore();
@@ -266,6 +414,9 @@ export function getStore(): Readonly<Store> {
 export function setStore(updater: (prev: Store) => Store): void {
   store = updater(store);
   persistStore(store);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("academia-store-updated"));
+  }
 }
 
 export function resetStore(): void {
@@ -287,14 +438,35 @@ function persistStore(data: Store): void {
 function normalizeStore(data: Store): Store {
   return {
     ...data,
+    tenant: data.tenant ?? {
+      id: TENANT_ID,
+      nome: "Academia Força Total",
+    },
+    horarios: data.horarios ?? [],
+    convenios: data.convenios ?? [],
+    servicos: data.servicos ?? [],
+    funcionarios: data.funcionarios ?? [],
+    presencas: data.presencas ?? [],
     prospects: data.prospects.map((p) => ({
       ...p,
       dataCriacao: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao,
       dataUltimoContato: p.dataUltimoContato,
       motivoPerda: p.motivoPerda,
+      statusLog: p.statusLog ?? [
+        { status: p.status, data: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao },
+      ],
     })),
     alunos: data.alunos.map((a) => ({
       ...a,
+      status: a.status === "BLOQUEADO" ? "INATIVO" : a.status,
+      suspensoes: a.suspensoes ?? (a.suspensao ? [{
+        motivo: a.suspensao.motivo,
+        inicio: a.suspensao.inicio,
+        fim: a.suspensao.fim,
+        detalhes: a.suspensao.detalhes,
+        arquivoBase64: a.suspensao.arquivoBase64,
+        dataRegistro: a.dataAtualizacao ?? a.dataCadastro,
+      }] : []),
       dataCadastro: (a as unknown as { createdAt?: string }).createdAt ?? a.dataCadastro,
       dataAtualizacao: a.dataAtualizacao,
     })),

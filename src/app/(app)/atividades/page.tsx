@@ -206,7 +206,7 @@ export default function AtividadesPage() {
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [categoria, setCategoria] =
     useState<CategoriaAtividade | "TODAS">("TODAS");
-  const [apenasAtivas, setApenasAtivas] = useState(false);
+  const [apenasAtivas, setApenasAtivas] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Atividade | undefined>(undefined);
 

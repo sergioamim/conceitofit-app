@@ -19,7 +19,16 @@ export type StatusProspect =
   | "CONVERTIDO"
   | "PERDIDO";
 
-export type StatusAluno = "ATIVO" | "INATIVO" | "BLOQUEADO" | "CANCELADO";
+export interface ProspectStatusLog {
+  status: StatusProspect;
+  data: LocalDateTime;
+}
+
+export type StatusAluno =
+  | "ATIVO"
+  | "INATIVO"
+  | "SUSPENSO"
+  | "CANCELADO";
 
 export type Sexo = "M" | "F" | "OUTRO";
 
@@ -71,6 +80,7 @@ export interface ContatoEmergencia {
 export interface Prospect {
   id: UUID;
   tenantId: UUID;
+  responsavelId?: UUID;
   nome: string;
   telefone: string;
   email?: string;
@@ -81,6 +91,7 @@ export interface Prospect {
   dataCriacao: LocalDateTime;
   dataUltimoContato?: LocalDateTime;
   motivoPerda?: string;
+  statusLog?: ProspectStatusLog[];
 }
 
 export interface Aluno {
@@ -100,6 +111,21 @@ export interface Aluno {
   observacoesMedicas?: string;
   foto?: string;
   status: StatusAluno;
+  suspensao?: {
+    motivo: string;
+    inicio?: LocalDate;
+    fim?: LocalDate;
+    detalhes?: string;
+    arquivoBase64?: string;
+  };
+  suspensoes?: {
+    motivo: string;
+    inicio?: LocalDate;
+    fim?: LocalDate;
+    detalhes?: string;
+    arquivoBase64?: string;
+    dataRegistro: LocalDateTime;
+  }[];
   dataCadastro: LocalDateTime;
   dataAtualizacao?: LocalDateTime;
 }
@@ -150,6 +176,7 @@ export interface Matricula {
   observacoes?: string;
   dataCriacao: LocalDateTime;
   dataAtualizacao?: LocalDateTime;
+  convenioId?: UUID;
 }
 
 export interface Pagamento {
@@ -183,6 +210,56 @@ export interface FormaPagamento {
   ativo: boolean;
 }
 
+export interface Funcionario {
+  id: UUID;
+  nome: string;
+  cargo?: string;
+  ativo: boolean;
+}
+
+export interface Servico {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  descricao?: string;
+  sessoes?: number;
+  ativo: boolean;
+}
+
+export interface Presenca {
+  id: UUID;
+  alunoId: UUID;
+  data: LocalDate;
+  horario: string;
+  origem: "CHECKIN" | "AULA" | "ACESSO";
+  atividade?: string;
+}
+
+export interface Tenant {
+  id: UUID;
+  nome: string;
+  subdomain?: string;
+  email?: string;
+  telefone?: string;
+  endereco?: Endereco;
+}
+
+export interface HorarioFuncionamento {
+  dia: "SEG" | "TER" | "QUA" | "QUI" | "SEX" | "SAB" | "DOM";
+  abre: string;
+  fecha: string;
+  fechado?: boolean;
+}
+
+export interface Convenio {
+  id: UUID;
+  nome: string;
+  ativo: boolean;
+  descontoPercentual: number;
+  planoIds?: UUID[];
+  observacoes?: string;
+}
+
 // ─── Input/Request types ────────────────────────────────────────────────────
 
 export interface CreateProspectInput {
@@ -192,6 +269,7 @@ export interface CreateProspectInput {
   cpf?: string;
   origem: OrigemProspect;
   observacoes?: string;
+  responsavelId?: UUID;
 }
 
 export interface ConverterProspectInput {

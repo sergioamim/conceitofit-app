@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, UserPlus, TrendingUp, AlertTriangle } from "lucide-react";
+import {
+  Users,
+  UserPlus,
+  TrendingUp,
+  AlertTriangle,
+} from "lucide-react";
 import { getDashboard } from "@/lib/mock/services";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { DashboardData } from "@/lib/types";
+import { MonthYearPicker } from "@/components/shared/month-year-picker";
 
 function StatCard({
   label,
@@ -49,6 +55,8 @@ function formatDate(d: string) {
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [mes, setMes] = useState(new Date().getMonth());
+  const [ano, setAno] = useState(new Date().getFullYear());
 
   useEffect(() => {
     getDashboard().then(setData);
@@ -58,17 +66,27 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Visão geral da academia
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Visão geral da academia
+          </p>
+        </div>
+        <MonthYearPicker
+          month={mes}
+          year={ano}
+          onChange={(next) => {
+            setMes(next.month);
+            setAno(next.year);
+          }}
+        />
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         <StatCard
-          label="Alunos ativos"
+          label="Clientes ativos"
           value={data.totalAlunosAtivos}
           sub="matrículas vigentes"
           icon={Users}

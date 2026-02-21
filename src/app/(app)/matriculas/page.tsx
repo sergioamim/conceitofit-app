@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { listMatriculas, cancelarMatricula } from "@/lib/mock/services";
+import { useSearchParams } from "next/navigation";
+import {
+  listMatriculas,
+  cancelarMatricula,
+  renovarMatricula,
+  listConvenios,
+} from "@/lib/mock/services";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
-import type { Matricula, Aluno, Plano, StatusMatricula } from "@/lib/types";
+import { MonthYearPicker } from "@/components/shared/month-year-picker";
+import { NovaMatriculaModal } from "@/components/shared/nova-matricula-modal";
+import type { Matricula, Aluno, Plano, StatusMatricula, Convenio } from "@/lib/types";
 
 type MatriculaWithRefs = Matricula & { aluno?: Aluno; plano?: Plano };
 
@@ -38,23 +46,47 @@ function daysUntil(d: string) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
+
 export default function MatriculasPage() {
+  const searchParams = useSearchParams();
   const [matriculas, setMatriculas] = useState<MatriculaWithRefs[]>([]);
   const [filtro, setFiltro] = useState<StatusMatricula | "TODOS">("TODOS");
+  const [mes, setMes] = useState(new Date().getMonth());
+  const [ano, setAno] = useState(new Date().getFullYear());
+  const [novaOpen, setNovaOpen] = useState(false);
+  const [filtroConvenio, setFiltroConvenio] = useState<"TODOS" | "COM" | "SEM">("TODOS");
+  const [convenios, setConvenios] = useState<Convenio[]>([]);
+  const [autoOpenDone, setAutoOpenDone] = useState(false);
+  const prefillClienteId = searchParams.get("clienteId") ?? "";
 
   async function load() {
-    const data = await listMatriculas();
+    const [data, cvs] = await Promise.all([listMatriculas(), listConvenios()]);
     setMatriculas(data);
+    setConvenios(cvs);
   }
 
   useEffect(() => {
     load();
   }, []);
 
-  const filtered =
+  useEffect(() => {
+    if (prefillClienteId && !autoOpenDone) {
+      setNovaOpen(true);
+      setAutoOpenDone(true);
+    }
+  }, [prefillClienteId, autoOpenDone]);
+
+  const filteredBase =
     filtro === "TODOS"
       ? matriculas
       : matriculas.filter((m) => m.status === filtro);
+
+  const filtered = filteredBase.filter((m) => {
+    if (filtroConvenio === "COM" && !m.convenioId) return false;
+    if (filtroConvenio === "SEM" && m.convenioId) return false;
+    const d = new Date(m.dataInicio + "T00:00:00");
+    return d.getMonth() === mes && d.getFullYear() === ano;
+  });
 
   async function handleCancel(id: string) {
     if (!confirm("Cancelar esta matrícula?")) return;
@@ -62,8 +94,20 @@ export default function MatriculasPage() {
     load();
   }
 
+  async function handleRenovar(id: string) {
+    await renovarMatricula(id);
+    load();
+  }
+
   return (
     <div className="space-y-6">
+      <NovaMatriculaModal
+        open={novaOpen}
+        onClose={() => setNovaOpen(false)}
+        onDone={load}
+        prefillClienteId={prefillClienteId}
+      />
+
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight">
           Matrículas
@@ -73,21 +117,48 @@ export default function MatriculasPage() {
         </p>
       </div>
 
+      <div className="flex items-center justify-between">
+        <div />
+        <Button onClick={() => setNovaOpen(true)}>Nova matrícula</Button>
+      </div>
+
       {/* Filter tabs */}
-      <div className="flex gap-1.5">
-        {STATUS_FILTERS.map((s) => (
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex gap-1.5">
+          {STATUS_FILTERS.map((s) => (
+            <button
+              key={s.value}
+              onClick={() => setFiltro(s.value)}
+              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                filtro === s.value
+                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
           <button
-            key={s.value}
-            onClick={() => setFiltro(s.value)}
+            onClick={() =>
+              setFiltroConvenio((v) => (v === "COM" ? "TODOS" : "COM"))
+            }
             className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-              filtro === s.value
+              filtroConvenio === "COM"
                 ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
                 : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
             }`}
           >
-            {s.label}
+            Convênio
           </button>
-        ))}
+        </div>
+        <MonthYearPicker
+          month={mes}
+          year={ano}
+          onChange={(next) => {
+            setMes(next.month);
+            setAno(next.year);
+          }}
+        />
       </div>
 
       {/* Table */}
@@ -96,7 +167,7 @@ export default function MatriculasPage() {
           <thead>
             <tr className="border-b border-border bg-secondary">
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Aluno
+                Cliente
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Plano
@@ -109,6 +180,9 @@ export default function MatriculasPage() {
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Pagamento
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Convênio
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Status
@@ -168,19 +242,45 @@ export default function MatriculasPage() {
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {FORMA_PAGAMENTO_LABEL[m.formaPagamento] ?? m.formaPagamento}
                   </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {m.convenioId ? (() => {
+                      const conv = convenios.find((c) => c.id === m.convenioId);
+                      const title = conv
+                        ? `${conv.nome} · ${conv.descontoPercentual}%`
+                        : "Convênio aplicado";
+                      return (
+                        <span
+                          title={title}
+                          className="inline-flex items-center justify-center rounded-full bg-gym-teal/15 px-2 py-0.5 text-xs text-gym-teal"
+                        >
+                          ✓
+                        </span>
+                      );
+                    })() : "—"}
+                  </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={m.status} />
                   </td>
                   <td className="px-4 py-3">
                     {m.status === "ATIVA" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCancel(m.id)}
-                        className="h-7 border-gym-danger/30 text-xs text-gym-danger hover:border-gym-danger/60 hover:bg-gym-danger/10"
-                      >
-                        Cancelar
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRenovar(m.id)}
+                          className="h-7 text-xs"
+                        >
+                          Renovar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCancel(m.id)}
+                          className="h-7 border-gym-danger/30 text-xs text-gym-danger hover:border-gym-danger/60 hover:bg-gym-danger/10"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
                     )}
                   </td>
                 </tr>

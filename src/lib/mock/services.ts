@@ -7,6 +7,12 @@ import type {
   Matricula,
   Pagamento,
   FormaPagamento,
+  Funcionario,
+  Servico,
+  Presenca,
+  Tenant,
+  HorarioFuncionamento,
+  Convenio,
   CategoriaAtividade,
   StatusProspect,
   StatusAluno,
@@ -37,9 +43,55 @@ function today(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+function rangesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
+  return aStart <= bEnd && aEnd >= bStart;
+}
+
+function computeAlunoStatus(
+  aluno: Aluno,
+  store: ReturnType<typeof getStore>,
+  pagamentos: Pagamento[]
+): StatusAluno {
+  if (aluno.status === "CANCELADO") return "CANCELADO";
+  if (aluno.status === "SUSPENSO" || aluno.suspensao) return "SUSPENSO";
+  const todayStr = today();
+  const hasVencido = pagamentos.some(
+    (p) => p.alunoId === aluno.id && p.status === "VENCIDO"
+  );
+  if (hasVencido) return "INATIVO";
+  const hasAtivo = store.matriculas.some(
+    (m) =>
+      m.alunoId === aluno.id &&
+      m.status === "ATIVA" &&
+      m.dataInicio <= todayStr &&
+      m.dataFim >= todayStr
+  );
+  return hasAtivo ? "ATIVO" : "INATIVO";
+}
+
+function syncAlunosStatus(): void {
+  setStore((s) => {
+    const pagamentos = s.pagamentos.map((p) => {
+      if (p.status === "PENDENTE" && p.dataVencimento < today()) {
+        return { ...p, status: "VENCIDO" as const };
+      }
+      return p;
+    });
+    return {
+      ...s,
+      pagamentos,
+      alunos: s.alunos.map((a) => {
+        const status = computeAlunoStatus(a, s, pagamentos);
+        return status === a.status ? a : { ...a, status };
+      }),
+    };
+  });
+}
+
 // ─── DASHBOARD ──────────────────────────────────────────────────────────────
 
 export async function getDashboard(): Promise<DashboardData> {
+  syncAlunosStatus();
   const store = getStore();
   const todayStr = today();
   const in7Days = addDays(todayStr, 7);
@@ -92,6 +144,18 @@ export async function listProspects(params?: {
   return all;
 }
 
+export async function updateProspect(
+  id: string,
+  data: Partial<Omit<Prospect, "id" | "tenantId">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    prospects: s.prospects.map((p) =>
+      p.id === id ? { ...p, ...data } : p
+    ),
+  }));
+}
+
 export async function getProspect(id: string): Promise<Prospect | null> {
   return getStore().prospects.find((p) => p.id === id) ?? null;
 }
@@ -99,12 +163,14 @@ export async function getProspect(id: string): Promise<Prospect | null> {
 export async function createProspect(
   data: CreateProspectInput
 ): Promise<Prospect> {
+  const createdAt = now();
   const prospect: Prospect = {
     ...data,
     id: genId(),
     tenantId: TENANT_ID_DEFAULT,
     status: "NOVO",
-    dataCriacao: now(),
+    dataCriacao: createdAt,
+    statusLog: [{ status: "NOVO", data: createdAt }],
   };
   setStore((s) => ({ ...s, prospects: [prospect, ...s.prospects] }));
   return prospect;
@@ -114,11 +180,17 @@ export async function updateProspectStatus(
   id: string,
   status: StatusProspect
 ): Promise<void> {
+  const at = now();
   setStore((s) => ({
     ...s,
     prospects: s.prospects.map((p) =>
       p.id === id
-        ? { ...p, status, dataUltimoContato: now() }
+        ? {
+            ...p,
+            status,
+            dataUltimoContato: at,
+            statusLog: [...(p.statusLog ?? []), { status, data: at }],
+          }
         : p
     ),
   }));
@@ -128,6 +200,7 @@ export async function marcarProspectPerdido(
   id: string,
   motivo?: string
 ): Promise<void> {
+  const at = now();
   setStore((s) => ({
     ...s,
     prospects: s.prospects.map((p) =>
@@ -136,7 +209,11 @@ export async function marcarProspectPerdido(
             ...p,
             status: "PERDIDO" as StatusProspect,
             motivoPerda: motivo,
-            dataUltimoContato: now(),
+            dataUltimoContato: at,
+            statusLog: [
+              ...(p.statusLog ?? []),
+              { status: "PERDIDO" as StatusProspect, data: at },
+            ],
           }
         : p
     ),
@@ -188,7 +265,7 @@ export async function converterProspect(
     endereco: data.endereco,
     contatoEmergencia: data.contatoEmergencia,
     observacoesMedicas: data.observacoesMedicas,
-    status: "ATIVO",
+    status: "INATIVO",
     dataCadastro: now(),
   };
 
@@ -239,6 +316,10 @@ export async function converterProspect(
             ...p,
             status: "CONVERTIDO" as StatusProspect,
             dataUltimoContato: now(),
+            statusLog: [
+              ...(p.statusLog ?? []),
+              { status: "CONVERTIDO" as StatusProspect, data: now() },
+            ],
           }
         : p
     ),
@@ -285,6 +366,42 @@ export interface CriarAlunoComMatriculaResponse {
   aluno: Aluno;
   matricula: Matricula;
   pagamento: Pagamento;
+}
+
+export async function criarAluno(
+  data: Omit<
+    CriarAlunoComMatriculaInput,
+    | "planoId"
+    | "dataInicio"
+    | "formaPagamento"
+    | "desconto"
+    | "motivoDesconto"
+  >
+): Promise<Aluno> {
+  const alunoId = genId();
+  const aluno: Aluno = {
+    id: alunoId,
+    tenantId: TENANT_ID_DEFAULT,
+    nome: data.nome,
+    email: data.email,
+    telefone: data.telefone,
+    telefoneSec: data.telefoneSec,
+    cpf: data.cpf,
+    rg: data.rg,
+    dataNascimento: data.dataNascimento,
+    sexo: data.sexo,
+    endereco: data.endereco,
+    contatoEmergencia: data.contatoEmergencia,
+    observacoesMedicas: data.observacoesMedicas,
+    foto: data.foto,
+    status: "INATIVO",
+    dataCadastro: now(),
+  };
+  setStore((s) => ({
+    ...s,
+    alunos: [...s.alunos, aluno],
+  }));
+  return aluno;
 }
 
 export async function criarAlunoComMatricula(
@@ -359,6 +476,7 @@ export async function criarAlunoComMatricula(
     matriculas: [...s.matriculas, matricula],
     pagamentos: [...s.pagamentos, pagamento],
   }));
+  syncAlunosStatus();
 
   return { aluno, matricula, pagamento };
 }
@@ -370,11 +488,125 @@ export async function deleteProspect(id: string): Promise<void> {
   }));
 }
 
+// ─── FUNCIONÁRIOS ───────────────────────────────────────────────────────────
+
+export async function listFuncionarios(params?: { apenasAtivos?: boolean }): Promise<Funcionario[]> {
+  const only = params?.apenasAtivos ?? true;
+  return only
+    ? getStore().funcionarios.filter((f) => f.ativo)
+    : getStore().funcionarios;
+}
+
+export async function createFuncionario(
+  data: Omit<Funcionario, "id" | "ativo">
+): Promise<Funcionario> {
+  const f: Funcionario = { ...data, id: genId(), ativo: true };
+  setStore((s) => ({ ...s, funcionarios: [f, ...s.funcionarios] }));
+  return f;
+}
+
+export async function updateFuncionario(
+  id: string,
+  data: Partial<Omit<Funcionario, "id">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    funcionarios: s.funcionarios.map((f) =>
+      f.id === id ? { ...f, ...data } : f
+    ),
+  }));
+}
+
+export async function toggleFuncionario(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    funcionarios: s.funcionarios.map((f) =>
+      f.id === id ? { ...f, ativo: !f.ativo } : f
+    ),
+  }));
+}
+
+export async function deleteFuncionario(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    funcionarios: s.funcionarios.filter((f) => f.id !== id),
+  }));
+}
+
+// ─── TENANT ────────────────────────────────────────────────────────────────
+
+export async function getTenant(): Promise<Tenant> {
+  return getStore().tenant;
+}
+
+export async function updateTenant(data: Partial<Tenant>): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    tenant: { ...s.tenant, ...data },
+  }));
+}
+
+export async function listHorarios(): Promise<HorarioFuncionamento[]> {
+  return getStore().horarios;
+}
+
+export async function updateHorarios(
+  data: HorarioFuncionamento[]
+): Promise<void> {
+  setStore((s) => ({ ...s, horarios: data }));
+}
+
+export async function listConvenios(params?: { apenasAtivos?: boolean }): Promise<Convenio[]> {
+  const only = params?.apenasAtivos ?? false;
+  return only ? getStore().convenios.filter((c) => c.ativo) : getStore().convenios;
+}
+
+export async function createConvenio(
+  data: Omit<Convenio, "id">
+): Promise<Convenio> {
+  const convenio: Convenio = { ...data, id: genId() };
+  setStore((s) => ({ ...s, convenios: [convenio, ...s.convenios] }));
+  return convenio;
+}
+
+export async function updateConvenio(
+  id: string,
+  data: Partial<Omit<Convenio, "id">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    convenios: s.convenios.map((c) => (c.id === id ? { ...c, ...data } : c)),
+  }));
+}
+
+export async function toggleConvenio(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    convenios: s.convenios.map((c) =>
+      c.id === id ? { ...c, ativo: !c.ativo } : c
+    ),
+  }));
+}
+
+export async function deleteConvenio(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    convenios: s.convenios.filter((c) => c.id !== id),
+  }));
+}
+
+// ─── PRESENÇAS ─────────────────────────────────────────────────────────────
+
+export async function listPresencasByAluno(alunoId: string): Promise<Presenca[]> {
+  return getStore().presencas.filter((p) => p.alunoId === alunoId);
+}
+
 // ─── ALUNOS ─────────────────────────────────────────────────────────────────
 
 export async function listAlunos(params?: {
   status?: StatusAluno;
 }): Promise<Aluno[]> {
+  syncAlunosStatus();
   const { alunos } = getStore();
   const all = [...alunos].reverse();
   if (params?.status) return all.filter((a) => a.status === params.status);
@@ -382,6 +614,7 @@ export async function listAlunos(params?: {
 }
 
 export async function getAluno(id: string): Promise<Aluno | null> {
+  syncAlunosStatus();
   return getStore().alunos.find((a) => a.id === id) ?? null;
 }
 
@@ -392,6 +625,79 @@ export async function updateAlunoStatus(
   setStore((s) => ({
     ...s,
     alunos: s.alunos.map((a) => (a.id === id ? { ...a, status } : a)),
+  }));
+}
+
+export async function updateAluno(
+  id: string,
+  data: Partial<Omit<Aluno, "id" | "tenantId" | "dataCadastro">>
+): Promise<Aluno | null> {
+  let updated: Aluno | null = null;
+  setStore((s) => ({
+    ...s,
+    alunos: s.alunos.map((a) => {
+      if (a.id !== id) return a;
+      updated = {
+        ...a,
+        ...data,
+        dataAtualizacao: now(),
+      };
+      return updated;
+    }),
+  }));
+  syncAlunosStatus();
+  return updated;
+}
+
+// ─── SERVIÇOS ─────────────────────────────────────────────────────────────
+
+export async function listServicos(params?: {
+  apenasAtivos?: boolean;
+}): Promise<Servico[]> {
+  const { servicos } = getStore();
+  const all = [...servicos].reverse();
+  if (params?.apenasAtivos) return all.filter((s) => s.ativo);
+  return all;
+}
+
+export async function createServico(
+  data: Omit<Servico, "id" | "tenantId" | "ativo">
+): Promise<Servico> {
+  const servico: Servico = {
+    ...data,
+    id: genId(),
+    tenantId: TENANT_ID_DEFAULT,
+    ativo: true,
+  };
+  setStore((s) => ({ ...s, servicos: [servico, ...s.servicos] }));
+  return servico;
+}
+
+export async function updateServico(
+  id: string,
+  data: Partial<Omit<Servico, "id" | "tenantId">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    servicos: s.servicos.map((sv) =>
+      sv.id === id ? { ...sv, ...data } : sv
+    ),
+  }));
+}
+
+export async function toggleServico(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    servicos: s.servicos.map((sv) =>
+      sv.id === id ? { ...sv, ativo: !sv.ativo } : sv
+    ),
+  }));
+}
+
+export async function deleteServico(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    servicos: s.servicos.filter((sv) => sv.id !== id),
   }));
 }
 
@@ -540,17 +846,163 @@ export async function cancelarMatricula(id: string): Promise<void> {
   }));
 }
 
+export async function criarMatricula(data: {
+  alunoId: string;
+  planoId: string;
+  dataInicio: string;
+  valorPago: number;
+  valorMatricula?: number;
+  desconto?: number;
+  motivoDesconto?: string;
+  formaPagamento: TipoFormaPagamento;
+  renovacaoAutomatica?: boolean;
+  observacoes?: string;
+  convenioId?: string;
+  dataPagamento?: string;
+}): Promise<Matricula> {
+  const store = getStore();
+  const plano = store.planos.find((p) => p.id === data.planoId);
+  if (!plano) throw new Error("Plano não encontrado");
+  if (data.convenioId) {
+    const convenio = store.convenios.find((c) => c.id === data.convenioId);
+    if (!convenio || !convenio.ativo) {
+      throw new Error("Convênio inativo");
+    }
+    if (convenio.planoIds && convenio.planoIds.length > 0) {
+      if (!convenio.planoIds.includes(data.planoId)) {
+        throw new Error("Convênio não aplicável para este plano");
+      }
+    }
+  }
+
+  const matId = genId();
+  const pagamentoId = genId();
+  let desconto = data.desconto ?? 0;
+  if (data.convenioId) {
+    const convenio = store.convenios.find((c) => c.id === data.convenioId);
+    if (convenio && convenio.ativo) {
+      const descontoConvenio = (plano.valor * convenio.descontoPercentual) / 100;
+      desconto += descontoConvenio;
+    }
+  }
+  const dataFim = addDays(data.dataInicio, plano.duracaoDias);
+  const planoAtividades = plano.atividades ?? [];
+  const conflitos = store.matriculas.filter((m) => {
+    if (m.alunoId !== data.alunoId) return false;
+    if (m.status !== "ATIVA") return false;
+    return rangesOverlap(data.dataInicio, dataFim, m.dataInicio, m.dataFim);
+  });
+  if (conflitos.length > 0) {
+    const conflitoMesmoPlano = conflitos.some((m) => m.planoId === data.planoId);
+    if (conflitoMesmoPlano) {
+      throw new Error("Já existe um plano igual vigente neste período.");
+    }
+    const conflitoAtividade = conflitos.some((m) => {
+      const planoExistente = store.planos.find((p) => p.id === m.planoId);
+      const atividadesExistentes = planoExistente?.atividades ?? [];
+      return planoAtividades.some((a) => atividadesExistentes.includes(a));
+    });
+    if (conflitoAtividade) {
+      throw new Error("Já existe um plano com a mesma atividade no período vigente.");
+    }
+  }
+  const valorFinal = Math.max(0, plano.valor - desconto);
+
+  const matricula: Matricula = {
+    id: matId,
+    tenantId: TENANT_ID_DEFAULT,
+    alunoId: data.alunoId,
+    planoId: data.planoId,
+    dataInicio: data.dataInicio,
+    dataFim,
+    valorPago: data.valorPago,
+    valorMatricula: data.valorMatricula ?? plano.valorMatricula,
+    desconto,
+    motivoDesconto: data.motivoDesconto,
+    formaPagamento: data.formaPagamento,
+    status: "ATIVA",
+    renovacaoAutomatica: data.renovacaoAutomatica ?? false,
+    observacoes: data.observacoes,
+    dataCriacao: now(),
+    convenioId: data.convenioId,
+  };
+
+  const pagamento: Pagamento = {
+    id: pagamentoId,
+    tenantId: TENANT_ID_DEFAULT,
+    alunoId: data.alunoId,
+    matriculaId: matId,
+    tipo: "MENSALIDADE",
+    descricao: `Mensalidade – ${plano.nome}`,
+    valor: plano.valor,
+    desconto,
+    valorFinal,
+    dataVencimento: data.dataInicio,
+    status: data.dataPagamento ? "PAGO" : "PENDENTE",
+    dataPagamento: data.dataPagamento,
+    dataCriacao: now(),
+  };
+
+  setStore((s) => ({
+    ...s,
+    matriculas: [matricula, ...s.matriculas],
+    pagamentos: [pagamento, ...s.pagamentos],
+    alunos: s.alunos,
+  }));
+  syncAlunosStatus();
+
+  return matricula;
+}
+
+export async function renovarMatricula(id: string, planoId?: string): Promise<void> {
+  const store = getStore();
+  const atual = store.matriculas.find((m) => m.id === id);
+  if (!atual) throw new Error("Matrícula não encontrada");
+  if (atual.convenioId) {
+    const convenio = store.convenios.find((c) => c.id === atual.convenioId);
+    if (!convenio || !convenio.ativo) {
+      throw new Error("Convênio inativo. Renovação bloqueada.");
+    }
+  }
+  const novoPlanoId = planoId ?? atual.planoId;
+  const plano = store.planos.find((p) => p.id === novoPlanoId);
+  if (!plano) throw new Error("Plano não encontrado");
+  const start = addDays(atual.dataFim, 1);
+  await criarMatricula({
+    alunoId: atual.alunoId,
+    planoId: novoPlanoId,
+    dataInicio: start,
+    valorPago: plano.valor,
+    valorMatricula: plano.valorMatricula,
+    formaPagamento: atual.formaPagamento,
+    desconto: 0,
+    convenioId: atual.convenioId,
+  });
+}
+
 // ─── PAGAMENTOS ─────────────────────────────────────────────────────────────
 
 export async function listPagamentos(params?: {
   status?: string;
 }): Promise<(Pagamento & { aluno?: Aluno })[]> {
-  const store = getStore();
-  let pags = [...store.pagamentos].reverse();
+  const todayStr = today();
+  // Atualiza vencidos e bloqueia clientes quando necessário
+  setStore((s) => ({
+    ...s,
+    pagamentos: s.pagamentos.map((p) => {
+      if (p.status === "PENDENTE" && p.dataVencimento < todayStr) {
+        return { ...p, status: "VENCIDO" as const };
+      }
+      return p;
+    }),
+  }));
+  syncAlunosStatus();
+  const updated = getStore();
+  let pags = [...updated.pagamentos].reverse();
   if (params?.status) pags = pags.filter((p) => p.status === params.status);
   return pags.map((p) => ({
     ...p,
-    aluno: store.alunos.find((a) => a.id === p.alunoId),
+    aluno: updated.alunos.find((a) => a.id === p.alunoId),
   }));
 }
 
@@ -558,9 +1010,8 @@ export async function receberPagamento(
   id: string,
   data: ReceberPagamentoInput
 ): Promise<void> {
-  setStore((s) => ({
-    ...s,
-    pagamentos: s.pagamentos.map((p) =>
+  setStore((s) => {
+    const pagamentos = s.pagamentos.map((p) =>
       p.id === id
         ? {
             ...p,
@@ -570,14 +1021,62 @@ export async function receberPagamento(
             observacoes: data.observacoes,
           }
         : p
-    ),
-  }));
+    );
+    return { ...s, pagamentos };
+  });
+  syncAlunosStatus();
 }
 
 // ─── FORMAS DE PAGAMENTO ────────────────────────────────────────────────────
 
-export async function listFormasPagamento(): Promise<FormaPagamento[]> {
-  return getStore().formasPagamento.filter((f) => f.ativo);
+export async function listFormasPagamento(params?: {
+  apenasAtivas?: boolean;
+}): Promise<FormaPagamento[]> {
+  const only = params?.apenasAtivas ?? true;
+  return only
+    ? getStore().formasPagamento.filter((f) => f.ativo)
+    : getStore().formasPagamento;
+}
+
+export async function createFormaPagamento(
+  data: Omit<FormaPagamento, "id" | "tenantId" | "ativo">
+): Promise<FormaPagamento> {
+  const fp: FormaPagamento = {
+    ...data,
+    id: genId(),
+    tenantId: TENANT_ID_DEFAULT,
+    ativo: true,
+  };
+  setStore((s) => ({ ...s, formasPagamento: [fp, ...s.formasPagamento] }));
+  return fp;
+}
+
+export async function updateFormaPagamento(
+  id: string,
+  data: Partial<Omit<FormaPagamento, "id" | "tenantId">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    formasPagamento: s.formasPagamento.map((f) =>
+      f.id === id ? { ...f, ...data } : f
+    ),
+  }));
+}
+
+export async function toggleFormaPagamento(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    formasPagamento: s.formasPagamento.map((f) =>
+      f.id === id ? { ...f, ativo: !f.ativo } : f
+    ),
+  }));
+}
+
+export async function deleteFormaPagamento(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    formasPagamento: s.formasPagamento.filter((f) => f.id !== id),
+  }));
 }
 
 export async function getFormasPagamentoLabels(): Promise<

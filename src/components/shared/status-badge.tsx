@@ -26,7 +26,7 @@ const STATUS_MAP: Record<
   // Aluno
   ATIVO: { label: "Ativo", className: "bg-gym-teal/15 text-gym-teal" },
   INATIVO: { label: "Inativo", className: "bg-muted text-muted-foreground" },
-  BLOQUEADO: { label: "Bloqueado", className: "bg-gym-danger/15 text-gym-danger" },
+  SUSPENSO: { label: "Suspenso", className: "bg-gym-warning/15 text-gym-warning" },
   CANCELADO: { label: "Cancelado", className: "bg-muted text-muted-foreground" },
   // Matrícula
   ATIVA: { label: "Ativa", className: "bg-gym-teal/15 text-gym-teal" },
