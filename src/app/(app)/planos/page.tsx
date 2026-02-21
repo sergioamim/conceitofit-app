@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Plus, Pencil, Power, Star, Trash2 } from "lucide-react";
+import { Check, Plus, Pencil, Power, Star } from "lucide-react";
 import {
   listPlanos,
   listAtividades,
@@ -9,7 +9,6 @@ import {
   updatePlano,
   togglePlanoAtivo,
   togglePlanoDestaque,
-  deletePlano,
 } from "@/lib/mock/services";
 import type { Plano, Atividade, TipoPlano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -33,6 +32,7 @@ export default function PlanosPage() {
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Plano | undefined>(undefined);
+  const [filtroAtivo, setFiltroAtivo] = useState<"ATIVOS" | "TODOS">("ATIVOS");
 
   useEffect(() => {
     Promise.all([listPlanos(), listAtividades()]).then(([pls, atv]) => {
@@ -55,6 +55,12 @@ export default function PlanosPage() {
       duracaoDias: parseInt(data.duracaoDias, 10) || 0,
       valor: parseFloat(data.valor) || 0,
       valorMatricula: parseFloat(data.valorMatricula) || 0,
+      permiteRenovacaoAutomatica: data.tipo === "AVULSO" ? false : data.permiteRenovacaoAutomatica,
+      permiteCobrancaRecorrente: data.tipo === "AVULSO" ? false : data.permiteCobrancaRecorrente,
+      diaCobrancaPadrao:
+        data.tipo === "AVULSO" || !data.permiteCobrancaRecorrente
+          ? undefined
+          : Math.min(28, Math.max(1, parseInt(data.diaCobrancaPadrao, 10) || 1)),
       atividades: data.atividades,
       beneficios: data.beneficios,
       destaque: data.destaque,
@@ -80,11 +86,8 @@ export default function PlanosPage() {
     reload();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Remover este plano?")) return;
-    await deletePlano(id);
-    reload();
-  }
+  const planosFiltrados =
+    filtroAtivo === "ATIVOS" ? planos.filter((p) => p.ativo) : planos;
 
   return (
     <div className="space-y-6">
@@ -108,16 +111,27 @@ export default function PlanosPage() {
 
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {planos.length} planos cadastrados
+          {planosFiltrados.length} planos
+          {filtroAtivo === "ATIVOS" ? " ativos" : " cadastrados"}
         </div>
-        <Button onClick={() => setModalOpen(true)}>
-          <Plus className="size-4" />
-          Novo Plano
-        </Button>
+        <div className="flex items-center gap-2">
+          <select
+            value={filtroAtivo}
+            onChange={(e) => setFiltroAtivo(e.target.value as "ATIVOS" | "TODOS")}
+            className="h-9 rounded-md border border-border bg-secondary px-3 text-sm text-foreground"
+          >
+            <option value="ATIVOS">Mostrar ativos</option>
+            <option value="TODOS">Mostrar todos</option>
+          </select>
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="size-4" />
+            Novo Plano
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
-        {planos.map((p) => (
+        {planosFiltrados.map((p) => (
           <div
             key={p.id}
             className={cn(
@@ -181,6 +195,24 @@ export default function PlanosPage() {
               </p>
             )}
 
+            <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+              <p>
+                Renovação automática:{" "}
+                <span className={p.permiteRenovacaoAutomatica ? "text-gym-teal" : "text-gym-danger"}>
+                  {p.permiteRenovacaoAutomatica ? "Permitida" : "Não permitida"}
+                </span>
+              </p>
+              <p>
+                Cobrança recorrente:{" "}
+                <span className={p.permiteCobrancaRecorrente ? "text-gym-teal" : "text-gym-danger"}>
+                  {p.permiteCobrancaRecorrente ? "Permitida" : "Não permitida"}
+                </span>
+                {p.permiteCobrancaRecorrente && p.diaCobrancaPadrao
+                  ? ` · dia ${p.diaCobrancaPadrao}`
+                  : ""}
+              </p>
+            </div>
+
             {p.beneficios && p.beneficios.length > 0 && (
               <ul className="mt-4 space-y-2">
                 {p.beneficios.map((b) => (
@@ -197,12 +229,6 @@ export default function PlanosPage() {
 
             <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
               <span>{p.ativo ? "Ativo" : "Inativo"}</span>
-              <button
-                onClick={() => handleDelete(p.id)}
-                className="text-gym-danger/80 hover:text-gym-danger"
-              >
-                <Trash2 className="size-3" /> Remover
-              </button>
             </div>
           </div>
         ))}
@@ -228,12 +254,18 @@ export default function PlanosPage() {
                 Matrícula
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Renovação
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Cobrança recorrente
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Destaque
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {planos.map((p) => (
+            {planosFiltrados.map((p) => (
               <tr key={p.id} className="transition-colors hover:bg-secondary/40">
                 <td className="px-4 py-3 font-medium text-sm">{p.nome}</td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
@@ -247,6 +279,14 @@ export default function PlanosPage() {
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {p.valorMatricula > 0 ? formatBRL(p.valorMatricula) : "—"}
+                </td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">
+                  {p.permiteRenovacaoAutomatica ? "Sim" : "Não"}
+                </td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">
+                  {p.permiteCobrancaRecorrente
+                    ? `Sim${p.diaCobrancaPadrao ? ` · dia ${p.diaCobrancaPadrao}` : ""}`
+                    : "Não"}
                 </td>
                 <td className="px-4 py-3">
                   {p.destaque ? (

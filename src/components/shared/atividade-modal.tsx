@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { HoverPopover } from "@/components/shared/hover-popover";
 
 const CATEGORIA_LABEL: Record<CategoriaAtividade, string> = {
   MUSCULACAO: "Musculação",
@@ -22,6 +23,8 @@ export interface AtividadeForm {
   categoria: CategoriaAtividade;
   icone: string;
   cor: string;
+  permiteCheckin: boolean;
+  checkinObrigatorio: boolean;
 }
 
 export function AtividadeModal({
@@ -41,6 +44,8 @@ export function AtividadeModal({
     categoria: "MUSCULACAO",
     icone: "",
     cor: "#3de8a0",
+    permiteCheckin: true,
+    checkinObrigatorio: false,
   });
 
   useEffect(() => {
@@ -52,6 +57,8 @@ export function AtividadeModal({
         categoria: initial.categoria,
         icone: initial.icone ?? "",
         cor: initial.cor ?? "#3de8a0",
+        permiteCheckin: initial.permiteCheckin,
+        checkinObrigatorio: initial.checkinObrigatorio,
       });
     } else {
       setForm({
@@ -60,6 +67,8 @@ export function AtividadeModal({
         categoria: "MUSCULACAO",
         icone: "",
         cor: "#3de8a0",
+        permiteCheckin: true,
+        checkinObrigatorio: false,
       });
     }
   }, [initial, open]);
@@ -103,6 +112,46 @@ export function AtividadeModal({
               onChange={(e) => set("descricao", e.target.value)}
               className="bg-secondary border-border"
             />
+          </div>
+          <div className="rounded-lg border border-border bg-secondary/20 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Configuração de Check-in
+            </p>
+            <div className="mt-2 grid gap-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.permiteCheckin}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      permiteCheckin: e.target.checked,
+                      checkinObrigatorio: e.target.checked ? f.checkinObrigatorio : false,
+                    }))
+                  }
+                />
+                <span className="text-muted-foreground">Permitir check-in para clientes</span>
+                <HoverPopover content="Quando ativo, os clientes podem registrar presença nessa atividade.">
+                  <span className="inline-flex size-4 items-center justify-center rounded-full border border-border text-[10px] font-bold text-muted-foreground">
+                    ?
+                  </span>
+                </HoverPopover>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.checkinObrigatorio}
+                  disabled={!form.permiteCheckin}
+                  onChange={(e) => set("checkinObrigatorio", e.target.checked)}
+                />
+                <span className="text-muted-foreground">Check-in obrigatório para participar</span>
+                <HoverPopover content="Quando obrigatório, a atividade só conta presença com check-in efetuado.">
+                  <span className="inline-flex size-4 items-center justify-center rounded-full border border-border text-[10px] font-bold text-muted-foreground">
+                    ?
+                  </span>
+                </HoverPopover>
+              </label>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">

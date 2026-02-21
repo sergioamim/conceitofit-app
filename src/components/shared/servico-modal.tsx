@@ -5,6 +5,7 @@ import type { Servico } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { HoverPopover } from "@/components/shared/hover-popover";
 
 export function ServicoModal({
   open,
@@ -23,6 +24,8 @@ export function ServicoModal({
     sessoes: "",
     valor: "",
     agendavel: true,
+    permiteAcessoCatraca: false,
+    permiteVoucher: false,
     ativo: true,
   });
 
@@ -35,6 +38,8 @@ export function ServicoModal({
         sessoes: initial.sessoes ? String(initial.sessoes) : "",
         valor: initial.valor ? String(initial.valor) : "",
         agendavel: initial.agendavel,
+        permiteAcessoCatraca: initial.permiteAcessoCatraca,
+        permiteVoucher: initial.permiteVoucher,
         ativo: initial.ativo,
       });
     } else {
@@ -44,6 +49,8 @@ export function ServicoModal({
         sessoes: "",
         valor: "",
         agendavel: true,
+        permiteAcessoCatraca: false,
+        permiteVoucher: false,
         ativo: true,
       });
     }
@@ -58,6 +65,8 @@ export function ServicoModal({
         sessoes: form.sessoes ? Math.max(1, parseInt(form.sessoes, 10)) : undefined,
         valor: form.valor ? Math.max(0, parseFloat(form.valor)) : 0,
         agendavel: form.agendavel,
+        permiteAcessoCatraca: form.permiteAcessoCatraca,
+        permiteVoucher: form.permiteVoucher,
         ativo: form.ativo,
       },
       initial?.id
@@ -156,6 +165,46 @@ export function ServicoModal({
                   }
                 />
                 <span className="text-muted-foreground">Agendável</span>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Permite acesso catraca?
+                <HoverPopover
+                  content="Quando ativo, o acesso na catraca será consumido pela quantidade de sessões do serviço."
+                  side="top"
+                >
+                  <span className="inline-flex size-4 items-center justify-center rounded-full border border-border text-[10px] font-bold text-muted-foreground">
+                    ?
+                  </span>
+                </HoverPopover>
+              </p>
+              <div className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.permiteAcessoCatraca}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, permiteAcessoCatraca: e.target.checked }))
+                  }
+                />
+                <span className="text-muted-foreground">Controlar acesso por sessões</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Permite aplicar voucher?
+              </p>
+              <div className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.permiteVoucher}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, permiteVoucher: e.target.checked }))
+                  }
+                />
+                <span className="text-muted-foreground">Aplicável em campanhas e vouchers</span>
               </div>
             </div>
           </div>

@@ -144,4 +144,10 @@
     background: #2a2d35;
     border-radius: 3px;
   }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
 }

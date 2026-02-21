@@ -10,6 +10,7 @@ import {
   ClipboardList,
   CreditCard,
   Activity,
+  CalendarDays,
   DollarSign,
   BriefcaseBusiness,
   Kanban,
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/matriculas", label: "Matrículas", icon: ClipboardList },
   { href: "/planos", label: "Planos", icon: CreditCard },
   { href: "/atividades", label: "Atividades", icon: Activity },
+  { href: "/grade", label: "Grade", icon: CalendarDays },
   { href: "/pagamentos", label: "Pagamentos", icon: DollarSign },
 ];
 
@@ -41,6 +43,8 @@ const administrativoItems = [
   { href: "/administrativo/bandeiras", label: "Bandeiras de Cartão", icon: Settings },
   { href: "/administrativo/academia", label: "Academia", icon: Settings },
   { href: "/administrativo/funcionarios", label: "Funcionários", icon: Settings },
+  { href: "/administrativo/atividades", label: "Atividades", icon: Settings },
+  { href: "/administrativo/atividades-grade", label: "Atividades - Grade", icon: Settings },
   { href: "/administrativo/horarios", label: "Horários", icon: Settings },
   { href: "/administrativo/convenios", label: "Convênios", icon: Settings },
   { href: "/administrativo/servicos", label: "Serviços", icon: Settings },

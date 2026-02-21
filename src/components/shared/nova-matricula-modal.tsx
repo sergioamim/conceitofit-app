@@ -154,7 +154,20 @@ export function NovaMatriculaModal({
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Plano *
             </label>
-            <Select value={planoId} onValueChange={setPlanoId}>
+            <Select
+              value={planoId}
+              onValueChange={(nextPlanoId) => {
+                setPlanoId(nextPlanoId);
+                const nextPlano = planos.find((p) => p.id === nextPlanoId);
+                if (!nextPlano) return;
+                if (!nextPlano.permiteRenovacaoAutomatica) {
+                  setRenovacao(false);
+                }
+                if (!nextPlano.permiteCobrancaRecorrente && formaPagamento === "RECORRENTE") {
+                  setFormaPagamento("");
+                }
+              }}
+            >
               <SelectTrigger className="w-full bg-secondary border-border">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -192,7 +205,15 @@ export function NovaMatriculaModal({
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
                   {formas.map((fp) => (
-                    <SelectItem key={fp.id} value={fp.tipo}>
+                    <SelectItem
+                      key={fp.id}
+                      value={fp.tipo}
+                      disabled={
+                        fp.tipo === "RECORRENTE" &&
+                        !!selectedPlano &&
+                        !selectedPlano.permiteCobrancaRecorrente
+                      }
+                    >
                       {fp.nome}
                     </SelectItem>
                   ))}
@@ -247,10 +268,23 @@ export function NovaMatriculaModal({
             <input
               type="checkbox"
               checked={renovacao}
+              disabled={!!selectedPlano && !selectedPlano.permiteRenovacaoAutomatica}
               onChange={(e) => setRenovacao(e.target.checked)}
             />
             <span className="text-muted-foreground">Renovação automática</span>
           </div>
+          {selectedPlano && (
+            <div className="rounded-md border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
+              Configuração do plano: renovação automática{" "}
+              {selectedPlano.permiteRenovacaoAutomatica ? "permitida" : "não permitida"}
+              {" · "}
+              cobrança recorrente{" "}
+              {selectedPlano.permiteCobrancaRecorrente ? "permitida" : "não permitida"}
+              {selectedPlano.permiteCobrancaRecorrente && selectedPlano.diaCobrancaPadrao
+                ? ` (dia padrão ${selectedPlano.diaCobrancaPadrao})`
+                : ""}
+            </div>
+          )}
           <div className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

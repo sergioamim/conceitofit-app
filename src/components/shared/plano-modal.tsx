@@ -23,6 +23,9 @@ export interface PlanoForm {
   duracaoDias: string;
   valor: string;
   valorMatricula: string;
+  permiteRenovacaoAutomatica: boolean;
+  permiteCobrancaRecorrente: boolean;
+  diaCobrancaPadrao: string;
   atividades: string[];
   beneficios: string[];
   destaque: boolean;
@@ -49,6 +52,9 @@ export function PlanoModal({
     duracaoDias: "30",
     valor: "",
     valorMatricula: "0",
+    permiteRenovacaoAutomatica: true,
+    permiteCobrancaRecorrente: false,
+    diaCobrancaPadrao: "",
     atividades: [],
     beneficios: [],
     destaque: false,
@@ -66,6 +72,9 @@ export function PlanoModal({
         duracaoDias: String(initial.duracaoDias),
         valor: String(initial.valor),
         valorMatricula: String(initial.valorMatricula ?? 0),
+        permiteRenovacaoAutomatica: initial.permiteRenovacaoAutomatica,
+        permiteCobrancaRecorrente: initial.permiteCobrancaRecorrente,
+        diaCobrancaPadrao: initial.diaCobrancaPadrao ? String(initial.diaCobrancaPadrao) : "",
         atividades: initial.atividades ?? [],
         beneficios: initial.beneficios ?? [],
         destaque: initial.destaque,
@@ -79,6 +88,9 @@ export function PlanoModal({
         duracaoDias: "30",
         valor: "",
         valorMatricula: "0",
+        permiteRenovacaoAutomatica: true,
+        permiteCobrancaRecorrente: false,
+        diaCobrancaPadrao: "",
         atividades: [],
         beneficios: [],
         destaque: false,
@@ -161,7 +173,20 @@ export function PlanoModal({
                 </label>
                 <Select
                   value={form.tipo}
-                  onValueChange={(v) => set("tipo", v as TipoPlano)}
+                  onValueChange={(v) => {
+                    const tipo = v as TipoPlano;
+                    if (tipo === "AVULSO") {
+                      setForm((f) => ({
+                        ...f,
+                        tipo,
+                        permiteRenovacaoAutomatica: false,
+                        permiteCobrancaRecorrente: false,
+                        diaCobrancaPadrao: "",
+                      }));
+                      return;
+                    }
+                    set("tipo", tipo);
+                  }}
                 >
                   <SelectTrigger className="w-full bg-secondary border-border">
                     <SelectValue placeholder="Selecione" />
@@ -247,6 +272,56 @@ export function PlanoModal({
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Renovação automática
+                </label>
+                <div className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.permiteRenovacaoAutomatica}
+                    disabled={form.tipo === "AVULSO"}
+                    onChange={(e) => set("permiteRenovacaoAutomatica", e.target.checked)}
+                  />
+                  <span className="text-muted-foreground">Permite renovação no vencimento</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Cobrança recorrente
+                </label>
+                <div className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.permiteCobrancaRecorrente}
+                    disabled={form.tipo === "AVULSO"}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setForm((f) => ({
+                        ...f,
+                        permiteCobrancaRecorrente: checked,
+                        diaCobrancaPadrao: checked ? f.diaCobrancaPadrao : "",
+                      }));
+                    }}
+                  />
+                  <span className="text-muted-foreground">Permite forma de pagamento recorrente</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Dia padrão de cobrança
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={28}
+                  placeholder="1 a 28"
+                  value={form.diaCobrancaPadrao}
+                  disabled={!form.permiteCobrancaRecorrente || form.tipo === "AVULSO"}
+                  onChange={(e) => set("diaCobrancaPadrao", e.target.value)}
+                  className="bg-secondary border-border"
+                />
+              </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Destaque

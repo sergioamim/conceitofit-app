@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, Plus, ChevronDown } from "lucide-react";
 import {
@@ -95,8 +95,12 @@ export default function ProspectsPage() {
   }, []);
 
   const buscaDigits = busca.replace(/\D/g, "");
+  const prospectsByMonth = prospects.filter((p) => {
+    const d = new Date(p.dataCriacao);
+    return d.getFullYear() === ano && d.getMonth() === mes;
+  });
 
-  const filtered = prospects.filter((p) => {
+  const filtered = prospectsByMonth.filter((p) => {
     const matchStatus = filtroStatus === "TODOS" || p.status === filtroStatus;
     const matchOrigem = filtroOrigem === "TODAS" || p.origem === filtroOrigem;
     const matchBusca =
@@ -107,7 +111,7 @@ export default function ProspectsPage() {
     return matchStatus && matchOrigem && matchBusca;
   });
 
-  const statusTotals = useMemo(() => {
+  const statusTotals = (() => {
     const totals: Record<StatusProspect, number> = {
       NOVO: 0,
       EM_CONTATO: 0,
@@ -117,22 +121,12 @@ export default function ProspectsPage() {
       PERDIDO: 0,
     };
 
-    prospects.forEach((p) => {
-      const logs = p.statusLog ?? [{ status: p.status, data: p.dataCriacao }];
-      const occurred = new Set<StatusProspect>();
-      logs.forEach((log) => {
-        const d = new Date(log.data);
-        if (d.getFullYear() === ano && d.getMonth() === mes) {
-          occurred.add(log.status);
-        }
-      });
-      occurred.forEach((s) => {
-        totals[s] += 1;
-      });
+    prospectsByMonth.forEach((p) => {
+      totals[p.status] += 1;
     });
 
     return totals;
-  }, [prospects, mes, ano]);
+  })();
 
   async function handleSave(data: CreateProspectInput) {
     const isDup = await checkProspectDuplicate({
@@ -208,14 +202,6 @@ export default function ProspectsPage() {
             Gerencie leads e converta em clientes
           </p>
         </div>
-        <MonthYearPicker
-          month={mes}
-          year={ano}
-          onChange={(next) => {
-            setMes(next.month);
-            setAno(next.year);
-          }}
-        />
         <Button onClick={() => setModalOpen(true)}>
           <Plus className="size-4" />
           Novo Prospect
@@ -239,6 +225,24 @@ export default function ProspectsPage() {
         ))}
       </div>
 
+      <div className="relative w-60">
+        <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nome ou telefone..."
+          value={busca}
+          onChange={(e) => {
+            const raw = e.target.value;
+            const hasLetters = /[a-zA-Z@]/.test(raw);
+            if (hasLetters) {
+              setBusca(raw);
+              return;
+            }
+            setBusca(maskPhone(raw));
+          }}
+          className="w-full bg-secondary border-border pl-8 text-sm"
+        />
+      </div>
+
       {/* Filters */}
       <div className="flex items-center gap-3">
         <div className="flex gap-1.5">
@@ -255,7 +259,7 @@ export default function ProspectsPage() {
               {s.label}
               {s.value === "TODOS" && (
                 <span className="ml-1.5 text-muted-foreground">
-                  ({prospects.filter((p) => p.status !== "CONVERTIDO" && p.status !== "PERDIDO").length})
+                  ({prospectsByMonth.filter((p) => p.status !== "CONVERTIDO" && p.status !== "PERDIDO").length})
                 </span>
               )}
             </button>
@@ -279,21 +283,14 @@ export default function ProspectsPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="relative ml-auto">
-          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou telefone..."
-            value={busca}
-            onChange={(e) => {
-              const raw = e.target.value;
-              const hasLetters = /[a-zA-Z@]/.test(raw);
-              if (hasLetters) {
-                setBusca(raw);
-                return;
-              }
-              setBusca(maskPhone(raw));
+        <div className="ml-auto">
+          <MonthYearPicker
+            month={mes}
+            year={ano}
+            onChange={(next) => {
+              setMes(next.month);
+              setAno(next.year);
             }}
-            className="w-60 bg-secondary border-border pl-8 text-sm"
           />
         </div>
       </div>

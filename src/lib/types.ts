@@ -160,6 +160,48 @@ export interface Atividade {
   categoria: CategoriaAtividade;
   icone?: string;
   cor?: string;
+  permiteCheckin: boolean;
+  checkinObrigatorio: boolean;
+  ativo: boolean;
+}
+
+export type DiaSemana =
+  | "SEG"
+  | "TER"
+  | "QUA"
+  | "QUI"
+  | "SEX"
+  | "SAB"
+  | "DOM";
+
+export interface AtividadeGrade {
+  id: UUID;
+  tenantId: UUID;
+  atividadeId: UUID;
+  diasSemana: DiaSemana[];
+  definicaoHorario: "PREVIAMENTE" | "SOB_DEMANDA";
+  horaInicio: string;
+  horaFim: string;
+  capacidade: number;
+  duracaoMinutos: number;
+  codigo?: string;
+  grupoAtividades?: string;
+  publico?: string;
+  dificuldade?: 1 | 2 | 3 | 4 | 5;
+  descricaoAgenda?: string;
+  acessoClientes: "TODOS_CLIENTES" | "APENAS_COM_CONTRATO_OU_SERVICO";
+  permiteReserva: boolean;
+  limitarVagasAgregadores: boolean;
+  exibirWellhub: boolean;
+  permitirSaidaAntesInicio: boolean;
+  permitirEscolherNumeroVaga: boolean;
+  exibirNoAppCliente: boolean;
+  exibirNoAutoatendimento: boolean;
+  exibirNoWodTv: boolean;
+  finalizarAtividadeAutomaticamente: boolean;
+  desabilitarListaEspera: boolean;
+  local?: string;
+  instrutor?: string;
   ativo: boolean;
 }
 
@@ -172,6 +214,9 @@ export interface Plano {
   duracaoDias: number;
   valor: number;
   valorMatricula: number;
+  permiteRenovacaoAutomatica: boolean;
+  permiteCobrancaRecorrente: boolean;
+  diaCobrancaPadrao?: number;
   atividades?: UUID[];
   beneficios?: string[];
   destaque: boolean;
@@ -267,6 +312,8 @@ export interface Servico {
   sessoes?: number;
   valor: number;
   agendavel: boolean;
+  permiteAcessoCatraca: boolean;
+  permiteVoucher: boolean;
   ativo: boolean;
 }
 

@@ -3,6 +3,7 @@ import type {
   Prospect,
   Aluno,
   Atividade,
+  AtividadeGrade,
   Plano,
   Matricula,
   Pagamento,
@@ -21,6 +22,7 @@ import type {
   StatusAluno,
   StatusAgendamento,
   Sexo,
+  TipoPlano,
   TipoFormaPagamento,
   CreateProspectInput,
   ConverterProspectInput,
@@ -1021,8 +1023,9 @@ export async function listAtividades(params?: {
 export async function createAtividade(
   data: Omit<Atividade, "id" | "tenantId" | "ativo">
 ): Promise<Atividade> {
+  const normalized = normalizeAtividadeCheckinRules(data);
   const atividade: Atividade = {
-    ...data,
+    ...normalized,
     id: genId(),
     tenantId: TENANT_ID_DEFAULT,
     ativo: true,
@@ -1035,10 +1038,13 @@ export async function updateAtividade(
   id: string,
   data: Partial<Omit<Atividade, "id" | "tenantId">>
 ): Promise<void> {
+  const current = getStore().atividades.find((a) => a.id === id);
+  if (!current) return;
+  const normalized = normalizeAtividadeCheckinRules({ ...current, ...data });
   setStore((s) => ({
     ...s,
     atividades: s.atividades.map((a) =>
-      a.id === id ? { ...a, ...data } : a
+      a.id === id ? { ...a, ...normalized } : a
     ),
   }));
 }
@@ -1056,6 +1062,74 @@ export async function deleteAtividade(id: string): Promise<void> {
   setStore((s) => ({
     ...s,
     atividades: s.atividades.filter((a) => a.id !== id),
+    atividadeGrades: s.atividadeGrades.filter((g) => g.atividadeId !== id),
+  }));
+}
+
+function normalizeAtividadeCheckinRules<T extends {
+  permiteCheckin: boolean;
+  checkinObrigatorio: boolean;
+}>(atividade: T): T {
+  if (!atividade.permiteCheckin) {
+    return {
+      ...atividade,
+      checkinObrigatorio: false,
+    };
+  }
+  return atividade;
+}
+
+// ─── ATIVIDADES · GRADE ───────────────────────────────────────────────────
+
+export async function listAtividadeGrades(params?: {
+  atividadeId?: string;
+  apenasAtivas?: boolean;
+}): Promise<AtividadeGrade[]> {
+  const { atividadeGrades } = getStore();
+  let all = [...atividadeGrades].reverse();
+  if (params?.atividadeId) all = all.filter((g) => g.atividadeId === params.atividadeId);
+  if (params?.apenasAtivas) all = all.filter((g) => g.ativo);
+  return all;
+}
+
+export async function createAtividadeGrade(
+  data: Omit<AtividadeGrade, "id" | "tenantId" | "ativo">
+): Promise<AtividadeGrade> {
+  const grade: AtividadeGrade = {
+    ...data,
+    id: genId(),
+    tenantId: TENANT_ID_DEFAULT,
+    ativo: true,
+  };
+  setStore((s) => ({ ...s, atividadeGrades: [grade, ...s.atividadeGrades] }));
+  return grade;
+}
+
+export async function updateAtividadeGrade(
+  id: string,
+  data: Partial<Omit<AtividadeGrade, "id" | "tenantId">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    atividadeGrades: s.atividadeGrades.map((g) =>
+      g.id === id ? { ...g, ...data } : g
+    ),
+  }));
+}
+
+export async function toggleAtividadeGrade(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    atividadeGrades: s.atividadeGrades.map((g) =>
+      g.id === id ? { ...g, ativo: !g.ativo } : g
+    ),
+  }));
+}
+
+export async function deleteAtividadeGrade(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    atividadeGrades: s.atividadeGrades.filter((g) => g.id !== id),
   }));
 }
 
@@ -1072,8 +1146,9 @@ export async function getPlano(id: string): Promise<Plano | null> {
 export async function createPlano(
   data: Omit<Plano, "id" | "tenantId" | "ativo">
 ): Promise<Plano> {
+  const sanitized = sanitizePlanoRules(data);
   const plano: Plano = {
-    ...data,
+    ...sanitized,
     id: genId(),
     tenantId: TENANT_ID_DEFAULT,
     ativo: true,
@@ -1086,9 +1161,13 @@ export async function updatePlano(
   id: string,
   data: Partial<Omit<Plano, "id" | "tenantId">>
 ): Promise<void> {
+  const current = getStore().planos.find((p) => p.id === id);
+  if (!current) return;
+  const merged = { ...current, ...data };
+  const sanitized = sanitizePlanoRules(merged);
   setStore((s) => ({
     ...s,
-    planos: s.planos.map((p) => (p.id === id ? { ...p, ...data } : p)),
+    planos: s.planos.map((p) => (p.id === id ? { ...p, ...sanitized } : p)),
   }));
 }
 
@@ -1167,6 +1246,12 @@ export async function criarMatricula(data: {
   const store = getStore();
   const plano = store.planos.find((p) => p.id === data.planoId);
   if (!plano) throw new Error("Plano não encontrado");
+  if (data.renovacaoAutomatica && !plano.permiteRenovacaoAutomatica) {
+    throw new Error("Este plano não permite renovação automática.");
+  }
+  if (data.formaPagamento === "RECORRENTE" && !plano.permiteCobrancaRecorrente) {
+    throw new Error("Este plano não permite cobrança recorrente.");
+  }
   if (data.convenioId) {
     const convenio = store.convenios.find((c) => c.id === data.convenioId);
     if (!convenio || !convenio.ativo) {
@@ -1256,6 +1341,32 @@ export async function criarMatricula(data: {
   syncAlunosStatus();
 
   return matricula;
+}
+
+function sanitizePlanoRules<T extends {
+  tipo: TipoPlano;
+  permiteRenovacaoAutomatica: boolean;
+  permiteCobrancaRecorrente: boolean;
+  diaCobrancaPadrao?: number;
+}>(plano: T): T {
+  if (plano.tipo === "AVULSO") {
+    return {
+      ...plano,
+      permiteRenovacaoAutomatica: false,
+      permiteCobrancaRecorrente: false,
+      diaCobrancaPadrao: undefined,
+    };
+  }
+
+  const dia =
+    plano.permiteCobrancaRecorrente && plano.diaCobrancaPadrao
+      ? Math.min(28, Math.max(1, Math.floor(plano.diaCobrancaPadrao)))
+      : undefined;
+
+  return {
+    ...plano,
+    diaCobrancaPadrao: dia,
+  };
 }
 
 export async function renovarMatricula(id: string, planoId?: string): Promise<void> {

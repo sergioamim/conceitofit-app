@@ -11,6 +11,7 @@ import type {
   BandeiraCartao,
   CartaoCliente,
   Presenca,
+  AtividadeGrade,
   Tenant,
   HorarioFuncionamento,
   Convenio,
@@ -32,6 +33,7 @@ interface Store {
   bandeirasCartao: BandeiraCartao[];
   cartoesCliente: CartaoCliente[];
   atividades: Atividade[];
+  atividadeGrades: AtividadeGrade[];
   planos: Plano[];
   formasPagamento: FormaPagamento[];
   funcionarios: Funcionario[];
@@ -48,13 +50,13 @@ interface Store {
 
 function makeInitialStore(): Store {
   const atividades: Atividade[] = [
-    { id: "atv-001", tenantId: TENANT_ID, nome: "Musculação", categoria: "MUSCULACAO", icone: "💪", cor: "#FF5733", ativo: true },
-    { id: "atv-002", tenantId: TENANT_ID, nome: "Spinning", categoria: "CARDIO", icone: "🚴", cor: "#33A1FF", ativo: true },
-    { id: "atv-003", tenantId: TENANT_ID, nome: "Yoga", categoria: "COLETIVA", icone: "🧘", cor: "#9B59B6", ativo: true },
-    { id: "atv-004", tenantId: TENANT_ID, nome: "Muay Thai", categoria: "LUTA", icone: "🥊", cor: "#E74C3C", ativo: true },
-    { id: "atv-005", tenantId: TENANT_ID, nome: "Funcional", categoria: "COLETIVA", icone: "🏋️", cor: "#2ECC71", ativo: true },
-    { id: "atv-006", tenantId: TENANT_ID, nome: "Natação", categoria: "AQUATICA", icone: "🏊", cor: "#3498DB", ativo: true },
-    { id: "atv-007", tenantId: TENANT_ID, nome: "Pilates", categoria: "COLETIVA", icone: "🤸", cor: "#F39C12", ativo: true },
+    { id: "atv-001", tenantId: TENANT_ID, nome: "Musculação", categoria: "MUSCULACAO", icone: "💪", cor: "#FF5733", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
+    { id: "atv-002", tenantId: TENANT_ID, nome: "Spinning", categoria: "CARDIO", icone: "🚴", cor: "#33A1FF", permiteCheckin: true, checkinObrigatorio: true, ativo: true },
+    { id: "atv-003", tenantId: TENANT_ID, nome: "Yoga", categoria: "COLETIVA", icone: "🧘", cor: "#9B59B6", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
+    { id: "atv-004", tenantId: TENANT_ID, nome: "Muay Thai", categoria: "LUTA", icone: "🥊", cor: "#E74C3C", permiteCheckin: true, checkinObrigatorio: true, ativo: true },
+    { id: "atv-005", tenantId: TENANT_ID, nome: "Funcional", categoria: "COLETIVA", icone: "🏋️", cor: "#2ECC71", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
+    { id: "atv-006", tenantId: TENANT_ID, nome: "Natação", categoria: "AQUATICA", icone: "🏊", cor: "#3498DB", permiteCheckin: true, checkinObrigatorio: true, ativo: true },
+    { id: "atv-007", tenantId: TENANT_ID, nome: "Pilates", categoria: "COLETIVA", icone: "🤸", cor: "#F39C12", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
   ];
 
   const tenant: Tenant = {
@@ -116,6 +118,33 @@ function makeInitialStore(): Store {
     { dia: "DOM", abre: "00:00", fecha: "00:00", fechado: true },
   ];
 
+  const atividadeGrades: AtividadeGrade[] = [
+    {
+      id: "agr-001",
+      tenantId: TENANT_ID,
+      atividadeId: "atv-002",
+      diaSemana: "SEG",
+      horaInicio: "07:00",
+      horaFim: "08:00",
+      capacidade: 20,
+      local: "Sala Bike 1",
+      instrutor: "Larissa Costa",
+      ativo: true,
+    },
+    {
+      id: "agr-002",
+      tenantId: TENANT_ID,
+      atividadeId: "atv-003",
+      diaSemana: "TER",
+      horaInicio: "19:00",
+      horaFim: "20:00",
+      capacidade: 15,
+      local: "Sala Zen",
+      instrutor: "Bruno Silva",
+      ativo: true,
+    },
+  ];
+
   const servicos: Servico[] = [
     {
       id: "srv-001",
@@ -125,6 +154,8 @@ function makeInitialStore(): Store {
       sessoes: 1,
       valor: 120,
       agendavel: true,
+      permiteAcessoCatraca: false,
+      permiteVoucher: true,
       ativo: true,
     },
     {
@@ -135,6 +166,8 @@ function makeInitialStore(): Store {
       sessoes: 1,
       valor: 80,
       agendavel: true,
+      permiteAcessoCatraca: false,
+      permiteVoucher: true,
       ativo: true,
     },
     {
@@ -145,6 +178,8 @@ function makeInitialStore(): Store {
       sessoes: 10,
       valor: 450,
       agendavel: true,
+      permiteAcessoCatraca: true,
+      permiteVoucher: true,
       ativo: true,
     },
   ];
@@ -238,6 +273,9 @@ function makeInitialStore(): Store {
       valor: 99.90,
       valorMatricula: 50.00,
       duracaoDias: 30,
+      permiteRenovacaoAutomatica: true,
+      permiteCobrancaRecorrente: true,
+      diaCobrancaPadrao: 5,
       destaque: false,
       ativo: true,
       atividades: ["atv-001"],
@@ -251,6 +289,9 @@ function makeInitialStore(): Store {
       valor: 149.90,
       valorMatricula: 50.00,
       duracaoDias: 30,
+      permiteRenovacaoAutomatica: true,
+      permiteCobrancaRecorrente: true,
+      diaCobrancaPadrao: 5,
       destaque: true,
       ativo: true,
       atividades: ["atv-001", "atv-002", "atv-005"],
@@ -264,6 +305,8 @@ function makeInitialStore(): Store {
       valor: 399.90,
       valorMatricula: 0,
       duracaoDias: 90,
+      permiteRenovacaoAutomatica: true,
+      permiteCobrancaRecorrente: false,
       destaque: false,
       ativo: true,
       atividades: ["atv-001", "atv-002", "atv-003", "atv-005"],
@@ -277,6 +320,8 @@ function makeInitialStore(): Store {
       valor: 999.90,
       valorMatricula: 0,
       duracaoDias: 365,
+      permiteRenovacaoAutomatica: true,
+      permiteCobrancaRecorrente: false,
       destaque: false,
       ativo: true,
       atividades: ["atv-001", "atv-002", "atv-003", "atv-004", "atv-005", "atv-006", "atv-007"],
@@ -594,6 +639,7 @@ function makeInitialStore(): Store {
     bandeirasCartao,
     cartoesCliente,
     atividades,
+    atividadeGrades,
     planos,
     formasPagamento,
     funcionarios,
@@ -652,7 +698,11 @@ function normalizeStore(data: Store): Store {
     currentTenantId: data.currentTenantId ?? data.tenant?.id ?? TENANT_ID,
     horarios: data.horarios ?? [],
     convenios: data.convenios ?? [],
-    servicos: data.servicos ?? [],
+    servicos: (data.servicos ?? []).map((s) => ({
+      ...s,
+      permiteAcessoCatraca: (s as unknown as { permiteAcessoCatraca?: boolean }).permiteAcessoCatraca ?? false,
+      permiteVoucher: (s as unknown as { permiteVoucher?: boolean }).permiteVoucher ?? false,
+    })),
     bandeirasCartao: data.bandeirasCartao ?? [],
     cartoesCliente: data.cartoesCliente ?? [],
     funcionarios: data.funcionarios ?? [],
@@ -705,6 +755,19 @@ function normalizeStore(data: Store): Store {
     pagamentos: data.pagamentos.map((p) => ({
       ...p,
       dataCriacao: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao,
+    })),
+    atividades: (data.atividades ?? []).map((a) => ({
+      ...a,
+      permiteCheckin: (a as unknown as { permiteCheckin?: boolean }).permiteCheckin ?? true,
+      checkinObrigatorio:
+        (a as unknown as { checkinObrigatorio?: boolean }).checkinObrigatorio ?? false,
+    })),
+    atividadeGrades: data.atividadeGrades ?? [],
+    planos: data.planos.map((p) => ({
+      ...p,
+      permiteRenovacaoAutomatica: p.tipo === "AVULSO" ? false : (p as unknown as { permiteRenovacaoAutomatica?: boolean }).permiteRenovacaoAutomatica ?? true,
+      permiteCobrancaRecorrente: p.tipo === "AVULSO" ? false : (p as unknown as { permiteCobrancaRecorrente?: boolean }).permiteCobrancaRecorrente ?? false,
+      diaCobrancaPadrao: (p as unknown as { diaCobrancaPadrao?: number }).diaCobrancaPadrao,
     })),
   };
 }

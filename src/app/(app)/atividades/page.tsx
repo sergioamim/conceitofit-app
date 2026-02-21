@@ -215,19 +215,29 @@ export default function AtividadesPage() {
               </p>
             )}
             <div className="mt-4 flex items-center justify-between text-xs">
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 font-semibold",
-                  a.ativo
-                    ? "bg-gym-teal/15 text-gym-teal"
-                    : "bg-secondary text-muted-foreground"
-                )}
-              >
-                {a.ativo ? "Ativa" : "Inativa"}
-              </span>
-              <span className="text-muted-foreground">
-                Cor {a.cor ?? "#3de8a0"}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 font-semibold",
+                    a.ativo
+                      ? "bg-gym-teal/15 text-gym-teal"
+                      : "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  {a.ativo ? "Ativa" : "Inativa"}
+                </span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 font-semibold",
+                    a.permiteCheckin
+                      ? "bg-gym-accent/15 text-gym-accent"
+                      : "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  {a.permiteCheckin ? (a.checkinObrigatorio ? "Check-in obrigatório" : "Check-in permitido") : "Sem check-in"}
+                </span>
+              </div>
+              <span className="text-muted-foreground">Cor {a.cor ?? "#3de8a0"}</span>
             </div>
           </div>
         ))}

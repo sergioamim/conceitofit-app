@@ -98,6 +98,12 @@ export default function ServicosPage() {
                   Agendamento
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Acesso catraca
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Voucher
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Status
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -130,6 +136,30 @@ export default function ServicosPage() {
                       )}
                     >
                       {s.agendavel ? "Sim" : "Não"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                        s.permiteAcessoCatraca
+                          ? "bg-gym-accent/15 text-gym-accent"
+                          : "bg-secondary text-muted-foreground"
+                      )}
+                    >
+                      {s.permiteAcessoCatraca ? "Sim" : "Não"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                        s.permiteVoucher
+                          ? "bg-gym-accent/15 text-gym-accent"
+                          : "bg-secondary text-muted-foreground"
+                      )}
+                    >
+                      {s.permiteVoucher ? "Sim" : "Não"}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -179,7 +209,7 @@ export default function ServicosPage() {
             {servicos.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={8}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   Nenhum serviço cadastrado
