@@ -19,20 +19,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { NovaMatriculaModal } from "@/components/shared/nova-matricula-modal";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SuspenderClienteModal } from "@/components/shared/suspender-cliente-modal";
 import { cn } from "@/lib/utils";
 
 function formatDate(d: string) {
@@ -58,13 +45,6 @@ export default function ClienteDetalhePage() {
   const [suspenderOpen, setSuspenderOpen] = useState(false);
   const [novaMatriculaOpen, setNovaMatriculaOpen] = useState(false);
   const [recebendo, setRecebendo] = useState<Pagamento | null>(null);
-  const [suspensaoForm, setSuspensaoForm] = useState({
-    motivo: "",
-    inicio: "",
-    fim: "",
-    detalhes: "",
-    arquivoBase64: "",
-  });
 
   useEffect(() => {
     const id = params?.id;
@@ -168,15 +148,6 @@ export default function ClienteDetalhePage() {
     setPresencas(pres);
     setFormasPagamento(fps);
     setConvenios(cvs);
-    if (a?.suspensao) {
-      setSuspensaoForm({
-        motivo: a.suspensao.motivo ?? "",
-        inicio: a.suspensao.inicio ?? "",
-        fim: a.suspensao.fim ?? "",
-        detalhes: a.suspensao.detalhes ?? "",
-        arquivoBase64: a.suspensao.arquivoBase64 ?? "",
-      });
-    }
   }
 
   return (
@@ -205,152 +176,25 @@ export default function ClienteDetalhePage() {
         onDone={reload}
         prefillClienteId={aluno.id}
       />
-      <Dialog open={suspenderOpen} onOpenChange={setSuspenderOpen}>
-        <DialogContent className="bg-card border-border max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg">
-              Suspender cliente
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Motivo
-              </label>
-              <Select
-                value={suspensaoForm.motivo}
-                onValueChange={(v) =>
-                  setSuspensaoForm((prev) => ({ ...prev, motivo: v }))
-                }
-              >
-                <SelectTrigger className="w-full bg-secondary border-border">
-                  <SelectValue placeholder="Selecione um motivo" />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  {motivoOptions.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Início
-                </label>
-                <Input
-                  type="date"
-                  value={suspensaoForm.inicio}
-                  onChange={(e) =>
-                    setSuspensaoForm((prev) => ({
-                      ...prev,
-                      inicio: e.target.value,
-                    }))
-                  }
-                  className="bg-secondary border-border"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Fim
-                </label>
-                <Input
-                  type="date"
-                  value={suspensaoForm.fim}
-                  onChange={(e) =>
-                    setSuspensaoForm((prev) => ({
-                      ...prev,
-                      fim: e.target.value,
-                    }))
-                  }
-                  className="bg-secondary border-border"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Anexo (opcional)
-              </label>
-              <Input
-                type="file"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    setSuspensaoForm((prev) => ({
-                      ...prev,
-                      arquivoBase64: String(reader.result),
-                    }));
-                  };
-                  reader.readAsDataURL(file);
-                }}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Observações
-              </label>
-              <textarea
-                value={suspensaoForm.detalhes}
-                onChange={(e) =>
-                  setSuspensaoForm((prev) => ({
-                    ...prev,
-                    detalhes: e.target.value,
-                  }))
-                }
-                className="min-h-24 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
-                placeholder="Detalhes adicionais da suspensão..."
-              />
-              <p className="text-xs text-muted-foreground">
-                Se não informar datas, a suspensão é imediata e por prazo
-                indeterminado.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center justify-end gap-2">
-            <Button variant="outline" onClick={() => setSuspenderOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!suspensaoForm.motivo) return;
-                const registro = {
-                  motivo: suspensaoForm.motivo,
-                  inicio: suspensaoForm.inicio || undefined,
-                  fim: suspensaoForm.fim || undefined,
-                  detalhes: suspensaoForm.detalhes || undefined,
-                  arquivoBase64: suspensaoForm.arquivoBase64 || undefined,
-                  dataRegistro: new Date().toISOString().slice(0, 19),
-                };
-                await updateAluno(aluno.id, {
-                  status: "SUSPENSO",
-                  suspensao: {
-                    motivo: registro.motivo,
-                    inicio: registro.inicio,
-                    fim: registro.fim,
-                    detalhes: registro.detalhes,
-                    arquivoBase64: registro.arquivoBase64,
-                  },
-                  suspensoes: [registro, ...(aluno.suspensoes ?? [])],
-                });
-                setSuspenderOpen(false);
-                await reload();
-              }}
-              disabled={!suspensaoForm.motivo}
-            >
-              Suspender
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SuspenderClienteModal
+        open={suspenderOpen}
+        onClose={() => setSuspenderOpen(false)}
+        initial={aluno.suspensao}
+        onConfirm={async (payload) => {
+          const registro = {
+            ...payload,
+            dataRegistro: new Date().toISOString().slice(0, 19),
+          };
+          await updateAluno(aluno.id, {
+            status: "SUSPENSO",
+            suspensao: payload,
+            suspensoes: [registro, ...(aluno.suspensoes ?? [])],
+          });
+          setSuspenderOpen(false);
+          await reload();
+        }}
+      />
+      
 
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -397,13 +241,6 @@ export default function ClienteDetalhePage() {
               variant="outline"
               className="h-9"
               onClick={() => {
-                setSuspensaoForm({
-                  motivo: "",
-                  inicio: "",
-                  fim: "",
-                  detalhes: "",
-                  arquivoBase64: "",
-                });
                 setSuspenderOpen(true);
               }}
             >

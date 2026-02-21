@@ -1,0 +1,12 @@
+export { AtividadeModal } from "@/components/shared/atividade-modal";
+export { PlanoModal } from "@/components/shared/plano-modal";
+export { ConvenioModal } from "@/components/shared/convenio-modal";
+export { FuncionarioModal } from "@/components/shared/funcionario-modal";
+export { ServicoModal } from "@/components/shared/servico-modal";
+export { FormaPagamentoModal } from "@/components/shared/forma-pagamento-modal";
+export { ProspectModal } from "@/components/shared/prospect-modal";
+export { ProspectTimelineModal } from "@/components/shared/prospect-timeline-modal";
+export { SuspenderClienteModal } from "@/components/shared/suspender-cliente-modal";
+export { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
+export { NovaMatriculaModal } from "@/components/shared/nova-matricula-modal";
+export { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";

@@ -58,9 +58,30 @@ export default function DashboardPage() {
   const [mes, setMes] = useState(new Date().getMonth());
   const [ano, setAno] = useState(new Date().getFullYear());
 
+  async function load(month = mes, year = ano) {
+    const dash = await getDashboard({ month, year });
+    setData(dash);
+  }
+
   useEffect(() => {
-    getDashboard().then(setData);
+    load();
   }, []);
+
+  useEffect(() => {
+    load(mes, ano);
+  }, [mes, ano]);
+
+  useEffect(() => {
+    function handleUpdate() {
+      load(mes, ano);
+    }
+    window.addEventListener("academia-store-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("academia-store-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, [mes, ano]);
 
   if (!data) return null;
 

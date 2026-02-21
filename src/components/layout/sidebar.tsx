@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   UserPlus,
@@ -49,6 +49,19 @@ export function Sidebar() {
   const [crmOpen, setCrmOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [administrativoOpen, setAdministrativoOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (!userMenuRef.current) return;
+      if (!userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <aside
@@ -190,17 +203,52 @@ export function Sidebar() {
 
       {/* User pill */}
       <div className="border-t border-border px-3 py-4">
-        <div className={cn(
-          "flex items-center gap-2.5 rounded-md bg-secondary px-2.5 py-2",
-          collapsed && "justify-center"
-        )}>
-          <div className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-gym-accent font-display text-xs font-bold text-background">
-            S
-          </div>
-          {!collapsed && (
-            <div>
-              <p className="text-[13px] font-medium">Sergio</p>
-              <p className="text-[11px] text-muted-foreground">Administrador</p>
+        <div
+          ref={userMenuRef}
+          className={cn(
+            "relative flex items-center gap-2.5 rounded-md bg-secondary px-2.5 py-2",
+            collapsed && "justify-center"
+          )}
+        >
+          <button
+            onClick={() => setUserMenuOpen((v) => !v)}
+            className={cn("flex items-center gap-2.5", collapsed && "justify-center")}
+            aria-label="Menu do usuário"
+          >
+            <div className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-gym-accent font-display text-xs font-bold text-background">
+              S
+            </div>
+            {!collapsed && (
+              <div className="text-left">
+                <p className="text-[13px] font-medium">Sergio</p>
+                <p className="text-[11px] text-muted-foreground">Administrador</p>
+              </div>
+            )}
+          </button>
+          {userMenuOpen && !collapsed && (
+            <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-56 rounded-md border border-border bg-card p-2 shadow-lg">
+              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Conta
+              </p>
+              {[
+                { label: "Meu perfil" },
+                { label: "Trocar senha" },
+                { label: "Trocar academia" },
+                { label: "Preferências" },
+                { label: "Notificações" },
+                { label: "Sair" },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    alert("Em breve.");
+                  }}
+                  className="w-full rounded-md px-2 py-2 text-left text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
           )}
         </div>

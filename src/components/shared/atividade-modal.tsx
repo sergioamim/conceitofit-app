@@ -16,7 +16,7 @@ const CATEGORIA_LABEL: Record<CategoriaAtividade, string> = {
   OUTRA: "Outra",
 };
 
-interface AtividadeForm {
+export interface AtividadeForm {
   nome: string;
   descricao: string;
   categoria: CategoriaAtividade;

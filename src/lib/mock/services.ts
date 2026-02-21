@@ -90,23 +90,26 @@ function syncAlunosStatus(): void {
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────────────
 
-export async function getDashboard(): Promise<DashboardData> {
+export async function getDashboard(params?: { month?: number; year?: number }): Promise<DashboardData> {
   syncAlunosStatus();
   const store = getStore();
   const todayStr = today();
+  const month = params?.month ?? new Date().getMonth();
+  const year = params?.year ?? new Date().getFullYear();
+  const monthStr = String(month + 1).padStart(2, "0");
+  const monthPrefix = `${year}-${monthStr}`;
   const in7Days = addDays(todayStr, 7);
-  const thisMonth = todayStr.substring(0, 7);
 
   return {
     totalAlunosAtivos: store.alunos.filter((a) => a.status === "ATIVO").length,
-    prospectsNovos: store.prospects.filter((p) => p.status === "NOVO").length,
+    prospectsNovos: store.prospects.filter((p) => p.dataCriacao.startsWith(monthPrefix)).length,
     matriculasDoMes: store.matriculas.filter((m) =>
-      m.dataCriacao.startsWith(thisMonth)
+      m.dataCriacao.startsWith(monthPrefix)
     ).length,
     receitaDoMes: store.pagamentos
       .filter(
         (p) =>
-          p.status === "PAGO" && p.dataPagamento?.startsWith(thisMonth)
+          p.status === "PAGO" && p.dataPagamento?.startsWith(monthPrefix)
       )
       .reduce((sum, p) => sum + p.valorFinal, 0),
     prospectsRecentes: store.prospects
