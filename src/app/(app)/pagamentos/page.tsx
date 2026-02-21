@@ -62,12 +62,13 @@ function ReceberModal({
   pagamento: PagamentoWithAluno;
   formasPagamento: FormaPagamento[];
   onClose: () => void;
-  onConfirm: (data: { dataPagamento: string; formaPagamento: TipoFormaPagamento }) => void;
+  onConfirm: (data: { dataPagamento: string; formaPagamento: TipoFormaPagamento; observacoes?: string }) => void;
 }) {
   const [dataPagamento, setDataPagamento] = useState(
     new Date().toISOString().split("T")[0]
   );
   const [formaPagamento, setFormaPagamento] = useState<TipoFormaPagamento | "">("");
+  const [observacoes, setObservacoes] = useState("");
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -116,6 +117,17 @@ function ReceberModal({
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Observações
+            </label>
+            <Input
+              placeholder="Observações do recebimento"
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              className="bg-secondary border-border"
+            />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} className="border-border">
@@ -127,6 +139,7 @@ function ReceberModal({
               onConfirm({
                 dataPagamento,
                 formaPagamento: formaPagamento as TipoFormaPagamento,
+                observacoes: observacoes || undefined,
               })
             }
           >
@@ -173,6 +186,7 @@ export default function PagamentosPage() {
   async function handleConfirmRecebimento(data: {
     dataPagamento: string;
     formaPagamento: TipoFormaPagamento;
+    observacoes?: string;
   }) {
     if (!recebendo) return;
     await receberPagamento(recebendo.id, {

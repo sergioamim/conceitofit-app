@@ -7,7 +7,9 @@ import {
   listProspects,
   createProspect,
   updateProspectStatus,
+  marcarProspectPerdido,
   deleteProspect,
+  checkProspectDuplicate,
 } from "@/lib/mock/services";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
@@ -75,7 +77,9 @@ function NovoProspectModal({
     nome: "",
     telefone: "",
     email: "",
+    cpf: "",
     origem: "INSTAGRAM",
+    observacoes: "",
   });
 
   function set(key: keyof CreateProspectInput) {
@@ -86,7 +90,14 @@ function NovoProspectModal({
   function handleSubmit() {
     if (!form.nome || !form.telefone) return;
     onSave(form);
-    setForm({ nome: "", telefone: "", email: "", origem: "INSTAGRAM" });
+    setForm({
+      nome: "",
+      telefone: "",
+      email: "",
+      cpf: "",
+      origem: "INSTAGRAM",
+      observacoes: "",
+    });
     onClose();
   }
 
@@ -124,6 +135,42 @@ function NovoProspectModal({
               />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                CPF
+              </label>
+              <MaskedInput
+                mask="cpf"
+                placeholder="000.000.000-00"
+                value={form.cpf ?? ""}
+                onChange={(v) => setForm((f) => ({ ...f, cpf: v }))}
+                className="bg-secondary border-border"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Origem
+              </label>
+              <Select
+                value={form.origem}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, origem: v as OrigemProspect }))
+                }
+              >
+                <SelectTrigger className="w-full bg-secondary border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {Object.entries(ORIGEM_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               E-mail
@@ -138,25 +185,14 @@ function NovoProspectModal({
           </div>
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Origem
+              Observações
             </label>
-            <Select
-              value={form.origem}
-              onValueChange={(v) =>
-                setForm((f) => ({ ...f, origem: v as OrigemProspect }))
-              }
-            >
-              <SelectTrigger className="w-full bg-secondary border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {Object.entries(ORIGEM_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              placeholder="Observações sobre o prospect"
+              value={form.observacoes ?? ""}
+              onChange={set("observacoes")}
+              className="bg-secondary border-border"
+            />
           </div>
         </div>
         <DialogFooter>
@@ -175,6 +211,7 @@ function NovoProspectModal({
 export default function ProspectsPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<StatusProspect | "TODOS">("TODOS");
+  const [filtroOrigem, setFiltroOrigem] = useState<OrigemProspect | "TODAS">("TODAS");
   const [busca, setBusca] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -191,15 +228,25 @@ export default function ProspectsPage() {
 
   const filtered = prospects.filter((p) => {
     const matchStatus = filtroStatus === "TODOS" || p.status === filtroStatus;
+    const matchOrigem = filtroOrigem === "TODAS" || p.origem === filtroOrigem;
     const matchBusca =
       !busca ||
       p.nome.toLowerCase().includes(busca.toLowerCase()) ||
       (buscaDigits &&
         p.telefone.replace(/\D/g, "").includes(buscaDigits));
-    return matchStatus && matchBusca;
+    return matchStatus && matchOrigem && matchBusca;
   });
 
   async function handleSave(data: CreateProspectInput) {
+    const isDup = await checkProspectDuplicate({
+      telefone: data.telefone,
+      cpf: data.cpf,
+      email: data.email,
+    });
+    if (isDup) {
+      alert("Já existe prospect com este telefone, CPF ou e-mail.");
+      return;
+    }
     await createProspect(data);
     load();
   }
@@ -212,6 +259,12 @@ export default function ProspectsPage() {
   async function handleDelete(id: string) {
     if (!confirm("Remover este prospect?")) return;
     await deleteProspect(id);
+    load();
+  }
+
+  async function handlePerdido(id: string) {
+    const motivo = prompt("Motivo da perda (opcional):");
+    await marcarProspectPerdido(id, motivo ?? undefined);
     load();
   }
 
@@ -263,6 +316,24 @@ export default function ProspectsPage() {
               )}
             </button>
           ))}
+        </div>
+        <div className="w-44">
+          <Select
+            value={filtroOrigem}
+            onValueChange={(v) => setFiltroOrigem(v as OrigemProspect | "TODAS")}
+          >
+            <SelectTrigger className="w-full bg-secondary border-border text-xs">
+              <SelectValue placeholder="Origem" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="TODAS">Todas origens</SelectItem>
+              {Object.entries(ORIGEM_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="relative ml-auto">
           <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -337,7 +408,7 @@ export default function ProspectsPage() {
                   {ORIGEM_LABELS[p.origem]}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
-                  {formatDate(p.createdAt)}
+                  {formatDate(p.dataCriacao)}
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={p.status} />
@@ -370,6 +441,14 @@ export default function ProspectsPage() {
                           Converter
                         </Button>
                       </Link>
+                    )}
+                    {p.status !== "PERDIDO" && (
+                      <button
+                        onClick={() => handlePerdido(p.id)}
+                        className="rounded border border-gym-warning/40 px-2 py-1 text-[11px] text-gym-warning transition-colors hover:border-gym-warning/70"
+                      >
+                        Marcar perdido
+                      </button>
                     )}
                     {/* Delete */}
                     <button

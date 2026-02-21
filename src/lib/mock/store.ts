@@ -42,6 +42,7 @@ function makeInitialStore(): Store {
       duracaoDias: 30,
       destaque: false,
       ativo: true,
+      atividades: ["atv-001"],
       beneficios: ["Acesso à musculação", "Uso de vestiários", "Wi-Fi gratuito"],
     },
     {
@@ -54,6 +55,7 @@ function makeInitialStore(): Store {
       duracaoDias: 30,
       destaque: true,
       ativo: true,
+      atividades: ["atv-001", "atv-002", "atv-005"],
       beneficios: ["Acesso completo", "Todas as aulas coletivas", "Toalha inclusa", "Armário exclusivo"],
     },
     {
@@ -66,6 +68,7 @@ function makeInitialStore(): Store {
       duracaoDias: 90,
       destaque: false,
       ativo: true,
+      atividades: ["atv-001", "atv-002", "atv-003", "atv-005"],
       beneficios: ["Acesso completo", "Todas as aulas", "Personal trainer 1x/semana", "Avaliação física"],
     },
     {
@@ -78,6 +81,7 @@ function makeInitialStore(): Store {
       duracaoDias: 365,
       destaque: false,
       ativo: true,
+      atividades: ["atv-001", "atv-002", "atv-003", "atv-004", "atv-005", "atv-006", "atv-007"],
       beneficios: ["Acesso completo", "Todas as aulas", "Personal trainer ilimitado", "Avaliação física mensal", "Nutricionista"],
     },
   ];
@@ -91,10 +95,10 @@ function makeInitialStore(): Store {
   ];
 
   const prospects: Prospect[] = [
-    { id: "pr-001", tenantId: TENANT_ID, nome: "Maria Silva", telefone: "(11) 99988-7766", email: "maria@email.com", origem: "INSTAGRAM", status: "NOVO", createdAt: "2026-02-18T10:00:00" },
-    { id: "pr-002", tenantId: TENANT_ID, nome: "João Santos", telefone: "(11) 98877-6655", origem: "VISITA_PRESENCIAL", status: "AGENDOU_VISITA", createdAt: "2026-02-17T14:30:00" },
-    { id: "pr-003", tenantId: TENANT_ID, nome: "Ana Costa", telefone: "(11) 97766-5544", email: "ana@email.com", origem: "INDICACAO", status: "VISITOU", createdAt: "2026-02-15T09:00:00" },
-    { id: "pr-004", tenantId: TENANT_ID, nome: "Pedro Alves", telefone: "(11) 96655-4433", origem: "WHATSAPP", status: "EM_CONTATO", createdAt: "2026-02-10T11:00:00" },
+    { id: "pr-001", tenantId: TENANT_ID, nome: "Maria Silva", telefone: "(11) 99988-7766", email: "maria@email.com", origem: "INSTAGRAM", status: "NOVO", dataCriacao: "2026-02-18T10:00:00" },
+    { id: "pr-002", tenantId: TENANT_ID, nome: "João Santos", telefone: "(11) 98877-6655", origem: "VISITA_PRESENCIAL", status: "AGENDOU_VISITA", dataCriacao: "2026-02-17T14:30:00", dataUltimoContato: "2026-02-18T09:00:00" },
+    { id: "pr-003", tenantId: TENANT_ID, nome: "Ana Costa", telefone: "(11) 97766-5544", email: "ana@email.com", origem: "INDICACAO", status: "VISITOU", dataCriacao: "2026-02-15T09:00:00" },
+    { id: "pr-004", tenantId: TENANT_ID, nome: "Pedro Alves", telefone: "(11) 96655-4433", origem: "WHATSAPP", status: "EM_CONTATO", dataCriacao: "2026-02-10T11:00:00", dataUltimoContato: "2026-02-12T11:30:00" },
   ];
 
   const alunos: Aluno[] = [
@@ -104,11 +108,12 @@ function makeInitialStore(): Store {
       nome: "Carlos Oliveira",
       email: "carlos@email.com",
       telefone: "(11) 98765-4321",
+      telefoneSec: "(11) 90000-0000",
       cpf: "987.654.321-00",
       dataNascimento: "1990-05-15",
       sexo: "M",
       status: "ATIVO",
-      createdAt: "2025-09-01T10:00:00",
+      dataCadastro: "2025-09-01T10:00:00",
     },
     {
       id: "al-002",
@@ -120,7 +125,7 @@ function makeInitialStore(): Store {
       dataNascimento: "1995-08-20",
       sexo: "F",
       status: "ATIVO",
-      createdAt: "2025-11-15T10:00:00",
+      dataCadastro: "2025-11-15T10:00:00",
     },
     {
       id: "al-003",
@@ -132,7 +137,7 @@ function makeInitialStore(): Store {
       dataNascimento: "1988-03-10",
       sexo: "M",
       status: "BLOQUEADO",
-      createdAt: "2025-06-01T10:00:00",
+      dataCadastro: "2025-06-01T10:00:00",
     },
   ];
 
@@ -150,7 +155,7 @@ function makeInitialStore(): Store {
       formaPagamento: "PIX",
       status: "ATIVA",
       renovacaoAutomatica: false,
-      createdAt: "2026-02-01T10:00:00",
+      dataCriacao: "2026-02-01T10:00:00",
     },
     {
       id: "mt-002",
@@ -165,7 +170,7 @@ function makeInitialStore(): Store {
       formaPagamento: "CARTAO_CREDITO",
       status: "ATIVA",
       renovacaoAutomatica: false,
-      createdAt: "2025-12-01T10:00:00",
+      dataCriacao: "2025-12-01T10:00:00",
     },
     {
       id: "mt-003",
@@ -180,7 +185,7 @@ function makeInitialStore(): Store {
       formaPagamento: "DINHEIRO",
       status: "VENCIDA",
       renovacaoAutomatica: false,
-      createdAt: "2026-01-01T10:00:00",
+      dataCriacao: "2026-01-01T10:00:00",
     },
   ];
 
@@ -199,7 +204,7 @@ function makeInitialStore(): Store {
       dataPagamento: "2026-02-04",
       formaPagamento: "PIX",
       status: "PAGO",
-      createdAt: "2026-02-01T10:00:00",
+      dataCriacao: "2026-02-01T10:00:00",
     },
     {
       id: "pg-002",
@@ -215,7 +220,7 @@ function makeInitialStore(): Store {
       dataPagamento: "2025-12-04",
       formaPagamento: "CARTAO_CREDITO",
       status: "PAGO",
-      createdAt: "2025-12-01T10:00:00",
+      dataCriacao: "2025-12-01T10:00:00",
     },
     {
       id: "pg-003",
@@ -229,7 +234,7 @@ function makeInitialStore(): Store {
       valorFinal: 99.90,
       dataVencimento: "2026-01-05",
       status: "VENCIDO",
-      createdAt: "2026-01-01T10:00:00",
+      dataCriacao: "2026-01-01T10:00:00",
     },
     {
       id: "pg-004",
@@ -243,7 +248,7 @@ function makeInitialStore(): Store {
       valorFinal: 50,
       dataVencimento: "2026-01-31",
       status: "PENDENTE",
-      createdAt: "2026-01-15T10:00:00",
+      dataCriacao: "2026-01-15T10:00:00",
     },
   ];
 
@@ -260,8 +265,65 @@ export function getStore(): Readonly<Store> {
 
 export function setStore(updater: (prev: Store) => Store): void {
   store = updater(store);
+  persistStore(store);
 }
 
 export function resetStore(): void {
   store = makeInitialStore();
+  persistStore(store);
+}
+
+const STORAGE_KEY = "academia-mvp-store";
+
+function persistStore(data: Store): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function normalizeStore(data: Store): Store {
+  return {
+    ...data,
+    prospects: data.prospects.map((p) => ({
+      ...p,
+      dataCriacao: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao,
+      dataUltimoContato: p.dataUltimoContato,
+      motivoPerda: p.motivoPerda,
+    })),
+    alunos: data.alunos.map((a) => ({
+      ...a,
+      dataCadastro: (a as unknown as { createdAt?: string }).createdAt ?? a.dataCadastro,
+      dataAtualizacao: a.dataAtualizacao,
+    })),
+    matriculas: data.matriculas.map((m) => ({
+      ...m,
+      dataCriacao: (m as unknown as { createdAt?: string }).createdAt ?? m.dataCriacao,
+      dataAtualizacao: m.dataAtualizacao,
+    })),
+    pagamentos: data.pagamentos.map((p) => ({
+      ...p,
+      dataCriacao: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao,
+    })),
+  };
+}
+
+function loadStore(): Store | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Store;
+    return normalizeStore(parsed);
+  } catch {
+    return null;
+  }
+}
+
+if (typeof window !== "undefined") {
+  const loaded = loadStore();
+  if (loaded) store = loaded;
+  else persistStore(store);
 }

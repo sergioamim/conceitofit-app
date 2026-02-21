@@ -78,16 +78,19 @@ export interface Prospect {
   origem: OrigemProspect;
   status: StatusProspect;
   observacoes?: string;
-  createdAt: LocalDateTime;
-  updatedAt?: LocalDateTime;
+  dataCriacao: LocalDateTime;
+  dataUltimoContato?: LocalDateTime;
+  motivoPerda?: string;
 }
 
 export interface Aluno {
   id: UUID;
   tenantId: UUID;
+  prospectId?: UUID;
   nome: string;
   email: string;
   telefone: string;
+  telefoneSec?: string;
   cpf: string;
   rg?: string;
   dataNascimento: LocalDate;
@@ -95,8 +98,10 @@ export interface Aluno {
   endereco?: Endereco;
   contatoEmergencia?: ContatoEmergencia;
   observacoesMedicas?: string;
+  foto?: string;
   status: StatusAluno;
-  createdAt: LocalDateTime;
+  dataCadastro: LocalDateTime;
+  dataAtualizacao?: LocalDateTime;
 }
 
 export interface Atividade {
@@ -119,7 +124,7 @@ export interface Plano {
   duracaoDias: number;
   valor: number;
   valorMatricula: number;
-  atividades?: Atividade[];
+  atividades?: UUID[];
   beneficios?: string[];
   destaque: boolean;
   ativo: boolean;
@@ -143,7 +148,8 @@ export interface Matricula {
   status: StatusMatricula;
   renovacaoAutomatica: boolean;
   observacoes?: string;
-  createdAt: LocalDateTime;
+  dataCriacao: LocalDateTime;
+  dataAtualizacao?: LocalDateTime;
 }
 
 export interface Pagamento {
@@ -161,8 +167,9 @@ export interface Pagamento {
   dataPagamento?: LocalDate;
   formaPagamento?: TipoFormaPagamento;
   status: StatusPagamento;
+  comprovante?: string;
   observacoes?: string;
-  createdAt: LocalDateTime;
+  dataCriacao: LocalDateTime;
 }
 
 export interface FormaPagamento {

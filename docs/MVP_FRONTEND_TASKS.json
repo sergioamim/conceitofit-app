@@ -1,0 +1,715 @@
+{
+  "projectInfo": {
+    "name": "Academia Java - Frontend MVP",
+    "description": "MVP para gestão de academias com fluxo completo de Prospect → Aluno → Matrícula → Plano → Pagamento",
+    "techStack": {
+      "suggested": ["React", "TypeScript", "TailwindCSS", "React Query", "React Router"],
+      "database": "LocalStorage ou IndexedDB para persistência mockada",
+      "stateManagement": "Context API ou Zustand"
+    },
+    "mvpScope": "Frontend funcional com dados mockados, navegação completa, validações e fluxos de negócio"
+  },
+
+  "dataModel": {
+    "prospect": {
+      "description": "Pessoa interessada que ainda não é aluno. Pode vir de visita presencial, WhatsApp, Instagram, etc.",
+      "fields": {
+        "id": { "type": "UUID", "auto": true },
+        "tenantId": { "type": "UUID", "required": true },
+        "nome": { "type": "string", "required": true, "minLength": 3, "maxLength": 100 },
+        "email": { "type": "string", "required": false, "validation": "email" },
+        "telefone": { "type": "string", "required": true, "description": "Principal forma de contato" },
+        "cpf": { "type": "string", "required": false, "mask": "000.000.000-00" },
+        "origem": { "type": "enum", "values": ["VISITA_PRESENCIAL", "WHATSAPP", "INSTAGRAM", "FACEBOOK", "INDICACAO", "SITE", "OUTROS"] },
+        "observacoes": { "type": "string", "required": false },
+        "status": { "type": "enum", "values": ["NOVO", "EM_CONTATO", "AGENDOU_VISITA", "VISITOU", "CONVERTIDO", "PERDIDO"], "default": "NOVO" },
+        "dataCriacao": { "type": "datetime", "auto": true },
+        "dataUltimoContato": { "type": "datetime", "required": false },
+        "motivoPerda": { "type": "string", "required": false, "description": "Preenchido quando status = PERDIDO" }
+      },
+      "uniqueConstraint": "Para identificar unicidade: telefone OU (cpf se preenchido) OU email",
+      "businessRules": [
+        "Ao converter para aluno, criar registro em 'aluno' e mudar status para CONVERTIDO",
+        "Telefone é obrigatório pois é o principal canal de contato",
+        "CPF é opcional inicialmente, mas obrigatório para virar aluno"
+      ]
+    },
+
+    "aluno": {
+      "description": "Cliente efetivo da academia. Prospect convertido.",
+      "fields": {
+        "id": { "type": "UUID", "auto": true },
+        "tenantId": { "type": "UUID", "required": true },
+        "prospectId": { "type": "UUID", "required": false, "description": "Referência ao prospect original se houver" },
+        "nome": { "type": "string", "required": true, "minLength": 3, "maxLength": 100 },
+        "email": { "type": "string", "required": true, "validation": "email" },
+        "telefone": { "type": "string", "required": true },
+        "telefoneSec": { "type": "string", "required": false, "description": "Telefone secundário" },
+        "cpf": { "type": "string", "required": true, "mask": "000.000.000-00", "unique": true },
+        "rg": { "type": "string", "required": false },
+        "dataNascimento": { "type": "date", "required": true },
+        "sexo": { "type": "enum", "values": ["M", "F", "OUTRO"], "required": true },
+        "endereco": {
+          "type": "object",
+          "fields": {
+            "cep": { "type": "string", "mask": "00000-000" },
+            "logradouro": { "type": "string" },
+            "numero": { "type": "string" },
+            "complemento": { "type": "string" },
+            "bairro": { "type": "string" },
+            "cidade": { "type": "string" },
+            "estado": { "type": "string", "maxLength": 2 }
+          }
+        },
+        "contatoEmergencia": {
+          "type": "object",
+          "fields": {
+            "nome": { "type": "string", "required": true },
+            "telefone": { "type": "string", "required": true },
+            "parentesco": { "type": "string" }
+          }
+        },
+        "observacoesMedicas": { "type": "string", "description": "Restrições, alergias, condições" },
+        "foto": { "type": "string", "description": "URL ou base64 da foto" },
+        "status": { "type": "enum", "values": ["ATIVO", "INATIVO", "BLOQUEADO", "CANCELADO"], "default": "ATIVO" },
+        "dataCadastro": { "type": "datetime", "auto": true },
+        "dataAtualizacao": { "type": "datetime", "auto": true }
+      },
+      "businessRules": [
+        "CPF deve ser único por tenant",
+        "Ao criar aluno, automaticamente criar conta financeira vinculada",
+        "Status BLOQUEADO = inadimplente, pode treinar após regularizar",
+        "Status CANCELADO = cancelou matrícula"
+      ]
+    },
+
+    "plano": {
+      "description": "Planos de assinatura disponíveis na academia",
+      "fields": {
+        "id": { "type": "UUID", "auto": true },
+        "tenantId": { "type": "UUID", "required": true },
+        "nome": { "type": "string", "required": true, "example": "Mensal Básico" },
+        "descricao": { "type": "string" },
+        "tipo": { "type": "enum", "values": ["MENSAL", "TRIMESTRAL", "SEMESTRAL", "ANUAL", "AVULSO"], "required": true },
+        "duracaoDias": { "type": "integer", "required": true, "description": "30, 90, 180, 365, etc." },
+        "valor": { "type": "decimal", "required": true, "precision": 2 },
+        "valorMatricula": { "type": "decimal", "default": 0, "description": "Taxa de matrícula" },
+        "atividades": { "type": "array<UUID>", "description": "IDs das atividades incluídas" },
+        "beneficios": { "type": "array<string>", "description": "Lista de benefícios do plano" },
+        "ativo": { "type": "boolean", "default": true },
+        "destaque": { "type": "boolean", "default": false, "description": "Plano em destaque/recomendado" },
+        "ordem": { "type": "integer", "description": "Ordem de exibição" },
+        "dataCriacao": { "type": "datetime", "auto": true }
+      },
+      "examples": [
+        { "nome": "Mensal Básico", "tipo": "MENSAL", "duracaoDias": 30, "valor": 99.90 },
+        { "nome": "Trimestral", "tipo": "TRIMESTRAL", "duracaoDias": 90, "valor": 269.90 },
+        { "nome": "Semestral", "tipo": "SEMESTRAL", "duracaoDias": 180, "valor": 499.90 },
+        { "nome": "Anual VIP", "tipo": "ANUAL", "duracaoDias": 365, "valor": 899.90, "destaque": true }
+      ]
+    },
+
+    "atividade": {
+      "description": "Atividades/modalidades oferecidas pela academia",
+      "fields": {
+        "id": { "type": "UUID", "auto": true },
+        "tenantId": { "type": "UUID", "required": true },
+        "nome": { "type": "string", "required": true, "example": "Musculação" },
+        "descricao": { "type": "string" },
+        "categoria": { "type": "enum", "values": ["MUSCULACAO", "CARDIO", "COLETIVA", "LUTA", "AQUATICA", "OUTRA"] },
+        "icone": { "type": "string", "description": "Nome do ícone ou emoji" },
+        "cor": { "type": "string", "description": "Cor para identificação visual", "example": "#FF5733" },
+        "ativo": { "type": "boolean", "default": true }
+      },
+      "examples": [
+        { "nome": "Musculação", "categoria": "MUSCULACAO", "icone": "💪" },
+        { "nome": "Spinning", "categoria": "CARDIO", "icone": "🚴" },
+        { "nome": "Yoga", "categoria": "COLETIVA", "icone": "🧘" },
+        { "nome": "Muay Thai", "categoria": "LUTA", "icone": "🥊" },
+        { "nome": "Natação", "categoria": "AQUATICA", "icone": "🏊" },
+        { "nome": "Funcional", "categoria": "COLETIVA", "icone": "🏋️" },
+        { "nome": "Pilates", "categoria": "COLETIVA", "icone": "🤸" }
+      ]
+    },
+
+    "matricula": {
+      "description": "Vínculo entre aluno e plano. Representa a assinatura ativa.",
+      "fields": {
+        "id": { "type": "UUID", "auto": true },
+        "tenantId": { "type": "UUID", "required": true },
+        "alunoId": { "type": "UUID", "required": true },
+        "planoId": { "type": "UUID", "required": true },
+        "dataInicio": { "type": "date", "required": true },
+        "dataFim": { "type": "date", "required": true, "calculated": "dataInicio + plano.duracaoDias" },
+        "valorPago": { "type": "decimal", "required": true, "description": "Valor efetivamente pago (pode ter desconto)" },
+        "valorMatricula": { "type": "decimal", "default": 0 },
+        "desconto": { "type": "decimal", "default": 0 },
+        "motivoDesconto": { "type": "string" },
+        "formaPagamento": { "type": "enum", "values": ["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "BOLETO", "RECORRENTE"], "required": true },
+        "status": { "type": "enum", "values": ["ATIVA", "VENCIDA", "CANCELADA", "SUSPENSA"], "default": "ATIVA" },
+        "renovacaoAutomatica": { "type": "boolean", "default": false },
+        "observacoes": { "type": "string" },
+        "dataCriacao": { "type": "datetime", "auto": true },
+        "dataAtualizacao": { "type": "datetime", "auto": true }
+      },
+      "businessRules": [
+        "Ao criar matrícula, gerar pagamento correspondente",
+        "dataFim é calculada automaticamente: dataInicio + plano.duracaoDias",
+        "Se renovacaoAutomatica = true, gerar nova matrícula quando vencer",
+        "Aluno só pode ter UMA matrícula ATIVA por vez",
+        "Ao vencer, status muda para VENCIDA e aluno fica BLOQUEADO"
+      ]
+    },
+
+    "pagamento": {
+      "description": "Pagamentos de mensalidades e taxas",
+      "fields": {
+        "id": { "type": "UUID", "auto": true },
+        "tenantId": { "type": "UUID", "required": true },
+        "alunoId": { "type": "UUID", "required": true },
+        "matriculaId": { "type": "UUID", "required": false },
+        "tipo": { "type": "enum", "values": ["MATRICULA", "MENSALIDADE", "TAXA", "PRODUTO", "AVULSO"] },
+        "descricao": { "type": "string", "required": true },
+        "valor": { "type": "decimal", "required": true },
+        "desconto": { "type": "decimal", "default": 0 },
+        "valorFinal": { "type": "decimal", "calculated": "valor - desconto" },
+        "dataVencimento": { "type": "date", "required": true },
+        "dataPagamento": { "type": "date", "required": false },
+        "formaPagamento": { "type": "enum", "values": ["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "BOLETO"] },
+        "status": { "type": "enum", "values": ["PENDENTE", "PAGO", "VENCIDO", "CANCELADO"], "default": "PENDENTE" },
+        "comprovante": { "type": "string", "description": "URL ou referência do comprovante" },
+        "observacoes": { "type": "string" },
+        "dataCriacao": { "type": "datetime", "auto": true }
+      },
+      "businessRules": [
+        "Ao criar matrícula, criar pagamento automaticamente",
+        "Pagamentos vencidos devem mudar status do aluno para BLOQUEADO",
+        "Ao pagar, preencher dataPagamento e mudar status para PAGO"
+      ]
+    },
+
+    "formaPagamento": {
+      "description": "Formas de pagamento aceitas pela academia (configurável)",
+      "fields": {
+        "id": { "type": "UUID", "auto": true },
+        "tenantId": { "type": "UUID", "required": true },
+        "nome": { "type": "string", "required": true },
+        "tipo": { "type": "enum", "values": ["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "BOLETO", "RECORRENTE"] },
+        "ativo": { "type": "boolean", "default": true },
+        "taxaPercentual": { "type": "decimal", "default": 0, "description": "Taxa da operadora %" },
+        "parcelasMax": { "type": "integer", "default": 1, "description": "Máximo de parcelas (para cartão)" },
+        "instrucoes": { "type": "string", "description": "Instruções para o cliente" }
+      },
+      "examples": [
+        { "nome": "Dinheiro", "tipo": "DINHEIRO", "taxaPercentual": 0 },
+        { "nome": "PIX", "tipo": "PIX", "taxaPercentual": 0 },
+        { "nome": "Cartão de Crédito", "tipo": "CARTAO_CREDITO", "taxaPercentual": 2.5, "parcelasMax": 12 },
+        { "nome": "Cartão de Débito", "tipo": "CARTAO_DEBITO", "taxaPercentual": 1.5 },
+        { "nome": "Boleto Bancário", "tipo": "BOLETO", "taxaPercentual": 0 }
+      ]
+    }
+  },
+
+  "sampleData": {
+    "description": "Dados de exemplo para popular o sistema inicialmente",
+    "tenant": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "nome": "Academia Força Total",
+      "subdomain": "forcatotal"
+    },
+    "atividades": [
+      { "id": "a1", "nome": "Musculação", "categoria": "MUSCULACAO", "icone": "💪" },
+      { "id": "a2", "nome": "Spinning", "categoria": "CARDIO", "icone": "🚴" },
+      { "id": "a3", "nome": "Yoga", "categoria": "COLETIVA", "icone": "🧘" },
+      { "id": "a4", "nome": "Muay Thai", "categoria": "LUTA", "icone": "🥊" },
+      { "id": "a5", "nome": "Funcional", "categoria": "COLETIVA", "icone": "🏋️" }
+    ],
+    "planos": [
+      { "id": "p1", "nome": "Mensal Básico", "tipo": "MENSAL", "duracaoDias": 30, "valor": 99.90, "valorMatricula": 50.00, "atividades": ["a1"], "beneficios": ["Acesso à musculação", "Avaliação física"] },
+      { "id": "p2", "nome": "Mensal Completo", "tipo": "MENSAL", "duracaoDias": 30, "valor": 149.90, "valorMatricula": 50.00, "atividades": ["a1", "a2", "a5"], "beneficios": ["Acesso total", "Avaliação física", "Aulas coletivas"], "destaque": true },
+      { "id": "p3", "nome": "Trimestral", "tipo": "TRIMESTRAL", "duracaoDias": 90, "valor": 399.90, "valorMatricula": 0, "atividades": ["a1", "a2", "a3", "a5"], "beneficios": ["Acesso total", "Avaliação física mensal", "Matrícula grátis"] },
+      { "id": "p4", "nome": "Anual VIP", "tipo": "ANUAL", "duracaoDias": 365, "valor": 999.90, "valorMatricula": 0, "atividades": ["a1", "a2", "a3", "a4", "a5"], "beneficios": ["Acesso total", "Personal 1x/mês", "Matrícula grátis", "Armário incluso"] }
+    ],
+    "formasPagamento": [
+      { "id": "fp1", "nome": "Dinheiro", "tipo": "DINHEIRO" },
+      { "id": "fp2", "nome": "PIX", "tipo": "PIX" },
+      { "id": "fp3", "nome": "Cartão de Crédito", "tipo": "CARTAO_CREDITO", "parcelasMax": 12 },
+      { "id": "fp4", "nome": "Cartão de Débito", "tipo": "CARTAO_DEBITO" }
+    ],
+    "prospects": [
+      { "id": "pr1", "nome": "Maria Silva", "telefone": "11999887766", "email": "maria@email.com", "origem": "INSTAGRAM", "status": "NOVO" },
+      { "id": "pr2", "nome": "João Santos", "telefone": "11988776655", "origem": "VISITA_PRESENCIAL", "status": "AGENDOU_VISITA" },
+      { "id": "pr3", "nome": "Ana Costa", "telefone": "11977665544", "cpf": "123.456.789-00", "origem": "INDICACAO", "status": "VISITOU" }
+    ],
+    "alunos": [
+      {
+        "id": "al1",
+        "nome": "Carlos Oliveira",
+        "email": "carlos@email.com",
+        "telefone": "11966554433",
+        "cpf": "987.654.321-00",
+        "dataNascimento": "1990-05-15",
+        "sexo": "M",
+        "status": "ATIVO"
+      },
+      {
+        "id": "al2",
+        "nome": "Fernanda Lima",
+        "email": "fernanda@email.com",
+        "telefone": "11955443322",
+        "cpf": "456.789.123-00",
+        "dataNascimento": "1985-08-22",
+        "sexo": "F",
+        "status": "ATIVO"
+      }
+    ],
+    "matriculas": [
+      { "id": "m1", "alunoId": "al1", "planoId": "p2", "dataInicio": "2024-01-15", "dataFim": "2024-02-14", "valorPago": 199.90, "status": "ATIVA" },
+      { "id": "m2", "alunoId": "al2", "planoId": "p3", "dataInicio": "2024-01-01", "dataFim": "2024-03-31", "valorPago": 399.90, "status": "ATIVA" }
+    ]
+  },
+
+  "screens": {
+    "dashboard": {
+      "path": "/",
+      "description": "Visão geral da academia",
+      "components": [
+        { "name": "StatsCards", "data": ["Total Alunos Ativos", "Prospects Novos", "Matrículas do Mês", "Receita do Mês"] },
+        { "name": "ProspectsRecentes", "data": "Últimos 5 prospects" },
+        { "name": "MatriculasVencendo", "data": "Matrículas que vencem em 7 dias" },
+        { "name": "PagamentosPendentes", "data": "Pagamentos em atraso" }
+      ]
+    },
+    "prospects": {
+      "list": {
+        "path": "/prospects",
+        "description": "Lista de prospects com filtros",
+        "features": ["Busca por nome/telefone", "Filtro por status", "Filtro por origem", "Ordenação"],
+        "actions": ["Novo Prospect", "Editar", "Converter para Aluno", "Marcar como Perdido"]
+      },
+      "form": {
+        "path": "/prospects/novo ou /prospects/:id",
+        "description": "Formulário de cadastro/edição",
+        "fields": ["nome*", "telefone*", "email", "cpf", "origem*", "observacoes"],
+        "validation": "Verificar se telefone/cpf/email já existe"
+      },
+      "convert": {
+        "path": "/prospects/:id/converter",
+        "description": "Wizard de conversão prospect → aluno",
+        "steps": [
+          "1. Completar dados pessoais (CPF obrigatório, data nascimento, etc)",
+          "2. Selecionar plano",
+          "3. Definir forma de pagamento",
+          "4. Confirmar e criar matrícula"
+        ]
+      }
+    },
+    "alunos": {
+      "list": {
+        "path": "/alunos",
+        "description": "Lista de alunos",
+        "features": ["Busca por nome/CPF", "Filtro por status", "Ver situação financeira"],
+        "actions": ["Novo Aluno", "Editar", "Nova Matrícula", "Ver Histórico"]
+      },
+      "form": {
+        "path": "/alunos/novo ou /alunos/:id",
+        "description": "Formulário completo de aluno",
+        "sections": [
+          { "name": "Dados Pessoais", "fields": ["nome*", "cpf*", "rg", "dataNascimento*", "sexo*"] },
+          { "name": "Contato", "fields": ["email*", "telefone*", "telefoneSec"] },
+          { "name": "Endereço", "fields": ["cep", "logradouro", "numero", "complemento", "bairro", "cidade", "estado"] },
+          { "name": "Emergência", "fields": ["contatoNome*", "contatoTelefone*", "parentesco"] },
+          { "name": "Saúde", "fields": ["observacoesMedicas"] }
+        ]
+      },
+      "detail": {
+        "path": "/alunos/:id",
+        "description": "Detalhes do aluno",
+        "tabs": [
+          { "name": "Dados", "content": "Informações pessoais" },
+          { "name": "Matrículas", "content": "Histórico de matrículas" },
+          { "name": "Financeiro", "content": "Pagamentos e débitos" }
+        ]
+      }
+    },
+    "planos": {
+      "list": {
+        "path": "/planos",
+        "description": "Lista de planos disponíveis",
+        "view": "Cards com destaque visual para plano recomendado",
+        "actions": ["Novo Plano", "Editar", "Ativar/Desativar"]
+      },
+      "form": {
+        "path": "/planos/novo ou /planos/:id",
+        "fields": ["nome*", "tipo*", "duracaoDias*", "valor*", "valorMatricula", "atividades[]", "beneficios[]", "destaque"]
+      }
+    },
+    "atividades": {
+      "list": {
+        "path": "/atividades",
+        "description": "Lista de atividades/modalidades",
+        "view": "Grid com ícones e cores"
+      },
+      "form": {
+        "path": "/atividades/novo ou /atividades/:id",
+        "fields": ["nome*", "categoria*", "descricao", "icone", "cor"]
+      }
+    },
+    "matriculas": {
+      "list": {
+        "path": "/matriculas",
+        "description": "Lista de matrículas",
+        "features": ["Filtro por status", "Filtro por período", "Ver vencendo"],
+        "actions": ["Nova Matrícula", "Renovar", "Cancelar"]
+      },
+      "form": {
+        "path": "/matriculas/nova",
+        "description": "Wizard de nova matrícula",
+        "steps": [
+          "1. Selecionar aluno (autocomplete)",
+          "2. Selecionar plano",
+          "3. Definir data início e calcular fim",
+          "4. Aplicar desconto se houver",
+          "5. Selecionar forma de pagamento",
+          "6. Confirmar e gerar pagamento"
+        ]
+      }
+    },
+    "pagamentos": {
+      "list": {
+        "path": "/pagamentos",
+        "description": "Lista de pagamentos",
+        "features": ["Filtro por status", "Filtro por período", "Filtro por aluno"],
+        "indicators": ["Verde=Pago", "Amarelo=Pendente", "Vermelho=Vencido"]
+      },
+      "receive": {
+        "path": "/pagamentos/:id/receber",
+        "description": "Modal de recebimento",
+        "fields": ["dataPagamento", "formaPagamento", "observacoes"]
+      }
+    },
+    "configuracoes": {
+      "path": "/configuracoes",
+      "tabs": [
+        { "name": "Formas de Pagamento", "content": "CRUD de formas de pagamento" },
+        { "name": "Academia", "content": "Dados da academia (tenant)" }
+      ]
+    }
+  },
+
+  "navigation": {
+    "sidebar": [
+      { "label": "Dashboard", "path": "/", "icon": "Home" },
+      { "label": "Prospects", "path": "/prospects", "icon": "UserPlus", "badge": "count:novos" },
+      { "label": "Alunos", "path": "/alunos", "icon": "Users" },
+      { "label": "Matrículas", "path": "/matriculas", "icon": "ClipboardList" },
+      { "label": "Planos", "path": "/planos", "icon": "CreditCard" },
+      { "label": "Atividades", "path": "/atividades", "icon": "Activity" },
+      { "label": "Pagamentos", "path": "/pagamentos", "icon": "DollarSign", "badge": "count:pendentes" },
+      { "label": "Configurações", "path": "/configuracoes", "icon": "Settings" }
+    ]
+  },
+
+  "tasks": [
+    {
+      "id": 1,
+      "titulo": "Setup inicial do projeto",
+      "descricao": "Criar projeto React com TypeScript, TailwindCSS, React Router. Configurar estrutura de pastas.",
+      "prioridade": "ALTA",
+      "dependencias": [],
+      "entregaveis": [
+        "Projeto inicializado com Vite + React + TypeScript",
+        "TailwindCSS configurado",
+        "React Router configurado",
+        "Estrutura de pastas: /components, /pages, /hooks, /services, /types, /data",
+        "Layout base com Sidebar"
+      ]
+    },
+    {
+      "id": 2,
+      "titulo": "Implementar camada de dados mockados",
+      "descricao": "Criar serviços que simulam API usando LocalStorage para persistência",
+      "prioridade": "ALTA",
+      "dependencias": [1],
+      "entregaveis": [
+        "Types/interfaces para todas as entidades (Prospect, Aluno, Plano, etc)",
+        "Dados iniciais de exemplo (seed data)",
+        "Serviços CRUD genéricos com LocalStorage",
+        "Hooks customizados: useProspects, useAlunos, usePlanos, etc"
+      ]
+    },
+    {
+      "id": 3,
+      "titulo": "Componentes UI base",
+      "descricao": "Criar componentes reutilizáveis",
+      "prioridade": "ALTA",
+      "dependencias": [1],
+      "entregaveis": [
+        "Button, Input, Select, TextArea",
+        "Card, Modal, Alert",
+        "Table com ordenação e paginação",
+        "Badge, StatusBadge",
+        "SearchInput, FilterSelect",
+        "StatsCard para dashboard",
+        "FormField com label e validação"
+      ]
+    },
+    {
+      "id": 4,
+      "titulo": "Dashboard",
+      "descricao": "Implementar tela inicial com métricas",
+      "prioridade": "MEDIA",
+      "dependencias": [2, 3],
+      "entregaveis": [
+        "Cards de estatísticas (alunos ativos, prospects, receita)",
+        "Lista de prospects recentes",
+        "Lista de matrículas vencendo",
+        "Lista de pagamentos pendentes"
+      ]
+    },
+    {
+      "id": 5,
+      "titulo": "CRUD de Atividades",
+      "descricao": "Tela de gestão de atividades/modalidades",
+      "prioridade": "MEDIA",
+      "dependencias": [2, 3],
+      "entregaveis": [
+        "Lista de atividades em grid",
+        "Modal de criação/edição",
+        "Seletor de ícone/emoji",
+        "Toggle ativo/inativo"
+      ]
+    },
+    {
+      "id": 6,
+      "titulo": "CRUD de Planos",
+      "descricao": "Tela de gestão de planos",
+      "prioridade": "ALTA",
+      "dependencias": [5],
+      "entregaveis": [
+        "Lista de planos em cards",
+        "Formulário de criação/edição",
+        "Seleção múltipla de atividades",
+        "Campo de benefícios (adicionar/remover)",
+        "Toggle destaque",
+        "Preview do plano"
+      ]
+    },
+    {
+      "id": 7,
+      "titulo": "CRUD de Prospects",
+      "descricao": "Gestão completa de prospects",
+      "prioridade": "ALTA",
+      "dependencias": [2, 3],
+      "entregaveis": [
+        "Lista com filtros (status, origem)",
+        "Busca por nome/telefone",
+        "Formulário de cadastro/edição",
+        "Validação de duplicidade",
+        "Ações: editar, converter, marcar como perdido",
+        "Timeline de interações (simplificada)"
+      ]
+    },
+    {
+      "id": 8,
+      "titulo": "CRUD de Alunos",
+      "descricao": "Gestão completa de alunos",
+      "prioridade": "ALTA",
+      "dependencias": [2, 3],
+      "entregaveis": [
+        "Lista com filtros e busca",
+        "Formulário completo em seções",
+        "Integração com API de CEP (ViaCEP)",
+        "Upload de foto (base64 ou preview)",
+        "Página de detalhes com tabs"
+      ]
+    },
+    {
+      "id": 9,
+      "titulo": "Conversão Prospect → Aluno",
+      "descricao": "Wizard de conversão com matrícula",
+      "prioridade": "ALTA",
+      "dependencias": [6, 7, 8],
+      "entregaveis": [
+        "Wizard multi-step",
+        "Step 1: Completar dados do prospect",
+        "Step 2: Selecionar plano",
+        "Step 3: Forma de pagamento e data início",
+        "Step 4: Resumo e confirmação",
+        "Criar aluno, matrícula e pagamento automaticamente"
+      ]
+    },
+    {
+      "id": 10,
+      "titulo": "CRUD de Matrículas",
+      "descricao": "Gestão de matrículas",
+      "prioridade": "ALTA",
+      "dependencias": [6, 8],
+      "entregaveis": [
+        "Lista com filtros de status",
+        "Indicadores visuais de vencimento",
+        "Wizard de nova matrícula",
+        "Cálculo automático de data fim",
+        "Aplicação de descontos",
+        "Ação de renovar matrícula",
+        "Ação de cancelar"
+      ]
+    },
+    {
+      "id": 11,
+      "titulo": "Gestão de Pagamentos",
+      "descricao": "Controle de pagamentos",
+      "prioridade": "ALTA",
+      "dependencias": [10],
+      "entregaveis": [
+        "Lista com filtros (status, período)",
+        "Indicadores visuais (pago/pendente/vencido)",
+        "Modal de recebimento de pagamento",
+        "Histórico de pagamentos por aluno",
+        "Integração com status do aluno (bloqueio automático)"
+      ]
+    },
+    {
+      "id": 12,
+      "titulo": "Configurações e Formas de Pagamento",
+      "descricao": "Tela de configurações do sistema",
+      "prioridade": "BAIXA",
+      "dependencias": [2, 3],
+      "entregaveis": [
+        "CRUD de formas de pagamento",
+        "Configurações da academia",
+        "Editar dados do tenant"
+      ]
+    },
+    {
+      "id": 13,
+      "titulo": "Validações e feedback",
+      "descricao": "Implementar validações e mensagens de feedback",
+      "prioridade": "MEDIA",
+      "dependencias": [7, 8, 9, 10, 11],
+      "entregaveis": [
+        "Validação de formulários (react-hook-form + zod)",
+        "Mensagens de erro claras",
+        "Toast notifications (sucesso/erro)",
+        "Confirmação antes de ações destrutivas",
+        "Loading states"
+      ]
+    },
+    {
+      "id": 14,
+      "titulo": "Responsividade e UX",
+      "descricao": "Ajustes de responsividade e melhorias de UX",
+      "prioridade": "BAIXA",
+      "dependencias": [4, 5, 6, 7, 8, 9, 10, 11, 12],
+      "entregaveis": [
+        "Layout responsivo (mobile-first)",
+        "Sidebar colapsável em mobile",
+        "Tabelas responsivas",
+        "Formulários adaptados para mobile"
+      ]
+    }
+  ],
+
+  "flowDiagram": {
+    "prospectToAluno": [
+      "1. PROSPECT CRIADO (status: NOVO)",
+      "   ↓",
+      "2. Contato realizado (status: EM_CONTATO)",
+      "   ↓",
+      "3. Visita agendada (status: AGENDOU_VISITA)",
+      "   ↓",
+      "4. Visitou academia (status: VISITOU)",
+      "   ↓",
+      "5. CONVERSÃO → Criar ALUNO",
+      "   ↓",
+      "6. Selecionar PLANO",
+      "   ↓",
+      "7. Criar MATRÍCULA (status: ATIVA)",
+      "   ↓",
+      "8. Gerar PAGAMENTO (status: PENDENTE)",
+      "   ↓",
+      "9. Receber pagamento (status: PAGO)",
+      "   ↓",
+      "10. Prospect atualizado (status: CONVERTIDO)"
+    ],
+    "renovacaoMatricula": [
+      "1. Matrícula existente (status: ATIVA)",
+      "   ↓",
+      "2. Data fim se aproxima (alerta no dashboard)",
+      "   ↓",
+      "3. Ação RENOVAR",
+      "   ↓",
+      "4. Criar nova MATRÍCULA",
+      "   ↓",
+      "5. Gerar novo PAGAMENTO",
+      "   ↓",
+      "6. Matrícula anterior (status: permanece ATIVA até vencer)"
+    ],
+    "inadimplencia": [
+      "1. PAGAMENTO vence (status: VENCIDO)",
+      "   ↓",
+      "2. ALUNO bloqueado (status: BLOQUEADO)",
+      "   ↓",
+      "3. Pagamento realizado",
+      "   ↓",
+      "4. ALUNO desbloqueado (status: ATIVO)"
+    ]
+  },
+
+  "apiSimulation": {
+    "description": "Estrutura dos serviços mockados",
+    "services": {
+      "prospectService": {
+        "methods": [
+          "getAll(filters?): Prospect[]",
+          "getById(id): Prospect",
+          "create(data): Prospect",
+          "update(id, data): Prospect",
+          "delete(id): void",
+          "convertToAluno(id, dadosComplementares): { aluno, matricula, pagamento }",
+          "checkDuplicate(telefone?, cpf?, email?): boolean"
+        ]
+      },
+      "alunoService": {
+        "methods": [
+          "getAll(filters?): Aluno[]",
+          "getById(id): Aluno",
+          "create(data): Aluno",
+          "update(id, data): Aluno",
+          "getMatriculas(alunoId): Matricula[]",
+          "getPagamentos(alunoId): Pagamento[]",
+          "updateStatus(id, status): Aluno"
+        ]
+      },
+      "planoService": {
+        "methods": [
+          "getAll(): Plano[]",
+          "getAtivos(): Plano[]",
+          "getById(id): Plano",
+          "create(data): Plano",
+          "update(id, data): Plano",
+          "toggleAtivo(id): Plano"
+        ]
+      },
+      "matriculaService": {
+        "methods": [
+          "getAll(filters?): Matricula[]",
+          "getById(id): Matricula",
+          "create(data): { matricula, pagamento }",
+          "renovar(matriculaId, planoId?): { matricula, pagamento }",
+          "cancelar(id, motivo): Matricula",
+          "getVencendoEm(dias): Matricula[]"
+        ]
+      },
+      "pagamentoService": {
+        "methods": [
+          "getAll(filters?): Pagamento[]",
+          "getById(id): Pagamento",
+          "receber(id, dadosPagamento): Pagamento",
+          "getPendentes(): Pagamento[]",
+          "getVencidos(): Pagamento[]"
+        ]
+      }
+    }
+  }
+}

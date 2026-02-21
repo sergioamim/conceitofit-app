@@ -2,10 +2,12 @@ import { getStore, setStore, TENANT_ID_DEFAULT } from "./store";
 import type {
   Prospect,
   Aluno,
+  Atividade,
   Plano,
   Matricula,
   Pagamento,
   FormaPagamento,
+  CategoriaAtividade,
   StatusProspect,
   StatusAluno,
   Sexo,
@@ -47,7 +49,7 @@ export async function getDashboard(): Promise<DashboardData> {
     totalAlunosAtivos: store.alunos.filter((a) => a.status === "ATIVO").length,
     prospectsNovos: store.prospects.filter((p) => p.status === "NOVO").length,
     matriculasDoMes: store.matriculas.filter((m) =>
-      m.createdAt.startsWith(thisMonth)
+      m.dataCriacao.startsWith(thisMonth)
     ).length,
     receitaDoMes: store.pagamentos
       .filter(
@@ -102,7 +104,7 @@ export async function createProspect(
     id: genId(),
     tenantId: TENANT_ID_DEFAULT,
     status: "NOVO",
-    createdAt: now(),
+    dataCriacao: now(),
   };
   setStore((s) => ({ ...s, prospects: [prospect, ...s.prospects] }));
   return prospect;
@@ -115,9 +117,47 @@ export async function updateProspectStatus(
   setStore((s) => ({
     ...s,
     prospects: s.prospects.map((p) =>
-      p.id === id ? { ...p, status, updatedAt: now() } : p
+      p.id === id
+        ? { ...p, status, dataUltimoContato: now() }
+        : p
     ),
   }));
+}
+
+export async function marcarProspectPerdido(
+  id: string,
+  motivo?: string
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    prospects: s.prospects.map((p) =>
+      p.id === id
+        ? {
+            ...p,
+            status: "PERDIDO" as StatusProspect,
+            motivoPerda: motivo,
+            dataUltimoContato: now(),
+          }
+        : p
+    ),
+  }));
+}
+
+export async function checkProspectDuplicate(params: {
+  telefone?: string;
+  cpf?: string;
+  email?: string;
+}): Promise<boolean> {
+  const { prospects } = getStore();
+  const tel = params.telefone?.replace(/\D/g, "");
+  return prospects.some((p) => {
+    const samePhone =
+      tel && p.telefone?.replace(/\D/g, "").includes(tel);
+    const sameCpf = params.cpf && p.cpf === params.cpf;
+    const sameEmail =
+      params.email && p.email?.toLowerCase() === params.email.toLowerCase();
+    return Boolean(samePhone || sameCpf || sameEmail);
+  });
 }
 
 export async function converterProspect(
@@ -137,6 +177,7 @@ export async function converterProspect(
   const aluno: Aluno = {
     id: alunoId,
     tenantId: TENANT_ID_DEFAULT,
+    prospectId: data.prospectId,
     nome: prospect.nome,
     email: prospect.email ?? "",
     telefone: prospect.telefone,
@@ -148,7 +189,7 @@ export async function converterProspect(
     contatoEmergencia: data.contatoEmergencia,
     observacoesMedicas: data.observacoesMedicas,
     status: "ATIVO",
-    createdAt: now(),
+    dataCadastro: now(),
   };
 
   const dataFim = addDays(data.dataInicio, plano.duracaoDias);
@@ -168,7 +209,7 @@ export async function converterProspect(
     formaPagamento: data.formaPagamento,
     status: "ATIVA",
     renovacaoAutomatica: false,
-    createdAt: now(),
+    dataCriacao: now(),
   };
 
   const valorFinal = plano.valor - desconto;
@@ -184,7 +225,7 @@ export async function converterProspect(
     valorFinal,
     dataVencimento: data.dataInicio,
     status: "PENDENTE",
-    createdAt: now(),
+    dataCriacao: now(),
   };
 
   setStore((s) => ({
@@ -194,7 +235,11 @@ export async function converterProspect(
     pagamentos: [...s.pagamentos, pagamento],
     prospects: s.prospects.map((p) =>
       p.id === data.prospectId
-        ? { ...p, status: "CONVERTIDO" as StatusProspect, updatedAt: now() }
+        ? {
+            ...p,
+            status: "CONVERTIDO" as StatusProspect,
+            dataUltimoContato: now(),
+          }
         : p
     ),
   }));
@@ -208,10 +253,27 @@ export interface CriarAlunoComMatriculaInput {
   nome: string;
   email: string;
   telefone: string;
+  telefoneSec?: string;
   cpf: string;
   dataNascimento: string;
   sexo: Sexo;
   rg?: string;
+  endereco?: {
+    cep?: string;
+    logradouro?: string;
+    numero?: string;
+    complemento?: string;
+    bairro?: string;
+    cidade?: string;
+    estado?: string;
+  };
+  contatoEmergencia?: {
+    nome: string;
+    telefone: string;
+    parentesco?: string;
+  };
+  observacoesMedicas?: string;
+  foto?: string;
   planoId: string;
   dataInicio: string;
   formaPagamento: TipoFormaPagamento;
@@ -242,12 +304,17 @@ export async function criarAlunoComMatricula(
     nome: data.nome,
     email: data.email,
     telefone: data.telefone,
+    telefoneSec: data.telefoneSec,
     cpf: data.cpf,
     rg: data.rg,
     dataNascimento: data.dataNascimento,
     sexo: data.sexo,
+    endereco: data.endereco,
+    contatoEmergencia: data.contatoEmergencia,
+    observacoesMedicas: data.observacoesMedicas,
+    foto: data.foto,
     status: "ATIVO",
-    createdAt: now(),
+    dataCadastro: now(),
   };
 
   const dataFim = addDays(data.dataInicio, plano.duracaoDias);
@@ -267,7 +334,7 @@ export async function criarAlunoComMatricula(
     formaPagamento: data.formaPagamento,
     status: "ATIVA",
     renovacaoAutomatica: false,
-    createdAt: now(),
+    dataCriacao: now(),
   };
 
   const valorFinal = plano.valor - desconto;
@@ -283,7 +350,7 @@ export async function criarAlunoComMatricula(
     valorFinal,
     dataVencimento: data.dataInicio,
     status: "PENDENTE",
-    createdAt: now(),
+    dataCriacao: now(),
   };
 
   setStore((s) => ({
@@ -328,14 +395,116 @@ export async function updateAlunoStatus(
   }));
 }
 
+// ─── ATIVIDADES ─────────────────────────────────────────────────────────────
+
+export async function listAtividades(params?: {
+  apenasAtivas?: boolean;
+  categoria?: CategoriaAtividade;
+}): Promise<Atividade[]> {
+  const { atividades } = getStore();
+  let all = [...atividades].reverse();
+  if (params?.apenasAtivas) all = all.filter((a) => a.ativo);
+  if (params?.categoria) all = all.filter((a) => a.categoria === params.categoria);
+  return all;
+}
+
+export async function createAtividade(
+  data: Omit<Atividade, "id" | "tenantId" | "ativo">
+): Promise<Atividade> {
+  const atividade: Atividade = {
+    ...data,
+    id: genId(),
+    tenantId: TENANT_ID_DEFAULT,
+    ativo: true,
+  };
+  setStore((s) => ({ ...s, atividades: [atividade, ...s.atividades] }));
+  return atividade;
+}
+
+export async function updateAtividade(
+  id: string,
+  data: Partial<Omit<Atividade, "id" | "tenantId">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    atividades: s.atividades.map((a) =>
+      a.id === id ? { ...a, ...data } : a
+    ),
+  }));
+}
+
+export async function toggleAtividade(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    atividades: s.atividades.map((a) =>
+      a.id === id ? { ...a, ativo: !a.ativo } : a
+    ),
+  }));
+}
+
+export async function deleteAtividade(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    atividades: s.atividades.filter((a) => a.id !== id),
+  }));
+}
+
 // ─── PLANOS ─────────────────────────────────────────────────────────────────
 
 export async function listPlanos(): Promise<Plano[]> {
-  return getStore().planos.filter((p) => p.ativo);
+  return getStore().planos;
 }
 
 export async function getPlano(id: string): Promise<Plano | null> {
   return getStore().planos.find((p) => p.id === id) ?? null;
+}
+
+export async function createPlano(
+  data: Omit<Plano, "id" | "tenantId" | "ativo">
+): Promise<Plano> {
+  const plano: Plano = {
+    ...data,
+    id: genId(),
+    tenantId: TENANT_ID_DEFAULT,
+    ativo: true,
+  };
+  setStore((s) => ({ ...s, planos: [plano, ...s.planos] }));
+  return plano;
+}
+
+export async function updatePlano(
+  id: string,
+  data: Partial<Omit<Plano, "id" | "tenantId">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    planos: s.planos.map((p) => (p.id === id ? { ...p, ...data } : p)),
+  }));
+}
+
+export async function togglePlanoAtivo(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    planos: s.planos.map((p) =>
+      p.id === id ? { ...p, ativo: !p.ativo } : p
+    ),
+  }));
+}
+
+export async function togglePlanoDestaque(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    planos: s.planos.map((p) =>
+      p.id === id ? { ...p, destaque: !p.destaque } : p
+    ),
+  }));
+}
+
+export async function deletePlano(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    planos: s.planos.filter((p) => p.id !== id),
+  }));
 }
 
 // ─── MATRÍCULAS ─────────────────────────────────────────────────────────────

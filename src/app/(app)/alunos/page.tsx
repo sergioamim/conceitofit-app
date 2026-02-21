@@ -74,7 +74,20 @@ function StepDot({ step, current }: { step: number; current: number }) {
 
 interface DadosPessoais {
   nome: string; email: string; telefone: string;
+  telefoneSec: string;
   cpf: string; rg: string; dataNascimento: string; sexo: Sexo | "";
+  enderecoCep: string;
+  enderecoLogradouro: string;
+  enderecoNumero: string;
+  enderecoComplemento: string;
+  enderecoBairro: string;
+  enderecoCidade: string;
+  enderecoEstado: string;
+  emergenciaNome: string;
+  emergenciaTelefone: string;
+  emergenciaParentesco: string;
+  observacoesMedicas: string;
+  foto: string;
 }
 
 function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: DadosPessoais) => void }) {
@@ -83,43 +96,113 @@ function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: Dad
   }
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2 space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome completo *</label>
-          <Input placeholder="João da Silva" value={data.nome} onChange={set("nome")} className="bg-secondary border-border" />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
-          <Input type="email" placeholder="joao@email.com" value={data.email} onChange={set("email")} className="bg-secondary border-border" />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
-          <MaskedInput mask="phone" placeholder="(11) 99999-0000" value={data.telefone} onChange={(v) => onChange({ ...data, telefone: v })} className="bg-secondary border-border" />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF *</label>
-          <MaskedInput mask="cpf" placeholder="000.000.000-00" value={data.cpf} onChange={(v) => onChange({ ...data, cpf: v })} className="bg-secondary border-border" />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">RG</label>
-          <Input placeholder="00.000.000-0" value={data.rg} onChange={set("rg")} className="bg-secondary border-border" />
-        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome completo *</label>
+            <Input placeholder="João da Silva" value={data.nome} onChange={set("nome")} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
+            <Input type="email" placeholder="joao@email.com" value={data.email} onChange={set("email")} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
+            <MaskedInput mask="phone" placeholder="(11) 99999-0000" value={data.telefone} onChange={(v) => onChange({ ...data, telefone: v })} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone secundário</label>
+            <MaskedInput mask="phone" placeholder="(11) 90000-0000" value={data.telefoneSec} onChange={(v) => onChange({ ...data, telefoneSec: v })} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF *</label>
+            <MaskedInput mask="cpf" placeholder="000.000.000-00" value={data.cpf} onChange={(v) => onChange({ ...data, cpf: v })} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">RG</label>
+            <Input placeholder="00.000.000-0" value={data.rg} onChange={set("rg")} className="bg-secondary border-border" />
+          </div>
         <div className="space-y-1.5">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data de nascimento *</label>
           <Input type="date" value={data.dataNascimento} onChange={set("dataNascimento")} className="bg-secondary border-border" />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sexo *</label>
-          <Select value={data.sexo} onValueChange={(v) => onChange({ ...data, sexo: v as Sexo })}>
-            <SelectTrigger className="w-full bg-secondary border-border">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border">
-              <SelectItem value="M">Masculino</SelectItem>
-              <SelectItem value="F">Feminino</SelectItem>
-              <SelectItem value="OUTRO">Outro</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sexo *</label>
+            <Select value={data.sexo} onValueChange={(v) => onChange({ ...data, sexo: v as Sexo })}>
+              <SelectTrigger className="w-full bg-secondary border-border">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="M">Masculino</SelectItem>
+                <SelectItem value="F">Feminino</SelectItem>
+                <SelectItem value="OUTRO">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+      <div className="space-y-3 pt-1">
+        <p className="text-sm font-semibold text-muted-foreground">Endereço (opcional)</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CEP</label>
+            <MaskedInput mask="cep" placeholder="00000-000" value={data.enderecoCep} onChange={(v) => onChange({ ...data, enderecoCep: v })} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Logradouro</label>
+            <Input placeholder="Rua, Avenida..." value={data.enderecoLogradouro} onChange={set("enderecoLogradouro")} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Número</label>
+            <Input placeholder="123" value={data.enderecoNumero} onChange={set("enderecoNumero")} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Complemento</label>
+            <Input placeholder="Apto, bloco..." value={data.enderecoComplemento} onChange={set("enderecoComplemento")} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Bairro</label>
+            <Input placeholder="Centro" value={data.enderecoBairro} onChange={set("enderecoBairro")} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cidade</label>
+            <Input placeholder="São Paulo" value={data.enderecoCidade} onChange={set("enderecoCidade")} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</label>
+            <Input placeholder="SP" value={data.enderecoEstado} onChange={set("enderecoEstado")} className="bg-secondary border-border" />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 pt-1">
+        <p className="text-sm font-semibold text-muted-foreground">Contato de emergência (opcional)</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome</label>
+            <Input placeholder="Nome do contato" value={data.emergenciaNome} onChange={set("emergenciaNome")} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</label>
+            <MaskedInput mask="phone" placeholder="(11) 90000-0000" value={data.emergenciaTelefone} onChange={(v) => onChange({ ...data, emergenciaTelefone: v })} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>
+            <Input placeholder="Ex: irmão" value={data.emergenciaParentesco} onChange={set("emergenciaParentesco")} className="bg-secondary border-border" />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 pt-1">
+        <p className="text-sm font-semibold text-muted-foreground">Saúde e foto (opcional)</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações médicas</label>
+            <Input placeholder="Alergias, restrições..." value={data.observacoesMedicas} onChange={set("observacoesMedicas")} className="bg-secondary border-border" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Foto (URL/base64)</label>
+            <Input placeholder="https://..." value={data.foto} onChange={set("foto")} className="bg-secondary border-border" />
+          </div>
         </div>
       </div>
     </div>
@@ -257,7 +340,28 @@ function NovoAlunoWizard({ open, onClose, onDone }: { open: boolean; onClose: ()
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [dados, setDados] = useState<DadosPessoais>({ nome: "", email: "", telefone: "", cpf: "", rg: "", dataNascimento: "", sexo: "" });
+  const [dados, setDados] = useState<DadosPessoais>({
+    nome: "",
+    email: "",
+    telefone: "",
+    telefoneSec: "",
+    cpf: "",
+    rg: "",
+    dataNascimento: "",
+    sexo: "",
+    enderecoCep: "",
+    enderecoLogradouro: "",
+    enderecoNumero: "",
+    enderecoComplemento: "",
+    enderecoBairro: "",
+    enderecoCidade: "",
+    enderecoEstado: "",
+    emergenciaNome: "",
+    emergenciaTelefone: "",
+    emergenciaParentesco: "",
+    observacoesMedicas: "",
+    foto: "",
+  });
   const [planoId, setPlanoId] = useState("");
   const [pagamento, setPagamento] = useState<PagamentoForm>({ dataInicio: new Date().toISOString().split("T")[0], formaPagamento: "", desconto: "" });
 
@@ -269,7 +373,28 @@ function NovoAlunoWizard({ open, onClose, onDone }: { open: boolean; onClose: ()
 
   function reset() {
     setStep(1); setResult(null); setError(null);
-    setDados({ nome: "", email: "", telefone: "", cpf: "", rg: "", dataNascimento: "", sexo: "" });
+    setDados({
+      nome: "",
+      email: "",
+      telefone: "",
+      telefoneSec: "",
+      cpf: "",
+      rg: "",
+      dataNascimento: "",
+      sexo: "",
+      enderecoCep: "",
+      enderecoLogradouro: "",
+      enderecoNumero: "",
+      enderecoComplemento: "",
+      enderecoBairro: "",
+      enderecoCidade: "",
+      enderecoEstado: "",
+      emergenciaNome: "",
+      emergenciaTelefone: "",
+      emergenciaParentesco: "",
+      observacoesMedicas: "",
+      foto: "",
+    });
     setPlanoId(""); setPagamento({ dataInicio: new Date().toISOString().split("T")[0], formaPagamento: "", desconto: "" });
   }
 
@@ -287,8 +412,28 @@ function NovoAlunoWizard({ open, onClose, onDone }: { open: boolean; onClose: ()
     try {
       const res = await criarAlunoComMatricula({
         nome: dados.nome, email: dados.email, telefone: dados.telefone,
+        telefoneSec: dados.telefoneSec || undefined,
         cpf: dados.cpf, rg: dados.rg || undefined,
         dataNascimento: dados.dataNascimento, sexo: dados.sexo as Sexo,
+        endereco: {
+          cep: dados.enderecoCep || undefined,
+          logradouro: dados.enderecoLogradouro || undefined,
+          numero: dados.enderecoNumero || undefined,
+          complemento: dados.enderecoComplemento || undefined,
+          bairro: dados.enderecoBairro || undefined,
+          cidade: dados.enderecoCidade || undefined,
+          estado: dados.enderecoEstado || undefined,
+        },
+        contatoEmergencia:
+          dados.emergenciaNome && dados.emergenciaTelefone
+            ? {
+                nome: dados.emergenciaNome,
+                telefone: dados.emergenciaTelefone,
+                parentesco: dados.emergenciaParentesco || undefined,
+              }
+            : undefined,
+        observacoesMedicas: dados.observacoesMedicas || undefined,
+        foto: dados.foto || undefined,
         planoId, dataInicio: pagamento.dataInicio,
         formaPagamento: pagamento.formaPagamento as TipoFormaPagamento,
         desconto: parseFloat(pagamento.desconto) || undefined,

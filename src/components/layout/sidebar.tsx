@@ -8,6 +8,7 @@ import {
   Users,
   ClipboardList,
   CreditCard,
+  Activity,
   DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/alunos", label: "Alunos", icon: Users },
   { href: "/matriculas", label: "Matrículas", icon: ClipboardList },
   { href: "/planos", label: "Planos", icon: CreditCard },
+  { href: "/atividades", label: "Atividades", icon: Activity },
   { href: "/pagamentos", label: "Pagamentos", icon: DollarSign },
 ];
 

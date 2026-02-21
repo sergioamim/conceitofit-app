@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { Input } from "@/components/ui/input";
-import { maskCPF, maskPhone } from "@/lib/utils";
+import { maskCEP, maskCPF, maskPhone } from "@/lib/utils";
 
-type MaskType = "cpf" | "phone";
+type MaskType = "cpf" | "phone" | "cep";
 
 interface MaskedInputProps
   extends Omit<React.ComponentProps<typeof Input>, "onChange"> {
@@ -16,6 +16,7 @@ interface MaskedInputProps
 const MASK_FN: Record<MaskType, (v: string) => string> = {
   cpf: maskCPF,
   phone: maskPhone,
+  cep: maskCEP,
 };
 
 export function MaskedInput({ mask, value, onChange, ...props }: MaskedInputProps) {
