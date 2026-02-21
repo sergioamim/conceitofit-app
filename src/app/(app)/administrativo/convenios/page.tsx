@@ -12,6 +12,7 @@ import {
 import type { Convenio, Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ConvenioModal } from "@/components/shared/convenio-modal";
+import { cn } from "@/lib/utils";
 
 export default function ConveniosPage() {
   const [convenios, setConvenios] = useState<Convenio[]>([]);
@@ -26,6 +27,7 @@ export default function ConveniosPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

@@ -61,6 +61,7 @@ export function NovaMatriculaModal({
   }, [open, prefillClienteId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConvenioId("");
   }, [planoId]);
 

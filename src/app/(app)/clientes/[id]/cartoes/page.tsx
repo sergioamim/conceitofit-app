@@ -1,11 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { listCartoesCliente, listBandeirasCartao, createCartaoCliente, deleteCartaoCliente, setCartaoPadrao } from "@/lib/mock/services";
-import type { CartaoCliente, BandeiraCartao } from "@/lib/types";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  listCartoesCliente,
+  listBandeirasCartao,
+  createCartaoCliente,
+  deleteCartaoCliente,
+  setCartaoPadrao,
+  getAluno,
+  listMatriculas,
+  listPlanos,
+  listPagamentos,
+  updateAluno,
+} from "@/lib/mock/services";
+import type { CartaoCliente, BandeiraCartao, Aluno, Matricula, Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { NovoCartaoModal } from "@/components/shared/novo-cartao-modal";
+import { Breadcrumb } from "@/components/shared/breadcrumb";
+import { ClienteHeader } from "@/components/shared/cliente-header";
+import { ClienteTabs } from "@/components/shared/cliente-tabs";
+import { NovaMatriculaModal } from "@/components/shared/nova-matricula-modal";
+import { SuspenderClienteModal } from "@/components/shared/suspender-cliente-modal";
 
 function maskCard(ultimos4: string) {
   return `•••• •••• •••• ${ultimos4}`;
@@ -21,27 +37,87 @@ function cardGradient(name?: string) {
 
 export default function CartoesClientePage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [cartoes, setCartoes] = useState<CartaoCliente[]>([]);
   const [bandeiras, setBandeiras] = useState<BandeiraCartao[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [aluno, setAluno] = useState<Aluno | null>(null);
+  const [matriculas, setMatriculas] = useState<Matricula[]>([]);
+  const [planos, setPlanos] = useState<Plano[]>([]);
+  const [novaMatriculaOpen, setNovaMatriculaOpen] = useState(false);
+  const [suspenderOpen, setSuspenderOpen] = useState(false);
+  const [pendenteFinanceiro, setPendenteFinanceiro] = useState(false);
 
   async function load() {
     const id = params?.id;
     if (!id) return;
-    const [cards, brands] = await Promise.all([
+    const [cards, brands, a, ms, ps, pags] = await Promise.all([
       listCartoesCliente(id),
       listBandeirasCartao({ apenasAtivas: true }),
+      getAluno(id),
+      listMatriculas(),
+      listPlanos(),
+      listPagamentos(),
     ]);
     setCartoes(cards);
     setBandeiras(brands);
+    setAluno(a);
+    setMatriculas(ms.filter((m) => m.alunoId === id));
+    setPlanos(ps);
+    setPendenteFinanceiro(
+      pags.some(
+        (p) => p.alunoId === id && (p.status === "PENDENTE" || p.status === "VENCIDO")
+      )
+    );
   }
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params?.id]);
+
+  const planoAtivo = useMemo(
+    () => matriculas.find((m) => m.status === "ATIVA"),
+    [matriculas]
+  );
+  const planoAtivoInfo = useMemo(
+    () => (planoAtivo ? planos.find((p) => p.id === planoAtivo.planoId) : null),
+    [planoAtivo, planos]
+  );
+  const suspenso = Boolean(aluno?.status === "SUSPENSO" || aluno?.suspensao);
+
+  if (!aluno) {
+    return (
+      <div className="text-sm text-muted-foreground">Cliente não encontrado</div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      <NovaMatriculaModal
+        open={novaMatriculaOpen}
+        onClose={() => setNovaMatriculaOpen(false)}
+        onDone={load}
+        prefillClienteId={aluno.id}
+      />
+      <SuspenderClienteModal
+        open={suspenderOpen}
+        onClose={() => setSuspenderOpen(false)}
+        initial={aluno.suspensao}
+        onConfirm={async (payload) => {
+          const registro = {
+            ...payload,
+            dataRegistro: new Date().toISOString().slice(0, 19),
+          };
+          await updateAluno(aluno.id, {
+            status: "SUSPENSO",
+            suspensao: payload,
+            suspensoes: [registro, ...(aluno.suspensoes ?? [])],
+          });
+          setSuspenderOpen(false);
+          await load();
+        }}
+      />
       <NovoCartaoModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -60,6 +136,38 @@ export default function CartoesClientePage() {
           setModalOpen(false);
           await load();
         }}
+      />
+
+      <Breadcrumb
+        items={[
+          { label: "Clientes", href: "/clientes" },
+          { label: aluno.nome, href: `/clientes/${params?.id ?? ""}` },
+          { label: "Cartões" },
+        ]}
+      />
+
+      <ClienteHeader
+        aluno={aluno}
+        planoAtivo={planoAtivo ? { dataFim: planoAtivo.dataFim } : null}
+        planoAtivoInfo={planoAtivoInfo}
+        suspenso={suspenso}
+        onCartoes={() => router.push(`/clientes/${aluno.id}/cartoes`)}
+        onNovaVenda={() => setNovaMatriculaOpen(true)}
+        onSuspender={() => setSuspenderOpen(true)}
+        onReativar={async () => {
+          await updateAluno(aluno.id, {
+            status: "INATIVO",
+            suspensao: undefined,
+          });
+          await load();
+        }}
+        showCartoesAction={false}
+      />
+
+      <ClienteTabs
+        current="cartoes"
+        baseHref={`/clientes/${aluno.id}`}
+        pendenteFinanceiro={pendenteFinanceiro}
       />
 
       <div className="flex items-center justify-between">

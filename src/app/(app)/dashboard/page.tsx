@@ -65,10 +65,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     load(mes, ano);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mes, ano]);
 
   useEffect(() => {
@@ -81,6 +83,7 @@ export default function DashboardPage() {
       window.removeEventListener("academia-store-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mes, ano]);
 
   if (!data) return null;

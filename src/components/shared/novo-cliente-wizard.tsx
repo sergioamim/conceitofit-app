@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import React from "react";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2 } from "lucide-react";
 import { listPlanos, listFormasPagamento, criarAlunoComMatricula, criarAluno } from "@/lib/mock/services";
 import type { CriarAlunoComMatriculaResponse } from "@/lib/mock/services";
@@ -12,7 +13,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-const SEXO_LABEL: Record<string, string> = { M: "Masculino", F: "Feminino", OUTRO: "Outro" };
 const TIPO_PLANO_LABEL: Record<string, string> = { MENSAL: "Mensal", TRIMESTRAL: "Trimestral", SEMESTRAL: "Semestral", ANUAL: "Anual", AVULSO: "Avulso" };
 
 function formatDate(d: string) {
@@ -59,6 +59,11 @@ interface DadosPessoais {
 }
 
 function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: DadosPessoais) => void }) {
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+
   function set(key: keyof DadosPessoais) {
     return (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...data, [key]: e.target.value });
   }
@@ -78,7 +83,44 @@ function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: Dad
         });
       })
       .catch(() => undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.enderecoCep]);
+
+  useEffect(() => {
+    if (!cameraOpen) return;
+    async function start() {
+      try {
+        setCameraError("");
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch {
+        setCameraError("Não foi possível acessar a câmera.");
+      }
+    }
+    start();
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, [cameraOpen]);
+
+  function capturePhoto() {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 320;
+    canvas.height = video.videoHeight || 240;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    onChange({ ...data, foto: dataUrl });
+    setCameraOpen(false);
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
@@ -186,21 +228,35 @@ function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: Dad
           </div>
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Foto</label>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = () => {
-                  onChange({ ...data, foto: String(reader.result) });
-                };
-                reader.readAsDataURL(file);
-              }}
-              className="bg-secondary border-border"
-            />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" className="border-border" onClick={() => setCameraOpen(true)}>
+                Capturar foto
+              </Button>
+              {data.foto && (
+                <Button variant="outline" className="border-border" onClick={() => onChange({ ...data, foto: "" })}>
+                  Remover
+                </Button>
+              )}
+            </div>
+            {cameraOpen && (
+              <div className="mt-2 rounded-md border border-border bg-secondary/40 p-2">
+                {cameraError ? (
+                  <p className="text-xs text-gym-danger">{cameraError}</p>
+                ) : (
+                  <>
+                    <video ref={videoRef} autoPlay playsInline className="w-full rounded-md" />
+                    <div className="mt-2 flex justify-end gap-2">
+                      <Button variant="outline" className="border-border" onClick={() => setCameraOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={capturePhoto}>Capturar</Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             {data.foto && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={data.foto} alt="Foto do cliente" className="mt-2 h-16 w-16 rounded-md object-cover" />
             )}
           </div>

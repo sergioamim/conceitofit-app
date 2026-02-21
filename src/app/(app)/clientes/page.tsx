@@ -22,7 +22,6 @@ const STATUS_FILTERS: { value: StatusAluno | "TODOS"; label: string }[] = [
 ];
 
 const SEXO_LABEL: Record<string, string> = { M: "Masculino", F: "Feminino", OUTRO: "Outro" };
-const TIPO_PLANO_LABEL: Record<string, string> = { MENSAL: "Mensal", TRIMESTRAL: "Trimestral", SEMESTRAL: "Semestral", ANUAL: "Anual", AVULSO: "Avulso" };
 
 const AVATAR_COLORS = ["#c8f135", "#3de8a0", "#38bdf8", "#f472b6", "#fb923c", "#a78bfa"];
 
@@ -38,10 +37,6 @@ function avatarColor(nome: string) {
 
 function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
-function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 export default function ClientesPage() {

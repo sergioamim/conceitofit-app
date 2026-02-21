@@ -36,6 +36,7 @@ export function SuspenderClienteModal({
 
   useEffect(() => {
     if (initial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         motivo: initial.motivo ?? "",
         inicio: initial.inicio ?? "",

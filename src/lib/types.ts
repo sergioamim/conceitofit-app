@@ -243,6 +243,8 @@ export interface Servico {
   nome: string;
   descricao?: string;
   sessoes?: number;
+  valor: number;
+  agendavel: boolean;
   ativo: boolean;
 }
 

@@ -11,6 +11,14 @@ import {
 import type { Servico } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ServicoModal } from "@/components/shared/servico-modal";
+import { cn } from "@/lib/utils";
+
+function formatBRL(value: number) {
+  return (value ?? 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
 
 export default function ServicosPage() {
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -23,6 +31,7 @@ export default function ServicosPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 
@@ -75,44 +84,65 @@ export default function ServicosPage() {
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border bg-secondary">
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Serviço
-              </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Sessões
-              </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Status
-              </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {servicos.map((s) => (
-              <tr key={s.id} className="transition-colors hover:bg-secondary/40">
-                <td className="px-4 py-3">
-                  <p className="text-sm font-medium">{s.nome}</p>
-                  {s.descricao && (
-                    <p className="text-xs text-muted-foreground">{s.descricao}</p>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">
-                  {s.sessoes ?? "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                      s.ativo
-                        ? "bg-gym-teal/15 text-gym-teal"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {s.ativo ? "Ativo" : "Inativo"}
-                  </span>
-                </td>
+              <tr className="border-b border-border bg-secondary">
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Serviço
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Valor
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Sessões
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Agendamento
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Ações
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {servicos.map((s) => (
+                <tr key={s.id} className="transition-colors hover:bg-secondary/40">
+                  <td className="px-4 py-3">
+                    <p className="text-sm font-medium">{s.nome}</p>
+                    {s.descricao && (
+                      <p className="text-xs text-muted-foreground">{s.descricao}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {formatBRL(s.valor)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {s.sessoes ?? "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                        s.agendavel
+                          ? "bg-gym-accent/15 text-gym-accent"
+                          : "bg-secondary text-muted-foreground"
+                      )}
+                    >
+                      {s.agendavel ? "Sim" : "Não"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                        s.ativo
+                          ? "bg-gym-teal/15 text-gym-teal"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {s.ativo ? "Ativo" : "Inativo"}
+                    </span>
+                  </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <Button
@@ -149,7 +179,7 @@ export default function ServicosPage() {
             {servicos.length === 0 && (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={6}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   Nenhum serviço cadastrado

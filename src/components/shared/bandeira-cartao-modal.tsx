@@ -26,6 +26,7 @@ export function BandeiraCartaoModal({
 
   useEffect(() => {
     if (initial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         nome: initial.nome,
         taxaPercentual: String(initial.taxaPercentual ?? 0),

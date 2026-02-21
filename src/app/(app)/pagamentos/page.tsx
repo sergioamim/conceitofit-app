@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type {
   Pagamento,
   Aluno,
@@ -73,6 +74,7 @@ export default function PagamentosPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

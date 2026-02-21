@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import {
@@ -21,7 +21,11 @@ import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-mod
 import { Button } from "@/components/ui/button";
 import { SuspenderClienteModal } from "@/components/shared/suspender-cliente-modal";
 import { cn } from "@/lib/utils";
-import { CreditCard } from "lucide-react";
+import { Breadcrumb } from "@/components/shared/breadcrumb";
+import { ClienteEditForm } from "@/components/shared/cliente-edit-form";
+import { ClienteHeader } from "@/components/shared/cliente-header";
+import { ClientePhotoModal } from "@/components/shared/cliente-photo-modal";
+import { ClienteTabs, ClienteTabKey } from "@/components/shared/cliente-tabs";
 
 function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
@@ -42,16 +46,38 @@ export default function ClienteDetalhePage() {
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [freqMode, setFreqMode] = useState<"7d" | "ano">("7d");
   const [presencas, setPresencas] = useState<Presenca[]>([]);
-  const [tab, setTab] = useState<"resumo" | "matriculas" | "financeiro">("resumo");
+  const [tab, setTab] = useState<ClienteTabKey>("resumo");
   const [suspenderOpen, setSuspenderOpen] = useState(false);
   const [novaMatriculaOpen, setNovaMatriculaOpen] = useState(false);
   const [recebendo, setRecebendo] = useState<Pagamento | null>(null);
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
 
-  useEffect(() => {
+  const reload = useCallback(async () => {
     const id = params?.id;
     if (!id) return;
-    void reload();
+    const [pags, ms, ps, pres, a, fps, cvs] = await Promise.all([
+      listPagamentos(),
+      listMatriculas(),
+      listPlanos(),
+      listPresencasByAluno(id),
+      getAluno(id),
+      listFormasPagamento(),
+      listConvenios(),
+    ]);
+    setAluno(a);
+    setMatriculas(ms.filter((m) => m.alunoId === id));
+    setPlanos(ps);
+    setPagamentos(pags.filter((p) => p.alunoId === id));
+    setPresencas(pres);
+    setFormasPagamento(fps);
+    setConvenios(cvs);
   }, [params?.id]);
+
+  useEffect(() => {
+    if (!params?.id) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void reload();
+  }, [params?.id, reload]);
 
   const planoAtivo = useMemo(() => {
     return matriculas.find((m) => m.status === "ATIVA");
@@ -84,6 +110,11 @@ export default function ClienteDetalhePage() {
       valor: plano.valor,
     };
   }, [matriculas, planos]);
+
+  const pendenteFinanceiro = useMemo(
+    () => pagamentos.some((p) => p.status === "PENDENTE" || p.status === "VENCIDO"),
+    [pagamentos]
+  );
 
   const serie = useMemo(() => {
     if (!aluno) return [];
@@ -130,27 +161,6 @@ export default function ClienteDetalhePage() {
     { value: "OUTROS", label: "Outros" },
   ];
 
-  async function reload() {
-    const id = params?.id;
-    if (!id) return;
-    const [pags, ms, ps, pres, a, fps, cvs] = await Promise.all([
-      listPagamentos(),
-      listMatriculas(),
-      listPlanos(),
-      listPresencasByAluno(id),
-      getAluno(id),
-      listFormasPagamento(),
-      listConvenios(),
-    ]);
-    setAluno(a);
-    setMatriculas(ms.filter((m) => m.alunoId === id));
-    setPlanos(ps);
-    setPagamentos(pags.filter((p) => p.alunoId === id));
-    setPresencas(pres);
-    setFormasPagamento(fps);
-    setConvenios(cvs);
-  }
-
   return (
     <div className="space-y-6">
       {recebendo && (
@@ -195,78 +205,43 @@ export default function ClienteDetalhePage() {
           await reload();
         }}
       />
+      <ClientePhotoModal
+        open={photoModalOpen}
+        onClose={() => setPhotoModalOpen(false)}
+        aluno={aluno}
+        onSaved={async () => {
+          await reload();
+        }}
+      />
       
 
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">
-            Cliente · {aluno.nome}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Status do cliente: <StatusBadge status={aluno.status} />
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Status do plano:{" "}
-            {planoAtivo ? (
-              <span className="text-gym-teal">Plano ativo</span>
-            ) : (
-              <span className="text-gym-warning">Sem plano ativo</span>
-            )}
-          </p>
-        </div>
-        <div className="flex items-start gap-3">
-          <Button
-            variant="outline"
-            className="h-9"
-            onClick={() => router.push(`/clientes/${aluno.id}/cartoes`)}
-          >
-            <CreditCard className="size-4" />
-          </Button>
-          {!planoAtivo && (
-            <Button
-              onClick={() => setNovaMatriculaOpen(true)}
-              className="h-9"
-            >
-              Nova venda de plano
-            </Button>
-          )}
-          {suspenso ? (
-            <Button
-              variant="outline"
-              className="h-9"
-              onClick={async () => {
-                await updateAluno(aluno.id, {
-                  status: "INATIVO",
-                  suspensao: undefined,
-                });
-                await reload();
-              }}
-            >
-              Reativar
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              className="h-9"
-              onClick={() => {
-                setSuspenderOpen(true);
-              }}
-            >
-              Suspender
-            </Button>
-          )}
-          {planoAtivoInfo && (
-            <div className="rounded-xl border border-border bg-card px-4 py-3 text-right">
-              <p className="text-xs text-muted-foreground">Plano ativo</p>
-              <p className="font-display text-lg font-bold text-gym-accent">
-                {planoAtivoInfo.nome}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                até {formatDate(planoAtivo?.dataFim ?? "")}
-              </p>
-            </div>
-          )}
-        </div>
+      <div className="space-y-3">
+        <Breadcrumb
+          items={[
+            { label: "Clientes", href: "/clientes" },
+            { label: aluno.nome },
+          ]}
+        />
+
+        <ClienteHeader
+          aluno={aluno}
+          planoAtivo={planoAtivo ? { dataFim: planoAtivo.dataFim } : null}
+          planoAtivoInfo={planoAtivoInfo ?? null}
+          suspenso={suspenso}
+          onCartoes={() => router.push(`/clientes/${aluno.id}/cartoes`)}
+          onNovaVenda={() => setNovaMatriculaOpen(true)}
+          onSuspender={() => setSuspenderOpen(true)}
+          onReativar={async () => {
+            await updateAluno(aluno.id, {
+              status: "INATIVO",
+              suspensao: undefined,
+            });
+            await reload();
+          }}
+          showCartoesAction={false}
+          onEdit={() => setTab("editar")}
+          onChangeFoto={() => setPhotoModalOpen(true)}
+        />
       </div>
 
       {suspenso && aluno.suspensao && (
@@ -287,26 +262,13 @@ export default function ClienteDetalhePage() {
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        {[
-          { key: "resumo", label: "Dados" },
-          { key: "matriculas", label: "Matrículas" },
-          { key: "financeiro", label: "Financeiro" },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key as typeof tab)}
-            className={cn(
-              "rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors",
-              tab === t.key
-                ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ClienteTabs
+        current={tab}
+        baseHref={`/clientes/${aluno.id}`}
+        onSelect={(next) => setTab(next)}
+        pendenteFinanceiro={pendenteFinanceiro}
+        showEditTab={tab === "editar"}
+      />
 
       {tab === "resumo" && (
         <>
@@ -477,6 +439,19 @@ export default function ClienteDetalhePage() {
             </div>
           </div>
         </>
+      )}
+
+      {tab === "editar" && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <ClienteEditForm
+            aluno={aluno}
+            onCancel={() => setTab("resumo")}
+            onSaved={async () => {
+              await reload();
+              setTab("resumo");
+            }}
+          />
+        </div>
       )}
 
       {tab === "matriculas" && (

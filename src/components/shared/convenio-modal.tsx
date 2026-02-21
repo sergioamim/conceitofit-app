@@ -30,6 +30,7 @@ export function ConvenioModal({
 
   useEffect(() => {
     if (initial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         nome: initial.nome,
         descontoPercentual: String(initial.descontoPercentual ?? 0),

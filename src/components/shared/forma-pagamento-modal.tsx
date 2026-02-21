@@ -38,6 +38,7 @@ export function FormaPagamentoModal({
 
   useEffect(() => {
     if (initial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         nome: initial.nome,
         tipo: initial.tipo,

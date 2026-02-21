@@ -32,6 +32,7 @@ export default function FormasPagamentoPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

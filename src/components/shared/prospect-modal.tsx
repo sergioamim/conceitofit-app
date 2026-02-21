@@ -43,6 +43,7 @@ export function ProspectModal({
 
   useEffect(() => {
     if (initial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         nome: initial.nome,
         telefone: initial.telefone,

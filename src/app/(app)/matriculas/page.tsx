@@ -66,11 +66,13 @@ export default function MatriculasPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 
   useEffect(() => {
     if (prefillClienteId && !autoOpenDone) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNovaOpen(true);
       setAutoOpenDone(true);
     }

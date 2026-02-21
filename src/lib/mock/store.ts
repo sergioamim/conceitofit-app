@@ -115,6 +115,8 @@ function makeInitialStore(): Store {
       nome: "Avaliação física",
       descricao: "Avaliação inicial completa",
       sessoes: 1,
+      valor: 120,
+      agendavel: true,
       ativo: true,
     },
     {
@@ -123,6 +125,8 @@ function makeInitialStore(): Store {
       nome: "Bioimpedância",
       descricao: "Avaliação de composição corporal",
       sessoes: 1,
+      valor: 80,
+      agendavel: true,
       ativo: true,
     },
     {
@@ -131,6 +135,8 @@ function makeInitialStore(): Store {
       nome: "Aula com personal",
       descricao: "Acompanhamento individual",
       sessoes: 10,
+      valor: 450,
+      agendavel: true,
       ativo: true,
     },
   ];
