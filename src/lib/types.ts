@@ -24,6 +24,28 @@ export interface ProspectStatusLog {
   data: LocalDateTime;
 }
 
+export type StatusAgendamento = "AGENDADO" | "REALIZADO" | "CANCELADO";
+
+export interface ProspectMensagem {
+  id: UUID;
+  prospectId: UUID;
+  texto: string;
+  datahora: LocalDateTime;
+  autorNome: string;
+  autorId?: UUID;
+}
+
+export interface ProspectAgendamento {
+  id: UUID;
+  prospectId: UUID;
+  funcionarioId: UUID;
+  titulo: string;
+  data: LocalDate;
+  hora: string;
+  observacoes?: string;
+  status: StatusAgendamento;
+}
+
 export type StatusAluno =
   | "ATIVO"
   | "INATIVO"
@@ -280,6 +302,36 @@ export interface Convenio {
   descontoPercentual: number;
   planoIds?: UUID[];
   observacoes?: string;
+}
+
+export type VoucherCodeType = "UNICO" | "ALEATORIO";
+export type VoucherAplicarEm = "CONTRATO" | "ANUIDADE";
+
+export interface Voucher {
+  id: UUID;
+  tenantId: UUID;
+  tipo: string;
+  nome: string;
+  periodoInicio: LocalDate;
+  periodoFim?: LocalDate;
+  prazoDeterminado: boolean;
+  quantidade?: number;
+  ilimitado: boolean;
+  codigoTipo: VoucherCodeType;
+  usarNaVenda: boolean;
+  planoIds?: UUID[];
+  umaVezPorCliente: boolean;
+  aplicarEm: VoucherAplicarEm[];
+  ativo: boolean;
+}
+
+export interface VoucherCodigo {
+  id: UUID;
+  voucherId: UUID;
+  codigo: string;
+  usado: boolean;
+  usadoPorAlunoId?: UUID;
+  dataUso?: LocalDateTime;
 }
 
 // ─── Input/Request types ────────────────────────────────────────────────────

@@ -44,6 +44,7 @@ const administrativoItems = [
   { href: "/administrativo/horarios", label: "Horários", icon: Settings },
   { href: "/administrativo/convenios", label: "Convênios", icon: Settings },
   { href: "/administrativo/servicos", label: "Serviços", icon: Settings },
+  { href: "/administrativo/vouchers", label: "Vouchers", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -114,7 +115,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex flex-1 flex-col gap-0.5 px-3 py-4">
+      <nav className="flex flex-1 flex-col gap-0.5 px-3 py-4 overflow-y-auto">
         {!collapsed && (
           <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
           Principal

@@ -9,25 +9,27 @@ import {
 } from "@/lib/mock/services";
 import type { Prospect, StatusProspect, Funcionario } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { ProspectDetailModal } from "@/components/shared/prospect-detail-modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-const STATUS_COLUMNS: { key: StatusProspect; label: string }[] = [
-  { key: "NOVO", label: "Novo" },
-  { key: "EM_CONTATO", label: "Em contato" },
-  { key: "AGENDOU_VISITA", label: "Agendou visita" },
-  { key: "VISITOU", label: "Visitou" },
-  { key: "CONVERTIDO", label: "Convertido" },
-  { key: "PERDIDO", label: "Perdido" },
+const STATUS_COLUMNS: { key: StatusProspect; label: string; accent: string }[] = [
+  { key: "NOVO", label: "Novo", accent: "bg-muted-foreground/20" },
+  { key: "AGENDOU_VISITA", label: "Agendou visita", accent: "bg-gym-warning/30" },
+  { key: "VISITOU", label: "Visitou", accent: "bg-blue-400/30" },
+  { key: "EM_CONTATO", label: "Em contato", accent: "bg-gym-accent/30" },
+  { key: "CONVERTIDO", label: "Convertido", accent: "bg-gym-teal/30" },
+  { key: "PERDIDO", label: "Perdido", accent: "bg-gym-danger/30" },
 ];
 
-const NEXT_STATUS: Record<StatusProspect, StatusProspect | null> = {
-  NOVO: "EM_CONTATO",
-  EM_CONTATO: "AGENDOU_VISITA",
-  AGENDOU_VISITA: "VISITOU",
-  VISITOU: "CONVERTIDO",
-  CONVERTIDO: null,
-  PERDIDO: null,
+const ORIGEM_LABEL: Record<string, string> = {
+  VISITA_PRESENCIAL: "Presencial",
+  WHATSAPP: "WhatsApp",
+  INSTAGRAM: "Instagram",
+  FACEBOOK: "Facebook",
+  INDICACAO: "Indicação",
+  SITE: "Site",
+  OUTROS: "Outros",
 };
 
 function formatDate(d: string) {
@@ -40,6 +42,7 @@ export default function ProspectsKanbanPage() {
   const [filtroStatus, setFiltroStatus] = useState<StatusProspect | "TODOS">("TODOS");
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>("TODOS");
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
 
   async function load() {
     const [data, funcs] = await Promise.all([listProspects(), listFuncionarios()]);
@@ -70,13 +73,6 @@ export default function ProspectsKanbanPage() {
     items: filtered.filter((p) => p.status === col.key),
   }));
 
-  async function handleAdvance(p: Prospect) {
-    const next = NEXT_STATUS[p.status];
-    if (!next) return;
-    await updateProspectStatus(p.id, next);
-    load();
-  }
-
   async function handleSetStatus(id: string, status: StatusProspect) {
     if (status === "PERDIDO") {
       const motivo = prompt("Motivo da perda (opcional):");
@@ -88,15 +84,44 @@ export default function ProspectsKanbanPage() {
     load();
   }
 
+  function handleCardClick(p: Prospect) {
+    setSelectedProspect(p);
+  }
+
   return (
     <div className="space-y-6">
+      {selectedProspect && (
+        <ProspectDetailModal
+          prospect={selectedProspect}
+          funcionarios={funcionarios}
+          onClose={() => setSelectedProspect(null)}
+          onChanged={() => {
+            load();
+            setSelectedProspect(null);
+          }}
+        />
+      )}
+
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight">
           CRM · Funil de Vendas
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Arraste cards entre etapas para evoluir o status
+          Arraste cards entre etapas ou clique para ver detalhes
         </p>
+      </div>
+
+      <div className="grid grid-cols-6 gap-3">
+        {byStatus.map((col) => (
+          <div key={col.key} className="rounded-lg border border-border bg-card p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {col.label}
+            </p>
+            <p className="mt-1 font-display text-xl font-bold text-gym-accent">
+              {col.items.length}
+            </p>
+          </div>
+        ))}
       </div>
 
       <div className="flex items-center gap-3">
@@ -111,9 +136,7 @@ export default function ProspectsKanbanPage() {
             <SelectContent className="bg-card border-border">
               <SelectItem value="TODOS">Todos status</SelectItem>
               {STATUS_COLUMNS.map((s) => (
-                <SelectItem key={s.key} value={s.key}>
-                  {s.label}
-                </SelectItem>
+                <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -130,21 +153,20 @@ export default function ProspectsKanbanPage() {
               <SelectItem value="TODOS">Todos responsáveis</SelectItem>
               <SelectItem value="SEM_RESP">Sem responsável</SelectItem>
               {funcionarios.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.nome}
-                </SelectItem>
+                <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <div className="grid grid-cols-6 gap-4">
+      {/* Kanban board */}
+      <div className="grid grid-cols-6 gap-3">
         {byStatus.map((col) => (
           <div
             key={col.key}
             className={cn(
-              "rounded-xl border border-border bg-card",
+              "rounded-xl border border-border bg-card transition-colors",
               draggingId && "ring-1 ring-gym-accent/30"
             )}
             onDragOver={(e) => e.preventDefault()}
@@ -155,18 +177,24 @@ export default function ProspectsKanbanPage() {
               setDraggingId(null);
             }}
           >
-            <div className="flex items-center justify-between border-b border-border px-3 py-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {col.label}
-              </span>
-              <span className="text-xs text-muted-foreground">
+            {/* Column header */}
+            <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className={cn("h-1.5 w-1.5 rounded-full", col.accent.replace("/30", ""))} />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {col.label}
+                </span>
+              </div>
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-bold text-muted-foreground">
                 {col.items.length}
               </span>
             </div>
-            <div className="space-y-2 p-3">
+
+            {/* Cards */}
+            <div className="space-y-2 p-2">
               {col.items.length === 0 && (
-                <div className="rounded-lg border border-dashed border-border/70 p-3 text-center text-xs text-muted-foreground">
-                  Sem prospects
+                <div className="rounded-lg border border-dashed border-border/50 p-3 text-center text-[11px] text-muted-foreground/60">
+                  Solte aqui
                 </div>
               )}
               {col.items.map((p) => (
@@ -178,53 +206,26 @@ export default function ProspectsKanbanPage() {
                     setDraggingId(p.id);
                   }}
                   onDragEnd={() => setDraggingId(null)}
-                  className="rounded-lg border border-border bg-secondary/40 p-3"
+                  onClick={() => handleCardClick(p)}
+                  className={cn(
+                    "cursor-pointer rounded-lg border border-border bg-secondary/40 p-3 transition-all",
+                    "hover:border-gym-accent/40 hover:bg-secondary/70 hover:shadow-sm",
+                    draggingId === p.id && "opacity-40"
+                  )}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold">{p.nome}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {p.telefone}
-                        {p.email ? ` · ${p.email}` : ""}
-                      </p>
-                    </div>
+                  <p className="text-sm font-semibold leading-snug">{p.nome}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{p.telefone}</p>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
+                      {ORIGEM_LABEL[p.origem] ?? p.origem}
+                    </span>
                     <StatusBadge status={p.status} />
                   </div>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    {p.origem} · criado {formatDate(p.dataCriacao)}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    Resp: {p.responsavelId ? funcionariosMap.get(p.responsavelId) : "—"}
-                  </div>
 
-                  <div className="mt-3 flex items-center gap-2">
-                    <Select
-                      value={p.status}
-                      onValueChange={(v) =>
-                        handleSetStatus(p.id, v as StatusProspect)
-                      }
-                    >
-                      <SelectTrigger className="h-8 w-full bg-card border-border text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border">
-                        {STATUS_COLUMNS.map((s) => (
-                          <SelectItem key={s.key} value={s.key}>
-                            {s.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {NEXT_STATUS[p.status] && (
-                      <button
-                        onClick={() => handleAdvance(p)}
-                        className={cn(
-                          "rounded border border-border px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        Avançar
-                      </button>
-                    )}
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>{formatDate(p.dataCriacao)}</span>
+                    <span>{p.responsavelId ? funcionariosMap.get(p.responsavelId) : "—"}</span>
                   </div>
                 </div>
               ))}

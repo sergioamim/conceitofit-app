@@ -14,6 +14,10 @@ import type {
   Tenant,
   HorarioFuncionamento,
   Convenio,
+  Voucher,
+  VoucherCodigo,
+  ProspectMensagem,
+  ProspectAgendamento,
 } from "../types";
 
 const TENANT_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -33,9 +37,13 @@ interface Store {
   funcionarios: Funcionario[];
   presencas: Presenca[];
   prospects: Prospect[];
+  prospectMensagens: ProspectMensagem[];
+  prospectAgendamentos: ProspectAgendamento[];
   alunos: Aluno[];
   matriculas: Matricula[];
   pagamentos: Pagamento[];
+  vouchers: Voucher[];
+  voucherCodigos: VoucherCodigo[];
 }
 
 function makeInitialStore(): Store {
@@ -145,6 +153,70 @@ function makeInitialStore(): Store {
     { id: "cv-001", nome: "Empresa Alpha", ativo: true, descontoPercentual: 15, planoIds: ["pln-002", "pln-003"] },
     { id: "cv-002", nome: "Sindicato Beta", ativo: true, descontoPercentual: 10 },
     { id: "cv-003", nome: "Convênio Inativo", ativo: false, descontoPercentual: 20, planoIds: ["pln-001"] },
+  ];
+
+  const vouchers: Voucher[] = [
+    {
+      id: "vch-001",
+      tenantId: TENANT_ID,
+      tipo: "DESCONTO",
+      nome: "Voucher Black Friday",
+      periodoInicio: "2025-11-01",
+      periodoFim: "2025-11-30",
+      prazoDeterminado: true,
+      quantidade: 50,
+      ilimitado: false,
+      codigoTipo: "ALEATORIO",
+      usarNaVenda: true,
+      planoIds: ["pln-001", "pln-002"],
+      umaVezPorCliente: true,
+      aplicarEm: ["CONTRATO"],
+      ativo: true,
+    },
+    {
+      id: "vch-002",
+      tenantId: TENANT_ID,
+      tipo: "ACESSO",
+      nome: "Voucher Amigo",
+      periodoInicio: "2025-01-01",
+      prazoDeterminado: false,
+      ilimitado: true,
+      codigoTipo: "UNICO",
+      usarNaVenda: false,
+      planoIds: [],
+      umaVezPorCliente: false,
+      aplicarEm: ["CONTRATO", "ANUIDADE"],
+      ativo: true,
+    },
+    {
+      id: "vch-003",
+      tenantId: TENANT_ID,
+      tipo: "SESSAO",
+      nome: "Sessão Experimental",
+      periodoInicio: "2026-01-01",
+      prazoDeterminado: false,
+      ilimitado: false,
+      quantidade: 20,
+      codigoTipo: "UNICO",
+      usarNaVenda: true,
+      planoIds: ["pln-001"],
+      umaVezPorCliente: true,
+      aplicarEm: ["CONTRATO"],
+      ativo: true,
+    },
+  ];
+
+  const voucherCodigos: VoucherCodigo[] = [
+    // vch-001 · ALEATORIO · 50 qty
+    { id: "vcod-001", voucherId: "vch-001", codigo: "BF25A3", usado: true,  usadoPorAlunoId: "al-001", dataUso: "2025-11-02T10:30:00" },
+    { id: "vcod-002", voucherId: "vch-001", codigo: "BF7MXQ", usado: true,  usadoPorAlunoId: "al-002", dataUso: "2025-11-05T14:15:00" },
+    { id: "vcod-003", voucherId: "vch-001", codigo: "BFQ9ZR", usado: false },
+    { id: "vcod-004", voucherId: "vch-001", codigo: "BFW2PL", usado: false },
+    // vch-002 · UNICO · ilimitado (each row = one usage of the same code)
+    { id: "vcod-005", voucherId: "vch-002", codigo: "AMIGO2025", usado: true,  usadoPorAlunoId: "al-002", dataUso: "2025-03-15T10:00:00" },
+    { id: "vcod-006", voucherId: "vch-002", codigo: "AMIGO2025", usado: true,  usadoPorAlunoId: "al-001", dataUso: "2025-04-02T14:30:00" },
+    // vch-003 · UNICO · 20 qty · no usages yet
+    { id: "vcod-007", voucherId: "vch-003", codigo: "SESSAO2026", usado: false },
   ];
 
   const bandeirasCartao: BandeiraCartao[] = [
@@ -286,6 +358,63 @@ function makeInitialStore(): Store {
         { status: "NOVO", data: "2026-02-10T11:00:00" },
         { status: "EM_CONTATO", data: "2026-02-12T11:30:00" },
       ],
+    },
+  ];
+
+  const prospectMensagens: ProspectMensagem[] = [
+    {
+      id: "pm-001",
+      prospectId: "pr-001",
+      texto: "Olá Maria! Vi que você se interessou pela nossa academia pelo Instagram. Posso te contar mais sobre nossos planos?",
+      datahora: "2026-02-18T10:30:00",
+      autorNome: "Larissa Costa",
+      autorId: "fn-002",
+    },
+    {
+      id: "pm-002",
+      prospectId: "pr-002",
+      texto: "João, tudo bem? Passando para confirmar a visita agendada para amanhã às 10h.",
+      datahora: "2026-02-18T09:15:00",
+      autorNome: "Bruno Silva",
+      autorId: "fn-003",
+    },
+    {
+      id: "pm-003",
+      prospectId: "pr-002",
+      texto: "Confirmado! Estarei lá às 10h.",
+      datahora: "2026-02-18T09:45:00",
+      autorNome: "Bruno Silva",
+      autorId: "fn-003",
+    },
+    {
+      id: "pm-004",
+      prospectId: "pr-003",
+      texto: "Ana, obrigada pela visita hoje! Ficou com alguma dúvida sobre os planos?",
+      datahora: "2026-02-18T19:00:00",
+      autorNome: "Larissa Costa",
+      autorId: "fn-002",
+    },
+  ];
+
+  const prospectAgendamentos: ProspectAgendamento[] = [
+    {
+      id: "pa-001",
+      prospectId: "pr-002",
+      funcionarioId: "fn-003",
+      titulo: "Visita à academia",
+      data: "2026-02-19",
+      hora: "10:00",
+      observacoes: "João quer conhecer a área de musculação e spinning.",
+      status: "REALIZADO",
+    },
+    {
+      id: "pa-002",
+      prospectId: "pr-003",
+      funcionarioId: "fn-002",
+      titulo: "Apresentação dos planos",
+      data: "2026-02-22",
+      hora: "14:00",
+      status: "AGENDADO",
     },
   ];
 
@@ -455,7 +584,29 @@ function makeInitialStore(): Store {
     { id: "prc-012", alunoId: "al-003", data: "2026-02-01", horario: "18:00", origem: "ACESSO" },
   ];
 
-  return { tenant, tenants, currentTenantId: tenant.id, horarios, convenios, servicos, bandeirasCartao, cartoesCliente, atividades, planos, formasPagamento, funcionarios, presencas, prospects, alunos, matriculas, pagamentos };
+  return {
+    tenant,
+    tenants,
+    currentTenantId: tenant.id,
+    horarios,
+    convenios,
+    servicos,
+    bandeirasCartao,
+    cartoesCliente,
+    atividades,
+    planos,
+    formasPagamento,
+    funcionarios,
+    presencas,
+    prospects,
+    prospectMensagens,
+    prospectAgendamentos,
+    alunos,
+    matriculas,
+    pagamentos,
+    vouchers,
+    voucherCodigos,
+  };
 }
 
 let store: Store = makeInitialStore();
@@ -506,6 +657,8 @@ function normalizeStore(data: Store): Store {
     cartoesCliente: data.cartoesCliente ?? [],
     funcionarios: data.funcionarios ?? [],
     presencas: data.presencas ?? [],
+    prospectMensagens: data.prospectMensagens ?? [],
+    prospectAgendamentos: data.prospectAgendamentos ?? [],
     prospects: data.prospects.map((p) => ({
       ...p,
       dataCriacao: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao,
@@ -534,6 +687,21 @@ function normalizeStore(data: Store): Store {
       dataCriacao: (m as unknown as { createdAt?: string }).createdAt ?? m.dataCriacao,
       dataAtualizacao: m.dataAtualizacao,
     })),
+    vouchers: (data.vouchers ?? []).map((v) => {
+      const raw = v as unknown as Record<string, unknown>;
+      return {
+        ...v,
+        periodoInicio: v.periodoInicio ?? (raw.vencimento as string) ?? "2025-01-01",
+        periodoFim: v.periodoFim ?? (raw.vencimento as string | undefined),
+        prazoDeterminado: v.prazoDeterminado ?? !!raw.vencimento,
+        planoIds: v.planoIds ?? [],
+        umaVezPorCliente: v.umaVezPorCliente ?? false,
+        aplicarEm: Array.isArray(v.aplicarEm)
+          ? v.aplicarEm
+          : [v.aplicarEm ?? "CONTRATO"],
+      };
+    }),
+    voucherCodigos: data.voucherCodigos ?? [],
     pagamentos: data.pagamentos.map((p) => ({
       ...p,
       dataCriacao: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao,

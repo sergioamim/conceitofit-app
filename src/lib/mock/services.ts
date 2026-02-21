@@ -15,9 +15,11 @@ import type {
   Tenant,
   HorarioFuncionamento,
   Convenio,
+  Voucher,
   CategoriaAtividade,
   StatusProspect,
   StatusAluno,
+  StatusAgendamento,
   Sexo,
   TipoFormaPagamento,
   CreateProspectInput,
@@ -25,6 +27,10 @@ import type {
   ConverterProspectResponse,
   DashboardData,
   ReceberPagamentoInput,
+  ProspectMensagem,
+  ProspectAgendamento,
+  VoucherCodigo,
+  VoucherAplicarEm,
 } from "../types";
 
 function genId(): string {
@@ -243,6 +249,81 @@ export async function marcarProspectPerdido(
             ],
           }
         : p
+    ),
+  }));
+}
+
+// ─── PROSPECT MENSAGENS ──────────────────────────────────────────────────────
+
+export async function listProspectMensagens(
+  prospectId: string
+): Promise<ProspectMensagem[]> {
+  return getStore().prospectMensagens.filter((m) => m.prospectId === prospectId);
+}
+
+export async function addProspectMensagem(
+  prospectId: string,
+  texto: string,
+  autorNome: string,
+  autorId?: string
+): Promise<ProspectMensagem> {
+  const msg: ProspectMensagem = {
+    id: genId(),
+    prospectId,
+    texto,
+    datahora: now(),
+    autorNome,
+    autorId,
+  };
+  setStore((s) => ({ ...s, prospectMensagens: [...s.prospectMensagens, msg] }));
+  const at = now();
+  setStore((s) => ({
+    ...s,
+    prospects: s.prospects.map((p) =>
+      p.id === prospectId ? { ...p, dataUltimoContato: at } : p
+    ),
+  }));
+  return msg;
+}
+
+// ─── PROSPECT AGENDAMENTOS ───────────────────────────────────────────────────
+
+export async function listProspectAgendamentos(
+  prospectId: string
+): Promise<ProspectAgendamento[]> {
+  return getStore().prospectAgendamentos
+    .filter((a) => a.prospectId === prospectId)
+    .sort((a, b) => a.data.localeCompare(b.data) || a.hora.localeCompare(b.hora));
+}
+
+export async function criarProspectAgendamento(data: {
+  prospectId: string;
+  funcionarioId: string;
+  titulo: string;
+  data: string;
+  hora: string;
+  observacoes?: string;
+}): Promise<ProspectAgendamento> {
+  const ag: ProspectAgendamento = {
+    id: genId(),
+    ...data,
+    status: "AGENDADO",
+  };
+  setStore((s) => ({
+    ...s,
+    prospectAgendamentos: [...s.prospectAgendamentos, ag],
+  }));
+  return ag;
+}
+
+export async function updateProspectAgendamento(
+  id: string,
+  status: StatusAgendamento
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    prospectAgendamentos: s.prospectAgendamentos.map((a) =>
+      a.id === id ? { ...a, status } : a
     ),
   }));
 }
@@ -620,6 +701,101 @@ export async function deleteConvenio(id: string): Promise<void> {
     ...s,
     convenios: s.convenios.filter((c) => c.id !== id),
   }));
+}
+
+// ─── VOUCHERS ───────────────────────────────────────────────────────────────
+
+export async function listVouchers(): Promise<Voucher[]> {
+  const { vouchers } = getStore();
+  return [...vouchers].reverse();
+}
+
+function gerarCodigoAleatorio(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+export async function createVoucher(
+  data: Omit<Voucher, "id" | "tenantId" | "ativo"> & { codigoUnicoCustom?: string }
+): Promise<Voucher> {
+  const { codigoUnicoCustom, ...voucherData } = data;
+  const voucher: Voucher = {
+    ...voucherData,
+    id: genId(),
+    tenantId: TENANT_ID_DEFAULT,
+    ativo: true,
+  };
+
+  const qty = data.codigoTipo === "UNICO" ? 1 : Math.min(data.quantidade ?? 10, 50);
+  const uniCodigo = (codigoUnicoCustom ?? "").trim().toUpperCase() || gerarCodigoAleatorio();
+  const codigos: VoucherCodigo[] = Array.from({ length: qty }, () => ({
+    id: genId(),
+    voucherId: voucher.id,
+    codigo: data.codigoTipo === "UNICO" ? uniCodigo : gerarCodigoAleatorio(),
+    usado: false,
+  }));
+
+  setStore((s) => ({
+    ...s,
+    vouchers: [voucher, ...s.vouchers],
+    voucherCodigos: [...s.voucherCodigos, ...codigos],
+  }));
+  return voucher;
+}
+
+export async function listVoucherCodigos(voucherId: string): Promise<VoucherCodigo[]> {
+  return getStore().voucherCodigos.filter((c) => c.voucherId === voucherId);
+}
+
+export async function toggleVoucher(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    vouchers: s.vouchers.map((v) =>
+      v.id === id ? { ...v, ativo: !v.ativo } : v
+    ),
+  }));
+}
+
+export async function updateVoucher(
+  id: string,
+  data: {
+    tipo: string;
+    nome: string;
+    periodoInicio: string;
+    periodoFim?: string;
+    prazoDeterminado: boolean;
+    quantidade?: number;
+    ilimitado: boolean;
+    usarNaVenda: boolean;
+    planoIds: string[];
+    umaVezPorCliente: boolean;
+    aplicarEm: VoucherAplicarEm[];
+  }
+): Promise<void> {
+  const hasUsage = getStore().voucherCodigos.some(
+    (c) => c.voucherId === id && c.usado
+  );
+  if (hasUsage) {
+    throw new Error("Voucher já utilizado não pode ser editado.");
+  }
+  setStore((s) => ({
+    ...s,
+    vouchers: s.vouchers.map((v) => (v.id === id ? { ...v, ...data } : v)),
+  }));
+}
+
+export async function listVoucherUsageCounts(): Promise<Record<string, number>> {
+  const result: Record<string, number> = {};
+  for (const c of getStore().voucherCodigos) {
+    if (c.usado) {
+      result[c.voucherId] = (result[c.voucherId] ?? 0) + 1;
+    }
+  }
+  return result;
 }
 
 // ─── PRESENÇAS ─────────────────────────────────────────────────────────────
