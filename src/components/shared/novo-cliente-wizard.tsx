@@ -7,6 +7,7 @@ import { listPlanos, listFormasPagamento, criarAlunoComMatricula, criarAluno } f
 import type { CriarAlunoComMatriculaResponse } from "@/lib/mock/services";
 import type { Plano, FormaPagamento, Sexo, TipoFormaPagamento } from "@/lib/types";
 import { MaskedInput } from "@/components/shared/masked-input";
+import { PhoneInput } from "@/components/shared/phone-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -134,11 +135,11 @@ function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: Dad
         </div>
         <div className="space-y-1.5">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
-          <MaskedInput mask="phone" placeholder="(11) 99999-0000" value={data.telefone} onChange={(v) => onChange({ ...data, telefone: v })} className="bg-secondary border-border" />
+          <PhoneInput placeholder="(11) 99999-0000" value={data.telefone} onChange={(v) => onChange({ ...data, telefone: v })} className="bg-secondary border-border" />
         </div>
         <div className="space-y-1.5">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone secundário</label>
-          <MaskedInput mask="phone" placeholder="(11) 90000-0000" value={data.telefoneSec} onChange={(v) => onChange({ ...data, telefoneSec: v })} className="bg-secondary border-border" />
+          <PhoneInput placeholder="(11) 90000-0000" value={data.telefoneSec} onChange={(v) => onChange({ ...data, telefoneSec: v })} className="bg-secondary border-border" />
         </div>
         <div className="space-y-1.5">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF *</label>
@@ -210,7 +211,7 @@ function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: Dad
           </div>
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</label>
-            <MaskedInput mask="phone" placeholder="(11) 90000-0000" value={data.emergenciaTelefone} onChange={(v) => onChange({ ...data, emergenciaTelefone: v })} className="bg-secondary border-border" />
+            <PhoneInput placeholder="(11) 90000-0000" value={data.emergenciaTelefone} onChange={(v) => onChange({ ...data, emergenciaTelefone: v })} className="bg-secondary border-border" />
           </div>
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>

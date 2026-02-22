@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/shared/phone-input";
 
 export default function PerfilPage() {
   const [nome, setNome] = useState("Sergio");
@@ -34,7 +35,7 @@ export default function PerfilPage() {
           </div>
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</label>
-            <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} className="bg-secondary border-border" />
+            <PhoneInput value={telefone} onChange={setTelefone} className="bg-secondary border-border" />
           </div>
         </div>
         <div className="mt-4 flex justify-end">

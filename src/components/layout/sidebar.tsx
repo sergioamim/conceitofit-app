@@ -43,10 +43,12 @@ const administrativoItems = [
   { href: "/administrativo/bandeiras", label: "Bandeiras de Cartão", icon: Settings },
   { href: "/administrativo/academia", label: "Academia", icon: Settings },
   { href: "/administrativo/funcionarios", label: "Funcionários", icon: Settings },
+  { href: "/administrativo/salas", label: "Salas", icon: Settings },
   { href: "/administrativo/atividades", label: "Atividades", icon: Settings },
   { href: "/administrativo/atividades-grade", label: "Atividades - Grade", icon: Settings },
   { href: "/administrativo/horarios", label: "Horários", icon: Settings },
   { href: "/administrativo/convenios", label: "Convênios", icon: Settings },
+  { href: "/administrativo/produtos", label: "Produtos", icon: Settings },
   { href: "/administrativo/servicos", label: "Serviços", icon: Settings },
   { href: "/administrativo/vouchers", label: "Vouchers", icon: Settings },
 ];

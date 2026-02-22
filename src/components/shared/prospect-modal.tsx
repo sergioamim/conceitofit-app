@@ -5,6 +5,7 @@ import type { CreateProspectInput, Funcionario, Prospect, OrigemProspect } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
+import { PhoneInput } from "@/components/shared/phone-input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -106,8 +107,7 @@ export function ProspectModal({
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Telefone *
               </label>
-              <MaskedInput
-                mask="phone"
+              <PhoneInput
                 placeholder="(11) 99999-0000"
                 value={form.telefone}
                 onChange={(v) => setForm((f) => ({ ...f, telefone: v }))}

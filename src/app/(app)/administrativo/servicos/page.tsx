@@ -92,16 +92,16 @@ export default function ServicosPage() {
                   Valor
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Sessões
+                  Sessões / Duração
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Venda
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Agendamento
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Acesso catraca
-                </th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Voucher
+                  Acesso catraca / Voucher
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Status
@@ -125,6 +125,22 @@ export default function ServicosPage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {s.sessoes ?? "—"}
+                    {s.duracaoMinutos ? ` · ${s.duracaoMinutos} min` : ""}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                        s.tipoCobranca === "RECORRENTE"
+                          ? "bg-gym-accent/15 text-gym-accent"
+                          : "bg-secondary text-muted-foreground"
+                      )}
+                    >
+                      {s.tipoCobranca === "RECORRENTE" ? "Recorrente" : "Único"}
+                    </span>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {s.permiteDesconto ? "Desconto permitido" : "Sem desconto"}
+                    </p>
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -135,32 +151,16 @@ export default function ServicosPage() {
                           : "bg-secondary text-muted-foreground"
                       )}
                     >
-                      {s.agendavel ? "Sim" : "Não"}
+                      {s.agendavel ? "Agendável" : "Sem agenda"}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                        s.permiteAcessoCatraca
-                          ? "bg-gym-accent/15 text-gym-accent"
-                          : "bg-secondary text-muted-foreground"
-                      )}
-                    >
-                      {s.permiteAcessoCatraca ? "Sim" : "Não"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                        s.permiteVoucher
-                          ? "bg-gym-accent/15 text-gym-accent"
-                          : "bg-secondary text-muted-foreground"
-                      )}
-                    >
-                      {s.permiteVoucher ? "Sim" : "Não"}
-                    </span>
+                    <p className="text-[11px] text-muted-foreground">
+                      Catraca: <span className={s.permiteAcessoCatraca ? "text-gym-accent" : ""}>{s.permiteAcessoCatraca ? "Sim" : "Não"}</span>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Voucher: <span className={s.permiteVoucher ? "text-gym-accent" : ""}>{s.permiteVoucher ? "Sim" : "Não"}</span>
+                    </p>
                   </td>
                   <td className="px-4 py-3">
                     <span

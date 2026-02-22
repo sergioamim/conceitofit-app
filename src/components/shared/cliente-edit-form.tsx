@@ -6,6 +6,7 @@ import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
+import { PhoneInput } from "@/components/shared/phone-input";
 
 interface EditForm {
   nome: string;
@@ -96,7 +97,7 @@ export function ClienteEditForm({
       cpf: form.cpf,
       rg: form.rg || undefined,
       dataNascimento: form.dataNascimento,
-      sexo: form.sexo,
+      sexo: form.sexo || undefined,
       endereco: {
         cep: form.enderecoCep || undefined,
         logradouro: form.enderecoLogradouro || undefined,
@@ -144,11 +145,11 @@ export function ClienteEditForm({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
-              <MaskedInput mask="phone" value={form.telefone} onChange={(v) => setField("telefone", v)} className="bg-secondary border-border" />
+              <PhoneInput value={form.telefone} onChange={(v) => setField("telefone", v)} className="bg-secondary border-border" />
             </div>
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone secundário</label>
-              <MaskedInput mask="phone" value={form.telefoneSec} onChange={(v) => setField("telefoneSec", v)} className="bg-secondary border-border" />
+              <PhoneInput value={form.telefoneSec} onChange={(v) => setField("telefoneSec", v)} className="bg-secondary border-border" />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -224,7 +225,7 @@ export function ClienteEditForm({
           </div>
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</label>
-            <MaskedInput mask="phone" value={form.emergenciaTelefone} onChange={(v) => setField("emergenciaTelefone", v)} className="bg-secondary border-border" />
+            <PhoneInput value={form.emergenciaTelefone} onChange={(v) => setField("emergenciaTelefone", v)} className="bg-secondary border-border" />
           </div>
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>

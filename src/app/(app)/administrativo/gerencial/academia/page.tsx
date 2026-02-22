@@ -6,6 +6,7 @@ import type { Tenant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
+import { PhoneInput } from "@/components/shared/phone-input";
 
 export default function AcademiaPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
@@ -18,6 +19,7 @@ export default function AcademiaPage() {
   if (!tenant) return null;
 
   async function handleSave() {
+    if (!tenant) return;
     setSaving(true);
     await updateTenant(tenant);
     setSaving(false);
@@ -60,8 +62,7 @@ export default function AcademiaPage() {
         </div>
         <div className="space-y-1.5">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</label>
-          <MaskedInput
-            mask="phone"
+          <PhoneInput
             value={tenant.telefone ?? ""}
             onChange={(v) => setTenant({ ...tenant, telefone: v })}
             className="bg-secondary border-border"

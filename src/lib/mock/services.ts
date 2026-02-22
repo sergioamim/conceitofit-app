@@ -33,6 +33,9 @@ import type {
   ProspectAgendamento,
   VoucherCodigo,
   VoucherAplicarEm,
+  Sala,
+  Cargo,
+  Produto,
 } from "../types";
 
 function genId(): string {
@@ -600,6 +603,51 @@ export async function deleteProspect(id: string): Promise<void> {
 
 // ─── FUNCIONÁRIOS ───────────────────────────────────────────────────────────
 
+export async function listCargos(params?: { apenasAtivos?: boolean }): Promise<Cargo[]> {
+  const only = params?.apenasAtivos ?? false;
+  return only ? getStore().cargos.filter((c) => c.ativo) : getStore().cargos;
+}
+
+export async function createCargo(
+  data: Omit<Cargo, "id" | "tenantId" | "ativo">
+): Promise<Cargo> {
+  const cargo: Cargo = {
+    ...data,
+    id: genId(),
+    tenantId: TENANT_ID_DEFAULT,
+    ativo: true,
+  };
+  setStore((s) => ({ ...s, cargos: [cargo, ...s.cargos] }));
+  return cargo;
+}
+
+export async function updateCargo(
+  id: string,
+  data: Partial<Omit<Cargo, "id" | "tenantId">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    cargos: s.cargos.map((c) => (c.id === id ? { ...c, ...data } : c)),
+  }));
+}
+
+export async function toggleCargo(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    cargos: s.cargos.map((c) => (c.id === id ? { ...c, ativo: !c.ativo } : c)),
+  }));
+}
+
+export async function deleteCargo(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    cargos: s.cargos.filter((c) => c.id !== id),
+    funcionarios: s.funcionarios.map((f) =>
+      f.cargoId === id ? { ...f, cargoId: undefined } : f
+    ),
+  }));
+}
+
 export async function listFuncionarios(params?: { apenasAtivos?: boolean }): Promise<Funcionario[]> {
   const only = params?.apenasAtivos ?? true;
   return only
@@ -610,7 +658,12 @@ export async function listFuncionarios(params?: { apenasAtivos?: boolean }): Pro
 export async function createFuncionario(
   data: Omit<Funcionario, "id" | "ativo">
 ): Promise<Funcionario> {
-  const f: Funcionario = { ...data, id: genId(), ativo: true };
+  const f: Funcionario = {
+    ...data,
+    podeMinistrarAulas: data.podeMinistrarAulas ?? false,
+    id: genId(),
+    ativo: true,
+  };
   setStore((s) => ({ ...s, funcionarios: [f, ...s.funcionarios] }));
   return f;
 }
@@ -622,7 +675,9 @@ export async function updateFuncionario(
   setStore((s) => ({
     ...s,
     funcionarios: s.funcionarios.map((f) =>
-      f.id === id ? { ...f, ...data } : f
+      f.id === id
+        ? { ...f, ...data, podeMinistrarAulas: data.podeMinistrarAulas ?? f.podeMinistrarAulas }
+        : f
     ),
   }));
 }
@@ -640,6 +695,56 @@ export async function deleteFuncionario(id: string): Promise<void> {
   setStore((s) => ({
     ...s,
     funcionarios: s.funcionarios.filter((f) => f.id !== id),
+    atividadeGrades: s.atividadeGrades.map((g) =>
+      g.funcionarioId === id ? { ...g, funcionarioId: undefined } : g
+    ),
+  }));
+}
+
+// ─── SALAS ──────────────────────────────────────────────────────────────────
+
+export async function listSalas(params?: { apenasAtivas?: boolean }): Promise<Sala[]> {
+  const only = params?.apenasAtivas ?? false;
+  return only ? getStore().salas.filter((s) => s.ativo) : getStore().salas;
+}
+
+export async function createSala(
+  data: Omit<Sala, "id" | "tenantId" | "ativo">
+): Promise<Sala> {
+  const sala: Sala = {
+    ...data,
+    id: genId(),
+    tenantId: TENANT_ID_DEFAULT,
+    ativo: true,
+  };
+  setStore((s) => ({ ...s, salas: [sala, ...s.salas] }));
+  return sala;
+}
+
+export async function updateSala(
+  id: string,
+  data: Partial<Omit<Sala, "id" | "tenantId">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    salas: s.salas.map((item) => (item.id === id ? { ...item, ...data } : item)),
+  }));
+}
+
+export async function toggleSala(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    salas: s.salas.map((item) => (item.id === id ? { ...item, ativo: !item.ativo } : item)),
+  }));
+}
+
+export async function deleteSala(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    salas: s.salas.filter((item) => item.id !== id),
+    atividadeGrades: s.atividadeGrades.map((g) =>
+      g.salaId === id ? { ...g, salaId: undefined } : g
+    ),
   }));
 }
 
@@ -903,6 +1008,58 @@ export async function deleteServico(id: string): Promise<void> {
   setStore((s) => ({
     ...s,
     servicos: s.servicos.filter((sv) => sv.id !== id),
+  }));
+}
+
+// ─── PRODUTOS ──────────────────────────────────────────────────────────────
+
+export async function listProdutos(params?: {
+  apenasAtivos?: boolean;
+}): Promise<Produto[]> {
+  const { produtos } = getStore();
+  const all = [...produtos].reverse();
+  if (params?.apenasAtivos) return all.filter((p) => p.ativo);
+  return all;
+}
+
+export async function createProduto(
+  data: Omit<Produto, "id" | "tenantId" | "ativo">
+): Promise<Produto> {
+  const produto: Produto = {
+    ...data,
+    id: genId(),
+    tenantId: TENANT_ID_DEFAULT,
+    ativo: true,
+  };
+  setStore((s) => ({ ...s, produtos: [produto, ...s.produtos] }));
+  return produto;
+}
+
+export async function updateProduto(
+  id: string,
+  data: Partial<Omit<Produto, "id" | "tenantId">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    produtos: s.produtos.map((p) =>
+      p.id === id ? { ...p, ...data } : p
+    ),
+  }));
+}
+
+export async function toggleProduto(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    produtos: s.produtos.map((p) =>
+      p.id === id ? { ...p, ativo: !p.ativo } : p
+    ),
+  }));
+}
+
+export async function deleteProduto(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    produtos: s.produtos.filter((p) => p.id !== id),
   }));
 }
 

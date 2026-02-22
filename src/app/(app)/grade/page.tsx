@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { listAtividadeGrades, listAtividades } from "@/lib/mock/services";
-import type { Atividade, AtividadeGrade, DiaSemana } from "@/lib/types";
+import { listAtividadeGrades, listAtividades, listFuncionarios, listSalas } from "@/lib/mock/services";
+import type { Atividade, AtividadeGrade, DiaSemana, Funcionario, Sala } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -41,14 +41,20 @@ export default function GradePage() {
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date()));
   const [grades, setGrades] = useState<AtividadeGrade[]>([]);
   const [atividades, setAtividades] = useState<Atividade[]>([]);
+  const [salas, setSalas] = useState<Sala[]>([]);
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
 
   async function load() {
-    const [g, a] = await Promise.all([
+    const [g, a, sal, pro] = await Promise.all([
       listAtividadeGrades({ apenasAtivas: true }),
       listAtividades({ apenasAtivas: true }),
+      listSalas({ apenasAtivas: true }),
+      listFuncionarios({ apenasAtivos: true }),
     ]);
     setGrades(g);
     setAtividades(a);
+    setSalas(sal);
+    setFuncionarios(pro);
   }
 
   useEffect(() => {
@@ -57,9 +63,11 @@ export default function GradePage() {
   }, []);
 
   const atividadeMap = useMemo(() => new Map(atividades.map((a) => [a.id, a])), [atividades]);
+  const salaMap = useMemo(() => new Map(salas.map((s) => [s.id, s])), [salas]);
+  const funcionarioMap = useMemo(() => new Map(funcionarios.map((f) => [f.id, f])), [funcionarios]);
 
   const byDay = useMemo(() => {
-    const grouped: Record<DiaSemana, (AtividadeGrade & { atividade?: Atividade })[]> = {
+    const grouped: Record<DiaSemana, (AtividadeGrade & { atividade?: Atividade; diaExibicao: DiaSemana })[]> = {
       SEG: [],
       TER: [],
       QUA: [],
@@ -72,7 +80,9 @@ export default function GradePage() {
     grades.forEach((g) => {
       const atividade = atividadeMap.get(g.atividadeId);
       if (!atividade) return;
-      grouped[g.diaSemana].push({ ...g, atividade });
+      g.diasSemana.forEach((dia) => {
+        grouped[dia].push({ ...g, atividade, diaExibicao: dia });
+      });
     });
 
     DIA_ORDER.forEach((dia) => {
@@ -83,6 +93,16 @@ export default function GradePage() {
   }, [grades, atividadeMap]);
 
   const weekEnd = addDays(weekStart, 6);
+  const nowDate = new Date();
+
+  function isCheckinWindowOpen(item: AtividadeGrade, date: Date) {
+    if (item.definicaoHorario !== "PREVIAMENTE") return false;
+    const [hh, mm] = item.horaInicio.split(":").map(Number);
+    const start = new Date(date);
+    start.setHours(hh || 0, mm || 0, 0, 0);
+    const openAt = new Date(start.getTime() - item.checkinLiberadoMinutosAntes * 60 * 1000);
+    return nowDate >= openAt && nowDate <= start;
+  }
 
   return (
     <div className="space-y-6">
@@ -111,7 +131,7 @@ export default function GradePage() {
           const date = addDays(weekStart, idx);
           const items = byDay[dia];
           return (
-            <div key={dia} className="rounded-xl border border-border bg-card">
+            <div key={dia} className="rounded-xl border border-border bg-card min-h-[280px]">
               <div className="border-b border-border px-3 py-2.5">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{DIA_LABEL[dia]}</p>
                 <p className="mt-0.5 text-sm text-muted-foreground">{formatDayDate(date)}</p>
@@ -125,20 +145,38 @@ export default function GradePage() {
                 )}
 
                 {items.map((item) => (
-                  <div key={item.id} className="rounded-lg border border-border bg-secondary/30 p-2.5">
+                  <div key={`${item.id}-${item.diaExibicao}`} className="rounded-lg border border-border bg-secondary/30 px-3 py-3">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-semibold leading-tight">{item.atividade?.nome ?? "Atividade"}</p>
                       <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                        {item.horaInicio}
+                        {item.definicaoHorario === "SOB_DEMANDA" ? "Sob demanda" : item.horaInicio}
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{item.horaInicio} - {item.horaFim}</p>
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      {item.local ?? "Local não definido"}
-                      {item.instrutor ? ` · ${item.instrutor}` : ""}
+                      {item.definicaoHorario === "SOB_DEMANDA" ? "Horário definido sob demanda" : `${item.horaInicio} - ${item.horaFim}`}
                     </p>
+                    <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                      <p className="truncate">
+                        <span className="text-foreground/70">Sala:</span>{" "}
+                        {item.salaId
+                          ? (salaMap.get(item.salaId)?.nome ?? "Sala removida")
+                          : (item.local ?? "Não definida")}
+                      </p>
+                      <p className="truncate">
+                        <span className="text-foreground/70">Funcionário:</span>{" "}
+                        {item.funcionarioId
+                          ? (funcionarioMap.get(item.funcionarioId)?.nome ?? "Funcionário removido")
+                          : (item.instrutor ?? "Não definido")}
+                      </p>
+                    </div>
                     <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
-                      <span>Capacidade {item.capacidade}</span>
+                      <span>
+                        {item.atividade?.permiteCheckin
+                          ? isCheckinWindowOpen(item, date)
+                            ? `Vagas disponíveis: ${item.capacidade}`
+                            : "Check-in ainda indisponível"
+                          : `Capacidade da sala: ${item.capacidade}`}
+                      </span>
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 font-semibold",

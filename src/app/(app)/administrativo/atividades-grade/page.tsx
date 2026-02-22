@@ -7,10 +7,12 @@ import {
   deleteAtividadeGrade,
   listAtividadeGrades,
   listAtividades,
+  listFuncionarios,
+  listSalas,
   toggleAtividadeGrade,
   updateAtividadeGrade,
 } from "@/lib/mock/services";
-import type { Atividade, AtividadeGrade, DiaSemana } from "@/lib/types";
+import type { Atividade, AtividadeGrade, DiaSemana, Funcionario, Sala } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AtividadeGradeModal, type AtividadeGradeForm } from "@/components/shared/atividade-grade-modal";
@@ -28,6 +30,8 @@ const DIA_LABEL: Record<DiaSemana, string> = {
 export default function AtividadesGradePage() {
   const [grades, setGrades] = useState<AtividadeGrade[]>([]);
   const [atividades, setAtividades] = useState<Atividade[]>([]);
+  const [salas, setSalas] = useState<Sala[]>([]);
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AtividadeGrade | null>(null);
   const [filtroAtividade, setFiltroAtividade] = useState<string>("TODAS");
@@ -35,9 +39,16 @@ export default function AtividadesGradePage() {
   const [apenasAtivas, setApenasAtivas] = useState(true);
 
   async function load() {
-    const [g, a] = await Promise.all([listAtividadeGrades(), listAtividades()]);
+    const [g, a, sal, pro] = await Promise.all([
+      listAtividadeGrades(),
+      listAtividades(),
+      listSalas(),
+      listFuncionarios({ apenasAtivos: true }),
+    ]);
     setGrades(g);
     setAtividades(a);
+    setSalas(sal);
+    setFuncionarios(pro);
   }
 
   useEffect(() => {
@@ -46,10 +57,12 @@ export default function AtividadesGradePage() {
   }, []);
 
   const atividadeMap = useMemo(() => new Map(atividades.map((a) => [a.id, a])), [atividades]);
+  const salaMap = useMemo(() => new Map(salas.map((s) => [s.id, s])), [salas]);
+  const funcionarioMap = useMemo(() => new Map(funcionarios.map((f) => [f.id, f])), [funcionarios]);
 
   const filtered = grades.filter((g) => {
     const matchAtividade = filtroAtividade === "TODAS" || g.atividadeId === filtroAtividade;
-    const matchDia = filtroDia === "TODOS" || g.diaSemana === filtroDia;
+    const matchDia = filtroDia === "TODOS" || g.diasSemana.includes(filtroDia);
     const matchAtiva = !apenasAtivas || g.ativo;
     return matchAtividade && matchDia && matchAtiva;
   });
@@ -57,12 +70,33 @@ export default function AtividadesGradePage() {
   async function handleSave(data: AtividadeGradeForm, id?: string) {
     const payload = {
       atividadeId: data.atividadeId,
-      diaSemana: data.diaSemana,
+      diasSemana: data.diasSemana,
+      definicaoHorario: data.definicaoHorario,
       horaInicio: data.horaInicio,
       horaFim: data.horaFim,
       capacidade: Math.max(1, parseInt(data.capacidade, 10) || 1),
-      local: data.local || undefined,
-      instrutor: data.instrutor || undefined,
+      checkinLiberadoMinutosAntes: Math.max(0, parseInt(data.checkinLiberadoMinutosAntes, 10) || 0),
+      duracaoMinutos: Math.max(1, parseInt(data.duracaoMinutos, 10) || 1),
+      codigo: data.codigo || undefined,
+      grupoAtividades: data.grupoAtividades || undefined,
+      publico: data.publico || undefined,
+      dificuldade: data.dificuldade ? (parseInt(data.dificuldade, 10) as 1 | 2 | 3 | 4 | 5) : undefined,
+      descricaoAgenda: data.descricaoAgenda || undefined,
+      acessoClientes: data.acessoClientes,
+      permiteReserva: data.permiteReserva,
+      limitarVagasAgregadores: data.limitarVagasAgregadores,
+      exibirWellhub: data.exibirWellhub,
+      permitirSaidaAntesInicio: data.permitirSaidaAntesInicio,
+      permitirEscolherNumeroVaga: data.permitirEscolherNumeroVaga,
+      exibirNoAppCliente: data.exibirNoAppCliente,
+      exibirNoAutoatendimento: data.exibirNoAutoatendimento,
+      exibirNoWodTv: data.exibirNoWodTv,
+      finalizarAtividadeAutomaticamente: data.finalizarAtividadeAutomaticamente,
+      desabilitarListaEspera: data.desabilitarListaEspera,
+      salaId: data.salaId || undefined,
+      funcionarioId: data.funcionarioId || undefined,
+      local: data.salaId ? salaMap.get(data.salaId)?.nome : undefined,
+      instrutor: data.funcionarioId ? funcionarioMap.get(data.funcionarioId)?.nome : undefined,
     };
 
     if (id) await updateAtividadeGrade(id, payload);
@@ -94,6 +128,8 @@ export default function AtividadesGradePage() {
         }}
         onSave={handleSave}
         atividades={atividades}
+        salas={salas}
+        funcionarios={funcionarios}
         initial={editing}
       />
 
@@ -169,10 +205,10 @@ export default function AtividadesGradePage() {
           <thead>
             <tr className="border-b border-border bg-secondary">
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Atividade</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dia</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Horário</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dias</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Horário / Tipo</th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Capacidade</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Local / Instrutor</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Local / Instrutor / Reserva</th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ações</th>
             </tr>
@@ -186,12 +222,20 @@ export default function AtividadesGradePage() {
                     <p className="text-sm font-medium">{atividade?.nome ?? "Atividade removida"}</p>
                     <p className="text-xs text-muted-foreground">{atividade?.categoria ?? "—"}</p>
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{DIA_LABEL[g.diaSemana]}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{g.horaInicio} - {g.horaFim}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {g.diasSemana.map((dia) => DIA_LABEL[dia]).join(", ")}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {g.definicaoHorario === "SOB_DEMANDA"
+                      ? "Sob demanda"
+                      : `${g.horaInicio} - ${g.horaFim}`}
+                  </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">{g.capacidade}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {g.local ?? "—"}
-                    {g.instrutor ? ` · ${g.instrutor}` : ""}
+                    {g.salaId ? (salaMap.get(g.salaId)?.nome ?? "Sala removida") : (g.local ?? "Sem sala")}
+                    {` · `}
+                    {g.funcionarioId ? (funcionarioMap.get(g.funcionarioId)?.nome ?? "Funcionário removido") : (g.instrutor ?? "Sem funcionário")}
+                    {` · ${g.permiteReserva ? "Reserva habilitada" : "Sem reserva"}`}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${

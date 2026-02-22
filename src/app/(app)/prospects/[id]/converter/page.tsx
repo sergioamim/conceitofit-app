@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
+import { PhoneInput } from "@/components/shared/phone-input";
 import {
   Select,
   SelectContent,
@@ -188,8 +189,7 @@ function Step1({
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Telefone
             </label>
-            <MaskedInput
-              mask="phone"
+            <PhoneInput
               placeholder="(11) 99999-0000"
               value={data.emergenciaTelefone}
               onChange={(v) => onChange({ ...data, emergenciaTelefone: v })}

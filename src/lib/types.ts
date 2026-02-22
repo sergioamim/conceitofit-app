@@ -178,11 +178,14 @@ export interface AtividadeGrade {
   id: UUID;
   tenantId: UUID;
   atividadeId: UUID;
+  salaId?: UUID;
+  funcionarioId?: UUID;
   diasSemana: DiaSemana[];
   definicaoHorario: "PREVIAMENTE" | "SOB_DEMANDA";
   horaInicio: string;
   horaFim: string;
   capacidade: number;
+  checkinLiberadoMinutosAntes: number;
   duracaoMinutos: number;
   codigo?: string;
   grupoAtividades?: string;
@@ -280,7 +283,25 @@ export interface FormaPagamento {
 export interface Funcionario {
   id: UUID;
   nome: string;
+  cargoId?: UUID;
   cargo?: string;
+  podeMinistrarAulas: boolean;
+  ativo: boolean;
+}
+
+export interface Cargo {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  ativo: boolean;
+}
+
+export interface Sala {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  descricao?: string;
+  capacidadePadrao?: number;
   ativo: boolean;
 }
 
@@ -308,11 +329,43 @@ export interface Servico {
   id: UUID;
   tenantId: UUID;
   nome: string;
+  sku?: string;
+  categoria?: string;
   descricao?: string;
   sessoes?: number;
+  duracaoMinutos?: number;
+  validadeDias?: number;
   valor: number;
+  custo?: number;
+  comissaoPercentual?: number;
+  aliquotaImpostoPercentual?: number;
+  permiteDesconto: boolean;
+  tipoCobranca: "UNICO" | "RECORRENTE";
+  recorrenciaDias?: number;
   agendavel: boolean;
   permiteAcessoCatraca: boolean;
+  permiteVoucher: boolean;
+  ativo: boolean;
+}
+
+export interface Produto {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  sku: string;
+  codigoBarras?: string;
+  categoria?: string;
+  marca?: string;
+  unidadeMedida: "UN" | "KG" | "G" | "L" | "ML" | "CX";
+  descricao?: string;
+  valorVenda: number;
+  custo?: number;
+  comissaoPercentual?: number;
+  aliquotaImpostoPercentual?: number;
+  controlaEstoque: boolean;
+  estoqueAtual: number;
+  estoqueMinimo?: number;
+  permiteDesconto: boolean;
   permiteVoucher: boolean;
   ativo: boolean;
 }
