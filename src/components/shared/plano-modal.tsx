@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Plano, Atividade, TipoPlano } from "@/lib/types";
+import type { Plano, Atividade, ModoAssinaturaContrato, TipoPlano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -29,6 +29,9 @@ export interface PlanoForm {
   permiteRenovacaoAutomatica: boolean;
   permiteCobrancaRecorrente: boolean;
   diaCobrancaPadrao: string;
+  contratoTemplateHtml: string;
+  contratoAssinatura: ModoAssinaturaContrato;
+  contratoEnviarAutomaticoEmail: boolean;
   atividades: string[];
   beneficios: string[];
   destaque: boolean;
@@ -61,6 +64,9 @@ export function PlanoModal({
     permiteRenovacaoAutomatica: true,
     permiteCobrancaRecorrente: false,
     diaCobrancaPadrao: "",
+    contratoTemplateHtml: "",
+    contratoAssinatura: "AMBAS",
+    contratoEnviarAutomaticoEmail: false,
     atividades: [],
     beneficios: [],
     destaque: false,
@@ -84,6 +90,9 @@ export function PlanoModal({
         permiteRenovacaoAutomatica: initial.permiteRenovacaoAutomatica,
         permiteCobrancaRecorrente: initial.permiteCobrancaRecorrente,
         diaCobrancaPadrao: initial.diaCobrancaPadrao ? String(initial.diaCobrancaPadrao) : "",
+        contratoTemplateHtml: initial.contratoTemplateHtml ?? "",
+        contratoAssinatura: initial.contratoAssinatura ?? "AMBAS",
+        contratoEnviarAutomaticoEmail: initial.contratoEnviarAutomaticoEmail ?? false,
         atividades: initial.atividades ?? [],
         beneficios: initial.beneficios ?? [],
         destaque: initial.destaque,
@@ -103,6 +112,9 @@ export function PlanoModal({
         permiteRenovacaoAutomatica: true,
         permiteCobrancaRecorrente: false,
         diaCobrancaPadrao: "",
+        contratoTemplateHtml: "",
+        contratoAssinatura: "AMBAS",
+        contratoEnviarAutomaticoEmail: false,
         atividades: [],
         beneficios: [],
         destaque: false,
@@ -296,6 +308,57 @@ export function PlanoModal({
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-md border border-border bg-secondary/30 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Contrato vinculado ao plano</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Assinatura
+                  </label>
+                  <Select
+                    value={form.contratoAssinatura}
+                    onValueChange={(v) => set("contratoAssinatura", v as ModoAssinaturaContrato)}
+                  >
+                    <SelectTrigger className="w-full bg-secondary border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="DIGITAL">Digital</SelectItem>
+                      <SelectItem value="PRESENCIAL">Presencial</SelectItem>
+                      <SelectItem value="AMBAS">Digital ou presencial</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Envio automático
+                  </label>
+                  <div className="flex h-10 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={form.contratoEnviarAutomaticoEmail}
+                      onChange={(e) => set("contratoEnviarAutomaticoEmail", e.target.checked)}
+                    />
+                    <span className="text-muted-foreground">Enviar contrato por e-mail após venda</span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Template do contrato (HTML)
+                </label>
+                <textarea
+                  value={form.contratoTemplateHtml}
+                  onChange={(e) => set("contratoTemplateHtml", e.target.value)}
+                  placeholder="<h1>Contrato</h1><p>Cliente: {{NOME_CLIENTE}}</p>"
+                  className="h-40 w-full resize-y rounded-md border border-border bg-secondary p-3 text-sm outline-none"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Marcações disponíveis: {`{{NOME_CLIENTE}}`} {`{{CPF_CLIENTE}}`} {`{{NOME_PLANO}}`} {`{{VALOR_PLANO}}`} {`{{NOME_UNIDADE}}`} {`{{RAZAO_SOCIAL_UNIDADE}}`} {`{{CNPJ_UNIDADE}}`} {`{{DATA_ASSINATURA}}`}
+                </p>
               </div>
             </div>
             <div className="space-y-1.5">

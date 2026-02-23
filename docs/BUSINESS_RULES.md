@@ -60,6 +60,17 @@
 - Ao receber pagamento, status vira `PAGO` e o cliente pode voltar para `ATIVO` se tiver plano vigente e não houver débitos.
 - Venda com pagamento pendente exige confirmação explícita.
 
+## Contas a pagar
+- `Conta a pagar` e lançamento financeiro por unidade (`tenantId`).
+- Status suportados:
+  - `PENDENTE`, `PAGA`, `VENCIDA`, `CANCELADA`.
+- Regra automática:
+  - conta `PENDENTE` com `dataVencimento < hoje` torna-se `VENCIDA`.
+- Valor líquido da conta:
+  - `valorOriginal - desconto + jurosMulta`.
+- Baixa financeira deve registrar:
+  - `dataPagamento`, `formaPagamento` e `valorPago` (opcional, default = valor líquido).
+
 ## Presenças
 - Registro de presença inclui `data`, `horario`, `origem` e `atividade`.
 - Gráfico de frequência conta no máximo 1 presença por dia.
@@ -122,3 +133,22 @@
 - Usuario pode escolher outra data apenas no passado.
 - Componentes de periodo em telas de listagem devem respeitar escopo funcional:
   - Quando definido, listar dados do mes/ano selecionado.
+
+## DRE gerencial
+- DRE deve permitir filtro mensal e período customizado.
+- Estrutura base:
+  - Receita bruta
+  - (-) Deduções
+  - Receita líquida
+  - (-) Custos variáveis
+  - Margem de contribuição
+  - (-) Despesas operacionais
+  - EBITDA
+  - Resultado líquido
+- DRE realizado considera apenas:
+  - receitas efetivamente pagas/recebidas no período
+  - despesas efetivamente baixadas no período
+
+## Conciliação bancária (futuro)
+- Primeira fase: importação manual (`OFX`/`CNAB`/`CSV`) e matching assistido.
+- Fases seguintes: integração bancária via API/Open Finance com conciliação semiautomática.

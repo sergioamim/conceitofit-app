@@ -7,6 +7,7 @@ import type {
   Plano,
   Matricula,
   Pagamento,
+  ContaPagar,
   FormaPagamento,
   Funcionario,
   Servico,
@@ -46,6 +47,14 @@ import type {
   CampanhaCanal,
   CampanhaPublicoAlvo,
   CampanhaStatus,
+  CategoriaContaPagar,
+  StatusContaPagar,
+  DREGerencial,
+  GrupoDre,
+  TipoContaPagar,
+  RegraRecorrenciaContaPagar,
+  RecorrenciaContaPagar,
+  TerminoRecorrenciaContaPagar,
 } from "../types";
 
 function genId(): string {
@@ -70,6 +79,73 @@ function subtractDays(date: Date, days: number): Date {
 
 function today(): string {
   return new Date().toISOString().split("T")[0];
+}
+
+function monthDateRange(month: number, year: number): { start: string; end: string } {
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0);
+  return {
+    start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`,
+    end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`,
+  };
+}
+
+function inDateRange(date: string | undefined, start: string, end: string): boolean {
+  if (!date) return false;
+  return date >= start && date <= end;
+}
+
+function contaPagarTotal(conta: ContaPagar): number {
+  const bruto = Number(conta.valorOriginal ?? 0);
+  const desconto = Number(conta.desconto ?? 0);
+  const juros = Number(conta.jurosMulta ?? 0);
+  return Math.max(0, bruto - desconto + juros);
+}
+
+function getMonthStart(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function toLocalDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function parseDate(date: string): Date {
+  return new Date(`${date}T00:00:00`);
+}
+
+function addDaysToDate(date: string, days: number): string {
+  const parsed = parseDate(date);
+  parsed.setDate(parsed.getDate() + days);
+  return toLocalDate(parsed);
+}
+
+function getNextMonthlyDate(baseDate: string, dayOfMonth: number, step = 1): string {
+  const current = parseDate(baseDate);
+  current.setMonth(current.getMonth() + step);
+  const year = current.getFullYear();
+  const month = current.getMonth();
+  const maxDay = new Date(year, month + 1, 0).getDate();
+  current.setDate(Math.min(dayOfMonth, maxDay));
+  return toLocalDate(current);
+}
+
+function matchesRuleTermination(
+  rule: RegraRecorrenciaContaPagar,
+  generatedCount: number,
+  nextDueDate: string
+): boolean {
+  if (rule.termino === "SEM_FIM") return true;
+  if (rule.termino === "EM_DATA") {
+    return !rule.dataFim || nextDueDate <= rule.dataFim;
+  }
+  if (rule.termino === "APOS_OCORRENCIAS") {
+    const max = Math.max(1, Number(rule.numeroOcorrencias ?? 1));
+    return generatedCount < max;
+  }
+  return true;
 }
 
 function rangesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
@@ -378,6 +454,9 @@ function tenantHasLinkedData(store: ReturnType<typeof getStore>, tenantId: strin
     store.alunos.some((item) => item.tenantId === tenantId) ||
     store.matriculas.some((item) => item.tenantId === tenantId) ||
     store.pagamentos.some((item) => item.tenantId === tenantId) ||
+    (store.contasPagar ?? []).some((item) => item.tenantId === tenantId) ||
+    (store.tiposContaPagar ?? []).some((item) => item.tenantId === tenantId) ||
+    (store.regrasRecorrenciaContaPagar ?? []).some((item) => item.tenantId === tenantId) ||
     store.planos.some((item) => item.tenantId === tenantId) ||
     store.formasPagamento.some((item) => item.tenantId === tenantId) ||
     store.atividades.some((item) => item.tenantId === tenantId) ||
@@ -1990,7 +2069,11 @@ function sanitizePlanoRules<T extends {
   permiteRenovacaoAutomatica: boolean;
   permiteCobrancaRecorrente: boolean;
   diaCobrancaPadrao?: number;
+  contratoTemplateHtml?: string;
+  contratoEnviarAutomaticoEmail: boolean;
 }>(plano: T): T {
+  const contratoTemplateHtml = plano.contratoTemplateHtml?.trim() ?? "";
+  const contratoEnviarAutomaticoEmail = contratoTemplateHtml ? plano.contratoEnviarAutomaticoEmail : false;
   if (plano.tipo === "AVULSO") {
     return {
       ...plano,
@@ -2000,6 +2083,8 @@ function sanitizePlanoRules<T extends {
       cobraAnuidade: false,
       valorAnuidade: undefined,
       parcelasMaxAnuidade: undefined,
+      contratoTemplateHtml,
+      contratoEnviarAutomaticoEmail,
     };
   }
 
@@ -2013,6 +2098,8 @@ function sanitizePlanoRules<T extends {
     diaCobrancaPadrao: dia,
     valorAnuidade: plano.cobraAnuidade ? Math.max(0, plano.valorAnuidade ?? 0) : undefined,
     parcelasMaxAnuidade: plano.cobraAnuidade ? Math.max(1, Math.min(24, Math.floor(plano.parcelasMaxAnuidade ?? 1))) : undefined,
+    contratoTemplateHtml,
+    contratoEnviarAutomaticoEmail,
   };
 }
 
@@ -2093,14 +2180,678 @@ export async function receberPagamento(
   syncAlunosStatus();
 }
 
+// ─── CONTAS A PAGAR ────────────────────────────────────────────────────────
+
+export interface CreateTipoContaPagarInput {
+  nome: string;
+  descricao?: string;
+  categoriaOperacional: CategoriaContaPagar;
+  grupoDre: GrupoDre;
+  centroCustoPadrao?: string;
+}
+
+export interface UpdateTipoContaPagarInput {
+  nome?: string;
+  descricao?: string;
+  categoriaOperacional?: CategoriaContaPagar;
+  grupoDre?: GrupoDre;
+  centroCustoPadrao?: string;
+}
+
+export interface CreateContaPagarRecorrenciaInput {
+  tipo: RecorrenciaContaPagar;
+  intervaloDias?: number;
+  diaDoMes?: number;
+  dataInicial: string;
+  termino: TerminoRecorrenciaContaPagar;
+  dataFim?: string;
+  numeroOcorrencias?: number;
+  criarLancamentoInicial: boolean;
+  timezone?: string;
+}
+
+export interface CreateContaPagarInput {
+  tipoContaId?: string;
+  fornecedor: string;
+  documentoFornecedor?: string;
+  descricao: string;
+  categoria?: CategoriaContaPagar;
+  grupoDre?: GrupoDre;
+  centroCusto?: string;
+  regime?: ContaPagar["regime"];
+  competencia: string;
+  dataEmissao?: string;
+  dataVencimento: string;
+  valorOriginal: number;
+  desconto?: number;
+  jurosMulta?: number;
+  observacoes?: string;
+  recorrencia?: CreateContaPagarRecorrenciaInput;
+}
+
+export interface PagarContaPagarInput {
+  dataPagamento: string;
+  formaPagamento: ContaPagar["formaPagamento"];
+  valorPago?: number;
+  observacoes?: string;
+}
+
+function grupoDreFromCategoria(categoria: CategoriaContaPagar): GrupoDre {
+  if (categoria === "FORNECEDORES") return "CUSTO_VARIAVEL";
+  if (categoria === "IMPOSTOS") return "IMPOSTOS";
+  return "DESPESA_OPERACIONAL";
+}
+
+function getNextRecurrenceDate(rule: RegraRecorrenciaContaPagar, currentDate: string): string {
+  if (rule.recorrencia === "INTERVALO_DIAS") {
+    return addDaysToDate(currentDate, Math.max(1, Number(rule.intervaloDias ?? 30)));
+  }
+  return getNextMonthlyDate(currentDate, Math.max(1, Math.min(31, Number(rule.diaDoMes ?? 1))));
+}
+
+function resolveContaTipoValues(input: CreateContaPagarInput): {
+  tipoConta?: TipoContaPagar;
+  categoria: CategoriaContaPagar;
+  grupoDre: GrupoDre;
+  centroCusto?: string;
+} {
+  const tenantId = getCurrentTenantId();
+  const store = getStore();
+  const tipoConta = input.tipoContaId
+    ? (store.tiposContaPagar ?? []).find((t) => t.id === input.tipoContaId && t.tenantId === tenantId)
+    : undefined;
+
+  const categoria = tipoConta?.categoriaOperacional ?? input.categoria ?? "OUTROS";
+  const grupoDre = tipoConta?.grupoDre ?? input.grupoDre ?? grupoDreFromCategoria(categoria);
+  const centroCusto = input.centroCusto?.trim() || tipoConta?.centroCustoPadrao;
+
+  return { tipoConta, categoria, grupoDre, centroCusto: centroCusto || undefined };
+}
+
+export async function listTiposContaPagar(params?: { apenasAtivos?: boolean }): Promise<TipoContaPagar[]> {
+  const tenantId = getCurrentTenantId();
+  const apenasAtivos = params?.apenasAtivos ?? true;
+  const tipos = (getStore().tiposContaPagar ?? [])
+    .filter((tipo) => tipo.tenantId === tenantId)
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  return apenasAtivos ? tipos.filter((tipo) => tipo.ativo) : tipos;
+}
+
+export async function createTipoContaPagar(input: CreateTipoContaPagarInput): Promise<TipoContaPagar> {
+  const tipo: TipoContaPagar = {
+    id: genId(),
+    tenantId: getCurrentTenantId(),
+    nome: input.nome.trim(),
+    descricao: input.descricao?.trim() || undefined,
+    categoriaOperacional: input.categoriaOperacional,
+    grupoDre: input.grupoDre,
+    centroCustoPadrao: input.centroCustoPadrao?.trim() || undefined,
+    ativo: true,
+  };
+  setStore((s) => ({ ...s, tiposContaPagar: [tipo, ...(s.tiposContaPagar ?? [])] }));
+  return tipo;
+}
+
+export async function updateTipoContaPagar(
+  id: string,
+  input: UpdateTipoContaPagarInput
+): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  setStore((s) => ({
+    ...s,
+    tiposContaPagar: (s.tiposContaPagar ?? []).map((tipo) => {
+      if (tipo.id !== id || tipo.tenantId !== tenantId) return tipo;
+      return {
+        ...tipo,
+        nome: input.nome?.trim() ?? tipo.nome,
+        descricao: input.descricao?.trim() || (input.descricao === "" ? undefined : tipo.descricao),
+        categoriaOperacional: input.categoriaOperacional ?? tipo.categoriaOperacional,
+        grupoDre: input.grupoDre ?? tipo.grupoDre,
+        centroCustoPadrao:
+          input.centroCustoPadrao?.trim() ||
+          (input.centroCustoPadrao === "" ? undefined : tipo.centroCustoPadrao),
+      };
+    }),
+  }));
+}
+
+export async function toggleTipoContaPagar(id: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  setStore((s) => ({
+    ...s,
+    tiposContaPagar: (s.tiposContaPagar ?? []).map((tipo) =>
+      tipo.id === id && tipo.tenantId === tenantId
+        ? { ...tipo, ativo: !tipo.ativo }
+        : tipo
+    ),
+  }));
+}
+
+export async function listRegrasRecorrenciaContaPagar(params?: {
+  status?: RegraRecorrenciaContaPagar["status"] | "TODAS";
+}): Promise<RegraRecorrenciaContaPagar[]> {
+  const tenantId = getCurrentTenantId();
+  let regras = (getStore().regrasRecorrenciaContaPagar ?? [])
+    .filter((rule) => rule.tenantId === tenantId)
+    .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
+  if (params?.status && params.status !== "TODAS") {
+    regras = regras.filter((rule) => rule.status === params.status);
+  }
+  return regras;
+}
+
+export async function pauseRegraRecorrencia(id: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  setStore((s) => ({
+    ...s,
+    regrasRecorrenciaContaPagar: (s.regrasRecorrenciaContaPagar ?? []).map((rule) =>
+      rule.id === id && rule.tenantId === tenantId
+        ? { ...rule, status: "PAUSADA", dataAtualizacao: now() }
+        : rule
+    ),
+  }));
+}
+
+export async function resumeRegraRecorrencia(id: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  setStore((s) => ({
+    ...s,
+    regrasRecorrenciaContaPagar: (s.regrasRecorrenciaContaPagar ?? []).map((rule) =>
+      rule.id === id && rule.tenantId === tenantId
+        ? { ...rule, status: "ATIVA", dataAtualizacao: now() }
+        : rule
+    ),
+  }));
+}
+
+export async function cancelRegraRecorrencia(id: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  setStore((s) => ({
+    ...s,
+    regrasRecorrenciaContaPagar: (s.regrasRecorrenciaContaPagar ?? []).map((rule) =>
+      rule.id === id && rule.tenantId === tenantId
+        ? { ...rule, status: "CANCELADA", dataAtualizacao: now() }
+        : rule
+    ),
+  }));
+}
+
+export async function triggerGeracaoContasRecorrentes(params?: {
+  untilDate?: string;
+  tenantId?: string;
+}): Promise<number> {
+  const targetTenantId = params?.tenantId ?? getCurrentTenantId();
+  const limitDate = params?.untilDate ?? today();
+  let generatedCount = 0;
+
+  setStore((s) => {
+    const contas = [...(s.contasPagar ?? [])];
+    let changed = false;
+    const rules = (s.regrasRecorrenciaContaPagar ?? []).map((rule) => {
+      if (rule.tenantId !== targetTenantId || rule.status !== "ATIVA") return rule;
+
+      const dayOfMonth = Math.max(1, Math.min(31, Number(rule.diaDoMes ?? parseDate(rule.dataInicial).getDate())));
+      const intervalDays = Math.max(1, Number(rule.intervaloDias ?? 30));
+      const existingRuleAccounts = contas.filter((conta) => conta.regraRecorrenciaId === rule.id);
+
+      let occurrenceDate = rule.dataInicial;
+      if (!rule.criarLancamentoInicial && existingRuleAccounts.length === 0) {
+        occurrenceDate =
+          rule.recorrencia === "MENSAL"
+            ? getNextMonthlyDate(rule.dataInicial, dayOfMonth)
+            : addDaysToDate(rule.dataInicial, intervalDays);
+      }
+
+      let totalGeneratedForRule = existingRuleAccounts.length;
+      let safeGuard = 0;
+      while (occurrenceDate <= limitDate && safeGuard < 500) {
+        safeGuard += 1;
+        if (!matchesRuleTermination(rule, totalGeneratedForRule, occurrenceDate)) break;
+
+        const competencia = getMonthStart(parseDate(occurrenceDate));
+        const alreadyExists = contas.some(
+          (conta) =>
+            conta.regraRecorrenciaId === rule.id &&
+            conta.competencia === competencia &&
+            conta.tenantId === rule.tenantId
+        );
+
+        if (!alreadyExists) {
+          const novaConta: ContaPagar = {
+            id: genId(),
+            tenantId: rule.tenantId,
+            tipoContaId: rule.tipoContaId,
+            fornecedor: rule.fornecedor,
+            documentoFornecedor: rule.documentoFornecedor,
+            descricao: rule.descricao,
+            categoria: rule.categoriaOperacional,
+            grupoDre: rule.grupoDre,
+            centroCusto: rule.centroCusto,
+            regime: "FIXA",
+            competencia,
+            dataVencimento: occurrenceDate,
+            valorOriginal: Number(rule.valorOriginal ?? 0),
+            desconto: Number(rule.desconto ?? 0),
+            jurosMulta: Number(rule.jurosMulta ?? 0),
+            status: "PENDENTE",
+            regraRecorrenciaId: rule.id,
+            geradaAutomaticamente: true,
+            origemLancamento: "RECORRENTE",
+            dataCriacao: now(),
+          };
+          contas.push(novaConta);
+          generatedCount += 1;
+          totalGeneratedForRule += 1;
+          changed = true;
+        }
+
+        occurrenceDate = getNextRecurrenceDate(rule, occurrenceDate);
+      }
+
+      if (safeGuard > 0) {
+        changed = true;
+        return {
+          ...rule,
+          diaDoMes: rule.recorrencia === "MENSAL" ? dayOfMonth : rule.diaDoMes,
+          intervaloDias: rule.recorrencia === "INTERVALO_DIAS" ? intervalDays : rule.intervaloDias,
+          ultimaGeracaoEm: now(),
+          dataAtualizacao: now(),
+        };
+      }
+      return rule;
+    });
+
+    if (!changed) return s;
+    return { ...s, contasPagar: contas, regrasRecorrenciaContaPagar: rules };
+  });
+
+  return generatedCount;
+}
+
+export async function listContasPagar(params?: {
+  status?: StatusContaPagar;
+  categoria?: CategoriaContaPagar;
+  tipoContaId?: string;
+  grupoDre?: GrupoDre;
+  origem?: ContaPagar["origemLancamento"];
+  startDate?: string;
+  endDate?: string;
+}): Promise<ContaPagar[]> {
+  await triggerGeracaoContasRecorrentes({ untilDate: params?.endDate ?? today() });
+  const tenantId = getCurrentTenantId();
+  const todayStr = today();
+  setStore((s) => {
+    let changed = false;
+    const contas = (s.contasPagar ?? []).map((c) => {
+      if (c.status === "PENDENTE" && c.dataVencimento < todayStr) {
+        changed = true;
+        return { ...c, status: "VENCIDA" as const, dataAtualizacao: now() };
+      }
+      return c;
+    });
+    return changed ? { ...s, contasPagar: contas } : s;
+  });
+
+  const store = getStore();
+  let contas = [...(store.contasPagar ?? [])]
+    .filter((c) => c.tenantId === tenantId)
+    .sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento));
+  if (params?.status) contas = contas.filter((c) => c.status === params.status);
+  if (params?.categoria) contas = contas.filter((c) => c.categoria === params.categoria);
+  if (params?.tipoContaId) contas = contas.filter((c) => c.tipoContaId === params.tipoContaId);
+  if (params?.grupoDre) contas = contas.filter((c) => (c.grupoDre ?? "DESPESA_OPERACIONAL") === params.grupoDre);
+  if (params?.origem) contas = contas.filter((c) => (c.origemLancamento ?? "MANUAL") === params.origem);
+  if (params?.startDate && params?.endDate) {
+    contas = contas.filter(
+      (c) => c.dataVencimento >= params.startDate! && c.dataVencimento <= params.endDate!
+    );
+  }
+  return contas;
+}
+
+export async function createContaPagar(input: CreateContaPagarInput): Promise<ContaPagar | null> {
+  const resolved = resolveContaTipoValues(input);
+  const tenantId = getCurrentTenantId();
+  if (!resolved.tipoConta) {
+    throw new Error("Tipo de conta é obrigatório");
+  }
+  const total = Math.max(0, Number(input.valorOriginal ?? 0));
+  const desconto = Math.max(0, Number(input.desconto ?? 0));
+  const jurosMulta = Math.max(0, Number(input.jurosMulta ?? 0));
+  const recorrencia = input.recorrencia;
+
+  let createdConta: ContaPagar | null = null;
+  setStore((s) => {
+    const contas = [...(s.contasPagar ?? [])];
+    const regras = [...(s.regrasRecorrenciaContaPagar ?? [])];
+
+    let regraId: string | undefined;
+    if (recorrencia) {
+      regraId = genId();
+      const tipoContaId = resolved.tipoConta.id;
+      const regra: RegraRecorrenciaContaPagar = {
+        id: regraId,
+        tenantId,
+        tipoContaId,
+        fornecedor: input.fornecedor.trim(),
+        documentoFornecedor: input.documentoFornecedor?.trim() || undefined,
+        descricao: input.descricao.trim(),
+        categoriaOperacional: resolved.categoria,
+        grupoDre: resolved.grupoDre,
+        centroCusto: resolved.centroCusto,
+        valorOriginal: total,
+        desconto,
+        jurosMulta,
+        recorrencia: recorrencia.tipo,
+        intervaloDias:
+          recorrencia.tipo === "INTERVALO_DIAS"
+            ? Math.max(1, Number(recorrencia.intervaloDias ?? 30))
+            : undefined,
+        diaDoMes:
+          recorrencia.tipo === "MENSAL"
+            ? Math.max(
+                1,
+                Math.min(
+                  31,
+                  Number(recorrencia.diaDoMes ?? parseDate(input.dataVencimento).getDate())
+                )
+              )
+            : undefined,
+        dataInicial: recorrencia.dataInicial,
+        termino: recorrencia.termino,
+        dataFim: recorrencia.termino === "EM_DATA" ? recorrencia.dataFim : undefined,
+        numeroOcorrencias:
+          recorrencia.termino === "APOS_OCORRENCIAS"
+            ? Math.max(1, Number(recorrencia.numeroOcorrencias ?? 1))
+            : undefined,
+        criarLancamentoInicial: recorrencia.criarLancamentoInicial,
+        timezone: recorrencia.timezone ?? "America/Sao_Paulo",
+        status: "ATIVA",
+        dataCriacao: now(),
+      };
+      regras.unshift(regra);
+
+      if (recorrencia.criarLancamentoInicial) {
+        const conta: ContaPagar = {
+          id: genId(),
+          tenantId,
+          tipoContaId: resolved.tipoConta.id,
+          fornecedor: input.fornecedor.trim(),
+          documentoFornecedor: input.documentoFornecedor?.trim() || undefined,
+          descricao: input.descricao.trim(),
+          categoria: resolved.categoria,
+          grupoDre: resolved.grupoDre,
+          centroCusto: resolved.centroCusto,
+          regime: input.regime ?? "FIXA",
+          competencia: input.competencia,
+          dataEmissao: input.dataEmissao,
+          dataVencimento: input.dataVencimento,
+          valorOriginal: total,
+          desconto,
+          jurosMulta,
+          status: "PENDENTE",
+          regraRecorrenciaId: regraId,
+          origemLancamento: "RECORRENTE",
+          geradaAutomaticamente: false,
+          observacoes: input.observacoes?.trim() || undefined,
+          dataCriacao: now(),
+        };
+        contas.unshift(conta);
+        createdConta = conta;
+      }
+    } else {
+      const conta: ContaPagar = {
+        id: genId(),
+        tenantId,
+        tipoContaId: resolved.tipoConta.id,
+        fornecedor: input.fornecedor.trim(),
+        documentoFornecedor: input.documentoFornecedor?.trim() || undefined,
+        descricao: input.descricao.trim(),
+        categoria: resolved.categoria,
+        grupoDre: resolved.grupoDre,
+        centroCusto: resolved.centroCusto,
+        regime: input.regime ?? "AVULSA",
+        competencia: input.competencia,
+        dataEmissao: input.dataEmissao,
+        dataVencimento: input.dataVencimento,
+        valorOriginal: total,
+        desconto,
+        jurosMulta,
+        status: "PENDENTE",
+        origemLancamento: "MANUAL",
+        observacoes: input.observacoes?.trim() || undefined,
+        dataCriacao: now(),
+      };
+      contas.unshift(conta);
+      createdConta = conta;
+    }
+
+    return {
+      ...s,
+      contasPagar: contas,
+      regrasRecorrenciaContaPagar: regras,
+    };
+  });
+  return createdConta;
+}
+
+export async function updateContaPagar(
+  id: string,
+  data: Partial<Omit<ContaPagar, "id" | "tenantId" | "dataCriacao">>
+): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  setStore((s) => ({
+    ...s,
+    contasPagar: (s.contasPagar ?? []).map((c) =>
+      c.id === id && c.tenantId === tenantId ? { ...c, ...data, dataAtualizacao: now() } : c
+    ),
+  }));
+}
+
+export async function pagarContaPagar(id: string, input: PagarContaPagarInput): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  setStore((s) => ({
+    ...s,
+    contasPagar: (s.contasPagar ?? []).map((c) => {
+      if (c.id !== id || c.tenantId !== tenantId) return c;
+      const liquid = contaPagarTotal(c);
+      return {
+        ...c,
+        status: "PAGA" as const,
+        dataPagamento: input.dataPagamento,
+        formaPagamento: input.formaPagamento,
+        valorPago: input.valorPago != null ? Math.max(0, Number(input.valorPago)) : liquid,
+        observacoes: input.observacoes ?? c.observacoes,
+        dataAtualizacao: now(),
+      };
+    }),
+  }));
+}
+
+export async function cancelarContaPagar(id: string, observacoes?: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  setStore((s) => ({
+    ...s,
+    contasPagar: (s.contasPagar ?? []).map((c) =>
+      c.id === id && c.tenantId === tenantId
+        ? {
+            ...c,
+            status: "CANCELADA" as const,
+            observacoes: observacoes ?? c.observacoes,
+            dataAtualizacao: now(),
+          }
+        : c
+    ),
+  }));
+}
+
+// ─── DRE GERENCIAL ─────────────────────────────────────────────────────────
+
+export async function getDreGerencial(params?: {
+  month?: number;
+  year?: number;
+  startDate?: string;
+  endDate?: string;
+}): Promise<DREGerencial> {
+  const tenantId = getCurrentTenantId();
+  const store = getStore();
+  const month = params?.month ?? new Date().getMonth();
+  const year = params?.year ?? new Date().getFullYear();
+  const range = params?.startDate && params?.endDate
+    ? { start: params.startDate, end: params.endDate }
+    : monthDateRange(month, year);
+  const start = range.start;
+  const end = range.end;
+
+  const recebimentosPagos = store.pagamentos.filter(
+    (p) => p.tenantId === tenantId && p.status === "PAGO" && inDateRange(p.dataPagamento, start, end)
+  );
+  const receitaBruta = recebimentosPagos.reduce((sum, p) => sum + Number(p.valor ?? 0), 0);
+  const deducoesReceita = recebimentosPagos.reduce((sum, p) => sum + Number(p.desconto ?? 0), 0);
+  const receitaLiquida = recebimentosPagos.reduce((sum, p) => sum + Number(p.valorFinal ?? 0), 0);
+
+  const despesasPagas = (store.contasPagar ?? []).filter(
+    (c) => c.tenantId === tenantId && c.status === "PAGA" && inDateRange(c.dataPagamento, start, end)
+  );
+  const tiposContaMap = new Map(
+    (store.tiposContaPagar ?? [])
+      .filter((tipo) => tipo.tenantId === tenantId)
+      .map((tipo) => [tipo.id, tipo])
+  );
+  const despesasPorGrupoMap = new Map<GrupoDre, number>();
+  let despesasSemTipoCount = 0;
+  let despesasSemTipoValor = 0;
+
+  for (const conta of despesasPagas) {
+    const valor = Number(conta.valorPago ?? contaPagarTotal(conta));
+    const tipoConta = conta.tipoContaId ? tiposContaMap.get(conta.tipoContaId) : undefined;
+    const grupo = conta.grupoDre ?? tipoConta?.grupoDre ?? "DESPESA_OPERACIONAL";
+    despesasPorGrupoMap.set(grupo, (despesasPorGrupoMap.get(grupo) ?? 0) + valor);
+
+    if (!conta.tipoContaId || !tipoConta) {
+      despesasSemTipoCount += 1;
+      despesasSemTipoValor += valor;
+    }
+  }
+
+  const custosVariaveis = despesasPorGrupoMap.get("CUSTO_VARIAVEL") ?? 0;
+  const despesasOperacionais =
+    (despesasPorGrupoMap.get("DESPESA_OPERACIONAL") ?? 0) +
+    (despesasPorGrupoMap.get("DESPESA_FINANCEIRA") ?? 0) +
+    (despesasPorGrupoMap.get("IMPOSTOS") ?? 0);
+  const margemContribuicao = receitaLiquida - custosVariaveis;
+  const ebitda = margemContribuicao - despesasOperacionais;
+  const resultadoLiquido = ebitda;
+  const ticketMedio = recebimentosPagos.length ? receitaLiquida / recebimentosPagos.length : 0;
+
+  const inadimplencia = store.pagamentos
+    .filter(
+      (p) => p.tenantId === tenantId && p.status === "VENCIDO" && inDateRange(p.dataVencimento, start, end)
+    )
+    .reduce((sum, p) => sum + Number(p.valorFinal ?? 0), 0);
+
+  const contasReceberEmAberto = store.pagamentos
+    .filter(
+      (p) =>
+        p.tenantId === tenantId &&
+        (p.status === "PENDENTE" || p.status === "VENCIDO") &&
+        inDateRange(p.dataVencimento, start, end)
+    )
+    .reduce((sum, p) => sum + Number(p.valorFinal ?? 0), 0);
+
+  const contasPagarEmAberto = (store.contasPagar ?? [])
+    .filter(
+      (c) =>
+        c.tenantId === tenantId &&
+        (c.status === "PENDENTE" || c.status === "VENCIDA") &&
+        inDateRange(c.dataVencimento, start, end)
+    )
+    .reduce((sum, c) => sum + contaPagarTotal(c), 0);
+
+  const despesasPorCategoriaMap = new Map<CategoriaContaPagar, number>();
+  for (const conta of despesasPagas) {
+    const value = Number(conta.valorPago ?? contaPagarTotal(conta));
+    despesasPorCategoriaMap.set(
+      conta.categoria,
+      (despesasPorCategoriaMap.get(conta.categoria) ?? 0) + value
+    );
+  }
+
+  const despesasPorCategoria = Array.from(despesasPorCategoriaMap.entries())
+    .map(([categoria, valor]) => ({ categoria, valor }))
+    .sort((a, b) => b.valor - a.valor);
+
+  const despesasPorGrupo = Array.from(despesasPorGrupoMap.entries())
+    .map(([grupo, valor]) => ({ grupo, valor }))
+    .sort((a, b) => b.valor - a.valor);
+
+  return {
+    periodoInicio: start,
+    periodoFim: end,
+    receitaBruta,
+    deducoesReceita,
+    receitaLiquida,
+    custosVariaveis,
+    margemContribuicao,
+    despesasOperacionais,
+    ebitda,
+    resultadoLiquido,
+    ticketMedio,
+    inadimplencia,
+    contasReceberEmAberto,
+    contasPagarEmAberto,
+    despesasPorGrupo,
+    despesasPorCategoria,
+    despesasSemTipoCount,
+    despesasSemTipoValor,
+  };
+}
+
 // ─── FORMAS DE PAGAMENTO ────────────────────────────────────────────────────
+
+function makeDefaultFormasPagamento(tenantId: string): FormaPagamento[] {
+  return [
+    {
+      id: genId(),
+      tenantId,
+      nome: "Dinheiro",
+      tipo: "DINHEIRO",
+      taxaPercentual: 0,
+      parcelasMax: 1,
+      ativo: true,
+    },
+    {
+      id: genId(),
+      tenantId,
+      nome: "PIX",
+      tipo: "PIX",
+      taxaPercentual: 0,
+      parcelasMax: 1,
+      ativo: true,
+    },
+    {
+      id: genId(),
+      tenantId,
+      nome: "Cartão de Crédito",
+      tipo: "CARTAO_CREDITO",
+      taxaPercentual: 2.99,
+      parcelasMax: 12,
+      ativo: true,
+    },
+  ];
+}
 
 export async function listFormasPagamento(params?: {
   apenasAtivas?: boolean;
 }): Promise<FormaPagamento[]> {
   const tenantId = getCurrentTenantId();
   const only = params?.apenasAtivas ?? true;
-  const formas = getStore().formasPagamento.filter((f) => f.tenantId === tenantId);
+  let formas = getStore().formasPagamento.filter((f) => f.tenantId === tenantId);
+  if (formas.length === 0) {
+    const defaults = makeDefaultFormasPagamento(tenantId);
+    setStore((s) => ({ ...s, formasPagamento: [...defaults, ...(s.formasPagamento ?? [])] }));
+    formas = getStore().formasPagamento.filter((f) => f.tenantId === tenantId);
+  }
   return only ? formas.filter((f) => f.ativo) : formas;
 }
 

@@ -63,10 +63,12 @@ export type CategoriaAtividade =
   | "OUTRA";
 
 export type TipoPlano = "MENSAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL" | "AVULSO";
+export type ModoAssinaturaContrato = "DIGITAL" | "PRESENCIAL" | "AMBAS";
 
 export type StatusMatricula = "ATIVA" | "VENCIDA" | "CANCELADA" | "SUSPENSA";
 
 export type StatusPagamento = "PENDENTE" | "PAGO" | "VENCIDO" | "CANCELADO";
+export type StatusContaPagar = "PENDENTE" | "PAGA" | "VENCIDA" | "CANCELADA";
 
 export type TipoPagamento =
   | "MATRICULA"
@@ -85,6 +87,27 @@ export type TipoFormaPagamento =
   | "CARTAO_DEBITO"
   | "BOLETO"
   | "RECORRENTE";
+
+export type CategoriaContaPagar =
+  | "FOLHA"
+  | "ALUGUEL"
+  | "UTILIDADES"
+  | "IMPOSTOS"
+  | "MARKETING"
+  | "MANUTENCAO"
+  | "FORNECEDORES"
+  | "OUTROS";
+
+export type RegimeContaPagar = "FIXA" | "AVULSA";
+export type GrupoDre =
+  | "CUSTO_VARIAVEL"
+  | "DESPESA_OPERACIONAL"
+  | "DESPESA_FINANCEIRA"
+  | "IMPOSTOS";
+
+export type RecorrenciaContaPagar = "MENSAL" | "INTERVALO_DIAS";
+export type TerminoRecorrenciaContaPagar = "SEM_FIM" | "EM_DATA" | "APOS_OCORRENCIAS";
+export type StatusRegraRecorrenciaContaPagar = "ATIVA" | "PAUSADA" | "CANCELADA";
 
 export interface Endereco {
   cep?: string;
@@ -226,6 +249,9 @@ export interface Plano {
   permiteRenovacaoAutomatica: boolean;
   permiteCobrancaRecorrente: boolean;
   diaCobrancaPadrao?: number;
+  contratoTemplateHtml?: string;
+  contratoAssinatura: ModoAssinaturaContrato;
+  contratoEnviarAutomaticoEmail: boolean;
   atividades?: UUID[];
   beneficios?: string[];
   destaque: boolean;
@@ -273,6 +299,74 @@ export interface Pagamento {
   comprovante?: string;
   observacoes?: string;
   dataCriacao: LocalDateTime;
+}
+
+export interface ContaPagar {
+  id: UUID;
+  tenantId: UUID;
+  tipoContaId?: UUID;
+  fornecedor: string;
+  documentoFornecedor?: string;
+  descricao: string;
+  categoria: CategoriaContaPagar;
+  grupoDre?: GrupoDre;
+  centroCusto?: string;
+  regime: RegimeContaPagar;
+  competencia: LocalDate;
+  dataEmissao?: LocalDate;
+  dataVencimento: LocalDate;
+  dataPagamento?: LocalDate;
+  valorOriginal: number;
+  desconto: number;
+  jurosMulta: number;
+  valorPago?: number;
+  formaPagamento?: TipoFormaPagamento;
+  status: StatusContaPagar;
+  regraRecorrenciaId?: UUID;
+  geradaAutomaticamente?: boolean;
+  origemLancamento?: "MANUAL" | "RECORRENTE";
+  observacoes?: string;
+  dataCriacao: LocalDateTime;
+  dataAtualizacao?: LocalDateTime;
+}
+
+export interface TipoContaPagar {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  descricao?: string;
+  categoriaOperacional: CategoriaContaPagar;
+  grupoDre: GrupoDre;
+  centroCustoPadrao?: string;
+  ativo: boolean;
+}
+
+export interface RegraRecorrenciaContaPagar {
+  id: UUID;
+  tenantId: UUID;
+  tipoContaId: UUID;
+  fornecedor: string;
+  documentoFornecedor?: string;
+  descricao: string;
+  categoriaOperacional: CategoriaContaPagar;
+  grupoDre: GrupoDre;
+  centroCusto?: string;
+  valorOriginal: number;
+  desconto: number;
+  jurosMulta: number;
+  recorrencia: RecorrenciaContaPagar;
+  intervaloDias?: number;
+  diaDoMes?: number;
+  dataInicial: LocalDate;
+  termino: TerminoRecorrenciaContaPagar;
+  dataFim?: LocalDate;
+  numeroOcorrencias?: number;
+  criarLancamentoInicial: boolean;
+  timezone?: string;
+  status: StatusRegraRecorrenciaContaPagar;
+  ultimaGeracaoEm?: LocalDateTime;
+  dataCriacao: LocalDateTime;
+  dataAtualizacao?: LocalDateTime;
 }
 
 export interface VendaItem {
@@ -601,6 +695,27 @@ export interface DashboardData {
   prospectsRecentes: Prospect[];
   matriculasVencendo: (Matricula & { aluno?: Aluno; plano?: Plano })[];
   pagamentosPendentes: (Pagamento & { aluno?: Aluno })[];
+}
+
+export interface DREGerencial {
+  periodoInicio: LocalDate;
+  periodoFim: LocalDate;
+  receitaBruta: number;
+  deducoesReceita: number;
+  receitaLiquida: number;
+  custosVariaveis: number;
+  margemContribuicao: number;
+  despesasOperacionais: number;
+  ebitda: number;
+  resultadoLiquido: number;
+  ticketMedio: number;
+  inadimplencia: number;
+  contasReceberEmAberto: number;
+  contasPagarEmAberto: number;
+  despesasPorGrupo: Array<{ grupo: GrupoDre; valor: number }>;
+  despesasPorCategoria: Array<{ categoria: CategoriaContaPagar; valor: number }>;
+  despesasSemTipoCount: number;
+  despesasSemTipoValor: number;
 }
 
 export interface ReceberPagamentoInput {

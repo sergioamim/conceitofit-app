@@ -4,13 +4,15 @@ import type {
   StatusAluno,
   StatusMatricula,
   StatusPagamento,
+  StatusContaPagar,
 } from "@/lib/types";
 
 type AnyStatus =
   | StatusProspect
   | StatusAluno
   | StatusMatricula
-  | StatusPagamento;
+  | StatusPagamento
+  | StatusContaPagar;
 
 const STATUS_MAP: Record<
   AnyStatus,
@@ -36,6 +38,7 @@ const STATUS_MAP: Record<
   // Pagamento
   PENDENTE: { label: "Pendente", className: "bg-yellow-500/15 text-yellow-400" },
   PAGO: { label: "Pago", className: "bg-gym-teal/15 text-gym-teal" },
+  PAGA: { label: "Paga", className: "bg-gym-teal/15 text-gym-teal" },
   VENCIDO: { label: "Vencido", className: "bg-gym-danger/15 text-gym-danger" },
 };
 

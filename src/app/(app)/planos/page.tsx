@@ -1,27 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Check, Plus, Pencil, Power, Star } from "lucide-react";
 import {
   listPlanos,
-  listAtividades,
-  createPlano,
-  updatePlano,
   togglePlanoAtivo,
   togglePlanoDestaque,
 } from "@/lib/mock/services";
-import type { Plano, Atividade, TipoPlano } from "@/lib/types";
+import type { Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { PlanoModal, type PlanoForm } from "@/components/shared/plano-modal";
 import { cn } from "@/lib/utils";
-
-const TIPO_LABEL: Record<TipoPlano, string> = {
-  MENSAL: "Mensal",
-  TRIMESTRAL: "Trimestral",
-  SEMESTRAL: "Semestral",
-  ANUAL: "Anual",
-  AVULSO: "Avulso",
-};
+import { TIPO_PLANO_LABEL } from "@/lib/planos/form";
 
 function formatBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -29,54 +19,14 @@ function formatBRL(v: number) {
 
 export default function PlanosPage() {
   const [planos, setPlanos] = useState<Plano[]>([]);
-  const [atividades, setAtividades] = useState<Atividade[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Plano | undefined>(undefined);
   const [filtroAtivo, setFiltroAtivo] = useState<"ATIVOS" | "TODOS">("ATIVOS");
 
   useEffect(() => {
-    Promise.all([listPlanos(), listAtividades()]).then(([pls, atv]) => {
-      setPlanos(pls);
-      setAtividades(atv);
-    });
+    listPlanos().then(setPlanos);
   }, []);
 
   async function reload() {
-    const [pls, atv] = await Promise.all([listPlanos(), listAtividades()]);
-    setPlanos(pls);
-    setAtividades(atv);
-  }
-
-  async function handleSave(data: PlanoForm, id?: string) {
-    const payload = {
-      nome: data.nome,
-      descricao: data.descricao || undefined,
-      tipo: data.tipo,
-      duracaoDias: parseInt(data.duracaoDias, 10) || 0,
-      valor: parseFloat(data.valor) || 0,
-      valorMatricula: parseFloat(data.valorMatricula) || 0,
-      cobraAnuidade: data.cobraAnuidade,
-      valorAnuidade: data.cobraAnuidade ? parseFloat(data.valorAnuidade) || 0 : undefined,
-      parcelasMaxAnuidade: data.cobraAnuidade ? Math.max(1, parseInt(data.parcelasMaxAnuidade, 10) || 1) : undefined,
-      permiteRenovacaoAutomatica: data.tipo === "AVULSO" ? false : data.permiteRenovacaoAutomatica,
-      permiteCobrancaRecorrente: data.tipo === "AVULSO" ? false : data.permiteCobrancaRecorrente,
-      diaCobrancaPadrao:
-        data.tipo === "AVULSO" || !data.permiteCobrancaRecorrente
-          ? undefined
-          : Math.min(28, Math.max(1, parseInt(data.diaCobrancaPadrao, 10) || 1)),
-      atividades: data.atividades,
-      beneficios: data.beneficios,
-      destaque: data.destaque,
-      ordem: data.ordem ? parseInt(data.ordem, 10) : undefined,
-    };
-    if (id) {
-      await updatePlano(id, payload);
-    } else {
-      await createPlano(payload);
-    }
-    setModalOpen(false);
-    setEditing(undefined);
-    reload();
+    setPlanos(await listPlanos());
   }
 
   async function handleToggleAtivo(id: string) {
@@ -94,17 +44,6 @@ export default function PlanosPage() {
 
   return (
     <div className="space-y-6">
-      <PlanoModal
-        open={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          setEditing(undefined);
-        }}
-        onSave={handleSave}
-        atividades={atividades}
-        initial={editing}
-      />
-
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight">Planos</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -126,9 +65,11 @@ export default function PlanosPage() {
             <option value="ATIVOS">Mostrar ativos</option>
             <option value="TODOS">Mostrar todos</option>
           </select>
-          <Button onClick={() => setModalOpen(true)}>
+          <Button asChild>
+            <Link href="/planos/novo">
             <Plus className="size-4" />
             Novo Plano
+            </Link>
           </Button>
         </div>
       </div>
@@ -152,15 +93,12 @@ export default function PlanosPage() {
             )}
 
             <div className="absolute right-3 top-3 flex gap-1.5">
-              <button
-                onClick={() => {
-                  setEditing(p);
-                  setModalOpen(true);
-                }}
+              <Link
+                href={`/planos/${p.id}/editar`}
                 className="rounded-md border border-border bg-secondary px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 <Pencil className="size-3" />
-              </button>
+              </Link>
               <button
                 onClick={() => handleToggleDestaque(p.id)}
                 className="rounded-md border border-border bg-secondary px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
@@ -177,7 +115,7 @@ export default function PlanosPage() {
 
             <div className="font-display text-lg font-bold">{p.nome}</div>
             <div className="mt-0.5 text-xs text-muted-foreground">
-              {TIPO_LABEL[p.tipo]} · {p.duracaoDias} dias
+              {TIPO_PLANO_LABEL[p.tipo]} · {p.duracaoDias} dias
             </div>
 
             <div className="mt-4">
@@ -220,6 +158,20 @@ export default function PlanosPage() {
                   ? ` · dia ${p.diaCobrancaPadrao}`
                   : ""}
               </p>
+            </div>
+
+            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+              <p>
+                Contrato:
+                <span className={p.contratoTemplateHtml ? "text-gym-teal" : "text-gym-danger"}>
+                  {p.contratoTemplateHtml ? " vinculado" : " não vinculado"}
+                </span>
+              </p>
+              {p.contratoTemplateHtml && (
+                <p>
+                  Assinatura: {p.contratoAssinatura.toLowerCase()} · envio automático: {p.contratoEnviarAutomaticoEmail ? "sim" : "não"}
+                </p>
+              )}
             </div>
 
             {p.beneficios && p.beneficios.length > 0 && (
@@ -272,6 +224,9 @@ export default function PlanosPage() {
                 Cobrança recorrente
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Contrato
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Destaque
               </th>
             </tr>
@@ -281,7 +236,7 @@ export default function PlanosPage() {
               <tr key={p.id} className="transition-colors hover:bg-secondary/40">
                 <td className="px-4 py-3 font-medium text-sm">{p.nome}</td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
-                  {TIPO_LABEL[p.tipo]}
+                  {TIPO_PLANO_LABEL[p.tipo]}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {p.duracaoDias} dias
@@ -303,6 +258,11 @@ export default function PlanosPage() {
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {p.permiteCobrancaRecorrente
                     ? `Sim${p.diaCobrancaPadrao ? ` · dia ${p.diaCobrancaPadrao}` : ""}`
+                    : "Não"}
+                </td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">
+                  {p.contratoTemplateHtml
+                    ? `Sim · ${p.contratoAssinatura.toLowerCase()}${p.contratoEnviarAutomaticoEmail ? " · auto email" : ""}`
                     : "Não"}
                 </td>
                 <td className="px-4 py-3">

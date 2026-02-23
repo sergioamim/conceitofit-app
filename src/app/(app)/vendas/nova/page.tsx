@@ -104,6 +104,8 @@ export default function NovaVendaPage() {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptVenda, setReceiptVenda] = useState<Venda | null>(null);
   const [receiptCliente, setReceiptCliente] = useState<Aluno | null>(null);
+  const [receiptPlano, setReceiptPlano] = useState<Plano | null>(null);
+  const [receiptContratoAutoMsg, setReceiptContratoAutoMsg] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState("");
   const [manualCode, setManualCode] = useState("");
@@ -395,6 +397,9 @@ export default function NovaVendaPage() {
 
     setSaving(true);
     try {
+      const planRef = cart.find((item) => item.tipo === "PLANO")?.referenciaId;
+      const planId = planRef?.split(":")[0];
+      const plan = planId ? planos.find((p) => p.id === planId) ?? null : null;
       const tipoFinal = inferSaleTypeFromCart(cart);
       const venda = await createVenda({
         tipo: tipoFinal,
@@ -411,8 +416,15 @@ export default function NovaVendaPage() {
         acrescimoTotal: parseFloat(acrescimoGeral) || 0,
         pagamento,
       });
+      const selectedCliente = alunos.find((a) => a.id === venda.clienteId) ?? null;
       setReceiptVenda(venda);
-      setReceiptCliente(alunos.find((a) => a.id === venda.clienteId) ?? null);
+      setReceiptCliente(selectedCliente);
+      setReceiptPlano(plan);
+      if (plan?.contratoTemplateHtml && plan.contratoEnviarAutomaticoEmail && selectedCliente?.email) {
+        setReceiptContratoAutoMsg(`Contrato enviado automaticamente para ${selectedCliente.email}.`);
+      } else {
+        setReceiptContratoAutoMsg("");
+      }
       setReceiptOpen(true);
       setCart([]);
       setSelectedItemId("");
@@ -440,6 +452,8 @@ export default function NovaVendaPage() {
         venda={receiptVenda}
         cliente={receiptCliente}
         tenant={tenant}
+        plano={receiptPlano}
+        contratoAutoEnvioMensagem={receiptContratoAutoMsg}
       />
 
       <div className="flex items-start justify-between gap-4">

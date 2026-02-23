@@ -4,8 +4,7 @@ import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Aluno, Tenant, Venda } from "@/lib/types";
+import type { Aluno, Plano, Tenant, Venda } from "@/lib/types";
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -30,18 +29,22 @@ export function SaleReceiptModal({
   venda,
   cliente,
   tenant,
+  plano,
+  contratoAutoEnvioMensagem,
 }: {
   open: boolean;
   onClose: () => void;
   venda: Venda | null;
   cliente?: Aluno | null;
   tenant?: Tenant | null;
+  plano?: Plano | null;
+  contratoAutoEnvioMensagem?: string;
 }) {
   const [email, setEmail] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sentMessage, setSentMessage] = useState("");
-  const [printModeOverride, setPrintModeOverride] = useState<"58MM" | "80MM" | "CUSTOM" | null>(null);
-  const [customWidthOverride, setCustomWidthOverride] = useState<string | null>(null);
+  const [sendingContrato, setSendingContrato] = useState(false);
+  const [sentContratoMessage, setSentContratoMessage] = useState("");
 
   const totalItens = useMemo(
     () => venda?.itens.reduce((sum, item) => sum + item.quantidade, 0) ?? 0,
@@ -49,18 +52,49 @@ export function SaleReceiptModal({
   );
 
   const emailValue = email ?? cliente?.email ?? "";
-  const tenantPrintMode = tenant?.configuracoes?.impressaoCupom?.modo ?? "80MM";
-  const tenantCustomWidth = String(tenant?.configuracoes?.impressaoCupom?.larguraCustomMm ?? 80);
-  const printMode = printModeOverride ?? tenantPrintMode;
-  const customWidthValue = customWidthOverride ?? tenantCustomWidth;
-
   function resetAndClose() {
     setSentMessage("");
+    setSentContratoMessage("");
     setSending(false);
+    setSendingContrato(false);
     setEmail(null);
-    setPrintModeOverride(null);
-    setCustomWidthOverride(null);
     onClose();
+  }
+
+  function formatDocumento(value: string | undefined) {
+    if (!value) return "";
+    const digits = value.replace(/\D/g, "");
+    if (digits.length === 11) {
+      return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    }
+    if (digits.length === 14) {
+      return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    }
+    return value;
+  }
+
+  function renderContractTemplate(templateHtml: string): string {
+    const replacements: Record<string, string> = {
+      NOME_CLIENTE: cliente?.nome ?? venda?.clienteNome ?? "",
+      CPF_CLIENTE: formatDocumento(cliente?.cpf),
+      EMAIL_CLIENTE: cliente?.email ?? "",
+      TELEFONE_CLIENTE: cliente?.telefone ?? "",
+      NOME_PLANO: plano?.nome ?? "",
+      VALOR_PLANO: formatBRL(Number(plano?.valor ?? 0)),
+      NOME_UNIDADE: tenant?.nome ?? "",
+      RAZAO_SOCIAL_UNIDADE: tenant?.razaoSocial ?? tenant?.nome ?? "",
+      CNPJ_UNIDADE: formatDocumento(tenant?.documento),
+      DATA_ASSINATURA: new Date().toLocaleDateString("pt-BR"),
+      NUMERO_RECIBO: venda?.id ?? "",
+      DATA_PAGAMENTO: venda ? formatDateTime(venda.dataCriacao) : "",
+    };
+
+    let html = templateHtml;
+    Object.entries(replacements).forEach(([key, value]) => {
+      const safe = escapeHtml(value);
+      html = html.replaceAll(`{{${key}}}`, safe).replaceAll(`%${key}%`, safe);
+    });
+    return html;
   }
 
   async function handleSendEmail() {
@@ -76,13 +110,28 @@ export function SaleReceiptModal({
     setSentMessage(`Recibo enviado para ${mail}.`);
   }
 
+  async function handleSendContratoEmail() {
+    const mail = emailValue.trim();
+    if (!mail || !mail.includes("@")) {
+      setSentContratoMessage("Informe um e-mail válido para envio do contrato.");
+      return;
+    }
+    if (!plano?.contratoTemplateHtml?.trim()) {
+      setSentContratoMessage("Plano sem contrato configurado.");
+      return;
+    }
+    setSendingContrato(true);
+    setSentContratoMessage("");
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    setSendingContrato(false);
+    setSentContratoMessage(`Contrato enviado para ${mail}.`);
+  }
+
   function handlePrintCupom() {
     if (!venda) return;
-    const mm = printMode === "58MM"
-      ? 58
-      : printMode === "80MM"
-        ? 80
-        : Math.max(40, Math.min(120, Number(customWidthValue) || 80));
+    const mode = tenant?.configuracoes?.impressaoCupom?.modo ?? "80MM";
+    const custom = Number(tenant?.configuracoes?.impressaoCupom?.larguraCustomMm ?? 80);
+    const mm = mode === "58MM" ? 58 : mode === "80MM" ? 80 : Math.max(40, Math.min(120, custom || 80));
 
     const itemsHtml = venda.itens.map((item) => {
       const title = escapeHtml(item.descricao);
@@ -98,18 +147,12 @@ export function SaleReceiptModal({
       `;
     }).join("");
 
-    const w = window.open("", "_blank", "noopener,noreferrer,width=420,height=720");
-    if (!w) {
-      window.alert("Não foi possível abrir a impressão. Verifique bloqueio de pop-up.");
-      return;
-    }
-
     const html = `
       <!doctype html>
       <html lang="pt-BR">
       <head>
         <meta charset="utf-8" />
-        <title>Cupom de venda</title>
+        <title>Recibo de pagamento</title>
         <style>
           @page { size: auto; margin: 4mm; }
           body { margin: 0; font-family: Arial, sans-serif; color: #111; }
@@ -123,12 +166,17 @@ export function SaleReceiptModal({
           .item .meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
           .total { font-size: 14px; font-weight: 700; }
           .foot { margin-top: 3mm; text-align: center; font-size: 10px; }
+          .print-actions { margin-top: 3mm; display: flex; justify-content: center; }
+          .print-btn { border: 1px solid #222; background: #fff; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+          @media print { .print-actions { display: none; } }
         </style>
       </head>
       <body>
         <div class="cupom">
           <div class="title">${escapeHtml(tenant?.nome ?? "Unidade")}</div>
-          <div class="sub">Cupom de venda</div>
+          <div class="sub">Recibo de pagamento</div>
+          ${tenant?.razaoSocial ? `<div class="sub">${escapeHtml(tenant.razaoSocial)}</div>` : ""}
+          ${tenant?.documento ? `<div class="sub">Documento: ${escapeHtml(tenant.documento)}</div>` : ""}
           <div class="sep"></div>
           <div class="line"><span>Nº:</span><span>${escapeHtml(venda.id)}</span></div>
           <div class="line"><span>Data:</span><span>${escapeHtml(formatDateTime(venda.dataCriacao))}</span></div>
@@ -143,21 +191,93 @@ export function SaleReceiptModal({
           <div class="sep"></div>
           <div class="line"><span>Pagamento</span><span>${escapeHtml(venda.pagamento.formaPagamento)}</span></div>
           ${venda.pagamento.parcelas ? `<div class="line"><span>Parcelas</span><span>${venda.pagamento.parcelas}x</span></div>` : ""}
-          <div class="foot">Documento não fiscal</div>
+          <div class="line"><span>Valor pago</span><span>${escapeHtml(formatBRL(venda.pagamento.valorPago))}</span></div>
+          <div class="foot">Documento comercial não fiscal</div>
+          <div class="print-actions">
+            <button class="print-btn" onclick="window.print()">Imprimir recibo</button>
+          </div>
         </div>
         <script>
-          window.onload = () => {
-            window.print();
-            window.onafterprint = () => window.close();
-          };
+          window.onload = () => { setTimeout(() => window.print(), 150); };
         </script>
       </body>
       </html>
     `;
+    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+    const w = window.open(url, "_blank");
+    if (!w) {
+      URL.revokeObjectURL(url);
+      window.alert("Não foi possível abrir o recibo. Verifique bloqueio de pop-up.");
+      return;
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
 
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+  function handlePrintContrato() {
+    if (!venda || !plano?.contratoTemplateHtml?.trim()) {
+      window.alert("Este plano não possui contrato vinculado.");
+      return;
+    }
+    const mode = tenant?.configuracoes?.impressaoCupom?.modo ?? "80MM";
+    const custom = Number(tenant?.configuracoes?.impressaoCupom?.larguraCustomMm ?? 80);
+    const mm = mode === "58MM" ? 58 : mode === "80MM" ? 80 : Math.max(40, Math.min(120, custom || 80));
+    const contratoHtml = renderContractTemplate(plano.contratoTemplateHtml);
+    const assinaturaHint =
+      plano.contratoAssinatura === "DIGITAL"
+        ? "Assinatura digital obrigatória."
+        : plano.contratoAssinatura === "PRESENCIAL"
+          ? "Assinatura presencial obrigatória."
+          : "Assinatura digital ou presencial.";
+
+    const html = `
+      <!doctype html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <title>Contrato - ${escapeHtml(plano.nome)}</title>
+        <style>
+          @page { size: auto; margin: 8mm; }
+          body { margin: 0; font-family: Arial, sans-serif; color: #111; background: #fff; }
+          .doc { width: ${Math.max(80, mm)}mm; margin: 0 auto; font-size: 12px; line-height: 1.4; }
+          .head { text-align: center; margin-bottom: 8px; }
+          .head h1 { margin: 0; font-size: 16px; }
+          .meta { font-size: 11px; color: #333; margin-bottom: 8px; }
+          .content { border: 1px solid #ccc; padding: 8px; }
+          .assinatura { margin-top: 16px; font-size: 11px; }
+          .line { margin-top: 20px; border-top: 1px solid #111; width: 100%; }
+          .actions { margin-top: 12px; display: flex; justify-content: center; }
+          .btn { border: 1px solid #222; background: #fff; padding: 6px 10px; cursor: pointer; }
+          @media print { .actions { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="doc">
+          <div class="head">
+            <h1>Contrato do plano</h1>
+            <div class="meta">${escapeHtml(tenant?.nome ?? "Unidade")} · ${escapeHtml(plano.nome)}</div>
+          </div>
+          <div class="content">${contratoHtml}</div>
+          <div class="assinatura">
+            <p><strong>Regras de assinatura:</strong> ${escapeHtml(assinaturaHint)}</p>
+            <div class="line"></div>
+            <p>Assinatura do cliente</p>
+          </div>
+          <div class="actions">
+            <button class="btn" onclick="window.print()">Imprimir contrato</button>
+          </div>
+        </div>
+        <script>window.onload = () => { setTimeout(() => window.print(), 150); };</script>
+      </body>
+      </html>
+    `;
+    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+    const w = window.open(url, "_blank");
+    if (!w) {
+      URL.revokeObjectURL(url);
+      window.alert("Não foi possível abrir o contrato. Verifique bloqueio de pop-up.");
+      return;
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   if (!venda) return null;
@@ -233,44 +353,39 @@ export function SaleReceiptModal({
             {sentMessage && <p className="text-xs text-muted-foreground">{sentMessage}</p>}
           </div>
 
-          <div className="space-y-2 rounded-lg border border-border p-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Impressão do cupom
-            </p>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-[180px_1fr]">
-              <Select value={printMode} onValueChange={(value) => setPrintModeOverride(value as "58MM" | "80MM" | "CUSTOM")}>
-                <SelectTrigger className="w-full border-border bg-secondary">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="border-border bg-card">
-                  <SelectItem value="80MM">80mm (padrão)</SelectItem>
-                  <SelectItem value="58MM">58mm</SelectItem>
-                  <SelectItem value="CUSTOM">Customizado</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {printMode === "CUSTOM" ? (
-                <Input
-                  type="number"
-                  min={40}
-                  max={120}
-                  value={customWidthValue}
-                  onChange={(e) => setCustomWidthOverride(e.target.value)}
-                  className="border-border bg-secondary"
-                  placeholder="Largura em mm"
-                />
+          {plano?.contratoTemplateHtml?.trim() ? (
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Contrato do plano
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Plano: {plano.nome} · assinatura {plano.contratoAssinatura.toLowerCase()}
+              </p>
+              {contratoAutoEnvioMensagem ? (
+                <p className="text-xs text-gym-teal">{contratoAutoEnvioMensagem}</p>
               ) : (
-                <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground">
-                  Tamanho aplicado ao imprimir
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  {plano.contratoEnviarAutomaticoEmail
+                    ? "Envio automático habilitado (cliente sem e-mail disponível nesta venda)."
+                    : "Envio automático não habilitado para este plano."}
+                </p>
               )}
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                <Button type="button" variant="outline" className="border-border" onClick={handlePrintContrato}>
+                  Imprimir contrato
+                </Button>
+                <Button type="button" variant="outline" className="border-border" onClick={handleSendContratoEmail} disabled={sendingContrato}>
+                  {sendingContrato ? "Enviando..." : "Enviar contrato por e-mail"}
+                </Button>
+              </div>
+              {sentContratoMessage && <p className="text-xs text-muted-foreground">{sentContratoMessage}</p>}
             </div>
-            <Button type="button" variant="outline" className="w-full border-border" onClick={handlePrintCupom}>
-              Imprimir cupom
-            </Button>
-          </div>
+          ) : null}
 
           <div className="flex justify-end">
+            <Button type="button" variant="outline" className="border-border" onClick={handlePrintCupom}>
+              Imprimir recibo
+            </Button>
             <Button type="button" variant="outline" className="border-border" onClick={resetAndClose}>
               Fechar
             </Button>

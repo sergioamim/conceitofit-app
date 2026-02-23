@@ -58,11 +58,14 @@ const administrativoItems = [
   { href: "/administrativo/convenios", label: "Convênios", icon: Settings },
   { href: "/administrativo/produtos", label: "Produtos", icon: Settings },
   { href: "/administrativo/servicos", label: "Serviços", icon: Settings },
+  { href: "/administrativo/tipos-conta", label: "Tipos de Conta", icon: Settings },
   { href: "/administrativo/vouchers", label: "Vouchers", icon: Settings },
 ];
 
 const gerencialItems = [
   { href: "/gerencial/contas-a-receber", label: "Contas a Receber", icon: HandCoins },
+  { href: "/gerencial/contas-a-pagar", label: "Contas a Pagar", icon: DollarSign },
+  { href: "/gerencial/dre", label: "DRE", icon: LineChart },
 ];
 
 type SidebarProps = {
