@@ -82,6 +82,8 @@ export default function ProspectsPage() {
   const [timeline, setTimeline] = useState<Prospect | null>(null);
   const [mes, setMes] = useState(new Date().getMonth());
   const [ano, setAno] = useState(new Date().getFullYear());
+  const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
+  const [page, setPage] = useState(1);
 
   async function load() {
     const [data, funcs] = await Promise.all([listProspects(), listFuncionarios()]);
@@ -110,6 +112,11 @@ export default function ProspectsPage() {
         p.telefone.replace(/\D/g, "").includes(buscaDigits));
     return matchStatus && matchOrigem && matchBusca;
   });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const startIndex = (pageSafe - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginated = filtered.slice(startIndex, endIndex);
 
   const statusTotals = (() => {
     const totals: Record<StatusProspect, number> = {
@@ -235,9 +242,11 @@ export default function ProspectsPage() {
             const hasLetters = /[a-zA-Z@]/.test(raw);
             if (hasLetters) {
               setBusca(raw);
+              setPage(1);
               return;
             }
             setBusca(maskPhone(raw));
+            setPage(1);
           }}
           className="w-full bg-secondary border-border pl-8 text-sm"
         />
@@ -249,7 +258,10 @@ export default function ProspectsPage() {
           {STATUS_OPTIONS.map((s) => (
             <button
               key={s.value}
-              onClick={() => setFiltroStatus(s.value)}
+              onClick={() => {
+                setFiltroStatus(s.value);
+                setPage(1);
+              }}
               className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 filtroStatus === s.value
                   ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
@@ -268,7 +280,10 @@ export default function ProspectsPage() {
         <div className="w-44">
           <Select
             value={filtroOrigem}
-            onValueChange={(v) => setFiltroOrigem(v as OrigemProspect | "TODAS")}
+            onValueChange={(v) => {
+              setFiltroOrigem(v as OrigemProspect | "TODAS");
+              setPage(1);
+            }}
           >
             <SelectTrigger className="w-full bg-secondary border-border text-xs">
               <SelectValue placeholder="Origem" />
@@ -283,13 +298,33 @@ export default function ProspectsPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto w-44">
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => {
+              setPageSize(Number(v) as 20 | 50 | 100 | 200);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full bg-secondary border-border text-xs">
+              <SelectValue placeholder="Itens por página" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="20">20 por página</SelectItem>
+              <SelectItem value="50">50 por página</SelectItem>
+              <SelectItem value="100">100 por página</SelectItem>
+              <SelectItem value="200">200 por página</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
           <MonthYearPicker
             month={mes}
             year={ano}
             onChange={(next) => {
               setMes(next.month);
               setAno(next.year);
+              setPage(1);
             }}
           />
         </div>
@@ -321,7 +356,7 @@ export default function ProspectsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {filtered.length === 0 && (
+            {paginated.length === 0 && (
               <tr>
                 <td
                   colSpan={6}
@@ -331,7 +366,7 @@ export default function ProspectsPage() {
                 </td>
               </tr>
             )}
-            {filtered.map((p) => (
+            {paginated.map((p) => (
               <tr
                 key={p.id}
                 className="transition-colors hover:bg-secondary/40"
@@ -416,6 +451,38 @@ export default function ProspectsPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+        <p className="text-xs text-muted-foreground">
+          Mostrando <span className="font-semibold text-foreground">{filtered.length === 0 ? 0 : startIndex + 1}</span> até{" "}
+          <span className="font-semibold text-foreground">{Math.min(endIndex, filtered.length)}</span> de{" "}
+          <span className="font-semibold text-foreground">{filtered.length}</span> prospects
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="border-border"
+            disabled={pageSafe <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Anterior
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Página <span className="font-semibold text-foreground">{pageSafe}</span> de{" "}
+            <span className="font-semibold text-foreground">{totalPages}</span>
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            className="border-border"
+            disabled={pageSafe >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            Próxima
+          </Button>
+        </div>
       </div>
     </div>
   );

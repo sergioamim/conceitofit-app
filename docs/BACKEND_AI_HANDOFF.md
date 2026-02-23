@@ -185,7 +185,8 @@ Recomendação:
 Também deve existir endpoint para listar unidades disponíveis ao usuário logado.
 
 ## 11) Placeholders de contrato (plano)
-Backend deve aceitar/armazenar HTML livre e suportar renderização com placeholders:
+Editor de contrato no frontend usa Tiptap (modo visual) e persiste HTML no campo `contratoTemplateHtml`.
+Backend deve aceitar/armazenar HTML livre (com sanitização server-side) e suportar renderização com placeholders:
 - `{{NOME_CLIENTE}}`
 - `{{CPF_CLIENTE}}`
 - `{{NOME_PLANO}}`
@@ -194,6 +195,10 @@ Backend deve aceitar/armazenar HTML livre e suportar renderização com placehol
 - `{{RAZAO_SOCIAL_UNIDADE}}`
 - `{{CNPJ_UNIDADE}}`
 - `{{DATA_ASSINATURA}}`
+
+Recomendação backend para esse campo:
+- Sanitizar HTML na gravação e/ou renderização (allowlist de tags e atributos).
+- Preservar conteúdo básico de rich text: parágrafos, headings, negrito, itálico, listas e separador horizontal.
 
 ## 12) Critério de “integração natural”
 Será considerado natural quando:

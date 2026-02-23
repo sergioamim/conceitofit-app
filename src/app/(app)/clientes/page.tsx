@@ -10,6 +10,7 @@ import { HoverPopover } from "@/components/shared/hover-popover";
 import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { maskCPF, maskPhone } from "@/lib/utils";
 import type { Aluno, StatusAluno } from "@/lib/types";
 
@@ -46,6 +47,8 @@ function ClientesPageContent() {
   const [filtro, setFiltro] = useState<StatusAluno | "TODOS">("TODOS");
   const [busca, setBusca] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
+  const [page, setPage] = useState(1);
 
   async function load() {
     listAlunos().then(setAlunos);
@@ -91,6 +94,11 @@ function ClientesPageContent() {
       || (buscaDigits && a.telefone.replace(/\D/g, "").includes(buscaDigits));
     return matchStatus && matchBusca;
   });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const startIndex = (pageSafe - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginated = filtered.slice(startIndex, endIndex);
 
   const metrics = useMemo(() => {
     const ym = new Date().toISOString().slice(0, 7);
@@ -145,7 +153,10 @@ function ClientesPageContent() {
       <div className="flex items-center gap-3">
         <div className="flex gap-1.5">
           {STATUS_FILTERS.map((s) => (
-            <button key={s.value} onClick={() => setFiltro(s.value)}
+            <button key={s.value} onClick={() => {
+              setFiltro(s.value);
+              setPage(1);
+            }}
               className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 filtro === s.value
                   ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
@@ -166,6 +177,7 @@ function ClientesPageContent() {
               const hasLetters = /[a-zA-Z@]/.test(raw);
               if (hasLetters) {
                 setBusca(raw);
+                setPage(1);
                 return;
               }
               const digits = raw.replace(/\D/g, "");
@@ -174,9 +186,29 @@ function ClientesPageContent() {
               } else {
                 setBusca(maskPhone(raw));
               }
+              setPage(1);
             }}
             className="w-72 bg-secondary border-border pl-8 text-sm"
           />
+        </div>
+        <div className="w-44">
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => {
+              setPageSize(Number(v) as 20 | 50 | 100 | 200);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full bg-secondary border-border text-xs">
+              <SelectValue placeholder="Itens por página" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="20">20 por página</SelectItem>
+              <SelectItem value="50">50 por página</SelectItem>
+              <SelectItem value="100">100 por página</SelectItem>
+              <SelectItem value="200">200 por página</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -191,10 +223,10 @@ function ClientesPageContent() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {filtered.length === 0 && (
+            {paginated.length === 0 && (
               <tr><td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">Nenhum cliente encontrado</td></tr>
             )}
-            {filtered.map((a) => {
+            {paginated.map((a) => {
               const color = avatarColor(a.nome);
               return (
                 <tr
@@ -254,6 +286,38 @@ function ClientesPageContent() {
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+        <p className="text-xs text-muted-foreground">
+          Mostrando <span className="font-semibold text-foreground">{filtered.length === 0 ? 0 : startIndex + 1}</span> até{" "}
+          <span className="font-semibold text-foreground">{Math.min(endIndex, filtered.length)}</span> de{" "}
+          <span className="font-semibold text-foreground">{filtered.length}</span> clientes
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="border-border"
+            disabled={pageSafe <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Anterior
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Página <span className="font-semibold text-foreground">{pageSafe}</span> de{" "}
+            <span className="font-semibold text-foreground">{totalPages}</span>
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            className="border-border"
+            disabled={pageSafe >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            Próxima
+          </Button>
+        </div>
       </div>
     </div>
   );

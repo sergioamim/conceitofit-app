@@ -5,6 +5,7 @@ import type { Atividade, TipoPlano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RichTextEditor } from "@/components/shared/rich-text-editor";
 import { cn } from "@/lib/utils";
 import {
   type PlanoFormValues,
@@ -32,6 +33,7 @@ export function PlanoForm({
   const [form, setForm] = useState<PlanoFormValues>(initial ?? getDefaultPlanoFormValues());
   const [beneficioInput, setBeneficioInput] = useState("");
   const [activeTab, setActiveTab] = useState<"CONFIG" | "CONTRATO" | "BENEFICIOS">("CONFIG");
+  const [contratoEditorMode, setContratoEditorMode] = useState<"VISUAL" | "HTML">("VISUAL");
 
   function set<K extends keyof PlanoFormValues>(key: K, value: PlanoFormValues[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -336,13 +338,49 @@ export function PlanoForm({
             </label>
           </div>
           <div className="mt-4 space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Template do contrato (HTML)</label>
-            <textarea
-              value={form.contratoTemplateHtml}
-              onChange={(e) => set("contratoTemplateHtml", e.target.value)}
-              placeholder="<h1>Contrato</h1><p>Cliente: {{NOME_CLIENTE}}</p>"
-              className="h-56 w-full resize-y rounded-md border border-border bg-secondary p-3 text-sm outline-none"
-            />
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Template do contrato</label>
+              <div className="flex items-center gap-1 rounded-md border border-border bg-secondary/40 p-1">
+                <button
+                  type="button"
+                  onClick={() => setContratoEditorMode("VISUAL")}
+                  className={cn(
+                    "cursor-pointer rounded px-2 py-1 text-xs font-medium transition-colors",
+                    contratoEditorMode === "VISUAL"
+                      ? "bg-gym-accent/15 text-gym-accent"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Visual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContratoEditorMode("HTML")}
+                  className={cn(
+                    "cursor-pointer rounded px-2 py-1 text-xs font-medium transition-colors",
+                    contratoEditorMode === "HTML"
+                      ? "bg-gym-accent/15 text-gym-accent"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  HTML
+                </button>
+              </div>
+            </div>
+            {contratoEditorMode === "VISUAL" ? (
+              <RichTextEditor
+                value={form.contratoTemplateHtml}
+                onChange={(html) => set("contratoTemplateHtml", html)}
+                placeholder="Digite o contrato do plano. Exemplo: Cliente {{NOME_CLIENTE}}..."
+              />
+            ) : (
+              <textarea
+                value={form.contratoTemplateHtml}
+                onChange={(e) => set("contratoTemplateHtml", e.target.value)}
+                placeholder="<h1>Contrato</h1><p>Cliente: {{NOME_CLIENTE}}</p>"
+                className="h-56 w-full resize-y rounded-md border border-border bg-secondary p-3 text-sm font-mono outline-none"
+              />
+            )}
           </div>
           <div className="mt-4 rounded-md border border-border bg-secondary/30 p-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Legenda de marcadores do contrato</p>
