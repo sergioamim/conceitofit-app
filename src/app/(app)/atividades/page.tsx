@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { AtividadeModal, type AtividadeForm } from "@/components/shared/atividade-modal";
+import { ActivityIconChip } from "@/components/shared/activity-icon-chip";
 
 const CATEGORIA_LABEL: Record<CategoriaAtividade, string> = {
   MUSCULACAO: "Musculação",
@@ -196,12 +197,7 @@ export default function AtividadesPage() {
               </button>
             </div>
             <div className="flex items-center gap-3">
-              <div
-                className="flex size-11 items-center justify-center rounded-lg text-xl"
-                style={{ backgroundColor: (a.cor ?? "#3de8a0") + "22" }}
-              >
-                <span>{a.icone ?? "🏋️"}</span>
-              </div>
+              <ActivityIconChip icone={a.icone} cor={a.cor} />
               <div>
                 <p className="text-sm font-semibold">{a.nome}</p>
                 <p className="text-xs text-muted-foreground">

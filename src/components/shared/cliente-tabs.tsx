@@ -5,6 +5,11 @@ import { CreditCard, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ClienteTabKey = "resumo" | "matriculas" | "financeiro" | "editar" | "cartoes";
+type ClienteTabItem = {
+  key: ClienteTabKey;
+  label: string;
+  icon?: React.ElementType;
+};
 
 export function ClienteTabs({
   current,
@@ -19,14 +24,14 @@ export function ClienteTabs({
   pendenteFinanceiro?: boolean;
   showEditTab?: boolean;
 }) {
-  const base: { key: ClienteTabKey; label: string; icon?: React.ElementType }[] = [
+  const base: ClienteTabItem[] = [
     { key: "resumo", label: "Dashboard" },
     { key: "matriculas", label: "Matrículas" },
     { key: "financeiro", label: "Financeiro" },
     { key: "cartoes", label: "Cartões", icon: CreditCard },
   ];
-  const items = showEditTab
-    ? [...base, { key: "editar", label: "Edição" }]
+  const items: ClienteTabItem[] = showEditTab
+    ? [...base, { key: "editar", label: "Edição", icon: undefined }]
     : base;
 
   return (

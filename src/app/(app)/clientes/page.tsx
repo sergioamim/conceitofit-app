@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, Plus } from "lucide-react";
@@ -39,7 +39,7 @@ function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
-export default function ClientesPage() {
+function ClientesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -256,5 +256,13 @@ export default function ClientesPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+export default function ClientesPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Carregando clientes...</div>}>
+      <ClientesPageContent />
+    </Suspense>
   );
 }

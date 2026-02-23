@@ -4,8 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:mock": "NEXT_PUBLIC_USE_REAL_API=false next dev",
+    "dev:api": "NEXT_PUBLIC_USE_REAL_API=true NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 BACKEND_PROXY_TARGET=http://localhost:8080 next dev -p 3001 -H 0.0.0.0",
+    "dev:3001:mock": "NEXT_PUBLIC_USE_REAL_API=false next dev -p 3001 -H 0.0.0.0",
+    "dev:3001:api": "NEXT_PUBLIC_USE_REAL_API=true NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 BACKEND_PROXY_TARGET=http://localhost:8080 next dev -p 3001 -H 0.0.0.0",
     "build": "next build",
+    "build:preview": "NEXT_PUBLIC_USE_REAL_API=true next build",
     "start": "next start",
+    "start:prod": "next start -p 3000 -H 0.0.0.0",
+    "prod:local": "npm run build && npm run start:prod",
     "lint": "eslint"
   },
   "dependencies": {

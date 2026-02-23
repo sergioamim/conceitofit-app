@@ -4,15 +4,71 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/shared/phone-input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  getCurrentTenant,
+  listTenants,
+  setCurrentTenant,
+} from "@/lib/mock/services";
+import {
+  getPreferredTenantId,
+  setPreferredTenantId,
+} from "@/lib/api/session";
+import type { Tenant } from "@/lib/types";
 
 export default function PerfilPage() {
   const [nome, setNome] = useState("Sergio");
   const [email, setEmail] = useState("sergio@academia.com");
   const [telefone, setTelefone] = useState("(11) 90000-0000");
 
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [preferredTenantId, setPreferredTenantIdState] = useState("");
+  const [savingTenant, setSavingTenant] = useState(false);
+  const [tenantSaved, setTenantSaved] = useState(false);
+  const [tenantError, setTenantError] = useState<string | null>(null);
+
   useEffect(() => {
-    // Mock data only
+    async function load() {
+      const [allTenants, currentTenant] = await Promise.all([
+        listTenants(),
+        getCurrentTenant(),
+      ]);
+      const active = allTenants.filter((t) => t.ativo !== false);
+      setTenants(active);
+      const preferred = getPreferredTenantId();
+      const preferredIsValid = preferred && active.some((t) => t.id === preferred);
+      setPreferredTenantIdState(
+        preferredIsValid ? preferred! : currentTenant.id
+      );
+    }
+    load();
   }, []);
+
+  async function handleSaveTenant() {
+    if (!preferredTenantId) {
+      setTenantError("Selecione uma unidade.");
+      return;
+    }
+    setSavingTenant(true);
+    setTenantError(null);
+    setTenantSaved(false);
+    try {
+      await setCurrentTenant(preferredTenantId);
+      setPreferredTenantId(preferredTenantId);
+      setTenantSaved(true);
+      setTimeout(() => setTenantSaved(false), 2500);
+    } catch {
+      setTenantError("Não foi possível alterar a unidade.");
+    } finally {
+      setSavingTenant(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -40,6 +96,41 @@ export default function PerfilPage() {
         </div>
         <div className="mt-4 flex justify-end">
           <Button>Salvar</Button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h2 className="font-display text-base font-semibold">Unidade prioritária</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Define qual unidade é aberta automaticamente ao fazer login.
+        </p>
+        <div className="mt-4 space-y-1.5">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Unidade
+          </label>
+          <Select value={preferredTenantId} onValueChange={setPreferredTenantIdState}>
+            <SelectTrigger className="bg-secondary border-border">
+              <SelectValue placeholder="Selecione a unidade" />
+            </SelectTrigger>
+            <SelectContent>
+              {tenants.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {tenantError && (
+          <p className="mt-2 text-sm text-gym-danger">{tenantError}</p>
+        )}
+        <div className="mt-4 flex items-center justify-end gap-3">
+          {tenantSaved && (
+            <span className="text-sm text-gym-teal">Unidade salva!</span>
+          )}
+          <Button onClick={handleSaveTenant} disabled={savingTenant}>
+            {savingTenant ? "Salvando..." : "Salvar unidade"}
+          </Button>
         </div>
       </div>
     </div>

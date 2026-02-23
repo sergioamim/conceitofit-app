@@ -15,6 +15,7 @@ const TOKEN_TYPE_KEY = "academia-auth-token-type";
 const EXPIRES_IN_KEY = "academia-auth-expires-in";
 const ACTIVE_TENANT_ID_KEY = "academia-auth-active-tenant-id";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
+const MOCK_LOGGED_IN_KEY = "academia-mock-logged-in";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -53,6 +54,17 @@ export function clearAuthSession(): void {
   window.localStorage.removeItem(TOKEN_TYPE_KEY);
   window.localStorage.removeItem(EXPIRES_IN_KEY);
   window.localStorage.removeItem(ACTIVE_TENANT_ID_KEY);
+  window.localStorage.removeItem(MOCK_LOGGED_IN_KEY);
+}
+
+export function isMockSessionActive(): boolean {
+  if (!isBrowser()) return false;
+  return window.localStorage.getItem(MOCK_LOGGED_IN_KEY) === "1";
+}
+
+export function setMockSessionActive(): void {
+  if (!isBrowser()) return;
+  window.localStorage.setItem(MOCK_LOGGED_IN_KEY, "1");
 }
 
 export function getPreferredTenantId(): string | undefined {

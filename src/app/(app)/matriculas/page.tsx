@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   listMatriculas,
@@ -47,7 +47,7 @@ function daysUntil(d: string) {
 }
 
 
-export default function MatriculasPage() {
+function MatriculasPageContent() {
   const searchParams = useSearchParams();
   const [matriculas, setMatriculas] = useState<MatriculaWithRefs[]>([]);
   const [filtro, setFiltro] = useState<StatusMatricula | "TODOS">("TODOS");
@@ -292,5 +292,13 @@ export default function MatriculasPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+export default function MatriculasPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Carregando matrículas...</div>}>
+      <MatriculasPageContent />
+    </Suspense>
   );
 }

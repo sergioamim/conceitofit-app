@@ -13,7 +13,7 @@ export default function SairPage() {
     setSaving(true);
     try {
       await authLogout();
-      router.push("/login");
+      router.replace("/login");
     } finally {
       setSaving(false);
     }
@@ -33,8 +33,12 @@ export default function SairPage() {
           Encerra a sessão atual e retorna para a tela de login.
         </p>
         <div className="mt-4 flex justify-end">
-          <Button onClick={handleLogout} disabled={saving}>
-            {saving ? "Saindo..." : "Sair"}
+          <Button
+            variant="destructive"
+            onClick={handleLogout}
+            disabled={saving}
+          >
+            {saving ? "Saindo..." : "Confirmar saída"}
           </Button>
         </div>
       </div>

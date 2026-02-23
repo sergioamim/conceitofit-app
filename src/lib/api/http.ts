@@ -68,6 +68,10 @@ function resolveRequestUrl(path: string, query?: Record<string, string | number 
     }
   }
   const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  const shouldUseProxy = isRealApiEnabled() && (typeof window !== "undefined");
+  if (shouldUseProxy) {
+    return `/backend${pathname}${suffix}`;
+  }
   return baseUrl ? `${baseUrl}${pathname}${suffix}` : `${pathname}${suffix}`;
 }
 

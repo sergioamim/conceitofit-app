@@ -1,6 +1,6 @@
   "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { listPagamentos, receberPagamento, listFormasPagamento, listAlunos, listMatriculas, listConvenios } from "@/lib/mock/services";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -45,7 +45,7 @@ function formatDate(d: string) {
 }
 
 
-export default function PagamentosPage() {
+function PagamentosPageContent() {
   const searchParams = useSearchParams();
   const [pagamentos, setPagamentos] = useState<PagamentoWithAluno[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
@@ -299,5 +299,13 @@ export default function PagamentosPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+export default function PagamentosPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Carregando pagamentos...</div>}>
+      <PagamentosPageContent />
+    </Suspense>
   );
 }

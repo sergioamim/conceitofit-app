@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { memo, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Building2, Menu, Search } from "lucide-react";
 import { getCurrentTenant, listTenants, setCurrentTenant } from "@/lib/mock/services";
 import type { Tenant } from "@/lib/types";
@@ -13,13 +13,15 @@ type AppTopbarProps = {
   onOpenMenu?: () => void;
 };
 
-export function AppTopbar({ onOpenMenu }: AppTopbarProps) {
+function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState("");
   const [query, setQuery] = useState("");
   const [savingTenant, setSavingTenant] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     async function load() {
@@ -66,9 +68,7 @@ export function AppTopbar({ onOpenMenu }: AppTopbarProps) {
       return;
     }
     router.push(`/clientes?q=${encodeURIComponent(q)}`);
-    if (pathname !== "/clientes") {
-      setQuery("");
-    }
+    setQuery("");
   }
 
   return (
@@ -86,18 +86,20 @@ export function AppTopbar({ onOpenMenu }: AppTopbarProps) {
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Unidade ativa</p>
             <p className="truncate text-sm font-medium text-foreground">{currentTenant?.nome ?? "Carregando..."}</p>
           </div>
-          <Select value={tenantId} onValueChange={handleChangeTenant} disabled={savingTenant || tenants.length === 0}>
-            <SelectTrigger className="h-8 w-full border-border bg-secondary sm:w-[220px]">
-              <SelectValue placeholder="Selecionar unidade" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border">
-              {tenants.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {mounted && (
+            <Select value={tenantId} onValueChange={handleChangeTenant} disabled={savingTenant || tenants.length === 0}>
+              <SelectTrigger className="h-8 w-full border-border bg-secondary sm:w-[220px]">
+                <SelectValue placeholder="Selecionar unidade" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                {tenants.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <div className="flex w-full flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2 sm:flex-row sm:items-center">
@@ -122,3 +124,4 @@ export function AppTopbar({ onOpenMenu }: AppTopbarProps) {
     </div>
   );
 }
+export const AppTopbar = memo(AppTopbarComponent);

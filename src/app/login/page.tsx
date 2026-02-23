@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { authLogin, getCurrentTenant, listTenants, setCurrentTenant } from "@/lib/mock/services";
-import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/lib/api/session";
+import { getAccessToken, getPreferredTenantId, isMockSessionActive, setPreferredTenantId } from "@/lib/api/session";
 import { isRealApiEnabled } from "@/lib/api/http";
 import type { Tenant } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,7 +22,7 @@ export default function LoginPage() {
   const [tenantId, setTenantId] = useState("");
 
   useEffect(() => {
-    if (!isRealApiEnabled() || getAccessToken()) {
+    if (isRealApiEnabled() ? getAccessToken() : isMockSessionActive()) {
       router.replace("/dashboard");
     }
   }, [router]);

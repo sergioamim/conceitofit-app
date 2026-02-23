@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HoverPopover } from "@/components/shared/hover-popover";
+import { ACTIVITY_ICON_OPTIONS } from "@/lib/icons/activity-icons";
+import { ActivityIconChip } from "@/components/shared/activity-icon-chip";
 
 const CATEGORIA_LABEL: Record<CategoriaAtividade, string> = {
   MUSCULACAO: "Musculação",
@@ -47,6 +49,7 @@ export function AtividadeModal({
     permiteCheckin: true,
     checkinObrigatorio: false,
   });
+  const [iconSearch, setIconSearch] = useState("");
 
   useEffect(() => {
     if (initial) {
@@ -60,6 +63,7 @@ export function AtividadeModal({
         permiteCheckin: initial.permiteCheckin,
         checkinObrigatorio: initial.checkinObrigatorio,
       });
+      setIconSearch(initial.icone ?? "");
     } else {
       setForm({
         nome: "",
@@ -70,6 +74,7 @@ export function AtividadeModal({
         permiteCheckin: true,
         checkinObrigatorio: false,
       });
+      setIconSearch("");
     }
   }, [initial, open]);
 
@@ -175,12 +180,45 @@ export function AtividadeModal({
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Ícone
               </label>
-              <Input
-                placeholder="Ex: 💪"
-                value={form.icone}
-                onChange={(e) => set("icone", e.target.value)}
-                className="bg-secondary border-border"
-              />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 rounded-md border border-border bg-secondary p-2">
+                  <ActivityIconChip icone={form.icone} cor={form.cor} className="size-9" />
+                  <Input
+                    placeholder="Buscar ícone (ex: shield) ou emoji"
+                    value={iconSearch || form.icone}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setIconSearch(value);
+                      set("icone", value);
+                    }}
+                    className="h-8 border-border bg-background"
+                  />
+                </div>
+                <div className="max-h-28 overflow-auto rounded-md border border-border bg-secondary/20 p-1">
+                  {ACTIVITY_ICON_OPTIONS.filter((item) => {
+                    if (!iconSearch.trim()) return true;
+                    const q = iconSearch.trim().toLowerCase();
+                    return item.value.includes(q) || item.label.toLowerCase().includes(q);
+                  }).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => {
+                          set("icone", item.value);
+                          setIconSearch(item.value);
+                        }}
+                        className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-background hover:text-foreground"
+                      >
+                        <Icon className="size-4" />
+                        <span>{item.label}</span>
+                        <span className="ml-auto text-[10px] opacity-70">{item.value}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">

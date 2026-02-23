@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { AppContentShell } from "@/components/layout/app-content-shell";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
 import { isRealApiEnabled } from "@/lib/api/http";
-import { getAccessToken } from "@/lib/api/session";
+import { getAccessToken, isMockSessionActive } from "@/lib/api/session";
 
 export default function AppLayout({
   children,
@@ -16,11 +16,12 @@ export default function AppLayout({
 }) {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const handleOpenMenu = useCallback(() => setMobileMenuOpen(true), []);
+  const handleCloseMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   useEffect(() => {
-    if (!isRealApiEnabled()) return;
-    if (getAccessToken()) return;
-    router.replace("/login");
+    const authenticated = isRealApiEnabled() ? !!getAccessToken() : isMockSessionActive();
+    if (!authenticated) router.replace("/login");
   }, [router]);
 
   return (
@@ -31,12 +32,12 @@ export default function AppLayout({
           type="button"
           aria-label="Fechar menu"
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
-          onClick={() => setMobileMenuOpen(false)}
+          onClick={handleCloseMenu}
         />
       )}
-      <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
+      <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={handleCloseMenu} />
       <main className="flex flex-1 flex-col overflow-hidden">
-        <AppTopbar onOpenMenu={() => setMobileMenuOpen(true)} />
+        <AppTopbar onOpenMenu={handleOpenMenu} />
         <AppContentShell>{children}</AppContentShell>
       </main>
     </div>

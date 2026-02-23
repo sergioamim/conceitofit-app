@@ -15,6 +15,7 @@ import type {
   CartaoCliente,
   Presenca,
   AtividadeGrade,
+  DiaSemana,
   Tenant,
   HorarioFuncionamento,
   Convenio,
@@ -28,6 +29,7 @@ import type {
   Venda,
   Academia,
   CampanhaCRM,
+  TenantThemePreset,
 } from "../types";
 
 const TENANT_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -102,6 +104,12 @@ function normalizeTenantConfiguracoes(tenant: Tenant): Tenant {
       },
     },
   };
+}
+
+const DIA_SEMANA_VALUES: DiaSemana[] = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
+
+function isDiaSemana(value: string): value is DiaSemana {
+  return DIA_SEMANA_VALUES.includes(value as DiaSemana);
 }
 
 function applyLegacyTenantMigration(input: Store): Store {
@@ -2077,14 +2085,14 @@ function normalizeStore(data: Store): Store {
     ativo: t.ativo ?? true,
   })).map(normalizeTenantConfiguracoes);
 
-  const normalizedAcademias = mergeById(
+  const normalizedAcademias: Academia[] = mergeById(
     data.academias,
     defaults.academias
   ).map((a) => ({
     ...a,
     ativo: a.ativo ?? true,
     branding: {
-      themePreset: "CONCEITO_DARK",
+      themePreset: "CONCEITO_DARK" as TenantThemePreset,
       useCustomColors: false,
       ...(defaults.academias.find((x) => x.id === a.id)?.branding ?? {}),
       ...(a.branding ?? {}),
@@ -2111,7 +2119,7 @@ function normalizeStore(data: Store): Store {
     ativo: (data.tenant ?? {}).ativo ?? true,
   });
 
-  return {
+  const result: Store = {
     ...data,
     academias: normalizedAcademias,
     tenant: normalizedTenant,
@@ -2169,7 +2177,7 @@ function normalizeStore(data: Store): Store {
     })),
     alunos: mergeById(data.alunos, defaults.alunos).map((a) => ({
       ...a,
-      status: a.status === "BLOQUEADO" ? "INATIVO" : a.status,
+      status: (a.status as string) === "BLOQUEADO" ? "INATIVO" : a.status,
       suspensoes: a.suspensoes ?? (a.suspensao ? [{
         motivo: a.suspensao.motivo,
         inicio: a.suspensao.inicio,
@@ -2261,11 +2269,12 @@ function normalizeStore(data: Store): Store {
     })),
     atividadeGrades: mergeById(data.atividadeGrades, defaults.atividadeGrades).map((g) => {
       const legacy = g as unknown as { diaSemana?: "SEG" | "TER" | "QUA" | "QUI" | "SEX" | "SAB" | "DOM" };
-      const diasSemana = Array.isArray((g as AtividadeGrade).diasSemana) && (g as AtividadeGrade).diasSemana.length > 0
-        ? (g as AtividadeGrade).diasSemana
+      const diasSemanaRaw: DiaSemana[] = Array.isArray((g as AtividadeGrade).diasSemana) && (g as AtividadeGrade).diasSemana.length > 0
+        ? (g as AtividadeGrade).diasSemana.filter((dia): dia is DiaSemana => isDiaSemana(String(dia)))
         : legacy.diaSemana
           ? [legacy.diaSemana]
           : ["SEG"];
+      const diasSemana: DiaSemana[] = diasSemanaRaw.length > 0 ? diasSemanaRaw : ["SEG"];
       return {
         ...g,
         diasSemana,
