@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FitManager – Gestão de Academia",
-  description: "Sistema de gestão para academias",
+  title: "Conceito Fit – Gestão de Academia",
+  description: "Conceito Fit · Sistema de gestão para academias",
 };
 
 export default function RootLayout({

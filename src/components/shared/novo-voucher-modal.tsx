@@ -20,7 +20,7 @@ import {
 import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { listPlanos } from "@/lib/mock/services";
-import type { Plano, VoucherAplicarEm } from "@/lib/types";
+import type { Plano, VoucherAplicarEm, VoucherEscopo } from "@/lib/types";
 
 const VOUCHER_TYPES = [
   { value: "DESCONTO", label: "Desconto" },
@@ -31,6 +31,7 @@ const VOUCHER_TYPES = [
 type VoucherCodeType = "UNICO" | "ALEATORIO";
 
 export interface NovoVoucherPayload {
+  escopo: VoucherEscopo;
   tipo: string;
   nome: string;
   periodoInicio: string;
@@ -59,6 +60,7 @@ export function NovoVoucherModal({
 
   // ─── Step 1 state ─────────────────────────────────────────
   const [tipo, setTipo] = useState("");
+  const [escopo, setEscopo] = useState<VoucherEscopo>("UNIDADE");
   const [nome, setNome] = useState("");
   const [periodoInicio, setPeriodoInicio] = useState("");
   const [periodoFim, setPeriodoFim] = useState("");
@@ -85,6 +87,7 @@ export function NovoVoucherModal({
   function resetAll() {
     setStep(1);
     setTipo("");
+    setEscopo("UNIDADE");
     setNome("");
     setPeriodoInicio("");
     setPeriodoFim("");
@@ -127,6 +130,7 @@ export function NovoVoucherModal({
 
   function handleGerar() {
     onNext({
+      escopo,
       tipo,
       nome: nome.trim(),
       periodoInicio,
@@ -194,6 +198,25 @@ export function NovoVoucherModal({
         {/* ─── STEP 1 ─── */}
         {step === 1 && (
           <div className="max-h-[65vh] overflow-y-auto space-y-5 pr-1">
+            {/* Tipo */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span>Escopo</span>
+                <HoverPopover content="Unidade: voucher exclusivo da unidade atual. Grupo: voucher global para todas as unidades da rede.">
+                  <HelpCircle className="size-4 text-muted-foreground" />
+                </HoverPopover>
+              </div>
+              <Select value={escopo} onValueChange={(v) => setEscopo(v as VoucherEscopo)}>
+                <SelectTrigger className="w-full bg-secondary border-border text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="UNIDADE">Apenas esta unidade</SelectItem>
+                  <SelectItem value="GRUPO">Grupo (rede inteira)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Tipo */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">

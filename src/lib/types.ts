@@ -75,6 +75,9 @@ export type TipoPagamento =
   | "PRODUTO"
   | "AVULSO";
 
+export type TipoVenda = "PLANO" | "SERVICO" | "PRODUTO";
+export type StatusVenda = "RASCUNHO" | "FECHADA" | "CANCELADA";
+
 export type TipoFormaPagamento =
   | "DINHEIRO"
   | "PIX"
@@ -217,6 +220,9 @@ export interface Plano {
   duracaoDias: number;
   valor: number;
   valorMatricula: number;
+  cobraAnuidade: boolean;
+  valorAnuidade?: number;
+  parcelasMaxAnuidade?: number;
   permiteRenovacaoAutomatica: boolean;
   permiteCobrancaRecorrente: boolean;
   diaCobrancaPadrao?: number;
@@ -266,6 +272,40 @@ export interface Pagamento {
   status: StatusPagamento;
   comprovante?: string;
   observacoes?: string;
+  dataCriacao: LocalDateTime;
+}
+
+export interface VendaItem {
+  id: UUID;
+  tipo: TipoVenda;
+  referenciaId: UUID;
+  descricao: string;
+  quantidade: number;
+  valorUnitario: number;
+  desconto: number;
+  valorTotal: number;
+}
+
+export interface PagamentoVenda {
+  formaPagamento: TipoFormaPagamento;
+  parcelas?: number;
+  valorPago: number;
+  observacoes?: string;
+}
+
+export interface Venda {
+  id: UUID;
+  tenantId: UUID;
+  tipo: TipoVenda;
+  clienteId?: UUID;
+  clienteNome?: string;
+  status: StatusVenda;
+  itens: VendaItem[];
+  subtotal: number;
+  descontoTotal: number;
+  acrescimoTotal: number;
+  total: number;
+  pagamento: PagamentoVenda;
   dataCriacao: LocalDateTime;
 }
 
@@ -381,11 +421,68 @@ export interface Presenca {
 
 export interface Tenant {
   id: UUID;
+  academiaId?: UUID;
   nome: string;
+  razaoSocial?: string;
+  documento?: string;
+  groupId?: string;
   subdomain?: string;
   email?: string;
   telefone?: string;
+  ativo?: boolean;
   endereco?: Endereco;
+  branding?: TenantBranding;
+  configuracoes?: TenantConfiguracoes;
+}
+
+export interface Academia {
+  id: UUID;
+  nome: string;
+  razaoSocial?: string;
+  documento?: string;
+  email?: string;
+  telefone?: string;
+  endereco?: Endereco;
+  branding?: TenantBranding;
+  ativo?: boolean;
+}
+
+export type TenantThemePreset =
+  | "CONCEITO_DARK"
+  | "AZUL_OCEANO"
+  | "VERDE_ENERGIA"
+  | "GRAFITE_FIRE";
+
+export interface TenantThemeColors {
+  accent: string;
+  primary: string;
+  ring: string;
+  secondary: string;
+  background: string;
+  surface: string;
+  border: string;
+  foreground: string;
+  mutedForeground: string;
+  danger: string;
+  warning: string;
+  teal: string;
+}
+
+export interface TenantBranding {
+  appName?: string;
+  logoUrl?: string;
+  themePreset?: TenantThemePreset;
+  useCustomColors?: boolean;
+  colors?: Partial<TenantThemeColors>;
+}
+
+export type CupomPrintMode = "58MM" | "80MM" | "CUSTOM";
+
+export interface TenantConfiguracoes {
+  impressaoCupom?: {
+    modo: CupomPrintMode;
+    larguraCustomMm?: number;
+  };
 }
 
 export interface HorarioFuncionamento {
@@ -406,10 +503,13 @@ export interface Convenio {
 
 export type VoucherCodeType = "UNICO" | "ALEATORIO";
 export type VoucherAplicarEm = "CONTRATO" | "ANUIDADE";
+export type VoucherEscopo = "UNIDADE" | "GRUPO";
 
 export interface Voucher {
   id: UUID;
-  tenantId: UUID;
+  tenantId?: UUID;
+  groupId?: string;
+  escopo: VoucherEscopo;
   tipo: string;
   nome: string;
   periodoInicio: LocalDate;

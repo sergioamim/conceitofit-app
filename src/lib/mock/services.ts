@@ -33,9 +33,15 @@ import type {
   ProspectAgendamento,
   VoucherCodigo,
   VoucherAplicarEm,
+  VoucherEscopo,
   Sala,
   Cargo,
   Produto,
+  Venda,
+  VendaItem,
+  PagamentoVenda,
+  TipoVenda,
+  Academia,
 } from "../types";
 
 function genId(): string {
@@ -58,6 +64,52 @@ function today(): string {
 
 function rangesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
   return aStart <= bEnd && aEnd >= bStart;
+}
+
+function getCurrentTenantId(): string {
+  const store = getStore();
+  return store.currentTenantId ?? store.tenant.id ?? TENANT_ID_DEFAULT;
+}
+
+function getCurrentGroupTenantIds(): string[] {
+  const store = getStore();
+  const currentTenantId = getCurrentTenantId();
+  const currentTenant =
+    store.tenants.find((t) => t.id === currentTenantId) ?? store.tenant;
+  const groupId = currentTenant.academiaId ?? currentTenant.groupId;
+  if (!groupId) return [currentTenantId];
+  return store.tenants
+    .filter((tenant) => (tenant.academiaId ?? tenant.groupId) === groupId)
+    .map((tenant) => tenant.id);
+}
+
+function getCurrentGroupId(): string | undefined {
+  const store = getStore();
+  const currentTenantId = getCurrentTenantId();
+  const current = store.tenants.find((t) => t.id === currentTenantId) ?? store.tenant;
+  return current.academiaId ?? current.groupId;
+}
+
+function getCurrentAcademiaId(): string | undefined {
+  return getCurrentGroupId();
+}
+
+function normalizeTenantConfig(data: Partial<Tenant>): Partial<Tenant> {
+  const modo = data.configuracoes?.impressaoCupom?.modo;
+  const larguraRaw = Number(data.configuracoes?.impressaoCupom?.larguraCustomMm ?? 80);
+  const larguraCustomMm = Number.isFinite(larguraRaw)
+    ? Math.min(120, Math.max(40, larguraRaw))
+    : 80;
+  return {
+    ...data,
+    configuracoes: {
+      ...(data.configuracoes ?? {}),
+      impressaoCupom: {
+        modo: modo ?? "80MM",
+        larguraCustomMm,
+      },
+    },
+  };
 }
 
 function computeAlunoStatus(
@@ -84,19 +136,33 @@ function computeAlunoStatus(
 
 function syncAlunosStatus(): void {
   setStore((s) => {
-    const pagamentos = s.pagamentos.map((p) => {
+    const pagamentosBase = Array.isArray(s.pagamentos) ? s.pagamentos : [];
+    const alunosBase = Array.isArray(s.alunos) ? s.alunos : [];
+    const matriculasBase = Array.isArray(s.matriculas) ? s.matriculas : [];
+    const safeStore = { ...s, matriculas: matriculasBase };
+
+    let pagamentosChanged = false;
+    const pagamentos = pagamentosBase.map((p) => {
       if (p.status === "PENDENTE" && p.dataVencimento < today()) {
+        pagamentosChanged = true;
         return { ...p, status: "VENCIDO" as const };
       }
       return p;
     });
+    let alunosChanged = false;
+    const alunos = alunosBase.map((a) => {
+      const status = computeAlunoStatus(a, safeStore, pagamentos);
+      if (status !== a.status) {
+        alunosChanged = true;
+        return { ...a, status };
+      }
+      return a;
+    });
+    if (!pagamentosChanged && !alunosChanged) return s;
     return {
       ...s,
       pagamentos,
-      alunos: s.alunos.map((a) => {
-        const status = computeAlunoStatus(a, s, pagamentos);
-        return status === a.status ? a : { ...a, status };
-      }),
+      alunos,
     };
   });
 }
@@ -106,6 +172,12 @@ function syncAlunosStatus(): void {
 export async function getDashboard(params?: { month?: number; year?: number }): Promise<DashboardData> {
   syncAlunosStatus();
   const store = getStore();
+  const tenantId = getCurrentTenantId();
+  const alunos = store.alunos.filter((a) => a.tenantId === tenantId);
+  const prospects = store.prospects.filter((p) => p.tenantId === tenantId);
+  const matriculas = store.matriculas.filter((m) => m.tenantId === tenantId);
+  const pagamentos = store.pagamentos.filter((p) => p.tenantId === tenantId);
+  const planos = store.planos.filter((p) => p.tenantId === tenantId);
   const todayStr = today();
   const month = params?.month ?? new Date().getMonth();
   const year = params?.year ?? new Date().getFullYear();
@@ -114,21 +186,21 @@ export async function getDashboard(params?: { month?: number; year?: number }): 
   const in7Days = addDays(todayStr, 7);
 
   return {
-    totalAlunosAtivos: store.alunos.filter((a) => a.status === "ATIVO").length,
-    prospectsNovos: store.prospects.filter((p) => p.dataCriacao.startsWith(monthPrefix)).length,
-    matriculasDoMes: store.matriculas.filter((m) =>
+    totalAlunosAtivos: alunos.filter((a) => a.status === "ATIVO").length,
+    prospectsNovos: prospects.filter((p) => p.dataCriacao.startsWith(monthPrefix)).length,
+    matriculasDoMes: matriculas.filter((m) =>
       m.dataCriacao.startsWith(monthPrefix)
     ).length,
-    receitaDoMes: store.pagamentos
+    receitaDoMes: pagamentos
       .filter(
         (p) =>
           p.status === "PAGO" && p.dataPagamento?.startsWith(monthPrefix)
       )
       .reduce((sum, p) => sum + p.valorFinal, 0),
-    prospectsRecentes: store.prospects
+    prospectsRecentes: prospects
       .filter((p) => p.status !== "CONVERTIDO" && p.status !== "PERDIDO")
       .slice(0, 5),
-    matriculasVencendo: store.matriculas
+    matriculasVencendo: matriculas
       .filter(
         (m) =>
           m.status === "ATIVA" &&
@@ -137,14 +209,14 @@ export async function getDashboard(params?: { month?: number; year?: number }): 
       )
       .map((m) => ({
         ...m,
-        aluno: store.alunos.find((a) => a.id === m.alunoId),
-        plano: store.planos.find((p) => p.id === m.planoId),
+        aluno: alunos.find((a) => a.id === m.alunoId),
+        plano: planos.find((p) => p.id === m.planoId),
       })),
-    pagamentosPendentes: store.pagamentos
+    pagamentosPendentes: pagamentos
       .filter((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
       .map((p) => ({
         ...p,
-        aluno: store.alunos.find((a) => a.id === p.alunoId),
+        aluno: alunos.find((a) => a.id === p.alunoId),
       })),
   };
 }
@@ -152,7 +224,12 @@ export async function getDashboard(params?: { month?: number; year?: number }): 
 // ─── TENANT ────────────────────────────────────────────────────────────────
 
 export async function listTenants(): Promise<Tenant[]> {
-  return getStore().tenants;
+  const store = getStore();
+  const academiaId = getCurrentAcademiaId();
+  if (!academiaId) {
+    return store.tenants.filter((t) => t.id === getCurrentTenantId());
+  }
+  return store.tenants.filter((t) => (t.academiaId ?? t.groupId) === academiaId);
 }
 
 export async function getCurrentTenant(): Promise<Tenant> {
@@ -162,7 +239,14 @@ export async function getCurrentTenant(): Promise<Tenant> {
 
 export async function setCurrentTenant(id: string): Promise<void> {
   setStore((s) => {
-    const tenant = s.tenants.find((t) => t.id === id) ?? s.tenant;
+    const current = s.tenants.find((t) => t.id === s.currentTenantId) ?? s.tenant;
+    const currentAcademiaId = current.academiaId ?? current.groupId;
+    const tenant = s.tenants.find(
+      (t) =>
+        t.id === id &&
+        t.ativo !== false &&
+        (!currentAcademiaId || (t.academiaId ?? t.groupId) === currentAcademiaId)
+    ) ?? s.tenant;
     return {
       ...s,
       currentTenantId: tenant.id,
@@ -171,15 +255,128 @@ export async function setCurrentTenant(id: string): Promise<void> {
   });
 }
 
+export async function listAcademias(): Promise<Academia[]> {
+  const academiaId = getCurrentAcademiaId();
+  if (!academiaId) return getStore().academias;
+  return getStore().academias.filter((a) => a.id === academiaId);
+}
+
+export async function getCurrentAcademia(): Promise<Academia> {
+  const store = getStore();
+  const academiaId = getCurrentAcademiaId();
+  return (
+    store.academias.find((a) => a.id === academiaId) ??
+    store.academias[0] ?? {
+      id: "acd-default",
+      nome: "Academia",
+      ativo: true,
+    }
+  );
+}
+
+export async function updateCurrentAcademia(data: Partial<Academia>): Promise<void> {
+  const academiaId = getCurrentAcademiaId();
+  if (!academiaId) return;
+  setStore((s) => ({
+    ...s,
+    academias: s.academias.map((a) =>
+      a.id === academiaId ? { ...a, ...data } : a
+    ),
+  }));
+}
+
+export async function createTenant(
+  data: Omit<Tenant, "id">
+): Promise<Tenant> {
+  const academiaId = data.academiaId?.trim() || getCurrentAcademiaId() || "acd-default";
+  const groupId = data.groupId?.trim() || academiaId;
+  const tenant: Tenant = {
+    ...data,
+    id: genId(),
+    nome: data.nome.trim(),
+    academiaId,
+    groupId,
+    ativo: data.ativo ?? true,
+  };
+  const normalizedTenant = normalizeTenantConfig(tenant) as Tenant;
+  setStore((s) => ({
+    ...s,
+    tenants: [normalizedTenant, ...s.tenants],
+  }));
+  return normalizedTenant;
+}
+
+export async function updateTenantById(id: string, data: Partial<Tenant>): Promise<void> {
+  const normalized = normalizeTenantConfig(data);
+  setStore((s) => {
+    const currentUpdated =
+      s.currentTenantId === id ? { ...s.tenant, ...normalized } : s.tenant;
+    return {
+      ...s,
+      tenant: currentUpdated,
+      tenants: s.tenants.map((t) => (t.id === id ? { ...t, ...normalized } : t)),
+    };
+  });
+}
+
+export async function toggleTenant(id: string): Promise<void> {
+  setStore((s) => {
+    const target = s.tenants.find((t) => t.id === id);
+    if (!target) return s;
+    if (target.id === s.currentTenantId && target.ativo !== false) return s;
+    return {
+      ...s,
+      tenants: s.tenants.map((t) =>
+        t.id === id ? { ...t, ativo: t.ativo === false } : t
+      ),
+    };
+  });
+}
+
+function tenantHasLinkedData(store: ReturnType<typeof getStore>, tenantId: string): boolean {
+  return (
+    store.prospects.some((item) => item.tenantId === tenantId) ||
+    store.alunos.some((item) => item.tenantId === tenantId) ||
+    store.matriculas.some((item) => item.tenantId === tenantId) ||
+    store.pagamentos.some((item) => item.tenantId === tenantId) ||
+    store.planos.some((item) => item.tenantId === tenantId) ||
+    store.formasPagamento.some((item) => item.tenantId === tenantId) ||
+    store.atividades.some((item) => item.tenantId === tenantId) ||
+    store.atividadeGrades.some((item) => item.tenantId === tenantId) ||
+    store.cargos.some((item) => item.tenantId === tenantId) ||
+    store.salas.some((item) => item.tenantId === tenantId) ||
+    store.servicos.some((item) => item.tenantId === tenantId) ||
+    store.produtos.some((item) => item.tenantId === tenantId) ||
+    store.vendas.some((item) => item.tenantId === tenantId) ||
+    store.vouchers.some((item) => item.tenantId === tenantId)
+  );
+}
+
+export async function deleteTenant(id: string): Promise<void> {
+  const current = getStore();
+  if (id === current.currentTenantId) {
+    throw new Error("Não é possível remover a unidade ativa.");
+  }
+  if (tenantHasLinkedData(current, id)) {
+    throw new Error("Não é possível remover unidade com dados vinculados.");
+  }
+  setStore((s) => ({
+    ...s,
+    tenants: s.tenants.filter((t) => t.id !== id),
+  }));
+}
+
 // ─── PROSPECTS ──────────────────────────────────────────────────────────────
 
 export async function listProspects(params?: {
   status?: StatusProspect;
 }): Promise<Prospect[]> {
+  const tenantId = getCurrentTenantId();
   const { prospects } = getStore();
   const all = [...prospects].reverse();
-  if (params?.status) return all.filter((p) => p.status === params.status);
-  return all;
+  const byTenant = all.filter((p) => p.tenantId === tenantId);
+  if (params?.status) return byTenant.filter((p) => p.status === params.status);
+  return byTenant;
 }
 
 export async function updateProspect(
@@ -195,7 +392,8 @@ export async function updateProspect(
 }
 
 export async function getProspect(id: string): Promise<Prospect | null> {
-  return getStore().prospects.find((p) => p.id === id) ?? null;
+  const tenantId = getCurrentTenantId();
+  return getStore().prospects.find((p) => p.id === id && p.tenantId === tenantId) ?? null;
 }
 
 export async function createProspect(
@@ -205,7 +403,7 @@ export async function createProspect(
   const prospect: Prospect = {
     ...data,
     id: genId(),
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     status: "NOVO",
     dataCriacao: createdAt,
     statusLog: [{ status: "NOVO", data: createdAt }],
@@ -338,9 +536,11 @@ export async function checkProspectDuplicate(params: {
   cpf?: string;
   email?: string;
 }): Promise<boolean> {
+  const tenantId = getCurrentTenantId();
   const { prospects } = getStore();
   const tel = params.telefone?.replace(/\D/g, "");
   return prospects.some((p) => {
+    if (p.tenantId !== tenantId) return false;
     const samePhone =
       tel && p.telefone?.replace(/\D/g, "").includes(tel);
     const sameCpf = params.cpf && p.cpf === params.cpf;
@@ -354,10 +554,11 @@ export async function converterProspect(
   data: ConverterProspectInput
 ): Promise<ConverterProspectResponse> {
   const store = getStore();
-  const prospect = store.prospects.find((p) => p.id === data.prospectId);
+  const tenantId = getCurrentTenantId();
+  const prospect = store.prospects.find((p) => p.id === data.prospectId && p.tenantId === tenantId);
   if (!prospect) throw new Error("Prospect não encontrado");
 
-  const plano = store.planos.find((p) => p.id === data.planoId);
+  const plano = store.planos.find((p) => p.id === data.planoId && p.tenantId === tenantId);
   if (!plano) throw new Error("Plano não encontrado");
 
   const alunoId = genId();
@@ -366,7 +567,7 @@ export async function converterProspect(
 
   const aluno: Aluno = {
     id: alunoId,
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId,
     prospectId: data.prospectId,
     nome: prospect.nome,
     email: prospect.email ?? "",
@@ -387,7 +588,7 @@ export async function converterProspect(
 
   const matricula: Matricula = {
     id: matriculaId,
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId,
     alunoId,
     planoId: data.planoId,
     dataInicio: data.dataInicio,
@@ -405,7 +606,7 @@ export async function converterProspect(
   const valorFinal = plano.valor - desconto;
   const pagamento: Pagamento = {
     id: pagamentoId,
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId,
     alunoId,
     matriculaId,
     tipo: "MENSALIDADE",
@@ -494,7 +695,7 @@ export async function criarAluno(
   const alunoId = genId();
   const aluno: Aluno = {
     id: alunoId,
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     nome: data.nome,
     email: data.email,
     telefone: data.telefone,
@@ -530,7 +731,7 @@ export async function criarAlunoComMatricula(
 
   const aluno: Aluno = {
     id: alunoId,
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     nome: data.nome,
     email: data.email,
     telefone: data.telefone,
@@ -552,7 +753,7 @@ export async function criarAlunoComMatricula(
 
   const matricula: Matricula = {
     id: matriculaId,
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     alunoId,
     planoId: data.planoId,
     dataInicio: data.dataInicio,
@@ -570,7 +771,7 @@ export async function criarAlunoComMatricula(
   const valorFinal = plano.valor - desconto;
   const pagamento: Pagamento = {
     id: pagamentoId,
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     alunoId,
     matriculaId,
     tipo: "MENSALIDADE",
@@ -604,8 +805,10 @@ export async function deleteProspect(id: string): Promise<void> {
 // ─── FUNCIONÁRIOS ───────────────────────────────────────────────────────────
 
 export async function listCargos(params?: { apenasAtivos?: boolean }): Promise<Cargo[]> {
+  const tenantId = getCurrentTenantId();
   const only = params?.apenasAtivos ?? false;
-  return only ? getStore().cargos.filter((c) => c.ativo) : getStore().cargos;
+  const cargos = getStore().cargos.filter((c) => c.tenantId === tenantId);
+  return only ? cargos.filter((c) => c.ativo) : cargos;
 }
 
 export async function createCargo(
@@ -614,7 +817,7 @@ export async function createCargo(
   const cargo: Cargo = {
     ...data,
     id: genId(),
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     ativo: true,
   };
   setStore((s) => ({ ...s, cargos: [cargo, ...s.cargos] }));
@@ -704,8 +907,10 @@ export async function deleteFuncionario(id: string): Promise<void> {
 // ─── SALAS ──────────────────────────────────────────────────────────────────
 
 export async function listSalas(params?: { apenasAtivas?: boolean }): Promise<Sala[]> {
+  const tenantId = getCurrentTenantId();
   const only = params?.apenasAtivas ?? false;
-  return only ? getStore().salas.filter((s) => s.ativo) : getStore().salas;
+  const salas = getStore().salas.filter((s) => s.tenantId === tenantId);
+  return only ? salas.filter((s) => s.ativo) : salas;
 }
 
 export async function createSala(
@@ -714,7 +919,7 @@ export async function createSala(
   const sala: Sala = {
     ...data,
     id: genId(),
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     ativo: true,
   };
   setStore((s) => ({ ...s, salas: [sala, ...s.salas] }));
@@ -751,13 +956,17 @@ export async function deleteSala(id: string): Promise<void> {
 // ─── TENANT ────────────────────────────────────────────────────────────────
 
 export async function getTenant(): Promise<Tenant> {
-  return getStore().tenant;
+  const store = getStore();
+  return store.tenants.find((t) => t.id === store.currentTenantId) ?? store.tenant;
 }
 
 export async function updateTenant(data: Partial<Tenant>): Promise<void> {
   setStore((s) => ({
     ...s,
-    tenant: { ...s.tenant, ...data },
+    tenant: s.tenant.id === s.currentTenantId ? { ...s.tenant, ...data } : s.tenant,
+    tenants: s.tenants.map((t) =>
+      t.id === s.currentTenantId ? { ...t, ...data } : t
+    ),
   }));
 }
 
@@ -813,8 +1022,15 @@ export async function deleteConvenio(id: string): Promise<void> {
 // ─── VOUCHERS ───────────────────────────────────────────────────────────────
 
 export async function listVouchers(): Promise<Voucher[]> {
+  const tenantId = getCurrentTenantId();
+  const groupId = getCurrentGroupId();
   const { vouchers } = getStore();
-  return [...vouchers].reverse();
+  return [...vouchers].reverse().filter((v) => {
+    if (v.escopo === "GRUPO") {
+      return Boolean(groupId) && v.groupId === groupId;
+    }
+    return v.tenantId === tenantId;
+  });
 }
 
 function gerarCodigoAleatorio(): string {
@@ -827,13 +1043,16 @@ function gerarCodigoAleatorio(): string {
 }
 
 export async function createVoucher(
-  data: Omit<Voucher, "id" | "tenantId" | "ativo"> & { codigoUnicoCustom?: string }
+  data: Omit<Voucher, "id" | "tenantId" | "groupId" | "ativo"> & { codigoUnicoCustom?: string }
 ): Promise<Voucher> {
   const { codigoUnicoCustom, ...voucherData } = data;
+  const tenantId = getCurrentTenantId();
+  const groupId = getCurrentGroupId();
   const voucher: Voucher = {
     ...voucherData,
     id: genId(),
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: data.escopo === "GRUPO" ? undefined : tenantId,
+    groupId: data.escopo === "GRUPO" ? groupId : undefined,
     ativo: true,
   };
 
@@ -870,6 +1089,7 @@ export async function toggleVoucher(id: string): Promise<void> {
 export async function updateVoucher(
   id: string,
   data: {
+    escopo: VoucherEscopo;
     tipo: string;
     nome: string;
     periodoInicio: string;
@@ -889,9 +1109,20 @@ export async function updateVoucher(
   if (hasUsage) {
     throw new Error("Voucher já utilizado não pode ser editado.");
   }
+  const tenantId = getCurrentTenantId();
+  const groupId = getCurrentGroupId();
   setStore((s) => ({
     ...s,
-    vouchers: s.vouchers.map((v) => (v.id === id ? { ...v, ...data } : v)),
+    vouchers: s.vouchers.map((v) =>
+      v.id === id
+        ? {
+            ...v,
+            ...data,
+            tenantId: data.escopo === "GRUPO" ? undefined : tenantId,
+            groupId: data.escopo === "GRUPO" ? groupId : undefined,
+          }
+        : v
+    ),
   }));
 }
 
@@ -916,16 +1147,18 @@ export async function listPresencasByAluno(alunoId: string): Promise<Presenca[]>
 export async function listAlunos(params?: {
   status?: StatusAluno;
 }): Promise<Aluno[]> {
+  const tenantId = getCurrentTenantId();
   syncAlunosStatus();
   const { alunos } = getStore();
-  const all = [...alunos].reverse();
+  const all = [...alunos].reverse().filter((a) => a.tenantId === tenantId);
   if (params?.status) return all.filter((a) => a.status === params.status);
   return all;
 }
 
 export async function getAluno(id: string): Promise<Aluno | null> {
+  const tenantId = getCurrentTenantId();
   syncAlunosStatus();
-  return getStore().alunos.find((a) => a.id === id) ?? null;
+  return getStore().alunos.find((a) => a.id === id && a.tenantId === tenantId) ?? null;
 }
 
 export async function updateAlunoStatus(
@@ -964,8 +1197,9 @@ export async function updateAluno(
 export async function listServicos(params?: {
   apenasAtivos?: boolean;
 }): Promise<Servico[]> {
+  const tenantId = getCurrentTenantId();
   const { servicos } = getStore();
-  const all = [...servicos].reverse();
+  const all = [...servicos].reverse().filter((s) => s.tenantId === tenantId);
   if (params?.apenasAtivos) return all.filter((s) => s.ativo);
   return all;
 }
@@ -976,7 +1210,7 @@ export async function createServico(
   const servico: Servico = {
     ...data,
     id: genId(),
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     ativo: true,
   };
   setStore((s) => ({ ...s, servicos: [servico, ...s.servicos] }));
@@ -1016,8 +1250,9 @@ export async function deleteServico(id: string): Promise<void> {
 export async function listProdutos(params?: {
   apenasAtivos?: boolean;
 }): Promise<Produto[]> {
+  const groupTenantIds = getCurrentGroupTenantIds();
   const { produtos } = getStore();
-  const all = [...produtos].reverse();
+  const all = [...produtos].reverse().filter((p) => groupTenantIds.includes(p.tenantId));
   if (params?.apenasAtivos) return all.filter((p) => p.ativo);
   return all;
 }
@@ -1028,7 +1263,7 @@ export async function createProduto(
   const produto: Produto = {
     ...data,
     id: genId(),
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     ativo: true,
   };
   setStore((s) => ({ ...s, produtos: [produto, ...s.produtos] }));
@@ -1061,6 +1296,115 @@ export async function deleteProduto(id: string): Promise<void> {
     ...s,
     produtos: s.produtos.filter((p) => p.id !== id),
   }));
+}
+
+// ─── VENDAS ────────────────────────────────────────────────────────────────
+
+export interface CreateVendaInput {
+  tipo: TipoVenda;
+  clienteId?: string;
+  itens: Array<{
+    tipo: TipoVenda;
+    referenciaId: string;
+    descricao: string;
+    quantidade: number;
+    valorUnitario: number;
+    desconto?: number;
+  }>;
+  descontoTotal?: number;
+  acrescimoTotal?: number;
+  pagamento: PagamentoVenda;
+}
+
+export async function listVendas(): Promise<Venda[]> {
+  const tenantId = getCurrentTenantId();
+  return [...getStore().vendas].reverse().filter((v) => v.tenantId === tenantId);
+}
+
+export async function createVenda(input: CreateVendaInput): Promise<Venda> {
+  const requiresCliente = input.itens.some((item) => item.tipo === "PLANO" || item.tipo === "SERVICO");
+  if (requiresCliente && !input.clienteId) {
+    throw new Error("Cliente é obrigatório para venda de plano/serviço.");
+  }
+
+  const store = getStore();
+  const cliente = input.clienteId ? store.alunos.find((a) => a.id === input.clienteId) : undefined;
+
+  const itens: VendaItem[] = input.itens.map((item) => {
+    const qtd = Math.max(1, item.quantidade || 1);
+    const unit = Math.max(0, item.valorUnitario || 0);
+    const desconto = Math.max(0, item.desconto || 0);
+    const valorTotal = Math.max(0, unit * qtd - desconto);
+    return {
+      id: genId(),
+      tipo: item.tipo,
+      referenciaId: item.referenciaId,
+      descricao: item.descricao,
+      quantidade: qtd,
+      valorUnitario: unit,
+      desconto,
+      valorTotal,
+    };
+  });
+
+  const subtotal = itens.reduce((sum, i) => sum + i.valorUnitario * i.quantidade, 0);
+  const descontoItens = itens.reduce((sum, i) => sum + i.desconto, 0);
+  const descontoTotal = Math.max(0, (input.descontoTotal ?? 0) + descontoItens);
+  const acrescimoTotal = Math.max(0, input.acrescimoTotal ?? 0);
+  const total = Math.max(0, subtotal - descontoTotal + acrescimoTotal);
+
+  const venda: Venda = {
+    id: genId(),
+    tenantId: getCurrentTenantId(),
+    tipo: input.tipo,
+    clienteId: input.clienteId,
+    clienteNome: cliente?.nome,
+    status: "FECHADA",
+    itens,
+    subtotal,
+    descontoTotal,
+    acrescimoTotal,
+    total,
+    pagamento: input.pagamento,
+    dataCriacao: now(),
+  };
+
+  const pagamentoTipo = itens.some((item) => item.tipo === "PLANO")
+    ? "MENSALIDADE"
+    : itens.some((item) => item.tipo === "SERVICO")
+      ? "AVULSO"
+      : "PRODUTO";
+  const descricaoPagamento = itens.length === 1
+    ? `Venda ${input.tipo.toLowerCase()} · ${itens[0].descricao}`
+    : `Venda mista · ${itens.length} itens`;
+
+  setStore((s) => ({
+    ...s,
+    vendas: [venda, ...s.vendas],
+    pagamentos: input.clienteId
+      ? [
+          {
+            id: genId(),
+            tenantId: getCurrentTenantId(),
+            alunoId: input.clienteId,
+            tipo: pagamentoTipo,
+            descricao: descricaoPagamento,
+            valor: total,
+            desconto: descontoTotal,
+            valorFinal: total,
+            dataVencimento: now().slice(0, 10),
+            dataPagamento: now().slice(0, 10),
+            formaPagamento: input.pagamento.formaPagamento,
+            status: "PAGO",
+            observacoes: input.pagamento.observacoes,
+            dataCriacao: now(),
+          },
+          ...s.pagamentos,
+        ]
+      : s.pagamentos,
+  }));
+
+  return venda;
 }
 
 // ─── BANDEIRAS DE CARTÃO ───────────────────────────────────────────────────
@@ -1170,8 +1514,9 @@ export async function listAtividades(params?: {
   apenasAtivas?: boolean;
   categoria?: CategoriaAtividade;
 }): Promise<Atividade[]> {
+  const tenantId = getCurrentTenantId();
   const { atividades } = getStore();
-  let all = [...atividades].reverse();
+  let all = [...atividades].reverse().filter((a) => a.tenantId === tenantId);
   if (params?.apenasAtivas) all = all.filter((a) => a.ativo);
   if (params?.categoria) all = all.filter((a) => a.categoria === params.categoria);
   return all;
@@ -1184,7 +1529,7 @@ export async function createAtividade(
   const atividade: Atividade = {
     ...normalized,
     id: genId(),
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     ativo: true,
   };
   setStore((s) => ({ ...s, atividades: [atividade, ...s.atividades] }));
@@ -1242,8 +1587,9 @@ export async function listAtividadeGrades(params?: {
   atividadeId?: string;
   apenasAtivas?: boolean;
 }): Promise<AtividadeGrade[]> {
+  const tenantId = getCurrentTenantId();
   const { atividadeGrades } = getStore();
-  let all = [...atividadeGrades].reverse();
+  let all = [...atividadeGrades].reverse().filter((g) => g.tenantId === tenantId);
   if (params?.atividadeId) all = all.filter((g) => g.atividadeId === params.atividadeId);
   if (params?.apenasAtivas) all = all.filter((g) => g.ativo);
   return all;
@@ -1255,7 +1601,7 @@ export async function createAtividadeGrade(
   const grade: AtividadeGrade = {
     ...data,
     id: genId(),
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     ativo: true,
   };
   setStore((s) => ({ ...s, atividadeGrades: [grade, ...s.atividadeGrades] }));
@@ -1293,11 +1639,13 @@ export async function deleteAtividadeGrade(id: string): Promise<void> {
 // ─── PLANOS ─────────────────────────────────────────────────────────────────
 
 export async function listPlanos(): Promise<Plano[]> {
-  return getStore().planos;
+  const tenantId = getCurrentTenantId();
+  return getStore().planos.filter((p) => p.tenantId === tenantId);
 }
 
 export async function getPlano(id: string): Promise<Plano | null> {
-  return getStore().planos.find((p) => p.id === id) ?? null;
+  const tenantId = getCurrentTenantId();
+  return getStore().planos.find((p) => p.id === id && p.tenantId === tenantId) ?? null;
 }
 
 export async function createPlano(
@@ -1307,7 +1655,7 @@ export async function createPlano(
   const plano: Plano = {
     ...sanitized,
     id: genId(),
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     ativo: true,
   };
   setStore((s) => ({ ...s, planos: [plano, ...s.planos] }));
@@ -1358,8 +1706,9 @@ export async function deletePlano(id: string): Promise<void> {
 export async function listMatriculas(params?: {
   status?: string;
 }): Promise<(Matricula & { aluno?: Aluno; plano?: Plano })[]> {
+  const tenantId = getCurrentTenantId();
   const store = getStore();
-  let mats = [...store.matriculas].reverse();
+  let mats = [...store.matriculas].reverse().filter((m) => m.tenantId === tenantId);
   if (params?.status) mats = mats.filter((m) => m.status === params.status);
   return mats.map((m) => ({
     ...m,
@@ -1371,9 +1720,10 @@ export async function listMatriculas(params?: {
 export async function getAlunoMatriculas(
   alunoId: string
 ): Promise<(Matricula & { plano?: Plano })[]> {
+  const tenantId = getCurrentTenantId();
   const store = getStore();
   return store.matriculas
-    .filter((m) => m.alunoId === alunoId)
+    .filter((m) => m.alunoId === alunoId && m.tenantId === tenantId)
     .map((m) => ({ ...m, plano: store.planos.find((p) => p.id === m.planoId) }));
 }
 
@@ -1456,7 +1806,7 @@ export async function criarMatricula(data: {
 
   const matricula: Matricula = {
     id: matId,
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     alunoId: data.alunoId,
     planoId: data.planoId,
     dataInicio: data.dataInicio,
@@ -1475,7 +1825,7 @@ export async function criarMatricula(data: {
 
   const pagamento: Pagamento = {
     id: pagamentoId,
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     alunoId: data.alunoId,
     matriculaId: matId,
     tipo: "MENSALIDADE",
@@ -1502,6 +1852,9 @@ export async function criarMatricula(data: {
 
 function sanitizePlanoRules<T extends {
   tipo: TipoPlano;
+  cobraAnuidade: boolean;
+  valorAnuidade?: number;
+  parcelasMaxAnuidade?: number;
   permiteRenovacaoAutomatica: boolean;
   permiteCobrancaRecorrente: boolean;
   diaCobrancaPadrao?: number;
@@ -1512,6 +1865,9 @@ function sanitizePlanoRules<T extends {
       permiteRenovacaoAutomatica: false,
       permiteCobrancaRecorrente: false,
       diaCobrancaPadrao: undefined,
+      cobraAnuidade: false,
+      valorAnuidade: undefined,
+      parcelasMaxAnuidade: undefined,
     };
   }
 
@@ -1523,6 +1879,8 @@ function sanitizePlanoRules<T extends {
   return {
     ...plano,
     diaCobrancaPadrao: dia,
+    valorAnuidade: plano.cobraAnuidade ? Math.max(0, plano.valorAnuidade ?? 0) : undefined,
+    parcelasMaxAnuidade: plano.cobraAnuidade ? Math.max(1, Math.min(24, Math.floor(plano.parcelasMaxAnuidade ?? 1))) : undefined,
   };
 }
 
@@ -1557,20 +1915,24 @@ export async function renovarMatricula(id: string, planoId?: string): Promise<vo
 export async function listPagamentos(params?: {
   status?: string;
 }): Promise<(Pagamento & { aluno?: Aluno })[]> {
+  const tenantId = getCurrentTenantId();
   const todayStr = today();
   // Atualiza vencidos e bloqueia clientes quando necessário
-  setStore((s) => ({
-    ...s,
-    pagamentos: s.pagamentos.map((p) => {
+  setStore((s) => {
+    const pagamentosBase = Array.isArray(s.pagamentos) ? s.pagamentos : [];
+    let changed = false;
+    const pagamentos = pagamentosBase.map((p) => {
       if (p.status === "PENDENTE" && p.dataVencimento < todayStr) {
+        changed = true;
         return { ...p, status: "VENCIDO" as const };
       }
       return p;
-    }),
-  }));
+    });
+    return changed ? { ...s, pagamentos } : s;
+  });
   syncAlunosStatus();
   const updated = getStore();
-  let pags = [...updated.pagamentos].reverse();
+  let pags = [...updated.pagamentos].reverse().filter((p) => p.tenantId === tenantId);
   if (params?.status) pags = pags.filter((p) => p.status === params.status);
   return pags.map((p) => ({
     ...p,
@@ -1604,10 +1966,10 @@ export async function receberPagamento(
 export async function listFormasPagamento(params?: {
   apenasAtivas?: boolean;
 }): Promise<FormaPagamento[]> {
+  const tenantId = getCurrentTenantId();
   const only = params?.apenasAtivas ?? true;
-  return only
-    ? getStore().formasPagamento.filter((f) => f.ativo)
-    : getStore().formasPagamento;
+  const formas = getStore().formasPagamento.filter((f) => f.tenantId === tenantId);
+  return only ? formas.filter((f) => f.ativo) : formas;
 }
 
 export async function createFormaPagamento(
@@ -1616,7 +1978,7 @@ export async function createFormaPagamento(
   const fp: FormaPagamento = {
     ...data,
     id: genId(),
-    tenantId: TENANT_ID_DEFAULT,
+    tenantId: getCurrentTenantId(),
     ativo: true,
   };
   setStore((s) => ({ ...s, formasPagamento: [fp, ...s.formasPagamento] }));

@@ -20,7 +20,7 @@ import {
 import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { listPlanos, updateVoucher } from "@/lib/mock/services";
-import type { Plano, Voucher, VoucherAplicarEm } from "@/lib/types";
+import type { Plano, Voucher, VoucherAplicarEm, VoucherEscopo } from "@/lib/types";
 
 const VOUCHER_TYPES = [
   { value: "DESCONTO", label: "Desconto" },
@@ -38,6 +38,7 @@ export function EditarVoucherModal({
   onSaved: () => void;
 }) {
   const [tipo, setTipo] = useState(voucher.tipo);
+  const [escopo, setEscopo] = useState<VoucherEscopo>(voucher.escopo);
   const [nome, setNome] = useState(voucher.nome);
   const [periodoInicio, setPeriodoInicio] = useState(voucher.periodoInicio);
   const [periodoFim, setPeriodoFim] = useState(voucher.periodoFim ?? "");
@@ -96,6 +97,7 @@ export function EditarVoucherModal({
     setSaveError("");
     try {
       await updateVoucher(voucher.id, {
+        escopo,
         tipo,
         nome: nome.trim(),
         periodoInicio,
@@ -140,6 +142,25 @@ export function EditarVoucherModal({
             <p className="text-sm font-medium">
               {voucher.codigoTipo === "UNICO" ? "Código único" : "Códigos aleatórios"}
             </p>
+          </div>
+
+          {/* Tipo */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Escopo</span>
+              <HoverPopover content="Unidade: voucher exclusivo da unidade atual. Grupo: voucher global para toda a rede.">
+                <HelpCircle className="size-4 text-muted-foreground" />
+              </HoverPopover>
+            </div>
+            <Select value={escopo} onValueChange={(v) => setEscopo(v as VoucherEscopo)}>
+              <SelectTrigger className="w-full bg-secondary border-border text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="UNIDADE">Apenas esta unidade</SelectItem>
+                <SelectItem value="GRUPO">Grupo (rede inteira)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Tipo */}

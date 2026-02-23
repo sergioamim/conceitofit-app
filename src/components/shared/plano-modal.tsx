@@ -23,6 +23,9 @@ export interface PlanoForm {
   duracaoDias: string;
   valor: string;
   valorMatricula: string;
+  cobraAnuidade: boolean;
+  valorAnuidade: string;
+  parcelasMaxAnuidade: string;
   permiteRenovacaoAutomatica: boolean;
   permiteCobrancaRecorrente: boolean;
   diaCobrancaPadrao: string;
@@ -52,6 +55,9 @@ export function PlanoModal({
     duracaoDias: "30",
     valor: "",
     valorMatricula: "0",
+    cobraAnuidade: false,
+    valorAnuidade: "0",
+    parcelasMaxAnuidade: "1",
     permiteRenovacaoAutomatica: true,
     permiteCobrancaRecorrente: false,
     diaCobrancaPadrao: "",
@@ -72,6 +78,9 @@ export function PlanoModal({
         duracaoDias: String(initial.duracaoDias),
         valor: String(initial.valor),
         valorMatricula: String(initial.valorMatricula ?? 0),
+        cobraAnuidade: initial.cobraAnuidade ?? false,
+        valorAnuidade: String(initial.valorAnuidade ?? 0),
+        parcelasMaxAnuidade: String(initial.parcelasMaxAnuidade ?? 1),
         permiteRenovacaoAutomatica: initial.permiteRenovacaoAutomatica,
         permiteCobrancaRecorrente: initial.permiteCobrancaRecorrente,
         diaCobrancaPadrao: initial.diaCobrancaPadrao ? String(initial.diaCobrancaPadrao) : "",
@@ -88,6 +97,9 @@ export function PlanoModal({
         duracaoDias: "30",
         valor: "",
         valorMatricula: "0",
+        cobraAnuidade: false,
+        valorAnuidade: "0",
+        parcelasMaxAnuidade: "1",
         permiteRenovacaoAutomatica: true,
         permiteCobrancaRecorrente: false,
         diaCobrancaPadrao: "",
@@ -237,6 +249,53 @@ export function PlanoModal({
                   onChange={(e) => set("valorMatricula", e.target.value)}
                   className="bg-secondary border-border"
                 />
+              </div>
+              <div className="col-span-2 space-y-1.5 rounded-md border border-border bg-secondary/40 p-3">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={form.cobraAnuidade}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        cobraAnuidade: e.target.checked,
+                        valorAnuidade: e.target.checked ? f.valorAnuidade : "0",
+                        parcelasMaxAnuidade: e.target.checked ? f.parcelasMaxAnuidade : "1",
+                      }))
+                    }
+                  />
+                  Cobrar anuidade (a cada 12 meses)
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Valor anuidade (R$)
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={form.valorAnuidade}
+                      disabled={!form.cobraAnuidade}
+                      onChange={(e) => set("valorAnuidade", e.target.value)}
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Máx. parcelas anuidade
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={24}
+                      value={form.parcelasMaxAnuidade}
+                      disabled={!form.cobraAnuidade}
+                      onChange={(e) => set("parcelasMaxAnuidade", e.target.value)}
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
             <div className="space-y-1.5">

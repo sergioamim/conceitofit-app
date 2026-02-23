@@ -12,7 +12,10 @@ import {
   Activity,
   CalendarDays,
   DollarSign,
+  ShoppingCart,
   BriefcaseBusiness,
+  LineChart,
+  HandCoins,
   Kanban,
   ChevronDown,
   ChevronRight,
@@ -21,7 +24,8 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCurrentTenant } from "@/lib/mock/services";
+import { getCurrentAcademia, getCurrentTenant } from "@/lib/mock/services";
+import { getTenantAppName } from "@/lib/tenant-theme";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -31,6 +35,7 @@ const navItems = [
   { href: "/planos", label: "Planos", icon: CreditCard },
   { href: "/atividades", label: "Atividades", icon: Activity },
   { href: "/grade", label: "Grade", icon: CalendarDays },
+  { href: "/vendas/nova", label: "Vendas", icon: ShoppingCart },
   { href: "/pagamentos", label: "Pagamentos", icon: DollarSign },
 ];
 
@@ -41,6 +46,7 @@ const crmItems = [
 const administrativoItems = [
   { href: "/administrativo/formas-pagamento", label: "Formas de Pagamento", icon: Settings },
   { href: "/administrativo/bandeiras", label: "Bandeiras de Cartão", icon: Settings },
+  { href: "/administrativo/unidades", label: "Unidades", icon: Settings },
   { href: "/administrativo/academia", label: "Academia", icon: Settings },
   { href: "/administrativo/funcionarios", label: "Funcionários", icon: Settings },
   { href: "/administrativo/salas", label: "Salas", icon: Settings },
@@ -53,14 +59,26 @@ const administrativoItems = [
   { href: "/administrativo/vouchers", label: "Vouchers", icon: Settings },
 ];
 
-export function Sidebar() {
+const gerencialItems = [
+  { href: "/gerencial/contas-a-receber", label: "Contas a Receber", icon: HandCoins },
+];
+
+type SidebarProps = {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+};
+
+export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const [crmOpen, setCrmOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [administrativoOpen, setAdministrativoOpen] = useState(false);
+  const [gerencialOpen, setGerencialOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const [tenantName, setTenantName] = useState("Academia");
+  const [appName, setAppName] = useState("Conceito Fit");
+  const [logoUrl, setLogoUrl] = useState("");
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -75,8 +93,13 @@ export function Sidebar() {
 
   useEffect(() => {
     async function load() {
-      const tenant = await getCurrentTenant();
+      const [tenant, academia] = await Promise.all([
+        getCurrentTenant(),
+        getCurrentAcademia(),
+      ]);
       setTenantName(tenant.nome);
+      setAppName(getTenantAppName(academia));
+      setLogoUrl(academia.branding?.logoUrl ?? "");
     }
     load();
     function handleUpdate() {
@@ -90,19 +113,45 @@ export function Sidebar() {
     };
   }, []);
 
+  function getInitials(name: string): string {
+    const words = name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2);
+    if (words.length === 0) return "CF";
+    return words.map((w) => w[0]?.toUpperCase() ?? "").join("");
+  }
+
+  useEffect(() => {
+    if (mobileOpen) {
+      onMobileClose?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   return (
     <aside
       className={cn(
-        "flex h-screen flex-col border-r border-border bg-surface transition-all",
-        collapsed ? "w-[72px] min-w-[72px]" : "w-[220px] min-w-[220px]"
+        "fixed inset-y-0 left-0 z-40 flex h-full w-[280px] flex-col border-r border-border bg-surface transition-transform md:static md:h-screen md:translate-x-0",
+        mobileOpen ? "translate-x-0" : "-translate-x-full",
+        collapsed ? "md:w-[72px] md:min-w-[72px]" : "md:w-[220px] md:min-w-[220px]"
       )}
     >
       {/* Logo */}
       <div className="border-b border-border px-4 py-5">
         <div className="flex items-start justify-between">
-          <div>
+          <div className="min-w-0">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt={appName}
+                className={cn("mb-2 h-8 w-auto object-contain", collapsed && "mb-0")}
+              />
+            ) : null}
             <div className="font-display text-xl font-extrabold tracking-tight text-gym-accent">
-              {collapsed ? "FM" : "FitManager"}
+              {collapsed ? getInitials(appName) : appName}
             </div>
             {!collapsed && (
               <div className="mt-0.5 text-[11px] uppercase tracking-widest text-muted-foreground">
@@ -112,7 +161,7 @@ export function Sidebar() {
           </div>
           <button
             onClick={() => setCollapsed((v) => !v)}
-            className="mt-0.5 rounded-md border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground"
+            className="mt-0.5 hidden rounded-md border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground md:inline-flex"
             aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
           >
             {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
@@ -133,6 +182,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={() => onMobileClose?.()}
               className={cn(
                 "flex items-center gap-2.5 rounded-md px-3 py-2 text-[13.5px] font-normal transition-colors",
                 active
@@ -170,6 +220,48 @@ export function Sidebar() {
                   <Link
                     key={href}
                     href={href}
+                    onClick={() => onMobileClose?.()}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md px-3 py-2 text-[13px] transition-colors",
+                      active
+                        ? "bg-gym-accent/10 font-medium text-gym-accent"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    )}
+                    title={collapsed ? label : undefined}
+                  >
+                    <Icon className="size-[14px] shrink-0" />
+                    {!collapsed && label}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4">
+          <button
+            onClick={() => setGerencialOpen((v) => !v)}
+            className={cn(
+              "flex w-full items-center justify-between rounded-md px-2 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 transition-colors hover:text-foreground",
+              collapsed && "justify-center"
+            )}
+            title={collapsed ? "Gerencial" : undefined}
+          >
+            <span className={cn("flex items-center gap-2", collapsed && "justify-center")}>
+              <LineChart className="size-3.5" />
+              {!collapsed && "Gerencial"}
+            </span>
+            {!collapsed && (gerencialOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />)}
+          </button>
+          {gerencialOpen && (
+            <div className="mt-1 flex flex-col gap-0.5">
+              {gerencialItems.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href || pathname.startsWith(href + "/");
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => onMobileClose?.()}
                     className={cn(
                       "flex items-center gap-2 rounded-md px-3 py-2 text-[13px] transition-colors",
                       active
@@ -210,6 +302,7 @@ export function Sidebar() {
                   <Link
                     key={href}
                     href={href}
+                    onClick={() => onMobileClose?.()}
                     className={cn(
                       "flex items-center gap-2 rounded-md px-3 py-2 text-[13px] transition-colors",
                       active
@@ -260,7 +353,6 @@ export function Sidebar() {
               {[
                 { label: "Meu perfil", href: "/conta/perfil" },
                 { label: "Trocar senha", href: "/conta/seguranca" },
-                { label: "Trocar academia", href: "/conta/academia" },
                 { label: "Preferências", href: "/conta/preferencias" },
                 { label: "Notificações", href: "/conta/notificacoes" },
                 { label: "Sair", href: "/conta/sair" },

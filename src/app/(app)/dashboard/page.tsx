@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -123,7 +123,7 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState(todayIso);
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
 
-  async function load(referenceDate = selectedDate) {
+  const load = useCallback(async (referenceDate = selectedDate) => {
     const ref = new Date(`${referenceDate}T00:00:00`);
     const month = ref.getMonth();
     const year = ref.getFullYear();
@@ -139,17 +139,14 @@ export default function DashboardPage() {
     setPagamentos(pags);
     setMatriculas(mats);
     setAlunos(als);
-  }
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    load(selectedDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      load(selectedDate);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load, selectedDate]);
 
   useEffect(() => {
     function handleUpdate() {
@@ -161,8 +158,7 @@ export default function DashboardPage() {
       window.removeEventListener("academia-store-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
+  }, [load, selectedDate]);
 
   const metrics = useMemo(() => {
     if (!data) return null;

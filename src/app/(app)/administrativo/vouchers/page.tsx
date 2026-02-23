@@ -104,6 +104,7 @@ export default function VouchersPage() {
             <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
               <th className="px-4 py-3 text-left font-semibold">Tipo</th>
               <th className="px-4 py-3 text-left font-semibold">Nome</th>
+              <th className="px-4 py-3 text-left font-semibold">Escopo</th>
               <th className="px-4 py-3 text-left font-semibold">Período</th>
               <th className="px-4 py-3 text-left font-semibold">Quantidade</th>
               <th className="px-4 py-3 text-left font-semibold">Código</th>
@@ -121,6 +122,15 @@ export default function VouchersPage() {
                 <tr key={voucher.id} className="transition-colors hover:bg-secondary/40">
                   <td className="px-4 py-3">{TIPO_LABEL[voucher.tipo] ?? voucher.tipo}</td>
                   <td className="px-4 py-3 font-medium">{voucher.nome}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                      voucher.escopo === "GRUPO"
+                        ? "bg-gym-accent/15 text-gym-accent"
+                        : "bg-secondary text-muted-foreground"
+                    }`}>
+                      {voucher.escopo === "GRUPO" ? "Grupo" : "Unidade"}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                     {formatPeriodo(voucher)}
                   </td>
@@ -194,7 +204,7 @@ export default function VouchersPage() {
             })}
             {vouchers.length === 0 && (
               <tr>
-                <td colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={10} className="py-10 text-center text-sm text-muted-foreground">
                   Nenhum voucher cadastrado
                 </td>
               </tr>

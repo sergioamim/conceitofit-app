@@ -22,11 +22,17 @@ import type {
   Sala,
   Cargo,
   Produto,
+  Venda,
+  Academia,
 } from "../types";
 
 const TENANT_ID = "550e8400-e29b-41d4-a716-446655440000";
+const TENANT_ID_S1 = "550e8400-e29b-41d4-a716-446655440001";
+const TENANT_ID_S3 = "550e8400-e29b-41d4-a716-446655440002";
+const PRIMARY_TENANT_ID = TENANT_ID_S1;
 
 interface Store {
+  academias: Academia[];
   tenant: Tenant;
   tenants: Tenant[];
   currentTenantId: string;
@@ -34,6 +40,7 @@ interface Store {
   convenios: Convenio[];
   produtos: Produto[];
   servicos: Servico[];
+  vendas: Venda[];
   bandeirasCartao: BandeiraCartao[];
   cartoesCliente: CartaoCliente[];
   atividades: Atividade[];
@@ -54,35 +61,92 @@ interface Store {
   voucherCodigos: VoucherCodigo[];
 }
 
+function migrateTenantId(id: string | undefined): string | undefined {
+  if (!id) return id;
+  return id === TENANT_ID ? TENANT_ID_S1 : id;
+}
+
+function mapTenantItems<T extends { tenantId: string }>(items: T[]): T[] {
+  return items.map((item) => ({ ...item, tenantId: migrateTenantId(item.tenantId) ?? item.tenantId }));
+}
+
+function dedupeById<T extends { id: string }>(items: T[]): T[] {
+  const map = new Map<string, T>();
+  for (const item of items) {
+    if (!map.has(item.id)) map.set(item.id, item);
+  }
+  return Array.from(map.values());
+}
+
+function normalizeTenantConfiguracoes(tenant: Tenant): Tenant {
+  const modo = tenant.configuracoes?.impressaoCupom?.modo ?? "80MM";
+  const larguraRaw = Number(tenant.configuracoes?.impressaoCupom?.larguraCustomMm ?? 80);
+  const larguraCustomMm = Number.isFinite(larguraRaw)
+    ? Math.min(120, Math.max(40, larguraRaw))
+    : 80;
+  return {
+    ...tenant,
+    configuracoes: {
+      ...tenant.configuracoes,
+      impressaoCupom: {
+        modo,
+        larguraCustomMm,
+      },
+    },
+  };
+}
+
+function applyLegacyTenantMigration(input: Store): Store {
+  const tenants = dedupeById(
+    input.tenants
+      .filter((tenant) => tenant.id !== TENANT_ID)
+      .map((tenant) => ({
+        ...tenant,
+        id: migrateTenantId(tenant.id) ?? tenant.id,
+        groupId: migrateTenantId(tenant.groupId),
+        academiaId: migrateTenantId(tenant.academiaId),
+      }))
+  );
+
+  const tenant = tenants.find((t) => t.id === migrateTenantId(input.tenant.id))
+    ?? tenants.find((t) => t.id === PRIMARY_TENANT_ID)
+    ?? input.tenant;
+
+  const result: Store = {
+    ...input,
+    tenant,
+    tenants,
+    currentTenantId: migrateTenantId(input.currentTenantId) ?? PRIMARY_TENANT_ID,
+    produtos: mapTenantItems(input.produtos),
+    servicos: mapTenantItems(input.servicos),
+    vendas: mapTenantItems(input.vendas),
+    atividades: mapTenantItems(input.atividades),
+    cargos: mapTenantItems(input.cargos),
+    salas: mapTenantItems(input.salas),
+    atividadeGrades: mapTenantItems(input.atividadeGrades),
+    planos: mapTenantItems(input.planos),
+    formasPagamento: mapTenantItems(input.formasPagamento),
+    prospects: mapTenantItems(input.prospects),
+    alunos: mapTenantItems(input.alunos),
+    matriculas: mapTenantItems(input.matriculas),
+    pagamentos: mapTenantItems(input.pagamentos),
+    vouchers: input.vouchers.map((voucher) => ({
+      ...voucher,
+      tenantId: migrateTenantId(voucher.tenantId),
+    })),
+  };
+  return result;
+}
+
 function makeInitialStore(): Store {
-  const atividades: Atividade[] = [
-    { id: "atv-001", tenantId: TENANT_ID, nome: "Musculação", categoria: "MUSCULACAO", icone: "💪", cor: "#FF5733", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
-    { id: "atv-002", tenantId: TENANT_ID, nome: "Spinning", categoria: "CARDIO", icone: "🚴", cor: "#33A1FF", permiteCheckin: true, checkinObrigatorio: true, ativo: true },
-    { id: "atv-003", tenantId: TENANT_ID, nome: "Yoga", categoria: "COLETIVA", icone: "🧘", cor: "#9B59B6", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
-    { id: "atv-004", tenantId: TENANT_ID, nome: "Muay Thai", categoria: "LUTA", icone: "🥊", cor: "#E74C3C", permiteCheckin: true, checkinObrigatorio: true, ativo: true },
-    { id: "atv-005", tenantId: TENANT_ID, nome: "Funcional", categoria: "COLETIVA", icone: "🏋️", cor: "#2ECC71", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
-    { id: "atv-006", tenantId: TENANT_ID, nome: "Natação", categoria: "AQUATICA", icone: "🏊", cor: "#3498DB", permiteCheckin: true, checkinObrigatorio: true, ativo: true },
-    { id: "atv-007", tenantId: TENANT_ID, nome: "Pilates", categoria: "COLETIVA", icone: "🤸", cor: "#F39C12", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
-  ];
-
-  const salas: Sala[] = [
-    { id: "sal-001", tenantId: TENANT_ID, nome: "Sala Bike 1", descricao: "Estúdio Spinning", capacidadePadrao: 20, ativo: true },
-    { id: "sal-002", tenantId: TENANT_ID, nome: "Sala Zen", descricao: "Atividades de bem-estar", capacidadePadrao: 15, ativo: true },
-    { id: "sal-003", tenantId: TENANT_ID, nome: "Dojo 1", descricao: "Lutas", capacidadePadrao: 24, ativo: true },
-  ];
-
-  const cargos: Cargo[] = [
-    { id: "crg-001", tenantId: TENANT_ID, nome: "Administrador", ativo: true },
-    { id: "crg-002", tenantId: TENANT_ID, nome: "Consultor Comercial", ativo: true },
-    { id: "crg-003", tenantId: TENANT_ID, nome: "Instrutor", ativo: true },
-  ];
-
-  const tenant: Tenant = {
-    id: TENANT_ID,
-    nome: "Academia Força Total",
-    subdomain: "forcatotal",
-    email: "contato@forcatotal.com.br",
+  const academia: Academia = {
+    id: "acd-sergio-amim",
+    nome: "Academia Sergio Amim",
+    razaoSocial: "Academia Sergio Amim LTDA",
+    documento: "12.345.678/0001-90",
+    email: "contato@sergioamim.com.br",
     telefone: "(11) 99999-0000",
+    ativo: true,
     endereco: {
       cep: "01000-000",
       logradouro: "Av. Paulista",
@@ -91,30 +155,88 @@ function makeInitialStore(): Store {
       cidade: "São Paulo",
       estado: "SP",
     },
+    branding: {
+      appName: "Conceito Fit",
+      themePreset: "CONCEITO_DARK",
+      useCustomColors: false,
+    },
+  };
+
+  const atividades: Atividade[] = [
+    { id: "atv-001", tenantId: TENANT_ID, nome: "Musculação", categoria: "MUSCULACAO", icone: "💪", cor: "#FF5733", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
+    { id: "atv-002", tenantId: TENANT_ID, nome: "Spinning", categoria: "CARDIO", icone: "🚴", cor: "#33A1FF", permiteCheckin: true, checkinObrigatorio: true, ativo: true },
+    { id: "atv-003", tenantId: TENANT_ID, nome: "Yoga", categoria: "COLETIVA", icone: "🧘", cor: "#9B59B6", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
+    { id: "atv-004", tenantId: TENANT_ID, nome: "Muay Thai", categoria: "LUTA", icone: "🥊", cor: "#E74C3C", permiteCheckin: true, checkinObrigatorio: true, ativo: true },
+    { id: "atv-005", tenantId: TENANT_ID, nome: "Funcional", categoria: "COLETIVA", icone: "🏋️", cor: "#2ECC71", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
+    { id: "atv-006", tenantId: TENANT_ID, nome: "Natação", categoria: "AQUATICA", icone: "🏊", cor: "#3498DB", permiteCheckin: true, checkinObrigatorio: true, ativo: true },
+    { id: "atv-007", tenantId: TENANT_ID, nome: "Pilates", categoria: "COLETIVA", icone: "🤸", cor: "#F39C12", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
+    { id: "atv-s1-001", tenantId: TENANT_ID_S1, nome: "Musculação", categoria: "MUSCULACAO", icone: "💪", cor: "#ef4444", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
+    { id: "atv-s1-002", tenantId: TENANT_ID_S1, nome: "Spinning", categoria: "CARDIO", icone: "🚴", cor: "#0ea5e9", permiteCheckin: true, checkinObrigatorio: true, ativo: true },
+    { id: "atv-s3-001", tenantId: TENANT_ID_S3, nome: "Musculação", categoria: "MUSCULACAO", icone: "🏋️", cor: "#22c55e", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
+    { id: "atv-s3-002", tenantId: TENANT_ID_S3, nome: "Ritmos", categoria: "COLETIVA", icone: "💃", cor: "#f59e0b", permiteCheckin: true, checkinObrigatorio: false, ativo: true },
+  ];
+
+  const salas: Sala[] = [
+    { id: "sal-001", tenantId: TENANT_ID, nome: "Sala Bike 1", descricao: "Estúdio Spinning", capacidadePadrao: 20, ativo: true },
+    { id: "sal-002", tenantId: TENANT_ID, nome: "Sala Zen", descricao: "Atividades de bem-estar", capacidadePadrao: 15, ativo: true },
+    { id: "sal-003", tenantId: TENANT_ID, nome: "Dojo 1", descricao: "Lutas", capacidadePadrao: 24, ativo: true },
+    { id: "sal-s1-001", tenantId: TENANT_ID_S1, nome: "Sala S1 Cardio", descricao: "Unidade Mananciais", capacidadePadrao: 18, ativo: true },
+    { id: "sal-s1-002", tenantId: TENANT_ID_S1, nome: "Sala S1 Funcional", descricao: "Unidade Mananciais", capacidadePadrao: 22, ativo: true },
+    { id: "sal-s3-001", tenantId: TENANT_ID_S3, nome: "Sala S3 Training", descricao: "Unidade Pechincha", capacidadePadrao: 20, ativo: true },
+    { id: "sal-s3-002", tenantId: TENANT_ID_S3, nome: "Studio S3", descricao: "Unidade Pechincha", capacidadePadrao: 16, ativo: true },
+  ];
+
+  const cargos: Cargo[] = [
+    { id: "crg-001", tenantId: TENANT_ID, nome: "Administrador", ativo: true },
+    { id: "crg-002", tenantId: TENANT_ID, nome: "Consultor Comercial", ativo: true },
+    { id: "crg-003", tenantId: TENANT_ID, nome: "Instrutor", ativo: true },
+    { id: "crg-s1-001", tenantId: TENANT_ID_S1, nome: "Administrador", ativo: true },
+    { id: "crg-s1-002", tenantId: TENANT_ID_S1, nome: "Consultor Comercial", ativo: true },
+    { id: "crg-s1-003", tenantId: TENANT_ID_S1, nome: "Instrutor", ativo: true },
+    { id: "crg-s3-001", tenantId: TENANT_ID_S3, nome: "Administrador", ativo: true },
+    { id: "crg-s3-002", tenantId: TENANT_ID_S3, nome: "Consultor Comercial", ativo: true },
+    { id: "crg-s3-003", tenantId: TENANT_ID_S3, nome: "Instrutor", ativo: true },
+  ];
+
+  const tenant: Tenant = {
+    id: TENANT_ID_S1,
+    academiaId: academia.id,
+    nome: "MANANCIAIS - S1",
+    razaoSocial: "Academia Sergio Amim Mananciais LTDA",
+    documento: "12.345.678/0001-91",
+    groupId: "GRP-SERGIO-AMIM",
+    subdomain: "mananciais-s1",
+    email: "contato@mananciais-s1.com.br",
+    telefone: "(11) 98888-1122",
+    ativo: true,
+    endereco: {
+      cep: "04567-000",
+      logradouro: "Rua das Flores",
+      numero: "120",
+      bairro: "Vila Nova",
+      cidade: "São Paulo",
+      estado: "SP",
+    },
+    configuracoes: {
+      impressaoCupom: {
+        modo: "80MM",
+        larguraCustomMm: 80,
+      },
+    },
   };
   const tenants: Tenant[] = [
     tenant,
     {
-      id: "550e8400-e29b-41d4-a716-446655440001",
-      nome: "Academia Vila Nova",
-      subdomain: "vilanova",
-      email: "contato@vilanova.com.br",
-      telefone: "(11) 98888-1122",
-      endereco: {
-        cep: "04567-000",
-        logradouro: "Rua das Flores",
-        numero: "120",
-        bairro: "Vila Nova",
-        cidade: "São Paulo",
-        estado: "SP",
-      },
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440002",
-      nome: "Academia Jardins",
-      subdomain: "jardins",
-      email: "contato@jardins.com.br",
+      id: TENANT_ID_S3,
+      academiaId: academia.id,
+      nome: "PECHINCHA - S3",
+      razaoSocial: "Academia Sergio Amim Pechincha LTDA",
+      documento: "12.345.678/0001-92",
+      groupId: "GRP-SERGIO-AMIM",
+      subdomain: "pechincha-s3",
+      email: "contato@pechincha-s3.com.br",
       telefone: "(11) 97777-3344",
+      ativo: true,
       endereco: {
         cep: "01400-000",
         logradouro: "Alameda Central",
@@ -122,6 +244,12 @@ function makeInitialStore(): Store {
         bairro: "Jardins",
         cidade: "São Paulo",
         estado: "SP",
+      },
+      configuracoes: {
+        impressaoCupom: {
+          modo: "80MM",
+          larguraCustomMm: 80,
+        },
       },
     },
   ];
@@ -199,6 +327,68 @@ function makeInitialStore(): Store {
       instrutor: "Bruno Silva",
       ativo: true,
     },
+    {
+      id: "agr-s1-001",
+      tenantId: TENANT_ID_S1,
+      atividadeId: "atv-s1-002",
+      diasSemana: ["SEG", "QUA", "SEX"],
+      definicaoHorario: "PREVIAMENTE",
+      horaInicio: "06:30",
+      horaFim: "07:20",
+      capacidade: 18,
+      checkinLiberadoMinutosAntes: 45,
+      duracaoMinutos: 50,
+      grupoAtividades: "Cardio",
+      publico: "Adulto",
+      dificuldade: 3,
+      acessoClientes: "TODOS_CLIENTES",
+      permiteReserva: true,
+      limitarVagasAgregadores: false,
+      exibirWellhub: true,
+      permitirSaidaAntesInicio: false,
+      permitirEscolherNumeroVaga: false,
+      exibirNoAppCliente: true,
+      exibirNoAutoatendimento: true,
+      exibirNoWodTv: false,
+      finalizarAtividadeAutomaticamente: true,
+      desabilitarListaEspera: false,
+      salaId: "sal-s1-001",
+      funcionarioId: "fn-s1-002",
+      local: "Sala S1 Cardio",
+      instrutor: "Priscila Gomes",
+      ativo: true,
+    },
+    {
+      id: "agr-s3-001",
+      tenantId: TENANT_ID_S3,
+      atividadeId: "atv-s3-002",
+      diasSemana: ["TER", "QUI"],
+      definicaoHorario: "PREVIAMENTE",
+      horaInicio: "19:00",
+      horaFim: "19:50",
+      capacidade: 16,
+      checkinLiberadoMinutosAntes: 30,
+      duracaoMinutos: 50,
+      grupoAtividades: "Coletivas",
+      publico: "Todos",
+      dificuldade: 2,
+      acessoClientes: "TODOS_CLIENTES",
+      permiteReserva: true,
+      limitarVagasAgregadores: false,
+      exibirWellhub: false,
+      permitirSaidaAntesInicio: true,
+      permitirEscolherNumeroVaga: false,
+      exibirNoAppCliente: true,
+      exibirNoAutoatendimento: true,
+      exibirNoWodTv: false,
+      finalizarAtividadeAutomaticamente: true,
+      desabilitarListaEspera: false,
+      salaId: "sal-s3-002",
+      funcionarioId: "fn-s3-002",
+      local: "Studio S3",
+      instrutor: "Leandro Dias",
+      ativo: true,
+    },
   ];
 
   const servicos: Servico[] = [
@@ -262,6 +452,46 @@ function makeInitialStore(): Store {
       tipoCobranca: "UNICO",
       agendavel: true,
       permiteAcessoCatraca: true,
+      permiteVoucher: true,
+      ativo: true,
+    },
+    {
+      id: "srv-s1-001",
+      tenantId: TENANT_ID_S1,
+      nome: "Avaliação física S1",
+      sku: "SRV-S1-AVAL",
+      categoria: "Avaliação",
+      sessoes: 1,
+      duracaoMinutos: 45,
+      validadeDias: 30,
+      valor: 110,
+      custo: 38,
+      comissaoPercentual: 8,
+      aliquotaImpostoPercentual: 4,
+      permiteDesconto: true,
+      tipoCobranca: "UNICO",
+      agendavel: true,
+      permiteAcessoCatraca: false,
+      permiteVoucher: true,
+      ativo: true,
+    },
+    {
+      id: "srv-s3-001",
+      tenantId: TENANT_ID_S3,
+      nome: "Avaliação física S3",
+      sku: "SRV-S3-AVAL",
+      categoria: "Avaliação",
+      sessoes: 1,
+      duracaoMinutos: 45,
+      validadeDias: 30,
+      valor: 115,
+      custo: 40,
+      comissaoPercentual: 8,
+      aliquotaImpostoPercentual: 4,
+      permiteDesconto: true,
+      tipoCobranca: "UNICO",
+      agendavel: true,
+      permiteAcessoCatraca: false,
       permiteVoucher: true,
       ativo: true,
     },
@@ -382,6 +612,7 @@ function makeInitialStore(): Store {
     {
       id: "vch-001",
       tenantId: TENANT_ID,
+      escopo: "UNIDADE",
       tipo: "DESCONTO",
       nome: "Voucher Black Friday",
       periodoInicio: "2025-11-01",
@@ -399,6 +630,7 @@ function makeInitialStore(): Store {
     {
       id: "vch-002",
       tenantId: TENANT_ID,
+      escopo: "UNIDADE",
       tipo: "ACESSO",
       nome: "Voucher Amigo",
       periodoInicio: "2025-01-01",
@@ -414,6 +646,7 @@ function makeInitialStore(): Store {
     {
       id: "vch-003",
       tenantId: TENANT_ID,
+      escopo: "UNIDADE",
       tipo: "SESSAO",
       nome: "Sessão Experimental",
       periodoInicio: "2026-01-01",
@@ -425,6 +658,22 @@ function makeInitialStore(): Store {
       planoIds: ["pln-001"],
       umaVezPorCliente: true,
       aplicarEm: ["CONTRATO"],
+      ativo: true,
+    },
+    {
+      id: "vch-grp-001",
+      groupId: "GRP-SERGIO-AMIM",
+      escopo: "GRUPO",
+      tipo: "DESCONTO",
+      nome: "Rede Fit 10%",
+      periodoInicio: "2026-01-01",
+      prazoDeterminado: false,
+      ilimitado: true,
+      codigoTipo: "UNICO",
+      usarNaVenda: true,
+      planoIds: [],
+      umaVezPorCliente: true,
+      aplicarEm: ["CONTRATO", "ANUIDADE"],
       ativo: true,
     },
   ];
@@ -440,6 +689,8 @@ function makeInitialStore(): Store {
     { id: "vcod-006", voucherId: "vch-002", codigo: "AMIGO2025", usado: true,  usadoPorAlunoId: "al-001", dataUso: "2025-04-02T14:30:00" },
     // vch-003 · UNICO · 20 qty · no usages yet
     { id: "vcod-007", voucherId: "vch-003", codigo: "SESSAO2026", usado: false },
+    // vch-grp-001 · UNICO · global rede
+    { id: "vcod-008", voucherId: "vch-grp-001", codigo: "REDEFIT10", usado: false },
   ];
 
   const bandeirasCartao: BandeiraCartao[] = [
@@ -460,6 +711,9 @@ function makeInitialStore(): Store {
       tipo: "MENSAL",
       valor: 99.90,
       valorMatricula: 50.00,
+      cobraAnuidade: true,
+      valorAnuidade: 120,
+      parcelasMaxAnuidade: 3,
       duracaoDias: 30,
       permiteRenovacaoAutomatica: true,
       permiteCobrancaRecorrente: true,
@@ -476,6 +730,9 @@ function makeInitialStore(): Store {
       tipo: "MENSAL",
       valor: 149.90,
       valorMatricula: 50.00,
+      cobraAnuidade: true,
+      valorAnuidade: 180,
+      parcelasMaxAnuidade: 6,
       duracaoDias: 30,
       permiteRenovacaoAutomatica: true,
       permiteCobrancaRecorrente: true,
@@ -492,6 +749,7 @@ function makeInitialStore(): Store {
       tipo: "TRIMESTRAL",
       valor: 399.90,
       valorMatricula: 0,
+      cobraAnuidade: false,
       duracaoDias: 90,
       permiteRenovacaoAutomatica: true,
       permiteCobrancaRecorrente: false,
@@ -507,6 +765,7 @@ function makeInitialStore(): Store {
       tipo: "ANUAL",
       valor: 999.90,
       valorMatricula: 0,
+      cobraAnuidade: false,
       duracaoDias: 365,
       permiteRenovacaoAutomatica: true,
       permiteCobrancaRecorrente: false,
@@ -514,6 +773,44 @@ function makeInitialStore(): Store {
       ativo: true,
       atividades: ["atv-001", "atv-002", "atv-003", "atv-004", "atv-005", "atv-006", "atv-007"],
       beneficios: ["Acesso completo", "Todas as aulas", "Personal trainer ilimitado", "Avaliação física mensal", "Nutricionista"],
+    },
+    {
+      id: "pln-s1-001",
+      tenantId: TENANT_ID_S1,
+      nome: "Mensal S1",
+      tipo: "MENSAL",
+      valor: 129.9,
+      valorMatricula: 40,
+      cobraAnuidade: true,
+      valorAnuidade: 150,
+      parcelasMaxAnuidade: 5,
+      duracaoDias: 30,
+      permiteRenovacaoAutomatica: true,
+      permiteCobrancaRecorrente: true,
+      diaCobrancaPadrao: 5,
+      destaque: true,
+      ativo: true,
+      atividades: ["atv-s1-001", "atv-s1-002"],
+      beneficios: ["Acesso completo S1", "Aulas coletivas S1"],
+    },
+    {
+      id: "pln-s3-001",
+      tenantId: TENANT_ID_S3,
+      nome: "Mensal S3",
+      tipo: "MENSAL",
+      valor: 119.9,
+      valorMatricula: 35,
+      cobraAnuidade: true,
+      valorAnuidade: 130,
+      parcelasMaxAnuidade: 4,
+      duracaoDias: 30,
+      permiteRenovacaoAutomatica: true,
+      permiteCobrancaRecorrente: true,
+      diaCobrancaPadrao: 5,
+      destaque: true,
+      ativo: true,
+      atividades: ["atv-s3-001", "atv-s3-002"],
+      beneficios: ["Acesso completo S3", "Aulas coletivas S3"],
     },
   ];
 
@@ -523,13 +820,27 @@ function makeInitialStore(): Store {
     { id: "fp-003", tenantId: TENANT_ID, nome: "Cartão de Crédito", tipo: "CARTAO_CREDITO", taxaPercentual: 2.99, parcelasMax: 12, ativo: true },
     { id: "fp-004", tenantId: TENANT_ID, nome: "Cartão de Débito", tipo: "CARTAO_DEBITO", taxaPercentual: 1.5, parcelasMax: 1, ativo: true },
     { id: "fp-005", tenantId: TENANT_ID, nome: "Boleto", tipo: "BOLETO", taxaPercentual: 0, parcelasMax: 1, ativo: true },
+    { id: "fp-s1-001", tenantId: TENANT_ID_S1, nome: "Dinheiro", tipo: "DINHEIRO", taxaPercentual: 0, parcelasMax: 1, ativo: true },
+    { id: "fp-s1-002", tenantId: TENANT_ID_S1, nome: "PIX", tipo: "PIX", taxaPercentual: 0, parcelasMax: 1, ativo: true },
+    { id: "fp-s1-003", tenantId: TENANT_ID_S1, nome: "Cartão de Crédito", tipo: "CARTAO_CREDITO", taxaPercentual: 2.99, parcelasMax: 12, ativo: true },
+    { id: "fp-s3-001", tenantId: TENANT_ID_S3, nome: "Dinheiro", tipo: "DINHEIRO", taxaPercentual: 0, parcelasMax: 1, ativo: true },
+    { id: "fp-s3-002", tenantId: TENANT_ID_S3, nome: "PIX", tipo: "PIX", taxaPercentual: 0, parcelasMax: 1, ativo: true },
+    { id: "fp-s3-003", tenantId: TENANT_ID_S3, nome: "Cartão de Crédito", tipo: "CARTAO_CREDITO", taxaPercentual: 2.99, parcelasMax: 12, ativo: true },
   ];
 
   const funcionarios = [
     { id: "fn-001", nome: "Sergio Amim", cargoId: "crg-001", cargo: "Administrador", podeMinistrarAulas: false, ativo: true },
     { id: "fn-002", nome: "Larissa Costa", cargoId: "crg-003", cargo: "Instrutor", podeMinistrarAulas: true, ativo: true },
     { id: "fn-003", nome: "Bruno Silva", cargoId: "crg-002", cargo: "Consultor Comercial", podeMinistrarAulas: false, ativo: true },
+    { id: "fn-s1-001", nome: "Rafaela Nunes", cargoId: "crg-s1-001", cargo: "Administrador", podeMinistrarAulas: false, ativo: true },
+    { id: "fn-s1-002", nome: "Priscila Gomes", cargoId: "crg-s1-003", cargo: "Instrutor", podeMinistrarAulas: true, ativo: true },
+    { id: "fn-s1-003", nome: "Diego Paes", cargoId: "crg-s1-002", cargo: "Consultor Comercial", podeMinistrarAulas: false, ativo: true },
+    { id: "fn-s3-001", nome: "Mauro Freitas", cargoId: "crg-s3-001", cargo: "Administrador", podeMinistrarAulas: false, ativo: true },
+    { id: "fn-s3-002", nome: "Leandro Dias", cargoId: "crg-s3-003", cargo: "Instrutor", podeMinistrarAulas: true, ativo: true },
+    { id: "fn-s3-003", nome: "Julia Santos", cargoId: "crg-s3-002", cargo: "Consultor Comercial", podeMinistrarAulas: false, ativo: true },
   ];
+
+  const vendas: Venda[] = [];
 
   const prospects: Prospect[] = [
     {
@@ -590,6 +901,34 @@ function makeInitialStore(): Store {
       statusLog: [
         { status: "NOVO", data: "2026-02-10T11:00:00" },
         { status: "EM_CONTATO", data: "2026-02-12T11:30:00" },
+      ],
+    },
+    {
+      id: "pr-s1-001",
+      tenantId: TENANT_ID_S1,
+      responsavelId: "fn-s1-003",
+      nome: "Clara Matos",
+      telefone: "(21) 99811-4422",
+      origem: "WHATSAPP",
+      status: "AGENDOU_VISITA",
+      dataCriacao: "2026-02-19T10:00:00",
+      statusLog: [
+        { status: "NOVO", data: "2026-02-19T10:00:00" },
+        { status: "AGENDOU_VISITA", data: "2026-02-19T12:00:00" },
+      ],
+    },
+    {
+      id: "pr-s3-001",
+      tenantId: TENANT_ID_S3,
+      responsavelId: "fn-s3-003",
+      nome: "Mateus Castro",
+      telefone: "(21) 99722-1133",
+      origem: "INSTAGRAM",
+      status: "EM_CONTATO",
+      dataCriacao: "2026-02-18T09:00:00",
+      statusLog: [
+        { status: "NOVO", data: "2026-02-18T09:00:00" },
+        { status: "EM_CONTATO", data: "2026-02-18T10:20:00" },
       ],
     },
   ];
@@ -689,6 +1028,30 @@ function makeInitialStore(): Store {
       status: "INATIVO",
       dataCadastro: "2025-06-01T10:00:00",
     },
+    {
+      id: "al-s1-001",
+      tenantId: TENANT_ID_S1,
+      nome: "Bianca Rocha",
+      email: "bianca.s1@email.com",
+      telefone: "(21) 98811-1020",
+      cpf: "321.654.987-00",
+      dataNascimento: "1993-04-12",
+      sexo: "F",
+      status: "ATIVO",
+      dataCadastro: "2026-01-20T10:00:00",
+    },
+    {
+      id: "al-s3-001",
+      tenantId: TENANT_ID_S3,
+      nome: "Thiago Prado",
+      email: "thiago.s3@email.com",
+      telefone: "(21) 97744-8899",
+      cpf: "741.852.963-00",
+      dataNascimento: "1991-09-25",
+      sexo: "M",
+      status: "ATIVO",
+      dataCadastro: "2026-01-10T10:00:00",
+    },
   ];
 
   const matriculas: Matricula[] = [
@@ -736,6 +1099,36 @@ function makeInitialStore(): Store {
       status: "VENCIDA",
       renovacaoAutomatica: false,
       dataCriacao: "2026-01-01T10:00:00",
+    },
+    {
+      id: "mt-s1-001",
+      tenantId: TENANT_ID_S1,
+      alunoId: "al-s1-001",
+      planoId: "pln-s1-001",
+      dataInicio: "2026-02-01",
+      dataFim: "2026-03-02",
+      valorPago: 129.9,
+      valorMatricula: 40,
+      desconto: 0,
+      formaPagamento: "PIX",
+      status: "ATIVA",
+      renovacaoAutomatica: true,
+      dataCriacao: "2026-02-01T09:00:00",
+    },
+    {
+      id: "mt-s3-001",
+      tenantId: TENANT_ID_S3,
+      alunoId: "al-s3-001",
+      planoId: "pln-s3-001",
+      dataInicio: "2026-02-05",
+      dataFim: "2026-03-06",
+      valorPago: 119.9,
+      valorMatricula: 35,
+      desconto: 0,
+      formaPagamento: "CARTAO_CREDITO",
+      status: "ATIVA",
+      renovacaoAutomatica: true,
+      dataCriacao: "2026-02-05T10:00:00",
     },
   ];
 
@@ -800,6 +1193,38 @@ function makeInitialStore(): Store {
       status: "PENDENTE",
       dataCriacao: "2026-01-15T10:00:00",
     },
+    {
+      id: "pg-s1-001",
+      tenantId: TENANT_ID_S1,
+      alunoId: "al-s1-001",
+      matriculaId: "mt-s1-001",
+      tipo: "MENSALIDADE",
+      descricao: "Mensalidade Fevereiro 2026 – Mensal S1",
+      valor: 129.9,
+      desconto: 0,
+      valorFinal: 129.9,
+      dataVencimento: "2026-02-05",
+      dataPagamento: "2026-02-04",
+      formaPagamento: "PIX",
+      status: "PAGO",
+      dataCriacao: "2026-02-01T09:00:00",
+    },
+    {
+      id: "pg-s3-001",
+      tenantId: TENANT_ID_S3,
+      alunoId: "al-s3-001",
+      matriculaId: "mt-s3-001",
+      tipo: "MENSALIDADE",
+      descricao: "Mensalidade Fevereiro 2026 – Mensal S3",
+      valor: 119.9,
+      desconto: 0,
+      valorFinal: 119.9,
+      dataVencimento: "2026-02-08",
+      dataPagamento: "2026-02-07",
+      formaPagamento: "CARTAO_CREDITO",
+      status: "PAGO",
+      dataCriacao: "2026-02-05T10:00:00",
+    },
   ];
 
   const presencas: Presenca[] = [
@@ -817,10 +1242,130 @@ function makeInitialStore(): Store {
     { id: "prc-012", alunoId: "al-003", data: "2026-02-01", horario: "18:00", origem: "ACESSO" },
   ];
 
-  return {
+  const nomesBase = [
+    "Lucas", "Mariana", "Gustavo", "Patricia", "Rafael", "Camila", "Diego", "Aline", "Vitor", "Beatriz",
+    "Henrique", "Juliana", "Thiago", "Larissa", "Felipe", "Isabela", "Andre", "Renata", "Caio", "Amanda",
+  ];
+  const sobrenomesBase = [
+    "Souza", "Oliveira", "Pereira", "Costa", "Rodrigues", "Almeida", "Nunes", "Lima", "Carvalho", "Araujo",
+  ];
+
+  for (let i = 1; i <= 50; i += 1) {
+    const tenantId = i <= 35 ? TENANT_ID_S1 : TENANT_ID_S3;
+    const isS1 = tenantId === TENANT_ID_S1;
+    const nome = `${nomesBase[i % nomesBase.length]} ${sobrenomesBase[i % sobrenomesBase.length]} ${i}`;
+    const alunoId = `al-demo-${String(i).padStart(3, "0")}`;
+    const cpf = `${String(100 + i).padStart(3, "0")}.${String(200 + i).padStart(3, "0")}.${String(300 + i).padStart(3, "0")}-${String(i % 99).padStart(2, "0")}`;
+    const sexo = i % 3 === 0 ? "OUTRO" : i % 2 === 0 ? "F" : "M";
+    const dataCadastro = `2026-01-${String((i % 28) + 1).padStart(2, "0")}T10:00:00`;
+    alunos.push({
+      id: alunoId,
+      tenantId,
+      nome,
+      email: `aluno${i}@conceitofit.com`,
+      telefone: `(11) 9${String(70000000 + i).slice(-8)}`,
+      cpf,
+      dataNascimento: `19${80 + (i % 20)}-${String(((i % 12) + 1)).padStart(2, "0")}-${String(((i % 28) + 1)).padStart(2, "0")}`,
+      sexo: sexo as Aluno["sexo"],
+      status: "ATIVO",
+      dataCadastro,
+    });
+
+    if (i <= 40) {
+      const matriculaId = `mt-demo-${String(i).padStart(3, "0")}`;
+      const planoId = isS1 ? "pln-s1-001" : "pln-s3-001";
+      const inicio = `2026-02-${String((i % 26) + 1).padStart(2, "0")}`;
+      const fim = `2026-03-${String((i % 26) + 1).padStart(2, "0")}`;
+      matriculas.push({
+        id: matriculaId,
+        tenantId,
+        alunoId,
+        planoId,
+        dataInicio: inicio,
+        dataFim: fim,
+        valorPago: isS1 ? 129.9 : 119.9,
+        valorMatricula: isS1 ? 40 : 35,
+        desconto: i % 5 === 0 ? 10 : 0,
+        formaPagamento: i % 2 === 0 ? "PIX" : "CARTAO_CREDITO",
+        status: "ATIVA",
+        renovacaoAutomatica: true,
+        dataCriacao: `${inicio}T09:00:00`,
+      });
+      pagamentos.push({
+        id: `pg-demo-${String(i).padStart(3, "0")}`,
+        tenantId,
+        alunoId,
+        matriculaId,
+        tipo: "MENSALIDADE",
+        descricao: `Mensalidade ${isS1 ? "S1" : "S3"} – ${nome}`,
+        valor: isS1 ? 129.9 : 119.9,
+        desconto: i % 5 === 0 ? 10 : 0,
+        valorFinal: (isS1 ? 129.9 : 119.9) - (i % 5 === 0 ? 10 : 0),
+        dataVencimento: inicio,
+        dataPagamento: i % 7 === 0 ? undefined : `${inicio}`,
+        formaPagamento: i % 2 === 0 ? "PIX" : "CARTAO_CREDITO",
+        status: i % 7 === 0 ? "PENDENTE" : "PAGO",
+        dataCriacao: `${inicio}T09:10:00`,
+      });
+    }
+
+    if (i <= 24) {
+      vendas.push({
+        id: `vd-demo-${String(i).padStart(3, "0")}`,
+        tenantId,
+        tipo: i % 6 === 0 ? "PRODUTO" : i % 5 === 0 ? "SERVICO" : "PLANO",
+        clienteId: alunoId,
+        clienteNome: nome,
+        status: "FECHADA",
+        itens: [
+          {
+            id: `vdi-demo-${String(i).padStart(3, "0")}`,
+            tipo: i % 6 === 0 ? "PRODUTO" : i % 5 === 0 ? "SERVICO" : "PLANO",
+            referenciaId: isS1 ? (i % 6 === 0 ? "prd-001" : i % 5 === 0 ? "srv-s1-001" : "pln-s1-001") : (i % 6 === 0 ? "prd-001" : i % 5 === 0 ? "srv-s3-001" : "pln-s3-001"),
+            descricao: i % 6 === 0 ? "Whey Protein 900g" : i % 5 === 0 ? "Avaliação física" : "Plano mensal",
+            quantidade: 1,
+            valorUnitario: i % 6 === 0 ? 149.9 : i % 5 === 0 ? 110 : isS1 ? 129.9 : 119.9,
+            desconto: i % 8 === 0 ? 10 : 0,
+            valorTotal: (i % 6 === 0 ? 149.9 : i % 5 === 0 ? 110 : isS1 ? 129.9 : 119.9) - (i % 8 === 0 ? 10 : 0),
+          },
+        ],
+        subtotal: i % 6 === 0 ? 149.9 : i % 5 === 0 ? 110 : isS1 ? 129.9 : 119.9,
+        descontoTotal: i % 8 === 0 ? 10 : 0,
+        acrescimoTotal: 0,
+        total: (i % 6 === 0 ? 149.9 : i % 5 === 0 ? 110 : isS1 ? 129.9 : 119.9) - (i % 8 === 0 ? 10 : 0),
+        pagamento: {
+          formaPagamento: i % 2 === 0 ? "PIX" : "CARTAO_CREDITO",
+          valorPago: (i % 6 === 0 ? 149.9 : i % 5 === 0 ? 110 : isS1 ? 129.9 : 119.9) - (i % 8 === 0 ? 10 : 0),
+        },
+        dataCriacao: `2026-02-${String((i % 28) + 1).padStart(2, "0")}T12:00:00`,
+      });
+    }
+  }
+
+  for (let i = 1; i <= 20; i += 1) {
+    const tenantId = i <= 14 ? TENANT_ID_S1 : TENANT_ID_S3;
+    const nome = `${nomesBase[(i + 3) % nomesBase.length]} ${sobrenomesBase[(i + 2) % sobrenomesBase.length]} Prospect ${i}`;
+    const origem = i % 4 === 0 ? "VISITA_PRESENCIAL" : i % 3 === 0 ? "INSTAGRAM" : i % 2 === 0 ? "SITE" : "WHATSAPP";
+    const status = i % 6 === 0 ? "VISITOU" : i % 5 === 0 ? "EM_CONTATO" : i % 4 === 0 ? "AGENDOU_VISITA" : "NOVO";
+    prospects.push({
+      id: `pr-demo-${String(i).padStart(3, "0")}`,
+      tenantId,
+      responsavelId: tenantId === TENANT_ID_S1 ? "fn-s1-003" : "fn-s3-003",
+      nome,
+      telefone: `(21) 9${String(60000000 + i).slice(-8)}`,
+      email: `prospect${i}@lead.com`,
+      origem: origem as Prospect["origem"],
+      status: status as Prospect["status"],
+      dataCriacao: `2026-02-${String((i % 25) + 1).padStart(2, "0")}T08:00:00`,
+      statusLog: [{ status: "NOVO", data: `2026-02-${String((i % 25) + 1).padStart(2, "0")}T08:00:00` }],
+    });
+  }
+
+  return applyLegacyTenantMigration({
+    academias: [academia],
     tenant,
     tenants,
-    currentTenantId: tenant.id,
+    currentTenantId: PRIMARY_TENANT_ID,
     horarios,
     convenios,
     produtos,
@@ -841,21 +1386,33 @@ function makeInitialStore(): Store {
     alunos,
     matriculas,
     pagamentos,
+    vendas,
     vouchers,
     voucherCodigos,
-  };
+  });
 }
 
 let store: Store = makeInitialStore();
 
-export const TENANT_ID_DEFAULT = TENANT_ID;
+export const TENANT_ID_DEFAULT = PRIMARY_TENANT_ID;
 
 export function getStore(): Readonly<Store> {
   return store;
 }
 
 export function setStore(updater: (prev: Store) => Store): void {
-  store = updater(store);
+  const prev = store;
+  let nextRaw: Store;
+  try {
+    nextRaw = updater(prev);
+  } catch (error) {
+    console.error("Erro ao atualizar store", error);
+    return;
+  }
+  if (!nextRaw) return;
+  if (nextRaw === prev) return;
+  const next = normalizeStore(nextRaw);
+  store = next;
   persistStore(store);
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("academia-store-updated"));
@@ -878,27 +1435,105 @@ function persistStore(data: Store): void {
   }
 }
 
+function mergeById<T extends { id: string }>(
+  current: T[] | undefined,
+  seeded: T[]
+): T[] {
+  const map = new Map<string, T>();
+  for (const item of current ?? []) {
+    map.set(item.id, item);
+  }
+  for (const item of seeded) {
+    if (!map.has(item.id)) {
+      map.set(item.id, item);
+    }
+  }
+  return Array.from(map.values());
+}
+
 function normalizeStore(data: Store): Store {
   const defaults = makeInitialStore();
+  const defaultAcademiaId = defaults.academias[0]?.id ?? "acd-default";
+  const canonicalTenants: Record<string, Partial<Tenant>> = {
+    "550e8400-e29b-41d4-a716-446655440001": {
+      nome: "MANANCIAIS - S1",
+      groupId: "GRP-SERGIO-AMIM",
+      subdomain: "mananciais-s1",
+      email: "contato@mananciais-s1.com.br",
+      ativo: true,
+    },
+    "550e8400-e29b-41d4-a716-446655440002": {
+      nome: "PECHINCHA - S3",
+      groupId: "GRP-SERGIO-AMIM",
+      subdomain: "pechincha-s3",
+      email: "contato@pechincha-s3.com.br",
+      ativo: true,
+    },
+  };
+
+  const normalizedTenants = mergeById(
+    data.tenants ?? (data.tenant ? [data.tenant] : []),
+    defaults.tenants
+  ).map((t) => ({
+    ...(canonicalTenants[t.id] ?? {}),
+    ...t,
+    academiaId: t.academiaId ?? t.groupId ?? defaultAcademiaId,
+    groupId: t.groupId ?? t.academiaId ?? defaultAcademiaId,
+    ativo: t.ativo ?? true,
+  })).map(normalizeTenantConfiguracoes);
+
+  const normalizedAcademias = mergeById(
+    data.academias,
+    defaults.academias
+  ).map((a) => ({
+    ...a,
+    ativo: a.ativo ?? true,
+    branding: {
+      themePreset: "CONCEITO_DARK",
+      useCustomColors: false,
+      ...(defaults.academias.find((x) => x.id === a.id)?.branding ?? {}),
+      ...(a.branding ?? {}),
+    },
+  }));
+
+  const normalizedTenant = normalizeTenantConfiguracoes({
+    ...({
+      id: PRIMARY_TENANT_ID,
+      nome: "MANANCIAIS - S1",
+      groupId: "GRP-SERGIO-AMIM",
+      ativo: true,
+    } as Tenant),
+    ...(canonicalTenants[(data.tenant ?? { id: PRIMARY_TENANT_ID }).id] ?? {}),
+    ...(data.tenant ?? {}),
+    academiaId:
+      (data.tenant ?? {}).academiaId ??
+      (data.tenant ?? {}).groupId ??
+      defaultAcademiaId,
+    groupId:
+      (data.tenant ?? {}).groupId ??
+      (data.tenant ?? {}).academiaId ??
+      defaultAcademiaId,
+    ativo: (data.tenant ?? {}).ativo ?? true,
+  });
+
   return {
     ...data,
-    tenant: data.tenant ?? {
-      id: TENANT_ID,
-      nome: "Academia Força Total",
-    },
-    tenants: data.tenants ?? (data.tenant ? [data.tenant] : []),
-    currentTenantId: data.currentTenantId ?? data.tenant?.id ?? TENANT_ID,
-    horarios: data.horarios ?? [],
-    convenios: data.convenios ?? [],
-    produtos: ((data.produtos && data.produtos.length > 0) ? data.produtos : defaults.produtos).map((p) => ({
+    academias: normalizedAcademias,
+    tenant: normalizedTenant,
+    tenants: normalizedTenants,
+    currentTenantId: data.currentTenantId ?? data.tenant?.id ?? PRIMARY_TENANT_ID,
+    horarios: (data.horarios && data.horarios.length > 0) ? data.horarios : defaults.horarios,
+    convenios: (data.convenios && data.convenios.length > 0) ? data.convenios : defaults.convenios,
+    produtos: mergeById((data.produtos && data.produtos.length > 0) ? data.produtos : undefined, defaults.produtos).map((p) => ({
       ...p,
+      valorVenda: (p as unknown as { valorVenda?: number; valor?: number }).valorVenda ?? (p as unknown as { valor?: number }).valor ?? 0,
       unidadeMedida: (p as unknown as { unidadeMedida?: Produto["unidadeMedida"] }).unidadeMedida ?? "UN",
       controlaEstoque: (p as unknown as { controlaEstoque?: boolean }).controlaEstoque ?? true,
       estoqueAtual: (p as unknown as { estoqueAtual?: number }).estoqueAtual ?? 0,
       permiteDesconto: (p as unknown as { permiteDesconto?: boolean }).permiteDesconto ?? true,
       permiteVoucher: (p as unknown as { permiteVoucher?: boolean }).permiteVoucher ?? false,
     })),
-    servicos: (data.servicos ?? []).map((s) => ({
+    servicos: mergeById(data.servicos, defaults.servicos).map((s) => ({
       ...s,
       sku: (s as unknown as { sku?: string }).sku ?? undefined,
       categoria: (s as unknown as { categoria?: string }).categoria ?? undefined,
@@ -913,11 +1548,11 @@ function normalizeStore(data: Store): Store {
       permiteAcessoCatraca: (s as unknown as { permiteAcessoCatraca?: boolean }).permiteAcessoCatraca ?? false,
       permiteVoucher: (s as unknown as { permiteVoucher?: boolean }).permiteVoucher ?? false,
     })),
-    bandeirasCartao: data.bandeirasCartao ?? [],
-    cartoesCliente: data.cartoesCliente ?? [],
-    salas: data.salas ?? [],
-    cargos: data.cargos ?? [],
-    funcionarios: (data.funcionarios ?? []).map((f) => {
+    bandeirasCartao: mergeById(data.bandeirasCartao, defaults.bandeirasCartao),
+    cartoesCliente: mergeById(data.cartoesCliente, defaults.cartoesCliente),
+    salas: mergeById(data.salas, defaults.salas),
+    cargos: mergeById(data.cargos, defaults.cargos),
+    funcionarios: mergeById(data.funcionarios, defaults.funcionarios).map((f) => {
       const raw = f as unknown as { cargoId?: string; cargo?: string; podeMinistrarAulas?: boolean };
       return {
         ...f,
@@ -925,10 +1560,10 @@ function normalizeStore(data: Store): Store {
         podeMinistrarAulas: raw.podeMinistrarAulas ?? false,
       };
     }),
-    presencas: data.presencas ?? [],
-    prospectMensagens: data.prospectMensagens ?? [],
-    prospectAgendamentos: data.prospectAgendamentos ?? [],
-    prospects: data.prospects.map((p) => ({
+    presencas: mergeById(data.presencas, defaults.presencas),
+    prospectMensagens: mergeById(data.prospectMensagens, defaults.prospectMensagens),
+    prospectAgendamentos: mergeById(data.prospectAgendamentos, defaults.prospectAgendamentos),
+    prospects: mergeById(data.prospects, defaults.prospects).map((p) => ({
       ...p,
       dataCriacao: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao,
       dataUltimoContato: p.dataUltimoContato,
@@ -937,7 +1572,7 @@ function normalizeStore(data: Store): Store {
         { status: p.status, data: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao },
       ],
     })),
-    alunos: data.alunos.map((a) => ({
+    alunos: mergeById(data.alunos, defaults.alunos).map((a) => ({
       ...a,
       status: a.status === "BLOQUEADO" ? "INATIVO" : a.status,
       suspensoes: a.suspensoes ?? (a.suspensao ? [{
@@ -951,15 +1586,24 @@ function normalizeStore(data: Store): Store {
       dataCadastro: (a as unknown as { createdAt?: string }).createdAt ?? a.dataCadastro,
       dataAtualizacao: a.dataAtualizacao,
     })),
-    matriculas: data.matriculas.map((m) => ({
+    matriculas: mergeById(data.matriculas, defaults.matriculas).map((m) => ({
       ...m,
       dataCriacao: (m as unknown as { createdAt?: string }).createdAt ?? m.dataCriacao,
       dataAtualizacao: m.dataAtualizacao,
     })),
-    vouchers: (data.vouchers ?? []).map((v) => {
+    vouchers: mergeById(data.vouchers, defaults.vouchers).map((v) => {
       const raw = v as unknown as Record<string, unknown>;
+      const tenantId = v.tenantId;
+      const tenantGroupId = tenantId
+        ? (normalizedTenants.find((t) => t.id === tenantId)?.groupId ?? normalizedTenant.groupId)
+        : normalizedTenant.groupId;
+      const escopo = (v as unknown as { escopo?: "UNIDADE" | "GRUPO" }).escopo
+        ?? (tenantId ? "UNIDADE" : "GRUPO");
       return {
         ...v,
+        escopo,
+        groupId: v.groupId ?? (escopo === "GRUPO" ? tenantGroupId : undefined),
+        tenantId: escopo === "GRUPO" ? undefined : tenantId,
         periodoInicio: v.periodoInicio ?? (raw.vencimento as string) ?? "2025-01-01",
         periodoFim: v.periodoFim ?? (raw.vencimento as string | undefined),
         prazoDeterminado: v.prazoDeterminado ?? !!raw.vencimento,
@@ -970,18 +1614,19 @@ function normalizeStore(data: Store): Store {
           : [v.aplicarEm ?? "CONTRATO"],
       };
     }),
-    voucherCodigos: data.voucherCodigos ?? [],
-    pagamentos: data.pagamentos.map((p) => ({
+    voucherCodigos: mergeById(data.voucherCodigos, defaults.voucherCodigos),
+    pagamentos: mergeById(data.pagamentos, defaults.pagamentos).map((p) => ({
       ...p,
       dataCriacao: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao,
     })),
-    atividades: (data.atividades ?? []).map((a) => ({
+    vendas: mergeById(data.vendas, defaults.vendas),
+    atividades: mergeById(data.atividades, defaults.atividades).map((a) => ({
       ...a,
       permiteCheckin: (a as unknown as { permiteCheckin?: boolean }).permiteCheckin ?? true,
       checkinObrigatorio:
         (a as unknown as { checkinObrigatorio?: boolean }).checkinObrigatorio ?? false,
     })),
-    atividadeGrades: (data.atividadeGrades ?? []).map((g) => {
+    atividadeGrades: mergeById(data.atividadeGrades, defaults.atividadeGrades).map((g) => {
       const legacy = g as unknown as { diaSemana?: "SEG" | "TER" | "QUA" | "QUI" | "SEX" | "SAB" | "DOM" };
       const diasSemana = Array.isArray((g as AtividadeGrade).diasSemana) && (g as AtividadeGrade).diasSemana.length > 0
         ? (g as AtividadeGrade).diasSemana
@@ -1008,13 +1653,18 @@ function normalizeStore(data: Store): Store {
         desabilitarListaEspera: (g as unknown as { desabilitarListaEspera?: boolean }).desabilitarListaEspera ?? false,
       };
     }),
-    planos: data.planos.map((p) => ({
+    planos: mergeById(data.planos, defaults.planos).map((p) => ({
       ...p,
+      cobraAnuidade: (p as unknown as { cobraAnuidade?: boolean }).cobraAnuidade ?? false,
+      valorAnuidade: (p as unknown as { valorAnuidade?: number }).valorAnuidade,
+      parcelasMaxAnuidade: (p as unknown as { parcelasMaxAnuidade?: number }).parcelasMaxAnuidade ?? 1,
       permiteRenovacaoAutomatica: p.tipo === "AVULSO" ? false : (p as unknown as { permiteRenovacaoAutomatica?: boolean }).permiteRenovacaoAutomatica ?? true,
       permiteCobrancaRecorrente: p.tipo === "AVULSO" ? false : (p as unknown as { permiteCobrancaRecorrente?: boolean }).permiteCobrancaRecorrente ?? false,
       diaCobrancaPadrao: (p as unknown as { diaCobrancaPadrao?: number }).diaCobrancaPadrao,
     })),
   };
+
+  return applyLegacyTenantMigration(result);
 }
 
 function loadStore(): Store | null {
@@ -1031,6 +1681,8 @@ function loadStore(): Store | null {
 
 if (typeof window !== "undefined") {
   const loaded = loadStore();
-  if (loaded) store = loaded;
-  else persistStore(store);
+  if (loaded) {
+    store = loaded;
+    persistStore(store);
+  } else persistStore(store);
 }

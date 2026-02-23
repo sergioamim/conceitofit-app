@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, Plus } from "lucide-react";
 import { listAlunos } from "@/lib/mock/services";
@@ -41,6 +41,7 @@ function formatDate(d: string) {
 
 export default function ClientesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [filtro, setFiltro] = useState<StatusAluno | "TODOS">("TODOS");
   const [busca, setBusca] = useState("");
@@ -51,6 +52,19 @@ export default function ClientesPage() {
   }
 
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const q = (searchParams.get("q") ?? "").trim();
+    if (!q) return;
+    const timer = window.setTimeout(() => {
+      const digits = q.replace(/\D/g, "");
+      if (digits && digits.length >= 11) {
+        setBusca(maskCPF(digits));
+        return;
+      }
+      setBusca(q);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
   useEffect(() => {
     function handleUpdate() {
       load();

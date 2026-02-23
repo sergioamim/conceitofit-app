@@ -55,6 +55,9 @@ export default function PlanosPage() {
       duracaoDias: parseInt(data.duracaoDias, 10) || 0,
       valor: parseFloat(data.valor) || 0,
       valorMatricula: parseFloat(data.valorMatricula) || 0,
+      cobraAnuidade: data.cobraAnuidade,
+      valorAnuidade: data.cobraAnuidade ? parseFloat(data.valorAnuidade) || 0 : undefined,
+      parcelasMaxAnuidade: data.cobraAnuidade ? Math.max(1, parseInt(data.parcelasMaxAnuidade, 10) || 1) : undefined,
       permiteRenovacaoAutomatica: data.tipo === "AVULSO" ? false : data.permiteRenovacaoAutomatica,
       permiteCobrancaRecorrente: data.tipo === "AVULSO" ? false : data.permiteCobrancaRecorrente,
       diaCobrancaPadrao:
@@ -194,6 +197,12 @@ export default function PlanosPage() {
                 + {formatBRL(p.valorMatricula)} de matrícula
               </p>
             )}
+            {p.cobraAnuidade && (p.valorAnuidade ?? 0) > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                + {formatBRL(Number(p.valorAnuidade ?? 0))} de anuidade
+                {(p.parcelasMaxAnuidade ?? 1) > 1 ? ` (até ${p.parcelasMaxAnuidade}x)` : ""}
+              </p>
+            )}
 
             <div className="mt-3 space-y-1 text-xs text-muted-foreground">
               <p>
@@ -254,6 +263,9 @@ export default function PlanosPage() {
                 Matrícula
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Anuidade
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Renovação
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -279,6 +291,11 @@ export default function PlanosPage() {
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {p.valorMatricula > 0 ? formatBRL(p.valorMatricula) : "—"}
+                </td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">
+                  {p.cobraAnuidade && (p.valorAnuidade ?? 0) > 0
+                    ? `${formatBRL(Number(p.valorAnuidade ?? 0))}${(p.parcelasMaxAnuidade ?? 1) > 1 ? ` · até ${p.parcelasMaxAnuidade}x` : ""}`
+                    : "—"}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {p.permiteRenovacaoAutomatica ? "Sim" : "Não"}
