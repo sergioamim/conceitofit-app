@@ -24,6 +24,7 @@ import type {
   Produto,
   Venda,
   Academia,
+  CampanhaCRM,
 } from "../types";
 
 const TENANT_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -59,6 +60,7 @@ interface Store {
   pagamentos: Pagamento[];
   vouchers: Voucher[];
   voucherCodigos: VoucherCodigo[];
+  campanhasCrm: CampanhaCRM[];
 }
 
 function migrateTenantId(id: string | undefined): string | undefined {
@@ -130,6 +132,7 @@ function applyLegacyTenantMigration(input: Store): Store {
     alunos: mapTenantItems(input.alunos),
     matriculas: mapTenantItems(input.matriculas),
     pagamentos: mapTenantItems(input.pagamentos),
+    campanhasCrm: mapTenantItems(input.campanhasCrm),
     vouchers: input.vouchers.map((voucher) => ({
       ...voucher,
       tenantId: migrateTenantId(voucher.tenantId),
@@ -675,6 +678,35 @@ function makeInitialStore(): Store {
       umaVezPorCliente: true,
       aplicarEm: ["CONTRATO", "ANUIDADE"],
       ativo: true,
+    },
+  ];
+
+  const campanhasCrm: CampanhaCRM[] = [
+    {
+      id: "cmp-s1-001",
+      tenantId: TENANT_ID_S1,
+      nome: "Reativação 90 dias",
+      descricao: "Campanha focada em clientes evadidos com incentivo de retorno.",
+      publicoAlvo: "EVADIDOS_ULTIMOS_3_MESES",
+      canais: ["WHATSAPP", "EMAIL"],
+      voucherId: "vch-s1-reativa-001",
+      dataInicio: "2026-02-01",
+      status: "ATIVA",
+      disparosRealizados: 1,
+      ultimaExecucao: "2026-02-20T10:00:00",
+      dataCriacao: "2026-02-01T09:00:00",
+    },
+    {
+      id: "cmp-s3-001",
+      tenantId: TENANT_ID_S3,
+      nome: "Prospects quentes da semana",
+      descricao: "Contato rápido com prospects em aberto para agendamento de visita.",
+      publicoAlvo: "PROSPECTS_EM_ABERTO",
+      canais: ["WHATSAPP", "LIGACAO"],
+      dataInicio: "2026-02-10",
+      status: "RASCUNHO",
+      disparosRealizados: 0,
+      dataCriacao: "2026-02-10T11:00:00",
     },
   ];
 
@@ -1389,6 +1421,7 @@ function makeInitialStore(): Store {
     vendas,
     vouchers,
     voucherCodigos,
+    campanhasCrm,
   });
 }
 
@@ -1615,6 +1648,13 @@ function normalizeStore(data: Store): Store {
       };
     }),
     voucherCodigos: mergeById(data.voucherCodigos, defaults.voucherCodigos),
+    campanhasCrm: mergeById(data.campanhasCrm, defaults.campanhasCrm).map((c) => ({
+      ...c,
+      canais: Array.isArray(c.canais) ? c.canais : ["WHATSAPP"],
+      disparosRealizados: c.disparosRealizados ?? 0,
+      dataCriacao: c.dataCriacao ?? new Date().toISOString().slice(0, 19),
+      dataAtualizacao: c.dataAtualizacao,
+    })),
     pagamentos: mergeById(data.pagamentos, defaults.pagamentos).map((p) => ({
       ...p,
       dataCriacao: (p as unknown as { createdAt?: string }).createdAt ?? p.dataCriacao,

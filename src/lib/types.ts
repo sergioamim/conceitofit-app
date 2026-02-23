@@ -534,6 +534,31 @@ export interface VoucherCodigo {
   dataUso?: LocalDateTime;
 }
 
+export type CampanhaCanal = "WHATSAPP" | "EMAIL" | "SMS" | "LIGACAO";
+export type CampanhaPublicoAlvo =
+  | "EVADIDOS_ULTIMOS_3_MESES"
+  | "PROSPECTS_EM_ABERTO"
+  | "ALUNOS_INATIVOS";
+export type CampanhaStatus = "RASCUNHO" | "ATIVA" | "ENCERRADA";
+
+export interface CampanhaCRM {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  descricao?: string;
+  publicoAlvo: CampanhaPublicoAlvo;
+  canais: CampanhaCanal[];
+  voucherId?: UUID;
+  dataInicio: LocalDate;
+  dataFim?: LocalDate;
+  status: CampanhaStatus;
+  disparosRealizados: number;
+  ultimaExecucao?: LocalDateTime;
+  dataCriacao: LocalDateTime;
+  dataAtualizacao?: LocalDateTime;
+  audienceEstimado?: number;
+}
+
 // ─── Input/Request types ────────────────────────────────────────────────────
 
 export interface CreateProspectInput {

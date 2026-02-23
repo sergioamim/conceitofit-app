@@ -42,6 +42,10 @@ import type {
   PagamentoVenda,
   TipoVenda,
   Academia,
+  CampanhaCRM,
+  CampanhaCanal,
+  CampanhaPublicoAlvo,
+  CampanhaStatus,
 } from "../types";
 
 function genId(): string {
@@ -56,6 +60,12 @@ function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + days);
   return d.toISOString().split("T")[0];
+}
+
+function subtractDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() - days);
+  return d;
 }
 
 function today(): string {
@@ -92,6 +102,35 @@ function getCurrentGroupId(): string | undefined {
 
 function getCurrentAcademiaId(): string | undefined {
   return getCurrentGroupId();
+}
+
+function estimateCampanhaAudience(campanha: Pick<CampanhaCRM, "tenantId" | "publicoAlvo">): number {
+  const store = getStore();
+  const tenantId = campanha.tenantId;
+  if (campanha.publicoAlvo === "PROSPECTS_EM_ABERTO") {
+    return store.prospects.filter(
+      (p) => p.tenantId === tenantId && p.status !== "CONVERTIDO" && p.status !== "PERDIDO"
+    ).length;
+  }
+
+  if (campanha.publicoAlvo === "ALUNOS_INATIVOS") {
+    return store.alunos.filter(
+      (a) => a.tenantId === tenantId && (a.status === "INATIVO" || a.status === "CANCELADO" || a.status === "SUSPENSO")
+    ).length;
+  }
+
+  const fromDate = subtractDays(new Date(), 90);
+  const alunosEvadidos = store.alunos.filter(
+    (a) => a.tenantId === tenantId && (a.status === "INATIVO" || a.status === "CANCELADO")
+  );
+  return alunosEvadidos.filter((aluno) => {
+    const mats = store.matriculas
+      .filter((m) => m.tenantId === tenantId && m.alunoId === aluno.id)
+      .sort((a, b) => b.dataFim.localeCompare(a.dataFim));
+    const last = mats[0];
+    if (!last) return false;
+    return new Date(`${last.dataFim}T00:00:00`) >= fromDate;
+  }).length;
 }
 
 function normalizeTenantConfig(data: Partial<Tenant>): Partial<Tenant> {
@@ -348,7 +387,8 @@ function tenantHasLinkedData(store: ReturnType<typeof getStore>, tenantId: strin
     store.servicos.some((item) => item.tenantId === tenantId) ||
     store.produtos.some((item) => item.tenantId === tenantId) ||
     store.vendas.some((item) => item.tenantId === tenantId) ||
-    store.vouchers.some((item) => item.tenantId === tenantId)
+    store.vouchers.some((item) => item.tenantId === tenantId) ||
+    store.campanhasCrm.some((item) => item.tenantId === tenantId)
   );
 }
 
@@ -363,6 +403,98 @@ export async function deleteTenant(id: string): Promise<void> {
   setStore((s) => ({
     ...s,
     tenants: s.tenants.filter((t) => t.id !== id),
+  }));
+}
+
+// ─── CAMPANHAS CRM ──────────────────────────────────────────────────────────
+
+export async function listCampanhasCrm(params?: {
+  status?: CampanhaStatus;
+}): Promise<CampanhaCRM[]> {
+  const tenantId = getCurrentTenantId();
+  let all = [...getStore().campanhasCrm]
+    .filter((c) => c.tenantId === tenantId)
+    .map((c) => ({ ...c, audienceEstimado: estimateCampanhaAudience(c) }))
+    .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
+  if (params?.status) all = all.filter((c) => c.status === params.status);
+  return all;
+}
+
+export async function createCampanhaCrm(data: {
+  nome: string;
+  descricao?: string;
+  publicoAlvo: CampanhaPublicoAlvo;
+  canais: CampanhaCanal[];
+  voucherId?: string;
+  dataInicio: string;
+  dataFim?: string;
+  status?: CampanhaStatus;
+}): Promise<CampanhaCRM> {
+  const campanha: CampanhaCRM = {
+    id: genId(),
+    tenantId: getCurrentTenantId(),
+    nome: data.nome.trim(),
+    descricao: data.descricao?.trim() || undefined,
+    publicoAlvo: data.publicoAlvo,
+    canais: data.canais.length > 0 ? data.canais : ["WHATSAPP"],
+    voucherId: data.voucherId,
+    dataInicio: data.dataInicio,
+    dataFim: data.dataFim || undefined,
+    status: data.status ?? "RASCUNHO",
+    disparosRealizados: 0,
+    dataCriacao: now(),
+  };
+  setStore((s) => ({ ...s, campanhasCrm: [campanha, ...s.campanhasCrm] }));
+  return { ...campanha, audienceEstimado: estimateCampanhaAudience(campanha) };
+}
+
+export async function updateCampanhaCrm(
+  id: string,
+  data: Partial<Omit<CampanhaCRM, "id" | "tenantId" | "dataCriacao" | "disparosRealizados" | "ultimaExecucao" | "audienceEstimado">>
+): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    campanhasCrm: s.campanhasCrm.map((c) =>
+      c.id === id
+        ? {
+            ...c,
+            ...data,
+            nome: data.nome?.trim() ?? c.nome,
+            descricao: data.descricao?.trim() || undefined,
+            canais: data.canais && data.canais.length > 0 ? data.canais : c.canais,
+            dataAtualizacao: now(),
+          }
+        : c
+    ),
+  }));
+}
+
+export async function dispararCampanhaCrm(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    campanhasCrm: s.campanhasCrm.map((c) => {
+      if (c.id !== id) return c;
+      const audiencia = estimateCampanhaAudience(c);
+      return {
+        ...c,
+        status: "ATIVA",
+        disparosRealizados: c.disparosRealizados + 1,
+        ultimaExecucao: now(),
+        dataAtualizacao: now(),
+        audienceEstimado: audiencia,
+      };
+    }),
+  }));
+}
+
+export async function encerrarCampanhaCrm(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    campanhasCrm: s.campanhasCrm.map((c) =>
+      c.id === id
+        ? { ...c, status: "ENCERRADA", dataAtualizacao: now() }
+        : c
+    ),
   }));
 }
 

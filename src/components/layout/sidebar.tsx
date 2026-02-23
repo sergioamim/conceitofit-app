@@ -17,6 +17,7 @@ import {
   LineChart,
   HandCoins,
   Kanban,
+  Megaphone,
   ChevronDown,
   ChevronRight,
   PanelLeftClose,
@@ -41,6 +42,7 @@ const navItems = [
 
 const crmItems = [
   { href: "/crm/prospects-kanban", label: "Funil de Vendas", icon: Kanban },
+  { href: "/crm/campanhas", label: "Campanhas", icon: Megaphone },
 ];
 
 const administrativoItems = [

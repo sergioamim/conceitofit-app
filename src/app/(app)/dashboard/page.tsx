@@ -113,17 +113,16 @@ function MetricCard({
 }
 
 export default function DashboardPage() {
-  const today = new Date();
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const [data, setData] = useState<DashboardData | null>(null);
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [pagamentos, setPagamentos] = useState<(Pagamento & { aluno?: Aluno })[]>([]);
   const [matriculas, setMatriculas] = useState<(Matricula & { aluno?: Aluno })[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [selectedDate, setSelectedDate] = useState(todayIso);
+  const [todayIso, setTodayIso] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
 
-  const load = useCallback(async (referenceDate = selectedDate) => {
+  const load = useCallback(async (referenceDate: string) => {
     const ref = new Date(`${referenceDate}T00:00:00`);
     const month = ref.getMonth();
     const year = ref.getFullYear();
@@ -139,9 +138,18 @@ export default function DashboardPage() {
     setPagamentos(pags);
     setMatriculas(mats);
     setAlunos(als);
-  }, [selectedDate]);
+  }, []);
 
   useEffect(() => {
+    const now = new Date();
+    const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTodayIso(iso);
+    setSelectedDate(iso);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDate) return;
     const timer = window.setTimeout(() => {
       load(selectedDate);
     }, 0);
@@ -149,6 +157,7 @@ export default function DashboardPage() {
   }, [load, selectedDate]);
 
   useEffect(() => {
+    if (!selectedDate) return;
     function handleUpdate() {
       load(selectedDate);
     }
@@ -161,7 +170,7 @@ export default function DashboardPage() {
   }, [load, selectedDate]);
 
   const metrics = useMemo(() => {
-    if (!data) return null;
+    if (!data || !selectedDate) return null;
 
     const ref = new Date(`${selectedDate}T00:00:00`);
     const mes = ref.getMonth();

@@ -5,7 +5,6 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { listAtividadeGrades, listAtividades, listFuncionarios, listHorarios, listSalas } from "@/lib/mock/services";
 import type { Atividade, AtividadeGrade, DiaSemana, Funcionario, HorarioFuncionamento, Sala } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 const DIA_ORDER: DiaSemana[] = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
 const DIA_LABEL: Record<DiaSemana, string> = {
@@ -238,28 +237,23 @@ export default function GradePage() {
                   const date = addDays(weekStart, idx);
                   const items = byDayBySlot[dia][slot] ?? [];
                   return (
-                    <div key={`${dia}-${slot}`} className="min-h-[124px] border-l border-border p-2">
+                    <div key={`${dia}-${slot}`} className="min-h-[152px] border-l border-border p-2">
                       {items.length === 0 ? (
                         <div className="h-full rounded-md border border-dashed border-border/50 bg-secondary/20" />
                       ) : (
                         <div className="space-y-2">
                           {items.map((item) => (
-                            <div key={`${item.id}-${item.diaExibicao}`} className="rounded-lg border border-border bg-secondary/40 p-2.5">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="truncate text-xs font-semibold">{item.atividade?.nome ?? "Atividade"}</p>
-                                <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                                  {item.horaInicio} - {item.horaFim}
-                                </span>
-                              </div>
+                            <div key={`${item.id}-${item.diaExibicao}`} className="rounded-lg border border-border bg-secondary/40 p-3">
+                              <p className="text-xs font-semibold">{item.atividade?.nome ?? "Atividade"}</p>
 
                               <div className="mt-1.5 space-y-1 text-[11px] text-muted-foreground">
-                                <p className="truncate">
+                                <p className="break-words">
                                   <span className="text-foreground/70">Local:</span>{" "}
                                   {item.salaId
                                     ? (salaMap.get(item.salaId)?.nome ?? "Sala removida")
                                     : (item.local ?? "Não definido")}
                                 </p>
-                                <p className="truncate">
+                                <p className="break-words">
                                   <span className="text-foreground/70">Professor:</span>{" "}
                                   {item.funcionarioId
                                     ? (funcionarioMap.get(item.funcionarioId)?.nome ?? "Funcionário removido")
@@ -267,30 +261,19 @@ export default function GradePage() {
                                 </p>
                               </div>
 
-                              <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
-                                <span className="truncate text-muted-foreground">
+                              <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                                <p className="break-words">
                                   {item.atividade?.permiteCheckin
                                     ? isCheckinWindowOpen(item, date)
                                       ? `Vagas disponíveis: ${item.capacidade}`
                                       : `Check-in abre ${item.checkinLiberadoMinutosAntes} min antes`
                                     : `Capacidade da sala: ${item.capacidade}`}
-                                </span>
-                                <span
-                                  className={cn(
-                                    "shrink-0 rounded-full px-2 py-0.5 font-semibold",
-                                    item.atividade?.checkinObrigatorio
-                                      ? "bg-gym-warning/15 text-gym-warning"
-                                      : item.atividade?.permiteCheckin
-                                        ? "bg-gym-accent/15 text-gym-accent"
-                                        : "bg-secondary text-muted-foreground"
-                                  )}
-                                >
-                                  {item.atividade?.checkinObrigatorio
-                                    ? "Obrigatório"
-                                    : item.atividade?.permiteCheckin
-                                      ? "Permitido"
-                                      : "Sem check-in"}
-                                </span>
+                                </p>
+                                {item.atividade?.checkinObrigatorio ? (
+                                  <span className="inline-flex w-fit rounded-full bg-gym-warning/15 px-2 py-0.5 text-[10px] font-semibold text-gym-warning">
+                                    Check-in obrigatório
+                                  </span>
+                                ) : null}
                               </div>
                             </div>
                           ))}
