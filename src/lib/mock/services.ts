@@ -89,6 +89,30 @@ import {
   updateUnidadeApi,
 } from "../api/contexto-unidades";
 import {
+  addProspectMensagemApi,
+  checkProspectDuplicateApi,
+  converterProspectApi,
+  createProspectApi,
+  criarProspectAgendamentoApi,
+  deleteProspectApi,
+  getProspectApi,
+  listProspectAgendamentosApi,
+  listProspectMensagensApi,
+  listProspectsApi,
+  marcarProspectPerdidoApi,
+  updateProspectAgendamentoApi,
+  updateProspectApi,
+  updateProspectStatusApi,
+} from "../api/crm";
+import {
+  createAlunoApi,
+  createAlunoComMatriculaApi,
+  getAlunoApi,
+  listAlunosApi,
+  updateAlunoApi,
+  updateAlunoStatusApi,
+} from "../api/alunos";
+import {
   createAtividadeApi,
   createAtividadeGradeApi,
   createCargoApi,
@@ -429,6 +453,18 @@ export async function getDashboard(params?: { month?: number; year?: number }): 
 
 // ─── TENANT ────────────────────────────────────────────────────────────────
 
+function areSameTenant(a: Tenant | undefined, b: Tenant | undefined): boolean {
+  if (!a || !b) return a === b;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function areSameTenantList(a: Tenant[], b: Tenant[]): boolean {
+  if (a.length !== b.length) return false;
+  const aSorted = [...a].sort((x, y) => x.id.localeCompare(y.id));
+  const bSorted = [...b].sort((x, y) => x.id.localeCompare(y.id));
+  return aSorted.every((item, index) => areSameTenant(item, bSorted[index]));
+}
+
 function syncTenantContextInStore(input: {
   currentTenantId: string;
   tenantAtual: Tenant;
@@ -440,6 +476,11 @@ function syncTenantContextInStore(input: {
       ...input.unidadesDisponiveis,
       ...s.tenants.filter((tenant) => !availableIds.has(tenant.id)),
     ];
+    const hasNoChanges =
+      s.currentTenantId === input.currentTenantId &&
+      areSameTenant(s.tenant, input.tenantAtual) &&
+      areSameTenantList(s.tenants, mergedTenants);
+    if (hasNoChanges) return s;
     return {
       ...s,
       tenant: input.tenantAtual,
@@ -487,10 +528,13 @@ export async function listTenants(): Promise<Tenant[]> {
   if (isRealApiEnabled()) {
     try {
       const tenants = await listUnidadesApi();
-      setStore((s) => ({
-        ...s,
-        tenants,
-      }));
+      setStore((s) => {
+        if (areSameTenantList(s.tenants, tenants)) return s;
+        return {
+          ...s,
+          tenants,
+        };
+      });
       return tenants;
     } catch (error) {
       console.warn("[contexto-unidades][api-fallback] Falha ao listar unidades na API real. Usando store local.", error);
@@ -508,12 +552,22 @@ export async function getCurrentTenant(): Promise<Tenant> {
   if (isRealApiEnabled()) {
     try {
       const tenant = await getTenantAtualApi();
-      setStore((s) => ({
-        ...s,
-        tenant,
-        currentTenantId: tenant.id,
-        tenants: s.tenants.map((item) => (item.id === tenant.id ? tenant : item)),
-      }));
+      setStore((s) => {
+        const found = s.tenants.some((item) => item.id === tenant.id);
+        const nextTenants = found
+          ? s.tenants.map((item) => (item.id === tenant.id ? tenant : item))
+          : [...s.tenants, tenant];
+        const tenantsChanged = !areSameTenantList(s.tenants, nextTenants);
+        const tenantChanged = !areSameTenant(s.tenant, tenant);
+        const currentChanged = s.currentTenantId !== tenant.id;
+        if (!tenantsChanged && !tenantChanged && !currentChanged) return s;
+        return {
+          ...s,
+          tenant,
+          currentTenantId: tenant.id,
+          tenants: tenantsChanged ? nextTenants : s.tenants,
+        };
+      });
       return tenant;
     } catch (error) {
       console.warn("[contexto-unidades][api-fallback] Falha ao obter unidade atual na API real. Usando store local.", error);
@@ -582,13 +636,15 @@ export async function getCurrentAcademia(): Promise<Academia> {
   if (isRealApiEnabled()) {
     try {
       const academia = await getAcademiaAtualApi(getCurrentTenantId());
-      setStore((s) => ({
-        ...s,
-        academias: [
-          academia,
-          ...s.academias.filter((item) => item.id !== academia.id),
-        ],
-      }));
+      setStore((s) => {
+        const next = [academia, ...s.academias.filter((item) => item.id !== academia.id)];
+        const academiasChanged = JSON.stringify(next) !== JSON.stringify(s.academias);
+        if (!academiasChanged) return s;
+        return {
+          ...s,
+          academias: next,
+        };
+      });
       return academia;
     } catch (error) {
       console.warn("[contexto-unidades][api-fallback] Falha ao obter academia atual na API real. Usando store local.", error);
@@ -861,9 +917,39 @@ export async function encerrarCampanhaCrm(id: string): Promise<void> {
 
 // ─── PROSPECTS ──────────────────────────────────────────────────────────────
 
+function normalizeProspectFromApi(prospect: Prospect): Prospect {
+  const createdAt = prospect.dataCriacao ?? now();
+  const statusLog = prospect.statusLog ?? [{ status: prospect.status, data: createdAt }];
+  return {
+    ...prospect,
+    dataCriacao: createdAt,
+    statusLog,
+  };
+}
+
 export async function listProspects(params?: {
   status?: StatusProspect;
 }): Promise<Prospect[]> {
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = getCurrentTenantId();
+      const prospects = await listProspectsApi({
+        tenantId,
+        status: params?.status,
+      });
+      const normalized = prospects.map(normalizeProspectFromApi);
+      setStore((s) => ({
+        ...s,
+        prospects: [
+          ...normalized,
+          ...s.prospects.filter((item) => !normalized.some((p) => p.id === item.id)),
+        ],
+      }));
+      return normalized;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao listar prospects na API real. Usando store local.", error);
+    }
+  }
   const tenantId = getCurrentTenantId();
   const { prospects } = getStore();
   const all = [...prospects].reverse();
@@ -876,6 +962,22 @@ export async function updateProspect(
   id: string,
   data: Partial<Omit<Prospect, "id" | "tenantId">>
 ): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      await updateProspectApi({
+        tenantId: getCurrentTenantId(),
+        id,
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        prospects: s.prospects.map((p) => (p.id === id ? { ...p, ...data } : p)),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao atualizar prospect na API real. Aplicando update local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     prospects: s.prospects.map((p) =>
@@ -885,6 +987,22 @@ export async function updateProspect(
 }
 
 export async function getProspect(id: string): Promise<Prospect | null> {
+  if (isRealApiEnabled()) {
+    try {
+      const prospect = await getProspectApi({
+        tenantId: getCurrentTenantId(),
+        id,
+      });
+      const normalized = normalizeProspectFromApi(prospect);
+      setStore((s) => ({
+        ...s,
+        prospects: [normalized, ...s.prospects.filter((item) => item.id !== normalized.id)],
+      }));
+      return normalized;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao obter prospect na API real. Usando store local.", error);
+    }
+  }
   const tenantId = getCurrentTenantId();
   return getStore().prospects.find((p) => p.id === id && p.tenantId === tenantId) ?? null;
 }
@@ -892,6 +1010,20 @@ export async function getProspect(id: string): Promise<Prospect | null> {
 export async function createProspect(
   data: CreateProspectInput
 ): Promise<Prospect> {
+  if (isRealApiEnabled()) {
+    try {
+      const created = normalizeProspectFromApi(
+        await createProspectApi({
+          tenantId: getCurrentTenantId(),
+          data,
+        })
+      );
+      setStore((s) => ({ ...s, prospects: [created, ...s.prospects.filter((item) => item.id !== created.id)] }));
+      return created;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao criar prospect na API real. Aplicando criação local.", error);
+    }
+  }
   const createdAt = now();
   const prospect: Prospect = {
     ...data,
@@ -909,6 +1041,32 @@ export async function updateProspectStatus(
   id: string,
   status: StatusProspect
 ): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      await updateProspectStatusApi({
+        tenantId: getCurrentTenantId(),
+        id,
+        status,
+      });
+      const at = now();
+      setStore((s) => ({
+        ...s,
+        prospects: s.prospects.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                status,
+                dataUltimoContato: at,
+                statusLog: [...(p.statusLog ?? []), { status, data: at }],
+              }
+            : p
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao atualizar status do prospect na API real. Aplicando update local.", error);
+    }
+  }
   const at = now();
   setStore((s) => ({
     ...s,
@@ -929,6 +1087,36 @@ export async function marcarProspectPerdido(
   id: string,
   motivo?: string
 ): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      await marcarProspectPerdidoApi({
+        tenantId: getCurrentTenantId(),
+        id,
+        motivo,
+      });
+      const at = now();
+      setStore((s) => ({
+        ...s,
+        prospects: s.prospects.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                status: "PERDIDO" as StatusProspect,
+                motivoPerda: motivo,
+                dataUltimoContato: at,
+                statusLog: [
+                  ...(p.statusLog ?? []),
+                  { status: "PERDIDO" as StatusProspect, data: at },
+                ],
+              }
+            : p
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao marcar prospect como perdido na API real. Aplicando update local.", error);
+    }
+  }
   const at = now();
   setStore((s) => ({
     ...s,
@@ -954,6 +1142,24 @@ export async function marcarProspectPerdido(
 export async function listProspectMensagens(
   prospectId: string
 ): Promise<ProspectMensagem[]> {
+  if (isRealApiEnabled()) {
+    try {
+      const mensagens = await listProspectMensagensApi({
+        tenantId: getCurrentTenantId(),
+        prospectId,
+      });
+      setStore((s) => ({
+        ...s,
+        prospectMensagens: [
+          ...mensagens,
+          ...s.prospectMensagens.filter((item) => !mensagens.some((m) => m.id === item.id)),
+        ],
+      }));
+      return mensagens;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao listar mensagens do prospect na API real. Usando store local.", error);
+    }
+  }
   return getStore().prospectMensagens.filter((m) => m.prospectId === prospectId);
 }
 
@@ -963,6 +1169,23 @@ export async function addProspectMensagem(
   autorNome: string,
   autorId?: string
 ): Promise<ProspectMensagem> {
+  if (isRealApiEnabled()) {
+    try {
+      const msg = await addProspectMensagemApi({
+        tenantId: getCurrentTenantId(),
+        prospectId,
+        data: {
+          texto,
+          autorNome,
+          autorId,
+        },
+      });
+      setStore((s) => ({ ...s, prospectMensagens: [...s.prospectMensagens, msg] }));
+      return msg;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao adicionar mensagem do prospect na API real. Aplicando criação local.", error);
+    }
+  }
   const msg: ProspectMensagem = {
     id: genId(),
     prospectId,
@@ -987,6 +1210,24 @@ export async function addProspectMensagem(
 export async function listProspectAgendamentos(
   prospectId: string
 ): Promise<ProspectAgendamento[]> {
+  if (isRealApiEnabled()) {
+    try {
+      const agendamentos = await listProspectAgendamentosApi({
+        tenantId: getCurrentTenantId(),
+        prospectId,
+      });
+      setStore((s) => ({
+        ...s,
+        prospectAgendamentos: [
+          ...agendamentos,
+          ...s.prospectAgendamentos.filter((item) => !agendamentos.some((a) => a.id === item.id)),
+        ],
+      }));
+      return [...agendamentos].sort((a, b) => a.data.localeCompare(b.data) || a.hora.localeCompare(b.hora));
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao listar agendamentos do prospect na API real. Usando store local.", error);
+    }
+  }
   return getStore().prospectAgendamentos
     .filter((a) => a.prospectId === prospectId)
     .sort((a, b) => a.data.localeCompare(b.data) || a.hora.localeCompare(b.hora));
@@ -1000,6 +1241,28 @@ export async function criarProspectAgendamento(data: {
   hora: string;
   observacoes?: string;
 }): Promise<ProspectAgendamento> {
+  if (isRealApiEnabled()) {
+    try {
+      const ag = await criarProspectAgendamentoApi({
+        tenantId: getCurrentTenantId(),
+        prospectId: data.prospectId,
+        data: {
+          funcionarioId: data.funcionarioId,
+          titulo: data.titulo,
+          data: data.data,
+          hora: data.hora,
+          observacoes: data.observacoes,
+        },
+      });
+      setStore((s) => ({
+        ...s,
+        prospectAgendamentos: [...s.prospectAgendamentos, ag],
+      }));
+      return ag;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao criar agendamento do prospect na API real. Aplicando criação local.", error);
+    }
+  }
   const ag: ProspectAgendamento = {
     id: genId(),
     ...data,
@@ -1016,6 +1279,24 @@ export async function updateProspectAgendamento(
   id: string,
   status: StatusAgendamento
 ): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      await updateProspectAgendamentoApi({
+        tenantId: getCurrentTenantId(),
+        id,
+        status,
+      });
+      setStore((s) => ({
+        ...s,
+        prospectAgendamentos: s.prospectAgendamentos.map((a) =>
+          a.id === id ? { ...a, status } : a
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao atualizar status do agendamento na API real. Aplicando update local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     prospectAgendamentos: s.prospectAgendamentos.map((a) =>
@@ -1029,6 +1310,18 @@ export async function checkProspectDuplicate(params: {
   cpf?: string;
   email?: string;
 }): Promise<boolean> {
+  if (isRealApiEnabled()) {
+    try {
+      return await checkProspectDuplicateApi({
+        tenantId: getCurrentTenantId(),
+        telefone: params.telefone,
+        cpf: params.cpf,
+        email: params.email,
+      });
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao verificar duplicidade de prospect na API real. Usando store local.", error);
+    }
+  }
   const tenantId = getCurrentTenantId();
   const { prospects } = getStore();
   const tel = params.telefone?.replace(/\D/g, "");
@@ -1046,6 +1339,26 @@ export async function checkProspectDuplicate(params: {
 export async function converterProspect(
   data: ConverterProspectInput
 ): Promise<ConverterProspectResponse> {
+  if (isRealApiEnabled()) {
+    try {
+      const converted = await converterProspectApi({
+        tenantId: getCurrentTenantId(),
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        alunos: [converted.aluno, ...s.alunos.filter((a) => a.id !== converted.aluno.id)],
+        matriculas: [converted.matricula, ...s.matriculas.filter((m) => m.id !== converted.matricula.id)],
+        pagamentos: [converted.pagamento, ...s.pagamentos.filter((p) => p.id !== converted.pagamento.id)],
+        prospects: s.prospects.map((p) =>
+          p.id === data.prospectId ? { ...p, status: "CONVERTIDO", dataUltimoContato: now() } : p
+        ),
+      }));
+      return converted;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao converter prospect na API real. Aplicando conversão local.", error);
+    }
+  }
   const store = getStore();
   const tenantId = getCurrentTenantId();
   const prospect = store.prospects.find((p) => p.id === data.prospectId && p.tenantId === tenantId);
@@ -1185,6 +1498,21 @@ export async function criarAluno(
     | "motivoDesconto"
   >
 ): Promise<Aluno> {
+  if (isRealApiEnabled()) {
+    try {
+      const created = await createAlunoApi({
+        tenantId: getCurrentTenantId(),
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        alunos: [created, ...s.alunos.filter((item) => item.id !== created.id)],
+      }));
+      return created;
+    } catch (error) {
+      console.warn("[alunos][api-fallback] Falha ao criar aluno na API real. Aplicando criação local.", error);
+    }
+  }
   const alunoId = genId();
   const aluno: Aluno = {
     id: alunoId,
@@ -1214,6 +1542,24 @@ export async function criarAluno(
 export async function criarAlunoComMatricula(
   data: CriarAlunoComMatriculaInput
 ): Promise<CriarAlunoComMatriculaResponse> {
+  if (isRealApiEnabled()) {
+    try {
+      const created = await createAlunoComMatriculaApi({
+        tenantId: getCurrentTenantId(),
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        alunos: [created.aluno, ...s.alunos.filter((item) => item.id !== created.aluno.id)],
+        matriculas: [created.matricula, ...s.matriculas.filter((item) => item.id !== created.matricula.id)],
+        pagamentos: [created.pagamento, ...s.pagamentos.filter((item) => item.id !== created.pagamento.id)],
+      }));
+      syncAlunosStatus();
+      return created;
+    } catch (error) {
+      console.warn("[alunos][api-fallback] Falha ao criar aluno com matrícula na API real. Aplicando criação local.", error);
+    }
+  }
   const store = getStore();
   const plano = store.planos.find((p) => p.id === data.planoId);
   if (!plano) throw new Error("Plano não encontrado");
@@ -1289,6 +1635,21 @@ export async function criarAlunoComMatricula(
 }
 
 export async function deleteProspect(id: string): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      await deleteProspectApi({
+        tenantId: getCurrentTenantId(),
+        id,
+      });
+      setStore((s) => ({
+        ...s,
+        prospects: s.prospects.filter((p) => p.id !== id),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao remover prospect na API real. Aplicando remoção local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     prospects: s.prospects.filter((p) => p.id !== id),
@@ -1997,6 +2358,25 @@ export async function listPresencasByAluno(alunoId: string): Promise<Presenca[]>
 export async function listAlunos(params?: {
   status?: StatusAluno;
 }): Promise<Aluno[]> {
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = getCurrentTenantId();
+      const alunos = await listAlunosApi({
+        tenantId,
+        status: params?.status,
+      });
+      setStore((s) => ({
+        ...s,
+        alunos: [
+          ...alunos,
+          ...s.alunos.filter((item) => !alunos.some((a) => a.id === item.id)),
+        ],
+      }));
+      return alunos;
+    } catch (error) {
+      console.warn("[alunos][api-fallback] Falha ao listar alunos na API real. Usando store local.", error);
+    }
+  }
   const tenantId = getCurrentTenantId();
   syncAlunosStatus();
   const { alunos } = getStore();
@@ -2006,6 +2386,21 @@ export async function listAlunos(params?: {
 }
 
 export async function getAluno(id: string): Promise<Aluno | null> {
+  if (isRealApiEnabled()) {
+    try {
+      const aluno = await getAlunoApi({
+        tenantId: getCurrentTenantId(),
+        id,
+      });
+      setStore((s) => ({
+        ...s,
+        alunos: [aluno, ...s.alunos.filter((item) => item.id !== aluno.id)],
+      }));
+      return aluno;
+    } catch (error) {
+      console.warn("[alunos][api-fallback] Falha ao obter aluno na API real. Usando store local.", error);
+    }
+  }
   const tenantId = getCurrentTenantId();
   syncAlunosStatus();
   return getStore().alunos.find((a) => a.id === id && a.tenantId === tenantId) ?? null;
@@ -2015,6 +2410,22 @@ export async function updateAlunoStatus(
   id: string,
   status: StatusAluno
 ): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      await updateAlunoStatusApi({
+        tenantId: getCurrentTenantId(),
+        id,
+        status,
+      });
+      setStore((s) => ({
+        ...s,
+        alunos: s.alunos.map((a) => (a.id === id ? { ...a, status } : a)),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[alunos][api-fallback] Falha ao atualizar status do aluno na API real. Aplicando update local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     alunos: s.alunos.map((a) => (a.id === id ? { ...a, status } : a)),
@@ -2025,6 +2436,22 @@ export async function updateAluno(
   id: string,
   data: Partial<Omit<Aluno, "id" | "tenantId" | "dataCadastro">>
 ): Promise<Aluno | null> {
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await updateAlunoApi({
+        tenantId: getCurrentTenantId(),
+        id,
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        alunos: s.alunos.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+      }));
+      return updated;
+    } catch (error) {
+      console.warn("[alunos][api-fallback] Falha ao atualizar aluno na API real. Aplicando update local.", error);
+    }
+  }
   let updated: Aluno | null = null;
   setStore((s) => ({
     ...s,

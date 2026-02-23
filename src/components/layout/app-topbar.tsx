@@ -4,6 +4,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Menu, Search } from "lucide-react";
 import { getCurrentTenant, listTenants, setCurrentTenant } from "@/lib/mock/services";
+import { getStore } from "@/lib/mock/store";
 import type { Tenant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,13 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
+    function syncFromStore() {
+      const store = getStore();
+      const activeTenants = (store.tenants ?? []).filter((t) => t.ativo !== false);
+      setTenants(activeTenants);
+      setTenantId(store.currentTenantId || store.tenant?.id || activeTenants[0]?.id || "");
+    }
+
     async function load() {
       const [allTenants, current] = await Promise.all([listTenants(), getCurrentTenant()]);
       const activeTenants = allTenants.filter((t) => t.ativo !== false);
@@ -31,9 +39,10 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
       setTenants(activeTenants);
       setTenantId(currentActive?.id ?? "");
     }
+    syncFromStore();
     load();
     function handleUpdate() {
-      load();
+      syncFromStore();
     }
     window.addEventListener("academia-store-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);

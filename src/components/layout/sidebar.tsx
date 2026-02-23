@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCurrentAcademia, getCurrentTenant } from "@/lib/mock/services";
+import { getStore } from "@/lib/mock/store";
 import { getTenantAppName } from "@/lib/tenant-theme";
 
 type NavItem = {
@@ -375,16 +376,27 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [logoUrl, setLogoUrl] = useState("");
 
   useEffect(() => {
+    function syncFromStore() {
+      const store = getStore();
+      const tenant = store.tenants.find((item) => item.id === store.currentTenantId) ?? store.tenant;
+      const academiaId = tenant?.academiaId ?? tenant?.groupId;
+      const academia = store.academias.find((item) => item.id === academiaId) ?? store.academias[0];
+      setTenantName(tenant?.nome ?? "Academia");
+      setAppName(getTenantAppName(academia));
+      setLogoUrl(academia?.branding?.logoUrl ?? "");
+    }
+
     async function load() {
       const [tenant, academia] = await Promise.all([getCurrentTenant(), getCurrentAcademia()]);
       setTenantName(tenant.nome);
       setAppName(getTenantAppName(academia));
       setLogoUrl(academia.branding?.logoUrl ?? "");
     }
+    syncFromStore();
     load();
 
     function handleUpdate() {
-      load();
+      syncFromStore();
     }
     window.addEventListener("academia-store-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);

@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getCurrentTenant } from "@/lib/mock/services";
+import { getStore } from "@/lib/mock/store";
 
 export function AppContentShell({ children }: { children: React.ReactNode }) {
   const [tenantKey, setTenantKey] = useState("tenant-initial");
 
   useEffect(() => {
-    async function syncKey() {
-      const tenant = await getCurrentTenant();
-      setTenantKey(`tenant-${tenant.id}`);
+    function syncKey() {
+      const store = getStore();
+      const nextTenantId = store.currentTenantId || store.tenant?.id || "tenant-initial";
+      setTenantKey(`tenant-${nextTenantId}`);
     }
     syncKey();
 
