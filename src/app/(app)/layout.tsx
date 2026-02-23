@@ -1,17 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { AppContentShell } from "@/components/layout/app-content-shell";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
+import { isRealApiEnabled } from "@/lib/api/http";
+import { getAccessToken } from "@/lib/api/session";
 
 export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isRealApiEnabled()) return;
+    if (getAccessToken()) return;
+    router.replace("/login");
+  }, [router]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

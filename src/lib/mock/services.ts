@@ -56,6 +56,38 @@ import type {
   RecorrenciaContaPagar,
   TerminoRecorrenciaContaPagar,
 } from "../types";
+import { isRealApiEnabled } from "../api/http";
+import { loginApi, meApi, refreshTokenApi, switchTenantApi, type AuthUser } from "../api/auth";
+import { clearAuthSession, getActiveTenantIdFromSession, getRefreshToken } from "../api/session";
+import {
+  createTipoContaPagarApi,
+  listTiposContaPagarApi,
+  toggleTipoContaPagarApi,
+  updateTipoContaPagarApi,
+} from "../api/tipos-conta";
+import {
+  createFormaPagamentoApi,
+  deleteFormaPagamentoApi,
+  getFormasPagamentoLabelsApi,
+  listFormasPagamentoApi,
+  toggleFormaPagamentoApi,
+  updateFormaPagamentoApi,
+} from "../api/formas-pagamento";
+import {
+  createUnidadeApi,
+  deleteUnidadeApi,
+  getAcademiaAtualApi,
+  getTenantAtualApi,
+  listAcademiasApi,
+  listHorariosApi,
+  listUnidadesApi,
+  setTenantContextApi,
+  toggleUnidadeApi,
+  updateAcademiaAtualApi,
+  updateHorariosApi,
+  updateTenantAtualApi,
+  updateUnidadeApi,
+} from "../api/contexto-unidades";
 
 function genId(): string {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -338,7 +370,70 @@ export async function getDashboard(params?: { month?: number; year?: number }): 
 
 // ─── TENANT ────────────────────────────────────────────────────────────────
 
+function syncTenantContextInStore(input: {
+  currentTenantId: string;
+  tenantAtual: Tenant;
+  unidadesDisponiveis: Tenant[];
+}): void {
+  setStore((s) => {
+    const availableIds = new Set(input.unidadesDisponiveis.map((tenant) => tenant.id));
+    const mergedTenants = [
+      ...input.unidadesDisponiveis,
+      ...s.tenants.filter((tenant) => !availableIds.has(tenant.id)),
+    ];
+    return {
+      ...s,
+      tenant: input.tenantAtual,
+      currentTenantId: input.currentTenantId,
+      tenants: mergedTenants,
+    };
+  });
+}
+
+export async function authLogin(input: { email: string; password: string }): Promise<void> {
+  if (!isRealApiEnabled()) return;
+  await loginApi(input);
+  const tenantFromToken = getActiveTenantIdFromSession();
+  if (tenantFromToken) {
+    setStore((s) => ({
+      ...s,
+      currentTenantId: tenantFromToken,
+      tenant: s.tenants.find((item) => item.id === tenantFromToken) ?? s.tenant,
+    }));
+  }
+}
+
+export async function authRefresh(): Promise<void> {
+  if (!isRealApiEnabled()) return;
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    throw new Error("Sessão expirada. Faça login novamente.");
+  }
+  await refreshTokenApi(refreshToken);
+}
+
+export async function authMe(): Promise<AuthUser | undefined> {
+  if (!isRealApiEnabled()) return undefined;
+  return meApi();
+}
+
+export async function authLogout(): Promise<void> {
+  clearAuthSession();
+}
+
 export async function listTenants(): Promise<Tenant[]> {
+  if (isRealApiEnabled()) {
+    try {
+      const tenants = await listUnidadesApi();
+      setStore((s) => ({
+        ...s,
+        tenants,
+      }));
+      return tenants;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao listar unidades na API real. Usando store local.", error);
+    }
+  }
   const store = getStore();
   const academiaId = getCurrentAcademiaId();
   if (!academiaId) {
@@ -348,11 +443,44 @@ export async function listTenants(): Promise<Tenant[]> {
 }
 
 export async function getCurrentTenant(): Promise<Tenant> {
+  if (isRealApiEnabled()) {
+    try {
+      const tenant = await getTenantAtualApi();
+      setStore((s) => ({
+        ...s,
+        tenant,
+        currentTenantId: tenant.id,
+        tenants: s.tenants.map((item) => (item.id === tenant.id ? tenant : item)),
+      }));
+      return tenant;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao obter unidade atual na API real. Usando store local.", error);
+    }
+  }
   const store = getStore();
   return store.tenants.find((t) => t.id === store.currentTenantId) ?? store.tenant;
 }
 
 export async function setCurrentTenant(id: string): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      await switchTenantApi(id);
+      const context = await setTenantContextApi(id);
+      syncTenantContextInStore(context);
+      return;
+    } catch (error) {
+      try {
+        const context = await setTenantContextApi(id);
+        syncTenantContextInStore(context);
+        return;
+      } catch (contextError) {
+        console.warn(
+          "[contexto-unidades][api-fallback] Falha ao trocar unidade na API real (auth/context). Aplicando troca local.",
+          { authSwitchError: error, contextSwitchError: contextError }
+        );
+      }
+    }
+  }
   setStore((s) => {
     const current = s.tenants.find((t) => t.id === s.currentTenantId) ?? s.tenant;
     const currentAcademiaId = current.academiaId ?? current.groupId;
@@ -371,12 +499,39 @@ export async function setCurrentTenant(id: string): Promise<void> {
 }
 
 export async function listAcademias(): Promise<Academia[]> {
+  if (isRealApiEnabled()) {
+    try {
+      const academias = await listAcademiasApi(getCurrentTenantId());
+      setStore((s) => ({
+        ...s,
+        academias,
+      }));
+      return academias;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao listar academias na API real. Usando store local.", error);
+    }
+  }
   const academiaId = getCurrentAcademiaId();
   if (!academiaId) return getStore().academias;
   return getStore().academias.filter((a) => a.id === academiaId);
 }
 
 export async function getCurrentAcademia(): Promise<Academia> {
+  if (isRealApiEnabled()) {
+    try {
+      const academia = await getAcademiaAtualApi(getCurrentTenantId());
+      setStore((s) => ({
+        ...s,
+        academias: [
+          academia,
+          ...s.academias.filter((item) => item.id !== academia.id),
+        ],
+      }));
+      return academia;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao obter academia atual na API real. Usando store local.", error);
+    }
+  }
   const store = getStore();
   const academiaId = getCurrentAcademiaId();
   return (
@@ -391,6 +546,23 @@ export async function getCurrentAcademia(): Promise<Academia> {
 
 export async function updateCurrentAcademia(data: Partial<Academia>): Promise<void> {
   const academiaId = getCurrentAcademiaId();
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await updateAcademiaAtualApi({
+        tenantId: getCurrentTenantId(),
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        academias: s.academias.map((item) =>
+          item.id === updated.id ? { ...item, ...updated } : item
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao atualizar academia na API real. Aplicando update local.", error);
+    }
+  }
   if (!academiaId) return;
   setStore((s) => ({
     ...s,
@@ -403,6 +575,18 @@ export async function updateCurrentAcademia(data: Partial<Academia>): Promise<vo
 export async function createTenant(
   data: Omit<Tenant, "id">
 ): Promise<Tenant> {
+  if (isRealApiEnabled()) {
+    try {
+      const created = await createUnidadeApi(data);
+      setStore((s) => ({
+        ...s,
+        tenants: [created, ...s.tenants.filter((item) => item.id !== created.id)],
+      }));
+      return created;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao criar unidade na API real. Aplicando criação local.", error);
+    }
+  }
   const academiaId = data.academiaId?.trim() || getCurrentAcademiaId() || "acd-default";
   const groupId = data.groupId?.trim() || academiaId;
   const tenant: Tenant = {
@@ -422,6 +606,23 @@ export async function createTenant(
 }
 
 export async function updateTenantById(id: string, data: Partial<Tenant>): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await updateUnidadeApi(id, data);
+      setStore((s) => {
+        const currentUpdated =
+          s.currentTenantId === id ? { ...s.tenant, ...updated } : s.tenant;
+        return {
+          ...s,
+          tenant: currentUpdated,
+          tenants: s.tenants.map((item) => (item.id === id ? { ...item, ...updated } : item)),
+        };
+      });
+      return;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao atualizar unidade na API real. Aplicando update local.", error);
+    }
+  }
   const normalized = normalizeTenantConfig(data);
   setStore((s) => {
     const currentUpdated =
@@ -435,6 +636,18 @@ export async function updateTenantById(id: string, data: Partial<Tenant>): Promi
 }
 
 export async function toggleTenant(id: string): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      const toggled = await toggleUnidadeApi(id);
+      setStore((s) => ({
+        ...s,
+        tenants: s.tenants.map((item) => (item.id === toggled.id ? { ...item, ...toggled } : item)),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao alternar unidade na API real. Aplicando toggle local.", error);
+    }
+  }
   setStore((s) => {
     const target = s.tenants.find((t) => t.id === id);
     if (!target) return s;
@@ -478,6 +691,13 @@ export async function deleteTenant(id: string): Promise<void> {
   }
   if (tenantHasLinkedData(current, id)) {
     throw new Error("Não é possível remover unidade com dados vinculados.");
+  }
+  if (isRealApiEnabled()) {
+    try {
+      await deleteUnidadeApi(id);
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao remover unidade na API real. Aplicando remoção local.", error);
+    }
   }
   setStore((s) => ({
     ...s,
@@ -1167,11 +1387,40 @@ export async function deleteSala(id: string): Promise<void> {
 // ─── TENANT ────────────────────────────────────────────────────────────────
 
 export async function getTenant(): Promise<Tenant> {
+  if (isRealApiEnabled()) {
+    try {
+      const tenant = await getTenantAtualApi();
+      setStore((s) => ({
+        ...s,
+        tenant,
+        currentTenantId: tenant.id,
+        tenants: s.tenants.map((item) => (item.id === tenant.id ? tenant : item)),
+      }));
+      return tenant;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao obter tenant na API real. Usando store local.", error);
+    }
+  }
   const store = getStore();
   return store.tenants.find((t) => t.id === store.currentTenantId) ?? store.tenant;
 }
 
 export async function updateTenant(data: Partial<Tenant>): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await updateTenantAtualApi(data);
+      setStore((s) => ({
+        ...s,
+        tenant: s.tenant.id === s.currentTenantId ? { ...s.tenant, ...updated } : s.tenant,
+        tenants: s.tenants.map((item) =>
+          item.id === s.currentTenantId ? { ...item, ...updated } : item
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao atualizar tenant na API real. Aplicando update local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     tenant: s.tenant.id === s.currentTenantId ? { ...s.tenant, ...data } : s.tenant,
@@ -1182,12 +1431,33 @@ export async function updateTenant(data: Partial<Tenant>): Promise<void> {
 }
 
 export async function listHorarios(): Promise<HorarioFuncionamento[]> {
+  if (isRealApiEnabled()) {
+    try {
+      const horarios = await listHorariosApi(getCurrentTenantId());
+      setStore((s) => ({ ...s, horarios }));
+      return horarios;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao listar horários na API real. Usando store local.", error);
+    }
+  }
   return getStore().horarios;
 }
 
 export async function updateHorarios(
   data: HorarioFuncionamento[]
 ): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await updateHorariosApi({
+        tenantId: getCurrentTenantId(),
+        data,
+      });
+      setStore((s) => ({ ...s, horarios: updated }));
+      return;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao atualizar horários na API real. Aplicando update local.", error);
+    }
+  }
   setStore((s) => ({ ...s, horarios: data }));
 }
 
@@ -2271,6 +2541,24 @@ function resolveContaTipoValues(input: CreateContaPagarInput): {
 export async function listTiposContaPagar(params?: { apenasAtivos?: boolean }): Promise<TipoContaPagar[]> {
   const tenantId = getCurrentTenantId();
   const apenasAtivos = params?.apenasAtivos ?? true;
+  if (isRealApiEnabled()) {
+    try {
+      const synced = await listTiposContaPagarApi({
+        tenantId,
+        apenasAtivos: false,
+      });
+      setStore((s) => ({
+        ...s,
+        tiposContaPagar: [
+          ...synced,
+          ...(s.tiposContaPagar ?? []).filter((tipo) => tipo.tenantId !== tenantId),
+        ],
+      }));
+      return apenasAtivos ? synced.filter((tipo) => tipo.ativo) : synced;
+    } catch (error) {
+      console.warn("Falha ao listar tipos de conta na API real. Usando cache local.", error);
+    }
+  }
   const tipos = (getStore().tiposContaPagar ?? [])
     .filter((tipo) => tipo.tenantId === tenantId)
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
@@ -2278,9 +2566,34 @@ export async function listTiposContaPagar(params?: { apenasAtivos?: boolean }): 
 }
 
 export async function createTipoContaPagar(input: CreateTipoContaPagarInput): Promise<TipoContaPagar> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const created = await createTipoContaPagarApi({
+        tenantId,
+        data: {
+          nome: input.nome.trim(),
+          descricao: input.descricao?.trim() || undefined,
+          categoriaOperacional: input.categoriaOperacional,
+          grupoDre: input.grupoDre,
+          centroCustoPadrao: input.centroCustoPadrao?.trim() || undefined,
+        },
+      });
+      setStore((s) => ({
+        ...s,
+        tiposContaPagar: [
+          created,
+          ...(s.tiposContaPagar ?? []).filter((tipo) => tipo.id !== created.id),
+        ],
+      }));
+      return created;
+    } catch (error) {
+      console.warn("Falha ao criar tipo de conta na API real. Gravando localmente.", error);
+    }
+  }
   const tipo: TipoContaPagar = {
     id: genId(),
-    tenantId: getCurrentTenantId(),
+    tenantId,
     nome: input.nome.trim(),
     descricao: input.descricao?.trim() || undefined,
     categoriaOperacional: input.categoriaOperacional,
@@ -2297,6 +2610,31 @@ export async function updateTipoContaPagar(
   input: UpdateTipoContaPagarInput
 ): Promise<void> {
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await updateTipoContaPagarApi({
+        tenantId,
+        id,
+        data: {
+          nome: input.nome?.trim(),
+          descricao: input.descricao?.trim() || (input.descricao === "" ? undefined : undefined),
+          categoriaOperacional: input.categoriaOperacional,
+          grupoDre: input.grupoDre,
+          centroCustoPadrao:
+            input.centroCustoPadrao?.trim() || (input.centroCustoPadrao === "" ? undefined : undefined),
+        },
+      });
+      setStore((s) => ({
+        ...s,
+        tiposContaPagar: (s.tiposContaPagar ?? []).map((tipo) =>
+          tipo.id === updated.id ? updated : tipo
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("Falha ao atualizar tipo de conta na API real. Aplicando update local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     tiposContaPagar: (s.tiposContaPagar ?? []).map((tipo) => {
@@ -2317,6 +2655,20 @@ export async function updateTipoContaPagar(
 
 export async function toggleTipoContaPagar(id: string): Promise<void> {
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await toggleTipoContaPagarApi({ tenantId, id });
+      setStore((s) => ({
+        ...s,
+        tiposContaPagar: (s.tiposContaPagar ?? []).map((tipo) =>
+          tipo.id === updated.id ? updated : tipo
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("Falha ao alternar tipo de conta na API real. Aplicando toggle local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     tiposContaPagar: (s.tiposContaPagar ?? []).map((tipo) =>
@@ -2841,11 +3193,45 @@ function makeDefaultFormasPagamento(tenantId: string): FormaPagamento[] {
   ];
 }
 
+const DEFAULT_FORMA_PAGAMENTO_LABELS: Record<TipoFormaPagamento, string> = {
+  DINHEIRO: "Dinheiro",
+  PIX: "PIX",
+  CARTAO_CREDITO: "Cartão de Crédito",
+  CARTAO_DEBITO: "Cartão de Débito",
+  BOLETO: "Boleto",
+  RECORRENTE: "Recorrente",
+};
+
 export async function listFormasPagamento(params?: {
   apenasAtivas?: boolean;
 }): Promise<FormaPagamento[]> {
   const tenantId = getCurrentTenantId();
   const only = params?.apenasAtivas ?? true;
+  if (isRealApiEnabled()) {
+    try {
+      const synced = await listFormasPagamentoApi({
+        tenantId,
+        apenasAtivas: false,
+      });
+      setStore((s) => ({
+        ...s,
+        formasPagamento: [
+          ...synced,
+          ...(s.formasPagamento ?? []).filter((forma) => forma.tenantId !== tenantId),
+        ],
+      }));
+      const filteredSynced = only ? synced.filter((f) => f.ativo) : synced;
+      if (filteredSynced.length > 0) return filteredSynced;
+      const fallbackDefaults = makeDefaultFormasPagamento(tenantId);
+      setStore((s) => ({
+        ...s,
+        formasPagamento: [...fallbackDefaults, ...(s.formasPagamento ?? [])],
+      }));
+      return only ? fallbackDefaults.filter((f) => f.ativo) : fallbackDefaults;
+    } catch (error) {
+      console.warn("[formas-pagamento][api-fallback] Falha ao listar na API real. Usando cache local.", error);
+    }
+  }
   let formas = getStore().formasPagamento.filter((f) => f.tenantId === tenantId);
   if (formas.length === 0) {
     const defaults = makeDefaultFormasPagamento(tenantId);
@@ -2858,10 +3244,29 @@ export async function listFormasPagamento(params?: {
 export async function createFormaPagamento(
   data: Omit<FormaPagamento, "id" | "tenantId" | "ativo">
 ): Promise<FormaPagamento> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const created = await createFormaPagamentoApi({
+        tenantId,
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        formasPagamento: [
+          created,
+          ...(s.formasPagamento ?? []).filter((forma) => forma.id !== created.id),
+        ],
+      }));
+      return created;
+    } catch (error) {
+      console.warn("[formas-pagamento][api-fallback] Falha ao criar na API real. Gravando localmente.", error);
+    }
+  }
   const fp: FormaPagamento = {
     ...data,
     id: genId(),
-    tenantId: getCurrentTenantId(),
+    tenantId,
     ativo: true,
   };
   setStore((s) => ({ ...s, formasPagamento: [fp, ...s.formasPagamento] }));
@@ -2872,6 +3277,25 @@ export async function updateFormaPagamento(
   id: string,
   data: Partial<Omit<FormaPagamento, "id" | "tenantId">>
 ): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await updateFormaPagamentoApi({
+        tenantId,
+        id,
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        formasPagamento: (s.formasPagamento ?? []).map((forma) =>
+          forma.id === updated.id ? updated : forma
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[formas-pagamento][api-fallback] Falha ao atualizar na API real. Aplicando update local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     formasPagamento: s.formasPagamento.map((f) =>
@@ -2881,6 +3305,24 @@ export async function updateFormaPagamento(
 }
 
 export async function toggleFormaPagamento(id: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const toggled = await toggleFormaPagamentoApi({
+        tenantId,
+        id,
+      });
+      setStore((s) => ({
+        ...s,
+        formasPagamento: (s.formasPagamento ?? []).map((forma) =>
+          forma.id === toggled.id ? toggled : forma
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[formas-pagamento][api-fallback] Falha ao alternar na API real. Aplicando toggle local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     formasPagamento: s.formasPagamento.map((f) =>
@@ -2890,6 +3332,17 @@ export async function toggleFormaPagamento(id: string): Promise<void> {
 }
 
 export async function deleteFormaPagamento(id: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      await deleteFormaPagamentoApi({
+        tenantId,
+        id,
+      });
+    } catch (error) {
+      console.warn("[formas-pagamento][api-fallback] Falha ao excluir na API real. Aplicando remoção local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     formasPagamento: s.formasPagamento.filter((f) => f.id !== id),
@@ -2899,12 +3352,16 @@ export async function deleteFormaPagamento(id: string): Promise<void> {
 export async function getFormasPagamentoLabels(): Promise<
   Record<TipoFormaPagamento, string>
 > {
-  return {
-    DINHEIRO: "Dinheiro",
-    PIX: "PIX",
-    CARTAO_CREDITO: "Cartão de Crédito",
-    CARTAO_DEBITO: "Cartão de Débito",
-    BOLETO: "Boleto",
-    RECORRENTE: "Recorrente",
-  };
+  if (isRealApiEnabled()) {
+    try {
+      const labels = await getFormasPagamentoLabelsApi();
+      return {
+        ...DEFAULT_FORMA_PAGAMENTO_LABELS,
+        ...labels,
+      };
+    } catch (error) {
+      console.warn("[formas-pagamento][api-fallback] Falha ao obter labels na API real. Usando labels locais.", error);
+    }
+  }
+  return DEFAULT_FORMA_PAGAMENTO_LABELS;
 }

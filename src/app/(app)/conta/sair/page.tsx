@@ -1,10 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { authLogout } from "@/lib/mock/services";
 
 export default function SairPage() {
   const router = useRouter();
+  const [saving, setSaving] = useState(false);
+
+  async function handleLogout() {
+    setSaving(true);
+    try {
+      await authLogout();
+      router.push("/login");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -17,10 +30,12 @@ export default function SairPage() {
 
       <div className="rounded-xl border border-border bg-card p-5">
         <p className="text-sm text-muted-foreground">
-          Esta é uma simulação. Clique para voltar ao dashboard.
+          Encerra a sessão atual e retorna para a tela de login.
         </p>
         <div className="mt-4 flex justify-end">
-          <Button onClick={() => router.push("/dashboard")}>Sair</Button>
+          <Button onClick={handleLogout} disabled={saving}>
+            {saving ? "Saindo..." : "Sair"}
+          </Button>
         </div>
       </div>
     </div>
