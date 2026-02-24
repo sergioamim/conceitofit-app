@@ -175,6 +175,15 @@ export default function ContasPagarPage() {
     desconto: "0",
     jurosMulta: "0",
     observacoes: "",
+    recorrente: false,
+    recorrenciaTipo: "MENSAL" as "MENSAL" | "INTERVALO_DIAS",
+    recorrenciaIntervaloDias: "30",
+    recorrenciaDiaDoMes: "",
+    recorrenciaDataInicial: "",
+    recorrenciaTermino: "SEM_FIM" as "SEM_FIM" | "EM_DATA" | "APOS_OCORRENCIAS",
+    recorrenciaDataFim: "",
+    recorrenciaNumeroOcorrencias: "12",
+    criarLancamentoInicialAgora: false,
   });
 
   const tipoContaMap = useMemo(() => {
@@ -297,6 +306,9 @@ export default function ContasPagarPage() {
 
   function abrirModalEdicao(conta: ContaPagar) {
     setContaEditandoId(conta.id);
+    const regra = conta.regraRecorrenciaId
+      ? regrasRecorrencia.find((r) => r.id === conta.regraRecorrenciaId)
+      : undefined;
     setEdicaoConta({
       tipoContaId: conta.tipoContaId ?? "",
       fornecedor: conta.fornecedor,
@@ -313,6 +325,15 @@ export default function ContasPagarPage() {
       desconto: String(conta.desconto ?? 0),
       jurosMulta: String(conta.jurosMulta ?? 0),
       observacoes: conta.observacoes ?? "",
+      recorrente: !!regra,
+      recorrenciaTipo: regra?.recorrencia ?? "MENSAL",
+      recorrenciaIntervaloDias: String(regra?.intervaloDias ?? 30),
+      recorrenciaDiaDoMes: String(regra?.diaDoMes ?? conta.dataVencimento.split("-")[2] ?? ""),
+      recorrenciaDataInicial: regra?.dataInicial ?? conta.dataVencimento,
+      recorrenciaTermino: regra?.termino ?? "SEM_FIM",
+      recorrenciaDataFim: regra?.dataFim ?? "",
+      recorrenciaNumeroOcorrencias: String(regra?.numeroOcorrencias ?? 12),
+      criarLancamentoInicialAgora: false,
     });
     setOpenEditarConta(true);
   }
@@ -446,6 +467,32 @@ export default function ContasPagarPage() {
       return;
     }
 
+    if (edicaoConta.recorrente) {
+      if (!edicaoConta.recorrenciaDataInicial) return;
+      if (
+        edicaoConta.recorrenciaTipo === "INTERVALO_DIAS" &&
+        Number(edicaoConta.recorrenciaIntervaloDias || 0) < 1
+      ) {
+        return;
+      }
+      if (
+        edicaoConta.recorrenciaTipo === "MENSAL" &&
+        Number(edicaoConta.recorrenciaDiaDoMes || 0) < 1
+      ) {
+        return;
+      }
+      if (edicaoConta.recorrenciaTermino === "EM_DATA" && !edicaoConta.recorrenciaDataFim) return;
+      if (
+        edicaoConta.recorrenciaTermino === "APOS_OCORRENCIAS" &&
+        Number(edicaoConta.recorrenciaNumeroOcorrencias || 0) < 1
+      ) {
+        return;
+      }
+    }
+
+    const contaEditando = contas.find((c) => c.id === contaEditandoId);
+    const jaTemRegra = !!contaEditando?.regraRecorrenciaId;
+
     await updateContaPagar(contaEditandoId, {
       tipoContaId: edicaoConta.tipoContaId,
       fornecedor: edicaoConta.fornecedor.trim(),
@@ -454,7 +501,7 @@ export default function ContasPagarPage() {
       categoria: edicaoConta.categoria,
       grupoDre: edicaoConta.grupoDre,
       centroCusto: edicaoConta.centroCusto.trim() || undefined,
-      regime: edicaoConta.regime,
+      regime: edicaoConta.recorrente ? "FIXA" : edicaoConta.regime,
       competencia: edicaoConta.competencia,
       dataEmissao: edicaoConta.dataEmissao || undefined,
       dataVencimento: edicaoConta.dataVencimento,
@@ -463,6 +510,53 @@ export default function ContasPagarPage() {
       jurosMulta: Number(edicaoConta.jurosMulta || 0),
       observacoes: edicaoConta.observacoes.trim() || undefined,
     });
+
+    if (edicaoConta.recorrente && !jaTemRegra) {
+      const diaPadraoVencimento = Number(edicaoConta.dataVencimento.split("-")[2] || 1);
+      try {
+        await createContaPagar({
+          tipoContaId: edicaoConta.tipoContaId,
+          fornecedor: edicaoConta.fornecedor.trim(),
+          documentoFornecedor: edicaoConta.documentoFornecedor.trim() || undefined,
+          descricao: edicaoConta.descricao.trim(),
+          categoria: edicaoConta.categoria,
+          grupoDre: edicaoConta.grupoDre,
+          centroCusto: edicaoConta.centroCusto.trim() || undefined,
+          regime: "FIXA",
+          competencia: edicaoConta.competencia,
+          dataEmissao: edicaoConta.dataEmissao || undefined,
+          dataVencimento: edicaoConta.dataVencimento,
+          valorOriginal: Number(edicaoConta.valorOriginal || 0),
+          desconto: Number(edicaoConta.desconto || 0),
+          jurosMulta: Number(edicaoConta.jurosMulta || 0),
+          observacoes: edicaoConta.observacoes.trim() || undefined,
+          recorrencia: {
+            tipo: edicaoConta.recorrenciaTipo,
+            intervaloDias:
+              edicaoConta.recorrenciaTipo === "INTERVALO_DIAS"
+                ? Number(edicaoConta.recorrenciaIntervaloDias || 30)
+                : undefined,
+            diaDoMes:
+              edicaoConta.recorrenciaTipo === "MENSAL"
+                ? Number(edicaoConta.recorrenciaDiaDoMes || diaPadraoVencimento)
+                : undefined,
+            dataInicial: edicaoConta.recorrenciaDataInicial,
+            termino: edicaoConta.recorrenciaTermino,
+            dataFim:
+              edicaoConta.recorrenciaTermino === "EM_DATA"
+                ? edicaoConta.recorrenciaDataFim
+                : undefined,
+            numeroOcorrencias:
+              edicaoConta.recorrenciaTermino === "APOS_OCORRENCIAS"
+                ? Number(edicaoConta.recorrenciaNumeroOcorrencias || 1)
+                : undefined,
+            criarLancamentoInicial: false,
+          },
+        });
+      } catch (error) {
+        console.error("Erro ao criar regra de recorrência", error);
+      }
+    }
 
     setOpenEditarConta(false);
     setContaEditandoId(null);
@@ -1174,6 +1268,174 @@ export default function ContasPagarPage() {
                 className="h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
               />
             </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-secondary/30 p-4">
+            <label className="inline-flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={edicaoConta.recorrente}
+                onChange={(e) =>
+                  setEdicaoConta((v) => ({
+                    ...v,
+                    recorrente: e.target.checked,
+                    regime: e.target.checked ? "FIXA" : v.regime,
+                    recorrenciaDiaDoMes:
+                      v.recorrenciaDiaDoMes || (v.dataVencimento.split("-")[2] ?? ""),
+                    recorrenciaDataInicial: v.recorrenciaDataInicial || v.dataVencimento,
+                  }))
+                }
+              />
+              Conta recorrente
+            </label>
+
+            {edicaoConta.recorrente && (
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Tipo de recorrência
+                  </label>
+                  <Select
+                    value={edicaoConta.recorrenciaTipo}
+                    onValueChange={(value) =>
+                      setEdicaoConta((v) => ({
+                        ...v,
+                        recorrenciaTipo: value as "MENSAL" | "INTERVALO_DIAS",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full bg-secondary border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="MENSAL">Mensal</SelectItem>
+                      <SelectItem value="INTERVALO_DIAS">A cada X dias</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {edicaoConta.recorrenciaTipo === "INTERVALO_DIAS" && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      A cada X dias
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={edicaoConta.recorrenciaIntervaloDias}
+                      onChange={(e) =>
+                        setEdicaoConta((v) => ({
+                          ...v,
+                          recorrenciaIntervaloDias: e.target.value,
+                        }))
+                      }
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                )}
+
+                {edicaoConta.recorrenciaTipo === "MENSAL" && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Dia do mês
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={31}
+                      value={edicaoConta.recorrenciaDiaDoMes || (edicaoConta.dataVencimento.split("-")[2] ?? "")}
+                      onChange={(e) =>
+                        setEdicaoConta((v) => ({
+                          ...v,
+                          recorrenciaDiaDoMes: e.target.value,
+                        }))
+                      }
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Data inicial (âncora)
+                  </label>
+                  <Input
+                    type="date"
+                    value={edicaoConta.recorrenciaDataInicial}
+                    onChange={(e) =>
+                      setEdicaoConta((v) => ({
+                        ...v,
+                        recorrenciaDataInicial: e.target.value,
+                      }))
+                    }
+                    className="bg-secondary border-border"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Término da recorrência
+                  </label>
+                  <Select
+                    value={edicaoConta.recorrenciaTermino}
+                    onValueChange={(value) =>
+                      setEdicaoConta((v) => ({
+                        ...v,
+                        recorrenciaTermino: value as "SEM_FIM" | "EM_DATA" | "APOS_OCORRENCIAS",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full bg-secondary border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="SEM_FIM">Sem fim</SelectItem>
+                      <SelectItem value="EM_DATA">Em data</SelectItem>
+                      <SelectItem value="APOS_OCORRENCIAS">Após N ocorrências</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {edicaoConta.recorrenciaTermino === "EM_DATA" && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Data fim
+                    </label>
+                    <Input
+                      type="date"
+                      value={edicaoConta.recorrenciaDataFim}
+                      onChange={(e) =>
+                        setEdicaoConta((v) => ({
+                          ...v,
+                          recorrenciaDataFim: e.target.value,
+                        }))
+                      }
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                )}
+
+                {edicaoConta.recorrenciaTermino === "APOS_OCORRENCIAS" && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Qtd. ocorrências
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={edicaoConta.recorrenciaNumeroOcorrencias}
+                      onChange={(e) =>
+                        setEdicaoConta((v) => ({
+                          ...v,
+                          recorrenciaNumeroOcorrencias: e.target.value,
+                        }))
+                      }
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <DialogFooter>
