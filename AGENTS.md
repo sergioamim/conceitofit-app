@@ -57,6 +57,11 @@ Este arquivo define padrões para evolução do frontend (`Next.js`) da aplicaç
   - vazio
 - Garantir feedback de erro amigável ao usuário.
 
+## Regra de integração API real (anti-loop)
+- Quando `NEXT_PUBLIC_USE_REAL_API=true`, evitar listeners globais de store (`academia-store-updated` e `storage`) em páginas que já carregam dados via API e cujo service sincroniza `setStore`.
+- Motivo: o fluxo `API -> setStore -> evento global -> reload` cria tempestade de requisições e pode causar `net::ERR_INSUFFICIENT_RESOURCES`.
+- Para essas páginas, prefira refresh explícito por ação de usuário (`onDone`, `onSave`, troca de filtro/página) em vez de refresh por evento global.
+
 ## Qualidade e validação
 - Rodar `npm run lint` após alterações.
 - Em integrações, validar:

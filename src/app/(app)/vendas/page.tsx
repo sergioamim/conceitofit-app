@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { listVendas } from "@/lib/mock/services";
+import { isRealApiEnabled } from "@/lib/api/http";
 import type { Venda } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 
@@ -39,6 +40,7 @@ export default function VendasPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
+    if (isRealApiEnabled()) return;
     function handleUpdate() {
       load();
     }

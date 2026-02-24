@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { memo, useEffect, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  Activity,
   BriefcaseBusiness,
   CalendarDays,
   ChevronDown,
@@ -28,7 +27,6 @@ import {
 import { cn } from "@/lib/utils";
 import { authLogout, getCurrentAcademia, getCurrentTenant } from "@/lib/mock/services";
 import { getStore } from "@/lib/mock/store";
-import { getTenantAppName } from "@/lib/tenant-theme";
 import { isRealApiEnabled } from "@/lib/api/http";
 import {
   Dialog,
@@ -52,7 +50,6 @@ const navItems: NavItem[] = [
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/matriculas", label: "Matrículas", icon: ClipboardList },
   { href: "/planos", label: "Planos", icon: CreditCard },
-  { href: "/atividades", label: "Atividades", icon: Activity },
   { href: "/grade", label: "Grade", icon: CalendarDays },
   { href: "/vendas", label: "Vendas", icon: ShoppingCart },
   { href: "/pagamentos", label: "Pagamentos", icon: DollarSign },
@@ -108,12 +105,14 @@ function getInitials(name: string): string {
 const SidebarBrand = memo(function SidebarBrand({
   collapsed,
   appName,
+  academiaName,
   tenantName,
   logoUrl,
   onToggleCollapsed,
 }: {
   collapsed: boolean;
   appName: string;
+  academiaName: string;
   tenantName: string;
   logoUrl: string;
   onToggleCollapsed: () => void;
@@ -134,8 +133,15 @@ const SidebarBrand = memo(function SidebarBrand({
             {collapsed ? getInitials(appName) : appName}
           </div>
           {!collapsed && (
-            <div className="mt-0.5 text-[11px] uppercase tracking-widest text-muted-foreground">
-              {tenantName}
+            <div className="mt-1 space-y-1 text-[11px] text-muted-foreground">
+              <div>
+                <span className="font-semibold uppercase tracking-widest text-muted-foreground/70">Academia</span>
+                <p className="mt-0.5 truncate text-[12px] text-foreground/90">{academiaName}</p>
+              </div>
+              <div>
+                <span className="font-semibold uppercase tracking-widest text-muted-foreground/70">Unidade</span>
+                <p className="mt-0.5 truncate text-[12px] text-foreground/90">{tenantName}</p>
+              </div>
             </div>
           )}
         </div>
@@ -435,8 +441,9 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
 
 function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [academiaName, setAcademiaName] = useState("Academia");
   const [tenantName, setTenantName] = useState("Academia");
-  const [appName, setAppName] = useState("Conceito Fit");
+  const [appName] = useState("Conceito.Fit");
   const [logoUrl, setLogoUrl] = useState("");
 
   useEffect(() => {
@@ -448,7 +455,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
       const academiaId = tenant?.academiaId ?? tenant?.groupId;
       const academia = store.academias.find((item) => item.id === academiaId) ?? store.academias[0];
       setTenantName(tenant?.nome ?? "Academia");
-      setAppName(getTenantAppName(academia));
+      setAcademiaName(academia?.nome ?? "Academia");
       setLogoUrl(academia?.branding?.logoUrl ?? "");
     }
 
@@ -456,7 +463,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
       try {
         const [tenant, academia] = await Promise.all([getCurrentTenant(), getCurrentAcademia()]);
         setTenantName(tenant.nome);
-        setAppName(getTenantAppName(academia));
+        setAcademiaName(academia.nome);
         setLogoUrl(academia.branding?.logoUrl ?? "");
       } catch {
         // Mantem estado atual em caso de indisponibilidade temporaria da API.
@@ -488,6 +495,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
       <SidebarBrand
         collapsed={collapsed}
         appName={appName}
+        academiaName={academiaName}
         tenantName={tenantName}
         logoUrl={logoUrl}
         onToggleCollapsed={() => setCollapsed((v) => !v)}

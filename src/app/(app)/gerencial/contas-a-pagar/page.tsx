@@ -10,7 +10,9 @@ import {
   listRegrasRecorrenciaContaPagar,
   listTiposContaPagar,
   pagarContaPagar,
+  updateContaPagar,
 } from "@/lib/mock/services";
+import { isRealApiEnabled } from "@/lib/api/http";
 import type {
   CategoriaContaPagar,
   ContaPagar,
@@ -140,8 +142,10 @@ export default function ContasPagarPage() {
   const [endDate, setEndDate] = useState(range.end);
 
   const [openNovaConta, setOpenNovaConta] = useState(false);
+  const [openEditarConta, setOpenEditarConta] = useState(false);
   const [openPagarConta, setOpenPagarConta] = useState(false);
   const [selectedConta, setSelectedConta] = useState<ContaPagar | null>(null);
+  const [contaEditandoId, setContaEditandoId] = useState<string | null>(null);
 
   const [novaConta, setNovaConta] = useState({
     ...NOVA_CONTA_DEFAULT,
@@ -153,6 +157,23 @@ export default function ContasPagarPage() {
     dataPagamento: todayISO(),
     formaPagamento: "PIX" as TipoFormaPagamento,
     valorPago: "",
+    observacoes: "",
+  });
+  const [edicaoConta, setEdicaoConta] = useState({
+    tipoContaId: "",
+    fornecedor: "",
+    documentoFornecedor: "",
+    descricao: "",
+    categoria: "OUTROS" as CategoriaContaPagar,
+    grupoDre: "DESPESA_OPERACIONAL" as GrupoDre,
+    centroCusto: "",
+    regime: "AVULSA" as ContaPagar["regime"],
+    competencia: "",
+    dataEmissao: "",
+    dataVencimento: "",
+    valorOriginal: "",
+    desconto: "0",
+    jurosMulta: "0",
     observacoes: "",
   });
 
@@ -183,6 +204,7 @@ export default function ContasPagarPage() {
   }, []);
 
   useEffect(() => {
+    if (isRealApiEnabled()) return;
     function handleUpdate() {
       load();
     }
@@ -265,6 +287,39 @@ export default function ContasPagarPage() {
   function applyTipoConta(tipoId: string) {
     const tipo = tiposConta.find((item) => item.id === tipoId);
     setNovaConta((prev) => ({
+      ...prev,
+      tipoContaId: tipoId,
+      categoria: tipo?.categoriaOperacional ?? prev.categoria,
+      grupoDre: tipo?.grupoDre ?? prev.grupoDre,
+      centroCusto: prev.centroCusto || tipo?.centroCustoPadrao || "",
+    }));
+  }
+
+  function abrirModalEdicao(conta: ContaPagar) {
+    setContaEditandoId(conta.id);
+    setEdicaoConta({
+      tipoContaId: conta.tipoContaId ?? "",
+      fornecedor: conta.fornecedor,
+      documentoFornecedor: conta.documentoFornecedor ?? "",
+      descricao: conta.descricao,
+      categoria: conta.categoria,
+      grupoDre: conta.grupoDre ?? "DESPESA_OPERACIONAL",
+      centroCusto: conta.centroCusto ?? "",
+      regime: conta.regime,
+      competencia: conta.competencia,
+      dataEmissao: conta.dataEmissao ?? "",
+      dataVencimento: conta.dataVencimento,
+      valorOriginal: String(conta.valorOriginal ?? 0),
+      desconto: String(conta.desconto ?? 0),
+      jurosMulta: String(conta.jurosMulta ?? 0),
+      observacoes: conta.observacoes ?? "",
+    });
+    setOpenEditarConta(true);
+  }
+
+  function applyTipoContaEdicao(tipoId: string) {
+    const tipo = tiposConta.find((item) => item.id === tipoId);
+    setEdicaoConta((prev) => ({
       ...prev,
       tipoContaId: tipoId,
       categoria: tipo?.categoriaOperacional ?? prev.categoria,
@@ -376,6 +431,41 @@ export default function ContasPagarPage() {
     });
     setSelectedConta(null);
     setOpenPagarConta(false);
+    await load();
+  }
+
+  async function handleSalvarEdicaoConta() {
+    if (
+      !contaEditandoId ||
+      !edicaoConta.tipoContaId ||
+      !edicaoConta.fornecedor.trim() ||
+      !edicaoConta.descricao.trim() ||
+      !edicaoConta.competencia ||
+      !edicaoConta.dataVencimento
+    ) {
+      return;
+    }
+
+    await updateContaPagar(contaEditandoId, {
+      tipoContaId: edicaoConta.tipoContaId,
+      fornecedor: edicaoConta.fornecedor.trim(),
+      documentoFornecedor: edicaoConta.documentoFornecedor.trim() || undefined,
+      descricao: edicaoConta.descricao.trim(),
+      categoria: edicaoConta.categoria,
+      grupoDre: edicaoConta.grupoDre,
+      centroCusto: edicaoConta.centroCusto.trim() || undefined,
+      regime: edicaoConta.regime,
+      competencia: edicaoConta.competencia,
+      dataEmissao: edicaoConta.dataEmissao || undefined,
+      dataVencimento: edicaoConta.dataVencimento,
+      valorOriginal: Number(edicaoConta.valorOriginal || 0),
+      desconto: Number(edicaoConta.desconto || 0),
+      jurosMulta: Number(edicaoConta.jurosMulta || 0),
+      observacoes: edicaoConta.observacoes.trim() || undefined,
+    });
+
+    setOpenEditarConta(false);
+    setContaEditandoId(null);
     await load();
   }
 
@@ -891,6 +981,210 @@ export default function ContasPagarPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={openEditarConta} onOpenChange={setOpenEditarConta}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto bg-card border-border sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold">Editar conta a pagar</DialogTitle>
+            <DialogDescription>
+              Atualize os dados da conta selecionada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Tipo de conta
+              </label>
+              <Select value={edicaoConta.tipoContaId} onValueChange={applyTipoContaEdicao}>
+                <SelectTrigger className="w-full bg-secondary border-border">
+                  <SelectValue placeholder="Selecione o tipo *" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {tiposAtivos.map((tipo) => (
+                    <SelectItem key={tipo.id} value={tipo.id}>
+                      {tipo.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Fornecedor
+              </label>
+              <Input
+                value={edicaoConta.fornecedor}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, fornecedor: e.target.value }))}
+                placeholder="Nome do fornecedor *"
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Documento do fornecedor
+              </label>
+              <Input
+                value={edicaoConta.documentoFornecedor}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, documentoFornecedor: e.target.value }))}
+                placeholder="CPF/CNPJ"
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Descrição
+              </label>
+              <Input
+                value={edicaoConta.descricao}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, descricao: e.target.value }))}
+                placeholder="Descrição da conta *"
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Categoria
+              </label>
+              <Input value={CATEGORIA_LABEL[edicaoConta.categoria]} readOnly className="bg-secondary border-border" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Grupo DRE
+              </label>
+              <Input value={GRUPO_DRE_LABEL[edicaoConta.grupoDre]} readOnly className="bg-secondary border-border" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Centro de custo
+              </label>
+              <Input
+                value={edicaoConta.centroCusto}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, centroCusto: e.target.value }))}
+                placeholder="Opcional"
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Regime
+              </label>
+              <Select value={edicaoConta.regime} onValueChange={(value) => setEdicaoConta((v) => ({ ...v, regime: value as ContaPagar["regime"] }))}>
+                <SelectTrigger className="w-full bg-secondary border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="FIXA">Fixa</SelectItem>
+                  <SelectItem value="AVULSA">Avulsa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Competência
+              </label>
+              <Input
+                type="date"
+                value={edicaoConta.competencia}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, competencia: e.target.value }))}
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Data de emissão
+              </label>
+              <Input
+                type="date"
+                value={edicaoConta.dataEmissao}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, dataEmissao: e.target.value }))}
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Data de vencimento
+              </label>
+              <Input
+                type="date"
+                value={edicaoConta.dataVencimento}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, dataVencimento: e.target.value }))}
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Valor original
+              </label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={edicaoConta.valorOriginal}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, valorOriginal: e.target.value }))}
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Desconto
+              </label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={edicaoConta.desconto}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, desconto: e.target.value }))}
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Juros/Multa
+              </label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={edicaoConta.jurosMulta}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, jurosMulta: e.target.value }))}
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Observações
+              </label>
+              <textarea
+                value={edicaoConta.observacoes}
+                onChange={(e) => setEdicaoConta((v) => ({ ...v, observacoes: e.target.value }))}
+                className="h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" className="border-border" onClick={() => setOpenEditarConta(false)}>
+              Fechar
+            </Button>
+            <Button onClick={handleSalvarEdicaoConta}>Salvar alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Contas a Pagar</h1>
@@ -1143,6 +1437,16 @@ export default function ContasPagarPage() {
                             }}
                           >
                             Pagar
+                          </Button>
+                        )}
+                        {conta.status !== "CANCELADA" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-border"
+                            onClick={() => abrirModalEdicao(conta)}
+                          >
+                            Editar
                           </Button>
                         )}
                         {conta.status === "PENDENTE" && (

@@ -50,6 +50,13 @@ function ClientesPageContent() {
   const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
+  const [statusTotals, setStatusTotals] = useState({
+    TODOS: 0,
+    ATIVO: 0,
+    SUSPENSO: 0,
+    INATIVO: 0,
+    CANCELADO: 0,
+  });
 
   const load = useCallback(async () => {
     const paged = await listAlunosPage({
@@ -61,10 +68,39 @@ function ClientesPageContent() {
     setHasNextPage(paged.hasNext);
   }, [filtro, page, pageSize]);
 
+  const loadTotals = useCallback(async () => {
+    async function countByStatus(status?: StatusAluno): Promise<number> {
+      const paged = await listAlunosPage({
+        status,
+        page: 1,
+        size: 200,
+      });
+      return paged.items.length;
+    }
+
+    const [todos, ativos, suspensos, inativos] = await Promise.all([
+      countByStatus(undefined),
+      countByStatus("ATIVO"),
+      countByStatus("SUSPENSO"),
+      countByStatus("INATIVO"),
+    ]);
+    setStatusTotals({
+      TODOS: todos,
+      ATIVO: ativos,
+      SUSPENSO: suspensos,
+      INATIVO: inativos,
+      CANCELADO: Math.max(0, todos - ativos - suspensos - inativos),
+    });
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadTotals();
+  }, [loadTotals]);
   useEffect(() => {
     const q = (searchParams.get("q") ?? "").trim();
     if (!q) return;
@@ -78,20 +114,6 @@ function ClientesPageContent() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [searchParams]);
-  useEffect(() => {
-    function handleUpdate() {
-      load();
-    }
-    function handleStorage() {
-      load();
-    }
-    window.addEventListener("academia-store-updated", handleUpdate);
-    window.addEventListener("storage", handleStorage);
-    return () => {
-      window.removeEventListener("academia-store-updated", handleUpdate);
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, [load]);
 
   const buscaDigits = busca.replace(/\D/g, "");
 
@@ -123,13 +145,20 @@ function ClientesPageContent() {
 
   return (
     <div className="space-y-6">
-      <NovoClienteWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onDone={load} />
+      <NovoClienteWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onDone={async () => {
+          await load();
+          await loadTotals();
+        }}
+      />
 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Clientes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {alunos.length} clientes cadastrados · cadastro direto já cria matrícula e pagamento
+            {statusTotals.TODOS} clientes cadastrados · cadastro direto já cria matrícula e pagamento
           </p>
         </div>
         <Button onClick={() => setWizardOpen(true)}>
@@ -172,6 +201,16 @@ function ClientesPageContent() {
               }`}
             >
               {s.label}
+              {(
+                s.value === "TODOS" ||
+                s.value === "ATIVO" ||
+                s.value === "SUSPENSO" ||
+                s.value === "INATIVO"
+              ) && (
+                <span className="ml-1.5 text-muted-foreground">
+                  ({statusTotals[s.value]})
+                </span>
+              )}
             </button>
           ))}
         </div>

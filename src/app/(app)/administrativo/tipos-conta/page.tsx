@@ -7,6 +7,7 @@ import {
   toggleTipoContaPagar,
   updateTipoContaPagar,
 } from "@/lib/mock/services";
+import { isRealApiEnabled } from "@/lib/api/http";
 import type { CategoriaContaPagar, GrupoDre, TipoContaPagar } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +79,7 @@ export default function TiposContaPage() {
   }, [showAll]);
 
   useEffect(() => {
+    if (isRealApiEnabled()) return;
     function handleUpdate() {
       load(showAll);
     }

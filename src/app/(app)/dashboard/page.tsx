@@ -25,6 +25,7 @@ import {
   listPagamentos,
   listProspects,
 } from "@/lib/mock/services";
+import { isRealApiEnabled } from "@/lib/api/http";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type {
   Aluno,
@@ -158,6 +159,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!selectedDate) return;
+    if (isRealApiEnabled()) return;
     function handleUpdate() {
       load(selectedDate);
     }

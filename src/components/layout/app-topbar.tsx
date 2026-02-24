@@ -3,13 +3,13 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Menu, Search } from "lucide-react";
-import { getCurrentTenant, listTenants, setCurrentTenant } from "@/lib/mock/services";
+import { getCurrentTenant, listAlunosPage, listTenants, setCurrentTenant } from "@/lib/mock/services";
 import { getStore } from "@/lib/mock/store";
 import { isRealApiEnabled } from "@/lib/api/http";
 import type { Tenant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
 
 type AppTopbarProps = {
   onOpenMenu?: () => void;
@@ -20,6 +20,7 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState("");
   const [query, setQuery] = useState("");
+  const [clienteOptions, setClienteOptions] = useState<SuggestionOption[]>([]);
   const [savingTenant, setSavingTenant] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -64,6 +65,37 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
     () => tenants.find((t) => t.id === tenantId),
     [tenants, tenantId]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadClienteOptions() {
+      if (!tenantId) {
+        setClienteOptions([]);
+        return;
+      }
+      try {
+        const result = await listAlunosPage({
+          page: 1,
+          size: 200,
+        });
+        if (cancelled) return;
+        setClienteOptions(
+          result.items.map((aluno) => ({
+            id: aluno.id,
+            label: aluno.cpf ? `${aluno.nome} • ${aluno.cpf}` : aluno.nome,
+            searchText: [aluno.nome, aluno.cpf, aluno.email, aluno.telefone].filter(Boolean).join(" "),
+          }))
+        );
+      } catch {
+        if (cancelled) return;
+        setClienteOptions([]);
+      }
+    }
+    loadClienteOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   async function handleChangeTenant(nextId: string) {
     setSavingTenant(true);
@@ -121,17 +153,17 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
 
         <div className="flex w-full flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2 sm:flex-row sm:items-center">
           <Search className="size-4 text-muted-foreground" />
-          <Input
+          <SuggestionInput
             placeholder="Buscar cliente por nome ou CPF"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleSearch();
-              }
+            onValueChange={setQuery}
+            onSelect={(option) => {
+              setQuery("");
+              router.push(`/clientes/${option.id}`);
             }}
-            className="h-8 border-border bg-secondary"
+            options={clienteOptions}
+            emptyText="Nenhum cliente encontrado"
+            className="w-full"
           />
           <Button type="button" size="sm" onClick={handleSearch} className="sm:w-auto">
             Buscar

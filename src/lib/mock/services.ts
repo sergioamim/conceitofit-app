@@ -67,6 +67,19 @@ import {
   updateTipoContaPagarApi,
 } from "../api/tipos-conta";
 import {
+  cancelRegraRecorrenciaApi,
+  cancelarContaPagarApi,
+  createContaPagarApi,
+  getDreGerencialApi,
+  listContasPagarApi,
+  listRegrasRecorrenciaContaPagarApi,
+  pagarContaPagarApi,
+  pauseRegraRecorrenciaApi,
+  resumeRegraRecorrenciaApi,
+  triggerGeracaoContasRecorrentesApi,
+  updateContaPagarApi,
+} from "../api/financeiro-gerencial";
+import {
   createFormaPagamentoApi,
   deleteFormaPagamentoApi,
   getFormasPagamentoLabelsApi,
@@ -172,6 +185,8 @@ import {
   updateProdutoApi,
   updateServicoApi,
 } from "../api/comercial-catalogo";
+import { listPagamentosApi, receberPagamentoApi } from "../api/pagamentos";
+import { createVendaApi, listVendasApi } from "../api/vendas";
 
 function genId(): string {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -2816,7 +2831,32 @@ export interface CreateVendaInput {
 
 export async function listVendas(): Promise<Venda[]> {
   const tenantId = getCurrentTenantId();
-  return [...getStore().vendas].reverse().filter((v) => v.tenantId === tenantId);
+  if (isRealApiEnabled()) {
+    try {
+      const synced = await listVendasApi({
+        tenantId,
+        page: 0,
+        size: 200,
+      });
+      const sorted = [...synced].sort((a, b) => {
+        if (a.dataCriacao === b.dataCriacao) return 0;
+        return a.dataCriacao > b.dataCriacao ? -1 : 1;
+      });
+      setStore((s) => ({
+        ...s,
+        vendas: [...sorted, ...s.vendas.filter((v) => v.tenantId !== tenantId)],
+      }));
+      return sorted;
+    } catch (error) {
+      console.warn("[vendas][api-fallback] Falha ao listar vendas na API real. Usando store local.", error);
+    }
+  }
+  return [...getStore().vendas]
+    .filter((v) => v.tenantId === tenantId)
+    .sort((a, b) => {
+      if (a.dataCriacao === b.dataCriacao) return 0;
+      return a.dataCriacao > b.dataCriacao ? -1 : 1;
+    });
 }
 
 export async function createVenda(input: CreateVendaInput): Promise<Venda> {
@@ -2827,6 +2867,42 @@ export async function createVenda(input: CreateVendaInput): Promise<Venda> {
 
   const store = getStore();
   const cliente = input.clienteId ? store.alunos.find((a) => a.id === input.clienteId) : undefined;
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = getCurrentTenantId();
+      const created = await createVendaApi({
+        tenantId,
+        data: {
+          tipo: input.tipo,
+          clienteId: input.clienteId,
+          itens: input.itens.map((item) => ({
+            tipo: item.tipo,
+            referenciaId: item.referenciaId,
+            descricao: item.descricao,
+            quantidade: Math.max(1, item.quantidade || 1),
+            valorUnitario: Math.max(0, item.valorUnitario || 0),
+            desconto: Math.max(0, item.desconto || 0),
+          })),
+          descontoTotal: Math.max(0, input.descontoTotal ?? 0),
+          acrescimoTotal: Math.max(0, input.acrescimoTotal ?? 0),
+          pagamento: {
+            formaPagamento: input.pagamento.formaPagamento,
+            parcelas: input.pagamento.parcelas,
+            valorPago: Math.max(0, input.pagamento.valorPago || 0),
+            observacoes: input.pagamento.observacoes,
+          },
+        },
+      });
+      setStore((s) => ({
+        ...s,
+        vendas: [created, ...s.vendas.filter((venda) => venda.id !== created.id)],
+      }));
+      return created;
+    } catch (error) {
+      console.warn("[vendas][api-fallback] Falha ao criar venda na API real. Gravando localmente.", error);
+    }
+  }
 
   const itens: VendaItem[] = input.itens.map((item) => {
     const qtd = Math.max(1, item.quantidade || 1);
@@ -3624,6 +3700,33 @@ export async function listPagamentos(params?: {
   status?: string;
 }): Promise<(Pagamento & { aluno?: Aluno })[]> {
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const synced = await listPagamentosApi({
+        tenantId,
+        status: params?.status as Pagamento["status"] | undefined,
+        page: 0,
+        size: 200,
+      });
+      setStore((s) => ({
+        ...s,
+        pagamentos: [
+          ...synced,
+          ...s.pagamentos.filter((item) => !synced.some((pagamento) => pagamento.id === item.id)),
+        ],
+      }));
+      const updated = getStore();
+      return synced
+        .map((p) => ({
+          ...p,
+          aluno: p.aluno ?? updated.alunos.find((a) => a.id === p.alunoId),
+        }))
+        .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
+    } catch (error) {
+      console.warn("[pagamentos][api-fallback] Falha ao listar pagamentos na API real. Usando store local.", error);
+    }
+  }
+
   const todayStr = today();
   // Atualiza vencidos e bloqueia clientes quando necessário
   setStore((s) => {
@@ -3652,6 +3755,33 @@ export async function receberPagamento(
   id: string,
   data: ReceberPagamentoInput
 ): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      await receberPagamentoApi({
+        tenantId,
+        id,
+        data,
+      });
+      const refreshed = await listPagamentosApi({
+        tenantId,
+        page: 0,
+        size: 200,
+      });
+      setStore((s) => ({
+        ...s,
+        pagamentos: [
+          ...refreshed,
+          ...s.pagamentos.filter((item) => !refreshed.some((pagamento) => pagamento.id === item.id)),
+        ],
+      }));
+      syncAlunosStatus();
+      return;
+    } catch (error) {
+      console.warn("[pagamentos][api-fallback] Falha ao receber pagamento na API real. Aplicando baixa local.", error);
+    }
+  }
+
   setStore((s) => {
     const pagamentos = s.pagamentos.map((p) =>
       p.id === id
@@ -3902,6 +4032,26 @@ export async function listRegrasRecorrenciaContaPagar(params?: {
   status?: RegraRecorrenciaContaPagar["status"] | "TODAS";
 }): Promise<RegraRecorrenciaContaPagar[]> {
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const synced = await listRegrasRecorrenciaContaPagarApi({
+        tenantId,
+        status: params?.status,
+        page: 0,
+        size: 200,
+      });
+      setStore((s) => ({
+        ...s,
+        regrasRecorrenciaContaPagar: [
+          ...synced,
+          ...(s.regrasRecorrenciaContaPagar ?? []).filter((rule) => rule.tenantId !== tenantId),
+        ],
+      }));
+      return [...synced].sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
+    } catch (error) {
+      console.warn("[contas-pagar][api-fallback] Falha ao listar regras de recorrência na API real. Usando store local.", error);
+    }
+  }
   let regras = (getStore().regrasRecorrenciaContaPagar ?? [])
     .filter((rule) => rule.tenantId === tenantId)
     .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
@@ -3913,6 +4063,20 @@ export async function listRegrasRecorrenciaContaPagar(params?: {
 
 export async function pauseRegraRecorrencia(id: string): Promise<void> {
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await pauseRegraRecorrenciaApi({ tenantId, id });
+      setStore((s) => ({
+        ...s,
+        regrasRecorrenciaContaPagar: (s.regrasRecorrenciaContaPagar ?? []).map((rule) =>
+          rule.id === updated.id ? updated : rule
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[contas-pagar][api-fallback] Falha ao pausar regra na API real. Aplicando pausa local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     regrasRecorrenciaContaPagar: (s.regrasRecorrenciaContaPagar ?? []).map((rule) =>
@@ -3925,6 +4089,20 @@ export async function pauseRegraRecorrencia(id: string): Promise<void> {
 
 export async function resumeRegraRecorrencia(id: string): Promise<void> {
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await resumeRegraRecorrenciaApi({ tenantId, id });
+      setStore((s) => ({
+        ...s,
+        regrasRecorrenciaContaPagar: (s.regrasRecorrenciaContaPagar ?? []).map((rule) =>
+          rule.id === updated.id ? updated : rule
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[contas-pagar][api-fallback] Falha ao retomar regra na API real. Aplicando retomada local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     regrasRecorrenciaContaPagar: (s.regrasRecorrenciaContaPagar ?? []).map((rule) =>
@@ -3937,6 +4115,20 @@ export async function resumeRegraRecorrencia(id: string): Promise<void> {
 
 export async function cancelRegraRecorrencia(id: string): Promise<void> {
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await cancelRegraRecorrenciaApi({ tenantId, id });
+      setStore((s) => ({
+        ...s,
+        regrasRecorrenciaContaPagar: (s.regrasRecorrenciaContaPagar ?? []).map((rule) =>
+          rule.id === updated.id ? updated : rule
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[contas-pagar][api-fallback] Falha ao cancelar regra na API real. Aplicando cancelamento local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     regrasRecorrenciaContaPagar: (s.regrasRecorrenciaContaPagar ?? []).map((rule) =>
@@ -3952,6 +4144,33 @@ export async function triggerGeracaoContasRecorrentes(params?: {
   tenantId?: string;
 }): Promise<number> {
   const targetTenantId = params?.tenantId ?? getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const generated = await triggerGeracaoContasRecorrentesApi({
+        tenantId: targetTenantId,
+        untilDate: params?.untilDate,
+      });
+      try {
+        const [contas, regras] = await Promise.all([
+          listContasPagarApi({ tenantId: targetTenantId, page: 0, size: 200 }),
+          listRegrasRecorrenciaContaPagarApi({ tenantId: targetTenantId, status: "TODAS", page: 0, size: 200 }),
+        ]);
+        setStore((s) => ({
+          ...s,
+          contasPagar: [...contas, ...(s.contasPagar ?? []).filter((c) => c.tenantId !== targetTenantId)],
+          regrasRecorrenciaContaPagar: [
+            ...regras,
+            ...(s.regrasRecorrenciaContaPagar ?? []).filter((r) => r.tenantId !== targetTenantId),
+          ],
+        }));
+      } catch {
+        // Não interrompe o retorno de geração em caso de falha no refresh.
+      }
+      return generated;
+    } catch (error) {
+      console.warn("[contas-pagar][api-fallback] Falha ao gerar recorrências na API real. Aplicando geração local.", error);
+    }
+  }
   const limitDate = params?.untilDate ?? today();
   let generatedCount = 0;
 
@@ -4048,8 +4267,43 @@ export async function listContasPagar(params?: {
   startDate?: string;
   endDate?: string;
 }): Promise<ContaPagar[]> {
-  await triggerGeracaoContasRecorrentes({ untilDate: params?.endDate ?? today() });
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      if (!params?.status || params.status === "PENDENTE" || params.status === "VENCIDA") {
+        try {
+          await triggerGeracaoContasRecorrentesApi({
+            tenantId,
+            untilDate: params?.endDate ?? today(),
+          });
+        } catch {
+          // Se falhar a geração, segue com listagem existente.
+        }
+      }
+      const synced = await listContasPagarApi({
+        tenantId,
+        status: params?.status,
+        categoria: params?.categoria,
+        tipoContaId: params?.tipoContaId,
+        grupoDre: params?.grupoDre,
+        origem: params?.origem,
+        startDate: params?.startDate,
+        endDate: params?.endDate,
+        page: 0,
+        size: 500,
+      });
+      const sorted = [...synced].sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento));
+      setStore((s) => ({
+        ...s,
+        contasPagar: [...sorted, ...(s.contasPagar ?? []).filter((c) => c.tenantId !== tenantId)],
+      }));
+      return sorted;
+    } catch (error) {
+      console.warn("[contas-pagar][api-fallback] Falha ao listar contas a pagar na API real. Usando store local.", error);
+    }
+  }
+
+  await triggerGeracaoContasRecorrentes({ untilDate: params?.endDate ?? today() });
   const todayStr = today();
   setStore((s) => {
     let changed = false;
@@ -4091,6 +4345,82 @@ export async function createContaPagar(input: CreateContaPagarInput): Promise<Co
   const desconto = Math.max(0, Number(input.desconto ?? 0));
   const jurosMulta = Math.max(0, Number(input.jurosMulta ?? 0));
   const recorrencia = input.recorrencia;
+
+  if (isRealApiEnabled()) {
+    try {
+      const created = await createContaPagarApi({
+        tenantId,
+        data: {
+          tipoContaId: resolved.tipoConta.id,
+          fornecedor: input.fornecedor.trim(),
+          documentoFornecedor: input.documentoFornecedor?.trim() || undefined,
+          descricao: input.descricao.trim(),
+          categoria: resolved.categoria,
+          grupoDre: resolved.grupoDre,
+          centroCusto: resolved.centroCusto,
+          regime: input.regime,
+          competencia: input.competencia,
+          dataEmissao: input.dataEmissao,
+          dataVencimento: input.dataVencimento,
+          valorOriginal: total,
+          desconto,
+          jurosMulta,
+          observacoes: input.observacoes?.trim() || undefined,
+          recorrencia: recorrencia
+            ? {
+                tipo: recorrencia.tipo,
+                intervaloDias: recorrencia.intervaloDias,
+                diaDoMes: recorrencia.diaDoMes,
+                dataInicial: recorrencia.dataInicial,
+                termino: recorrencia.termino,
+                dataFim: recorrencia.dataFim,
+                numeroOcorrencias: recorrencia.numeroOcorrencias,
+                criarLancamentoInicial: recorrencia.criarLancamentoInicial,
+                timezone: recorrencia.timezone ?? "America/Sao_Paulo",
+              }
+            : undefined,
+        },
+      });
+
+      if (created) {
+        setStore((s) => ({
+          ...s,
+          contasPagar: [created, ...(s.contasPagar ?? []).filter((conta) => conta.id !== created.id)],
+        }));
+      } else {
+        try {
+          const refreshed = await listContasPagarApi({ tenantId, page: 0, size: 500 });
+          setStore((s) => ({
+            ...s,
+            contasPagar: [...refreshed, ...(s.contasPagar ?? []).filter((conta) => conta.tenantId !== tenantId)],
+          }));
+        } catch {
+          // Se falhar refresh, mantém store atual.
+        }
+      }
+
+      try {
+        const regras = await listRegrasRecorrenciaContaPagarApi({
+          tenantId,
+          status: "TODAS",
+          page: 0,
+          size: 200,
+        });
+        setStore((s) => ({
+          ...s,
+          regrasRecorrenciaContaPagar: [
+            ...regras,
+            ...(s.regrasRecorrenciaContaPagar ?? []).filter((rule) => rule.tenantId !== tenantId),
+          ],
+        }));
+      } catch {
+        // Refresh de regras é opcional.
+      }
+      return created;
+    } catch (error) {
+      console.warn("[contas-pagar][api-fallback] Falha ao criar conta na API real. Gravando localmente.", error);
+    }
+  }
 
   let createdConta: ContaPagar | null = null;
   setStore((s) => {
@@ -4212,6 +4542,24 @@ export async function updateContaPagar(
   data: Partial<Omit<ContaPagar, "id" | "tenantId" | "dataCriacao">>
 ): Promise<void> {
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await updateContaPagarApi({
+        tenantId,
+        id,
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        contasPagar: (s.contasPagar ?? []).map((conta) =>
+          conta.id === updated.id ? updated : conta
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[contas-pagar][api-fallback] Falha ao atualizar conta na API real. Aplicando update local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     contasPagar: (s.contasPagar ?? []).map((c) =>
@@ -4222,6 +4570,32 @@ export async function updateContaPagar(
 
 export async function pagarContaPagar(id: string, input: PagarContaPagarInput): Promise<void> {
   const tenantId = getCurrentTenantId();
+  if (!input.formaPagamento) {
+    throw new Error("Forma de pagamento é obrigatória para baixar a conta.");
+  }
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await pagarContaPagarApi({
+        tenantId,
+        id,
+        data: {
+          dataPagamento: input.dataPagamento,
+          formaPagamento: input.formaPagamento,
+          valorPago: input.valorPago,
+          observacoes: input.observacoes,
+        },
+      });
+      setStore((s) => ({
+        ...s,
+        contasPagar: (s.contasPagar ?? []).map((conta) =>
+          conta.id === updated.id ? updated : conta
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[contas-pagar][api-fallback] Falha ao pagar conta na API real. Aplicando baixa local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     contasPagar: (s.contasPagar ?? []).map((c) => {
@@ -4242,6 +4616,24 @@ export async function pagarContaPagar(id: string, input: PagarContaPagarInput): 
 
 export async function cancelarContaPagar(id: string, observacoes?: string): Promise<void> {
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await cancelarContaPagarApi({
+        tenantId,
+        id,
+        observacoes,
+      });
+      setStore((s) => ({
+        ...s,
+        contasPagar: (s.contasPagar ?? []).map((conta) =>
+          conta.id === updated.id ? updated : conta
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[contas-pagar][api-fallback] Falha ao cancelar conta na API real. Aplicando cancelamento local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     contasPagar: (s.contasPagar ?? []).map((c) =>
@@ -4266,6 +4658,19 @@ export async function getDreGerencial(params?: {
   endDate?: string;
 }): Promise<DREGerencial> {
   const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      return await getDreGerencialApi({
+        tenantId,
+        month: params?.month,
+        year: params?.year,
+        startDate: params?.startDate,
+        endDate: params?.endDate,
+      });
+    } catch (error) {
+      console.warn("[dre][api-fallback] Falha ao carregar DRE na API real. Usando cálculo local.", error);
+    }
+  }
   const store = getStore();
   const month = params?.month ?? new Date().getMonth();
   const year = params?.year ?? new Date().getFullYear();

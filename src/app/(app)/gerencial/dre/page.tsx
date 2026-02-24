@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getDreGerencial } from "@/lib/mock/services";
+import { isRealApiEnabled } from "@/lib/api/http";
 import type { CategoriaContaPagar, DREGerencial, GrupoDre } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";
@@ -73,6 +74,7 @@ export default function DrePage() {
   }, [mes, ano, customRange, startDate, endDate]);
 
   useEffect(() => {
+    if (isRealApiEnabled()) return;
     function handleUpdate() {
       load();
     }

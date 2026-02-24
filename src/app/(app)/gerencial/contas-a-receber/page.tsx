@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { listPagamentos } from "@/lib/mock/services";
+import { isRealApiEnabled } from "@/lib/api/http";
 import type { Aluno, Pagamento } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,7 @@ export default function ContasReceberPage() {
   }, []);
 
   useEffect(() => {
+    if (isRealApiEnabled()) return;
     function handleUpdate() {
       load();
     }
@@ -219,4 +221,3 @@ export default function ContasReceberPage() {
     </div>
   );
 }
-
