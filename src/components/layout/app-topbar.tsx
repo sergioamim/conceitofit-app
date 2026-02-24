@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Building2, Menu, Search } from "lucide-react";
 import { getCurrentTenant, listTenants, setCurrentTenant } from "@/lib/mock/services";
 import { getStore } from "@/lib/mock/store";
+import { isRealApiEnabled } from "@/lib/api/http";
 import type { Tenant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,8 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
+    const useRealApi = isRealApiEnabled();
+
     function syncFromStore() {
       const store = getStore();
       const activeTenants = (store.tenants ?? []).filter((t) => t.ativo !== false);
@@ -33,22 +36,27 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
     }
 
     async function load() {
-      const [allTenants, current] = await Promise.all([listTenants(), getCurrentTenant()]);
-      const activeTenants = allTenants.filter((t) => t.ativo !== false);
-      const currentActive = activeTenants.find((t) => t.id === current.id) ?? activeTenants[0];
-      setTenants(activeTenants);
-      setTenantId(currentActive?.id ?? "");
+      try {
+        const [allTenants, current] = await Promise.all([listTenants(), getCurrentTenant()]);
+        const activeTenants = allTenants.filter((t) => t.ativo !== false);
+        const currentActive = activeTenants.find((t) => t.id === current.id) ?? activeTenants[0];
+        setTenants(activeTenants);
+        setTenantId(currentActive?.id ?? "");
+      } catch {
+        // Mantem estado atual em caso de indisponibilidade temporaria da API.
+      }
     }
-    syncFromStore();
+    if (!useRealApi) {
+      syncFromStore();
+    }
     load();
     function handleUpdate() {
+      if (useRealApi) return;
       syncFromStore();
     }
     window.addEventListener("academia-store-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
     return () => {
       window.removeEventListener("academia-store-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
     };
   }, []);
 

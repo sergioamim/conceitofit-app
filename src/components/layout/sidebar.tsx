@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { memo, useEffect, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -26,9 +26,19 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCurrentAcademia, getCurrentTenant } from "@/lib/mock/services";
+import { authLogout, getCurrentAcademia, getCurrentTenant } from "@/lib/mock/services";
 import { getStore } from "@/lib/mock/store";
 import { getTenantAppName } from "@/lib/tenant-theme";
+import { isRealApiEnabled } from "@/lib/api/http";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type NavItem = {
   href: string;
@@ -44,7 +54,7 @@ const navItems: NavItem[] = [
   { href: "/planos", label: "Planos", icon: CreditCard },
   { href: "/atividades", label: "Atividades", icon: Activity },
   { href: "/grade", label: "Grade", icon: CalendarDays },
-  { href: "/vendas/nova", label: "Vendas", icon: ShoppingCart },
+  { href: "/vendas", label: "Vendas", icon: ShoppingCart },
   { href: "/pagamentos", label: "Pagamentos", icon: DollarSign },
 ];
 
@@ -303,7 +313,10 @@ function SidebarNavigation({
 }
 
 const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed: boolean }) {
+  const router = useRouter();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -318,54 +331,105 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
   }, []);
 
   return (
-    <div className="border-t border-border px-3 py-4">
-      <div
-        ref={userMenuRef}
-        className={cn(
-          "relative flex items-center gap-2.5 rounded-md bg-secondary px-2.5 py-2",
-          collapsed && "justify-center"
-        )}
-      >
-        <button
-          onClick={() => setUserMenuOpen((v) => !v)}
-          className={cn("cursor-pointer flex items-center gap-2.5", collapsed && "justify-center")}
-          aria-label="Menu do usuário"
+    <>
+      <div className="border-t border-border px-3 py-4">
+        <div
+          ref={userMenuRef}
+          className={cn(
+            "relative flex items-center gap-2.5 rounded-md bg-secondary px-2.5 py-2",
+            collapsed && "justify-center"
+          )}
         >
-          <div className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-gym-accent font-display text-xs font-bold text-background">
-            S
-          </div>
-          {!collapsed && (
-            <div className="text-left">
-              <p className="text-[13px] font-medium">Sergio</p>
-              <p className="text-[11px] text-muted-foreground">Administrador</p>
+          <button
+            onClick={() => setUserMenuOpen((v) => !v)}
+            className={cn("cursor-pointer flex items-center gap-2.5", collapsed && "justify-center")}
+            aria-label="Menu do usuário"
+          >
+            <div className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-gym-accent font-display text-xs font-bold text-background">
+              S
+            </div>
+            {!collapsed && (
+              <div className="text-left">
+                <p className="text-[13px] font-medium">Sergio</p>
+                <p className="text-[11px] text-muted-foreground">Administrador</p>
+              </div>
+            )}
+          </button>
+          {userMenuOpen && !collapsed && (
+            <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-56 rounded-md border border-border bg-card p-2 shadow-lg">
+              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Conta
+              </p>
+              {[
+                { label: "Meu perfil", href: "/conta/perfil" },
+                { label: "Trocar senha", href: "/conta/seguranca" },
+                { label: "Preferências", href: "/conta/preferencias" },
+                { label: "Notificações", href: "/conta/notificacoes" },
+              ].map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setUserMenuOpen(false)}
+                  className="block w-full rounded-md px-2 py-2 text-left text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  setLogoutOpen(true);
+                }}
+                className="mt-1 block w-full cursor-pointer rounded-md px-2 py-2 text-left text-[13px] text-gym-danger hover:bg-secondary"
+              >
+                Sair
+              </button>
             </div>
           )}
-        </button>
-        {userMenuOpen && !collapsed && (
-          <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-56 rounded-md border border-border bg-card p-2 shadow-lg">
-            <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Conta
-            </p>
-            {[
-              { label: "Meu perfil", href: "/conta/perfil" },
-              { label: "Trocar senha", href: "/conta/seguranca" },
-              { label: "Preferências", href: "/conta/preferencias" },
-              { label: "Notificações", href: "/conta/notificacoes" },
-              { label: "Sair", href: "/conta/sair" },
-            ].map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={() => setUserMenuOpen(false)}
-                className="block w-full rounded-md px-2 py-2 text-left text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
-    </div>
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent className="border-border bg-card">
+          <DialogHeader>
+            <DialogTitle>Encerrar sessão?</DialogTitle>
+            <DialogDescription>
+              Você será redirecionado para o login. Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-border"
+              onClick={() => setLogoutOpen(false)}
+              disabled={loggingOut}
+            >
+              Não, permanecer
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={loggingOut}
+              onClick={async () => {
+                setLoggingOut(true);
+                try {
+                  await authLogout();
+                  router.replace("/login");
+                  if (typeof window !== "undefined") {
+                    window.location.assign("/login");
+                  }
+                } finally {
+                  setLoggingOut(false);
+                }
+              }}
+            >
+              {loggingOut ? "Saindo..." : "Sim, sair"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 });
 
@@ -376,6 +440,8 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [logoUrl, setLogoUrl] = useState("");
 
   useEffect(() => {
+    const useRealApi = isRealApiEnabled();
+
     function syncFromStore() {
       const store = getStore();
       const tenant = store.tenants.find((item) => item.id === store.currentTenantId) ?? store.tenant;
@@ -387,22 +453,27 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
     }
 
     async function load() {
-      const [tenant, academia] = await Promise.all([getCurrentTenant(), getCurrentAcademia()]);
-      setTenantName(tenant.nome);
-      setAppName(getTenantAppName(academia));
-      setLogoUrl(academia.branding?.logoUrl ?? "");
+      try {
+        const [tenant, academia] = await Promise.all([getCurrentTenant(), getCurrentAcademia()]);
+        setTenantName(tenant.nome);
+        setAppName(getTenantAppName(academia));
+        setLogoUrl(academia.branding?.logoUrl ?? "");
+      } catch {
+        // Mantem estado atual em caso de indisponibilidade temporaria da API.
+      }
     }
-    syncFromStore();
+    if (!useRealApi) {
+      syncFromStore();
+    }
     load();
 
     function handleUpdate() {
+      if (useRealApi) return;
       syncFromStore();
     }
     window.addEventListener("academia-store-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
     return () => {
       window.removeEventListener("academia-store-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
     };
   }, []);
 

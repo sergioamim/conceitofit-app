@@ -2,6 +2,14 @@ export type UUID = string;
 export type LocalDate = string; // "YYYY-MM-DD"
 export type LocalDateTime = string; // "YYYY-MM-DDTHH:mm:ss"
 
+export interface PaginatedResult<T> {
+  items: T[];
+  page: number;
+  size: number;
+  total?: number;
+  hasNext: boolean;
+}
+
 export type OrigemProspect =
   | "VISITA_PRESENCIAL"
   | "WHATSAPP"

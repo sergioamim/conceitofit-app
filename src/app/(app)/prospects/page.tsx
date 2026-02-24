@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, Plus, ChevronDown } from "lucide-react";
 import {
-  listProspects,
+  listProspectsPage,
   createProspect,
   updateProspect,
   updateProspectStatus,
@@ -84,17 +84,26 @@ export default function ProspectsPage() {
   const [ano, setAno] = useState(new Date().getFullYear());
   const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
   const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
 
-  async function load() {
-    const [data, funcs] = await Promise.all([listProspects(), listFuncionarios()]);
-    setProspects(data);
+  const load = useCallback(async () => {
+    const [paged, funcs] = await Promise.all([
+      listProspectsPage({
+        status: filtroStatus === "TODOS" ? undefined : filtroStatus,
+        page,
+        size: pageSize,
+      }),
+      listFuncionarios(),
+    ]);
+    setProspects(paged.items);
+    setHasNextPage(paged.hasNext);
     setFuncionarios(funcs);
-  }
+  }, [filtroStatus, page, pageSize]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-  }, []);
+  }, [load]);
 
   const buscaDigits = busca.replace(/\D/g, "");
   const prospectsByMonth = prospects.filter((p) => {
@@ -112,11 +121,9 @@ export default function ProspectsPage() {
         p.telefone.replace(/\D/g, "").includes(buscaDigits));
     return matchStatus && matchOrigem && matchBusca;
   });
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageSafe = Math.min(page, totalPages);
-  const startIndex = (pageSafe - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginated = filtered.slice(startIndex, endIndex);
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + filtered.length;
+  const displayed = filtered;
 
   const statusTotals = (() => {
     const totals: Record<StatusProspect, number> = {
@@ -356,7 +363,7 @@ export default function ProspectsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {paginated.length === 0 && (
+            {displayed.length === 0 && (
               <tr>
                 <td
                   colSpan={6}
@@ -366,7 +373,7 @@ export default function ProspectsPage() {
                 </td>
               </tr>
             )}
-            {paginated.map((p) => (
+            {displayed.map((p) => (
               <tr
                 key={p.id}
                 className="transition-colors hover:bg-secondary/40"
@@ -456,29 +463,25 @@ export default function ProspectsPage() {
       <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
         <p className="text-xs text-muted-foreground">
           Mostrando <span className="font-semibold text-foreground">{filtered.length === 0 ? 0 : startIndex + 1}</span> até{" "}
-          <span className="font-semibold text-foreground">{Math.min(endIndex, filtered.length)}</span> de{" "}
-          <span className="font-semibold text-foreground">{filtered.length}</span> prospects
+          <span className="font-semibold text-foreground">{endIndex}</span> · página{" "}
+          <span className="font-semibold text-foreground">{page}</span>
         </p>
         <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
             className="border-border"
-            disabled={pageSafe <= 1}
+            disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
             Anterior
           </Button>
-          <span className="text-xs text-muted-foreground">
-            Página <span className="font-semibold text-foreground">{pageSafe}</span> de{" "}
-            <span className="font-semibold text-foreground">{totalPages}</span>
-          </span>
           <Button
             type="button"
             variant="outline"
             className="border-border"
-            disabled={pageSafe >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={!hasNextPage}
+            onClick={() => setPage((p) => p + 1)}
           >
             Próxima
           </Button>

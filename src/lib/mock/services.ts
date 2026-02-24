@@ -55,6 +55,7 @@ import type {
   RegraRecorrenciaContaPagar,
   RecorrenciaContaPagar,
   TerminoRecorrenciaContaPagar,
+  PaginatedResult,
 } from "../types";
 import { isRealApiEnabled } from "../api/http";
 import { loginApi, meApi, refreshTokenApi, switchTenantApi, type AuthUser } from "../api/auth";
@@ -465,27 +466,26 @@ function areSameTenantList(a: Tenant[], b: Tenant[]): boolean {
   return aSorted.every((item, index) => areSameTenant(item, bSorted[index]));
 }
 
+let tenantContextHydratedFromApi = false;
+
 function syncTenantContextInStore(input: {
   currentTenantId: string;
   tenantAtual: Tenant;
   unidadesDisponiveis: Tenant[];
 }): void {
+  tenantContextHydratedFromApi = true;
   setStore((s) => {
-    const availableIds = new Set(input.unidadesDisponiveis.map((tenant) => tenant.id));
-    const mergedTenants = [
-      ...input.unidadesDisponiveis,
-      ...s.tenants.filter((tenant) => !availableIds.has(tenant.id)),
-    ];
+    const nextTenants = [...input.unidadesDisponiveis];
     const hasNoChanges =
       s.currentTenantId === input.currentTenantId &&
       areSameTenant(s.tenant, input.tenantAtual) &&
-      areSameTenantList(s.tenants, mergedTenants);
+      areSameTenantList(s.tenants, nextTenants);
     if (hasNoChanges) return s;
     return {
       ...s,
       tenant: input.tenantAtual,
       currentTenantId: input.currentTenantId,
-      tenants: mergedTenants,
+      tenants: nextTenants,
     };
   });
 }
@@ -528,6 +528,7 @@ export async function listTenants(): Promise<Tenant[]> {
   if (isRealApiEnabled()) {
     try {
       const tenants = await listUnidadesApi();
+      tenantContextHydratedFromApi = true;
       setStore((s) => {
         if (areSameTenantList(s.tenants, tenants)) return s;
         return {
@@ -537,7 +538,11 @@ export async function listTenants(): Promise<Tenant[]> {
       });
       return tenants;
     } catch (error) {
-      console.warn("[contexto-unidades][api-fallback] Falha ao listar unidades na API real. Usando store local.", error);
+      console.warn("[contexto-unidades][api-fallback] Falha ao listar unidades na API real.", error);
+      if (tenantContextHydratedFromApi) {
+        return getStore().tenants.filter((t) => t.ativo !== false);
+      }
+      return [];
     }
   }
   const store = getStore();
@@ -552,6 +557,7 @@ export async function getCurrentTenant(): Promise<Tenant> {
   if (isRealApiEnabled()) {
     try {
       const tenant = await getTenantAtualApi();
+      tenantContextHydratedFromApi = true;
       setStore((s) => {
         const found = s.tenants.some((item) => item.id === tenant.id);
         const nextTenants = found
@@ -570,7 +576,10 @@ export async function getCurrentTenant(): Promise<Tenant> {
       });
       return tenant;
     } catch (error) {
-      console.warn("[contexto-unidades][api-fallback] Falha ao obter unidade atual na API real. Usando store local.", error);
+      console.warn("[contexto-unidades][api-fallback] Falha ao obter unidade atual na API real.", error);
+      if (!tenantContextHydratedFromApi) {
+        throw error instanceof Error ? error : new Error("Falha ao obter unidade atual");
+      }
     }
   }
   const store = getStore();
@@ -956,6 +965,55 @@ export async function listProspects(params?: {
   const byTenant = all.filter((p) => p.tenantId === tenantId);
   if (params?.status) return byTenant.filter((p) => p.status === params.status);
   return byTenant;
+}
+
+export async function listProspectsPage(params: {
+  status?: StatusProspect;
+  page: number;
+  size: number;
+}): Promise<PaginatedResult<Prospect>> {
+  const page = Math.max(1, params.page);
+  const size = Math.min(200, Math.max(1, params.size));
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = getCurrentTenantId();
+      const prospects = await listProspectsApi({
+        tenantId,
+        status: params.status,
+        page: page - 1,
+        size,
+      });
+      const normalized = prospects.map(normalizeProspectFromApi);
+      setStore((s) => ({
+        ...s,
+        prospects: [
+          ...normalized,
+          ...s.prospects.filter((item) => !normalized.some((p) => p.id === item.id)),
+        ],
+      }));
+      return {
+        items: normalized,
+        page,
+        size,
+        hasNext: normalized.length >= size,
+      };
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao listar prospects paginados na API real. Usando store local.", error);
+    }
+  }
+  const tenantId = getCurrentTenantId();
+  const all = [...getStore().prospects]
+    .reverse()
+    .filter((p) => p.tenantId === tenantId && (!params.status || p.status === params.status));
+  const start = (page - 1) * size;
+  const items = all.slice(start, start + size);
+  return {
+    items,
+    page,
+    size,
+    total: all.length,
+    hasNext: start + size < all.length,
+  };
 }
 
 export async function updateProspect(
@@ -2383,6 +2441,55 @@ export async function listAlunos(params?: {
   const all = [...alunos].reverse().filter((a) => a.tenantId === tenantId);
   if (params?.status) return all.filter((a) => a.status === params.status);
   return all;
+}
+
+export async function listAlunosPage(params: {
+  status?: StatusAluno;
+  page: number;
+  size: number;
+}): Promise<PaginatedResult<Aluno>> {
+  const page = Math.max(1, params.page);
+  const size = Math.min(200, Math.max(1, params.size));
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = getCurrentTenantId();
+      const alunos = await listAlunosApi({
+        tenantId,
+        status: params.status,
+        page: page - 1,
+        size,
+      });
+      setStore((s) => ({
+        ...s,
+        alunos: [
+          ...alunos,
+          ...s.alunos.filter((item) => !alunos.some((a) => a.id === item.id)),
+        ],
+      }));
+      return {
+        items: alunos,
+        page,
+        size,
+        hasNext: alunos.length >= size,
+      };
+    } catch (error) {
+      console.warn("[alunos][api-fallback] Falha ao listar alunos paginados na API real. Usando store local.", error);
+    }
+  }
+  const tenantId = getCurrentTenantId();
+  syncAlunosStatus();
+  const all = [...getStore().alunos]
+    .reverse()
+    .filter((a) => a.tenantId === tenantId && (!params.status || a.status === params.status));
+  const start = (page - 1) * size;
+  const items = all.slice(start, start + size);
+  return {
+    items,
+    page,
+    size,
+    total: all.length,
+    hasNext: start + size < all.length,
+  };
 }
 
 export async function getAluno(id: string): Promise<Aluno | null> {

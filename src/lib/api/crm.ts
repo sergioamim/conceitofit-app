@@ -13,12 +13,16 @@ import { apiRequest } from "./http";
 export async function listProspectsApi(input: {
   tenantId: string;
   status?: StatusProspect;
+  page?: number;
+  size?: number;
 }): Promise<Prospect[]> {
   return apiRequest<Prospect[]>({
     path: "/api/v1/crm/prospects",
     query: {
       tenantId: input.tenantId,
       status: input.status,
+      page: input.page,
+      size: input.size,
     },
   });
 }

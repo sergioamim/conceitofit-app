@@ -45,12 +45,16 @@ type CreateAlunoComMatriculaResponse = {
 export async function listAlunosApi(input: {
   tenantId: string;
   status?: StatusAluno;
+  page?: number;
+  size?: number;
 }): Promise<Aluno[]> {
   return apiRequest<Aluno[]>({
     path: "/api/v1/comercial/alunos",
     query: {
       tenantId: input.tenantId,
       status: input.status,
+      page: input.page,
+      size: input.size,
     },
   });
 }

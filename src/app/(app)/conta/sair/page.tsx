@@ -14,6 +14,9 @@ export default function SairPage() {
     try {
       await authLogout();
       router.replace("/login");
+      if (typeof window !== "undefined") {
+        window.location.assign("/login");
+      }
     } finally {
       setSaving(false);
     }
