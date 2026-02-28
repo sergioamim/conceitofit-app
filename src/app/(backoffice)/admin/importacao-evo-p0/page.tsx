@@ -1,0 +1,798 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { AlertCircle, RefreshCw, Copy, UploadCloud, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
+import { ApiRequestError, apiRequest } from "@/lib/api/http";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
+
+type EvoStatus = "PROCESSANDO" | "CONCLUIDO" | "CONCLUIDO_COM_REJEICOES" | "FALHA";
+
+type EntidadeResumo = {
+  total: number;
+  processadas: number;
+  criadas: number;
+  atualizadas: number;
+  rejeitadas: number;
+};
+
+type JobResumo = {
+  status: EvoStatus;
+  solicitadoEm?: string | null;
+  finalizadoEm?: string | null;
+  geral?: EntidadeResumo;
+  clientes?: EntidadeResumo;
+  prospects?: EntidadeResumo;
+  contratos?: EntidadeResumo;
+  clientesContratos?: EntidadeResumo;
+  vendas?: EntidadeResumo;
+  vendasItens?: EntidadeResumo;
+  recebimentos?: EntidadeResumo;
+  contasBancarias?: EntidadeResumo;
+  contasPagar?: EntidadeResumo;
+  rejeicoes?: { mensagem?: string };
+};
+
+type Rejeicao = {
+  entidade: string;
+  arquivo: string;
+  linhaArquivo: number;
+  sourceId?: string;
+  motivo: string;
+  criadoEm: string;
+};
+
+const STORAGE_KEY = "evo-ultima-importacao-jobId";
+const ENTIDADE_TODAS = "__todas__";
+const resolveTenantForStorage = (tenantId?: string | null) =>
+  (tenantId ?? "global").trim().toLowerCase() || "global";
+
+const FILE_FIELDS: { key: keyof FileMap; label: string; field: string }[] = [
+  { key: "clientesFile", label: "CLIENTES.csv", field: "clientesFile" },
+  { key: "prospectsFile", label: "PROSPECTS.csv", field: "prospectsFile" },
+  { key: "contratosFile", label: "CONTRATOS.csv", field: "contratosFile" },
+  { key: "clientesContratosFile", label: "CLIENTES_CONTRATOS.csv", field: "clientesContratosFile" },
+  { key: "vendasFile", label: "VENDAS.csv", field: "vendasFile" },
+  { key: "vendasItensFile", label: "VENDAS_ITENS.csv", field: "vendasItensFile" },
+  { key: "recebimentosFile", label: "RECEBIMENTOS.csv", field: "recebimentosFile" },
+  { key: "contasBancariasFile", label: "CONTAS_BANCARIAS.csv", field: "contasBancariasFile" },
+  { key: "contasPagarFile", label: "CONTAS_PAGAR.csv", field: "contasPagarFile" },
+];
+
+type FileMap = {
+  clientesFile?: File | null;
+  prospectsFile?: File | null;
+  contratosFile?: File | null;
+  clientesContratosFile?: File | null;
+  vendasFile?: File | null;
+  vendasItensFile?: File | null;
+  recebimentosFile?: File | null;
+  contasBancariasFile?: File | null;
+  contasPagarFile?: File | null;
+};
+
+type MapeamentoFilial = { idFilialEvo: string; tenantId: string };
+
+export default function ImportacaoEvoP0Page() {
+  const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"nova" | "acompanhamento">("nova");
+  const [dryRun, setDryRun] = useState(false);
+  const [maxRejeicoes, setMaxRejeicoes] = useState(200);
+  const [mapeamentos, setMapeamentos] = useState<MapeamentoFilial[]>([{ idFilialEvo: "", tenantId: "" }]);
+  const [files, setFiles] = useState<FileMap>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const [jobId, setJobId] = useState<string>("");
+  const [jobResumo, setJobResumo] = useState<JobResumo | null>(null);
+  const [polling, setPolling] = useState(false);
+  const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [rejeicoes, setRejeicoes] = useState<Rejeicao[]>([]);
+  const [rejPage, setRejPage] = useState(0);
+  const [rejHasNext, setRejHasNext] = useState(false);
+  const [rejeicoesLoading, setRejeicoesLoading] = useState(false);
+  const [showRejeicoes, setShowRejeicoes] = useState(false);
+  const [entidadeFiltro, setEntidadeFiltro] = useState<string>(ENTIDADE_TODAS);
+
+  const getStorageKeyForTenant = useCallback(
+    (tenantId?: string | null) => `${STORAGE_KEY}:${resolveTenantForStorage(tenantId)}`,
+    []
+  );
+  const getStoredJobId = useCallback(
+    (tenantId?: string | null) => {
+      if (typeof window === "undefined") return null;
+      return window.localStorage.getItem(getStorageKeyForTenant(tenantId));
+    },
+    [getStorageKeyForTenant]
+  );
+  const setStoredJobId = useCallback(
+    (tenantId: string | null | undefined, value: string) => {
+      if (typeof window === "undefined") return;
+      window.localStorage.setItem(getStorageKeyForTenant(tenantId), value);
+    },
+    [getStorageKeyForTenant]
+  );
+  const clearStoredJobId = useCallback(
+    (tenantId?: string | null) => {
+      if (typeof window === "undefined") return;
+      window.localStorage.removeItem(getStorageKeyForTenant(tenantId));
+    },
+    [getStorageKeyForTenant]
+  );
+  const resolveCurrentTenantId = useCallback(() => {
+    const tenantId = getActiveTenantIdFromSession();
+    return resolveTenantForStorage(tenantId);
+  }, []);
+  const resolveRejeicao = useCallback((rejeicao: Partial<Rejeicao> & { createdAt?: string }) => ({
+    entidade: rejeicao.entidade ?? "—",
+    arquivo: rejeicao.arquivo ?? "—",
+    linhaArquivo: rejeicao.linhaArquivo ?? 0,
+    sourceId: rejeicao.sourceId,
+    motivo: rejeicao.motivo ?? "Sem motivo informado",
+    criadoEm: rejeicao.criadoEm ?? rejeicao.createdAt ?? new Date().toISOString(),
+  }), []);
+
+  const progress = useMemo(() => {
+    const geral = jobResumo?.geral;
+    if (!geral || !geral.total) return 0;
+    const pct = Math.min(100, Math.max(0, (geral.processadas / geral.total) * 100));
+    return Math.round(pct);
+  }, [jobResumo?.geral]);
+
+  const getPercentual = (resumo?: EntidadeResumo) => {
+    if (!resumo) return { percentual: 0, temTotal: false };
+    const total = Number(resumo.total ?? 0);
+    if (!Number.isFinite(total) || total <= 0) return { percentual: 0, temTotal: false };
+    const pct = Math.min(100, Math.max(0, (Number(resumo.processadas ?? 0) / total) * 100));
+    return { percentual: Math.round(pct), temTotal: true };
+  };
+
+  const resumoCards: { key: keyof JobResumo; label: string }[] = [
+    { key: "geral", label: "Geral" },
+    { key: "clientes", label: "Clientes" },
+    { key: "prospects", label: "Prospects" },
+    { key: "contratos", label: "Contratos" },
+    { key: "clientesContratos", label: "ClientesContrato" },
+    { key: "vendas", label: "Vendas" },
+    { key: "vendasItens", label: "VendasItens" },
+    { key: "recebimentos", label: "Recebimentos" },
+    { key: "contasBancarias", label: "ContasBancárias" },
+    { key: "contasPagar", label: "Contas a Pagar" },
+  ];
+
+  function setFile(key: keyof FileMap, file: File | null) {
+    setFiles((prev) => ({ ...prev, [key]: file }));
+  }
+
+  const validarForm = useCallback((): string | null => {
+    if (Number.isNaN(maxRejeicoes) || maxRejeicoes < 0 || maxRejeicoes > 10000) {
+      return "maxRejeicoesRetorno deve estar entre 0 e 10000.";
+    }
+    if (!mapeamentos.length || mapeamentos.some((m) => !m.idFilialEvo || !m.tenantId)) {
+      return "Informe ao menos um mapeamento com idFilialEvo e tenantId.";
+    }
+    const algumArquivo = FILE_FIELDS.some((f) => files[f.key]);
+    if (!algumArquivo) {
+      return "Envie pelo menos um arquivo CSV (idealmente todos).";
+    }
+    return null;
+  }, [files, mapeamentos, maxRejeicoes]);
+
+  async function handleSubmit() {
+    const validation = validarForm();
+    if (validation) {
+      toast({ title: "Corrija os campos", description: validation, variant: "destructive" });
+      return;
+    }
+    const formData = new FormData();
+    formData.set("dryRun", String(dryRun));
+    formData.set("maxRejeicoesRetorno", String(maxRejeicoes));
+    formData.set("mapeamentoFiliais", JSON.stringify(mapeamentos));
+    FILE_FIELDS.forEach(({ key, field }) => {
+      const file = files[key];
+      if (file) formData.append(field, file, file.name);
+    });
+    setSubmitting(true);
+    try {
+      const body = await apiRequest<{
+        jobId?: string;
+        id?: string;
+        status?: EvoStatus;
+        solicitadoEm?: string;
+        finalizadoEm?: string;
+        geral?: EntidadeResumo;
+      }>({
+        path: "/api/v1/admin/integracoes/importacao-terceiros/evo/p0/upload",
+        method: "POST",
+        body: formData,
+      });
+      const newJobId = body.jobId ?? body.id ?? "";
+      setJobResumo({
+        status: body.status ?? "PROCESSANDO",
+        solicitadoEm: body.solicitadoEm,
+        finalizadoEm: body.finalizadoEm,
+        geral: body.geral,
+      });
+      if (newJobId) {
+        setJobId(newJobId);
+        setStoredJobId(resolveCurrentTenantId(), newJobId);
+        setActiveTab("acompanhamento");
+        startPolling(newJobId, true);
+      }
+      toast({ title: "Importação iniciada", description: newJobId ? `Job ${newJobId}` : undefined });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({ title: "Erro ao enviar importação", description: message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const stopPolling = useCallback(() => {
+    if (pollTimer.current) clearInterval(pollTimer.current);
+    pollTimer.current = null;
+    setPolling(false);
+  }, []);
+
+  useEffect(() => {
+    if (!polling || !pollStartedAt) return;
+    const timeout = setInterval(() => {
+      if (!pollStartedAt) return;
+      if (Date.now() - pollStartedAt > 60 * 60 * 1000) {
+        stopPolling();
+        toast({ title: "Polling encerrado após 60 minutos", variant: "destructive" });
+      }
+    }, 10000);
+    return () => clearInterval(timeout);
+  }, [pollStartedAt, polling, stopPolling, toast]);
+
+  const pollOnce = useCallback(async (id: string) => {
+    try {
+      let data: JobResumo | null = null;
+
+      try {
+        data = await apiRequest<JobResumo>({
+          path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${id}/p0`,
+          query: { maxRejeicoesRetorno: 200 },
+        });
+      } catch (error) {
+        if (error instanceof ApiRequestError && error.status === 404) {
+          data = await apiRequest<JobResumo>({
+            path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${id}`,
+            query: { maxRejeicoesRetorno: 200 },
+          });
+        } else {
+          throw error;
+        }
+      }
+      if (!data) {
+        throw new Error("Erro ao consultar job (sem retorno)");
+      }
+      setJobResumo(data);
+      if (data.status === "FALHA") {
+        toast({ title: "Job falhou", description: data?.rejeicoes?.mensagem, variant: "destructive" });
+      }
+      if (data.status === "CONCLUIDO" || data.status === "CONCLUIDO_COM_REJEICOES" || data.status === "FALHA") {
+        stopPolling();
+      }
+    } catch (error: unknown) {
+      stopPolling();
+      const message = error instanceof Error ? error.message : String(error);
+      if (error instanceof ApiRequestError && error.status === 404) {
+        clearStoredJobId(resolveCurrentTenantId());
+        setJobId("");
+      }
+      toast({ title: "Erro no acompanhamento", description: message, variant: "destructive" });
+    }
+  }, [clearStoredJobId, resolveCurrentTenantId, stopPolling, toast]);
+
+  const startPolling = useCallback((id: string, resetTimer: boolean) => {
+    if (!id) return;
+    if (pollTimer.current) clearInterval(pollTimer.current);
+    if (resetTimer) setPollStartedAt(Date.now());
+    setPolling(true);
+    pollOnce(id);
+    pollTimer.current = setInterval(() => pollOnce(id), 3000);
+  }, [pollOnce]);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimer.current) clearInterval(pollTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const tenantId = resolveCurrentTenantId();
+    const legacy = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+    if (!legacy && typeof window !== "undefined") {
+      window.localStorage.removeItem(getStorageKeyForTenant(tenantId));
+    } else if (legacy && typeof window !== "undefined" && legacy.trim()) {
+      setStoredJobId(tenantId, legacy);
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+    const queryJobId = searchParams?.get("jobId")?.trim();
+    const saved = queryJobId || getStoredJobId(tenantId);
+    if (saved) {
+      setJobId(saved);
+      setStoredJobId(tenantId, saved);
+      setActiveTab("acompanhamento");
+      startPolling(saved, false);
+    }
+  }, [
+    getStoredJobId,
+    getStorageKeyForTenant,
+    searchParams,
+    setStoredJobId,
+    startPolling,
+    resolveCurrentTenantId,
+  ]);
+
+  function handleJobIdInput(value: string) {
+    setJobId(value.trim());
+    setStoredJobId(resolveCurrentTenantId(), value.trim());
+  }
+
+  async function handleLoadJob() {
+    if (!jobId) {
+      toast({ title: "Informe o jobId", variant: "destructive" });
+      return;
+    }
+    startPolling(jobId, true);
+  }
+
+  async function loadRejeicoes(page = 0) {
+    if (!jobId) return;
+    setRejeicoesLoading(true);
+    try {
+      let data: {
+        items?: Rejeicao[];
+        content?: Rejeicao[];
+        hasNext?: boolean;
+        page?: number;
+      } | null = null;
+
+      try {
+        data = await apiRequest({
+          path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${jobId}/rejeicoes`,
+          query: { page, size: 50 },
+        });
+      } catch (error) {
+        if (error instanceof ApiRequestError && error.status === 404) {
+          data = await apiRequest({
+            path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${jobId}/rejeicoes`,
+            query: { page, size: 50, legacy: true },
+          });
+        } else {
+          throw error;
+        }
+      }
+      if (!data) {
+        throw new Error("Erro ao carregar rejeições (sem retorno)");
+      }
+      const items = (data.items ?? data.content ?? []) as Rejeicao[];
+      const mapped = items.map((r) => resolveRejeicao(r));
+      const hasNext = data.hasNext ?? (Array.isArray(mapped) && mapped.length === 50);
+      setRejeicoes(mapped);
+      setRejPage(page);
+      setRejHasNext(hasNext);
+      setShowRejeicoes(true);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({ title: "Erro ao carregar rejeições", description: message, variant: "destructive" });
+    } finally {
+      setRejeicoesLoading(false);
+    }
+  }
+
+  function statusVariant(status?: EvoStatus) {
+    switch (status) {
+      case "PROCESSANDO":
+        return { variant: "secondary" as const, className: "bg-amber-500/20 text-amber-200 border-amber-400/40" };
+      case "CONCLUIDO":
+        return { variant: "secondary" as const, className: "bg-emerald-500/15 text-emerald-200 border-emerald-400/40" };
+      case "CONCLUIDO_COM_REJEICOES":
+        return { variant: "secondary" as const, className: "bg-orange-500/15 text-orange-200 border-orange-400/40" };
+      case "FALHA":
+        return { variant: "destructive" as const, className: "" };
+      default:
+        return { variant: "outline" as const, className: "" };
+    }
+  }
+
+  function formatDateTime(value?: string | null) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(d);
+  }
+
+  function resumoValue(field: keyof EntidadeResumo, resumo?: EntidadeResumo) {
+    return resumo ? resumo[field] ?? 0 : 0;
+  }
+
+  const entidadesDisponiveis = useMemo(() => {
+    const mapa = new Set<string>();
+    rejeicoes.forEach((r) => {
+      if (r.entidade) mapa.add(r.entidade);
+    });
+    return Array.from(mapa).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [rejeicoes]);
+
+  const rejeicoesFiltradas = useMemo(() => {
+    if (entidadeFiltro === ENTIDADE_TODAS) return rejeicoes;
+    return rejeicoes.filter((r) => r.entidade === entidadeFiltro);
+  }, [entidadeFiltro, rejeicoes]);
+
+  return (
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium text-gym-accent">Admin &gt; Integrações &gt; EVO</p>
+        <h1 className="text-3xl font-display font-bold leading-tight">Acompanhamento de Importação EVO P0</h1>
+        <p className="text-sm text-muted-foreground">
+          Dispare e acompanhe jobs de importação EVO P0. Salva automaticamente o último job para retomar depois.
+        </p>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+        <TabsList>
+          <TabsTrigger value="nova">Nova Importação</TabsTrigger>
+          <TabsTrigger value="acompanhamento">Acompanhar Job</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="nova" className="mt-4 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Parâmetros</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-wrap gap-4">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={dryRun}
+                    onChange={(e) => setDryRun(e.target.checked)}
+                    className="accent-gym-accent"
+                  />
+                  Dry-run (não gravar)
+                </Label>
+                <div className="w-48 space-y-2">
+                  <Label htmlFor="maxRejeicoes">Max rejeições retorno</Label>
+                  <Input
+                    id="maxRejeicoes"
+                    type="number"
+                    min={0}
+                    max={10000}
+                    value={maxRejeicoes}
+                    onChange={(e) => setMaxRejeicoes(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="font-semibold">Mapeamento de filiais (EVO → tenant)</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMapeamentos((prev) => [...prev, { idFilialEvo: "", tenantId: "" }])}
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {mapeamentos.map((m, idx) => (
+                    <div key={idx} className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label>ID Filial EVO</Label>
+                        <Input
+                          type="number"
+                          placeholder="123"
+                          value={m.idFilialEvo}
+                          onChange={(e) =>
+                            setMapeamentos((prev) =>
+                              prev.map((row, i) => (i === idx ? { ...row, idFilialEvo: e.target.value } : row))
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Tenant ID</Label>
+                        <Input
+                          placeholder="uuid da unidade"
+                          value={m.tenantId}
+                          onChange={(e) =>
+                            setMapeamentos((prev) =>
+                              prev.map((row, i) => (i === idx ? { ...row, tenantId: e.target.value } : row))
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <p className="text-sm font-semibold">Uploads (CSV)</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {FILE_FIELDS.map(({ key, label, field }) => (
+                    <label
+                      key={field}
+                      className={cn(
+                        "flex cursor-pointer items-center justify-between rounded-md border border-dashed px-3 py-2 text-sm hover:border-gym-accent",
+                        files[key] ? "border-gym-accent/80 bg-gym-accent/5" : "border-border"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <UploadCloud className="size-4 text-muted-foreground" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {files[key]?.name ?? "Selecione um arquivo CSV"}
+                          </span>
+                        </div>
+                      </div>
+                      <Input
+                        type="file"
+                        accept=".csv,text/csv"
+                        className="hidden"
+                        onChange={(e) => setFile(key, e.target.files?.[0] ?? null)}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? "Enviando..." : "Iniciar importação"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="acompanhamento" className="mt-4 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Job de importação</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Job ID</Label>
+                  <Input
+                    placeholder="Informe ou use o último job salvo"
+                    value={jobId}
+                    onChange={(e) => handleJobIdInput(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <Button variant="outline" onClick={handleLoadJob} disabled={!jobId || polling}>
+                    Carregar job
+                  </Button>
+                  <Button variant="secondary" onClick={() => startPolling(jobId, true)} disabled={!jobId}>
+                    Atualizar agora
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (jobId) navigator.clipboard.writeText(jobId);
+                      toast({ title: "jobId copiado" });
+                    }}
+                    disabled={!jobId}
+                  >
+                    <Copy className="size-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              {!jobId && <p className="text-sm text-muted-foreground">Nenhuma importação em andamento.</p>}
+
+              {jobId && (
+                <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Job</span>
+                      <span className="font-mono text-sm">{jobId}</span>
+                      {(() => {
+                        const v = statusVariant(jobResumo?.status);
+                        return (
+                          <Badge variant={v.variant} className={v.className}>
+                            {jobResumo?.status ?? "—"}
+                          </Badge>
+                        );
+                      })()}
+                      {polling && <span className="text-xs text-muted-foreground">Atualizando a cada 3s…</span>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => loadRejeicoes(0)} disabled={!jobResumo}>
+                        Abrir rejeições
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => pollOnce(jobId)} disabled={!jobResumo}>
+                        <RefreshCw className="size-4" />
+                        Atualizar agora
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Solicitado em</p>
+                      <p className="text-sm">{formatDateTime(jobResumo?.solicitadoEm)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Finalizado em</p>
+                      <p className="text-sm">{formatDateTime(jobResumo?.finalizadoEm)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Progresso</p>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 flex-1 rounded-full bg-muted">
+                          <div
+                            className="h-2 rounded-full bg-gym-accent"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium">{progress}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {jobResumo?.status === "FALHA" && (
+                    <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                      <XCircle className="mt-0.5 size-4" />
+                      <div>
+                        <p className="font-semibold">Job falhou</p>
+                        <p>{jobResumo?.rejeicoes?.mensagem ?? "Verifique as rejeições para detalhes."}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {resumoCards.map(({ key, label }) => {
+                      const resumo = jobResumo?.[key] as EntidadeResumo | undefined;
+                      const { percentual, temTotal } = getPercentual(resumo);
+                      return (
+                        <Card key={key} className="border-border">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm">{label}</CardTitle>
+                          </CardHeader>
+                          <CardContent className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                            <span>Total</span>
+                            <span className="text-right text-foreground">{resumoValue("total", resumo)}</span>
+                            <span>Processadas</span>
+                            <span className="text-right text-foreground">{resumoValue("processadas", resumo)}</span>
+                            <span>Criadas</span>
+                            <span className="text-right text-foreground">{resumoValue("criadas", resumo)}</span>
+                            <span>Atualizadas</span>
+                            <span className="text-right text-foreground">{resumoValue("atualizadas", resumo)}</span>
+                            <span className="text-gym-danger">Rejeitadas</span>
+                            <span className="text-right text-gym-danger font-semibold">{resumoValue("rejeitadas", resumo)}</span>
+                            <span className="col-span-2 pt-2">Evolução</span>
+                            <span className="col-span-2">
+                              <span className="inline-flex w-full items-center gap-2">
+                                <span className="text-foreground">
+                                  {temTotal ? `${percentual}%` : "Aguardando total"}
+                                </span>
+                                <span className="flex-1 rounded-full bg-muted h-2">
+                                  <span
+                                    className="block h-2 rounded-full bg-gym-accent transition-all duration-300"
+                                    style={{ width: temTotal ? `${percentual}%` : "0%" }}
+                                  />
+                                </span>
+                              </span>
+                            </span>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {showRejeicoes && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Rejeições</CardTitle>
+                  <p className="text-sm text-muted-foreground">Página {rejPage + 1}</p>
+                </div>
+                  <div className="flex gap-2">
+                  <div className="min-w-56">
+                    <Label htmlFor="filtro-entidade" className="text-xs">
+                      Filtrar por entidade
+                    </Label>
+                    <Select
+                      value={entidadeFiltro}
+                      onValueChange={(value) => {
+                        setEntidadeFiltro(value);
+                        setRejPage(0);
+                      }}
+                    >
+                      <SelectTrigger className="mt-1 h-9 w-full" id="filtro-entidade">
+                        <SelectValue placeholder="Todas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ENTIDADE_TODAS}>Todas</SelectItem>
+                        {entidadesDisponiveis.map((entidade) => (
+                          <SelectItem key={entidade} value={entidade}>
+                            {entidade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" disabled={rejPage === 0 || rejeicoesLoading} onClick={() => loadRejeicoes(rejPage - 1)}>
+                      Anterior
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={!rejHasNext || rejeicoesLoading} onClick={() => loadRejeicoes(rejPage + 1)}>
+                      Próxima
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {rejeicoesLoading && <p className="text-sm text-muted-foreground">Carregando rejeições…</p>}
+                {!rejeicoesLoading && rejeicoesFiltradas.length === 0 && (
+                  <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    <AlertCircle className="mt-0.5 size-4" />
+                    Nenhuma rejeição encontrada nesta página.
+                  </div>
+                )}
+                {!rejeicoesLoading && rejeicoesFiltradas.length > 0 && (
+                  <div className="overflow-auto rounded-md border border-border">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-semibold">Entidade</th>
+                          <th className="px-3 py-2 text-left font-semibold">Arquivo</th>
+                          <th className="px-3 py-2 text-left font-semibold">Linha</th>
+                          <th className="px-3 py-2 text-left font-semibold">Source ID</th>
+                          <th className="px-3 py-2 text-left font-semibold">Motivo</th>
+                          <th className="px-3 py-2 text-left font-semibold">Criado em</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rejeicoesFiltradas.map((r, idx) => (
+                          <tr key={idx} className="border-t border-border/70">
+                            <td className="px-3 py-2">{r.entidade}</td>
+                            <td className="px-3 py-2">{r.arquivo}</td>
+                            <td className="px-3 py-2">{r.linhaArquivo}</td>
+                            <td className="px-3 py-2">{r.sourceId ?? "—"}</td>
+                            <td className="px-3 py-2">{r.motivo}</td>
+                            <td className="px-3 py-2">{formatDateTime(r.criadoEm)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

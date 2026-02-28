@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getDreGerencial } from "@/lib/mock/services";
+import { getDreGerencial, getDreProjecao } from "@/lib/mock/services";
 import { isRealApiEnabled } from "@/lib/api/http";
-import type { CategoriaContaPagar, DREGerencial, GrupoDre } from "@/lib/types";
+import type { CategoriaContaPagar, DREProjecao, DREGerencial, DreProjectionScenario, GrupoDre } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   FOLHA: "Folha",
@@ -44,15 +45,36 @@ function monthRangeFromNow() {
   };
 }
 
+function addMonths(date: Date, months: number) {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
+function toISODate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+const CENARIO_LABEL: Record<DreProjectionScenario, string> = {
+  BASE: "Base",
+  OTIMISTA: "Otimista",
+  CONSERVADOR: "Conservador",
+};
+
 export default function DrePage() {
   const [loading, setLoading] = useState(true);
+  const [loadingProjecao, setLoadingProjecao] = useState(true);
   const [dre, setDre] = useState<DREGerencial | null>(null);
+  const [projecao, setProjecao] = useState<DREProjecao | null>(null);
   const [mes, setMes] = useState(new Date().getMonth());
   const [ano, setAno] = useState(new Date().getFullYear());
   const [customRange, setCustomRange] = useState(false);
   const defaultRange = monthRangeFromNow();
   const [startDate, setStartDate] = useState(defaultRange.start);
   const [endDate, setEndDate] = useState(defaultRange.end);
+  const [cenarioProjecao, setCenarioProjecao] = useState<DreProjectionScenario>("BASE");
+  const [projecaoStartDate, setProjecaoStartDate] = useState(toISODate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)));
+  const [projecaoEndDate, setProjecaoEndDate] = useState(toISODate(addMonths(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0), 3)));
 
   async function load() {
     setLoading(true);
@@ -73,10 +95,30 @@ export default function DrePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mes, ano, customRange, startDate, endDate]);
 
+  async function loadProjecao() {
+    setLoadingProjecao(true);
+    try {
+      const data = await getDreProjecao({
+        startDate: projecaoStartDate,
+        endDate: projecaoEndDate,
+        cenario: cenarioProjecao,
+      });
+      setProjecao(data);
+    } finally {
+      setLoadingProjecao(false);
+    }
+  }
+
+  useEffect(() => {
+    loadProjecao();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projecaoStartDate, projecaoEndDate, cenarioProjecao]);
+
   useEffect(() => {
     if (isRealApiEnabled()) return;
     function handleUpdate() {
       load();
+      loadProjecao();
     }
     window.addEventListener("academia-store-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
@@ -85,7 +127,7 @@ export default function DrePage() {
       window.removeEventListener("storage", handleUpdate);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mes, ano, customRange, startDate, endDate]);
+  }, [mes, ano, customRange, startDate, endDate, projecaoStartDate, projecaoEndDate, cenarioProjecao]);
 
   const margins = useMemo(() => {
     if (!dre || dre.receitaLiquida <= 0) return { margem: 0, ebitda: 0, resultado: 0 };
@@ -277,6 +319,125 @@ export default function DrePage() {
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card">
+        <div className="border-b border-border px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-base font-semibold text-foreground">Projeção DRE por competência</h2>
+              <p className="text-xs text-muted-foreground">
+                Visão futuro: realizado, projetado e consolidado no período selecionado.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={cenarioProjecao}
+                onValueChange={(value) => setCenarioProjecao(value as DreProjectionScenario)}
+              >
+                <SelectTrigger className="w-[150px] bg-secondary border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {Object.entries(CENARIO_LABEL).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                type="date"
+                value={projecaoStartDate}
+                onChange={(e) => setProjecaoStartDate(e.target.value)}
+                className="w-[160px] bg-secondary border-border"
+              />
+              <Input
+                type="date"
+                value={projecaoEndDate}
+                onChange={(e) => setProjecaoEndDate(e.target.value)}
+                className="w-[160px] bg-secondary border-border"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
+          <div className="rounded-lg border border-border bg-secondary/30 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Realizado</p>
+            <p className="mt-2 text-sm text-muted-foreground">Receitas</p>
+            <p className="font-display text-xl font-extrabold text-gym-teal">{formatBRL(projecao?.realizado.receitas ?? 0)}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Despesas</p>
+            <p className="font-display text-xl font-bold text-gym-danger">{formatBRL(projecao?.realizado.despesas ?? 0)}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Resultado</p>
+            <p className={`font-display text-xl font-bold ${(projecao?.realizado.resultado ?? 0) >= 0 ? "text-gym-teal" : "text-gym-danger"}`}>
+              {formatBRL(projecao?.realizado.resultado ?? 0)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-secondary/30 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Projetado</p>
+            <p className="mt-2 text-sm text-muted-foreground">Receitas</p>
+            <p className="font-display text-xl font-extrabold text-gym-accent">{formatBRL(projecao?.projetado.receitas ?? 0)}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Despesas</p>
+            <p className="font-display text-xl font-bold text-gym-warning">{formatBRL(projecao?.projetado.despesas ?? 0)}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Resultado</p>
+            <p className={`font-display text-xl font-bold ${(projecao?.projetado.resultado ?? 0) >= 0 ? "text-gym-teal" : "text-gym-danger"}`}>
+              {formatBRL(projecao?.projetado.resultado ?? 0)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-secondary/30 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Consolidado</p>
+            <p className="mt-2 text-sm text-muted-foreground">Receitas</p>
+            <p className="font-display text-xl font-extrabold text-foreground">{formatBRL(projecao?.consolidado.receitas ?? 0)}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Despesas</p>
+            <p className="font-display text-xl font-bold text-foreground">{formatBRL(projecao?.consolidado.despesas ?? 0)}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Resultado</p>
+            <p className={`font-display text-xl font-bold ${(projecao?.consolidado.resultado ?? 0) >= 0 ? "text-gym-teal" : "text-gym-danger"}`}>
+              {formatBRL(projecao?.consolidado.resultado ?? 0)}
+            </p>
+          </div>
+        </div>
+        <div className="border-t border-border p-4">
+          <h3 className="mb-2 font-display text-sm font-semibold">Linhas da projeção</h3>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <th className="px-3 py-2 text-left font-semibold">Grupo</th>
+                  <th className="px-3 py-2 text-left font-semibold">Natureza</th>
+                  <th className="px-3 py-2 text-right font-semibold">Realizado</th>
+                  <th className="px-3 py-2 text-right font-semibold">Projetado</th>
+                  <th className="px-3 py-2 text-right font-semibold">Consolidado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {loadingProjecao && (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
+                      Carregando projeção...
+                    </td>
+                  </tr>
+                )}
+                {!loadingProjecao && (projecao?.linhas ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
+                      Sem dados de projeção para o período.
+                    </td>
+                  </tr>
+                )}
+                {!loadingProjecao &&
+                  (projecao?.linhas ?? []).map((linha) => (
+                    <tr key={`${linha.grupo}-${linha.natureza}`}>
+                      <td className="px-3 py-2">{linha.grupo}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{linha.natureza}</td>
+                      <td className="px-3 py-2 text-right">{formatBRL(linha.realizado)}</td>
+                      <td className="px-3 py-2 text-right">{formatBRL(linha.projetado)}</td>
+                      <td className="px-3 py-2 text-right font-semibold">{formatBRL(linha.consolidado)}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

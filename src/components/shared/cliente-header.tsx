@@ -4,7 +4,7 @@ import type { Aluno, Plano } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Pencil, Camera } from "lucide-react";
+import { Camera, KeyRound, MoreVertical, Pencil } from "lucide-react";
 
 function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
@@ -19,10 +19,12 @@ export function ClienteHeader({
   onNovaVenda,
   onSuspender,
   onReativar,
+  onLiberarAcesso,
   sticky = true,
   showCartoesAction = true,
   onEdit,
   onChangeFoto,
+  onCompletarCadastro,
 }: {
   aluno: Aluno;
   planoAtivo?: { dataFim: string } | null;
@@ -32,10 +34,12 @@ export function ClienteHeader({
   onNovaVenda: () => void;
   onSuspender: () => void;
   onReativar: () => void;
+  onLiberarAcesso?: () => void;
   sticky?: boolean;
   showCartoesAction?: boolean;
   onEdit?: () => void;
   onChangeFoto?: () => void;
+  onCompletarCadastro?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -72,9 +76,9 @@ export function ClienteHeader({
           </div>
           {onChangeFoto && (
             <Button
-              variant="outline"
+              variant="default"
               size="icon-sm"
-              className="absolute -bottom-1 -right-1 border-secondary/60"
+              className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full border-2 border-card bg-gym-accent p-0 text-background shadow-md hover:bg-gym-accent/90"
               onClick={onChangeFoto}
               aria-label="Trocar foto"
             >
@@ -90,6 +94,11 @@ export function ClienteHeader({
             <span>
               Status: <StatusBadge status={aluno.status} />
             </span>
+            {aluno.pendenteComplementacao ? (
+              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-400">
+                Cadastro pendente
+              </span>
+            ) : null}
             <span>
               Plano:{" "}
               {planoAtivo ? (
@@ -110,6 +119,17 @@ export function ClienteHeader({
         {onEdit && (
           <Button variant="outline" className="h-9" onClick={onEdit}>
             <Pencil className="size-4" />
+          </Button>
+        )}
+        {aluno.pendenteComplementacao && onCompletarCadastro && (
+          <Button variant="outline" className="h-9 border-gym-accent/50 text-gym-accent" onClick={onCompletarCadastro}>
+            Completar cadastro
+          </Button>
+        )}
+        {onLiberarAcesso && (
+          <Button variant="outline" className="h-9 border-amber-500/40 text-amber-300" onClick={onLiberarAcesso}>
+            <KeyRound className="mr-2 size-4" />
+            Liberar acesso (catraca)
           </Button>
         )}
         {!planoAtivo && (

@@ -1,4 +1,4 @@
-import type { Aluno, Matricula, Pagamento, StatusAluno } from "@/lib/types";
+import type { Aluno, AlunoTotaisStatus, Matricula, Pagamento, StatusAluno } from "@/lib/types";
 import { apiRequest } from "./http";
 
 type CreateAlunoInput = {
@@ -36,6 +36,105 @@ type CreateAlunoComMatriculaInput = CreateAlunoInput & {
   motivoDesconto?: string;
 };
 
+export type ListAlunosApiResponse = {
+  items?: Aluno[];
+  content?: Aluno[];
+  data?: Aluno[];
+  alunos?: Aluno[];
+  total?: number;
+  size?: number;
+  page?: number;
+  hasNext?: boolean;
+  totalAtivo?: number;
+  totalSuspenso?: number;
+  totalInativo?: number;
+  totalCancelado?: number;
+  ativos?: number;
+  suspensos?: number;
+  inativos?: number;
+  cancelados?: number;
+  totaisStatus?: AlunoTotaisStatus;
+  alunoTotaisStatus?: AlunoTotaisStatus;
+  totalStatus?: AlunoTotaisStatus;
+  dataRows?: Aluno[];
+};
+
+type AlunoListPayload = Aluno[] | ListAlunosApiResponse;
+
+function getNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) return Number(value);
+  return undefined;
+}
+
+function toArray(value: unknown): Aluno[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(Boolean) as Aluno[];
+}
+
+export function extractAlunosFromListResponse(response: AlunoListPayload): Aluno[] {
+  if (Array.isArray(response)) return response;
+  const candidates = [response.items, response.content, response.data, response.alunos, response.dataRows];
+  return toArray(candidates.find(Array.isArray));
+}
+
+export function extractAlunosTotais(response: AlunoListPayload): AlunoTotaisStatus | undefined {
+  if (Array.isArray(response)) return undefined;
+  const totalsSource = response.totaisStatus ?? response.alunoTotaisStatus ?? response.totalStatus;
+  if (
+    totalsSource &&
+    typeof totalsSource === "object" &&
+    ("total" in totalsSource || "totalAtivo" in totalsSource || "totalSuspenso" in totalsSource || "totalInativo" in totalsSource)
+  ) {
+    const source = totalsSource;
+    const total = getNumber(source.total);
+    const totalAtivo = getNumber(source.totalAtivo) ?? getNumber(source.ativos);
+    const totalSuspenso = getNumber(source.totalSuspenso) ?? getNumber(source.suspensos);
+    const totalInativo = getNumber(source.totalInativo) ?? getNumber(source.inativos);
+    const totalCancelado = getNumber(source.totalCancelado) ?? getNumber(source.cancelados);
+
+    return {
+      total: total ?? 0,
+      totalAtivo: totalAtivo ?? 0,
+      totalSuspenso: totalSuspenso ?? 0,
+      totalInativo: totalInativo ?? 0,
+      totalCancelado,
+      ativos: getNumber(source.ativos),
+      suspensos: getNumber(source.suspensos),
+      inativos: getNumber(source.inativos),
+      cancelados: getNumber(source.cancelados),
+    };
+  }
+
+  const directTotals = {
+    total: getNumber(response.total),
+    totalAtivo: getNumber(response.totalAtivo),
+    totalSuspenso: getNumber(response.totalSuspenso),
+    totalInativo: getNumber(response.totalInativo),
+    totalCancelado: getNumber(response.totalCancelado),
+    ativos: getNumber(response.ativos),
+    suspensos: getNumber(response.suspensos),
+    inativos: getNumber(response.inativos),
+    cancelados: getNumber(response.cancelados),
+  };
+
+  if (directTotals.total == null && directTotals.totalAtivo == null && directTotals.totalSuspenso == null && directTotals.totalInativo == null) {
+    return undefined;
+  }
+
+  return {
+    total: directTotals.total ?? 0,
+    totalAtivo: directTotals.totalAtivo ?? 0,
+    totalSuspenso: directTotals.totalSuspenso ?? 0,
+    totalInativo: directTotals.totalInativo ?? 0,
+    totalCancelado: directTotals.totalCancelado,
+    ativos: directTotals.ativos,
+    suspensos: directTotals.suspensos,
+    inativos: directTotals.inativos,
+    cancelados: directTotals.cancelados,
+  };
+}
+
 type CreateAlunoComMatriculaResponse = {
   aluno: Aluno;
   matricula: Matricula;
@@ -43,18 +142,19 @@ type CreateAlunoComMatriculaResponse = {
 };
 
 export async function listAlunosApi(input: {
-  tenantId: string;
+  tenantId?: string;
   status?: StatusAluno;
   page?: number;
   size?: number;
-}): Promise<Aluno[]> {
-  return apiRequest<Aluno[]>({
+}): Promise<AlunoListPayload> {
+  return apiRequest<AlunoListPayload>({
     path: "/api/v1/comercial/alunos",
     query: {
       tenantId: input.tenantId,
       status: input.status,
       page: input.page,
       size: input.size,
+      envelope: true,
     },
   });
 }

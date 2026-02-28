@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ScanLine } from "lucide-react";
 import { createVenda, getCurrentTenant, listAlunos, listPlanos, listProdutos, listServicos, listVoucherCodigos, listVouchers } from "@/lib/mock/services";
 import type { Aluno, PagamentoVenda, Plano, Produto, Servico, Tenant, TipoVenda, Venda } from "@/lib/types";
@@ -79,7 +80,7 @@ function inferSaleTypeFromCart(items: CartItem[]): TipoVenda {
   return "PRODUTO";
 }
 
-export default function NovaVendaPage() {
+function NovaVendaPageContent() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [tipoVenda, setTipoVenda] = useState<TipoVenda>("PLANO");
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -112,6 +113,8 @@ export default function NovaVendaPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanIntervalRef = useRef<number | null>(null);
+  const searchParams = useSearchParams();
+  const prefillClienteId = searchParams.get("clienteId") ?? "";
 
   useEffect(() => {
     async function load() {
@@ -136,6 +139,14 @@ export default function NovaVendaPage() {
     setItemQuery("");
     setQtd("1");
   }, [tipoVenda]);
+
+  useEffect(() => {
+    if (!prefillClienteId || alunos.length === 0) return;
+    const alvo = alunos.find((a) => a.id === prefillClienteId);
+    if (!alvo) return;
+    setClienteId(alvo.id);
+    setClienteQuery(`${alvo.nome} · CPF ${alvo.cpf}`);
+  }, [prefillClienteId, alunos]);
 
   const options = useMemo(() => {
     if (tipoVenda === "PLANO") {
@@ -507,6 +518,7 @@ export default function NovaVendaPage() {
                   }}
                   options={clienteOptions}
                   placeholder="Buscar por nome ou CPF"
+                  minCharsToSearch={3}
                 />
                 {!requireCliente && (
                   <button
@@ -746,5 +758,13 @@ export default function NovaVendaPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function NovaVendaPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Carregando nova venda...</div>}>
+      <NovaVendaPageContent />
+    </Suspense>
   );
 }

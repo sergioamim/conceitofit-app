@@ -15,23 +15,28 @@ export function SuggestionInput({
   onValueChange,
   onSelect,
   options,
+  onFocusOpen,
   placeholder,
   emptyText = "Nenhum resultado",
   className,
+  minCharsToSearch = 0,
 }: {
   value: string;
   onValueChange: (value: string) => void;
   onSelect: (option: SuggestionOption) => void;
+  onFocusOpen?: () => void;
   options: SuggestionOption[];
   placeholder?: string;
   emptyText?: string;
   className?: string;
+  minCharsToSearch?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const filtered = useMemo(() => {
     const term = value.trim().toLowerCase();
+    if (term.length < minCharsToSearch) return [];
     if (!term) return options.slice(0, 10);
     return options
       .filter((option) => {
@@ -39,7 +44,7 @@ export function SuggestionInput({
         return hay.includes(term);
       })
       .slice(0, 12);
-  }, [options, value]);
+  }, [minCharsToSearch, options, value]);
 
   const normalizedActiveIndex =
     open && filtered.length > 0
@@ -59,15 +64,24 @@ export function SuggestionInput({
       <Input
         value={value}
         onFocus={() => {
-          setOpen(true);
+          const shouldOpen = value.trim().length >= minCharsToSearch;
+          if (shouldOpen && onFocusOpen) onFocusOpen();
+          setOpen(shouldOpen);
         }}
         onBlur={() => window.setTimeout(() => setOpen(false), 120)}
         onChange={(e) => {
-          onValueChange(e.target.value);
-          setOpen(true);
+          const nextValue = e.target.value;
+          onValueChange(nextValue);
+          const shouldOpen = nextValue.trim().length >= minCharsToSearch;
+          if (shouldOpen && onFocusOpen) onFocusOpen();
+          setOpen(shouldOpen);
         }}
         onKeyDown={(e) => {
-          if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+          if (
+            !open &&
+            (e.key === "ArrowDown" || e.key === "ArrowUp") &&
+            value.trim().length >= minCharsToSearch
+          ) {
             setOpen(true);
           }
           if (!open || filtered.length === 0) return;

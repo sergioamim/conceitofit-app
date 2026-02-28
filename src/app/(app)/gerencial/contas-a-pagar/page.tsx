@@ -65,6 +65,15 @@ const GRUPO_DRE_LABEL: Record<GrupoDre, string> = {
   IMPOSTOS: "Impostos",
 };
 
+const FORMA_PAGAMENTO_LABEL: Record<TipoFormaPagamento, string> = {
+  DINHEIRO: "Dinheiro",
+  PIX: "PIX",
+  CARTAO_CREDITO: "Cartão de crédito",
+  CARTAO_DEBITO: "Cartão de débito",
+  BOLETO: "Boleto",
+  RECORRENTE: "Recorrente",
+};
+
 function formatBRL(value: number) {
   return Number(value ?? 0).toLocaleString("pt-BR", {
     style: "currency",
@@ -125,6 +134,13 @@ const NOVA_CONTA_DEFAULT = {
   criarLancamentoInicialAgora: true,
 };
 
+const NOVO_PAGAMENTO_CONTA_DEFAULT = {
+  dataPagamento: todayISO(),
+  formaPagamento: "PIX" as TipoFormaPagamento,
+  valorPago: "",
+  observacoes: "",
+};
+
 export default function ContasPagarPage() {
   const range = monthRangeFromNow();
   const [loading, setLoading] = useState(true);
@@ -159,6 +175,8 @@ export default function ContasPagarPage() {
     valorPago: "",
     observacoes: "",
   });
+  const [registrarComoPagaNoCadastro, setRegistrarComoPagaNoCadastro] = useState(false);
+  const [pagamentoNoCadastro, setPagamentoNoCadastro] = useState(NOVO_PAGAMENTO_CONTA_DEFAULT);
   const [edicaoConta, setEdicaoConta] = useState({
     tipoContaId: "",
     fornecedor: "",
@@ -189,6 +207,27 @@ export default function ContasPagarPage() {
   const tipoContaMap = useMemo(() => {
     return new Map(tiposConta.map((item) => [item.id, item]));
   }, [tiposConta]);
+
+  function resetNovaConta() {
+    setNovaConta({
+      ...NOVA_CONTA_DEFAULT,
+      competencia: range.start,
+      dataVencimento: range.end,
+      recorrenciaDataInicial: range.end,
+    });
+    setRegistrarComoPagaNoCadastro(false);
+    setPagamentoNoCadastro(NOVO_PAGAMENTO_CONTA_DEFAULT);
+  }
+
+  function abrirNovaContaModal() {
+    resetNovaConta();
+    setOpenNovaConta(true);
+  }
+
+  function fecharNovaContaModal() {
+    resetNovaConta();
+    setOpenNovaConta(false);
+  }
 
   async function load() {
     setLoading(true);
@@ -386,7 +425,7 @@ export default function ContasPagarPage() {
 
     const diaPadraoVencimento = Number(novaConta.dataVencimento.split("-")[2] || 1);
     try {
-      await createContaPagar({
+      const criada = await createContaPagar({
         tipoContaId: novaConta.tipoContaId,
         fornecedor: novaConta.fornecedor.trim(),
         documentoFornecedor: novaConta.documentoFornecedor.trim() || undefined,
@@ -424,21 +463,30 @@ export default function ContasPagarPage() {
                   ? Number(novaConta.recorrenciaNumeroOcorrencias || 1)
                   : undefined,
               criarLancamentoInicial: novaConta.criarLancamentoInicialAgora,
-            }
-          : undefined,
+                }
+              : undefined,
       });
+
+      if (registrarComoPagaNoCadastro) {
+        if (!criada) {
+          throw new Error("Não foi possível marcar como paga porque o lançamento inicial não foi criado.");
+        }
+
+        const valorPago = Number(pagamentoNoCadastro.valorPago);
+        const valorFinal = valorPago > 0 ? valorPago : valorContaLiquida;
+        await pagarContaPagar(criada.id, {
+          dataPagamento: pagamentoNoCadastro.dataPagamento || todayISO(),
+          formaPagamento: pagamentoNoCadastro.formaPagamento,
+          valorPago: valorFinal,
+          observacoes: pagamentoNoCadastro.observacoes.trim() || undefined,
+        });
+      }
     } catch (error) {
       console.error("Erro ao criar conta a pagar", error);
       return;
     }
 
-    setNovaConta({
-      ...NOVA_CONTA_DEFAULT,
-      competencia: range.start,
-      dataVencimento: range.end,
-      recorrenciaDataInicial: range.end,
-    });
-    setOpenNovaConta(false);
+    fecharNovaContaModal();
     await load();
   }
 
@@ -569,11 +617,34 @@ export default function ContasPagarPage() {
   }
 
   const tiposAtivos = useMemo(() => tiposConta.filter((tipo) => tipo.ativo), [tiposConta]);
+  const formasPagamentoUnicas = useMemo(() => {
+    const seen = new Set<string>();
+    return formasPagamento.filter((forma) => {
+      if (seen.has(forma.tipo)) return false;
+      seen.add(forma.tipo);
+      return true;
+    });
+  }, [formasPagamento]);
   const diaVencimentoSugestao = Number(novaConta.dataVencimento.split("-")[2] || 1);
+  const valorContaLiquida = useMemo(() => {
+    return Math.max(
+      0,
+      Number(novaConta.valorOriginal || 0) - Number(novaConta.desconto || 0) + Number(novaConta.jurosMulta || 0)
+    );
+  }, [novaConta.desconto, novaConta.jurosMulta, novaConta.valorOriginal]);
 
   return (
     <div className="space-y-6">
-      <Dialog open={openNovaConta} onOpenChange={setOpenNovaConta}>
+      <Dialog
+        open={openNovaConta}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            fecharNovaContaModal();
+            return;
+          }
+          setOpenNovaConta(true);
+        }}
+      >
         <DialogContent className="max-h-[85vh] overflow-y-auto bg-card border-border sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold">Nova conta a pagar</DialogTitle>
@@ -971,19 +1042,98 @@ export default function ContasPagarPage() {
             )}
           </div>
 
+          <div className="rounded-lg border border-border bg-secondary/30 p-4">
+            <label className="inline-flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={registrarComoPagaNoCadastro}
+                onChange={(e) =>
+                  setRegistrarComoPagaNoCadastro(e.target.checked)
+                }
+              />
+              Registrar como paga no cadastro
+            </label>
+
+            {registrarComoPagaNoCadastro && (
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Data de pagamento
+                  </label>
+                  <Input
+                    type="date"
+                    value={pagamentoNoCadastro.dataPagamento}
+                    onChange={(e) =>
+                      setPagamentoNoCadastro((p) => ({
+                        ...p,
+                        dataPagamento: e.target.value,
+                      }))
+                    }
+                    className="bg-secondary border-border"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Forma de pagamento
+                  </label>
+                  <Select
+                    value={pagamentoNoCadastro.formaPagamento}
+                    onValueChange={(value) =>
+                      setPagamentoNoCadastro((p) => ({ ...p, formaPagamento: value as TipoFormaPagamento }))
+                    }
+                  >
+                    <SelectTrigger className="w-full bg-secondary border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {formasPagamentoUnicas.map((forma) => (
+                        <SelectItem key={forma.id} value={forma.tipo}>
+                          {FORMA_PAGAMENTO_LABEL[forma.tipo] ?? forma.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Valor pago
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder={`Padrão: ${formatBRL(valorContaLiquida)}`}
+                    value={pagamentoNoCadastro.valorPago}
+                    onChange={(e) =>
+                      setPagamentoNoCadastro((p) => ({ ...p, valorPago: e.target.value }))
+                    }
+                    className="bg-secondary border-border"
+                  />
+                </div>
+
+                <div className="space-y-1 md:col-span-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Observações
+                  </label>
+                  <textarea
+                    value={pagamentoNoCadastro.observacoes}
+                    onChange={(e) =>
+                      setPagamentoNoCadastro((p) => ({ ...p, observacoes: e.target.value }))
+                    }
+                    className="h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <DialogFooter>
             <Button
               variant="outline"
               className="border-border"
-              onClick={() => {
-                setNovaConta({
-                  ...NOVA_CONTA_DEFAULT,
-                  competencia: range.start,
-                  dataVencimento: range.end,
-                  recorrenciaDataInicial: range.end,
-                });
-                setOpenNovaConta(false);
-              }}
+              onClick={fecharNovaContaModal}
             >
               Cancelar
             </Button>
@@ -1454,7 +1604,7 @@ export default function ContasPagarPage() {
             Gestão de despesas da unidade com classificação DRE e recorrência.
           </p>
         </div>
-        <Button onClick={() => setOpenNovaConta(true)}>
+        <Button onClick={abrirNovaContaModal}>
           <Plus className="size-4" />
           Nova conta
         </Button>

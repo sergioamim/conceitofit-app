@@ -51,8 +51,16 @@ export default function AtividadesPage() {
   const [editing, setEditing] = useState<Atividade | undefined>(undefined);
 
   async function load() {
-    const data = await listAtividades();
-    setAtividades(data);
+    try {
+      const data = await listAtividades();
+      setAtividades(
+        Array.isArray(data)
+          ? data.filter((item): item is Atividade => Boolean(item && item.id))
+          : []
+      );
+    } catch {
+      setAtividades([]);
+    }
   }
 
   useEffect(() => {
@@ -199,9 +207,9 @@ export default function AtividadesPage() {
             <div className="flex items-center gap-3">
               <ActivityIconChip icone={a.icone} cor={a.cor} />
               <div>
-                <p className="text-sm font-semibold">{a.nome}</p>
+                <p className="text-sm font-semibold">{a.nome || "Sem nome"}</p>
                 <p className="text-xs text-muted-foreground">
-                  {CATEGORIA_LABEL[a.categoria]}
+                  {CATEGORIA_LABEL[a.categoria] ?? a.categoria}
                 </p>
               </div>
             </div>

@@ -8,6 +8,8 @@ interface FormaPagamentoApiResponse {
   tipo: TipoFormaPagamento;
   taxaPercentual?: number | null;
   parcelasMax?: number | null;
+  prazoRecebimentoDias?: number | null;
+  emitirAutomaticamente?: boolean | null;
   instrucoes?: string | null;
   ativo?: boolean | null;
 }
@@ -23,6 +25,8 @@ function normalizeFormaPagamento(input: FormaPagamentoApiResponse): FormaPagamen
     tipo: input.tipo,
     taxaPercentual: Number(input.taxaPercentual ?? 0),
     parcelasMax: Math.max(1, Number(input.parcelasMax ?? 1)),
+    emitirAutomaticamente: Boolean(input.emitirAutomaticamente ?? false),
+    prazoRecebimentoDias: input.prazoRecebimentoDias == null ? undefined : Number(input.prazoRecebimentoDias),
     instrucoes: input.instrucoes ?? undefined,
     ativo: input.ativo ?? true,
   };

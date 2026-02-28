@@ -29,6 +29,8 @@ export function NovaMatriculaModal({
   onDone: () => void;
   prefillClienteId?: string;
 }) {
+  const CONVENIO_SEM_CONVENIO = "__SEM_CONVENIO__";
+
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [formas, setFormas] = useState<{ id: string; nome: string; tipo: TipoFormaPagamento }[]>([]);
@@ -40,7 +42,7 @@ export function NovaMatriculaModal({
   const [desconto, setDesconto] = useState("");
   const [motivoDesconto, setMotivoDesconto] = useState("");
   const [renovacao, setRenovacao] = useState(false);
-  const [convenioId, setConvenioId] = useState<string>("");
+  const [convenioId, setConvenioId] = useState<string>(CONVENIO_SEM_CONVENIO);
   const [pagamentoPendente, setPagamentoPendente] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -62,7 +64,7 @@ export function NovaMatriculaModal({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setConvenioId("");
+    setConvenioId(CONVENIO_SEM_CONVENIO);
   }, [planoId]);
 
   function reset() {
@@ -73,7 +75,7 @@ export function NovaMatriculaModal({
     setDesconto("");
     setMotivoDesconto("");
     setRenovacao(false);
-    setConvenioId("");
+    setConvenioId(CONVENIO_SEM_CONVENIO);
     setPagamentoPendente(false);
     setError("");
   }
@@ -99,7 +101,7 @@ export function NovaMatriculaModal({
         motivoDesconto: motivoDesconto || undefined,
         formaPagamento: formaPagamento as TipoFormaPagamento,
         renovacaoAutomatica: renovacao,
-        convenioId: convenioId || undefined,
+        convenioId: convenioId === CONVENIO_SEM_CONVENIO ? undefined : convenioId || undefined,
         dataPagamento: pagamentoPendente ? undefined : new Date().toISOString().split("T")[0],
       });
       setLoading(false);
@@ -254,7 +256,7 @@ export function NovaMatriculaModal({
                   <SelectValue placeholder="Sem convênio" />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
-                  <SelectItem value="">Sem convênio</SelectItem>
+                  <SelectItem value={CONVENIO_SEM_CONVENIO}>Sem convênio</SelectItem>
                   {conveniosPlano.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.nome} ({c.descontoPercentual}%)

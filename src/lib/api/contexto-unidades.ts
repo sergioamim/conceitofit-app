@@ -250,18 +250,18 @@ export async function deleteUnidadeApi(id: string): Promise<void> {
   });
 }
 
-export async function listAcademiasApi(tenantId?: string): Promise<Academia[]> {
-  const response = await apiRequest<AcademiaApiResponse[]>({
-    path: "/api/v1/context/academias",
-    query: { tenantId },
+export async function listAcademiasApi(_tenantId?: string): Promise<Academia[]> {
+  void _tenantId;
+  const response = await apiRequest<AcademiaApiResponse>({
+    path: "/api/v1/academia",
   });
-  return response.map(normalizeAcademia);
+  return [normalizeAcademia(response)];
 }
 
-export async function getAcademiaAtualApi(tenantId?: string): Promise<Academia> {
+export async function getAcademiaAtualApi(_tenantId?: string): Promise<Academia> {
+  void _tenantId;
   const response = await apiRequest<AcademiaApiResponse>({
-    path: "/api/v1/context/academia-atual",
-    query: { tenantId },
+    path: "/api/v1/academia",
   });
   return normalizeAcademia(response);
 }
@@ -271,15 +271,15 @@ export async function updateAcademiaAtualApi(input: {
   data: Partial<Academia>;
 }): Promise<Academia> {
   const response = await apiRequest<AcademiaApiResponse>({
-    path: "/api/v1/context/academia-atual",
+    path: "/api/v1/academia",
     method: "PUT",
-    query: { tenantId: input.tenantId },
     body: {
       nome: input.data.nome,
       razaoSocial: input.data.razaoSocial,
       documento: input.data.documento,
       email: input.data.email,
       telefone: input.data.telefone,
+      endereco: input.data.endereco,
       ativo: input.data.ativo,
       branding: input.data.branding,
     },
@@ -305,4 +305,3 @@ export async function updateHorariosApi(input: {
     body: input.data,
   });
 }
-

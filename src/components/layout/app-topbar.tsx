@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Menu, Search } from "lucide-react";
 import { getCurrentTenant, listAlunosPage, listTenants, setCurrentTenant } from "@/lib/mock/services";
@@ -23,6 +23,7 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
   const [clienteOptions, setClienteOptions] = useState<SuggestionOption[]>([]);
   const [savingTenant, setSavingTenant] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [clienteOptionsLoadedTenant, setClienteOptionsLoadedTenant] = useState("");
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -66,36 +67,33 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
     [tenants, tenantId]
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadClienteOptions() {
-      if (!tenantId) {
-        setClienteOptions([]);
-        return;
-      }
-      try {
-        const result = await listAlunosPage({
-          page: 1,
-          size: 200,
-        });
-        if (cancelled) return;
-        setClienteOptions(
-          result.items.map((aluno) => ({
-            id: aluno.id,
-            label: aluno.cpf ? `${aluno.nome} • ${aluno.cpf}` : aluno.nome,
-            searchText: [aluno.nome, aluno.cpf, aluno.email, aluno.telefone].filter(Boolean).join(" "),
-          }))
-        );
-      } catch {
-        if (cancelled) return;
-        setClienteOptions([]);
-      }
+  const loadClienteOptions = useCallback(async () => {
+    if (!tenantId || clienteOptionsLoadedTenant === tenantId) return;
+    try {
+      const result = await listAlunosPage({
+        page: 0,
+        size: 200,
+      });
+      const mapped = result.items.map((aluno) => ({
+        id: aluno.id,
+        label: aluno.cpf ? `${aluno.nome} • ${aluno.cpf}` : aluno.nome,
+        searchText: [aluno.nome, aluno.cpf, aluno.email, aluno.telefone].filter(Boolean).join(" "),
+      }));
+      setClienteOptions(mapped);
+      setClienteOptionsLoadedTenant(tenantId);
+    } catch {
+      setClienteOptions([]);
+      setClienteOptionsLoadedTenant("");
     }
-    loadClienteOptions();
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantId]);
+  }, [tenantId, clienteOptionsLoadedTenant]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    if (clienteOptionsLoadedTenant && clienteOptionsLoadedTenant !== tenantId) {
+      setClienteOptions([]);
+      setClienteOptionsLoadedTenant("");
+    }
+  }, [tenantId, clienteOptionsLoadedTenant]);
 
   async function handleChangeTenant(nextId: string) {
     setSavingTenant(true);
@@ -157,14 +155,17 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
             placeholder="Buscar cliente por nome ou CPF"
             value={query}
             onValueChange={setQuery}
-            onSelect={(option) => {
-              setQuery("");
-              router.push(`/clientes/${option.id}`);
-            }}
-            options={clienteOptions}
-            emptyText="Nenhum cliente encontrado"
-            className="w-full"
-          />
+              onSelect={(option) => {
+                setQuery("");
+                const queryTenant = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : "";
+                router.push(`/clientes/${option.id}${queryTenant}`);
+              }}
+              onFocusOpen={loadClienteOptions}
+              options={clienteOptions}
+              emptyText="Nenhum cliente encontrado"
+              minCharsToSearch={3}
+              className="w-full"
+            />
           <Button type="button" size="sm" onClick={handleSearch} className="sm:w-auto">
             Buscar
           </Button>

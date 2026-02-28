@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   listCartoesCliente,
   listBandeirasCartao,
@@ -9,11 +9,14 @@ import {
   deleteCartaoCliente,
   setCartaoPadrao,
   getAluno,
+  getCurrentTenant,
   listMatriculas,
   listPlanos,
   listPagamentos,
+  setCurrentTenant,
   updateAluno,
 } from "@/lib/mock/services";
+import { getStore } from "@/lib/mock/store";
 import type { CartaoCliente, BandeiraCartao, Aluno, Matricula, Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { NovoCartaoModal } from "@/components/shared/novo-cartao-modal";
@@ -22,6 +25,7 @@ import { ClienteHeader } from "@/components/shared/cliente-header";
 import { ClienteTabs } from "@/components/shared/cliente-tabs";
 import { NovaMatriculaModal } from "@/components/shared/nova-matricula-modal";
 import { SuspenderClienteModal } from "@/components/shared/suspender-cliente-modal";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 function maskCard(ultimos4: string) {
   return `•••• •••• •••• ${ultimos4}`;
@@ -38,6 +42,8 @@ function cardGradient(name?: string) {
 export default function CartoesClientePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tenantFromUrl = (searchParams.get("tenantId") ?? "").trim();
   const [cartoes, setCartoes] = useState<CartaoCliente[]>([]);
   const [bandeiras, setBandeiras] = useState<BandeiraCartao[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -47,34 +53,79 @@ export default function CartoesClientePage() {
   const [novaMatriculaOpen, setNovaMatriculaOpen] = useState(false);
   const [suspenderOpen, setSuspenderOpen] = useState(false);
   const [pendenteFinanceiro, setPendenteFinanceiro] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  async function load() {
+  const ensureTenantContext = useCallback(async (alunoId: string) => {
+    const current = await getCurrentTenant();
+    if (tenantFromUrl) {
+      if (current.id !== tenantFromUrl) {
+        await setCurrentTenant(tenantFromUrl);
+      }
+      return;
+    }
+
+    const cached = getStore().alunos.find((item) => item.id === alunoId);
+    if (cached?.tenantId && cached.tenantId !== current.id) {
+      await setCurrentTenant(cached.tenantId);
+    }
+  }, [tenantFromUrl]);
+
+  const load = useCallback(async () => {
     const id = params?.id;
-    if (!id) return;
-    const [cards, brands, a, ms, ps, pags] = await Promise.all([
-      listCartoesCliente(id),
-      listBandeirasCartao({ apenasAtivas: true }),
-      getAluno(id),
-      listMatriculas(),
-      listPlanos(),
-      listPagamentos(),
-    ]);
-    setCartoes(cards);
-    setBandeiras(brands);
-    setAluno(a);
-    setMatriculas(ms.filter((m) => m.alunoId === id));
-    setPlanos(ps);
-    setPendenteFinanceiro(
-      pags.some(
-        (p) => p.alunoId === id && (p.status === "PENDENTE" || p.status === "VENCIDO")
-      )
-    );
-  }
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(null);
+    try {
+      await ensureTenantContext(id);
+      const alunoAtual = await getAluno(id);
+      if (!alunoAtual) {
+        setAluno(null);
+        setCartoes([]);
+        setMatriculas([]);
+        setPlanos([]);
+        setPendenteFinanceiro(false);
+        return;
+      }
+      const [cards, brands, ms, ps] = await Promise.all([
+        listCartoesCliente(id),
+        listBandeirasCartao({ apenasAtivas: true }),
+        listMatriculas(),
+        listPlanos(),
+      ]);
+      setCartoes(cards);
+      setBandeiras(brands);
+      setAluno(alunoAtual);
+      setMatriculas(ms.filter((m) => m.alunoId === id));
+      setPlanos(ps);
+      setPendenteFinanceiro(false);
+      void listPagamentos({
+        alunoId: id,
+        page: 0,
+        size: 40,
+      })
+        .then((pags) => {
+          setPendenteFinanceiro(
+            pags.some((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
+          );
+        })
+        .catch(() => {
+          setPendenteFinanceiro(false);
+        });
+    } catch (error) {
+      setLoadError(normalizeErrorMessage(error));
+      setAluno(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [ensureTenantContext, params?.id]);
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params?.id]);
+    void load();
+  }, [load]);
 
   const planoAtivo = useMemo(
     () => matriculas.find((m) => m.status === "ATIVA"),
@@ -86,9 +137,21 @@ export default function CartoesClientePage() {
   );
   const suspenso = Boolean(aluno?.status === "SUSPENSO" || aluno?.suspensao);
 
+  if (loading) {
+    return (
+      <div className="text-sm text-muted-foreground">Carregando cliente...</div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="text-sm text-gym-danger">{loadError}</div>
+    );
+  }
+
   if (!aluno) {
     return (
-      <div className="text-sm text-muted-foreground">Cliente não encontrado</div>
+      <div className="text-sm text-muted-foreground">Cliente não encontrado para a unidade ativa.</div>
     );
   }
 

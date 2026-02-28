@@ -1,7 +1,9 @@
 import type {
   CategoriaContaPagar,
   ContaPagar,
+  DREProjecao,
   DREGerencial,
+  DreProjectionScenario,
   GrupoDre,
   RecorrenciaContaPagar,
   RegraRecorrenciaContaPagar,
@@ -143,6 +145,46 @@ type DreApiResponse = {
   despesasSemTipoValor: number;
 };
 
+type DreProjecaoApiResponse = {
+  periodoInicio: string;
+  periodoFim: string;
+  cenario: DreProjectionScenario;
+  realizado: {
+    receitas: number;
+    despesas: number;
+    resultado: number;
+    custosVariaveis: number;
+    despesasOperacionais: number;
+    despesasFinanceiras: number;
+    impostos: number;
+  };
+  projetado: {
+    receitas: number;
+    despesas: number;
+    resultado: number;
+    custosVariaveis: number;
+    despesasOperacionais: number;
+    despesasFinanceiras: number;
+    impostos: number;
+  };
+  consolidado: {
+    receitas: number;
+    despesas: number;
+    resultado: number;
+    custosVariaveis: number;
+    despesasOperacionais: number;
+    despesasFinanceiras: number;
+    impostos: number;
+  };
+  linhas: Array<{
+    grupo: string;
+    natureza: "RECEITA" | "DESPESA";
+    realizado: number;
+    projetado: number;
+    consolidado: number;
+  }>;
+};
+
 const toNumber = (value: unknown, fallback = 0): number => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -235,6 +277,48 @@ function normalizeDre(input: DreApiResponse): DREGerencial {
     })),
     despesasSemTipoCount: Math.max(0, Number(input.despesasSemTipoCount ?? 0)),
     despesasSemTipoValor: toNumber(input.despesasSemTipoValor),
+  };
+}
+
+function normalizeDreProjecao(input: DreProjecaoApiResponse): DREProjecao {
+  return {
+    periodoInicio: input.periodoInicio,
+    periodoFim: input.periodoFim,
+    cenario: input.cenario,
+    realizado: {
+      receitas: toNumber(input.realizado.receitas),
+      despesas: toNumber(input.realizado.despesas),
+      resultado: toNumber(input.realizado.resultado),
+      custosVariaveis: toNumber(input.realizado.custosVariaveis),
+      despesasOperacionais: toNumber(input.realizado.despesasOperacionais),
+      despesasFinanceiras: toNumber(input.realizado.despesasFinanceiras),
+      impostos: toNumber(input.realizado.impostos),
+    },
+    projetado: {
+      receitas: toNumber(input.projetado.receitas),
+      despesas: toNumber(input.projetado.despesas),
+      resultado: toNumber(input.projetado.resultado),
+      custosVariaveis: toNumber(input.projetado.custosVariaveis),
+      despesasOperacionais: toNumber(input.projetado.despesasOperacionais),
+      despesasFinanceiras: toNumber(input.projetado.despesasFinanceiras),
+      impostos: toNumber(input.projetado.impostos),
+    },
+    consolidado: {
+      receitas: toNumber(input.consolidado.receitas),
+      despesas: toNumber(input.consolidado.despesas),
+      resultado: toNumber(input.consolidado.resultado),
+      custosVariaveis: toNumber(input.consolidado.custosVariaveis),
+      despesasOperacionais: toNumber(input.consolidado.despesasOperacionais),
+      despesasFinanceiras: toNumber(input.consolidado.despesasFinanceiras),
+      impostos: toNumber(input.consolidado.impostos),
+    },
+    linhas: (input.linhas ?? []).map((item) => ({
+      grupo: item.grupo,
+      natureza: item.natureza,
+      realizado: toNumber(item.realizado),
+      projetado: toNumber(item.projetado),
+      consolidado: toNumber(item.consolidado),
+    })),
   };
 }
 
@@ -401,3 +485,20 @@ export async function getDreGerencialApi(input: {
   return normalizeDre(response);
 }
 
+export async function getDreProjecaoApi(input: {
+  tenantId: string;
+  startDate?: string;
+  endDate?: string;
+  cenario?: DreProjectionScenario;
+}): Promise<DREProjecao> {
+  const response = await apiRequest<DreProjecaoApiResponse>({
+    path: "/api/v1/gerencial/financeiro/dre/projecao",
+    query: {
+      tenantId: input.tenantId,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      cenario: input.cenario,
+    },
+  });
+  return normalizeDreProjecao(response);
+}

@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   getAluno,
+  getCurrentTenant,
   listMatriculas,
   listPlanos,
   listPagamentos,
@@ -13,7 +14,10 @@ import {
   listFormasPagamento,
   receberPagamento,
   listConvenios,
+  liberarAcessoCatraca,
+  setCurrentTenant,
 } from "@/lib/mock/services";
+import { getStore } from "@/lib/mock/store";
 import type { Aluno, Matricula, Plano, Pagamento, Presenca, FormaPagamento, Convenio } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { NovaMatriculaModal } from "@/components/shared/nova-matricula-modal";
@@ -26,9 +30,11 @@ import { ClienteEditForm } from "@/components/shared/cliente-edit-form";
 import { ClienteHeader } from "@/components/shared/cliente-header";
 import { ClientePhotoModal } from "@/components/shared/cliente-photo-modal";
 import { ClienteTabs, ClienteTabKey } from "@/components/shared/cliente-tabs";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 function formatDate(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+  const normalized = d.includes("T") ? d.split("T")[0] : d;
+  return new Date(normalized + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
 function formatBRL(v: number) {
@@ -38,6 +44,8 @@ function formatBRL(v: number) {
 export default function ClienteDetalhePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tenantFromUrl = (searchParams.get("tenantId") ?? "").trim();
   const [aluno, setAluno] = useState<Aluno | null>(null);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -51,27 +59,82 @@ export default function ClienteDetalhePage() {
   const [novaMatriculaOpen, setNovaMatriculaOpen] = useState(false);
   const [recebendo, setRecebendo] = useState<Pagamento | null>(null);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [liberarAcessoOpen, setLiberarAcessoOpen] = useState(false);
+  const [liberarAcessoJustificativa, setLiberarAcessoJustificativa] = useState("");
+  const [liberandoAcesso, setLiberandoAcesso] = useState(false);
+  const [liberarAcessoErro, setLiberarAcessoErro] = useState("");
+  const [liberarAcessoInfo, setLiberarAcessoInfo] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const ensureTenantContext = useCallback(async (alunoId: string) => {
+    const current = await getCurrentTenant();
+    if (tenantFromUrl) {
+      if (current.id !== tenantFromUrl) {
+        await setCurrentTenant(tenantFromUrl);
+      }
+      return;
+    }
+
+    const cached = getStore().alunos.find((item) => item.id === alunoId);
+    if (cached?.tenantId && cached.tenantId !== current.id) {
+      await setCurrentTenant(cached.tenantId);
+    }
+  }, [tenantFromUrl]);
 
   const reload = useCallback(async () => {
     const id = params?.id;
-    if (!id) return;
-    const [pags, ms, ps, pres, a, fps, cvs] = await Promise.all([
-      listPagamentos(),
-      listMatriculas(),
-      listPlanos(),
-      listPresencasByAluno(id),
-      getAluno(id),
-      listFormasPagamento(),
-      listConvenios(),
-    ]);
-    setAluno(a);
-    setMatriculas(ms.filter((m) => m.alunoId === id));
-    setPlanos(ps);
-    setPagamentos(pags.filter((p) => p.alunoId === id));
-    setPresencas(pres);
-    setFormasPagamento(fps);
-    setConvenios(cvs);
-  }, [params?.id]);
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(null);
+    try {
+      await ensureTenantContext(id);
+      const alunoAtual = await getAluno(id);
+      if (!alunoAtual) {
+        setAluno(null);
+        setMatriculas([]);
+        setPlanos([]);
+        setPagamentos([]);
+        setPresencas([]);
+        setFormasPagamento([]);
+        setConvenios([]);
+        return;
+      }
+      const [ms, ps, pres, fps, cvs] = await Promise.all([
+        listMatriculas(),
+        listPlanos(),
+        listPresencasByAluno(id),
+        listFormasPagamento(),
+        listConvenios(),
+      ]);
+      setAluno(alunoAtual);
+      setMatriculas(ms.filter((m) => m.alunoId === id));
+      setPlanos(ps);
+      setPagamentos([]);
+      setPresencas(pres);
+      setFormasPagamento(fps);
+      setConvenios(cvs);
+      void listPagamentos({
+        alunoId: id,
+        page: 0,
+        size: 80,
+      })
+        .then((pags) => {
+          setPagamentos(pags);
+        })
+        .catch(() => {
+          setPagamentos([]);
+        });
+    } catch (error) {
+      setLoadError(normalizeErrorMessage(error));
+      setAluno(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [ensureTenantContext, params?.id]);
 
   useEffect(() => {
     if (!params?.id) return;
@@ -96,6 +159,11 @@ export default function ClienteDetalhePage() {
       .reduce((s, p) => s + p.valorFinal, 0);
     return pago - aberto;
   }, [pagamentos]);
+
+  const nfs = useMemo(
+    () => pagamentos.filter((p) => p.nfseEmitida),
+    [pagamentos]
+  );
 
   const recorrente = useMemo(() => {
     const mat = matriculas.find((m) => m.renovacaoAutomatica);
@@ -146,9 +214,21 @@ export default function ClienteDetalhePage() {
     .sort((a, b) => (a.dataCriacao > b.dataCriacao ? -1 : 1))
     .slice(0, 10);
 
+  if (loading) {
+    return (
+      <div className="text-sm text-muted-foreground">Carregando cliente...</div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="text-sm text-gym-danger">{loadError}</div>
+    );
+  }
+
   if (!aluno) {
     return (
-      <div className="text-sm text-muted-foreground">Cliente não encontrado</div>
+      <div className="text-sm text-muted-foreground">Cliente não encontrado para a unidade ativa.</div>
     );
   }
 
@@ -213,6 +293,83 @@ export default function ClienteDetalhePage() {
           await reload();
         }}
       />
+      <Dialog
+        open={liberarAcessoOpen}
+        onOpenChange={(next) => {
+          if (next) return;
+          setLiberarAcessoOpen(false);
+          setLiberarAcessoJustificativa("");
+          setLiberarAcessoErro("");
+        }}
+      >
+        <DialogContent className="bg-card border-border sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold">
+              Liberar acesso (catraca)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Informe a justificativa para envio do comando de liberação. Este campo é obrigatório.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Justificativa
+              </label>
+              <textarea
+                value={liberarAcessoJustificativa}
+                onChange={(event) => {
+                  setLiberarAcessoJustificativa(event.target.value);
+                  if (liberarAcessoErro) setLiberarAcessoErro("");
+                  if (liberarAcessoInfo) setLiberarAcessoInfo(null);
+                }}
+                rows={4}
+                maxLength={500}
+                className="min-h-24 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
+                placeholder="Justificativa obrigatória para liberação..."
+              />
+            </div>
+            {liberarAcessoErro ? <p className="text-xs text-gym-danger">{liberarAcessoErro}</p> : null}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLiberarAcessoOpen(false);
+                setLiberarAcessoJustificativa("");
+                setLiberarAcessoErro("");
+              }}
+              disabled={liberandoAcesso}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                const reason = liberarAcessoJustificativa.trim();
+                if (!reason) {
+                  setLiberarAcessoErro("Justificativa é obrigatória.");
+                  return;
+                }
+                setLiberarAcessoErro("");
+                setLiberandoAcesso(true);
+                try {
+                  const requestId = await liberarAcessoCatraca(aluno.id, reason);
+                  setLiberarAcessoOpen(false);
+                  setLiberarAcessoJustificativa("");
+                  setLiberarAcessoInfo(`Comando de liberação enviado com sucesso (requestId: ${requestId}).`);
+                } catch (error) {
+                  setLiberarAcessoErro(normalizeErrorMessage(error));
+                } finally {
+                  setLiberandoAcesso(false);
+                }
+              }}
+              disabled={liberandoAcesso || !liberarAcessoJustificativa.trim()}
+            >
+              {liberandoAcesso ? "Enviando..." : "Enviar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
 
       <div className="space-y-3">
@@ -238,10 +395,22 @@ export default function ClienteDetalhePage() {
             });
             await reload();
           }}
+          onCompletarCadastro={() => setTab("editar")}
           showCartoesAction={false}
+          onLiberarAcesso={() => {
+            setLiberarAcessoErro("");
+            setLiberarAcessoInfo(null);
+            setLiberarAcessoJustificativa("");
+            setLiberarAcessoOpen(true);
+          }}
           onEdit={() => setTab("editar")}
           onChangeFoto={() => setPhotoModalOpen(true)}
         />
+        {liberarAcessoInfo ? (
+          <div className="mt-3 rounded-xl border border-gym-accent/40 bg-gym-accent/10 p-3 text-sm text-gym-accent">
+            {liberarAcessoInfo}
+          </div>
+        ) : null}
       </div>
 
       {suspenso && aluno.suspensao && (
@@ -514,6 +683,38 @@ export default function ClienteDetalhePage() {
                       </Button>
                     </div>
                   )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "nfse" && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h2 className="font-display text-base font-bold">NFS-e do cliente</h2>
+          <div className="mt-3 divide-y divide-border">
+            {nfs.length === 0 && (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Nenhuma NF-e emitida para este cliente
+              </p>
+            )}
+            {nfs.map((p) => (
+              <div key={p.id} className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium">{p.descricao}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(p.dataVencimento)}
+                    {p.dataEmissaoNfse ? ` • Emitida em ${formatDate(p.dataEmissaoNfse)}` : ""}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-gym-accent">
+                    {formatBRL(p.valorFinal)}
+                  </p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gym-teal">
+                    {p.nfseNumero || "NF sem número"}
+                  </p>
                 </div>
               </div>
             ))}

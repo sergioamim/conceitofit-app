@@ -36,6 +36,10 @@ function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
+function nowDateTime() {
+  return new Date().toISOString().slice(0, 19);
+}
+
 export default function ProspectsKanbanPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
@@ -74,14 +78,41 @@ export default function ProspectsKanbanPage() {
   }));
 
   async function handleSetStatus(id: string, status: StatusProspect) {
+    const at = nowDateTime();
+
+    // Atualização local imediata para não "voltar" ao status antigo após o drop.
+    setProspects((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status,
+              dataUltimoContato: at,
+              statusLog: [...(item.statusLog ?? []), { status, data: at }],
+              motivoPerda: status === "PERDIDO" ? item.motivoPerda : undefined,
+            }
+          : item
+      )
+    );
+
     if (status === "PERDIDO") {
       const motivo = prompt("Motivo da perda (opcional):");
       await marcarProspectPerdido(id, motivo ?? undefined);
-      load();
+      if (motivo != null) {
+        setProspects((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  motivoPerda: motivo || undefined,
+                }
+              : item
+          )
+        );
+      }
       return;
     }
     await updateProspectStatus(id, status);
-    load();
   }
 
   function handleCardClick(p: Prospect) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -20,10 +20,10 @@ import {
 } from "lucide-react";
 import {
   getDashboard,
-  listAlunos,
+  listAlunosPage,
   listMatriculas,
   listPagamentos,
-  listProspects,
+  listProspectsPage,
 } from "@/lib/mock/services";
 import { isRealApiEnabled } from "@/lib/api/http";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -38,6 +38,7 @@ import type {
 import { Input } from "@/components/ui/input";
 
 type DashboardTab = "CLIENTES" | "VENDAS" | "FINANCEIRO";
+const PROSPECTS_PAGE_SIZE = 10;
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -116,52 +117,107 @@ function MetricCard({
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [prospects, setProspects] = useState<Prospect[]>([]);
+  const [showAllProspects, setShowAllProspects] = useState(false);
+  const [prospectsPage, setProspectsPage] = useState<Prospect[]>([]);
+  const [prospectsPageNumber, setProspectsPageNumber] = useState(1);
+  const [prospectsPageHasNext, setProspectsPageHasNext] = useState(false);
+  const [prospectsPageLoading, setProspectsPageLoading] = useState(false);
   const [pagamentos, setPagamentos] = useState<(Pagamento & { aluno?: Aluno })[]>([]);
   const [matriculas, setMatriculas] = useState<(Matricula & { aluno?: Aluno })[]>([]);
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [statusAlunoCount, setStatusAlunoCount] = useState<Record<StatusAluno, number>>({
+    ATIVO: 0,
+    INATIVO: 0,
+    SUSPENSO: 0,
+    CANCELADO: 0,
+  });
   const [todayIso, setTodayIso] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
+  const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false);
+  const financialLoadedDateRef = useRef<string | null>(null);
 
-  const load = useCallback(async (referenceDate: string) => {
+  const loadProspectsPageData = useCallback(async (page: number) => {
+    setProspectsPageLoading(true);
+    try {
+      const result = await listProspectsPage({ page, size: PROSPECTS_PAGE_SIZE });
+      setProspectsPage(result.items);
+      setProspectsPageNumber(result.page);
+      setProspectsPageHasNext(result.hasNext);
+    } catch {
+      setProspectsPage([]);
+      setProspectsPageHasNext(false);
+    } finally {
+      setProspectsPageLoading(false);
+    }
+  }, []);
+
+  const load = useCallback(async (referenceDate: string, includeFinancial = false) => {
+    if (!referenceDate) return;
+    loadingRef.current = true;
+    setLoading(true);
     const ref = new Date(`${referenceDate}T00:00:00`);
     const month = ref.getMonth();
     const year = ref.getFullYear();
-    const [dash, prs, pags, mats, als] = await Promise.all([
-      getDashboard({ month, year }),
-      listProspects(),
-      listPagamentos(),
-      listMatriculas(),
-      listAlunos(),
-    ]);
-    setData(dash);
-    setProspects(prs);
-    setPagamentos(pags);
-    setMatriculas(mats);
-    setAlunos(als);
+    try {
+      const [dash, alunosPage] = await Promise.all([
+        getDashboard({ month, year }),
+        listAlunosPage({ page: 0, size: 20 }),
+      ]);
+      const totais = alunosPage.totaisStatus;
+      setData(dash);
+      setProspects((dash.prospectsRecentes ?? []).slice(0, 5));
+      setStatusAlunoCount({
+        ATIVO: totais?.totalAtivo ?? 0,
+        INATIVO: totais?.totalInativo ?? 0,
+        SUSPENSO: totais?.totalSuspenso ?? 0,
+        CANCELADO: totais?.totalCancelado ?? totais?.cancelados ?? 0,
+      });
+      if (includeFinancial) {
+        const [pags, mats] = await Promise.all([listPagamentos(), listMatriculas()]);
+        setPagamentos(pags);
+        setMatriculas(mats);
+        financialLoadedDateRef.current = referenceDate;
+      } else if (financialLoadedDateRef.current && financialLoadedDateRef.current !== referenceDate) {
+        setPagamentos([]);
+        setMatriculas([]);
+        financialLoadedDateRef.current = null;
+      }
+    } catch {
+      // Mantem o ultimo snapshot valido em caso de falha temporaria.
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    setShowAllProspects(false);
+    setProspectsPage([]);
+    setProspectsPageNumber(1);
+    setProspectsPageHasNext(false);
+  }, [selectedDate]);
 
   useEffect(() => {
     const now = new Date();
     const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTodayIso(iso);
     setSelectedDate(iso);
   }, []);
 
   useEffect(() => {
     if (!selectedDate) return;
-    const timer = window.setTimeout(() => {
-      load(selectedDate);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [load, selectedDate]);
+    const shouldLoadFinancial = tab !== "CLIENTES";
+    if (shouldLoadFinancial && financialLoadedDateRef.current === selectedDate) return;
+    void load(selectedDate, shouldLoadFinancial);
+  }, [load, selectedDate, tab]);
 
   useEffect(() => {
     if (!selectedDate) return;
     if (isRealApiEnabled()) return;
     function handleUpdate() {
-      load(selectedDate);
+      if (loadingRef.current) return;
+      void load(selectedDate, tab !== "CLIENTES");
     }
     window.addEventListener("academia-store-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
@@ -169,7 +225,7 @@ export default function DashboardPage() {
       window.removeEventListener("academia-store-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
-  }, [load, selectedDate]);
+  }, [load, selectedDate, tab]);
 
   const metrics = useMemo(() => {
     if (!data || !selectedDate) return null;
@@ -181,57 +237,95 @@ export default function DashboardPage() {
     const prevRef = previousMonth(mes, ano);
     const prevPrefix = monthPrefix(prevRef.month, prevRef.year);
 
-    const emAberto = prospects.filter((p) => p.status !== "CONVERTIDO" && p.status !== "PERDIDO");
-    const followupPendente = emAberto.filter((p) => daysDiffFromReference(p.dataUltimoContato || p.dataCriacao, selectedDate) >= 2).length;
-    const visitsWaiting = prospects.filter((p) => p.status === "VISITOU").length;
+    let emAbertoCount = 0;
+    let followupPendente = 0;
+    let visitsWaiting = 0;
+    let convertedCurrent = 0;
+    let convertedPrev = 0;
+    let prospectsCurrent = 0;
+    let prospectsPrev = 0;
 
-    const convertedCurrent = prospects.filter((p) =>
-      (p.statusLog ?? []).some((log) => log.status === "CONVERTIDO" && log.data.startsWith(currentPrefix))
-    ).length;
-    const convertedPrev = prospects.filter((p) =>
-      (p.statusLog ?? []).some((log) => log.status === "CONVERTIDO" && log.data.startsWith(prevPrefix))
-    ).length;
+    for (const prospect of prospects) {
+      const isAberto = prospect.status !== "CONVERTIDO" && prospect.status !== "PERDIDO";
+      if (isAberto) {
+        emAbertoCount += 1;
+        if (daysDiffFromReference(prospect.dataUltimoContato || prospect.dataCriacao, selectedDate) >= 2) {
+          followupPendente += 1;
+        }
+      }
+      if (prospect.status === "VISITOU") {
+        visitsWaiting += 1;
+      }
+      if (prospect.dataCriacao.startsWith(currentPrefix)) {
+        prospectsCurrent += 1;
+      }
+      if (prospect.dataCriacao.startsWith(prevPrefix)) {
+        prospectsPrev += 1;
+      }
+      const logs = prospect.statusLog ?? [];
+      let convertedInCurrent = false;
+      let convertedInPrev = false;
+      for (const log of logs) {
+        if (log.status !== "CONVERTIDO") continue;
+        if (!convertedInCurrent && log.data.startsWith(currentPrefix)) convertedInCurrent = true;
+        if (!convertedInPrev && log.data.startsWith(prevPrefix)) convertedInPrev = true;
+        if (convertedInCurrent && convertedInPrev) break;
+      }
+      if (convertedInCurrent) convertedCurrent += 1;
+      if (convertedInPrev) convertedPrev += 1;
+    }
 
-    const prospectsCurrent = prospects.filter((p) => p.dataCriacao.startsWith(currentPrefix)).length;
-    const prospectsPrev = prospects.filter((p) => p.dataCriacao.startsWith(prevPrefix)).length;
+    let receitaCurrent = 0;
+    let receitaPrev = 0;
+    let pagosCurrentCount = 0;
+    let pagosPrevCount = 0;
+    let inadimplenciaValor = 0;
+    let receberValor = 0;
+    let vendasMensalidade = 0;
+    let vendasNovas = 0;
 
-    const pagosCurrent = pagamentos.filter((p) => p.status === "PAGO" && p.dataPagamento?.startsWith(currentPrefix));
-    const pagosPrev = pagamentos.filter((p) => p.status === "PAGO" && p.dataPagamento?.startsWith(prevPrefix));
+    for (const pagamento of pagamentos) {
+      if (pagamento.status === "VENCIDO") {
+        inadimplenciaValor += pagamento.valorFinal;
+      }
+      if (pagamento.status === "PENDENTE") {
+        receberValor += pagamento.valorFinal;
+      }
+      if (pagamento.status === "PAGO" && pagamento.dataPagamento) {
+        if (pagamento.dataPagamento.startsWith(currentPrefix)) {
+          receitaCurrent += pagamento.valorFinal;
+          pagosCurrentCount += 1;
+          if (pagamento.tipo === "MENSALIDADE") vendasMensalidade += pagamento.valorFinal;
+          if (pagamento.tipo === "MATRICULA") vendasNovas += pagamento.valorFinal;
+        }
+        if (pagamento.dataPagamento.startsWith(prevPrefix)) {
+          receitaPrev += pagamento.valorFinal;
+          pagosPrevCount += 1;
+        }
+      }
+    }
 
-    const receitaCurrent = pagosCurrent.reduce((sum, p) => sum + p.valorFinal, 0);
-    const receitaPrev = pagosPrev.reduce((sum, p) => sum + p.valorFinal, 0);
+    let matriculasCurrent = 0;
+    let matriculasPrev = 0;
+    let valorVendasCurrent = 0;
+    let valorVendasPrev = 0;
 
-    const ticketCurrent = pagosCurrent.length ? receitaCurrent / pagosCurrent.length : 0;
-    const ticketPrev = pagosPrev.length ? receitaPrev / pagosPrev.length : 0;
+    for (const matricula of matriculas) {
+      if (matricula.dataCriacao.startsWith(currentPrefix)) {
+        matriculasCurrent += 1;
+        valorVendasCurrent += matricula.valorPago;
+      }
+      if (matricula.dataCriacao.startsWith(prevPrefix)) {
+        matriculasPrev += 1;
+        valorVendasPrev += matricula.valorPago;
+      }
+    }
 
-    const vencidos = pagamentos.filter((p) => p.status === "VENCIDO");
-    const pendentes = pagamentos.filter((p) => p.status === "PENDENTE");
-    const inadimplenciaValor = vencidos.reduce((sum, p) => sum + p.valorFinal, 0);
-    const receberValor = pendentes.reduce((sum, p) => sum + p.valorFinal, 0);
-
-    const matriculasCurrent = matriculas.filter((m) => m.dataCriacao.startsWith(currentPrefix));
-    const matriculasPrev = matriculas.filter((m) => m.dataCriacao.startsWith(prevPrefix));
-    const valorVendasCurrent = matriculasCurrent.reduce((sum, m) => sum + m.valorPago, 0);
-    const valorVendasPrev = matriculasPrev.reduce((sum, m) => sum + m.valorPago, 0);
-
-    const vendasMensalidade = pagosCurrent
-      .filter((p) => p.tipo === "MENSALIDADE")
-      .reduce((sum, p) => sum + p.valorFinal, 0);
-
-    const vendasNovas = pagosCurrent
-      .filter((p) => p.tipo === "MATRICULA")
-      .reduce((sum, p) => sum + p.valorFinal, 0);
-
-    const statusAlunoCount = alunos.reduce<Record<StatusAluno, number>>(
-      (acc, aluno) => {
-        acc[aluno.status] += 1;
-        return acc;
-      },
-      { ATIVO: 0, INATIVO: 0, SUSPENSO: 0, CANCELADO: 0 }
-    );
+    const ticketCurrent = pagosCurrentCount ? receitaCurrent / pagosCurrentCount : 0;
+    const ticketPrev = pagosPrevCount ? receitaPrev / pagosPrevCount : 0;
 
     return {
-      emAberto,
+      emAbertoCount,
       followupPendente,
       visitsWaiting,
       prospectsCurrent,
@@ -246,15 +340,21 @@ export default function DashboardPage() {
       receberValor,
       valorVendasCurrent,
       valorVendasPrev,
-      matriculasCurrent: matriculasCurrent.length,
-      matriculasPrev: matriculasPrev.length,
+      matriculasCurrent,
+      matriculasPrev,
       vendasMensalidade,
       vendasNovas,
       statusAlunoCount,
     };
-  }, [data, prospects, pagamentos, matriculas, alunos, selectedDate]);
+  }, [data, prospects, pagamentos, matriculas, selectedDate, statusAlunoCount]);
 
-  if (!data || !metrics) return null;
+  if (!data || !metrics) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        {loading ? "Carregando dashboard..." : "Sem dados para o dashboard."}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -338,13 +438,72 @@ export default function DashboardPage() {
             <div className="rounded-xl border border-border bg-card p-5">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-display text-base font-bold">Prospects recentes</h2>
-                <Link href="/prospects" className="text-xs text-gym-accent hover:underline">Ver todos</Link>
+                {showAllProspects ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllProspects(false)}
+                    className="text-xs text-gym-accent hover:underline"
+                  >
+                    Ver recentes
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAllProspects(true);
+                      if (prospectsPage.length === 0) {
+                        void loadProspectsPageData(1);
+                      }
+                    }}
+                    className="text-xs text-gym-accent hover:underline"
+                  >
+                    Ver todos
+                  </button>
+                )}
               </div>
-              {data.prospectsRecentes.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">Nenhum prospect ativo</p>
+              {showAllProspects ? (
+                prospectsPageLoading ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Carregando prospects...</p>
+                ) : prospectsPage.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Nenhum prospect ativo</p>
+                ) : (
+                  <div className="space-y-3">
+                    {prospectsPage.map((p) => (
+                      <div key={p.id} className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{p.nome}</p>
+                          <p className="text-xs text-muted-foreground">{p.telefone}</p>
+                        </div>
+                        <StatusBadge status={p.status} />
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        disabled={prospectsPageLoading || prospectsPageNumber <= 1}
+                        onClick={() => void loadProspectsPageData(prospectsPageNumber - 1)}
+                        className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Anterior
+                      </button>
+                      <span className="text-xs text-muted-foreground">Página {prospectsPageNumber}</span>
+                      <button
+                        type="button"
+                        disabled={prospectsPageLoading || !prospectsPageHasNext}
+                        onClick={() => void loadProspectsPageData(prospectsPageNumber + 1)}
+                        className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Próxima
+                      </button>
+                    </div>
+                  </div>
+                )
               ) : (
+                prospects.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Nenhum prospect ativo</p>
+                ) : (
                 <div className="space-y-3">
-                  {data.prospectsRecentes.map((p) => (
+                  {prospects.map((p) => (
                     <div key={p.id} className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">{p.nome}</p>
@@ -354,6 +513,7 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
+                )
               )}
             </div>
 
@@ -437,7 +597,7 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3">
                   <span className="text-sm text-muted-foreground">Prospects em aberto</span>
-                  <span className="font-bold">{metrics.emAberto.length}</span>
+                  <span className="font-bold">{metrics.emAbertoCount}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3">
                   <span className="text-sm text-muted-foreground">Sem contato recente</span>

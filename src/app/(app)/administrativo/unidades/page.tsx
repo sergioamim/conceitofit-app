@@ -2,19 +2,33 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  authMe,
   createTenant,
   deleteTenant,
   getCurrentTenant,
+  gerarCredencialCatraca,
   listTenants,
   setCurrentTenant,
   toggleTenant,
   updateTenantById,
 } from "@/lib/mock/services";
 import type { Tenant } from "@/lib/types";
+import { ApiRequestError } from "@/lib/api/http";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Copy, Check, KeyRound } from "lucide-react";
+import { isRealApiEnabled } from "@/lib/api/http";
 import { PhoneInput } from "@/components/shared/phone-input";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import type { CatracaCredentialResponse } from "@/lib/api/catraca";
 
 type UnitForm = {
   nome: string;
@@ -27,6 +41,38 @@ type UnitForm = {
   cupomPrintMode: "58MM" | "80MM" | "CUSTOM";
   cupomCustomWidthMm: string;
 };
+
+type CopyButtonProps = {
+  label: string;
+  value: string;
+};
+
+function CopyButton({ label, value }: CopyButtonProps) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard
+      .writeText(value)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => {
+        window.alert(`Não foi possível copiar ${label.toLowerCase()}.`);
+      });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="rounded p-1.5 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary"
+      title={`Copiar ${label.toLowerCase()}`}
+    >
+      {copied ? <Check className="size-3.5 text-gym-teal" /> : <Copy className="size-3.5" />}
+    </button>
+  );
+}
 
 const EMPTY_FORM: UnitForm = {
   nome: "",
@@ -44,11 +90,26 @@ export default function UnidadesPage() {
   const [rows, setRows] = useState<Tenant[]>([]);
   const [currentTenantId, setCurrentTenantId] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [confirmCredencialOpen, setConfirmCredencialOpen] = useState(false);
   const [editing, setEditing] = useState<Tenant | null>(null);
   const [form, setForm] = useState<UnitForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [modalTab, setModalTab] = useState<"DADOS" | "CONFIG">("DADOS");
+  const [canManageCatraca, setCanManageCatraca] = useState(false);
+  const [permissionLoading, setPermissionLoading] = useState(true);
+  const [credentialLoading, setCredentialLoading] = useState(false);
+  const [credentialResult, setCredentialResult] = useState<CatracaCredentialResponse | null>(null);
+  const [credentialError, setCredentialError] = useState("");
+  const [credentialSuccess, setCredentialSuccess] = useState("");
+  const [manualCatracaAdminToken, setManualCatracaAdminToken] = useState("");
+  const hasConfiguredCatracaTokenFromEnv =
+    !!process.env.NEXT_PUBLIC_CATRACA_ADMIN_TOKEN?.trim() ||
+    !!process.env.NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN?.trim() ||
+    !!process.env.NEXT_PUBLIC_ADMIN_TOKEN?.trim();
+
+  const tenantSelecionado = rows.find((tenant) => tenant.id === currentTenantId);
+  const tenantDisplay = tenantSelecionado?.nome || tenantSelecionado?.id || "Nenhuma unidade selecionada";
 
   async function load() {
     const [all, current] = await Promise.all([listTenants(), getCurrentTenant()]);
@@ -56,9 +117,73 @@ export default function UnidadesPage() {
     setCurrentTenantId(current.id);
   }
 
+  async function loadPermissions() {
+    if (!isRealApiEnabled()) {
+      setCanManageCatraca(true);
+      setPermissionLoading(false);
+      return;
+    }
+
+    try {
+      const user = await authMe();
+      const roles = (user?.roles ?? []).map((role) => role.toUpperCase());
+      const hasHighRole = roles.some((role) => role === "ADMIN" || role.includes("ADMIN"));
+      setCanManageCatraca(hasHighRole);
+    } catch {
+      setCanManageCatraca(false);
+    } finally {
+      setPermissionLoading(false);
+    }
+  }
+
   useEffect(() => {
-    load();
+    void load();
+    void loadPermissions();
   }, []);
+
+  function closeCatracaModal() {
+    setConfirmCredencialOpen(false);
+  }
+
+  async function handleGenerateCatraca() {
+    if (!currentTenantId) {
+      setCredentialError("Selecione uma unidade para gerar credencial.");
+      return;
+    }
+    setCredentialLoading(true);
+    setCredentialError("");
+    setCredentialSuccess("");
+    const adminTokenFromEnv = (
+      process.env.NEXT_PUBLIC_CATRACA_ADMIN_TOKEN ??
+      process.env.NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN ??
+      process.env.NEXT_PUBLIC_ADMIN_TOKEN ??
+      ""
+    ).trim();
+    const adminToken = manualCatracaAdminToken.trim() || adminTokenFromEnv;
+    if (!adminToken) {
+      setCredentialError(
+        "Token de admin não configurado. Defina NEXT_PUBLIC_CATRACA_ADMIN_TOKEN (ou NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN / NEXT_PUBLIC_ADMIN_TOKEN) ou informe abaixo."
+      );
+      setCredentialLoading(false);
+      return;
+    }
+    try {
+      const generated = await gerarCredencialCatraca(currentTenantId, adminToken);
+      setCredentialSuccess(credentialResult ? "Credencial regenerada, atualize o Tray." : "Credencial gerada. Atualize o Tray.");
+      setCredentialResult(generated);
+      setConfirmCredencialOpen(false);
+    } catch (error) {
+      if (error instanceof ApiRequestError && (error.status === 401 || error.status === 403)) {
+        setCredentialError("Token de admin inválido ou ausente.");
+      } else if (error instanceof ApiRequestError && error.status === 503) {
+        setCredentialError("Backend sem integração configurada. Verifique se INTEGRATION_ADMIN_TOKEN (lado servidor) está definido.");
+      } else {
+        setCredentialError(normalizeErrorMessage(error));
+      }
+    } finally {
+      setCredentialLoading(false);
+    }
+  }
 
   const sorted = useMemo(
     () =>
@@ -288,6 +413,122 @@ export default function UnidadesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {confirmCredencialOpen && (
+        <Dialog open onOpenChange={closeCatracaModal}>
+          <DialogContent className="border-border bg-card sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg font-bold">Gerar credencial do Tray</DialogTitle>
+              <DialogDescription>
+                Isto vai gerar um novo secret. Atualize o System Tray com o token gerado.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-border"
+                onClick={closeCatracaModal}
+                disabled={credentialLoading}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" onClick={() => void handleGenerateCatraca()} disabled={credentialLoading}>
+                {credentialLoading ? "Gerando..." : "Gerar credencial"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <KeyRound className="size-4" />
+              Catraca / System Tray
+            </p>
+            <p className="text-xs text-muted-foreground">Tenant selecionado: <span className="font-semibold text-foreground">{tenantDisplay}</span></p>
+          </div>
+          <Button
+            onClick={() => setConfirmCredencialOpen(true)}
+            disabled={
+              permissionLoading ||
+              !canManageCatraca ||
+              !currentTenantId ||
+              !(manualCatracaAdminToken.trim() || hasConfiguredCatracaTokenFromEnv)
+            }
+          >
+            Gerar credencial do Tray
+          </Button>
+        </div>
+
+        {isRealApiEnabled() &&
+        !process.env.NEXT_PUBLIC_CATRACA_ADMIN_TOKEN &&
+        !process.env.NEXT_PUBLIC_ADMIN_TOKEN &&
+        !process.env.NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN ? (
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              X-Admin-Token (temporário nesta sessão)
+            </label>
+            <Input
+              type="password"
+              value={manualCatracaAdminToken}
+              onChange={(event) => setManualCatracaAdminToken(event.target.value)}
+              placeholder="Cole o token de integração"
+              className="w-full border-border bg-secondary md:max-w-lg"
+            />
+            <p className="text-xs text-muted-foreground">
+              Informe aqui o token enquanto não houver configuração de ambiente.
+            </p>
+          </div>
+        ) : null}
+
+        {permissionLoading ? (
+          <p className="text-xs text-muted-foreground">Validando permissão...</p>
+        ) : !canManageCatraca ? (
+          <p className="text-xs text-gym-danger">Acesso negado. Apenas usuários com permissão alta podem gerar a credencial.</p>
+        ) : null}
+
+        {credentialError ? <p className="text-sm text-gym-danger">{credentialError}</p> : null}
+        {credentialSuccess ? <p className="text-sm text-gym-teal">{credentialSuccess}</p> : null}
+
+        {credentialResult ? (
+          <div className="space-y-2">
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">keyId</label>
+                <div className="flex items-center gap-2">
+                  <Input value={credentialResult.keyId} readOnly className="bg-secondary border-border" />
+                  <CopyButton label="keyId" value={credentialResult.keyId} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Secret</label>
+                <div className="flex items-center gap-2">
+                  <Input value={credentialResult.secret} readOnly className="bg-secondary border-border" />
+                  <CopyButton label="secret" value={credentialResult.secret} />
+                </div>
+              </div>
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">bearerPlain</label>
+                <div className="flex items-center gap-2">
+                  <Input value={credentialResult.bearerPlain} readOnly className="bg-secondary border-border" />
+                  <CopyButton label="bearerPlain" value={credentialResult.bearerPlain} />
+                </div>
+              </div>
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">bearerBase64</label>
+                <div className="flex items-center gap-2">
+                  <Input value={credentialResult.bearerBase64} readOnly className="bg-secondary border-border" />
+                  <CopyButton label="bearerBase64" value={credentialResult.bearerBase64} />
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Emitida em: {new Date(credentialResult.createdAt).toLocaleString("pt-BR")}</p>
+          </div>
+        ) : null}
+      </div>
 
       <div className="flex items-center justify-between">
         <div>

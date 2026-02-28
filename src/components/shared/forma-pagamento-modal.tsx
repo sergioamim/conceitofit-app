@@ -32,6 +32,7 @@ export function FormaPagamentoModal({
     tipo: "PIX" as TipoFormaPagamento,
     taxaPercentual: "0",
     parcelasMax: "1",
+    emitirAutomaticamente: false,
     instrucoes: "",
     ativo: true,
   });
@@ -44,6 +45,7 @@ export function FormaPagamentoModal({
         tipo: initial.tipo,
         taxaPercentual: String(initial.taxaPercentual ?? 0),
         parcelasMax: String(initial.parcelasMax ?? 1),
+        emitirAutomaticamente: Boolean(initial.emitirAutomaticamente),
         instrucoes: initial.instrucoes ?? "",
         ativo: initial.ativo,
       });
@@ -53,6 +55,7 @@ export function FormaPagamentoModal({
         tipo: "PIX",
         taxaPercentual: "0",
         parcelasMax: "1",
+        emitirAutomaticamente: false,
         instrucoes: "",
         ativo: true,
       });
@@ -67,6 +70,7 @@ export function FormaPagamentoModal({
         tipo: form.tipo,
         taxaPercentual: parseFloat(form.taxaPercentual) || 0,
         parcelasMax: parseInt(form.parcelasMax, 10) || 1,
+        emitirAutomaticamente: Boolean(form.emitirAutomaticamente),
         instrucoes: form.instrucoes || undefined,
         ativo: form.ativo,
       },
@@ -149,6 +153,26 @@ export function FormaPagamentoModal({
                 />
                 <span className="text-muted-foreground">Disponível</span>
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Emissão de NFSe
+              </label>
+              <div className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.emitirAutomaticamente}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, emitirAutomaticamente: e.target.checked }))
+                  }
+                />
+                <span className="text-muted-foreground">
+                  Emitir NFSe automaticamente ao receber pagamento
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Ao marcar, toda baixa desse tipo de pagamento dispara emissão automática de NFSe.
+              </p>
             </div>
           </div>
           <div className="space-y-1.5">

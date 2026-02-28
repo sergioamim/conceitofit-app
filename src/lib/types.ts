@@ -10,6 +10,10 @@ export interface PaginatedResult<T> {
   hasNext: boolean;
 }
 
+export interface PaginatedAlunosResult extends PaginatedResult<Aluno> {
+  totaisStatus?: AlunoTotaisStatus;
+}
+
 export type OrigemProspect =
   | "VISITA_PRESENCIAL"
   | "WHATSAPP"
@@ -60,6 +64,18 @@ export type StatusAluno =
   | "SUSPENSO"
   | "CANCELADO";
 
+export interface AlunoTotaisStatus {
+  total: number;
+  totalAtivo: number;
+  totalSuspenso: number;
+  totalInativo: number;
+  totalCancelado?: number;
+  ativos?: number;
+  suspensos?: number;
+  inativos?: number;
+  cancelados?: number;
+}
+
 export type Sexo = "M" | "F" | "OUTRO";
 
 export type CategoriaAtividade =
@@ -77,6 +93,13 @@ export type StatusMatricula = "ATIVA" | "VENCIDA" | "CANCELADA" | "SUSPENSA";
 
 export type StatusPagamento = "PENDENTE" | "PAGO" | "VENCIDO" | "CANCELADO";
 export type StatusContaPagar = "PENDENTE" | "PAGA" | "VENCIDA" | "CANCELADA";
+export type TipoContaBancaria = "CORRENTE" | "POUPANCA" | "PAGAMENTO";
+export type StatusCadastro = "ATIVA" | "INATIVA";
+export type AdquirenteMaquininha = "STONE" | "CIELO" | "REDE" | "GETNET" | "PAGARME_POS" | "OUTROS";
+export type TipoMovimentoConciliacao = "CREDITO" | "DEBITO";
+export type StatusConciliacao = "PENDENTE" | "CONCILIADA" | "IGNORADA";
+export type OrigemConciliacao = "MANUAL" | "OFX" | "STONE";
+export type PixTipo = "CPF" | "CNPJ" | "EMAIL" | "TELEFONE" | "CHAVE_ALEATORIA" | "OUTRA";
 
 export type TipoPagamento =
   | "MATRICULA"
@@ -116,6 +139,7 @@ export type GrupoDre =
 export type RecorrenciaContaPagar = "MENSAL" | "INTERVALO_DIAS";
 export type TerminoRecorrenciaContaPagar = "SEM_FIM" | "EM_DATA" | "APOS_OCORRENCIAS";
 export type StatusRegraRecorrenciaContaPagar = "ATIVA" | "PAUSADA" | "CANCELADA";
+export type DreProjectionScenario = "BASE" | "OTIMISTA" | "CONSERVADOR";
 
 export interface Endereco {
   cep?: string;
@@ -155,6 +179,7 @@ export interface Aluno {
   tenantId: UUID;
   prospectId?: UUID;
   nome: string;
+  pendenteComplementacao?: boolean;
   email: string;
   telefone: string;
   telefoneSec?: string;
@@ -306,7 +331,53 @@ export interface Pagamento {
   status: StatusPagamento;
   comprovante?: string;
   observacoes?: string;
+  nfseEmitida?: boolean;
+  nfseNumero?: string;
+  nfseChave?: string;
+  dataEmissaoNfse?: LocalDateTime;
   dataCriacao: LocalDateTime;
+}
+
+export interface ContaBancaria {
+  id: UUID;
+  tenantId: UUID;
+  apelido: string;
+  banco: string;
+  agencia: string;
+  conta: string;
+  digito: string;
+  tipo: TipoContaBancaria;
+  titular: string;
+  pixChave?: string;
+  pixTipo?: PixTipo;
+  statusCadastro: StatusCadastro;
+}
+
+export interface Maquininha {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  adquirente: AdquirenteMaquininha;
+  terminal: string;
+  contaBancariaId: UUID;
+  statusCadastro: StatusCadastro;
+}
+
+export interface ConciliacaoLinha {
+  id: UUID;
+  tenantId: UUID;
+  contaBancariaId: UUID;
+  chaveConciliacao: string;
+  origem: OrigemConciliacao;
+  status: StatusConciliacao;
+  dataMovimento: LocalDate;
+  descricao?: string;
+  documento?: string;
+  valor: number;
+  tipoMovimento: TipoMovimentoConciliacao;
+  contaReceberId?: UUID;
+  contaPagarId?: UUID;
+  observacao?: string;
 }
 
 export interface ContaPagar {
@@ -418,6 +489,8 @@ export interface FormaPagamento {
   tipo: TipoFormaPagamento;
   taxaPercentual: number;
   parcelasMax: number;
+  emitirAutomaticamente?: boolean;
+  prazoRecebimentoDias?: number;
   instrucoes?: string;
   ativo: boolean;
 }
@@ -726,8 +799,120 @@ export interface DREGerencial {
   despesasSemTipoValor: number;
 }
 
+export interface DREBloco {
+  receitas: number;
+  despesas: number;
+  resultado: number;
+  custosVariaveis: number;
+  despesasOperacionais: number;
+  despesasFinanceiras: number;
+  impostos: number;
+}
+
+export interface DREProjecaoLinha {
+  grupo: string;
+  natureza: "RECEITA" | "DESPESA";
+  realizado: number;
+  projetado: number;
+  consolidado: number;
+}
+
+export interface DREProjecao {
+  periodoInicio: LocalDate;
+  periodoFim: LocalDate;
+  cenario: DreProjectionScenario;
+  realizado: DREBloco;
+  projetado: DREBloco;
+  consolidado: DREBloco;
+  linhas: DREProjecaoLinha[];
+}
+
 export interface ReceberPagamentoInput {
   dataPagamento: LocalDate;
   formaPagamento: TipoFormaPagamento;
   observacoes?: string;
+}
+
+export type RbacPermission = "VIEW" | "EDIT" | "MANAGE";
+
+export interface RbacPerfil {
+  id: UUID;
+  tenantId: UUID;
+  roleName: string;
+  displayName: string;
+  description?: string;
+  active: boolean;
+  createdAt?: LocalDateTime;
+  updatedAt?: LocalDateTime;
+}
+
+export interface RbacPerfilCreatePayload {
+  roleName: string;
+  displayName: string;
+  description?: string;
+  active: boolean;
+}
+
+export type RbacPerfilUpdatePayload = Partial<RbacPerfilCreatePayload>;
+
+export interface RbacUser {
+  id: UUID;
+  tenantId: UUID;
+  name: string;
+  fullName?: string;
+  email: string;
+  active?: boolean;
+}
+
+export interface RbacFeature {
+  featureKey: string;
+  name?: string;
+  enabled: boolean;
+  rollout: number;
+}
+
+export interface RbacFeatureConfig {
+  enabled: boolean;
+  rollout: number;
+}
+
+export interface RbacGrant {
+  id?: UUID;
+  tenantId?: UUID;
+  roleName: string;
+  featureKey: string;
+  permission: RbacPermission;
+  allowed: boolean;
+}
+
+export interface RbacGrantPayload {
+  roleName: string;
+  featureKey: string;
+  permission: RbacPermission;
+  allowed: boolean;
+}
+
+export type RbacActionFilter = string;
+
+export type RbacResourceTypeFilter = string;
+
+export interface RbacAuditoriaItem {
+  id: UUID;
+  tenantId: UUID;
+  action: string;
+  resourceType: string;
+  resourceId?: UUID;
+  actorId?: UUID;
+  actorName?: string;
+  actorEmail?: string;
+  createdAt: LocalDateTime;
+  detalhes?: string;
+}
+
+export interface RbacPaginatedResult<T> {
+  items: T[];
+  page: number;
+  size: number;
+  hasNext: boolean;
+  total?: number;
 }

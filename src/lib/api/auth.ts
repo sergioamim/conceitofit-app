@@ -1,4 +1,5 @@
 import type { Tenant } from "@/lib/types";
+import type { TenantAccess } from "./session";
 import { apiRequest } from "./http";
 import { saveAuthSession, type AuthSession } from "./session";
 
@@ -15,13 +16,18 @@ interface TenantApiResponse {
   ativo?: boolean;
 }
 
+interface TenantAccessApiResponse {
+  tenantId: string;
+  defaultTenant: boolean;
+}
+
 interface LoginApiResponse {
   token: string;
   refreshToken: string;
   type?: string;
   expiresIn?: number;
   activeTenantId?: string;
-  availableTenants?: TenantApiResponse[];
+  availableTenants?: TenantAccessApiResponse[];
 }
 
 interface MeApiResponse {
@@ -30,7 +36,7 @@ interface MeApiResponse {
   email?: string;
   roles?: string[];
   activeTenantId?: string;
-  availableTenants?: TenantApiResponse[];
+  availableTenants?: TenantAccessApiResponse[];
 }
 
 interface SwitchTenantApiRequest {
@@ -59,7 +65,10 @@ function normalizeSession(response: LoginApiResponse): AuthSession {
     type: response.type ?? "Bearer",
     expiresIn: response.expiresIn,
     activeTenantId: response.activeTenantId,
-    availableTenants: response.availableTenants?.map(normalizeTenant),
+    availableTenants: response.availableTenants?.map((item) => ({
+      tenantId: item.tenantId,
+      defaultTenant: item.defaultTenant,
+    })),
   };
 }
 
@@ -69,7 +78,22 @@ export interface AuthUser {
   email?: string;
   roles?: string[];
   activeTenantId?: string;
-  availableTenants: Tenant[];
+  availableTenants: TenantAccess[];
+}
+
+function parseAvailableTenants(raw?: TenantAccessApiResponse[]): TenantAccess[] {
+  if (!raw?.length) return [];
+  return raw
+    .map((item) => {
+      const tenantId = typeof item.tenantId === "string" ? item.tenantId.trim() : "";
+      return tenantId
+        ? {
+            tenantId,
+            defaultTenant: Boolean(item.defaultTenant),
+          }
+        : null;
+    })
+    .filter((item): item is TenantAccess => item !== null);
 }
 
 export async function loginApi(input: {
@@ -112,7 +136,7 @@ export async function meApi(): Promise<AuthUser> {
     email: response.email,
     roles: response.roles ?? [],
     activeTenantId: response.activeTenantId,
-    availableTenants: (response.availableTenants ?? []).map(normalizeTenant),
+    availableTenants: parseAvailableTenants(response.availableTenants),
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { updateAluno } from "@/lib/mock/services";
 import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -18,135 +18,165 @@ export function ClientePhotoModal({
   onSaved?: () => Promise<void> | void;
 }) {
   const [preview, setPreview] = useState(aluno.foto ?? "");
+  const [hasCaptured, setHasCaptured] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  useEffect(() => {
-    if (!open) {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Este dispositivo não suporta acesso à câmera.");
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPreview(aluno.foto ?? "");
     setCameraError("");
-    let mounted = true;
-    const start = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (!mounted) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch {
-        if (mounted) {
-          setCameraError("Não foi possível acessar a câmera.");
-        }
+    stopCamera();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => undefined);
       }
-    };
-    start();
+    } catch {
+      setCameraError("Não foi possível acessar a câmera.");
+    }
+  }, [stopCamera]);
+
+  useEffect(() => {
+    if (!open) {
+      stopCamera();
+      return;
+    }
+    setPreview(aluno.foto ?? "");
+    setHasCaptured(false);
+    setSaving(false);
+    setCameraError("");
+    void startCamera();
     return () => {
-      mounted = false;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+      stopCamera();
     };
-  }, [open, aluno.foto]);
+  }, [open, aluno.foto, startCamera, stopCamera]);
 
   const handleCapture = () => {
     const video = videoRef.current;
     if (!video) return;
+    if (!video.videoWidth || !video.videoHeight) return;
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 320;
-    canvas.height = video.videoHeight || 240;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     setPreview(dataUrl);
+    setHasCaptured(true);
+    stopCamera();
+  };
+
+  const handleRetake = () => {
+    setHasCaptured(false);
+    setCameraError("");
+    void startCamera();
+  };
+
+  const handleRemove = () => {
+    setPreview("");
+    setHasCaptured(true);
+    stopCamera();
   };
 
   const handleSave = async () => {
+    if (saving) return;
     setSaving(true);
-    await updateAluno(aluno.id, { foto: preview || undefined });
-    setSaving(false);
-    onClose();
-    if (onSaved) {
-      await onSaved();
+    try {
+      await updateAluno(aluno.id, { foto: preview || undefined });
+      onClose();
+      if (onSaved) {
+        await onSaved();
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
+  const canSave = hasCaptured || Boolean(preview) !== Boolean(aluno.foto);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-card border-border max-w-lg">
+      <DialogContent className="bg-card border-border w-[96vw] max-w-4xl p-0">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg">
+          <DialogTitle className="px-6 pt-6 font-display text-lg">
             Trocar foto do cliente
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              Use a câmera para tirar uma nova foto
-            </p>
-            <div className="rounded-xl border border-border bg-black/40">
-              {cameraError ? (
-                <div className="flex h-40 items-center justify-center p-4 text-sm text-gym-danger">
-                  {cameraError}
-                </div>
-              ) : (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  className="h-40 w-full object-cover"
-                />
-              )}
-            </div>
+        <div className="space-y-4 px-6 pb-6">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            {hasCaptured ? "Pré-visualização da captura" : "Use a câmera para tirar uma nova foto"}
+          </p>
+          <div className="overflow-hidden rounded-xl border border-border bg-black/70">
+            {hasCaptured ? (
+              <div className="flex h-[60vh] w-full items-center justify-center">
+                {preview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={preview}
+                    alt={`${aluno.nome} preview`}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <span className="text-sm text-muted-foreground">Foto removida. Salve para confirmar.</span>
+                )}
+              </div>
+            ) : cameraError ? (
+              <div className="flex h-[60vh] items-center justify-center p-4 text-sm text-gym-danger">
+                {cameraError}
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="h-[60vh] w-full object-cover"
+              />
+            )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={handleCapture} disabled={!!cameraError}>
-              Capturar nova foto
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setPreview("")}
-              disabled={!preview}
-            >
-              Remover foto atual
-            </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {hasCaptured ? (
+              <>
+                <Button variant="outline" onClick={handleRetake} disabled={saving}>
+                  Tirar outra foto
+                </Button>
+                <Button variant="outline" onClick={onClose} disabled={saving}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSave} disabled={saving || !canSave}>
+                  {saving ? "Salvando..." : "Salvar foto"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={onClose}>
+                  Cancelar
+                </Button>
+                <Button variant="outline" onClick={handleRemove} disabled={!preview}>
+                  Remover foto atual
+                </Button>
+                <Button onClick={handleCapture} disabled={!!cameraError}>
+                  Capturar foto
+                </Button>
+              </>
+            )}
           </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Pré-visualização
-            </p>
-            <div className="mt-2 flex h-32 items-center justify-center rounded-xl border border-border bg-secondary">
-              {preview ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={preview}
-                  alt={`${aluno.nome} preview`}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-xs text-muted-foreground">Sem foto selecionada</span>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Salvando..." : "Salvar foto"}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -29,6 +29,8 @@ import type {
   ConverterProspectInput,
   ConverterProspectResponse,
   DashboardData,
+  DREProjecao,
+  DreProjectionScenario,
   ReceberPagamentoInput,
   ProspectMensagem,
   ProspectAgendamento,
@@ -56,10 +58,26 @@ import type {
   RecorrenciaContaPagar,
   TerminoRecorrenciaContaPagar,
   PaginatedResult,
+  PaginatedAlunosResult,
 } from "../types";
-import { isRealApiEnabled } from "../api/http";
-import { loginApi, meApi, refreshTokenApi, switchTenantApi, type AuthUser } from "../api/auth";
-import { clearAuthSession, getActiveTenantIdFromSession, getRefreshToken, setMockSessionActive } from "../api/session";
+import { ApiRequestError, isRealApiEnabled } from "../api/http";
+import {
+  loginApi,
+  meApi,
+  refreshTokenApi,
+  switchTenantApi,
+  type AuthUser,
+} from "../api/auth";
+import {
+  clearAuthSession,
+  getActiveTenantIdFromSession,
+  getAccessToken,
+  getAvailableTenantsFromSession,
+  setAvailableTenants,
+  getRefreshToken,
+  setActiveTenantId,
+  setMockSessionActive,
+} from "../api/session";
 import {
   createTipoContaPagarApi,
   listTiposContaPagarApi,
@@ -70,6 +88,7 @@ import {
   cancelRegraRecorrenciaApi,
   cancelarContaPagarApi,
   createContaPagarApi,
+  getDreProjecaoApi,
   getDreGerencialApi,
   listContasPagarApi,
   listRegrasRecorrenciaContaPagarApi,
@@ -88,14 +107,25 @@ import {
   updateFormaPagamentoApi,
 } from "../api/formas-pagamento";
 import {
+  listarAcessosCatracaDashboardApi,
+  gerarCatracaCredencialApi,
+  liberarAcessoCatracaApi,
+  listarCatracaWsStatusApi,
+  obterCatracaWsStatusPorTenantApi,
+  type CatracaAcessosResponse,
+  type CatracaAcessosDashboardResponse,
+  type CatracaAgentConexao,
+  type CatracaCredentialResponse,
+  type CatracaWsStatusResponse,
+} from "../api/catraca";
+import {
   createUnidadeApi,
   deleteUnidadeApi,
   getAcademiaAtualApi,
-  getTenantAtualApi,
+  getTenantContextApi,
   listAcademiasApi,
   listHorariosApi,
   listUnidadesApi,
-  setTenantContextApi,
   toggleUnidadeApi,
   updateAcademiaAtualApi,
   updateHorariosApi,
@@ -118,10 +148,13 @@ import {
   updateProspectApi,
   updateProspectStatusApi,
 } from "../api/crm";
+import { getDashboardApi } from "../api/dashboard";
 import {
   createAlunoApi,
   createAlunoComMatriculaApi,
   getAlunoApi,
+  extractAlunosFromListResponse,
+  extractAlunosTotais,
   listAlunosApi,
   updateAlunoApi,
   updateAlunoStatusApi,
@@ -185,7 +218,21 @@ import {
   updateProdutoApi,
   updateServicoApi,
 } from "../api/comercial-catalogo";
-import { listPagamentosApi, receberPagamentoApi } from "../api/pagamentos";
+import {
+  listPagamentosApi,
+  receberPagamentoApi,
+  emitirNfsePagamentoApi,
+} from "../api/pagamentos";
+import {
+  cancelarContaReceberApi,
+  createContaReceberApi,
+  listContasReceberApi,
+  receberContaReceberApi,
+  type CategoriaContaReceberApi,
+  type ContaReceberApiResponse,
+  type StatusContaReceberApi,
+  updateContaReceberApi,
+} from "../api/contas-receber";
 import { createVendaApi, listVendasApi } from "../api/vendas";
 
 function genId(): string {
@@ -283,9 +330,405 @@ function rangesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: strin
   return aStart <= bEnd && aEnd >= bStart;
 }
 
-function getCurrentTenantId(): string {
+function normalizeTenantId(value: string | undefined): string | undefined {
+  const candidate = value?.trim();
+  return candidate || undefined;
+}
+
+type SessionTenantPreference = ReturnType<typeof getAvailableTenantsFromSession>;
+
+function getAvailableTenantIdsFromSessionResolved(): string[] {
+  const sessionIds = getAvailableTenantsFromSession().map((tenant) => tenant.tenantId);
+  if (sessionIds.length > 0) {
+    return sessionIds;
+  }
+  const tenantIds = new Set(getStore().tenants.map((tenant) => tenant.id));
+  if (!tenantIds.size) {
+    return [];
+  }
+  return Array.from(tenantIds);
+}
+
+function normalizeEntityList<T>(value: unknown): T[] {
+  if (Array.isArray(value)) {
+    return value as T[];
+  }
+
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const candidates: unknown = (value as Record<string, unknown>).items
+    ?? (value as Record<string, unknown>).content
+    ?? (value as Record<string, unknown>).data
+    ?? (value as Record<string, unknown>).rows
+    ?? (value as Record<string, unknown>).result
+    ?? (value as Record<string, unknown>).itens;
+
+  if (Array.isArray(candidates)) {
+    return candidates as T[];
+  }
+
+  return [];
+}
+
+function toStringOrEmpty(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
+function normalizeAtividadeItem(raw: unknown): Atividade | undefined {
+  if (!raw || typeof raw !== "object") {
+    return undefined;
+  }
+  const input = raw as Record<string, unknown>;
+  const id = toStringOrEmpty(input.id);
+  const tenantId = toStringOrEmpty(input.tenantId);
+  if (!id || !tenantId) return undefined;
+
+  const categoria = toStringOrEmpty(input.categoria) as CategoriaAtividade;
+  const nome = toStringOrEmpty(input.nome) || "Sem nome";
+
+  return {
+    id,
+    tenantId,
+    nome,
+    descricao: typeof input.descricao === "string" ? input.descricao : undefined,
+    categoria: (categoria as CategoriaAtividade) || "OUTRA",
+    icone: typeof input.icone === "string" ? input.icone : "",
+    cor: typeof input.cor === "string" ? input.cor : "#3de8a0",
+    permiteCheckin: input.permiteCheckin === true,
+    checkinObrigatorio: input.checkinObrigatorio === true,
+    ativo: input.ativo === false ? false : true,
+  };
+}
+
+function getAvailableTenantsFromSessionOrdered(): SessionTenantPreference {
+  return getAvailableTenantsFromSession()
+    .filter((tenant) => typeof tenant.tenantId === "string" && tenant.tenantId.trim())
+    .filter((tenant, index, source) =>
+      source.findIndex((item) => item.tenantId === tenant.tenantId) === index
+    );
+}
+
+function getAvailableTenantIdsFromSession(): string[] {
+  return getAvailableTenantsFromSessionOrdered().map((tenant) => tenant.tenantId);
+}
+
+function getDefaultTenantIdFromSession(): string | undefined {
+  const availableTenants = getAvailableTenantsFromSessionOrdered();
+  const resolvedIds = new Set(getAvailableTenantIdsFromSessionResolved());
+  const defaultFromSession = availableTenants.find(
+    (tenant) => tenant.defaultTenant && resolvedIds.has(tenant.tenantId)
+  )?.tenantId;
+  return defaultFromSession ?? getAvailableTenantIdsFromSessionResolved()[0];
+}
+
+function visibleTenantsFromSession(tenants: Tenant[]): Tenant[] {
+  const availableTenants = getAvailableTenantsFromSessionOrdered();
+  if (!availableTenants.length) {
+    return tenants.filter((tenant) => tenant.ativo !== false);
+  }
+
+  const byId = new Map<string, Tenant>();
+  for (const tenant of tenants) {
+    byId.set(tenant.id, tenant);
+  }
+
+  const visibleFromSession = availableTenants
+    .map((tenant) => byId.get(tenant.tenantId))
+    .filter((tenant): tenant is Tenant => Boolean(tenant));
+  return visibleFromSession.filter((tenant) => tenant.ativo !== false);
+}
+
+function resolveSessionTenantId(): { tenantId?: string; isRestricted: boolean } {
+  const sessionTenantId = normalizeTenantId(getActiveTenantIdFromSession());
+  const allowedIds = getAvailableTenantIdsFromSessionResolved();
+  if (!sessionTenantId) {
+    return { isRestricted: allowedIds.length > 0, tenantId: undefined };
+  }
+  if (allowedIds.length === 0 || allowedIds.includes(sessionTenantId)) {
+    return { isRestricted: allowedIds.length > 0, tenantId: sessionTenantId };
+  }
+  return { isRestricted: true, tenantId: undefined };
+}
+
+function chooseVisibleTenantBySession(
+  tenants: Tenant[],
+  fallbackId?: string
+): Tenant | undefined {
+  const { tenantId: sessionTenantId, isRestricted } = resolveSessionTenantId();
+  const allowedIds = getAvailableTenantIdsFromSessionResolved();
+  const fallbackTenantId = getDefaultTenantIdFromSession() ?? (allowedIds.length ? allowedIds[0] : undefined);
+
+  if (sessionTenantId) {
+    const matchedSession = tenants.find((tenant) => tenant.id === sessionTenantId);
+    if (matchedSession) return matchedSession;
+    if (!isRestricted) {
+      return tenants.find((tenant) => tenant.id === sessionTenantId) ?? tenants[0] ?? { id: sessionTenantId, nome: "Unidade" } as Tenant;
+    }
+  }
+
+  if (allowedIds.length && fallbackId && allowedIds.includes(fallbackId)) {
+    const fromFallback = tenants.find((tenant) => tenant.id === fallbackId);
+    if (fromFallback) return fromFallback;
+  }
+
+  if (fallbackTenantId) {
+    const fromDefault = tenants.find((tenant) => tenant.id === fallbackTenantId);
+    if (fromDefault) return fromDefault;
+  }
+
+  const visible = visibleTenantsFromSession(tenants);
+  if (visible.length) return visible[0];
+
+  if (fallbackId) {
+    return tenants.find((tenant) => tenant.id === fallbackId);
+  }
+  return tenants[0];
+}
+
+function resolveTenantForApi(): string {
+  const { tenantId: sessionTenantId, isRestricted } = resolveSessionTenantId();
   const store = getStore();
-  return store.currentTenantId ?? store.tenant.id ?? TENANT_ID_DEFAULT;
+
+  if (tenantContextHydratedFromApi && store.currentTenantId) {
+    return store.currentTenantId;
+  }
+
+  if (sessionTenantId) {
+    const tenantInStore = store.tenants.find((tenant) => tenant.id === sessionTenantId);
+    if (tenantInStore) return tenantInStore.id;
+    if (!isRestricted) {
+      return sessionTenantId;
+    }
+  }
+
+  const allowedIds = getAvailableTenantIdsFromSessionResolved();
+  const allowedInStore = allowedIds
+    .map((id) => store.tenants.find((tenant) => tenant.id === id))
+    .find((tenant): tenant is Tenant => Boolean(tenant));
+  if (allowedInStore) return allowedInStore.id;
+
+  const fallbackTenantId = getDefaultTenantIdFromSession() ?? getTenantFromContextFallback().id;
+  if (fallbackTenantId && fallbackTenantId !== TENANT_ID_DEFAULT) {
+    return fallbackTenantId;
+  }
+
+  if (store.currentTenantId && isTenantKnown(store.currentTenantId)) {
+    return store.currentTenantId;
+  }
+
+  if (store.tenant?.id && isTenantKnown(store.tenant.id)) {
+    return store.tenant.id;
+  }
+  return TENANT_ID_DEFAULT;
+}
+
+function isTenantKnown(tenantId: string): boolean {
+  const allowedIds = getAvailableTenantIdsFromSessionResolved();
+  if (allowedIds.length > 0) {
+    if (tenantContextHydratedFromApi) {
+      return getStore().tenants.some((tenant) => tenant.id === tenantId);
+    }
+    return allowedIds.includes(tenantId);
+  }
+  return getStore().tenants.some((tenant) => tenant.id === tenantId);
+}
+
+function syncCurrentTenantFromSessionIfNeeded(): string | undefined {
+  const { tenantId: activeTenantId, isRestricted } = resolveSessionTenantId();
+  const storeSnapshot = getStore();
+  const contextTenantId = tenantContextHydratedFromApi
+    ? normalizeTenantId(storeSnapshot.currentTenantId)
+    : undefined;
+  const contextTenant =
+    contextTenantId ? storeSnapshot.tenants.find((tenant) => tenant.id === contextTenantId) : undefined;
+
+  if (tenantContextHydratedFromApi && contextTenant && contextTenant.id !== activeTenantId) {
+    setStore((s) => ({
+      ...s,
+      currentTenantId: contextTenant.id,
+      tenant: contextTenant,
+    }));
+    setActiveTenantId(contextTenant.id);
+    return contextTenant.id;
+  }
+
+  if (!activeTenantId) {
+    return resolveTenantForApi();
+  }
+
+  const allowedTenantIds = getAvailableTenantIdsFromSessionResolved();
+  if (allowedTenantIds.length && !allowedTenantIds.includes(activeTenantId)) {
+    const fallbackTenantId = getDefaultTenantIdFromSession() || allowedTenantIds[0];
+    if (fallbackTenantId && fallbackTenantId !== activeTenantId) {
+      setActiveTenantId(fallbackTenantId);
+      return fallbackTenantId;
+    }
+  }
+
+  const activeExistsInStore = getStore().tenants.some((tenant) => tenant.id === activeTenantId);
+  if (!isRealApiEnabled()) {
+    if (!activeExistsInStore) {
+      return undefined;
+    }
+    setStore((s) => ({
+      ...s,
+      currentTenantId: activeTenantId,
+      tenant: s.tenants.find((tenant) => tenant.id === activeTenantId) ?? s.tenant,
+    }));
+    return activeTenantId;
+  }
+
+  if (!activeExistsInStore && !isRestricted && !tenantContextHydratedFromApi) {
+    setStore((s) => ({
+      ...s,
+      currentTenantId: activeTenantId,
+    }));
+    return activeTenantId;
+  }
+
+  if (!activeExistsInStore && (isRestricted || tenantContextHydratedFromApi)) {
+    return resolveTenantForApi();
+  }
+
+  const store = getStore();
+  if (!activeExistsInStore) {
+    setStore((s) => ({
+      ...s,
+      currentTenantId: activeTenantId,
+      tenant: s.tenants.find((tenant) => tenant.id === activeTenantId) ?? s.tenant,
+    }));
+    return resolveTenantForApi();
+  }
+
+  if (store.currentTenantId === activeTenantId && store.tenant?.id === activeTenantId) {
+    return activeTenantId;
+  }
+
+  const tenantFromSession = store.tenants.find((tenant) => tenant.id === activeTenantId);
+  const fallback = tenantFromSession ?? store.tenants.find((tenant) => tenant.id === getDefaultTenantIdFromSession());
+  setStore((s) => ({
+    ...s,
+    currentTenantId: activeTenantId,
+    tenant: fallback ?? s.tenant,
+  }));
+  return activeTenantId;
+}
+
+function getCurrentTenantId(): string {
+  const sessionTenantId = syncCurrentTenantFromSessionIfNeeded();
+  if (sessionTenantId) {
+    return sessionTenantId;
+  }
+  const store = getStore();
+  return (
+    normalizeTenantId(store.currentTenantId) ??
+    normalizeTenantId(store.tenant?.id) ??
+    store.tenants[0]?.id ??
+    TENANT_ID_DEFAULT
+  );
+}
+
+function resolveTenantIdForApiCall(): string | undefined {
+  const activeTenantId = normalizeTenantId(getActiveTenantIdFromSession());
+  const allowedTenantIds = getAvailableTenantIdsFromSessionResolved();
+  if (!allowedTenantIds.length) {
+    return activeTenantId ?? normalizeTenantId(getCurrentTenantId());
+  }
+  if (activeTenantId && allowedTenantIds.includes(activeTenantId)) {
+    return activeTenantId;
+  }
+
+  const currentTenantId = normalizeTenantId(getCurrentTenantId());
+  if (currentTenantId && allowedTenantIds.includes(currentTenantId)) {
+    return currentTenantId;
+  }
+
+  return allowedTenantIds[0] || undefined;
+}
+
+async function getTenantIdForApiCall(): Promise<string | undefined> {
+  if (!isRealApiEnabled()) return getCurrentTenantId();
+  const tenantId = resolveTenantIdForApiCall();
+  return tenantId;
+}
+
+type TenantContextFromApi = {
+  currentTenantId: string;
+  tenantAtual: Tenant;
+  unidadesDisponiveis: Tenant[];
+};
+
+async function getTenantContextFromAuth(): Promise<TenantContextFromApi> {
+  const me = await meApi();
+  const units = await listUnidadesApi();
+  if (!Array.isArray(units) || units.length === 0) {
+    throw new Error("Nenhuma unidade disponível para o usuário autenticado.");
+  }
+
+  const activeTenantId = normalizeTenantId(me.activeTenantId) ?? normalizeTenantId(getActiveTenantIdFromSession());
+  const allowedTenantIds = me.availableTenants
+    .map((tenant) => normalizeTenantId(tenant.tenantId))
+    .filter((tenantId): tenantId is string => Boolean(tenantId));
+
+  const defaultTenantId =
+    normalizeTenantId(getDefaultTenantIdFromSession()) ??
+    normalizeTenantId(
+      me.availableTenants.find((tenant) => tenant.defaultTenant)?.tenantId
+    );
+
+  const allowedUnits =
+    allowedTenantIds.length > 0 ? units.filter((tenant) => allowedTenantIds.includes(tenant.id)) : units;
+  const visibleUnits = allowedUnits.length > 0 ? allowedUnits : units;
+
+  const tenantAtual =
+    visibleUnits.find((tenant) => tenant.id === activeTenantId) ??
+    (defaultTenantId ? visibleUnits.find((tenant) => tenant.id === defaultTenantId) : undefined) ??
+    visibleUnits[0];
+
+  if (!tenantAtual) {
+    throw new Error("Não foi possível identificar a unidade atual do usuário autenticado.");
+  }
+
+  return {
+    currentTenantId: tenantAtual.id,
+    tenantAtual,
+    unidadesDisponiveis: visibleUnits,
+  };
+}
+
+async function getTenantContextFallbackFromApi(): Promise<TenantContextFromApi> {
+  try {
+    return await getTenantContextFromAuth();
+  } catch (authError) {
+    console.warn(
+      "[contexto-unidades][api-fallback] Falha no contexto via Auth. Tentando endpoint legado /context/.",
+      authError
+    );
+    const context = await getTenantContextApi();
+    return {
+      currentTenantId: context.currentTenantId,
+      tenantAtual: context.tenantAtual,
+      unidadesDisponiveis: context.unidadesDisponiveis,
+    };
+  }
+}
+
+function mergeTenantScopedData<T extends { id: string; tenantId: string }>(
+  base: T[],
+  incoming: T[]
+): T[] {
+  const incomingIds = new Set(incoming.map((item) => item.id));
+  const incomingTenantIds = new Set(incoming.map((item) => item.tenantId));
+  return [
+    ...incoming,
+    ...base.filter(
+      (item) => !incomingIds.has(item.id) && !incomingTenantIds.has(item.tenantId)
+    ),
+  ];
 }
 
 function getCurrentGroupTenantIds(): string[] {
@@ -416,6 +859,17 @@ function syncAlunosStatus(): void {
 // ─── DASHBOARD ──────────────────────────────────────────────────────────────
 
 export async function getDashboard(params?: { month?: number; year?: number }): Promise<DashboardData> {
+  if (isRealApiEnabled()) {
+    try {
+      return await getDashboardApi({
+        tenantId: getCurrentTenantId(),
+        month: params?.month,
+        year: params?.year,
+      });
+    } catch (error) {
+      console.warn("[dashboard][api-fallback] Falha ao obter dashboard na API real. Usando store local.", error);
+    }
+  }
   syncAlunosStatus();
   const store = getStore();
   const tenantId = getCurrentTenantId();
@@ -482,6 +936,96 @@ function areSameTenantList(a: Tenant[], b: Tenant[]): boolean {
 }
 
 let tenantContextHydratedFromApi = false;
+let tenantContextSyncAt = 0;
+let tenantContextSyncInFlight: Promise<boolean> | null = null;
+let tenantContextRetryUntil = 0;
+const TENANT_CONTEXT_CACHE_MS = 15_000;
+const TENANT_CONTEXT_RETRY_MS = 8_000;
+
+function shouldRefreshTenantContext(): boolean {
+  const now = Date.now();
+  if (now < tenantContextRetryUntil) {
+    return false;
+  }
+  if (tenantContextHydratedFromApi) {
+    return now - tenantContextSyncAt > TENANT_CONTEXT_CACHE_MS;
+  }
+  return true;
+}
+
+async function syncTenantContextFromApiIfStale(force = false): Promise<boolean> {
+  if (!isRealApiEnabled() || (!force && !shouldRefreshTenantContext())) {
+    return true;
+  }
+
+  if (tenantContextSyncInFlight) {
+    return tenantContextSyncInFlight;
+  }
+
+  const attempt = (async () => {
+    try {
+      const context = await getTenantContextFallbackFromApi();
+      const allowedTenantIds = getAvailableTenantIdsFromSession();
+      const allowedUnits =
+        allowedTenantIds.length > 0
+          ? context.unidadesDisponiveis.filter((tenant) => allowedTenantIds.includes(tenant.id))
+          : context.unidadesDisponiveis;
+      const preferredTenantId =
+        getDefaultTenantIdFromSession() ||
+        (allowedTenantIds.length > 0 ? allowedTenantIds[0] : undefined);
+      const contextCurrentTenantId = normalizeTenantId(context.currentTenantId);
+      const activeTenantId = normalizeTenantId(getActiveTenantIdFromSession());
+
+      const tenantCandidate =
+        allowedUnits.find((tenant) => tenant.id === contextCurrentTenantId)
+        ?? allowedUnits.find((tenant) => tenant.id === activeTenantId)
+        ?? allowedUnits.find((tenant) => tenant.id === preferredTenantId)
+        ?? allowedUnits[0]
+        ?? context.tenantAtual;
+
+      if (!tenantCandidate) {
+        throw new Error("Contexto de unidade sem tenant válido retornado pelo backend.");
+      }
+
+      const tenantId = normalizeTenantId(tenantCandidate.id) || contextCurrentTenantId || activeTenantId || preferredTenantId || TENANT_ID_DEFAULT;
+
+      syncTenantContextInStore({
+        currentTenantId: tenantId,
+        tenantAtual: tenantCandidate,
+        unidadesDisponiveis: allowedUnits.length ? allowedUnits : context.unidadesDisponiveis,
+      });
+
+      tenantContextSyncAt = Date.now();
+      tenantContextRetryUntil = 0;
+      return true;
+    } catch (error) {
+      const now = Date.now();
+      tenantContextRetryUntil = now + TENANT_CONTEXT_RETRY_MS;
+      tenantContextHydratedFromApi = false;
+      console.warn("[contexto-unidades][api-fallback] Falha ao sincronizar contexto da unidade ativa via API.", error);
+      return false;
+    } finally {
+      tenantContextSyncInFlight = null;
+    }
+  })();
+
+  tenantContextSyncInFlight = attempt;
+  return attempt;
+}
+
+function getTenantFromContextFallback(): Tenant {
+  const stored = getStore();
+  const allowedTenant = getAvailableTenantIdsFromSessionResolved()
+    .map((id) => stored.tenants.find((tenant) => tenant.id === id))
+    .find((tenant): tenant is Tenant => Boolean(tenant));
+
+  return {
+    ...(allowedTenant ?? stored.tenant),
+    id: allowedTenant?.id ?? stored.currentTenantId ?? stored.tenant?.id ?? TENANT_ID_DEFAULT,
+    ativo: allowedTenant?.ativo ?? stored.tenant?.ativo ?? true,
+    nome: allowedTenant?.nome ?? stored.tenant?.nome ?? "Unidade",
+  };
+}
 
 function syncTenantContextInStore(input: {
   currentTenantId: string;
@@ -489,6 +1033,12 @@ function syncTenantContextInStore(input: {
   unidadesDisponiveis: Tenant[];
 }): void {
   tenantContextHydratedFromApi = true;
+  tenantContextSyncAt = Date.now();
+  setActiveTenantId(input.currentTenantId);
+  setAvailableTenants(
+    input.unidadesDisponiveis.map((tenant) => tenant.id),
+    input.currentTenantId
+  );
   setStore((s) => {
     const nextTenants = [...input.unidadesDisponiveis];
     const hasNoChanges =
@@ -511,12 +1061,25 @@ export async function authLogin(input: { email: string; password: string }): Pro
     return;
   }
   await loginApi(input);
-  const tenantFromToken = getActiveTenantIdFromSession();
-  if (tenantFromToken) {
+  const synced = await syncTenantContextFromApiIfStale(true);
+  if (!synced) {
+    const tenantFromToken = getActiveTenantIdFromSession();
+    setActiveTenantId(tenantFromToken);
+    if (tenantFromToken) {
+      setStore((s) => ({
+        ...s,
+        currentTenantId: tenantFromToken,
+        tenant: s.tenants.find((tenant) => tenant.id === tenantFromToken) ?? s.tenant,
+      }));
+    }
+  } else {
+    const currentTenantId = getCurrentTenantId();
+    setActiveTenantId(currentTenantId);
     setStore((s) => ({
       ...s,
-      currentTenantId: tenantFromToken,
-      tenant: s.tenants.find((item) => item.id === tenantFromToken) ?? s.tenant,
+      currentTenantId,
+      tenant:
+        s.tenants.find((tenant) => tenant.id === currentTenantId) ?? s.tenant,
     }));
   }
 }
@@ -528,6 +1091,13 @@ export async function authRefresh(): Promise<void> {
     throw new Error("Sessão expirada. Faça login novamente.");
   }
   await refreshTokenApi(refreshToken);
+  await syncTenantContextFromApiIfStale(true);
+  const tenantId = getCurrentTenantId();
+  setActiveTenantId(tenantId);
+  if (tenantId) {
+    const tenantIds = getStore().tenants.map((tenant) => tenant.id);
+    setAvailableTenants(tenantIds.length ? tenantIds : [tenantId], tenantId);
+  }
 }
 
 export async function authMe(): Promise<AuthUser | undefined> {
@@ -535,15 +1105,299 @@ export async function authMe(): Promise<AuthUser | undefined> {
   return meApi();
 }
 
+function getCatracaAdminToken(): string {
+  return (
+    process.env.NEXT_PUBLIC_CATRACA_ADMIN_TOKEN ??
+    process.env.NEXT_PUBLIC_ADMIN_TOKEN ??
+    process.env.NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN ??
+    ""
+  ).trim();
+}
+
+function getBase64Token(value: string): string {
+  if (typeof window === "undefined" || typeof window.btoa !== "function") return `${value}-base64`;
+  try {
+    return window.btoa(value);
+  } catch {
+    return `${value}-base64`;
+  }
+}
+
+function buildMockCatracaCredential(tenantId: string): CatracaCredentialResponse {
+  const keyId = `catraca-${tenantId.slice(0, 8)}`;
+  const secret = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const bearerPlain = `${keyId}:${secret}`;
+  return {
+    keyId,
+    secret,
+    bearerPlain,
+    bearerBase64: getBase64Token(bearerPlain),
+    tenantId,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export async function gerarCredencialCatraca(
+  tenantId: string,
+  adminTokenOverride?: string
+): Promise<CatracaCredentialResponse> {
+  if (!tenantId.trim()) {
+    throw new Error("TenantId inválido para gerar credencial.");
+  }
+
+  if (!isRealApiEnabled()) {
+    return buildMockCatracaCredential(tenantId);
+  }
+
+  const adminToken = (adminTokenOverride ?? "").trim() || getCatracaAdminToken();
+  if (!adminToken) {
+    throw new Error(
+      "Token de admin não configurado. Defina NEXT_PUBLIC_CATRACA_ADMIN_TOKEN (ou NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN / NEXT_PUBLIC_ADMIN_TOKEN) ou informe o X-Admin-Token abaixo."
+    );
+  }
+
+  try {
+    return await gerarCatracaCredencialApi({
+      tenantId,
+      adminToken,
+    });
+  } catch (error) {
+    console.warn("[catraca][api-fallback] Falha ao gerar credencial no backend real.", error);
+    throw error;
+  }
+}
+
+function findOnlineAgentId(tenant: {
+  tenantId: string;
+  connectedAgents: number;
+  agents?: CatracaAgentConexao[];
+}): string | null {
+  const fromAgents = tenant.agents?.find((agent) => Boolean((agent?.agentId ?? "").trim()));
+  return fromAgents ? (fromAgents.agentId ?? "").trim() : null;
+}
+
+function decodeBase64Url(value: string): string {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  if (typeof atob !== "function") {
+    return "";
+  }
+  return atob(padded);
+}
+
+async function resolveCatracaIssuedBy(
+  issuedBy?: string
+): Promise<string | undefined> {
+  const forced = issuedBy?.trim();
+  if (forced) {
+    return forced;
+  }
+
+  try {
+    const current = await meApi();
+    const candidate = current?.id ?? current?.email ?? current?.nome;
+    if (candidate?.trim()) {
+      return candidate.trim();
+    }
+  } catch {
+    // fallback to JWT token claim
+  }
+
+  try {
+    const token = getAccessToken();
+    if (!token) return undefined;
+    const parts = token.split(".");
+    if (parts.length < 2) return undefined;
+    const payload = decodeBase64Url(parts[1]);
+    const parsed = JSON.parse(payload) as {
+      userId?: string;
+      sub?: string;
+      email?: string;
+      nome?: string;
+    };
+    const candidate = parsed.userId ?? parsed.sub ?? parsed.email ?? parsed.nome;
+    return typeof candidate === "string" && candidate.trim() ? candidate.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function liberarAcessoCatraca(
+  memberId: string,
+  justificativa: string,
+  issuedBy?: string
+): Promise<string> {
+  const reason = justificativa.trim();
+  const normalizedMemberId = memberId.trim();
+  if (!normalizedMemberId) {
+    throw new Error("Cliente inválido para liberar acesso.");
+  }
+  if (!reason) {
+    throw new Error("A justificativa é obrigatória.");
+  }
+
+  const tenantId = getCurrentTenantId();
+  if (!tenantId) {
+    throw new Error("Tenant não encontrado para liberar acesso.");
+  }
+
+  if (!isRealApiEnabled()) {
+    return `mock-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  const status = await listarStatusConexaoCatraca(tenantId);
+  const tenantStatus = status.tenants.find((item) => item.tenantId === tenantId);
+  if (!tenantStatus || tenantStatus.connectedAgents <= 0) {
+    throw new Error("Nenhum agente da catraca conectado para este tenant.");
+  }
+
+  const agentId = findOnlineAgentId(tenantStatus);
+  if (!agentId) {
+    throw new Error("Não foi possível identificar o agente conectado.");
+  }
+
+  const resolvedIssuedBy = await resolveCatracaIssuedBy(issuedBy);
+
+  const response = await liberarAcessoCatracaApi({
+    agentId,
+    memberId: normalizedMemberId,
+    reason,
+    issuedBy: resolvedIssuedBy,
+  });
+
+  return response.requestId;
+}
+
+export async function listarStatusConexaoCatraca(tenantId?: string): Promise<CatracaWsStatusResponse> {
+  if (!isRealApiEnabled()) {
+    const tenants = getStore().tenants.filter((tenant) => tenant.ativo !== false);
+    const rows = tenants.map((tenant) => ({
+      tenantId: tenant.id,
+      connectedAgents: 0,
+    }));
+    if (tenantId) {
+      const selected = rows.find((row) => row.tenantId === tenantId);
+      return {
+        totalConnectedAgents: selected?.connectedAgents ?? 0,
+        tenants: selected ? [selected] : [{ tenantId, connectedAgents: 0 }],
+      };
+    }
+
+    return {
+      totalConnectedAgents: 0,
+      tenants: rows,
+    };
+  }
+
+  if (tenantId?.trim()) {
+    return obterCatracaWsStatusPorTenantApi({ tenantId: tenantId.trim() });
+  }
+
+  return listarCatracaWsStatusApi({});
+}
+
+let acessosCatracaInFlightKey: string | null = null;
+let acessosCatracaInFlightPromise: Promise<CatracaAcessosDashboardResponse> | null = null;
+let lastAcessosCatracaKey: string | null = null;
+let lastAcessosCatracaAt = 0;
+let lastAcessosCatracaResponse: CatracaAcessosDashboardResponse | null = null;
+
+export async function listAcessosCatraca(params?: {
+  page?: number;
+  size?: number;
+  startDate?: string;
+  endDate?: string;
+  memberId?: string;
+  tipoLiberacao?: "TODOS" | "MANUAL" | "AUTOMATICA";
+  status?: "TODOS" | "LIBERADO" | "BLOQUEADO";
+  uniqueWindowMinutes?: number;
+  timezone?: string;
+}): Promise<CatracaAcessosDashboardResponse> {
+  const page = Math.max(0, params?.page ?? 0);
+  const size = Math.min(200, Math.max(1, params?.size ?? 20));
+  const tenantId = getCurrentTenantId();
+  const cacheKey = JSON.stringify({
+    tenantId,
+    page,
+    size,
+    startDate: params?.startDate ?? "",
+    endDate: params?.endDate ?? "",
+    memberId: params?.memberId ?? "",
+    tipoLiberacao: params?.tipoLiberacao ?? "TODOS",
+    status: params?.status ?? "TODOS",
+    uniqueWindowMinutes: params?.uniqueWindowMinutes ?? 120,
+    timezone: params?.timezone ?? "",
+  });
+
+  if (!isRealApiEnabled()) {
+    return {
+      items: [],
+      page,
+      size,
+      total: 0,
+      hasNext: false,
+    };
+  }
+
+  const nowTs = Date.now();
+  if (
+    lastAcessosCatracaResponse &&
+    lastAcessosCatracaKey === cacheKey &&
+    nowTs - lastAcessosCatracaAt < 1200
+  ) {
+    return lastAcessosCatracaResponse;
+  }
+
+  if (acessosCatracaInFlightPromise && acessosCatracaInFlightKey === cacheKey) {
+    return acessosCatracaInFlightPromise;
+  }
+
+  acessosCatracaInFlightKey = cacheKey;
+  acessosCatracaInFlightPromise = listarAcessosCatracaDashboardApi({
+    tenantId,
+    page,
+    size,
+    startDate: params?.startDate,
+    endDate: params?.endDate,
+    memberId: params?.memberId,
+    tipoLiberacao: params?.tipoLiberacao,
+    status: params?.status,
+    uniqueWindowMinutes: params?.uniqueWindowMinutes ?? 120,
+    timezone: params?.timezone,
+  })
+    .then((response) => {
+      lastAcessosCatracaKey = cacheKey;
+      lastAcessosCatracaResponse = response;
+      lastAcessosCatracaAt = Date.now();
+      return response;
+    })
+    .finally(() => {
+      acessosCatracaInFlightPromise = null;
+      acessosCatracaInFlightKey = null;
+    });
+
+  return acessosCatracaInFlightPromise;
+}
+
 export async function authLogout(): Promise<void> {
   clearAuthSession();
+  tenantContextHydratedFromApi = false;
+  tenantContextSyncAt = 0;
 }
 
 export async function listTenants(): Promise<Tenant[]> {
   if (isRealApiEnabled()) {
+    const synced = await syncTenantContextFromApiIfStale();
+    if (synced && tenantContextHydratedFromApi) {
+      const storeTenants = getStore().tenants;
+      const visibleTenants = visibleTenantsFromSession(storeTenants);
+      if (visibleTenants.length) return visibleTenants;
+      return storeTenants.filter((t) => t.ativo !== false);
+    }
     try {
       const tenants = await listUnidadesApi();
       tenantContextHydratedFromApi = true;
+      tenantContextSyncAt = Date.now();
       setStore((s) => {
         if (areSameTenantList(s.tenants, tenants)) return s;
         return {
@@ -551,11 +1405,21 @@ export async function listTenants(): Promise<Tenant[]> {
           tenants,
         };
       });
-      return tenants;
+      const visibleTenants = visibleTenantsFromSession(tenants);
+      if (visibleTenants.length) return visibleTenants;
+      return tenants.filter((tenant) => tenant.ativo !== false);
     } catch (error) {
       console.warn("[contexto-unidades][api-fallback] Falha ao listar unidades na API real.", error);
       if (tenantContextHydratedFromApi) {
-        return getStore().tenants.filter((t) => t.ativo !== false);
+        const storeTenants = getStore().tenants;
+        const visibleTenants = visibleTenantsFromSession(storeTenants);
+        if (visibleTenants.length) return visibleTenants;
+        return storeTenants.filter((t) => t.ativo !== false);
+      }
+      const active = normalizeTenantId(getActiveTenantIdFromSession());
+      const store = getStore();
+      if (active) {
+        return store.tenants.filter((t) => t.ativo !== false || t.id === active);
       }
       return [];
     }
@@ -568,33 +1432,63 @@ export async function listTenants(): Promise<Tenant[]> {
   return store.tenants.filter((t) => (t.academiaId ?? t.groupId) === academiaId);
 }
 
-export async function getCurrentTenant(): Promise<Tenant> {
+export async function listTenantsGlobal(): Promise<Tenant[]> {
   if (isRealApiEnabled()) {
     try {
-      const tenant = await getTenantAtualApi();
-      tenantContextHydratedFromApi = true;
-      setStore((s) => {
-        const found = s.tenants.some((item) => item.id === tenant.id);
-        const nextTenants = found
-          ? s.tenants.map((item) => (item.id === tenant.id ? tenant : item))
-          : [...s.tenants, tenant];
-        const tenantsChanged = !areSameTenantList(s.tenants, nextTenants);
-        const tenantChanged = !areSameTenant(s.tenant, tenant);
-        const currentChanged = s.currentTenantId !== tenant.id;
-        if (!tenantsChanged && !tenantChanged && !currentChanged) return s;
-        return {
-          ...s,
-          tenant,
-          currentTenantId: tenant.id,
-          tenants: tenantsChanged ? nextTenants : s.tenants,
-        };
-      });
-      return tenant;
+      return await listUnidadesApi();
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao listar unidades globais na API real. Usando store local.", error);
+    }
+  }
+  return getStore().tenants;
+}
+
+export async function getCurrentTenant(): Promise<Tenant> {
+  if (isRealApiEnabled()) {
+    const synced = await syncTenantContextFromApiIfStale();
+    try {
+      const store = getStore();
+      const sessionTenantId =
+        syncCurrentTenantFromSessionIfNeeded() ?? normalizeTenantId(getActiveTenantIdFromSession());
+      const fallbackId = sessionTenantId || store.currentTenantId || store.tenant?.id;
+      const sessionTenant = sessionTenantId
+        ? store.tenants.find((item) => item.id === sessionTenantId)
+        : undefined;
+      const visibleTenants = visibleTenantsFromSession(store.tenants);
+      const fallbackTenant = chooseVisibleTenantBySession(
+        visibleTenants.length ? visibleTenants : store.tenants,
+        fallbackId
+      );
+      const current = sessionTenant ?? fallbackTenant;
+      if (current) return current;
+      if (store.tenant) return store.tenant;
+      if (store.tenants[0]) return store.tenants[0];
+      if (synced && tenantContextHydratedFromApi) {
+        throw new Error("contexto vazio");
+      }
+      const resolvedTenantId = resolveTenantForApi();
+      return (
+        store.tenants.find((tenant) => tenant.id === resolvedTenantId) ?? {
+          id: resolvedTenantId,
+          nome: "Unidade",
+          ativo: true,
+        }
+      );
     } catch (error) {
       console.warn("[contexto-unidades][api-fallback] Falha ao obter unidade atual na API real.", error);
-      if (!tenantContextHydratedFromApi) {
-        throw error instanceof Error ? error : new Error("Falha ao obter unidade atual");
-      }
+      const sessionTenantId = normalizeTenantId(getActiveTenantIdFromSession());
+      const store = getStore();
+      return (
+        store.tenants.find((tenant) => tenant.id === sessionTenantId) ??
+        chooseVisibleTenantBySession(store.tenants, sessionTenantId || store.currentTenantId) ??
+        store.tenant ??
+        store.tenants[0] ??
+        {
+          id: resolveTenantForApi(),
+          nome: "Unidade",
+          ativo: true,
+        }
+      );
     }
   }
   const store = getStore();
@@ -602,23 +1496,62 @@ export async function getCurrentTenant(): Promise<Tenant> {
 }
 
 export async function setCurrentTenant(id: string): Promise<void> {
+  const tenantId = normalizeTenantId(id);
+  if (!tenantId) {
+    return;
+  }
+
   if (isRealApiEnabled()) {
     try {
-      await switchTenantApi(id);
-      const context = await setTenantContextApi(id);
-      syncTenantContextInStore(context);
-      return;
-    } catch (error) {
-      try {
-        const context = await setTenantContextApi(id);
-        syncTenantContextInStore(context);
-        return;
-      } catch (contextError) {
-        console.warn(
-          "[contexto-unidades][api-fallback] Falha ao trocar unidade na API real (auth/context). Aplicando troca local.",
-          { authSwitchError: error, contextSwitchError: contextError }
+      const switchResponse = await switchTenantApi(tenantId);
+      const synced = await syncTenantContextFromApiIfStale(true);
+      const tenants = getStore().tenants;
+      const activeTenantId =
+        normalizeTenantId(switchResponse.activeTenantId) ?? tenantId;
+      const tenantToActivate =
+        tenants.some((tenant) => tenant.id === activeTenantId)
+          ? activeTenantId
+          : tenants.some((tenant) => tenant.id === tenantId)
+          ? tenantId
+          : getDefaultTenantIdFromSession() || activeTenantId;
+      if (!synced) {
+        setStore((s) => {
+          const fallbackTenant = s.tenants.find((tenant) => tenant.id === tenantToActivate) ?? s.tenant;
+          return {
+            ...s,
+            currentTenantId: tenantToActivate,
+            tenant: fallbackTenant ?? s.tenant,
+          };
+        });
+      }
+      if (synced) {
+        const tenantFromApi = getStore().tenants.find((tenant) => tenant.id === tenantToActivate);
+        setStore((s) => ({
+          ...s,
+          currentTenantId: tenantToActivate,
+          tenant: tenantFromApi ?? s.tenant,
+        }));
+      }
+      setActiveTenantId(tenantToActivate);
+      const availableTenantIds = getAvailableTenantIdsFromSession();
+      if (availableTenantIds.length) {
+        setAvailableTenants(availableTenantIds, tenantToActivate);
+      } else if (tenants.length) {
+        setAvailableTenants(
+          tenants.map((tenant) => tenant.id),
+          tenantToActivate
         );
       }
+      return;
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao trocar unidade via auth. Aplicando troca local.", { error });
+      setStore((s) => ({
+        ...s,
+        currentTenantId: tenantId,
+      }));
+      setActiveTenantId(tenantId);
+      setAvailableTenants([tenantId], tenantId);
+      return;
     }
   }
   setStore((s) => {
@@ -636,6 +1569,7 @@ export async function setCurrentTenant(id: string): Promise<void> {
       tenant,
     };
   });
+  setActiveTenantId(id);
 }
 
 export async function listAcademias(): Promise<Academia[]> {
@@ -712,6 +1646,33 @@ export async function updateCurrentAcademia(data: Partial<Academia>): Promise<vo
       a.id === academiaId ? { ...a, ...data } : a
     ),
   }));
+}
+
+export async function createAcademia(data: Omit<Academia, "id">): Promise<Academia> {
+  if (isRealApiEnabled()) {
+    try {
+      // Endpoint de criação de academia ainda não exposto; manter fallback local.
+      console.warn("[contexto-unidades] createAcademia na API real indisponível. Aplicando criação local.");
+    } catch (error) {
+      console.warn("[contexto-unidades][api-fallback] Falha ao criar academia na API real. Aplicando criação local.", error);
+    }
+  }
+  const academia: Academia = {
+    id: genId(),
+    nome: data.nome.trim() || "Nova academia",
+    razaoSocial: data.razaoSocial?.trim() || undefined,
+    documento: data.documento?.trim() || undefined,
+    email: data.email?.trim() || undefined,
+    telefone: data.telefone?.trim() || undefined,
+    endereco: data.endereco,
+    branding: data.branding,
+    ativo: data.ativo ?? true,
+  };
+  setStore((s) => ({
+    ...s,
+    academias: [academia, ...s.academias],
+  }));
+  return academia;
 }
 
 export async function createTenant(
@@ -956,7 +1917,7 @@ export async function listProspects(params?: {
 }): Promise<Prospect[]> {
   if (isRealApiEnabled()) {
     try {
-      const tenantId = getCurrentTenantId();
+      const tenantId = await getTenantIdForApiCall();
       const prospects = await listProspectsApi({
         tenantId,
         status: params?.status,
@@ -964,10 +1925,7 @@ export async function listProspects(params?: {
       const normalized = prospects.map(normalizeProspectFromApi);
       setStore((s) => ({
         ...s,
-        prospects: [
-          ...normalized,
-          ...s.prospects.filter((item) => !normalized.some((p) => p.id === item.id)),
-        ],
+        prospects: mergeTenantScopedData(s.prospects, normalized),
       }));
       return normalized;
     } catch (error) {
@@ -991,7 +1949,7 @@ export async function listProspectsPage(params: {
   const size = Math.min(200, Math.max(1, params.size));
   if (isRealApiEnabled()) {
     try {
-      const tenantId = getCurrentTenantId();
+      const tenantId = await getTenantIdForApiCall();
       const prospects = await listProspectsApi({
         tenantId,
         status: params.status,
@@ -1001,10 +1959,7 @@ export async function listProspectsPage(params: {
       const normalized = prospects.map(normalizeProspectFromApi);
       setStore((s) => ({
         ...s,
-        prospects: [
-          ...normalized,
-          ...s.prospects.filter((item) => !normalized.some((p) => p.id === item.id)),
-        ],
+        prospects: mergeTenantScopedData(s.prospects, normalized),
       }));
       return {
         items: normalized,
@@ -1418,16 +2373,23 @@ export async function converterProspect(
         tenantId: getCurrentTenantId(),
         data,
       });
+      const convertedAluno = {
+        ...converted.aluno,
+        pendenteComplementacao: false,
+      };
       setStore((s) => ({
         ...s,
-        alunos: [converted.aluno, ...s.alunos.filter((a) => a.id !== converted.aluno.id)],
+        alunos: [convertedAluno, ...s.alunos.filter((a) => a.id !== convertedAluno.id)],
         matriculas: [converted.matricula, ...s.matriculas.filter((m) => m.id !== converted.matricula.id)],
         pagamentos: [converted.pagamento, ...s.pagamentos.filter((p) => p.id !== converted.pagamento.id)],
         prospects: s.prospects.map((p) =>
           p.id === data.prospectId ? { ...p, status: "CONVERTIDO", dataUltimoContato: now() } : p
         ),
       }));
-      return converted;
+      return {
+        ...converted,
+        aluno: convertedAluno,
+      };
     } catch (error) {
       console.warn("[crm][api-fallback] Falha ao converter prospect na API real. Aplicando conversão local.", error);
     }
@@ -1449,6 +2411,7 @@ export async function converterProspect(
     tenantId,
     prospectId: data.prospectId,
     nome: prospect.nome,
+    pendenteComplementacao: false,
     email: prospect.email ?? "",
     telefone: prospect.telefone,
     cpf: data.cpf,
@@ -1577,11 +2540,18 @@ export async function criarAluno(
         tenantId: getCurrentTenantId(),
         data,
       });
+      const createdWithPending = {
+        ...created,
+        pendenteComplementacao: true,
+      };
       setStore((s) => ({
         ...s,
-        alunos: [created, ...s.alunos.filter((item) => item.id !== created.id)],
+        alunos: [
+          createdWithPending,
+          ...s.alunos.filter((item) => item.id !== createdWithPending.id),
+        ],
       }));
-      return created;
+      return createdWithPending;
     } catch (error) {
       console.warn("[alunos][api-fallback] Falha ao criar aluno na API real. Aplicando criação local.", error);
     }
@@ -1591,6 +2561,7 @@ export async function criarAluno(
     id: alunoId,
     tenantId: getCurrentTenantId(),
     nome: data.nome,
+    pendenteComplementacao: true,
     email: data.email,
     telefone: data.telefone,
     telefoneSec: data.telefoneSec,
@@ -1621,14 +2592,18 @@ export async function criarAlunoComMatricula(
         tenantId: getCurrentTenantId(),
         data,
       });
+      const createdAluno = { ...created.aluno, pendenteComplementacao: false };
       setStore((s) => ({
         ...s,
-        alunos: [created.aluno, ...s.alunos.filter((item) => item.id !== created.aluno.id)],
+        alunos: [createdAluno, ...s.alunos.filter((item) => item.id !== createdAluno.id)],
         matriculas: [created.matricula, ...s.matriculas.filter((item) => item.id !== created.matricula.id)],
         pagamentos: [created.pagamento, ...s.pagamentos.filter((item) => item.id !== created.pagamento.id)],
       }));
       syncAlunosStatus();
-      return created;
+      return {
+        ...created,
+        aluno: createdAluno,
+      };
     } catch (error) {
       console.warn("[alunos][api-fallback] Falha ao criar aluno com matrícula na API real. Aplicando criação local.", error);
     }
@@ -1645,6 +2620,7 @@ export async function criarAlunoComMatricula(
     id: alunoId,
     tenantId: getCurrentTenantId(),
     nome: data.nome,
+    pendenteComplementacao: false,
     email: data.email,
     telefone: data.telefone,
     telefoneSec: data.telefoneSec,
@@ -2069,22 +3045,7 @@ export async function deleteSala(id: string): Promise<void> {
 // ─── TENANT ────────────────────────────────────────────────────────────────
 
 export async function getTenant(): Promise<Tenant> {
-  if (isRealApiEnabled()) {
-    try {
-      const tenant = await getTenantAtualApi();
-      setStore((s) => ({
-        ...s,
-        tenant,
-        currentTenantId: tenant.id,
-        tenants: s.tenants.map((item) => (item.id === tenant.id ? tenant : item)),
-      }));
-      return tenant;
-    } catch (error) {
-      console.warn("[contexto-unidades][api-fallback] Falha ao obter tenant na API real. Usando store local.", error);
-    }
-  }
-  const store = getStore();
-  return store.tenants.find((t) => t.id === store.currentTenantId) ?? store.tenant;
+  return getCurrentTenant();
 }
 
 export async function updateTenant(data: Partial<Tenant>): Promise<void> {
@@ -2428,24 +3389,48 @@ export async function listPresencasByAluno(alunoId: string): Promise<Presenca[]>
 
 // ─── ALUNOS ─────────────────────────────────────────────────────────────────
 
+function normalizeAlunoPendenteComplementacao(
+  aluno: Aluno,
+  fallbackStore: Aluno[] = []
+): Aluno {
+  if (aluno.pendenteComplementacao !== undefined) {
+    return aluno;
+  }
+  const local = fallbackStore.find((a) => a.id === aluno.id);
+  return {
+    ...aluno,
+    pendenteComplementacao: local?.pendenteComplementacao ?? false,
+  };
+}
+
+function getNumberFromUnknown(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
+    return Number(value);
+  }
+  return undefined;
+}
+
 export async function listAlunos(params?: {
   status?: StatusAluno;
 }): Promise<Aluno[]> {
   if (isRealApiEnabled()) {
     try {
-      const tenantId = getCurrentTenantId();
-      const alunos = await listAlunosApi({
+      const tenantId = await getTenantIdForApiCall();
+      const alunosResponse = await listAlunosApi({
         tenantId,
         status: params?.status,
       });
+      const alunos = extractAlunosFromListResponse(alunosResponse);
+      const existing = getStore().alunos;
+      const normalized = alunos.map((aluno) =>
+        normalizeAlunoPendenteComplementacao(aluno, existing)
+      );
       setStore((s) => ({
         ...s,
-        alunos: [
-          ...alunos,
-          ...s.alunos.filter((item) => !alunos.some((a) => a.id === item.id)),
-        ],
+        alunos: mergeTenantScopedData(s.alunos, normalized),
       }));
-      return alunos;
+      return normalized;
     } catch (error) {
       console.warn("[alunos][api-fallback] Falha ao listar alunos na API real. Usando store local.", error);
     }
@@ -2462,30 +3447,66 @@ export async function listAlunosPage(params: {
   status?: StatusAluno;
   page: number;
   size: number;
-}): Promise<PaginatedResult<Aluno>> {
-  const page = Math.max(1, params.page);
+}): Promise<PaginatedAlunosResult> {
+  const page = Math.max(0, params.page);
   const size = Math.min(200, Math.max(1, params.size));
   if (isRealApiEnabled()) {
     try {
-      const tenantId = getCurrentTenantId();
-      const alunos = await listAlunosApi({
+      const tenantId = await getTenantIdForApiCall();
+      const alunosResponse = await listAlunosApi({
         tenantId,
         status: params.status,
-        page: page - 1,
-        size,
-      });
-      setStore((s) => ({
-        ...s,
-        alunos: [
-          ...alunos,
-          ...s.alunos.filter((item) => !alunos.some((a) => a.id === item.id)),
-        ],
-      }));
-      return {
-        items: alunos,
         page,
         size,
-        hasNext: alunos.length >= size,
+      });
+      const alunos = extractAlunosFromListResponse(alunosResponse);
+      const totaisStatus = extractAlunosTotais(alunosResponse);
+      const isResponseObject =
+        alunosResponse !== null &&
+        alunosResponse !== undefined &&
+        typeof alunosResponse === "object" &&
+        !Array.isArray(alunosResponse);
+      const responsePage = isResponseObject ? getNumberFromUnknown(alunosResponse.page) ?? page : page;
+      const responseSize = isResponseObject ? getNumberFromUnknown(alunosResponse.size) ?? size : size;
+      const directTotal = isResponseObject ? getNumberFromUnknown(alunosResponse.total) : undefined;
+      const responseHasNext = isResponseObject ? alunosResponse.hasNext : undefined;
+      const existing = getStore().alunos;
+      const normalized = alunos.map((aluno) =>
+        normalizeAlunoPendenteComplementacao(aluno, existing)
+      );
+      setStore((s) => ({
+        ...s,
+        alunos: mergeTenantScopedData(s.alunos, normalized),
+      }));
+      const total = totaisStatus?.total;
+      const normalizedTotal =
+        total ??
+        directTotal ??
+        totaisStatus?.total ??
+        (typeof totaisStatus?.totalAtivo === "number" ? totaisStatus.totalAtivo : undefined) ??
+        alunos.length;
+      return {
+        items: normalized,
+        page: responsePage,
+        size: responseSize,
+        total: normalizedTotal,
+        hasNext:
+          typeof responseHasNext === "boolean"
+            ? responseHasNext
+            : normalizedTotal > (responsePage + 1) * responseSize
+            ? true
+            : alunos.length >= responseSize,
+        totaisStatus: {
+          total: totaisStatus?.total ?? normalizedTotal,
+          totalAtivo: totaisStatus?.totalAtivo ?? 0,
+          totalSuspenso: totaisStatus?.totalSuspenso ?? 0,
+          totalInativo: totaisStatus?.totalInativo ?? 0,
+          totalCancelado: totaisStatus?.totalCancelado,
+          ativos: totaisStatus?.ativos,
+          suspensos: totaisStatus?.suspensos,
+          inativos: totaisStatus?.inativos,
+          cancelados: totaisStatus?.cancelados,
+        },
       };
     } catch (error) {
       console.warn("[alunos][api-fallback] Falha ao listar alunos paginados na API real. Usando store local.", error);
@@ -2496,14 +3517,28 @@ export async function listAlunosPage(params: {
   const all = [...getStore().alunos]
     .reverse()
     .filter((a) => a.tenantId === tenantId && (!params.status || a.status === params.status));
-  const start = (page - 1) * size;
+  const start = page * size;
   const items = all.slice(start, start + size);
+  const total = all.length;
+  const totaisBase = getStore().alunos
+    .filter((a) => a.tenantId === tenantId);
   return {
     items,
     page,
     size,
-    total: all.length,
+    total,
     hasNext: start + size < all.length,
+    totaisStatus: {
+      total: totaisBase.length,
+      totalAtivo: totaisBase.filter((a) => a.status === "ATIVO").length,
+      totalSuspenso: totaisBase.filter((a) => a.status === "SUSPENSO").length,
+      totalInativo: totaisBase.filter((a) => a.status === "INATIVO").length,
+      totalCancelado: totaisBase.filter((a) => a.status === "CANCELADO").length,
+      ativos: totaisBase.filter((a) => a.status === "ATIVO").length,
+      suspensos: totaisBase.filter((a) => a.status === "SUSPENSO").length,
+      inativos: totaisBase.filter((a) => a.status === "INATIVO").length,
+      cancelados: totaisBase.filter((a) => a.status === "CANCELADO").length,
+    },
   };
 }
 
@@ -2514,11 +3549,15 @@ export async function getAluno(id: string): Promise<Aluno | null> {
         tenantId: getCurrentTenantId(),
         id,
       });
+      const normalizedAluno = normalizeAlunoPendenteComplementacao(
+        aluno,
+        getStore().alunos
+      );
       setStore((s) => ({
         ...s,
-        alunos: [aluno, ...s.alunos.filter((item) => item.id !== aluno.id)],
+        alunos: [normalizedAluno, ...s.alunos.filter((item) => item.id !== normalizedAluno.id)],
       }));
-      return aluno;
+      return normalizedAluno;
     } catch (error) {
       console.warn("[alunos][api-fallback] Falha ao obter aluno na API real. Usando store local.", error);
     }
@@ -2558,6 +3597,24 @@ export async function updateAluno(
   id: string,
   data: Partial<Omit<Aluno, "id" | "tenantId" | "dataCadastro">>
 ): Promise<Aluno | null> {
+  function resolvePendenteComplementacao(
+    current: Aluno,
+    patch: Partial<Omit<Aluno, "id" | "tenantId" | "dataCadastro">>
+  ): boolean {
+    if (typeof patch.pendenteComplementacao === "boolean") {
+      return patch.pendenteComplementacao;
+    }
+    const hasCoreData = Boolean(
+      (patch.nome ?? current.nome ?? "").trim() &&
+      (patch.telefone ?? current.telefone ?? "").trim() &&
+      (patch.cpf ?? current.cpf ?? "").trim()
+    );
+    if (current.pendenteComplementacao === false || current.pendenteComplementacao == null) {
+      return false;
+    }
+    return !hasCoreData;
+  }
+
   if (isRealApiEnabled()) {
     try {
       const updated = await updateAlunoApi({
@@ -2567,9 +3624,37 @@ export async function updateAluno(
       });
       setStore((s) => ({
         ...s,
-        alunos: s.alunos.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+        alunos: s.alunos.map((a) => {
+          if (a.id !== id) return a;
+          return {
+            ...a,
+            ...updated,
+            pendenteComplementacao: resolvePendenteComplementacao(a, data),
+            dataAtualizacao: now(),
+          };
+        }),
       }));
-      return updated;
+      return {
+        ...updated,
+        pendenteComplementacao: resolvePendenteComplementacao(
+          {
+            ...(getStore().alunos.find((a) => a.id === id) ?? {
+              id,
+              tenantId: getCurrentTenantId(),
+              nome: "",
+              email: "",
+              telefone: "",
+              cpf: "",
+              dataNascimento: "",
+              sexo: "M" as Sexo,
+              status: "ATIVO",
+              dataCadastro: now(),
+            }),
+            ...updated,
+          } as Aluno,
+          data
+        ),
+      };
     } catch (error) {
       console.warn("[alunos][api-fallback] Falha ao atualizar aluno na API real. Aplicando update local.", error);
     }
@@ -2582,6 +3667,7 @@ export async function updateAluno(
       updated = {
         ...a,
         ...data,
+        pendenteComplementacao: resolvePendenteComplementacao(a, data),
         dataAtualizacao: now(),
       };
       return updated;
@@ -3090,7 +4176,10 @@ export async function listAtividades(params?: {
 }): Promise<Atividade[]> {
   if (isRealApiEnabled()) {
     try {
-      const atividades = await listAtividadesApi(params);
+      const atividadesResponse = (await listAtividadesApi(params)) as unknown;
+      const atividades = normalizeEntityList<unknown>(atividadesResponse)
+        .map(normalizeAtividadeItem)
+        .filter((atividade): atividade is Atividade => Boolean(atividade));
       setStore((s) => ({
         ...s,
         atividades: [
@@ -3105,7 +4194,10 @@ export async function listAtividades(params?: {
   }
   const tenantId = getCurrentTenantId();
   const { atividades } = getStore();
-  let all = [...atividades].reverse().filter((a) => a.tenantId === tenantId);
+  let all = [...atividades]
+    .map(normalizeAtividadeItem)
+    .filter((atividade): atividade is Atividade => Boolean(atividade))
+    .filter((a) => a.tenantId === tenantId);
   if (params?.apenasAtivas) all = all.filter((a) => a.ativo);
   if (params?.categoria) all = all.filter((a) => a.categoria === params.categoria);
   return all;
@@ -3224,7 +4316,8 @@ export async function listAtividadeGrades(params?: {
 }): Promise<AtividadeGrade[]> {
   if (isRealApiEnabled()) {
     try {
-      const grades = await listAtividadeGradesApi(params);
+      const gradesResponse = (await listAtividadeGradesApi(params)) as unknown;
+      const grades = normalizeEntityList<AtividadeGrade>(gradesResponse);
       setStore((s) => ({
         ...s,
         atividadeGrades: [
@@ -3698,6 +4791,9 @@ export async function renovarMatricula(id: string, planoId?: string): Promise<vo
 
 export async function listPagamentos(params?: {
   status?: string;
+  alunoId?: string;
+  page?: number;
+  size?: number;
 }): Promise<(Pagamento & { aluno?: Aluno })[]> {
   const tenantId = getCurrentTenantId();
   if (isRealApiEnabled()) {
@@ -3705,8 +4801,9 @@ export async function listPagamentos(params?: {
       const synced = await listPagamentosApi({
         tenantId,
         status: params?.status as Pagamento["status"] | undefined,
-        page: 0,
-        size: 200,
+        alunoId: params?.alunoId,
+        page: params?.page ?? 0,
+        size: params?.size ?? (params?.alunoId ? 80 : 200),
       });
       setStore((s) => ({
         ...s,
@@ -3721,6 +4818,7 @@ export async function listPagamentos(params?: {
           ...p,
           aluno: p.aluno ?? updated.alunos.find((a) => a.id === p.alunoId),
         }))
+        .map(normalizeNfseInfo)
         .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
     } catch (error) {
       console.warn("[pagamentos][api-fallback] Falha ao listar pagamentos na API real. Usando store local.", error);
@@ -3745,10 +4843,604 @@ export async function listPagamentos(params?: {
   const updated = getStore();
   let pags = [...updated.pagamentos].reverse().filter((p) => p.tenantId === tenantId);
   if (params?.status) pags = pags.filter((p) => p.status === params.status);
+  if (params?.alunoId) pags = pags.filter((p) => p.alunoId === params.alunoId);
+  if (params?.size) {
+    const page = Math.max(0, params.page ?? 0);
+    const size = Math.max(1, params.size);
+    const start = page * size;
+    pags = pags.slice(start, start + size);
+  }
   return pags.map((p) => ({
     ...p,
     aluno: updated.alunos.find((a) => a.id === p.alunoId),
+  })).map(normalizeNfseInfo);
+}
+
+type PagamentoComAluno = Pagamento & {
+  aluno?: Aluno;
+  clienteNome?: string;
+  documentoCliente?: string;
+};
+
+function parseBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1" || normalized === "sim") return true;
+    if (normalized === "false" || normalized === "0" || normalized === "nao" || normalized === "não") return false;
+  }
+  if (typeof value === "number") return value === 1;
+  return fallback;
+}
+
+function normalizeString(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  const normalized = typeof value === "string" ? value.trim() : String(value).trim();
+  return normalized || undefined;
+}
+
+function generateNfseNumero(tenantId: string, pagamentoId: string): string {
+  const randomSuffix = pagamentoId.replace(/[^a-z0-9]/gi, "").slice(-4).padStart(4, "0").toUpperCase();
+  const month = new Date().toISOString().slice(0, 7).replace("-", "");
+  return `NFS-${tenantId.slice(-3)}-${month}-${randomSuffix}`;
+}
+
+function normalizeNfseInfo(pagamento: Pagamento): Pagamento {
+  return {
+    ...pagamento,
+    nfseEmitida: parseBoolean(pagamento.nfseEmitida),
+    nfseNumero: normalizeString(pagamento.nfseNumero),
+    nfseChave: normalizeString(pagamento.nfseChave),
+    dataEmissaoNfse: pagamento.dataEmissaoNfse,
+  };
+}
+
+function toCpfDigits(value?: string | null): string {
+  return (value ?? "").replace(/\D/g, "");
+}
+
+function mapContaReceberStatusToPagamento(status: StatusContaReceberApi): Pagamento["status"] {
+  if (status === "RECEBIDA") return "PAGO";
+  if (status === "VENCIDA") return "VENCIDO";
+  if (status === "CANCELADA") return "CANCELADO";
+  return "PENDENTE";
+}
+
+function mapPagamentoStatusToContaReceber(status: Pagamento["status"]): StatusContaReceberApi {
+  if (status === "PAGO") return "RECEBIDA";
+  if (status === "VENCIDO") return "VENCIDA";
+  if (status === "CANCELADO") return "CANCELADA";
+  return "PENDENTE";
+}
+
+function mapContaReceberCategoriaToTipo(categoria: CategoriaContaReceberApi): Pagamento["tipo"] {
+  if (categoria === "MATRICULA") return "MATRICULA";
+  if (categoria === "MENSALIDADE") return "MENSALIDADE";
+  if (categoria === "PRODUTO") return "PRODUTO";
+  if (categoria === "SERVICO") return "TAXA";
+  return "AVULSO";
+}
+
+function mapTipoToContaReceberCategoria(tipo: Pagamento["tipo"]): CategoriaContaReceberApi {
+  if (tipo === "MATRICULA") return "MATRICULA";
+  if (tipo === "MENSALIDADE") return "MENSALIDADE";
+  if (tipo === "PRODUTO") return "PRODUTO";
+  if (tipo === "TAXA") return "SERVICO";
+  return "AVULSO";
+}
+
+function resolveAlunoByContaReceber(conta: ContaReceberApiResponse, alunos: Aluno[]): Aluno | undefined {
+  const cpf = toCpfDigits(conta.documentoCliente);
+  if (cpf) {
+    const byCpf = alunos.find((aluno) => toCpfDigits(aluno.cpf) === cpf);
+    if (byCpf) return byCpf;
+  }
+  const nome = conta.cliente.trim().toLowerCase();
+  if (!nome) return undefined;
+  return alunos.find((aluno) => aluno.nome.trim().toLowerCase() === nome);
+}
+
+function mapContaReceberToPagamento(conta: ContaReceberApiResponse, alunos: Aluno[]): PagamentoComAluno {
+  const aluno = resolveAlunoByContaReceber(conta, alunos);
+  const valor = Math.max(0, Number(conta.valorOriginal ?? 0));
+  const desconto = Math.max(0, Number(conta.desconto ?? 0));
+  const juros = Math.max(0, Number(conta.jurosMulta ?? 0));
+  const valorFinal = Math.max(0, valor - desconto + juros);
+  const anyConta = conta as unknown as Record<string, unknown>;
+  return {
+    id: conta.id,
+    tenantId: conta.tenantId,
+    alunoId: aluno?.id ?? `manual-cr-${conta.id}`,
+    tipo: mapContaReceberCategoriaToTipo(conta.categoria),
+    descricao: conta.descricao,
+    valor,
+    desconto,
+    valorFinal,
+    dataVencimento: conta.dataVencimento,
+    dataPagamento: conta.dataRecebimento ?? undefined,
+    formaPagamento: conta.formaPagamento ?? undefined,
+    status: mapContaReceberStatusToPagamento(conta.status),
+    observacoes: conta.observacoes ?? undefined,
+    nfseEmitida: parseBoolean(anyConta.nfseEmitida),
+    nfseNumero: normalizeString(anyConta.nfseNumero),
+    nfseChave: normalizeString(anyConta.nfseChave),
+    dataEmissaoNfse: (anyConta.dataEmissaoNfse as Pagamento["dataEmissaoNfse"]) || undefined,
+    dataCriacao: conta.dataCriacao,
+    aluno,
+    clienteNome: conta.cliente,
+    documentoCliente: toCpfDigits(conta.documentoCliente) || undefined,
+  };
+}
+
+function mergePagamentosNoStore(items: Pagamento[]): void {
+  setStore((s) => ({
+    ...s,
+    pagamentos: [
+      ...items,
+      ...s.pagamentos.filter((item) => !items.some((pagamento) => pagamento.id === item.id)),
+    ],
   }));
+}
+
+function firstDayOfMonth(date: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return `${date.slice(0, 7)}-01`;
+  }
+  return `${today().slice(0, 7)}-01`;
+}
+
+async function resolveClienteFromAlunoId(inputAlunoId: string | undefined, tenantId: string): Promise<{
+  alunoId: string;
+  cliente: string;
+  documentoCliente?: string;
+}> {
+  const trimmed = inputAlunoId?.trim();
+  const resolvedAlunoId = normalizarAlunoRecebimentoAvulso(trimmed, tenantId);
+  if (!trimmed) {
+    return {
+      alunoId: resolvedAlunoId,
+      cliente: "Sem cliente (avulso)",
+    };
+  }
+
+  let aluno: Aluno | null =
+    getStore().alunos.find((item) => item.id === trimmed && item.tenantId === tenantId) ?? null;
+  if (!aluno) {
+    try {
+      aluno = await getAluno(trimmed);
+    } catch {
+      aluno = null;
+    }
+  }
+
+  if (aluno) {
+    return {
+      alunoId: aluno.id,
+      cliente: aluno.nome,
+      documentoCliente: toCpfDigits(aluno.cpf) || undefined,
+    };
+  }
+
+  return {
+    alunoId: resolvedAlunoId,
+    cliente: "Cliente não identificado",
+  };
+}
+
+async function resolveClienteFromInput(input: {
+  tenantId: string;
+  alunoId?: string;
+  clienteNome?: string;
+  documentoCliente?: string;
+}): Promise<{
+  alunoId: string;
+  cliente: string;
+  documentoCliente?: string;
+}> {
+  const normalizedDocumento = toCpfDigits(input.documentoCliente);
+
+  if (input.alunoId?.trim()) {
+    return resolveClienteFromAlunoId(input.alunoId, input.tenantId);
+  }
+
+  if (!input.clienteNome?.trim() && !normalizedDocumento) {
+    return resolveClienteFromAlunoId(undefined, input.tenantId);
+  }
+
+  const alunosTenant = getStore().alunos.filter((aluno) => aluno.tenantId === input.tenantId);
+  const matchedByCpf = alunosTenant.find((item) => toCpfDigits(item.cpf) === normalizedDocumento);
+  if (matchedByCpf) {
+    return {
+      alunoId: matchedByCpf.id,
+      cliente: matchedByCpf.nome,
+      documentoCliente: toCpfDigits(matchedByCpf.cpf) || undefined,
+    };
+  }
+
+  const normalizedClientName = input.clienteNome?.trim().toLowerCase();
+  if (normalizedClientName) {
+    const matchedByName = alunosTenant.find((item) => item.nome.trim().toLowerCase() === normalizedClientName);
+    if (matchedByName) {
+      return {
+        alunoId: matchedByName.id,
+        cliente: matchedByName.nome,
+        documentoCliente: toCpfDigits(matchedByName.cpf) || undefined,
+      };
+    }
+
+    const cliente = (input.clienteNome ?? "").trim();
+    return {
+      alunoId: `manual-avulso-${input.tenantId}`,
+      cliente,
+      documentoCliente: normalizedDocumento,
+    };
+  }
+
+  return {
+    alunoId: `manual-avulso-${input.tenantId}`,
+    cliente: "Cliente não identificado",
+    documentoCliente: normalizedDocumento,
+  };
+}
+
+export async function listContasReceberExperimental(params?: {
+  status?: Pagamento["status"];
+  startDate?: string;
+  endDate?: string;
+}): Promise<PagamentoComAluno[]> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    const synced = await listContasReceberApi({
+      tenantId,
+      status: params?.status ? mapPagamentoStatusToContaReceber(params.status) : undefined,
+      startDate: params?.startDate,
+      endDate: params?.endDate,
+      page: 0,
+      size: 500,
+    });
+    const alunosTenant = getStore().alunos.filter((aluno) => aluno.tenantId === tenantId);
+    const mapped = synced.map((item) => mapContaReceberToPagamento(item, alunosTenant));
+    mergePagamentosNoStore(mapped);
+    return mapped.sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
+  }
+
+  const list = await listPagamentos(params?.status ? { status: params.status } : undefined);
+  if (params?.startDate && params?.endDate) {
+    return list.filter((item) => item.dataVencimento >= params.startDate! && item.dataVencimento <= params.endDate!);
+  }
+  return list;
+}
+
+export async function receberContaReceberExperimental(id: string, data: ReceberPagamentoInput): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    const updated = await receberContaReceberApi({
+      tenantId,
+      id,
+      data: {
+        dataRecebimento: data.dataPagamento,
+        formaPagamento: data.formaPagamento,
+        observacoes: data.observacoes,
+      },
+    });
+    const alunosTenant = getStore().alunos.filter((aluno) => aluno.tenantId === tenantId);
+    const mapped = mapContaReceberToPagamento(updated, alunosTenant);
+    mergePagamentosNoStore([mapped]);
+    syncAlunosStatus();
+    return;
+  }
+  await receberPagamento(id, data);
+}
+
+export interface CreateRecebimentoAvulsoInput {
+  alunoId?: string;
+  clienteNome?: string;
+  documentoCliente?: string;
+  descricao: string;
+  tipo?: Pagamento["tipo"];
+  valor: number;
+  desconto?: number;
+  dataVencimento: string;
+  status?: "PENDENTE" | "PAGO";
+  dataPagamento?: string;
+  formaPagamento?: TipoFormaPagamento;
+  observacoes?: string;
+}
+
+export interface PagamentoImportItem {
+  alunoId?: string;
+  clienteNome?: string;
+  documentoCliente?: string;
+  descricao: string;
+  tipo?: Pagamento["tipo"];
+  valor: number;
+  desconto?: number;
+  dataVencimento: string;
+  status?: "PENDENTE" | "PAGO";
+  dataPagamento?: string;
+  formaPagamento?: TipoFormaPagamento;
+  observacoes?: string;
+}
+
+export interface ImportarPagamentosResultado {
+  total: number;
+  importados: number;
+  ignorados: number;
+  erros: string[];
+}
+
+export interface AjustarPagamentoInput {
+  alunoId?: string;
+  descricao?: string;
+  tipo?: Pagamento["tipo"];
+  valor?: number;
+  desconto?: number;
+  dataVencimento?: string;
+  status?: Pagamento["status"];
+  dataPagamento?: string;
+  formaPagamento?: TipoFormaPagamento;
+  observacoes?: string;
+}
+
+function normalizarAlunoRecebimentoAvulso(alunoId: string | undefined, tenantId: string): string {
+  const trimmed = alunoId?.trim();
+  if (trimmed) return trimmed;
+  return `manual-avulso-${tenantId}`;
+}
+
+export async function createRecebimentoAvulso(input: CreateRecebimentoAvulsoInput): Promise<Pagamento> {
+  const tenantId = getCurrentTenantId();
+  const valor = Math.max(0, Number(input.valor ?? 0));
+  const desconto = Math.max(0, Number(input.desconto ?? 0));
+  const valorFinal = Math.max(0, valor - desconto);
+  const status = input.status === "PAGO" ? "PAGO" : "PENDENTE";
+  const clienteData = await resolveClienteFromInput({
+    tenantId,
+    alunoId: input.alunoId,
+    clienteNome: input.clienteNome,
+    documentoCliente: input.documentoCliente,
+  });
+  const alunoId = clienteData.alunoId;
+  const descricaoBase = input.descricao.trim();
+  const isManual = alunoId.startsWith("manual-avulso-");
+  const descricao = isManual ? `[Avulso] ${descricaoBase}` : descricaoBase;
+
+  if (isRealApiEnabled()) {
+    const created = await createContaReceberApi({
+      tenantId,
+      data: {
+        cliente: clienteData.cliente,
+        documentoCliente: clienteData.documentoCliente,
+        descricao,
+        categoria: mapTipoToContaReceberCategoria(input.tipo ?? "AVULSO"),
+        competencia: firstDayOfMonth(input.dataVencimento),
+        dataEmissao: today(),
+        dataVencimento: input.dataVencimento,
+        valorOriginal: valor,
+        desconto,
+        jurosMulta: 0,
+        observacoes: input.observacoes?.trim() || undefined,
+      },
+    });
+
+    if (!created) {
+      throw new Error("Backend retornou lançamento vazio para conta a receber.");
+    }
+
+    let synced = created;
+    if (status === "PAGO") {
+      synced = await receberContaReceberApi({
+        tenantId,
+        id: created.id,
+        data: {
+          dataRecebimento: input.dataPagamento ?? today(),
+          formaPagamento: input.formaPagamento ?? "PIX",
+          valorRecebido: valorFinal,
+          observacoes: input.observacoes?.trim() || undefined,
+        },
+      });
+    }
+
+    const alunosTenant = getStore().alunos.filter((aluno) => aluno.tenantId === tenantId);
+    const mapped = mapContaReceberToPagamento(synced, alunosTenant);
+    const resolved: Pagamento = { ...mapped, alunoId };
+    mergePagamentosNoStore([resolved]);
+    syncAlunosStatus();
+    return resolved;
+  }
+
+  const pagamento: Pagamento = {
+    id: genId(),
+    tenantId,
+    alunoId,
+    tipo: input.tipo ?? "AVULSO",
+    descricao,
+    valor,
+    desconto,
+    valorFinal,
+    dataVencimento: input.dataVencimento,
+    status,
+    dataPagamento: status === "PAGO" ? input.dataPagamento ?? today() : undefined,
+    formaPagamento: status === "PAGO" ? input.formaPagamento ?? "PIX" : undefined,
+    observacoes: input.observacoes?.trim() || undefined,
+    dataCriacao: now(),
+  };
+
+  setStore((s) => ({
+    ...s,
+    pagamentos: [pagamento, ...s.pagamentos],
+  }));
+  syncAlunosStatus();
+  return pagamento;
+}
+
+export async function importarPagamentosEmLote(
+  itens: PagamentoImportItem[]
+): Promise<ImportarPagamentosResultado> {
+  const resultado: ImportarPagamentosResultado = {
+    total: itens.length,
+    importados: 0,
+    ignorados: 0,
+    erros: [],
+  };
+
+  for (let index = 0; index < itens.length; index += 1) {
+    const item = itens[index];
+    try {
+      const descricao = item.descricao.trim();
+      if (!descricao) {
+        throw new Error(`Linha ${index + 1}: descrição é obrigatória.`);
+      }
+
+      if (!item.dataVencimento || !/^\d{4}-\d{2}-\d{2}$/.test(item.dataVencimento)) {
+        throw new Error(`Linha ${index + 1}: dataVencimento inválida (use YYYY-MM-DD).`);
+      }
+
+      const valor = Number(item.valor);
+      if (!Number.isFinite(valor) || valor <= 0) {
+        throw new Error(`Linha ${index + 1}: valor deve ser maior que zero.`);
+      }
+
+      const desconto = item.desconto == null ? 0 : Number(item.desconto);
+      if (!Number.isFinite(desconto) || desconto < 0) {
+        throw new Error(`Linha ${index + 1}: desconto inválido.`);
+      }
+
+      await createRecebimentoAvulso({
+        alunoId: item.alunoId,
+        clienteNome: item.clienteNome,
+        documentoCliente: item.documentoCliente,
+        descricao,
+        tipo: item.tipo,
+        valor,
+        desconto,
+        dataVencimento: item.dataVencimento,
+        status: item.status === "PAGO" ? "PAGO" : "PENDENTE",
+        dataPagamento: item.dataPagamento,
+        formaPagamento: item.formaPagamento,
+        observacoes: item.observacoes,
+      });
+
+      resultado.importados += 1;
+    } catch (error) {
+      resultado.ignorados += 1;
+      resultado.erros.push(error instanceof Error ? error.message : "Erro desconhecido no registro.");
+    }
+  }
+
+  return resultado;
+}
+
+export async function ajustarPagamento(id: string, input: AjustarPagamentoInput): Promise<Pagamento> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    const current = getStore().pagamentos.find((pagamento) => pagamento.id === id && pagamento.tenantId === tenantId);
+    const alvoStatus = input.status ?? current?.status ?? "PENDENTE";
+    if (alvoStatus === "PENDENTE" && current && (current.status === "PAGO" || current.status === "CANCELADO")) {
+      throw new Error("Reabertura de conta recebida/cancelada ainda não está disponível no backend.");
+    }
+
+    const clienteData = input.alunoId === undefined
+      ? undefined
+      : await resolveClienteFromAlunoId(input.alunoId, tenantId);
+    const descricao = input.descricao == null ? undefined : input.descricao.trim();
+    const observacoes = input.observacoes === undefined ? undefined : input.observacoes.trim() || undefined;
+    const valorOriginal = input.valor == null ? undefined : Math.max(0, Number(input.valor));
+    const desconto = input.desconto == null ? undefined : Math.max(0, Number(input.desconto));
+
+    let updated = await updateContaReceberApi({
+      tenantId,
+      id,
+      data: {
+        cliente: clienteData?.cliente,
+        documentoCliente: clienteData?.documentoCliente,
+        descricao,
+        categoria: input.tipo ? mapTipoToContaReceberCategoria(input.tipo) : undefined,
+        competencia: input.dataVencimento ? firstDayOfMonth(input.dataVencimento) : undefined,
+        dataVencimento: input.dataVencimento,
+        valorOriginal,
+        desconto,
+        observacoes,
+      },
+    });
+
+    if (alvoStatus === "PAGO") {
+      const baseValor = valorOriginal ?? Math.max(0, Number(updated.valorOriginal ?? 0));
+      const baseDesconto = desconto ?? Math.max(0, Number(updated.desconto ?? 0));
+      const baseJuros = Math.max(0, Number(updated.jurosMulta ?? 0));
+      updated = await receberContaReceberApi({
+        tenantId,
+        id,
+        data: {
+          dataRecebimento: input.dataPagamento ?? current?.dataPagamento ?? today(),
+          formaPagamento: input.formaPagamento ?? current?.formaPagamento ?? "PIX",
+          valorRecebido: Math.max(0, baseValor - baseDesconto + baseJuros),
+          observacoes,
+        },
+      });
+    } else if (alvoStatus === "CANCELADO") {
+      updated = await cancelarContaReceberApi({
+        tenantId,
+        id,
+        observacoes,
+      });
+    }
+
+    const alunosTenant = getStore().alunos.filter((aluno) => aluno.tenantId === tenantId);
+    const mapped = mapContaReceberToPagamento(updated, alunosTenant);
+    const resolved: Pagamento = clienteData ? { ...mapped, alunoId: clienteData.alunoId } : mapped;
+    mergePagamentosNoStore([resolved]);
+    syncAlunosStatus();
+    return resolved;
+  }
+
+  let updated: Pagamento | null = null;
+  setStore((s) => {
+    const pagamentos = s.pagamentos.map((pagamento) => {
+      if (pagamento.id !== id || pagamento.tenantId !== tenantId) return pagamento;
+
+      const valor = input.valor == null ? pagamento.valor : Math.max(0, Number(input.valor));
+      const desconto = input.desconto == null ? pagamento.desconto : Math.max(0, Number(input.desconto));
+      const status = input.status ?? pagamento.status;
+      const alunoId = input.alunoId === undefined
+        ? pagamento.alunoId
+        : normalizarAlunoRecebimentoAvulso(input.alunoId, tenantId);
+
+      const next: Pagamento = {
+        ...pagamento,
+        alunoId,
+        descricao: input.descricao == null ? pagamento.descricao : input.descricao.trim(),
+        tipo: input.tipo ?? pagamento.tipo,
+        valor,
+        desconto,
+        valorFinal: Math.max(0, valor - desconto),
+        dataVencimento: input.dataVencimento ?? pagamento.dataVencimento,
+        status,
+        observacoes: input.observacoes === undefined
+          ? pagamento.observacoes
+          : input.observacoes.trim() || undefined,
+      };
+
+      if (status === "PAGO") {
+        next.dataPagamento = input.dataPagamento ?? pagamento.dataPagamento ?? today();
+        next.formaPagamento = input.formaPagamento ?? pagamento.formaPagamento ?? "PIX";
+      } else {
+        next.dataPagamento = undefined;
+        next.formaPagamento = undefined;
+      }
+
+      updated = next;
+      return next;
+    });
+
+    return { ...s, pagamentos };
+  });
+
+  if (!updated) {
+    throw new Error("Pagamento não encontrado para ajuste.");
+  }
+  syncAlunosStatus();
+  return updated;
 }
 
 export async function receberPagamento(
@@ -3797,6 +5489,56 @@ export async function receberPagamento(
     return { ...s, pagamentos };
   });
   syncAlunosStatus();
+}
+
+export async function emitirNfsePagamento(id: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const updated = await emitirNfsePagamentoApi({
+        tenantId,
+        id,
+      });
+      setStore((s) => ({
+        ...s,
+        pagamentos: [
+          updated,
+          ...s.pagamentos.filter((item) => item.id !== updated.id),
+        ],
+      }));
+      syncAlunosStatus();
+      return;
+    } catch (error) {
+      console.warn("[pagamentos][api-fallback] Falha ao emitir NFSe na API real. Aplicando marcação local.", error);
+    }
+  }
+
+  const numero = generateNfseNumero(tenantId, id);
+  setStore((s) => {
+    const nowDate = now();
+    const pagamentos = s.pagamentos.map((pagamento) =>
+      pagamento.id === id
+        ? {
+            ...pagamento,
+            nfseEmitida: true,
+            nfseNumero: numero,
+            dataEmissaoNfse: nowDate,
+          }
+        : pagamento
+    );
+    return {
+      ...s,
+      pagamentos,
+    };
+  });
+  syncAlunosStatus();
+}
+
+export async function emitirNfseEmLote(ids: string[]): Promise<void> {
+  const uniqueIds = Array.from(new Set(ids));
+  for (const id of uniqueIds) {
+    await emitirNfsePagamento(id);
+  }
 }
 
 // ─── CONTAS A PAGAR ────────────────────────────────────────────────────────
@@ -4784,6 +6526,93 @@ export async function getDreGerencial(params?: {
   };
 }
 
+export async function getDreProjecao(params?: {
+  startDate?: string;
+  endDate?: string;
+  cenario?: DreProjectionScenario;
+}): Promise<DREProjecao> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      return await getDreProjecaoApi({
+        tenantId,
+        startDate: params?.startDate,
+        endDate: params?.endDate,
+        cenario: params?.cenario,
+      });
+    } catch (error) {
+      console.warn("[dre][api-fallback] Falha ao carregar projeção DRE na API real. Usando fallback local.", error);
+    }
+  }
+
+  const dreAtual = await getDreGerencial({
+    startDate: params?.startDate,
+    endDate: params?.endDate,
+  });
+
+  const receitasProjetadas = Math.max(0, Number(dreAtual.contasReceberEmAberto ?? 0));
+  const despesasProjetadas = Math.max(0, Number(dreAtual.contasPagarEmAberto ?? 0));
+  const resultadoProjetado = receitasProjetadas - despesasProjetadas;
+  const realizado = {
+    receitas: Number(dreAtual.receitaLiquida ?? 0),
+    despesas: Number(dreAtual.custosVariaveis ?? 0) + Number(dreAtual.despesasOperacionais ?? 0),
+    resultado: Number(dreAtual.resultadoLiquido ?? 0),
+    custosVariaveis: Number(dreAtual.custosVariaveis ?? 0),
+    despesasOperacionais: Number(dreAtual.despesasOperacionais ?? 0),
+    despesasFinanceiras: 0,
+    impostos: 0,
+  };
+  const projetado = {
+    receitas: receitasProjetadas,
+    despesas: despesasProjetadas,
+    resultado: resultadoProjetado,
+    custosVariaveis: despesasProjetadas,
+    despesasOperacionais: 0,
+    despesasFinanceiras: 0,
+    impostos: 0,
+  };
+
+  return {
+    periodoInicio: params?.startDate ?? dreAtual.periodoInicio,
+    periodoFim: params?.endDate ?? dreAtual.periodoFim,
+    cenario: params?.cenario ?? "BASE",
+    realizado,
+    projetado,
+    consolidado: {
+      receitas: realizado.receitas + projetado.receitas,
+      despesas: realizado.despesas + projetado.despesas,
+      resultado: realizado.resultado + projetado.resultado,
+      custosVariaveis: realizado.custosVariaveis + projetado.custosVariaveis,
+      despesasOperacionais: realizado.despesasOperacionais + projetado.despesasOperacionais,
+      despesasFinanceiras: realizado.despesasFinanceiras + projetado.despesasFinanceiras,
+      impostos: realizado.impostos + projetado.impostos,
+    },
+    linhas: [
+      {
+        grupo: "RECEITAS",
+        natureza: "RECEITA",
+        realizado: realizado.receitas,
+        projetado: projetado.receitas,
+        consolidado: realizado.receitas + projetado.receitas,
+      },
+      {
+        grupo: "DESPESAS",
+        natureza: "DESPESA",
+        realizado: realizado.despesas,
+        projetado: projetado.despesas,
+        consolidado: realizado.despesas + projetado.despesas,
+      },
+      {
+        grupo: "RESULTADO",
+        natureza: "RECEITA",
+        realizado: realizado.resultado,
+        projetado: projetado.resultado,
+        consolidado: realizado.resultado + projetado.resultado,
+      },
+    ],
+  };
+}
+
 // ─── FORMAS DE PAGAMENTO ────────────────────────────────────────────────────
 
 function makeDefaultFormasPagamento(tenantId: string): FormaPagamento[] {
@@ -4795,6 +6624,7 @@ function makeDefaultFormasPagamento(tenantId: string): FormaPagamento[] {
       tipo: "DINHEIRO",
       taxaPercentual: 0,
       parcelasMax: 1,
+      emitirAutomaticamente: false,
       ativo: true,
     },
     {
@@ -4804,6 +6634,7 @@ function makeDefaultFormasPagamento(tenantId: string): FormaPagamento[] {
       tipo: "PIX",
       taxaPercentual: 0,
       parcelasMax: 1,
+      emitirAutomaticamente: false,
       ativo: true,
     },
     {
@@ -4813,6 +6644,7 @@ function makeDefaultFormasPagamento(tenantId: string): FormaPagamento[] {
       tipo: "CARTAO_CREDITO",
       taxaPercentual: 2.99,
       parcelasMax: 12,
+      emitirAutomaticamente: false,
       ativo: true,
     },
   ];
@@ -4890,6 +6722,7 @@ export async function createFormaPagamento(
   }
   const fp: FormaPagamento = {
     ...data,
+    emitirAutomaticamente: data.emitirAutomaticamente ?? false,
     id: genId(),
     tenantId,
     ativo: true,

@@ -22,6 +22,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Conceito Fit – Gestão de Academia",
   description: "Conceito Fit · Sistema de gestão para academias",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -29,11 +34,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isReactScanEnabled =
+    process.env.NODE_ENV === "development" &&
+    process.env.NEXT_PUBLIC_REACT_SCAN === "true";
+
   return (
     <html lang="pt-BR" className="dark">
       <body
         className={`${display.variable} ${body.variable} ${geistMono.variable} font-sans antialiased`}
       >
+        {isReactScanEnabled && (
+          <script src="https://unpkg.com/react-scan/dist/auto.global.js" crossOrigin="anonymous" />
+        )}
         {children}
       </body>
     </html>

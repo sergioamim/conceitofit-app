@@ -102,6 +102,9 @@ export default function FormasPagamentoPage() {
                 Status
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Emissão NFSe
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Ações
               </th>
             </tr>
@@ -128,6 +131,17 @@ export default function FormasPagamentoPage() {
                     }`}
                   >
                     {f.ativo ? "Ativo" : "Inativo"}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                      f.emitirAutomaticamente
+                        ? "bg-gym-teal/15 text-gym-teal"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {f.emitirAutomaticamente ? "Sim" : "Não"}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -166,7 +180,7 @@ export default function FormasPagamentoPage() {
             {formas.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   Nenhuma forma cadastrada

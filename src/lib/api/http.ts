@@ -9,6 +9,25 @@ export interface ApiErrorPayload {
   fieldErrors?: Record<string, string> | null;
 }
 
+export class ApiRequestError extends Error {
+  public readonly status: number;
+  public readonly error?: string;
+  public readonly path?: string;
+  public readonly fieldErrors?: Record<string, string> | null;
+
+  constructor(payload: ApiErrorPayload & { statusCode?: number }) {
+    const status = payload.status ?? payload.statusCode ?? 500;
+    const message =
+      payload.message || payload.error || `HTTP ${status}`;
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.error = payload.error;
+    this.path = payload.path;
+    this.fieldErrors = payload.fieldErrors;
+  }
+}
+
 const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 const AUTH_REFRESH_PATH = "/api/v1/auth/refresh";
 const AUTH_LOGIN_PATH = "/api/v1/auth/login";
@@ -46,6 +65,7 @@ export function buildApiUrl(path: string, query?: Record<string, string | number
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value == null) continue;
+      if (typeof value === "string" && value.trim() === "") continue;
       url.searchParams.set(key, String(value));
     }
   }
@@ -64,6 +84,7 @@ function resolveRequestUrl(path: string, query?: Record<string, string | number 
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value == null) continue;
+      if (typeof value === "string" && value.trim() === "") continue;
       qs.set(key, String(value));
     }
   }
@@ -81,14 +102,22 @@ export async function apiRequest<T>(input: {
   query?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
   includeContextHeader?: boolean;
+  headers?: Record<string, string>;
   retryOnAuthFailure?: boolean;
 }): Promise<T> {
   const method = input.method ?? "GET";
   const retryOnAuthFailure = input.retryOnAuthFailure ?? true;
-  const headers: HeadersInit = {
+  const isFormData =
+    typeof FormData !== "undefined" && input.body instanceof FormData;
+  const headers: Record<string, string> = {
     Accept: "application/json",
   };
-  if (input.body != null) {
+  if (input.headers) {
+    for (const [key, value] of Object.entries(input.headers)) {
+      headers[key] = value;
+    }
+  }
+  if (input.body != null && !isFormData) {
     headers["Content-Type"] = "application/json";
   }
   if (input.includeContextHeader !== false) {
@@ -109,10 +138,16 @@ export async function apiRequest<T>(input: {
   }
 
   const requestUrl = resolveRequestUrl(input.path, input.query);
+  const requestBody =
+    input.body == null
+      ? undefined
+      : isFormData
+        ? (input.body as unknown as BodyInit)
+        : (JSON.stringify(input.body) as unknown as BodyInit);
   let response = await fetch(requestUrl, {
     method,
     headers,
-    body: input.body != null ? JSON.stringify(input.body) : undefined,
+    body: requestBody,
   });
 
   if (response.status === 401 && retryOnAuthFailure && !isAuthEndpoint) {
@@ -127,7 +162,7 @@ export async function apiRequest<T>(input: {
         response = await fetch(requestUrl, {
           method,
           headers: retryHeaders,
-          body: input.body != null ? JSON.stringify(input.body) : undefined,
+          body: requestBody,
         });
       }
     }
@@ -140,11 +175,14 @@ export async function apiRequest<T>(input: {
     } catch {
       payload = undefined;
     }
-    const message =
-      payload?.message ||
-      payload?.error ||
-      `HTTP ${response.status} ao chamar ${input.path}`;
-    throw new Error(message);
+    const details: ApiErrorPayload & { statusCode?: number } = {
+      statusCode: response.status,
+      message: payload?.message ?? payload?.error,
+      error: payload?.error,
+      path: payload?.path ?? input.path,
+      fieldErrors: payload?.fieldErrors,
+    };
+    throw new ApiRequestError(details);
   }
 
   if (response.status === 204) {

@@ -5,7 +5,7 @@ import React from "react";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2 } from "lucide-react";
 import { listPlanos, listFormasPagamento, criarAlunoComMatricula, criarAluno } from "@/lib/mock/services";
 import type { CriarAlunoComMatriculaResponse } from "@/lib/mock/services";
-import type { Plano, FormaPagamento, Sexo, TipoFormaPagamento } from "@/lib/types";
+import type { Aluno, FormaPagamento, Plano, Sexo, TipoFormaPagamento } from "@/lib/types";
 import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { Button } from "@/components/ui/button";
@@ -26,15 +26,25 @@ function formatBRL(v: number) {
 
 // ─── Step indicator ────────────────────────────────────────────────────────
 
+const STEP_LABELS = ["Dados", "Plano", "Pagamento"];
+
 function StepDot({ step, current }: { step: number; current: number }) {
   const done = step < current;
   const active = step === current;
   return (
-    <div className={cn(
-      "flex size-7 items-center justify-center rounded-full text-xs font-bold transition-all",
-      done ? "bg-gym-teal text-background" : active ? "bg-gym-accent text-background" : "bg-secondary text-muted-foreground"
-    )}>
-      {done ? <Check className="size-3.5" /> : step}
+    <div className="flex items-center gap-2">
+      <div className={cn(
+        "flex size-8 items-center justify-center rounded-full text-xs font-bold transition-all",
+        done ? "bg-gym-teal text-background shadow-sm" : active ? "bg-gym-accent text-background shadow-sm" : "bg-muted text-muted-foreground"
+      )}>
+        {done ? <Check className="size-4" /> : step}
+      </div>
+      <span className={cn(
+        "text-xs font-semibold uppercase tracking-wide",
+        active ? "text-foreground" : "text-muted-foreground"
+      )}>
+        {STEP_LABELS[step - 1]}
+      </span>
     </div>
   );
 }
@@ -59,7 +69,17 @@ interface DadosPessoais {
   foto: string;
 }
 
-function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: DadosPessoais) => void }) {
+function Step1Dados({
+  data,
+  onChange,
+  showComplementary,
+  onToggleComplementary,
+}: {
+  data: DadosPessoais;
+  onChange: (d: DadosPessoais) => void;
+  showComplementary: boolean;
+  onToggleComplementary: () => void;
+}) {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
@@ -123,40 +143,43 @@ function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: Dad
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
+        Cadastro rápido (pré-cadastro) usa apenas dados principais. O restante pode ser completado depois.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="col-span-2 space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome completo *</label>
-          <Input placeholder="João da Silva" value={data.nome} onChange={set("nome")} className="bg-secondary border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nome completo *</label>
+          <Input placeholder="João da Silva" value={data.nome} onChange={set("nome")} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
-          <Input type="email" placeholder="joao@email.com" value={data.email} onChange={set("email")} className="bg-secondary border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">E-mail (opcional)</label>
+          <Input type="email" placeholder="joao@email.com" value={data.email} onChange={set("email")} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
-          <PhoneInput placeholder="(11) 99999-0000" value={data.telefone} onChange={(v) => onChange({ ...data, telefone: v })} className="bg-secondary border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone *</label>
+          <PhoneInput placeholder="(11) 99999-0000" value={data.telefone} onChange={(v) => onChange({ ...data, telefone: v })} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone secundário</label>
-          <PhoneInput placeholder="(11) 90000-0000" value={data.telefoneSec} onChange={(v) => onChange({ ...data, telefoneSec: v })} className="bg-secondary border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone secundário</label>
+          <PhoneInput placeholder="(11) 90000-0000" value={data.telefoneSec} onChange={(v) => onChange({ ...data, telefoneSec: v })} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF *</label>
-          <MaskedInput mask="cpf" placeholder="000.000.000-00" value={data.cpf} onChange={(v) => onChange({ ...data, cpf: v })} className="bg-secondary border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">CPF *</label>
+          <MaskedInput mask="cpf" placeholder="000.000.000-00" value={data.cpf} onChange={(v) => onChange({ ...data, cpf: v })} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">RG</label>
-          <Input placeholder="00.000.000-0" value={data.rg} onChange={set("rg")} className="bg-secondary border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">RG</label>
+          <Input placeholder="00.000.000-0" value={data.rg} onChange={set("rg")} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data de nascimento *</label>
-          <Input type="date" value={data.dataNascimento} onChange={set("dataNascimento")} className="bg-secondary border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Data de nascimento (opcional)</label>
+          <Input type="date" value={data.dataNascimento} onChange={set("dataNascimento")} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sexo *</label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sexo (opcional)</label>
           <Select value={data.sexo} onValueChange={(v) => onChange({ ...data, sexo: v as Sexo })}>
-            <SelectTrigger className="w-full bg-secondary border-border">
+            <SelectTrigger className="w-full bg-card border-border">
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
@@ -168,101 +191,114 @@ function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: Dad
         </div>
       </div>
 
-      <div className="space-y-3 pt-1">
-        <p className="text-sm font-semibold text-muted-foreground">Endereço (opcional)</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CEP</label>
-            <MaskedInput mask="cep" placeholder="00000-000" value={data.enderecoCep} onChange={(v) => onChange({ ...data, enderecoCep: v })} className="bg-secondary border-border" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Logradouro</label>
-            <Input placeholder="Rua, Avenida..." value={data.enderecoLogradouro} onChange={set("enderecoLogradouro")} className="bg-secondary border-border" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Número</label>
-            <Input placeholder="123" value={data.enderecoNumero} onChange={set("enderecoNumero")} className="bg-secondary border-border" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Complemento</label>
-            <Input placeholder="Apto, bloco..." value={data.enderecoComplemento} onChange={set("enderecoComplemento")} className="bg-secondary border-border" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Bairro</label>
-            <Input placeholder="Centro" value={data.enderecoBairro} onChange={set("enderecoBairro")} className="bg-secondary border-border" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cidade</label>
-            <Input placeholder="São Paulo" value={data.enderecoCidade} onChange={set("enderecoCidade")} className="bg-secondary border-border" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</label>
-            <Input placeholder="SP" value={data.enderecoEstado} onChange={set("enderecoEstado")} className="bg-secondary border-border" />
-          </div>
-        </div>
+      <div className="space-y-2 pt-2">
+        <button
+          type="button"
+          onClick={onToggleComplementary}
+          className="text-xs font-semibold text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          {showComplementary ? "Ocultar dados complementares" : "Adicionar dados complementares (opcional)"}
+        </button>
       </div>
-
-      <div className="space-y-3 pt-1">
-        <p className="text-sm font-semibold text-muted-foreground">Contato de emergência (opcional)</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome</label>
-            <Input placeholder="Nome do contato" value={data.emergenciaNome} onChange={set("emergenciaNome")} className="bg-secondary border-border" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</label>
-            <PhoneInput placeholder="(11) 90000-0000" value={data.emergenciaTelefone} onChange={(v) => onChange({ ...data, emergenciaTelefone: v })} className="bg-secondary border-border" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>
-            <Input placeholder="Ex: irmão" value={data.emergenciaParentesco} onChange={set("emergenciaParentesco")} className="bg-secondary border-border" />
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-3 pt-1">
-        <p className="text-sm font-semibold text-muted-foreground">Saúde e foto (opcional)</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações médicas</label>
-            <Input placeholder="Alergias, restrições..." value={data.observacoesMedicas} onChange={set("observacoesMedicas")} className="bg-secondary border-border" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Foto</label>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" className="border-border" onClick={() => setCameraOpen(true)}>
-                Capturar foto
-              </Button>
-              {data.foto && (
-                <Button variant="outline" className="border-border" onClick={() => onChange({ ...data, foto: "" })}>
-                  Remover
-                </Button>
-              )}
+      {showComplementary ? (
+        <>
+          <div className="space-y-3 pt-1">
+            <p className="text-sm font-semibold text-muted-foreground">Endereço (opcional)</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">CEP</label>
+                <MaskedInput mask="cep" placeholder="00000-000" value={data.enderecoCep} onChange={(v) => onChange({ ...data, enderecoCep: v })} className="bg-card border-border" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Logradouro</label>
+                <Input placeholder="Rua, Avenida..." value={data.enderecoLogradouro} onChange={set("enderecoLogradouro")} className="bg-card border-border" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Número</label>
+                <Input placeholder="123" value={data.enderecoNumero} onChange={set("enderecoNumero")} className="bg-card border-border" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Complemento</label>
+                <Input placeholder="Apto, bloco..." value={data.enderecoComplemento} onChange={set("enderecoComplemento")} className="bg-card border-border" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bairro</label>
+                <Input placeholder="Centro" value={data.enderecoBairro} onChange={set("enderecoBairro")} className="bg-card border-border" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cidade</label>
+                <Input placeholder="São Paulo" value={data.enderecoCidade} onChange={set("enderecoCidade")} className="bg-card border-border" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</label>
+                <Input placeholder="SP" value={data.enderecoEstado} onChange={set("enderecoEstado")} className="bg-card border-border" />
+              </div>
             </div>
-            {cameraOpen && (
-              <div className="mt-2 rounded-md border border-border bg-secondary/40 p-2">
-                {cameraError ? (
-                  <p className="text-xs text-gym-danger">{cameraError}</p>
-                ) : (
-                  <>
-                    <video ref={videoRef} autoPlay playsInline className="w-full rounded-md" />
-                    <div className="mt-2 flex justify-end gap-2">
-                      <Button variant="outline" className="border-border" onClick={() => setCameraOpen(false)}>
-                        Cancelar
-                      </Button>
-                      <Button onClick={capturePhoto}>Capturar</Button>
-                    </div>
-                  </>
+          </div>
+
+          <div className="space-y-3 pt-1">
+            <p className="text-sm font-semibold text-muted-foreground">Contato de emergência (opcional)</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nome</label>
+                <Input placeholder="Nome do contato" value={data.emergenciaNome} onChange={set("emergenciaNome")} className="bg-card border-border" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone</label>
+                <PhoneInput placeholder="(11) 90000-0000" value={data.emergenciaTelefone} onChange={(v) => onChange({ ...data, emergenciaTelefone: v })} className="bg-card border-border" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Parentesco</label>
+                <Input placeholder="Ex: irmão" value={data.emergenciaParentesco} onChange={set("emergenciaParentesco")} className="bg-card border-border" />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-1">
+            <p className="text-sm font-semibold text-muted-foreground">Saúde e foto (opcional)</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Observações médicas</label>
+                <Input placeholder="Alergias, restrições..." value={data.observacoesMedicas} onChange={set("observacoesMedicas")} className="bg-card border-border" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Foto</label>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" className="border-border" onClick={() => setCameraOpen(true)}>
+                    Capturar foto
+                  </Button>
+                  {data.foto && (
+                    <Button variant="outline" className="border-border" onClick={() => onChange({ ...data, foto: "" })}>
+                      Remover
+                    </Button>
+                  )}
+                </div>
+                {cameraOpen && (
+                  <div className="mt-2 rounded-md border border-border bg-secondary/40 p-2">
+                    {cameraError ? (
+                      <p className="text-xs text-gym-danger">{cameraError}</p>
+                    ) : (
+                      <>
+                        <video ref={videoRef} autoPlay playsInline className="w-full rounded-md" />
+                        <div className="mt-2 flex justify-end gap-2">
+                          <Button variant="outline" className="border-border" onClick={() => setCameraOpen(false)}>
+                            Cancelar
+                          </Button>
+                          <Button onClick={capturePhoto}>Capturar</Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {data.foto && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={data.foto} alt="Foto do cliente" className="mt-2 h-16 w-16 rounded-md object-cover" />
                 )}
               </div>
-            )}
-            {data.foto && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={data.foto} alt="Foto do cliente" className="mt-2 h-16 w-16 rounded-md object-cover" />
-            )}
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -271,13 +307,13 @@ function Step1Dados({ data, onChange }: { data: DadosPessoais; onChange: (d: Dad
 
 function Step2Plano({ planos, selected, onSelect }: { planos: Plano[]; selected: string; onSelect: (id: string) => void }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Escolha o plano</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {planos.map((p) => (
           <button key={p.id} onClick={() => onSelect(p.id)}
             className={cn("relative rounded-xl border p-4 text-left transition-all",
-              selected === p.id ? "border-gym-accent bg-gym-accent/5" : "border-border bg-secondary/40 hover:border-border/80"
+              selected === p.id ? "border-gym-accent bg-gym-accent/5 shadow-sm" : "border-border bg-secondary/40 hover:border-border/80"
             )}
           >
             {p.destaque && (
@@ -310,22 +346,22 @@ function Step3Pagamento({ plano, fps, data, onChange }: {
 }) {
   const desconto = parseFloat(data.desconto) || 0;
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {plano && (
-        <div className="rounded-lg border border-border bg-secondary/40 p-3 text-sm">
+        <div className="rounded-lg border border-border bg-secondary/40 p-4 text-sm">
           <p className="text-muted-foreground">Plano: <span className="font-semibold text-foreground">{plano.nome}</span></p>
           <p className="text-muted-foreground">Valor: <span className="font-bold text-gym-accent">{formatBRL(plano.valor)}</span></p>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data de início *</label>
-          <Input type="date" value={data.dataInicio} onChange={(e) => onChange({ ...data, dataInicio: e.target.value })} className="bg-secondary border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Data de início *</label>
+          <Input type="date" value={data.dataInicio} onChange={(e) => onChange({ ...data, dataInicio: e.target.value })} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Forma de pagamento *</label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Forma de pagamento *</label>
           <Select value={data.formaPagamento} onValueChange={(v) => onChange({ ...data, formaPagamento: v as TipoFormaPagamento })}>
-            <SelectTrigger className="w-full bg-secondary border-border">
+            <SelectTrigger className="w-full bg-card border-border">
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
@@ -334,8 +370,8 @@ function Step3Pagamento({ plano, fps, data, onChange }: {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Desconto (R$)</label>
-          <Input type="number" min={0} placeholder="0,00" value={data.desconto} onChange={(e) => onChange({ ...data, desconto: e.target.value })} className="bg-secondary border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Desconto (R$)</label>
+          <Input type="number" min={0} placeholder="0,00" value={data.desconto} onChange={(e) => onChange({ ...data, desconto: e.target.value })} className="bg-card border-border" />
         </div>
       </div>
       {plano && (
@@ -388,13 +424,42 @@ function StepSucesso({ result, plano, onClose }: { result: CriarAlunoComMatricul
   );
 }
 
+function normalizeDraftEmail(nome: string, cpf: string, email?: string) {
+  const trimmed = email?.trim();
+  if (trimmed) return trimmed;
+  const cpfDigits = (cpf || "").replace(/\D/g, "");
+  const slug = (nome || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  const base = slug || cpfDigits || "cliente";
+  return `${base}.${Date.now()}@temporario.local`;
+}
+
+interface CreateOnlyOptions {
+  openSale?: boolean;
+}
+
 // ─── Wizard modal ──────────────────────────────────────────────────────────
 
-export function NovoClienteWizard({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
+export function NovoClienteWizard({
+  open,
+  onClose,
+  onDone,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onDone?: (created?: Aluno, opts?: CreateOnlyOptions) => void | Promise<void>;
+}) {
   const [step, setStep] = useState(1);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
   const [selectedPlano, setSelectedPlano] = useState("");
+  const [showComplementary, setShowComplementary] = useState(false);
   const [dados, setDados] = useState<DadosPessoais>({
     nome: "", email: "", telefone: "", telefoneSec: "", cpf: "", rg: "",
     dataNascimento: "", sexo: "",
@@ -422,6 +487,7 @@ export function NovoClienteWizard({ open, onClose, onDone }: { open: boolean; on
   function reset() {
     setStep(1);
     setSelectedPlano("");
+    setShowComplementary(false);
     setDados({
       nome: "", email: "", telefone: "", telefoneSec: "", cpf: "", rg: "",
       dataNascimento: "", sexo: "",
@@ -440,7 +506,7 @@ export function NovoClienteWizard({ open, onClose, onDone }: { open: boolean; on
 
   async function handleNext() {
     if (step === 1) {
-      if (!dados.nome || !dados.email || !dados.telefone || !dados.cpf || !dados.dataNascimento || !dados.sexo) return;
+      if (!dados.nome || !dados.telefone || !dados.cpf) return;
       setStep(2);
       return;
     }
@@ -457,13 +523,13 @@ export function NovoClienteWizard({ open, onClose, onDone }: { open: boolean; on
       try {
         const resp = await criarAlunoComMatricula({
           nome: dados.nome,
-          email: dados.email,
+          email: normalizeDraftEmail(dados.nome, dados.cpf, dados.email),
           telefone: dados.telefone,
           telefoneSec: dados.telefoneSec || undefined,
           cpf: dados.cpf,
           rg: dados.rg || undefined,
-          dataNascimento: dados.dataNascimento,
-          sexo: dados.sexo as Sexo,
+          dataNascimento: dados.dataNascimento || "2000-01-01",
+          sexo: (dados.sexo || "OUTRO") as Sexo,
           endereco: dados.enderecoCep ? {
             cep: dados.enderecoCep,
             logradouro: dados.enderecoLogradouro,
@@ -487,26 +553,28 @@ export function NovoClienteWizard({ open, onClose, onDone }: { open: boolean; on
         });
         setResult(resp);
         setStep(4);
-        onDone();
+        if (onDone) {
+          void onDone(resp.aluno);
+        }
       } finally {
         setLoading(false);
       }
     }
   }
 
-  async function handleCreateOnly() {
-    if (!dados.nome || !dados.email || !dados.telefone || !dados.cpf || !dados.dataNascimento || !dados.sexo) return;
+  async function handleCreateOnly(options?: CreateOnlyOptions) {
+    if (!dados.nome || !dados.telefone || !dados.cpf) return;
     setLoading(true);
     try {
-      await criarAluno({
+      const created = await criarAluno({
         nome: dados.nome,
-        email: dados.email,
+        email: normalizeDraftEmail(dados.nome, dados.cpf, dados.email),
         telefone: dados.telefone,
         telefoneSec: dados.telefoneSec || undefined,
         cpf: dados.cpf,
         rg: dados.rg || undefined,
-        dataNascimento: dados.dataNascimento,
-        sexo: dados.sexo as Sexo,
+        dataNascimento: dados.dataNascimento || "2000-01-01",
+        sexo: (dados.sexo || "OUTRO") as Sexo,
         endereco: dados.enderecoCep ? {
           cep: dados.enderecoCep,
           logradouro: dados.enderecoLogradouro,
@@ -524,7 +592,9 @@ export function NovoClienteWizard({ open, onClose, onDone }: { open: boolean; on
         observacoesMedicas: dados.observacoesMedicas || undefined,
         foto: dados.foto || undefined,
       });
-      onDone();
+      if (onDone) {
+        await onDone(created, options);
+      }
       onClose();
       reset();
     } finally {
@@ -533,11 +603,13 @@ export function NovoClienteWizard({ open, onClose, onDone }: { open: boolean; on
   }
 
   return (
-    <Dialog open={open} onOpenChange={() => {
-      onClose();
-      reset();
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!nextOpen) {
+        onClose();
+        reset();
+      }
     }}>
-      <DialogContent className="bg-card border-border sm:max-w-lg">
+      <DialogContent className="bg-card border-border sm:max-w-2xl w-full">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">
             Novo cliente
@@ -545,25 +617,32 @@ export function NovoClienteWizard({ open, onClose, onDone }: { open: boolean; on
         </DialogHeader>
 
         {step <= 3 && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-4 text-sm">
             {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center gap-2">
                 <StepDot step={s} current={step} />
-                {s < 3 && <div className="h-px w-6 bg-border" />}
+                {s < 3 && <div className="h-px w-10 bg-border/70" />}
               </div>
             ))}
           </div>
         )}
 
-        <div className="mt-4">
-          {step === 1 && <Step1Dados data={dados} onChange={setDados} />}
+        <div className="mt-5">
+          {step === 1 && (
+            <Step1Dados
+              data={dados}
+              onChange={setDados}
+              showComplementary={showComplementary}
+              onToggleComplementary={() => setShowComplementary((v) => !v)}
+            />
+          )}
           {step === 2 && <Step2Plano planos={planos} selected={selectedPlano} onSelect={setSelectedPlano} />}
           {step === 3 && <Step3Pagamento plano={planos.find((p) => p.id === selectedPlano)} fps={formas} data={pagamento} onChange={setPagamento} />}
           {step === 4 && result && <StepSucesso result={result} plano={planos.find((p) => p.id === selectedPlano)} onClose={() => { onClose(); reset(); }} />}
         </div>
 
         {step <= 3 && (
-          <div className="mt-5 flex items-center justify-between">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
             <Button
               variant="outline"
               onClick={() => (step === 1 ? onClose() : setStep((s) => s - 1))}
@@ -575,11 +654,26 @@ export function NovoClienteWizard({ open, onClose, onDone }: { open: boolean; on
             <div className="flex items-center gap-2">
               {step === 1 && (
                 <>
-                  <Button variant="outline" onClick={handleCreateOnly} className="border-border">
-                    Finalizar
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleCreateOnly()}
+                    disabled={loading || !dados.nome || !dados.telefone || !dados.cpf}
+                  >
+                    Pré-cadastro
                   </Button>
-                  <Button onClick={handleNext}>
-                    Venda <ArrowRight className="size-3.5" />
+                  <Button
+                    variant="default"
+                    onClick={() => handleCreateOnly({ openSale: true })}
+                    disabled={loading || !dados.nome || !dados.telefone || !dados.cpf}
+                  >
+                    Pré-cadastro + venda <ArrowRight className="size-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleNext}
+                    disabled={loading || !dados.nome || !dados.telefone || !dados.cpf}
+                  >
+                    Completar cadastro agora <ArrowRight className="size-3.5" />
                   </Button>
                 </>
               )}

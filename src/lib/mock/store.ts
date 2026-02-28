@@ -922,17 +922,17 @@ function makeInitialStore(): Store {
   ];
 
   const formasPagamento: FormaPagamento[] = [
-    { id: "fp-001", tenantId: TENANT_ID, nome: "Dinheiro", tipo: "DINHEIRO", taxaPercentual: 0, parcelasMax: 1, ativo: true },
-    { id: "fp-002", tenantId: TENANT_ID, nome: "PIX", tipo: "PIX", taxaPercentual: 0, parcelasMax: 1, ativo: true },
-    { id: "fp-003", tenantId: TENANT_ID, nome: "Cartão de Crédito", tipo: "CARTAO_CREDITO", taxaPercentual: 2.99, parcelasMax: 12, ativo: true },
-    { id: "fp-004", tenantId: TENANT_ID, nome: "Cartão de Débito", tipo: "CARTAO_DEBITO", taxaPercentual: 1.5, parcelasMax: 1, ativo: true },
-    { id: "fp-005", tenantId: TENANT_ID, nome: "Boleto", tipo: "BOLETO", taxaPercentual: 0, parcelasMax: 1, ativo: true },
-    { id: "fp-s1-001", tenantId: TENANT_ID_S1, nome: "Dinheiro", tipo: "DINHEIRO", taxaPercentual: 0, parcelasMax: 1, ativo: true },
-    { id: "fp-s1-002", tenantId: TENANT_ID_S1, nome: "PIX", tipo: "PIX", taxaPercentual: 0, parcelasMax: 1, ativo: true },
-    { id: "fp-s1-003", tenantId: TENANT_ID_S1, nome: "Cartão de Crédito", tipo: "CARTAO_CREDITO", taxaPercentual: 2.99, parcelasMax: 12, ativo: true },
-    { id: "fp-s3-001", tenantId: TENANT_ID_S3, nome: "Dinheiro", tipo: "DINHEIRO", taxaPercentual: 0, parcelasMax: 1, ativo: true },
-    { id: "fp-s3-002", tenantId: TENANT_ID_S3, nome: "PIX", tipo: "PIX", taxaPercentual: 0, parcelasMax: 1, ativo: true },
-    { id: "fp-s3-003", tenantId: TENANT_ID_S3, nome: "Cartão de Crédito", tipo: "CARTAO_CREDITO", taxaPercentual: 2.99, parcelasMax: 12, ativo: true },
+    { id: "fp-001", tenantId: TENANT_ID, nome: "Dinheiro", tipo: "DINHEIRO", taxaPercentual: 0, parcelasMax: 1, ativo: true, emitirAutomaticamente: false },
+    { id: "fp-002", tenantId: TENANT_ID, nome: "PIX", tipo: "PIX", taxaPercentual: 0, parcelasMax: 1, ativo: true, emitirAutomaticamente: false },
+    { id: "fp-003", tenantId: TENANT_ID, nome: "Cartão de Crédito", tipo: "CARTAO_CREDITO", taxaPercentual: 2.99, parcelasMax: 12, ativo: true, emitirAutomaticamente: false },
+    { id: "fp-004", tenantId: TENANT_ID, nome: "Cartão de Débito", tipo: "CARTAO_DEBITO", taxaPercentual: 1.5, parcelasMax: 1, ativo: true, emitirAutomaticamente: false },
+    { id: "fp-005", tenantId: TENANT_ID, nome: "Boleto", tipo: "BOLETO", taxaPercentual: 0, parcelasMax: 1, ativo: true, emitirAutomaticamente: false },
+    { id: "fp-s1-001", tenantId: TENANT_ID_S1, nome: "Dinheiro", tipo: "DINHEIRO", taxaPercentual: 0, parcelasMax: 1, ativo: true, emitirAutomaticamente: false },
+    { id: "fp-s1-002", tenantId: TENANT_ID_S1, nome: "PIX", tipo: "PIX", taxaPercentual: 0, parcelasMax: 1, ativo: true, emitirAutomaticamente: false },
+    { id: "fp-s1-003", tenantId: TENANT_ID_S1, nome: "Cartão de Crédito", tipo: "CARTAO_CREDITO", taxaPercentual: 2.99, parcelasMax: 12, ativo: true, emitirAutomaticamente: false },
+    { id: "fp-s3-001", tenantId: TENANT_ID_S3, nome: "Dinheiro", tipo: "DINHEIRO", taxaPercentual: 0, parcelasMax: 1, ativo: true, emitirAutomaticamente: false },
+    { id: "fp-s3-002", tenantId: TENANT_ID_S3, nome: "PIX", tipo: "PIX", taxaPercentual: 0, parcelasMax: 1, ativo: true, emitirAutomaticamente: false },
+    { id: "fp-s3-003", tenantId: TENANT_ID_S3, nome: "Cartão de Crédito", tipo: "CARTAO_CREDITO", taxaPercentual: 2.99, parcelasMax: 12, ativo: true, emitirAutomaticamente: false },
   ];
 
   const funcionarios = [

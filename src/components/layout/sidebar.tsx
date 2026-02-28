@@ -21,6 +21,7 @@ import {
   PanelLeftOpen,
   Settings,
   ShoppingCart,
+  ShieldCheck,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -46,6 +47,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/seguranca/rbac", label: "Segurança", icon: ShieldCheck },
   { href: "/prospects", label: "Prospects", icon: UserPlus },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/matriculas", label: "Matrículas", icon: ClipboardList },
@@ -61,8 +63,12 @@ const crmItems: NavItem[] = [
 ];
 
 const administrativoItems: NavItem[] = [
+  { href: "/administrativo/conciliacao-bancaria", label: "Conciliação Bancária", icon: Settings },
   { href: "/administrativo/formas-pagamento", label: "Formas de Pagamento", icon: Settings },
   { href: "/administrativo/bandeiras", label: "Bandeiras de Cartão", icon: Settings },
+  { href: "/administrativo/contas-bancarias", label: "Contas Bancárias", icon: Settings },
+  { href: "/administrativo/maquininhas", label: "Maquininhas", icon: Settings },
+  { href: "/administrativo/catraca-status", label: "Status de Conexões", icon: Settings },
   { href: "/administrativo/unidades", label: "Unidades", icon: Settings },
   { href: "/administrativo/academia", label: "Academia", icon: Settings },
   { href: "/administrativo/funcionarios", label: "Funcionários", icon: Settings },
@@ -80,8 +86,26 @@ const administrativoItems: NavItem[] = [
 const gerencialItems: NavItem[] = [
   { href: "/gerencial/contas-a-receber", label: "Contas a Receber", icon: HandCoins },
   { href: "/gerencial/contas-a-pagar", label: "Contas a Pagar", icon: DollarSign },
+  { href: "/gerencial/catraca-acessos", label: "Acessos Catraca", icon: ClipboardList },
+  { href: "/gerencial/contas-a-receber-experimental", label: "Contas a Receber (Protótipo)", icon: HandCoins },
+  { href: "/gerencial/contas-a-pagar-experimental", label: "Contas a Pagar (Protótipo)", icon: DollarSign },
   { href: "/gerencial/dre", label: "DRE", icon: LineChart },
+  { href: "/gerencial/dre-experimental", label: "DRE (Protótipo)", icon: LineChart },
 ];
+
+function sortNavItemsByLabel(items: NavItem[]): NavItem[] {
+  return [...items].sort((a, b) =>
+    a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" })
+  );
+}
+
+const navItemsSorted = sortNavItemsByLabel(navItems);
+const crmItemsSorted = sortNavItemsByLabel(crmItems);
+const administrativoItemsSorted = sortNavItemsByLabel(administrativoItems);
+const gerencialItemsSorted = sortNavItemsByLabel(gerencialItems);
+const DEFAULT_APP_NAME = "Conceito.Fit";
+const DEFAULT_BRAND_LOGO_LIGHT_URL = "/conceito-fit_tech_horizontal.svg";
+const DEFAULT_BRAND_LOGO_DARK_URL = "/conceito-fit_tech_horizontal_dark.svg";
 
 type SidebarProps = {
   mobileOpen?: boolean;
@@ -108,6 +132,7 @@ const SidebarBrand = memo(function SidebarBrand({
   academiaName,
   tenantName,
   logoUrl,
+  defaultLogoUrl,
   onToggleCollapsed,
 }: {
   collapsed: boolean;
@@ -115,23 +140,30 @@ const SidebarBrand = memo(function SidebarBrand({
   academiaName: string;
   tenantName: string;
   logoUrl: string;
+  defaultLogoUrl: string;
   onToggleCollapsed: () => void;
 }) {
+  const brandLogo = logoUrl || defaultLogoUrl;
   return (
     <div className="border-b border-border px-4 py-5">
       <div className="flex items-start justify-between">
         <div className="min-w-0">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+          {brandLogo ? (
             <img
-              src={logoUrl}
+              src={brandLogo}
               alt={appName}
-              className={cn("mb-2 h-8 w-auto object-contain", collapsed && "mb-0")}
+              className={cn(
+                collapsed ? "mx-auto h-6 w-6 object-contain" : "mb-2 h-8 w-auto max-w-full object-contain",
+                collapsed && "mt-1"
+              )}
             />
           ) : null}
-          <div className="font-display text-xl font-extrabold tracking-tight text-gym-accent">
-            {collapsed ? getInitials(appName) : appName}
-          </div>
+          {collapsed && !brandLogo ? (
+            <div className="font-display text-sm font-extrabold tracking-tight text-gym-accent">{getInitials(appName)}</div>
+          ) : null}
+          {!collapsed && (
+            <div className="font-display text-xl font-extrabold tracking-tight text-gym-accent">{appName}</div>
+          )}
           {!collapsed && (
             <div className="mt-1 space-y-1 text-[11px] text-muted-foreground">
               <div>
@@ -272,7 +304,7 @@ function SidebarNavigation({
         </p>
       )}
 
-      {navItems.map((item) => (
+      {navItemsSorted.map((item) => (
         <NavLinkItem
           key={item.href}
           item={item}
@@ -288,7 +320,7 @@ function SidebarNavigation({
         collapsed={collapsed}
         open={crmOpen}
         onToggle={() => setCrmOpen((v) => !v)}
-        items={crmItems}
+        items={crmItemsSorted}
         pathname={pathname}
         onNavigate={onMobileClose}
       />
@@ -299,7 +331,7 @@ function SidebarNavigation({
         collapsed={collapsed}
         open={gerencialOpen}
         onToggle={() => setGerencialOpen((v) => !v)}
-        items={gerencialItems}
+        items={gerencialItemsSorted}
         pathname={pathname}
         onNavigate={onMobileClose}
       />
@@ -310,7 +342,7 @@ function SidebarNavigation({
         collapsed={collapsed}
         open={administrativoOpen}
         onToggle={() => setAdministrativoOpen((v) => !v)}
-        items={administrativoItems}
+        items={administrativoItemsSorted}
         pathname={pathname}
         onNavigate={onMobileClose}
       />
@@ -443,8 +475,9 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [academiaName, setAcademiaName] = useState("Academia");
   const [tenantName, setTenantName] = useState("Academia");
-  const [appName] = useState("Conceito.Fit");
+  const [appName, setAppName] = useState(DEFAULT_APP_NAME);
   const [logoUrl, setLogoUrl] = useState("");
+  const [defaultLogoUrl, setDefaultLogoUrl] = useState(DEFAULT_BRAND_LOGO_DARK_URL);
 
   useEffect(() => {
     const useRealApi = isRealApiEnabled();
@@ -456,6 +489,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
       const academia = store.academias.find((item) => item.id === academiaId) ?? store.academias[0];
       setTenantName(tenant?.nome ?? "Academia");
       setAcademiaName(academia?.nome ?? "Academia");
+      setAppName(academia?.branding?.appName?.trim() || DEFAULT_APP_NAME);
       setLogoUrl(academia?.branding?.logoUrl ?? "");
     }
 
@@ -464,6 +498,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
         const [tenant, academia] = await Promise.all([getCurrentTenant(), getCurrentAcademia()]);
         setTenantName(tenant.nome);
         setAcademiaName(academia.nome);
+        setAppName(academia.branding?.appName?.trim() || DEFAULT_APP_NAME);
         setLogoUrl(academia.branding?.logoUrl ?? "");
       } catch {
         // Mantem estado atual em caso de indisponibilidade temporaria da API.
@@ -484,6 +519,27 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
     };
   }, []);
 
+  useEffect(() => {
+    function syncDefaultLogoByTheme() {
+      const htmlHasDarkClass = document.documentElement.classList.contains("dark");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const useDarkVariant = htmlHasDarkClass || prefersDark;
+      setDefaultLogoUrl(useDarkVariant ? DEFAULT_BRAND_LOGO_DARK_URL : DEFAULT_BRAND_LOGO_LIGHT_URL);
+    }
+
+    syncDefaultLogoByTheme();
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onMediaChange = () => syncDefaultLogoByTheme();
+    const observer = new MutationObserver(syncDefaultLogoByTheme);
+
+    media.addEventListener("change", onMediaChange);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => {
+      media.removeEventListener("change", onMediaChange);
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <aside
       className={cn(
@@ -498,6 +554,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
         academiaName={academiaName}
         tenantName={tenantName}
         logoUrl={logoUrl}
+        defaultLogoUrl={defaultLogoUrl}
         onToggleCollapsed={() => setCollapsed((v) => !v)}
       />
 

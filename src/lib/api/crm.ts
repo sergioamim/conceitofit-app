@@ -11,7 +11,7 @@ import type {
 import { apiRequest } from "./http";
 
 export async function listProspectsApi(input: {
-  tenantId: string;
+  tenantId?: string;
   status?: StatusProspect;
   page?: number;
   size?: number;
