@@ -41,6 +41,15 @@ type JobResumo = {
   contasBancarias?: EntidadeResumo;
   contasPagar?: EntidadeResumo;
   rejeicoes?: { mensagem?: string };
+  exerciciosTreino?: EntidadeResumo;
+  treinos?: EntidadeResumo;
+  treinosSeries?: EntidadeResumo;
+  treinosSeriesItens?: EntidadeResumo;
+  produtos?: EntidadeResumo;
+  produtoMovimentacoes?: EntidadeResumo;
+  servicos?: EntidadeResumo;
+  funcionarios?: EntidadeResumo;
+  maquininhas?: EntidadeResumo;
 };
 
 type Rejeicao = {
@@ -65,6 +74,15 @@ const FILE_FIELDS: { key: keyof FileMap; label: string; field: string }[] = [
   { key: "vendasFile", label: "VENDAS.csv", field: "vendasFile" },
   { key: "vendasItensFile", label: "VENDAS_ITENS.csv", field: "vendasItensFile" },
   { key: "recebimentosFile", label: "RECEBIMENTOS.csv", field: "recebimentosFile" },
+  { key: "maquininhasFile", label: "MAQUININHAS.csv", field: "maquininhasFile" },
+  { key: "produtosFile", label: "PRODUTOS.csv", field: "produtosFile" },
+  { key: "produtoMovimentacoesFile", label: "PRODUTOS_MOVIMENTACOES.csv", field: "produtoMovimentacoesFile" },
+  { key: "servicosFile", label: "SERVICOS.csv", field: "servicosFile" },
+  { key: "funcionariosFile", label: "FUNCIONARIOS.csv", field: "funcionariosFile" },
+  { key: "treinosExerciciosFile", label: "TREINOS_EXERCICIOS.csv", field: "treinosExerciciosFile" },
+  { key: "treinosFile", label: "TREINOS.csv", field: "treinosFile" },
+  { key: "treinosSeriesFile", label: "TREINOS_SERIES.csv", field: "treinosSeriesFile" },
+  { key: "treinosSeriesItensFile", label: "TREINOS_SERIES_ITENS.csv", field: "treinosSeriesItensFile" },
   { key: "contasBancariasFile", label: "CONTAS_BANCARIAS.csv", field: "contasBancariasFile" },
   { key: "contasPagarFile", label: "CONTAS_PAGAR.csv", field: "contasPagarFile" },
 ];
@@ -79,6 +97,15 @@ type FileMap = {
   recebimentosFile?: File | null;
   contasBancariasFile?: File | null;
   contasPagarFile?: File | null;
+  maquininhasFile?: File | null;
+  produtosFile?: File | null;
+  produtoMovimentacoesFile?: File | null;
+  servicosFile?: File | null;
+  funcionariosFile?: File | null;
+  treinosExerciciosFile?: File | null;
+  treinosFile?: File | null;
+  treinosSeriesFile?: File | null;
+  treinosSeriesItensFile?: File | null;
 };
 
 type MapeamentoFilial = { idFilialEvo: string; tenantId: string };
@@ -164,6 +191,15 @@ export default function ImportacaoEvoP0Page() {
     prospects: "PROSPECTS",
     contratos: "CONTRATOS",
     clientesContratos: "CLIENTES_CONTRATOS",
+    maquininhas: "MAQUININHAS",
+    produtos: "PRODUTOS",
+    produtoMovimentacoes: "PRODUTOS_MOVIMENTACOES",
+    servicos: "SERVICOS",
+    funcionarios: "FUNCIONARIOS",
+    exerciciosTreino: "TREINOS_EXERCICIOS",
+    treinos: "TREINOS",
+    treinosSeries: "TREINOS_SERIES",
+    treinosSeriesItens: "TREINOS_SERIES_ITENS",
     vendas: "VENDAS",
     vendasItens: "VENDAS_ITENS",
     recebimentos: "RECEBIMENTOS",
@@ -177,6 +213,15 @@ export default function ImportacaoEvoP0Page() {
     { key: "prospects", label: "Prospects" },
     { key: "contratos", label: "Contratos" },
     { key: "clientesContratos", label: "ClientesContrato" },
+    { key: "maquininhas", label: "Maquininhas" },
+    { key: "produtos", label: "Produtos" },
+    { key: "produtoMovimentacoes", label: "Movimentações de Produto" },
+    { key: "servicos", label: "Serviços" },
+    { key: "funcionarios", label: "Funcionários" },
+    { key: "exerciciosTreino", label: "Exercícios de Treino" },
+    { key: "treinos", label: "Treinos" },
+    { key: "treinosSeries", label: "Séries de Treino" },
+    { key: "treinosSeriesItens", label: "Itens de Séries" },
     { key: "vendas", label: "Vendas" },
     { key: "vendasItens", label: "VendasItens" },
     { key: "recebimentos", label: "Recebimentos" },
@@ -209,9 +254,6 @@ export default function ImportacaoEvoP0Page() {
       return;
     }
     const formData = new FormData();
-    formData.set("dryRun", String(dryRun));
-    formData.set("maxRejeicoesRetorno", String(maxRejeicoes));
-    formData.set("mapeamentoFiliais", JSON.stringify(mapeamentos));
     FILE_FIELDS.forEach(({ key, field }) => {
       const file = files[key];
       if (file) formData.append(field, file, file.name);
@@ -228,6 +270,11 @@ export default function ImportacaoEvoP0Page() {
       }>({
         path: "/api/v1/admin/integracoes/importacao-terceiros/evo/p0/upload",
         method: "POST",
+        query: {
+          dryRun,
+          mapeamentoFiliais: JSON.stringify(mapeamentos),
+          maxRejeicoesRetorno: maxRejeicoes,
+        },
         body: formData,
       });
       const newJobId = body.jobId ?? body.id ?? "";
