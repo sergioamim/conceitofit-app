@@ -26,7 +26,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { authLogout, getCurrentAcademia, getCurrentTenant } from "@/lib/mock/services";
+import { authLogout } from "@/lib/mock/services";
 import { getStore } from "@/lib/mock/store";
 import { isRealApiEnabled } from "@/lib/api/http";
 import {
@@ -53,6 +53,7 @@ const navItems: NavItem[] = [
   { href: "/matriculas", label: "Matrículas", icon: ClipboardList },
   { href: "/planos", label: "Planos", icon: CreditCard },
   { href: "/grade", label: "Grade", icon: CalendarDays },
+  { href: "/treinos", label: "Treinos", icon: CalendarDays },
   { href: "/vendas", label: "Vendas", icon: ShoppingCart },
   { href: "/pagamentos", label: "Pagamentos", icon: DollarSign },
 ];
@@ -494,14 +495,56 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
     }
 
     async function load() {
-      try {
-        const [tenant, academia] = await Promise.all([getCurrentTenant(), getCurrentAcademia()]);
-        setTenantName(tenant.nome);
-        setAcademiaName(academia.nome);
-        setAppName(academia.branding?.appName?.trim() || DEFAULT_APP_NAME);
-        setLogoUrl(academia.branding?.logoUrl ?? "");
-      } catch {
-        // Mantem estado atual em caso de indisponibilidade temporaria da API.
+      const store = getStore();
+      const activeTenants = store.tenants.filter((tenant) => tenant.ativo !== false);
+      const tenantCandidates = activeTenants.length > 0 ? activeTenants : store.tenants;
+      const activeTenant =
+        (store.currentTenantId ? store.tenants.find((tenant) => tenant.id === store.currentTenantId) : store.tenant) ??
+        activeTenants[0] ??
+        store.tenants[0];
+      const hasLocalContext = useRealApi && tenantCandidates.length > 0 && activeTenant && store.academias.length > 0;
+      if (hasLocalContext) {
+        const fallbackTenant = activeTenant
+          ? tenantCandidates.find((tenant) => tenant.id === activeTenant.id) ?? tenantCandidates[0]
+          : activeTenants[0];
+        const fallbackAcademia = store.academias.find((item) => item.id === (fallbackTenant?.academiaId ?? fallbackTenant?.groupId)) ?? store.academias[0];
+        if (fallbackTenant && fallbackAcademia) {
+          setTenantName(fallbackTenant.nome ?? "Academia");
+          setAcademiaName(fallbackAcademia.nome ?? "Academia");
+          setAppName(fallbackAcademia.branding?.appName?.trim() || DEFAULT_APP_NAME);
+          setLogoUrl(fallbackAcademia.branding?.logoUrl ?? "");
+        }
+        return;
+      }
+
+      if (store.tenants.length > 0 && store.academias.length > 0) {
+        const fallbackTenant = activeTenant ?? tenantCandidates[0] ?? store.tenants[0];
+        const fallbackAcademia = fallbackTenant
+          ? store.academias.find((item) => item.id === (fallbackTenant.academiaId ?? fallbackTenant.groupId)) ?? store.academias[0]
+          : store.academias[0];
+        if (fallbackTenant && fallbackAcademia) {
+          setTenantName(fallbackTenant.nome ?? "Academia");
+          setAcademiaName(fallbackAcademia.nome ?? "Academia");
+          setAppName(fallbackAcademia.branding?.appName?.trim() || DEFAULT_APP_NAME);
+          setLogoUrl(fallbackAcademia.branding?.logoUrl ?? "");
+          return;
+        }
+      }
+
+      if (activeTenant) {
+        const fallbackAcademia = store.academias.find((item) => item.id === (activeTenant.academiaId ?? activeTenant.groupId))
+          ?? store.academias[0]
+          ?? undefined;
+
+        setTenantName(activeTenant.nome ?? "Academia");
+        setAcademiaName(fallbackAcademia?.nome ?? "Academia");
+        setAppName(
+          fallbackAcademia?.branding?.appName?.trim() || activeTenant.branding?.appName?.trim() || DEFAULT_APP_NAME
+        );
+        setLogoUrl(activeTenant.branding?.logoUrl ?? fallbackAcademia?.branding?.logoUrl ?? "");
+      } else {
+        setTenantName("Academia");
+        setAcademiaName("Academia");
       }
     }
     if (!useRealApi) {
@@ -510,7 +553,6 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
     load();
 
     function handleUpdate() {
-      if (useRealApi) return;
       syncFromStore();
     }
     window.addEventListener("academia-store-updated", handleUpdate);

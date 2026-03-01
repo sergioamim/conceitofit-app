@@ -21,6 +21,7 @@ type PaginatedTableProps<T> = {
   pageSize?: number;
   total?: number;
   hasNext?: boolean;
+  totalPages?: number;
   onPrevious?: () => void;
   onNext?: () => void;
   disablePrevious?: boolean;
@@ -41,6 +42,7 @@ export function PaginatedTable<T>({
   pageSize = 0,
   total,
   hasNext = false,
+  totalPages,
   onPrevious,
   onNext,
   disablePrevious,
@@ -56,6 +58,12 @@ export function PaginatedTable<T>({
   const rangeEnd = items.length > 0 ? startIndex + items.length : 0;
   const hasNextPage = Boolean(hasNext);
   const hasPreviousPage = currentPage > 0;
+  const effectiveTotalPages =
+    typeof totalPages === "number"
+      ? Math.max(0, totalPages)
+      : total !== undefined && effectiveSize > 0
+        ? Math.max(0, Math.ceil(total / effectiveSize))
+        : undefined;
   const previousDisabled = (disablePrevious ?? false) || !hasPreviousPage || !onPrevious;
   const nextDisabled = (disableNext ?? false) || !hasNextPage || !onNext;
 
@@ -103,6 +111,12 @@ export function PaginatedTable<T>({
             <span className="font-semibold text-foreground">{rangeEnd}</span> de{" "}
             <span className="font-semibold text-foreground">{totalCount}</span> {itemLabel} · página{" "}
             <span className="font-semibold text-foreground">{page + 1}</span>
+            {typeof effectiveTotalPages === "number" ? (
+              <>
+                {" "}
+                de <span className="font-semibold text-foreground">{Math.max(1, effectiveTotalPages)}</span>
+              </>
+            ) : null}
           </p>
           <div className="flex items-center gap-2">
             <Button

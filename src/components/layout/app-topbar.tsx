@@ -3,7 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Menu, Search } from "lucide-react";
-import { getCurrentTenant, listAlunosPage, listTenants, setCurrentTenant } from "@/lib/mock/services";
+import { listAlunosPage, listTenants, setCurrentTenant } from "@/lib/mock/services";
 import { getStore } from "@/lib/mock/store";
 import { isRealApiEnabled } from "@/lib/api/http";
 import type { Tenant } from "@/lib/types";
@@ -33,15 +33,32 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
     function syncFromStore() {
       const store = getStore();
       const activeTenants = (store.tenants ?? []).filter((t) => t.ativo !== false);
-      setTenants(activeTenants);
-      setTenantId(store.currentTenantId || store.tenant?.id || activeTenants[0]?.id || "");
+      const tenantCandidates = activeTenants.length > 0 ? activeTenants : store.tenants ?? [];
+      setTenants(tenantCandidates);
+      setTenantId(store.currentTenantId || store.tenant?.id || tenantCandidates[0]?.id || "");
     }
 
     async function load() {
+      const store = getStore();
+      const activeTenants = (store.tenants ?? []).filter((t) => t.ativo !== false);
+      const tenantCandidates = activeTenants.length > 0 ? activeTenants : store.tenants ?? [];
+      const activeTenantId = store.currentTenantId || store.tenant?.id || activeTenants[0]?.id;
+      const hasContextInStore = tenantCandidates.length > 0;
+
+      if (useRealApi && hasContextInStore) {
+        setTenants(tenantCandidates);
+        setTenantId(activeTenantId || tenantCandidates[0]?.id || "");
+        return;
+      }
+
       try {
-        const [allTenants, current] = await Promise.all([listTenants(), getCurrentTenant()]);
+        const allTenants = await listTenants();
         const activeTenants = allTenants.filter((t) => t.ativo !== false);
-        const currentActive = activeTenants.find((t) => t.id === current.id) ?? activeTenants[0];
+        const stored = getStore();
+        const activeTenantId = stored.currentTenantId || stored.tenant?.id;
+        const currentActive =
+          (activeTenantId ? activeTenants.find((t) => t.id === activeTenantId) : undefined)
+          ?? activeTenants[0];
         setTenants(activeTenants);
         setTenantId(currentActive?.id ?? "");
       } catch {
@@ -52,8 +69,8 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
       syncFromStore();
     }
     load();
+
     function handleUpdate() {
-      if (useRealApi) return;
       syncFromStore();
     }
     window.addEventListener("academia-store-updated", handleUpdate);
@@ -99,10 +116,12 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
     setSavingTenant(true);
     try {
       await setCurrentTenant(nextId);
-      const [allTenants, current] = await Promise.all([listTenants(), getCurrentTenant()]);
-      const activeTenants = allTenants.filter((t) => t.ativo !== false);
-      setTenants(activeTenants);
-      setTenantId(current.id);
+      const store = getStore();
+      const activeTenants = (store.tenants ?? []).filter((t) => t.ativo !== false);
+      if (activeTenants.length > 0) {
+        setTenants(activeTenants);
+      }
+      setTenantId(store.currentTenantId || nextId);
     } finally {
       setSavingTenant(false);
     }

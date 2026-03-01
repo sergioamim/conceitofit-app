@@ -30,6 +30,8 @@ import type {
   Academia,
   CampanhaCRM,
   TenantThemePreset,
+  Treino,
+  Exercicio,
 } from "../types";
 
 const TENANT_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -56,6 +58,8 @@ interface Store {
   planos: Plano[];
   formasPagamento: FormaPagamento[];
   funcionarios: Funcionario[];
+  treinos: Treino[];
+  exercicios: Exercicio[];
   presencas: Presenca[];
   prospects: Prospect[];
   prospectMensagens: ProspectMensagem[];
@@ -141,6 +145,8 @@ function applyLegacyTenantMigration(input: Store): Store {
     salas: mapTenantItems(input.salas),
     atividadeGrades: mapTenantItems(input.atividadeGrades),
     planos: mapTenantItems(input.planos),
+    exercicios: mapTenantItems((input.exercicios ?? []) as Exercicio[]),
+    treinos: mapTenantItems(input.treinos),
     formasPagamento: mapTenantItems(input.formasPagamento),
     prospects: mapTenantItems(input.prospects),
     alunos: mapTenantItems(input.alunos),
@@ -948,6 +954,124 @@ function makeInitialStore(): Store {
   ];
 
   const vendas: Venda[] = [];
+
+  const treinos: Treino[] = [
+    {
+      id: "trn-s1-001",
+      tenantId: TENANT_ID_S1,
+      alunoId: "al-s1-001",
+      alunoNome: "Bianca Rocha",
+      atividadeId: "atv-s1-002",
+      atividadeNome: "Spinning",
+      funcionarioId: "fn-s1-002",
+      funcionarioNome: "Priscila Gomes",
+      vencimento: "2026-03-03",
+      observacoes: "Treino funcional com foco em resistência.",
+      ativo: true,
+      criadoEm: "2026-03-01T08:30:00",
+      atualizadoEm: "2026-03-01T08:30:00",
+    },
+    {
+      id: "trn-s1-002",
+      tenantId: TENANT_ID_S1,
+      alunoId: "al-s1-001",
+      alunoNome: "Bianca Rocha",
+      atividadeId: "atv-s1-001",
+      atividadeNome: "Musculação",
+      funcionarioId: "fn-s1-002",
+      funcionarioNome: "Priscila Gomes",
+      vencimento: "2026-04-12",
+      ativo: true,
+      criadoEm: "2026-03-01T09:00:00",
+      atualizadoEm: "2026-03-01T09:00:00",
+    },
+    {
+      id: "trn-s3-001",
+      tenantId: TENANT_ID_S3,
+      alunoId: "al-s3-001",
+      alunoNome: "Thiago Prado",
+      atividadeId: "atv-s3-002",
+      atividadeNome: "Ritmos",
+      funcionarioId: "fn-s3-002",
+      funcionarioNome: "Leandro Dias",
+      vencimento: "2026-02-27",
+      observacoes: "Treino com ajustes de respiração e mobilidade.",
+      ativo: true,
+      criadoEm: "2026-02-20T07:40:00",
+      atualizadoEm: "2026-02-20T07:40:00",
+    },
+    {
+      id: "trn-001",
+      tenantId: TENANT_ID,
+      alunoId: "al-001",
+      alunoNome: "Carlos Oliveira",
+      atividadeId: "atv-002",
+      atividadeNome: "Spinning",
+      funcionarioId: "fn-002",
+      funcionarioNome: "Larissa Costa",
+      vencimento: "2026-03-05",
+      ativo: true,
+      criadoEm: "2026-03-02T07:20:00",
+      atualizadoEm: "2026-03-02T07:20:00",
+    },
+  ];
+
+  const exercicios: Exercicio[] = [
+    {
+      id: "ex-001",
+      tenantId: TENANT_ID,
+      nome: "Supino reto",
+      grupoMuscular: "Peitoral",
+      equipamento: "Barra e banco",
+      descricao: "3 séries de 12 repetições com carga moderada.",
+      ativo: true,
+      criadoEm: "2026-02-01T08:00:00",
+      atualizadoEm: "2026-02-01T08:00:00",
+    },
+    {
+      id: "ex-s1-001",
+      tenantId: TENANT_ID_S1,
+      nome: "Agachamento livre",
+      grupoMuscular: "Quadríceps",
+      equipamento: "Barra",
+      descricao: "Priorizar técnica e controle de coluna neutra.",
+      ativo: true,
+      criadoEm: "2026-02-02T09:00:00",
+      atualizadoEm: "2026-02-02T09:00:00",
+    },
+    {
+      id: "ex-s1-002",
+      tenantId: TENANT_ID_S1,
+      nome: "Remada unilateral",
+      grupoMuscular: "Dorsais",
+      equipamento: "Halter",
+      descricao: "Ajustar peso conforme amplitude.",
+      ativo: true,
+      criadoEm: "2026-02-03T09:30:00",
+      atualizadoEm: "2026-02-03T09:30:00",
+    },
+    {
+      id: "ex-s3-001",
+      tenantId: TENANT_ID_S3,
+      nome: "Stiff",
+      grupoMuscular: "Posterior de coxa",
+      equipamento: "Barra",
+      descricao: "Foco em cadeia posterior e estabilidade lombar.",
+      ativo: true,
+      criadoEm: "2026-02-04T10:00:00",
+      atualizadoEm: "2026-02-04T10:00:00",
+    },
+    {
+      id: "ex-s3-002",
+      tenantId: TENANT_ID_S3,
+      nome: "Prancha",
+      grupoMuscular: "Core",
+      descricao: "Manter 30 a 60 segundos por série.",
+      ativo: true,
+      criadoEm: "2026-02-05T07:45:00",
+      atualizadoEm: "2026-02-05T07:45:00",
+    },
+  ];
 
   const prospects: Prospect[] = [
     {
@@ -1978,6 +2102,8 @@ function makeInitialStore(): Store {
     planos,
     formasPagamento,
     funcionarios,
+    exercicios,
+    treinos,
     presencas,
     prospects,
     prospectMensagens,
@@ -2163,6 +2289,10 @@ function normalizeStore(data: Store): Store {
         podeMinistrarAulas: raw.podeMinistrarAulas ?? false,
       };
     }),
+    treinos: mergeById(data.treinos, defaults.treinos).map((t) => ({
+      ...t,
+      ativo: t.ativo ?? true,
+    })),
     presencas: mergeById(data.presencas, defaults.presencas),
     prospectMensagens: mergeById(data.prospectMensagens, defaults.prospectMensagens),
     prospectAgendamentos: mergeById(data.prospectAgendamentos, defaults.prospectAgendamentos),
@@ -2306,6 +2436,10 @@ function normalizeStore(data: Store): Store {
       contratoTemplateHtml: (p as unknown as { contratoTemplateHtml?: string }).contratoTemplateHtml ?? "",
       contratoAssinatura: (p as unknown as { contratoAssinatura?: Plano["contratoAssinatura"] }).contratoAssinatura ?? "AMBAS",
       contratoEnviarAutomaticoEmail: (p as unknown as { contratoEnviarAutomaticoEmail?: boolean }).contratoEnviarAutomaticoEmail ?? false,
+    })),
+    exercicios: mergeById(data.exercicios, defaults.exercicios).map((exercicio) => ({
+      ...exercicio,
+      ativo: exercicio.ativo ?? true,
     })),
   };
 

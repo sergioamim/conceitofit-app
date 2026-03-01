@@ -159,6 +159,18 @@ export default function ImportacaoEvoP0Page() {
     return { percentual: Math.round(pct), temTotal: true };
   };
 
+  const resumoEntidadeMap: Partial<Record<keyof JobResumo, string>> = {
+    clientes: "CLIENTES",
+    prospects: "PROSPECTS",
+    contratos: "CONTRATOS",
+    clientesContratos: "CLIENTES_CONTRATOS",
+    vendas: "VENDAS",
+    vendasItens: "VENDAS_ITENS",
+    recebimentos: "RECEBIMENTOS",
+    contasBancarias: "CONTAS_BANCÁRIAS",
+    contasPagar: "CONTAS_PAGAR",
+  };
+
   const resumoCards: { key: keyof JobResumo; label: string }[] = [
     { key: "geral", label: "Geral" },
     { key: "clientes", label: "Clientes" },
@@ -342,6 +354,18 @@ export default function ImportacaoEvoP0Page() {
   function handleJobIdInput(value: string) {
     setJobId(value.trim());
     setStoredJobId(resolveCurrentTenantId(), value.trim());
+  }
+
+  function openRejeicoesPorEntidade(entidade?: string, forceShow = true) {
+    const filtro = entidade ?? ENTIDADE_TODAS;
+    setEntidadeFiltro(filtro);
+    setRejPage(0);
+    if (forceShow) setShowRejeicoes(true);
+    if (jobId) {
+      void loadRejeicoes(0);
+    } else {
+      toast({ title: "Informe um job para consultar rejeições", variant: "destructive" });
+    }
   }
 
   async function handleLoadJob() {
@@ -670,8 +694,29 @@ export default function ImportacaoEvoP0Page() {
                     {resumoCards.map(({ key, label }) => {
                       const resumo = jobResumo?.[key] as EntidadeResumo | undefined;
                       const { percentual, temTotal } = getPercentual(resumo);
+                      const entityFilter = resumoEntidadeMap[key];
+                      const canOpenDetails = key === "geral" || Boolean(entityFilter);
                       return (
-                        <Card key={key} className="border-border">
+                        <Card
+                          key={key}
+                          className={cn(
+                            "border-border",
+                            canOpenDetails ? "cursor-pointer transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent" : ""
+                          )}
+                          role={canOpenDetails ? "link" : undefined}
+                          tabIndex={canOpenDetails ? 0 : -1}
+                          onClick={() => {
+                            if (!canOpenDetails) return;
+                            openRejeicoesPorEntidade(entityFilter);
+                          }}
+                          onKeyDown={(event) => {
+                            if (!canOpenDetails) return;
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              openRejeicoesPorEntidade(entityFilter);
+                            }
+                          }}
+                        >
                           <CardHeader className="pb-2">
                             <CardTitle className="text-sm">{label}</CardTitle>
                           </CardHeader>
@@ -700,6 +745,11 @@ export default function ImportacaoEvoP0Page() {
                                 </span>
                               </span>
                             </span>
+                            {canOpenDetails && (
+                              <span className="col-span-2 pt-2 text-[11px] text-muted-foreground">
+                                Abrir detalhes de rejeições
+                              </span>
+                            )}
                           </CardContent>
                         </Card>
                       );

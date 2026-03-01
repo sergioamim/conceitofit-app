@@ -46,9 +46,11 @@ import type {
   TipoVenda,
   Academia,
   CampanhaCRM,
+  Treino,
   CampanhaCanal,
   CampanhaPublicoAlvo,
   CampanhaStatus,
+  Exercicio,
   CategoriaContaPagar,
   StatusContaPagar,
   DREGerencial,
@@ -60,7 +62,7 @@ import type {
   PaginatedResult,
   PaginatedAlunosResult,
 } from "../types";
-import { ApiRequestError, isRealApiEnabled } from "../api/http";
+import { isRealApiEnabled } from "../api/http";
 import {
   loginApi,
   meApi,
@@ -233,7 +235,11 @@ import {
   type StatusContaReceberApi,
   updateContaReceberApi,
 } from "../api/contas-receber";
-import { createVendaApi, listVendasApi } from "../api/vendas";
+import {
+  createVendaApi,
+  listVendasApi,
+  type ListVendasApiEnvelopeResult,
+} from "../api/vendas";
 
 function genId(): string {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -648,6 +654,48 @@ function resolveTenantIdForApiCall(): string | undefined {
   }
 
   return allowedTenantIds[0] || undefined;
+}
+
+function hydrateTenantContextFromSessionCache(): boolean {
+  const store = getStore();
+  if (tenantContextHydratedFromApi) return true;
+
+  const availableTenantIds = getAvailableTenantIdsFromSessionResolved();
+  const hasSessionFilter = availableTenantIds.length > 0;
+  const activeTenantId = normalizeTenantId(getActiveTenantIdFromSession());
+  const candidateTenants = hasSessionFilter
+    ? store.tenants.filter((tenant) => availableTenantIds.includes(tenant.id))
+    : store.tenants;
+
+  const visibleTenants = hasSessionFilter
+    ? candidateTenants.filter((tenant) => tenant.ativo !== false)
+    : visibleTenantsFromSession(candidateTenants);
+
+  if (!visibleTenants.length) {
+    return false;
+  }
+
+  const resolvedTenantId =
+    (activeTenantId && visibleTenants.some((tenant) => tenant.id === activeTenantId)
+      ? activeTenantId
+      : visibleTenants[0]?.id) ?? "";
+
+  setStore((s) => ({
+    ...s,
+    tenants: visibleTenants,
+    currentTenantId: resolvedTenantId,
+    tenant: visibleTenants.find((tenant) => tenant.id === resolvedTenantId) ?? visibleTenants[0],
+  }));
+
+  if (visibleTenants.length) {
+    tenantContextHydratedFromApi = true;
+    tenantContextSyncAt = Date.now();
+    setAvailableTenants(visibleTenants.map((tenant) => tenant.id), resolvedTenantId);
+    setActiveTenantId(resolvedTenantId);
+    return true;
+  }
+
+  return false;
 }
 
 async function getTenantIdForApiCall(): Promise<string | undefined> {
@@ -1386,14 +1434,34 @@ export async function authLogout(): Promise<void> {
 }
 
 export async function listTenants(): Promise<Tenant[]> {
+  const store = getStore();
+  const visibleStoreTenants = visibleTenantsFromSession(store.tenants);
+  const activeTenantIdInStore = store.currentTenantId || store.tenant?.id;
+
+  if (activeTenantIdInStore && visibleStoreTenants.length > 0) {
+    return visibleStoreTenants;
+  }
+
   if (isRealApiEnabled()) {
+    const hydratedFromSessionCache = hydrateTenantContextFromSessionCache();
+    if (hydratedFromSessionCache) {
+      const hydratedStore = getStore();
+      const visible = visibleTenantsFromSession(hydratedStore.tenants);
+      if (visible.length > 0) return visible;
+      const activeVisible = hydratedStore.tenants.filter((tenant) => tenant.ativo !== false);
+      if (activeVisible.length > 0) return activeVisible;
+    }
+
     const synced = await syncTenantContextFromApiIfStale();
     if (synced && tenantContextHydratedFromApi) {
-      const storeTenants = getStore().tenants;
-      const visibleTenants = visibleTenantsFromSession(storeTenants);
-      if (visibleTenants.length) return visibleTenants;
-      return storeTenants.filter((t) => t.ativo !== false);
+      const syncedStore = getStore();
+      const visibleTenants = visibleTenantsFromSession(syncedStore.tenants);
+      if (visibleTenants.length > 0) return visibleTenants;
+      const activeTenants = syncedStore.tenants.filter((tenant) => tenant.ativo !== false);
+      if (activeTenants.length > 0) return activeTenants;
+      return syncedStore.tenants;
     }
+
     try {
       const tenants = await listUnidadesApi();
       tenantContextHydratedFromApi = true;
@@ -1406,25 +1474,24 @@ export async function listTenants(): Promise<Tenant[]> {
         };
       });
       const visibleTenants = visibleTenantsFromSession(tenants);
-      if (visibleTenants.length) return visibleTenants;
-      return tenants.filter((tenant) => tenant.ativo !== false);
+      return visibleTenants.length ? visibleTenants : tenants.filter((tenant) => tenant.ativo !== false);
     } catch (error) {
       console.warn("[contexto-unidades][api-fallback] Falha ao listar unidades na API real.", error);
       if (tenantContextHydratedFromApi) {
-        const storeTenants = getStore().tenants;
-        const visibleTenants = visibleTenantsFromSession(storeTenants);
+        const fallbackStore = getStore();
+        const visibleTenants = visibleTenantsFromSession(fallbackStore.tenants);
         if (visibleTenants.length) return visibleTenants;
-        return storeTenants.filter((t) => t.ativo !== false);
+        return fallbackStore.tenants.filter((t) => t.ativo !== false);
       }
-      const active = normalizeTenantId(getActiveTenantIdFromSession());
-      const store = getStore();
-      if (active) {
-        return store.tenants.filter((t) => t.ativo !== false || t.id === active);
+
+      if (activeTenantIdInStore && store.tenants.length > 0) {
+        return store.tenants.filter((tenant) => tenant.ativo !== false || tenant.id === activeTenantIdInStore);
       }
+      if (store.tenants.length > 0) return visibleStoreTenants.length ? visibleStoreTenants : store.tenants;
       return [];
     }
   }
-  const store = getStore();
+
   const academiaId = getCurrentAcademiaId();
   if (!academiaId) {
     return store.tenants.filter((t) => t.id === getCurrentTenantId());
@@ -1445,6 +1512,29 @@ export async function listTenantsGlobal(): Promise<Tenant[]> {
 
 export async function getCurrentTenant(): Promise<Tenant> {
   if (isRealApiEnabled()) {
+    const hydratedFromSessionCache = hydrateTenantContextFromSessionCache();
+    if (hydratedFromSessionCache) {
+      const store = getStore();
+      const visibleTenants = visibleTenantsFromSession(store.tenants);
+      const visibleFallback = visibleTenants.length
+        ? visibleTenants
+        : store.tenants.filter((tenant) => tenant.ativo !== false);
+      const tenantFromSession = visibleFallback.find(
+        (tenant) => tenant.id === normalizeTenantId(getActiveTenantIdFromSession())
+      );
+      return (
+        tenantFromSession ??
+        store.tenants.find((tenant) => tenant.id === getCurrentTenantId()) ??
+        visibleFallback[0] ??
+        store.tenant ??
+        {
+          id: resolveTenantIdForApiCall() || TENANT_ID_DEFAULT,
+          nome: "Unidade",
+          ativo: true,
+        }
+      );
+    }
+
     const synced = await syncTenantContextFromApiIfStale();
     try {
       const store = getStore();
@@ -1592,6 +1682,18 @@ export async function listAcademias(): Promise<Academia[]> {
 
 export async function getCurrentAcademia(): Promise<Academia> {
   if (isRealApiEnabled()) {
+    const store = getStore();
+    const currentTenant =
+      store.tenants.find((tenant) => tenant.id === getCurrentTenantId()) ?? store.tenant;
+    const academiaId = currentTenant?.academiaId ?? currentTenant?.groupId;
+    const cachedAcademia = (academiaId
+      ? store.academias.find((item) => item.id === academiaId)
+      : undefined) ?? store.academias[0];
+
+    if (cachedAcademia) {
+      return cachedAcademia;
+    }
+
     try {
       const academia = await getAcademiaAtualApi(getCurrentTenantId());
       setStore((s) => {
@@ -3915,15 +4017,78 @@ export interface CreateVendaInput {
   pagamento: PagamentoVenda;
 }
 
+export interface ListVendasPageInput {
+  dataInicio?: string;
+  dataFim?: string;
+  tipoVenda?: TipoVenda;
+  categoriaItem?: TipoVenda;
+  formaPagamento?: TipoFormaPagamento;
+  page?: number;
+  size?: number;
+  includeTotals?: boolean;
+}
+
+export interface PaginatedVendasResult extends PaginatedResult<Venda> {
+  totalGeral?: number;
+  totaisPorFormaPagamento?: Partial<Record<TipoFormaPagamento, number>>;
+}
+
+const LISTA_VENDAS_PAGE_CACHE_TTL_MS = 8_000;
+const listVendasPageCache = new Map<string, { at: number; data: PaginatedVendasResult }>();
+const listVendasPageInFlight = new Map<string, Promise<PaginatedVendasResult>>();
+const FORMAS_PAGAMENTO: TipoFormaPagamento[] = [
+  "DINHEIRO",
+  "PIX",
+  "CARTAO_CREDITO",
+  "CARTAO_DEBITO",
+  "BOLETO",
+  "RECORRENTE",
+];
+
+function buildListVendasPageCacheKey(input: {
+  tenantId: string;
+  page: number;
+  size: number;
+  dataInicio?: string;
+  dataFim?: string;
+  tipoVenda?: TipoVenda;
+  categoriaItem?: TipoVenda;
+  formaPagamento?: TipoFormaPagamento;
+  includeTotals?: boolean;
+}): string {
+  return JSON.stringify(input);
+}
+
+function clonePaginatedVendasResult(value: PaginatedVendasResult): PaginatedVendasResult {
+  return {
+    ...value,
+    items: [...value.items],
+    totaisPorFormaPagamento: value.totaisPorFormaPagamento
+      ? { ...value.totaisPorFormaPagamento }
+      : undefined,
+  };
+}
+
+function normalizeFormaPagamento(value: unknown): TipoFormaPagamento | null {
+  return typeof value === "string" && FORMAS_PAGAMENTO.includes(value as TipoFormaPagamento)
+    ? (value as TipoFormaPagamento)
+    : null;
+}
+
+function getVendaFormaPagamento(venda: Venda): TipoFormaPagamento | null {
+  return normalizeFormaPagamento((venda as { pagamento?: { formaPagamento?: unknown } }).pagamento?.formaPagamento);
+}
+
 export async function listVendas(): Promise<Venda[]> {
   const tenantId = getCurrentTenantId();
   if (isRealApiEnabled()) {
     try {
-      const synced = await listVendasApi({
+      const response = await listVendasApi({
         tenantId,
         page: 0,
         size: 200,
       });
+      const synced = Array.isArray(response) ? response : response.items;
       const sorted = [...synced].sort((a, b) => {
         if (a.dataCriacao === b.dataCriacao) return 0;
         return a.dataCriacao > b.dataCriacao ? -1 : 1;
@@ -3943,6 +4108,224 @@ export async function listVendas(): Promise<Venda[]> {
       if (a.dataCriacao === b.dataCriacao) return 0;
       return a.dataCriacao > b.dataCriacao ? -1 : 1;
     });
+}
+
+export async function listVendasPage(input: ListVendasPageInput): Promise<PaginatedVendasResult> {
+  const tenantId = getCurrentTenantId();
+  const page = Math.max(1, input.page ?? 1);
+  const size = Math.min(200, Math.max(1, input.size ?? 20));
+  const dataInicio = input.dataInicio;
+  const dataFim = input.dataFim;
+  const tipoVenda = input.tipoVenda;
+  const categoriaItem = input.categoriaItem;
+  const formaPagamento = input.formaPagamento;
+  const includeTotals = input.includeTotals ?? false;
+
+  const cacheKey = buildListVendasPageCacheKey({
+    tenantId,
+    page,
+    size,
+    dataInicio,
+    dataFim,
+    tipoVenda,
+    categoriaItem,
+    formaPagamento,
+    includeTotals,
+  });
+
+  const cached = listVendasPageCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < LISTA_VENDAS_PAGE_CACHE_TTL_MS) {
+    return clonePaginatedVendasResult(cached.data);
+  }
+
+  const inFlight = listVendasPageInFlight.get(cacheKey);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const request = (async () => {
+    const requestParams = {
+      tenantId,
+      page: page - 1,
+      size,
+      dataInicio,
+      dataFim,
+      tipoVenda,
+      categoriaItem,
+      formaPagamento,
+    };
+
+    const mapArrayResponse = (responseItems: Venda[]): PaginatedVendasResult => {
+      const synced = [...responseItems].sort((a, b) => {
+        if (a.dataCriacao === b.dataCriacao) return 0;
+        return a.dataCriacao > b.dataCriacao ? -1 : 1;
+      });
+      setStore((s) => ({
+        ...s,
+        vendas: [...synced, ...s.vendas.filter((v) => v.tenantId !== tenantId)],
+      }));
+      const result = {
+        items: synced,
+        page,
+        size,
+        total: synced.length,
+        hasNext: synced.length >= size,
+      };
+      listVendasPageCache.set(cacheKey, { at: Date.now(), data: clonePaginatedVendasResult(result) });
+      return result;
+    };
+
+    const mapEnvelopeResponse = (envelopeResponse: ListVendasApiEnvelopeResult): PaginatedVendasResult => {
+      const synced = [...envelopeResponse.items].sort((a, b) => {
+        if (a.dataCriacao === b.dataCriacao) return 0;
+        return a.dataCriacao > b.dataCriacao ? -1 : 1;
+      });
+      setStore((s) => ({
+        ...s,
+        vendas: [...synced, ...s.vendas.filter((v) => v.tenantId !== tenantId)],
+      }));
+      const result = {
+        items: synced,
+        page: Number(envelopeResponse.page) + 1,
+        size: Number(envelopeResponse.size),
+        total: envelopeResponse.total,
+        hasNext: envelopeResponse.hasNext,
+        totalGeral: envelopeResponse.totalGeral,
+        totaisPorFormaPagamento: envelopeResponse.totaisPorFormaPagamento,
+      };
+      listVendasPageCache.set(cacheKey, { at: Date.now(), data: clonePaginatedVendasResult(result) });
+      return result;
+    };
+
+    if (isRealApiEnabled()) {
+      try {
+        const response = await listVendasApi({ ...requestParams, envelope: includeTotals });
+        if (Array.isArray(response)) {
+          return mapArrayResponse(response);
+        }
+
+        const responseWithFallback: ListVendasApiEnvelopeResult =
+          (response as ListVendasApiEnvelopeResult);
+        return mapEnvelopeResponse(responseWithFallback);
+      } catch (error) {
+        console.warn(
+          "[vendas][api-fallback] Falha ao listar vendas paginadas na API real. Usando store local.",
+          error
+        );
+        if (includeTotals) {
+          try {
+            const fallbackResponse = await listVendasApi({
+              ...requestParams,
+              formaPagamento: undefined,
+              envelope: false,
+            });
+            const fallbackItems = Array.isArray(fallbackResponse)
+              ? fallbackResponse
+              : fallbackResponse.items;
+            const synced = [...fallbackItems].sort((a, b) => {
+              if (a.dataCriacao === b.dataCriacao) return 0;
+              return a.dataCriacao > b.dataCriacao ? -1 : 1;
+            });
+            const fallbackFiltered = formaPagamento
+              ? synced.filter((venda) => getVendaFormaPagamento(venda) === formaPagamento)
+              : synced;
+            setStore((s) => ({
+              ...s,
+              vendas: [...synced, ...s.vendas.filter((v) => v.tenantId !== tenantId)],
+            }));
+            const totalsByForma: Partial<Record<TipoFormaPagamento, number>> = {};
+            for (const venda of fallbackFiltered) {
+              const forma = getVendaFormaPagamento(venda);
+              if (!forma) continue;
+              totalsByForma[forma] = (totalsByForma[forma] ?? 0) + venda.total;
+            }
+            const startFallback = (page - 1) * size;
+            const items = fallbackFiltered.slice(startFallback, startFallback + size);
+            const fallbackResult = {
+              items,
+              page,
+              size,
+              total: fallbackFiltered.length,
+              hasNext: startFallback + size < fallbackFiltered.length,
+              totalGeral: fallbackFiltered.reduce((sum, venda) => sum + venda.total, 0),
+              totaisPorFormaPagamento: totalsByForma,
+            };
+            listVendasPageCache.set(cacheKey, {
+              at: Date.now(),
+              data: clonePaginatedVendasResult(fallbackResult),
+            });
+            return fallbackResult;
+          } catch {
+            // mantém fallback local abaixo
+          }
+        }
+      }
+    }
+
+    let filteredBase = [...getStore().vendas]
+      .filter((v) => v.tenantId === tenantId)
+      .sort((a, b) => {
+        if (a.dataCriacao === b.dataCriacao) return 0;
+        return a.dataCriacao > b.dataCriacao ? -1 : 1;
+      });
+
+    if (tipoVenda) {
+      filteredBase = filteredBase.filter((venda) => venda.tipo === tipoVenda);
+    }
+
+    if (formaPagamento) {
+      filteredBase = filteredBase.filter((venda) => getVendaFormaPagamento(venda) === formaPagamento);
+    }
+
+    if (categoriaItem) {
+      filteredBase = filteredBase.filter((venda) => venda.itens.some((item) => item.tipo === categoriaItem));
+    }
+
+    const startFilter = dataInicio && dataFim
+      ? (dataInicio <= dataFim ? dataInicio : dataFim)
+      : dataInicio ?? dataFim;
+    const endFilter = dataInicio && dataFim
+      ? (dataInicio <= dataFim ? dataFim : dataInicio)
+      : dataFim ?? dataInicio;
+
+    const filtered = filteredBase.filter((venda) => {
+      const vendaDate = venda.dataCriacao.slice(0, 10);
+      const inDateRange = startFilter && endFilter
+        ? vendaDate >= startFilter && vendaDate <= endFilter
+        : true;
+      return inDateRange;
+    });
+
+    const start = (page - 1) * size;
+    const items = filtered.slice(start, start + size);
+    const totalsByForma: Partial<Record<TipoFormaPagamento, number>> = {};
+    if (includeTotals) {
+      for (const venda of filtered) {
+        const forma = getVendaFormaPagamento(venda);
+        if (!forma) continue;
+        totalsByForma[forma] = (totalsByForma[forma] ?? 0) + venda.total;
+      }
+    }
+
+    const result = {
+      items,
+      page,
+      size,
+      total: filtered.length,
+      hasNext: start + size < filtered.length,
+      totalGeral: includeTotals ? filtered.reduce((sum, venda) => sum + venda.total, 0) : undefined,
+      totaisPorFormaPagamento: includeTotals ? totalsByForma : undefined,
+    };
+    listVendasPageCache.set(cacheKey, { at: Date.now(), data: clonePaginatedVendasResult(result) });
+    return result;
+  })();
+
+  listVendasPageInFlight.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    listVendasPageInFlight.delete(cacheKey);
+  }
 }
 
 export async function createVenda(input: CreateVendaInput): Promise<Venda> {
@@ -4336,6 +4719,113 @@ export async function listAtividadeGrades(params?: {
   if (params?.atividadeId) all = all.filter((g) => g.atividadeId === params.atividadeId);
   if (params?.apenasAtivas) all = all.filter((g) => g.ativo);
   return all;
+}
+
+// ─── TREINOS ────────────────────────────────────────────────────────────────
+
+export async function listTreinos(params?: {
+  apenasAtivas?: boolean;
+  funcionarioId?: string;
+  apenasVencendoAteDias?: number;
+}): Promise<Treino[]> {
+  const tenantId = getCurrentTenantId();
+  const items = getStore().treinos
+    .filter((t) => t.tenantId === tenantId)
+    .filter((t) => (params?.apenasAtivas ? t.ativo : true))
+    .filter((t) => (params?.funcionarioId ? t.funcionarioId === params.funcionarioId : true))
+    .filter((t) => {
+      if (!Number.isFinite(params?.apenasVencendoAteDias ?? NaN)) return true;
+      if (params?.apenasVencendoAteDias == null) return true;
+      const maxDias = Number(params.apenasVencendoAteDias);
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const venc = new Date(`${t.vencimento}T00:00:00`);
+      if (Number.isNaN(venc.getTime())) return false;
+      const dias = Math.floor((venc.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+      return dias >= 0 && dias <= maxDias;
+    })
+    .sort((a, b) => new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime());
+
+  if (isRealApiEnabled()) {
+    try {
+      setStore((s) => ({
+        ...s,
+        treinos: [
+          ...items,
+          ...s.treinos.filter((item) => !items.some((next) => next.id === item.id)),
+        ],
+      }));
+      return items;
+    } catch (error) {
+      console.warn("[treinos][api-fallback] Falha ao listar treinos na API real. Usando store local.", error);
+    }
+  }
+
+  return items;
+}
+
+export async function createTreino(
+  data: Omit<Treino, "id" | "tenantId" | "criadoEm" | "atualizadoEm">
+): Promise<Treino> {
+  if (isRealApiEnabled()) {
+    console.warn(
+      "[treinos] API de treino ainda não disponível. Aplicando criação local com fallback."
+    );
+  }
+  const treino: Treino = {
+    ...data,
+    id: genId(),
+    tenantId: getCurrentTenantId(),
+    ativo: data.ativo ?? true,
+    criadoEm: new Date().toISOString(),
+    atualizadoEm: new Date().toISOString(),
+  };
+  setStore((s) => ({ ...s, treinos: [treino, ...s.treinos] }));
+  return treino;
+}
+
+export async function listExercicios(params?: { apenasAtivos?: boolean }): Promise<Exercicio[]> {
+  const tenantId = getCurrentTenantId();
+  return getStore().exercicios
+    .filter((item) => item.tenantId === tenantId)
+    .filter((item) => (params?.apenasAtivos ? item.ativo : true))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+export async function createExercicio(
+  data: Omit<Exercicio, "id" | "tenantId" | "criadoEm" | "atualizadoEm" | "ativo">
+): Promise<Exercicio> {
+  if (isRealApiEnabled()) {
+    console.warn(
+      "[treinos] API de exercício ainda não disponível. Aplicando criação local com fallback."
+    );
+  }
+  const exercicio: Exercicio = {
+    ...data,
+    id: genId(),
+    tenantId: getCurrentTenantId(),
+    ativo: true,
+    criadoEm: new Date().toISOString(),
+    atualizadoEm: new Date().toISOString(),
+  };
+  setStore((s) => ({ ...s, exercicios: [exercicio, ...s.exercicios] }));
+  return exercicio;
+}
+
+export async function toggleExercicio(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    exercicios: s.exercicios.map((item) =>
+      item.id === id ? { ...item, ativo: !item.ativo } : item
+    ),
+  }));
+}
+
+export async function deleteExercicio(id: string): Promise<void> {
+  setStore((s) => ({
+    ...s,
+    exercicios: s.exercicios.filter((item) => item.id !== id),
+  }));
 }
 
 export async function createAtividadeGrade(

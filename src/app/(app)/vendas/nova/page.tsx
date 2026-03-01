@@ -3,7 +3,16 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ScanLine } from "lucide-react";
-import { createVenda, getCurrentTenant, listAlunos, listPlanos, listProdutos, listServicos, listVoucherCodigos, listVouchers } from "@/lib/mock/services";
+import {
+  createVenda,
+  listAlunos,
+  listPlanos,
+  listProdutos,
+  listServicos,
+  listVoucherCodigos,
+  listVouchers,
+} from "@/lib/mock/services";
+import { getStore } from "@/lib/mock/store";
 import type { Aluno, PagamentoVenda, Plano, Produto, Servico, Tenant, TipoVenda, Venda } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,12 +90,18 @@ function inferSaleTypeFromCart(items: CartItem[]): TipoVenda {
 }
 
 function NovaVendaPageContent() {
-  const [tenant, setTenant] = useState<Tenant | null>(null);
+  const initialTenantId = getStore().currentTenantId || getStore().tenant?.id || "";
+  const [tenantId, setTenantId] = useState(() => initialTenantId);
+  const tenantIdRef = useRef(tenantId);
+  const initialTenant = getStore().tenants.find((item) => item.id === initialTenantId) ?? getStore().tenant;
+  const [tenant, setTenant] = useState<Tenant | null>(initialTenant ?? null);
   const [tipoVenda, setTipoVenda] = useState<TipoVenda>("PLANO");
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [planosLoaded, setPlanosLoaded] = useState(false);
+  const [planosLoadedTenantId, setPlanosLoadedTenantId] = useState("");
 
   const [clienteId, setClienteId] = useState("");
   const [clienteQuery, setClienteQuery] = useState("");
@@ -115,24 +130,91 @@ function NovaVendaPageContent() {
   const scanIntervalRef = useRef<number | null>(null);
   const searchParams = useSearchParams();
   const prefillClienteId = searchParams.get("clienteId") ?? "";
+  const prefillHandledRef = useRef(false);
+  const [alunosLoaded, setAlunosLoaded] = useState(false);
+  const [servicosLoaded, setServicosLoaded] = useState(false);
+  const [produtosLoaded, setProdutosLoaded] = useState(false);
+
+  const loadAlunos = useCallback(async () => {
+    if (alunosLoaded) return;
+    const loaded = await listAlunos();
+    setAlunos(loaded);
+    setAlunosLoaded(true);
+  }, [alunosLoaded]);
+
+  const loadPlanos = useCallback(async () => {
+    const targetTenantId = tenantIdRef.current;
+    if (planosLoaded && planosLoadedTenantId === targetTenantId) return;
+    const planosResponse = await listPlanos();
+    setPlanos(planosResponse.filter((plano) => plano.ativo));
+    setPlanosLoaded(true);
+    setPlanosLoadedTenantId(targetTenantId);
+  }, [planosLoaded, planosLoadedTenantId]);
+
+  const loadServicos = useCallback(async () => {
+    if (servicosLoaded) return;
+    const servicosResponse = await listServicos({ apenasAtivos: true });
+    setServicos(servicosResponse);
+    setServicosLoaded(true);
+  }, [servicosLoaded]);
+
+  const loadProdutos = useCallback(async () => {
+    if (produtosLoaded) return;
+    const produtosResponse = await listProdutos({ apenasAtivos: true });
+    setProdutos(produtosResponse);
+    setProdutosLoaded(true);
+  }, [produtosLoaded]);
+
+  const syncTenantFromStore = useCallback(() => {
+    const store = getStore();
+    const nextTenantId = store.currentTenantId || store.tenant?.id || tenantIdRef.current;
+    if (!nextTenantId || nextTenantId === tenantIdRef.current) {
+      setTenant(store.tenants.find((item) => item.id === tenantIdRef.current) ?? store.tenant ?? null);
+      return;
+    }
+
+    tenantIdRef.current = nextTenantId;
+    setTenantId(nextTenantId);
+    setTenant(store.tenants.find((item) => item.id === nextTenantId) ?? store.tenant ?? null);
+    setAlunos([]);
+    setPlanos([]);
+    setPlanosLoaded(false);
+    setPlanosLoadedTenantId("");
+    setServicos([]);
+    setProdutos([]);
+    setAlunosLoaded(false);
+    setServicosLoaded(false);
+    setProdutosLoaded(false);
+    prefillHandledRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    tenantIdRef.current = tenantId;
+  }, [tenantId]);
+
+  useEffect(() => {
+    syncTenantFromStore();
+    window.addEventListener("academia-store-updated", syncTenantFromStore);
+    return () => {
+      window.removeEventListener("academia-store-updated", syncTenantFromStore);
+    };
+  }, [syncTenantFromStore]);
 
   useEffect(() => {
     async function load() {
-      const [t, als, pls, svs, prds] = await Promise.all([
-        getCurrentTenant(),
-        listAlunos(),
-        listPlanos(),
-        listServicos({ apenasAtivos: true }),
-        listProdutos({ apenasAtivos: true }),
-      ]);
-      setTenant(t);
-      setAlunos(als);
-      setPlanos(pls.filter((p) => p.ativo));
-      setServicos(svs);
-      setProdutos(prds);
+      if (!tenantId) return;
+      await loadPlanos();
+      if (prefillClienteId && !alunosLoaded) {
+        await loadAlunos();
+      }
     }
     load();
-  }, []);
+  }, [alunosLoaded, loadAlunos, loadPlanos, prefillClienteId, tenantId]);
+
+  useEffect(() => {
+    if (tipoVenda === "SERVICO") void loadServicos();
+    if (tipoVenda === "PRODUTO") void loadProdutos();
+  }, [tipoVenda, loadProdutos, loadServicos]);
 
   useEffect(() => {
     setSelectedItemId("");
@@ -141,12 +223,20 @@ function NovaVendaPageContent() {
   }, [tipoVenda]);
 
   useEffect(() => {
-    if (!prefillClienteId || alunos.length === 0) return;
+    if (!prefillClienteId || prefillHandledRef.current) return;
+    if (!alunosLoaded) {
+      if (prefillClienteId) void loadAlunos();
+      return;
+    }
     const alvo = alunos.find((a) => a.id === prefillClienteId);
-    if (!alvo) return;
+    if (!alvo) {
+      prefillHandledRef.current = true;
+      return;
+    }
     setClienteId(alvo.id);
     setClienteQuery(`${alvo.nome} · CPF ${alvo.cpf}`);
-  }, [prefillClienteId, alunos]);
+    prefillHandledRef.current = true;
+  }, [alunos, alunosLoaded, prefillClienteId, loadAlunos]);
 
   const options = useMemo(() => {
     if (tipoVenda === "PLANO") {
@@ -516,6 +606,7 @@ function NovaVendaPageContent() {
                     setClienteId(option.id);
                     setClienteQuery(option.label);
                   }}
+                  onFocusOpen={loadAlunos}
                   options={clienteOptions}
                   placeholder="Buscar por nome ou CPF"
                   minCharsToSearch={3}

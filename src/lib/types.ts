@@ -594,6 +594,34 @@ export interface Presenca {
   atividade?: string;
 }
 
+export interface Treino {
+  id: UUID;
+  tenantId: UUID;
+  alunoId: UUID;
+  alunoNome: string;
+  atividadeId?: UUID;
+  atividadeNome?: string;
+  funcionarioId?: UUID;
+  funcionarioNome?: string;
+  vencimento: LocalDate;
+  observacoes?: string;
+  ativo: boolean;
+  criadoEm?: LocalDateTime;
+  atualizadoEm?: LocalDateTime;
+}
+
+export interface Exercicio {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  grupoMuscular?: string;
+  equipamento?: string;
+  descricao?: string;
+  ativo: boolean;
+  criadoEm?: LocalDateTime;
+  atualizadoEm?: LocalDateTime;
+}
+
 export interface Tenant {
   id: UUID;
   academiaId?: UUID;

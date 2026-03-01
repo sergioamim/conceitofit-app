@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Plus } from "lucide-react";
-import { listAlunosPage } from "@/lib/mock/services";
+import { listAlunosPage, updateAluno } from "@/lib/mock/services";
 import { getStore } from "@/lib/mock/store";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { HoverPopover } from "@/components/shared/hover-popover";
@@ -55,6 +55,7 @@ function ClientesPageContent() {
   });
   const [resumoOpen, setResumoOpen] = useState(false);
   const [clienteResumo, setClienteResumo] = useState<Aluno | null>(null);
+  const [liberandoSuspensao, setLiberandoSuspensao] = useState(false);
 
   const load = useCallback(async () => {
     const paged = await listAlunosPage({
@@ -419,6 +420,39 @@ function ClientesPageContent() {
             <Button type="button" variant="outline" className="border-border" onClick={() => setResumoOpen(false)}>
               Fechar
             </Button>
+            {clienteResumo?.status === "SUSPENSO" ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="border-border text-gym-accent"
+                onClick={async () => {
+                  if (!clienteResumo || liberandoSuspensao) return;
+                  const confirmar = window.confirm(
+                    `Confirmar liberação da suspensão de ${clienteResumo.nome}?`
+                  );
+                  if (!confirmar) return;
+                  try {
+                    setLiberandoSuspensao(true);
+                    await updateAluno(clienteResumo.id, {
+                      status: "ATIVO",
+                      suspensao: undefined,
+                    });
+                    setClienteResumo((prev) =>
+                      prev ? { ...prev, status: "ATIVO", suspensao: undefined } : prev
+                    );
+                    await load();
+                  } catch (error) {
+                    console.error("[clientes] Falha ao liberar suspensão", error);
+                    window.alert("Não foi possível liberar a suspensão no momento.");
+                  } finally {
+                    setLiberandoSuspensao(false);
+                  }
+                }}
+                disabled={liberandoSuspensao}
+              >
+                {liberandoSuspensao ? "Liberando..." : "Liberar suspensão"}
+              </Button>
+            ) : null}
             <Button
               type="button"
               onClick={() => {
