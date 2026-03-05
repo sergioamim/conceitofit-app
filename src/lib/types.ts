@@ -599,13 +599,44 @@ export interface Treino {
   tenantId: UUID;
   alunoId: UUID;
   alunoNome: string;
+  nome?: string;
+  objetivo?: string;
+  divisao?: string; // A, B, C...
+  metaSessoesSemana?: number;
+  dataInicio?: LocalDate;
+  dataFim?: LocalDate;
   atividadeId?: UUID;
   atividadeNome?: string;
   funcionarioId?: UUID;
   funcionarioNome?: string;
-  vencimento: LocalDate;
+  vencimento?: LocalDate; // compat de UI; mapeia para dataFim
   observacoes?: string;
+  status?: "RASCUNHO" | "ATIVO" | "ARQUIVADO" | "CANCELADO";
+  tipoTreino?: "PRE_MONTADO" | "CUSTOMIZADO";
+  diasParaVencimento?: number | null;
+  statusValidade?: "ATIVO" | "VENCENDO" | "VENCIDO" | null;
   ativo: boolean;
+  criadoEm?: LocalDateTime;
+  atualizadoEm?: LocalDateTime;
+  itens?: TreinoItem[];
+}
+
+export interface TreinoItem {
+  id: UUID;
+  treinoId: UUID;
+  exercicioId: UUID;
+  exercicioNome?: string;
+  ordem: number;
+  series: number;
+  repeticoes?: number;
+  repeticoesMin?: number;
+  repeticoesMax?: number;
+  carga?: number;
+  cargaSugerida?: number;
+  intervaloSegundos?: number;
+  tempoExecucaoSegundos?: number;
+  observacao?: string;
+  diasSemana?: string[];
   criadoEm?: LocalDateTime;
   atualizadoEm?: LocalDateTime;
 }

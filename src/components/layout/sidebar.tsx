@@ -16,12 +16,14 @@ import {
   Kanban,
   LayoutDashboard,
   LineChart,
+  ListTree,
   Megaphone,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
   ShoppingCart,
   ShieldCheck,
+  Dumbbell,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -53,9 +55,14 @@ const navItems: NavItem[] = [
   { href: "/matriculas", label: "Matrículas", icon: ClipboardList },
   { href: "/planos", label: "Planos", icon: CreditCard },
   { href: "/grade", label: "Grade", icon: CalendarDays },
-  { href: "/treinos", label: "Treinos", icon: CalendarDays },
   { href: "/vendas", label: "Vendas", icon: ShoppingCart },
   { href: "/pagamentos", label: "Pagamentos", icon: DollarSign },
+];
+
+const treinoItems: NavItem[] = [
+  { href: "/treinos", label: "Treinos", icon: CalendarDays },
+  { href: "/treinos/exercicios", label: "Exercícios", icon: Dumbbell },
+  { href: "/treinos/grupos-musculares", label: "Grupos Musculares", icon: ListTree },
 ];
 
 const crmItems: NavItem[] = [
@@ -82,6 +89,7 @@ const administrativoItems: NavItem[] = [
   { href: "/administrativo/servicos", label: "Serviços", icon: Settings },
   { href: "/administrativo/tipos-conta", label: "Tipos de Conta", icon: Settings },
   { href: "/administrativo/vouchers", label: "Vouchers", icon: Settings },
+  { href: "/administrativo/ia", label: "Integração com IA", icon: Settings },
 ];
 
 const gerencialItems: NavItem[] = [
@@ -101,6 +109,7 @@ function sortNavItemsByLabel(items: NavItem[]): NavItem[] {
 }
 
 const navItemsSorted = sortNavItemsByLabel(navItems);
+const treinoItemsSorted = sortNavItemsByLabel(treinoItems);
 const crmItemsSorted = sortNavItemsByLabel(crmItems);
 const administrativoItemsSorted = sortNavItemsByLabel(administrativoItems);
 const gerencialItemsSorted = sortNavItemsByLabel(gerencialItems);
@@ -287,6 +296,7 @@ function SidebarNavigation({
 }) {
   const pathname = usePathname();
   const [crmOpen, setCrmOpen] = useState(false);
+  const [treinosOpen, setTreinosOpen] = useState(false);
   const [administrativoOpen, setAdministrativoOpen] = useState(false);
   const [gerencialOpen, setGerencialOpen] = useState(false);
 
@@ -295,6 +305,10 @@ function SidebarNavigation({
       onMobileClose?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  useEffect(() => {
+    setTreinosOpen(pathname.startsWith("/treinos"));
   }, [pathname]);
 
   return (
@@ -314,6 +328,17 @@ function SidebarNavigation({
           onNavigate={onMobileClose}
         />
       ))}
+
+      <CollapsibleSection
+        title="Treinos"
+        icon={CalendarDays}
+        collapsed={collapsed}
+        open={treinosOpen}
+        onToggle={() => setTreinosOpen((v) => !v)}
+        items={treinoItemsSorted}
+        pathname={pathname}
+        onNavigate={onMobileClose}
+      />
 
       <CollapsibleSection
         title="CRM"

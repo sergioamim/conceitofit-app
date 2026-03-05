@@ -2,89 +2,81 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search } from "lucide-react";
-import { ExercicioModal } from "@/components/shared/exercicio-modal";
 import { TreinoModal, type TreinoForm } from "@/components/shared/treino-modal";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  createExercicio,
-  createTreino,
-  listAlunos,
-  listAtividades,
-  listExercicios,
-  listFuncionarios,
-  listTreinos,
-} from "@/lib/mock/services";
+import { createTreino, listAlunos, listExercicios, listTreinos } from "@/lib/mock/services";
 import { getStore } from "@/lib/mock/store";
-import type { Aluno, Atividade, Exercicio, Funcionario, Treino } from "@/lib/types";
+import type { Aluno, Exercicio, Treino } from "@/lib/types";
 
 const PAGE_SIZE = 20;
 
-function formatDate(value: string): string {
+function formatDate(value?: string): string {
+  if (!value) return "-";
   const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
+  if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("pt-BR");
-}
-
-function diasParaVencer(dataVencimento: string): number {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const vencimento = new Date(`${dataVencimento}T00:00:00`);
-  if (Number.isNaN(vencimento.getTime())) return Number.NaN;
-  return Math.floor((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export default function TreinosPage() {
   const tenantRef = useRef<string>(getStore().currentTenantId || getStore().tenant?.id || "");
   const [tenantId, setTenantId] = useState(() => tenantRef.current);
   const [treinos, setTreinos] = useState<Treino[]>([]);
+  const [treinosTotal, setTreinosTotal] = useState<number | undefined>(undefined);
+  const [treinosHasNext, setTreinosHasNext] = useState(false);
+  const [treinosSize, setTreinosSize] = useState(PAGE_SIZE);
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [atividades, setAtividades] = useState<Atividade[]>([]);
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [apenasAtivosTreino, setApenasAtivosTreino] = useState(true);
-  const [apenasAtivosExercicio, setApenasAtivosExercicio] = useState(true);
   const [buscaTreino, setBuscaTreino] = useState("");
-  const [buscaExercicio, setBuscaExercicio] = useState("");
+  const [filtroClienteId, setFiltroClienteId] = useState("");
   const [page, setPage] = useState(0);
   const [modalTreinoOpen, setModalTreinoOpen] = useState(false);
-  const [modalExercicioOpen, setModalExercicioOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formOptionsLoading, setFormOptionsLoading] = useState(false);
+  const [formOptionsReady, setFormOptionsReady] = useState(false);
 
-  const instrutores = useMemo(
-    () => funcionarios.filter((funcionario) => funcionario.ativo && funcionario.podeMinistrarAulas),
-    [funcionarios]
-  );
-
-  const loadData = useCallback(async () => {
+  const loadTreinos = useCallback(async () => {
+    if (!tenantId) return;
     setLoading(true);
     try {
-      const [treinosList, exerciciosList, alunosList, atividadesList, funcionariosList] =
-        await Promise.all([
-          listTreinos({
-            apenasAtivas: apenasAtivosTreino,
-          }),
-          listExercicios(apenasAtivosExercicio ? { apenasAtivos: true } : {}),
-          listAlunos(),
-          listAtividades({ apenasAtivas: true }),
-          listFuncionarios({ apenasAtivos: true }),
-        ]);
-
-      setTreinos(treinosList);
-      setExercicios(exerciciosList);
-      setAlunos(alunosList);
-      setAtividades(atividadesList);
-      setFuncionarios(funcionariosList);
+      const response = await listTreinos({
+        apenasAtivas: apenasAtivosTreino,
+        page,
+        size: PAGE_SIZE,
+        search: buscaTreino,
+        clienteId: filtroClienteId || undefined,
+      });
+      setTreinos(response.items);
+      setTreinosTotal(response.total);
+      setTreinosHasNext(response.hasNext);
+      setTreinosSize(response.size);
     } catch (error) {
-      console.error("[treinos] Falha ao carregar dados.", error);
+      console.error("[treinos] Falha ao carregar treinos.", error);
     } finally {
       setLoading(false);
     }
-  }, [apenasAtivosTreino, apenasAtivosExercicio]);
+  }, [apenasAtivosTreino, buscaTreino, filtroClienteId, page, tenantId]);
+
+  const loadFormOptions = useCallback(async () => {
+    if (formOptionsReady || formOptionsLoading) return;
+    setFormOptionsLoading(true);
+    try {
+      const [alunosList, exerciciosList] = await Promise.all([
+        listAlunos(),
+        listExercicios({ apenasAtivos: true }),
+      ]);
+      setAlunos(alunosList);
+      setExercicios(exerciciosList);
+      setFormOptionsReady(true);
+    } catch (error) {
+      console.error("[treinos] Falha ao carregar opções do formulário.", error);
+    } finally {
+      setFormOptionsLoading(false);
+    }
+  }, [formOptionsLoading, formOptionsReady]);
 
   const syncTenantChange = useCallback(() => {
     const current = getStore().currentTenantId || getStore().tenant?.id || "";
@@ -93,10 +85,12 @@ export default function TreinosPage() {
     setTenantId(current);
     setPage(0);
     setTreinos([]);
-    setExercicios([]);
+    setTreinosTotal(undefined);
+    setTreinosHasNext(false);
+    setTreinosSize(PAGE_SIZE);
     setAlunos([]);
-    setAtividades([]);
-    setFuncionarios([]);
+    setExercicios([]);
+    setFormOptionsReady(false);
   }, []);
 
   useEffect(() => {
@@ -109,8 +103,15 @@ export default function TreinosPage() {
   }, [syncTenantChange]);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData, tenantId]);
+    if (!tenantId) return;
+    void loadTreinos();
+  }, [loadTreinos, tenantId]);
+
+  useEffect(() => {
+    if (modalTreinoOpen) {
+      void loadFormOptions();
+    }
+  }, [loadFormOptions, modalTreinoOpen]);
 
   const clienteOptions = useMemo(
     () =>
@@ -123,88 +124,48 @@ export default function TreinosPage() {
     [alunos],
   );
 
-  const atividadeOptions = useMemo(
-    () =>
-      atividades.map((atividade) => ({
-        id: atividade.id,
-        nome: atividade.nome,
-      })),
-    [atividades],
-  );
-
-  const funcionarioOptions = useMemo(
-    () =>
-      instrutores.map((funcionario) => ({
-        id: funcionario.id,
-        nome: funcionario.nome,
-      })),
-    [instrutores],
-  );
-
-  const treinosFiltrados = useMemo(() => {
-    const termo = buscaTreino.trim().toLowerCase();
-    if (!termo) return treinos;
-    return treinos.filter((treino) => {
-      const aluno = treino.alunoNome.toLowerCase();
-      const atividade = (treino.atividadeNome ?? "").toLowerCase();
-      const professor = (treino.funcionarioNome ?? "").toLowerCase();
-      const observacoes = (treino.observacoes ?? "").toLowerCase();
-      return (
-        aluno.includes(termo) ||
-        atividade.includes(termo) ||
-        professor.includes(termo) ||
-        observacoes.includes(termo)
-      );
-    });
-  }, [buscaTreino, treinos]);
-
-  const totalPages = Math.max(1, Math.ceil(treinosFiltrados.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages - 1);
-  const pageItems = treinosFiltrados.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
-
-  const exerciciosFiltrados = useMemo(() => {
-    const termo = buscaExercicio.trim().toLowerCase();
-    if (!termo) return exercicios;
-    return exercicios.filter((exercicio) => {
-      const nome = exercicio.nome.toLowerCase();
-      const grupo = (exercicio.grupoMuscular ?? "").toLowerCase();
-      const equipamento = (exercicio.equipamento ?? "").toLowerCase();
-      return (
-        nome.includes(termo) ||
-        grupo.includes(termo) ||
-        equipamento.includes(termo)
-      );
-    });
-  }, [buscaExercicio, exercicios]);
-
-  const hasNextPage = safePage < totalPages - 1;
+  const clienteFiltroOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const treino of treinos) {
+      if (treino.alunoNome && treino.alunoId) {
+        map.set(treino.alunoId, treino.alunoNome);
+      }
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([id, nome]) => ({ id, nome }));
+  }, [treinos]);
 
   async function handleNovoTreino(data: TreinoForm) {
     await createTreino({
       alunoId: data.alunoId,
       alunoNome: data.alunoNome,
-      atividadeId: data.atividadeId,
-      atividadeNome: data.atividadeNome,
-      funcionarioId: data.funcionarioId,
-      funcionarioNome: data.funcionarioNome,
-      vencimento: data.vencimento,
+      nome: data.nome,
+      divisao: data.divisao,
+      metaSessoesSemana: data.metaSessoesSemana,
+      dataInicio: data.dataInicio,
+      dataFim: data.dataFim,
       observacoes: data.observacoes,
       ativo: data.ativo,
+      itens: data.itens.map((item) => ({
+        id: "",
+        treinoId: "",
+        exercicioId: item.exercicioId,
+        ordem: item.ordem,
+        series: item.series,
+        repeticoesMin: item.repeticoesMin,
+        repeticoesMax: item.repeticoesMax,
+        intervaloSegundos: item.intervaloSegundos,
+        tempoExecucaoSegundos: item.tempoExecucaoSegundos,
+        cargaSugerida: item.cargaSugerida,
+        observacao: item.observacao,
+        diasSemana: item.diasSemana,
+        ativo: true,
+      })),
     });
     setModalTreinoOpen(false);
-    await loadData();
     setPage(0);
-  }
-
-  async function handleNovoExercicio(payload: Parameters<typeof createExercicio>[0]) {
-    await createExercicio({
-      nome: payload.nome,
-      grupoMuscular: payload.grupoMuscular,
-      equipamento: payload.equipamento,
-      descricao: payload.descricao,
-    });
-    setModalExercicioOpen(false);
-    await loadData();
+    await loadTreinos();
   }
 
   const title = tenantId ? "Treinos" : "Treinos por unidade";
@@ -216,29 +177,71 @@ export default function TreinosPage() {
         open={modalTreinoOpen}
         onClose={() => setModalTreinoOpen(false)}
         clientes={clienteOptions}
-        atividades={atividadeOptions}
-        funcionarios={funcionarioOptions}
+        exercicios={exercicios.map((ex) => ({ id: ex.id, nome: ex.nome, grupoMuscular: ex.grupoMuscular }))}
         onSave={handleNovoTreino}
-      />
-      <ExercicioModal
-        key={modalExercicioOpen ? "exercicio-open" : "exercicio-closed"}
-        open={modalExercicioOpen}
-        onClose={() => setModalExercicioOpen(false)}
-        onSave={handleNovoExercicio}
       />
 
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight">{title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {tenantId ? "Gerencie treinos por unidade ativa" : "Selecione uma unidade para visualizar os treinos"}
+          Monte, edite e atribua treinos para os alunos da unidade.
         </p>
       </div>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button onClick={() => setModalExercicioOpen(true)} variant="secondary">
-          <Plus className="size-4" />
-          Novo exercício
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => {
+                setApenasAtivosTreino(false);
+                setPage(0);
+              }}
+              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                !apenasAtivosTreino
+                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+              }`}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => {
+                setApenasAtivosTreino(true);
+                setPage(0);
+              }}
+              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                apenasAtivosTreino
+                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+              }`}
+            >
+              Apenas ativos
+            </button>
+          </div>
+          <div className="relative w-full max-w-xs">
+            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={buscaTreino}
+              onChange={(event) => {
+                setBuscaTreino(event.target.value);
+                setPage(0);
+              }}
+              className="w-full bg-secondary border-border pl-8"
+              placeholder="Buscar por cliente ou professor"
+            />
+          </div>
+          <div className="relative w-full max-w-xs">
+            <SelectFiltroCliente
+              options={clienteFiltroOptions}
+              value={filtroClienteId}
+              onChange={(value) => {
+                setFiltroClienteId(value);
+                setPage(0);
+              }}
+            />
+          </div>
+        </div>
+
         <Button onClick={() => setModalTreinoOpen(true)}>
           <Plus className="size-4" />
           Novo treino
@@ -248,86 +251,40 @@ export default function TreinosPage() {
       <Card className="border-border bg-card">
         <CardHeader className="space-y-2">
           <CardTitle className="font-display text-lg">Treinos</CardTitle>
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => {
-                  setApenasAtivosTreino(false);
-                  setPage(0);
-                }}
-                className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  !apenasAtivosTreino
-                    ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                    : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                }`}
-              >
-                Todos
-              </button>
-              <button
-                onClick={() => {
-                  setApenasAtivosTreino(true);
-                  setPage(0);
-                }}
-                className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  apenasAtivosTreino
-                    ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                    : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                }`}
-              >
-                Apenas ativos
-              </button>
-            </div>
-            <div className="relative ml-auto w-full max-w-[340px]">
-              <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={buscaTreino}
-                onChange={(event) => {
-                  setBuscaTreino(event.target.value);
-                  setPage(0);
-                }}
-                className="w-full bg-secondary border-border pl-8"
-                placeholder="Buscar por cliente, atividade ou professor"
-              />
-            </div>
-          </div>
         </CardHeader>
         <CardContent>
           <PaginatedTable<Treino>
             columns={[
               { label: "Cliente" },
-              { label: "Atividade" },
+              { label: "Divisão" },
               { label: "Professor" },
-              { label: "Vencimento" },
-              { label: "Observações" },
+              { label: "Validade" },
+              { label: "Meta/sem" },
             ]}
-            items={pageItems}
+            items={treinos}
             emptyText={loading ? "Carregando..." : "Nenhum treino encontrado"}
-            total={treinosFiltrados.length}
-            page={safePage}
-            pageSize={PAGE_SIZE}
-            hasNext={hasNextPage}
-            onNext={() => setPage((current) => (current >= totalPages - 1 ? current : current + 1))}
+            total={treinosTotal ?? treinos.length}
+            page={page}
+            pageSize={treinosSize}
+            hasNext={treinosHasNext}
+            onNext={() => {
+              if (treinosHasNext) setPage((current) => current + 1);
+            }}
             onPrevious={() => setPage((current) => Math.max(0, current - 1))}
             getRowKey={(treino) => treino.id}
             renderCells={(treino) => {
-              const dias = diasParaVencer(treino.vencimento);
-              const precisaUrgencia = dias >= 0 && dias < 7;
+              const validade = treino.dataFim ?? treino.vencimento ?? "";
               return (
                 <>
                   <td className="px-4 py-3">
                     <p className="text-sm font-medium">{treino.alunoNome}</p>
                   </td>
-                  <td className="px-4 py-3 text-sm">{treino.atividadeNome ?? "-"}</td>
+                  <td className="px-4 py-3 text-sm">{treino.divisao ?? "-"}</td>
                   <td className="px-4 py-3 text-sm">{treino.funcionarioNome ?? "-"}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <p>{formatDate(treino.vencimento)}</p>
-                    {precisaUrgencia && (
-                      <p className="mt-1 text-xs text-gym-warning">
-                        Faltam menos de 7 dias para vencer
-                      </p>
-                    )}
+                  <td className="px-4 py-3 text-sm">{formatDate(validade)}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {treino.metaSessoesSemana ?? "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{treino.observacoes ?? "-"}</td>
                 </>
               );
             }}
@@ -335,71 +292,41 @@ export default function TreinosPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
-        <CardHeader className="space-y-2">
-          <CardTitle className="font-display text-lg">Exercícios</CardTitle>
-          <div className="flex gap-1.5">
-            <button
-              onClick={() => {
-                setApenasAtivosExercicio(false);
-              }}
-              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                !apenasAtivosExercicio
-                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => {
-                setApenasAtivosExercicio(true);
-              }}
-              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                apenasAtivosExercicio
-                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-              }`}
-            >
-              Apenas ativos
-            </button>
-          </div>
-          <div className="relative mt-2 w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={buscaExercicio}
-              onChange={(event) => setBuscaExercicio(event.target.value)}
-              className="w-full bg-secondary border-border pl-8"
-              placeholder="Buscar exercício, grupo muscular ou equipamento"
-            />
-          </div>
+      <Card className="border-dashed border-border bg-card/50">
+        <CardHeader>
+          <CardTitle className="font-display text-lg">Templates de treino (em breve)</CardTitle>
         </CardHeader>
         <CardContent>
-          <PaginatedTable<Exercicio>
-            columns={[
-              { label: "Nome" },
-              { label: "Grupo muscular" },
-              { label: "Equipamento" },
-              { label: "Observação" },
-            ]}
-            items={exerciciosFiltrados}
-            emptyText="Nenhum exercício encontrado"
-            total={exerciciosFiltrados.length}
-            page={0}
-            pageSize={exerciciosFiltrados.length || 1}
-            showPagination={false}
-            getRowKey={(item) => item.id}
-            renderCells={(item) => (
-              <>
-                <td className="px-4 py-3 text-sm font-medium">{item.nome}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{item.grupoMuscular ?? "-"}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{item.equipamento ?? "-"}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{item.descricao ?? "-"}</td>
-              </>
-            )}
-          />
+          <p className="text-sm text-muted-foreground">
+            Vamos disponibilizar uma lista de templates para reaproveitar estruturas de treino e atribuir aos alunos rapidamente.
+          </p>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function SelectFiltroCliente({
+  options,
+  value,
+  onChange,
+}: {
+  options: Array<{ id: string; nome: string }>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
+    >
+      <option value="">Todos os clientes</option>
+      {options.map((opt) => (
+        <option key={opt.id} value={opt.id}>
+          {opt.nome}
+        </option>
+      ))}
+    </select>
   );
 }

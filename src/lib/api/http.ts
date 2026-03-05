@@ -7,6 +7,7 @@ export interface ApiErrorPayload {
   message?: string;
   path?: string;
   fieldErrors?: Record<string, string> | null;
+  responseBody?: string;
 }
 
 export class ApiRequestError extends Error {
@@ -14,6 +15,7 @@ export class ApiRequestError extends Error {
   public readonly error?: string;
   public readonly path?: string;
   public readonly fieldErrors?: Record<string, string> | null;
+  public readonly responseBody?: string;
 
   constructor(payload: ApiErrorPayload & { statusCode?: number }) {
     const status = payload.status ?? payload.statusCode ?? 500;
@@ -25,6 +27,7 @@ export class ApiRequestError extends Error {
     this.error = payload.error;
     this.path = payload.path;
     this.fieldErrors = payload.fieldErrors;
+    this.responseBody = payload.responseBody;
   }
 }
 
@@ -170,20 +173,27 @@ export async function apiRequest<T>(input: {
 
   if (!response.ok) {
     let payload: ApiErrorPayload | undefined;
-    try {
-      payload = (await response.json()) as ApiErrorPayload;
-    } catch {
-      payload = undefined;
+    let rawBody: string | undefined;
+      try {
+        rawBody = await response.text();
+        try {
+          payload = rawBody ? (JSON.parse(rawBody) as ApiErrorPayload) : undefined;
+        } catch {
+          payload = undefined;
+        }
+      } catch {
+        payload = undefined;
+      }
+      const details: ApiErrorPayload & { statusCode?: number } = {
+        statusCode: response.status,
+        message: payload?.message ?? payload?.error ?? response.statusText ?? `HTTP ${response.status}`,
+        error: payload?.error,
+        path: payload?.path ?? input.path,
+        responseBody: rawBody,
+        fieldErrors: payload?.fieldErrors,
+      };
+      throw new ApiRequestError(details);
     }
-    const details: ApiErrorPayload & { statusCode?: number } = {
-      statusCode: response.status,
-      message: payload?.message ?? payload?.error,
-      error: payload?.error,
-      path: payload?.path ?? input.path,
-      fieldErrors: payload?.fieldErrors,
-    };
-    throw new ApiRequestError(details);
-  }
 
   if (response.status === 204) {
     return undefined as T;

@@ -114,7 +114,6 @@ import {
   liberarAcessoCatracaApi,
   listarCatracaWsStatusApi,
   obterCatracaWsStatusPorTenantApi,
-  type CatracaAcessosResponse,
   type CatracaAcessosDashboardResponse,
   type CatracaAgentConexao,
   type CatracaCredentialResponse,
@@ -235,6 +234,25 @@ import {
   type StatusContaReceberApi,
   updateContaReceberApi,
 } from "../api/contas-receber";
+import {
+  getBotPromptApi,
+  getBotPromptTemplateApi,
+  type BotPromptResponse,
+} from "../api/bot";
+import {
+  createExercicioApi,
+  createTreinoApi,
+  getTreinoApi,
+  deleteExercicioApi,
+  listExerciciosApi,
+  listTreinosApi,
+  updateTreinoApi,
+  toggleExercicioApi,
+  type ExercicioApiResponse,
+  type TreinoApiResponse,
+  type TreinoStatusApi,
+  type UpdateTreinoApiInput,
+} from "../api/treinos";
 import {
   createVendaApi,
   listVendasApi,
@@ -432,13 +450,14 @@ function getDefaultTenantIdFromSession(): string | undefined {
 }
 
 function visibleTenantsFromSession(tenants: Tenant[]): Tenant[] {
+  const deduped = dedupeTenants(tenants);
   const availableTenants = getAvailableTenantsFromSessionOrdered();
   if (!availableTenants.length) {
-    return tenants.filter((tenant) => tenant.ativo !== false);
+    return deduped.filter((tenant) => tenant.ativo !== false);
   }
 
   const byId = new Map<string, Tenant>();
-  for (const tenant of tenants) {
+  for (const tenant of deduped) {
     byId.set(tenant.id, tenant);
   }
 
@@ -983,6 +1002,10 @@ function areSameTenantList(a: Tenant[], b: Tenant[]): boolean {
   return aSorted.every((item, index) => areSameTenant(item, bSorted[index]));
 }
 
+function dedupeTenants(tenants: Tenant[]): Tenant[] {
+  return Array.from(new Map(tenants.map((t) => [t.id, t] as const)).values());
+}
+
 let tenantContextHydratedFromApi = false;
 let tenantContextSyncAt = 0;
 let tenantContextSyncInFlight: Promise<boolean> | null = null;
@@ -1457,13 +1480,13 @@ export async function listTenants(): Promise<Tenant[]> {
       const syncedStore = getStore();
       const visibleTenants = visibleTenantsFromSession(syncedStore.tenants);
       if (visibleTenants.length > 0) return visibleTenants;
-      const activeTenants = syncedStore.tenants.filter((tenant) => tenant.ativo !== false);
+      const activeTenants = dedupeTenants(syncedStore.tenants).filter((tenant) => tenant.ativo !== false);
       if (activeTenants.length > 0) return activeTenants;
-      return syncedStore.tenants;
+      return dedupeTenants(syncedStore.tenants);
     }
 
     try {
-      const tenants = await listUnidadesApi();
+      const tenants = dedupeTenants(await listUnidadesApi());
       tenantContextHydratedFromApi = true;
       tenantContextSyncAt = Date.now();
       setStore((s) => {
@@ -1634,14 +1657,8 @@ export async function setCurrentTenant(id: string): Promise<void> {
       }
       return;
     } catch (error) {
-      console.warn("[contexto-unidades][api-fallback] Falha ao trocar unidade via auth. Aplicando troca local.", { error });
-      setStore((s) => ({
-        ...s,
-        currentTenantId: tenantId,
-      }));
-      setActiveTenantId(tenantId);
-      setAvailableTenants([tenantId], tenantId);
-      return;
+      console.warn("[contexto-unidades][api-fallback] Falha ao trocar unidade via auth. Mantendo tenant e token atuais.", { error });
+      throw error;
     }
   }
   setStore((s) => {
@@ -4721,60 +4738,349 @@ export async function listAtividadeGrades(params?: {
   return all;
 }
 
+// BOT PROMPT (API)
+
+export async function getBotPrompt(): Promise<BotPromptResponse> {
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = await getTenantIdForApiCall();
+      const response = await getBotPromptApi({ tenantId });
+      return {
+        prompt: response?.prompt ?? "",
+        generatedAt: response?.generatedAt,
+      };
+    } catch (error) {
+      console.warn("[bot-prompt] Falha ao obter prompt na API real. Usando fallback.", error);
+    }
+  }
+  return {
+    prompt: "Integração de IA indisponível em modo simulado (API desativada).",
+    generatedAt: now(),
+  };
+}
+
+export async function getBotPromptTemplate(): Promise<string> {
+  if (isRealApiEnabled()) {
+    try {
+      return await getBotPromptTemplateApi();
+    } catch (error) {
+      console.warn("[bot-prompt] Falha ao obter template na API real. Usando fallback.", error);
+    }
+  }
+  return "Template não disponível em modo simulado.";
+}
+
 // ─── TREINOS ────────────────────────────────────────────────────────────────
 
-export async function listTreinos(params?: {
+type ListTreinosParams = {
   apenasAtivas?: boolean;
+  clienteId?: string;
+  alunoId?: string;
   funcionarioId?: string;
+  search?: string;
+  page?: number;
+  size?: number;
   apenasVencendoAteDias?: number;
-}): Promise<Treino[]> {
-  const tenantId = getCurrentTenantId();
-  const items = getStore().treinos
-    .filter((t) => t.tenantId === tenantId)
+};
+
+function applyTreinoFilters(items: Treino[], params?: ListTreinosParams): Treino[] {
+  const search = cleanString(params?.search)?.toLowerCase();
+  const targetClienteId = cleanString(params?.clienteId) || cleanString(params?.alunoId);
+  return items
     .filter((t) => (params?.apenasAtivas ? t.ativo : true))
+    .filter((t) => (!targetClienteId ? true : t.alunoId === targetClienteId))
     .filter((t) => (params?.funcionarioId ? t.funcionarioId === params.funcionarioId : true))
+    .filter((t) => {
+      if (!search) return true;
+      const source = [t.alunoNome, t.atividadeNome, t.funcionarioNome, t.observacoes]
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.toLowerCase());
+      return source.some((value) => value.includes(search));
+    })
     .filter((t) => {
       if (!Number.isFinite(params?.apenasVencendoAteDias ?? NaN)) return true;
       if (params?.apenasVencendoAteDias == null) return true;
       const maxDias = Number(params.apenasVencendoAteDias);
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
-      const venc = new Date(`${t.vencimento}T00:00:00`);
+      const dataRef = t.vencimento ?? t.dataFim ?? t.dataInicio ?? today();
+      const venc = new Date(`${dataRef}T00:00:00`);
       if (Number.isNaN(venc.getTime())) return false;
       const dias = Math.floor((venc.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
       return dias >= 0 && dias <= maxDias;
     })
-    .sort((a, b) => new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime());
+    .sort((a, b) => {
+      const aDate = new Date(`${(a.vencimento ?? a.dataFim ?? a.dataInicio ?? today())}T00:00:00`).getTime();
+      const bDate = new Date(`${(b.vencimento ?? b.dataFim ?? b.dataInicio ?? today())}T00:00:00`).getTime();
+      return aDate - bDate;
+    });
+}
 
+function cleanString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized || undefined;
+}
+
+function extractAtividadeNomeFromObjetivo(value: string | null | undefined): string | undefined {
+  const objetivo = cleanString(value);
+  if (!objetivo) return undefined;
+  return objetivo.replace(/^atividade:\s*/i, "").trim() || undefined;
+}
+
+function mapExercicioApiToExercicio(input: ExercicioApiResponse): Exercicio {
+  return {
+    id: input.id,
+    tenantId: input.tenantId,
+    nome: input.nome,
+    grupoMuscular: cleanString(input.grupoMuscular),
+    equipamento: cleanString(input.aparelho) ?? cleanString(input.unidade),
+    descricao: cleanString(input.descricao),
+    ativo: input.ativo !== false,
+    criadoEm: cleanString(input.createdAt),
+    atualizadoEm: cleanString(input.updatedAt),
+  };
+}
+
+function mapTreinoApiToTreino(
+  input: TreinoApiResponse,
+  lookup?: {
+    alunoNomeById: Map<string, string>;
+    funcionarioNomeById: Map<string, string>;
+    fallbackAlunoNome?: string;
+    fallbackAtividadeNome?: string;
+    fallbackFuncionarioNome?: string;
+  }
+): Treino {
+  const alunoId = cleanString(input.alunoId) ?? cleanString(input.clienteId) ?? "";
+  const alunoNomeFromApi = cleanString(input.alunoNome) ?? cleanString(input.clienteNome);
+  const funcionarioId = cleanString(input.professorId);
+  const atividadeNomeFromApi = cleanString(input.atividadeNome);
+  const atividadeNome =
+    atividadeNomeFromApi ||
+    (cleanString(lookup?.fallbackAtividadeNome) ??
+    extractAtividadeNomeFromObjetivo(input.objetivo) ??
+    cleanString(input.nome));
+  const atividadeId = cleanString(input.atividadeId);
+  const itens =
+    Array.isArray(input.itens) && input.itens
+      ? input.itens.map((item) => ({
+          id: cleanString(item.id) ?? genId(),
+          treinoId: cleanString(item.treinoId) ?? input.id,
+          exercicioId: cleanString(item.exercicioId) ?? "",
+          exercicioNome: cleanString(item.exercicioNomeSnapshot),
+          ordem: Number(item.ordem ?? 0),
+          series: Number(item.series ?? 0),
+          repeticoes: item.repeticoes != null ? Number(item.repeticoes) : undefined,
+          repeticoesMin: item.repeticoesMin != null ? Number(item.repeticoesMin) : undefined,
+          repeticoesMax: item.repeticoesMax != null ? Number(item.repeticoesMax) : undefined,
+          carga: item.carga != null ? Number(item.carga) : undefined,
+          cargaSugerida: item.cargaSugerida != null ? Number(item.cargaSugerida) : undefined,
+          intervaloSegundos: item.intervaloSegundos != null ? Number(item.intervaloSegundos) : undefined,
+          tempoExecucaoSegundos: item.tempoExecucaoSegundos != null ? Number(item.tempoExecucaoSegundos) : undefined,
+          observacao: cleanString(item.observacao),
+          diasSemana: Array.isArray(item.diaDaSemana) ? item.diaDaSemana.filter(Boolean) : undefined,
+          criadoEm: cleanString(item.createdAt),
+          atualizadoEm: cleanString(item.updatedAt),
+        }))
+      : undefined;
+
+  return {
+    id: input.id,
+    tenantId: input.tenantId,
+    alunoId,
+    atividadeId,
+    alunoNome:
+      alunoNomeFromApi || (
+        (alunoId ? lookup?.alunoNomeById.get(alunoId) : undefined) ??
+        cleanString(lookup?.fallbackAlunoNome) ??
+        "Cliente não identificado"
+      ),
+    atividadeNome,
+    funcionarioNome:
+      cleanString(input.professorNome) ??
+      (funcionarioId ? lookup?.funcionarioNomeById.get(funcionarioId) : undefined) ??
+      cleanString(lookup?.fallbackFuncionarioNome),
+    funcionarioId,
+    divisao: cleanString(input.divisao),
+    metaSessoesSemana: input.metaSessoesSemana != null ? Number(input.metaSessoesSemana) : undefined,
+    dataInicio: cleanString(input.dataInicio),
+    dataFim: cleanString(input.dataFim),
+    vencimento: cleanString(input.dataFim) ?? cleanString(input.dataInicio) ?? today(),
+    observacoes: cleanString(input.observacoes),
+    status: cleanString(input.status) as Treino["status"],
+    tipoTreino: cleanString(input.tipoTreino) as Treino["tipoTreino"],
+    diasParaVencimento:
+      typeof input.diasParaVencimento === "number" ? input.diasParaVencimento : undefined,
+    statusValidade: cleanString(input.statusValidade) as Treino["statusValidade"],
+    ativo: input.ativo !== false,
+    criadoEm: cleanString(input.createdAt),
+    atualizadoEm: cleanString(input.updatedAt),
+    itens,
+  };
+}
+
+function buildTreinoUpsertPayloadFromForm(
+  treino: Treino,
+  overrides?: {
+    nome?: string;
+    objetivo?: string;
+    observacoes?: string;
+    ativo?: boolean;
+    vencimento?: string;
+    dataInicio?: string;
+    alunoId?: string;
+    funcionarioId?: string;
+  }
+): UpdateTreinoApiInput {
+  const nomeBase =
+    cleanString(overrides?.nome) ??
+    treino.nome ??
+    treino.atividadeNome ??
+    `Treino de ${treino.alunoNome}`;
+  const objetivo = cleanString(overrides?.objetivo) ?? (treino.atividadeNome ? `Atividade: ${treino.atividadeNome}` : undefined);
+  return {
+    clienteId: cleanString(overrides?.alunoId) ?? cleanString(treino.alunoId) ?? null,
+    professorId: cleanString(overrides?.funcionarioId) ?? cleanString(treino.funcionarioId) ?? null,
+    nome: nomeBase,
+    objetivo,
+    observacoes: cleanString(overrides?.observacoes) ?? cleanString(treino.observacoes),
+    dataInicio: cleanString(overrides?.dataInicio),
+    dataFim: cleanString(overrides?.vencimento) ?? cleanString(treino.vencimento),
+    status: (treino.ativo ? "ATIVO" : "ARQUIVADO") as TreinoStatusApi,
+    tipoTreino: "CUSTOMIZADO",
+    ativo: overrides?.ativo ?? treino.ativo,
+    itens: [],
+  };
+}
+
+function getTreinoLookupMaps(): {
+  alunoNomeById: Map<string, string>;
+  funcionarioNomeById: Map<string, string>;
+} {
+  const store = getStore();
+  return {
+    alunoNomeById: new Map(store.alunos.map((aluno) => [aluno.id, aluno.nome])),
+    funcionarioNomeById: new Map(
+      store.funcionarios.map((funcionario) => [funcionario.id, funcionario.nome])
+    ),
+  };
+}
+
+export async function listTreinos(params?: ListTreinosParams): Promise<PaginatedResult<Treino>> {
   if (isRealApiEnabled()) {
     try {
+      const tenantId = await getTenantIdForApiCall();
+      const response = await listTreinosApi({
+        tenantId,
+        clienteId: cleanString(params?.clienteId) ?? cleanString(params?.alunoId),
+        professorId: params?.funcionarioId,
+        search: params?.search,
+        status: params?.apenasAtivas ? "ATIVO" : undefined,
+        page: params?.page ?? 0,
+        size: params?.size ?? 20,
+      });
+      const lookup = getTreinoLookupMaps();
+      const mapped = response.items.map((item) => mapTreinoApiToTreino(item, lookup));
+      const total = response.total ?? mapped.length;
+
+      const cached = Array.from(
+        new Map(
+          mapped.map((item) => [item.id, item] as const)
+        ).values()
+      );
       setStore((s) => ({
         ...s,
         treinos: [
-          ...items,
-          ...s.treinos.filter((item) => !items.some((next) => next.id === item.id)),
+          ...cached,
+          ...s.treinos.filter((item) => !cached.some((next) => next.id === item.id)),
         ],
       }));
-      return items;
+
+      return {
+        items: mapped,
+        page: response.page,
+        size: response.size,
+        total,
+        hasNext: Boolean(response.hasNext ?? (response.page * response.size + response.size < total)),
+      };
     } catch (error) {
       console.warn("[treinos][api-fallback] Falha ao listar treinos na API real. Usando store local.", error);
     }
   }
 
-  return items;
+  const tenantId = getCurrentTenantId();
+  const items = getStore().treinos.filter((t) => t.tenantId === tenantId);
+  const page = Math.max(0, params?.page ?? 0);
+  const size = Math.max(1, Math.min(200, params?.size ?? 20));
+  const filtered = applyTreinoFilters(items, params);
+  const start = page * size;
+  const pagedItems = filtered.slice(start, start + size);
+  return {
+    items: pagedItems,
+    page,
+    size,
+    total: filtered.length,
+    hasNext: start + size < filtered.length,
+  };
 }
 
 export async function createTreino(
   data: Omit<Treino, "id" | "tenantId" | "criadoEm" | "atualizadoEm">
 ): Promise<Treino> {
   if (isRealApiEnabled()) {
-    console.warn(
-      "[treinos] API de treino ainda não disponível. Aplicando criação local com fallback."
-    );
+    try {
+      const tenantId = await getTenantIdForApiCall();
+      const atividadeNome = cleanString(data.atividadeNome);
+      const createdApi = await createTreinoApi({
+        tenantId,
+        data: {
+          clienteId: cleanString(data.alunoId),
+          professorId: cleanString(data.funcionarioId),
+          nome: cleanString(data.nome) ?? atividadeNome ?? `Treino de ${data.alunoNome}`,
+          objetivo: cleanString(data.objetivo) ?? (atividadeNome ? `Atividade: ${atividadeNome}` : undefined),
+          observacoes: cleanString(data.observacoes),
+          divisao: cleanString(data.divisao),
+          metaSessoesSemana: data.metaSessoesSemana,
+          dataInicio: cleanString(data.dataInicio),
+          dataFim: cleanString(data.dataFim) ?? cleanString(data.vencimento),
+          status: (data.ativo ? "ATIVO" : "ARQUIVADO") as TreinoStatusApi,
+          tipoTreino: "CUSTOMIZADO",
+          ativo: data.ativo,
+          itens: (data.itens ?? []).map((item, index) => ({
+            exercicioId: cleanString(item.exercicioId) ?? "",
+            ordem: Number(item.ordem ?? index + 1),
+            series: Number(item.series ?? 0),
+            repeticoes: item.repeticoes != null ? Number(item.repeticoes) : undefined,
+            repeticoesMin: item.repeticoesMin != null ? Number(item.repeticoesMin) : undefined,
+            repeticoesMax: item.repeticoesMax != null ? Number(item.repeticoesMax) : undefined,
+            carga: item.carga != null ? Number(item.carga) : undefined,
+            cargaSugerida: item.cargaSugerida != null ? Number(item.cargaSugerida) : undefined,
+            intervaloSegundos: item.intervaloSegundos != null ? Number(item.intervaloSegundos) : undefined,
+            tempoExecucaoSegundos: item.tempoExecucaoSegundos != null ? Number(item.tempoExecucaoSegundos) : undefined,
+            observacao: cleanString(item.observacao),
+            diaDaSemana: item.diasSemana,
+          })),
+        },
+      });
+      const lookup = getTreinoLookupMaps();
+      const treino = mapTreinoApiToTreino(createdApi, {
+        ...lookup,
+        fallbackAlunoNome: data.alunoNome,
+        fallbackAtividadeNome: data.atividadeNome,
+        fallbackFuncionarioNome: data.funcionarioNome,
+      });
+      setStore((s) => ({ ...s, treinos: [treino, ...s.treinos.filter((item) => item.id !== treino.id)] }));
+      return treino;
+    } catch (error) {
+      console.warn("[treinos][api-fallback] Falha ao criar treino na API real. Aplicando criação local.", error);
+    }
   }
   const treino: Treino = {
     ...data,
     id: genId(),
+    nome: data.nome ?? (data.atividadeNome ? `Treino de ${data.atividadeNome}` : `Treino de ${data.alunoNome}`),
+    objetivo: data.objetivo ?? (data.atividadeNome ? `Atividade: ${data.atividadeNome}` : undefined),
     tenantId: getCurrentTenantId(),
     ativo: data.ativo ?? true,
     criadoEm: new Date().toISOString(),
@@ -4784,7 +5090,137 @@ export async function createTreino(
   return treino;
 }
 
+export async function getTreino(id: string): Promise<Treino | null> {
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = await getTenantIdForApiCall();
+      const treinoApi = await getTreinoApi({ tenantId, id });
+      const lookup = getTreinoLookupMaps();
+      const treino = mapTreinoApiToTreino(treinoApi, lookup);
+      setStore((s) => ({
+        ...s,
+        treinos: [treino, ...s.treinos.filter((item) => item.id !== treino.id)],
+      }));
+      return treino;
+    } catch (error) {
+      console.warn("[treinos][api-fallback] Falha ao obter treino na API real. Usando store local.", error);
+    }
+  }
+  const tenantId = getCurrentTenantId();
+  return getStore().treinos.find((item) => item.id === id && item.tenantId === tenantId) ?? null;
+}
+
+export async function updateTreino(
+  id: string,
+  data: {
+    alunoId: string;
+    alunoNome: string;
+    atividadeId?: string;
+    atividadeNome?: string;
+    funcionarioId?: string;
+    funcionarioNome?: string;
+    vencimento: string;
+    observacoes?: string;
+    ativo: boolean;
+  }
+): Promise<Treino> {
+  const nowTime = new Date().toISOString();
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const current = getStore().treinos.find((item) => item.id === id);
+      const payload = buildTreinoUpsertPayloadFromForm(
+        current ?? {
+          id,
+          tenantId,
+          alunoId: data.alunoId,
+          alunoNome: data.alunoNome,
+          atividadeNome: data.atividadeNome,
+          funcionarioId: data.funcionarioId,
+          funcionarioNome: data.funcionarioNome,
+          vencimento: data.vencimento,
+          observacoes: data.observacoes,
+          ativo: data.ativo,
+          criadoEm: nowTime,
+          atualizadoEm: nowTime,
+        },
+        {
+          nome: data.atividadeNome
+            ? `Treino de ${data.atividadeNome}`
+            : `Treino de ${data.alunoNome}`,
+          objetivo: data.atividadeNome ? `Atividade: ${data.atividadeNome}` : undefined,
+          observacoes: data.observacoes,
+          ativo: data.ativo,
+          vencimento: data.vencimento,
+          alunoId: data.alunoId,
+          funcionarioId: data.funcionarioId,
+        }
+      );
+      const updatedApi = await updateTreinoApi({
+        tenantId,
+        id,
+        data: payload,
+      });
+      const treino = mapTreinoApiToTreino(updatedApi, getTreinoLookupMaps());
+      setStore((s) => ({
+        ...s,
+        treinos: s.treinos.map((item) => (item.id === id ? treino : item)),
+      }));
+      return treino;
+    } catch (error) {
+      console.warn("[treinos][api-fallback] Falha ao atualizar treino na API real. Aplicando atualização local.", error);
+    }
+  }
+
+  const current = getTreinoByIdFallback(id);
+  const treino: Treino = {
+    ...(current ?? {}),
+    ...data,
+    id,
+    tenantId: getCurrentTenantId(),
+    atualizadoEm: nowTime,
+    criadoEm: current?.criadoEm ?? nowTime,
+    nome: data.atividadeNome
+      ? `Treino de ${data.atividadeNome}`
+      : `Treino de ${data.alunoNome}`,
+    objetivo: data.atividadeNome ? `Atividade: ${data.atividadeNome}` : undefined,
+  };
+  setStore((s) => ({
+    ...s,
+    treinos: s.treinos.map((item) => (item.id === id ? treino : item)),
+  }));
+  return treino;
+}
+
+function getTreinoByIdFallback(id: string): Treino | null {
+  const tenantId = getCurrentTenantId();
+  return getStore().treinos.find((item) => item.id === id && item.tenantId === tenantId) ?? null;
+}
+
 export async function listExercicios(params?: { apenasAtivos?: boolean }): Promise<Exercicio[]> {
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = await getTenantIdForApiCall();
+      const apiItems = await listExerciciosApi({
+        tenantId,
+        ativo: params?.apenasAtivos,
+        page: 0,
+        size: 200,
+      });
+      const mapped = apiItems
+        .map(mapExercicioApiToExercicio)
+        .filter((item) => (params?.apenasAtivos ? item.ativo : true))
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+      setStore((s) => ({
+        ...s,
+        exercicios: mergeTenantScopedData(s.exercicios, mapped),
+      }));
+      return mapped;
+    } catch (error) {
+      console.warn("[treinos][api-fallback] Falha ao listar exercícios na API real. Usando store local.", error);
+    }
+  }
   const tenantId = getCurrentTenantId();
   return getStore().exercicios
     .filter((item) => item.tenantId === tenantId)
@@ -4796,9 +5232,24 @@ export async function createExercicio(
   data: Omit<Exercicio, "id" | "tenantId" | "criadoEm" | "atualizadoEm" | "ativo">
 ): Promise<Exercicio> {
   if (isRealApiEnabled()) {
-    console.warn(
-      "[treinos] API de exercício ainda não disponível. Aplicando criação local com fallback."
-    );
+    try {
+      const tenantId = await getTenantIdForApiCall();
+      const createdApi = await createExercicioApi({
+        tenantId,
+        data: {
+          nome: data.nome,
+          grupoMuscular: cleanString(data.grupoMuscular),
+          aparelho: cleanString(data.equipamento),
+          descricao: cleanString(data.descricao),
+          ativo: true,
+        },
+      });
+      const exercicio = mapExercicioApiToExercicio(createdApi);
+      setStore((s) => ({ ...s, exercicios: [exercicio, ...s.exercicios.filter((item) => item.id !== exercicio.id)] }));
+      return exercicio;
+    } catch (error) {
+      console.warn("[treinos][api-fallback] Falha ao criar exercício na API real. Aplicando criação local.", error);
+    }
   }
   const exercicio: Exercicio = {
     ...data,
@@ -4813,6 +5264,22 @@ export async function createExercicio(
 }
 
 export async function toggleExercicio(id: string): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = await getTenantIdForApiCall();
+      const toggled = await toggleExercicioApi({ tenantId, id });
+      const mapped = mapExercicioApiToExercicio(toggled);
+      setStore((s) => ({
+        ...s,
+        exercicios: s.exercicios.map((item) =>
+          item.id === id ? { ...item, ...mapped } : item
+        ),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[treinos][api-fallback] Falha ao alternar exercício na API real. Aplicando toggle local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     exercicios: s.exercicios.map((item) =>
@@ -4822,6 +5289,19 @@ export async function toggleExercicio(id: string): Promise<void> {
 }
 
 export async function deleteExercicio(id: string): Promise<void> {
+  if (isRealApiEnabled()) {
+    try {
+      const tenantId = await getTenantIdForApiCall();
+      await deleteExercicioApi({ tenantId, id });
+      setStore((s) => ({
+        ...s,
+        exercicios: s.exercicios.filter((item) => item.id !== id),
+      }));
+      return;
+    } catch (error) {
+      console.warn("[treinos][api-fallback] Falha ao remover exercício na API real. Aplicando remoção local.", error);
+    }
+  }
   setStore((s) => ({
     ...s,
     exercicios: s.exercicios.filter((item) => item.id !== id),

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { TableCell } from "@/components/ui/table";
 import { PaginatedTable } from "@/components/shared/paginated-table";
+import { SuggestionInput } from "@/components/shared/suggestion-input";
 import type { RbacPermission } from "@/lib/types";
 import {
   useAuditoriaManager,
@@ -168,6 +169,13 @@ export default function RbacPage() {
   const feedback = useStatusMessage();
 
   const [perfilForm, setPerfilForm] = useState<PerfilFormState>(PERFIL_DEFAULT);
+  const [userQuery, setUserQuery] = useState("");
+
+  useEffect(() => {
+    if (selectedUser) {
+      setUserQuery(selectedUser.fullName || selectedUser.name || selectedUser.email || "");
+    }
+  }, [selectedUser]);
   const [grantForm, setGrantForm] = useState<GrantFormState>({
     roleName: "",
     featureKey: "",
@@ -503,18 +511,21 @@ export default function RbacPage() {
               <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Usuário</label>
-                  <Select value={selectedUser?.id ?? ""} onValueChange={setSelectedUserId}>
-                    <SelectTrigger className="bg-secondary border-border">
-                      <SelectValue placeholder={loadingUsers ? "Carregando usuários..." : "Selecione um usuário"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name || user.fullName || user.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SuggestionInput
+                    value={userQuery}
+                    onValueChange={(value) => setUserQuery(value)}
+                    onSelect={(option) => {
+                      setSelectedUserId(option.id);
+                      setUserQuery(option.label);
+                    }}
+                    options={users.map((user) => ({
+                      id: user.id,
+                      label: user.fullName || user.name || user.email || "Sem nome",
+                      searchText: `${user.name ?? ""} ${user.fullName ?? ""} ${user.email ?? ""}`.trim(),
+                    }))}
+                    placeholder={loadingUsers ? "Carregando usuários..." : "Buscar por nome ou e-mail"}
+                    minCharsToSearch={0}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-[1fr_auto]">
                   <div className="space-y-1.5">
@@ -587,12 +598,12 @@ export default function RbacPage() {
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {features.map((feature) => (
-                        <FeatureToggleRow
-                          key={feature.featureKey}
-                          feature={feature}
-                          isSaving={grantActionLoading || isActionLoading}
-                          onSave={(enabled, rollout) => submitFeatureConfig(feature.featureKey, enabled, rollout)}
-                        />
+                      <FeatureToggleRow
+                        key={`${feature.featureKey}-${feature.enabled}-${feature.rollout}`}
+                        feature={feature}
+                        isSaving={grantActionLoading || isActionLoading}
+                        onSave={(enabled, rollout) => submitFeatureConfig(feature.featureKey, enabled, rollout)}
+                      />
                     ))}
                   </div>
                 )}
@@ -799,11 +810,6 @@ function FeatureToggleRow({
 }) {
   const [enabled, setEnabled] = useState(feature.enabled);
   const [rollout, setRollout] = useState(String(feature.rollout));
-
-  useEffect(() => {
-    setEnabled(feature.enabled);
-    setRollout(String(feature.rollout));
-  }, [feature.enabled, feature.rollout]);
 
   return (
     <div className="rounded-lg border border-border bg-secondary/30 p-3">

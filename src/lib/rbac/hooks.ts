@@ -437,7 +437,12 @@ export function useAuditoriaManager(tenantId: string) {
       );
       setItems(sorted);
     } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
+      setItems([]);
+      const message = normalizeErrorMessage(loadError);
+      const hint = message.includes("500")
+        ? "Auditoria indisponível no momento (erro 500). Verifique permissões ADMIN ou logs do backend."
+        : message;
+      setError(hint);
     } finally {
       setLoading(false);
     }

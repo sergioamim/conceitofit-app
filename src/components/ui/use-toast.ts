@@ -19,6 +19,7 @@ export interface ToastReturn {
 const globalToast = (options: ToastOptions): void => {
   if (typeof window === "undefined") return;
   const { title, description, variant = "default" } = options;
+
   const toText = (value: ReactNode): string => {
     if (value === null || value === undefined) return "";
     if (typeof value === "string") return value;
@@ -38,30 +39,58 @@ const globalToast = (options: ToastOptions): void => {
   };
 
   const text = [toText(title), toText(description)].filter(Boolean).join(" — ");
-
   if (!text) return;
 
-  const globalConsole =
-    typeof globalThis === "object" ? (globalThis as { console?: Console }).console : undefined;
-  const logMethod = typeof globalConsole?.error === "function" ? globalConsole.error : null;
-  const infoMethod = typeof globalConsole?.log === "function" ? globalConsole.log : null;
+  const safeConsoleError = (value: string): void => {
+    if (typeof globalThis !== "object") {
+      return;
+    }
 
-  if (variant === "destructive" && logMethod) {
     try {
-      logMethod.call(globalConsole, text);
+      const consoleRef: unknown = (globalThis as { console?: unknown }).console;
+      if (!consoleRef || typeof consoleRef !== "object") {
+        return;
+      }
+
+      const method = (consoleRef as { error?: unknown }).error;
+      if (typeof method !== "function") {
+        return;
+      }
+
+      method(value);
     } catch {
       // Keep toast operation non-blocking if console is unavailable or not fully functional.
     }
+  };
+
+  const safeConsoleLog = (value: string): void => {
+    if (typeof globalThis !== "object") {
+      return;
+    }
+
+    try {
+      const consoleRef: unknown = (globalThis as { console?: unknown }).console;
+      if (!consoleRef || typeof consoleRef !== "object") {
+        return;
+      }
+
+      const method = (consoleRef as { log?: unknown }).log;
+      if (typeof method !== "function") {
+        return;
+      }
+
+      method(value);
+    } catch {
+      // Keep toast operation non-blocking if console is unavailable or not fully functional.
+    }
+  };
+
+  if (variant === "destructive") {
+    safeConsoleError(text);
     return;
   }
 
-  if (infoMethod) {
-    try {
-      infoMethod.call(globalConsole, text);
-    } catch {
-      // Keep toast operation non-blocking if console is unavailable or not fully functional.
-    }
-  }
+  safeConsoleLog(text);
 };
 
 export function useToast(): ToastReturn {

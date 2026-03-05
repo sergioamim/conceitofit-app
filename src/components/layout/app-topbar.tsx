@@ -29,19 +29,21 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
 
   useEffect(() => {
     const useRealApi = isRealApiEnabled();
+    const dedupeTenants = (items: Tenant[]) =>
+      Array.from(new Map(items.map((t) => [t.id, t] as const)).values());
 
     function syncFromStore() {
       const store = getStore();
-      const activeTenants = (store.tenants ?? []).filter((t) => t.ativo !== false);
-      const tenantCandidates = activeTenants.length > 0 ? activeTenants : store.tenants ?? [];
+      const activeTenants = dedupeTenants((store.tenants ?? []).filter((t) => t.ativo !== false));
+      const tenantCandidates = activeTenants.length > 0 ? activeTenants : dedupeTenants(store.tenants ?? []);
       setTenants(tenantCandidates);
       setTenantId(store.currentTenantId || store.tenant?.id || tenantCandidates[0]?.id || "");
     }
 
     async function load() {
       const store = getStore();
-      const activeTenants = (store.tenants ?? []).filter((t) => t.ativo !== false);
-      const tenantCandidates = activeTenants.length > 0 ? activeTenants : store.tenants ?? [];
+      const activeTenants = dedupeTenants((store.tenants ?? []).filter((t) => t.ativo !== false));
+      const tenantCandidates = activeTenants.length > 0 ? activeTenants : dedupeTenants(store.tenants ?? []);
       const activeTenantId = store.currentTenantId || store.tenant?.id || activeTenants[0]?.id;
       const hasContextInStore = tenantCandidates.length > 0;
 
@@ -53,7 +55,7 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
 
       try {
         const allTenants = await listTenants();
-        const activeTenants = allTenants.filter((t) => t.ativo !== false);
+        const activeTenants = dedupeTenants(allTenants.filter((t) => t.ativo !== false));
         const stored = getStore();
         const activeTenantId = stored.currentTenantId || stored.tenant?.id;
         const currentActive =
@@ -82,6 +84,11 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
   const currentTenant = useMemo(
     () => tenants.find((t) => t.id === tenantId),
     [tenants, tenantId]
+  );
+
+  const tenantOptions = useMemo(
+    () => Array.from(new Map(tenants.map((t) => [t.id, t] as const)).values()),
+    [tenants]
   );
 
   const loadClienteOptions = useCallback(async () => {
@@ -153,12 +160,12 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
             <p className="truncate text-sm font-medium text-foreground">{currentTenant?.nome ?? "Carregando..."}</p>
           </div>
           {mounted && (
-            <Select value={tenantId} onValueChange={handleChangeTenant} disabled={savingTenant || tenants.length === 0}>
+            <Select value={tenantId} onValueChange={handleChangeTenant} disabled={savingTenant || tenantOptions.length === 0}>
               <SelectTrigger className="h-8 w-full border-border bg-secondary sm:w-[220px]">
                 <SelectValue placeholder="Selecionar unidade" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                {tenants.map((t) => (
+                {tenantOptions.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.nome}
                   </SelectItem>
