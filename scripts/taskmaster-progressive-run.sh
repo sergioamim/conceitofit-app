@@ -2,7 +2,8 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="$(pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 TAG="master"
 MAX_TASKS=999999
 MODEL=""
@@ -19,7 +20,7 @@ Usage: scripts/taskmaster-progressive-run.sh [options]
 Progressively executes Task Master tasks using Codex in non-interactive mode.
 
 Options:
-  --project <path>           Project root. Default: current directory
+  --project <path>           Project root. Default: parent directory of this script
   --tag <name>               Task Master tag. Default: master
   --branch <name>            Git branch used by the automation
                              Default: current main/main-* branch or main/taskmaster-auto

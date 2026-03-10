@@ -582,6 +582,175 @@
             "testStrategy": null
           }
         ]
+      },
+      {
+        "id": 9,
+        "title": "Estruturar backoffice global de academias e unidades",
+        "description": "Migrar `/admin`, `/admin/academias` e `/admin/unidades` para contratos reais, sem depender de mock services.",
+        "details": "Cobrir dashboard, listagens, detalhe, create/update de academia, create/update/toggle de unidade, vinculo academia -> unidade e alinhamento entre payloads do backoffice e o backend.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "1",
+          "3",
+          "7"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar rotas de backoffice e dependencias em mock",
+            "description": "Mapear onde o backoffice ainda depende de `mock/services` e stores locais.",
+            "dependencies": [],
+            "details": "Inventariar `/admin`, `/admin/academias`, `/admin/academias/[id]` e `/admin/unidades`, registrando chamadas a `listAcademias`, `listTenantsGlobal`, `createAcademia`, `createTenant` e afins, alem de estados persistidos localmente.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Especificar contratos reais e estados de UI do backoffice",
+            "description": "Definir modelos, carregamento e erros para as telas administrativas globais.",
+            "dependencies": [
+              1
+            ],
+            "details": "Alinhar tipos, requests e responses com as APIs administrativas do backend, incluindo lista/detalhe de academia, lista/detalhe de unidade, onboarding inicial e regras de permissao.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 3,
+            "title": "Migrar dashboard e listagens globais para API real",
+            "description": "Conectar o dashboard do backoffice e as tabelas principais aos contratos reais.",
+            "dependencies": [
+              2
+            ],
+            "details": "Substituir lookups em mock no dashboard admin e nas listagens de academias/unidades por clients em `src/lib/api/*`, com loading, erro, paginação e filtros consistentes.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 4,
+            "title": "Migrar cadastro e detalhe de academias",
+            "description": "Implementar create/list/detail/update de academia no backoffice.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Refatorar `/admin/academias` e `/admin/academias/[id]` para operar com contratos reais, preservando busca, contagem de unidades e feedbacks de sucesso/erro.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 5,
+            "title": "Migrar cadastro e gestao de unidades",
+            "description": "Conectar a tela de unidades ao backend administrativo real.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Refatorar `/admin/unidades` para create/edit/toggle/delete reais, corrigindo divergencias de payload como `groupId` e configuracoes, e exibindo o vinculo explicito com a academia.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 6,
+            "title": "Fechar guardas, navegacao e testes do backoffice",
+            "description": "Validar acesso, navegacao e cenarios principais do administrativo global.",
+            "dependencies": [
+              3,
+              4,
+              5
+            ],
+            "details": "Aplicar guardas/permissoes para a area global, revisar rotas e estados vazios, e criar testes basicos de navegacao/renderizacao para o backoffice.",
+            "status": "pending",
+            "testStrategy": "Adicionar testes de tela/E2E para listar academias, abrir detalhe e criar/editar unidade."
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Consolidar importacao ETL e onboarding de unidades no backoffice",
+        "description": "Completar a tela de importacao e integra-la ao fluxo de criacao de unidade com carga inicial padrao ou importacao futura.",
+        "details": "Conectar o `EVO BACKUP` e a trilha EVO P0 ao backoffice real, removendo lookups em mock e exibindo status de onboarding/importacao por unidade.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "1",
+          "7",
+          "9"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar a tela `/admin/importacao-evo-p0` e seus pontos em mock",
+            "description": "Mapear o que ja usa API real e o que ainda depende de dados simulados.",
+            "dependencies": [],
+            "details": "Revisar `src/app/(backoffice)/admin/importacao-evo-p0/page.tsx` e `src/lib/api/importacao-evo.ts`, destacando onde a tela ainda usa `listAcademias`, `listTenantsGlobal` e `setCurrentTenant` em mock para contexto e historico.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Conectar selecao global de academia/unidade e mapeamento de filial",
+            "description": "Usar o cadastro administrativo real como base do mapeamento ETL.",
+            "dependencies": [
+              1
+            ],
+            "details": "Integrar a tela de importacao ao cadastro real de academias/unidades, permitindo vincular `ID_FILIAL` da origem EVO com a unidade cadastrada no backoffice.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 3,
+            "title": "Fechar fluxo real de upload, analise, job e rejeicoes",
+            "description": "Consolidar a trilha principal de ETL no backoffice.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Ajustar upload de pacote, consulta de analise, criacao de job, polling, historico, rejeicoes e reprocessamento para operar com contratos reais e estados de erro padronizados.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 4,
+            "title": "Adicionar UX de onboarding na criacao de unidade",
+            "description": "Permitir escolher estrategia inicial ao cadastrar a unidade.",
+            "dependencies": [
+              2
+            ],
+            "details": "Incluir no fluxo de create/edit de unidade opcoes como `carregar dados iniciais`, `importar depois` e `preparar ETL agora`, alinhadas ao backend administrativo.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 5,
+            "title": "Exibir status e historico de onboarding/importacao por unidade",
+            "description": "Dar visibilidade operacional ao setup das novas unidades.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Adicionar status, badges, timeline ou cards no backoffice para mostrar se a unidade esta pendente de seed, aguardando importacao, em processamento ou pronta.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 6,
+            "title": "Validar erros, permissoes e testes da trilha ETL",
+            "description": "Fechar criterios de qualidade para a area administrativa de importacao.",
+            "dependencies": [
+              3,
+              4,
+              5
+            ],
+            "details": "Revisar acessos, mensagens de erro, estados vazios, progresso de job e testes de navegacao para o backoffice de importacao e onboarding.",
+            "status": "pending",
+            "testStrategy": "Adicionar testes de tela/E2E para upload, criação de job e visualização de status por unidade."
+          }
+        ]
       }
     ],
     "metadata": {
