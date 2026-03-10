@@ -79,15 +79,24 @@ export function planoToFormValues(plano: Plano): PlanoFormValues {
 }
 
 export function buildPlanoPayload(values: PlanoFormValues): Omit<Plano, "id" | "tenantId" | "ativo"> {
+  const nome = values.nome.trim();
+  const descricao = values.descricao.trim() || undefined;
+  const valor = Math.max(0, parseFloat(values.valor) || 0);
+  const valorMatricula = Math.max(0, parseFloat(values.valorMatricula) || 0);
+  const valorAnuidade = Math.max(0, parseFloat(values.valorAnuidade) || 0);
+  const beneficios = values.beneficios
+    .map((beneficio) => beneficio.trim())
+    .filter(Boolean);
+
   return {
-    nome: values.nome,
-    descricao: values.descricao || undefined,
+    nome,
+    descricao,
     tipo: values.tipo,
-    duracaoDias: parseInt(values.duracaoDias, 10) || 0,
-    valor: parseFloat(values.valor) || 0,
-    valorMatricula: parseFloat(values.valorMatricula) || 0,
+    duracaoDias: Math.max(1, parseInt(values.duracaoDias, 10) || 0),
+    valor,
+    valorMatricula,
     cobraAnuidade: values.cobraAnuidade,
-    valorAnuidade: values.cobraAnuidade ? parseFloat(values.valorAnuidade) || 0 : undefined,
+    valorAnuidade: values.cobraAnuidade ? valorAnuidade : undefined,
     parcelasMaxAnuidade: values.cobraAnuidade ? Math.max(1, parseInt(values.parcelasMaxAnuidade, 10) || 1) : undefined,
     permiteRenovacaoAutomatica: values.tipo === "AVULSO" ? false : values.permiteRenovacaoAutomatica,
     permiteCobrancaRecorrente: values.tipo === "AVULSO" ? false : values.permiteCobrancaRecorrente,
@@ -99,14 +108,18 @@ export function buildPlanoPayload(values: PlanoFormValues): Omit<Plano, "id" | "
     contratoAssinatura: values.contratoAssinatura,
     contratoEnviarAutomaticoEmail: values.contratoEnviarAutomaticoEmail,
     atividades: values.atividades,
-    beneficios: values.beneficios,
+    beneficios,
     destaque: values.destaque,
-    ordem: values.ordem ? parseInt(values.ordem, 10) : undefined,
+    ordem: values.ordem ? Math.max(0, parseInt(values.ordem, 10)) : undefined,
   };
 }
 
 export function isPlanoFormValid(values: PlanoFormValues) {
-  return Boolean(values.nome && values.valor && values.duracaoDias);
+  const nome = values.nome.trim();
+  const valor = parseFloat(values.valor);
+  const duracaoDias = parseInt(values.duracaoDias, 10);
+
+  return nome.length >= 2 && Number.isFinite(valor) && valor >= 0.01 && Number.isFinite(duracaoDias) && duracaoDias >= 1;
 }
 
 export function filterAtividadesSelecionadas(atividades: Atividade[], selecionadas: string[]) {

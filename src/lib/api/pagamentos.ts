@@ -42,7 +42,7 @@ export async function listPagamentosApi(input: {
   size?: number;
 }): Promise<Pagamento[]> {
   const response = await apiRequest<PagamentoApiResponse[]>({
-    path: "/api/v1/comercial/pagamentos",
+    path: "/api/v1/academia/pagamentos",
     query: {
       tenantId: input.tenantId,
       status: input.status,
@@ -58,13 +58,14 @@ export async function receberPagamentoApi(input: {
   tenantId: string;
   id: string;
   data: ReceberPagamentoInput;
-}): Promise<void> {
-  await apiRequest<void>({
-    path: `/api/v1/comercial/pagamentos/${input.id}/receber`,
+}): Promise<Pagamento> {
+  const response = await apiRequest<PagamentoApiResponse>({
+    path: `/api/v1/academia/pagamentos/${input.id}/receber`,
     method: "POST",
     query: { tenantId: input.tenantId },
     body: input.data,
   });
+  return normalizePagamento(response);
 }
 
 export async function emitirNfsePagamentoApi(input: {

@@ -17,6 +17,20 @@ interface FormaPagamentoApiResponse {
 export type CreateFormaPagamentoApiInput = Omit<FormaPagamento, "id" | "tenantId" | "ativo">;
 export type UpdateFormaPagamentoApiInput = Partial<Omit<FormaPagamento, "id" | "tenantId">>;
 
+function buildFormaPagamentoPayload(
+  tenantId: string,
+  data: CreateFormaPagamentoApiInput | UpdateFormaPagamentoApiInput
+): Record<string, unknown> {
+  return {
+    tenantId,
+    nome: data.nome,
+    tipo: data.tipo,
+    taxaPercentual: data.taxaPercentual ?? 0,
+    parcelasMax: data.parcelasMax ?? 1,
+    instrucoes: data.instrucoes,
+  };
+}
+
 function normalizeFormaPagamento(input: FormaPagamentoApiResponse): FormaPagamento {
   return {
     id: input.id,
@@ -37,8 +51,9 @@ export async function listFormasPagamentoApi(input: {
   apenasAtivas?: boolean;
 }): Promise<FormaPagamento[]> {
   const response = await apiRequest<FormaPagamentoApiResponse[]>({
-    path: "/api/v1/gerencial/financeiro/formas-pagamento",
+    path: "/api/v1/academia/formas-pagamento",
     query: {
+      tenantId: input.tenantId,
       apenasAtivas: input.apenasAtivas ?? true,
     },
   });
@@ -50,11 +65,16 @@ export async function createFormaPagamentoApi(input: {
   data: CreateFormaPagamentoApiInput;
 }): Promise<FormaPagamento> {
   const response = await apiRequest<FormaPagamentoApiResponse>({
-    path: "/api/v1/gerencial/financeiro/formas-pagamento",
+    path: "/api/v1/academia/formas-pagamento",
     method: "POST",
-    body: input.data,
+    query: { tenantId: input.tenantId },
+    body: buildFormaPagamentoPayload(input.tenantId, input.data),
   });
-  return normalizeFormaPagamento(response);
+  return {
+    ...normalizeFormaPagamento(response),
+    emitirAutomaticamente: input.data.emitirAutomaticamente ?? false,
+    prazoRecebimentoDias: input.data.prazoRecebimentoDias,
+  };
 }
 
 export async function updateFormaPagamentoApi(input: {
@@ -63,11 +83,20 @@ export async function updateFormaPagamentoApi(input: {
   data: UpdateFormaPagamentoApiInput;
 }): Promise<FormaPagamento> {
   const response = await apiRequest<FormaPagamentoApiResponse>({
-    path: `/api/v1/gerencial/financeiro/formas-pagamento/${input.id}`,
+    path: `/api/v1/academia/formas-pagamento/${input.id}`,
     method: "PUT",
-    body: input.data,
+    query: { tenantId: input.tenantId },
+    body: buildFormaPagamentoPayload(input.tenantId, input.data),
   });
-  return normalizeFormaPagamento(response);
+  return {
+    ...normalizeFormaPagamento(response),
+    ...(input.data.emitirAutomaticamente !== undefined
+      ? { emitirAutomaticamente: input.data.emitirAutomaticamente }
+      : {}),
+    ...(input.data.prazoRecebimentoDias !== undefined
+      ? { prazoRecebimentoDias: input.data.prazoRecebimentoDias }
+      : {}),
+  };
 }
 
 export async function toggleFormaPagamentoApi(input: {
@@ -75,8 +104,9 @@ export async function toggleFormaPagamentoApi(input: {
   id: string;
 }): Promise<FormaPagamento> {
   const response = await apiRequest<FormaPagamentoApiResponse>({
-    path: `/api/v1/gerencial/financeiro/formas-pagamento/${input.id}/toggle`,
+    path: `/api/v1/academia/formas-pagamento/${input.id}/toggle-ativo`,
     method: "PATCH",
+    query: { tenantId: input.tenantId },
   });
   return normalizeFormaPagamento(response);
 }
@@ -86,8 +116,9 @@ export async function deleteFormaPagamentoApi(input: {
   id: string;
 }): Promise<void> {
   await apiRequest<void>({
-    path: `/api/v1/gerencial/financeiro/formas-pagamento/${input.id}`,
+    path: `/api/v1/academia/formas-pagamento/${input.id}`,
     method: "DELETE",
+    query: { tenantId: input.tenantId },
   });
 }
 

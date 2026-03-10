@@ -2021,13 +2021,37 @@ export async function encerrarCampanhaCrm(id: string): Promise<void> {
 
 // ─── PROSPECTS ──────────────────────────────────────────────────────────────
 
-function normalizeProspectFromApi(prospect: Prospect): Prospect {
-  const createdAt = prospect.dataCriacao ?? now();
-  const statusLog = prospect.statusLog ?? [{ status: prospect.status, data: createdAt }];
+function normalizeProspectFromApi(prospect: Prospect, previous?: Prospect): Prospect {
+  const createdAt = prospect.dataCriacao ?? previous?.dataCriacao ?? now();
+  const existingStatusLog = prospect.statusLog ?? previous?.statusLog ?? [];
+  const statusChangedAt = prospect.dataUltimoContato ?? createdAt;
+  const lastStatusLog = existingStatusLog[existingStatusLog.length - 1];
+  const statusLog =
+    existingStatusLog.length === 0
+      ? [{ status: prospect.status, data: createdAt }]
+      : lastStatusLog?.status === prospect.status
+        ? existingStatusLog
+        : [...existingStatusLog, { status: prospect.status, data: statusChangedAt }];
   return {
+    ...(previous ?? {}),
     ...prospect,
     dataCriacao: createdAt,
     statusLog,
+  };
+}
+
+function buildProspectUpsertData(
+  current: Prospect | undefined,
+  patch: Partial<Omit<Prospect, "id" | "tenantId">>
+): CreateProspectInput {
+  return {
+    nome: (patch.nome ?? current?.nome ?? "").trim(),
+    telefone: (patch.telefone ?? current?.telefone ?? "").trim(),
+    email: (patch.email ?? current?.email ?? "").trim() || undefined,
+    cpf: (patch.cpf ?? current?.cpf ?? "").trim() || undefined,
+    origem: patch.origem ?? current?.origem ?? "OUTROS",
+    observacoes: (patch.observacoes ?? current?.observacoes ?? "").trim() || undefined,
+    responsavelId: (patch.responsavelId ?? current?.responsavelId ?? "").trim() || undefined,
   };
 }
 
@@ -2036,12 +2060,12 @@ export async function listProspects(params?: {
 }): Promise<Prospect[]> {
   if (isRealApiEnabled()) {
     try {
-      const tenantId = await getTenantIdForApiCall();
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
       const prospects = await listProspectsApi({
         tenantId,
         status: params?.status,
       });
-      const normalized = prospects.map(normalizeProspectFromApi);
+      const normalized = prospects.map((prospect) => normalizeProspectFromApi(prospect));
       setStore((s) => ({
         ...s,
         prospects: mergeTenantScopedData(s.prospects, normalized),
@@ -2068,23 +2092,24 @@ export async function listProspectsPage(params: {
   const size = Math.min(200, Math.max(1, params.size));
   if (isRealApiEnabled()) {
     try {
-      const tenantId = await getTenantIdForApiCall();
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
       const prospects = await listProspectsApi({
         tenantId,
         status: params.status,
-        page: page - 1,
-        size,
       });
-      const normalized = prospects.map(normalizeProspectFromApi);
+      const normalized = prospects.map((prospect) => normalizeProspectFromApi(prospect));
+      const start = (page - 1) * size;
+      const items = normalized.slice(start, start + size);
       setStore((s) => ({
         ...s,
         prospects: mergeTenantScopedData(s.prospects, normalized),
       }));
       return {
-        items: normalized,
+        items,
         page,
         size,
-        hasNext: normalized.length >= size,
+        total: normalized.length,
+        hasNext: start + size < normalized.length,
       };
     } catch (error) {
       console.warn("[crm][api-fallback] Falha ao listar prospects paginados na API real. Usando store local.", error);
@@ -2109,16 +2134,22 @@ export async function updateProspect(
   id: string,
   data: Partial<Omit<Prospect, "id" | "tenantId">>
 ): Promise<void> {
+  const current = getStore().prospects.find((p) => p.id === id);
+  const merged = buildProspectUpsertData(current, data);
   if (isRealApiEnabled()) {
     try {
-      await updateProspectApi({
-        tenantId: getCurrentTenantId(),
-        id,
-        data,
-      });
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const updated = normalizeProspectFromApi(
+        await updateProspectApi({
+          tenantId,
+          id,
+          data: merged,
+        }),
+        current
+      );
       setStore((s) => ({
         ...s,
-        prospects: s.prospects.map((p) => (p.id === id ? { ...p, ...data } : p)),
+        prospects: s.prospects.map((p) => (p.id === id ? updated : p)),
       }));
       return;
     } catch (error) {
@@ -2128,7 +2159,7 @@ export async function updateProspect(
   setStore((s) => ({
     ...s,
     prospects: s.prospects.map((p) =>
-      p.id === id ? { ...p, ...data } : p
+      p.id === id ? normalizeProspectFromApi({ ...p, ...merged }, p) : p
     ),
   }));
 }
@@ -2136,11 +2167,13 @@ export async function updateProspect(
 export async function getProspect(id: string): Promise<Prospect | null> {
   if (isRealApiEnabled()) {
     try {
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const current = getStore().prospects.find((item) => item.id === id);
       const prospect = await getProspectApi({
-        tenantId: getCurrentTenantId(),
+        tenantId,
         id,
       });
-      const normalized = normalizeProspectFromApi(prospect);
+      const normalized = normalizeProspectFromApi(prospect, current);
       setStore((s) => ({
         ...s,
         prospects: [normalized, ...s.prospects.filter((item) => item.id !== normalized.id)],
@@ -2159,9 +2192,10 @@ export async function createProspect(
 ): Promise<Prospect> {
   if (isRealApiEnabled()) {
     try {
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
       const created = normalizeProspectFromApi(
         await createProspectApi({
-          tenantId: getCurrentTenantId(),
+          tenantId,
           data,
         })
       );
@@ -2190,24 +2224,19 @@ export async function updateProspectStatus(
 ): Promise<void> {
   if (isRealApiEnabled()) {
     try {
-      await updateProspectStatusApi({
-        tenantId: getCurrentTenantId(),
-        id,
-        status,
-      });
-      const at = now();
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const current = getStore().prospects.find((p) => p.id === id);
+      const updated = normalizeProspectFromApi(
+        await updateProspectStatusApi({
+          tenantId,
+          id,
+          status,
+        }),
+        current
+      );
       setStore((s) => ({
         ...s,
-        prospects: s.prospects.map((p) =>
-          p.id === id
-            ? {
-                ...p,
-                status,
-                dataUltimoContato: at,
-                statusLog: [...(p.statusLog ?? []), { status, data: at }],
-              }
-            : p
-        ),
+        prospects: s.prospects.map((p) => (p.id === id ? updated : p)),
       }));
       return;
     } catch (error) {
@@ -2236,28 +2265,19 @@ export async function marcarProspectPerdido(
 ): Promise<void> {
   if (isRealApiEnabled()) {
     try {
-      await marcarProspectPerdidoApi({
-        tenantId: getCurrentTenantId(),
-        id,
-        motivo,
-      });
-      const at = now();
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const current = getStore().prospects.find((p) => p.id === id);
+      const updated = normalizeProspectFromApi(
+        await marcarProspectPerdidoApi({
+          tenantId,
+          id,
+          motivo,
+        }),
+        current
+      );
       setStore((s) => ({
         ...s,
-        prospects: s.prospects.map((p) =>
-          p.id === id
-            ? {
-                ...p,
-                status: "PERDIDO" as StatusProspect,
-                motivoPerda: motivo,
-                dataUltimoContato: at,
-                statusLog: [
-                  ...(p.statusLog ?? []),
-                  { status: "PERDIDO" as StatusProspect, data: at },
-                ],
-              }
-            : p
-        ),
+        prospects: s.prospects.map((p) => (p.id === id ? updated : p)),
       }));
       return;
     } catch (error) {
@@ -2459,8 +2479,9 @@ export async function checkProspectDuplicate(params: {
 }): Promise<boolean> {
   if (isRealApiEnabled()) {
     try {
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
       return await checkProspectDuplicateApi({
-        tenantId: getCurrentTenantId(),
+        tenantId,
         telefone: params.telefone,
         cpf: params.cpf,
         email: params.email,
@@ -2488,8 +2509,9 @@ export async function converterProspect(
 ): Promise<ConverterProspectResponse> {
   if (isRealApiEnabled()) {
     try {
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
       const converted = await converterProspectApi({
-        tenantId: getCurrentTenantId(),
+        tenantId,
         data,
       });
       const convertedAluno = {
@@ -4576,18 +4598,26 @@ export async function listAtividades(params?: {
 }): Promise<Atividade[]> {
   if (isRealApiEnabled()) {
     try {
-      const atividadesResponse = (await listAtividadesApi(params)) as unknown;
-      const atividades = normalizeEntityList<unknown>(atividadesResponse)
-        .map(normalizeAtividadeItem)
-        .filter((atividade): atividade is Atividade => Boolean(atividade));
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const atividades = await listAtividadesApi({
+        tenantId,
+        apenasAtivas: params?.apenasAtivas,
+        categoria: params?.categoria,
+      });
+      const mergedAtividades = atividades.map((atividade) =>
+        mergeAtividadeFromApi(
+          atividade,
+          getStore().atividades.find((item) => item.id === atividade.id)
+        )
+      );
       setStore((s) => ({
         ...s,
         atividades: [
-          ...atividades,
-          ...s.atividades.filter((item) => !atividades.some((a) => a.id === item.id)),
+          ...mergedAtividades,
+          ...s.atividades.filter((item) => !mergedAtividades.some((a) => a.id === item.id)),
         ],
       }));
-      return atividades;
+      return mergedAtividades;
     } catch (error) {
       console.warn("[administrativo][api-fallback] Falha ao listar atividades na API real. Usando store local.", error);
     }
@@ -4606,16 +4636,29 @@ export async function listAtividades(params?: {
 export async function createAtividade(
   data: Omit<Atividade, "id" | "tenantId" | "ativo">
 ): Promise<Atividade> {
+  const normalized = normalizeAtividadeCheckinRules(data);
   if (isRealApiEnabled()) {
     try {
-      const created = await createAtividadeApi(data);
-      setStore((s) => ({ ...s, atividades: [created, ...s.atividades.filter((item) => item.id !== created.id)] }));
-      return created;
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const created = await createAtividadeApi({
+        tenantId,
+        data: normalized,
+      });
+      const merged = mergeAtividadeFromApi(created, {
+        ...normalized,
+        id: created.id,
+        tenantId,
+        ativo: created.ativo,
+      });
+      setStore((s) => ({
+        ...s,
+        atividades: [merged, ...s.atividades.filter((item) => item.id !== merged.id)],
+      }));
+      return merged;
     } catch (error) {
       console.warn("[administrativo][api-fallback] Falha ao criar atividade na API real. Aplicando criação local.", error);
     }
   }
-  const normalized = normalizeAtividadeCheckinRules(data);
   const atividade: Atividade = {
     ...normalized,
     id: genId(),
@@ -4630,21 +4673,27 @@ export async function updateAtividade(
   id: string,
   data: Partial<Omit<Atividade, "id" | "tenantId">>
 ): Promise<void> {
+  const current = getStore().atividades.find((a) => a.id === id);
+  if (!current) return;
+  const normalized = normalizeAtividadeCheckinRules({ ...current, ...data });
   if (isRealApiEnabled()) {
     try {
-      const updated = await updateAtividadeApi(id, data);
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const updated = await updateAtividadeApi({
+        tenantId,
+        id,
+        data: normalized,
+      });
+      const merged = mergeAtividadeFromApi(updated, normalized);
       setStore((s) => ({
         ...s,
-        atividades: s.atividades.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+        atividades: s.atividades.map((a) => (a.id === id ? merged : a)),
       }));
       return;
     } catch (error) {
       console.warn("[administrativo][api-fallback] Falha ao atualizar atividade na API real. Aplicando update local.", error);
     }
   }
-  const current = getStore().atividades.find((a) => a.id === id);
-  if (!current) return;
-  const normalized = normalizeAtividadeCheckinRules({ ...current, ...data });
   setStore((s) => ({
     ...s,
     atividades: s.atividades.map((a) =>
@@ -4656,10 +4705,13 @@ export async function updateAtividade(
 export async function toggleAtividade(id: string): Promise<void> {
   if (isRealApiEnabled()) {
     try {
-      const toggled = await toggleAtividadeApi(id);
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const current = getStore().atividades.find((a) => a.id === id);
+      const toggled = await toggleAtividadeApi({ tenantId, id });
+      const merged = mergeAtividadeFromApi(toggled, current);
       setStore((s) => ({
         ...s,
-        atividades: s.atividades.map((a) => (a.id === id ? { ...a, ...toggled } : a)),
+        atividades: s.atividades.map((a) => (a.id === id ? merged : a)),
       }));
       return;
     } catch (error) {
@@ -4677,7 +4729,8 @@ export async function toggleAtividade(id: string): Promise<void> {
 export async function deleteAtividade(id: string): Promise<void> {
   if (isRealApiEnabled()) {
     try {
-      await deleteAtividadeApi(id);
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      await deleteAtividadeApi({ tenantId, id });
       setStore((s) => ({
         ...s,
         atividades: s.atividades.filter((a) => a.id !== id),
@@ -4706,6 +4759,17 @@ function normalizeAtividadeCheckinRules<T extends {
     };
   }
   return atividade;
+}
+
+function mergeAtividadeFromApi(next: Atividade, current?: Atividade): Atividade {
+  const merged = {
+    ...(current ?? {}),
+    ...next,
+    permiteCheckin: current?.permiteCheckin ?? next.permiteCheckin,
+    checkinObrigatorio: current?.checkinObrigatorio ?? next.checkinObrigatorio,
+  };
+
+  return normalizeAtividadeCheckinRules(merged);
 }
 
 // ─── ATIVIDADES · GRADE ───────────────────────────────────────────────────
@@ -5400,15 +5464,45 @@ export async function deleteAtividadeGrade(id: string): Promise<void> {
 
 // ─── PLANOS ─────────────────────────────────────────────────────────────────
 
+function mergePlanoFromApi(next: Plano, current?: Plano): Plano {
+  if (!current) {
+    return sanitizePlanoRules(next);
+  }
+
+  return sanitizePlanoRules({
+    ...current,
+    ...next,
+    cobraAnuidade: current.cobraAnuidade,
+    valorAnuidade: current.valorAnuidade,
+    parcelasMaxAnuidade: current.parcelasMaxAnuidade,
+    permiteRenovacaoAutomatica: current.permiteRenovacaoAutomatica,
+    permiteCobrancaRecorrente: current.permiteCobrancaRecorrente,
+    diaCobrancaPadrao: current.diaCobrancaPadrao,
+    contratoTemplateHtml: current.contratoTemplateHtml,
+    contratoAssinatura: current.contratoAssinatura,
+    contratoEnviarAutomaticoEmail: current.contratoEnviarAutomaticoEmail,
+  });
+}
+
 export async function listPlanos(): Promise<Plano[]> {
   if (isRealApiEnabled()) {
     try {
-      const planos = await listPlanosApi();
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const planos = await listPlanosApi({ tenantId });
+      const mergedPlanos = planos.map((plano) =>
+        mergePlanoFromApi(
+          plano,
+          getStore().planos.find((item) => item.id === plano.id)
+        )
+      );
       setStore((s) => ({
         ...s,
-        planos: [...planos, ...s.planos.filter((item) => !planos.some((p) => p.id === item.id))],
+        planos: [
+          ...mergedPlanos,
+          ...s.planos.filter((item) => !mergedPlanos.some((plano) => plano.id === item.id)),
+        ],
       }));
-      return planos;
+      return mergedPlanos;
     } catch (error) {
       console.warn("[catalogo][api-fallback] Falha ao listar planos na API real. Usando store local.", error);
     }
@@ -5420,7 +5514,17 @@ export async function listPlanos(): Promise<Plano[]> {
 export async function getPlano(id: string): Promise<Plano | null> {
   if (isRealApiEnabled()) {
     try {
-      return await getPlanoApi(id);
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const plano = await getPlanoApi({ tenantId, id });
+      const merged = mergePlanoFromApi(
+        plano,
+        getStore().planos.find((item) => item.id === id)
+      );
+      setStore((s) => ({
+        ...s,
+        planos: [merged, ...s.planos.filter((item) => item.id !== merged.id)],
+      }));
+      return merged;
     } catch (error) {
       console.warn("[catalogo][api-fallback] Falha ao obter plano na API real. Usando store local.", error);
     }
@@ -5432,16 +5536,29 @@ export async function getPlano(id: string): Promise<Plano | null> {
 export async function createPlano(
   data: Omit<Plano, "id" | "tenantId" | "ativo">
 ): Promise<Plano> {
+  const sanitized = sanitizePlanoRules(data);
   if (isRealApiEnabled()) {
     try {
-      const created = await createPlanoApi(data);
-      setStore((s) => ({ ...s, planos: [created, ...s.planos.filter((item) => item.id !== created.id)] }));
-      return created;
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const created = await createPlanoApi({
+        tenantId,
+        data: sanitized,
+      });
+      const merged = mergePlanoFromApi(created, {
+        ...sanitized,
+        id: created.id,
+        tenantId,
+        ativo: created.ativo,
+      });
+      setStore((s) => ({
+        ...s,
+        planos: [merged, ...s.planos.filter((item) => item.id !== merged.id)],
+      }));
+      return merged;
     } catch (error) {
       console.warn("[catalogo][api-fallback] Falha ao criar plano na API real. Aplicando criação local.", error);
     }
   }
-  const sanitized = sanitizePlanoRules(data);
   const plano: Plano = {
     ...sanitized,
     id: genId(),
@@ -5456,22 +5573,28 @@ export async function updatePlano(
   id: string,
   data: Partial<Omit<Plano, "id" | "tenantId">>
 ): Promise<void> {
+  const current = getStore().planos.find((p) => p.id === id);
+  if (!current) return;
+  const merged = { ...current, ...data };
+  const sanitized = sanitizePlanoRules(merged);
   if (isRealApiEnabled()) {
     try {
-      await updatePlanoApi(id, data);
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const updated = await updatePlanoApi({
+        tenantId,
+        id,
+        data: sanitized,
+      });
+      const next = mergePlanoFromApi(updated, sanitized);
       setStore((s) => ({
         ...s,
-        planos: s.planos.map((p) => (p.id === id ? { ...p, ...data } : p)),
+        planos: s.planos.map((p) => (p.id === id ? next : p)),
       }));
       return;
     } catch (error) {
       console.warn("[catalogo][api-fallback] Falha ao atualizar plano na API real. Aplicando update local.", error);
     }
   }
-  const current = getStore().planos.find((p) => p.id === id);
-  if (!current) return;
-  const merged = { ...current, ...data };
-  const sanitized = sanitizePlanoRules(merged);
   setStore((s) => ({
     ...s,
     planos: s.planos.map((p) => (p.id === id ? { ...p, ...sanitized } : p)),
@@ -5481,12 +5604,13 @@ export async function updatePlano(
 export async function togglePlanoAtivo(id: string): Promise<void> {
   if (isRealApiEnabled()) {
     try {
-      await togglePlanoAtivoApi(id);
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const current = getStore().planos.find((p) => p.id === id);
+      const toggled = await togglePlanoAtivoApi({ tenantId, id });
+      const next = mergePlanoFromApi(toggled, current);
       setStore((s) => ({
         ...s,
-        planos: s.planos.map((p) =>
-          p.id === id ? { ...p, ativo: !p.ativo } : p
-        ),
+        planos: s.planos.map((p) => (p.id === id ? next : p)),
       }));
       return;
     } catch (error) {
@@ -5504,12 +5628,13 @@ export async function togglePlanoAtivo(id: string): Promise<void> {
 export async function togglePlanoDestaque(id: string): Promise<void> {
   if (isRealApiEnabled()) {
     try {
-      await togglePlanoDestaqueApi(id);
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const current = getStore().planos.find((p) => p.id === id);
+      const toggled = await togglePlanoDestaqueApi({ tenantId, id });
+      const next = mergePlanoFromApi(toggled, current);
       setStore((s) => ({
         ...s,
-        planos: s.planos.map((p) =>
-          p.id === id ? { ...p, destaque: !p.destaque } : p
-        ),
+        planos: s.planos.map((p) => (p.id === id ? next : p)),
       }));
       return;
     } catch (error) {
@@ -5527,7 +5652,8 @@ export async function togglePlanoDestaque(id: string): Promise<void> {
 export async function deletePlano(id: string): Promise<void> {
   if (isRealApiEnabled()) {
     try {
-      await deletePlanoApi(id);
+      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      await deletePlanoApi({ tenantId, id });
       setStore((s) => ({ ...s, planos: s.planos.filter((p) => p.id !== id) }));
       return;
     } catch (error) {

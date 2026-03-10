@@ -61,6 +61,23 @@ export type ListAlunosApiResponse = {
 
 type AlunoListPayload = Aluno[] | ListAlunosApiResponse;
 
+function normalizeAlunoStatus(value: unknown): StatusAluno {
+  if (value === "ATIVO" || value === "INATIVO" || value === "SUSPENSO" || value === "CANCELADO") {
+    return value;
+  }
+  if (value === "BLOQUEADO") {
+    return "INATIVO";
+  }
+  return "INATIVO";
+}
+
+function normalizeAluno(input: Aluno): Aluno {
+  return {
+    ...input,
+    status: normalizeAlunoStatus((input as Aluno & { status?: unknown }).status),
+  };
+}
+
 function getNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) return Number(value);
@@ -69,7 +86,7 @@ function getNumber(value: unknown): number | undefined {
 
 function toArray(value: unknown): Aluno[] {
   if (!Array.isArray(value)) return [];
-  return value.filter(Boolean) as Aluno[];
+  return value.filter(Boolean).map((item) => normalizeAluno(item as Aluno));
 }
 
 export function extractAlunosFromListResponse(response: AlunoListPayload): Aluno[] {
@@ -148,7 +165,7 @@ export async function listAlunosApi(input: {
   size?: number;
 }): Promise<AlunoListPayload> {
   return apiRequest<AlunoListPayload>({
-    path: "/api/v1/comercial/alunos",
+    path: "/api/v1/academia/alunos",
     query: {
       tenantId: input.tenantId,
       status: input.status,
@@ -163,22 +180,27 @@ export async function getAlunoApi(input: {
   tenantId: string;
   id: string;
 }): Promise<Aluno> {
-  return apiRequest<Aluno>({
-    path: `/api/v1/comercial/alunos/${input.id}`,
+  const response = await apiRequest<Aluno>({
+    path: `/api/v1/academia/alunos/${input.id}`,
     query: { tenantId: input.tenantId },
   });
+  return normalizeAluno(response);
 }
 
 export async function createAlunoApi(input: {
   tenantId: string;
   data: CreateAlunoInput;
 }): Promise<Aluno> {
-  return apiRequest<Aluno>({
-    path: "/api/v1/comercial/alunos",
+  const response = await apiRequest<Aluno>({
+    path: "/api/v1/academia/alunos",
     method: "POST",
     query: { tenantId: input.tenantId },
-    body: input.data,
+    body: {
+      tenantId: input.tenantId,
+      ...input.data,
+    },
   });
+  return normalizeAluno(response);
 }
 
 export async function updateAlunoApi(input: {
@@ -186,27 +208,32 @@ export async function updateAlunoApi(input: {
   id: string;
   data: Partial<Omit<Aluno, "id" | "tenantId" | "dataCadastro">>;
 }): Promise<Aluno> {
-  return apiRequest<Aluno>({
-    path: `/api/v1/comercial/alunos/${input.id}`,
+  const response = await apiRequest<Aluno>({
+    path: `/api/v1/academia/alunos/${input.id}`,
     method: "PUT",
     query: { tenantId: input.tenantId },
-    body: input.data,
+    body: {
+      tenantId: input.tenantId,
+      ...input.data,
+    },
   });
+  return normalizeAluno(response);
 }
 
 export async function updateAlunoStatusApi(input: {
   tenantId: string;
   id: string;
   status: StatusAluno;
-}): Promise<void> {
-  await apiRequest<void>({
-    path: `/api/v1/comercial/alunos/${input.id}/status`,
+}): Promise<Aluno> {
+  const response = await apiRequest<Aluno>({
+    path: `/api/v1/academia/alunos/${input.id}/status`,
     method: "PATCH",
     query: {
       tenantId: input.tenantId,
       status: input.status,
     },
   });
+  return normalizeAluno(response);
 }
 
 export async function createAlunoComMatriculaApi(input: {

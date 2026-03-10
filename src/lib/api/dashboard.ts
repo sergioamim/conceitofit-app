@@ -70,7 +70,7 @@ export async function getDashboardApi(input: {
 
   try {
     const response = await apiRequest<DashboardApiResponse>({
-      path: "/api/v1/dashboard",
+      path: "/api/v1/academia/dashboard",
       query,
     });
     return normalizeDashboard(response);
@@ -81,7 +81,7 @@ export async function getDashboardApi(input: {
   }
 
   const fallback = await apiRequest<DashboardApiResponse>({
-    path: "/api/v1/academia/dashboard",
+    path: "/api/v1/dashboard",
     query,
   });
   return normalizeDashboard(fallback);

@@ -1,5 +1,120 @@
-import type { Atividade, AtividadeGrade, Cargo, Funcionario, Sala, CategoriaAtividade } from "@/lib/types";
+import type {
+  Atividade,
+  AtividadeGrade,
+  Cargo,
+  CategoriaAtividade,
+  Funcionario,
+  Sala,
+} from "@/lib/types";
 import { apiRequest } from "./http";
+
+type AtividadeApiResponse = {
+  id?: string;
+  tenantId?: string;
+  nome?: string;
+  descricao?: string | null;
+  categoria?: CategoriaAtividade | null;
+  icone?: string | null;
+  cor?: string | null;
+  ativo?: unknown;
+};
+
+type AtividadeListApiResponse =
+  | AtividadeApiResponse[]
+  | {
+      items?: AtividadeApiResponse[];
+      content?: AtividadeApiResponse[];
+      data?: AtividadeApiResponse[];
+      rows?: AtividadeApiResponse[];
+      result?: AtividadeApiResponse[];
+      itens?: AtividadeApiResponse[];
+    };
+
+export interface AtividadeUpsertApiRequest {
+  tenantId: string;
+  nome: string;
+  descricao?: string;
+  categoria: CategoriaAtividade;
+  icone?: string;
+  cor?: string;
+}
+
+const MAX_ATIVIDADE_NAME_LENGTH = 100;
+const MAX_ATIVIDADE_ICON_LENGTH = 10;
+const MAX_ATIVIDADE_COLOR_LENGTH = 10;
+const MAX_ATIVIDADE_DESCRIPTION_LENGTH = 500;
+
+function cleanString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized || undefined;
+}
+
+function limitString(value: string | undefined, maxLength: number): string | undefined {
+  if (!value) return undefined;
+  return value.slice(0, maxLength);
+}
+
+function toBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1" || normalized === "sim") return true;
+    if (normalized === "false" || normalized === "0" || normalized === "nao" || normalized === "não") {
+      return false;
+    }
+  }
+  if (typeof value === "number") return value === 1;
+  return fallback;
+}
+
+function extractAtividadeItems(response: AtividadeListApiResponse): AtividadeApiResponse[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  return (
+    response.items ??
+    response.content ??
+    response.data ??
+    response.rows ??
+    response.result ??
+    response.itens ??
+    []
+  );
+}
+
+export function buildAtividadeUpsertApiRequest(
+  tenantId: string,
+  data: Pick<Atividade, "nome" | "descricao" | "categoria" | "icone" | "cor">
+): AtividadeUpsertApiRequest {
+  return {
+    tenantId,
+    nome: limitString(cleanString(data.nome) ?? "", MAX_ATIVIDADE_NAME_LENGTH) ?? "",
+    descricao: limitString(cleanString(data.descricao), MAX_ATIVIDADE_DESCRIPTION_LENGTH),
+    categoria: data.categoria,
+    icone: limitString(cleanString(data.icone), MAX_ATIVIDADE_ICON_LENGTH),
+    cor: limitString(cleanString(data.cor), MAX_ATIVIDADE_COLOR_LENGTH),
+  };
+}
+
+export function normalizeAtividadeApiResponse(
+  input: AtividadeApiResponse,
+  fallback?: Partial<Atividade>
+): Atividade {
+  return {
+    id: cleanString(input.id) ?? fallback?.id ?? "",
+    tenantId: cleanString(input.tenantId) ?? fallback?.tenantId ?? "",
+    nome: cleanString(input.nome) ?? fallback?.nome ?? "",
+    descricao: cleanString(input.descricao) ?? fallback?.descricao,
+    categoria: input.categoria ?? fallback?.categoria ?? "OUTRA",
+    icone: cleanString(input.icone) ?? fallback?.icone ?? "",
+    cor: cleanString(input.cor) ?? fallback?.cor ?? "#3de8a0",
+    permiteCheckin: fallback?.permiteCheckin ?? true,
+    checkinObrigatorio: fallback?.checkinObrigatorio ?? false,
+    ativo: toBoolean(input.ativo, fallback?.ativo ?? true),
+  };
+}
 
 export async function listCargosApi(apenasAtivos?: boolean): Promise<Cargo[]> {
   return apiRequest<Cargo[]>({
@@ -114,48 +229,88 @@ export async function deleteSalaApi(id: string): Promise<void> {
   });
 }
 
-export async function listAtividadesApi(params?: {
+export async function listAtividadesApi(params: {
+  tenantId: string;
   apenasAtivas?: boolean;
   categoria?: CategoriaAtividade;
 }): Promise<Atividade[]> {
-  return apiRequest<Atividade[]>({
-    path: "/api/v1/administrativo/atividades",
+  const response = await apiRequest<AtividadeListApiResponse>({
+    path: "/api/v1/academia/atividades",
     query: {
-      apenasAtivas: params?.apenasAtivas,
-      categoria: params?.categoria,
+      tenantId: params.tenantId,
+      apenasAtivas: params.apenasAtivas,
+      categoria: params.categoria,
     },
   });
+
+  return extractAtividadeItems(response).map((item) =>
+    normalizeAtividadeApiResponse(item, {
+      tenantId: params.tenantId,
+    })
+  );
 }
 
-export async function createAtividadeApi(
-  data: Omit<Atividade, "id" | "tenantId" | "ativo">
-): Promise<Atividade> {
-  return apiRequest<Atividade>({
-    path: "/api/v1/administrativo/atividades",
+export async function createAtividadeApi(input: {
+  tenantId: string;
+  data: Omit<Atividade, "id" | "tenantId" | "ativo">;
+}): Promise<Atividade> {
+  const response = await apiRequest<AtividadeApiResponse>({
+    path: "/api/v1/academia/atividades",
     method: "POST",
-    body: data,
+    query: { tenantId: input.tenantId },
+    body: buildAtividadeUpsertApiRequest(input.tenantId, input.data),
+  });
+
+  return normalizeAtividadeApiResponse(response, {
+    tenantId: input.tenantId,
+    ...input.data,
+    ativo: true,
   });
 }
 
-export async function updateAtividadeApi(id: string, data: Partial<Atividade>): Promise<Atividade> {
-  return apiRequest<Atividade>({
-    path: `/api/v1/administrativo/atividades/${id}`,
+export async function updateAtividadeApi(input: {
+  tenantId: string;
+  id: string;
+  data: Omit<Atividade, "id" | "tenantId">;
+}): Promise<Atividade> {
+  const response = await apiRequest<AtividadeApiResponse>({
+    path: `/api/v1/academia/atividades/${input.id}`,
     method: "PUT",
-    body: data,
+    query: { tenantId: input.tenantId },
+    body: buildAtividadeUpsertApiRequest(input.tenantId, input.data),
+  });
+
+  return normalizeAtividadeApiResponse(response, {
+    id: input.id,
+    tenantId: input.tenantId,
+    ...input.data,
   });
 }
 
-export async function toggleAtividadeApi(id: string): Promise<Atividade> {
-  return apiRequest<Atividade>({
-    path: `/api/v1/administrativo/atividades/${id}/toggle`,
+export async function toggleAtividadeApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<Atividade> {
+  const response = await apiRequest<AtividadeApiResponse>({
+    path: `/api/v1/academia/atividades/${input.id}/toggle-ativo`,
     method: "PATCH",
+    query: { tenantId: input.tenantId },
+  });
+
+  return normalizeAtividadeApiResponse(response, {
+    id: input.id,
+    tenantId: input.tenantId,
   });
 }
 
-export async function deleteAtividadeApi(id: string): Promise<void> {
+export async function deleteAtividadeApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<void> {
   await apiRequest<void>({
-    path: `/api/v1/administrativo/atividades/${id}`,
+    path: `/api/v1/academia/atividades/${input.id}`,
     method: "DELETE",
+    query: { tenantId: input.tenantId },
   });
 }
 

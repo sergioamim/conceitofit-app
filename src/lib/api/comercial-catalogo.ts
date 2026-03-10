@@ -1,12 +1,190 @@
-import type { Plano, Produto, Servico } from "@/lib/types";
+import type { Atividade, Plano, Produto, Servico, TipoPlano } from "@/lib/types";
 import { apiRequest } from "./http";
+
+type PlanoApiResponse = {
+  id?: string;
+  tenantId?: string;
+  nome?: string;
+  descricao?: string | null;
+  tipo?: TipoPlano | null;
+  duracaoDias?: unknown;
+  valor?: unknown;
+  valorMatricula?: unknown;
+  atividadeIds?: string[] | null;
+  atividades?: Array<Pick<Atividade, "id">> | null;
+  beneficios?: string[] | null;
+  ativo?: unknown;
+  destaque?: unknown;
+  ordem?: unknown;
+};
+
+type PlanoListApiResponse =
+  | PlanoApiResponse[]
+  | {
+      items?: PlanoApiResponse[];
+      content?: PlanoApiResponse[];
+      data?: PlanoApiResponse[];
+      rows?: PlanoApiResponse[];
+      result?: PlanoApiResponse[];
+      itens?: PlanoApiResponse[];
+    };
+
+export interface PlanoUpsertApiRequest {
+  tenantId: string;
+  nome: string;
+  descricao?: string;
+  tipo: TipoPlano;
+  duracaoDias: number;
+  valor: number;
+  valorMatricula?: number;
+  atividadeIds?: string[];
+  beneficios?: string[];
+  destaque?: boolean;
+  ordem?: number;
+}
+
+const MAX_PLANO_NAME_LENGTH = 100;
+const MAX_PLANO_DESCRIPTION_LENGTH = 500;
 
 const toNumber = (value: unknown, fallback = 0): number => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
 };
 
+const toBoolean = (value: unknown, fallback = false): boolean => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1" || normalized === "sim") return true;
+    if (normalized === "false" || normalized === "0" || normalized === "nao" || normalized === "não") {
+      return false;
+    }
+  }
+  if (typeof value === "number") return value === 1;
+  return fallback;
+};
+
 const toArray = <T>(value: T[] | null | undefined): T[] => value ?? [];
+
+function cleanString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized || undefined;
+}
+
+function limitString(value: string | undefined, maxLength: number): string | undefined {
+  if (!value) return undefined;
+  return value.slice(0, maxLength);
+}
+
+function extractPlanoItems(response: PlanoListApiResponse): PlanoApiResponse[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  return (
+    response.items ??
+    response.content ??
+    response.data ??
+    response.rows ??
+    response.result ??
+    response.itens ??
+    []
+  );
+}
+
+function extractPlanoAtividadeIds(input: {
+  atividadeIds?: string[] | null;
+  atividades?: Array<Pick<Atividade, "id">> | null;
+}): string[] {
+  const ids = Array.isArray(input.atividadeIds)
+    ? input.atividadeIds
+    : Array.isArray(input.atividades)
+      ? input.atividades
+          .map((atividade) => cleanString(atividade?.id))
+          .filter((id): id is string => Boolean(id))
+      : [];
+
+  return Array.from(new Set(ids));
+}
+
+export function buildPlanoUpsertApiRequest(
+  tenantId: string,
+  data: Pick<
+    Plano,
+    | "nome"
+    | "descricao"
+    | "tipo"
+    | "duracaoDias"
+    | "valor"
+    | "valorMatricula"
+    | "atividades"
+    | "beneficios"
+    | "destaque"
+    | "ordem"
+  >
+): PlanoUpsertApiRequest {
+  const atividadeIds = Array.from(
+    new Set(
+      toArray(data.atividades)
+        .map((atividadeId) => cleanString(atividadeId))
+        .filter((atividadeId): atividadeId is string => Boolean(atividadeId))
+    )
+  );
+  const beneficios = toArray(data.beneficios)
+    .map((beneficio) => cleanString(beneficio))
+    .filter((beneficio): beneficio is string => Boolean(beneficio));
+
+  return {
+    tenantId,
+    nome: limitString(cleanString(data.nome) ?? "", MAX_PLANO_NAME_LENGTH) ?? "",
+    descricao: limitString(cleanString(data.descricao), MAX_PLANO_DESCRIPTION_LENGTH),
+    tipo: data.tipo,
+    duracaoDias: Math.max(1, Math.floor(toNumber(data.duracaoDias, 1))),
+    valor: Math.max(0.01, toNumber(data.valor, 0.01)),
+    valorMatricula: Math.max(0, toNumber(data.valorMatricula, 0)),
+    atividadeIds: atividadeIds.length > 0 ? atividadeIds : undefined,
+    beneficios: beneficios.length > 0 ? beneficios : undefined,
+    destaque: Boolean(data.destaque),
+    ordem: data.ordem == null ? undefined : Math.max(0, Math.floor(toNumber(data.ordem, 0))),
+  };
+}
+
+export function normalizePlanoApiResponse(input: PlanoApiResponse, fallback?: Partial<Plano>): Plano {
+  const tipo = input.tipo ?? fallback?.tipo ?? "MENSAL";
+
+  return {
+    id: cleanString(input.id) ?? fallback?.id ?? "",
+    tenantId: cleanString(input.tenantId) ?? fallback?.tenantId ?? "",
+    nome: cleanString(input.nome) ?? fallback?.nome ?? "",
+    descricao: cleanString(input.descricao) ?? fallback?.descricao,
+    tipo,
+    duracaoDias: Math.max(1, Math.floor(toNumber(input.duracaoDias, fallback?.duracaoDias ?? 1))),
+    valor: toNumber(input.valor, fallback?.valor ?? 0),
+    valorMatricula: toNumber(input.valorMatricula, fallback?.valorMatricula ?? 0),
+    cobraAnuidade: fallback?.cobraAnuidade ?? false,
+    valorAnuidade: fallback?.valorAnuidade,
+    parcelasMaxAnuidade: fallback?.parcelasMaxAnuidade,
+    permiteRenovacaoAutomatica: fallback?.permiteRenovacaoAutomatica ?? tipo !== "AVULSO",
+    permiteCobrancaRecorrente: fallback?.permiteCobrancaRecorrente ?? false,
+    diaCobrancaPadrao: fallback?.diaCobrancaPadrao,
+    contratoTemplateHtml: fallback?.contratoTemplateHtml,
+    contratoAssinatura: fallback?.contratoAssinatura ?? "AMBAS",
+    contratoEnviarAutomaticoEmail: fallback?.contratoEnviarAutomaticoEmail ?? false,
+    atividades: extractPlanoAtividadeIds(input),
+    beneficios: Array.isArray(input.beneficios)
+      ? input.beneficios
+          .map((beneficio) => cleanString(beneficio))
+          .filter((beneficio): beneficio is string => Boolean(beneficio))
+      : toArray(fallback?.beneficios),
+    destaque: toBoolean(input.destaque, fallback?.destaque ?? false),
+    ativo: toBoolean(input.ativo, fallback?.ativo ?? true),
+    ordem:
+      input.ordem == null && fallback?.ordem == null
+        ? undefined
+        : Math.max(0, Math.floor(toNumber(input.ordem, fallback?.ordem ?? 0))),
+  };
+}
 
 export async function listServicosApi(apenasAtivos?: boolean): Promise<Servico[]> {
   const response = await apiRequest<Servico[]>({
@@ -99,67 +277,118 @@ export async function deleteProdutoApi(id: string): Promise<void> {
   });
 }
 
-export async function listPlanosApi(): Promise<Plano[]> {
-  const response = await apiRequest<Plano[]>({
-    path: "/api/v1/comercial/planos",
+export async function listPlanosApi(input: {
+  tenantId: string;
+  apenasAtivos?: boolean;
+  tipo?: TipoPlano;
+}): Promise<Plano[]> {
+  const response = await apiRequest<PlanoListApiResponse>({
+    path: "/api/v1/academia/planos",
+    query: {
+      tenantId: input.tenantId,
+      apenasAtivos: input.apenasAtivos ?? false,
+      tipo: input.tipo,
+    },
   });
-  return response.map((item) => ({
-    ...item,
-    valor: toNumber(item.valor, 0),
-    valorMatricula: toNumber(item.valorMatricula, 0),
-    valorAnuidade: item.valorAnuidade == null ? undefined : toNumber(item.valorAnuidade),
-    atividades: toArray(item.atividades),
-    beneficios: toArray(item.beneficios),
-  }));
+
+  return extractPlanoItems(response).map((item) =>
+    normalizePlanoApiResponse(item, {
+      tenantId: input.tenantId,
+    })
+  );
 }
 
-export async function getPlanoApi(id: string): Promise<Plano> {
-  const response = await apiRequest<Plano>({
-    path: `/api/v1/comercial/planos/${id}`,
+export async function getPlanoApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<Plano> {
+  const response = await apiRequest<PlanoApiResponse>({
+    path: `/api/v1/academia/planos/${input.id}`,
+    query: { tenantId: input.tenantId },
   });
-  return {
-    ...response,
-    valor: toNumber(response.valor, 0),
-    valorMatricula: toNumber(response.valorMatricula, 0),
-    valorAnuidade: response.valorAnuidade == null ? undefined : toNumber(response.valorAnuidade),
-    atividades: toArray(response.atividades),
-    beneficios: toArray(response.beneficios),
-  };
+
+  return normalizePlanoApiResponse(response, {
+    id: input.id,
+    tenantId: input.tenantId,
+  });
 }
 
-export async function createPlanoApi(data: Omit<Plano, "id" | "tenantId" | "ativo">): Promise<Plano> {
-  return apiRequest<Plano>({
-    path: "/api/v1/comercial/planos",
+export async function createPlanoApi(input: {
+  tenantId: string;
+  data: Omit<Plano, "id" | "tenantId" | "ativo">;
+}): Promise<Plano> {
+  const response = await apiRequest<PlanoApiResponse>({
+    path: "/api/v1/academia/planos",
     method: "POST",
-    body: data,
+    query: { tenantId: input.tenantId },
+    body: buildPlanoUpsertApiRequest(input.tenantId, input.data),
+  });
+
+  return normalizePlanoApiResponse(response, {
+    tenantId: input.tenantId,
+    ...input.data,
+    ativo: true,
   });
 }
 
-export async function updatePlanoApi(id: string, data: Partial<Plano>): Promise<void> {
-  await apiRequest<void>({
-    path: `/api/v1/comercial/planos/${id}`,
+export async function updatePlanoApi(input: {
+  tenantId: string;
+  id: string;
+  data: Omit<Plano, "id" | "tenantId" | "ativo"> & Pick<Plano, "ativo">;
+}): Promise<Plano> {
+  const response = await apiRequest<PlanoApiResponse>({
+    path: `/api/v1/academia/planos/${input.id}`,
     method: "PUT",
-    body: data,
+    query: { tenantId: input.tenantId },
+    body: buildPlanoUpsertApiRequest(input.tenantId, input.data),
+  });
+
+  return normalizePlanoApiResponse(response, {
+    id: input.id,
+    tenantId: input.tenantId,
+    ...input.data,
   });
 }
 
-export async function togglePlanoAtivoApi(id: string): Promise<void> {
-  await apiRequest<void>({
-    path: `/api/v1/comercial/planos/${id}/toggle-ativo`,
+export async function togglePlanoAtivoApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<Plano> {
+  const response = await apiRequest<PlanoApiResponse>({
+    path: `/api/v1/academia/planos/${input.id}/toggle-ativo`,
     method: "PATCH",
+    query: { tenantId: input.tenantId },
+  });
+
+  return normalizePlanoApiResponse(response, {
+    id: input.id,
+    tenantId: input.tenantId,
   });
 }
 
-export async function togglePlanoDestaqueApi(id: string): Promise<void> {
-  await apiRequest<void>({
-    path: `/api/v1/comercial/planos/${id}/toggle-destaque`,
+export async function togglePlanoDestaqueApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<Plano> {
+  const response = await apiRequest<PlanoApiResponse>({
+    path: `/api/v1/academia/planos/${input.id}/toggle-destaque`,
     method: "PATCH",
+    query: { tenantId: input.tenantId },
+  });
+
+  return normalizePlanoApiResponse(response, {
+    id: input.id,
+    tenantId: input.tenantId,
   });
 }
 
-export async function deletePlanoApi(id: string): Promise<void> {
+export async function deletePlanoApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<void> {
   await apiRequest<void>({
-    path: `/api/v1/comercial/planos/${id}`,
+    path: `/api/v1/academia/planos/${input.id}`,
     method: "DELETE",
+    query: { tenantId: input.tenantId },
   });
 }

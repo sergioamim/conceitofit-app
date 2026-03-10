@@ -44,9 +44,10 @@
               2
             ],
             "details": "Comparar esquemas e payloads documentados no guia; ajustar types, parsers e validações nos clients/services para refletir o contrato oficial.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-10T22:40:23.531Z"
           },
           {
             "id": 4,
@@ -79,7 +80,7 @@
         "complexity": 8,
         "recommendedSubtasks": 5,
         "expansionPrompt": "Quebre em subtarefas para: mapear imports de @/lib/mock/services nas páginas, auditar apiRequest/http e normalizações, alinhar tipos/schemas nas APIs (src/lib/api/*), padronizar tratamento de erros e estados na UI, e adicionar testes de integração/Playwright para fluxos críticos.",
-        "updatedAt": "2026-03-10T22:16:45.996Z"
+        "updatedAt": "2026-03-10T22:40:23.531Z"
       },
       {
         "id": "2",
@@ -836,7 +837,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-10T22:16:45.996Z",
+      "lastModified": "2026-03-10T22:40:23.531Z",
       "taskCount": 10,
       "completedCount": 0,
       "tags": [
