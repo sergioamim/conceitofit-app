@@ -135,6 +135,7 @@ import {
 } from "../api/contexto-unidades";
 import {
   addProspectMensagemApi,
+  buildProspectUpsertApiRequest,
   checkProspectDuplicateApi,
   converterProspectApi,
   createProspectApi,
@@ -201,6 +202,7 @@ import {
   updateVoucherApi as updateVoucherApiAdmin,
 } from "../api/beneficios";
 import {
+  buildPlanoUpsertApiRequest,
   createPlanoApi,
   createProdutoApi,
   createServicoApi,
@@ -796,6 +798,156 @@ function mergeTenantScopedData<T extends { id: string; tenantId: string }>(
       (item) => !incomingIds.has(item.id) && !incomingTenantIds.has(item.tenantId)
     ),
   ];
+}
+
+function trimOptionalString(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
+  return normalized ? normalized : undefined;
+}
+
+function toFiniteNumber(value: unknown, fallback: number): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function requireTenantScopedEntity<T extends { id: string; tenantId: string }>(
+  items: T[],
+  id: string,
+  tenantId: string,
+  message: string
+): T {
+  const entity = items.find((item) => item.id === id && item.tenantId === tenantId);
+  if (!entity) {
+    throw new Error(message);
+  }
+  return entity;
+}
+
+function normalizeProspectFallbackInput(
+  tenantId: string,
+  data: CreateProspectInput
+): CreateProspectInput {
+  const payload = buildProspectUpsertApiRequest(tenantId, data);
+  if (!payload.nome) {
+    throw new Error("Nome do prospect é obrigatório.");
+  }
+  if (!payload.telefone) {
+    throw new Error("Telefone do prospect é obrigatório.");
+  }
+  return {
+    nome: payload.nome,
+    telefone: payload.telefone,
+    email: payload.email,
+    cpf: payload.cpf,
+    origem: payload.origem,
+    observacoes: payload.observacoes,
+    responsavelId: trimOptionalString(data.responsavelId),
+  };
+}
+
+function normalizePlanoFallbackInput<
+  T extends {
+    nome: string;
+    descricao?: string;
+    tipo: TipoPlano;
+    duracaoDias: number;
+    valor: number;
+    valorMatricula: number;
+    cobraAnuidade: boolean;
+    valorAnuidade?: number;
+    parcelasMaxAnuidade?: number;
+    permiteRenovacaoAutomatica: boolean;
+    permiteCobrancaRecorrente: boolean;
+    diaCobrancaPadrao?: number;
+    contratoTemplateHtml?: string;
+    contratoAssinatura: Plano["contratoAssinatura"];
+    contratoEnviarAutomaticoEmail: boolean;
+    atividades?: string[];
+    beneficios?: string[];
+    destaque: boolean;
+    ordem?: number;
+  },
+>(tenantId: string, data: T): T {
+  const payload = buildPlanoUpsertApiRequest(tenantId, data);
+  return sanitizePlanoRules({
+    ...data,
+    nome: payload.nome,
+    descricao: payload.descricao,
+    tipo: payload.tipo,
+    duracaoDias: payload.duracaoDias,
+    valor: payload.valor,
+    valorMatricula: payload.valorMatricula ?? 0,
+    atividades: payload.atividadeIds,
+    beneficios: payload.beneficios,
+    destaque: payload.destaque ?? false,
+    ordem: payload.ordem,
+  }) as T;
+}
+
+function getDefaultFormaPagamentoId(tenantId: string, tipo: TipoFormaPagamento): string {
+  return `forma-pagamento-default-${tenantId}-${tipo.toLowerCase()}`;
+}
+
+function normalizeFormaPagamentoCreateInput(
+  data: Omit<FormaPagamento, "id" | "tenantId" | "ativo">
+): Omit<FormaPagamento, "id" | "tenantId" | "ativo"> {
+  const nome = data.nome.trim();
+  if (!nome) {
+    throw new Error("Nome da forma de pagamento é obrigatório.");
+  }
+  return {
+    ...data,
+    nome,
+    taxaPercentual: toFiniteNumber(data.taxaPercentual, 0),
+    parcelasMax: Math.max(1, Math.floor(toFiniteNumber(data.parcelasMax, 1))),
+    emitirAutomaticamente: Boolean(data.emitirAutomaticamente ?? false),
+    prazoRecebimentoDias:
+      data.prazoRecebimentoDias == null
+        ? undefined
+        : Math.max(0, Math.floor(toFiniteNumber(data.prazoRecebimentoDias, 0))),
+    instrucoes: trimOptionalString(data.instrucoes),
+  };
+}
+
+function normalizeFormaPagamentoUpdateInput(
+  current: FormaPagamento | undefined,
+  data: Partial<Omit<FormaPagamento, "id" | "tenantId">>
+): Partial<Omit<FormaPagamento, "id" | "tenantId">> {
+  if (data.nome !== undefined && !data.nome.trim()) {
+    throw new Error("Nome da forma de pagamento é obrigatório.");
+  }
+  return {
+    ...data,
+    ...(data.nome !== undefined ? { nome: data.nome.trim() } : {}),
+    ...(data.taxaPercentual !== undefined
+      ? { taxaPercentual: toFiniteNumber(data.taxaPercentual, current?.taxaPercentual ?? 0) }
+      : {}),
+    ...(data.parcelasMax !== undefined
+      ? {
+          parcelasMax: Math.max(
+            1,
+            Math.floor(toFiniteNumber(data.parcelasMax, current?.parcelasMax ?? 1))
+          ),
+        }
+      : {}),
+    ...(data.emitirAutomaticamente !== undefined
+      ? { emitirAutomaticamente: Boolean(data.emitirAutomaticamente) }
+      : {}),
+    ...(data.prazoRecebimentoDias !== undefined
+      ? {
+          prazoRecebimentoDias:
+            data.prazoRecebimentoDias == null
+              ? undefined
+              : Math.max(
+                  0,
+                  Math.floor(
+                    toFiniteNumber(data.prazoRecebimentoDias, current?.prazoRecebimentoDias ?? 0)
+                  )
+                ),
+        }
+      : {}),
+    ...(data.instrucoes !== undefined ? { instrucoes: trimOptionalString(data.instrucoes) } : {}),
+  };
 }
 
 function getCurrentGroupTenantIds(): string[] {
@@ -2134,14 +2286,26 @@ export async function updateProspect(
   id: string,
   data: Partial<Omit<Prospect, "id" | "tenantId">>
 ): Promise<void> {
-  const current = getStore().prospects.find((p) => p.id === id);
-  const merged = buildProspectUpsertData(current, data);
+  const tenantId = getCurrentTenantId();
+  let current: Prospect | null | undefined = getStore().prospects.find(
+    (p) => p.id === id && p.tenantId === tenantId
+  );
+  if (!current && isRealApiEnabled()) {
+    current = await getProspect(id);
+  }
+  if (!current) {
+    throw new Error("Prospect não encontrado");
+  }
+  const merged = normalizeProspectFallbackInput(
+    tenantId,
+    buildProspectUpsertData(current, data)
+  );
   if (isRealApiEnabled()) {
     try {
-      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
       const updated = normalizeProspectFromApi(
         await updateProspectApi({
-          tenantId,
+          tenantId: tenantIdForApi,
           id,
           data: merged,
         }),
@@ -2149,7 +2313,9 @@ export async function updateProspect(
       );
       setStore((s) => ({
         ...s,
-        prospects: s.prospects.map((p) => (p.id === id ? updated : p)),
+        prospects: s.prospects.map((p) =>
+          p.id === id && p.tenantId === tenantId ? updated : p
+        ),
       }));
       return;
     } catch (error) {
@@ -2159,7 +2325,7 @@ export async function updateProspect(
   setStore((s) => ({
     ...s,
     prospects: s.prospects.map((p) =>
-      p.id === id ? normalizeProspectFromApi({ ...p, ...merged }, p) : p
+      p.id === id && p.tenantId === tenantId ? normalizeProspectFromApi({ ...p, ...merged }, p) : p
     ),
   }));
 }
@@ -2190,13 +2356,15 @@ export async function getProspect(id: string): Promise<Prospect | null> {
 export async function createProspect(
   data: CreateProspectInput
 ): Promise<Prospect> {
+  const tenantId = getCurrentTenantId();
+  const normalizedInput = normalizeProspectFallbackInput(tenantId, data);
   if (isRealApiEnabled()) {
     try {
-      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
       const created = normalizeProspectFromApi(
         await createProspectApi({
-          tenantId,
-          data,
+          tenantId: tenantIdForApi,
+          data: normalizedInput,
         })
       );
       setStore((s) => ({ ...s, prospects: [created, ...s.prospects.filter((item) => item.id !== created.id)] }));
@@ -2207,9 +2375,9 @@ export async function createProspect(
   }
   const createdAt = now();
   const prospect: Prospect = {
-    ...data,
+    ...normalizedInput,
     id: genId(),
-    tenantId: getCurrentTenantId(),
+    tenantId,
     status: "NOVO",
     dataCriacao: createdAt,
     statusLog: [{ status: "NOVO", data: createdAt }],
@@ -2222,13 +2390,14 @@ export async function updateProspectStatus(
   id: string,
   status: StatusProspect
 ): Promise<void> {
+  const tenantId = getCurrentTenantId();
   if (isRealApiEnabled()) {
     try {
-      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
       const current = getStore().prospects.find((p) => p.id === id);
       const updated = normalizeProspectFromApi(
         await updateProspectStatusApi({
-          tenantId,
+          tenantId: tenantIdForApi,
           id,
           status,
         }),
@@ -2243,11 +2412,12 @@ export async function updateProspectStatus(
       console.warn("[crm][api-fallback] Falha ao atualizar status do prospect na API real. Aplicando update local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().prospects, id, tenantId, "Prospect não encontrado");
   const at = now();
   setStore((s) => ({
     ...s,
     prospects: s.prospects.map((p) =>
-      p.id === id
+      p.id === id && p.tenantId === tenantId
         ? {
             ...p,
             status,
@@ -2263,13 +2433,14 @@ export async function marcarProspectPerdido(
   id: string,
   motivo?: string
 ): Promise<void> {
+  const tenantId = getCurrentTenantId();
   if (isRealApiEnabled()) {
     try {
-      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
       const current = getStore().prospects.find((p) => p.id === id);
       const updated = normalizeProspectFromApi(
         await marcarProspectPerdidoApi({
-          tenantId,
+          tenantId: tenantIdForApi,
           id,
           motivo,
         }),
@@ -2284,11 +2455,12 @@ export async function marcarProspectPerdido(
       console.warn("[crm][api-fallback] Falha ao marcar prospect como perdido na API real. Aplicando update local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().prospects, id, tenantId, "Prospect não encontrado");
   const at = now();
   setStore((s) => ({
     ...s,
     prospects: s.prospects.map((p) =>
-      p.id === id
+      p.id === id && p.tenantId === tenantId
         ? {
             ...p,
             status: "PERDIDO" as StatusProspect,
@@ -2496,7 +2668,7 @@ export async function checkProspectDuplicate(params: {
   return prospects.some((p) => {
     if (p.tenantId !== tenantId) return false;
     const samePhone =
-      tel && p.telefone?.replace(/\D/g, "").includes(tel);
+      tel && p.telefone?.replace(/\D/g, "") === tel;
     const sameCpf = params.cpf && p.cpf === params.cpf;
     const sameEmail =
       params.email && p.email?.toLowerCase() === params.email.toLowerCase();
@@ -5497,10 +5669,7 @@ export async function listPlanos(): Promise<Plano[]> {
       );
       setStore((s) => ({
         ...s,
-        planos: [
-          ...mergedPlanos,
-          ...s.planos.filter((item) => !mergedPlanos.some((plano) => plano.id === item.id)),
-        ],
+        planos: mergeTenantScopedData(s.planos, mergedPlanos),
       }));
       return mergedPlanos;
     } catch (error) {
@@ -5536,18 +5705,19 @@ export async function getPlano(id: string): Promise<Plano | null> {
 export async function createPlano(
   data: Omit<Plano, "id" | "tenantId" | "ativo">
 ): Promise<Plano> {
-  const sanitized = sanitizePlanoRules(data);
+  const tenantId = getCurrentTenantId();
+  const sanitized = normalizePlanoFallbackInput(tenantId, data);
   if (isRealApiEnabled()) {
     try {
-      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
       const created = await createPlanoApi({
-        tenantId,
+        tenantId: tenantIdForApi,
         data: sanitized,
       });
       const merged = mergePlanoFromApi(created, {
         ...sanitized,
         id: created.id,
-        tenantId,
+        tenantId: tenantIdForApi,
         ativo: created.ativo,
       });
       setStore((s) => ({
@@ -5562,7 +5732,7 @@ export async function createPlano(
   const plano: Plano = {
     ...sanitized,
     id: genId(),
-    tenantId: getCurrentTenantId(),
+    tenantId,
     ativo: true,
   };
   setStore((s) => ({ ...s, planos: [plano, ...s.planos] }));
@@ -5573,15 +5743,23 @@ export async function updatePlano(
   id: string,
   data: Partial<Omit<Plano, "id" | "tenantId">>
 ): Promise<void> {
-  const current = getStore().planos.find((p) => p.id === id);
-  if (!current) return;
+  const tenantId = getCurrentTenantId();
+  let current: Plano | null | undefined = getStore().planos.find(
+    (p) => p.id === id && p.tenantId === tenantId
+  );
+  if (!current && isRealApiEnabled()) {
+    current = await getPlano(id);
+  }
+  if (!current) {
+    throw new Error("Plano não encontrado");
+  }
   const merged = { ...current, ...data };
-  const sanitized = sanitizePlanoRules(merged);
+  const sanitized = normalizePlanoFallbackInput(tenantId, merged);
   if (isRealApiEnabled()) {
     try {
-      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
       const updated = await updatePlanoApi({
-        tenantId,
+        tenantId: tenantIdForApi,
         id,
         data: sanitized,
       });
@@ -5597,16 +5775,19 @@ export async function updatePlano(
   }
   setStore((s) => ({
     ...s,
-    planos: s.planos.map((p) => (p.id === id ? { ...p, ...sanitized } : p)),
+    planos: s.planos.map((p) =>
+      p.id === id && p.tenantId === tenantId ? { ...p, ...sanitized } : p
+    ),
   }));
 }
 
 export async function togglePlanoAtivo(id: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
   if (isRealApiEnabled()) {
     try {
-      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
       const current = getStore().planos.find((p) => p.id === id);
-      const toggled = await togglePlanoAtivoApi({ tenantId, id });
+      const toggled = await togglePlanoAtivoApi({ tenantId: tenantIdForApi, id });
       const next = mergePlanoFromApi(toggled, current);
       setStore((s) => ({
         ...s,
@@ -5617,20 +5798,22 @@ export async function togglePlanoAtivo(id: string): Promise<void> {
       console.warn("[catalogo][api-fallback] Falha ao alternar status do plano na API real. Aplicando toggle local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().planos, id, tenantId, "Plano não encontrado");
   setStore((s) => ({
     ...s,
     planos: s.planos.map((p) =>
-      p.id === id ? { ...p, ativo: !p.ativo } : p
+      p.id === id && p.tenantId === tenantId ? { ...p, ativo: !p.ativo } : p
     ),
   }));
 }
 
 export async function togglePlanoDestaque(id: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
   if (isRealApiEnabled()) {
     try {
-      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
       const current = getStore().planos.find((p) => p.id === id);
-      const toggled = await togglePlanoDestaqueApi({ tenantId, id });
+      const toggled = await togglePlanoDestaqueApi({ tenantId: tenantIdForApi, id });
       const next = mergePlanoFromApi(toggled, current);
       setStore((s) => ({
         ...s,
@@ -5641,28 +5824,31 @@ export async function togglePlanoDestaque(id: string): Promise<void> {
       console.warn("[catalogo][api-fallback] Falha ao alternar destaque do plano na API real. Aplicando toggle local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().planos, id, tenantId, "Plano não encontrado");
   setStore((s) => ({
     ...s,
     planos: s.planos.map((p) =>
-      p.id === id ? { ...p, destaque: !p.destaque } : p
+      p.id === id && p.tenantId === tenantId ? { ...p, destaque: !p.destaque } : p
     ),
   }));
 }
 
 export async function deletePlano(id: string): Promise<void> {
+  const tenantId = getCurrentTenantId();
   if (isRealApiEnabled()) {
     try {
-      const tenantId = (await getTenantIdForApiCall()) ?? getCurrentTenantId();
-      await deletePlanoApi({ tenantId, id });
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      await deletePlanoApi({ tenantId: tenantIdForApi, id });
       setStore((s) => ({ ...s, planos: s.planos.filter((p) => p.id !== id) }));
       return;
     } catch (error) {
       console.warn("[catalogo][api-fallback] Falha ao remover plano na API real. Aplicando remoção local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().planos, id, tenantId, "Plano não encontrado");
   setStore((s) => ({
     ...s,
-    planos: s.planos.filter((p) => p.id !== id),
+    planos: s.planos.filter((p) => !(p.id === id && p.tenantId === tenantId)),
   }));
 }
 
@@ -6069,11 +6255,12 @@ function mapContaReceberToPagamento(conta: ContaReceberApiResponse, alunos: Alun
 }
 
 function mergePagamentosNoStore(items: Pagamento[]): void {
+  const normalizedItems = items.map(normalizeNfseInfo);
   setStore((s) => ({
     ...s,
     pagamentos: [
-      ...items,
-      ...s.pagamentos.filter((item) => !items.some((pagamento) => pagamento.id === item.id)),
+      ...normalizedItems,
+      ...s.pagamentos.filter((item) => !normalizedItems.some((pagamento) => pagamento.id === item.id)),
     ],
   }));
 }
@@ -6569,10 +6756,11 @@ export async function receberPagamento(
       console.warn("[pagamentos][api-fallback] Falha ao receber pagamento na API real. Aplicando baixa local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().pagamentos, id, tenantId, "Pagamento não encontrado");
 
   setStore((s) => {
     const pagamentos = s.pagamentos.map((p) =>
-      p.id === id
+      p.id === id && p.tenantId === tenantId
         ? {
             ...p,
             status: "PAGO" as const,
@@ -6591,10 +6779,12 @@ export async function emitirNfsePagamento(id: string): Promise<void> {
   const tenantId = getCurrentTenantId();
   if (isRealApiEnabled()) {
     try {
-      const updated = await emitirNfsePagamentoApi({
-        tenantId,
-        id,
-      });
+      const updated = normalizeNfseInfo(
+        await emitirNfsePagamentoApi({
+          tenantId,
+          id,
+        })
+      );
       setStore((s) => ({
         ...s,
         pagamentos: [
@@ -6609,11 +6799,12 @@ export async function emitirNfsePagamento(id: string): Promise<void> {
     }
   }
 
+  requireTenantScopedEntity(getStore().pagamentos, id, tenantId, "Pagamento não encontrado");
   const numero = generateNfseNumero(tenantId, id);
   setStore((s) => {
     const nowDate = now();
     const pagamentos = s.pagamentos.map((pagamento) =>
-      pagamento.id === id
+      pagamento.id === id && pagamento.tenantId === tenantId
         ? {
             ...pagamento,
             nfseEmitida: true,
@@ -7398,6 +7589,7 @@ export async function updateContaPagar(
       console.warn("[contas-pagar][api-fallback] Falha ao atualizar conta na API real. Aplicando update local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().contasPagar ?? [], id, tenantId, "Conta a pagar não encontrada");
   setStore((s) => ({
     ...s,
     contasPagar: (s.contasPagar ?? []).map((c) =>
@@ -7434,6 +7626,7 @@ export async function pagarContaPagar(id: string, input: PagarContaPagarInput): 
       console.warn("[contas-pagar][api-fallback] Falha ao pagar conta na API real. Aplicando baixa local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().contasPagar ?? [], id, tenantId, "Conta a pagar não encontrada");
   setStore((s) => ({
     ...s,
     contasPagar: (s.contasPagar ?? []).map((c) => {
@@ -7472,6 +7665,7 @@ export async function cancelarContaPagar(id: string, observacoes?: string): Prom
       console.warn("[contas-pagar][api-fallback] Falha ao cancelar conta na API real. Aplicando cancelamento local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().contasPagar ?? [], id, tenantId, "Conta a pagar não encontrada");
   setStore((s) => ({
     ...s,
     contasPagar: (s.contasPagar ?? []).map((c) =>
@@ -7714,7 +7908,7 @@ export async function getDreProjecao(params?: {
 function makeDefaultFormasPagamento(tenantId: string): FormaPagamento[] {
   return [
     {
-      id: genId(),
+      id: getDefaultFormaPagamentoId(tenantId, "DINHEIRO"),
       tenantId,
       nome: "Dinheiro",
       tipo: "DINHEIRO",
@@ -7724,7 +7918,7 @@ function makeDefaultFormasPagamento(tenantId: string): FormaPagamento[] {
       ativo: true,
     },
     {
-      id: genId(),
+      id: getDefaultFormaPagamentoId(tenantId, "PIX"),
       tenantId,
       nome: "PIX",
       tipo: "PIX",
@@ -7734,7 +7928,7 @@ function makeDefaultFormasPagamento(tenantId: string): FormaPagamento[] {
       ativo: true,
     },
     {
-      id: genId(),
+      id: getDefaultFormaPagamentoId(tenantId, "CARTAO_CREDITO"),
       tenantId,
       nome: "Cartão de Crédito",
       tipo: "CARTAO_CREDITO",
@@ -7768,17 +7962,14 @@ export async function listFormasPagamento(params?: {
       });
       setStore((s) => ({
         ...s,
-        formasPagamento: [
-          ...synced,
-          ...(s.formasPagamento ?? []).filter((forma) => forma.tenantId !== tenantId),
-        ],
+        formasPagamento: mergeTenantScopedData(s.formasPagamento ?? [], synced),
       }));
       const filteredSynced = only ? synced.filter((f) => f.ativo) : synced;
       if (filteredSynced.length > 0) return filteredSynced;
       const fallbackDefaults = makeDefaultFormasPagamento(tenantId);
       setStore((s) => ({
         ...s,
-        formasPagamento: [...fallbackDefaults, ...(s.formasPagamento ?? [])],
+        formasPagamento: mergeTenantScopedData(s.formasPagamento ?? [], fallbackDefaults),
       }));
       return only ? fallbackDefaults.filter((f) => f.ativo) : fallbackDefaults;
     } catch (error) {
@@ -7788,7 +7979,10 @@ export async function listFormasPagamento(params?: {
   let formas = getStore().formasPagamento.filter((f) => f.tenantId === tenantId);
   if (formas.length === 0) {
     const defaults = makeDefaultFormasPagamento(tenantId);
-    setStore((s) => ({ ...s, formasPagamento: [...defaults, ...(s.formasPagamento ?? [])] }));
+    setStore((s) => ({
+      ...s,
+      formasPagamento: mergeTenantScopedData(s.formasPagamento ?? [], defaults),
+    }));
     formas = getStore().formasPagamento.filter((f) => f.tenantId === tenantId);
   }
   return only ? formas.filter((f) => f.ativo) : formas;
@@ -7798,11 +7992,12 @@ export async function createFormaPagamento(
   data: Omit<FormaPagamento, "id" | "tenantId" | "ativo">
 ): Promise<FormaPagamento> {
   const tenantId = getCurrentTenantId();
+  const normalizedInput = normalizeFormaPagamentoCreateInput(data);
   if (isRealApiEnabled()) {
     try {
       const created = await createFormaPagamentoApi({
         tenantId,
-        data,
+        data: normalizedInput,
       });
       setStore((s) => ({
         ...s,
@@ -7817,8 +8012,7 @@ export async function createFormaPagamento(
     }
   }
   const fp: FormaPagamento = {
-    ...data,
-    emitirAutomaticamente: data.emitirAutomaticamente ?? false,
+    ...normalizedInput,
     id: genId(),
     tenantId,
     ativo: true,
@@ -7832,12 +8026,14 @@ export async function updateFormaPagamento(
   data: Partial<Omit<FormaPagamento, "id" | "tenantId">>
 ): Promise<void> {
   const tenantId = getCurrentTenantId();
+  const current = getStore().formasPagamento.find((forma) => forma.id === id && forma.tenantId === tenantId);
+  const normalizedInput = normalizeFormaPagamentoUpdateInput(current, data);
   if (isRealApiEnabled()) {
     try {
       const updated = await updateFormaPagamentoApi({
         tenantId,
         id,
-        data,
+        data: normalizedInput,
       });
       setStore((s) => ({
         ...s,
@@ -7850,10 +8046,11 @@ export async function updateFormaPagamento(
       console.warn("[formas-pagamento][api-fallback] Falha ao atualizar na API real. Aplicando update local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().formasPagamento, id, tenantId, "Forma de pagamento não encontrada");
   setStore((s) => ({
     ...s,
     formasPagamento: s.formasPagamento.map((f) =>
-      f.id === id ? { ...f, ...data } : f
+      f.id === id && f.tenantId === tenantId ? { ...f, ...normalizedInput } : f
     ),
   }));
 }
@@ -7877,10 +8074,11 @@ export async function toggleFormaPagamento(id: string): Promise<void> {
       console.warn("[formas-pagamento][api-fallback] Falha ao alternar na API real. Aplicando toggle local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().formasPagamento, id, tenantId, "Forma de pagamento não encontrada");
   setStore((s) => ({
     ...s,
     formasPagamento: s.formasPagamento.map((f) =>
-      f.id === id ? { ...f, ativo: !f.ativo } : f
+      f.id === id && f.tenantId === tenantId ? { ...f, ativo: !f.ativo } : f
     ),
   }));
 }
@@ -7893,13 +8091,19 @@ export async function deleteFormaPagamento(id: string): Promise<void> {
         tenantId,
         id,
       });
+      setStore((s) => ({
+        ...s,
+        formasPagamento: s.formasPagamento.filter((f) => !(f.id === id && f.tenantId === tenantId)),
+      }));
+      return;
     } catch (error) {
       console.warn("[formas-pagamento][api-fallback] Falha ao excluir na API real. Aplicando remoção local.", error);
     }
   }
+  requireTenantScopedEntity(getStore().formasPagamento, id, tenantId, "Forma de pagamento não encontrada");
   setStore((s) => ({
     ...s,
-    formasPagamento: s.formasPagamento.filter((f) => f.id !== id),
+    formasPagamento: s.formasPagamento.filter((f) => !(f.id === id && f.tenantId === tenantId)),
   }));
 }
 

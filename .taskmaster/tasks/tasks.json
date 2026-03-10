@@ -58,9 +58,10 @@
               3
             ],
             "details": "Atualizar mocks para aderirem aos contratos reais, remover inconsistências e garantir que os fallbacks reproduzam estados de erro e respostas esperadas.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-10T22:57:51.612Z"
           },
           {
             "id": 5,
@@ -80,7 +81,7 @@
         "complexity": 8,
         "recommendedSubtasks": 5,
         "expansionPrompt": "Quebre em subtarefas para: mapear imports de @/lib/mock/services nas páginas, auditar apiRequest/http e normalizações, alinhar tipos/schemas nas APIs (src/lib/api/*), padronizar tratamento de erros e estados na UI, e adicionar testes de integração/Playwright para fluxos críticos.",
-        "updatedAt": "2026-03-10T22:40:23.531Z"
+        "updatedAt": "2026-03-10T22:57:51.612Z"
       },
       {
         "id": "2",
@@ -837,7 +838,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-10T22:40:23.531Z",
+      "lastModified": "2026-03-10T22:57:51.612Z",
       "taskCount": 10,
       "completedCount": 0,
       "tags": [
