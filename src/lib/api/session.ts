@@ -1,5 +1,3 @@
-import type { Tenant } from "@/lib/types";
-
 export interface TenantAccess {
   tenantId: string;
   defaultTenant: boolean;
@@ -30,6 +28,11 @@ function isBrowser(): boolean {
 export function getAccessToken(): string | undefined {
   if (!isBrowser()) return undefined;
   return window.localStorage.getItem(ACCESS_TOKEN_KEY) ?? undefined;
+}
+
+export function getAccessTokenType(): string | undefined {
+  if (!isBrowser()) return undefined;
+  return window.localStorage.getItem(TOKEN_TYPE_KEY) ?? undefined;
 }
 
 export function getRefreshToken(): string | undefined {

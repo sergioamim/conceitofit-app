@@ -30,9 +30,10 @@
               1
             ],
             "details": "Rever interceptores, headers, tratamento de erros, retries e normalização de respostas/erros no wrapper; garantir consistência com as especificações e padrões do backend.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-10T22:16:45.996Z"
           },
           {
             "id": 3,
@@ -78,7 +79,7 @@
         "complexity": 8,
         "recommendedSubtasks": 5,
         "expansionPrompt": "Quebre em subtarefas para: mapear imports de @/lib/mock/services nas páginas, auditar apiRequest/http e normalizações, alinhar tipos/schemas nas APIs (src/lib/api/*), padronizar tratamento de erros e estados na UI, e adicionar testes de integração/Playwright para fluxos críticos.",
-        "updatedAt": "2026-03-10T22:04:06.049Z"
+        "updatedAt": "2026-03-10T22:16:45.996Z"
       },
       {
         "id": "2",
@@ -835,7 +836,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-10T22:04:06.050Z",
+      "lastModified": "2026-03-10T22:16:45.996Z",
       "taskCount": 10,
       "completedCount": 0,
       "tags": [

@@ -1,20 +1,12 @@
-import type { Tenant } from "@/lib/types";
 import type { TenantAccess } from "./session";
 import { apiRequest } from "./http";
-import { saveAuthSession, type AuthSession } from "./session";
-
-interface TenantApiResponse {
-  id: string;
-  academiaId?: string | null;
-  nome: string;
-  razaoSocial?: string | null;
-  documento?: string | null;
-  groupId?: string | null;
-  subdomain?: string | null;
-  email?: string | null;
-  telefone?: string | null;
-  ativo?: boolean;
-}
+import {
+  getAccessTokenType,
+  getActiveTenantIdFromSession,
+  getAvailableTenantsFromSession,
+  saveAuthSession,
+  type AuthSession,
+} from "./session";
 
 interface TenantAccessApiResponse {
   tenantId: string;
@@ -43,32 +35,33 @@ interface SwitchTenantApiRequest {
   tenantId: string;
 }
 
-function normalizeTenant(input: TenantApiResponse): Tenant {
-  return {
-    id: input.id,
-    academiaId: input.academiaId ?? undefined,
-    nome: input.nome,
-    razaoSocial: input.razaoSocial ?? undefined,
-    documento: input.documento ?? undefined,
-    groupId: input.groupId ?? undefined,
-    subdomain: input.subdomain ?? undefined,
-    email: input.email ?? undefined,
-    telefone: input.telefone ?? undefined,
-    ativo: input.ativo ?? true,
-  };
-}
+function normalizeSession(
+  response: LoginApiResponse,
+  options?: {
+    preserveTenantContext?: boolean;
+    fallbackActiveTenantId?: string;
+  }
+): AuthSession {
+  const availableTenants = response.availableTenants?.map((item) => ({
+    tenantId: item.tenantId,
+    defaultTenant: item.defaultTenant,
+  }));
 
-function normalizeSession(response: LoginApiResponse): AuthSession {
   return {
     token: response.token,
     refreshToken: response.refreshToken,
-    type: response.type ?? "Bearer",
+    type:
+      response.type ??
+      (options?.preserveTenantContext ? getAccessTokenType() : undefined) ??
+      "Bearer",
     expiresIn: response.expiresIn,
-    activeTenantId: response.activeTenantId,
-    availableTenants: response.availableTenants?.map((item) => ({
-      tenantId: item.tenantId,
-      defaultTenant: item.defaultTenant,
-    })),
+    activeTenantId:
+      response.activeTenantId ??
+      options?.fallbackActiveTenantId ??
+      (options?.preserveTenantContext ? getActiveTenantIdFromSession() : undefined),
+    availableTenants:
+      availableTenants ??
+      (options?.preserveTenantContext ? getAvailableTenantsFromSession() : undefined),
   };
 }
 
@@ -121,7 +114,7 @@ export async function refreshTokenApi(refreshToken: string): Promise<AuthSession
     includeContextHeader: false,
     body: { refreshToken },
   });
-  const session = normalizeSession(response);
+  const session = normalizeSession(response, { preserveTenantContext: true });
   saveAuthSession(session);
   return session;
 }
@@ -146,7 +139,10 @@ export async function switchTenantApi(tenantId: string): Promise<AuthSession> {
     method: "POST",
     body: { tenantId } satisfies SwitchTenantApiRequest,
   });
-  const session = normalizeSession(response);
+  const session = normalizeSession(response, {
+    preserveTenantContext: true,
+    fallbackActiveTenantId: tenantId,
+  });
   saveAuthSession(session);
   return session;
 }
