@@ -49,7 +49,6 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/seguranca/rbac", label: "Segurança", icon: ShieldCheck },
   { href: "/prospects", label: "Prospects", icon: UserPlus },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/matriculas", label: "Matrículas", icon: ClipboardList },
@@ -68,6 +67,11 @@ const treinoItems: NavItem[] = [
 const crmItems: NavItem[] = [
   { href: "/crm/prospects-kanban", label: "Funil de Vendas", icon: Kanban },
   { href: "/crm/campanhas", label: "Campanhas", icon: Megaphone },
+];
+
+const segurancaItems: NavItem[] = [
+  { href: "/seguranca/rbac", label: "RBAC", icon: ShieldCheck },
+  { href: "/seguranca/acesso-unidade", label: "Acesso por Unidade", icon: ShieldCheck },
 ];
 
 const administrativoItems: NavItem[] = [
@@ -111,6 +115,7 @@ function sortNavItemsByLabel(items: NavItem[]): NavItem[] {
 const navItemsSorted = sortNavItemsByLabel(navItems);
 const treinoItemsSorted = sortNavItemsByLabel(treinoItems);
 const crmItemsSorted = sortNavItemsByLabel(crmItems);
+const segurancaItemsSorted = sortNavItemsByLabel(segurancaItems);
 const administrativoItemsSorted = sortNavItemsByLabel(administrativoItems);
 const gerencialItemsSorted = sortNavItemsByLabel(gerencialItems);
 const DEFAULT_APP_NAME = "Conceito.Fit";
@@ -297,6 +302,7 @@ function SidebarNavigation({
   const pathname = usePathname();
   const [crmOpen, setCrmOpen] = useState(false);
   const [treinosOpen, setTreinosOpen] = useState(false);
+  const [segurancaOpen, setSegurancaOpen] = useState(false);
   const [administrativoOpen, setAdministrativoOpen] = useState(false);
   const [gerencialOpen, setGerencialOpen] = useState(false);
 
@@ -309,6 +315,10 @@ function SidebarNavigation({
 
   useEffect(() => {
     setTreinosOpen(pathname.startsWith("/treinos"));
+  }, [pathname]);
+
+  useEffect(() => {
+    setSegurancaOpen(pathname.startsWith("/seguranca"));
   }, [pathname]);
 
   return (
@@ -347,6 +357,17 @@ function SidebarNavigation({
         open={crmOpen}
         onToggle={() => setCrmOpen((v) => !v)}
         items={crmItemsSorted}
+        pathname={pathname}
+        onNavigate={onMobileClose}
+      />
+
+      <CollapsibleSection
+        title="Segurança"
+        icon={ShieldCheck}
+        collapsed={collapsed}
+        open={segurancaOpen}
+        onToggle={() => setSegurancaOpen((v) => !v)}
+        items={segurancaItemsSorted}
         pathname={pathname}
         onNavigate={onMobileClose}
       />

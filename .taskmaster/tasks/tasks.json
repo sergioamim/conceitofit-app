@@ -1,0 +1,595 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Alinhar contrato HTTP e camada de consumo da API",
+        "description": "Revisar clients, services, schemas e tratamento de erro para refletir a API real no web.",
+        "details": "Inclui normalizacao de fetchers, contratos tipados, estados de erro e consumo consistente do backend.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar clientes e serviços em src/lib/api",
+            "description": "Mapear clientes, services e schemas atuais e comparar com a API real.",
+            "dependencies": [],
+            "details": "Inspecionar todos os módulos em `src/lib/api/*`, identificar endpoints, contratos tipados, normalizações de fetchers e discrepâncias com a API real para priorizar ajustes.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Revisar e ajustar wrapper HTTP central",
+            "description": "Alinhar o comportamento de `src/lib/api/http.ts` ao contrato real.",
+            "dependencies": [
+              1
+            ],
+            "details": "Rever interceptores, headers, tratamento de erros, retries e normalização de respostas/erros no wrapper; garantir consistência com as especificações e padrões do backend.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 3,
+            "title": "Alinhar contratos com guia de integração",
+            "description": "Atualizar contratos tipados conforme `docs/FRONTEND_INTEGRATION_GUIDE.json`.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Comparar esquemas e payloads documentados no guia; ajustar types, parsers e validações nos clients/services para refletir o contrato oficial.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 4,
+            "title": "Refatorar fallbacks e mocks de serviços",
+            "description": "Rever e padronizar fallbacks em `src/lib/mock/services.ts`.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Atualizar mocks para aderirem aos contratos reais, remover inconsistências e garantir que os fallbacks reproduzam estados de erro e respostas esperadas.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 5,
+            "title": "Ajustar páginas consumidoras e adicionar testes",
+            "description": "Atualizar páginas que consomem serviços e criar testes e2e/integração.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Revisar páginas e hooks que usam os services, corrigir estados de loading/erro; adicionar ou atualizar testes em `tests/e2e` e integração conforme fluxos críticos.",
+            "status": "pending",
+            "testStrategy": null
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Consolidar fluxo web de contratos, matricula e venda",
+        "description": "Ajustar telas administrativas e comerciais para o fluxo canonico de contratos, venda e matricula.",
+        "details": "Abrange jornada de venda, assinatura administrativa, estados de contrato e convergencia com o backend.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "1"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear telas atuais de vendas, matrículas e modal",
+            "description": "Levantar fluxos, estados e componentes usados nas telas existentes.",
+            "dependencies": [],
+            "details": "Revisar `src/app/(app)/vendas`, `src/app/(app)/matriculas` e `src/components/shared/nova-matricula-modal.tsx` para identificar passos do fluxo, estados de contrato e dependências com mocks ou dados estáticos.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Alinhar estados de contrato com o backend",
+            "description": "Garantir que estados e transições refletem o fluxo canônico.",
+            "dependencies": [
+              1
+            ],
+            "details": "Mapear estados atuais vs. estados do backend, ajustar enums e traduções de status, e garantir que telas administrativas exibem os estados corretos de contrato, venda e matrícula.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 3,
+            "title": "Ajustar criação de vendas e matrículas nos serviços",
+            "description": "Atualizar chamadas e payloads para o fluxo oficial.",
+            "dependencies": [
+              2
+            ],
+            "details": "Rever serviços de criação/atualização de venda e matrícula, remover mocks, alinhar payloads com o contrato HTTP e garantir encadeamento correto entre venda, contrato e matrícula.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 4,
+            "title": "Revisar UX e estados visuais do fluxo comercial",
+            "description": "Padronizar mensagens, badges e progressos do fluxo.",
+            "dependencies": [
+              2
+            ],
+            "details": "Atualizar componentes de UI para refletir o status canônico, ajustar rótulos e feedbacks do usuário, e garantir consistência entre telas administrativas e comerciais.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 5,
+            "title": "Cobrir testes e validações do fluxo consolidado",
+            "description": "Definir e executar testes do fluxo comercial end-to-end.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Criar checklist de cenários críticos (venda → contrato → matrícula), validar regressões visuais e funcionais, e documentar passos de verificação manual ou automatizada.",
+            "status": "pending",
+            "testStrategy": "Testes de fluxo comercial com cenários principais e validação manual dos estados exibidos."
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Corrigir contexto, sessao e experiencia multiunidade",
+        "description": "Tornar consistente a troca de unidade, contexto ativo, permissoes e navegacao por academia/unidade.",
+        "details": "Inclui cabecalhos de contexto, bootstrap da sessao e guardas de navegacao multiunidade.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "1"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar sessao e stores de contexto",
+            "description": "Mapear armazenamento de sessao, contexto ativo e navegacao multiunidade no web.",
+            "details": "Identificar estados duplicados ou desssincronizados.",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 3
+          },
+          {
+            "id": 2,
+            "title": "Implementar troca de unidade robusta",
+            "description": "Corrigir fluxos de alternancia de unidade e sincronizacao do contexto ativo.",
+            "details": "Garantir atualizacao consistente de dados e layout ao trocar unidade.",
+            "status": "pending",
+            "dependencies": [
+              "3.1"
+            ],
+            "parentTaskId": 3
+          },
+          {
+            "id": 3,
+            "title": "Alinhar permissao e renderizacao por contexto",
+            "description": "Revisar exibicao de menu, guardas e telas conforme papel e unidade ativa.",
+            "details": "Evitar acesso incorreto ou interfaces fora de contexto.",
+            "status": "pending",
+            "dependencies": [
+              "3.2"
+            ],
+            "parentTaskId": 3
+          },
+          {
+            "id": 4,
+            "title": "Cobrir cenarios de sessao e navegacao",
+            "description": "Testar refresh, reentrada, navegacao profunda e perda de sessao/contexto.",
+            "details": "Fechar comportamento previsivel da experiencia multiunidade.",
+            "status": "pending",
+            "dependencies": [
+              "3.3"
+            ],
+            "parentTaskId": 3
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Construir CRM operacional com automacoes",
+        "description": "Evoluir o frontend para suportar pipeline, tarefas, playbooks, cadencias e follow-up comercial.",
+        "details": "Inclui telas de funil, tarefas comerciais, filtros, produtividade e automacoes visiveis ao operador.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "1",
+          "3"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir workspace CRM e modelos de dados base",
+            "description": "Mapear entidades e estados necessários para o CRM operacional.",
+            "dependencies": [],
+            "details": "Especificar modelos para pipeline, etapas, tarefas, playbooks, cadências, follow-up e histórico, alinhando com o contexto multiunidade e permissões.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Expandir API/serviços além de prospects",
+            "description": "Criar endpoints e serviços para novas entidades do CRM.",
+            "dependencies": [
+              1
+            ],
+            "details": "Atualizar `src/lib/api/crm.ts` com métodos para pipeline, tarefas, playbooks, cadências, automações e histórico, incluindo contratos de dados e tratamento de erros.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 3,
+            "title": "Construir telas de pipeline e tarefas comerciais",
+            "description": "Adicionar UI para gestão de funil e tarefas.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implementar páginas e componentes para funil, lista de tarefas e filtros, conectando aos serviços e garantindo estados de carregamento e vazio.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 4,
+            "title": "Criar telas de playbooks e cadências",
+            "description": "Entregar UI para playbooks e cadências comerciais.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Desenvolver telas para criação/edição de playbooks e cadências, com visualização de etapas e ações, integradas ao backend.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 5,
+            "title": "Adicionar automações e histórico de follow-up",
+            "description": "Exibir automações e trilha de atividades do operador.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Implementar área de automações visíveis ao operador e timeline de histórico, com eventos de tarefas, contatos e mudanças de etapa.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 6,
+            "title": "Fechar estados UX e testes de fluxos críticos",
+            "description": "Finalizar experiência e validar fluxos principais.",
+            "dependencies": [
+              3,
+              4,
+              5
+            ],
+            "details": "Refinar estados de erro/carregamento, empty states e navegação, além de definir e executar testes dos fluxos de funil, tarefas e cadências.",
+            "status": "pending",
+            "testStrategy": "Testes de navegação e integração nos fluxos de funil, tarefas, playbooks e cadências."
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Construir reservas, vagas e operacao de aulas",
+        "description": "Criar as telas de backoffice e portal para reservas, lista de espera, ocupacao e check-in de aula.",
+        "details": "Abrange agenda operacional, estados da reserva, ocupacao e visoes por atividade e turma.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "1",
+          "3"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear UX e fluxos de agenda/reservas",
+            "description": "Definir jornadas de usuário para reservas, espera e ocupação.",
+            "dependencies": [],
+            "details": "Levantar requisitos com base na grade existente, desenhar fluxos para portal e backoffice, e especificar estados da reserva e transições.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Projetar modelo de dados e contratos de API",
+            "description": "Especificar entidades e endpoints para booking e waitlist.",
+            "dependencies": [
+              1
+            ],
+            "details": "Definir schemas para aula, reserva, lista de espera, check-in e ocupação; documentar endpoints CRUD e ações de transição de estado.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 3,
+            "title": "Implementar serviços/API de reservas e waitlist",
+            "description": "Construir serviços backend para criação e gestão de reservas.",
+            "dependencies": [
+              2
+            ],
+            "details": "Criar handlers para reservar, cancelar, promover da waitlist e consultar ocupação; integrar com regras de capacidade e horários.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 4,
+            "title": "Criar telas operacionais de reserva e check-in",
+            "description": "Desenvolver UI para reservar, cancelar e registrar presença.",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Adicionar telas no portal/backoffice com listas por atividade/turma, ações rápidas e painéis de ocupação; integrar com os serviços criados.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 5,
+            "title": "Tratar estados, permissões e responsividade",
+            "description": "Garantir consistência de estados e UX em diferentes dispositivos.",
+            "dependencies": [
+              4
+            ],
+            "details": "Implementar feedback de status, bloqueios por permissão, mensagens de erro/sucesso e ajustes responsivos para agenda operacional.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 6,
+            "title": "Adicionar testes de regressão do módulo",
+            "description": "Cobrir fluxos críticos de reservas e check-in.",
+            "dependencies": [
+              3,
+              4,
+              5
+            ],
+            "details": "Criar testes para criação/cancelamento, promoção da waitlist e check-in, incluindo cenários de capacidade e estados inválidos.",
+            "status": "pending",
+            "testStrategy": null
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Criar jornada digital web de adesao e checkout",
+        "description": "Implementar paginas e fluxos para trial, signup, checkout, formularios e contratos.",
+        "details": "Inclui landing flow, formularios, selecao de plano, checkout e acompanhamento de pendencias.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "1",
+          "2"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear e criar rotas públicas da jornada",
+            "description": "Definir as rotas públicas necessárias para landing, trial, signup e checkout.",
+            "dependencies": [],
+            "details": "Listar URLs, criar estrutura de páginas públicas e configurar layouts/guards para acesso não autenticado.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Implementar landing flow e seleção de plano",
+            "description": "Construir telas iniciais com conteúdo e escolha de plano.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar componentes de landing, cards de planos, pricing e CTAs, com navegação para o fluxo de adesão.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 3,
+            "title": "Desenvolver formulários de trial e cadastro",
+            "description": "Criar formulários de trial e signup com validações básicas.",
+            "dependencies": [
+              1
+            ],
+            "details": "Modelar campos, máscaras e validações, integrar com estado de formulário e mensagens de erro amigáveis.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 4,
+            "title": "Integrar checkout e contratos via API",
+            "description": "Conectar fluxo de pagamento e aceite de contratos ao backend.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Consumir endpoints de checkout/contratos, tratar callbacks, estados de pagamento e confirmação de aceite.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 5,
+            "title": "Aplicar autenticação e branding por tenant",
+            "description": "Garantir identificação do tenant e personalização visual no funil.",
+            "dependencies": [
+              1
+            ],
+            "details": "Resolver tenant por domínio/param, aplicar tema/logotipo e garantir isolamento de dados no fluxo público.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 6,
+            "title": "Validar funil e cobrir testes essenciais",
+            "description": "Finalizar validações e testes do fluxo ponta a ponta.",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "Revisar UX, mensagens de erro, estados de carregamento e adicionar testes críticos de navegação e API.",
+            "status": "pending",
+            "testStrategy": "Testes de navegação e integração dos fluxos principais"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Expandir modulos administrativos, financeiros e de integracao",
+        "description": "Cobrir configuracoes e operacao de NFSe, agregadores, recebimentos, dashboards e areas administrativas ausentes.",
+        "details": "Inclui telas de configuracao, monitoramento, recebimentos e integracoes operacionais.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "1"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Inventariar lacunas administrativas e financeiras existentes",
+            "description": "Mapear páginas faltantes e inconsistências nas áreas administrativas e financeiras.",
+            "dependencies": [],
+            "details": "Revisar rotas em `src/app/(app)/administrativo/*` e `src/app/(app)/gerencial/*`, listar telas ausentes de NFSe, agregadores, recebimentos e dashboards, e priorizar por impacto operacional.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Implementar telas de configuração de NFSe e integrações fiscais",
+            "description": "Criar interfaces para configurar emissor, prefeitura e parâmetros fiscais.",
+            "dependencies": [
+              1
+            ],
+            "details": "Definir fluxo de cadastro/edição de dados fiscais, campos obrigatórios, estados de configuração e feedback de validação para NFSe e integrações fiscais.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 3,
+            "title": "Criar telas operacionais de agregadores e recebimentos",
+            "description": "Adicionar páginas para operação de agregadores e controle de recebimentos.",
+            "dependencies": [
+              1
+            ],
+            "details": "Modelar listagens, filtros e detalhes de transações, status de repasse e conciliação, com navegação consistente com o módulo gerencial.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 4,
+            "title": "Integrar status e monitoramento de integrações",
+            "description": "Exibir indicadores de saúde e alertas para integrações operacionais.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Adicionar painéis de monitoramento com status por integração, histórico de falhas, e links para ações corretivas ou reprocessamento.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 5,
+            "title": "Fechar permissões, perfis e testes básicos",
+            "description": "Garantir controle de acesso e validações para novos módulos.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Definir permissões por perfil para novas rotas, ajustar guardas de acesso e criar testes básicos de renderização e navegação onde houver infraestrutura.",
+            "status": "pending",
+            "testStrategy": null
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Criar BI operacional e visao de rede",
+        "description": "Entregar dashboards e visoes consolidadas por unidade e por academia para uso gerencial.",
+        "details": "Inclui indicadores de conversao, ocupacao, inadimplencia, retencao e comparativos de rede.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "1",
+          "7"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir KPIs operacionais e dimensões de rede",
+            "description": "Mapear indicadores e dimensões necessárias para a visão de rede.",
+            "dependencies": [],
+            "details": "Documentar métricas de conversão, ocupação, inadimplência, retenção e comparativos, além de filtros por unidade, academia, período e segmento.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Especificar filtros e permissões por perfil",
+            "description": "Detalhar regras de acesso e escopo para cada tipo de usuário.",
+            "dependencies": [
+              1
+            ],
+            "details": "Definir regras de visibilidade por perfil (gerencial, unidade, rede), escopos de dados, defaults de filtro e validações de autorização.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 3,
+            "title": "Criar dashboards e cards de indicadores",
+            "description": "Desenhar e planejar os painéis e cards principais.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Listar telas, cards e layouts; definir componentes reutilizáveis, hierarquia de informações e navegação entre visão de rede e unidade.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 4,
+            "title": "Integrar gráficos, exportações e estados de carregamento",
+            "description": "Planejar integrações com APIs agregadas e experiência de uso.",
+            "dependencies": [
+              3
+            ],
+            "details": "Definir endpoints agregados, formatos de séries, tipos de gráficos, recursos de export (CSV/PDF) e skeletons/empty states.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 5,
+            "title": "Validar performance e critérios de qualidade",
+            "description": "Estabelecer critérios de aceitação e validações finais.",
+            "dependencies": [
+              4
+            ],
+            "details": "Definir métricas de tempo de carregamento, limites de payload, paginação/consulta, e checklist de permissões e consistência dos dados.",
+            "status": "pending",
+            "testStrategy": null
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "createdAt": "2026-03-10T00:00:00.000Z",
+      "updatedAt": "2026-03-10T00:00:00.000Z",
+      "description": "Backlog inicial do frontend web principal da plataforma Academia",
+      "created": "2026-03-10T20:34:26.487Z",
+      "updated": "2026-03-10T20:34:26.489Z"
+    }
+  }
+}

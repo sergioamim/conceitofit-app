@@ -5,6 +5,7 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { listAtividadeGrades, listAtividades, listFuncionarios, listHorarios, listSalas } from "@/lib/mock/services";
 import type { Atividade, AtividadeGrade, DiaSemana, Funcionario, HorarioFuncionamento, Sala } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const DIA_ORDER: DiaSemana[] = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
 const DIA_LABEL: Record<DiaSemana, string> = {
@@ -34,6 +35,10 @@ function addDays(date: Date, days: number) {
 
 function formatDayDate(date: Date) {
   return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function toIsoDate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function toMinutes(time: string) {
@@ -138,24 +143,18 @@ export default function GradePage() {
     return matrix;
   }, [byDay]);
 
-  const sobDemandaByDay = useMemo(() => {
-    const grouped: Record<DiaSemana, (AtividadeGrade & { atividade?: Atividade; diaExibicao: DiaSemana })[]> = {
-      SEG: [],
-      TER: [],
-      QUA: [],
-      QUI: [],
-      SEX: [],
-      SAB: [],
-      DOM: [],
-    };
-    DIA_ORDER.forEach((dia) => {
-      grouped[dia] = byDay[dia].filter((item) => item.definicaoHorario === "SOB_DEMANDA");
-    });
-    return grouped;
-  }, [byDay]);
-
   const weekEnd = addDays(weekStart, 6);
   const nowDate = new Date();
+  const todayIso = toIsoDate(nowDate);
+  const weekDays = DIA_ORDER.map((dia, idx) => {
+    const date = addDays(weekStart, idx);
+    return {
+      dia,
+      date,
+      isoDate: toIsoDate(date),
+      horarioDia: horarioMap.get(dia),
+    };
+  });
 
   function isCheckinWindowOpen(item: AtividadeGrade, date: Date) {
     if (item.definicaoHorario !== "PREVIAMENTE") return false;
@@ -165,13 +164,6 @@ export default function GradePage() {
     const openAt = new Date(start.getTime() - item.checkinLiberadoMinutosAntes * 60 * 1000);
     return nowDate >= openAt && nowDate <= start;
   }
-
-  const funcionamentoFaixa = useMemo(() => {
-    const abres = horarios.filter((h) => !h.fechado).map((h) => toMinutes(h.abre));
-    const fechos = horarios.filter((h) => !h.fechado).map((h) => toMinutes(h.fecha));
-    if (abres.length === 0 || fechos.length === 0) return null;
-    return `${formatMinutes(Math.min(...abres))} - ${formatMinutes(Math.max(...fechos))}`;
-  }, [horarios]);
 
   return (
     <div className="space-y-6">
@@ -195,17 +187,6 @@ export default function GradePage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-          <p>
-            {funcionamentoFaixa
-              ? `Faixa operacional da unidade: ${funcionamentoFaixa}`
-              : "Sem horários de funcionamento configurados para a unidade"}
-          </p>
-          <p>Exibindo apenas horários com atividade agendada</p>
-        </div>
-      </div>
-
       {slotMinutes.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border/70 bg-card p-8 text-center text-sm text-muted-foreground">
           Não há atividades com horário definido nesta semana.
@@ -213,38 +194,71 @@ export default function GradePage() {
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <div className="min-w-[1120px]">
-            <div className="grid grid-cols-[88px_repeat(7,minmax(0,1fr))] border-b border-border bg-secondary/30">
-              <div className="px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Horário</div>
-              {DIA_ORDER.map((dia, idx) => {
-                const date = addDays(weekStart, idx);
-                const horarioDia = horarioMap.get(dia);
+            <div className="grid grid-cols-[88px_repeat(7,minmax(0,1fr))] border-b border-border bg-secondary/45">
+              <div className="px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-foreground/75">Horário</div>
+              {weekDays.map((dayData) => {
+                const isToday = dayData.isoDate === todayIso;
                 return (
-                  <div key={dia} className="border-l border-border px-3 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{DIA_LABEL[dia]}</p>
-                    <p className="text-sm">{formatDayDate(date)}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {horarioDia?.fechado ? "Fechado" : `${horarioDia?.abre ?? "--:--"} - ${horarioDia?.fecha ?? "--:--"}`}
+                  <div
+                    key={dayData.dia}
+                    className={cn(
+                      "border-l border-border px-3 py-3",
+                      isToday && "border-l-gym-accent/50 bg-gym-accent/10"
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{DIA_LABEL[dayData.dia]}</p>
+                      {isToday ? (
+                        <span className="inline-flex rounded-full bg-gym-accent px-1.5 py-0.5 text-[10px] font-semibold text-gym-accent-foreground">
+                          Hoje
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className={cn("text-sm", isToday && "font-semibold text-gym-accent")}>{formatDayDate(dayData.date)}</p>
+                    <p className={cn("text-[11px] text-muted-foreground", isToday && "text-foreground/80")}>
+                      {dayData.horarioDia?.fechado
+                        ? "Fechado"
+                        : `${dayData.horarioDia?.abre ?? "--:--"} - ${dayData.horarioDia?.fecha ?? "--:--"}`}
                     </p>
                   </div>
                 );
               })}
             </div>
 
-            {slotMinutes.map((slot) => (
-              <div key={slot} className="grid grid-cols-[88px_repeat(7,minmax(0,1fr))] border-b border-border last:border-b-0">
-                <div className="px-3 py-3 text-xs font-semibold text-muted-foreground">{formatMinutes(slot)}</div>
-                {DIA_ORDER.map((dia, idx) => {
-                  const date = addDays(weekStart, idx);
-                  const items = byDayBySlot[dia][slot] ?? [];
+            {slotMinutes.map((slot, rowIndex) => (
+              <div key={slot} className="grid grid-cols-[88px_repeat(7,minmax(0,1fr))] border-b border-border/80 last:border-b-0">
+                <div
+                  className={cn(
+                    "px-3 py-3 text-xs font-semibold text-foreground/80",
+                    rowIndex % 2 === 1 ? "bg-secondary/20" : "bg-card"
+                  )}
+                >
+                  {formatMinutes(slot)}
+                </div>
+                {weekDays.map((dayData) => {
+                  const items = byDayBySlot[dayData.dia][slot] ?? [];
+                  const isToday = dayData.isoDate === todayIso;
                   return (
-                    <div key={`${dia}-${slot}`} className="min-h-[152px] border-l border-border p-2">
+                    <div
+                      key={`${dayData.dia}-${slot}`}
+                      className={cn(
+                        "min-h-[160px] border-l p-2",
+                        isToday ? "border-l-gym-accent/45 bg-gym-accent/5" : "border-border",
+                        !isToday && rowIndex % 2 === 1 && "bg-secondary/10"
+                      )}
+                    >
                       {items.length === 0 ? (
-                        <div className="h-full rounded-md border border-dashed border-border/50 bg-secondary/20" />
+                        <div
+                          className={cn(
+                            "h-full rounded-md border border-dashed",
+                            isToday ? "border-gym-accent/45 bg-gym-accent/10" : "border-border/55 bg-secondary/20"
+                          )}
+                        />
                       ) : (
                         <div className="space-y-2">
                           {items.map((item) => (
-                            <div key={`${item.id}-${item.diaExibicao}`} className="rounded-lg border border-border bg-secondary/40 p-3">
-                              <p className="text-xs font-semibold">{item.atividade?.nome ?? "Atividade"}</p>
+                            <div key={`${item.id}-${item.diaExibicao}`} className="rounded-lg border border-border/90 bg-card p-3 shadow-sm">
+                              <p className="text-xs font-semibold text-foreground">{item.atividade?.nome ?? "Atividade"}</p>
 
                               <div className="mt-1.5 space-y-1 text-[11px] text-muted-foreground">
                                 <p className="break-words">
@@ -264,7 +278,7 @@ export default function GradePage() {
                               <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
                                 <p className="break-words">
                                   {item.atividade?.permiteCheckin
-                                    ? isCheckinWindowOpen(item, date)
+                                    ? isCheckinWindowOpen(item, dayData.date)
                                       ? `Vagas disponíveis: ${item.capacidade}`
                                       : `Check-in abre ${item.checkinLiberadoMinutosAntes} min antes`
                                     : `Capacidade da sala: ${item.capacidade}`}
@@ -287,31 +301,6 @@ export default function GradePage() {
           </div>
         </div>
       )}
-
-      <div className="rounded-xl border border-border bg-card p-4">
-        <h3 className="font-display text-base font-bold">Atividades sob demanda</h3>
-        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {DIA_ORDER.map((dia) => {
-            const items = sobDemandaByDay[dia];
-            return (
-              <div key={`sob-demand-${dia}`} className="rounded-lg border border-border bg-secondary/20 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{DIA_LABEL[dia]}</p>
-                {items.length === 0 ? (
-                  <p className="mt-2 text-xs text-muted-foreground">Sem atividades sob demanda</p>
-                ) : (
-                  <div className="mt-2 space-y-1.5">
-                    {items.map((item) => (
-                      <p key={`${item.id}-${item.diaExibicao}`} className="truncate text-xs">
-                        {item.atividade?.nome ?? "Atividade"}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
         <div className="flex items-start gap-2 text-sm text-muted-foreground">

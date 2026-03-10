@@ -129,6 +129,9 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
         setTenants(activeTenants);
       }
       setTenantId(store.currentTenantId || nextId);
+    } catch {
+      const store = getStore();
+      setTenantId(store.currentTenantId || store.tenant?.id || "");
     } finally {
       setSavingTenant(false);
     }
@@ -183,8 +186,7 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
             onValueChange={setQuery}
               onSelect={(option) => {
                 setQuery("");
-                const queryTenant = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : "";
-                router.push(`/clientes/${option.id}${queryTenant}`);
+                router.push(`/clientes/${option.id}`);
               }}
               onFocusOpen={loadClienteOptions}
               options={clienteOptions}

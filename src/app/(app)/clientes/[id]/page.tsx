@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   getAluno,
@@ -44,8 +44,6 @@ function formatBRL(v: number) {
 export default function ClienteDetalhePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const tenantFromUrl = (searchParams.get("tenantId") ?? "").trim();
   const [aluno, setAluno] = useState<Aluno | null>(null);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -69,18 +67,11 @@ export default function ClienteDetalhePage() {
 
   const ensureTenantContext = useCallback(async (alunoId: string) => {
     const current = await getCurrentTenant();
-    if (tenantFromUrl) {
-      if (current.id !== tenantFromUrl) {
-        await setCurrentTenant(tenantFromUrl);
-      }
-      return;
-    }
-
     const cached = getStore().alunos.find((item) => item.id === alunoId);
     if (cached?.tenantId && cached.tenantId !== current.id) {
       await setCurrentTenant(cached.tenantId);
     }
-  }, [tenantFromUrl]);
+  }, []);
 
   const reload = useCallback(async () => {
     const id = params?.id;

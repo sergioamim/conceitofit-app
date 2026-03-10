@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   listCartoesCliente,
   listBandeirasCartao,
@@ -42,8 +42,6 @@ function cardGradient(name?: string) {
 export default function CartoesClientePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const tenantFromUrl = (searchParams.get("tenantId") ?? "").trim();
   const [cartoes, setCartoes] = useState<CartaoCliente[]>([]);
   const [bandeiras, setBandeiras] = useState<BandeiraCartao[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -58,18 +56,11 @@ export default function CartoesClientePage() {
 
   const ensureTenantContext = useCallback(async (alunoId: string) => {
     const current = await getCurrentTenant();
-    if (tenantFromUrl) {
-      if (current.id !== tenantFromUrl) {
-        await setCurrentTenant(tenantFromUrl);
-      }
-      return;
-    }
-
     const cached = getStore().alunos.find((item) => item.id === alunoId);
     if (cached?.tenantId && cached.tenantId !== current.id) {
       await setCurrentTenant(cached.tenantId);
     }
-  }, [tenantFromUrl]);
+  }, []);
 
   const load = useCallback(async () => {
     const id = params?.id;

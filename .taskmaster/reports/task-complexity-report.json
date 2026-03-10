@@ -1,0 +1,77 @@
+{
+	"meta": {
+		"generatedAt": "2026-03-10T21:00:22.283Z",
+		"tasksAnalyzed": 8,
+		"totalTasks": 8,
+		"analysisCount": 8,
+		"thresholdScore": 5,
+		"projectName": "WEB | academia-app",
+		"usedResearch": false
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Alinhar contrato HTTP e camada de consumo da API",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Quebre em subtarefas para: mapear imports de @/lib/mock/services nas páginas, auditar apiRequest/http e normalizações, alinhar tipos/schemas nas APIs (src/lib/api/*), padronizar tratamento de erros e estados na UI, e adicionar testes de integração/Playwright para fluxos críticos.",
+			"reasoning": "O código já tem um client HTTP centralizado com refresh de token, headers e erro tipado (src/lib/api/http.ts, src/lib/utils/api-error.ts), mas as telas ainda consomem massivamente @/lib/mock/services (ex.: src/app/(app)/vendas/page.tsx, src/app/(app)/matriculas/page.tsx, src/components/layout/app-topbar.tsx). Isso implica refatoração transversal de serviços/hooks e alinhamento de contratos nas APIs tipadas, além de ajustar estados de erro e loading. Há dependência direta de sessão/localStorage e de múltiplos endpoints, elevando o esforço e exigindo testes de regressão."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Consolidar fluxo web de contratos, matricula e venda",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Gerar subtarefas para: mapear telas e serviços do fluxo atual (vendas, matrículas, planos), alinhar contratos/estados com APIs existentes (src/lib/api/vendas.ts e catálogo), ajustar UI/validações e navegação, e fechar cobertura de testes end-to-end do fluxo comercial.",
+			"reasoning": "Existem telas de vendas e matrículas, mas elas usam mock e simplificações de estado; há API de vendas com normalizações e envelopes (src/lib/api/vendas.ts). Consolidar o fluxo exige ajuste de telas, estados de contrato e matrículas, e integração consistente com o backend. O esforço é moderado-alto por envolver múltiplas rotas e componentes (ex.: checkout interno e listagens) e validações comerciais."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Corrigir contexto, sessao e experiencia multiunidade",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Divida em: auditoria de sessão/localStorage e eventos de store, implementação de troca de unidade usando APIs de contexto (src/lib/api/contexto-unidades.ts, src/lib/api/auth.ts), alinhamento de permissões e guardas de navegação, e testes de refresh/reentrada e troca de unidade.",
+			"reasoning": "A experiência multiunidade hoje depende de mock store e eventos como academia-store-updated (ex.: src/components/layout/app-topbar.tsx, src/components/layout/tenant-theme-sync.tsx), enquanto a camada real tem APIs de contexto e sessão. Corrigir envolve sincronizar token/tenant, headers e stores, com impacto em navegação, menus e permissões. O escopo é transversal e requer testes de sessão e troca de unidade."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Construir CRM operacional com automacoes",
+			"complexityScore": 9,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Planeje subtarefas para: definir telas e componentes do workspace de CRM (pipeline, tarefas, playbooks), implementar views e filtros, integrar novas superfícies de automação e histórico com APIs, tratar estados UX (loading/erro/vazio), e adicionar testes de fluxo comercial.",
+			"reasoning": "Há APIs de CRM e telas de prospects/agendamentos já implementadas (src/lib/api/crm.ts, páginas em src/app/(app)/crm), mas não existem pipelines, tarefas e automações operacionais completas. Isso demanda novas estruturas de dados, UI rica e integrações adicionais, além de testes de usabilidade e regressão. É um módulo grande e multifásico."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Construir reservas, vagas e operacao de aulas",
+			"complexityScore": 9,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Crie subtarefas para: modelar o domínio de reservas/vagas (tipos e APIs), construir telas de agenda/ocupação/waitlist, implementar operações de reserva/cancelamento/check-in, tratar responsividade e estados, e validar com testes de integração.",
+			"reasoning": "Não há APIs específicas nem telas de reservas/booking no código atual (rg não encontrou endpoints em src/lib/api). Existem apenas componentes de grade e check-in em atividades, o que indica que o módulo de reservas é praticamente greenfield. Isso envolve novos contratos, UI e fluxos operacionais complexos, elevando a complexidade."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Criar jornada digital web de adesao e checkout",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Divida em: mapear rotas públicas da jornada, construir formulários e catálogo de planos, integrar checkout/contrato com APIs, ajustar validações e mensagens de erro, e adicionar testes de navegação e conversão.",
+			"reasoning": "Existe apenas um componente interno de pagamento (src/components/shared/checkout-payment.tsx) e a jornada digital pública não está presente. Será necessário criar novas rotas e formulários, integrar com contratos/checkout no backend, lidar com branding por academia e estados de erro. O esforço é alto por envolver fluxo público e segurança."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Expandir modulos administrativos, financeiros e de integracao",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Estruture subtarefas para: inventariar lacunas nas telas administrativas/financeiras, implementar configurações e operações faltantes (NFSe/agregadores/recebimentos), integrar monitoramento e auditoria, e alinhar permissões e testes.",
+			"reasoning": "Há módulos administrativos e financeiros já existentes (rotas em src/app/(app)/administrativo e gerencial, APIs em src/lib/api), mas as áreas de NFSe, agregadores e integrações parecem incompletas. Isso sugere trabalho de extensão e refinamento, com impacto em permissões e feedbacks. Complexidade moderada-alta."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Criar BI operacional e visao de rede",
+			"complexityScore": 8,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Gere subtarefas para: definir o shell analítico e filtros por unidade/rede, construir dashboards e cards principais, integrar gráficos/exportações e tratamento de estados, e validar performance/permissões com testes.",
+			"reasoning": "Existem APIs de dashboard e páginas gerenciais, mas não um módulo de BI consolidado com comparativos de rede. Será preciso criar novas views, componentes de gráficos, filtros globais e considerar performance. O esforço é alto, mas com apoio parcial das APIs existentes."
+		}
+	]
+}

@@ -167,7 +167,7 @@ function ClientesPageContent() {
 
   const clienteResumoBaseHref = useMemo(() => {
     if (!clienteResumo) return "";
-    return `/clientes/${clienteResumo.id}?tenantId=${encodeURIComponent(clienteResumo.tenantId)}`;
+    return `/clientes/${clienteResumo.id}`;
   }, [clienteResumo]);
 
   return (
@@ -303,7 +303,7 @@ function ClientesPageContent() {
         emptyText="Nenhum cliente encontrado"
         getRowKey={(aluno) => aluno.id}
         onRowClick={(aluno) =>
-          router.push(`/clientes/${aluno.id}?tenantId=${encodeURIComponent(aluno.tenantId)}`)
+          router.push(`/clientes/${aluno.id}`)
         }
         rowClassName={() => "cursor-pointer transition-colors hover:bg-secondary/40"}
         renderCells={(aluno) => {

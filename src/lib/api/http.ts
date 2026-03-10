@@ -1,4 +1,11 @@
-import { clearAuthSession, getAccessToken, getRefreshToken, saveAuthSession } from "./session";
+import {
+  clearAuthSession,
+  getAccessToken,
+  getActiveTenantIdFromSession,
+  getAvailableTenantsFromSession,
+  getRefreshToken,
+  saveAuthSession,
+} from "./session";
 
 export interface ApiErrorPayload {
   timestamp?: string;
@@ -99,6 +106,36 @@ function resolveRequestUrl(path: string, query?: Record<string, string | number 
   return baseUrl ? `${baseUrl}${pathname}${suffix}` : `${pathname}${suffix}`;
 }
 
+function normalizeTenantQuery(
+  query?: Record<string, string | number | boolean | undefined>
+): Record<string, string | number | boolean | undefined> | undefined {
+  if (!query) return query;
+  const normalized = { ...query };
+  const requestedTenant =
+    typeof normalized.tenantId === "string" ? normalized.tenantId.trim() : undefined;
+  if (!requestedTenant) return normalized;
+
+  const allowedTenants = getAvailableTenantsFromSession()
+    .map((item) => item.tenantId.trim())
+    .filter(Boolean);
+  const activeTenant = getActiveTenantIdFromSession()?.trim();
+  const fallbackTenant =
+    activeTenant && (allowedTenants.length === 0 || allowedTenants.includes(activeTenant))
+      ? activeTenant
+      : allowedTenants[0];
+
+  if (fallbackTenant && requestedTenant !== fallbackTenant) {
+    normalized.tenantId = fallbackTenant;
+    return normalized;
+  }
+  if (allowedTenants.length > 0 && !allowedTenants.includes(requestedTenant)) {
+    normalized.tenantId = allowedTenants[0];
+    return normalized;
+  }
+
+  return normalized;
+}
+
 export async function apiRequest<T>(input: {
   path: string;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -140,7 +177,8 @@ export async function apiRequest<T>(input: {
     }
   }
 
-  const requestUrl = resolveRequestUrl(input.path, input.query);
+  const normalizedQuery = normalizeTenantQuery(input.query);
+  const requestUrl = resolveRequestUrl(input.path, normalizedQuery);
   const requestBody =
     input.body == null
       ? undefined

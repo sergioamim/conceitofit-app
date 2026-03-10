@@ -1,0 +1,77 @@
+{
+	"meta": {
+		"generatedAt": "2026-03-10T21:26:26.930Z",
+		"tasksAnalyzed": 8,
+		"totalTasks": 8,
+		"analysisCount": 8,
+		"thresholdScore": 5,
+		"projectName": "WEB | academia-app",
+		"usedResearch": false
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Alinhar contrato HTTP e camada de consumo da API",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Divida em subtarefas para mapear os clientes/serviços atuais, comparar contratos com o guia de integração, ajustar o wrapper HTTP e normalização de erros, atualizar tipos e parsers, revisar mocks/fallbacks e corrigir consumidores com testes.",
+			"reasoning": "A base tem muitos módulos de API e uma camada de mocks com fallback para API real, além de normalizações e tratamento de erro centralizado. Alinhar contratos exige revisar endpoints, tipos e respostas em vários serviços e atualizar testes de integração, o que torna o esforço amplo e com risco de regressões."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Consolidar fluxo web de contratos, matricula e venda",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Quebre em subtarefas para mapear telas e fluxos atuais de vendas/matrículas, alinhar estados de contrato com o backend, ajustar chamadas e payloads nos serviços, revisar UX/estados visuais e atualizar testes do fluxo comercial.",
+			"reasoning": "As telas de vendas/matrículas usam serviços mockados e lógicas próprias de status; consolidar o fluxo canônico envolve mudanças em UI, estados de contrato e integrações com serviços. Há impacto direto em páginas críticas e validações de usuário, exigindo testes end-to-end."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Corrigir contexto, sessao e experiencia multiunidade",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Divida em subtarefas para auditar armazenamento de sessão/contexto, padronizar fonte do tenant ativo, corrigir troca de unidade e sincronização de dados, ajustar guardas/permissões e cobrir cenários de navegação com testes.",
+			"reasoning": "A lógica de contexto multiunidade mistura sessão, store local e sincronização com API, com múltiplos pontos de uso. Ajustes podem afetar autenticação, navegação e carregamento de dados, demandando validação cuidadosa."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Construir CRM operacional com automacoes",
+			"complexityScore": 9,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Crie subtarefas para definir modelos CRM (pipeline/tarefas/playbooks/cadências), expandir serviços/API, implementar telas de funil e tarefas, telas de playbooks/cadências, automações/histórico e finalizar UX/testes.",
+			"reasoning": "Hoje o CRM cobre basicamente prospects, então o restante é praticamente greenfield. Exige novos modelos, endpoints, várias telas e integração com contexto/permiteções, além de testes de fluxos críticos."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Construir reservas, vagas e operacao de aulas",
+			"complexityScore": 9,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Detalhe subtarefas para definir fluxos e estados de reserva/espera, modelar dados e contratos de API, implementar serviços de reservas/waitlist, construir telas operacionais/portal, tratar permissões/estados e adicionar testes de regressão.",
+			"reasoning": "Não há módulo de reservas implementado além de indícios de check-in em atividades, então o trabalho envolve criação de entidades, serviços e UI do zero. Também há complexidade de regras de capacidade e transições de estado que precisam de validação."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Criar jornada digital web de adesao e checkout",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Quebre em subtarefas para estruturar rotas públicas e layout, criar landing/seleção de plano, formularios de trial/signup, integrar checkout e contratos via API, aplicar branding por tenant e fechar testes ponta a ponta.",
+			"reasoning": "O app atual não possui fluxo público além do login, então será necessário criar novas rotas, formulários e integração de pagamento. A personalização por tenant e o isolamento de contexto aumentam o esforço e exigem testes de navegação."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Expandir modulos administrativos, financeiros e de integracao",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Divida em subtarefas para inventariar lacunas administrativas, criar telas de NFSe/configuração fiscal, implementar telas de agregadores/recebimentos, adicionar monitoramento de integrações e ajustar permissões/testes básicos.",
+			"reasoning": "Existem módulos administrativos e financeiros já estruturados, mas faltam telas e integrações específicas. O trabalho é amplo em UI e serviços, com dependência de permissões e consistência de dados."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Criar BI operacional e visao de rede",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Descreva subtarefas para definir KPIs e filtros de rede, criar dashboards e cards, integrar gráficos e exportações, implementar agregações por unidade/rede e validar performance/permissões.",
+			"reasoning": "Há um dashboard unitário básico, mas a visão de rede exige novos dados agregados, filtros e visualizações. Envolve integração com APIs de BI, cuidado com performance e critérios de qualidade."
+		}
+	]
+}
