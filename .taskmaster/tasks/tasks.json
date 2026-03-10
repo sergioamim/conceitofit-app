@@ -73,15 +73,16 @@
               4
             ],
             "details": "Revisar páginas e hooks que usam os services, corrigir estados de loading/erro; adicionar ou atualizar testes em `tests/e2e` e integração conforme fluxos críticos.",
-            "status": "pending",
+            "status": "blocked",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-10T23:12:19.456Z"
           }
         ],
         "complexity": 8,
         "recommendedSubtasks": 5,
         "expansionPrompt": "Quebre em subtarefas para: mapear imports de @/lib/mock/services nas páginas, auditar apiRequest/http e normalizações, alinhar tipos/schemas nas APIs (src/lib/api/*), padronizar tratamento de erros e estados na UI, e adicionar testes de integração/Playwright para fluxos críticos.",
-        "updatedAt": "2026-03-10T22:57:51.612Z"
+        "updatedAt": "2026-03-10T23:12:19.456Z"
       },
       {
         "id": "2",
@@ -838,7 +839,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-10T22:57:51.612Z",
+      "lastModified": "2026-03-10T23:12:19.457Z",
       "taskCount": 10,
       "completedCount": 0,
       "tags": [

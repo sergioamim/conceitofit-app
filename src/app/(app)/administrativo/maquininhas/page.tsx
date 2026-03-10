@@ -10,6 +10,7 @@ import { createMaquininhaApi, listMaquininhasApi, toggleMaquininhaApi, updateMaq
 import { getCurrentTenant } from "@/lib/mock/services";
 import { listContasBancariasApi } from "@/lib/api/contas-bancarias";
 import type { AdquirenteMaquininha, ContaBancaria } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 type MaquininhaForm = {
   nome: string;
@@ -44,11 +45,6 @@ const MAQUININHA_FORM_DEFAULT: MaquininhaForm = {
   contaBancariaId: "",
 };
 
-function formatError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return "Não foi possível completar a ação.";
-}
-
 function getStatusClass(status: "ATIVA" | "INATIVA") {
   return status === "ATIVA"
     ? "bg-gym-teal/15 text-gym-teal"
@@ -60,7 +56,9 @@ export default function MaquininhasPage() {
   const [tenantName, setTenantName] = useState("Tenant ativo");
   const [maquininhas, setMaquininhas] = useState<MaquininhaItem[]>([]);
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
+  const [tenantResolved, setTenantResolved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -96,6 +94,7 @@ export default function MaquininhasPage() {
   }, [maquininhas, search, contasMap]);
 
   const load = useCallback(async () => {
+    if (!tenantId) return;
     setLoading(true);
     setError(null);
     try {
@@ -106,22 +105,39 @@ export default function MaquininhasPage() {
       setMaquininhas(maqs);
       setContasBancarias(contas);
     } catch (loadError) {
-      setError(formatError(loadError));
+      setError(normalizeErrorMessage(loadError));
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
   }, [tenantId]);
 
   useEffect(() => {
+    let active = true;
+    setTenantResolved(false);
+    setHasLoadedOnce(false);
+
     void (async () => {
       try {
         const tenant = await getCurrentTenant();
+        if (!active) return;
         setTenantId(tenant.id);
         setTenantName(tenant.nome);
-      } catch {
+      } catch (tenantError) {
+        if (!active) return;
+        setTenantId("");
         setTenantName("Tenant ativo");
+        setError(normalizeErrorMessage(tenantError));
+      } finally {
+        if (active) {
+          setTenantResolved(true);
+        }
       }
     })();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -157,6 +173,10 @@ export default function MaquininhasPage() {
   }
 
   async function handleSave() {
+    if (!tenantId) {
+      setError("Não foi possível identificar a unidade ativa.");
+      return;
+    }
     if (!isFormValid()) return;
     setSaving(true);
     setError(null);
@@ -186,13 +206,17 @@ export default function MaquininhasPage() {
       await load();
       setSuccess(editing ? "Maquininha atualizada." : "Maquininha cadastrada.");
     } catch (saveError) {
-      setError(formatError(saveError));
+      setError(normalizeErrorMessage(saveError));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleToggle(item: MaquininhaItem) {
+    if (!tenantId) {
+      setError("Não foi possível identificar a unidade ativa.");
+      return;
+    }
     setError(null);
     setSuccess(null);
     try {
@@ -205,9 +229,17 @@ export default function MaquininhasPage() {
         `Maquininha ${updated.statusCadastro === "ATIVA" ? "ativada" : "inativada"} com sucesso.`
       );
     } catch (errorPayload) {
-      setError(formatError(errorPayload));
+      setError(normalizeErrorMessage(errorPayload));
     }
   }
+
+  const initialLoading = !tenantResolved || (loading && !hasLoadedOnce);
+  const isTenantUnavailable = tenantResolved && !tenantId;
+  const emptyStateMessage = isTenantUnavailable
+    ? "Não foi possível identificar a unidade ativa."
+    : error
+      ? "Não foi possível carregar as maquininhas."
+      : "Nenhuma maquininha cadastrada.";
 
   return (
     <div className="space-y-6">
@@ -216,10 +248,13 @@ export default function MaquininhasPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Administrativo</p>
           <h1 className="font-display text-2xl font-bold tracking-tight">Maquininhas</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Unidade ativa: <span className="font-medium text-foreground">{tenantName}</span>
+            Unidade ativa:{" "}
+            <span className="font-medium text-foreground">
+              {tenantResolved ? tenantName : "Carregando..."}
+            </span>
           </p>
         </div>
-        <Button onClick={openCreate} disabled={contasAtivas.length === 0}>
+        <Button onClick={openCreate} disabled={!tenantResolved || !tenantId || contasAtivas.length === 0}>
           Nova maquininha
         </Button>
       </div>
@@ -360,21 +395,21 @@ export default function MaquininhasPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-sm">
-            {loading && (
+            {initialLoading && (
               <tr>
                 <td colSpan={6} className="py-10 text-center text-muted-foreground">
                   Carregando...
                 </td>
               </tr>
             )}
-            {!loading && filtered.length === 0 && (
+            {!initialLoading && filtered.length === 0 && (
               <tr>
                 <td colSpan={6} className="py-10 text-center text-muted-foreground">
-                  Nenhuma maquininha cadastrada.
+                  {emptyStateMessage}
                 </td>
               </tr>
             )}
-            {!loading &&
+            {!initialLoading &&
               filtered.map((item) => (
                 <tr key={item.id} className="hover:bg-secondary/30">
                   <td className="px-4 py-3 font-medium">{item.nome}</td>

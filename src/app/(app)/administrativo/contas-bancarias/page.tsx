@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createContaBancariaApi, listContasBancariasApi, toggleContaBancariaApi, updateContaBancariaApi } from "@/lib/api/contas-bancarias";
 import { getCurrentTenant } from "@/lib/mock/services";
 import type { ContaBancaria, PixTipo, TipoContaBancaria } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const TIPO_CONTA_LABEL: Record<TipoContaBancaria, string> = {
   CORRENTE: "Conta corrente",
@@ -51,11 +52,6 @@ const FORM_DEFAULT: FormConta = {
   pixTipo: "SEM_PIX",
 };
 
-function formatError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return "Não foi possível completar a ação.";
-}
-
 function getStatusClass(status: "ATIVA" | "INATIVA") {
   return status === "ATIVA"
     ? "bg-gym-teal/15 text-gym-teal"
@@ -66,7 +62,9 @@ export default function ContasBancariasPage() {
   const [tenantId, setTenantId] = useState("");
   const [tenantName, setTenantName] = useState("Tenant ativo");
   const [contas, setContas] = useState<ContaBancaria[]>([]);
+  const [tenantResolved, setTenantResolved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -88,6 +86,7 @@ export default function ContasBancariasPage() {
   }, [contas, search]);
 
   const load = useCallback(async () => {
+    if (!tenantId) return;
     setLoading(true);
     setError(null);
     try {
@@ -96,22 +95,39 @@ export default function ContasBancariasPage() {
       });
       setContas(data);
     } catch (loadError) {
-      setError(formatError(loadError));
+      setError(normalizeErrorMessage(loadError));
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
   }, [tenantId]);
 
   useEffect(() => {
+    let active = true;
+    setTenantResolved(false);
+    setHasLoadedOnce(false);
+
     void (async () => {
       try {
         const tenant = await getCurrentTenant();
+        if (!active) return;
         setTenantId(tenant.id);
         setTenantName(tenant.nome);
-      } catch {
+      } catch (tenantError) {
+        if (!active) return;
+        setTenantId("");
         setTenantName("Tenant ativo");
+        setError(normalizeErrorMessage(tenantError));
+      } finally {
+        if (active) {
+          setTenantResolved(true);
+        }
       }
     })();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -145,6 +161,10 @@ export default function ContasBancariasPage() {
   }
 
   async function handleSave() {
+    if (!tenantId) {
+      setError("Não foi possível identificar a unidade ativa.");
+      return;
+    }
     if (!isFormValid()) return;
     setSaving(true);
     setError(null);
@@ -169,13 +189,17 @@ export default function ContasBancariasPage() {
       await load();
       setSuccess(editing ? "Conta atualizada." : "Conta cadastrada.");
     } catch (saveError) {
-      setError(formatError(saveError));
+      setError(normalizeErrorMessage(saveError));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleToggle(conta: ContaBancaria) {
+    if (!tenantId) {
+      setError("Não foi possível identificar a unidade ativa.");
+      return;
+    }
     setError(null);
     setSuccess(null);
     try {
@@ -188,7 +212,7 @@ export default function ContasBancariasPage() {
         `Conta ${updated.statusCadastro === "ATIVA" ? "ativada" : "inativada"} com sucesso.`
       );
     } catch (toggleError) {
-      setError(formatError(toggleError));
+      setError(normalizeErrorMessage(toggleError));
     }
   }
 
@@ -214,6 +238,14 @@ export default function ContasBancariasPage() {
     setModalOpen(true);
   }
 
+  const initialLoading = !tenantResolved || (loading && !hasLoadedOnce);
+  const isTenantUnavailable = tenantResolved && !tenantId;
+  const emptyStateMessage = isTenantUnavailable
+    ? "Não foi possível identificar a unidade ativa."
+    : error
+      ? "Não foi possível carregar as contas bancárias."
+      : "Nenhuma conta bancária cadastrada.";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
@@ -223,10 +255,15 @@ export default function ContasBancariasPage() {
             Contas bancárias
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Cadastro da unidade ativa: <span className="font-medium text-foreground">{tenantName}</span>
+            Cadastro da unidade ativa:{" "}
+            <span className="font-medium text-foreground">
+              {tenantResolved ? tenantName : "Carregando..."}
+            </span>
           </p>
         </div>
-        <Button onClick={openCreate}>Nova conta bancária</Button>
+        <Button onClick={openCreate} disabled={!tenantResolved || !tenantId}>
+          Nova conta bancária
+        </Button>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
@@ -425,21 +462,21 @@ export default function ContasBancariasPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-sm">
-            {loading && (
+            {initialLoading && (
               <tr>
                 <td colSpan={8} className="py-10 text-center text-muted-foreground">
                   Carregando...
                 </td>
               </tr>
             )}
-            {!loading && filtered.length === 0 && (
+            {!initialLoading && filtered.length === 0 && (
               <tr>
                 <td colSpan={8} className="py-10 text-center text-muted-foreground">
-                  Nenhuma conta bancária cadastrada.
+                  {emptyStateMessage}
                 </td>
               </tr>
             )}
-            {!loading &&
+            {!initialLoading &&
               filtered.map((conta) => (
                 <tr key={conta.id} className="hover:bg-secondary/30">
                   <td className="px-4 py-3 font-medium">{conta.apelido}</td>

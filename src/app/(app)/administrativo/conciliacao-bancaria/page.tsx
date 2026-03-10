@@ -25,6 +25,7 @@ import type {
 } from "@/lib/types";
 import { listContasPagar, listPagamentos } from "@/lib/mock/services";
 import { listContasBancariasApi } from "@/lib/api/contas-bancarias";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const ORIGEM_LABEL: Record<OrigemConciliacao, string> = {
   MANUAL: "Manual",
@@ -62,11 +63,6 @@ function formatBRL(value: number) {
   });
 }
 
-function formatError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return "Não foi possível completar a ação.";
-}
-
 function mapStatusClass(status: StatusConciliacao) {
   if (status === "CONCILIADA") return "bg-gym-teal/15 text-gym-teal";
   if (status === "IGNORADA") return "bg-muted text-muted-foreground";
@@ -89,7 +85,9 @@ export default function ConciliacaoBancariaPage() {
   const [tenantId, setTenantId] = useState("");
   const [tenantName, setTenantName] = useState("Tenant ativo");
 
+  const [tenantResolved, setTenantResolved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -146,6 +144,7 @@ export default function ConciliacaoBancariaPage() {
   );
 
   const load = useCallback(async () => {
+    if (!tenantId) return;
     setLoading(true);
     setError(null);
     try {
@@ -169,22 +168,39 @@ export default function ConciliacaoBancariaPage() {
         setImportContaId(contasResponse[0].id);
       }
     } catch (loadError) {
-      setError(formatError(loadError));
+      setError(normalizeErrorMessage(loadError));
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
   }, [tenantId, filtroStatus, filtroConta, startDate, endDate, importContaId]);
 
   useEffect(() => {
+    let active = true;
+    setTenantResolved(false);
+    setHasLoadedOnce(false);
+
     void (async () => {
       try {
         const tenant = await getCurrentTenant();
+        if (!active) return;
         setTenantId(tenant.id);
         setTenantName(tenant.nome);
-      } catch {
+      } catch (tenantError) {
+        if (!active) return;
+        setTenantId("");
         setTenantName("Tenant ativo");
+        setError(normalizeErrorMessage(tenantError));
+      } finally {
+        if (active) {
+          setTenantResolved(true);
+        }
       }
     })();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -263,6 +279,10 @@ export default function ConciliacaoBancariaPage() {
   }
 
   async function handleImport() {
+    if (!tenantId) {
+      setError("Não foi possível identificar a unidade ativa.");
+      return;
+    }
     setError(null);
     setSuccess(null);
     setSaving(true);
@@ -278,7 +298,7 @@ export default function ConciliacaoBancariaPage() {
       setSuccess("Importação concluída.");
       await load();
     } catch (importError) {
-      setError(formatError(importError));
+      setError(normalizeErrorMessage(importError));
     } finally {
       setSaving(false);
     }
@@ -295,6 +315,10 @@ export default function ConciliacaoBancariaPage() {
   }
 
   async function handleConciliar() {
+    if (!tenantId) {
+      setError("Não foi possível identificar a unidade ativa.");
+      return;
+    }
     if (!linhaSelecionada) return;
     if (conciliarForm.contaReceberId === NONE_OPTION && conciliarForm.contaPagarId === NONE_OPTION) {
       setError("Selecione conta a receber ou conta a pagar.");
@@ -327,13 +351,17 @@ export default function ConciliacaoBancariaPage() {
       setLinhaSelecionada(null);
       setSuccess("Conciliação registrada com sucesso.");
     } catch (conciliationError) {
-      setError(formatError(conciliationError));
+      setError(normalizeErrorMessage(conciliationError));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleIgnorar(linha: ConciliacaoLinha) {
+    if (!tenantId) {
+      setError("Não foi possível identificar a unidade ativa.");
+      return;
+    }
     setError(null);
     setSuccess(null);
     try {
@@ -353,9 +381,17 @@ export default function ConciliacaoBancariaPage() {
       );
       setSuccess("Lançamento ignorado.");
     } catch (ignoreError) {
-      setError(formatError(ignoreError));
+      setError(normalizeErrorMessage(ignoreError));
     }
   }
+
+  const initialLoading = !tenantResolved || (loading && !hasLoadedOnce);
+  const isTenantUnavailable = tenantResolved && !tenantId;
+  const emptyStateMessage = isTenantUnavailable
+    ? "Não foi possível identificar a unidade ativa."
+    : error
+      ? "Não foi possível carregar os lançamentos."
+      : "Nenhum lançamento para o filtro selecionado.";
 
   return (
     <div className="space-y-6">
@@ -364,7 +400,10 @@ export default function ConciliacaoBancariaPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Administrativo</p>
           <h1 className="font-display text-2xl font-bold tracking-tight">Conciliação bancária</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Unidade ativa: <span className="font-medium text-foreground">{tenantName}</span>
+            Unidade ativa:{" "}
+            <span className="font-medium text-foreground">
+              {tenantResolved ? tenantName : "Carregando..."}
+            </span>
           </p>
         </div>
       </div>
@@ -434,7 +473,7 @@ export default function ConciliacaoBancariaPage() {
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button onClick={handleImport} disabled={saving || !payload.trim()}>
+            <Button onClick={handleImport} disabled={saving || !tenantResolved || !tenantId || !payload.trim()}>
               {saving ? "Importando..." : "Importar linhas"}
             </Button>
             <Button
@@ -592,21 +631,21 @@ export default function ConciliacaoBancariaPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-sm">
-            {loading && (
+            {initialLoading && (
               <tr>
                 <td colSpan={8} className="py-10 text-center text-muted-foreground">
                   Carregando...
                 </td>
               </tr>
             )}
-            {!loading && linhas.length === 0 && (
+            {!initialLoading && linhas.length === 0 && (
               <tr>
                 <td colSpan={8} className="py-10 text-center text-muted-foreground">
-                  Nenhum lançamento para o filtro selecionado.
+                  {emptyStateMessage}
                 </td>
               </tr>
             )}
-            {!loading &&
+            {!initialLoading &&
               linhas.map((linha) => {
                 const contaLabel = contasBancariasMap.get(linha.contaBancariaId) ?? "Conta sem referência";
                 return (
