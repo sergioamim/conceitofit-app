@@ -17,9 +17,10 @@
             "description": "Mapear clientes, services e schemas atuais e comparar com a API real.",
             "dependencies": [],
             "details": "Inspecionar todos os módulos em `src/lib/api/*`, identificar endpoints, contratos tipados, normalizações de fetchers e discrepâncias com a API real para priorizar ajustes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-10T22:04:06.049Z"
           },
           {
             "id": 2,
@@ -77,7 +78,7 @@
         "complexity": 8,
         "recommendedSubtasks": 5,
         "expansionPrompt": "Quebre em subtarefas para: mapear imports de @/lib/mock/services nas páginas, auditar apiRequest/http e normalizações, alinhar tipos/schemas nas APIs (src/lib/api/*), padronizar tratamento de erros e estados na UI, e adicionar testes de integração/Playwright para fluxos críticos.",
-        "updatedAt": "2026-03-10T21:50:56.798Z"
+        "updatedAt": "2026-03-10T22:04:06.049Z"
       },
       {
         "id": "2",
@@ -834,7 +835,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-10T21:50:56.799Z",
+      "lastModified": "2026-03-10T22:04:06.050Z",
       "taskCount": 10,
       "completedCount": 0,
       "tags": [
