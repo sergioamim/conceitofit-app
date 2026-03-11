@@ -5,10 +5,10 @@ import { RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { authMe, listTenants, listarStatusConexaoCatraca } from "@/lib/mock/services";
-import { isRealApiEnabled } from "@/lib/api/http";
+import { listTenants, listarStatusConexaoCatraca } from "@/lib/mock/services";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { Tenant } from "@/lib/types";
+import { useAuthAccess } from "@/hooks/use-session-context";
 
 const TODOS_TENANTS_VALUE = "__TODOS_TENANTS__";
 
@@ -39,6 +39,7 @@ function getTenantStatusLabel(connected: number): string {
 }
 
 export default function CatracaStatusPage() {
+  const access = useAuthAccess();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState(TODOS_TENANTS_VALUE);
   const [rows, setRows] = useState<TenantStatusRow[]>([]);
@@ -46,8 +47,6 @@ export default function CatracaStatusPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [permissionLoading, setPermissionLoading] = useState(true);
-  const [canAccess, setCanAccess] = useState(false);
 
   const tenantMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -64,25 +63,6 @@ export default function CatracaStatusPage() {
     return list.filter((row) => [row.nome, row.tenantId].join(" ").toLowerCase().includes(term));
   }, [rows, search]);
 
-  async function loadPermissions() {
-    if (!isRealApiEnabled()) {
-      setCanAccess(true);
-      setPermissionLoading(false);
-      return;
-    }
-
-    try {
-      const user = await authMe();
-      const roles = (user?.roles ?? []).map((role) => role.toUpperCase());
-      const isAdmin = roles.some((role) => role === "ADMIN" || role.includes("ADMIN"));
-      setCanAccess(isAdmin);
-    } catch {
-      setCanAccess(false);
-    } finally {
-      setPermissionLoading(false);
-    }
-  }
-
   useEffect(() => {
     void (async () => {
       try {
@@ -95,7 +75,7 @@ export default function CatracaStatusPage() {
   }, []);
 
   const load = useCallback(async () => {
-    if (!canAccess) return;
+    if (!access.canAccessElevatedModules) return;
     setLoading(true);
     setError("");
     try {
@@ -148,17 +128,13 @@ export default function CatracaStatusPage() {
     } finally {
       setLoading(false);
     }
-  }, [canAccess, selectedTenantId, tenants, tenantMap]);
+  }, [access.canAccessElevatedModules, selectedTenantId, tenants, tenantMap]);
 
   useEffect(() => {
-    void loadPermissions();
-  }, []);
-
-  useEffect(() => {
-    if (!permissionLoading) {
+    if (!access.loading) {
       void load();
     }
-  }, [load, permissionLoading]);
+  }, [access.loading, load]);
 
   const tenantsOptions = useMemo(
     () => [
@@ -178,7 +154,7 @@ export default function CatracaStatusPage() {
             Monitore conexões WebSocket ativas por unidade (tenant).
           </p>
         </div>
-        <Button onClick={() => void load()} disabled={!canAccess || loading}>
+        <Button onClick={() => void load()} disabled={!access.canAccessElevatedModules || loading}>
           <RefreshCw className="mr-2 size-4" />
           {loading ? "Atualizando..." : "Atualizar"}
         </Button>
@@ -186,7 +162,7 @@ export default function CatracaStatusPage() {
 
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-          <Select value={selectedTenantId} onValueChange={setSelectedTenantId} disabled={!canAccess || permissionLoading}>
+          <Select value={selectedTenantId} onValueChange={setSelectedTenantId} disabled={!access.canAccessElevatedModules || access.loading}>
             <SelectTrigger className="w-full bg-secondary border-border">
               <SelectValue placeholder="Selecionar unidade" />
             </SelectTrigger>
@@ -212,9 +188,9 @@ export default function CatracaStatusPage() {
           />
         </div>
 
-        {permissionLoading ? (
+        {access.loading ? (
           <p className="text-xs text-muted-foreground">Validando permissão...</p>
-        ) : !canAccess ? (
+        ) : !access.canAccessElevatedModules ? (
           <p className="text-sm text-gym-danger">
             Acesso negado. Apenas usuários com permissão alta podem visualizar esta página.
           </p>

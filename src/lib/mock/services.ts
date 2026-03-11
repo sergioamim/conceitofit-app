@@ -1,9 +1,14 @@
 import { getStore, setStore, TENANT_ID_DEFAULT } from "./store";
 import type {
   Prospect,
+  ReservaAula,
+  ReservaAulaOrigem,
+  ReservaAulaStatus,
   Aluno,
   Atividade,
   AtividadeGrade,
+  AulaOcupacao,
+  AulaSessao,
   Plano,
   Matricula,
   Pagamento,
@@ -46,6 +51,16 @@ import type {
   TipoVenda,
   Academia,
   CampanhaCRM,
+  CrmActivity,
+  CrmAutomation,
+  CrmCadencia,
+  CrmPipelineStage,
+  CrmPlaybook,
+  CrmTask,
+  CrmTaskPrioridade,
+  CrmTaskStatus,
+  CrmTaskTipo,
+  CrmWorkspaceSnapshot,
   Treino,
   CampanhaCanal,
   CampanhaPublicoAlvo,
@@ -63,6 +78,21 @@ import type {
   PaginatedAlunosResult,
 } from "../types";
 import { isRealApiEnabled } from "../api/http";
+import {
+  buildAulaSessao,
+  createSessaoAulaId,
+  formatDiaSemana,
+  listDatesBetween,
+  sortReservasAula,
+  sortSessoesAula,
+  toIsoDate,
+} from "../aulas/reservas";
+import {
+  buildDefaultCrmPipelineStages,
+  getCrmStageName,
+  getEffectiveCrmTaskStatus,
+  isCrmTaskClosed,
+} from "../crm/workspace";
 import {
   loginApi,
   meApi,
@@ -143,13 +173,35 @@ import {
   deleteProspectApi,
   getProspectApi,
   listProspectAgendamentosApi,
+  listCrmActivitiesApi,
+  listCrmAutomacoesApi,
+  listCrmCadenciasApi,
+  listCrmPipelineStagesApi,
+  listCrmPlaybooksApi,
+  listCrmTasksApi,
   listProspectMensagensApi,
   listProspectsApi,
   marcarProspectPerdidoApi,
+  createCrmCadenciaApi,
+  createCrmPlaybookApi,
+  createCrmTaskApi,
+  updateCrmAutomacaoApi,
+  updateCrmCadenciaApi,
+  updateCrmPlaybookApi,
+  updateCrmTaskApi,
   updateProspectAgendamentoApi,
   updateProspectApi,
   updateProspectStatusApi,
 } from "../api/crm";
+import {
+  cancelarReservaAulaApi,
+  getAulaOcupacaoApi,
+  listAulasAgendaApi,
+  listReservasAulaApi,
+  promoverReservaWaitlistApi,
+  registrarCheckinAulaApi,
+  reservarAulaApi,
+} from "../api/reservas";
 import { getDashboardApi } from "../api/dashboard";
 import {
   createAlunoApi,
@@ -260,6 +312,11 @@ import {
   listVendasApi,
   type ListVendasApiEnvelopeResult,
 } from "../api/vendas";
+import {
+  resolveContratoStatusFromPlano,
+  resolvePagamentoVendaStatus,
+  resolvePlanoIdFromVendaItems,
+} from "../comercial/plano-flow";
 
 function genId(): string {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -2054,7 +2111,14 @@ function tenantHasLinkedData(store: ReturnType<typeof getStore>, tenantId: strin
     store.produtos.some((item) => item.tenantId === tenantId) ||
     store.vendas.some((item) => item.tenantId === tenantId) ||
     store.vouchers.some((item) => item.tenantId === tenantId) ||
-    store.campanhasCrm.some((item) => item.tenantId === tenantId)
+    store.campanhasCrm.some((item) => item.tenantId === tenantId) ||
+    store.crmPipelineStages.some((item) => item.tenantId === tenantId) ||
+    store.crmTasks.some((item) => item.tenantId === tenantId) ||
+    store.crmPlaybooks.some((item) => item.tenantId === tenantId) ||
+    store.crmCadencias.some((item) => item.tenantId === tenantId) ||
+    store.crmAutomations.some((item) => item.tenantId === tenantId) ||
+    store.crmActivities.some((item) => item.tenantId === tenantId) ||
+    store.reservasAulas.some((item) => item.tenantId === tenantId)
   );
 }
 
@@ -2169,6 +2233,878 @@ export async function encerrarCampanhaCrm(id: string): Promise<void> {
         : c
     ),
   }));
+}
+
+function findProspectForTenant(tenantId: string, prospectId?: string): Prospect | undefined {
+  if (!prospectId) return undefined;
+  return getStore().prospects.find((prospect) => prospect.id === prospectId && prospect.tenantId === tenantId);
+}
+
+function findFuncionarioForTenant(_tenantId: string, funcionarioId?: string): Funcionario | undefined {
+  if (!funcionarioId) return undefined;
+  return getStore().funcionarios.find((funcionario) => funcionario.id === funcionarioId);
+}
+
+function appendCrmActivity(activity: CrmActivity): void {
+  setStore((s) => ({
+    ...s,
+    crmActivities: [activity, ...s.crmActivities.filter((item) => item.id !== activity.id)],
+  }));
+}
+
+function logCrmActivity(input: Omit<CrmActivity, "id" | "tenantId" | "dataCriacao"> & {
+  tenantId?: string;
+  dataCriacao?: string;
+}): CrmActivity {
+  const activity: CrmActivity = {
+    id: genId(),
+    tenantId: input.tenantId ?? getCurrentTenantId(),
+    prospectId: input.prospectId,
+    prospectNome: input.prospectNome,
+    taskId: input.taskId,
+    tipo: input.tipo,
+    titulo: input.titulo,
+    descricao: input.descricao,
+    actorNome: input.actorNome,
+    actorId: input.actorId,
+    origem: input.origem,
+    dataCriacao: input.dataCriacao ?? now(),
+  };
+  appendCrmActivity(activity);
+  return activity;
+}
+
+function sortCrmTasks(tasks: CrmTask[]): CrmTask[] {
+  const priorityWeight: Record<CrmTaskPrioridade, number> = {
+    ALTA: 3,
+    MEDIA: 2,
+    BAIXA: 1,
+  };
+  return [...tasks].sort((a, b) => {
+    const dueCompare = a.vencimentoEm.localeCompare(b.vencimentoEm);
+    if (dueCompare !== 0) return dueCompare;
+    return priorityWeight[b.prioridade] - priorityWeight[a.prioridade];
+  });
+}
+
+function normalizeCrmTask(task: CrmTask): CrmTask {
+  const prospect = findProspectForTenant(task.tenantId, task.prospectId);
+  const responsavel = findFuncionarioForTenant(task.tenantId, task.responsavelId);
+  return {
+    ...task,
+    prospectNome: task.prospectNome ?? prospect?.nome,
+    stageStatus: task.stageStatus ?? prospect?.status,
+    responsavelNome: task.responsavelNome ?? responsavel?.nome,
+    status: getEffectiveCrmTaskStatus(task),
+  };
+}
+
+function ensureCrmStagesForTenant(tenantId: string): CrmPipelineStage[] {
+  const stages = getStore().crmPipelineStages.filter((stage) => stage.tenantId === tenantId);
+  if (stages.length > 0) {
+    return [...stages].sort((a, b) => a.ordem - b.ordem);
+  }
+  const defaults = buildDefaultCrmPipelineStages(tenantId);
+  setStore((s) => ({
+    ...s,
+    crmPipelineStages: [...s.crmPipelineStages, ...defaults],
+  }));
+  return defaults;
+}
+
+export async function listCrmPipelineStages(): Promise<CrmPipelineStage[]> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const stages = await listCrmPipelineStagesApi({
+        tenantId: tenantIdForApi,
+      });
+      const normalized = stages.length > 0 ? stages : buildDefaultCrmPipelineStages(tenantId);
+      setStore((s) => ({
+        ...s,
+        crmPipelineStages: mergeTenantScopedData(s.crmPipelineStages, normalized),
+      }));
+      return [...normalized].sort((a, b) => a.ordem - b.ordem);
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao listar pipeline na API real. Usando store local.", error);
+    }
+  }
+  return ensureCrmStagesForTenant(tenantId);
+}
+
+export async function listCrmTasks(params?: {
+  status?: CrmTaskStatus;
+  prioridade?: CrmTaskPrioridade;
+  prospectId?: string;
+  responsavelId?: string;
+  somenteAtrasadas?: boolean;
+}): Promise<CrmTask[]> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const tasks = await listCrmTasksApi({
+        tenantId: tenantIdForApi,
+        status: params?.status,
+        prioridade: params?.prioridade,
+        prospectId: params?.prospectId,
+        responsavelId: params?.responsavelId,
+      });
+      const normalized = tasks.map((task) => normalizeCrmTask(task));
+      setStore((s) => ({
+        ...s,
+        crmTasks: mergeTenantScopedData(s.crmTasks, normalized),
+      }));
+      return sortCrmTasks(
+        normalized.filter((task) => {
+          const status = getEffectiveCrmTaskStatus(task);
+          if (params?.somenteAtrasadas && status !== "ATRASADA") return false;
+          return true;
+        })
+      );
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao listar tarefas CRM na API real. Usando store local.", error);
+    }
+  }
+
+  const tasks = getStore().crmTasks
+    .filter((task) => task.tenantId === tenantId)
+    .map((task) => normalizeCrmTask(task))
+    .filter((task) => {
+      if (params?.status && task.status !== params.status) return false;
+      if (params?.prioridade && task.prioridade !== params.prioridade) return false;
+      if (params?.prospectId && task.prospectId !== params.prospectId) return false;
+      if (params?.responsavelId && task.responsavelId !== params.responsavelId) return false;
+      if (params?.somenteAtrasadas && task.status !== "ATRASADA") return false;
+      return true;
+    });
+  return sortCrmTasks(tasks);
+}
+
+export async function createCrmTask(data: {
+  prospectId?: string;
+  stageStatus?: StatusProspect;
+  titulo: string;
+  descricao?: string;
+  tipo: CrmTaskTipo;
+  prioridade: CrmTaskPrioridade;
+  status?: CrmTaskStatus;
+  responsavelId?: string;
+  vencimentoEm: string;
+}): Promise<CrmTask> {
+  const tenantId = getCurrentTenantId();
+  const prospect = findProspectForTenant(tenantId, data.prospectId);
+  const responsavel = findFuncionarioForTenant(
+    tenantId,
+    data.responsavelId ?? prospect?.responsavelId
+  );
+  const payload = {
+    prospectId: data.prospectId,
+    stageStatus: data.stageStatus ?? prospect?.status,
+    titulo: data.titulo.trim(),
+    descricao: trimOptionalString(data.descricao),
+    tipo: data.tipo,
+    prioridade: data.prioridade,
+    status: data.status ?? "PENDENTE",
+    responsavelId: responsavel?.id,
+    vencimentoEm: data.vencimentoEm,
+  };
+
+  if (!payload.titulo) {
+    throw new Error("Título da tarefa é obrigatório.");
+  }
+  if (!payload.vencimentoEm) {
+    throw new Error("Vencimento da tarefa é obrigatório.");
+  }
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const created = normalizeCrmTask(
+        await createCrmTaskApi({
+          tenantId: tenantIdForApi,
+          data: payload,
+        })
+      );
+      setStore((s) => ({
+        ...s,
+        crmTasks: [created, ...s.crmTasks.filter((item) => item.id !== created.id)],
+      }));
+      logCrmActivity({
+        tenantId,
+        prospectId: created.prospectId,
+        prospectNome: created.prospectNome,
+        taskId: created.id,
+        tipo: "TAREFA_CRIADA",
+        titulo: `Tarefa criada: ${created.titulo}`,
+        descricao: created.descricao,
+        actorNome: created.responsavelNome ?? "Operação CRM",
+        actorId: created.responsavelId,
+        origem: created.origem === "MANUAL" ? "OPERADOR" : "AUTOMACAO",
+      });
+      return created;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao criar tarefa CRM na API real. Aplicando criação local.", error);
+    }
+  }
+
+  const created: CrmTask = normalizeCrmTask({
+    id: genId(),
+    tenantId,
+    prospectId: payload.prospectId,
+    prospectNome: prospect?.nome,
+    stageStatus: payload.stageStatus,
+    titulo: payload.titulo,
+    descricao: payload.descricao,
+    tipo: payload.tipo,
+    prioridade: payload.prioridade,
+    status: payload.status,
+    responsavelId: responsavel?.id,
+    responsavelNome: responsavel?.nome,
+    origem: "MANUAL",
+    vencimentoEm: payload.vencimentoEm,
+    dataCriacao: now(),
+  });
+  setStore((s) => ({
+    ...s,
+    crmTasks: [created, ...s.crmTasks],
+  }));
+  logCrmActivity({
+    prospectId: created.prospectId,
+    prospectNome: created.prospectNome,
+    taskId: created.id,
+    tipo: "TAREFA_CRIADA",
+    titulo: `Tarefa criada: ${created.titulo}`,
+    descricao: created.descricao,
+    actorNome: created.responsavelNome ?? "Operação CRM",
+    actorId: created.responsavelId,
+    origem: "OPERADOR",
+  });
+  return created;
+}
+
+export async function updateCrmTask(
+  id: string,
+  data: Partial<{
+    prospectId?: string;
+    stageStatus?: StatusProspect;
+    titulo: string;
+    descricao?: string;
+    tipo: CrmTaskTipo;
+    prioridade: CrmTaskPrioridade;
+    status: CrmTaskStatus;
+    responsavelId?: string;
+    vencimentoEm: string;
+  }>
+): Promise<CrmTask> {
+  const tenantId = getCurrentTenantId();
+  const current = getStore().crmTasks.find((task) => task.id === id && task.tenantId === tenantId);
+  if (!current) {
+    throw new Error("Tarefa CRM não encontrada.");
+  }
+
+  const prospect = findProspectForTenant(tenantId, data.prospectId ?? current.prospectId);
+  const responsavel = findFuncionarioForTenant(
+    tenantId,
+    data.responsavelId ?? current.responsavelId ?? prospect?.responsavelId
+  );
+  const patch = {
+    ...data,
+    titulo: data.titulo?.trim(),
+    descricao: data.descricao !== undefined ? trimOptionalString(data.descricao) : current.descricao,
+    responsavelId: data.responsavelId !== undefined ? responsavel?.id : current.responsavelId,
+  };
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const updated = normalizeCrmTask(
+        await updateCrmTaskApi({
+          tenantId: tenantIdForApi,
+          id,
+          data: patch,
+        })
+      );
+      setStore((s) => ({
+        ...s,
+        crmTasks: s.crmTasks.map((task) => (task.id === id ? updated : task)),
+      }));
+      if (updated.status === "CONCLUIDA" && current.status !== "CONCLUIDA") {
+        logCrmActivity({
+          tenantId,
+          prospectId: updated.prospectId,
+          prospectNome: updated.prospectNome,
+          taskId: updated.id,
+          tipo: "TAREFA_CONCLUIDA",
+          titulo: `Tarefa concluída: ${updated.titulo}`,
+          actorNome: updated.responsavelNome ?? "Operação CRM",
+          actorId: updated.responsavelId,
+          origem: "OPERADOR",
+        });
+      }
+      return updated;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao atualizar tarefa CRM na API real. Aplicando update local.", error);
+    }
+  }
+
+  const nextStatus = patch.status ?? current.status;
+  const updated = normalizeCrmTask({
+    ...current,
+    ...patch,
+    prospectId: data.prospectId !== undefined ? data.prospectId : current.prospectId,
+    prospectNome: prospect?.nome ?? current.prospectNome,
+    stageStatus: patch.stageStatus ?? current.stageStatus ?? prospect?.status,
+    titulo: patch.titulo ?? current.titulo,
+    responsavelId: responsavel?.id ?? current.responsavelId,
+    responsavelNome: responsavel?.nome ?? current.responsavelNome,
+    status: nextStatus,
+    concluidaEm:
+      nextStatus === "CONCLUIDA"
+        ? current.concluidaEm ?? now()
+        : nextStatus === "CANCELADA"
+        ? current.concluidaEm
+        : undefined,
+    dataAtualizacao: now(),
+  });
+  setStore((s) => ({
+    ...s,
+    crmTasks: s.crmTasks.map((task) => (task.id === id ? updated : task)),
+  }));
+  if (updated.status === "CONCLUIDA" && current.status !== "CONCLUIDA") {
+    logCrmActivity({
+      prospectId: updated.prospectId,
+      prospectNome: updated.prospectNome,
+      taskId: updated.id,
+      tipo: "TAREFA_CONCLUIDA",
+      titulo: `Tarefa concluída: ${updated.titulo}`,
+      actorNome: updated.responsavelNome ?? "Operação CRM",
+      actorId: updated.responsavelId,
+      origem: "OPERADOR",
+    });
+  }
+  return updated;
+}
+
+export async function listCrmPlaybooks(): Promise<CrmPlaybook[]> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const playbooks = await listCrmPlaybooksApi({
+        tenantId: tenantIdForApi,
+      });
+      setStore((s) => ({
+        ...s,
+        crmPlaybooks: mergeTenantScopedData(s.crmPlaybooks, playbooks),
+      }));
+      return [...playbooks].sort((a, b) => a.nome.localeCompare(b.nome));
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao listar playbooks na API real. Usando store local.", error);
+    }
+  }
+  return [...getStore().crmPlaybooks]
+    .filter((playbook) => playbook.tenantId === tenantId)
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
+export async function createCrmPlaybook(data: {
+  nome: string;
+  objetivo: string;
+  stageStatus: StatusProspect;
+  ativo?: boolean;
+  passos: Array<{
+    titulo: string;
+    descricao?: string;
+    acao: CrmPlaybook["passos"][number]["acao"];
+    prazoHoras: number;
+    obrigatoria: boolean;
+  }>;
+}): Promise<CrmPlaybook> {
+  const tenantId = getCurrentTenantId();
+  const payload = {
+    nome: data.nome.trim(),
+    objetivo: data.objetivo.trim(),
+    stageStatus: data.stageStatus,
+    ativo: data.ativo ?? true,
+    passos: data.passos.map((step) => ({
+      id: genId(),
+      titulo: step.titulo.trim(),
+      descricao: trimOptionalString(step.descricao),
+      acao: step.acao,
+      prazoHoras: Math.max(0, toFiniteNumber(step.prazoHoras, 0)),
+      obrigatoria: step.obrigatoria,
+    })),
+  };
+  if (!payload.nome) throw new Error("Nome do playbook é obrigatório.");
+  if (payload.passos.length === 0) throw new Error("Inclua ao menos uma etapa no playbook.");
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const created = await createCrmPlaybookApi({
+        tenantId: tenantIdForApi,
+        data: payload,
+      });
+      setStore((s) => ({
+        ...s,
+        crmPlaybooks: [created, ...s.crmPlaybooks.filter((item) => item.id !== created.id)],
+      }));
+      logCrmActivity({
+        tenantId,
+        tipo: "PLAYBOOK_ATUALIZADO",
+        titulo: `Playbook criado: ${created.nome}`,
+        descricao: `Etapa base ${getCrmStageName(created.stageStatus)}.`,
+        actorNome: "Operação CRM",
+        origem: "OPERADOR",
+      });
+      return created;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao criar playbook na API real. Aplicando criação local.", error);
+    }
+  }
+
+  const created: CrmPlaybook = {
+    id: genId(),
+    tenantId,
+    nome: payload.nome,
+    objetivo: payload.objetivo,
+    stageStatus: payload.stageStatus,
+    ativo: payload.ativo,
+    passos: payload.passos,
+    dataCriacao: now(),
+  };
+  setStore((s) => ({
+    ...s,
+    crmPlaybooks: [created, ...s.crmPlaybooks],
+  }));
+  logCrmActivity({
+    tipo: "PLAYBOOK_ATUALIZADO",
+    titulo: `Playbook criado: ${created.nome}`,
+    descricao: `Etapa base ${getCrmStageName(created.stageStatus)}.`,
+    actorNome: "Operação CRM",
+    origem: "OPERADOR",
+  });
+  return created;
+}
+
+export async function updateCrmPlaybook(
+  id: string,
+  data: Partial<{
+    nome: string;
+    objetivo: string;
+    stageStatus: StatusProspect;
+    ativo: boolean;
+    passos: Array<{
+      id?: string;
+      titulo: string;
+      descricao?: string;
+      acao: CrmPlaybook["passos"][number]["acao"];
+      prazoHoras: number;
+      obrigatoria: boolean;
+    }>;
+  }>
+): Promise<CrmPlaybook> {
+  const tenantId = getCurrentTenantId();
+  const current = getStore().crmPlaybooks.find((playbook) => playbook.id === id && playbook.tenantId === tenantId);
+  if (!current) throw new Error("Playbook não encontrado.");
+  const patch = {
+    nome: data.nome?.trim(),
+    objetivo: data.objetivo?.trim(),
+    stageStatus: data.stageStatus,
+    ativo: data.ativo,
+    passos: data.passos?.map((step) => ({
+      id: step.id ?? genId(),
+      titulo: step.titulo.trim(),
+      descricao: trimOptionalString(step.descricao),
+      acao: step.acao,
+      prazoHoras: Math.max(0, toFiniteNumber(step.prazoHoras, 0)),
+      obrigatoria: step.obrigatoria,
+    })),
+  };
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const updated = await updateCrmPlaybookApi({
+        tenantId: tenantIdForApi,
+        id,
+        data: patch,
+      });
+      setStore((s) => ({
+        ...s,
+        crmPlaybooks: s.crmPlaybooks.map((playbook) => (playbook.id === id ? updated : playbook)),
+      }));
+      logCrmActivity({
+        tenantId,
+        tipo: "PLAYBOOK_ATUALIZADO",
+        titulo: `Playbook atualizado: ${updated.nome}`,
+        descricao: `Etapa base ${getCrmStageName(updated.stageStatus)}.`,
+        actorNome: "Operação CRM",
+        origem: "OPERADOR",
+      });
+      return updated;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao atualizar playbook na API real. Aplicando update local.", error);
+    }
+  }
+
+  const updated: CrmPlaybook = {
+    ...current,
+    nome: patch.nome ?? current.nome,
+    objetivo: patch.objetivo ?? current.objetivo,
+    stageStatus: patch.stageStatus ?? current.stageStatus,
+    ativo: patch.ativo ?? current.ativo,
+    passos: patch.passos ?? current.passos,
+    dataAtualizacao: now(),
+  };
+  setStore((s) => ({
+    ...s,
+    crmPlaybooks: s.crmPlaybooks.map((playbook) => (playbook.id === id ? updated : playbook)),
+  }));
+  logCrmActivity({
+    tipo: "PLAYBOOK_ATUALIZADO",
+    titulo: `Playbook atualizado: ${updated.nome}`,
+    descricao: `Etapa base ${getCrmStageName(updated.stageStatus)}.`,
+    actorNome: "Operação CRM",
+    origem: "OPERADOR",
+  });
+  return updated;
+}
+
+export async function listCrmCadencias(): Promise<CrmCadencia[]> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const cadencias = await listCrmCadenciasApi({
+        tenantId: tenantIdForApi,
+      });
+      setStore((s) => ({
+        ...s,
+        crmCadencias: mergeTenantScopedData(s.crmCadencias, cadencias),
+      }));
+      return [...cadencias].sort((a, b) => a.nome.localeCompare(b.nome));
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao listar cadências na API real. Usando store local.", error);
+    }
+  }
+  return [...getStore().crmCadencias]
+    .filter((cadencia) => cadencia.tenantId === tenantId)
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
+export async function createCrmCadencia(data: {
+  nome: string;
+  objetivo: string;
+  stageStatus: StatusProspect;
+  gatilho: CrmCadencia["gatilho"];
+  ativo?: boolean;
+  passos: Array<{
+    titulo: string;
+    acao: CrmCadencia["passos"][number]["acao"];
+    delayDias: number;
+    template?: string;
+    automatica: boolean;
+  }>;
+}): Promise<CrmCadencia> {
+  const tenantId = getCurrentTenantId();
+  const payload = {
+    nome: data.nome.trim(),
+    objetivo: data.objetivo.trim(),
+    stageStatus: data.stageStatus,
+    gatilho: data.gatilho,
+    ativo: data.ativo ?? true,
+    passos: data.passos.map((step) => ({
+      id: genId(),
+      titulo: step.titulo.trim(),
+      acao: step.acao,
+      delayDias: Math.max(0, toFiniteNumber(step.delayDias, 0)),
+      template: trimOptionalString(step.template),
+      automatica: step.automatica,
+    })),
+  };
+  if (!payload.nome) throw new Error("Nome da cadência é obrigatório.");
+  if (payload.passos.length === 0) throw new Error("Inclua ao menos uma etapa na cadência.");
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const created = await createCrmCadenciaApi({
+        tenantId: tenantIdForApi,
+        data: payload,
+      });
+      setStore((s) => ({
+        ...s,
+        crmCadencias: [created, ...s.crmCadencias.filter((item) => item.id !== created.id)],
+      }));
+      logCrmActivity({
+        tenantId,
+        tipo: "CADENCIA_ATIVADA",
+        titulo: `Cadência criada: ${created.nome}`,
+        descricao: `Gatilho ${created.gatilho}.`,
+        actorNome: "Operação CRM",
+        origem: "OPERADOR",
+      });
+      return created;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao criar cadência na API real. Aplicando criação local.", error);
+    }
+  }
+
+  const created: CrmCadencia = {
+    id: genId(),
+    tenantId,
+    nome: payload.nome,
+    objetivo: payload.objetivo,
+    stageStatus: payload.stageStatus,
+    gatilho: payload.gatilho,
+    ativo: payload.ativo,
+    passos: payload.passos,
+    dataCriacao: now(),
+  };
+  setStore((s) => ({
+    ...s,
+    crmCadencias: [created, ...s.crmCadencias],
+  }));
+  logCrmActivity({
+    tipo: "CADENCIA_ATIVADA",
+    titulo: `Cadência criada: ${created.nome}`,
+    descricao: `Gatilho ${created.gatilho}.`,
+    actorNome: "Operação CRM",
+    origem: "OPERADOR",
+  });
+  return created;
+}
+
+export async function updateCrmCadencia(
+  id: string,
+  data: Partial<{
+    nome: string;
+    objetivo: string;
+    stageStatus: StatusProspect;
+    gatilho: CrmCadencia["gatilho"];
+    ativo: boolean;
+    passos: Array<{
+      id?: string;
+      titulo: string;
+      acao: CrmCadencia["passos"][number]["acao"];
+      delayDias: number;
+      template?: string;
+      automatica: boolean;
+    }>;
+  }>
+): Promise<CrmCadencia> {
+  const tenantId = getCurrentTenantId();
+  const current = getStore().crmCadencias.find((cadencia) => cadencia.id === id && cadencia.tenantId === tenantId);
+  if (!current) throw new Error("Cadência não encontrada.");
+  const patch = {
+    nome: data.nome?.trim(),
+    objetivo: data.objetivo?.trim(),
+    stageStatus: data.stageStatus,
+    gatilho: data.gatilho,
+    ativo: data.ativo,
+    passos: data.passos?.map((step) => ({
+      id: step.id ?? genId(),
+      titulo: step.titulo.trim(),
+      acao: step.acao,
+      delayDias: Math.max(0, toFiniteNumber(step.delayDias, 0)),
+      template: trimOptionalString(step.template),
+      automatica: step.automatica,
+    })),
+  };
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const updated = await updateCrmCadenciaApi({
+        tenantId: tenantIdForApi,
+        id,
+        data: patch,
+      });
+      setStore((s) => ({
+        ...s,
+        crmCadencias: s.crmCadencias.map((cadencia) => (cadencia.id === id ? updated : cadencia)),
+      }));
+      logCrmActivity({
+        tenantId,
+        tipo: "CADENCIA_ATIVADA",
+        titulo: `Cadência atualizada: ${updated.nome}`,
+        descricao: `Gatilho ${updated.gatilho}.`,
+        actorNome: "Operação CRM",
+        origem: "OPERADOR",
+      });
+      return updated;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao atualizar cadência na API real. Aplicando update local.", error);
+    }
+  }
+
+  const updated: CrmCadencia = {
+    ...current,
+    nome: patch.nome ?? current.nome,
+    objetivo: patch.objetivo ?? current.objetivo,
+    stageStatus: patch.stageStatus ?? current.stageStatus,
+    gatilho: patch.gatilho ?? current.gatilho,
+    ativo: patch.ativo ?? current.ativo,
+    passos: patch.passos ?? current.passos,
+    dataAtualizacao: now(),
+  };
+  setStore((s) => ({
+    ...s,
+    crmCadencias: s.crmCadencias.map((cadencia) => (cadencia.id === id ? updated : cadencia)),
+  }));
+  logCrmActivity({
+    tipo: "CADENCIA_ATIVADA",
+    titulo: `Cadência atualizada: ${updated.nome}`,
+    descricao: `Gatilho ${updated.gatilho}.`,
+    actorNome: "Operação CRM",
+    origem: "OPERADOR",
+  });
+  return updated;
+}
+
+export async function listCrmAutomacoes(): Promise<CrmAutomation[]> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const automacoes = await listCrmAutomacoesApi({
+        tenantId: tenantIdForApi,
+      });
+      setStore((s) => ({
+        ...s,
+        crmAutomations: mergeTenantScopedData(s.crmAutomations, automacoes),
+      }));
+      return [...automacoes].sort((a, b) => a.nome.localeCompare(b.nome));
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao listar automações na API real. Usando store local.", error);
+    }
+  }
+  return [...getStore().crmAutomations]
+    .filter((automation) => automation.tenantId === tenantId)
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
+export async function updateCrmAutomacao(
+  id: string,
+  data: Partial<Omit<CrmAutomation, "id" | "tenantId" | "dataCriacao">>
+): Promise<CrmAutomation> {
+  const tenantId = getCurrentTenantId();
+  const current = getStore().crmAutomations.find((automation) => automation.id === id && automation.tenantId === tenantId);
+  if (!current) throw new Error("Automação não encontrada.");
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const updated = await updateCrmAutomacaoApi({
+        tenantId: tenantIdForApi,
+        id,
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        crmAutomations: s.crmAutomations.map((automation) => (automation.id === id ? updated : automation)),
+      }));
+      logCrmActivity({
+        tenantId,
+        tipo: "AUTOMACAO_ALTERADA",
+        titulo: `Automação atualizada: ${updated.nome}`,
+        descricao: updated.ativo ? "Automação ativada." : "Automação pausada.",
+        actorNome: "Operação CRM",
+        origem: "OPERADOR",
+      });
+      return updated;
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao atualizar automação na API real. Aplicando update local.", error);
+    }
+  }
+
+  const updated: CrmAutomation = {
+    ...current,
+    ...data,
+    dataAtualizacao: now(),
+  };
+  setStore((s) => ({
+    ...s,
+    crmAutomations: s.crmAutomations.map((automation) => (automation.id === id ? updated : automation)),
+  }));
+  logCrmActivity({
+    tipo: "AUTOMACAO_ALTERADA",
+    titulo: `Automação atualizada: ${updated.nome}`,
+    descricao: updated.ativo ? "Automação ativada." : "Automação pausada.",
+    actorNome: "Operação CRM",
+    origem: "OPERADOR",
+  });
+  return updated;
+}
+
+export async function listCrmActivities(params?: {
+  prospectId?: string;
+  limit?: number;
+}): Promise<CrmActivity[]> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const activities = await listCrmActivitiesApi({
+        tenantId: tenantIdForApi,
+        prospectId: params?.prospectId,
+        limit: params?.limit,
+      });
+      setStore((s) => ({
+        ...s,
+        crmActivities: mergeTenantScopedData(s.crmActivities, activities),
+      }));
+      return [...activities]
+        .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao))
+        .slice(0, params?.limit ?? activities.length);
+    } catch (error) {
+      console.warn("[crm][api-fallback] Falha ao listar histórico CRM na API real. Usando store local.", error);
+    }
+  }
+
+  let activities = [...getStore().crmActivities].filter((activity) => activity.tenantId === tenantId);
+  if (params?.prospectId) {
+    activities = activities.filter((activity) => activity.prospectId === params.prospectId);
+  }
+  activities.sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
+  return activities.slice(0, params?.limit ?? activities.length);
+}
+
+export async function getCrmWorkspaceSnapshot(): Promise<CrmWorkspaceSnapshot> {
+  const tenantId = getCurrentTenantId();
+  const [prospects, stages, tasks, cadencias, automacoes, atividades] = await Promise.all([
+    listProspects(),
+    listCrmPipelineStages(),
+    listCrmTasks(),
+    listCrmCadencias(),
+    listCrmAutomacoes(),
+    listCrmActivities({ limit: 8 }),
+  ]);
+
+  const estagios = stages.map((stage) => ({
+    stageStatus: stage.status,
+    stageNome: stage.nome,
+    totalProspects: prospects.filter((prospect) => prospect.status === stage.status).length,
+    totalTarefas: tasks.filter(
+      (task) => task.stageStatus === stage.status && !isCrmTaskClosed(task.status)
+    ).length,
+    slaHoras: stage.slaHoras,
+  }));
+  const tarefasAbertas = tasks.filter((task) => !isCrmTaskClosed(task.status));
+  return {
+    tenantId,
+    totalProspectsAbertos: prospects.filter((prospect) => !["CONVERTIDO", "PERDIDO"].includes(prospect.status)).length,
+    totalTarefasAbertas: tarefasAbertas.length,
+    totalTarefasAtrasadas: tarefasAbertas.filter((task) => task.status === "ATRASADA").length,
+    totalCadenciasAtivas: cadencias.filter((cadencia) => cadencia.ativo).length,
+    totalAutomacoesAtivas: automacoes.filter((automation) => automation.ativo).length,
+    estagios,
+    proximasTarefas: sortCrmTasks(tarefasAbertas).slice(0, 5),
+    atividadesRecentes: atividades,
+  };
 }
 
 // ─── PROSPECTS ──────────────────────────────────────────────────────────────
@@ -2368,6 +3304,17 @@ export async function createProspect(
         })
       );
       setStore((s) => ({ ...s, prospects: [created, ...s.prospects.filter((item) => item.id !== created.id)] }));
+      logCrmActivity({
+        tenantId,
+        prospectId: created.id,
+        prospectNome: created.nome,
+        tipo: "PROSPECT_CRIADO",
+        titulo: `Prospect criado: ${created.nome}`,
+        descricao: `Origem ${created.origem}.`,
+        actorNome: "Operação CRM",
+        actorId: created.responsavelId,
+        origem: "OPERADOR",
+      });
       return created;
     } catch (error) {
       console.warn("[crm][api-fallback] Falha ao criar prospect na API real. Aplicando criação local.", error);
@@ -2383,6 +3330,16 @@ export async function createProspect(
     statusLog: [{ status: "NOVO", data: createdAt }],
   };
   setStore((s) => ({ ...s, prospects: [prospect, ...s.prospects] }));
+  logCrmActivity({
+    prospectId: prospect.id,
+    prospectNome: prospect.nome,
+    tipo: "PROSPECT_CRIADO",
+    titulo: `Prospect criado: ${prospect.nome}`,
+    descricao: `Origem ${prospect.origem}.`,
+    actorNome: "Operação CRM",
+    actorId: prospect.responsavelId,
+    origem: "OPERADOR",
+  });
   return prospect;
 }
 
@@ -2407,6 +3364,17 @@ export async function updateProspectStatus(
         ...s,
         prospects: s.prospects.map((p) => (p.id === id ? updated : p)),
       }));
+      logCrmActivity({
+        tenantId,
+        prospectId: updated.id,
+        prospectNome: updated.nome,
+        tipo: "ETAPA_ALTERADA",
+        titulo: `Prospect movido para ${getCrmStageName(status)}`,
+        descricao: `Etapa comercial atualizada para ${getCrmStageName(status)}.`,
+        actorNome: updated.nome,
+        actorId: updated.responsavelId,
+        origem: "OPERADOR",
+      });
       return;
     } catch (error) {
       console.warn("[crm][api-fallback] Falha ao atualizar status do prospect na API real. Aplicando update local.", error);
@@ -2427,6 +3395,20 @@ export async function updateProspectStatus(
         : p
     ),
   }));
+  const updated = getStore().prospects.find((p) => p.id === id && p.tenantId === tenantId);
+  if (updated) {
+    const responsavel = findFuncionarioForTenant(tenantId, updated.responsavelId);
+    logCrmActivity({
+      prospectId: updated.id,
+      prospectNome: updated.nome,
+      tipo: "ETAPA_ALTERADA",
+      titulo: `Prospect movido para ${getCrmStageName(status)}`,
+      descricao: `Etapa comercial atualizada para ${getCrmStageName(status)}.`,
+      actorNome: responsavel?.nome ?? "Operação CRM",
+      actorId: updated.responsavelId,
+      origem: "OPERADOR",
+    });
+  }
 }
 
 export async function marcarProspectPerdido(
@@ -2450,6 +3432,17 @@ export async function marcarProspectPerdido(
         ...s,
         prospects: s.prospects.map((p) => (p.id === id ? updated : p)),
       }));
+      logCrmActivity({
+        tenantId,
+        prospectId: updated.id,
+        prospectNome: updated.nome,
+        tipo: "ETAPA_ALTERADA",
+        titulo: `Prospect marcado como perdido`,
+        descricao: motivo ? `Motivo: ${motivo}` : "Lead perdido sem motivo detalhado.",
+        actorNome: updated.nome,
+        actorId: updated.responsavelId,
+        origem: "OPERADOR",
+      });
       return;
     } catch (error) {
       console.warn("[crm][api-fallback] Falha ao marcar prospect como perdido na API real. Aplicando update local.", error);
@@ -2474,6 +3467,20 @@ export async function marcarProspectPerdido(
         : p
     ),
   }));
+  const updated = getStore().prospects.find((p) => p.id === id && p.tenantId === tenantId);
+  if (updated) {
+    const responsavel = findFuncionarioForTenant(tenantId, updated.responsavelId);
+    logCrmActivity({
+      prospectId: updated.id,
+      prospectNome: updated.nome,
+      tipo: "ETAPA_ALTERADA",
+      titulo: "Prospect marcado como perdido",
+      descricao: motivo ? `Motivo: ${motivo}` : "Lead perdido sem motivo detalhado.",
+      actorNome: responsavel?.nome ?? "Operação CRM",
+      actorId: updated.responsavelId,
+      origem: "OPERADOR",
+    });
+  }
 }
 
 // ─── PROSPECT MENSAGENS ──────────────────────────────────────────────────────
@@ -2520,6 +3527,18 @@ export async function addProspectMensagem(
         },
       });
       setStore((s) => ({ ...s, prospectMensagens: [...s.prospectMensagens, msg] }));
+      const prospect = getStore().prospects.find((item) => item.id === prospectId);
+      logCrmActivity({
+        tenantId: prospect?.tenantId,
+        prospectId,
+        prospectNome: prospect?.nome,
+        tipo: "FOLLOW_UP_REGISTRADO",
+        titulo: `Follow-up por mensagem: ${prospect?.nome ?? "prospect"}`,
+        descricao: texto,
+        actorNome: autorNome,
+        actorId: autorId,
+        origem: "OPERADOR",
+      });
       return msg;
     } catch (error) {
       console.warn("[crm][api-fallback] Falha ao adicionar mensagem do prospect na API real. Aplicando criação local.", error);
@@ -2541,6 +3560,18 @@ export async function addProspectMensagem(
       p.id === prospectId ? { ...p, dataUltimoContato: at } : p
     ),
   }));
+  const prospect = getStore().prospects.find((item) => item.id === prospectId);
+  logCrmActivity({
+    tenantId: prospect?.tenantId,
+    prospectId,
+    prospectNome: prospect?.nome,
+    tipo: "FOLLOW_UP_REGISTRADO",
+    titulo: `Follow-up por mensagem: ${prospect?.nome ?? "prospect"}`,
+    descricao: texto,
+    actorNome: autorNome,
+    actorId: autorId,
+    origem: "OPERADOR",
+  });
   return msg;
 }
 
@@ -2597,6 +3628,19 @@ export async function criarProspectAgendamento(data: {
         ...s,
         prospectAgendamentos: [...s.prospectAgendamentos, ag],
       }));
+      const prospect = getStore().prospects.find((item) => item.id === data.prospectId);
+      const funcionario = getStore().funcionarios.find((item) => item.id === data.funcionarioId);
+      logCrmActivity({
+        tenantId: prospect?.tenantId,
+        prospectId: data.prospectId,
+        prospectNome: prospect?.nome,
+        tipo: "FOLLOW_UP_REGISTRADO",
+        titulo: `Agendamento criado: ${data.titulo}`,
+        descricao: `${data.data} às ${data.hora}`,
+        actorNome: funcionario?.nome ?? "Operação CRM",
+        actorId: funcionario?.id,
+        origem: "OPERADOR",
+      });
       return ag;
     } catch (error) {
       console.warn("[crm][api-fallback] Falha ao criar agendamento do prospect na API real. Aplicando criação local.", error);
@@ -2611,6 +3655,19 @@ export async function criarProspectAgendamento(data: {
     ...s,
     prospectAgendamentos: [...s.prospectAgendamentos, ag],
   }));
+  const prospect = getStore().prospects.find((item) => item.id === data.prospectId);
+  const funcionario = getStore().funcionarios.find((item) => item.id === data.funcionarioId);
+  logCrmActivity({
+    tenantId: prospect?.tenantId,
+    prospectId: data.prospectId,
+    prospectNome: prospect?.nome,
+    tipo: "FOLLOW_UP_REGISTRADO",
+    titulo: `Agendamento criado: ${data.titulo}`,
+    descricao: `${data.data} às ${data.hora}`,
+    actorNome: funcionario?.nome ?? "Operação CRM",
+    actorId: funcionario?.id,
+    origem: "OPERADOR",
+  });
   return ag;
 }
 
@@ -4225,6 +5282,14 @@ export interface CreateVendaInput {
   }>;
   descontoTotal?: number;
   acrescimoTotal?: number;
+  planoContexto?: {
+    planoId?: string;
+    dataInicio?: string;
+    descontoPlano?: number;
+    motivoDesconto?: string;
+    renovacaoAutomatica?: boolean;
+    convenioId?: string;
+  };
   pagamento: PagamentoVenda;
 }
 
@@ -4268,6 +5333,11 @@ function buildListVendasPageCacheKey(input: {
   includeTotals?: boolean;
 }): string {
   return JSON.stringify(input);
+}
+
+function clearVendasPageCache(): void {
+  listVendasPageCache.clear();
+  listVendasPageInFlight.clear();
 }
 
 function clonePaginatedVendasResult(value: PaginatedVendasResult): PaginatedVendasResult {
@@ -4546,11 +5616,20 @@ export async function createVenda(input: CreateVendaInput): Promise<Venda> {
   }
 
   const store = getStore();
+  const tenantId = getCurrentTenantId();
   const cliente = input.clienteId ? store.alunos.find((a) => a.id === input.clienteId) : undefined;
+  const planoId =
+    input.tipo === "PLANO"
+      ? input.planoContexto?.planoId ?? resolvePlanoIdFromVendaItems(input.itens)
+      : undefined;
+  const plano = planoId ? store.planos.find((item) => item.id === planoId) : undefined;
+  if (input.tipo === "PLANO" && !plano) {
+    throw new Error("Plano não encontrado para concluir a contratação.");
+  }
+  const pagamentoStatus = resolvePagamentoVendaStatus(input.pagamento);
 
   if (isRealApiEnabled()) {
     try {
-      const tenantId = getCurrentTenantId();
       const created = await createVendaApi({
         tenantId,
         data: {
@@ -4578,6 +5657,7 @@ export async function createVenda(input: CreateVendaInput): Promise<Venda> {
         ...s,
         vendas: [created, ...s.vendas.filter((venda) => venda.id !== created.id)],
       }));
+      clearVendasPageCache();
       return created;
     } catch (error) {
       console.warn("[vendas][api-fallback] Falha ao criar venda na API real. Gravando localmente.", error);
@@ -4606,10 +5686,72 @@ export async function createVenda(input: CreateVendaInput): Promise<Venda> {
   const descontoTotal = Math.max(0, (input.descontoTotal ?? 0) + descontoItens);
   const acrescimoTotal = Math.max(0, input.acrescimoTotal ?? 0);
   const total = Math.max(0, subtotal - descontoTotal + acrescimoTotal);
+  const createdAt = now();
+  const vendaId = genId();
+  let matricula: Matricula | undefined;
+  let contratoStatus = plano ? resolveContratoStatusFromPlano(plano) : undefined;
+
+  if (input.tipo === "PLANO" && input.clienteId && plano) {
+    const dataInicioContrato = input.planoContexto?.dataInicio ?? createdAt.slice(0, 10);
+    matricula = await criarMatricula({
+      alunoId: input.clienteId,
+      planoId: plano.id,
+      dataInicio: dataInicioContrato,
+      valorPago: total,
+      valorMatricula: plano.valorMatricula,
+      desconto: Math.max(0, input.planoContexto?.descontoPlano ?? 0),
+      motivoDesconto: input.planoContexto?.motivoDesconto,
+      formaPagamento: input.pagamento.formaPagamento,
+      renovacaoAutomatica: input.planoContexto?.renovacaoAutomatica ?? false,
+      observacoes: input.pagamento.observacoes,
+      convenioId: input.planoContexto?.convenioId,
+      dataPagamento: pagamentoStatus === "PAGO" ? createdAt.slice(0, 10) : undefined,
+    });
+
+    const contratoEnviadoAutomaticamente = Boolean(
+      plano.contratoTemplateHtml?.trim() &&
+      plano.contratoEnviarAutomaticoEmail &&
+      cliente?.email
+    );
+
+    setStore((s) => ({
+      ...s,
+      matriculas: s.matriculas.map((item) =>
+        item.id === matricula?.id
+          ? {
+              ...item,
+              origemVendaId: vendaId,
+              contratoStatus,
+              contratoModoAssinatura: plano.contratoAssinatura,
+              contratoEnviadoAutomaticamente,
+              contratoUltimoEnvioEm: contratoEnviadoAutomaticamente ? createdAt : undefined,
+              dataAtualizacao: createdAt,
+            }
+          : item
+      ),
+      pagamentos: s.pagamentos.map((pagamento) =>
+        pagamento.matriculaId === matricula?.id
+          ? {
+              ...pagamento,
+              tipo: "MENSALIDADE",
+              descricao: `Contratação de plano – ${plano.nome}`,
+              valor: subtotal + acrescimoTotal,
+              desconto: descontoTotal,
+              valorFinal: total,
+              dataVencimento: dataInicioContrato,
+              dataPagamento: pagamentoStatus === "PAGO" ? createdAt.slice(0, 10) : undefined,
+              formaPagamento: input.pagamento.formaPagamento,
+              status: pagamentoStatus,
+              observacoes: input.pagamento.observacoes,
+            }
+          : pagamento
+      ),
+    }));
+  }
 
   const venda: Venda = {
-    id: genId(),
-    tenantId: getCurrentTenantId(),
+    id: vendaId,
+    tenantId,
     tipo: input.tipo,
     clienteId: input.clienteId,
     clienteNome: cliente?.nome,
@@ -4619,8 +5761,16 @@ export async function createVenda(input: CreateVendaInput): Promise<Venda> {
     descontoTotal,
     acrescimoTotal,
     total,
-    pagamento: input.pagamento,
-    dataCriacao: now(),
+    pagamento: {
+      ...input.pagamento,
+      status: pagamentoStatus,
+    },
+    planoId: plano?.id,
+    matriculaId: matricula?.id,
+    contratoStatus,
+    dataInicioContrato: matricula?.dataInicio,
+    dataFimContrato: matricula?.dataFim,
+    dataCriacao: createdAt,
   };
 
   const pagamentoTipo = itens.some((item) => item.tipo === "PLANO")
@@ -4635,28 +5785,29 @@ export async function createVenda(input: CreateVendaInput): Promise<Venda> {
   setStore((s) => ({
     ...s,
     vendas: [venda, ...s.vendas],
-    pagamentos: input.clienteId
+    pagamentos: input.clienteId && input.tipo !== "PLANO"
       ? [
           {
             id: genId(),
-            tenantId: getCurrentTenantId(),
+            tenantId,
             alunoId: input.clienteId,
             tipo: pagamentoTipo,
             descricao: descricaoPagamento,
-            valor: total,
+            valor: subtotal + acrescimoTotal,
             desconto: descontoTotal,
             valorFinal: total,
-            dataVencimento: now().slice(0, 10),
-            dataPagamento: now().slice(0, 10),
+            dataVencimento: createdAt.slice(0, 10),
+            dataPagamento: pagamentoStatus === "PAGO" ? createdAt.slice(0, 10) : undefined,
             formaPagamento: input.pagamento.formaPagamento,
-            status: "PAGO",
+            status: pagamentoStatus,
             observacoes: input.pagamento.observacoes,
-            dataCriacao: now(),
+            dataCriacao: createdAt,
           },
           ...s.pagamentos,
         ]
       : s.pagamentos,
   }));
+  clearVendasPageCache();
 
   return venda;
 }
@@ -5634,6 +6785,493 @@ export async function deleteAtividadeGrade(id: string): Promise<void> {
   }));
 }
 
+function parseSessaoAulaId(sessaoId: string): { atividadeGradeId: string; data: string } | null {
+  const match = sessaoId.match(/^sessao-(.+)-(\d{4}-\d{2}-\d{2})$/);
+  if (!match) return null;
+  return {
+    atividadeGradeId: match[1] ?? "",
+    data: match[2] ?? "",
+  };
+}
+
+function buildAulasAgendaDateRange(params?: {
+  dateFrom?: string;
+  dateTo?: string;
+}): { dateFrom: string; dateTo: string } {
+  const dateFrom = params?.dateFrom ?? today();
+  if (params?.dateTo) {
+    return { dateFrom, dateTo: params.dateTo };
+  }
+  const end = new Date(`${dateFrom}T00:00:00`);
+  end.setDate(end.getDate() + 6);
+  return {
+    dateFrom,
+    dateTo: toIsoDate(end),
+  };
+}
+
+function buildAulaSessaoFromStore(
+  store: ReturnType<typeof getStore>,
+  grade: AtividadeGrade,
+  data: string
+): AulaSessao | null {
+  const atividade = store.atividades.find((item) => item.id === grade.atividadeId && item.tenantId === grade.tenantId);
+  if (!atividade || !grade.ativo || grade.definicaoHorario !== "PREVIAMENTE") {
+    return null;
+  }
+  const sessaoId = createSessaoAulaId(grade.id, data);
+  const reservas = store.reservasAulas.filter(
+    (item) => item.tenantId === grade.tenantId && item.sessaoId === sessaoId
+  );
+  const vagasOcupadas = reservas.filter((item) => item.status === "CONFIRMADA" || item.status === "CHECKIN").length;
+  const waitlistTotal = reservas.filter((item) => item.status === "LISTA_ESPERA").length;
+  const sala = grade.salaId ? store.salas.find((item) => item.id === grade.salaId && item.tenantId === grade.tenantId) : undefined;
+  const funcionario = grade.funcionarioId ? store.funcionarios.find((item) => item.id === grade.funcionarioId) : undefined;
+  return buildAulaSessao({
+    grade,
+    atividade,
+    data,
+    sala,
+    funcionario,
+    vagasOcupadas,
+    waitlistTotal,
+  });
+}
+
+function reorderWaitlistForSessao(items: ReservaAula[], sessaoId: string): ReservaAula[] {
+  const waitlist = sortReservasAula(
+    items.filter((item) => item.sessaoId === sessaoId && item.status === "LISTA_ESPERA")
+  );
+  const waitlistIds = new Set(waitlist.map((item) => item.id));
+  const waitlistMap = new Map(
+    waitlist.map((item, index) => [
+      item.id,
+      {
+        ...item,
+        posicaoListaEspera: index + 1,
+      } satisfies ReservaAula,
+    ])
+  );
+  return items.map((item) => {
+    if (!waitlistIds.has(item.id)) return item;
+    return waitlistMap.get(item.id) ?? item;
+  });
+}
+
+function hasAlunoAcessoAoBooking(
+  store: ReturnType<typeof getStore>,
+  tenantId: string,
+  alunoId: string,
+  sessao: AulaSessao
+): boolean {
+  if (sessao.acessoClientes === "TODOS_CLIENTES") {
+    return true;
+  }
+  return store.matriculas.some(
+    (matricula) =>
+      matricula.tenantId === tenantId &&
+      matricula.alunoId === alunoId &&
+      matricula.status === "ATIVA"
+  );
+}
+
+function buildAulaOcupacaoFromStore(
+  store: ReturnType<typeof getStore>,
+  sessaoId: string
+): AulaOcupacao | null {
+  const parsed = parseSessaoAulaId(sessaoId);
+  if (!parsed) return null;
+  const grade = store.atividadeGrades.find((item) => item.id === parsed.atividadeGradeId);
+  if (!grade) return null;
+  const sessao = buildAulaSessaoFromStore(store, grade, parsed.data);
+  if (!sessao) return null;
+  const reservas = store.reservasAulas.filter(
+    (item) => item.tenantId === grade.tenantId && item.sessaoId === sessaoId
+  );
+  return {
+    sessao,
+    confirmadas: sortReservasAula(
+      reservas.filter((item) => item.status === "CONFIRMADA" || item.status === "CHECKIN")
+    ),
+    waitlist: sortReservasAula(
+      reservas.filter((item) => item.status === "LISTA_ESPERA")
+    ),
+    canceladas: sortReservasAula(
+      reservas.filter((item) => item.status === "CANCELADA")
+    ),
+    checkinsRealizados: reservas.filter((item) => item.status === "CHECKIN").length,
+  };
+}
+
+export async function listAulasAgenda(params?: {
+  dateFrom?: string;
+  dateTo?: string;
+  atividadeGradeId?: string;
+  apenasPortal?: boolean;
+}): Promise<AulaSessao[]> {
+  const tenantId = getCurrentTenantId();
+  const dateRange = buildAulasAgendaDateRange(params);
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      return sortSessoesAula(
+        await listAulasAgendaApi({
+          tenantId: tenantIdForApi,
+          dateFrom: dateRange.dateFrom,
+          dateTo: dateRange.dateTo,
+          atividadeGradeId: params?.atividadeGradeId,
+          apenasPortal: params?.apenasPortal,
+        })
+      );
+    } catch (error) {
+      console.warn("[reservas][api-fallback] Falha ao listar sessões na API real. Usando store local.", error);
+    }
+  }
+
+  const store = getStore();
+  const dates = listDatesBetween(dateRange.dateFrom, dateRange.dateTo);
+  const sessions = store.atividadeGrades
+    .filter((grade) => grade.tenantId === tenantId && grade.ativo)
+    .filter((grade) => (params?.atividadeGradeId ? grade.id === params.atividadeGradeId : true))
+    .filter((grade) => (params?.apenasPortal ? grade.exibirNoAppCliente && grade.permiteReserva : true))
+    .flatMap((grade) =>
+      dates
+        .filter((date) => grade.diasSemana.includes(formatDiaSemana(new Date(`${date}T00:00:00`))))
+        .map((date) => buildAulaSessaoFromStore(store, grade, date))
+        .filter((session): session is AulaSessao => Boolean(session))
+    );
+  return sortSessoesAula(sessions);
+}
+
+export async function listReservasAulas(params?: {
+  sessaoId?: string;
+  alunoId?: string;
+  status?: ReservaAulaStatus;
+}): Promise<ReservaAula[]> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const reservas = await listReservasAulaApi({
+        tenantId: tenantIdForApi,
+        sessaoId: params?.sessaoId,
+        alunoId: params?.alunoId,
+        status: params?.status,
+      });
+      setStore((s) => ({
+        ...s,
+        reservasAulas: mergeTenantScopedData(s.reservasAulas, reservas),
+      }));
+      return sortReservasAula(reservas);
+    } catch (error) {
+      console.warn("[reservas][api-fallback] Falha ao listar reservas na API real. Usando store local.", error);
+    }
+  }
+
+  return sortReservasAula(
+    getStore().reservasAulas.filter((item) => {
+      if (item.tenantId !== tenantId) return false;
+      if (params?.sessaoId && item.sessaoId !== params.sessaoId) return false;
+      if (params?.alunoId && item.alunoId !== params.alunoId) return false;
+      if (params?.status && item.status !== params.status) return false;
+      return true;
+    })
+  );
+}
+
+export async function getAulaOcupacao(sessaoId: string): Promise<AulaOcupacao | null> {
+  const tenantId = getCurrentTenantId();
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      return await getAulaOcupacaoApi({
+        tenantId: tenantIdForApi,
+        sessaoId,
+      });
+    } catch (error) {
+      console.warn("[reservas][api-fallback] Falha ao obter ocupação da aula na API real. Usando store local.", error);
+    }
+  }
+  return buildAulaOcupacaoFromStore(getStore(), sessaoId);
+}
+
+export async function reservarAula(data: {
+  atividadeGradeId: string;
+  data: string;
+  alunoId: string;
+  origem: ReservaAulaOrigem;
+}): Promise<ReservaAula> {
+  const tenantId = getCurrentTenantId();
+  const store = getStore();
+  const grade = store.atividadeGrades.find(
+    (item) => item.id === data.atividadeGradeId && item.tenantId === tenantId
+  );
+  if (!grade) {
+    throw new Error("Turma da grade não encontrada.");
+  }
+  const sessao = buildAulaSessaoFromStore(store, grade, data.data);
+  if (!sessao) {
+    throw new Error("Sessão da aula não encontrada.");
+  }
+  const aluno = store.alunos.find((item) => item.id === data.alunoId && item.tenantId === tenantId);
+  if (!aluno) {
+    throw new Error("Aluno não encontrado.");
+  }
+  if (!sessao.permiteReserva) {
+    throw new Error("Esta aula não aceita reservas.");
+  }
+  if (data.origem === "PORTAL_CLIENTE" && !sessao.exibirNoAppCliente) {
+    throw new Error("Esta aula não está disponível no portal do cliente.");
+  }
+  if (!hasAlunoAcessoAoBooking(store, tenantId, aluno.id, sessao)) {
+    throw new Error("Aluno sem contrato ou serviço válido para reservar esta aula.");
+  }
+
+  const existing = store.reservasAulas.find(
+    (item) =>
+      item.tenantId === tenantId &&
+      item.sessaoId === sessao.id &&
+      item.alunoId === aluno.id &&
+      item.status !== "CANCELADA"
+  );
+  if (existing) {
+    throw new Error("Aluno já possui reserva ativa nesta aula.");
+  }
+
+  const createLocal = () => {
+    const snapshot = getStore();
+    const occupancy = buildAulaOcupacaoFromStore(snapshot, sessao.id);
+    const vagasDisponiveis = occupancy?.sessao.vagasDisponiveis ?? sessao.vagasDisponiveis;
+    const waitlistTotal = occupancy?.waitlist.length ?? 0;
+    const shouldWaitlist = vagasDisponiveis <= 0;
+    if (shouldWaitlist && !sessao.listaEsperaHabilitada) {
+      throw new Error("A aula está lotada e a lista de espera está desabilitada.");
+    }
+    const reserva: ReservaAula = {
+      id: genId(),
+      tenantId,
+      sessaoId: sessao.id,
+      atividadeGradeId: sessao.atividadeGradeId,
+      atividadeId: sessao.atividadeId,
+      atividadeNome: sessao.atividadeNome,
+      alunoId: aluno.id,
+      alunoNome: aluno.nome,
+      data: sessao.data,
+      horaInicio: sessao.horaInicio,
+      horaFim: sessao.horaFim,
+      origem: data.origem,
+      status: shouldWaitlist ? "LISTA_ESPERA" : "CONFIRMADA",
+      posicaoListaEspera: shouldWaitlist ? waitlistTotal + 1 : undefined,
+      local: sessao.local ?? sessao.salaNome,
+      instrutorNome: sessao.instrutorNome,
+      dataCriacao: now(),
+    };
+    setStore((s) => ({
+      ...s,
+      reservasAulas: reorderWaitlistForSessao([reserva, ...s.reservasAulas], sessao.id),
+    }));
+    return reserva;
+  };
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const reserva = await reservarAulaApi({
+        tenantId: tenantIdForApi,
+        data,
+      });
+      setStore((s) => ({
+        ...s,
+        reservasAulas: [reserva, ...s.reservasAulas.filter((item) => item.id !== reserva.id)],
+      }));
+      return reserva;
+    } catch (error) {
+      console.warn("[reservas][api-fallback] Falha ao reservar aula na API real. Aplicando criação local.", error);
+    }
+  }
+
+  return createLocal();
+}
+
+export async function cancelarReservaAula(id: string): Promise<ReservaAula> {
+  const tenantId = getCurrentTenantId();
+  const current = getStore().reservasAulas.find((item) => item.id === id && item.tenantId === tenantId);
+  if (!current) {
+    throw new Error("Reserva não encontrada.");
+  }
+  if (current.status === "CANCELADA") {
+    throw new Error("Reserva já está cancelada.");
+  }
+  if (current.status === "CHECKIN") {
+    throw new Error("Não é possível cancelar uma reserva com check-in já realizado.");
+  }
+
+  const applyLocal = () => {
+    const updated: ReservaAula = {
+      ...current,
+      status: "CANCELADA",
+      posicaoListaEspera: undefined,
+      canceladaEm: now(),
+      dataAtualizacao: now(),
+    };
+    setStore((s) => ({
+      ...s,
+      reservasAulas: reorderWaitlistForSessao(
+        s.reservasAulas.map((item) => (item.id === id ? updated : item)),
+        current.sessaoId
+      ),
+    }));
+    return updated;
+  };
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const updated = await cancelarReservaAulaApi({
+        tenantId: tenantIdForApi,
+        id,
+      });
+      setStore((s) => ({
+        ...s,
+        reservasAulas: reorderWaitlistForSessao(
+          s.reservasAulas.map((item) => (item.id === id ? updated : item)),
+          current.sessaoId
+        ),
+      }));
+      return updated;
+    } catch (error) {
+      console.warn("[reservas][api-fallback] Falha ao cancelar reserva na API real. Aplicando update local.", error);
+    }
+  }
+
+  return applyLocal();
+}
+
+export async function promoverReservaWaitlist(sessaoId: string): Promise<ReservaAula | null> {
+  const tenantId = getCurrentTenantId();
+  const occupancy = buildAulaOcupacaoFromStore(getStore(), sessaoId);
+  if (!occupancy) {
+    throw new Error("Sessão não encontrada.");
+  }
+  if (occupancy.sessao.vagasDisponiveis <= 0) {
+    throw new Error("Ainda não há vaga disponível para promover da waitlist.");
+  }
+  const firstWaitlist = occupancy.waitlist[0];
+  if (!firstWaitlist) {
+    return null;
+  }
+
+  const applyLocal = () => {
+    const promoted: ReservaAula = {
+      ...firstWaitlist,
+      status: "CONFIRMADA",
+      posicaoListaEspera: undefined,
+      dataAtualizacao: now(),
+    };
+    setStore((s) => ({
+      ...s,
+      reservasAulas: reorderWaitlistForSessao(
+        s.reservasAulas.map((item) => (item.id === firstWaitlist.id ? promoted : item)),
+        sessaoId
+      ),
+    }));
+    return promoted;
+  };
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const promoted = await promoverReservaWaitlistApi({
+        tenantId: tenantIdForApi,
+        sessaoId,
+      });
+      if (!promoted) return null;
+      setStore((s) => ({
+        ...s,
+        reservasAulas: reorderWaitlistForSessao(
+          s.reservasAulas.map((item) => (item.id === promoted.id ? promoted : item)),
+          sessaoId
+        ),
+      }));
+      return promoted;
+    } catch (error) {
+      console.warn("[reservas][api-fallback] Falha ao promover waitlist na API real. Aplicando update local.", error);
+    }
+  }
+
+  return applyLocal();
+}
+
+export async function registrarCheckinAula(id: string): Promise<ReservaAula> {
+  const tenantId = getCurrentTenantId();
+  const current = getStore().reservasAulas.find((item) => item.id === id && item.tenantId === tenantId);
+  if (!current) {
+    throw new Error("Reserva não encontrada.");
+  }
+  if (current.status === "CANCELADA") {
+    throw new Error("Reserva cancelada não pode receber check-in.");
+  }
+  if (current.status === "LISTA_ESPERA") {
+    throw new Error("Promova a reserva da lista de espera antes do check-in.");
+  }
+  if (current.status === "CHECKIN") {
+    return current;
+  }
+
+  const applyLocal = () => {
+    const checkedInAt = now();
+    const updated: ReservaAula = {
+      ...current,
+      status: "CHECKIN",
+      checkinEm: checkedInAt,
+      dataAtualizacao: checkedInAt,
+    };
+    setStore((s) => ({
+      ...s,
+      reservasAulas: s.reservasAulas.map((item) => (item.id === id ? updated : item)),
+      presencas: s.presencas.some(
+        (presenca) =>
+          presenca.alunoId === updated.alunoId &&
+          presenca.data === updated.data &&
+          presenca.horario === updated.horaInicio &&
+          presenca.origem === "AULA"
+      )
+        ? s.presencas
+        : [
+            {
+              id: genId(),
+              alunoId: updated.alunoId,
+              data: updated.data,
+              horario: updated.horaInicio,
+              origem: "AULA",
+              atividade: updated.atividadeNome,
+            },
+            ...s.presencas,
+          ],
+    }));
+    return updated;
+  };
+
+  if (isRealApiEnabled()) {
+    try {
+      const tenantIdForApi = (await getTenantIdForApiCall()) ?? tenantId;
+      const updated = await registrarCheckinAulaApi({
+        tenantId: tenantIdForApi,
+        id,
+      });
+      setStore((s) => ({
+        ...s,
+        reservasAulas: s.reservasAulas.map((item) => (item.id === id ? updated : item)),
+      }));
+      return updated;
+    } catch (error) {
+      console.warn("[reservas][api-fallback] Falha ao registrar check-in na API real. Aplicando update local.", error);
+    }
+  }
+
+  return applyLocal();
+}
+
 // ─── PLANOS ─────────────────────────────────────────────────────────────────
 
 function mergePlanoFromApi(next: Plano, current?: Plano): Plano {
@@ -5885,6 +7523,33 @@ export async function cancelarMatricula(id: string): Promise<void> {
       m.id === id ? { ...m, status: "CANCELADA" as const } : m
     ),
   }));
+  clearVendasPageCache();
+}
+
+export async function registrarAssinaturaMatricula(id: string): Promise<void> {
+  const signedAt = now();
+  setStore((s) => ({
+    ...s,
+    matriculas: s.matriculas.map((m) =>
+      m.id === id
+        ? {
+            ...m,
+            contratoStatus: "ASSINADO" as const,
+            contratoAssinadoEm: signedAt,
+            dataAtualizacao: signedAt,
+          }
+        : m
+    ),
+    vendas: s.vendas.map((venda) =>
+      venda.matriculaId === id
+        ? {
+            ...venda,
+            contratoStatus: "ASSINADO" as const,
+          }
+        : venda
+    ),
+  }));
+  clearVendasPageCache();
 }
 
 export async function criarMatricula(data: {
@@ -5970,6 +7635,8 @@ export async function criarMatricula(data: {
     status: "ATIVA",
     renovacaoAutomatica: data.renovacaoAutomatica ?? false,
     observacoes: data.observacoes,
+    contratoStatus: resolveContratoStatusFromPlano(plano),
+    contratoModoAssinatura: plano.contratoAssinatura,
     dataCriacao: now(),
     convenioId: data.convenioId,
   };
@@ -5997,6 +7664,7 @@ export async function criarMatricula(data: {
     alunos: s.alunos,
   }));
   syncAlunosStatus();
+  clearVendasPageCache();
 
   return matricula;
 }

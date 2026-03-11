@@ -361,6 +361,15 @@ export function SaleReceiptModal({
               <p className="text-xs text-muted-foreground">
                 Plano: {plano.nome} · assinatura {plano.contratoAssinatura.toLowerCase()}
               </p>
+              {venda.contratoStatus ? (
+                <p className="text-xs text-muted-foreground">
+                  Status atual: {venda.contratoStatus === "ASSINADO"
+                    ? "assinado"
+                    : venda.contratoStatus === "PENDENTE_ASSINATURA"
+                      ? "pendente de assinatura"
+                      : "sem contrato obrigatório"}
+                </p>
+              ) : null}
               {contratoAutoEnvioMensagem ? (
                 <p className="text-xs text-gym-teal">{contratoAutoEnvioMensagem}</p>
               ) : (

@@ -134,7 +134,7 @@ export function ClienteHeader({
         )}
         {!planoAtivo && (
           <Button onClick={onNovaVenda} className="h-9">
-            Nova venda de plano
+            Nova contratação
           </Button>
         )}
         {showCartoesAction && (

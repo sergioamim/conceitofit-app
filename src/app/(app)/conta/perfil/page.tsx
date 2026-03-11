@@ -12,43 +12,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  getCurrentTenant,
-  listTenants,
   setCurrentTenant,
 } from "@/lib/mock/services";
 import {
   getPreferredTenantId,
   setPreferredTenantId,
 } from "@/lib/api/session";
-import type { Tenant } from "@/lib/types";
+import { useTenantContext } from "@/hooks/use-session-context";
 
 export default function PerfilPage() {
   const [nome, setNome] = useState("Sergio");
   const [email, setEmail] = useState("sergio@academia.com");
   const [telefone, setTelefone] = useState("(11) 90000-0000");
 
-  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [preferredTenantId, setPreferredTenantIdState] = useState("");
   const [savingTenant, setSavingTenant] = useState(false);
   const [tenantSaved, setTenantSaved] = useState(false);
   const [tenantError, setTenantError] = useState<string | null>(null);
+  const tenantContext = useTenantContext();
 
   useEffect(() => {
-    async function load() {
-      const [allTenants, currentTenant] = await Promise.all([
-        listTenants(),
-        getCurrentTenant(),
-      ]);
-      const active = allTenants.filter((t) => t.ativo !== false);
-      setTenants(active);
-      const preferred = getPreferredTenantId();
-      const preferredIsValid = preferred && active.some((t) => t.id === preferred);
-      setPreferredTenantIdState(
-        preferredIsValid ? preferred! : currentTenant.id
-      );
-    }
-    load();
-  }, []);
+    const active = tenantContext.tenants;
+    const preferred = getPreferredTenantId();
+    const preferredIsValid = preferred && active.some((tenant) => tenant.id === preferred);
+    setPreferredTenantIdState(preferredIsValid ? preferred : tenantContext.tenantId);
+  }, [tenantContext.tenantId, tenantContext.tenants]);
 
   async function handleSaveTenant() {
     if (!preferredTenantId) {
@@ -113,7 +101,7 @@ export default function PerfilPage() {
               <SelectValue placeholder="Selecione a unidade" />
             </SelectTrigger>
             <SelectContent>
-              {tenants.map((t) => (
+              {tenantContext.tenants.map((t) => (
                 <SelectItem key={t.id} value={t.id}>
                   {t.nome}
                 </SelectItem>

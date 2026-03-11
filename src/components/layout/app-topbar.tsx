@@ -3,13 +3,11 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Menu, Search } from "lucide-react";
-import { listAlunosPage, listTenants, setCurrentTenant } from "@/lib/mock/services";
-import { getStore } from "@/lib/mock/store";
-import { isRealApiEnabled } from "@/lib/api/http";
-import type { Tenant } from "@/lib/types";
+import { listAlunosPage, setCurrentTenant } from "@/lib/mock/services";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
+import { useTenantContext } from "@/hooks/use-session-context";
 
 type AppTopbarProps = {
   onOpenMenu?: () => void;
@@ -17,74 +15,14 @@ type AppTopbarProps = {
 
 function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
   const router = useRouter();
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [tenantId, setTenantId] = useState("");
   const [query, setQuery] = useState("");
   const [clienteOptions, setClienteOptions] = useState<SuggestionOption[]>([]);
   const [savingTenant, setSavingTenant] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [clienteOptionsLoadedTenant, setClienteOptionsLoadedTenant] = useState("");
+  const { tenant, tenantId, tenants } = useTenantContext();
 
   useEffect(() => { setMounted(true); }, []);
-
-  useEffect(() => {
-    const useRealApi = isRealApiEnabled();
-    const dedupeTenants = (items: Tenant[]) =>
-      Array.from(new Map(items.map((t) => [t.id, t] as const)).values());
-
-    function syncFromStore() {
-      const store = getStore();
-      const activeTenants = dedupeTenants((store.tenants ?? []).filter((t) => t.ativo !== false));
-      const tenantCandidates = activeTenants.length > 0 ? activeTenants : dedupeTenants(store.tenants ?? []);
-      setTenants(tenantCandidates);
-      setTenantId(store.currentTenantId || store.tenant?.id || tenantCandidates[0]?.id || "");
-    }
-
-    async function load() {
-      const store = getStore();
-      const activeTenants = dedupeTenants((store.tenants ?? []).filter((t) => t.ativo !== false));
-      const tenantCandidates = activeTenants.length > 0 ? activeTenants : dedupeTenants(store.tenants ?? []);
-      const activeTenantId = store.currentTenantId || store.tenant?.id || activeTenants[0]?.id;
-      const hasContextInStore = tenantCandidates.length > 0;
-
-      if (useRealApi && hasContextInStore) {
-        setTenants(tenantCandidates);
-        setTenantId(activeTenantId || tenantCandidates[0]?.id || "");
-        return;
-      }
-
-      try {
-        const allTenants = await listTenants();
-        const activeTenants = dedupeTenants(allTenants.filter((t) => t.ativo !== false));
-        const stored = getStore();
-        const activeTenantId = stored.currentTenantId || stored.tenant?.id;
-        const currentActive =
-          (activeTenantId ? activeTenants.find((t) => t.id === activeTenantId) : undefined)
-          ?? activeTenants[0];
-        setTenants(activeTenants);
-        setTenantId(currentActive?.id ?? "");
-      } catch {
-        // Mantem estado atual em caso de indisponibilidade temporaria da API.
-      }
-    }
-    if (!useRealApi) {
-      syncFromStore();
-    }
-    load();
-
-    function handleUpdate() {
-      syncFromStore();
-    }
-    window.addEventListener("academia-store-updated", handleUpdate);
-    return () => {
-      window.removeEventListener("academia-store-updated", handleUpdate);
-    };
-  }, []);
-
-  const currentTenant = useMemo(
-    () => tenants.find((t) => t.id === tenantId),
-    [tenants, tenantId]
-  );
 
   const tenantOptions = useMemo(
     () => Array.from(new Map(tenants.map((t) => [t.id, t] as const)).values()),
@@ -123,15 +61,11 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
     setSavingTenant(true);
     try {
       await setCurrentTenant(nextId);
-      const store = getStore();
-      const activeTenants = (store.tenants ?? []).filter((t) => t.ativo !== false);
-      if (activeTenants.length > 0) {
-        setTenants(activeTenants);
-      }
-      setTenantId(store.currentTenantId || nextId);
+      setClienteOptions([]);
+      setClienteOptionsLoadedTenant("");
     } catch {
-      const store = getStore();
-      setTenantId(store.currentTenantId || store.tenant?.id || "");
+      setClienteOptions([]);
+      setClienteOptionsLoadedTenant("");
     } finally {
       setSavingTenant(false);
     }
@@ -160,7 +94,7 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
           <Building2 className="size-4 text-muted-foreground" />
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Unidade ativa</p>
-            <p className="truncate text-sm font-medium text-foreground">{currentTenant?.nome ?? "Carregando..."}</p>
+            <p className="truncate text-sm font-medium text-foreground">{tenant?.nome ?? "Carregando..."}</p>
           </div>
           {mounted && (
             <Select value={tenantId} onValueChange={handleChangeTenant} disabled={savingTenant || tenantOptions.length === 0}>

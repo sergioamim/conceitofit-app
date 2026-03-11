@@ -2,7 +2,7 @@
 
 **Title:** Alinhar contrato HTTP e camada de consumo da API
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,7 +22,7 @@ No test strategy provided.
 
 ### 1.1. Auditar clientes e serviços em src/lib/api
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Mapear clientes, services e schemas atuais e comparar com a API real.
@@ -33,7 +33,7 @@ Inspecionar todos os módulos em `src/lib/api/*`, identificar endpoints, contrat
 
 ### 1.2. Revisar e ajustar wrapper HTTP central
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 1.1  
 
 Alinhar o comportamento de `src/lib/api/http.ts` ao contrato real.
@@ -44,7 +44,7 @@ Rever interceptores, headers, tratamento de erros, retries e normalização de r
 
 ### 1.3. Alinhar contratos com guia de integração
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 1.1, 1.2  
 
 Atualizar contratos tipados conforme `docs/FRONTEND_INTEGRATION_GUIDE.json`.
@@ -55,7 +55,7 @@ Comparar esquemas e payloads documentados no guia; ajustar types, parsers e vali
 
 ### 1.4. Refatorar fallbacks e mocks de serviços
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 1.2, 1.3  
 
 Rever e padronizar fallbacks em `src/lib/mock/services.ts`.
@@ -66,7 +66,7 @@ Atualizar mocks para aderirem aos contratos reais, remover inconsistências e ga
 
 ### 1.5. Ajustar páginas consumidoras e adicionar testes
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 1.2, 1.3, 1.4  
 
 Atualizar páginas que consomem serviços e criar testes e2e/integração.

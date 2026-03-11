@@ -2,44 +2,82 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
-import { listVendas } from "@/lib/mock/services";
+import { CheckCheck, Plus, RefreshCcw, XCircle } from "lucide-react";
+import { getStore } from "@/lib/mock/store";
+import {
+  cancelarMatricula,
+  listMatriculas,
+  registrarAssinaturaMatricula,
+  renovarMatricula,
+} from "@/lib/mock/services";
 import { isRealApiEnabled } from "@/lib/api/http";
-import type { Venda } from "@/lib/types";
+import {
+  resolveContratoStatusFromPlano,
+  resolveFluxoComercialStatus,
+  STATUS_CONTRATO_LABEL,
+  STATUS_FLUXO_COMERCIAL_LABEL,
+} from "@/lib/comercial/plano-flow";
+import type { Aluno, Matricula, Pagamento, Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+
+type MatriculaRow = Matricula & {
+  aluno?: Aluno;
+  plano?: Plano;
+  pagamento?: Pagamento;
+};
 
 function formatBRL(value: number) {
   const safe = Number.isFinite(value) ? value : 0;
   return safe.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatDate(value: string) {
+  return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR");
+}
+
+function getBadgeClass(kind: "contrato" | "fluxo", value: string | undefined) {
+  if (kind === "contrato") {
+    if (value === "ASSINADO") return "bg-gym-teal/15 text-gym-teal";
+    if (value === "PENDENTE_ASSINATURA") return "bg-gym-warning/15 text-gym-warning";
+    return "bg-muted text-muted-foreground";
+  }
+
+  if (value === "ATIVO") return "bg-gym-teal/15 text-gym-teal";
+  if (value === "AGUARDANDO_ASSINATURA") return "bg-amber-500/15 text-amber-400";
+  if (value === "AGUARDANDO_PAGAMENTO") return "bg-gym-warning/15 text-gym-warning";
+  if (value === "CANCELADO") return "bg-gym-danger/15 text-gym-danger";
+  if (value === "VENCIDO") return "bg-muted text-muted-foreground";
+  return "bg-muted text-muted-foreground";
 }
 
 export default function MatriculasPage() {
-  const [vendasPlano, setVendasPlano] = useState<Venda[]>([]);
+  const [rows, setRows] = useState<MatriculaRow[]>([]);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
 
   async function load() {
-    const data = await listVendas();
-    const somentePlano = data.filter((venda) =>
-      venda.itens.some((item) => item.tipo === "PLANO")
-    );
-    setVendasPlano(somentePlano.slice(0, 20));
+    try {
+      const matriculas = await listMatriculas();
+      const store = getStore();
+      setRows(
+        matriculas.map((matricula) => ({
+          ...matricula,
+          pagamento: store.pagamentos.find((pagamento) => pagamento.matriculaId === matricula.id),
+        }))
+      );
+      setError(null);
+    } catch {
+      setRows([]);
+      setError("Não foi possível carregar os contratos da unidade ativa.");
+    }
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    void load();
     if (isRealApiEnabled()) return;
     function handleUpdate() {
-      load();
+      void load();
     }
     window.addEventListener("academia-store-updated", handleUpdate);
     return () => window.removeEventListener("academia-store-updated", handleUpdate);
@@ -49,82 +87,173 @@ export default function MatriculasPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Matrículas</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Contratos e assinaturas</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Últimas vendas de plano da unidade ativa
+            Contratações de plano da unidade ativa, com status comercial, cobrança e assinatura em um único lugar.
           </p>
         </div>
         <Link href="/vendas/nova">
           <Button>
             <Plus className="size-4" />
-            Nova venda
+            Nova contratação
           </Button>
         </Link>
       </div>
+
+      {feedback ? (
+        <div className="rounded-md border border-gym-teal/30 bg-gym-teal/10 px-4 py-3 text-sm text-gym-teal">
+          {feedback}
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {error}
+        </div>
+      ) : null}
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-secondary">
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Data
+                Início
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Cliente
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Itens de plano
+                Plano
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Pagamento
+                Cobrança
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Contrato
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Fluxo
               </th>
               <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Total
-              </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Status
+                Ações
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {vendasPlano.length === 0 && (
+            {rows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={6}
-                  className="py-10 text-center text-sm text-muted-foreground"
-                >
-                  Nenhuma matrícula encontrada
+                <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                  Nenhum contrato encontrado
                 </td>
               </tr>
-            )}
-            {vendasPlano.map((venda) => {
-              const itensPlano = venda.itens.filter((item) => item.tipo === "PLANO");
+            ) : null}
+            {rows.map((row) => {
+              const contratoStatus = resolveContratoStatusFromPlano(row.plano, row.contratoStatus);
+              const fluxoStatus = resolveFluxoComercialStatus({
+                matricula: row,
+                pagamento: row.pagamento,
+                plano: row.plano,
+              });
+              const canSign = contratoStatus === "PENDENTE_ASSINATURA";
+              const canCancel = row.status === "ATIVA";
+              const canRenew = row.status === "VENCIDA" || row.status === "CANCELADA";
+
               return (
-                <tr key={venda.id}>
+                <tr key={row.id}>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {formatDateTime(venda.dataCriacao)}
+                    <div>{formatDate(row.dataInicio)}</div>
+                    <div className="text-xs text-muted-foreground">até {formatDate(row.dataFim)}</div>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    {venda.clienteNome ?? "Consumidor não identificado"}
+                    {row.aluno?.nome ?? "Cliente não identificado"}
                   </td>
-                  <td className="px-4 py-3">
-                    <p className="text-sm text-muted-foreground">
-                      {itensPlano.length} item(ns) de plano
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {itensPlano.map((item) => item.descricao).join(" · ")}
-                    </p>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="font-medium">{row.plano?.nome ?? "Plano não encontrado"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatBRL(row.valorPago)} · {row.formaPagamento}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {venda.pagamento.formaPagamento}
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gym-accent">
-                    {formatBRL(venda.total)}
+                    <div>{row.pagamento?.status ?? "Sem cobrança"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatBRL(row.pagamento?.valorFinal ?? row.valorPago)}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-gym-teal/15 px-2.5 py-1 text-[11px] font-semibold text-gym-teal">
-                      {venda.status}
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getBadgeClass("contrato", contratoStatus)}`}>
+                      {STATUS_CONTRATO_LABEL[contratoStatus]}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getBadgeClass("fluxo", fluxoStatus)}`}>
+                      {fluxoStatus ? STATUS_FLUXO_COMERCIAL_LABEL[fluxoStatus] : "Sem fluxo"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      {canSign ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={actionId === row.id}
+                          onClick={async () => {
+                            setActionId(row.id);
+                            try {
+                              await registrarAssinaturaMatricula(row.id);
+                              setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} marcado como assinado.`);
+                              await load();
+                            } finally {
+                              setActionId(null);
+                            }
+                          }}
+                        >
+                          <CheckCheck className="mr-1 size-4" />
+                          Assinar
+                        </Button>
+                      ) : null}
+                      {canRenew ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={actionId === row.id}
+                          onClick={async () => {
+                            setActionId(row.id);
+                            try {
+                              await renovarMatricula(row.id);
+                              setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} renovado.`);
+                              await load();
+                            } finally {
+                              setActionId(null);
+                            }
+                          }}
+                        >
+                          <RefreshCcw className="mr-1 size-4" />
+                          Renovar
+                        </Button>
+                      ) : null}
+                      {canCancel ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={actionId === row.id}
+                          onClick={async () => {
+                            const confirmed = window.confirm("Cancelar esta contratação?");
+                            if (!confirmed) return;
+                            setActionId(row.id);
+                            try {
+                              await cancelarMatricula(row.id);
+                              setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} cancelado.`);
+                              await load();
+                            } finally {
+                              setActionId(null);
+                            }
+                          }}
+                        >
+                          <XCircle className="mr-1 size-4" />
+                          Cancelar
+                        </Button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PagamentoVenda, TipoFormaPagamento } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,16 +14,23 @@ export function CheckoutPayment({
   total,
   onConfirm,
   loading,
+  disabledFormasPagamento = [],
 }: {
   total: number;
   onConfirm: (data: PagamentoVenda) => void;
   loading?: boolean;
+  disabledFormasPagamento?: TipoFormaPagamento[];
 }) {
   const [formaPagamento, setFormaPagamento] = useState<TipoFormaPagamento>("PIX");
   const [parcelas, setParcelas] = useState("1");
   const [observacoes, setObservacoes] = useState("");
 
   const totalPreview = useMemo(() => formatBRL(total || 0), [total]);
+
+  useEffect(() => {
+    if (!disabledFormasPagamento.includes(formaPagamento)) return;
+    setFormaPagamento("PIX");
+  }, [disabledFormasPagamento, formaPagamento]);
 
   function handleConfirm() {
     onConfirm({
@@ -45,10 +52,10 @@ export function CheckoutPayment({
             <SelectContent className="bg-card border-border">
               <SelectItem value="PIX">PIX</SelectItem>
               <SelectItem value="DINHEIRO">Dinheiro</SelectItem>
-              <SelectItem value="CARTAO_CREDITO">Cartão crédito</SelectItem>
-              <SelectItem value="CARTAO_DEBITO">Cartão débito</SelectItem>
-              <SelectItem value="BOLETO">Boleto</SelectItem>
-              <SelectItem value="RECORRENTE">Recorrente</SelectItem>
+              <SelectItem value="CARTAO_CREDITO" disabled={disabledFormasPagamento.includes("CARTAO_CREDITO")}>Cartão crédito</SelectItem>
+              <SelectItem value="CARTAO_DEBITO" disabled={disabledFormasPagamento.includes("CARTAO_DEBITO")}>Cartão débito</SelectItem>
+              <SelectItem value="BOLETO" disabled={disabledFormasPagamento.includes("BOLETO")}>Boleto</SelectItem>
+              <SelectItem value="RECORRENTE" disabled={disabledFormasPagamento.includes("RECORRENTE")}>Recorrente</SelectItem>
             </SelectContent>
           </Select>
         </div>

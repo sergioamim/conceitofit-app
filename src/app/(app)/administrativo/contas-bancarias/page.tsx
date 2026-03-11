@@ -7,9 +7,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createContaBancariaApi, listContasBancariasApi, toggleContaBancariaApi, updateContaBancariaApi } from "@/lib/api/contas-bancarias";
-import { getCurrentTenant } from "@/lib/mock/services";
 import type { ContaBancaria, PixTipo, TipoContaBancaria } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useTenantContext } from "@/hooks/use-session-context";
 
 const TIPO_CONTA_LABEL: Record<TipoContaBancaria, string> = {
   CORRENTE: "Conta corrente",
@@ -59,10 +59,7 @@ function getStatusClass(status: "ATIVA" | "INATIVA") {
 }
 
 export default function ContasBancariasPage() {
-  const [tenantId, setTenantId] = useState("");
-  const [tenantName, setTenantName] = useState("Tenant ativo");
   const [contas, setContas] = useState<ContaBancaria[]>([]);
-  const [tenantResolved, setTenantResolved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -73,6 +70,7 @@ export default function ContasBancariasPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ContaBancaria | null>(null);
   const [form, setForm] = useState<FormConta>(FORM_DEFAULT);
+  const { tenantId, tenantName, tenantResolved, loading: tenantLoading, error: tenantError } = useTenantContext();
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -103,36 +101,20 @@ export default function ContasBancariasPage() {
   }, [tenantId]);
 
   useEffect(() => {
-    let active = true;
-    setTenantResolved(false);
-    setHasLoadedOnce(false);
-
-    void (async () => {
-      try {
-        const tenant = await getCurrentTenant();
-        if (!active) return;
-        setTenantId(tenant.id);
-        setTenantName(tenant.nome);
-      } catch (tenantError) {
-        if (!active) return;
-        setTenantId("");
-        setTenantName("Tenant ativo");
-        setError(normalizeErrorMessage(tenantError));
-      } finally {
-        if (active) {
-          setTenantResolved(true);
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setError(tenantError);
+  }, [tenantError]);
+
+  useEffect(() => {
+    setHasLoadedOnce(false);
+    setModalOpen(false);
+    setEditing(null);
+    setForm(FORM_DEFAULT);
+    setSuccess(null);
+  }, [tenantId]);
 
   function normalizeForm(data: FormConta): Omit<ContaBancaria, "id" | "tenantId"> {
     return {
@@ -238,7 +220,7 @@ export default function ContasBancariasPage() {
     setModalOpen(true);
   }
 
-  const initialLoading = !tenantResolved || (loading && !hasLoadedOnce);
+  const initialLoading = tenantLoading || !tenantResolved || (loading && !hasLoadedOnce);
   const isTenantUnavailable = tenantResolved && !tenantId;
   const emptyStateMessage = isTenantUnavailable
     ? "Não foi possível identificar a unidade ativa."

@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { AppContentShell } from "@/components/layout/app-content-shell";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
 import { isRealApiEnabled } from "@/lib/api/http";
 import { getAccessToken, isMockSessionActive } from "@/lib/api/session";
+import { buildLoginHref } from "@/lib/auth-redirect";
 
 export default function AppLayout({
   children,
@@ -15,14 +16,20 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const handleOpenMenu = useCallback(() => setMobileMenuOpen(true), []);
   const handleCloseMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   useEffect(() => {
     const authenticated = isRealApiEnabled() ? !!getAccessToken() : isMockSessionActive();
-    if (!authenticated) router.replace("/login");
-  }, [router]);
+    if (!authenticated) {
+      const queryString = searchParams.toString();
+      const currentPath = `${pathname}${queryString ? `?${queryString}` : ""}`;
+      router.replace(buildLoginHref(currentPath));
+    }
+  }, [pathname, router, searchParams]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

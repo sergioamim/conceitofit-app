@@ -6,14 +6,16 @@ import { ScanLine } from "lucide-react";
 import {
   createVenda,
   listAlunos,
+  listConvenios,
   listPlanos,
   listProdutos,
   listServicos,
   listVoucherCodigos,
   listVouchers,
 } from "@/lib/mock/services";
+import { buildPlanoVendaItems } from "@/lib/comercial/plano-flow";
 import { getStore } from "@/lib/mock/store";
-import type { Aluno, PagamentoVenda, Plano, Produto, Servico, Tenant, TipoVenda, Venda } from "@/lib/types";
+import type { Aluno, Convenio, PagamentoVenda, Plano, Produto, Servico, Tenant, TipoVenda, Venda } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckoutPayment } from "@/components/shared/checkout-payment";
@@ -41,48 +43,6 @@ function formatBRL(value: number) {
   return safe.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function buildPlanoItems(plano: Plano, parcelasAnuidade: number): CartItem[] {
-  const items: CartItem[] = [
-    {
-      tipo: "PLANO",
-      referenciaId: plano.id,
-      descricao: `Plano: ${plano.nome}`,
-      quantidade: 1,
-      valorUnitario: Number(plano.valor ?? 0),
-      desconto: 0,
-    },
-  ];
-
-  if (Number(plano.valorMatricula ?? 0) > 0) {
-    items.push({
-      tipo: "PLANO",
-      referenciaId: `${plano.id}:matricula`,
-      descricao: `Matrícula: ${plano.nome}`,
-      quantidade: 1,
-      valorUnitario: Number(plano.valorMatricula ?? 0),
-      desconto: 0,
-      detalhes: "Cobrança única",
-    });
-  }
-
-  const cobraAnuidade = Boolean(plano.cobraAnuidade);
-  const valorAnuidade = Number(plano.valorAnuidade ?? 0);
-  if (cobraAnuidade && valorAnuidade > 0) {
-    const parcelas = Math.max(1, parcelasAnuidade || 1);
-    items.push({
-      tipo: "PLANO",
-      referenciaId: `${plano.id}:anuidade`,
-      descricao: `Anuidade: ${plano.nome}`,
-      quantidade: 1,
-      valorUnitario: valorAnuidade,
-      desconto: 0,
-      detalhes: `${parcelas}x de ${formatBRL(valorAnuidade / parcelas)}`,
-    });
-  }
-
-  return items;
-}
-
 function inferSaleTypeFromCart(items: CartItem[]): TipoVenda {
   if (items.some((item) => item.tipo === "PLANO")) return "PLANO";
   if (items.some((item) => item.tipo === "SERVICO")) return "SERVICO";
@@ -98,6 +58,7 @@ function NovaVendaPageContent() {
   const [tipoVenda, setTipoVenda] = useState<TipoVenda>("PLANO");
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
+  const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [planosLoaded, setPlanosLoaded] = useState(false);
@@ -110,6 +71,9 @@ function NovaVendaPageContent() {
   const [qtd, setQtd] = useState("1");
   const [selectedPlanoId, setSelectedPlanoId] = useState("");
   const [parcelasAnuidade, setParcelasAnuidade] = useState("1");
+  const [dataInicioPlano, setDataInicioPlano] = useState(() => new Date().toISOString().split("T")[0]);
+  const [renovacaoAutomaticaPlano, setRenovacaoAutomaticaPlano] = useState(false);
+  const [convenioPlanoId, setConvenioPlanoId] = useState("__SEM_CONVENIO__");
   const [cupomCode, setCupomCode] = useState("");
   const [cupomAppliedCode, setCupomAppliedCode] = useState("");
   const [cupomPercent, setCupomPercent] = useState(0);
@@ -134,6 +98,7 @@ function NovaVendaPageContent() {
   const [alunosLoaded, setAlunosLoaded] = useState(false);
   const [servicosLoaded, setServicosLoaded] = useState(false);
   const [produtosLoaded, setProdutosLoaded] = useState(false);
+  const [conveniosLoaded, setConveniosLoaded] = useState(false);
 
   const loadAlunos = useCallback(async () => {
     if (alunosLoaded) return;
@@ -165,6 +130,13 @@ function NovaVendaPageContent() {
     setProdutosLoaded(true);
   }, [produtosLoaded]);
 
+  const loadConvenios = useCallback(async () => {
+    if (conveniosLoaded) return;
+    const conveniosResponse = await listConvenios({ apenasAtivos: true });
+    setConvenios(conveniosResponse);
+    setConveniosLoaded(true);
+  }, [conveniosLoaded]);
+
   const syncTenantFromStore = useCallback(() => {
     const store = getStore();
     const nextTenantId = store.currentTenantId || store.tenant?.id || tenantIdRef.current;
@@ -182,9 +154,11 @@ function NovaVendaPageContent() {
     setPlanosLoadedTenantId("");
     setServicos([]);
     setProdutos([]);
+    setConvenios([]);
     setAlunosLoaded(false);
     setServicosLoaded(false);
     setProdutosLoaded(false);
+    setConveniosLoaded(false);
     prefillHandledRef.current = false;
   }, []);
 
@@ -204,12 +178,13 @@ function NovaVendaPageContent() {
     async function load() {
       if (!tenantId) return;
       await loadPlanos();
+      await loadConvenios();
       if (prefillClienteId && !alunosLoaded) {
         await loadAlunos();
       }
     }
     load();
-  }, [alunosLoaded, loadAlunos, loadPlanos, prefillClienteId, tenantId]);
+  }, [alunosLoaded, loadAlunos, loadConvenios, loadPlanos, prefillClienteId, tenantId]);
 
   useEffect(() => {
     if (tipoVenda === "SERVICO") void loadServicos();
@@ -220,6 +195,13 @@ function NovaVendaPageContent() {
     setSelectedItemId("");
     setItemQuery("");
     setQtd("1");
+    if (tipoVenda !== "PLANO") {
+      setSelectedPlanoId("");
+      setParcelasAnuidade("1");
+      setConvenioPlanoId("__SEM_CONVENIO__");
+      setRenovacaoAutomaticaPlano(false);
+      setDataInicioPlano(new Date().toISOString().split("T")[0]);
+    }
   }, [tipoVenda]);
 
   useEffect(() => {
@@ -291,6 +273,26 @@ function NovaVendaPageContent() {
     () => planos.find((plano) => plano.id === selectedPlanoId),
     [planos, selectedPlanoId]
   );
+  const conveniosPlano = useMemo(
+    () =>
+      selectedPlano
+        ? convenios.filter((convenio) => (convenio.planoIds ?? []).includes(selectedPlano.id))
+        : [],
+    [convenios, selectedPlano]
+  );
+  const selectedConvenio = useMemo(
+    () =>
+      convenioPlanoId !== "__SEM_CONVENIO__"
+        ? conveniosPlano.find((convenio) => convenio.id === convenioPlanoId) ?? null
+        : null,
+    [convenioPlanoId, conveniosPlano]
+  );
+
+  useEffect(() => {
+    if (convenioPlanoId === "__SEM_CONVENIO__") return;
+    if (conveniosPlano.some((convenio) => convenio.id === convenioPlanoId)) return;
+    setConvenioPlanoId("__SEM_CONVENIO__");
+  }, [convenioPlanoId, conveniosPlano]);
 
   const requireCliente = useMemo(
     () => cart.some((item) => item.tipo === "PLANO" || item.tipo === "SERVICO"),
@@ -302,7 +304,11 @@ function NovaVendaPageContent() {
     [cart]
   );
   const descontoCupom = useMemo(() => (subtotal * cupomPercent) / 100, [subtotal, cupomPercent]);
-  const descontoTotal = descontoCupom;
+  const descontoConvenioPlano = useMemo(() => {
+    if (!selectedPlano || !selectedConvenio) return 0;
+    return (Number(selectedPlano.valor ?? 0) * selectedConvenio.descontoPercentual) / 100;
+  }, [selectedConvenio, selectedPlano]);
+  const descontoTotal = descontoCupom + descontoConvenioPlano;
   const acrescimoTotal = parseFloat(acrescimoGeral) || 0;
   const total = Math.max(0, subtotal - descontoTotal + acrescimoTotal);
 
@@ -327,9 +333,13 @@ function NovaVendaPageContent() {
     const parcelas = Math.min(maxParcelas, Math.max(1, parseInt(parcelasAnuidade, 10) || 1));
     setParcelasAnuidade(String(parcelas));
     setSelectedPlanoId(plano.id);
+    setConvenioPlanoId("__SEM_CONVENIO__");
+    if (!plano.permiteRenovacaoAutomatica) {
+      setRenovacaoAutomaticaPlano(false);
+    }
     setCart((prev) => {
       const semPlano = prev.filter((item) => item.tipo !== "PLANO");
-      return [...buildPlanoItems(plano, parcelas), ...semPlano];
+      return [...buildPlanoVendaItems(plano, parcelas), ...semPlano];
     });
   }
 
@@ -337,7 +347,7 @@ function NovaVendaPageContent() {
     if (!selectedPlano) return;
     setCart((prev) => {
       const semPlano = prev.filter((item) => item.tipo !== "PLANO");
-      return [...buildPlanoItems(selectedPlano, parcelas), ...semPlano];
+      return [...buildPlanoVendaItems(selectedPlano, parcelas), ...semPlano];
     });
   }
 
@@ -348,6 +358,8 @@ function NovaVendaPageContent() {
       setCart((prev) => prev.filter((item) => item.tipo !== "PLANO"));
       setSelectedPlanoId("");
       setParcelasAnuidade("1");
+       setConvenioPlanoId("__SEM_CONVENIO__");
+       setRenovacaoAutomaticaPlano(false);
       return;
     }
     setCart((prev) => prev.filter((_, idx) => idx !== index));
@@ -515,7 +527,20 @@ function NovaVendaPageContent() {
         })),
         descontoTotal,
         acrescimoTotal: parseFloat(acrescimoGeral) || 0,
-        pagamento,
+        pagamento: {
+          ...pagamento,
+          status: "PAGO",
+        },
+        planoContexto:
+          tipoFinal === "PLANO" && plan
+            ? {
+                planoId: plan.id,
+                dataInicio: dataInicioPlano,
+                descontoPlano: 0,
+                renovacaoAutomatica: renovacaoAutomaticaPlano,
+                convenioId: selectedConvenio?.id,
+              }
+            : undefined,
       });
       const selectedCliente = alunos.find((a) => a.id === venda.clienteId) ?? null;
       setReceiptVenda(venda);
@@ -712,6 +737,63 @@ function NovaVendaPageContent() {
                   </div>
                 )}
 
+                {selectedPlano && (
+                  <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-secondary/20 p-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label htmlFor="venda-plano-data-inicio" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Início da contratação
+                      </label>
+                      <Input
+                        id="venda-plano-data-inicio"
+                        type="date"
+                        value={dataInicioPlano}
+                        onChange={(e) => setDataInicioPlano(e.target.value)}
+                        className="bg-secondary border-border"
+                      />
+                    </div>
+                    {conveniosPlano.length > 0 ? (
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Convênio
+                        </label>
+                        <Select value={convenioPlanoId} onValueChange={setConvenioPlanoId}>
+                          <SelectTrigger className="w-full border-border bg-secondary">
+                            <SelectValue placeholder="Sem convênio" />
+                          </SelectTrigger>
+                          <SelectContent className="border-border bg-card">
+                            <SelectItem value="__SEM_CONVENIO__">Sem convênio</SelectItem>
+                            {conveniosPlano.map((convenio) => (
+                              <SelectItem key={convenio.id} value={convenio.id}>
+                                {convenio.nome} ({convenio.descontoPercentual}%)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
+                        Sem convênio ativo vinculado a este plano.
+                      </div>
+                    )}
+                    <div className="md:col-span-2 flex items-start gap-2 rounded-md border border-border/70 bg-card/40 px-3 py-2 text-sm">
+                      <input
+                        id="venda-plano-renovacao"
+                        type="checkbox"
+                        checked={renovacaoAutomaticaPlano}
+                        disabled={!selectedPlano.permiteRenovacaoAutomatica}
+                        onChange={(e) => setRenovacaoAutomaticaPlano(e.target.checked)}
+                      />
+                      <label htmlFor="venda-plano-renovacao" className="cursor-pointer text-muted-foreground">
+                        Renovação automática {selectedPlano.permiteRenovacaoAutomatica ? "permitida" : "indisponível"} ·
+                        assinatura {selectedPlano.contratoAssinatura.toLowerCase()}
+                        {selectedPlano.permiteCobrancaRecorrente && selectedPlano.diaCobrancaPadrao
+                          ? ` · cobrança recorrente disponível (dia ${selectedPlano.diaCobrancaPadrao})`
+                          : " · cobrança recorrente indisponível"}
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid gap-3 md:grid-cols-2">
                   {planos.map((plano) => {
                     const selected = selectedPlanoId === plano.id;
@@ -791,6 +873,14 @@ function NovaVendaPageContent() {
                   <span className="text-gym-teal">- {formatBRL(descontoCupom)}</span>
                 </div>
               )}
+              {selectedConvenio && descontoConvenioPlano > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gym-teal">
+                    Convênio {selectedConvenio.nome} aplicado ({selectedConvenio.descontoPercentual}%)
+                  </span>
+                  <span className="text-gym-teal">- {formatBRL(descontoConvenioPlano)}</span>
+                </div>
+              )}
               {cupomError && <p className="text-xs text-gym-danger">{cupomError}</p>}
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Acréscimo</span>
@@ -805,7 +895,14 @@ function NovaVendaPageContent() {
             </div>
           </div>
 
-          <CheckoutPayment total={total} onConfirm={handleConfirmPayment} loading={saving} />
+          <CheckoutPayment
+            total={total}
+            onConfirm={handleConfirmPayment}
+            loading={saving}
+            disabledFormasPagamento={
+              selectedPlano && !selectedPlano.permiteCobrancaRecorrente ? ["RECORRENTE"] : []
+            }
+          />
         </div>
       </div>
 

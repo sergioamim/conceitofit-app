@@ -17,6 +17,7 @@ import { SuggestionInput } from "@/components/shared/suggestion-input";
 import type { RbacPermission } from "@/lib/types";
 import {
   useAuditoriaManager,
+  useAuthAccess,
   useGrantManager,
   usePerfisManager,
   useRbacTenant,
@@ -108,6 +109,7 @@ function SimpleEmptyState({ text }: { text: string }) {
 export default function RbacPage() {
   const [activeTab, setActiveTab] = useState<RbacTab>("perfis");
 
+  const access = useAuthAccess();
   const tenant = useRbacTenant();
   const tenantId = tenant.tenantId;
 
@@ -370,6 +372,32 @@ export default function RbacPage() {
         </p>
       </div>
 
+      {access.loading ? (
+        <div className="rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+          Validando permissões de acesso...
+        </div>
+      ) : null}
+
+      {access.error ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {access.error}
+        </div>
+      ) : null}
+
+      {tenant.error ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {tenant.error}
+        </div>
+      ) : null}
+
+      {!access.loading && !access.canAccessElevatedModules ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          Acesso negado. Apenas perfis administrativos podem gerenciar RBAC.
+        </div>
+      ) : null}
+
+      {!access.loading && access.canAccessElevatedModules ? (
+        <>
       <div className="flex flex-wrap gap-2 rounded-xl border border-border bg-card p-2">
         {tabButtons.map((tab) => (
           <button
@@ -791,6 +819,8 @@ export default function RbacPage() {
       )}
 
       {isActionLoading ? <p className="text-xs text-muted-foreground">Processando...</p> : null}
+        </>
+      ) : null}
     </div>
   );
 }

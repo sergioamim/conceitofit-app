@@ -2,10 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  authMe,
   createTenant,
   deleteTenant,
-  getCurrentTenant,
   gerarCredencialCatraca,
   listTenants,
   setCurrentTenant,
@@ -29,6 +27,7 @@ import { isRealApiEnabled } from "@/lib/api/http";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { CatracaCredentialResponse } from "@/lib/api/catraca";
+import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
 
 type UnitForm = {
   nome: string;
@@ -87,6 +86,8 @@ const EMPTY_FORM: UnitForm = {
 };
 
 export default function UnidadesPage() {
+  const access = useAuthAccess();
+  const tenantContext = useTenantContext();
   const [rows, setRows] = useState<Tenant[]>([]);
   const [currentTenantId, setCurrentTenantId] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -96,8 +97,6 @@ export default function UnidadesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [modalTab, setModalTab] = useState<"DADOS" | "CONFIG">("DADOS");
-  const [canManageCatraca, setCanManageCatraca] = useState(false);
-  const [permissionLoading, setPermissionLoading] = useState(true);
   const [credentialLoading, setCredentialLoading] = useState(false);
   const [credentialResult, setCredentialResult] = useState<CatracaCredentialResponse | null>(null);
   const [credentialError, setCredentialError] = useState("");
@@ -112,34 +111,17 @@ export default function UnidadesPage() {
   const tenantDisplay = tenantSelecionado?.nome || tenantSelecionado?.id || "Nenhuma unidade selecionada";
 
   async function load() {
-    const [all, current] = await Promise.all([listTenants(), getCurrentTenant()]);
+    const all = await listTenants();
     setRows(all);
-    setCurrentTenantId(current.id);
-  }
-
-  async function loadPermissions() {
-    if (!isRealApiEnabled()) {
-      setCanManageCatraca(true);
-      setPermissionLoading(false);
-      return;
-    }
-
-    try {
-      const user = await authMe();
-      const roles = (user?.roles ?? []).map((role) => role.toUpperCase());
-      const hasHighRole = roles.some((role) => role === "ADMIN" || role.includes("ADMIN"));
-      setCanManageCatraca(hasHighRole);
-    } catch {
-      setCanManageCatraca(false);
-    } finally {
-      setPermissionLoading(false);
-    }
   }
 
   useEffect(() => {
     void load();
-    void loadPermissions();
-  }, []);
+  }, [tenantContext.tenantId]);
+
+  useEffect(() => {
+    setCurrentTenantId(tenantContext.tenantId);
+  }, [tenantContext.tenantId]);
 
   function closeCatracaModal() {
     setConfirmCredencialOpen(false);
@@ -453,8 +435,8 @@ export default function UnidadesPage() {
           <Button
             onClick={() => setConfirmCredencialOpen(true)}
             disabled={
-              permissionLoading ||
-              !canManageCatraca ||
+              access.loading ||
+              !access.canAccessElevatedModules ||
               !currentTenantId ||
               !(manualCatracaAdminToken.trim() || hasConfiguredCatracaTokenFromEnv)
             }
@@ -484,9 +466,9 @@ export default function UnidadesPage() {
           </div>
         ) : null}
 
-        {permissionLoading ? (
+        {access.loading ? (
           <p className="text-xs text-muted-foreground">Validando permissão...</p>
-        ) : !canManageCatraca ? (
+        ) : !access.canAccessElevatedModules ? (
           <p className="text-xs text-gym-danger">Acesso negado. Apenas usuários com permissão alta podem gerar a credencial.</p>
         ) : null}
 

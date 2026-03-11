@@ -149,32 +149,74 @@ function Step1Dados({
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="col-span-2 space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nome completo *</label>
-          <Input placeholder="João da Silva" value={data.nome} onChange={set("nome")} className="bg-card border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-nome">
+            Nome completo *
+          </label>
+          <Input
+            id="novo-cliente-nome"
+            placeholder="João da Silva"
+            value={data.nome}
+            onChange={set("nome")}
+            className="bg-card border-border"
+          />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">E-mail (opcional)</label>
-          <Input type="email" placeholder="joao@email.com" value={data.email} onChange={set("email")} className="bg-card border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-email">
+            E-mail (opcional)
+          </label>
+          <Input
+            id="novo-cliente-email"
+            type="email"
+            placeholder="joao@email.com"
+            value={data.email}
+            onChange={set("email")}
+            className="bg-card border-border"
+          />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone *</label>
-          <PhoneInput placeholder="(11) 99999-0000" value={data.telefone} onChange={(v) => onChange({ ...data, telefone: v })} className="bg-card border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-telefone">
+            Telefone *
+          </label>
+          <PhoneInput
+            id="novo-cliente-telefone"
+            placeholder="(11) 99999-0000"
+            value={data.telefone}
+            onChange={(v) => onChange({ ...data, telefone: v })}
+            className="bg-card border-border"
+          />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone secundário</label>
           <PhoneInput placeholder="(11) 90000-0000" value={data.telefoneSec} onChange={(v) => onChange({ ...data, telefoneSec: v })} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">CPF *</label>
-          <MaskedInput mask="cpf" placeholder="000.000.000-00" value={data.cpf} onChange={(v) => onChange({ ...data, cpf: v })} className="bg-card border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-cpf">
+            CPF *
+          </label>
+          <MaskedInput
+            id="novo-cliente-cpf"
+            mask="cpf"
+            placeholder="000.000.000-00"
+            value={data.cpf}
+            onChange={(v) => onChange({ ...data, cpf: v })}
+            className="bg-card border-border"
+          />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">RG</label>
           <Input placeholder="00.000.000-0" value={data.rg} onChange={set("rg")} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Data de nascimento (opcional)</label>
-          <Input type="date" value={data.dataNascimento} onChange={set("dataNascimento")} className="bg-card border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-data-nascimento">
+            Data de nascimento (opcional)
+          </label>
+          <Input
+            id="novo-cliente-data-nascimento"
+            type="date"
+            value={data.dataNascimento}
+            onChange={set("dataNascimento")}
+            className="bg-card border-border"
+          />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sexo (opcional)</label>
@@ -355,8 +397,16 @@ function Step3Pagamento({ plano, fps, data, onChange }: {
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Data de início *</label>
-          <Input type="date" value={data.dataInicio} onChange={(e) => onChange({ ...data, dataInicio: e.target.value })} className="bg-card border-border" />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-data-inicio">
+            Data de início *
+          </label>
+          <Input
+            id="novo-cliente-data-inicio"
+            type="date"
+            value={data.dataInicio}
+            onChange={(e) => onChange({ ...data, dataInicio: e.target.value })}
+            className="bg-card border-border"
+          />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Forma de pagamento *</label>

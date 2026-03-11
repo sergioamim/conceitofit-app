@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { authLogout } from "@/lib/mock/services";
 import { getStore } from "@/lib/mock/store";
 import { isRealApiEnabled } from "@/lib/api/http";
+import { useAuthAccess } from "@/hooks/use-session-context";
 import {
   Dialog,
   DialogContent,
@@ -50,8 +51,9 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/prospects", label: "Prospects", icon: UserPlus },
+  { href: "/reservas", label: "Reservas", icon: CalendarDays },
   { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/matriculas", label: "Matrículas", icon: ClipboardList },
+  { href: "/matriculas", label: "Contratos", icon: ClipboardList },
   { href: "/planos", label: "Planos", icon: CreditCard },
   { href: "/grade", label: "Grade", icon: CalendarDays },
   { href: "/vendas", label: "Vendas", icon: ShoppingCart },
@@ -65,7 +67,10 @@ const treinoItems: NavItem[] = [
 ];
 
 const crmItems: NavItem[] = [
+  { href: "/crm", label: "Workspace CRM", icon: BriefcaseBusiness },
   { href: "/crm/prospects-kanban", label: "Funil de Vendas", icon: Kanban },
+  { href: "/crm/tarefas", label: "Tarefas Comerciais", icon: ClipboardList },
+  { href: "/crm/playbooks", label: "Playbooks e Cadências", icon: ListTree },
   { href: "/crm/campanhas", label: "Campanhas", icon: Megaphone },
 ];
 
@@ -300,11 +305,18 @@ function SidebarNavigation({
   onMobileClose?: () => void;
 }) {
   const pathname = usePathname();
+  const access = useAuthAccess();
   const [crmOpen, setCrmOpen] = useState(false);
   const [treinosOpen, setTreinosOpen] = useState(false);
   const [segurancaOpen, setSegurancaOpen] = useState(false);
   const [administrativoOpen, setAdministrativoOpen] = useState(false);
   const [gerencialOpen, setGerencialOpen] = useState(false);
+  const visibleSegurancaItems = access.canAccessElevatedModules ? segurancaItemsSorted : [];
+  const visibleAdministrativoItems = access.canAccessElevatedModules
+    ? administrativoItemsSorted
+    : administrativoItemsSorted.filter(
+        (item) => item.href !== "/administrativo/unidades" && item.href !== "/administrativo/catraca-status"
+      );
 
   useEffect(() => {
     if (mobileOpen) {
@@ -361,16 +373,18 @@ function SidebarNavigation({
         onNavigate={onMobileClose}
       />
 
-      <CollapsibleSection
-        title="Segurança"
-        icon={ShieldCheck}
-        collapsed={collapsed}
-        open={segurancaOpen}
-        onToggle={() => setSegurancaOpen((v) => !v)}
-        items={segurancaItemsSorted}
-        pathname={pathname}
-        onNavigate={onMobileClose}
-      />
+      {visibleSegurancaItems.length > 0 ? (
+        <CollapsibleSection
+          title="Segurança"
+          icon={ShieldCheck}
+          collapsed={collapsed}
+          open={segurancaOpen}
+          onToggle={() => setSegurancaOpen((v) => !v)}
+          items={visibleSegurancaItems}
+          pathname={pathname}
+          onNavigate={onMobileClose}
+        />
+      ) : null}
 
       <CollapsibleSection
         title="Gerencial"
@@ -389,7 +403,7 @@ function SidebarNavigation({
         collapsed={collapsed}
         open={administrativoOpen}
         onToggle={() => setAdministrativoOpen((v) => !v)}
-        items={administrativoItemsSorted}
+        items={visibleAdministrativoItems}
         pathname={pathname}
         onNavigate={onMobileClose}
       />

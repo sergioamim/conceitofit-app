@@ -1,13 +1,14 @@
- "use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import {
-  criarMatricula,
+  createVenda,
   listAlunos,
   listConvenios,
   listFormasPagamento,
   listPlanos,
 } from "@/lib/mock/services";
+import { buildPlanoVendaItems } from "@/lib/comercial/plano-flow";
 import type { Aluno, Plano, TipoFormaPagamento, Convenio } from "@/lib/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ export function NovaMatriculaModal({
   const [motivoDesconto, setMotivoDesconto] = useState("");
   const [renovacao, setRenovacao] = useState(false);
   const [convenioId, setConvenioId] = useState<string>(CONVENIO_SEM_CONVENIO);
+  const [parcelasAnuidade, setParcelasAnuidade] = useState("1");
   const [pagamentoPendente, setPagamentoPendente] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -76,6 +78,7 @@ export function NovaMatriculaModal({
     setMotivoDesconto("");
     setRenovacao(false);
     setConvenioId(CONVENIO_SEM_CONVENIO);
+    setParcelasAnuidade("1");
     setPagamentoPendente(false);
     setError("");
   }
@@ -91,25 +94,49 @@ export function NovaMatriculaModal({
     setLoading(true);
     setError("");
     try {
-      await criarMatricula({
-        alunoId,
-        planoId,
-        dataInicio,
-        valorPago: plano.valor,
-        valorMatricula: plano.valorMatricula,
-        desconto: parseFloat(desconto) || 0,
-        motivoDesconto: motivoDesconto || undefined,
-        formaPagamento: formaPagamento as TipoFormaPagamento,
-        renovacaoAutomatica: renovacao,
-        convenioId: convenioId === CONVENIO_SEM_CONVENIO ? undefined : convenioId || undefined,
-        dataPagamento: pagamentoPendente ? undefined : new Date().toISOString().split("T")[0],
+      const manualDiscount = Math.max(0, parseFloat(desconto) || 0);
+      const convenioSelecionado =
+        convenioId === CONVENIO_SEM_CONVENIO ? undefined : convenios.find((item) => item.id === convenioId);
+      const descontoConvenio = convenioSelecionado
+        ? (Number(plano.valor ?? 0) * convenioSelecionado.descontoPercentual) / 100
+        : 0;
+      const descontoTotal = manualDiscount + descontoConvenio;
+      const items = buildPlanoVendaItems(plano, Math.max(1, parseInt(parcelasAnuidade, 10) || 1));
+      const subtotal = items.reduce((sum, item) => sum + item.valorUnitario * item.quantidade, 0);
+      const total = Math.max(0, subtotal - descontoTotal);
+
+      await createVenda({
+        tipo: "PLANO",
+        clienteId: alunoId,
+        itens: items.map((item) => ({
+          tipo: item.tipo,
+          referenciaId: item.referenciaId,
+          descricao: item.descricao,
+          quantidade: item.quantidade,
+          valorUnitario: item.valorUnitario,
+          desconto: item.desconto,
+        })),
+        descontoTotal,
+        pagamento: {
+          formaPagamento: formaPagamento as TipoFormaPagamento,
+          valorPago: pagamentoPendente ? 0 : total,
+          status: pagamentoPendente ? "PENDENTE" : "PAGO",
+        },
+        planoContexto: {
+          planoId,
+          dataInicio,
+          descontoPlano: manualDiscount,
+          motivoDesconto: motivoDesconto || undefined,
+          renovacaoAutomatica: renovacao,
+          convenioId: convenioSelecionado?.id,
+        },
       });
       setLoading(false);
       reset();
       onDone();
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao criar matrícula.";
+      const message = err instanceof Error ? err.message : "Erro ao registrar contratação.";
       setError(message);
       setLoading(false);
     }
@@ -125,10 +152,13 @@ export function NovaMatriculaModal({
       <DialogContent className="bg-card border-border sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">
-            Nova Matrícula
+            Nova contratação de plano
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
+          <p className="text-sm text-muted-foreground">
+            Este atalho usa o mesmo fluxo comercial da venda canônica e já vincula venda, contratação e cobrança.
+          </p>
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Cliente *
@@ -160,6 +190,7 @@ export function NovaMatriculaModal({
               value={planoId}
               onValueChange={(nextPlanoId) => {
                 setPlanoId(nextPlanoId);
+                setParcelasAnuidade("1");
                 const nextPlano = planos.find((p) => p.id === nextPlanoId);
                 if (!nextPlano) return;
                 if (!nextPlano.permiteRenovacaoAutomatica) {
@@ -246,6 +277,29 @@ export function NovaMatriculaModal({
               />
             </div>
           </div>
+          {selectedPlano?.cobraAnuidade && Number(selectedPlano.valorAnuidade ?? 0) > 0 && (
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Parcelas da anuidade
+              </label>
+              <Select value={parcelasAnuidade} onValueChange={setParcelasAnuidade}>
+                <SelectTrigger className="w-full bg-secondary border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {Array.from({ length: Math.max(1, Number(selectedPlano.parcelasMaxAnuidade ?? 1)) }).map((_, idx) => {
+                    const parcelas = idx + 1;
+                    const parcelaValor = Number(selectedPlano.valorAnuidade ?? 0) / parcelas;
+                    return (
+                      <SelectItem key={parcelas} value={String(parcelas)}>
+                        {parcelas}x de {formatBRL(parcelaValor)}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {selectedPlano && conveniosPlano.length > 0 && (
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -303,6 +357,19 @@ export function NovaMatriculaModal({
               <p className="text-muted-foreground">
                 Valor: <span className="font-bold text-gym-accent">{formatBRL(selectedPlano.valor)}</span>
               </p>
+              {selectedPlano.valorMatricula > 0 ? (
+                <p className="text-muted-foreground">
+                  Matrícula: <span className="font-semibold text-foreground">{formatBRL(selectedPlano.valorMatricula)}</span>
+                </p>
+              ) : null}
+              {selectedPlano.cobraAnuidade && Number(selectedPlano.valorAnuidade ?? 0) > 0 ? (
+                <p className="text-muted-foreground">
+                  Anuidade: <span className="font-semibold text-foreground">{formatBRL(Number(selectedPlano.valorAnuidade ?? 0))}</span>
+                </p>
+              ) : null}
+              <p className="text-muted-foreground">
+                Assinatura: <span className="font-semibold text-foreground">{selectedPlano.contratoAssinatura.toLowerCase()}</span>
+              </p>
             </div>
           )}
           {error && (
@@ -316,7 +383,7 @@ export function NovaMatriculaModal({
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={!alunoId || !planoId || !formaPagamento || loading}>
-            {loading ? "Salvando..." : "Criar matrícula"}
+            {loading ? "Salvando..." : "Registrar contratação"}
           </Button>
         </DialogFooter>
       </DialogContent>

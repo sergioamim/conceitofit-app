@@ -7,10 +7,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createMaquininhaApi, listMaquininhasApi, toggleMaquininhaApi, updateMaquininhaApi } from "@/lib/api/maquininhas";
-import { getCurrentTenant } from "@/lib/mock/services";
 import { listContasBancariasApi } from "@/lib/api/contas-bancarias";
 import type { AdquirenteMaquininha, ContaBancaria } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useTenantContext } from "@/hooks/use-session-context";
 
 type MaquininhaForm = {
   nome: string;
@@ -52,11 +52,8 @@ function getStatusClass(status: "ATIVA" | "INATIVA") {
 }
 
 export default function MaquininhasPage() {
-  const [tenantId, setTenantId] = useState("");
-  const [tenantName, setTenantName] = useState("Tenant ativo");
   const [maquininhas, setMaquininhas] = useState<MaquininhaItem[]>([]);
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
-  const [tenantResolved, setTenantResolved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,6 +65,7 @@ export default function MaquininhasPage() {
   const [form, setForm] = useState<MaquininhaForm>(MAQUININHA_FORM_DEFAULT);
 
   const [search, setSearch] = useState("");
+  const { tenantId, tenantName, tenantResolved, loading: tenantLoading, error: tenantError } = useTenantContext();
 
   const contasAtivas = useMemo(
     () => contasBancarias.filter((conta) => conta.statusCadastro === "ATIVA"),
@@ -113,36 +111,20 @@ export default function MaquininhasPage() {
   }, [tenantId]);
 
   useEffect(() => {
-    let active = true;
-    setTenantResolved(false);
-    setHasLoadedOnce(false);
-
-    void (async () => {
-      try {
-        const tenant = await getCurrentTenant();
-        if (!active) return;
-        setTenantId(tenant.id);
-        setTenantName(tenant.nome);
-      } catch (tenantError) {
-        if (!active) return;
-        setTenantId("");
-        setTenantName("Tenant ativo");
-        setError(normalizeErrorMessage(tenantError));
-      } finally {
-        if (active) {
-          setTenantResolved(true);
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setError(tenantError);
+  }, [tenantError]);
+
+  useEffect(() => {
+    setHasLoadedOnce(false);
+    setModalOpen(false);
+    setEditing(null);
+    setForm(MAQUININHA_FORM_DEFAULT);
+    setSuccess(null);
+  }, [tenantId]);
 
   function isFormValid() {
     return Boolean(
@@ -233,7 +215,7 @@ export default function MaquininhasPage() {
     }
   }
 
-  const initialLoading = !tenantResolved || (loading && !hasLoadedOnce);
+  const initialLoading = tenantLoading || !tenantResolved || (loading && !hasLoadedOnce);
   const isTenantUnavailable = tenantResolved && !tenantId;
   const emptyStateMessage = isTenantUnavailable
     ? "Não foi possível identificar a unidade ativa."

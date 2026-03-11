@@ -20,9 +20,16 @@ const ACTIVE_TENANT_ID_KEY = "academia-auth-active-tenant-id";
 const AVAILABLE_TENANTS_KEY = "academia-auth-available-tenants";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
 const MOCK_LOGGED_IN_KEY = "academia-mock-logged-in";
+export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
+}
+
+function notifyAuthSessionUpdated(): void {
+  if (!isBrowser()) return;
+  if (typeof window.dispatchEvent !== "function") return;
+  window.dispatchEvent(new Event(AUTH_SESSION_UPDATED_EVENT));
 }
 
 export function getAccessToken(): string | undefined {
@@ -87,15 +94,18 @@ export function saveAuthSession(session: AuthSession): void {
   } else {
     window.localStorage.removeItem(AVAILABLE_TENANTS_KEY);
   }
+  notifyAuthSessionUpdated();
 }
 
 export function setActiveTenantId(tenantId?: string): void {
   if (!isBrowser()) return;
   if (!tenantId) {
     window.localStorage.removeItem(ACTIVE_TENANT_ID_KEY);
+    notifyAuthSessionUpdated();
     return;
   }
   window.localStorage.setItem(ACTIVE_TENANT_ID_KEY, tenantId);
+  notifyAuthSessionUpdated();
 }
 
 export function setAvailableTenants(tenantIds: string[], defaultTenantId?: string): void {
@@ -106,6 +116,7 @@ export function setAvailableTenants(tenantIds: string[], defaultTenantId?: strin
 
   if (!normalizedIds.length) {
     window.localStorage.removeItem(AVAILABLE_TENANTS_KEY);
+    notifyAuthSessionUpdated();
     return;
   }
 
@@ -127,11 +138,13 @@ export function setAvailableTenants(tenantIds: string[], defaultTenantId?: strin
     defaultTenant: tenantId === defaultId || (!defaultId && index === 0),
   }));
   window.localStorage.setItem(AVAILABLE_TENANTS_KEY, JSON.stringify(payload));
+  notifyAuthSessionUpdated();
 }
 
 export function clearAvailableTenants(): void {
   if (!isBrowser()) return;
   window.localStorage.removeItem(AVAILABLE_TENANTS_KEY);
+  notifyAuthSessionUpdated();
 }
 
 export function clearAuthSession(): void {
@@ -143,6 +156,7 @@ export function clearAuthSession(): void {
   window.localStorage.removeItem(ACTIVE_TENANT_ID_KEY);
   window.localStorage.removeItem(AVAILABLE_TENANTS_KEY);
   window.localStorage.removeItem(MOCK_LOGGED_IN_KEY);
+  notifyAuthSessionUpdated();
 }
 
 export function isMockSessionActive(): boolean {
@@ -153,6 +167,7 @@ export function isMockSessionActive(): boolean {
 export function setMockSessionActive(): void {
   if (!isBrowser()) return;
   window.localStorage.setItem(MOCK_LOGGED_IN_KEY, "1");
+  notifyAuthSessionUpdated();
 }
 
 export function getPreferredTenantId(): string | undefined {
@@ -163,4 +178,5 @@ export function getPreferredTenantId(): string | undefined {
 export function setPreferredTenantId(tenantId: string): void {
   if (!isBrowser()) return;
   window.localStorage.setItem(PREFERRED_TENANT_ID_KEY, tenantId);
+  notifyAuthSessionUpdated();
 }

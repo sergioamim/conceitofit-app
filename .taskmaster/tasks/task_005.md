@@ -2,7 +2,7 @@
 
 **Title:** Construir reservas, vagas e operacao de aulas
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 1, 3
 
@@ -22,7 +22,7 @@ No test strategy provided.
 
 ### 5.1. Mapear UX e fluxos de agenda/reservas
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Definir jornadas de usuário para reservas, espera e ocupação.
@@ -33,7 +33,7 @@ Levantar requisitos com base na grade existente, desenhar fluxos para portal e b
 
 ### 5.2. Projetar modelo de dados e contratos de API
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.1  
 
 Especificar entidades e endpoints para booking e waitlist.
@@ -44,7 +44,7 @@ Definir schemas para aula, reserva, lista de espera, check-in e ocupação; docu
 
 ### 5.3. Implementar serviços/API de reservas e waitlist
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.2  
 
 Construir serviços backend para criação e gestão de reservas.
@@ -55,7 +55,7 @@ Criar handlers para reservar, cancelar, promover da waitlist e consultar ocupaç
 
 ### 5.4. Criar telas operacionais de reserva e check-in
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.1, 5.3  
 
 Desenvolver UI para reservar, cancelar e registrar presença.
@@ -66,7 +66,7 @@ Adicionar telas no portal/backoffice com listas por atividade/turma, ações rá
 
 ### 5.5. Tratar estados, permissões e responsividade
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.4  
 
 Garantir consistência de estados e UX em diferentes dispositivos.
@@ -77,7 +77,7 @@ Implementar feedback de status, bloqueios por permissão, mensagens de erro/suce
 
 ### 5.6. Adicionar testes de regressão do módulo
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.3, 5.4, 5.5  
 
 Cobrir fluxos críticos de reservas e check-in.

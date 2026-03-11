@@ -1,4 +1,4 @@
-import type { TipoFormaPagamento, TipoVenda, Venda } from "@/lib/types";
+import type { StatusContratoPlano, TipoFormaPagamento, TipoVenda, Venda } from "@/lib/types";
 import { apiRequest } from "./http";
 
 const listVendasApiInFlight = new Map<string, Promise<Venda[] | ListVendasApiEnvelopeResult>>();
@@ -38,6 +38,7 @@ type CreateVendaApiInput = {
     formaPagamento: TipoFormaPagamento;
     parcelas?: number;
     valorPago: number;
+    status?: "PAGO" | "PENDENTE";
     observacoes?: string;
   };
 };
@@ -63,10 +64,16 @@ type VendaApiResponse = {
   descontoTotal: number;
   acrescimoTotal: number;
   total: number;
+  planoId?: string | null;
+  matriculaId?: string | null;
+  contratoStatus?: StatusContratoPlano | null;
+  dataInicioContrato?: string | null;
+  dataFimContrato?: string | null;
   pagamento?: {
     formaPagamento: TipoFormaPagamento;
     parcelas?: number | null;
     valorPago: number;
+    status?: "PAGO" | "PENDENTE" | null;
     observacoes?: string | null;
   } | null;
   dataCriacao: string;
@@ -169,8 +176,14 @@ function normalizeVenda(input: VendaApiResponse): Venda {
       parcelas:
         pagamento?.parcelas == null ? undefined : Math.max(1, Number(pagamento.parcelas)),
       valorPago: toNumber(pagamento?.valorPago, toNumber(input.total, 0)),
+      status: pagamento?.status === "PENDENTE" ? "PENDENTE" : "PAGO",
       observacoes: pagamento?.observacoes ?? undefined,
     },
+    planoId: input.planoId ?? undefined,
+    matriculaId: input.matriculaId ?? undefined,
+    contratoStatus: input.contratoStatus ?? undefined,
+    dataInicioContrato: input.dataInicioContrato ?? undefined,
+    dataFimContrato: input.dataFimContrato ?? undefined,
     dataCriacao: input.dataCriacao,
   };
 }

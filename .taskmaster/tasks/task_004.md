@@ -2,7 +2,7 @@
 
 **Title:** Construir CRM operacional com automacoes
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 1, 3
 
@@ -22,7 +22,7 @@ No test strategy provided.
 
 ### 4.1. Definir workspace CRM e modelos de dados base
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Mapear entidades e estados necessários para o CRM operacional.
@@ -33,7 +33,7 @@ Especificar modelos para pipeline, etapas, tarefas, playbooks, cadências, follo
 
 ### 4.2. Expandir API/serviços além de prospects
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.1  
 
 Criar endpoints e serviços para novas entidades do CRM.
@@ -44,7 +44,7 @@ Atualizar `src/lib/api/crm.ts` com métodos para pipeline, tarefas, playbooks, c
 
 ### 4.3. Construir telas de pipeline e tarefas comerciais
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.1, 4.2  
 
 Adicionar UI para gestão de funil e tarefas.
@@ -55,7 +55,7 @@ Implementar páginas e componentes para funil, lista de tarefas e filtros, conec
 
 ### 4.4. Criar telas de playbooks e cadências
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.1, 4.2  
 
 Entregar UI para playbooks e cadências comerciais.
@@ -66,7 +66,7 @@ Desenvolver telas para criação/edição de playbooks e cadências, com visuali
 
 ### 4.5. Adicionar automações e histórico de follow-up
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.2, 4.3, 4.4  
 
 Exibir automações e trilha de atividades do operador.
@@ -77,7 +77,7 @@ Implementar área de automações visíveis ao operador e timeline de histórico
 
 ### 4.6. Fechar estados UX e testes de fluxos críticos
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.3, 4.4, 4.5  
 
 Finalizar experiência e validar fluxos principais.

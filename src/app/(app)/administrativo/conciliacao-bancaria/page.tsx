@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getCurrentTenant } from "@/lib/mock/services";
 import {
   ImportarLinhasApiInput,
   conciliarLinhaApi,
@@ -26,6 +25,7 @@ import type {
 import { listContasPagar, listPagamentos } from "@/lib/mock/services";
 import { listContasBancariasApi } from "@/lib/api/contas-bancarias";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useTenantContext } from "@/hooks/use-session-context";
 
 const ORIGEM_LABEL: Record<OrigemConciliacao, string> = {
   MANUAL: "Manual",
@@ -82,10 +82,6 @@ const IMPORT_ORIGEM_OPTIONS: OrigemConciliacao[] = ["MANUAL", "OFX", "STONE"];
 
 export default function ConciliacaoBancariaPage() {
   const initialRange = normalizeDateISO();
-  const [tenantId, setTenantId] = useState("");
-  const [tenantName, setTenantName] = useState("Tenant ativo");
-
-  const [tenantResolved, setTenantResolved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -115,6 +111,7 @@ export default function ConciliacaoBancariaPage() {
     contaPagarId: NONE_OPTION,
     observacao: "",
   });
+  const { tenantId, tenantName, tenantResolved, loading: tenantLoading, error: tenantError } = useTenantContext();
 
   const contasBancariasMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -176,36 +173,24 @@ export default function ConciliacaoBancariaPage() {
   }, [tenantId, filtroStatus, filtroConta, startDate, endDate, importContaId]);
 
   useEffect(() => {
-    let active = true;
-    setTenantResolved(false);
-    setHasLoadedOnce(false);
-
-    void (async () => {
-      try {
-        const tenant = await getCurrentTenant();
-        if (!active) return;
-        setTenantId(tenant.id);
-        setTenantName(tenant.nome);
-      } catch (tenantError) {
-        if (!active) return;
-        setTenantId("");
-        setTenantName("Tenant ativo");
-        setError(normalizeErrorMessage(tenantError));
-      } finally {
-        if (active) {
-          setTenantResolved(true);
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setError(tenantError);
+  }, [tenantError]);
+
+  useEffect(() => {
+    setHasLoadedOnce(false);
+    setSuccess(null);
+    setConciliarOpen(false);
+    setLinhaSelecionada(null);
+    setConciliarForm({
+      contaReceberId: NONE_OPTION,
+      contaPagarId: NONE_OPTION,
+      observacao: "",
+    });
+  }, [tenantId]);
 
   const contasBancariasOptions = useMemo(
     () => [
@@ -385,7 +370,7 @@ export default function ConciliacaoBancariaPage() {
     }
   }
 
-  const initialLoading = !tenantResolved || (loading && !hasLoadedOnce);
+  const initialLoading = tenantLoading || !tenantResolved || (loading && !hasLoadedOnce);
   const isTenantUnavailable = tenantResolved && !tenantId;
   const emptyStateMessage = isTenantUnavailable
     ? "Não foi possível identificar a unidade ativa."

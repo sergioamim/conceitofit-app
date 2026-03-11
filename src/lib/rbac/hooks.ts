@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getCurrentTenant } from "@/lib/mock/services";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import {
   createPerfilService,
   listAuditoriaService,
@@ -25,39 +23,22 @@ import type {
   RbacPermission,
   RbacUser,
 } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
 
 export function useRbacTenant() {
-  const [tenantId, setTenantId] = useState("");
-  const [tenantName, setTenantName] = useState("Tenant ativo");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const tenant = await getCurrentTenant();
-      setTenantId(tenant.id);
-      setTenantName(tenant.nome);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const tenantContext = useTenantContext();
 
   return {
-    tenantId,
-    tenantName,
-    loading,
-    error,
-    refreshTenant: load,
+    tenantId: tenantContext.tenantId,
+    tenantName: tenantContext.tenantName,
+    loading: tenantContext.loading,
+    error: tenantContext.error,
+    refreshTenant: tenantContext.refresh,
   };
 }
+
+export { useAuthAccess };
 
 export function usePerfisManager(tenantId: string) {
   const [perfis, setPerfis] = useState<RbacPerfil[]>([]);

@@ -1,6 +1,15 @@
 import type {
   ConverterProspectInput,
   ConverterProspectResponse,
+  CrmActivity,
+  CrmAutomation,
+  CrmCadencia,
+  CrmPipelineStage,
+  CrmPlaybook,
+  CrmTask,
+  CrmTaskPrioridade,
+  CrmTaskStatus,
+  CrmTaskTipo,
   CreateProspectInput,
   OrigemProspect,
   Prospect,
@@ -80,6 +89,22 @@ function extractProspectItems(response: ProspectListApiResponse): ProspectApiRes
     response.itens ??
     []
   );
+}
+
+type GenericListResponse<T> =
+  | T[]
+  | {
+      items?: T[];
+      content?: T[];
+      data?: T[];
+      rows?: T[];
+      result?: T[];
+      itens?: T[];
+    };
+
+function extractListItems<T>(response: GenericListResponse<T>): T[] {
+  if (Array.isArray(response)) return response;
+  return response.items ?? response.content ?? response.data ?? response.rows ?? response.result ?? response.itens ?? [];
 }
 
 export function buildProspectUpsertApiRequest(
@@ -357,4 +382,188 @@ export async function updateProspectAgendamentoApi(input: {
       status: input.status,
     },
   });
+}
+
+export async function listCrmPipelineStagesApi(input: {
+  tenantId: string;
+}): Promise<CrmPipelineStage[]> {
+  const response = await apiRequest<GenericListResponse<CrmPipelineStage>>({
+    path: "/api/v1/crm/pipeline/stages",
+    query: { tenantId: input.tenantId },
+  });
+  return extractListItems(response);
+}
+
+export async function listCrmTasksApi(input: {
+  tenantId: string;
+  status?: CrmTaskStatus;
+  prioridade?: CrmTaskPrioridade;
+  prospectId?: string;
+  responsavelId?: string;
+}): Promise<CrmTask[]> {
+  const response = await apiRequest<GenericListResponse<CrmTask>>({
+    path: "/api/v1/crm/tasks",
+    query: {
+      tenantId: input.tenantId,
+      status: input.status,
+      prioridade: input.prioridade,
+      prospectId: input.prospectId,
+      responsavelId: input.responsavelId,
+    },
+  });
+  return extractListItems(response);
+}
+
+export async function createCrmTaskApi(input: {
+  tenantId: string;
+  data: {
+    prospectId?: string;
+    stageStatus?: StatusProspect;
+    titulo: string;
+    descricao?: string;
+    tipo: CrmTaskTipo;
+    prioridade: CrmTaskPrioridade;
+    status?: CrmTaskStatus;
+    responsavelId?: string;
+    vencimentoEm: string;
+  };
+}): Promise<CrmTask> {
+  return apiRequest<CrmTask>({
+    path: "/api/v1/crm/tasks",
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function updateCrmTaskApi(input: {
+  tenantId: string;
+  id: string;
+  data: Partial<{
+    prospectId?: string;
+    stageStatus?: StatusProspect;
+    titulo: string;
+    descricao?: string;
+    tipo: CrmTaskTipo;
+    prioridade: CrmTaskPrioridade;
+    status: CrmTaskStatus;
+    responsavelId?: string;
+    vencimentoEm: string;
+  }>;
+}): Promise<CrmTask> {
+  return apiRequest<CrmTask>({
+    path: `/api/v1/crm/tasks/${input.id}`,
+    method: "PATCH",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function listCrmPlaybooksApi(input: {
+  tenantId: string;
+}): Promise<CrmPlaybook[]> {
+  const response = await apiRequest<GenericListResponse<CrmPlaybook>>({
+    path: "/api/v1/crm/playbooks",
+    query: { tenantId: input.tenantId },
+  });
+  return extractListItems(response);
+}
+
+export async function createCrmPlaybookApi(input: {
+  tenantId: string;
+  data: Omit<CrmPlaybook, "id" | "tenantId" | "dataCriacao" | "dataAtualizacao">;
+}): Promise<CrmPlaybook> {
+  return apiRequest<CrmPlaybook>({
+    path: "/api/v1/crm/playbooks",
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function updateCrmPlaybookApi(input: {
+  tenantId: string;
+  id: string;
+  data: Partial<Omit<CrmPlaybook, "id" | "tenantId" | "dataCriacao" | "dataAtualizacao">>;
+}): Promise<CrmPlaybook> {
+  return apiRequest<CrmPlaybook>({
+    path: `/api/v1/crm/playbooks/${input.id}`,
+    method: "PATCH",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function listCrmCadenciasApi(input: {
+  tenantId: string;
+}): Promise<CrmCadencia[]> {
+  const response = await apiRequest<GenericListResponse<CrmCadencia>>({
+    path: "/api/v1/crm/cadencias",
+    query: { tenantId: input.tenantId },
+  });
+  return extractListItems(response);
+}
+
+export async function createCrmCadenciaApi(input: {
+  tenantId: string;
+  data: Omit<CrmCadencia, "id" | "tenantId" | "dataCriacao" | "dataAtualizacao" | "ultimaExecucao">;
+}): Promise<CrmCadencia> {
+  return apiRequest<CrmCadencia>({
+    path: "/api/v1/crm/cadencias",
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function updateCrmCadenciaApi(input: {
+  tenantId: string;
+  id: string;
+  data: Partial<Omit<CrmCadencia, "id" | "tenantId" | "dataCriacao" | "dataAtualizacao">>;
+}): Promise<CrmCadencia> {
+  return apiRequest<CrmCadencia>({
+    path: `/api/v1/crm/cadencias/${input.id}`,
+    method: "PATCH",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function listCrmAutomacoesApi(input: {
+  tenantId: string;
+}): Promise<CrmAutomation[]> {
+  const response = await apiRequest<GenericListResponse<CrmAutomation>>({
+    path: "/api/v1/crm/automacoes",
+    query: { tenantId: input.tenantId },
+  });
+  return extractListItems(response);
+}
+
+export async function updateCrmAutomacaoApi(input: {
+  tenantId: string;
+  id: string;
+  data: Partial<Omit<CrmAutomation, "id" | "tenantId" | "dataCriacao" | "dataAtualizacao">>;
+}): Promise<CrmAutomation> {
+  return apiRequest<CrmAutomation>({
+    path: `/api/v1/crm/automacoes/${input.id}`,
+    method: "PATCH",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function listCrmActivitiesApi(input: {
+  tenantId: string;
+  prospectId?: string;
+  limit?: number;
+}): Promise<CrmActivity[]> {
+  const response = await apiRequest<GenericListResponse<CrmActivity>>({
+    path: "/api/v1/crm/atividades",
+    query: {
+      tenantId: input.tenantId,
+      prospectId: input.prospectId,
+      limit: input.limit,
+    },
+  });
+  return extractListItems(response);
 }

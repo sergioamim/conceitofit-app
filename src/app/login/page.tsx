@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,11 @@ import { getAccessToken, getPreferredTenantId, isMockSessionActive, setPreferred
 import { isRealApiEnabled } from "@/lib/api/http";
 import type { Tenant } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { resolvePostLoginPath } from "@/lib/auth-redirect";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [username, setUsername] = useState("admin@academia.local");
   const [password, setPassword] = useState("12345678");
   const [error, setError] = useState<string | null>(null);
@@ -20,12 +22,13 @@ export default function LoginPage() {
   const [step, setStep] = useState<"LOGIN" | "TENANT">("LOGIN");
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState("");
+  const nextPath = resolvePostLoginPath(searchParams.get("next"));
 
   useEffect(() => {
     if (isRealApiEnabled() ? getAccessToken() : isMockSessionActive()) {
-      router.replace("/dashboard");
+      router.replace(nextPath);
     }
-  }, [router]);
+  }, [nextPath, router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,7 +43,7 @@ export default function LoginPage() {
 
       if (preferredIsValid && preferredTenantId) {
         await setCurrentTenant(preferredTenantId);
-        router.push("/dashboard");
+        router.push(nextPath);
         return;
       }
 
@@ -64,7 +67,7 @@ export default function LoginPage() {
     try {
       await setCurrentTenant(tenantId);
       setPreferredTenantId(tenantId);
-      router.push("/dashboard");
+      router.push(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível definir a unidade prioritária.");
     } finally {
@@ -87,8 +90,11 @@ export default function LoginPage() {
           {step === "LOGIN" ? (
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Usuário</label>
+                <label className="text-sm font-medium" htmlFor="login-username">
+                  Usuário
+                </label>
                 <Input
+                  id="login-username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -97,8 +103,11 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Senha</label>
+                <label className="text-sm font-medium" htmlFor="login-password">
+                  Senha
+                </label>
                 <Input
+                  id="login-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

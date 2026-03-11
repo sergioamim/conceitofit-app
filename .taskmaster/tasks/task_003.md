@@ -2,7 +2,7 @@
 
 **Title:** Corrigir contexto, sessao e experiencia multiunidade
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 1
 
@@ -22,7 +22,7 @@ No test strategy provided.
 
 ### 3.1. Auditar sessao e stores de contexto
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Mapear armazenamento de sessao, contexto ativo e navegacao multiunidade no web.
@@ -33,7 +33,7 @@ Identificar estados duplicados ou desssincronizados.
 
 ### 3.2. Implementar troca de unidade robusta
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 3.1  
 
 Corrigir fluxos de alternancia de unidade e sincronizacao do contexto ativo.
@@ -44,7 +44,7 @@ Garantir atualizacao consistente de dados e layout ao trocar unidade.
 
 ### 3.3. Alinhar permissao e renderizacao por contexto
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 3.2  
 
 Revisar exibicao de menu, guardas e telas conforme papel e unidade ativa.
@@ -55,7 +55,7 @@ Evitar acesso incorreto ou interfaces fora de contexto.
 
 ### 3.4. Cobrir cenarios de sessao e navegacao
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 3.3  
 
 Testar refresh, reentrada, navegacao profunda e perda de sessao/contexto.

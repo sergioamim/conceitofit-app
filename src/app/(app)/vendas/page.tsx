@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { listVendasPage } from "@/lib/mock/services";
+import { getStore } from "@/lib/mock/store";
 import { isRealApiEnabled } from "@/lib/api/http";
 import type { TipoFormaPagamento, Venda } from "@/lib/types";
+import { resolveFluxoComercialStatus, STATUS_FLUXO_COMERCIAL_LABEL } from "@/lib/comercial/plano-flow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -70,6 +72,25 @@ function formatItensResumo(venda: Venda): string {
   });
 
   return itens.join(" | ");
+}
+
+function resolveVendaFluxoStatus(venda: Venda) {
+  if (!venda.matriculaId) return undefined;
+  const store = getStore();
+  const matricula = store.matriculas.find((item) => item.id === venda.matriculaId);
+  if (!matricula) return undefined;
+  const plano = store.planos.find((item) => item.id === matricula.planoId);
+  const pagamento = store.pagamentos.find((item) => item.matriculaId === matricula.id);
+  return resolveFluxoComercialStatus({ matricula, plano, pagamento });
+}
+
+function getFluxoBadgeClass(value: string | undefined) {
+  if (value === "ATIVO") return "bg-gym-teal/15 text-gym-teal";
+  if (value === "AGUARDANDO_ASSINATURA") return "bg-amber-500/15 text-amber-400";
+  if (value === "AGUARDANDO_PAGAMENTO") return "bg-gym-warning/15 text-gym-warning";
+  if (value === "CANCELADO") return "bg-gym-danger/15 text-gym-danger";
+  if (value === "VENCIDO") return "bg-muted text-muted-foreground";
+  return "bg-gym-teal/15 text-gym-teal";
 }
 
 type TipoFiltro = "TODOS" | Venda["tipo"];
@@ -338,6 +359,7 @@ export default function VendasPage() {
         getRowKey={(venda) => venda.id}
         renderCells={(venda) => {
           const forma = resolveFormaPagamento(venda);
+          const fluxoStatus = resolveVendaFluxoStatus(venda);
           return (
             <>
               <TableCell className="px-4 py-3 text-sm text-muted-foreground">{formatDateTime(venda.dataCriacao)}</TableCell>
@@ -353,9 +375,14 @@ export default function VendasPage() {
                 {formatBRL(venda.total)}
               </TableCell>
               <TableCell className="px-4 py-3">
-                <span className="rounded-full bg-gym-teal/15 px-2.5 py-1 text-[11px] font-semibold text-gym-teal">
-                  {venda.status}
-                </span>
+                <div className="space-y-1">
+                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getFluxoBadgeClass(fluxoStatus)}`}>
+                    {fluxoStatus ? STATUS_FLUXO_COMERCIAL_LABEL[fluxoStatus] : venda.status}
+                  </span>
+                  {fluxoStatus ? (
+                    <p className="text-[11px] text-muted-foreground">Venda {venda.status.toLowerCase()}</p>
+                  ) : null}
+                </div>
               </TableCell>
             </>
           );

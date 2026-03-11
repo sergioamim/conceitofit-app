@@ -30,11 +30,11 @@ async function abrirComSessaoMockE2e(page: Page) {
 }
 
 async function preencherDadosPessoais(page: Page, input: ClientePayload) {
-  await page.getByLabel("Nome completo *").fill(input.nome);
-  await page.getByLabel("E-mail *").fill(input.email);
-  await page.getByLabel("Telefone *").fill(input.telefone);
-  await page.getByLabel("CPF *").fill(input.cpf);
-  await page.getByLabel("Data de nascimento *").fill(input.nascimento);
+  await page.getByLabel(/Nome completo/).fill(input.nome);
+  await page.getByLabel(/E-mail/).fill(input.email);
+  await page.getByLabel(/Telefone \*/).fill(input.telefone);
+  await page.getByLabel(/CPF \*/).fill(input.cpf);
+  await page.getByLabel(/Data de nascimento/).fill(input.nascimento);
   await page.getByRole("combobox").first().click();
   await page.getByRole("option", { name: "Masculino" }).click();
 }
@@ -56,15 +56,15 @@ test.describe("Cadastro de clientes (Playwright)", () => {
     await expect(page.getByRole("heading", { name: "Novo cliente" })).toBeVisible();
 
     await preencherDadosPessoais(page, payload);
-    await page.getByRole("button", { name: "Venda" }).click();
+    await page.getByRole("button", { name: /Completar cadastro agora/i }).click();
 
     await expect(page.getByText("Escolha o plano")).toBeVisible();
     await page.getByRole("button", { name: /Mensal Básico/ }).click();
     await page.getByRole("button", { name: "Próximo" }).click();
 
     await expect(page.getByText("Data de início *")).toBeVisible();
-    await page.getByRole("combobox").first().click();
-    await page.getByRole("option", { name: "Dinheiro" }).click();
+    await page.getByRole("combobox").last().click();
+    await page.getByRole("option", { name: "Dinheiro" }).first().click();
     await page.getByRole("button", { name: "Próximo" }).click();
 
     await expect(page.getByText("Cadastro realizado!")).toBeVisible();
@@ -80,12 +80,13 @@ test.describe("Cadastro de clientes (Playwright)", () => {
     await abrirComSessaoMockE2e(page);
 
     await page.getByRole("button", { name: "Novo cliente" }).click();
-    await page.getByRole("button", { name: "Venda" }).click();
 
     await expect(page.getByRole("heading", { name: "Novo cliente" })).toBeVisible();
     await expect(page.getByText("Escolha o plano")).not.toBeVisible();
-    await expect(page.getByLabel("Nome completo *")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Finalizar" })).toBeVisible();
+    await expect(page.getByLabel(/Nome completo/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Pré-cadastro$/i })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /Pré-cadastro \+ venda/i })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /Completar cadastro agora/i })).toBeDisabled();
   });
 
   test("Cenário 3: cria cliente sem matrícula (cadastro direto)", async ({ page }) => {
@@ -102,12 +103,10 @@ test.describe("Cadastro de clientes (Playwright)", () => {
 
     await page.getByRole("button", { name: "Novo cliente" }).click();
     await preencherDadosPessoais(page, payload);
-    await page.getByRole("button", { name: "Finalizar" }).click();
+    await page.getByRole("button", { name: /Pré-cadastro$/i }).click();
 
     await expect(page.getByRole("row").filter({ hasText: payload.nome })).toBeVisible();
-    await expect(
-      page.getByRole("row").filter({ hasText: payload.nome }).getByText("Inativo"),
-    ).toBeVisible();
-    await expect(page.getByText("Cadastro realizado!")).toBeHidden();
+    await expect(page.getByRole("row").filter({ hasText: payload.nome })).toContainText("Inativo");
+    await expect(page.getByRole("heading", { name: "Novo cliente" })).toBeHidden();
   });
 });

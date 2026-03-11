@@ -17,12 +17,14 @@ import {
 } from "@/lib/api/rbac";
 import type { RbacPerfil, RbacUser, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useAuthAccess } from "@/hooks/use-session-context";
 
 function isCustomerRole(roleName: string | undefined): boolean {
   return (roleName ?? "").trim().toUpperCase() === "CUSTOMER";
 }
 
 export default function AcessoUnidadePage() {
+  const access = useAuthAccess();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState("");
   const [users, setUsers] = useState<RbacUser[]>([]);
@@ -210,6 +212,27 @@ export default function AcessoUnidadePage() {
         </p>
       </div>
 
+      {access.loading ? (
+        <div className="rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+          Validando permissões de acesso...
+        </div>
+      ) : null}
+
+      {access.error ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {access.error}
+        </div>
+      ) : null}
+
+      {!access.loading && !access.canAccessElevatedModules ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          Acesso negado. Apenas perfis administrativos podem gerenciar acessos por unidade.
+        </div>
+      ) : null}
+
+      {!access.loading && access.canAccessElevatedModules ? (
+        <>
+
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="font-display text-lg">Conceder acesso</CardTitle>
@@ -333,6 +356,8 @@ export default function AcessoUnidadePage() {
           />
         </CardContent>
       </Card>
+        </>
+      ) : null}
     </div>
   );
 }

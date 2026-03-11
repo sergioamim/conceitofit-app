@@ -2,7 +2,7 @@
 
 **Title:** Consolidar fluxo web de contratos, matricula e venda
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 1
 
@@ -22,7 +22,7 @@ No test strategy provided.
 
 ### 2.1. Mapear telas atuais de vendas, matrículas e modal
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Levantar fluxos, estados e componentes usados nas telas existentes.
@@ -33,7 +33,7 @@ Revisar `src/app/(app)/vendas`, `src/app/(app)/matriculas` e `src/components/sha
 
 ### 2.2. Alinhar estados de contrato com o backend
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 2.1  
 
 Garantir que estados e transições refletem o fluxo canônico.
@@ -44,7 +44,7 @@ Mapear estados atuais vs. estados do backend, ajustar enums e traduções de sta
 
 ### 2.3. Ajustar criação de vendas e matrículas nos serviços
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 2.2  
 
 Atualizar chamadas e payloads para o fluxo oficial.
@@ -55,7 +55,7 @@ Rever serviços de criação/atualização de venda e matrícula, remover mocks,
 
 ### 2.4. Revisar UX e estados visuais do fluxo comercial
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 2.2  
 
 Padronizar mensagens, badges e progressos do fluxo.
@@ -66,7 +66,7 @@ Atualizar componentes de UI para refletir o status canônico, ajustar rótulos e
 
 ### 2.5. Cobrir testes e validações do fluxo consolidado
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 2.3, 2.4  
 
 Definir e executar testes do fluxo comercial end-to-end.

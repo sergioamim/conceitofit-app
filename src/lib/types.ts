@@ -90,6 +90,13 @@ export type TipoPlano = "MENSAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL" | "AVULS
 export type ModoAssinaturaContrato = "DIGITAL" | "PRESENCIAL" | "AMBAS";
 
 export type StatusMatricula = "ATIVA" | "VENCIDA" | "CANCELADA" | "SUSPENSA";
+export type StatusContratoPlano = "SEM_CONTRATO" | "PENDENTE_ASSINATURA" | "ASSINADO";
+export type StatusFluxoComercial =
+  | "AGUARDANDO_PAGAMENTO"
+  | "AGUARDANDO_ASSINATURA"
+  | "ATIVO"
+  | "CANCELADO"
+  | "VENCIDO";
 
 export type StatusPagamento = "PENDENTE" | "PAGO" | "VENCIDO" | "CANCELADO";
 export type StatusContaPagar = "PENDENTE" | "PAGA" | "VENCIDA" | "CANCELADA";
@@ -309,6 +316,12 @@ export interface Matricula {
   status: StatusMatricula;
   renovacaoAutomatica: boolean;
   observacoes?: string;
+  origemVendaId?: UUID;
+  contratoStatus?: StatusContratoPlano;
+  contratoModoAssinatura?: ModoAssinaturaContrato;
+  contratoEnviadoAutomaticamente?: boolean;
+  contratoUltimoEnvioEm?: LocalDateTime;
+  contratoAssinadoEm?: LocalDateTime;
   dataCriacao: LocalDateTime;
   dataAtualizacao?: LocalDateTime;
   convenioId?: UUID;
@@ -463,6 +476,7 @@ export interface PagamentoVenda {
   formaPagamento: TipoFormaPagamento;
   parcelas?: number;
   valorPago: number;
+  status?: "PAGO" | "PENDENTE";
   observacoes?: string;
 }
 
@@ -479,6 +493,11 @@ export interface Venda {
   acrescimoTotal: number;
   total: number;
   pagamento: PagamentoVenda;
+  planoId?: UUID;
+  matriculaId?: UUID;
+  contratoStatus?: StatusContratoPlano;
+  dataInicioContrato?: LocalDate;
+  dataFimContrato?: LocalDate;
   dataCriacao: LocalDateTime;
 }
 
@@ -592,6 +611,71 @@ export interface Presenca {
   horario: string;
   origem: "CHECKIN" | "AULA" | "ACESSO";
   atividade?: string;
+}
+
+export type ReservaAulaStatus =
+  | "CONFIRMADA"
+  | "LISTA_ESPERA"
+  | "CANCELADA"
+  | "CHECKIN";
+export type ReservaAulaOrigem = "PORTAL_CLIENTE" | "BACKOFFICE";
+
+export interface AulaSessao {
+  id: UUID;
+  tenantId: UUID;
+  atividadeGradeId: UUID;
+  atividadeId: UUID;
+  atividadeNome: string;
+  data: LocalDate;
+  diaSemana: DiaSemana;
+  horaInicio: string;
+  horaFim: string;
+  capacidade: number;
+  vagasOcupadas: number;
+  vagasDisponiveis: number;
+  waitlistTotal: number;
+  permiteReserva: boolean;
+  listaEsperaHabilitada: boolean;
+  acessoClientes: AtividadeGrade["acessoClientes"];
+  exibirNoAppCliente: boolean;
+  exibirNoAutoatendimento: boolean;
+  checkinLiberadoMinutosAntes: number;
+  permiteCheckin: boolean;
+  checkinObrigatorio: boolean;
+  local?: string;
+  salaNome?: string;
+  instrutorNome?: string;
+}
+
+export interface ReservaAula {
+  id: UUID;
+  tenantId: UUID;
+  sessaoId: UUID;
+  atividadeGradeId: UUID;
+  atividadeId: UUID;
+  atividadeNome: string;
+  alunoId: UUID;
+  alunoNome: string;
+  data: LocalDate;
+  horaInicio: string;
+  horaFim: string;
+  origem: ReservaAulaOrigem;
+  status: ReservaAulaStatus;
+  posicaoListaEspera?: number;
+  checkinEm?: LocalDateTime;
+  canceladaEm?: LocalDateTime;
+  local?: string;
+  instrutorNome?: string;
+  dataCriacao: LocalDateTime;
+  dataAtualizacao?: LocalDateTime;
+}
+
+export interface AulaOcupacao {
+  sessao: AulaSessao;
+  confirmadas: ReservaAula[];
+  waitlist: ReservaAula[];
+  canceladas: ReservaAula[];
+  checkinsRealizados: number;
 }
 
 export interface Treino {
@@ -774,6 +858,53 @@ export type CampanhaPublicoAlvo =
   | "PROSPECTS_EM_ABERTO"
   | "ALUNOS_INATIVOS";
 export type CampanhaStatus = "RASCUNHO" | "ATIVA" | "ENCERRADA";
+export type CrmTaskStatus =
+  | "PENDENTE"
+  | "EM_ANDAMENTO"
+  | "CONCLUIDA"
+  | "ATRASADA"
+  | "CANCELADA";
+export type CrmTaskPrioridade = "BAIXA" | "MEDIA" | "ALTA";
+export type CrmTaskTipo =
+  | "LIGACAO"
+  | "WHATSAPP"
+  | "EMAIL"
+  | "VISITA"
+  | "PROPOSTA"
+  | "FOLLOW_UP";
+export type CrmTaskOrigem = "MANUAL" | "AUTOMACAO" | "CADENCIA";
+export type CrmPlaybookAcao =
+  | "CHECKLIST"
+  | "SCRIPT_WHATSAPP"
+  | "LIGACAO"
+  | "PROPOSTA"
+  | "VISITA";
+export type CrmCadenciaGatilho =
+  | "NOVO_PROSPECT"
+  | "SEM_RESPOSTA"
+  | "VISITA_REALIZADA"
+  | "MUDANCA_DE_ETAPA";
+export type CrmCadenciaAcao = "WHATSAPP" | "EMAIL" | "LIGACAO" | "TAREFA_INTERNA";
+export type CrmAutomationGatilho =
+  | "PROSPECT_CRIADO"
+  | "ETAPA_ALTERADA"
+  | "TAREFA_ATRASADA"
+  | "CADENCIA_CONCLUIDA";
+export type CrmAutomationAcao =
+  | "CRIAR_TAREFA"
+  | "INICIAR_CADENCIA"
+  | "APLICAR_PLAYBOOK"
+  | "NOTIFICAR_RESPONSAVEL";
+export type CrmActivityTipo =
+  | "PROSPECT_CRIADO"
+  | "ETAPA_ALTERADA"
+  | "FOLLOW_UP_REGISTRADO"
+  | "TAREFA_CRIADA"
+  | "TAREFA_CONCLUIDA"
+  | "PLAYBOOK_ATUALIZADO"
+  | "CADENCIA_ATIVADA"
+  | "AUTOMACAO_ALTERADA";
+export type CrmActivityOrigem = "OPERADOR" | "AUTOMACAO" | "SISTEMA";
 
 export interface CampanhaCRM {
   id: UUID;
@@ -791,6 +922,135 @@ export interface CampanhaCRM {
   dataCriacao: LocalDateTime;
   dataAtualizacao?: LocalDateTime;
   audienceEstimado?: number;
+}
+
+export interface CrmPipelineStage {
+  id: UUID;
+  tenantId: UUID;
+  status: StatusProspect;
+  nome: string;
+  ordem: number;
+  descricao: string;
+  objetivo: string;
+  slaHoras: number;
+  ativo: boolean;
+  accentClass?: string;
+}
+
+export interface CrmTask {
+  id: UUID;
+  tenantId: UUID;
+  prospectId?: UUID;
+  prospectNome?: string;
+  stageStatus?: StatusProspect;
+  titulo: string;
+  descricao?: string;
+  tipo: CrmTaskTipo;
+  prioridade: CrmTaskPrioridade;
+  status: CrmTaskStatus;
+  responsavelId?: UUID;
+  responsavelNome?: string;
+  origem: CrmTaskOrigem;
+  vencimentoEm: LocalDateTime;
+  concluidaEm?: LocalDateTime;
+  dataCriacao: LocalDateTime;
+  dataAtualizacao?: LocalDateTime;
+}
+
+export interface CrmPlaybookStep {
+  id: UUID;
+  titulo: string;
+  descricao?: string;
+  acao: CrmPlaybookAcao;
+  prazoHoras: number;
+  obrigatoria: boolean;
+}
+
+export interface CrmPlaybook {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  objetivo: string;
+  stageStatus: StatusProspect;
+  ativo: boolean;
+  passos: CrmPlaybookStep[];
+  dataCriacao: LocalDateTime;
+  dataAtualizacao?: LocalDateTime;
+}
+
+export interface CrmCadenciaStep {
+  id: UUID;
+  titulo: string;
+  acao: CrmCadenciaAcao;
+  delayDias: number;
+  template?: string;
+  automatica: boolean;
+}
+
+export interface CrmCadencia {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  objetivo: string;
+  stageStatus: StatusProspect;
+  gatilho: CrmCadenciaGatilho;
+  ativo: boolean;
+  passos: CrmCadenciaStep[];
+  ultimaExecucao?: LocalDateTime;
+  dataCriacao: LocalDateTime;
+  dataAtualizacao?: LocalDateTime;
+}
+
+export interface CrmAutomation {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  descricao?: string;
+  gatilho: CrmAutomationGatilho;
+  acao: CrmAutomationAcao;
+  stageStatus?: StatusProspect;
+  ativo: boolean;
+  execucoes: number;
+  ultimaExecucao?: LocalDateTime;
+  cadenceId?: UUID;
+  playbookId?: UUID;
+  dataCriacao: LocalDateTime;
+  dataAtualizacao?: LocalDateTime;
+}
+
+export interface CrmActivity {
+  id: UUID;
+  tenantId: UUID;
+  prospectId?: UUID;
+  prospectNome?: string;
+  taskId?: UUID;
+  tipo: CrmActivityTipo;
+  titulo: string;
+  descricao?: string;
+  actorNome: string;
+  actorId?: UUID;
+  origem: CrmActivityOrigem;
+  dataCriacao: LocalDateTime;
+}
+
+export interface CrmWorkspaceStageSummary {
+  stageStatus: StatusProspect;
+  stageNome: string;
+  totalProspects: number;
+  totalTarefas: number;
+  slaHoras: number;
+}
+
+export interface CrmWorkspaceSnapshot {
+  tenantId: UUID;
+  totalProspectsAbertos: number;
+  totalTarefasAbertas: number;
+  totalTarefasAtrasadas: number;
+  totalCadenciasAtivas: number;
+  totalAutomacoesAtivas: number;
+  estagios: CrmWorkspaceStageSummary[];
+  proximasTarefas: CrmTask[];
+  atividadesRecentes: CrmActivity[];
 }
 
 // ─── Input/Request types ────────────────────────────────────────────────────
