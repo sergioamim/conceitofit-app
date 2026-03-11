@@ -1,6 +1,7 @@
 "use client";
 
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AlertCircle, RefreshCw, Copy, UploadCloud, XCircle } from "lucide-react";
 import { type SuggestionOption } from "@/components/shared/suggestion-input";
 import { MapeamentoAcademiaUnidadeSelector } from "@/components/admin/importacao-academia-unidade-selector";
@@ -14,65 +15,36 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { ApiRequestError, apiRequest } from "@/lib/api/http";
+import { ApiRequestError } from "@/lib/api/http";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import {
-  createEvoP0PacoteJobApi,
-  getEvoP0PacoteAnaliseApi,
+  type EvoImportEntidadeResumo as EntidadeResumo,
+  type EvoImportJobResumo as JobResumo,
+  type EvoImportJobStatus as EvoStatus,
+  type EvoImportRejeicao as Rejeicao,
   type UploadAnaliseArquivo,
   type UploadAnaliseResponse,
-  uploadEvoP0PacoteApi,
 } from "@/lib/api/importacao-evo";
-import { listAcademias, listTenantsGlobal, setCurrentTenant } from "@/lib/mock/services";
-import type { Academia, Tenant } from "@/lib/types";
+import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
+import {
+  createBackofficeEvoP0CsvJob,
+  createBackofficeEvoP0PacoteJob,
+  getBackofficeEvoImportJobResumo,
+  getBackofficeEvoP0PacoteAnalise,
+  listBackofficeEvoImportJobRejeicoes,
+  uploadBackofficeEvoP0Pacote,
+} from "@/lib/backoffice/importacao-evo";
+import {
+  atualizarImportacaoOnboardingStatus,
+  getUnidadeOnboardingStatusLabel,
+  getUnidadeOnboardingStrategyLabel,
+  listUnidadesOnboarding,
+  registrarImportacaoOnboarding,
+  saveUnidadeOnboarding,
+} from "@/lib/backoffice/onboarding";
+import type { Academia, Tenant, UnidadeOnboardingState } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-type EvoStatus = "PROCESSANDO" | "CONCLUIDO" | "CONCLUIDO_COM_REJEICOES" | "FALHA";
-
-type EntidadeResumo = {
-  total: number;
-  processadas: number;
-  criadas: number;
-  atualizadas: number;
-  rejeitadas: number;
-};
-
-type JobResumo = {
-  status: EvoStatus;
-  solicitadoEm?: string | null;
-  finalizadoEm?: string | null;
-  geral?: EntidadeResumo;
-  clientes?: EntidadeResumo;
-  prospects?: EntidadeResumo;
-  contratos?: EntidadeResumo;
-  clientesContratos?: EntidadeResumo;
-  vendas?: EntidadeResumo;
-  vendasItens?: EntidadeResumo;
-  recebimentos?: EntidadeResumo;
-  contasBancarias?: EntidadeResumo;
-  contasPagar?: EntidadeResumo;
-  gruposExercicio?: EntidadeResumo;
-  rejeicoes?: { mensagem?: string };
-  exerciciosTreino?: EntidadeResumo;
-  treinos?: EntidadeResumo;
-  treinosSeries?: EntidadeResumo;
-  treinosSeriesItens?: EntidadeResumo;
-  produtos?: EntidadeResumo;
-  produtoMovimentacoes?: EntidadeResumo;
-  servicos?: EntidadeResumo;
-  funcionarios?: EntidadeResumo;
-  maquininhas?: EntidadeResumo;
-};
-
-type Rejeicao = {
-  entidade: string;
-  arquivo: string;
-  linhaArquivo: number;
-  sourceId?: string;
-  motivo: string;
-  criadoEm: string;
-};
 
 type JobHistoryMeta = {
   tenantId: string;
@@ -170,12 +142,15 @@ type MapeamentoFilial = {
 };
 
 export default function ImportacaoEvoP0Page() {
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+  const preselectedTenantId = normalizeTenantId(searchParams.get("tenantId"));
   const [activeTab, setActiveTab] = useState<"nova" | "pacote" | "acompanhamento">("nova");
   const [dryRun, setDryRun] = useState(false);
   const [maxRejeicoes, setMaxRejeicoes] = useState(200);
   const [academias, setAcademias] = useState<Academia[]>([]);
   const [unidades, setUnidades] = useState<Tenant[]>([]);
+  const [unidadesOnboarding, setUnidadesOnboarding] = useState<UnidadeOnboardingState[]>([]);
   const [loadingMapeamento, setLoadingMapeamento] = useState(false);
   const [mapeamentos, setMapeamentos] = useState<MapeamentoFilial[]>([
     { idFilialEvo: "", tenantId: "", academiaId: "", academiaNome: "", unidadeNome: "" },
@@ -201,6 +176,8 @@ export default function ImportacaoEvoP0Page() {
 
   const [jobId, setJobId] = useState<string>("");
   const [jobTenantId, setJobTenantId] = useState<string>("");
+  const [jobTenantIds, setJobTenantIds] = useState<string[]>([]);
+  const [jobOrigem, setJobOrigem] = useState<"pacote" | "csv" | null>(null);
   const [jobContextoLabel, setJobContextoLabel] = useState({
     academiaNome: "Não informado",
     unidadeNome: "Não informado",
@@ -217,6 +194,7 @@ export default function ImportacaoEvoP0Page() {
   const [rejeicoesLoading, setRejeicoesLoading] = useState(false);
   const [showRejeicoes, setShowRejeicoes] = useState(false);
   const [entidadeFiltro, setEntidadeFiltro] = useState<string>(ENTIDADE_TODAS);
+  const lastJobStatusRef = useRef<EvoStatus | null>(null);
 
   const getStorageKeyForTenant = useCallback(
     (tenantId?: string | null) => `${STORAGE_KEY}:${resolveTenantForStorage(tenantId)}`,
@@ -248,11 +226,6 @@ export default function ImportacaoEvoP0Page() {
     return resolveTenantForStorage(tenantId);
   }, []);
   const resolveCurrentTenantIdRaw = useCallback(() => normalizeTenantId(getActiveTenantIdFromSession()), []);
-  const buildTenantHeader = useCallback((tenantId?: string) => {
-    const tenant = normalizeTenantId(tenantId) || resolveCurrentTenantIdRaw();
-    if (!tenant) return undefined;
-    return { "X-Tenant-Id": tenant };
-  }, [resolveCurrentTenantIdRaw]);
   const tenantIndex = useMemo(() => {
     const map = new Map<string, Tenant>();
     unidades.forEach((tenant) => {
@@ -267,6 +240,13 @@ export default function ImportacaoEvoP0Page() {
     });
     return map;
   }, [academias]);
+  const onboardingIndex = useMemo(() => {
+    const map = new Map<string, UnidadeOnboardingState>();
+    unidadesOnboarding.forEach((item) => {
+      map.set(normalizeTenantId(item.tenantId), item);
+    });
+    return map;
+  }, [unidadesOnboarding]);
 
   const resolveTenantLabel = useCallback(
     (tenantId?: string) => {
@@ -459,47 +439,110 @@ export default function ImportacaoEvoP0Page() {
     return `Erro na requisição (${error.status}).`;
   }, [formatErrorBody, parseApiErrorBody]);
 
-  const ensureContextoTenantDoPacote = useCallback(
-    async (tenantId: string) => {
-      const desiredTenant = normalizeTenantId(tenantId);
-      const currentTenant = normalizeTenantId(getActiveTenantIdFromSession());
-      if (!desiredTenant || desiredTenant === currentTenant) {
-        return currentTenant;
-      }
-      await setCurrentTenant(desiredTenant);
-      return currentTenant;
-    },
-    []
-  );
-
-  const ensureContextoTenant = useCallback(async (tenantId: string) => {
-    const desiredTenant = normalizeTenantId(tenantId);
-    const currentTenant = normalizeTenantId(getActiveTenantIdFromSession());
-    if (!desiredTenant || desiredTenant === currentTenant) return;
-    await setCurrentTenant(desiredTenant);
+  const upsertOnboardingState = useCallback((next: UnidadeOnboardingState) => {
+    setUnidadesOnboarding((current) => [next, ...current.filter((item) => item.tenantId !== next.tenantId)]);
   }, []);
 
-  const restoreContextoTenant = useCallback(async (tenantId: string | null | undefined) => {
-    const targetTenant = normalizeTenantId(tenantId);
-    if (!targetTenant) return;
-    const current = normalizeTenantId(getActiveTenantIdFromSession());
-    if (current && current === targetTenant) return;
-    try {
-      await setCurrentTenant(targetTenant);
-    } catch {
-      // no-op: evitar ruptura de fluxo caso retorno de tenant antigo falhe.
-    }
-  }, []);
+  const persistOnboardingContext = useCallback(async (
+    tenantId: string,
+    academiaId: string | undefined,
+    evoFilialId: string | undefined
+  ) => {
+    const normalizedTenant = normalizeTenantId(tenantId);
+    if (!normalizedTenant) return null;
+    const current = onboardingIndex.get(normalizedTenant);
+    const saved = await saveUnidadeOnboarding({
+      tenantId,
+      academiaId,
+      estrategia: current?.estrategia ?? "PREPARAR_ETL",
+      evoFilialId,
+      status: current?.status,
+      ultimaMensagem: current?.ultimaMensagem,
+    });
+    upsertOnboardingState(saved);
+    return saved;
+  }, [onboardingIndex, upsertOnboardingState]);
 
-  const temMensagemContexto = useCallback((error: ApiRequestError) => {
-    const message = extractErrorMessage(error).toLowerCase();
-    return (
-      message.includes("nao pertence ao tenant") ||
-      message.includes("não pertence ao tenant") ||
-      message.includes("pacote não pertence") ||
-      message.includes("pacote nao pertence")
+  const registrarOnboardingDoJob = useCallback(async (input: {
+    tenantId: string;
+    academiaId?: string;
+    evoFilialId?: string;
+    jobId: string;
+    origem: "CSV" | "PACOTE";
+    mensagem?: string;
+  }) => {
+    await persistOnboardingContext(input.tenantId, input.academiaId, input.evoFilialId);
+    const next = await registrarImportacaoOnboarding({
+      tenantId: input.tenantId,
+      academiaId: input.academiaId,
+      jobId: input.jobId,
+      origem: input.origem,
+      mensagem: input.mensagem,
+    });
+    upsertOnboardingState(next);
+  }, [persistOnboardingContext, upsertOnboardingState]);
+
+  const atualizarStatusOnboardingDoJob = useCallback(async (input: {
+    tenantIds: string[];
+    jobId: string;
+    status: EvoStatus;
+    origem: "CSV" | "PACOTE";
+    mensagem?: string;
+  }) => {
+    if (!input.jobId || input.tenantIds.length === 0) return;
+    if (lastJobStatusRef.current === input.status) return;
+    lastJobStatusRef.current = input.status;
+    await Promise.all(
+      input.tenantIds.map(async (tenantId) => {
+        const normalizedTenant = normalizeTenantId(tenantId);
+        if (!normalizedTenant) return;
+        const unidade = tenantIndex.get(normalizedTenant);
+        const current = onboardingIndex.get(normalizedTenant);
+        const updated = await atualizarImportacaoOnboardingStatus({
+          tenantId,
+          academiaId: current?.academiaId ?? unidade?.academiaId,
+          jobId: input.jobId,
+          importStatus: input.status,
+          origem: input.origem,
+          mensagem: input.mensagem,
+        });
+        upsertOnboardingState(updated);
+      })
     );
-  }, [extractErrorMessage]);
+  }, [onboardingIndex, tenantIndex, upsertOnboardingState]);
+
+  const aplicarPresetTenant = useCallback((tenantId: string) => {
+    const normalizedTenant = normalizeTenantId(tenantId);
+    if (!normalizedTenant) return;
+    const unidade = tenantIndex.get(normalizedTenant);
+    if (!unidade) return;
+    const academiaId = unidade.academiaId ?? unidade.groupId ?? "";
+    const academia = academiaId ? academiaIndex.get(normalizeTenantId(academiaId)) : null;
+    const onboarding = onboardingIndex.get(normalizedTenant);
+    const academiaNome = academia?.nome ?? "Não informado";
+    const unidadeNome = unidade.nome ?? "Não informado";
+    const evoFilialId = onboarding?.evoFilialId ?? "";
+
+    setMapeamentos([
+      {
+        idFilialEvo: evoFilialId,
+        tenantId: unidade.id,
+        academiaId,
+        academiaNome,
+        unidadeNome,
+      },
+    ]);
+    setPacoteMapeamento({
+      idFilialEvo: evoFilialId,
+      tenantId: unidade.id,
+      academiaId,
+      academiaNome,
+      unidadeNome,
+    });
+    if (evoFilialId) {
+      setPacoteEvoUnidadeId(evoFilialId);
+    }
+  }, [academiaIndex, onboardingIndex, tenantIndex]);
 
   const setJobLabelFromContext = useCallback(
     (tenantId: string, academiaNome?: string, unidadeNome?: string) => {
@@ -557,10 +600,15 @@ export default function ImportacaoEvoP0Page() {
     async function loadMapeamentoData() {
       setLoadingMapeamento(true);
       try {
-        const [loadedAcademias, loadedUnidades] = await Promise.all([listAcademias(), listTenantsGlobal()]);
+        const [loadedAcademias, loadedUnidades, loadedOnboarding] = await Promise.all([
+          listGlobalAcademias(),
+          listGlobalUnidades(),
+          listUnidadesOnboarding(),
+        ]);
         if (!mounted) return;
         setAcademias(loadedAcademias);
         setUnidades(loadedUnidades);
+        setUnidadesOnboarding(loadedOnboarding);
       } catch (error) {
         if (!mounted) return;
         const message = error instanceof Error ? error.message : String(error);
@@ -574,6 +622,12 @@ export default function ImportacaoEvoP0Page() {
       mounted = false;
     };
   }, [toast]);
+
+  useEffect(() => {
+    if (!preselectedTenantId) return;
+    if (tenantIndex.size === 0) return;
+    aplicarPresetTenant(preselectedTenantId);
+  }, [aplicarPresetTenant, preselectedTenantId, tenantIndex.size]);
 
   useEffect(() => {
     carregarJobHistorico();
@@ -651,7 +705,9 @@ export default function ImportacaoEvoP0Page() {
     const unidadeOptions = getUnidadesOptions(option.id);
     if (unidadeOptions.length === 1) {
       const unidadeUnica = unidadeOptions[0];
+      const onboarding = onboardingIndex.get(normalizeTenantId(unidadeUnica?.id));
       updateMapeamento(idx, {
+        idFilialEvo: onboarding?.evoFilialId ?? "",
         academiaId: option.id,
         academiaNome: option.label,
         unidadeNome: unidadeUnica?.label ?? "",
@@ -668,7 +724,9 @@ export default function ImportacaoEvoP0Page() {
   }
 
   function handleSelecionarUnidade(idx: number, option: SuggestionOption) {
+    const onboarding = onboardingIndex.get(normalizeTenantId(option.id));
     updateMapeamento(idx, {
+      idFilialEvo: onboarding?.evoFilialId ?? "",
       unidadeNome: option.label,
       tenantId: option.id,
     });
@@ -678,19 +736,25 @@ export default function ImportacaoEvoP0Page() {
     const unidadeOptions = getUnidadesOptions(option.id);
     if (unidadeOptions.length === 1) {
       const unidadeUnica = unidadeOptions[0];
+      const onboarding = onboardingIndex.get(normalizeTenantId(unidadeUnica?.id));
       setPacoteMapeamento({
         ...pacoteMapeamento,
+        idFilialEvo: onboarding?.evoFilialId ?? "",
         academiaId: option.id,
         academiaNome: option.label,
         unidadeNome: unidadeUnica?.label ?? "",
         tenantId: unidadeUnica?.id ?? "",
       });
+      if (onboarding?.evoFilialId) {
+        setPacoteEvoUnidadeId(onboarding.evoFilialId);
+      }
       setPacoteAnalise(null);
       setPacoteArquivosSelecionados([]);
       return;
     }
     setPacoteMapeamento({
       ...pacoteMapeamento,
+      idFilialEvo: "",
       academiaId: option.id,
       academiaNome: option.label,
       unidadeNome: "",
@@ -701,11 +765,16 @@ export default function ImportacaoEvoP0Page() {
   }
 
   function handlePacoteSelecionarUnidade(option: SuggestionOption) {
+    const onboarding = onboardingIndex.get(normalizeTenantId(option.id));
     setPacoteMapeamento({
       ...pacoteMapeamento,
+      idFilialEvo: onboarding?.evoFilialId ?? "",
       unidadeNome: option.label,
       tenantId: option.id,
     });
+    if (onboarding?.evoFilialId) {
+      setPacoteEvoUnidadeId(onboarding.evoFilialId);
+    }
     setPacoteAnalise(null);
     setPacoteArquivosSelecionados([]);
   }
@@ -810,7 +879,7 @@ export default function ImportacaoEvoP0Page() {
 
     setPacoteAnalisando(true);
     try {
-      const analise = await uploadEvoP0PacoteApi({
+      const analise = await uploadBackofficeEvoP0Pacote({
         tenantId: pacoteMapeamento.tenantId,
         evoUnidadeId: Number(pacoteEvoUnidadeId),
         arquivo: pacoteArquivo,
@@ -856,7 +925,7 @@ export default function ImportacaoEvoP0Page() {
 
     setPacoteAnalisando(true);
     try {
-      const analise = await getEvoP0PacoteAnaliseApi({
+      const analise = await getBackofficeEvoP0PacoteAnalise({
         uploadId: pacoteAnalise.uploadId,
         tenantId: pacoteAnalise.tenantId,
       });
@@ -897,45 +966,26 @@ export default function ImportacaoEvoP0Page() {
     }
 
     setPacoteCriandoJob(true);
-    let tenantAnterior: string | null = null;
     try {
-      tenantAnterior = await ensureContextoTenantDoPacote(pacoteAnalise.tenantId);
-      const criar = () =>
-        createEvoP0PacoteJobApi({
-          uploadId: pacoteAnalise.uploadId,
-          dryRun: pacoteDryRun,
-          maxRejeicoesRetorno: pacoteMaxRejeicoes,
-          arquivos: arquivosParaImportar,
-          tenantId: pacoteAnalise.tenantId,
-        });
-
-      let job: { jobId: string } | null = null;
-      try {
-        job = await criar();
-      } catch (error: unknown) {
-        const temErroContexto =
-          error instanceof ApiRequestError && error.status === 403 && temMensagemContexto(error);
-        if (!temErroContexto) {
-          throw error;
-        }
-
-        await ensureContextoTenantDoPacote(pacoteAnalise.tenantId);
-        job = await createEvoP0PacoteJobApi({
-          uploadId: pacoteAnalise.uploadId,
-          dryRun: pacoteDryRun,
-          maxRejeicoesRetorno: pacoteMaxRejeicoes,
-          arquivos: arquivosParaImportar,
-          tenantId: pacoteAnalise.tenantId,
-        });
-      }
-
-      if (!job) {
-        throw new Error("Resposta sem job da API de criação de pacote.");
-      }
+      const job = await createBackofficeEvoP0PacoteJob({
+        uploadId: pacoteAnalise.uploadId,
+        dryRun: pacoteDryRun,
+        maxRejeicoesRetorno: pacoteMaxRejeicoes,
+        arquivos: arquivosParaImportar,
+        tenantId: pacoteAnalise.tenantId,
+      });
 
       const tenant = normalizeTenantId(pacoteAnalise.tenantId);
       const nomeAcademia = pacoteMapeamento.academiaNome || "Não informado";
       const nomeUnidade = pacoteMapeamento.unidadeNome || "Não informado";
+      await registrarOnboardingDoJob({
+        tenantId: pacoteAnalise.tenantId,
+        academiaId: pacoteMapeamento.academiaId,
+        evoFilialId: pacoteEvoUnidadeId,
+        jobId: job.jobId,
+        origem: "PACOTE",
+        mensagem: `Job ${job.jobId} criado a partir do pacote EVO.`,
+      });
       upsertJobHistorico({
         tenantId: tenant,
         jobId: job.jobId,
@@ -947,10 +997,13 @@ export default function ImportacaoEvoP0Page() {
       });
       setJobId(job.jobId);
       setJobTenantId(tenant);
+      setJobTenantIds([tenant]);
+      setJobOrigem("pacote");
+      lastJobStatusRef.current = null;
       setJobLabelFromContext(tenant, nomeAcademia, nomeUnidade);
       setStoredJobId(tenant, job.jobId);
       setActiveTab("acompanhamento");
-      startPolling(job.jobId, true, normalizeTenantId(pacoteAnalise.tenantId));
+      startPolling(job.jobId, true, [tenant], "pacote", normalizeTenantId(pacoteAnalise.tenantId));
       toast({
         title: "Job criado",
         description: `Job ${job.jobId} criado com sucesso.`,
@@ -972,9 +1025,6 @@ export default function ImportacaoEvoP0Page() {
         });
       }
     } finally {
-      if (tenantAnterior && normalizeTenantId(tenantAnterior) !== normalizeTenantId(getActiveTenantIdFromSession())) {
-        await restoreContextoTenant(tenantAnterior);
-      }
       setPacoteCriandoJob(false);
     }
   }
@@ -1009,39 +1059,45 @@ export default function ImportacaoEvoP0Page() {
       idFilialEvo: Number(mapeamento.idFilialEvo),
       tenantId: mapeamento.tenantId,
     }));
-    const formData = new FormData();
-    formData.append("dryRun", String(dryRun));
-    formData.append("mapeamentoFiliais", JSON.stringify(payloadMapeamentos));
-    formData.append("maxRejeicoesRetorno", String(maxRejeicoes));
-    FILE_FIELDS.forEach(({ key, field }) => {
-      const file = files[key];
-      if (file) formData.append(field, file, file.name);
-    });
     setSubmitting(true);
     try {
-      const body = await apiRequest<{
-        jobId?: string;
-        id?: string;
-        status?: EvoStatus;
-        solicitadoEm?: string;
-        finalizadoEm?: string;
-        geral?: EntidadeResumo;
-      }>({
-        path: "/api/v1/admin/integracoes/importacao-terceiros/evo/p0/upload",
-        method: "POST",
-        body: formData,
-        headers: buildTenantHeader(),
+      const body = await createBackofficeEvoP0CsvJob({
+        dryRun,
+        maxRejeicoesRetorno: maxRejeicoes,
+        mapeamentoFiliais: payloadMapeamentos,
+        arquivos: FILE_FIELDS.flatMap(({ key, field }) => {
+          const file = files[key];
+          return file ? [{ field, file }] : [];
+        }),
+        tenantId: resolveCurrentTenantIdRaw(),
       });
-      const newJobId = body.jobId ?? body.id ?? "";
+      const newJobId = body.jobId ?? "";
+      const currentStatus = (body.status as EvoStatus | undefined) ?? "PROCESSANDO";
       setJobResumo({
-        status: body.status ?? "PROCESSANDO",
+        status: currentStatus,
         solicitadoEm: body.solicitadoEm,
         finalizadoEm: body.finalizadoEm,
         geral: body.geral,
+        tenantIds: body.tenantIds,
       });
       if (newJobId) {
-        const currentTenant = normalizeTenantId(resolveCurrentTenantIdRaw());
-        const mapeamentoPrimario = mapeamentos.find((m) => normalizeTenantId(m.tenantId) === currentTenant);
+        const tenantIds = [...new Set(payloadMapeamentos.map((item) => normalizeTenantId(item.tenantId)).filter(Boolean))];
+        await Promise.all(
+          mapeamentos.map(async (mapeamento) => {
+            if (!mapeamento.tenantId) return;
+            await registrarOnboardingDoJob({
+              tenantId: mapeamento.tenantId,
+              academiaId: mapeamento.academiaId,
+              evoFilialId: mapeamento.idFilialEvo,
+              jobId: newJobId,
+              origem: "CSV",
+              mensagem: `Job ${newJobId} criado para a trilha CSV EVO.`,
+            });
+          })
+        );
+        const currentTenant = tenantIds[0] || normalizeTenantId(resolveCurrentTenantIdRaw());
+        const mapeamentoPrimario =
+          mapeamentos.find((m) => normalizeTenantId(m.tenantId) === currentTenant) ?? mapeamentos[0];
         const nomeAcademia = mapeamentoPrimario?.academiaNome || "Não informado";
         const nomeUnidade = mapeamentoPrimario?.unidadeNome || "Não informado";
         upsertJobHistorico({
@@ -1051,14 +1107,17 @@ export default function ImportacaoEvoP0Page() {
           unidadeNome: nomeUnidade,
           origem: "csv",
           criadoEm: new Date().toISOString(),
-          status: body.status ?? "PROCESSANDO",
+          status: currentStatus,
         });
         setJobTenantId(currentTenant);
+        setJobTenantIds(body.tenantIds?.map((item) => normalizeTenantId(item)).filter(Boolean) ?? tenantIds);
+        setJobOrigem("csv");
+        lastJobStatusRef.current = null;
         setJobLabelFromContext(currentTenant, nomeAcademia, nomeUnidade);
         setJobId(newJobId);
         setStoredJobId(currentTenant, newJobId);
         setActiveTab("acompanhamento");
-        startPolling(newJobId, true);
+        startPolling(newJobId, true, body.tenantIds?.map((item) => normalizeTenantId(item)).filter(Boolean) ?? tenantIds, "csv", currentTenant);
       }
       toast({ title: "Importação iniciada", description: newJobId ? `Job ${newJobId}` : undefined });
     } catch (error: unknown) {
@@ -1101,34 +1160,23 @@ export default function ImportacaoEvoP0Page() {
     return () => clearInterval(timeout);
   }, [pollStartedAt, polling, stopPolling, toast]);
 
-  const pollOnce = useCallback(async (id: string, tenantOverride?: string) => {
+  const pollOnce = useCallback(async (
+    id: string,
+    tenantIdsOverride?: string[],
+    origemOverride?: "pacote" | "csv" | null,
+    tenantOverride?: string
+  ) => {
     try {
-      let data: JobResumo | null = null;
       const tenantParaConsulta = normalizeTenantId(tenantOverride || jobTenantId);
-      const tenantHeader = buildTenantHeader(tenantParaConsulta);
-      const headerOptions = tenantHeader ? { headers: tenantHeader } : undefined;
-
-      try {
-        data = await apiRequest<JobResumo>({
-          path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${id}/p0`,
-          query: { maxRejeicoesRetorno: 200 },
-          ...headerOptions,
-        });
-      } catch (error) {
-        if (error instanceof ApiRequestError && error.status === 404) {
-          data = await apiRequest<JobResumo>({
-            path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${id}`,
-            query: { maxRejeicoesRetorno: 200 },
-            ...headerOptions,
-          });
-        } else {
-          throw error;
-        }
-      }
-      if (!data) {
-        throw new Error("Erro ao consultar job (sem retorno)");
-      }
+      const data = await getBackofficeEvoImportJobResumo({
+        jobId: id,
+        tenantId: tenantParaConsulta,
+      });
       setJobResumo(data);
+      const tenantIds = data.tenantIds?.map((item) => normalizeTenantId(item)).filter(Boolean) ?? tenantIdsOverride ?? jobTenantIds;
+      if (tenantIds.length > 0) {
+        setJobTenantIds(tenantIds);
+      }
       if (tenantParaConsulta) {
         atualizarJobHistoricoStatus(id, tenantParaConsulta, data.status);
         const itemSelecionado = jobsHistorico.find(
@@ -1141,6 +1189,17 @@ export default function ImportacaoEvoP0Page() {
           itemSelecionado?.unidadeNome ?? labels.unidadeNome
         );
       }
+      const origem = (origemOverride ?? jobOrigem ?? jobsHistorico.find((item) => item.jobId === id)?.origem ?? "csv").toUpperCase() as
+        | "CSV"
+        | "PACOTE";
+      const tenantsParaOnboarding = tenantIds.length > 0 ? tenantIds : tenantParaConsulta ? [tenantParaConsulta] : [];
+      await atualizarStatusOnboardingDoJob({
+        tenantIds: tenantsParaOnboarding,
+        jobId: id,
+        status: data.status,
+        origem,
+        mensagem: data.rejeicoes?.mensagem,
+      });
       if (data.status === "FALHA") {
         toast({ title: "Job falhou", description: data?.rejeicoes?.mensagem, variant: "destructive" });
       }
@@ -1151,16 +1210,18 @@ export default function ImportacaoEvoP0Page() {
       stopPolling();
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ApiRequestError && error.status === 404) {
-        clearStoredJobId(resolveCurrentTenantId());
+        clearStoredJobId(tenantOverride || resolveCurrentTenantId());
         setJobId("");
       }
       toast({ title: "Erro no acompanhamento", description: message, variant: "destructive" });
     }
   }, [
+    atualizarStatusOnboardingDoJob,
     atualizarJobHistoricoStatus,
-    buildTenantHeader,
     clearStoredJobId,
+    jobOrigem,
     jobTenantId,
+    jobTenantIds,
     jobsHistorico,
     resolveTenantLabel,
     resolveCurrentTenantId,
@@ -1169,17 +1230,29 @@ export default function ImportacaoEvoP0Page() {
     toast,
   ]);
 
-  const startPolling = useCallback((id: string, resetTimer: boolean, tenantId?: string) => {
+  const startPolling = useCallback((
+    id: string,
+    resetTimer: boolean,
+    tenantIds: string[] = [],
+    origem: "pacote" | "csv" | null = null,
+    tenantId?: string
+  ) => {
     if (!id) return;
     const tenant = normalizeTenantId(tenantId) || resolveCurrentTenantIdRaw();
     if (tenant) {
       setJobTenantId(tenant);
     }
+    if (tenantIds.length > 0) {
+      setJobTenantIds(tenantIds);
+    }
+    if (origem) {
+      setJobOrigem(origem);
+    }
     if (pollTimer.current) clearInterval(pollTimer.current);
     if (resetTimer) setPollStartedAt(Date.now());
     setPolling(true);
-    pollOnce(id, tenant);
-    pollTimer.current = setInterval(() => pollOnce(id, tenant), 3000);
+    pollOnce(id, tenantIds, origem, tenant);
+    pollTimer.current = setInterval(() => pollOnce(id, tenantIds, origem, tenant), 3000);
   }, [pollOnce, resolveCurrentTenantIdRaw]);
 
   useEffect(() => {
@@ -1198,7 +1271,7 @@ export default function ImportacaoEvoP0Page() {
       setStoredJobId(tenantId, legacy);
       window.localStorage.removeItem(STORAGE_KEY);
     }
-    const queryJobId = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("jobId")?.trim();
+    const queryJobId = searchParams.get("jobId")?.trim() ?? "";
     const saved = queryJobId || getStoredJobId(tenantId);
     if (saved) {
       setJobId(saved);
@@ -1206,15 +1279,18 @@ export default function ImportacaoEvoP0Page() {
         (job) => normalizeTenantId(job.jobId) === normalizeTenantId(saved) && normalizeTenantId(job.tenantId) === tenantAtual
       );
       const tenantParaAcompanhar = normalizeTenantId(historicoSelecionado?.tenantId) || tenantAtual;
+      const origemHistorico = historicoSelecionado?.origem ?? null;
       setStoredJobId(tenantParaAcompanhar, saved);
       if (tenantParaAcompanhar) {
         setJobTenantId(tenantParaAcompanhar);
         setJobLabelFromContext(tenantParaAcompanhar, historicoSelecionado?.academiaNome, historicoSelecionado?.unidadeNome);
       }
+      lastJobStatusRef.current = null;
       setActiveTab("acompanhamento");
-      startPolling(saved, false, tenantParaAcompanhar || tenantAtual);
+      startPolling(saved, false, tenantParaAcompanhar ? [tenantParaAcompanhar] : [], origemHistorico, tenantParaAcompanhar || tenantAtual);
     }
   }, [
+    searchParams,
     jobsHistorico,
     getStoredJobId,
     getStorageKeyForTenant,
@@ -1234,6 +1310,8 @@ export default function ImportacaoEvoP0Page() {
     setStoredJobId(tenantParaUsar, jobIdValue);
     if (tenantParaUsar) {
       setJobTenantId(tenantParaUsar);
+      setJobTenantIds([tenantParaUsar]);
+      setJobOrigem(historicoSelecionado?.origem ?? null);
       const labels = resolveTenantLabel(tenantParaUsar);
       setJobLabelFromContext(
         tenantParaUsar,
@@ -1248,16 +1326,14 @@ export default function ImportacaoEvoP0Page() {
     if (!job) {
       return;
     }
-    try {
-      await ensureContextoTenant(job.tenantId);
-    } catch {
-      // no-op
-    }
     setJobId(job.jobId);
     setStoredJobId(job.tenantId, job.jobId);
     setJobTenantId(job.tenantId);
+    setJobTenantIds([job.tenantId]);
+    setJobOrigem(job.origem);
+    lastJobStatusRef.current = null;
     setJobLabelFromContext(job.tenantId, job.academiaNome, job.unidadeNome);
-    startPolling(job.jobId, true, job.tenantId);
+    startPolling(job.jobId, true, [job.tenantId], job.origem, job.tenantId);
   }
 
   function openRejeicoesPorEntidade(entidade?: string, forceShow = true) {
@@ -1280,13 +1356,10 @@ export default function ImportacaoEvoP0Page() {
     const selecionado = jobsHistorico.find((item) => item.jobId === jobId);
     const tenantParaConsulta = normalizeTenantId(selecionado?.tenantId) || normalizeTenantId(jobTenantId) || resolveCurrentTenantIdRaw();
     const labels = tenantParaConsulta ? resolveTenantLabel(tenantParaConsulta) : null;
-    try {
-      await ensureContextoTenant(tenantParaConsulta);
-    } catch {
-      // no-op
-    }
     if (tenantParaConsulta) {
       setJobTenantId(tenantParaConsulta);
+      setJobTenantIds([tenantParaConsulta]);
+      setJobOrigem(selecionado?.origem ?? jobOrigem);
       setStoredJobId(tenantParaConsulta, jobId);
       setJobLabelFromContext(
         tenantParaConsulta,
@@ -1294,42 +1367,20 @@ export default function ImportacaoEvoP0Page() {
         selecionado?.unidadeNome || labels?.unidadeNome
       );
     }
-    startPolling(jobId, true, tenantParaConsulta);
+    lastJobStatusRef.current = null;
+    startPolling(jobId, true, tenantParaConsulta ? [tenantParaConsulta] : [], selecionado?.origem ?? jobOrigem, tenantParaConsulta);
   }
 
   async function loadRejeicoes(page = 0) {
     if (!jobId) return;
     setRejeicoesLoading(true);
     try {
-      const tenantHeader = buildTenantHeader(jobTenantId);
-      const headerOptions = tenantHeader ? { headers: tenantHeader } : undefined;
-      let data: {
-        items?: Rejeicao[];
-        content?: Rejeicao[];
-        hasNext?: boolean;
-        page?: number;
-      } | null = null;
-
-      try {
-        data = await apiRequest({
-          path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${jobId}/rejeicoes`,
-          query: { page, size: 50 },
-          ...headerOptions,
-        });
-      } catch (error) {
-        if (error instanceof ApiRequestError && error.status === 404) {
-          data = await apiRequest({
-            path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${jobId}/rejeicoes`,
-            query: { page, size: 50, legacy: true },
-            ...headerOptions,
-          });
-        } else {
-          throw error;
-        }
-      }
-      if (!data) {
-        throw new Error("Erro ao carregar rejeições (sem retorno)");
-      }
+      const data = await listBackofficeEvoImportJobRejeicoes({
+        jobId,
+        page,
+        size: 50,
+        tenantId: jobTenantId,
+      });
       const items = (data.items ?? data.content ?? []) as Rejeicao[];
       const mapped = items.map((r) => resolveRejeicao(r));
       const hasNext = data.hasNext ?? (Array.isArray(mapped) && mapped.length === 50);
@@ -1383,6 +1434,8 @@ export default function ImportacaoEvoP0Page() {
     if (entidadeFiltro === ENTIDADE_TODAS) return rejeicoes;
     return rejeicoes.filter((r) => r.entidade === entidadeFiltro);
   }, [entidadeFiltro, rejeicoes]);
+  const tenantFoco = normalizeTenantId(pacoteMapeamento.tenantId || preselectedTenantId || mapeamentos[0]?.tenantId);
+  const onboardingFoco = onboardingIndex.get(tenantFoco);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
@@ -1393,6 +1446,16 @@ export default function ImportacaoEvoP0Page() {
           Dispare e acompanhe jobs de importação EVO P0. Salva automaticamente o último job para retomar depois.
         </p>
       </div>
+
+      {tenantFoco && onboardingFoco ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm">
+          <Badge variant="secondary">{getUnidadeOnboardingStrategyLabel(onboardingFoco.estrategia)}</Badge>
+          <Badge variant="outline">{getUnidadeOnboardingStatusLabel(onboardingFoco.status)}</Badge>
+          <span className="text-muted-foreground">
+            Unidade foco: {resolveTenantLabel(tenantFoco).unidadeNome} · EVO {onboardingFoco.evoFilialId || "não vinculado"}
+          </span>
+        </div>
+      ) : null}
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
         <TabsList>
@@ -1543,7 +1606,10 @@ export default function ImportacaoEvoP0Page() {
                     min={1}
                     placeholder="Ex.: 1"
                     value={pacoteEvoUnidadeId}
-                    onChange={(e) => setPacoteEvoUnidadeId(e.target.value)}
+                    onChange={(e) => {
+                      setPacoteEvoUnidadeId(e.target.value);
+                      setPacoteMapeamento((current) => ({ ...current, idFilialEvo: e.target.value }));
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -1693,7 +1759,19 @@ export default function ImportacaoEvoP0Page() {
                   </Button>
                   <Button
                     variant="secondary"
-                    onClick={() => startPolling(jobId, true, jobTenantId || resolveCurrentTenantIdRaw())}
+                    onClick={() =>
+                      startPolling(
+                        jobId,
+                        true,
+                        jobTenantIds.length > 0
+                          ? jobTenantIds
+                          : jobTenantId || resolveCurrentTenantIdRaw()
+                            ? [jobTenantId || resolveCurrentTenantIdRaw()]
+                            : [],
+                        jobOrigem,
+                        jobTenantId || resolveCurrentTenantIdRaw()
+                      )
+                    }
                     disabled={!jobId}
                   >
                     Atualizar agora

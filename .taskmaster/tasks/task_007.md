@@ -2,7 +2,7 @@
 
 **Title:** Expandir modulos administrativos, financeiros e de integracao
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 1
 
@@ -22,7 +22,7 @@ No test strategy provided.
 
 ### 7.1. Inventariar lacunas administrativas e financeiras existentes
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Mapear páginas faltantes e inconsistências nas áreas administrativas e financeiras.
@@ -33,7 +33,7 @@ Revisar rotas em `src/app/(app)/administrativo/*` e `src/app/(app)/gerencial/*`,
 
 ### 7.2. Implementar telas de configuração de NFSe e integrações fiscais
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 7.1  
 
 Criar interfaces para configurar emissor, prefeitura e parâmetros fiscais.
@@ -44,7 +44,7 @@ Definir fluxo de cadastro/edição de dados fiscais, campos obrigatórios, estad
 
 ### 7.3. Criar telas operacionais de agregadores e recebimentos
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 7.1  
 
 Adicionar páginas para operação de agregadores e controle de recebimentos.
@@ -55,7 +55,7 @@ Modelar listagens, filtros e detalhes de transações, status de repasse e conci
 
 ### 7.4. Integrar status e monitoramento de integrações
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 7.2, 7.3  
 
 Exibir indicadores de saúde e alertas para integrações operacionais.
@@ -66,7 +66,7 @@ Adicionar painéis de monitoramento com status por integração, histórico de f
 
 ### 7.5. Fechar permissões, perfis e testes básicos
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 7.2, 7.3, 7.4  
 
 Garantir controle de acesso e validações para novos módulos.

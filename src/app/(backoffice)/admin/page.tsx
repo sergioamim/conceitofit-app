@@ -4,24 +4,30 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { listAcademias, listTenantsGlobal } from "@/lib/mock/services";
+import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
 import type { Academia, Tenant } from "@/lib/types";
 import Link from "next/link";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 export default function AdminHomePage() {
   const [loading, setLoading] = useState(true);
   const [academias, setAcademias] = useState<Academia[]>([]);
   const [unidades, setUnidades] = useState<Tenant[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     async function load() {
       setLoading(true);
       try {
-        const [acs, uns] = await Promise.all([listAcademias(), listTenantsGlobal()]);
+        setError(null);
+        const [acs, uns] = await Promise.all([listGlobalAcademias(), listGlobalUnidades()]);
         if (!mounted) return;
         setAcademias(acs);
         setUnidades(uns);
+      } catch (loadError) {
+        if (!mounted) return;
+        setError(normalizeErrorMessage(loadError));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -47,6 +53,12 @@ export default function AdminHomePage() {
         <h1 className="text-3xl font-display font-bold leading-tight">Dashboard do backoffice</h1>
         <p className="text-sm text-muted-foreground">Visão geral e atalhos para gestão de academias, unidades e integrações.</p>
       </header>
+
+      {error ? (
+        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {error}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

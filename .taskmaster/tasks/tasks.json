@@ -506,7 +506,7 @@
         "description": "Cobrir configuracoes e operacao de NFSe, agregadores, recebimentos, dashboards e areas administrativas ausentes.",
         "details": "Inclui telas de configuracao, monitoramento, recebimentos e integracoes operacionais.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "1"
         ],
@@ -518,7 +518,7 @@
             "description": "Mapear páginas faltantes e inconsistências nas áreas administrativas e financeiras.",
             "dependencies": [],
             "details": "Revisar rotas em `src/app/(app)/administrativo/*` e `src/app/(app)/gerencial/*`, listar telas ausentes de NFSe, agregadores, recebimentos e dashboards, e priorizar por impacto operacional.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -530,7 +530,7 @@
               1
             ],
             "details": "Definir fluxo de cadastro/edição de dados fiscais, campos obrigatórios, estados de configuração e feedback de validação para NFSe e integrações fiscais.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -542,7 +542,7 @@
               1
             ],
             "details": "Modelar listagens, filtros e detalhes de transações, status de repasse e conciliação, com navegação consistente com o módulo gerencial.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -555,7 +555,7 @@
               3
             ],
             "details": "Adicionar painéis de monitoramento com status por integração, histórico de falhas, e links para ações corretivas ou reprocessamento.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -569,7 +569,7 @@
               4
             ],
             "details": "Definir permissões por perfil para novas rotas, ajustar guardas de acesso e criar testes básicos de renderização e navegação onde houver infraestrutura.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           }
@@ -584,7 +584,7 @@
         "description": "Entregar dashboards e visoes consolidadas por unidade e por academia para uso gerencial.",
         "details": "Inclui indicadores de conversao, ocupacao, inadimplencia, retencao e comparativos de rede.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "1",
           "7"
@@ -597,7 +597,7 @@
             "description": "Mapear indicadores e dimensões necessárias para a visão de rede.",
             "dependencies": [],
             "details": "Documentar métricas de conversão, ocupação, inadimplência, retenção e comparativos, além de filtros por unidade, academia, período e segmento.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -609,7 +609,7 @@
               1
             ],
             "details": "Definir regras de visibilidade por perfil (gerencial, unidade, rede), escopos de dados, defaults de filtro e validações de autorização.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -622,7 +622,7 @@
               2
             ],
             "details": "Listar telas, cards e layouts; definir componentes reutilizáveis, hierarquia de informações e navegação entre visão de rede e unidade.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -634,7 +634,7 @@
               3
             ],
             "details": "Definir endpoints agregados, formatos de séries, tipos de gráficos, recursos de export (CSV/PDF) e skeletons/empty states.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -646,7 +646,7 @@
               4
             ],
             "details": "Definir métricas de tempo de carregamento, limites de payload, paginação/consulta, e checklist de permissões e consistência dos dados.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           }
@@ -661,7 +661,7 @@
         "description": "Migrar `/admin`, `/admin/academias` e `/admin/unidades` para contratos reais, sem depender de mock services.",
         "details": "Cobrir dashboard, listagens, detalhe, create/update de academia, create/update/toggle de unidade, vinculo academia -> unidade e alinhamento entre payloads do backoffice e o backend.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "1",
           "3",
@@ -675,7 +675,7 @@
             "description": "Mapear onde o backoffice ainda depende de `mock/services` e stores locais.",
             "dependencies": [],
             "details": "Inventariar `/admin`, `/admin/academias`, `/admin/academias/[id]` e `/admin/unidades`, registrando chamadas a `listAcademias`, `listTenantsGlobal`, `createAcademia`, `createTenant` e afins, alem de estados persistidos localmente.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -687,7 +687,7 @@
               1
             ],
             "details": "Alinhar tipos, requests e responses com as APIs administrativas do backend, incluindo lista/detalhe de academia, lista/detalhe de unidade, onboarding inicial e regras de permissao.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -699,7 +699,7 @@
               2
             ],
             "details": "Substituir lookups em mock no dashboard admin e nas listagens de academias/unidades por clients em `src/lib/api/*`, com loading, erro, paginação e filtros consistentes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -712,7 +712,7 @@
               3
             ],
             "details": "Refatorar `/admin/academias` e `/admin/academias/[id]` para operar com contratos reais, preservando busca, contagem de unidades e feedbacks de sucesso/erro.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -726,7 +726,7 @@
               4
             ],
             "details": "Refatorar `/admin/unidades` para create/edit/toggle/delete reais, corrigindo divergencias de payload como `groupId` e configuracoes, e exibindo o vinculo explicito com a academia.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -740,7 +740,7 @@
               5
             ],
             "details": "Aplicar guardas/permissoes para a area global, revisar rotas e estados vazios, e criar testes basicos de navegacao/renderizacao para o backoffice.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Adicionar testes de tela/E2E para listar academias, abrir detalhe e criar/editar unidade.",
             "parentId": "undefined"
           }
@@ -752,7 +752,7 @@
         "description": "Completar a tela de importacao e integra-la ao fluxo de criacao de unidade com carga inicial padrao ou importacao futura.",
         "details": "Conectar o `EVO BACKUP` e a trilha EVO P0 ao backoffice real, removendo lookups em mock e exibindo status de onboarding/importacao por unidade.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "1",
           "7",
@@ -766,7 +766,7 @@
             "description": "Mapear o que ja usa API real e o que ainda depende de dados simulados.",
             "dependencies": [],
             "details": "Revisar `src/app/(backoffice)/admin/importacao-evo-p0/page.tsx` e `src/lib/api/importacao-evo.ts`, destacando onde a tela ainda usa `listAcademias`, `listTenantsGlobal` e `setCurrentTenant` em mock para contexto e historico.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -778,7 +778,7 @@
               1
             ],
             "details": "Integrar a tela de importacao ao cadastro real de academias/unidades, permitindo vincular `ID_FILIAL` da origem EVO com a unidade cadastrada no backoffice.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -791,7 +791,7 @@
               2
             ],
             "details": "Ajustar upload de pacote, consulta de analise, criacao de job, polling, historico, rejeicoes e reprocessamento para operar com contratos reais e estados de erro padronizados.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -803,7 +803,7 @@
               2
             ],
             "details": "Incluir no fluxo de create/edit de unidade opcoes como `carregar dados iniciais`, `importar depois` e `preparar ETL agora`, alinhadas ao backend administrativo.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -816,7 +816,7 @@
               4
             ],
             "details": "Adicionar status, badges, timeline ou cards no backoffice para mostrar se a unidade esta pendente de seed, aguardando importacao, em processamento ou pronta.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -830,7 +830,7 @@
               5
             ],
             "details": "Revisar acessos, mensagens de erro, estados vazios, progresso de job e testes de navegacao para o backoffice de importacao e onboarding.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Adicionar testes de tela/E2E para upload, criação de job e visualização de status por unidade.",
             "parentId": "undefined"
           }

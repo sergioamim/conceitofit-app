@@ -2,7 +2,7 @@
 
 **Title:** Consolidar importacao ETL e onboarding de unidades no backoffice
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 1, 7, 9
 
@@ -16,13 +16,13 @@ Conectar o `EVO BACKUP` e a trilha EVO P0 ao backoffice real, removendo lookups 
 
 **Test Strategy:**
 
-No test strategy provided.
+Executar `npx tsc --noEmit`, `npx playwright test --config=playwright.unit.config.ts` e `npx playwright test`, cobrindo a trilha local de onboarding/importacao e o fluxo e2e do backoffice.
 
 ## Subtasks
 
 ### 10.1. Auditar a tela `/admin/importacao-evo-p0` e seus pontos em mock
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Mapear o que ja usa API real e o que ainda depende de dados simulados.
@@ -33,7 +33,7 @@ Revisar `src/app/(backoffice)/admin/importacao-evo-p0/page.tsx` e `src/lib/api/i
 
 ### 10.2. Conectar selecao global de academia/unidade e mapeamento de filial
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 10.1  
 
 Usar o cadastro administrativo real como base do mapeamento ETL.
@@ -44,7 +44,7 @@ Integrar a tela de importacao ao cadastro real de academias/unidades, permitindo
 
 ### 10.3. Fechar fluxo real de upload, analise, job e rejeicoes
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 10.1, 10.2  
 
 Consolidar a trilha principal de ETL no backoffice.
@@ -55,7 +55,7 @@ Ajustar upload de pacote, consulta de analise, criacao de job, polling, historic
 
 ### 10.4. Adicionar UX de onboarding na criacao de unidade
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 10.2  
 
 Permitir escolher estrategia inicial ao cadastrar a unidade.
@@ -66,7 +66,7 @@ Incluir no fluxo de create/edit de unidade opcoes como `carregar dados iniciais`
 
 ### 10.5. Exibir status e historico de onboarding/importacao por unidade
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 10.3, 10.4  
 
 Dar visibilidade operacional ao setup das novas unidades.
@@ -77,7 +77,7 @@ Adicionar status, badges, timeline ou cards no backoffice para mostrar se a unid
 
 ### 10.6. Validar erros, permissoes e testes da trilha ETL
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 10.3, 10.4, 10.5  
 
 Fechar criterios de qualidade para a area administrativa de importacao.

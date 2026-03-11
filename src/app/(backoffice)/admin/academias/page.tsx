@@ -13,8 +13,9 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
-import { createAcademia, listAcademias, listTenantsGlobal } from "@/lib/mock/services";
+import { createGlobalAcademia, listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
 import type { Academia, Tenant } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 interface AcademiaForm {
   nome: string;
@@ -34,16 +35,21 @@ export default function AcademiasPage() {
   const [busca, setBusca] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(20);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     async function load() {
       setLoading(true);
       try {
-        const [acs, uns] = await Promise.all([listAcademias(), listTenantsGlobal()]);
+        setError(null);
+        const [acs, uns] = await Promise.all([listGlobalAcademias(), listGlobalUnidades()]);
         if (!mounted) return;
         setAcademias(acs);
         setUnidades(uns);
+      } catch (loadError) {
+        if (!mounted) return;
+        setError(normalizeErrorMessage(loadError));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -106,7 +112,7 @@ export default function AcademiasPage() {
     }
     setSaving(true);
     try {
-      const created = await createAcademia({
+      const created = await createGlobalAcademia({
         nome: form.nome.trim(),
         documento: form.documento.trim() || undefined,
         ativo: true,
@@ -116,6 +122,12 @@ export default function AcademiasPage() {
       toast({ title: "Academia criada", description: created.nome });
       setBusca("");
       setPage(0);
+    } catch (createError) {
+      toast({
+        title: "Não foi possível criar a academia",
+        description: normalizeErrorMessage(createError),
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -133,6 +145,12 @@ export default function AcademiasPage() {
         <h1 className="text-3xl font-display font-bold">Academias</h1>
         <p className="text-sm text-muted-foreground">Cadastro e consulta de academias da rede.</p>
       </header>
+
+      {error ? (
+        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {error}
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>

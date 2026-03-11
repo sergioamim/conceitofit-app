@@ -12,6 +12,9 @@ import type {
   Plano,
   Matricula,
   Pagamento,
+  NfseConfiguracao,
+  AgregadorTransacao,
+  IntegracaoOperacional,
   ContaPagar,
   FormaPagamento,
   Funcionario,
@@ -33,6 +36,9 @@ import type {
   CreateProspectInput,
   ConverterProspectInput,
   ConverterProspectResponse,
+  BiEscopo,
+  BiOperationalSnapshot,
+  BiSegmento,
   DashboardData,
   DREProjecao,
   DreProjectionScenario,
@@ -78,6 +84,12 @@ import type {
   PaginatedAlunosResult,
 } from "../types";
 import { isRealApiEnabled } from "../api/http";
+import {
+  createEmptyNfseConfiguracao,
+  getNfseConfiguracaoStatus,
+  validateNfseConfiguracaoDraft,
+} from "../admin-financeiro";
+import { buildBiOperationalSnapshot } from "../bi/analytics";
 import {
   buildAulaSessao,
   createSessaoAulaId,
@@ -1195,6 +1207,41 @@ export async function getDashboard(params?: { month?: number; year?: number }): 
         aluno: alunos.find((a) => a.id === p.alunoId),
       })),
   };
+}
+
+export async function getBiOperacionalSnapshot(params?: {
+  scope?: BiEscopo;
+  tenantId?: string;
+  academiaId?: string;
+  startDate?: string;
+  endDate?: string;
+  segmento?: BiSegmento;
+  canViewNetwork?: boolean;
+}): Promise<BiOperationalSnapshot> {
+  const store = getStore();
+  const todayDate = new Date();
+  const defaultRange = monthDateRange(todayDate.getMonth(), todayDate.getFullYear());
+  const tenantId = params?.tenantId ?? getCurrentTenantId();
+  const academiaId = params?.academiaId ?? getCurrentAcademiaId();
+
+  return buildBiOperationalSnapshot({
+    academias: store.academias,
+    tenants: store.tenants,
+    prospects: store.prospects,
+    alunos: store.alunos,
+    matriculas: store.matriculas,
+    pagamentos: store.pagamentos,
+    atividadeGrades: store.atividadeGrades,
+    reservasAulas: store.reservasAulas,
+    scope: params?.scope ?? "UNIDADE",
+    tenantId,
+    academiaId,
+    startDate: params?.startDate ?? defaultRange.start,
+    endDate: params?.endDate ?? defaultRange.end,
+    segmento: params?.segmento ?? "TODOS",
+    canViewNetwork: params?.canViewNetwork ?? false,
+    nowIso: now(),
+  });
 }
 
 // ─── TENANT ────────────────────────────────────────────────────────────────
@@ -8494,6 +8541,364 @@ export async function emitirNfseEmLote(ids: string[]): Promise<void> {
   for (const id of uniqueIds) {
     await emitirNfsePagamento(id);
   }
+}
+
+function createIntegracaoOcorrencia(
+  integracaoId: string,
+  input: {
+    severidade: "INFO" | "WARN" | "ERROR";
+    mensagem: string;
+    codigo?: string;
+  }
+) {
+  return {
+    id: `ioc-${genId()}`,
+    integracaoId,
+    severidade: input.severidade,
+    mensagem: input.mensagem,
+    codigo: input.codigo,
+    dataCriacao: now(),
+  };
+}
+
+function computeAdquirenteStatus(transacoes: AgregadorTransacao[]): {
+  status: IntegracaoOperacional["status"];
+  filaPendente: number;
+  ultimoErro?: string;
+} {
+  const divergentes = transacoes.filter(
+    (item) => item.statusRepasse === "DIVERGENTE" || item.statusConciliacao === "DIVERGENTE"
+  ).length;
+  const pendentes = transacoes.filter((item) => item.statusRepasse !== "LIQUIDADO").length;
+
+  if (divergentes > 0) {
+    return {
+      status: "ATENCAO",
+      filaPendente: pendentes,
+      ultimoErro: `${divergentes} transação(ões) com divergência de repasse.`,
+    };
+  }
+
+  if (pendentes > 0) {
+    return {
+      status: "ATENCAO",
+      filaPendente: pendentes,
+      ultimoErro: `${pendentes} transação(ões) aguardando liquidação.`,
+    };
+  }
+
+  return {
+    status: "SAUDAVEL",
+    filaPendente: 0,
+  };
+}
+
+function upsertNfseConfiguracaoLocal(
+  current: NfseConfiguracao | undefined,
+  input: Partial<NfseConfiguracao> & { tenantId: string }
+): NfseConfiguracao {
+  const merged: NfseConfiguracao = {
+    ...(current ?? createEmptyNfseConfiguracao(input.tenantId)),
+    ...input,
+    id: current?.id ?? `nfse-${input.tenantId}`,
+    tenantId: input.tenantId,
+    prefeitura: input.prefeitura?.trim() ?? current?.prefeitura ?? "",
+    inscricaoMunicipal: input.inscricaoMunicipal?.trim() ?? current?.inscricaoMunicipal ?? "",
+    cnaePrincipal: input.cnaePrincipal?.trim() ?? current?.cnaePrincipal ?? "",
+    serieRps: input.serieRps?.trim() ?? current?.serieRps ?? "",
+    loteInicial: Math.max(1, Number(input.loteInicial ?? current?.loteInicial ?? 1)),
+    aliquotaPadrao: Number(input.aliquotaPadrao ?? current?.aliquotaPadrao ?? 0),
+    emailCopiaFinanceiro: input.emailCopiaFinanceiro?.trim() || current?.emailCopiaFinanceiro,
+    certificadoAlias: input.certificadoAlias?.trim() || current?.certificadoAlias,
+    webhookFiscalUrl: input.webhookFiscalUrl?.trim() || current?.webhookFiscalUrl,
+    emissaoAutomatica: input.emissaoAutomatica ?? current?.emissaoAutomatica ?? true,
+  };
+
+  const status = getNfseConfiguracaoStatus(merged);
+  return {
+    ...merged,
+    status,
+    ultimoErro: status === "CONFIGURADA" ? undefined : merged.ultimoErro,
+  };
+}
+
+function syncNfseIntegracao(
+  integracoes: IntegracaoOperacional[],
+  tenantId: string,
+  config: NfseConfiguracao,
+  mensagem: string,
+  severidade: "INFO" | "WARN" | "ERROR"
+) {
+  const nextStatus: IntegracaoOperacional["status"] =
+    config.status === "CONFIGURADA"
+      ? "SAUDAVEL"
+      : config.status === "ERRO"
+        ? "FALHA"
+        : "CONFIGURACAO_PENDENTE";
+
+  const base = integracoes.find((item) => item.tenantId === tenantId && item.tipo === "NFSE");
+  const targetId = base?.id ?? `int-${tenantId}-nfse`;
+  const occurrence = createIntegracaoOcorrencia(targetId, {
+    severidade,
+    mensagem,
+  });
+
+  if (!base) {
+    return [
+      {
+        id: targetId,
+        tenantId,
+        nome: "NFSe prefeitura",
+        tipo: "NFSE" as const,
+        fornecedor: config.provedor,
+        status: nextStatus,
+        filaPendente: 0,
+        ultimaExecucaoEm: now(),
+        ultimaSucessoEm: config.status === "CONFIGURADA" ? now() : undefined,
+        ultimoErro: config.ultimoErro,
+        linkDestino: "/administrativo/nfse",
+        ocorrencias: [occurrence],
+      },
+      ...integracoes,
+    ];
+  }
+
+  return integracoes.map((item) =>
+    item.id !== base.id
+      ? item
+      : {
+          ...item,
+          fornecedor: config.provedor,
+          status: nextStatus,
+          filaPendente: 0,
+          ultimaExecucaoEm: now(),
+          ultimaSucessoEm: config.status === "CONFIGURADA" ? now() : item.ultimaSucessoEm,
+          ultimoErro: config.ultimoErro,
+          ocorrencias: [occurrence, ...item.ocorrencias].slice(0, 8),
+        }
+  );
+}
+
+function syncAdquirenteIntegracao(
+  integracoes: IntegracaoOperacional[],
+  tenantId: string,
+  transacoes: AgregadorTransacao[],
+  mensagem?: string
+) {
+  const status = computeAdquirenteStatus(transacoes);
+  const integracao = integracoes.find((item) => item.tenantId === tenantId && item.tipo === "ADQUIRENTE");
+  if (!integracao) return integracoes;
+
+  const occurrence = mensagem
+    ? createIntegracaoOcorrencia(integracao.id, {
+        severidade: status.status === "SAUDAVEL" ? "INFO" : "WARN",
+        mensagem,
+      })
+    : null;
+
+  return integracoes.map((item) =>
+    item.id !== integracao.id
+      ? item
+      : {
+          ...item,
+          status: status.status,
+          filaPendente: status.filaPendente,
+          ultimaExecucaoEm: now(),
+          ultimaSucessoEm: status.status === "SAUDAVEL" ? now() : item.ultimaSucessoEm,
+          ultimoErro: status.ultimoErro,
+          ocorrencias: occurrence ? [occurrence, ...item.ocorrencias].slice(0, 8) : item.ocorrencias,
+        }
+  );
+}
+
+export async function listNfseConfiguracoes(params?: {
+  tenantId?: string;
+}): Promise<NfseConfiguracao[]> {
+  const tenantId = params?.tenantId ?? getCurrentTenantId();
+  return getStore().nfseConfiguracoes
+    .filter((item) => item.tenantId === tenantId)
+    .sort((a, b) => a.prefeitura.localeCompare(b.prefeitura, "pt-BR"));
+}
+
+export async function getNfseConfiguracaoAtual(params?: {
+  tenantId?: string;
+}): Promise<NfseConfiguracao> {
+  const tenantId = params?.tenantId ?? getCurrentTenantId();
+  const config = getStore().nfseConfiguracoes.find((item) => item.tenantId === tenantId);
+  return config ?? createEmptyNfseConfiguracao(tenantId);
+}
+
+export async function salvarNfseConfiguracaoAtual(
+  input: Partial<NfseConfiguracao> & { tenantId?: string }
+): Promise<NfseConfiguracao> {
+  const tenantId = input.tenantId ?? getCurrentTenantId();
+  const errors = validateNfseConfiguracaoDraft(input);
+  if (Object.keys(errors).length > 0) {
+    throw new Error(Object.entries(errors).map(([field, message]) => `${field}: ${message}`).join(" "));
+  }
+
+  let saved = createEmptyNfseConfiguracao(tenantId);
+  setStore((s) => {
+    const current = s.nfseConfiguracoes.find((item) => item.tenantId === tenantId);
+    saved = upsertNfseConfiguracaoLocal(current, {
+      ...input,
+      tenantId,
+      ultimaValidacaoEm: now(),
+      ultimaSincronizacaoEm: now(),
+      ultimoErro: undefined,
+    });
+    const nfseConfiguracoes = current
+      ? s.nfseConfiguracoes.map((item) => (item.id === current.id ? saved : item))
+      : [saved, ...s.nfseConfiguracoes];
+    return {
+      ...s,
+      nfseConfiguracoes,
+      integracoesOperacionais: syncNfseIntegracao(
+        s.integracoesOperacionais,
+        tenantId,
+        saved,
+        "Configuração fiscal atualizada manualmente.",
+        "INFO"
+      ),
+    };
+  });
+  return saved;
+}
+
+export async function validarNfseConfiguracaoAtual(params?: {
+  tenantId?: string;
+}): Promise<NfseConfiguracao> {
+  const tenantId = params?.tenantId ?? getCurrentTenantId();
+  const current = await getNfseConfiguracaoAtual({ tenantId });
+  const errors = validateNfseConfiguracaoDraft(current);
+
+  let updated = current;
+  setStore((s) => {
+    const currentStore = s.nfseConfiguracoes.find((item) => item.tenantId === tenantId);
+    updated = {
+      ...(currentStore ?? current),
+      status: Object.keys(errors).length > 0 ? "PENDENTE" : "CONFIGURADA",
+      ultimaValidacaoEm: now(),
+      ultimaSincronizacaoEm: Object.keys(errors).length > 0 ? currentStore?.ultimaSincronizacaoEm : now(),
+      ultimoErro: Object.keys(errors).length > 0
+        ? Object.values(errors).join(" ")
+        : undefined,
+    };
+    const nfseConfiguracoes = currentStore
+      ? s.nfseConfiguracoes.map((item) => (item.id === currentStore.id ? updated : item))
+      : [updated, ...s.nfseConfiguracoes];
+    return {
+      ...s,
+      nfseConfiguracoes,
+      integracoesOperacionais: syncNfseIntegracao(
+        s.integracoesOperacionais,
+        tenantId,
+        updated,
+        Object.keys(errors).length > 0
+          ? "Validação fiscal encontrou pendências obrigatórias."
+          : "Configuração fiscal validada com sucesso.",
+        Object.keys(errors).length > 0 ? "WARN" : "INFO"
+      ),
+    };
+  });
+
+  if (Object.keys(errors).length > 0) {
+    throw new Error(Object.entries(errors).map(([field, message]) => `${field}: ${message}`).join(" "));
+  }
+
+  return updated;
+}
+
+export async function listAgregadorTransacoes(params?: {
+  tenantId?: string;
+}): Promise<AgregadorTransacao[]> {
+  const tenantId = params?.tenantId ?? getCurrentTenantId();
+  return getStore().agregadorTransacoes
+    .filter((item) => item.tenantId === tenantId)
+    .sort((a, b) => b.dataTransacao.localeCompare(a.dataTransacao));
+}
+
+export async function reprocessarAgregadorTransacao(id: string): Promise<AgregadorTransacao> {
+  const tenantId = getCurrentTenantId();
+  let updated: AgregadorTransacao | undefined;
+  setStore((s) => {
+    const agregadorTransacoes = s.agregadorTransacoes.map((item) => {
+      if (item.id !== id || item.tenantId !== tenantId) return item;
+      updated = {
+        ...item,
+        statusTransacao: "CAPTURADA",
+        statusRepasse: "LIQUIDADO",
+        statusConciliacao: "CONCILIADA",
+        dataRepasse: today(),
+        observacao: "Reprocessamento manual concluído com sucesso.",
+      };
+      return updated;
+    });
+    const tenantTransacoes = agregadorTransacoes.filter((item) => item.tenantId === tenantId);
+    return {
+      ...s,
+      agregadorTransacoes,
+      integracoesOperacionais: syncAdquirenteIntegracao(
+        s.integracoesOperacionais,
+        tenantId,
+        tenantTransacoes,
+        "Reprocessamento manual de repasse concluído."
+      ),
+    };
+  });
+
+  if (!updated) {
+    throw new Error("Transação do agregador não encontrada.");
+  }
+
+  return updated;
+}
+
+export async function listIntegracoesOperacionais(params?: {
+  tenantId?: string;
+  includeAllTenants?: boolean;
+}): Promise<IntegracaoOperacional[]> {
+  const tenantId = params?.tenantId ?? getCurrentTenantId();
+  return getStore().integracoesOperacionais
+    .filter((item) => params?.includeAllTenants || item.tenantId === tenantId)
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+export async function reprocessarIntegracaoOperacional(id: string): Promise<IntegracaoOperacional> {
+  const tenantId = getCurrentTenantId();
+  let updated: IntegracaoOperacional | undefined;
+  setStore((s) => {
+    const integracoesOperacionais = s.integracoesOperacionais.map((item) => {
+      if (item.id !== id || item.tenantId !== tenantId) return item;
+      updated = {
+        ...item,
+        status: "SAUDAVEL",
+        filaPendente: 0,
+        latenciaMs: Math.min(180, Number(item.latenciaMs ?? 120)),
+        ultimaExecucaoEm: now(),
+        ultimaSucessoEm: now(),
+        ultimoErro: undefined,
+        ocorrencias: [
+          createIntegracaoOcorrencia(item.id, {
+            severidade: "INFO",
+            mensagem: "Reprocessamento manual concluído e fila limpa.",
+          }),
+          ...item.ocorrencias,
+        ].slice(0, 8),
+      };
+      return updated;
+    });
+    return {
+      ...s,
+      integracoesOperacionais,
+    };
+  });
+
+  if (!updated) {
+    throw new Error("Integração não encontrada.");
+  }
+
+  return updated;
 }
 
 // ─── CONTAS A PAGAR ────────────────────────────────────────────────────────

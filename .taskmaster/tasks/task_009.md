@@ -2,7 +2,7 @@
 
 **Title:** Estruturar backoffice global de academias e unidades
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 1, 3, 7
 
@@ -22,7 +22,7 @@ No test strategy provided.
 
 ### 9.1. Auditar rotas de backoffice e dependencias em mock
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Mapear onde o backoffice ainda depende de `mock/services` e stores locais.
@@ -33,7 +33,7 @@ Inventariar `/admin`, `/admin/academias`, `/admin/academias/[id]` e `/admin/unid
 
 ### 9.2. Especificar contratos reais e estados de UI do backoffice
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 9.1  
 
 Definir modelos, carregamento e erros para as telas administrativas globais.
@@ -44,7 +44,7 @@ Alinhar tipos, requests e responses com as APIs administrativas do backend, incl
 
 ### 9.3. Migrar dashboard e listagens globais para API real
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 9.2  
 
 Conectar o dashboard do backoffice e as tabelas principais aos contratos reais.
@@ -55,7 +55,7 @@ Substituir lookups em mock no dashboard admin e nas listagens de academias/unida
 
 ### 9.4. Migrar cadastro e detalhe de academias
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 9.2, 9.3  
 
 Implementar create/list/detail/update de academia no backoffice.
@@ -66,7 +66,7 @@ Refatorar `/admin/academias` e `/admin/academias/[id]` para operar com contratos
 
 ### 9.5. Migrar cadastro e gestao de unidades
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 9.2, 9.3, 9.4  
 
 Conectar a tela de unidades ao backend administrativo real.
@@ -77,7 +77,7 @@ Refatorar `/admin/unidades` para create/edit/toggle/delete reais, corrigindo div
 
 ### 9.6. Fechar guardas, navegacao e testes do backoffice
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 9.3, 9.4, 9.5  
 
 Validar acesso, navegacao e cenarios principais do administrativo global.

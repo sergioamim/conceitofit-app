@@ -84,6 +84,8 @@ const administrativoItems: NavItem[] = [
   { href: "/administrativo/formas-pagamento", label: "Formas de Pagamento", icon: Settings },
   { href: "/administrativo/bandeiras", label: "Bandeiras de Cartão", icon: Settings },
   { href: "/administrativo/contas-bancarias", label: "Contas Bancárias", icon: Settings },
+  { href: "/administrativo/nfse", label: "NFSe e Fiscal", icon: Settings },
+  { href: "/administrativo/integracoes", label: "Monitoramento de Integrações", icon: Settings },
   { href: "/administrativo/maquininhas", label: "Maquininhas", icon: Settings },
   { href: "/administrativo/catraca-status", label: "Status de Conexões", icon: Settings },
   { href: "/administrativo/unidades", label: "Unidades", icon: Settings },
@@ -102,6 +104,9 @@ const administrativoItems: NavItem[] = [
 ];
 
 const gerencialItems: NavItem[] = [
+  { href: "/gerencial/bi", label: "BI Operacional", icon: LineChart },
+  { href: "/gerencial/bi/rede", label: "Visão de Rede", icon: LineChart },
+  { href: "/gerencial/agregadores", label: "Agregadores", icon: CreditCard },
   { href: "/gerencial/contas-a-receber", label: "Contas a Receber", icon: HandCoins },
   { href: "/gerencial/contas-a-pagar", label: "Contas a Pagar", icon: DollarSign },
   { href: "/gerencial/catraca-acessos", label: "Acessos Catraca", icon: ClipboardList },
@@ -109,6 +114,7 @@ const gerencialItems: NavItem[] = [
   { href: "/gerencial/contas-a-pagar-experimental", label: "Contas a Pagar (Protótipo)", icon: DollarSign },
   { href: "/gerencial/dre", label: "DRE", icon: LineChart },
   { href: "/gerencial/dre-experimental", label: "DRE (Protótipo)", icon: LineChart },
+  { href: "/gerencial/recebimentos", label: "Recebimentos", icon: HandCoins },
 ];
 
 function sortNavItemsByLabel(items: NavItem[]): NavItem[] {
@@ -312,10 +318,17 @@ function SidebarNavigation({
   const [administrativoOpen, setAdministrativoOpen] = useState(false);
   const [gerencialOpen, setGerencialOpen] = useState(false);
   const visibleSegurancaItems = access.canAccessElevatedModules ? segurancaItemsSorted : [];
+  const visibleGerencialItems = access.canAccessElevatedModules
+    ? gerencialItemsSorted
+    : gerencialItemsSorted.filter((item) => item.href !== "/gerencial/bi/rede");
   const visibleAdministrativoItems = access.canAccessElevatedModules
     ? administrativoItemsSorted
     : administrativoItemsSorted.filter(
-        (item) => item.href !== "/administrativo/unidades" && item.href !== "/administrativo/catraca-status"
+        (item) =>
+          item.href !== "/administrativo/unidades" &&
+          item.href !== "/administrativo/catraca-status" &&
+          item.href !== "/administrativo/nfse" &&
+          item.href !== "/administrativo/integracoes"
       );
 
   useEffect(() => {
@@ -392,7 +405,7 @@ function SidebarNavigation({
         collapsed={collapsed}
         open={gerencialOpen}
         onToggle={() => setGerencialOpen((v) => !v)}
-        items={gerencialItemsSorted}
+        items={visibleGerencialItems}
         pathname={pathname}
         onNavigate={onMobileClose}
       />

@@ -376,6 +376,92 @@ export interface Maquininha {
   statusCadastro: StatusCadastro;
 }
 
+export type NfseAmbiente = "HOMOLOGACAO" | "PRODUCAO";
+export type NfseProvider = "GINFES" | "ABRASF" | "BETHA" | "ISSNET" | "IPM";
+export type NfseRegimeTributario = "SIMPLES_NACIONAL" | "LUCRO_PRESUMIDO" | "LUCRO_REAL";
+export type NfseConfiguracaoStatus = "PENDENTE" | "CONFIGURADA" | "ERRO";
+
+export interface NfseConfiguracao {
+  id: UUID;
+  tenantId: UUID;
+  ambiente: NfseAmbiente;
+  provedor: NfseProvider;
+  prefeitura: string;
+  inscricaoMunicipal: string;
+  cnaePrincipal: string;
+  serieRps: string;
+  loteInicial: number;
+  aliquotaPadrao: number;
+  regimeTributario: NfseRegimeTributario;
+  emissaoAutomatica: boolean;
+  emailCopiaFinanceiro?: string;
+  certificadoAlias?: string;
+  webhookFiscalUrl?: string;
+  status: NfseConfiguracaoStatus;
+  ultimaValidacaoEm?: LocalDateTime;
+  ultimaSincronizacaoEm?: LocalDateTime;
+  ultimoErro?: string;
+}
+
+export type AgregadorMeioCaptura = "POS" | "TEF" | "LINK_PAGAMENTO";
+export type AgregadorTransacaoStatus = "CAPTURADA" | "PENDENTE" | "FALHA" | "ESTORNADA";
+export type AgregadorRepasseStatus = "PREVISTO" | "EM_TRANSITO" | "LIQUIDADO" | "DIVERGENTE";
+export type AgregadorConciliacaoStatus = "PENDENTE" | "CONCILIADA" | "DIVERGENTE";
+
+export interface AgregadorTransacao {
+  id: UUID;
+  tenantId: UUID;
+  pagamentoId?: UUID;
+  adquirente: AdquirenteMaquininha;
+  maquininhaNome?: string;
+  nsu: string;
+  autorizacao?: string;
+  bandeira: string;
+  meioCaptura: AgregadorMeioCaptura;
+  clienteNome: string;
+  descricao: string;
+  valorBruto: number;
+  taxa: number;
+  valorLiquido: number;
+  parcelas: number;
+  dataTransacao: LocalDateTime;
+  dataPrevistaRepasse: LocalDate;
+  dataRepasse?: LocalDate;
+  statusTransacao: AgregadorTransacaoStatus;
+  statusRepasse: AgregadorRepasseStatus;
+  statusConciliacao: AgregadorConciliacaoStatus;
+  observacao?: string;
+}
+
+export type IntegracaoOperacionalTipo = "NFSE" | "ADQUIRENTE" | "CATRACA" | "WEBHOOK" | "IMPORTACAO";
+export type IntegracaoOperacionalStatus = "SAUDAVEL" | "ATENCAO" | "FALHA" | "CONFIGURACAO_PENDENTE";
+export type IntegracaoOcorrenciaSeveridade = "INFO" | "WARN" | "ERROR";
+
+export interface IntegracaoOperacionalOcorrencia {
+  id: UUID;
+  integracaoId: UUID;
+  severidade: IntegracaoOcorrenciaSeveridade;
+  mensagem: string;
+  codigo?: string;
+  dataCriacao: LocalDateTime;
+}
+
+export interface IntegracaoOperacional {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  tipo: IntegracaoOperacionalTipo;
+  fornecedor: string;
+  status: IntegracaoOperacionalStatus;
+  filaPendente: number;
+  latenciaMs?: number;
+  ultimaExecucaoEm?: LocalDateTime;
+  ultimaSucessoEm?: LocalDateTime;
+  ultimoErro?: string;
+  linkDestino?: string;
+  ocorrencias: IntegracaoOperacionalOcorrencia[];
+}
+
 export interface ConciliacaoLinha {
   id: UUID;
   tenantId: UUID;
@@ -765,6 +851,48 @@ export interface Academia {
   ativo?: boolean;
 }
 
+export type UnidadeOnboardingStrategy = "CARGA_INICIAL" | "IMPORTAR_DEPOIS" | "PREPARAR_ETL";
+export type UnidadeOnboardingStatus =
+  | "PENDENTE_SEED"
+  | "AGUARDANDO_IMPORTACAO"
+  | "EM_IMPORTACAO"
+  | "PRONTA"
+  | "ERRO";
+export type UnidadeOnboardingOrigem = "SEED" | "CSV" | "PACOTE" | "MANUAL";
+export type UnidadeOnboardingEventType =
+  | "UNIDADE_CRIADA"
+  | "ESTRATEGIA_DEFINIDA"
+  | "SEED_AGENDADO"
+  | "IMPORTACAO_PREPARADA"
+  | "JOB_CRIADO"
+  | "JOB_STATUS_ATUALIZADO";
+
+export interface UnidadeOnboardingEvent {
+  id: UUID;
+  tenantId: UUID;
+  type: UnidadeOnboardingEventType;
+  titulo: string;
+  descricao?: string;
+  status?: UnidadeOnboardingStatus;
+  origem?: UnidadeOnboardingOrigem;
+  jobId?: string;
+  criadoEm: LocalDateTime;
+}
+
+export interface UnidadeOnboardingState {
+  tenantId: UUID;
+  academiaId?: UUID;
+  estrategia: UnidadeOnboardingStrategy;
+  status: UnidadeOnboardingStatus;
+  evoFilialId?: string;
+  ultimoJobId?: string;
+  ultimaOrigem?: UnidadeOnboardingOrigem;
+  ultimaMensagem?: string;
+  criadoEm: LocalDateTime;
+  atualizadoEm: LocalDateTime;
+  eventos: UnidadeOnboardingEvent[];
+}
+
 export type TenantThemePreset =
   | "CONCEITO_DARK"
   | "AZUL_OCEANO"
@@ -1095,6 +1223,98 @@ export interface DashboardData {
   prospectsRecentes: Prospect[];
   matriculasVencendo: (Matricula & { aluno?: Aluno; plano?: Plano })[];
   pagamentosPendentes: (Pagamento & { aluno?: Aluno })[];
+}
+
+export type BiEscopo = "UNIDADE" | "ACADEMIA";
+export type BiSegmento = OrigemProspect | "TODOS";
+export type BiKpiKey =
+  | "CONVERSAO"
+  | "OCUPACAO"
+  | "INADIMPLENCIA"
+  | "RETENCAO"
+  | "RECEITA"
+  | "ATIVOS";
+export type BiQualityStatus = "OK" | "ATENCAO";
+
+export interface BiKpiDefinition {
+  key: BiKpiKey;
+  label: string;
+  description: string;
+  unit: "%" | "currency" | "count";
+}
+
+export interface BiResumoOperacional {
+  conversaoPct: number;
+  ocupacaoPct: number;
+  inadimplenciaPct: number;
+  retencaoPct: number;
+  receita: number;
+  ativos: number;
+  prospects: number;
+  conversoes: number;
+  lugaresOcupados: number;
+  lugaresDisponiveis: number;
+  valorInadimplente: number;
+  valorEmAberto: number;
+}
+
+export interface BiDeltaOperacional {
+  conversaoPct: number;
+  ocupacaoPct: number;
+  inadimplenciaPct: number;
+  retencaoPct: number;
+  receita: number;
+  ativos: number;
+}
+
+export interface BiSeriePonto {
+  label: string;
+  periodoInicio: LocalDate;
+  periodoFim: LocalDate;
+  receita: number;
+  conversaoPct: number;
+  ocupacaoPct: number;
+  inadimplenciaPct: number;
+  retencaoPct: number;
+}
+
+export interface BiBenchmarkTenant {
+  tenantId: UUID;
+  tenantNome: string;
+  academiaId?: UUID;
+  academiaNome?: string;
+  receita: number;
+  ativos: number;
+  prospects: number;
+  conversoes: number;
+  conversaoPct: number;
+  ocupacaoPct: number;
+  inadimplenciaPct: number;
+  retencaoPct: number;
+}
+
+export interface BiQualityItem {
+  id: string;
+  label: string;
+  status: BiQualityStatus;
+  detail: string;
+}
+
+export interface BiOperationalSnapshot {
+  scope: BiEscopo;
+  startDate: LocalDate;
+  endDate: LocalDate;
+  academiaId?: UUID;
+  academiaNome?: string;
+  tenantId?: UUID;
+  tenantNome?: string;
+  segmento: BiSegmento;
+  kpis: BiResumoOperacional;
+  deltas: BiDeltaOperacional;
+  series: BiSeriePonto[];
+  benchmark: BiBenchmarkTenant[];
+  quality: BiQualityItem[];
+  generatedAt: LocalDateTime;
 }
 
 export interface DREGerencial {
