@@ -414,7 +414,7 @@
         "description": "Implementar paginas e fluxos para trial, signup, checkout, formularios e contratos.",
         "details": "Inclui landing flow, formularios, selecao de plano, checkout e acompanhamento de pendencias.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "1",
           "2"
@@ -427,7 +427,7 @@
             "description": "Definir as rotas públicas necessárias para landing, trial, signup e checkout.",
             "dependencies": [],
             "details": "Listar URLs, criar estrutura de páginas públicas e configurar layouts/guards para acesso não autenticado.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -439,7 +439,7 @@
               1
             ],
             "details": "Criar componentes de landing, cards de planos, pricing e CTAs, com navegação para o fluxo de adesão.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -451,7 +451,7 @@
               1
             ],
             "details": "Modelar campos, máscaras e validações, integrar com estado de formulário e mensagens de erro amigáveis.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -464,7 +464,7 @@
               3
             ],
             "details": "Consumir endpoints de checkout/contratos, tratar callbacks, estados de pagamento e confirmação de aceite.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -476,7 +476,7 @@
               1
             ],
             "details": "Resolver tenant por domínio/param, aplicar tema/logotipo e garantir isolamento de dados no fluxo público.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -491,7 +491,7 @@
               5
             ],
             "details": "Revisar UX, mensagens de erro, estados de carregamento e adicionar testes críticos de navegação e API.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testes de navegação e integração dos fluxos principais",
             "parentId": "undefined"
           }

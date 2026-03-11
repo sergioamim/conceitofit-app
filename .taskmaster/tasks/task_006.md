@@ -2,7 +2,7 @@
 
 **Title:** Criar jornada digital web de adesao e checkout
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 1, 2
 
@@ -22,7 +22,7 @@ No test strategy provided.
 
 ### 6.1. Mapear e criar rotas públicas da jornada
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Definir as rotas públicas necessárias para landing, trial, signup e checkout.
@@ -33,7 +33,7 @@ Listar URLs, criar estrutura de páginas públicas e configurar layouts/guards p
 
 ### 6.2. Implementar landing flow e seleção de plano
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 6.1  
 
 Construir telas iniciais com conteúdo e escolha de plano.
@@ -44,7 +44,7 @@ Criar componentes de landing, cards de planos, pricing e CTAs, com navegação p
 
 ### 6.3. Desenvolver formulários de trial e cadastro
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 6.1  
 
 Criar formulários de trial e signup com validações básicas.
@@ -55,7 +55,7 @@ Modelar campos, máscaras e validações, integrar com estado de formulário e m
 
 ### 6.4. Integrar checkout e contratos via API
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 6.2, 6.3  
 
 Conectar fluxo de pagamento e aceite de contratos ao backend.
@@ -66,7 +66,7 @@ Consumir endpoints de checkout/contratos, tratar callbacks, estados de pagamento
 
 ### 6.5. Aplicar autenticação e branding por tenant
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 6.1  
 
 Garantir identificação do tenant e personalização visual no funil.
@@ -77,7 +77,7 @@ Resolver tenant por domínio/param, aplicar tema/logotipo e garantir isolamento 
 
 ### 6.6. Validar funil e cobrir testes essenciais
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 6.2, 6.3, 6.4, 6.5  
 
 Finalizar validações e testes do fluxo ponta a ponta.
