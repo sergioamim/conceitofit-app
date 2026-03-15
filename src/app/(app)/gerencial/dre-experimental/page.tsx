@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { isRealApiEnabled } from "@/lib/api/http";
-import { getDreGerencial, getDreProjecao } from "@/lib/mock/services";
+import { useTenantContext } from "@/hooks/use-session-context";
+import { getDreGerencialApi, getDreProjecaoApi } from "@/lib/api/financeiro-gerencial";
+import { getBusinessCurrentMonthYear } from "@/lib/business-date";
 import type { DREProjecao, DREGerencial, DreProjectionScenario, GrupoDre } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const CENARIO_LABEL: Record<DreProjectionScenario, string> = {
   BASE: "Base",
@@ -81,9 +83,9 @@ function clampWidth(value: number) {
 }
 
 export default function DreExperimentalPage() {
-  const now = new Date();
-  const [mes, setMes] = useState(now.getMonth());
-  const [ano, setAno] = useState(now.getFullYear());
+  const tenantContext = useTenantContext();
+  const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
+  const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [horizonte, setHorizonte] = useState<(typeof HORIZONTE_OPTIONS)[number]["value"]>("6");
   const [cenario, setCenario] = useState<DreProjectionScenario>("BASE");
   const [dre, setDre] = useState<DREGerencial | null>(null);
@@ -92,14 +94,16 @@ export default function DreExperimentalPage() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (!tenantContext.tenantId) return;
     setLoading(true);
     setError(null);
     try {
       const horizonMonths = Number(horizonte);
       const projRange = projectionRange(mes, ano, horizonMonths);
       const [dreData, projectionData] = await Promise.all([
-        getDreGerencial({ month: mes, year: ano }),
-        getDreProjecao({
+        getDreGerencialApi({ tenantId: tenantContext.tenantId, month: mes, year: ano }),
+        getDreProjecaoApi({
+          tenantId: tenantContext.tenantId,
           startDate: projRange.startDate,
           endDate: projRange.endDate,
           cenario,
@@ -108,29 +112,17 @@ export default function DreExperimentalPage() {
       setDre(dreData);
       setProjecao(projectionData);
     } catch (loadError) {
-      console.error("[dre-experimental] erro ao carregar dados", loadError);
-      setError("Não foi possível carregar o DRE experimental agora.");
+      setError(normalizeErrorMessage(loadError));
     } finally {
       setLoading(false);
     }
-  }, [ano, cenario, horizonte, mes]);
+  }, [ano, cenario, horizonte, mes, tenantContext.tenantId]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    if (isRealApiEnabled()) return;
-    function handleUpdate() {
+    if (tenantContext.tenantResolved && tenantContext.tenantId) {
       void load();
     }
-    window.addEventListener("academia-store-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-    return () => {
-      window.removeEventListener("academia-store-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
-  }, [load]);
+  }, [load, tenantContext.tenantId, tenantContext.tenantResolved]);
 
   const resumo = useMemo(() => {
     const receitaLiquida = Number(dre?.receitaLiquida ?? 0);

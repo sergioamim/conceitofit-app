@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { updateAluno } from "@/lib/mock/services";
+import { updateAlunoService } from "@/lib/comercial/runtime";
 import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,36 +89,43 @@ export function ClienteEditForm({
 
   const handleSave = async () => {
     setLoading(true);
-    await updateAluno(aluno.id, {
-      nome: form.nome,
-      email: form.email,
-      telefone: form.telefone,
-      telefoneSec: form.telefoneSec || undefined,
-      cpf: form.cpf,
-      rg: form.rg || undefined,
-      dataNascimento: form.dataNascimento,
-      sexo: form.sexo || undefined,
-      endereco: {
-        cep: form.enderecoCep || undefined,
-        logradouro: form.enderecoLogradouro || undefined,
-        numero: form.enderecoNumero || undefined,
-        complemento: form.enderecoComplemento || undefined,
-        bairro: form.enderecoBairro || undefined,
-        cidade: form.enderecoCidade || undefined,
-        estado: form.enderecoEstado || undefined,
-      },
-      contatoEmergencia: form.emergenciaNome
-        ? {
-            nome: form.emergenciaNome,
-            telefone: form.emergenciaTelefone,
-            parentesco: form.emergenciaParentesco || undefined,
-          }
-        : undefined,
-      observacoesMedicas: form.observacoesMedicas || undefined,
-    });
-    setLoading(false);
-    if (onSaved) {
-      await onSaved();
+    try {
+      await updateAlunoService({
+        tenantId: aluno.tenantId,
+        id: aluno.id,
+        data: {
+          nome: form.nome,
+          email: form.email,
+          telefone: form.telefone,
+          telefoneSec: form.telefoneSec || undefined,
+          cpf: form.cpf,
+          rg: form.rg || undefined,
+          dataNascimento: form.dataNascimento,
+          sexo: form.sexo || undefined,
+          endereco: {
+            cep: form.enderecoCep || undefined,
+            logradouro: form.enderecoLogradouro || undefined,
+            numero: form.enderecoNumero || undefined,
+            complemento: form.enderecoComplemento || undefined,
+            bairro: form.enderecoBairro || undefined,
+            cidade: form.enderecoCidade || undefined,
+            estado: form.enderecoEstado || undefined,
+          },
+          contatoEmergencia: form.emergenciaNome
+            ? {
+                nome: form.emergenciaNome,
+                telefone: form.emergenciaTelefone,
+                parentesco: form.emergenciaParentesco || undefined,
+              }
+            : undefined,
+          observacoesMedicas: form.observacoesMedicas || undefined,
+        },
+      });
+      if (onSaved) {
+        await onSaved();
+      }
+    } finally {
+      setLoading(false);
     }
   };
 

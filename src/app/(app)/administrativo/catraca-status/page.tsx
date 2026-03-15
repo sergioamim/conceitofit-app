@@ -5,7 +5,8 @@ import { RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { listTenants, listarStatusConexaoCatraca } from "@/lib/mock/services";
+import { listarCatracaWsStatusApi } from "@/lib/api/catraca";
+import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { Tenant } from "@/lib/types";
 import { useAuthAccess } from "@/hooks/use-session-context";
@@ -64,24 +65,25 @@ export default function CatracaStatusPage() {
   }, [rows, search]);
 
   useEffect(() => {
+    if (!access.canAccessElevatedModules) return;
     void (async () => {
       try {
-        const tenantsResponse = await listTenants();
+        const tenantsResponse = await listUnidadesApi();
         setTenants(tenantsResponse);
       } catch {
         setTenants([]);
       }
     })();
-  }, []);
+  }, [access.canAccessElevatedModules]);
 
   const load = useCallback(async () => {
     if (!access.canAccessElevatedModules) return;
     setLoading(true);
     setError("");
     try {
-      const status = await listarStatusConexaoCatraca(
-        selectedTenantId === TODOS_TENANTS_VALUE ? undefined : selectedTenantId
-      );
+      const status = await listarCatracaWsStatusApi({
+        tenantId: selectedTenantId === TODOS_TENANTS_VALUE ? undefined : selectedTenantId,
+      });
 
       const statusByTenant = new Map<string, number>(
         status.tenants.map((item) => [item.tenantId, item.connectedAgents])

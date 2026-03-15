@@ -16,7 +16,7 @@ Este PRD existe para manter o backlog do Task Master alinhado ao estado real do 
 
 ## Instrucoes obrigatorias de geracao
 
-- Gerar exatamente 10 tasks top-level, na ordem abaixo.
+- O backlog inicial de 10 epicos ja foi expandido no Task Master e deve continuar evoluindo sem perder aderencia ao codigo real.
 - Cada task top-level representa um epico.
 - Expandir cada epico em subtasks verificaveis por fluxo, tela e integracao.
 - Nao criar tasks para apps legados ou para frontends fora do repositorio atual.
@@ -52,3 +52,16 @@ Este PRD existe para manter o backlog do Task Master alinhado ao estado real do 
 
 ### 10. Consolidar importacao ETL e onboarding de unidades no backoffice
 - Completar `/admin/importacao-evo-p0` e integra-la ao cadastro de unidade, com opcao de dados iniciais padrao ou importacao futura.
+
+## Complemento 2026-03-13 - Seguranca Global do Backoffice
+
+O backend passou a formalizar uma nova trilha administrativa de seguranca em `/api/v1/admin/seguranca/*`. No frontend, isso nao deve reaproveitar integralmente as paginas contextuais em `src/app/(app)/seguranca/*`, porque elas operam por tenant e nao cobrem a visao global de rede. A diretriz e criar telas novas no shell `/admin`, reaproveitando componentes, hooks e padroes visuais das telas atuais quando fizer sentido.
+
+### 16. Criar area global de seguranca no backoffice administrativo
+- Adicionar navegacao, listagem global de usuarios administrativos e detalhe consolidado de acessos em `/admin/seguranca/*`.
+
+### 17. Operar usuarios, unidades e perfis pelo backoffice global
+- Permitir associar usuario a unidade, remover acesso, trocar unidade padrao e gerir perfis administrativos por unidade no path `/admin`.
+
+### 18. Integrar politica de novas unidades ao administrativo e onboarding
+- Exibir e operar a elegibilidade de usuarios para novas unidades, alem de refletir acesso herdado/manual nas telas de seguranca e de unidades.

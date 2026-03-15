@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { getBiOperacionalSnapshotApi } from "@/lib/api/bi";
+import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { buildBiExportCsv } from "@/lib/bi/analytics";
-import { getBiOperacionalSnapshot, listAcademias, listTenantsGlobal } from "@/lib/mock/services";
+import { getBusinessMonthRange } from "@/lib/business-date";
 import type { Academia, BiEscopo, BiOperationalSnapshot, BiSegmento, Tenant } from "@/lib/types";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
@@ -26,13 +28,7 @@ const SEGMENTO_OPTIONS: Array<{ value: BiSegmento; label: string }> = [
 ];
 
 function monthRangeFromNow() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`,
-    end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`,
-  };
+  return getBusinessMonthRange();
 }
 
 function formatBRL(value: number) {
@@ -74,7 +70,7 @@ export default function BiRedePage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadFilters = useCallback(async () => {
-    const [academiasResponse, tenantsResponse] = await Promise.all([listAcademias(), listTenantsGlobal()]);
+    const [academiasResponse, tenantsResponse] = await Promise.all([listAcademiasApi(), listUnidadesApi()]);
     setAcademias(academiasResponse);
     setTenants(tenantsResponse);
     setSelectedAcademiaId((current) => {
@@ -90,7 +86,7 @@ export default function BiRedePage() {
     setError(null);
     try {
       const scope: BiEscopo = selectedTenantId === ALL_TENANTS ? "ACADEMIA" : "UNIDADE";
-      const nextSnapshot = await getBiOperacionalSnapshot({
+      const nextSnapshot = await getBiOperacionalSnapshotApi({
         scope,
         tenantId: selectedTenantId === ALL_TENANTS ? tenantContext.tenantId : selectedTenantId,
         academiaId: selectedAcademiaId,
@@ -127,18 +123,6 @@ export default function BiRedePage() {
       void loadSnapshot();
     }
   }, [access.canAccessElevatedModules, loadSnapshot, tenantContext.tenantResolved]);
-
-  useEffect(() => {
-    function handleStoreUpdate() {
-      void loadSnapshot();
-    }
-    window.addEventListener("academia-store-updated", handleStoreUpdate);
-    window.addEventListener("storage", handleStoreUpdate);
-    return () => {
-      window.removeEventListener("academia-store-updated", handleStoreUpdate);
-      window.removeEventListener("storage", handleStoreUpdate);
-    };
-  }, [loadSnapshot]);
 
   const filteredTenants = useMemo(
     () => tenants.filter((tenant) => (tenant.academiaId ?? tenant.groupId) === selectedAcademiaId),

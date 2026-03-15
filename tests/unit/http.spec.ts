@@ -100,8 +100,15 @@ function mockFetchSequence(
 
 const envSnapshot = {
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
-  useRealApi: process.env.NEXT_PUBLIC_USE_REAL_API,
   devAutoLogin: process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN,
+};
+
+const runtimeSnapshot = {
+  forceLocalMode: (
+    globalThis as typeof globalThis & {
+      __ACADEMIA_FORCE_LOCAL_MODE__?: boolean;
+    }
+  ).__ACADEMIA_FORCE_LOCAL_MODE__,
 };
 
 let browser: MockBrowser | undefined;
@@ -109,8 +116,12 @@ let browser: MockBrowser | undefined;
 test.beforeEach(() => {
   browser = installMockBrowser();
   process.env.NEXT_PUBLIC_API_BASE_URL = "";
-  process.env.NEXT_PUBLIC_USE_REAL_API = "false";
   process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN = "false";
+  (
+    globalThis as typeof globalThis & {
+      __ACADEMIA_FORCE_LOCAL_MODE__?: boolean;
+    }
+  ).__ACADEMIA_FORCE_LOCAL_MODE__ = true;
   clearAuthSession();
 });
 
@@ -118,12 +129,24 @@ test.afterEach(() => {
   clearAuthSession();
   browser?.restore();
   process.env.NEXT_PUBLIC_API_BASE_URL = envSnapshot.apiBaseUrl;
-  process.env.NEXT_PUBLIC_USE_REAL_API = envSnapshot.useRealApi;
   process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN = envSnapshot.devAutoLogin;
+  if (runtimeSnapshot.forceLocalMode === undefined) {
+    delete (
+      globalThis as typeof globalThis & {
+        __ACADEMIA_FORCE_LOCAL_MODE__?: boolean;
+      }
+    ).__ACADEMIA_FORCE_LOCAL_MODE__;
+  } else {
+    (
+      globalThis as typeof globalThis & {
+        __ACADEMIA_FORCE_LOCAL_MODE__?: boolean;
+      }
+    ).__ACADEMIA_FORCE_LOCAL_MODE__ = runtimeSnapshot.forceLocalMode;
+  }
 });
 
 test.describe("http apiRequest", () => {
-  test("mantem tenant explicito quando ele pertence a sessao", async () => {
+  test("remove tenantId redundante em rota comercial tenant-scoped quando o contexto ativo ja esta presente", async () => {
     saveAuthSession({
       token: "access-token",
       refreshToken: "refresh-token",
@@ -143,23 +166,115 @@ test.describe("http apiRequest", () => {
 
     try {
       await apiRequest<unknown[]>({
-        path: "/api/v1/gerencial/financeiro/formas-pagamento",
+        path: "/api/v1/comercial/matriculas",
         query: {
           tenantId: "tenant-secondary",
-          apenasAtivas: false,
+          status: "ATIVA",
         },
       });
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].url).toContain("tenantId=tenant-secondary");
-      expect(calls[0].url).not.toContain("tenantId=tenant-active");
+      expect(calls[0].url).toContain("/api/v1/comercial/matriculas");
+      expect(calls[0].url).not.toContain("tenantId=");
+      expect(calls[0].url).toContain("status=ATIVA");
+      expect(calls[0].headers.get("X-Context-Id")).toBeTruthy();
       expect(calls[0].headers.get("Authorization")).toBe("Bearer access-token");
     } finally {
       restore();
     }
   });
 
-  test("injeta tenantId da sessao em rotas que exigem tenant quando o wrapper omite a query", async () => {
+  test("remove tenantId redundante em outras rotas operacionais tenant-scoped", async () => {
+    saveAuthSession({
+      token: "access-token",
+      refreshToken: "refresh-token",
+      activeTenantId: "tenant-active",
+      availableTenants: [{ tenantId: "tenant-active", defaultTenant: true }],
+    });
+
+    const { calls, restore } = mockFetchSequence([
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ]);
+
+    try {
+      await apiRequest<unknown[]>({
+        path: "/api/v1/crm/tarefas",
+        query: {
+          tenantId: "tenant-secondary",
+          status: "PENDENTE",
+        },
+      });
+      await apiRequest<unknown[]>({
+        path: "/api/v1/administrativo/atividades",
+        query: {
+          tenantId: "tenant-secondary",
+          apenasAtivas: true,
+        },
+      });
+      await apiRequest<unknown[]>({
+        path: "/api/v1/gerencial/financeiro/contas-pagar",
+        query: {
+          tenantId: "tenant-secondary",
+          status: "PENDENTE",
+        },
+      });
+
+      expect(calls).toHaveLength(3);
+      expect(calls[0].url).toContain("/api/v1/crm/tarefas");
+      expect(calls[0].url).not.toContain("tenantId=");
+      expect(calls[1].url).toContain("/api/v1/administrativo/atividades");
+      expect(calls[1].url).not.toContain("tenantId=");
+      expect(calls[2].url).toContain("/api/v1/gerencial/financeiro/contas-pagar");
+      expect(calls[2].url).not.toContain("tenantId=");
+    } finally {
+      restore();
+    }
+  });
+
+  test("preserva tenantId em rotas globais que ainda exigem tenant explicito", async () => {
+    saveAuthSession({
+      token: "access-token",
+      refreshToken: "refresh-token",
+      activeTenantId: "tenant-active",
+      availableTenants: [{ tenantId: "tenant-active", defaultTenant: true }],
+    });
+
+    const { calls, restore } = mockFetchSequence([
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ]);
+
+    try {
+      await apiRequest<unknown[]>({
+        path: "/api/v1/academia/prospects",
+        query: {
+          tenantId: "tenant-secondary",
+          status: "NOVO",
+        },
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toContain("tenantId=tenant-secondary");
+      expect(calls[0].url).toContain("status=NOVO");
+    } finally {
+      restore();
+    }
+  });
+
+  test("injeta tenantId da sessao quando a rota ainda depende de tenant explicito", async () => {
     saveAuthSession({
       token: "access-token",
       refreshToken: "refresh-token",
@@ -177,13 +292,60 @@ test.describe("http apiRequest", () => {
 
     try {
       await apiRequest<unknown[]>({
-        path: "/api/v1/administrativo/cargos",
-        query: { apenasAtivos: true },
+        path: "/api/v1/academia/prospects",
+        query: { status: "NOVO" },
       });
 
       expect(calls).toHaveLength(1);
       expect(calls[0].url).toContain("tenantId=tenant-active");
-      expect(calls[0].url).toContain("apenasAtivos=true");
+      expect(calls[0].url).toContain("status=NOVO");
+    } finally {
+      restore();
+    }
+  });
+
+  test("mantem tenantId explicito em rota operacional quando a requisicao nao usa contexto", async () => {
+    saveAuthSession({
+      token: "access-token",
+      refreshToken: "refresh-token",
+      activeTenantId: "tenant-active",
+      availableTenants: [{ tenantId: "tenant-active", defaultTenant: true }],
+    });
+
+    const { calls, restore } = mockFetchSequence([
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ]);
+
+    try {
+      await apiRequest<unknown[]>({
+        path: "/api/v1/comercial/matriculas",
+        includeContextHeader: false,
+        query: {
+          tenantId: "tenant-secondary",
+          status: "ATIVA",
+        },
+      });
+
+      await apiRequest<unknown[]>({
+        path: "/api/v1/comercial/matriculas",
+        includeContextHeader: false,
+        query: {
+          status: "ATIVA",
+        },
+      });
+
+      expect(calls).toHaveLength(2);
+      expect(calls[0].url).toContain("tenantId=tenant-secondary");
+      expect(calls[0].headers.get("X-Context-Id")).toBeNull();
+      expect(calls[1].url).toContain("tenantId=tenant-active");
+      expect(calls[1].headers.get("X-Context-Id")).toBeNull();
     } finally {
       restore();
     }
@@ -224,9 +386,10 @@ test.describe("http apiRequest", () => {
       expect(response.ok).toBe(true);
       expect(calls).toHaveLength(3);
       expect(calls[0].headers.get("Authorization")).toBe("Bearer token-expired");
-      expect(calls[1].url).toBe("/api/v1/auth/refresh");
+      expect(calls[1].url).toContain("/api/v1/auth/refresh");
       expect(calls[2].headers.get("Authorization")).toBe("Bearer token-fresh");
-      expect(calls[2].url).toContain("tenantId=tenant-active");
+      expect(calls[2].url).not.toContain("tenantId=");
+      expect(calls[2].headers.get("X-Context-Id")).toBeTruthy();
       expect(getActiveTenantIdFromSession()).toBe("tenant-active");
       expect(getAvailableTenantsFromSession().map((item) => item.tenantId)).toEqual([
         "tenant-active",

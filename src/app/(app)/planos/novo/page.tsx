@@ -6,22 +6,30 @@ import { ChevronLeft } from "lucide-react";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { PlanoForm } from "@/components/planos/plano-form";
-import { listAtividades, createPlano } from "@/lib/mock/services";
+import { useTenantContext } from "@/hooks/use-session-context";
+import { createPlanoApi } from "@/lib/api/comercial-catalogo";
+import { listAtividadesApi } from "@/lib/api/administrativo";
 import type { Atividade } from "@/lib/types";
 import { buildPlanoPayload, type PlanoFormValues } from "@/lib/planos/form";
 
 export default function NovoPlanoPage() {
   const router = useRouter();
+  const { tenantId, tenantResolved } = useTenantContext();
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    listAtividades().then(setAtividades);
-  }, []);
+    if (!tenantResolved || !tenantId) return;
+    void listAtividadesApi({ tenantId, apenasAtivas: false }).then(setAtividades);
+  }, [tenantId, tenantResolved]);
 
   async function handleSubmit(values: PlanoFormValues) {
+    if (!tenantId) return;
     setSaving(true);
-    await createPlano(buildPlanoPayload(values));
+    await createPlanoApi({
+      tenantId,
+      data: buildPlanoPayload(values),
+    });
     router.push("/planos");
   }
 
@@ -43,8 +51,8 @@ export default function NovoPlanoPage() {
 
       <PlanoForm
         atividades={atividades}
-        submitLabel={saving ? "Criando..." : "Criar plano"}
-        submitting={saving}
+        submitLabel={!tenantResolved || !tenantId ? "Carregando contexto..." : saving ? "Criando..." : "Criar plano"}
+        submitting={saving || !tenantResolved || !tenantId}
         onCancel={() => router.push("/planos")}
         onSubmit={handleSubmit}
       />

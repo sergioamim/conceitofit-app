@@ -2,14 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  listProspectMensagens,
-  addProspectMensagem,
-  listProspectAgendamentos,
-  criarProspectAgendamento,
-  updateProspectAgendamento,
-  updateProspectStatus,
-  marcarProspectPerdido,
-} from "@/lib/mock/services";
+  addProspectMensagemApi,
+  criarProspectAgendamentoApi,
+  listProspectAgendamentosApi,
+  listProspectMensagensApi,
+  marcarProspectPerdidoApi,
+  updateProspectAgendamentoApi,
+  updateProspectStatusApi,
+} from "@/lib/api/crm";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type {
   Prospect,
   StatusProspect,
@@ -103,6 +105,7 @@ export function ProspectDetailModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const tenantContext = useTenantContext();
   const [tab, setTab] = useState<Tab>("detalhes");
   const [mensagens, setMensagens] = useState<ProspectMensagem[]>([]);
   const [agendamentos, setAgendamentos] = useState<ProspectAgendamento[]>([]);
@@ -119,17 +122,31 @@ export function ProspectDetailModal({
   });
   const [savingAg, setSavingAg] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
   const funcionariosMap = new Map(funcionarios.map((f) => [f.id, f]));
 
   useEffect(() => {
-    if (!prospect) return;
-    setTab("detalhes");
-    setMsgTexto("");
-    setAgendaOpen(false);
-    loadData(prospect.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prospect?.id]);
+    if (!prospect || !tenantId) return;
+    let cancelled = false;
+
+    Promise.all([
+      listProspectMensagensApi({ tenantId, prospectId: prospect.id }),
+      listProspectAgendamentosApi({ tenantId, prospectId: prospect.id }),
+    ]).then(([msgs, ags]) => {
+      if (cancelled) return;
+      setMensagens(msgs);
+      setAgendamentos(ags);
+    }).catch(() => {
+      if (cancelled) return;
+      setMensagens([]);
+      setAgendamentos([]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [prospect, tenantId]);
 
   useEffect(() => {
     if (tab === "conversa") {
@@ -137,67 +154,95 @@ export function ProspectDetailModal({
     }
   }, [tab, mensagens]);
 
-  async function loadData(id: string) {
+  async function refreshData(id: string) {
+    if (!tenantId) return;
     const [msgs, ags] = await Promise.all([
-      listProspectMensagens(id),
-      listProspectAgendamentos(id),
+      listProspectMensagensApi({ tenantId, prospectId: id }),
+      listProspectAgendamentosApi({ tenantId, prospectId: id }),
     ]);
     setMensagens(msgs);
     setAgendamentos(ags);
   }
 
   async function handleSendMsg() {
-    if (!prospect || !msgTexto.trim()) return;
+    if (!prospect || !msgTexto.trim() || !tenantId) return;
     setSendingMsg(true);
-    await addProspectMensagem(prospect.id, msgTexto.trim(), autorNome);
+    await addProspectMensagemApi({
+      tenantId,
+      prospectId: prospect.id,
+      data: {
+        texto: msgTexto.trim(),
+        autorNome,
+      },
+    });
     setMsgTexto("");
-    await loadData(prospect.id);
+    await refreshData(prospect.id);
     onChanged();
     setSendingMsg(false);
   }
 
   async function handleStatusChange(status: StatusProspect) {
-    if (!prospect) return;
+    if (!prospect || !tenantId) return;
     if (status === "PERDIDO") {
       const motivo = prompt("Motivo da perda (opcional):");
-      await marcarProspectPerdido(prospect.id, motivo ?? undefined);
+      await marcarProspectPerdidoApi({
+        tenantId,
+        id: prospect.id,
+        motivo: motivo ?? undefined,
+      });
     } else {
-      await updateProspectStatus(prospect.id, status);
+      await updateProspectStatusApi({
+        tenantId,
+        id: prospect.id,
+        status,
+      });
     }
     onChanged();
     onClose();
   }
 
   async function handleAdvance() {
-    if (!prospect) return;
+    if (!prospect || !tenantId) return;
     const next = getNextStatus(prospect);
     if (!next) return;
-    await updateProspectStatus(prospect.id, next);
+    await updateProspectStatusApi({
+      tenantId,
+      id: prospect.id,
+      status: next,
+    });
     onChanged();
     onClose();
   }
 
   async function handleSaveAgendamento() {
-    if (!prospect || !agForm.data || !agForm.hora || !agForm.funcionarioId) return;
+    if (!prospect || !agForm.data || !agForm.hora || !agForm.funcionarioId || !tenantId) return;
     setSavingAg(true);
-    await criarProspectAgendamento({
+    await criarProspectAgendamentoApi({
+      tenantId,
       prospectId: prospect.id,
-      funcionarioId: agForm.funcionarioId,
-      titulo: agForm.titulo || "Visita à academia",
-      data: agForm.data,
-      hora: agForm.hora,
-      observacoes: agForm.observacoes || undefined,
+      data: {
+        funcionarioId: agForm.funcionarioId,
+        titulo: agForm.titulo || "Visita à academia",
+        data: agForm.data,
+        hora: agForm.hora,
+        observacoes: agForm.observacoes || undefined,
+      },
     });
     setAgForm({ titulo: "Visita à academia", data: "", hora: "", funcionarioId: "", observacoes: "" });
     setAgendaOpen(false);
-    await loadData(prospect.id);
+    await refreshData(prospect.id);
     onChanged();
     setSavingAg(false);
   }
 
   async function handleAgStatus(id: string, status: StatusAgendamento) {
-    await updateProspectAgendamento(id, status);
-    if (prospect) await loadData(prospect.id);
+    if (!tenantId) return;
+    await updateProspectAgendamentoApi({
+      tenantId,
+      id,
+      status,
+    });
+    if (prospect) await refreshData(prospect.id);
     onChanged();
   }
 

@@ -1,10 +1,16 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Plus } from "lucide-react";
-import { listAlunosPage, updateAluno } from "@/lib/mock/services";
-import { getStore } from "@/lib/mock/store";
+import { getBusinessTodayIso } from "@/lib/business-date";
+import {
+  listAlunosPageService,
+  listMatriculasService,
+  listPlanosService,
+  updateAlunoService,
+} from "@/lib/comercial/runtime";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
@@ -15,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { maskCPF, maskPhone } from "@/lib/utils";
-import type { Aluno, StatusAluno } from "@/lib/types";
+import type { Aluno, Matricula, Plano, StatusAluno } from "@/lib/types";
 
 const STATUS_FILTERS: { value: StatusAluno | "TODOS"; label: string }[] = [
   { value: "TODOS", label: "Todos" },
@@ -34,11 +40,10 @@ function formatDate(d: string) {
 function ClientesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tenantRef = useRef<string>(getStore().currentTenantId || getStore().tenant?.id || "");
+  const { tenantId, tenantResolved } = useTenantContext();
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [filtro, setFiltro] = useState<StatusAluno | "TODOS">("TODOS");
   const [busca, setBusca] = useState("");
-  const [tenantId, setTenantId] = useState(() => tenantRef.current);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
   const [page, setPage] = useState(0);
@@ -56,13 +61,29 @@ function ClientesPageContent() {
   const [resumoOpen, setResumoOpen] = useState(false);
   const [clienteResumo, setClienteResumo] = useState<Aluno | null>(null);
   const [liberandoSuspensao, setLiberandoSuspensao] = useState(false);
+  const [matriculasAtivas, setMatriculasAtivas] = useState<Matricula[]>([]);
+  const [planos, setPlanos] = useState<Plano[]>([]);
 
   const load = useCallback(async () => {
-    const paged = await listAlunosPage({
-      status: filtro === "TODOS" ? undefined : filtro,
-      page,
-      size: pageSize,
-    });
+    if (!tenantId) return;
+    const [paged, matriculas, planosResponse] = await Promise.all([
+      listAlunosPageService({
+        tenantId,
+        status: filtro === "TODOS" ? undefined : filtro,
+        page,
+        size: pageSize,
+      }),
+      listMatriculasService({
+        tenantId,
+        status: "ATIVA",
+        page: 0,
+        size: 500,
+      }),
+      listPlanosService({
+        tenantId,
+        apenasAtivos: false,
+      }),
+    ]);
 
     setAlunos(paged.items);
     setHasNextPage(paged.hasNext);
@@ -84,32 +105,23 @@ function ClientesPageContent() {
       INATIVO: inativos,
       CANCELADO: cancelados,
     });
-  }, [filtro, page, pageSize]);
+    setMatriculasAtivas(matriculas.filter((item) => item.status === "ATIVA"));
+    setPlanos(planosResponse);
+  }, [filtro, page, pageSize, tenantId]);
 
-  const syncTenantChange = useCallback(() => {
-    const current = getStore().currentTenantId || getStore().tenant?.id || "";
-    if (!current || current === tenantRef.current) return;
-    tenantRef.current = current;
-    setTenantId(current);
+  useEffect(() => {
     setPage(0);
     setAlunos([]);
     setHasNextPage(false);
     setTotalClientes(0);
-  }, []);
+    setMatriculasAtivas([]);
+    setPlanos([]);
+  }, [tenantId]);
 
   useEffect(() => {
-    syncTenantChange();
-    function handleTenantUpdate() {
-      syncTenantChange();
-    }
-    window.addEventListener("academia-store-updated", handleTenantUpdate);
-    return () => window.removeEventListener("academia-store-updated", handleTenantUpdate);
-  }, [syncTenantChange]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-  }, [load, tenantId]);
+    if (!tenantResolved || !tenantId) return;
+    void load();
+  }, [load, tenantId, tenantResolved]);
   useEffect(() => {
     const q = (searchParams.get("q") ?? "").trim();
     if (!q) return;
@@ -139,7 +151,7 @@ function ClientesPageContent() {
   const isSearchFiltered = busca.trim().length > 0;
 
   const metrics = useMemo(() => {
-    const ym = new Date().toISOString().slice(0, 7);
+    const ym = getBusinessTodayIso().slice(0, 7);
     const novos = alunos.filter((a) => a.dataCadastro.startsWith(ym)).length;
     const renovados = 0;
     const naoRenovados = 0;
@@ -153,17 +165,16 @@ function ClientesPageContent() {
 
   const clienteResumoPlano = useMemo(() => {
     if (!clienteResumo) return null;
-    const store = getStore();
-    const matriculaAtiva = store.matriculas.find(
+    const matriculaAtiva = matriculasAtivas.find(
       (item) => item.alunoId === clienteResumo.id && item.status === "ATIVA"
     );
     if (!matriculaAtiva) return null;
-    const plano = store.planos.find((item) => item.id === matriculaAtiva.planoId);
+    const plano = planos.find((item) => item.id === matriculaAtiva.planoId);
     return {
       nome: plano?.nome ?? "Plano ativo",
       dataFim: matriculaAtiva.dataFim,
     };
-  }, [clienteResumo]);
+  }, [clienteResumo, matriculasAtivas, planos]);
 
   const clienteResumoBaseHref = useMemo(() => {
     if (!clienteResumo) return "";
@@ -433,9 +444,13 @@ function ClientesPageContent() {
                   if (!confirmar) return;
                   try {
                     setLiberandoSuspensao(true);
-                    await updateAluno(clienteResumo.id, {
-                      status: "ATIVO",
-                      suspensao: undefined,
+                    await updateAlunoService({
+                      tenantId: clienteResumo.tenantId,
+                      id: clienteResumo.id,
+                      data: {
+                        status: "ATIVO",
+                        suspensao: undefined,
+                      },
                     });
                     setClienteResumo((prev) =>
                       prev ? { ...prev, status: "ATIVO", suspensao: undefined } : prev

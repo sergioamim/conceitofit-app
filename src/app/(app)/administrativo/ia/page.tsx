@@ -4,21 +4,25 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { getBotPrompt, getBotPromptTemplate } from "@/lib/mock/services";
+import { getBotPromptApi, getBotPromptTemplateApi } from "@/lib/api/bot";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function AdministrativoIaPage() {
   const { toast } = useToast();
+  const tenantContext = useTenantContext();
   const [prompt, setPrompt] = useState("");
   const [generatedAt, setGeneratedAt] = useState<string | undefined>(undefined);
   const [template, setTemplate] = useState<string | null>(null);
   const [loadingPrompt, setLoadingPrompt] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
   const loadPrompt = useCallback(async () => {
     setLoadingPrompt(true);
     try {
-      const response = await getBotPrompt();
+      const response = await getBotPromptApi({ tenantId });
       setPrompt(response.prompt ?? "");
       setGeneratedAt(response.generatedAt ?? undefined);
     } catch {
@@ -30,12 +34,12 @@ export default function AdministrativoIaPage() {
     } finally {
       setLoadingPrompt(false);
     }
-  }, [toast]);
+  }, [tenantId, toast]);
 
   const loadTemplate = useCallback(async () => {
     setLoadingTemplate(true);
     try {
-      const raw = await getBotPromptTemplate();
+      const raw = await getBotPromptTemplateApi();
       setTemplate(raw);
     } catch {
       toast({
@@ -49,8 +53,9 @@ export default function AdministrativoIaPage() {
   }, [toast]);
 
   useEffect(() => {
+    if (!tenantId) return;
     void loadPrompt();
-  }, [loadPrompt]);
+  }, [tenantId, loadPrompt]);
 
   async function handleCopyPrompt() {
     try {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Info, Lock, LogIn, RefreshCw, Trophy } from "lucide-react";
 import type {
   CatracaAcesso,
@@ -8,8 +8,10 @@ import type {
   CatracaAcessosResumo,
   CatracaAcessosSerieDiaria,
 } from "@/lib/api/catraca";
-import { listAcessosCatraca, listAlunosPage } from "@/lib/mock/services";
-import { getStore } from "@/lib/mock/store";
+import { listarAcessosCatracaDashboardApi } from "@/lib/api/catraca";
+import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
+import { getBusinessTodayIso } from "@/lib/business-date";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { ClienteThumbnail } from "@/components/shared/cliente-thumbnail";
@@ -22,12 +24,9 @@ import { TableCell } from "@/components/ui/table";
 type TipoLiberacaoFiltro = "TODOS" | "MANUAL" | "AUTOMATICA";
 type StatusFiltro = "TODOS" | "LIBERADO" | "BLOQUEADO";
 type TipoLiberacaoNormalizado = "MANUAL" | "AUTOMATICA" | "INDEFINIDA";
-type TipoResumoAcesso = "ENTRADA" | "MANUAL" | "BLOQUEADO";
-
-const UNIQUE_WINDOW_MS = 2 * 60 * 60 * 1000;
 
 function getTodayDate(): string {
-  return new Date().toISOString().slice(0, 10);
+  return getBusinessTodayIso();
 }
 
 function parseDateTime(value?: string): Date | null {
@@ -82,23 +81,6 @@ function resolveTipoLiberacao(value?: string, issuedBy?: string): TipoLiberacaoN
 function isBlockedStatus(value?: string): boolean {
   const status = normalizeStatus(value);
   return /(BLOQUEADO|NEGADO|DENIED|RECUSADO|ERRO|FAIL)/.test(status);
-}
-
-function isEntradaDirection(value?: string): boolean {
-  const normalized = value?.trim().toUpperCase();
-  if (!normalized) return false;
-  return /(ENTRADA|ENTRY|IN|INBOUND)/.test(normalized);
-}
-
-function resolveResumoTipo(item: Pick<CatracaAcesso, "status" | "releaseType" | "issuedBy" | "direction">): TipoResumoAcesso | null {
-  if (isBlockedStatus(item.status)) return "BLOQUEADO";
-  if (resolveTipoLiberacao(item.releaseType, item.issuedBy) === "MANUAL") return "MANUAL";
-  if (isEntradaDirection(item.direction)) return "ENTRADA";
-  return null;
-}
-
-function resolveClientKey(item: CatracaAcesso): string {
-  return item.memberId || item.memberDocumento || item.memberNome || "desconhecido";
 }
 
 function resolveTipoExibicao(item: Pick<CatracaAcesso, "releaseType" | "issuedBy" | "status">): {
@@ -174,10 +156,6 @@ function estimateTotal(input: {
   return input.page * input.size + input.itemsLength;
 }
 
-function getAccessTimestamp(item: CatracaAcesso): number {
-  return toTimestamp(item.occurredAt ?? item.createdAt);
-}
-
 type RankingRow = {
   id: string;
   nome: string;
@@ -198,9 +176,8 @@ type DashboardViewData = {
 };
 
 export default function CatracaAcessosPage() {
-  const tenantRef = useRef(getStore().currentTenantId || getStore().tenant?.id || "");
+  const { tenantId, tenantResolved } = useTenantContext();
   const [activeTab, setActiveTab] = useState<"DASHBOARD" | "ACESSOS">("DASHBOARD");
-  const [tenantId, setTenantId] = useState(() => tenantRef.current);
   const [page, setPage] = useState(0);
   const [size] = useState(20);
   const [items, setItems] = useState<CatracaAcesso[]>([]);
@@ -234,10 +211,12 @@ export default function CatracaAcessosPage() {
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("TODOS");
 
   const load = useCallback(async () => {
+    if (!tenantId) return;
     setLoading(true);
     setError("");
     try {
-      const response = await listAcessosCatraca({
+      const response = await listarAcessosCatracaDashboardApi({
+        tenantId,
         page,
         size,
         startDate: periodStart,
@@ -277,17 +256,14 @@ export default function CatracaAcessosPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, size, periodStart, periodEnd, tipoLiberacaoFiltro, statusFiltro, tenantId]);
+  }, [page, periodEnd, periodStart, size, statusFiltro, tenantId, tipoLiberacaoFiltro]);
 
   useEffect(() => {
+    if (!tenantResolved || !tenantId) return;
     void load();
-  }, [load]);
+  }, [load, tenantId, tenantResolved]);
 
-  const syncTenantChange = useCallback(() => {
-    const current = getStore().currentTenantId || getStore().tenant?.id || "";
-    if (!current || current === tenantRef.current) return;
-    tenantRef.current = current;
-    setTenantId(current);
+  useEffect(() => {
     setPage(0);
     setClienteSelecionado(null);
     setClienteQuery("");
@@ -295,16 +271,7 @@ export default function CatracaAcessosPage() {
     setClienteCatalogoById({});
     setClienteOptionsLoadedTenant("");
     setErroClienteOptions("");
-  }, []);
-
-  useEffect(() => {
-    syncTenantChange();
-    function handleTenantUpdate() {
-      syncTenantChange();
-    }
-    window.addEventListener("academia-store-updated", handleTenantUpdate);
-    return () => window.removeEventListener("academia-store-updated", handleTenantUpdate);
-  }, [syncTenantChange]);
+  }, [tenantId]);
 
   const loadClienteOptions = useCallback(async () => {
     if (!tenantId) return;
@@ -326,12 +293,14 @@ export default function CatracaAcessosPage() {
           throw new Error("Limite de paginação excedido ao carregar clientes.");
         }
 
-        const result = await listAlunosPage({
+        const result = await listAlunosApi({
+          tenantId,
           page: currentPage,
           size: 200,
         });
+        const alunos = extractAlunosFromListResponse(result);
 
-        for (const aluno of result.items) {
+        for (const aluno of alunos) {
           if (!aluno.id || unique.has(aluno.id)) continue;
           catalog[aluno.id] = {
             nome: aluno.nome,
@@ -346,9 +315,9 @@ export default function CatracaAcessosPage() {
           });
         }
 
-        hasNextLoop = Boolean(result.hasNext);
-        if (!hasNextLoop || result.items.length === 0) break;
-        currentPage = (result.page ?? currentPage) + 1;
+        hasNextLoop = Array.isArray(result) ? false : Boolean(result.hasNext);
+        if (!hasNextLoop || alunos.length === 0) break;
+        currentPage = (Array.isArray(result) ? currentPage : (result.page ?? currentPage)) + 1;
       }
 
       setClienteOptions(Array.from(unique.values()));

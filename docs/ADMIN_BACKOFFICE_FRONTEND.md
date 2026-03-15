@@ -10,7 +10,7 @@ Construir um painel Next.js (App Router + TypeScript) separado do app público, 
 
 ## 2) Topologia e setup
 - Subdomínio dedicado `admin.conceito.fit` com build independente (pasta `apps/admin` ou `src/app-admin` — decidir conforme monorepo). Compartilhar design system e tipos via pacote interno (`@academia/ui`, `@academia/types`).
-- Feature flag `NEXT_PUBLIC_USE_REAL_API=true` para ativar API real; fallback para mock/localStorage apenas em dev.
+- Backend real sempre ativo; fallback local deve ser tratado apenas como contingência técnica controlada pelo código.
 - Cookies/sessão escopados ao subdomínio; headers obrigatórios: `X-Context-Id`, `tenantId` (ou `targetTenantId` para cross-tenant).
 
 ## 3) Arquitetura de pastas sugerida
@@ -22,7 +22,7 @@ Construir um painel Next.js (App Router + TypeScript) separado do app público, 
 - `apps/admin/styles`: tokens/tema e overrides se necessário.
 
 ## 4) Padrões obrigatórios (anti-loop, performance, UX)
-- **Anti-loop**: quando `NEXT_PUBLIC_USE_REAL_API=true`, não usar listeners globais (`academia-store-updated`, `storage`) em páginas com carga via API; refrescar dados somente por ações explícitas (`onSave`, filtros, paginação, botão de reload`).
+- **Anti-loop**: não usar listeners globais (`academia-store-updated`, `storage`) em páginas com carga via API; refrescar dados somente por ações explícitas (`onSave`, filtros, paginação, botão de reload`).
 - **Formulários**: estado local por campo; usar `react-hook-form` + componentes memoizados; evitar atualizar stores globais em `onChange`; callbacks e arrays memorizados; validação pesada sob debounce ou em submit.
 - **Estados**: sempre cobrir loading/sucesso/erro/vazio; mensagens de erro amigáveis e com código/ID de correlação (`X-Context-Id`).
 - **Acessibilidade**: labels visíveis, foco visível, contraste adequado; usar componentes `ui/*` existentes antes de criar novos.

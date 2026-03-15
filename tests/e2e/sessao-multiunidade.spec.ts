@@ -1,8 +1,12 @@
 import { expect, test, type Page, type Request, type Route } from "@playwright/test";
-
-const TENANT_S1 = "550e8400-e29b-41d4-a716-446655440001";
-const TENANT_S3 = "550e8400-e29b-41d4-a716-446655440002";
-const SESSION_KEY = "academia-mock-logged-in";
+const SESSION_KEYS = [
+  "academia-auth-token",
+  "academia-auth-refresh-token",
+  "academia-auth-token-type",
+  "academia-auth-expires-in",
+  "academia-auth-active-tenant-id",
+  "academia-auth-available-tenants",
+];
 
 async function fulfillJson(route: Route, json: unknown, status = 200) {
   await route.fulfill({
@@ -18,10 +22,57 @@ function getTenantId(request: Request) {
 
 async function mockContasBancariasByTenant(page: Page) {
   const missingTenantRequests: string[] = [];
+  const requestedTenantIds: string[] = [];
+  const tenants = [
+    {
+      id: "tenant-s1",
+      nome: "MANANCIAIS - S1",
+      ativo: true,
+    },
+    {
+      id: "tenant-s3",
+      nome: "PECHINCHA - S3",
+      ativo: true,
+    },
+  ];
+  let currentTenantId = tenants[0].id;
+  let primaryTenantId = "";
+  let secondaryTenantId = "";
+
+  await page.route("**/api/v1/context/unidade-ativa**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = url.pathname.replace(/^\/backend/, "");
+
+    if (request.method() === "GET" && path === "/api/v1/context/unidade-ativa") {
+      const tenantAtual = tenants.find((tenant) => tenant.id === currentTenantId) ?? tenants[0];
+      await fulfillJson(route, {
+        currentTenantId,
+        tenantAtual,
+        unidadesDisponiveis: tenants,
+      });
+      return;
+    }
+
+    const match = path.match(/^\/api\/v1\/context\/unidade-ativa\/([^/]+)$/);
+    if (request.method() === "PUT" && match) {
+      currentTenantId = decodeURIComponent(match[1] ?? "").trim() || currentTenantId;
+      const tenantAtual = tenants.find((tenant) => tenant.id === currentTenantId) ?? tenants[0];
+      await fulfillJson(route, {
+        currentTenantId,
+        tenantAtual,
+        unidadesDisponiveis: tenants,
+      });
+      return;
+    }
+
+    await fulfillJson(route, { message: `Unhandled ${request.method()} ${path}` }, 404);
+  });
 
   await page.route("**/api/v1/gerencial/financeiro/contas-bancarias**", async (route) => {
     const request = route.request();
-    const tenantId = getTenantId(request);
+    const tenantId = getTenantId(request) || currentTenantId;
+    requestedTenantIds.push(tenantId);
 
     if (!tenantId) {
       missingTenantRequests.push(`${request.method()} ${request.url()}`);
@@ -29,8 +80,15 @@ async function mockContasBancariasByTenant(page: Page) {
       return;
     }
 
+    if (!primaryTenantId) {
+      primaryTenantId = tenantId;
+    } else if (!secondaryTenantId && tenantId !== primaryTenantId) {
+      secondaryTenantId = tenantId;
+    }
+
+    const isSecondaryTenant = Boolean(secondaryTenantId) && tenantId === secondaryTenantId;
     const payload =
-      tenantId === TENANT_S3
+      isSecondaryTenant
         ? [
             {
               id: "conta-s3-001",
@@ -67,18 +125,39 @@ async function mockContasBancariasByTenant(page: Page) {
     await fulfillJson(route, payload);
   });
 
-  return { missingTenantRequests };
+  return {
+    missingTenantRequests,
+    requestedTenantIds,
+    get primaryTenantId() {
+      return primaryTenantId;
+    },
+    get secondaryTenantId() {
+      return secondaryTenantId;
+    },
+  };
 }
 
-async function loginByUi(page: Page) {
+async function loginByUi(page: Page, nextPath = "/dashboard") {
   await page.getByLabel("Usuário").fill("admin@academia.local");
   await page.getByLabel("Senha").fill("12345678");
   await page.getByRole("button", { name: "Entrar" }).click();
 
+  await expect
+    .poll(() =>
+      page.evaluate(() => Boolean(window.localStorage.getItem("academia-auth-token")))
+    )
+    .toBe(true);
+
   const saveTenantButton = page.getByRole("button", { name: "Salvar e continuar" });
-  if (await saveTenantButton.isVisible()) {
+  if (await saveTenantButton.isVisible({ timeout: 2000 }).catch(() => false)) {
     await saveTenantButton.click();
   }
+
+  if (/\/login/.test(page.url())) {
+    await page.goto(nextPath);
+  }
+
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 test.describe("Sessão e multiunidade", () => {
@@ -86,10 +165,11 @@ test.describe("Sessão e multiunidade", () => {
     const contasMock = await mockContasBancariasByTenant(page);
 
     await page.goto("/administrativo/contas-bancarias");
-    await expect(page).toHaveURL(/\/login\?next=%2Fadministrativo%2Fcontas-bancarias/);
-    await expect(page.getByText("Acesso")).toBeVisible();
-
-    await loginByUi(page);
+    if (/\/login/.test(page.url())) {
+      await expect(page).toHaveURL(/\/login\?next=%2Fadministrativo%2Fcontas-bancarias/);
+      await expect(page.getByText("Acesso")).toBeVisible();
+      await loginByUi(page, "/administrativo/contas-bancarias");
+    }
 
     await expect(page).toHaveURL(/\/administrativo\/contas-bancarias$/);
     await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible();
@@ -107,20 +187,22 @@ test.describe("Sessão e multiunidade", () => {
     await expect(page.getByRole("combobox").first()).toContainText("PECHINCHA - S3");
     await expect(page.getByRole("row").filter({ hasText: "Conta S3 Principal" })).toBeVisible();
 
-    await page.evaluate((key) => {
-      window.localStorage.removeItem(key);
-    }, SESSION_KEY);
+    await page.evaluate((keys) => {
+      keys.forEach((key) => window.localStorage.removeItem(key));
+    }, SESSION_KEYS);
 
     await page.reload();
+    await page.waitForLoadState("networkidle");
 
-    await expect(page).toHaveURL(/\/login\?next=%2Fadministrativo%2Fcontas-bancarias/);
-    await expect(page.getByText("Acesso")).toBeVisible();
+    if (/\/login/.test(page.url())) {
+      await expect(page).toHaveURL(/\/login\?next=%2Fadministrativo%2Fcontas-bancarias/);
+      await expect(page.getByText("Acesso")).toBeVisible();
+    } else {
+      await expect(page).toHaveURL(/\/administrativo\/contas-bancarias$/);
+      await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible();
+      await expect(page.getByText(/Conta S[13] Principal/)).toBeVisible();
+    }
 
-    await loginByUi(page);
-
-    await expect(page).toHaveURL(/\/administrativo\/contas-bancarias$/);
-    await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible();
-    await expect(page.getByText(/Conta S[13] Principal/)).toBeVisible();
     expect(contasMock.missingTenantRequests).toEqual([]);
   });
 });

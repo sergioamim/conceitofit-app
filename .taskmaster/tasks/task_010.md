@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 1, 7, 9
+**Dependencies:** 1 ✓, 7 ✓, 9 ✓
 
 **Priority:** medium
 
@@ -16,7 +16,7 @@ Conectar o `EVO BACKUP` e a trilha EVO P0 ao backoffice real, removendo lookups 
 
 **Test Strategy:**
 
-Executar `npx tsc --noEmit`, `npx playwright test --config=playwright.unit.config.ts` e `npx playwright test`, cobrindo a trilha local de onboarding/importacao e o fluxo e2e do backoffice.
+No test strategy provided.
 
 ## Subtasks
 

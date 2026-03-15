@@ -11,6 +11,8 @@ export interface SuggestionOption {
 }
 
 export function SuggestionInput({
+  inputId,
+  inputAriaLabel,
   value,
   onValueChange,
   onSelect,
@@ -21,6 +23,8 @@ export function SuggestionInput({
   className,
   minCharsToSearch = 0,
 }: {
+  inputId?: string;
+  inputAriaLabel?: string;
   value: string;
   onValueChange: (value: string) => void;
   onSelect: (option: SuggestionOption) => void;
@@ -62,6 +66,8 @@ export function SuggestionInput({
   return (
     <div className={cn("relative", className)}>
       <Input
+        id={inputId}
+        aria-label={inputAriaLabel}
         value={value}
         onFocus={() => {
           const shouldOpen = value.trim().length >= minCharsToSearch;

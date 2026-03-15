@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { listHorarios, updateHorarios } from "@/lib/mock/services";
+import { useTenantContext } from "@/hooks/use-session-context";
+import { listHorariosApi, updateHorariosApi } from "@/lib/api/contexto-unidades";
 import type { HorarioFuncionamento } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,16 +18,22 @@ const DIAS_LABEL: Record<HorarioFuncionamento["dia"], string> = {
 };
 
 export default function HorariosPage() {
+  const { tenantId, tenantResolved } = useTenantContext();
   const [horarios, setHorarios] = useState<HorarioFuncionamento[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    listHorarios().then(setHorarios);
-  }, []);
+    if (!tenantResolved || !tenantId) return;
+    void listHorariosApi(tenantId).then(setHorarios);
+  }, [tenantId, tenantResolved]);
 
   async function handleSave() {
+    if (!tenantId) return;
     setSaving(true);
-    await updateHorarios(horarios);
+    await updateHorariosApi({
+      tenantId,
+      data: horarios,
+    });
     setSaving(false);
   }
 

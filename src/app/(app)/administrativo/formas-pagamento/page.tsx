@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import {
-  listFormasPagamento,
-  createFormaPagamento,
-  updateFormaPagamento,
-  toggleFormaPagamento,
-  deleteFormaPagamento,
-} from "@/lib/mock/services";
+  createFormaPagamentoApi,
+  deleteFormaPagamentoApi,
+  listFormasPagamentoApi,
+  toggleFormaPagamentoApi,
+  updateFormaPagamentoApi,
+} from "@/lib/api/formas-pagamento";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { FormaPagamento, TipoFormaPagamento } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { FormaPagamentoModal } from "@/components/shared/forma-pagamento-modal";
@@ -22,40 +23,57 @@ const TIPO_LABEL: Record<TipoFormaPagamento, string> = {
 };
 
 export default function FormasPagamentoPage() {
+  const { tenantId, tenantResolved } = useTenantContext();
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<FormaPagamento | null>(null);
 
   async function load() {
-    const data = await listFormasPagamento({ apenasAtivas: false });
+    if (!tenantId) return;
+    const data = await listFormasPagamentoApi({ tenantId, apenasAtivas: false });
     setFormas(data);
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-  }, []);
+    if (!tenantResolved || !tenantId) return;
+    void listFormasPagamentoApi({ tenantId, apenasAtivas: false }).then(setFormas);
+  }, [tenantId, tenantResolved]);
 
   async function handleSave(
     data: Omit<FormaPagamento, "id" | "tenantId">,
     id?: string
   ) {
-    if (id) await updateFormaPagamento(id, data);
-    else await createFormaPagamento(data);
+    if (!tenantId) return;
+
+    const { ativo = true, ...payload } = data;
+
+    if (id) {
+      await updateFormaPagamentoApi({ tenantId, id, data: payload });
+      if (editing && editing.ativo !== ativo) {
+        await toggleFormaPagamentoApi({ tenantId, id });
+      }
+    } else {
+      const created = await createFormaPagamentoApi({ tenantId, data: payload });
+      if (!ativo) {
+        await toggleFormaPagamentoApi({ tenantId, id: created.id });
+      }
+    }
     setModalOpen(false);
     setEditing(null);
-    load();
+    await load();
   }
 
   async function handleToggle(id: string) {
-    await toggleFormaPagamento(id);
-    load();
+    if (!tenantId) return;
+    await toggleFormaPagamentoApi({ tenantId, id });
+    await load();
   }
 
   async function handleDelete(id: string) {
+    if (!tenantId) return;
     if (!confirm("Remover esta forma de pagamento?")) return;
-    await deleteFormaPagamento(id);
-    load();
+    await deleteFormaPagamentoApi({ tenantId, id });
+    await load();
   }
 
   return (

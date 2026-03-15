@@ -10,7 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Copy, Check, Infinity } from "lucide-react";
-import { listVoucherCodigos, listAlunos } from "@/lib/mock/services";
+import { listVoucherCodigosApi } from "@/lib/api/beneficios";
+import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import type { Aluno, Voucher, VoucherCodigo } from "@/lib/types";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -84,9 +85,11 @@ function formatPeriodo(voucher: Voucher): string {
 }
 
 export function VoucherCodigosModal({
+  tenantId,
   voucher,
   onClose,
 }: {
+  tenantId?: string;
   voucher: Voucher;
   onClose: () => void;
 }) {
@@ -96,16 +99,23 @@ export function VoucherCodigosModal({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    Promise.all([listVoucherCodigos(voucher.id), listAlunos()]).then(
-      ([codData, alunosData]) => {
+    async function load() {
+      setLoading(true);
+      try {
+        const [codData, alunosData] = await Promise.all([
+          listVoucherCodigosApi(voucher.id),
+          tenantId
+            ? listAlunosApi({ tenantId, page: 0, size: 500 }).then(extractAlunosFromListResponse)
+            : Promise.resolve([]),
+        ]);
         setCodigos(codData);
         setAlunos(alunosData);
+      } finally {
         setLoading(false);
       }
-    );
-  }, [voucher.id]);
+    }
+    void load();
+  }, [tenantId, voucher.id]);
 
   const alunoMap = useMemo(
     () => new Map(alunos.map((a) => [a.id, a])),

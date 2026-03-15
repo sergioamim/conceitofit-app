@@ -165,7 +165,7 @@ export async function listAlunosApi(input: {
   size?: number;
 }): Promise<AlunoListPayload> {
   return apiRequest<AlunoListPayload>({
-    path: "/api/v1/academia/alunos",
+    path: "/api/v1/comercial/alunos",
     query: {
       tenantId: input.tenantId,
       status: input.status,
@@ -179,10 +179,12 @@ export async function listAlunosApi(input: {
 export async function getAlunoApi(input: {
   tenantId: string;
   id: string;
+  includeContextHeader?: boolean;
 }): Promise<Aluno> {
   const response = await apiRequest<Aluno>({
-    path: `/api/v1/academia/alunos/${input.id}`,
+    path: `/api/v1/comercial/alunos/${input.id}`,
     query: { tenantId: input.tenantId },
+    includeContextHeader: input.includeContextHeader,
   });
   return normalizeAluno(response);
 }
@@ -192,7 +194,7 @@ export async function createAlunoApi(input: {
   data: CreateAlunoInput;
 }): Promise<Aluno> {
   const response = await apiRequest<Aluno>({
-    path: "/api/v1/academia/alunos",
+    path: "/api/v1/comercial/alunos",
     method: "POST",
     query: { tenantId: input.tenantId },
     body: {
@@ -209,7 +211,7 @@ export async function updateAlunoApi(input: {
   data: Partial<Omit<Aluno, "id" | "tenantId" | "dataCadastro">>;
 }): Promise<Aluno> {
   const response = await apiRequest<Aluno>({
-    path: `/api/v1/academia/alunos/${input.id}`,
+    path: `/api/v1/comercial/alunos/${input.id}`,
     method: "PUT",
     query: { tenantId: input.tenantId },
     body: {
@@ -226,7 +228,7 @@ export async function updateAlunoStatusApi(input: {
   status: StatusAluno;
 }): Promise<Aluno> {
   const response = await apiRequest<Aluno>({
-    path: `/api/v1/academia/alunos/${input.id}/status`,
+    path: `/api/v1/comercial/alunos/${input.id}/status`,
     method: "PATCH",
     query: {
       tenantId: input.tenantId,

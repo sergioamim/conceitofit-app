@@ -18,27 +18,25 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import {
-  getDashboard,
-  listAlunosPage,
-  listMatriculas,
-  listPagamentos,
-  listProspectsPage,
-} from "@/lib/mock/services";
-import { isRealApiEnabled } from "@/lib/api/http";
+import { useTenantContext } from "@/hooks/use-session-context";
+import { extractAlunosFromListResponse, extractAlunosTotais, listAlunosApi } from "@/lib/api/alunos";
+import { listMatriculasApi } from "@/lib/api/matriculas";
+import { listPagamentosApi } from "@/lib/api/pagamentos";
+import { listProspectsApi } from "@/lib/api/crm";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type {
   Aluno,
-  DashboardData,
   Matricula,
   Pagamento,
   Prospect,
   StatusAluno,
 } from "@/lib/types";
 import { Input } from "@/components/ui/input";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 type DashboardTab = "CLIENTES" | "VENDAS" | "FINANCEIRO";
 const PROSPECTS_PAGE_SIZE = 10;
+const DASHBOARD_PAGE_SIZE = 1000;
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -55,6 +53,12 @@ function monthPrefix(month: number, year: number) {
 function previousMonth(month: number, year: number) {
   if (month === 0) return { month: 11, year: year - 1 };
   return { month: month - 1, year };
+}
+
+function addDaysIso(isoDate: string, days: number) {
+  const next = new Date(`${isoDate}T00:00:00`);
+  next.setDate(next.getDate() + days);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
 }
 
 function daysDiffFromReference(isoDateTime: string | undefined, referenceDateIso: string) {
@@ -115,7 +119,7 @@ function MetricCard({
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
+  const tenantContext = useTenantContext();
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [showAllProspects, setShowAllProspects] = useState(false);
   const [prospectsPage, setProspectsPage] = useState<Prospect[]>([]);
@@ -134,39 +138,41 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState("");
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false);
   const financialLoadedDateRef = useRef<string | null>(null);
 
-  const loadProspectsPageData = useCallback(async (page: number) => {
+  const loadProspectsPageData = useCallback((page: number) => {
     setProspectsPageLoading(true);
-    try {
-      const result = await listProspectsPage({ page, size: PROSPECTS_PAGE_SIZE });
-      setProspectsPage(result.items);
-      setProspectsPageNumber(result.page);
-      setProspectsPageHasNext(result.hasNext);
-    } catch {
-      setProspectsPage([]);
-      setProspectsPageHasNext(false);
-    } finally {
-      setProspectsPageLoading(false);
-    }
-  }, []);
+    const activeProspects = [...prospects]
+      .filter((prospect) => prospect.status !== "CONVERTIDO" && prospect.status !== "PERDIDO")
+      .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
+    const startIndex = Math.max(0, (page - 1) * PROSPECTS_PAGE_SIZE);
+    const pageItems = activeProspects.slice(startIndex, startIndex + PROSPECTS_PAGE_SIZE);
+    setProspectsPage(pageItems);
+    setProspectsPageNumber(page);
+    setProspectsPageHasNext(startIndex + PROSPECTS_PAGE_SIZE < activeProspects.length);
+    setProspectsPageLoading(false);
+  }, [prospects]);
 
   const load = useCallback(async (referenceDate: string, includeFinancial = false) => {
-    if (!referenceDate) return;
+    if (!referenceDate || !tenantContext.tenantId) return;
     loadingRef.current = true;
     setLoading(true);
-    const ref = new Date(`${referenceDate}T00:00:00`);
-    const month = ref.getMonth();
-    const year = ref.getFullYear();
+    setError(null);
     try {
-      const [dash, alunosPage] = await Promise.all([
-        getDashboard({ month, year }),
-        listAlunosPage({ page: 0, size: 20 }),
+      const [prospectsList, alunosResponse, mats] = await Promise.all([
+        listProspectsApi({ tenantId: tenantContext.tenantId }),
+        listAlunosApi({ tenantId: tenantContext.tenantId, page: 0, size: DASHBOARD_PAGE_SIZE }),
+        listMatriculasApi({ tenantId: tenantContext.tenantId }),
       ]);
-      const totais = alunosPage.totaisStatus;
-      setData(dash);
-      setProspects((dash.prospectsRecentes ?? []).slice(0, 5));
+      const totais = extractAlunosTotais(alunosResponse);
+      const alunos = extractAlunosFromListResponse(alunosResponse);
+      const alunosMap = new Map(alunos.map((aluno) => [aluno.id, aluno] as const));
+      setProspects(
+        [...prospectsList].sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao))
+      );
+      setMatriculas(mats);
       setStatusAlunoCount({
         ATIVO: totais?.totalAtivo ?? 0,
         INATIVO: totais?.totalInativo ?? 0,
@@ -174,22 +180,24 @@ export default function DashboardPage() {
         CANCELADO: totais?.totalCancelado ?? totais?.cancelados ?? 0,
       });
       if (includeFinancial) {
-        const [pags, mats] = await Promise.all([listPagamentos(), listMatriculas()]);
-        setPagamentos(pags);
-        setMatriculas(mats);
+        const pags = await listPagamentosApi({
+          tenantId: tenantContext.tenantId,
+          page: 0,
+          size: DASHBOARD_PAGE_SIZE,
+        });
+        setPagamentos(pags.map((pagamento) => ({ ...pagamento, aluno: alunosMap.get(pagamento.alunoId) })));
         financialLoadedDateRef.current = referenceDate;
       } else if (financialLoadedDateRef.current && financialLoadedDateRef.current !== referenceDate) {
         setPagamentos([]);
-        setMatriculas([]);
         financialLoadedDateRef.current = null;
       }
-    } catch {
-      // Mantem o ultimo snapshot valido em caso de falha temporaria.
+    } catch (loadError) {
+      setError(normalizeErrorMessage(loadError));
     } finally {
       loadingRef.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [tenantContext.tenantId]);
 
   useEffect(() => {
     setShowAllProspects(false);
@@ -209,26 +217,41 @@ export default function DashboardPage() {
     if (!selectedDate) return;
     const shouldLoadFinancial = tab !== "CLIENTES";
     if (shouldLoadFinancial && financialLoadedDateRef.current === selectedDate) return;
-    void load(selectedDate, shouldLoadFinancial);
-  }, [load, selectedDate, tab]);
+    if (tenantContext.tenantResolved) {
+      void load(selectedDate, shouldLoadFinancial);
+    }
+  }, [load, selectedDate, tab, tenantContext.tenantResolved]);
 
   useEffect(() => {
-    if (!selectedDate) return;
-    if (isRealApiEnabled()) return;
-    function handleUpdate() {
-      if (loadingRef.current) return;
-      void load(selectedDate, tab !== "CLIENTES");
+    if (showAllProspects) {
+      loadProspectsPageData(prospectsPageNumber);
     }
-    window.addEventListener("academia-store-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-    return () => {
-      window.removeEventListener("academia-store-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
-  }, [load, selectedDate, tab]);
+  }, [loadProspectsPageData, prospectsPageNumber, showAllProspects]);
+
+  const recentProspects = useMemo(
+    () => prospects.filter((p) => p.status !== "CONVERTIDO" && p.status !== "PERDIDO").slice(0, 5),
+    [prospects]
+  );
+
+  const matriculasVencendo = useMemo(() => {
+    const referenceToday = todayIso || selectedDate;
+    if (!referenceToday) return [];
+    const in7Days = addDaysIso(referenceToday, 7);
+    return matriculas
+      .filter((m) => m.status === "ATIVA" && m.dataFim >= referenceToday && m.dataFim <= in7Days)
+      .sort((a, b) => a.dataFim.localeCompare(b.dataFim));
+  }, [matriculas, selectedDate, todayIso]);
+
+  const pagamentosPendentes = useMemo(
+    () =>
+      pagamentos
+        .filter((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
+        .sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento)),
+    [pagamentos]
+  );
 
   const metrics = useMemo(() => {
-    if (!data || !selectedDate) return null;
+    if (!selectedDate) return null;
 
     const ref = new Date(`${selectedDate}T00:00:00`);
     const mes = ref.getMonth();
@@ -346,9 +369,9 @@ export default function DashboardPage() {
       vendasNovas,
       statusAlunoCount,
     };
-  }, [data, prospects, pagamentos, matriculas, selectedDate, statusAlunoCount]);
+  }, [prospects, pagamentos, matriculas, selectedDate, statusAlunoCount]);
 
-  if (!data || !metrics) {
+  if (!metrics) {
     return (
       <div className="text-sm text-muted-foreground">
         {loading ? "Carregando dashboard..." : "Sem dados para o dashboard."}
@@ -399,6 +422,12 @@ export default function DashboardPage() {
           </button>
         ))}
       </div>
+
+      {error ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {error}
+        </div>
+      ) : null}
 
       {tab === "CLIENTES" && (
         <>
@@ -499,11 +528,11 @@ export default function DashboardPage() {
                   </div>
                 )
               ) : (
-                prospects.length === 0 ? (
+                recentProspects.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Nenhum prospect ativo</p>
                 ) : (
                 <div className="space-y-3">
-                  {prospects.map((p) => (
+                  {recentProspects.map((p) => (
                     <div key={p.id} className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">{p.nome}</p>
@@ -522,11 +551,11 @@ export default function DashboardPage() {
                 <h2 className="font-display text-base font-bold">Matrículas vencendo em 7 dias</h2>
                 <Link href="/matriculas" className="text-xs text-gym-accent hover:underline">Ver todas</Link>
               </div>
-              {data.matriculasVencendo.length === 0 ? (
+              {matriculasVencendo.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma matrícula vencendo</p>
               ) : (
                 <div className="divide-y divide-border">
-                  {data.matriculasVencendo.map((m) => (
+                  {matriculasVencendo.map((m) => (
                     <div key={m.id} className="flex items-center justify-between py-3">
                       <div>
                         <p className="text-sm font-medium">{m.aluno?.nome ?? "—"}</p>
@@ -653,11 +682,11 @@ export default function DashboardPage() {
               <h2 className="font-display text-base font-bold">Pagamentos pendentes e vencidos</h2>
               <Link href="/pagamentos" className="text-xs text-gym-accent hover:underline">Ver todos</Link>
             </div>
-            {data.pagamentosPendentes.length === 0 ? (
+            {pagamentosPendentes.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">Nenhum pagamento pendente</p>
             ) : (
               <div className="space-y-3">
-                {data.pagamentosPendentes.map((p) => (
+                {pagamentosPendentes.map((p) => (
                   <div key={p.id} className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 p-3">
                     <div>
                       <p className="text-sm font-medium">{p.aluno?.nome ?? "—"}</p>

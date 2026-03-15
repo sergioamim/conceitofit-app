@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { getCurrentAcademia, listTenants, updateCurrentAcademia } from "@/lib/mock/services";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  getAcademiaAtualApi,
+  listUnidadesApi,
+  updateAcademiaAtualApi,
+} from "@/lib/api/contexto-unidades";
 import type { Academia, TenantThemeColors, TenantThemePreset } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +13,7 @@ import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createDefaultBranding, TENANT_THEME_OPTIONS, resolveTenantTheme } from "@/lib/tenant-theme";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const COLOR_FIELDS: Array<{ key: keyof TenantThemeColors; label: string }> = [
   { key: "accent", label: "Accent (botoes e links)" },
@@ -34,15 +39,24 @@ export default function AcademiaAdminPage() {
   const [academia, setAcademia] = useState<Academia | null>(null);
   const [saving, setSaving] = useState(false);
   const [unitsCount, setUnitsCount] = useState(0);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function load() {
-      const [current, units] = await Promise.all([getCurrentAcademia(), listTenants()]);
+  const load = useCallback(async () => {
+    setError("");
+    try {
+      const [current, units] = await Promise.all([getAcademiaAtualApi(), listUnidadesApi()]);
       setAcademia({ ...current, branding: { ...createDefaultBranding(), ...(current.branding ?? {}) } });
       setUnitsCount(units.length);
+    } catch (loadError) {
+      setAcademia(null);
+      setUnitsCount(0);
+      setError(normalizeErrorMessage(loadError) || "Falha ao carregar academia.");
     }
-    load();
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const preview = useMemo(() => resolveTenantTheme(academia ?? undefined), [academia]);
 
@@ -50,13 +64,28 @@ export default function AcademiaAdminPage() {
     if (!academia) return;
     setSaving(true);
     try {
-      await updateCurrentAcademia(academia);
+      const updated = await updateAcademiaAtualApi({
+        data: academia,
+      });
+      setAcademia({ ...updated, branding: { ...createDefaultBranding(), ...(updated.branding ?? {}) } });
     } finally {
       setSaving(false);
     }
   }
 
-  if (!academia) return null;
+  if (!academia) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Academia</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Entidade principal da rede.</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+          {error || "Carregando academia..."}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -66,6 +95,12 @@ export default function AcademiaAdminPage() {
           Entidade principal da rede. Tema e marca aplicam em todas as {unitsCount} unidades.
         </p>
       </div>
+
+      {error ? (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {error}
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-border bg-card p-4">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dados da academia</p>
@@ -279,4 +314,3 @@ export default function AcademiaAdminPage() {
     </div>
   );
 }
-

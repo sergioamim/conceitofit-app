@@ -3,9 +3,9 @@ import {
   createBackofficeEvoP0CsvJob,
   createBackofficeEvoP0PacoteJob,
   getBackofficeEvoImportJobResumo,
-  listBackofficeEvoImportJobRejeicoes,
   uploadBackofficeEvoP0Pacote,
 } from "../../src/lib/backoffice/importacao-evo";
+import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
 class MemoryStorage implements Storage {
   private readonly store = new Map<string, string>();
@@ -39,6 +39,13 @@ type MockBrowser = {
   restore(): void;
 };
 
+type FetchCall = {
+  url: string;
+  method: string;
+  headers: Headers;
+  body?: BodyInit | null;
+};
+
 function installMockBrowser(): MockBrowser {
   const globalRef = globalThis as typeof globalThis & {
     window?: Window & typeof globalThis;
@@ -60,93 +67,266 @@ function installMockBrowser(): MockBrowser {
   };
 }
 
+function mockFetchSequence(
+  responses: Array<Response | ((call: FetchCall) => Response | Promise<Response>)>
+): {
+  calls: FetchCall[];
+  restore(): void;
+} {
+  const calls: FetchCall[] = [];
+  const previousFetch = global.fetch;
+
+  global.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const call: FetchCall = {
+      url: String(input),
+      method: init?.method ?? "GET",
+      headers: new Headers(init?.headers),
+      body: init?.body,
+    };
+    calls.push(call);
+
+    const response = responses[calls.length - 1];
+    if (!response) {
+      throw new Error(`Unexpected fetch call ${calls.length}: ${call.method} ${call.url}`);
+    }
+
+    return response instanceof Response ? response : response(call);
+  }) as typeof global.fetch;
+
+  return {
+    calls,
+    restore() {
+      global.fetch = previousFetch;
+    },
+  };
+}
+
+function jsonResponse(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 const envSnapshot = {
-  useRealApi: process.env.NEXT_PUBLIC_USE_REAL_API,
+  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+  devAutoLogin: process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN,
 };
 
 let browser: MockBrowser | undefined;
 
 test.beforeEach(() => {
   browser = installMockBrowser();
-  process.env.NEXT_PUBLIC_USE_REAL_API = "false";
+  process.env.NEXT_PUBLIC_API_BASE_URL = "";
+  process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN = "false";
+  clearAuthSession();
+  saveAuthSession({
+    token: "access-token",
+    refreshToken: "refresh-token",
+    activeTenantId: "tenant-pacote",
+    availableTenants: [{ tenantId: "tenant-pacote", defaultTenant: true }],
+  });
 });
 
 test.afterEach(() => {
+  clearAuthSession();
   browser?.restore();
-  process.env.NEXT_PUBLIC_USE_REAL_API = envSnapshot.useRealApi;
+  process.env.NEXT_PUBLIC_API_BASE_URL = envSnapshot.apiBaseUrl;
+  process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN = envSnapshot.devAutoLogin;
 });
 
-test.describe("backoffice importacao EVO local service", () => {
-  test("executa job CSV com rejeições simuladas e paginação de erros", async () => {
-    const csvFile = new File(["id,nome\n1,Ana"], "clientes.csv", { type: "text/csv" });
+test.describe("backoffice importacao EVO api wrappers", () => {
+  test("analisa pacote sem EVO Unidade manual e recebe filial resolvida do backend", async () => {
+    const pacote = new File(["conteudo"], "backup-evo.zip", { type: "application/zip" });
+    const { calls, restore } = mockFetchSequence([
+      jsonResponse({
+        uploadId: "upload-1",
+        tenantId: null,
+        evoUnidadeId: 321,
+        filialResolvida: {
+          evoFilialId: 321,
+          evoAcademiaId: 99,
+          nome: "Academia Centro",
+          documento: "12.345.678/0001-90",
+          cidade: "Sao Paulo",
+          bairro: "Centro",
+          email: "centro@academia.test",
+          telefone: "1133334444",
+          abreviacao: "CTR",
+        },
+        filiaisEncontradas: [
+          {
+            evoFilialId: 321,
+            evoAcademiaId: 99,
+            nome: "Academia Centro",
+          },
+        ],
+        criadoEm: "2026-03-13T10:00:00Z",
+        expiraEm: "2026-03-13T11:00:00Z",
+        totalArquivosDisponiveis: 1,
+        arquivos: [
+          {
+            chave: "clientes",
+            rotulo: "Clientes",
+            arquivoEsperado: "CLIENTES.csv",
+            disponivel: true,
+            nomeArquivoEnviado: "CLIENTES.csv",
+            tamanhoBytes: 128,
+          },
+        ],
+      }),
+    ]);
 
-    const created = await createBackofficeEvoP0CsvJob({
-      dryRun: true,
-      maxRejeicoesRetorno: 10,
-      mapeamentoFiliais: [{ idFilialEvo: 123, tenantId: "tenant-csv" }],
-      arquivos: [{ field: "clientesFile", file: csvFile }],
-      tenantId: "tenant-csv",
-    });
+    try {
+      const analise = await uploadBackofficeEvoP0Pacote({
+        arquivo: pacote,
+      });
 
-    expect(created.jobId).toBeTruthy();
-    expect(created.tenantIds).toEqual(["tenant-csv"]);
+      expect(analise.evoUnidadeId).toBe(321);
+      expect(analise.filialResolvida?.nome).toBe("Academia Centro");
+      expect(analise.filiaisEncontradas).toHaveLength(1);
 
-    const firstPoll = await getBackofficeEvoImportJobResumo({
-      jobId: created.jobId,
-      tenantId: "tenant-csv",
-    });
-    const secondPoll = await getBackofficeEvoImportJobResumo({
-      jobId: created.jobId,
-      tenantId: "tenant-csv",
-    });
-    const thirdPoll = await getBackofficeEvoImportJobResumo({
-      jobId: created.jobId,
-      tenantId: "tenant-csv",
-    });
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote");
+      expect(calls[0].method).toBe("POST");
+      expect(calls[0].headers.get("Authorization")).toBe("Bearer access-token");
+      expect(calls[0].headers.get("X-Tenant-Id")).toBeNull();
 
-    expect(firstPoll.status).toBe("PROCESSANDO");
-    expect(secondPoll.status).toBe("PROCESSANDO");
-    expect(thirdPoll.status).toBe("CONCLUIDO_COM_REJEICOES");
-    expect(thirdPoll.geral?.total).toBeGreaterThan(0);
-
-    const rejeicoes = await listBackofficeEvoImportJobRejeicoes({
-      jobId: created.jobId,
-      tenantId: "tenant-csv",
-      page: 0,
-      size: 50,
-    });
-
-    expect(rejeicoes.items).toHaveLength(1);
-    expect(rejeicoes.hasNext).toBeFalsy();
+      const formData = calls[0].body as FormData;
+      expect(formData).toBeInstanceOf(FormData);
+      expect(formData.get("tenantId")).toBeNull();
+      expect(formData.get("evoUnidadeId")).toBeNull();
+      expect(formData.get("arquivo")).toBeTruthy();
+    } finally {
+      restore();
+    }
   });
 
-  test("analisa pacote e conclui job unitário", async () => {
+  test("mantem envio manual de EVO Unidade quando o usuario informa a filial", async () => {
     const pacote = new File(["conteudo"], "backup-evo.zip", { type: "application/zip" });
+    const { calls, restore } = mockFetchSequence([
+      jsonResponse({
+        uploadId: "upload-2",
+        tenantId: null,
+        evoUnidadeId: null,
+        filialResolvida: null,
+        filiaisEncontradas: [
+          { evoFilialId: 100, nome: "Academia Centro" },
+          { evoFilialId: 200, nome: "Academia Norte" },
+        ],
+        criadoEm: "2026-03-13T10:00:00Z",
+        expiraEm: "2026-03-13T11:00:00Z",
+        totalArquivosDisponiveis: 2,
+        arquivos: [],
+      }),
+    ]);
 
-    const analise = await uploadBackofficeEvoP0Pacote({
-      tenantId: "tenant-pacote",
-      evoUnidadeId: 88,
-      arquivo: pacote,
-    });
+    try {
+      const analise = await uploadBackofficeEvoP0Pacote({
+        evoUnidadeId: 200,
+        arquivo: pacote,
+      });
 
-    expect(analise.uploadId).toBeTruthy();
-    expect(analise.totalArquivosDisponiveis).toBeGreaterThan(0);
-    expect(analise.arquivos.some((item) => item.chave === "clientes")).toBeTruthy();
+      expect(analise.evoUnidadeId).toBeNull();
+      expect(analise.filiaisEncontradas).toHaveLength(2);
 
-    const job = await createBackofficeEvoP0PacoteJob({
-      uploadId: analise.uploadId,
-      dryRun: false,
-      maxRejeicoesRetorno: 50,
-      arquivos: ["clientes", "contratos"],
-      tenantId: "tenant-pacote",
-    });
+      const formData = calls[0].body as FormData;
+      expect(formData.get("tenantId")).toBeNull();
+      expect(formData.get("evoUnidadeId")).toBe("200");
+    } finally {
+      restore();
+    }
+  });
 
-    await getBackofficeEvoImportJobResumo({ jobId: job.jobId, tenantId: "tenant-pacote" });
-    await getBackofficeEvoImportJobResumo({ jobId: job.jobId, tenantId: "tenant-pacote" });
-    const finished = await getBackofficeEvoImportJobResumo({ jobId: job.jobId, tenantId: "tenant-pacote" });
+  test("cria job de pacote e consulta resumo sem quebrar o polling", async () => {
+    const { calls, restore } = mockFetchSequence([
+      jsonResponse({
+        jobId: "job-pacote-1",
+        status: "PROCESSANDO",
+        dryRun: false,
+        solicitadoEm: "2026-03-13T10:05:00Z",
+      }),
+      jsonResponse({
+        jobId: "job-pacote-1",
+        tenantIds: ["tenant-pacote"],
+        status: "CONCLUIDO",
+        solicitadoEm: "2026-03-13T10:05:00Z",
+        finalizadoEm: "2026-03-13T10:07:00Z",
+        geral: { total: 12, processadas: 12, criadas: 10, atualizadas: 2, rejeitadas: 0 },
+      }),
+    ]);
 
-    expect(finished.status).toBe("CONCLUIDO");
-    expect(finished.tenantIds).toEqual(["tenant-pacote"]);
-    expect(finished.contratos?.total).toBeGreaterThan(0);
+    try {
+      const job = await createBackofficeEvoP0PacoteJob({
+        uploadId: "upload-1",
+        dryRun: false,
+        maxRejeicoesRetorno: 50,
+        arquivos: ["clientes", "contratos"],
+        tenantId: "tenant-pacote",
+        evoUnidadeId: 321,
+      });
+      const resumo = await getBackofficeEvoImportJobResumo({
+        jobId: job.jobId,
+        tenantId: "tenant-pacote",
+      });
+
+      expect(job.jobId).toBe("job-pacote-1");
+      expect(resumo.status).toBe("CONCLUIDO");
+      expect(resumo.geral?.total).toBe(12);
+
+      expect(calls).toHaveLength(2);
+      expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/upload-1/job");
+      expect(calls[0].method).toBe("POST");
+      expect(calls[0].headers.get("Content-Type")).toBe("application/json");
+      expect(calls[0].headers.get("X-Tenant-Id")).toBe("tenant-pacote");
+      expect(JSON.parse(String(calls[0].body))).toEqual({
+        dryRun: false,
+        maxRejeicoesRetorno: 50,
+        tenantId: "tenant-pacote",
+        evoUnidadeId: 321,
+        arquivos: ["clientes", "contratos"],
+      });
+
+      expect(calls[1].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/jobs/job-pacote-1/p0?maxRejeicoesRetorno=200");
+      expect(calls[1].method).toBe("GET");
+    } finally {
+      restore();
+    }
+  });
+
+  test("mantem upload CSV unitario funcionando", async () => {
+    const csvFile = new File(["id,nome\n1,Ana"], "clientes.csv", { type: "text/csv" });
+    const { calls, restore } = mockFetchSequence([
+      jsonResponse({
+        jobId: "job-csv-1",
+        status: "PROCESSANDO",
+        tenantIds: ["tenant-csv"],
+      }),
+    ]);
+
+    try {
+      const created = await createBackofficeEvoP0CsvJob({
+        dryRun: true,
+        maxRejeicoesRetorno: 10,
+        mapeamentoFiliais: [{ idFilialEvo: 123, tenantId: "tenant-csv" }],
+        arquivos: [{ field: "clientesFile", file: csvFile }],
+        tenantId: "tenant-csv",
+      });
+
+      expect(created.jobId).toBe("job-csv-1");
+      expect(created.tenantIds).toEqual(["tenant-csv"]);
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/upload");
+      expect(calls[0].method).toBe("POST");
+
+      const formData = calls[0].body as FormData;
+      expect(formData.get("dryRun")).toBe("true");
+      expect(formData.get("maxRejeicoesRetorno")).toBe("10");
+      expect(formData.get("mapeamentoFiliais")).toBe(JSON.stringify([{ idFilialEvo: 123, tenantId: "tenant-csv" }]));
+      expect(formData.get("clientesFile")).toBeTruthy();
+    } finally {
+      restore();
+    }
   });
 });

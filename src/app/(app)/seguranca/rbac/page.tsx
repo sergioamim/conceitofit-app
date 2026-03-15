@@ -14,6 +14,8 @@ import {
 import { TableCell } from "@/components/ui/table";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { SuggestionInput } from "@/components/shared/suggestion-input";
+import { SecurityActiveBadge } from "@/components/security/security-badges";
+import { SecurityEmptyState, SecuritySectionFeedback } from "@/components/security/security-feedback";
 import type { RbacPermission } from "@/lib/types";
 import {
   useAuditoriaManager,
@@ -51,20 +53,6 @@ const PERFIL_DEFAULT: PerfilFormState = {
 
 const GRANT_PERMISSION_OPTIONS: RbacPermission[] = ["VIEW", "EDIT", "MANAGE"];
 
-function renderStatusBadge(active: boolean) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
-        active
-          ? "bg-gym-teal/15 text-gym-teal"
-          : "bg-muted text-muted-foreground"
-      }`}
-    >
-      {active ? "Ativo" : "Inativo"}
-    </span>
-  );
-}
-
 function useStatusMessage() {
   const [message, setMessage] = useState<string | null>(null);
   const [variant, setVariant] = useState<"success" | "error" | null>(null);
@@ -88,22 +76,6 @@ function useStatusMessage() {
     className,
     hasMessage: Boolean(message),
   };
-}
-
-function SectionFeedback({ loading, error }: { loading: boolean; error?: string | null }) {
-  if (loading) {
-    return <p className="text-xs text-muted-foreground">Carregando...</p>;
-  }
-
-  if (error) {
-    return <p className="text-sm text-gym-danger">{error}</p>;
-  }
-
-  return null;
-}
-
-function SimpleEmptyState({ text }: { text: string }) {
-  return <p className="px-4 py-8 text-center text-sm text-muted-foreground">{text}</p>;
 }
 
 export default function RbacPage() {
@@ -480,7 +452,7 @@ export default function RbacPage() {
             </CardContent>
           </Card>
 
-          <SectionFeedback loading={perfisLoading || perfilActionLoading} error={perfisError} />
+          <SecuritySectionFeedback loading={perfisLoading || perfilActionLoading} error={perfisError} />
 
           <PaginatedTable
             columns={profileColumns}
@@ -500,7 +472,9 @@ export default function RbacPage() {
                 <TableCell className="px-3 py-2 font-mono text-xs">{perfil.roleName}</TableCell>
                 <TableCell className="px-3 py-2">{perfil.displayName}</TableCell>
                 <TableCell className="px-3 py-2 text-muted-foreground">{perfil.description || "—"}</TableCell>
-                <TableCell className="px-3 py-2">{renderStatusBadge(perfil.active)}</TableCell>
+                <TableCell className="px-3 py-2">
+                  <SecurityActiveBadge active={perfil.active} />
+                </TableCell>
                 <TableCell className="px-3 py-2">
                   <div className="flex flex-wrap gap-1.5">
                     <Button
@@ -577,7 +551,7 @@ export default function RbacPage() {
                 </div>
               </div>
 
-              <SectionFeedback loading={loadingUsers || loadingPerfis || userSaving} error={usuariosError} />
+              <SecuritySectionFeedback loading={loadingUsers || loadingPerfis || userSaving} error={usuariosError} />
 
               <PaginatedTable
                 columns={userProfileColumns}
@@ -588,7 +562,9 @@ export default function RbacPage() {
                   <>
                     <TableCell className="px-3 py-2 font-mono text-xs">{item.roleName}</TableCell>
                     <TableCell className="px-3 py-2">{item.displayName}</TableCell>
-                    <TableCell className="px-3 py-2">{renderStatusBadge(item.active)}</TableCell>
+                    <TableCell className="px-3 py-2">
+                      <SecurityActiveBadge active={item.active} />
+                    </TableCell>
                     <TableCell className="px-3 py-2">
                       <Button
                         type="button"
@@ -622,7 +598,7 @@ export default function RbacPage() {
             <CardContent>
               <div className="space-y-4">
                 {features.length === 0 ? (
-                  <SimpleEmptyState text="Nenhuma feature definida." />
+                  <SecurityEmptyState text="Nenhuma feature definida." />
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {features.map((feature) => (
@@ -725,7 +701,7 @@ export default function RbacPage() {
                 </div>
               </form>
 
-              <SectionFeedback loading={grantsLoading || grantActionLoading} error={grantsError} />
+              <SecuritySectionFeedback loading={grantsLoading || grantActionLoading} error={grantsError} />
 
               <PaginatedTable
                 columns={grantColumns}
@@ -789,7 +765,7 @@ export default function RbacPage() {
                 </div>
               </div>
 
-              <SectionFeedback loading={logsLoading} error={logsError} />
+              <SecuritySectionFeedback loading={logsLoading} error={logsError} />
 
               <PaginatedTable
                 columns={[

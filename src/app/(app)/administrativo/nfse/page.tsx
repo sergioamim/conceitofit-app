@@ -5,9 +5,13 @@ import { CheckCircle2, RefreshCw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  getNfseConfiguracaoAtualApi,
+  salvarNfseConfiguracaoAtualApi,
+  validarNfseConfiguracaoAtualApi,
+} from "@/lib/api/admin-financeiro";
 import { buildNfseChecklist, NFSE_STATUS_LABEL } from "@/lib/admin-financeiro";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
-import { getNfseConfiguracaoAtual, salvarNfseConfiguracaoAtual, validarNfseConfiguracaoAtual } from "@/lib/mock/services";
 import type { NfseAmbiente, NfseConfiguracao, NfseProvider, NfseRegimeTributario } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
@@ -55,7 +59,7 @@ export default function AdministrativoNfsePage() {
     setLoading(true);
     setError(null);
     try {
-      setForm(await getNfseConfiguracaoAtual({ tenantId }));
+      setForm(await getNfseConfiguracaoAtualApi({ tenantId }));
     } catch (loadError) {
       setError(normalizeErrorMessage(loadError));
     } finally {
@@ -77,7 +81,7 @@ export default function AdministrativoNfsePage() {
     setError(null);
     setSuccess(null);
     try {
-      const saved = await salvarNfseConfiguracaoAtual(form);
+      const saved = await salvarNfseConfiguracaoAtualApi(form);
       setForm(saved);
       setSuccess("Configuração fiscal atualizada.");
     } catch (saveError) {
@@ -93,7 +97,7 @@ export default function AdministrativoNfsePage() {
     setError(null);
     setSuccess(null);
     try {
-      const validated = await validarNfseConfiguracaoAtual({ tenantId });
+      const validated = await validarNfseConfiguracaoAtualApi({ tenantId });
       setForm(validated);
       setSuccess("Configuração validada com sucesso.");
     } catch (validationError) {

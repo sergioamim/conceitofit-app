@@ -2,52 +2,64 @@
 
 import { useEffect, useState } from "react";
 import {
-  listConvenios,
-  createConvenio,
-  updateConvenio,
-  toggleConvenio,
-  deleteConvenio,
-  listPlanos,
-} from "@/lib/mock/services";
+  createConvenioApi,
+  deleteConvenioApi,
+  listConveniosApi,
+  toggleConvenioApi,
+  updateConvenioApi,
+} from "@/lib/api/beneficios";
+import { listPlanosApi } from "@/lib/api/comercial-catalogo";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { Convenio, Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ConvenioModal } from "@/components/shared/convenio-modal";
 import { cn } from "@/lib/utils";
 
 export default function ConveniosPage() {
+  const { tenantId, tenantResolved } = useTenantContext();
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Convenio | null>(null);
 
   async function load() {
-    const [cvs, pls] = await Promise.all([listConvenios(), listPlanos()]);
+    if (!tenantId) return;
+    const [cvs, pls] = await Promise.all([
+      listConveniosApi(false),
+      listPlanosApi({ tenantId, apenasAtivos: false }),
+    ]);
     setConvenios(cvs);
     setPlanos(pls);
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-  }, []);
+    if (!tenantResolved || !tenantId) return;
+    void Promise.all([
+      listConveniosApi(false),
+      listPlanosApi({ tenantId, apenasAtivos: false }),
+    ]).then(([cvs, pls]) => {
+      setConvenios(cvs);
+      setPlanos(pls);
+    });
+  }, [tenantId, tenantResolved]);
 
   async function handleSave(data: Omit<Convenio, "id">, id?: string) {
-    if (id) await updateConvenio(id, data);
-    else await createConvenio(data);
+    if (id) await updateConvenioApi(id, data);
+    else await createConvenioApi(data);
     setModalOpen(false);
     setEditing(null);
-    load();
+    await load();
   }
 
   async function handleToggle(id: string) {
-    await toggleConvenio(id);
-    load();
+    await toggleConvenioApi(id);
+    await load();
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remover este convênio?") ) return;
-    await deleteConvenio(id);
-    load();
+    await deleteConvenioApi(id);
+    await load();
   }
 
   return (

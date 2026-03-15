@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { authLogout } from "@/lib/mock/services";
+import { clearAuthSession } from "@/lib/api/session";
 
 export default function SairPage() {
   const router = useRouter();
@@ -12,7 +12,7 @@ export default function SairPage() {
   async function handleLogout() {
     setSaving(true);
     try {
-      await authLogout();
+      clearAuthSession();
       router.replace("/login");
       if (typeof window !== "undefined") {
         window.location.assign("/login");

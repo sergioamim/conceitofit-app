@@ -2,48 +2,74 @@
 
 import { useEffect, useState } from "react";
 import {
-  listBandeirasCartao,
-  createBandeiraCartao,
-  updateBandeiraCartao,
-  toggleBandeiraCartao,
-  deleteBandeiraCartao,
-} from "@/lib/mock/services";
+  createBandeiraCartaoApi,
+  deleteBandeiraCartaoApi,
+  listBandeirasCartaoApi,
+  toggleBandeiraCartaoApi,
+  updateBandeiraCartaoApi,
+} from "@/lib/api/cartoes";
 import type { BandeiraCartao } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { BandeiraCartaoModal } from "@/components/shared/bandeira-cartao-modal";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 export default function BandeirasPage() {
   const [bandeiras, setBandeiras] = useState<BandeiraCartao[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<BandeiraCartao | null>(null);
+  const [error, setError] = useState("");
 
   async function load() {
-    const data = await listBandeirasCartao();
-    setBandeiras(data);
+    try {
+      setError("");
+      const data = await listBandeirasCartaoApi();
+      setBandeiras(data);
+    } catch (loadError) {
+      setError(normalizeErrorMessage(loadError));
+      setBandeiras([]);
+    }
   }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    void load();
   }, []);
 
   async function handleSave(data: Omit<BandeiraCartao, "id">, id?: string) {
-    if (id) await updateBandeiraCartao(id, data);
-    else await createBandeiraCartao(data);
-    setModalOpen(false);
-    setEditing(null);
-    load();
+    try {
+      setError("");
+      if (id) {
+        await updateBandeiraCartaoApi({ id, ...data });
+      } else {
+        await createBandeiraCartaoApi(data);
+      }
+      setModalOpen(false);
+      setEditing(null);
+      await load();
+    } catch (submitError) {
+      setError(normalizeErrorMessage(submitError));
+    }
   }
 
   async function handleToggle(id: string) {
-    await toggleBandeiraCartao(id);
-    load();
+    try {
+      setError("");
+      await toggleBandeiraCartaoApi(id);
+      await load();
+    } catch (submitError) {
+      setError(normalizeErrorMessage(submitError));
+    }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remover esta bandeira?")) return;
-    await deleteBandeiraCartao(id);
-    load();
+    try {
+      setError("");
+      await deleteBandeiraCartaoApi(id);
+      await load();
+    } catch (submitError) {
+      setError(normalizeErrorMessage(submitError));
+    }
   }
 
   return (
@@ -69,6 +95,12 @@ export default function BandeirasPage() {
         </div>
         <Button onClick={() => setModalOpen(true)}>Nova bandeira</Button>
       </div>
+
+      {error ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {error}
+        </div>
+      ) : null}
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">

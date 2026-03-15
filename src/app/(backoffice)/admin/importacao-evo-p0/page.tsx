@@ -1,13 +1,22 @@
 "use client";
 
-import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { Suspense, type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AlertCircle, RefreshCw, Copy, UploadCloud, XCircle } from "lucide-react";
-import { type SuggestionOption } from "@/components/shared/suggestion-input";
+import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
 import { MapeamentoAcademiaUnidadeSelector } from "@/components/admin/importacao-academia-unidade-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -23,9 +32,10 @@ import {
   type EvoImportJobStatus as EvoStatus,
   type EvoImportRejeicao as Rejeicao,
   type UploadAnaliseArquivo,
+  type UploadAnaliseFilial,
   type UploadAnaliseResponse,
 } from "@/lib/api/importacao-evo";
-import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
+import { createGlobalUnidade, listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
 import {
   createBackofficeEvoP0CsvJob,
   createBackofficeEvoP0PacoteJob,
@@ -42,18 +52,25 @@ import {
   registrarImportacaoOnboarding,
   saveUnidadeOnboarding,
 } from "@/lib/backoffice/onboarding";
-import type { Academia, Tenant, UnidadeOnboardingState } from "@/lib/types";
+import { listEligibleNewUnitAdminsPreview } from "@/lib/backoffice/seguranca";
+import type { Academia, GlobalAdminUserSummary, Tenant, UnidadeOnboardingState } from "@/lib/types";
+import { formatCnpj, isValidCnpj } from "@/lib/utils/cnpj";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { normalizeSubdomain } from "@/lib/utils/subdomain";
 
 export const dynamic = "force-dynamic";
 
 type JobHistoryMeta = {
   tenantId: string;
   jobId: string;
+  alias?: string;
   academiaNome: string;
   unidadeNome: string;
   origem: "pacote" | "csv";
   criadoEm: string;
   status?: EvoStatus;
+  arquivosSelecionados?: string[];
+  arquivosDisponiveis?: string[];
 };
 
 const PACOTE_CHAVES_DISPONIVEIS = [
@@ -78,6 +95,102 @@ const PACOTE_CHAVES_DISPONIVEIS = [
   "contasPagar",
 ] as const;
 
+type PacoteArquivoChave = (typeof PACOTE_CHAVES_DISPONIVEIS)[number];
+
+const IMPORT_RESUMO_CARD_CONFIG: Array<{
+  key: keyof JobResumo;
+  label: string;
+  arquivoChave: PacoteArquivoChave;
+  csvField: string;
+  entidade: string;
+}> = [
+  { key: "clientes", label: "Clientes", arquivoChave: "clientes", csvField: "clientesFile", entidade: "CLIENTES" },
+  { key: "prospects", label: "Prospects", arquivoChave: "prospects", csvField: "prospectsFile", entidade: "PROSPECTS" },
+  { key: "contratos", label: "Contratos", arquivoChave: "contratos", csvField: "contratosFile", entidade: "CONTRATOS" },
+  {
+    key: "clientesContratos",
+    label: "ClientesContrato",
+    arquivoChave: "clientesContratos",
+    csvField: "clientesContratosFile",
+    entidade: "CLIENTES_CONTRATOS",
+  },
+  { key: "maquininhas", label: "Maquininhas", arquivoChave: "maquininhas", csvField: "maquininhasFile", entidade: "MAQUININHAS" },
+  { key: "produtos", label: "Produtos", arquivoChave: "produtos", csvField: "produtosFile", entidade: "PRODUTOS" },
+  {
+    key: "produtoMovimentacoes",
+    label: "Movimentações de Produto",
+    arquivoChave: "produtoMovimentacoes",
+    csvField: "produtoMovimentacoesFile",
+    entidade: "PRODUTOS_MOVIMENTACOES",
+  },
+  { key: "servicos", label: "Serviços", arquivoChave: "servicos", csvField: "servicosFile", entidade: "SERVICOS" },
+  {
+    key: "funcionarios",
+    label: "Funcionários",
+    arquivoChave: "funcionarios",
+    csvField: "funcionariosFile",
+    entidade: "FUNCIONARIOS",
+  },
+  {
+    key: "gruposExercicio",
+    label: "Grupos de Exercícios",
+    arquivoChave: "treinosGruposExercicios",
+    csvField: "treinosGruposExerciciosFile",
+    entidade: "TREINOS_GRUPOS_EXERCICIOS",
+  },
+  {
+    key: "exerciciosTreino",
+    label: "Exercícios de Treino",
+    arquivoChave: "treinosExercicios",
+    csvField: "treinosExerciciosFile",
+    entidade: "TREINOS_EXERCICIOS",
+  },
+  { key: "treinos", label: "Treinos", arquivoChave: "treinos", csvField: "treinosFile", entidade: "TREINOS" },
+  {
+    key: "treinosSeries",
+    label: "Séries de Treino",
+    arquivoChave: "treinosSeries",
+    csvField: "treinosSeriesFile",
+    entidade: "TREINOS_SERIES",
+  },
+  {
+    key: "treinosSeriesItens",
+    label: "Itens de Séries",
+    arquivoChave: "treinosSeriesItens",
+    csvField: "treinosSeriesItensFile",
+    entidade: "TREINOS_SERIES_ITENS",
+  },
+  { key: "vendas", label: "Vendas", arquivoChave: "vendas", csvField: "vendasFile", entidade: "VENDAS" },
+  {
+    key: "vendasItens",
+    label: "VendasItens",
+    arquivoChave: "vendasItens",
+    csvField: "vendasItensFile",
+    entidade: "VENDAS_ITENS",
+  },
+  {
+    key: "recebimentos",
+    label: "Recebimentos",
+    arquivoChave: "recebimentos",
+    csvField: "recebimentosFile",
+    entidade: "RECEBIMENTOS",
+  },
+  {
+    key: "contasBancarias",
+    label: "Contas bancárias",
+    arquivoChave: "contasBancarias",
+    csvField: "contasBancariasFile",
+    entidade: "CONTAS_BANCÁRIAS",
+  },
+  {
+    key: "contasPagar",
+    label: "Contas a pagar",
+    arquivoChave: "contasPagar",
+    csvField: "contasPagarFile",
+    entidade: "CONTAS_PAGAR",
+  },
+];
+
 const JOB_HISTORY_KEY = "evo-importacao-jobs-historico";
 const JOB_HISTORY_LIMIT = 30;
 const STORAGE_KEY = "evo-ultima-importacao-jobId";
@@ -85,8 +198,69 @@ const ENTIDADE_TODAS = "__todas__";
 const resolveTenantForStorage = (tenantId?: string | null) =>
   (tenantId ?? "global").trim().toLowerCase() || "global";
 
+function isOnboardingCollectionRouteError(message: string) {
+  const normalized = message.toLowerCase();
+  return normalized.includes("invalid uuid string: onboarding") || normalized.includes("/admin/unidades/onboarding");
+}
+
 function normalizeTenantId(value?: string | null): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function parsePositiveInteger(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isInteger(value) && value > 0 ? value : null;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    if (!normalized) return null;
+    const parsed = Number(normalized);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+  return null;
+}
+
+function normalizeComparableText(value?: string | null): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function normalizeDocumentDigits(value?: string | null): string {
+  return typeof value === "string" ? value.replace(/\D/g, "") : "";
+}
+
+function normalizeSearchKey(value?: string | null): string {
+  return typeof value === "string"
+    ? value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()
+    : "";
+}
+
+function normalizeJobAlias(value?: string | null): string | undefined {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  return normalized ? normalized : undefined;
+}
+
+function formatJobAliasDate(value?: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function buildDefaultJobAlias(input: {
+  origem: "pacote" | "csv";
+  unidadeNome?: string | null;
+  academiaNome?: string | null;
+  criadoEm?: string | null;
+}): string {
+  const origem = input.origem === "pacote" ? "Pacote" : "CSV";
+  const contexto = input.unidadeNome?.trim() || input.academiaNome?.trim() || "Importação EVO";
+  const data = formatJobAliasDate(input.criadoEm);
+  return data ? `${origem} · ${contexto} · ${data}` : `${origem} · ${contexto}`;
 }
 
 const FILE_FIELDS: { key: keyof FileMap; label: string; field: string }[] = [
@@ -141,7 +315,80 @@ type MapeamentoFilial = {
   tenantId: string;
 };
 
-export default function ImportacaoEvoP0Page() {
+type NovaUnidadePacoteForm = {
+  nomeOriginal: string;
+  nome: string;
+  subdomain: string;
+  documento: string;
+  email: string;
+  telefone: string;
+  bairro: string;
+  cidade: string;
+};
+
+function resolvePacoteNomeFilial(rawName?: string | null, academiaName?: string | null) {
+  const nomeOriginal = typeof rawName === "string" ? rawName.trim() : "";
+  const academiaSelecionada = typeof academiaName === "string" ? academiaName.trim() : "";
+  if (!nomeOriginal) {
+    return {
+      nomeOriginal: "",
+      academiaNome: academiaSelecionada,
+      unidadeNome: "",
+    };
+  }
+
+  const nomeOriginalKey = normalizeSearchKey(nomeOriginal);
+  const academiaSelecionadaKey = normalizeSearchKey(academiaSelecionada);
+  if (academiaSelecionada && academiaSelecionadaKey && nomeOriginalKey.startsWith(academiaSelecionadaKey)) {
+    const unidadeNome = nomeOriginal
+      .slice(academiaSelecionada.length)
+      .replace(/^[\s\-–—:/|]+/, "")
+      .trim();
+    if (unidadeNome) {
+      return {
+        nomeOriginal,
+        academiaNome: academiaSelecionada,
+        unidadeNome,
+      };
+    }
+  }
+
+  const partes = nomeOriginal.split(/\s[-–—]\s/).map((parte) => parte.trim()).filter(Boolean);
+  if (partes.length > 1) {
+    return {
+      nomeOriginal,
+      academiaNome: academiaSelecionada || partes[0],
+      unidadeNome: partes.slice(1).join(" - "),
+    };
+  }
+
+  return {
+    nomeOriginal,
+    academiaNome: academiaSelecionada,
+    unidadeNome: nomeOriginal,
+  };
+}
+
+function buildNovaUnidadePacoteForm(filial: UploadAnaliseFilial | null, academiaName?: string | null): NovaUnidadePacoteForm {
+  const nomes = resolvePacoteNomeFilial(filial?.nome, academiaName);
+  const subdomainBase = nomes.nomeOriginal || [academiaName, nomes.unidadeNome].filter(Boolean).join(" - ");
+  return {
+    nomeOriginal: nomes.nomeOriginal,
+    nome: nomes.unidadeNome || nomes.nomeOriginal,
+    subdomain: normalizeSubdomain(subdomainBase),
+    documento: formatCnpj(filial?.documento),
+    email: filial?.email?.trim() || "",
+    telefone: filial?.telefone?.trim() || "",
+    bairro: filial?.bairro?.trim() || "",
+    cidade: filial?.cidade?.trim() || "",
+  };
+}
+
+function resolveUnidadeAcademiaId(unidade?: Tenant | null): string {
+  return unidade?.academiaId ?? unidade?.groupId ?? "";
+}
+
+function ImportacaoEvoP0PageContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const preselectedTenantId = normalizeTenantId(searchParams.get("tenantId"));
@@ -151,6 +398,15 @@ export default function ImportacaoEvoP0Page() {
   const [academias, setAcademias] = useState<Academia[]>([]);
   const [unidades, setUnidades] = useState<Tenant[]>([]);
   const [unidadesOnboarding, setUnidadesOnboarding] = useState<UnidadeOnboardingState[]>([]);
+  const [eligibleAdminsPreview, setEligibleAdminsPreview] = useState<{
+    items: GlobalAdminUserSummary[];
+    total: number;
+    loading: boolean;
+  }>({
+    items: [],
+    total: 0,
+    loading: false,
+  });
   const [loadingMapeamento, setLoadingMapeamento] = useState(false);
   const [mapeamentos, setMapeamentos] = useState<MapeamentoFilial[]>([
     { idFilialEvo: "", tenantId: "", academiaId: "", academiaNome: "", unidadeNome: "" },
@@ -171,8 +427,15 @@ export default function ImportacaoEvoP0Page() {
   });
   const [pacoteAnalise, setPacoteAnalise] = useState<UploadAnaliseResponse | null>(null);
   const [pacoteArquivosSelecionados, setPacoteArquivosSelecionados] = useState<string[]>([]);
+  const [pacoteJobAlias, setPacoteJobAlias] = useState("");
   const [pacoteAnalisando, setPacoteAnalisando] = useState(false);
   const [pacoteCriandoJob, setPacoteCriandoJob] = useState(false);
+  const [novaUnidadePacoteAberta, setNovaUnidadePacoteAberta] = useState(false);
+  const [novaUnidadePacoteSalvando, setNovaUnidadePacoteSalvando] = useState(false);
+  const [novaUnidadePacoteErro, setNovaUnidadePacoteErro] = useState<string | null>(null);
+  const [novaUnidadePacoteForm, setNovaUnidadePacoteForm] = useState<NovaUnidadePacoteForm>(() =>
+    buildNovaUnidadePacoteForm(null)
+  );
 
   const [jobId, setJobId] = useState<string>("");
   const [jobTenantId, setJobTenantId] = useState<string>("");
@@ -195,6 +458,8 @@ export default function ImportacaoEvoP0Page() {
   const [showRejeicoes, setShowRejeicoes] = useState(false);
   const [entidadeFiltro, setEntidadeFiltro] = useState<string>(ENTIDADE_TODAS);
   const lastJobStatusRef = useRef<EvoStatus | null>(null);
+  const [csvJobAlias, setCsvJobAlias] = useState("");
+  const [jobAliasDraft, setJobAliasDraft] = useState("");
 
   const getStorageKeyForTenant = useCallback(
     (tenantId?: string | null) => `${STORAGE_KEY}:${resolveTenantForStorage(tenantId)}`,
@@ -283,11 +548,22 @@ export default function ImportacaoEvoP0Page() {
       return cleaned.map((item) => ({
         tenantId: item.tenantId?.toString().trim(),
         jobId: item.jobId?.toString().trim(),
+        alias: normalizeJobAlias(item.alias?.toString()),
         academiaNome: item.academiaNome?.toString() || "Não informado",
         unidadeNome: item.unidadeNome?.toString() || "Não informado",
         origem: item.origem === "pacote" || item.origem === "csv" ? item.origem : "csv",
         criadoEm: item.criadoEm?.toString() || new Date().toISOString(),
         status: (item.status as EvoStatus) || undefined,
+        arquivosSelecionados: Array.isArray(item.arquivosSelecionados)
+          ? item.arquivosSelecionados
+              .map((value) => value?.toString().trim())
+              .filter((value): value is string => Boolean(value))
+          : undefined,
+        arquivosDisponiveis: Array.isArray(item.arquivosDisponiveis)
+          ? item.arquivosDisponiveis
+              .map((value) => value?.toString().trim())
+              .filter((value): value is string => Boolean(value))
+          : undefined,
       }));
     } catch {
       return [];
@@ -301,8 +577,11 @@ export default function ImportacaoEvoP0Page() {
           ...item,
           tenantId: item.tenantId.toLowerCase(),
           jobId: item.jobId.trim(),
+          alias: normalizeJobAlias(item.alias),
           academiaNome: item.academiaNome || "Não informado",
           unidadeNome: item.unidadeNome || "Não informado",
+          arquivosSelecionados: item.arquivosSelecionados?.map((value) => value.trim()).filter(Boolean),
+          arquivosDisponiveis: item.arquivosDisponiveis?.map((value) => value.trim()).filter(Boolean),
         };
       })
       .filter((item) => item.jobId && item.tenantId)
@@ -320,18 +599,37 @@ export default function ImportacaoEvoP0Page() {
     [getStoredJobsHistorico, setStoredJobsHistorico]
   );
 
-  const atualizarJobHistoricoStatus = useCallback(
-    (jobId: string, tenantId: string, status?: EvoStatus) => {
+  const atualizarJobHistoricoMeta = useCallback(
+    (jobId: string, tenantId: string, patch: Partial<JobHistoryMeta>) => {
       if (!jobId || !tenantId) return;
       const atual = getStoredJobsHistorico();
       const next = atual.map((item) =>
         item.jobId === jobId && normalizeTenantId(item.tenantId) === normalizeTenantId(tenantId)
-          ? { ...item, status, criadoEm: item.criadoEm || new Date().toISOString() }
+          ? {
+              ...item,
+              ...patch,
+              alias: patch.alias !== undefined ? normalizeJobAlias(patch.alias) : item.alias,
+            }
           : item
       );
       setStoredJobsHistorico(next);
     },
     [getStoredJobsHistorico, setStoredJobsHistorico]
+  );
+
+  const atualizarJobHistoricoStatus = useCallback(
+    (jobId: string, tenantId: string, status?: EvoStatus) => {
+      if (!jobId || !tenantId) return;
+      const atual = getStoredJobsHistorico();
+      const itemAtual = atual.find(
+        (item) => item.jobId === jobId && normalizeTenantId(item.tenantId) === normalizeTenantId(tenantId)
+      );
+      atualizarJobHistoricoMeta(jobId, tenantId, {
+        status,
+        criadoEm: itemAtual?.criadoEm || new Date().toISOString(),
+      });
+    },
+    [atualizarJobHistoricoMeta, getStoredJobsHistorico]
   );
 
   const carregarJobHistorico = useCallback(() => {
@@ -555,6 +853,19 @@ export default function ImportacaoEvoP0Page() {
     [resolveTenantLabel]
   );
 
+  const resolveJobAlias = useCallback((job: Partial<JobHistoryMeta> | null | undefined) => {
+    if (!job) return "";
+    return (
+      normalizeJobAlias(job.alias) ||
+      buildDefaultJobAlias({
+        origem: job.origem === "pacote" ? "pacote" : "csv",
+        unidadeNome: job.unidadeNome,
+        academiaNome: job.academiaNome,
+        criadoEm: job.criadoEm,
+      })
+    );
+  }, []);
+
   const jobsEmExecucao = useMemo(() => {
     return jobsHistorico
       .filter((job) => !job.status || job.status === "PROCESSANDO")
@@ -564,6 +875,17 @@ export default function ImportacaoEvoP0Page() {
         if (Number.isNaN(aa) || Number.isNaN(bb)) return 0;
         return bb - aa;
       });
+  }, [jobsHistorico]);
+
+  const jobsRecentes = useMemo(() => {
+    return [...jobsHistorico]
+      .sort((a, b) => {
+        const aa = new Date(a.criadoEm).getTime();
+        const bb = new Date(b.criadoEm).getTime();
+        if (Number.isNaN(aa) || Number.isNaN(bb)) return 0;
+        return bb - aa;
+      })
+      .slice(0, 8);
   }, [jobsHistorico]);
 
   const pacoteArquivosDisponiveis = useMemo<UploadAnaliseArquivo[]>(() => {
@@ -580,6 +902,78 @@ export default function ImportacaoEvoP0Page() {
     return ordenado;
   }, [pacoteAnalise]);
 
+  const pacoteEvoUnidadeInformada = useMemo(() => parsePositiveInteger(pacoteEvoUnidadeId), [pacoteEvoUnidadeId]);
+
+  const pacoteEvoUnidadeResolvida = useMemo(() => parsePositiveInteger(pacoteAnalise?.evoUnidadeId), [pacoteAnalise?.evoUnidadeId]);
+
+  const pacoteFilialResolvida = useMemo<UploadAnaliseFilial | null>(() => {
+    return pacoteAnalise?.filialResolvida ?? null;
+  }, [pacoteAnalise]);
+
+  const pacoteFiliaisEncontradas = useMemo<UploadAnaliseFilial[]>(() => {
+    return Array.isArray(pacoteAnalise?.filiaisEncontradas) ? pacoteAnalise.filiaisEncontradas : [];
+  }, [pacoteAnalise]);
+
+  const pacoteFilialReferencia = useMemo<UploadAnaliseFilial | null>(() => {
+    return pacoteFilialResolvida ?? pacoteFiliaisEncontradas[0] ?? null;
+  }, [pacoteFilialResolvida, pacoteFiliaisEncontradas]);
+
+  const pacoteNomeFilialReferencia = useMemo(() => {
+    return resolvePacoteNomeFilial(pacoteFilialReferencia?.nome, pacoteMapeamento.academiaNome);
+  }, [pacoteFilialReferencia?.nome, pacoteMapeamento.academiaNome]);
+
+  const pacoteUnidadesSugeridas = useMemo(() => {
+    const documento = normalizeDocumentDigits(pacoteFilialReferencia?.documento);
+    const nome = normalizeComparableText(
+      pacoteNomeFilialReferencia.unidadeNome || pacoteFilialReferencia?.nome || pacoteFilialReferencia?.abreviacao
+    );
+    const cidade = normalizeComparableText(pacoteFilialReferencia?.cidade);
+    if (!documento && !nome) return [];
+
+    return unidades
+      .filter((unidade) => {
+        const documentoUnidade = normalizeDocumentDigits(unidade.documento);
+        if (documento && documentoUnidade && documento === documentoUnidade) {
+          return true;
+        }
+
+        const nomeUnidade = normalizeComparableText(unidade.nome);
+        if (!nome || !nomeUnidade) return false;
+        const nomeCompativel = nomeUnidade.includes(nome) || nome.includes(nomeUnidade);
+        if (!nomeCompativel) return false;
+
+        const cidadeUnidade = normalizeComparableText(unidade.endereco?.cidade);
+        return !cidade || !cidadeUnidade || cidade === cidadeUnidade;
+      })
+      .slice(0, 5)
+      .map((unidade) => ({
+        unidade,
+        academiaNome:
+          academiaIndex.get(normalizeTenantId(resolveUnidadeAcademiaId(unidade)))?.nome ?? "Academia não informada",
+      }));
+  }, [academiaIndex, pacoteFilialReferencia, pacoteNomeFilialReferencia.unidadeNome, unidades]);
+
+  const pacoteSelecaoFilialPendente = useMemo(() => {
+    return Boolean(pacoteAnalise && !pacoteEvoUnidadeResolvida && pacoteFiliaisEncontradas.length > 1);
+  }, [pacoteAnalise, pacoteEvoUnidadeResolvida, pacoteFiliaisEncontradas.length]);
+
+  const pacoteTenantAnalise = useMemo(() => normalizeTenantId(pacoteAnalise?.tenantId), [pacoteAnalise?.tenantId]);
+
+  const pacoteTenantDestino = useMemo(() => normalizeTenantId(pacoteMapeamento.tenantId), [pacoteMapeamento.tenantId]);
+
+  const pacotePrecisaVincularTenant = useMemo(() => {
+    if (!pacoteAnalise || !pacoteTenantDestino) return false;
+    return pacoteTenantAnalise !== pacoteTenantDestino;
+  }, [pacoteAnalise, pacoteTenantAnalise, pacoteTenantDestino]);
+
+  const pacotePrecisaReanaliseManual = useMemo(() => {
+    return Boolean(
+      pacoteArquivo &&
+      pacoteEvoUnidadeInformada &&
+      pacoteEvoUnidadeInformada !== pacoteEvoUnidadeResolvida
+    );
+  }, [pacoteArquivo, pacoteEvoUnidadeInformada, pacoteEvoUnidadeResolvida]);
+
   const formatBytes = useCallback((value?: number | null) => {
     if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "—";
     if (value === 0) return "0 B";
@@ -594,34 +988,43 @@ export default function ImportacaoEvoP0Page() {
   }, []);
 
   const pacoteArquivosSelecionadosSet = useMemo(() => new Set(pacoteArquivosSelecionados), [pacoteArquivosSelecionados]);
+  const arquivoCanonicoPorCsvField = useMemo(
+    () => new Map(IMPORT_RESUMO_CARD_CONFIG.map((item) => [item.csvField, item.arquivoChave] as const)),
+    []
+  );
 
-  useEffect(() => {
-    let mounted = true;
-    async function loadMapeamentoData() {
-      setLoadingMapeamento(true);
+  const carregarMapeamentoData = useCallback(async () => {
+    setLoadingMapeamento(true);
+    try {
+      const [loadedAcademias, loadedUnidades] = await Promise.all([listGlobalAcademias(), listGlobalUnidades()]);
+      setAcademias(loadedAcademias);
+      setUnidades(loadedUnidades);
+
       try {
-        const [loadedAcademias, loadedUnidades, loadedOnboarding] = await Promise.all([
-          listGlobalAcademias(),
-          listGlobalUnidades(),
-          listUnidadesOnboarding(),
-        ]);
-        if (!mounted) return;
-        setAcademias(loadedAcademias);
-        setUnidades(loadedUnidades);
+        const loadedOnboarding = await listUnidadesOnboarding();
         setUnidadesOnboarding(loadedOnboarding);
       } catch (error) {
-        if (!mounted) return;
         const message = error instanceof Error ? error.message : String(error);
-        toast({ title: "Erro ao carregar dados de mapeamento", description: message, variant: "destructive" });
-      } finally {
-        if (mounted) setLoadingMapeamento(false);
+        setUnidadesOnboarding([]);
+        if (!isOnboardingCollectionRouteError(message)) {
+          toast({
+            title: "Erro ao carregar dados de onboarding",
+            description: message,
+            variant: "destructive",
+          });
+        }
       }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({ title: "Erro ao carregar dados de mapeamento", description: message, variant: "destructive" });
+    } finally {
+      setLoadingMapeamento(false);
     }
-    void loadMapeamentoData();
-    return () => {
-      mounted = false;
-    };
   }, [toast]);
+
+  useEffect(() => {
+    void carregarMapeamentoData();
+  }, [carregarMapeamentoData]);
 
   useEffect(() => {
     if (!preselectedTenantId) return;
@@ -647,51 +1050,75 @@ export default function ImportacaoEvoP0Page() {
     const pct = Math.min(100, Math.max(0, (Number(resumo.processadas ?? 0) / total) * 100));
     return { percentual: Math.round(pct), temTotal: true };
   };
+  const resumoEntidadeMap = useMemo(
+    () =>
+      Object.fromEntries(IMPORT_RESUMO_CARD_CONFIG.map((item) => [item.key, item.entidade])) as Partial<
+        Record<keyof JobResumo, string>
+      >,
+    []
+  );
+  const resumoCards = useMemo(
+    () => [{ key: "geral" as keyof JobResumo, label: "Geral", arquivoChave: null as null | PacoteArquivoChave }, ...IMPORT_RESUMO_CARD_CONFIG],
+    []
+  );
+  const jobHistoricoAtual = useMemo(
+    () => jobsHistorico.find((item) => normalizeTenantId(item.jobId) === normalizeTenantId(jobId)),
+    [jobId, jobsHistorico]
+  );
+  const jobAliasAtual = useMemo(
+    () =>
+      resolveJobAlias(
+        jobHistoricoAtual
+          ? jobHistoricoAtual
+          : jobId
+            ? {
+                jobId,
+                alias: undefined,
+                origem: jobOrigem ?? "csv",
+                unidadeNome: jobContextoLabel.unidadeNome,
+                academiaNome: jobContextoLabel.academiaNome,
+                criadoEm: jobResumo?.solicitadoEm ?? undefined,
+              }
+            : null
+      ),
+    [jobContextoLabel.academiaNome, jobContextoLabel.unidadeNome, jobHistoricoAtual, jobId, jobOrigem, jobResumo?.solicitadoEm, resolveJobAlias]
+  );
+  const jobArquivosSelecionados = useMemo(
+    () => Array.from(new Set(jobHistoricoAtual?.arquivosSelecionados?.filter(Boolean) ?? [])),
+    [jobHistoricoAtual?.arquivosSelecionados]
+  );
+  const jobArquivosDisponiveis = useMemo(
+    () => Array.from(new Set(jobHistoricoAtual?.arquivosDisponiveis?.filter(Boolean) ?? [])),
+    [jobHistoricoAtual?.arquivosDisponiveis]
+  );
+  const resumoCardsVisiveis = useMemo(() => {
+    if (!jobArquivosSelecionados.length) return resumoCards;
+    const selecionados = new Set(jobArquivosSelecionados);
+    return resumoCards.filter(
+      (card) => card.key === "geral" || (card.arquivoChave ? selecionados.has(card.arquivoChave) : false)
+    );
+  }, [jobArquivosSelecionados, resumoCards]);
+  const resumoCardsOcultos = useMemo(() => {
+    if (!jobArquivosSelecionados.length) return [] as typeof resumoCards;
+    if (!jobArquivosDisponiveis.length) return [] as typeof resumoCards;
+    const selecionados = new Set(jobArquivosSelecionados);
+    const disponiveis = new Set(jobArquivosDisponiveis);
+    return resumoCards.filter(
+      (card) =>
+        card.key !== "geral" &&
+        card.arquivoChave &&
+        disponiveis.has(card.arquivoChave) &&
+        !selecionados.has(card.arquivoChave)
+    );
+  }, [jobArquivosDisponiveis, jobArquivosSelecionados, resumoCards]);
 
-  const resumoEntidadeMap: Partial<Record<keyof JobResumo, string>> = {
-    clientes: "CLIENTES",
-    prospects: "PROSPECTS",
-    contratos: "CONTRATOS",
-    clientesContratos: "CLIENTES_CONTRATOS",
-    maquininhas: "MAQUININHAS",
-    produtos: "PRODUTOS",
-    produtoMovimentacoes: "PRODUTOS_MOVIMENTACOES",
-    servicos: "SERVICOS",
-    funcionarios: "FUNCIONARIOS",
-    exerciciosTreino: "TREINOS_EXERCICIOS",
-    treinos: "TREINOS",
-    gruposExercicio: "TREINOS_GRUPOS_EXERCICIOS",
-    treinosSeries: "TREINOS_SERIES",
-    treinosSeriesItens: "TREINOS_SERIES_ITENS",
-    vendas: "VENDAS",
-    vendasItens: "VENDAS_ITENS",
-    recebimentos: "RECEBIMENTOS",
-    contasBancarias: "CONTAS_BANCÁRIAS",
-    contasPagar: "CONTAS_PAGAR",
-  };
-
-  const resumoCards: { key: keyof JobResumo; label: string }[] = [
-    { key: "geral", label: "Geral" },
-    { key: "clientes", label: "Clientes" },
-    { key: "prospects", label: "Prospects" },
-    { key: "contratos", label: "Contratos" },
-    { key: "clientesContratos", label: "ClientesContrato" },
-    { key: "maquininhas", label: "Maquininhas" },
-    { key: "produtos", label: "Produtos" },
-    { key: "produtoMovimentacoes", label: "Movimentações de Produto" },
-    { key: "servicos", label: "Serviços" },
-    { key: "funcionarios", label: "Funcionários" },
-    { key: "gruposExercicio", label: "Grupos de Exercícios" },
-    { key: "exerciciosTreino", label: "Exercícios de Treino" },
-    { key: "treinos", label: "Treinos" },
-    { key: "treinosSeries", label: "Séries de Treino" },
-    { key: "treinosSeriesItens", label: "Itens de Séries" },
-    { key: "vendas", label: "Vendas" },
-    { key: "vendasItens", label: "VendasItens" },
-    { key: "recebimentos", label: "Recebimentos" },
-    { key: "contasBancarias", label: "ContasBancárias" },
-    { key: "contasPagar", label: "Contas a Pagar" },
-  ];
+  useEffect(() => {
+    if (!jobId) {
+      setJobAliasDraft("");
+      return;
+    }
+    setJobAliasDraft(jobAliasAtual);
+  }, [jobAliasAtual, jobId]);
 
   function setFile(key: keyof FileMap, file: File | null) {
     setFiles((prev) => ({ ...prev, [key]: file }));
@@ -700,6 +1127,145 @@ export default function ImportacaoEvoP0Page() {
   function updateMapeamento(idx: number, patch: Partial<MapeamentoFilial>) {
     setMapeamentos((prev) => prev.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
   }
+
+  const aplicarDestinoPacotePorUnidade = useCallback((unidade: Tenant, overrides?: { evoFilialId?: string }) => {
+    const academiaId = resolveUnidadeAcademiaId(unidade);
+    const academia = academiaId ? academiaIndex.get(normalizeTenantId(academiaId)) : null;
+    const onboarding = onboardingIndex.get(normalizeTenantId(unidade.id));
+    const nextEvoFilialId =
+      overrides?.evoFilialId ??
+      onboarding?.evoFilialId ??
+      (pacoteEvoUnidadeResolvida ? String(pacoteEvoUnidadeResolvida) : pacoteEvoUnidadeId.trim());
+
+    setPacoteMapeamento({
+      idFilialEvo: nextEvoFilialId,
+      tenantId: unidade.id,
+      academiaId,
+      academiaNome: academia?.nome ?? "Não informado",
+      unidadeNome: unidade.nome ?? "Não informado",
+    });
+
+    if (nextEvoFilialId) {
+      setPacoteEvoUnidadeId(nextEvoFilialId);
+    }
+  }, [academiaIndex, onboardingIndex, pacoteEvoUnidadeId, pacoteEvoUnidadeResolvida]);
+
+  const aplicarDestinoPacotePorTenantId = useCallback((tenantId: string) => {
+    const normalizedTenant = normalizeTenantId(tenantId);
+    if (!normalizedTenant) return;
+    const unidade = tenantIndex.get(normalizedTenant);
+    if (!unidade) return;
+    aplicarDestinoPacotePorUnidade(unidade);
+  }, [aplicarDestinoPacotePorUnidade, tenantIndex]);
+
+  const abrirNovaUnidadePacote = useCallback(() => {
+    if (!pacoteFilialReferencia) {
+      toast({
+        title: "Sem metadados da filial",
+        description: "Analise o pacote antes de criar uma nova unidade a partir dos dados do ZIP.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!pacoteMapeamento.academiaId) {
+      toast({
+        title: "Selecione a academia",
+        description: "Defina a academia no passo 1 antes de criar uma nova unidade.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setNovaUnidadePacoteForm(buildNovaUnidadePacoteForm(pacoteFilialReferencia, pacoteMapeamento.academiaNome));
+    setNovaUnidadePacoteErro(null);
+    setNovaUnidadePacoteAberta(true);
+  }, [pacoteFilialReferencia, pacoteMapeamento.academiaId, pacoteMapeamento.academiaNome, toast]);
+
+  const salvarNovaUnidadePacote = useCallback(async () => {
+    if (!pacoteMapeamento.academiaId) {
+      setNovaUnidadePacoteErro("Selecione a academia antes de criar a unidade.");
+      return;
+    }
+    if (!novaUnidadePacoteForm.nome.trim()) {
+      setNovaUnidadePacoteErro("Informe o nome da unidade.");
+      return;
+    }
+    const normalizedSubdomain = normalizeSubdomain(novaUnidadePacoteForm.subdomain);
+    if (!normalizedSubdomain) {
+      setNovaUnidadePacoteErro("Informe um subdominio valido para a nova unidade.");
+      return;
+    }
+    if (!isValidCnpj(novaUnidadePacoteForm.documento)) {
+      setNovaUnidadePacoteErro("Informe um CNPJ valido para a nova unidade.");
+      return;
+    }
+
+    setNovaUnidadePacoteSalvando(true);
+    setNovaUnidadePacoteErro(null);
+    try {
+      const persisted = await createGlobalUnidade({
+        nome: novaUnidadePacoteForm.nome.trim(),
+        academiaId: pacoteMapeamento.academiaId,
+        groupId: pacoteMapeamento.academiaId,
+        razaoSocial: novaUnidadePacoteForm.nomeOriginal.trim() || undefined,
+        subdomain: normalizedSubdomain,
+        documento: formatCnpj(novaUnidadePacoteForm.documento),
+        email: novaUnidadePacoteForm.email.trim() || undefined,
+        telefone: novaUnidadePacoteForm.telefone.trim() || undefined,
+        endereco: {
+          bairro: novaUnidadePacoteForm.bairro.trim() || undefined,
+          cidade: novaUnidadePacoteForm.cidade.trim() || undefined,
+        },
+        ativo: true,
+      });
+
+      setUnidades((current) => [persisted, ...current.filter((item) => item.id !== persisted.id)]);
+
+      const evoFilialId =
+        (pacoteEvoUnidadeResolvida ? String(pacoteEvoUnidadeResolvida) : pacoteEvoUnidadeId.trim()) || undefined;
+
+      try {
+        const savedOnboarding = await saveUnidadeOnboarding({
+          tenantId: persisted.id,
+          academiaId: pacoteMapeamento.academiaId,
+          estrategia: "PREPARAR_ETL",
+          evoFilialId,
+        });
+        upsertOnboardingState(savedOnboarding);
+      } catch (onboardingError) {
+        toast({
+          title: "Unidade criada, mas o onboarding nao foi salvo",
+          description: normalizeErrorMessage(onboardingError),
+          variant: "destructive",
+        });
+      }
+
+      aplicarDestinoPacotePorUnidade(persisted, { evoFilialId });
+      setNovaUnidadePacoteAberta(false);
+      toast({
+        title: "Nova unidade criada",
+        description: `${persisted.nome} foi criada e selecionada como destino da importacao.`,
+      });
+    } catch (saveError) {
+      setNovaUnidadePacoteErro(normalizeErrorMessage(saveError));
+    } finally {
+      setNovaUnidadePacoteSalvando(false);
+    }
+  }, [
+    aplicarDestinoPacotePorUnidade,
+    novaUnidadePacoteForm.bairro,
+    novaUnidadePacoteForm.cidade,
+    novaUnidadePacoteForm.documento,
+    novaUnidadePacoteForm.email,
+    novaUnidadePacoteForm.nome,
+    novaUnidadePacoteForm.nomeOriginal,
+    novaUnidadePacoteForm.subdomain,
+    novaUnidadePacoteForm.telefone,
+    pacoteEvoUnidadeId,
+    pacoteEvoUnidadeResolvida,
+    pacoteMapeamento.academiaId,
+    toast,
+    upsertOnboardingState,
+  ]);
 
   function handleSelecionarAcademia(idx: number, option: SuggestionOption) {
     const unidadeOptions = getUnidadesOptions(option.id);
@@ -748,8 +1314,6 @@ export default function ImportacaoEvoP0Page() {
       if (onboarding?.evoFilialId) {
         setPacoteEvoUnidadeId(onboarding.evoFilialId);
       }
-      setPacoteAnalise(null);
-      setPacoteArquivosSelecionados([]);
       return;
     }
     setPacoteMapeamento({
@@ -760,8 +1324,6 @@ export default function ImportacaoEvoP0Page() {
       unidadeNome: "",
       tenantId: "",
     });
-    setPacoteAnalise(null);
-    setPacoteArquivosSelecionados([]);
   }
 
   function handlePacoteSelecionarUnidade(option: SuggestionOption) {
@@ -775,8 +1337,6 @@ export default function ImportacaoEvoP0Page() {
     if (onboarding?.evoFilialId) {
       setPacoteEvoUnidadeId(onboarding.evoFilialId);
     }
-    setPacoteAnalise(null);
-    setPacoteArquivosSelecionados([]);
   }
 
   function handleAcademiaNomeChange(idx: number, value: string) {
@@ -796,8 +1356,6 @@ export default function ImportacaoEvoP0Page() {
       unidadeNome: "",
       tenantId: "",
     });
-    setPacoteAnalise(null);
-    setPacoteArquivosSelecionados([]);
   }
 
   function handleUnidadeNomeChange(idx: number, value: string) {
@@ -813,8 +1371,6 @@ export default function ImportacaoEvoP0Page() {
       unidadeNome: value,
       tenantId: "",
     });
-    setPacoteAnalise(null);
-    setPacoteArquivosSelecionados([]);
   }
 
   function togglePacoteArquivo(chave: string, checked: boolean) {
@@ -836,12 +1392,8 @@ export default function ImportacaoEvoP0Page() {
   }
 
   const validarFormPacote = useCallback((): string | null => {
-    if (!pacoteMapeamento.academiaId || !pacoteMapeamento.tenantId) {
-      return "Selecione academia e unidade do pacote.";
-    }
-    const unidadeNum = Number(pacoteEvoUnidadeId);
-    if (!pacoteEvoUnidadeId || Number.isNaN(unidadeNum) || unidadeNum <= 0) {
-      return "Informe o EVO Unidade como número inteiro válido.";
+    if (pacoteEvoUnidadeId.trim() && !parsePositiveInteger(pacoteEvoUnidadeId)) {
+      return "Quando informado, EVO Unidade deve ser um número inteiro válido.";
     }
     if (!pacoteArquivo) {
       return "Selecione o arquivo de pacote (.zip ou .csv).";
@@ -850,14 +1402,28 @@ export default function ImportacaoEvoP0Page() {
       return "maxRejeicoesRetorno deve estar entre 0 e 10000.";
     }
     return null;
-  }, [pacoteArquivo, pacoteEvoUnidadeId, pacoteMapeamento.academiaId, pacoteMapeamento.tenantId, pacoteMaxRejeicoes]);
+  }, [pacoteArquivo, pacoteEvoUnidadeId, pacoteMaxRejeicoes]);
+
+  const aplicarAnalisePacote = useCallback((analise: UploadAnaliseResponse, preserveSelection = false) => {
+    setPacoteAnalise(analise);
+    const disponiveis = analise.arquivos.filter((arquivo) => arquivo.disponivel).map((arquivo) => arquivo.chave);
+    setPacoteArquivosSelecionados((prev) => {
+      if (!preserveSelection) {
+        return disponiveis;
+      }
+      return prev.filter((chave) => disponiveis.includes(chave));
+    });
+
+    const evoUnidadeId = parsePositiveInteger(analise.evoUnidadeId);
+    if (evoUnidadeId) {
+      const normalizedId = String(evoUnidadeId);
+      setPacoteEvoUnidadeId(normalizedId);
+      setPacoteMapeamento((current) => ({ ...current, idFilialEvo: normalizedId }));
+    }
+  }, []);
 
   const arquivosSelecionadosDaAnalise = useMemo(() => {
     if (!pacoteAnalise) return [];
-    if (!pacoteArquivosSelecionados.length) {
-      const disponiveis = pacoteAnalise.arquivos.filter((arquivo) => arquivo.disponivel).map((arquivo) => arquivo.chave);
-      return [...disponiveis];
-    }
     return pacoteArquivosSelecionados.filter((chave) => {
       const encontrado = pacoteAnalise.arquivos.find((arquivo) => arquivo.chave === chave);
       return Boolean(encontrado?.disponivel);
@@ -879,15 +1445,15 @@ export default function ImportacaoEvoP0Page() {
 
     setPacoteAnalisando(true);
     try {
+      const evoUnidadeId = parsePositiveInteger(pacoteEvoUnidadeId);
       const analise = await uploadBackofficeEvoP0Pacote({
-        tenantId: pacoteMapeamento.tenantId,
-        evoUnidadeId: Number(pacoteEvoUnidadeId),
+        tenantId: pacoteMapeamento.tenantId || undefined,
+        evoUnidadeId,
         arquivo: pacoteArquivo,
-        contextoTenantId: pacoteMapeamento.tenantId,
+        contextoTenantId: pacoteMapeamento.tenantId || undefined,
       });
-      setPacoteAnalise(analise);
+      aplicarAnalisePacote(analise);
       const disponiveis = analise.arquivos.filter((arquivo) => arquivo.disponivel).map((arquivo) => arquivo.chave);
-      setPacoteArquivosSelecionados(disponiveis);
       toast({
         title: "Pacote analisado",
         description: `Upload ${analise.uploadId} pronto. ${disponiveis.length} de ${analise.arquivos.length} arquivo(s) disponíveis.`,
@@ -925,17 +1491,23 @@ export default function ImportacaoEvoP0Page() {
 
     setPacoteAnalisando(true);
     try {
+      if (pacoteArquivo && pacotePrecisaReanaliseManual) {
+        const analise = await uploadBackofficeEvoP0Pacote({
+          tenantId: pacoteMapeamento.tenantId || undefined,
+          evoUnidadeId: pacoteEvoUnidadeInformada,
+          arquivo: pacoteArquivo,
+          contextoTenantId: pacoteMapeamento.tenantId || undefined,
+        });
+        aplicarAnalisePacote(analise);
+        toast({ title: "Pacote reanalisado", description: "Nova análise concluída com a EVO Unidade informada." });
+        return;
+      }
+
       const analise = await getBackofficeEvoP0PacoteAnalise({
         uploadId: pacoteAnalise.uploadId,
-        tenantId: pacoteAnalise.tenantId,
+        tenantId: pacoteMapeamento.tenantId || pacoteAnalise.tenantId || undefined,
       });
-      setPacoteAnalise(analise);
-      const disponiveis = analise.arquivos.filter((arquivo) => arquivo.disponivel).map((arquivo) => arquivo.chave);
-      setPacoteArquivosSelecionados((prev) => {
-        const interseccao = prev.filter((chave) => disponiveis.includes(chave));
-        if (interseccao.length > 0) return interseccao;
-        return disponiveis;
-      });
+      aplicarAnalisePacote(analise, true);
       toast({ title: "Análise atualizada", description: "Revalidação de pacote concluída." });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
@@ -955,6 +1527,25 @@ export default function ImportacaoEvoP0Page() {
       return;
     }
 
+    if (!pacoteEvoUnidadeResolvida) {
+      toast({
+        title: "Filial pendente",
+        description:
+          "O pacote ainda não tem uma EVO Unidade resolvida. Informe a unidade manualmente e analise novamente antes de criar o job.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!pacoteMapeamento.academiaId || !pacoteMapeamento.tenantId) {
+      toast({
+        title: "Destino pendente",
+        description: "Escolha uma unidade existente ou crie uma nova unidade antes de criar o job.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const arquivosParaImportar = arquivosSelecionadosDaAnalise;
     if (!arquivosParaImportar.length) {
       toast({
@@ -967,21 +1558,56 @@ export default function ImportacaoEvoP0Page() {
 
     setPacoteCriandoJob(true);
     try {
+      let analiseAtiva = pacoteAnalise;
+      if (pacotePrecisaVincularTenant) {
+        if (!pacoteArquivo) {
+          toast({
+            title: "Reanalise necessária",
+            description:
+              "O pacote foi analisado sem vínculo de unidade. Reenvie o ZIP com a unidade destino escolhida antes de criar o job.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const analiseVinculada = await uploadBackofficeEvoP0Pacote({
+          tenantId: pacoteMapeamento.tenantId,
+          evoUnidadeId: pacoteEvoUnidadeResolvida,
+          arquivo: pacoteArquivo,
+          contextoTenantId: pacoteMapeamento.tenantId,
+        });
+        aplicarAnalisePacote(analiseVinculada, true);
+        analiseAtiva = analiseVinculada;
+        toast({
+          title: "Pacote vinculado a unidade destino",
+          description: "O ZIP foi reprocessado com a unidade selecionada antes da criação do job.",
+        });
+      }
+      const evoUnidadeIdParaJob = parsePositiveInteger(analiseAtiva.evoUnidadeId) ?? pacoteEvoUnidadeResolvida;
+
       const job = await createBackofficeEvoP0PacoteJob({
-        uploadId: pacoteAnalise.uploadId,
+        uploadId: analiseAtiva.uploadId,
         dryRun: pacoteDryRun,
         maxRejeicoesRetorno: pacoteMaxRejeicoes,
         arquivos: arquivosParaImportar,
-        tenantId: pacoteAnalise.tenantId,
+        tenantId: pacoteMapeamento.tenantId,
+        evoUnidadeId: evoUnidadeIdParaJob,
       });
 
-      const tenant = normalizeTenantId(pacoteAnalise.tenantId);
+      const tenant = normalizeTenantId(pacoteMapeamento.tenantId);
       const nomeAcademia = pacoteMapeamento.academiaNome || "Não informado";
       const nomeUnidade = pacoteMapeamento.unidadeNome || "Não informado";
+      const alias = normalizeJobAlias(pacoteJobAlias) ??
+        buildDefaultJobAlias({
+          origem: "pacote",
+          unidadeNome: nomeUnidade,
+          academiaNome: nomeAcademia,
+          criadoEm: new Date().toISOString(),
+        });
       await registrarOnboardingDoJob({
-        tenantId: pacoteAnalise.tenantId,
+        tenantId: pacoteMapeamento.tenantId,
         academiaId: pacoteMapeamento.academiaId,
-        evoFilialId: pacoteEvoUnidadeId,
+        evoFilialId: String(evoUnidadeIdParaJob),
         jobId: job.jobId,
         origem: "PACOTE",
         mensagem: `Job ${job.jobId} criado a partir do pacote EVO.`,
@@ -989,21 +1615,26 @@ export default function ImportacaoEvoP0Page() {
       upsertJobHistorico({
         tenantId: tenant,
         jobId: job.jobId,
+        alias,
         academiaNome: nomeAcademia,
         unidadeNome: nomeUnidade,
         origem: "pacote",
         criadoEm: new Date().toISOString(),
         status: "PROCESSANDO",
+        arquivosSelecionados: arquivosParaImportar,
+        arquivosDisponiveis: analiseAtiva.arquivos.filter((arquivo) => arquivo.disponivel).map((arquivo) => arquivo.chave),
       });
       setJobId(job.jobId);
       setJobTenantId(tenant);
       setJobTenantIds([tenant]);
       setJobOrigem("pacote");
+      setJobAliasDraft(alias);
+      setPacoteJobAlias("");
       lastJobStatusRef.current = null;
       setJobLabelFromContext(tenant, nomeAcademia, nomeUnidade);
       setStoredJobId(tenant, job.jobId);
       setActiveTab("acompanhamento");
-      startPolling(job.jobId, true, [tenant], "pacote", normalizeTenantId(pacoteAnalise.tenantId));
+      startPolling(job.jobId, true, [tenant], "pacote", tenant);
       toast({
         title: "Job criado",
         description: `Job ${job.jobId} criado com sucesso.`,
@@ -1100,18 +1731,38 @@ export default function ImportacaoEvoP0Page() {
           mapeamentos.find((m) => normalizeTenantId(m.tenantId) === currentTenant) ?? mapeamentos[0];
         const nomeAcademia = mapeamentoPrimario?.academiaNome || "Não informado";
         const nomeUnidade = mapeamentoPrimario?.unidadeNome || "Não informado";
+        const alias = normalizeJobAlias(csvJobAlias) ??
+          buildDefaultJobAlias({
+            origem: "csv",
+            unidadeNome: nomeUnidade,
+            academiaNome: nomeAcademia,
+            criadoEm: new Date().toISOString(),
+          });
         upsertJobHistorico({
           tenantId: currentTenant,
           jobId: newJobId,
+          alias,
           academiaNome: nomeAcademia,
           unidadeNome: nomeUnidade,
           origem: "csv",
           criadoEm: new Date().toISOString(),
           status: currentStatus,
+          arquivosSelecionados: FILE_FIELDS.flatMap(({ key, field }) => {
+            if (!files[key]) return [];
+            const arquivoCanonico = arquivoCanonicoPorCsvField.get(field);
+            return arquivoCanonico ? [arquivoCanonico] : [];
+          }),
+          arquivosDisponiveis: FILE_FIELDS.flatMap(({ key, field }) => {
+            if (!files[key]) return [];
+            const arquivoCanonico = arquivoCanonicoPorCsvField.get(field);
+            return arquivoCanonico ? [arquivoCanonico] : [];
+          }),
         });
         setJobTenantId(currentTenant);
         setJobTenantIds(body.tenantIds?.map((item) => normalizeTenantId(item)).filter(Boolean) ?? tenantIds);
         setJobOrigem("csv");
+        setJobAliasDraft(alias);
+        setCsvJobAlias("");
         lastJobStatusRef.current = null;
         setJobLabelFromContext(currentTenant, nomeAcademia, nomeUnidade);
         setJobId(newJobId);
@@ -1124,7 +1775,7 @@ export default function ImportacaoEvoP0Page() {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ApiRequestError) {
         const trimmedBody = formatErrorBody(error.responseBody);
-        console.error("Erro na importação EVO P0", {
+        console.error("Erro na importação EVO", {
           status: error.status,
           path: error.path,
           body: trimmedBody,
@@ -1321,19 +1972,60 @@ export default function ImportacaoEvoP0Page() {
     }
   }
 
-  async function selecionarJobDaLista(jobIdSelecionado: string) {
-    const job = jobsEmExecucao.find((item) => item.jobId === jobIdSelecionado);
-    if (!job) {
-      return;
-    }
+  function selecionarJobDoHistorico(job: JobHistoryMeta) {
     setJobId(job.jobId);
     setStoredJobId(job.tenantId, job.jobId);
     setJobTenantId(job.tenantId);
     setJobTenantIds([job.tenantId]);
     setJobOrigem(job.origem);
+    setJobAliasDraft(resolveJobAlias(job));
     lastJobStatusRef.current = null;
     setJobLabelFromContext(job.tenantId, job.academiaNome, job.unidadeNome);
+    setActiveTab("acompanhamento");
     startPolling(job.jobId, true, [job.tenantId], job.origem, job.tenantId);
+  }
+
+  async function selecionarJobDaLista(jobIdSelecionado: string) {
+    const job = jobsEmExecucao.find((item) => item.jobId === jobIdSelecionado) ?? jobsHistorico.find((item) => item.jobId === jobIdSelecionado);
+    if (!job) {
+      return;
+    }
+    selecionarJobDoHistorico(job);
+  }
+
+  function salvarAliasJobAtual() {
+    if (!jobId) {
+      toast({ title: "Selecione um job", description: "Escolha um job para salvar o alias.", variant: "destructive" });
+      return;
+    }
+    const tenantParaSalvar =
+      normalizeTenantId(jobHistoricoAtual?.tenantId) || normalizeTenantId(jobTenantId) || resolveCurrentTenantIdRaw();
+    if (!tenantParaSalvar) {
+      toast({ title: "Sem contexto do job", description: "Não foi possível identificar a unidade do job.", variant: "destructive" });
+      return;
+    }
+    if (jobHistoricoAtual) {
+      atualizarJobHistoricoMeta(jobId, tenantParaSalvar, {
+        alias: jobAliasDraft,
+      });
+    } else {
+      upsertJobHistorico({
+        tenantId: tenantParaSalvar,
+        jobId,
+        alias: jobAliasDraft,
+        academiaNome: jobContextoLabel.academiaNome,
+        unidadeNome: jobContextoLabel.unidadeNome,
+        origem: jobOrigem ?? "csv",
+        criadoEm: jobResumo?.solicitadoEm ?? new Date().toISOString(),
+        status: jobResumo?.status,
+      });
+    }
+    toast({
+      title: normalizeJobAlias(jobAliasDraft) ? "Alias salvo" : "Alias removido",
+      description: normalizeJobAlias(jobAliasDraft)
+        ? "O alias foi salvo neste navegador para facilitar buscas futuras."
+        : "O job voltou a usar o nome automático.",
+    });
   }
 
   function openRejeicoesPorEntidade(entidade?: string, forceShow = true) {
@@ -1436,14 +2128,68 @@ export default function ImportacaoEvoP0Page() {
   }, [entidadeFiltro, rejeicoes]);
   const tenantFoco = normalizeTenantId(pacoteMapeamento.tenantId || preselectedTenantId || mapeamentos[0]?.tenantId);
   const onboardingFoco = onboardingIndex.get(tenantFoco);
+  const aliasSugestaoCsv = useMemo(() => {
+    const mapeamentoPrimario = mapeamentos.find((item) => item.unidadeNome || item.academiaNome) ?? mapeamentos[0];
+    return buildDefaultJobAlias({
+      origem: "csv",
+      unidadeNome: mapeamentoPrimario?.unidadeNome,
+      academiaNome: mapeamentoPrimario?.academiaNome,
+    });
+  }, [mapeamentos]);
+  const aliasSugestaoPacote = useMemo(
+    () =>
+      buildDefaultJobAlias({
+        origem: "pacote",
+        unidadeNome: pacoteMapeamento.unidadeNome,
+        academiaNome: pacoteMapeamento.academiaNome,
+      }),
+    [pacoteMapeamento.academiaNome, pacoteMapeamento.unidadeNome]
+  );
+  const tenantFocoAcademiaId = useMemo(() => {
+    const tenant = tenantIndex.get(tenantFoco);
+    return normalizeTenantId(resolveUnidadeAcademiaId(tenant));
+  }, [tenantFoco, tenantIndex]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadEligibleAdmins() {
+      if (!tenantFocoAcademiaId) {
+        if (!mounted) return;
+        setEligibleAdminsPreview({ items: [], total: 0, loading: false });
+        return;
+      }
+
+      setEligibleAdminsPreview((current) => ({ ...current, loading: true }));
+      try {
+        const response = await listEligibleNewUnitAdminsPreview({
+          academiaId: tenantFocoAcademiaId,
+          size: 4,
+        });
+        if (!mounted) return;
+        setEligibleAdminsPreview({
+          items: response.items,
+          total: response.total ?? response.items.length,
+          loading: false,
+        });
+      } catch {
+        if (!mounted) return;
+        setEligibleAdminsPreview({ items: [], total: 0, loading: false });
+      }
+    }
+
+    void loadEligibleAdmins();
+    return () => {
+      mounted = false;
+    };
+  }, [tenantFocoAcademiaId]);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium text-gym-accent">Admin &gt; Integrações &gt; EVO</p>
-        <h1 className="text-3xl font-display font-bold leading-tight">Acompanhamento de Importação EVO P0</h1>
+        <h1 className="text-3xl font-display font-bold leading-tight">Acompanhamento de Importação EVO</h1>
         <p className="text-sm text-muted-foreground">
-          Dispare e acompanhe jobs de importação EVO P0. Salva automaticamente o último job para retomar depois.
+          Dispare e acompanhe jobs de importação EVO. O último job fica salvo para retomar depois.
         </p>
       </div>
 
@@ -1454,6 +2200,30 @@ export default function ImportacaoEvoP0Page() {
           <span className="text-muted-foreground">
             Unidade foco: {resolveTenantLabel(tenantFoco).unidadeNome} · EVO {onboardingFoco.evoFilialId || "não vinculado"}
           </span>
+        </div>
+      ) : null}
+
+      {tenantFocoAcademiaId ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="font-medium">
+              {eligibleAdminsPreview.loading
+                ? "Consultando usuários elegíveis para novas unidades..."
+                : eligibleAdminsPreview.total > 0
+                  ? `${eligibleAdminsPreview.total} usuário(s) administrativos receberão acesso automático em unidades novas desta academia.`
+                  : "Nenhum usuário está elegível para propagação automática nesta academia."}
+            </p>
+            {eligibleAdminsPreview.items.length > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Preview: {eligibleAdminsPreview.items.map((item) => item.fullName || item.name).join(", ")}.
+              </p>
+            ) : null}
+          </div>
+          <Button asChild size="sm" variant="outline" className="border-border">
+            <Link href={`/admin/seguranca/usuarios?academiaId=${tenantFocoAcademiaId}&eligible=1`}>
+              Abrir segurança
+            </Link>
+          </Button>
         </div>
       ) : null}
 
@@ -1490,6 +2260,18 @@ export default function ImportacaoEvoP0Page() {
                     value={maxRejeicoes}
                     onChange={(e) => setMaxRejeicoes(Number(e.target.value))}
                   />
+                </div>
+                <div className="min-w-72 flex-1 space-y-2">
+                  <Label htmlFor="csvJobAlias">Alias do job</Label>
+                  <Input
+                    id="csvJobAlias"
+                    value={csvJobAlias}
+                    onChange={(e) => setCsvJobAlias(e.target.value)}
+                    placeholder={aliasSugestaoCsv}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Opcional. Se vazio, a tela gera um nome automático para facilitar encontrar o job depois.
+                  </p>
                 </div>
               </div>
 
@@ -1582,35 +2364,27 @@ export default function ImportacaoEvoP0Page() {
               <CardTitle className="text-lg">Importação por pacote</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <Label className="font-semibold">Destino da importação</Label>
-                <MapeamentoAcademiaUnidadeSelector
-                  academiaNome={pacoteMapeamento.academiaNome}
-                  unidadeNome={pacoteMapeamento.unidadeNome}
-                  academiaId={pacoteMapeamento.academiaId}
-                  academiaOptions={academiaOptions}
-                  unidadesOptions={getUnidadesOptions(pacoteMapeamento.academiaId)}
-                  loadingAcademias={loadingMapeamento}
-                  onAcademiaNomeChange={handlePacoteAcademiaNomeChange}
-                  onUnidadeNomeChange={handlePacoteUnidadeNomeChange}
-                  onAcademiaSelect={handlePacoteSelecionarAcademia}
-                  onUnidadeSelect={handlePacoteSelecionarUnidade}
-                />
+              <div className="space-y-1">
+                <Label className="font-semibold">1. Analisar pacote</Label>
+                <p className="text-sm text-muted-foreground">
+                  Se quiser, já selecione a academia para contextualizar as sugestões. A EVO Unidade fica para depois da leitura do ZIP.
+                </p>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="pacoteEvoUnidadeId">EVO Unidade</Label>
-                  <Input
-                    id="pacoteEvoUnidadeId"
-                    type="number"
-                    min={1}
-                    placeholder="Ex.: 1"
-                    value={pacoteEvoUnidadeId}
-                    onChange={(e) => {
-                      setPacoteEvoUnidadeId(e.target.value);
-                      setPacoteMapeamento((current) => ({ ...current, idFilialEvo: e.target.value }));
-                    }}
+                  <Label>Academia</Label>
+                  <SuggestionInput
+                    value={pacoteMapeamento.academiaNome}
+                    onValueChange={handlePacoteAcademiaNomeChange}
+                    onSelect={handlePacoteSelecionarAcademia}
+                    options={academiaOptions}
+                    minCharsToSearch={0}
+                    placeholder="Pesquise por nome da academia"
+                    emptyText={loadingMapeamento ? "Carregando academias..." : "Nenhuma academia encontrada"}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Opcional nesta etapa. Ajuda a filtrar sugestões e a abertura do cadastro de nova unidade.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="pacoteArquivo">Arquivo</Label>
@@ -1649,6 +2423,18 @@ export default function ImportacaoEvoP0Page() {
                     onChange={(e) => setPacoteMaxRejeicoes(Number(e.target.value))}
                   />
                 </div>
+                <div className="min-w-72 flex-1 space-y-2">
+                  <Label htmlFor="pacoteJobAlias">Alias do job</Label>
+                  <Input
+                    id="pacoteJobAlias"
+                    value={pacoteJobAlias}
+                    onChange={(e) => setPacoteJobAlias(e.target.value)}
+                    placeholder={aliasSugestaoPacote}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Opcional. Use um nome curto para reencontrar este job sem depender do ID.
+                  </p>
+                </div>
               </div>
 
               <div className="flex justify-end">
@@ -1670,11 +2456,257 @@ export default function ImportacaoEvoP0Page() {
                       <span className="font-medium">Upload ID:</span> {pacoteAnalise.uploadId}
                     </p>
                     <p>
+                      <span className="font-medium">EVO Unidade:</span> {pacoteEvoUnidadeResolvida ?? "pendente"}
+                    </p>
+                    <p>
                       <span className="font-medium">Expira em:</span> {formatDateTime(pacoteAnalise.expiraEm)}
                     </p>
                     <p>
-                      <span className="font-medium">Disponíveis:</span> {pacoteArquivosSelecionados.length} / {pacoteAnalise.arquivos.length}
+                      <span className="font-medium">Disponíveis:</span> {arquivosSelecionadosDaAnalise.length} / {pacoteAnalise.arquivos.length}
                     </p>
+                  </div>
+
+                  {pacoteFilialResolvida && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3 rounded-md border border-border bg-background p-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold">Filial detectada no pacote</p>
+                          {pacoteEvoUnidadeResolvida ? (
+                            <Badge variant="secondary">EVO Unidade {pacoteEvoUnidadeResolvida}</Badge>
+                          ) : (
+                            <Badge variant="outline">Sem EVO Unidade resolvida</Badge>
+                          )}
+                        </div>
+                        <div className="grid gap-2 text-sm md:grid-cols-2">
+                          <p>
+                            <span className="font-medium">Nome no pacote:</span> {pacoteNomeFilialReferencia.nomeOriginal || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Unidade/filial:</span> {pacoteNomeFilialReferencia.unidadeNome || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Documento:</span> {pacoteFilialResolvida.documento?.trim() || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Abreviação:</span> {pacoteFilialResolvida.abreviacao?.trim() || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Local:</span>{" "}
+                            {[pacoteFilialResolvida.bairro, pacoteFilialResolvida.cidade]
+                              .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+                              .join(" · ") || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Email:</span> {pacoteFilialResolvida.email?.trim() || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Telefone:</span> {pacoteFilialResolvida.telefone?.trim() || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">EVO Filial ID:</span>{" "}
+                            {typeof pacoteFilialResolvida.evoFilialId === "number" ? pacoteFilialResolvida.evoFilialId : "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">EVO Academia ID:</span>{" "}
+                            {typeof pacoteFilialResolvida.evoAcademiaId === "number" ? pacoteFilialResolvida.evoAcademiaId : "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {pacoteFiliaisEncontradas.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">Filiais encontradas no pacote</p>
+                        <div className="grid gap-2">
+                          {pacoteFiliaisEncontradas.map((filial, index) => {
+                            const nome = filial.nome?.trim() || filial.abreviacao?.trim() || `Filial ${index + 1}`;
+                            const detalhes = [
+                              filial.documento?.trim(),
+                              filial.bairro?.trim(),
+                              filial.cidade?.trim(),
+                              filial.email?.trim(),
+                              filial.telefone?.trim(),
+                            ].filter((value): value is string => Boolean(value));
+                            const filialResolvida = pacoteEvoUnidadeResolvida && filial.evoFilialId === pacoteEvoUnidadeResolvida;
+                            return (
+                              <div key={`${filial.evoFilialId ?? filial.documento ?? nome}-${index}`} className="rounded-md border border-border bg-background px-3 py-2 text-sm">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-medium">{nome}</p>
+                                  {filialResolvida ? <Badge variant="secondary">Resolvida</Badge> : null}
+                                  {typeof filial.evoFilialId === "number" ? (
+                                    <Badge variant="outline">EVO {filial.evoFilialId}</Badge>
+                                  ) : null}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {detalhes.length > 0 ? detalhes.join(" · ") : "Sem detalhes adicionais."}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {!pacoteEvoUnidadeResolvida && (
+                    <>
+                      <Separator />
+                      <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                        <AlertCircle className="mt-0.5 size-4" />
+                        <div>
+                          <p className="font-semibold">
+                            {pacoteSelecaoFilialPendente ? "Seleção de filial pendente" : "EVO Unidade ainda não resolvida"}
+                          </p>
+                          <p>
+                            {pacoteSelecaoFilialPendente
+                              ? "O pacote contém múltiplas filiais. Informe manualmente a EVO Unidade correta e rode a análise novamente antes de criar o job."
+                              : "A análise ainda não retornou uma EVO Unidade válida. Se necessário, preencha o campo manualmente e reanalise o pacote antes de criar o job."}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold">2. Confirmar EVO Unidade e unidade destino</p>
+                      <p className="text-xs text-muted-foreground">
+                        Com os metadados do pacote, informe a EVO Unidade se necessário e então escolha uma unidade existente ou crie uma nova.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="pacoteEvoUnidadeId">EVO Unidade</Label>
+                        <Input
+                          id="pacoteEvoUnidadeId"
+                          type="number"
+                          min={1}
+                          placeholder="Ex.: 1"
+                          value={pacoteEvoUnidadeId}
+                          onChange={(e) => {
+                            setPacoteEvoUnidadeId(e.target.value);
+                            setPacoteMapeamento((current) => ({ ...current, idFilialEvo: e.target.value }));
+                          }}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Se você informar manualmente uma EVO Unidade depois da análise, use{" "}
+                          {pacotePrecisaReanaliseManual ? '"Atualizar análise"' : '"Analisar pacote"'} para reprocessar o ZIP com esse valor.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Academia selecionada</Label>
+                        <div className="rounded-md border border-border bg-background px-3 py-2 text-sm">
+                          <p className="font-medium">{pacoteMapeamento.academiaNome || "Nenhuma academia selecionada"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {pacoteMapeamento.academiaId
+                              ? "Você pode ajustar a academia e a unidade logo abaixo, se necessário."
+                              : "Selecione uma academia no passo 1 ou ajuste abaixo antes de criar o job."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {pacoteUnidadesSugeridas.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">Sugestões de unidades existentes</p>
+                        <div className="grid gap-2">
+                          {pacoteUnidadesSugeridas.map(({ unidade, academiaNome }) => {
+                            const selecionada = unidade.id === pacoteMapeamento.tenantId;
+                            return (
+                              <div
+                                key={unidade.id}
+                                className="flex flex-col gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm md:flex-row md:items-center md:justify-between"
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="font-medium">{unidade.nome}</p>
+                                    {selecionada ? <Badge variant="secondary">Selecionada</Badge> : null}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {academiaNome}
+                                    {unidade.documento ? ` · ${unidade.documento}` : ""}
+                                    {unidade.endereco?.cidade ? ` · ${unidade.endereco.cidade}` : ""}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant={selecionada ? "secondary" : "outline"}
+                                  onClick={() => aplicarDestinoPacotePorTenantId(unidade.id)}
+                                >
+                                  {selecionada ? "Destino atual" : "Usar esta unidade"}
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Nenhuma unidade existente corresponde automaticamente aos metadados detectados.
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={abrirNovaUnidadePacote}
+                        disabled={!pacoteFilialReferencia || !pacoteMapeamento.academiaId}
+                      >
+                        Criar nova unidade
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void carregarMapeamentoData()}
+                        disabled={loadingMapeamento}
+                      >
+                        {loadingMapeamento ? "Atualizando unidades..." : "Atualizar unidades"}
+                      </Button>
+                    </div>
+
+                    <MapeamentoAcademiaUnidadeSelector
+                      academiaNome={pacoteMapeamento.academiaNome}
+                      unidadeNome={pacoteMapeamento.unidadeNome}
+                      academiaId={pacoteMapeamento.academiaId}
+                      academiaOptions={academiaOptions}
+                      unidadesOptions={getUnidadesOptions(pacoteMapeamento.academiaId)}
+                      loadingAcademias={loadingMapeamento}
+                      onAcademiaNomeChange={handlePacoteAcademiaNomeChange}
+                      onUnidadeNomeChange={handlePacoteUnidadeNomeChange}
+                      onAcademiaSelect={handlePacoteSelecionarAcademia}
+                      onUnidadeSelect={handlePacoteSelecionarUnidade}
+                    />
+
+                    {pacoteMapeamento.academiaId && pacoteMapeamento.tenantId ? (
+                      <div className="rounded-md border border-border bg-background px-3 py-2 text-sm">
+                        <p className="font-medium">Destino selecionado</p>
+                        <p className="text-muted-foreground">
+                          {pacoteMapeamento.academiaNome || "Academia não informada"} · {pacoteMapeamento.unidadeNome || "Unidade não informada"}
+                        </p>
+                        {pacotePrecisaVincularTenant ? (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            O pacote atual ainda será vinculado a essa unidade antes da criação do job.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                        <AlertCircle className="mt-0.5 size-4" />
+                        <div>
+                          <p className="font-semibold">Destino ainda não selecionado</p>
+                          <p>Escolha uma unidade existente ou crie uma nova unidade antes de criar o job.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <Separator />
@@ -1683,36 +2715,65 @@ export default function ImportacaoEvoP0Page() {
                   {pacoteArquivosDisponiveis.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Nenhum arquivo reconhecido neste pacote.</p>
                   ) : (
-                    <div className="grid gap-2">
-                      {pacoteArquivosDisponiveis.map((arquivo) => {
-                        const selecionado = pacoteArquivosSelecionadosSet.has(arquivo.chave);
-                        return (
-                          <label
-                            key={arquivo.chave}
-                            className={cn(
-                              "grid grid-cols-[1fr_auto] gap-2 rounded-md border border-border px-3 py-2 text-sm",
-                              arquivo.disponivel ? "bg-background" : "bg-muted/40"
-                            )}
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          Selecionados: {arquivosSelecionadosDaAnalise.length} de {pacoteArquivosDisponiveis.filter((arquivo) => arquivo.disponivel).length} disponíveis
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setPacoteArquivosSelecionados(
+                                pacoteArquivosDisponiveis.filter((arquivo) => arquivo.disponivel).map((arquivo) => arquivo.chave)
+                              )
+                            }
                           >
-                            <div className="space-y-1">
-                              <p className="font-medium">{arquivo.rotulo || arquivo.chave}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {arquivo.arquivoEsperado} | enviado: {arquivo.nomeArquivoEnviado ?? "—"} | {formatBytes(arquivo.tamanhoBytes)}
-                              </p>
-                              <p className="text-xs text-muted-foreground">Chave: {arquivo.chave}</p>
-                            </div>
-                            <div className="flex items-center">
-                              <input
-                                type="checkbox"
-                                disabled={!arquivo.disponivel}
-                                checked={selecionado}
-                                onChange={(e) => togglePacoteArquivo(arquivo.chave, e.target.checked)}
-                              />
-                              {!arquivo.disponivel && <span className="ml-2 text-xs text-destructive">Não disponível</span>}
-                            </div>
-                          </label>
-                        );
-                      })}
+                            Selecionar disponíveis
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setPacoteArquivosSelecionados([])}
+                          >
+                            Desmarcar todos
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        {pacoteArquivosDisponiveis.map((arquivo) => {
+                          const selecionado = pacoteArquivosSelecionadosSet.has(arquivo.chave);
+                          return (
+                            <label
+                              key={arquivo.chave}
+                              className={cn(
+                                "grid grid-cols-[1fr_auto] gap-2 rounded-md border border-border px-3 py-2 text-sm",
+                                arquivo.disponivel ? "bg-background" : "bg-muted/40"
+                              )}
+                            >
+                              <div className="space-y-1">
+                                <p className="font-medium">{arquivo.rotulo || arquivo.chave}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {arquivo.arquivoEsperado} | enviado: {arquivo.nomeArquivoEnviado ?? "—"} | {formatBytes(arquivo.tamanhoBytes)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">Chave: {arquivo.chave}</p>
+                              </div>
+                              <div className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  disabled={!arquivo.disponivel}
+                                  checked={selecionado}
+                                  onChange={(e) => togglePacoteArquivo(arquivo.chave, e.target.checked)}
+                                />
+                                {!arquivo.disponivel && <span className="ml-2 text-xs text-destructive">Não disponível</span>}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -1729,7 +2790,7 @@ export default function ImportacaoEvoP0Page() {
                       disabled={pacoteAnalisando}
                       className="ml-2"
                     >
-                      Atualizar análise
+                      {pacotePrecisaReanaliseManual ? "Reanalisar com EVO Unidade" : "Atualizar análise"}
                     </Button>
                   </div>
                 </div>
@@ -1803,10 +2864,14 @@ export default function ImportacaoEvoP0Page() {
                       {jobsEmExecucao.map((job) => {
                         const academia = job.academiaNome || "Não informado";
                         const unidade = job.unidadeNome || "Não informado";
+                        const alias = resolveJobAlias(job);
                         return (
                           <SelectItem key={job.jobId} value={job.jobId}>
                             <span className="inline-flex w-full items-center justify-between gap-2">
-                              <span>{job.jobId}</span>
+                              <span className="flex flex-col text-left">
+                                <span>{alias}</span>
+                                <span className="font-mono text-[11px] text-muted-foreground">{job.jobId}</span>
+                              </span>
                               <span className="text-xs text-muted-foreground">
                                 {academia} · {unidade}
                               </span>
@@ -1819,6 +2884,48 @@ export default function ImportacaoEvoP0Page() {
                 </div>
               )}
 
+              {jobsRecentes.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label className="text-sm">Últimos jobs salvos</Label>
+                    <p className="text-xs text-muted-foreground">Histórico local deste navegador</p>
+                  </div>
+                  <div className="grid gap-2">
+                    {jobsRecentes.map((job) => {
+                      const alias = resolveJobAlias(job);
+                      const status = statusVariant(job.status);
+                      return (
+                        <button
+                          key={`${job.tenantId}-${job.jobId}`}
+                          type="button"
+                          className={cn(
+                            "rounded-md border border-border bg-background px-3 py-3 text-left transition hover:bg-muted/40",
+                            job.jobId === jobId ? "border-gym-accent/40 bg-gym-accent/5" : ""
+                          )}
+                          onClick={() => selecionarJobDoHistorico(job)}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="space-y-1">
+                              <p className="font-medium text-foreground">{alias}</p>
+                              <p className="font-mono text-xs text-muted-foreground">{job.jobId}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {job.academiaNome} · {job.unidadeNome} · {formatDateTime(job.criadoEm)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">{job.origem === "pacote" ? "Pacote" : "CSV"}</Badge>
+                              <Badge variant={status.variant} className={status.className}>
+                                {job.status ?? "SALVO"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <Separator />
 
               {!jobId && <p className="text-sm text-muted-foreground">Nenhuma importação em andamento.</p>}
@@ -1826,9 +2933,10 @@ export default function ImportacaoEvoP0Page() {
               {jobId && (
                 <div className="space-y-3 rounded-lg border border-border bg-card p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Job</span>
-                      <span className="font-mono text-sm">{jobId}</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Job</span>
+                        <span className="text-sm font-semibold text-foreground">{jobAliasAtual || "Sem alias"}</span>
                       {(() => {
                         const v = statusVariant(jobResumo?.status);
                         return (
@@ -1838,6 +2946,8 @@ export default function ImportacaoEvoP0Page() {
                         );
                       })()}
                       {polling && <span className="text-xs text-muted-foreground">Atualizando a cada 3s…</span>}
+                      </div>
+                      <span className="font-mono text-xs text-muted-foreground">{jobId}</span>
                     </div>
                     <div className="space-y-1 text-xs text-muted-foreground">
                       <p>
@@ -1854,6 +2964,26 @@ export default function ImportacaoEvoP0Page() {
                       <Button size="sm" variant="ghost" onClick={() => pollOnce(jobId)} disabled={!jobResumo}>
                         <RefreshCw className="size-4" />
                         Atualizar agora
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                    <div className="space-y-2">
+                      <Label htmlFor="jobAliasDraft">Alias do job</Label>
+                      <Input
+                        id="jobAliasDraft"
+                        value={jobAliasDraft}
+                        onChange={(e) => setJobAliasDraft(e.target.value)}
+                        placeholder={jobAliasAtual || "Ex.: EVO Centro março"}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Salvo localmente neste navegador para facilitar localizar o job depois.
+                      </p>
+                    </div>
+                    <div className="flex items-end">
+                      <Button type="button" variant="outline" onClick={salvarAliasJobAtual}>
+                        Salvar alias
                       </Button>
                     </div>
                   </div>
@@ -1892,7 +3022,7 @@ export default function ImportacaoEvoP0Page() {
                   )}
 
                   <div className="grid gap-3 md:grid-cols-2">
-                    {resumoCards.map(({ key, label }) => {
+                    {resumoCardsVisiveis.map(({ key, label }) => {
                       const resumo = jobResumo?.[key] as EntidadeResumo | undefined;
                       const { percentual, temTotal } = getPercentual(resumo);
                       const entityFilter = resumoEntidadeMap[key];
@@ -1956,6 +3086,27 @@ export default function ImportacaoEvoP0Page() {
                       );
                     })}
                   </div>
+
+                  {resumoCardsOcultos.length > 0 ? (
+                    <details className="rounded-lg border border-border bg-muted/20 p-4">
+                      <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
+                        Arquivos ignorados nesta execução ({resumoCardsOcultos.length})
+                      </summary>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Estes blocos não foram selecionados na criação do job e ficam recolhidos para não poluir a tela.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {resumoCardsOcultos.map((card) => (
+                          <span
+                            key={String(card.key)}
+                            className="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground"
+                          >
+                            {card.label}
+                          </span>
+                        ))}
+                      </div>
+                    </details>
+                  ) : null}
                 </div>
               )}
             </CardContent>
@@ -2044,6 +3195,175 @@ export default function ImportacaoEvoP0Page() {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={novaUnidadePacoteAberta}
+        onOpenChange={(open) => {
+          setNovaUnidadePacoteAberta(open);
+          if (!open) {
+            setNovaUnidadePacoteErro(null);
+          }
+        }}
+      >
+        <DialogContent className="border-border bg-card sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Criar nova unidade a partir do ZIP</DialogTitle>
+            <DialogDescription>
+              Os dados detectados no pacote foram pre-carregados e podem ser ajustados antes da criacao da unidade.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">
+              <p className="font-medium">{pacoteMapeamento.academiaNome || "Academia nao informada"}</p>
+              <p className="text-xs text-muted-foreground">A nova unidade sera criada dentro desta academia.</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="nova-unidade-pacote-nome-original">Nome detectado no pacote</Label>
+                <Input
+                  id="nova-unidade-pacote-nome-original"
+                  value={novaUnidadePacoteForm.nomeOriginal}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, nomeOriginal: event.target.value }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Exemplo deste pacote: academia + unidade/filial, como `Academia Sergio Amim - S6`.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-nome">Nome da unidade</Label>
+                <Input
+                  id="nova-unidade-pacote-nome"
+                  value={novaUnidadePacoteForm.nome}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, nome: event.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-subdomain">Subdominio</Label>
+                <Input
+                  id="nova-unidade-pacote-subdomain"
+                  placeholder="academia-sergio-amim-s6"
+                  value={novaUnidadePacoteForm.subdomain}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({
+                      ...current,
+                      subdomain: normalizeSubdomain(event.target.value),
+                    }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Obrigatorio. O valor e normalizado para letras minusculas, numeros e hifens.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-documento">CNPJ</Label>
+                <Input
+                  id="nova-unidade-pacote-documento"
+                  inputMode="numeric"
+                  placeholder="00.000.000/0000-00"
+                  value={novaUnidadePacoteForm.documento}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({
+                      ...current,
+                      documento: formatCnpj(event.target.value),
+                    }))
+                  }
+                />
+                {novaUnidadePacoteForm.documento && !isValidCnpj(novaUnidadePacoteForm.documento) ? (
+                  <p className="text-xs text-destructive">Informe um CNPJ valido no padrao 00.000.000/0000-00.</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">O CNPJ e padronizado e validado antes de salvar.</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-email">Email</Label>
+                <Input
+                  id="nova-unidade-pacote-email"
+                  type="email"
+                  value={novaUnidadePacoteForm.email}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, email: event.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-telefone">Telefone</Label>
+                <Input
+                  id="nova-unidade-pacote-telefone"
+                  value={novaUnidadePacoteForm.telefone}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, telefone: event.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-bairro">Bairro</Label>
+                <Input
+                  id="nova-unidade-pacote-bairro"
+                  value={novaUnidadePacoteForm.bairro}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, bairro: event.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-cidade">Cidade</Label>
+                <Input
+                  id="nova-unidade-pacote-cidade"
+                  value={novaUnidadePacoteForm.cidade}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, cidade: event.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            {novaUnidadePacoteErro ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {novaUnidadePacoteErro}
+              </div>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setNovaUnidadePacoteAberta(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={salvarNovaUnidadePacote} disabled={novaUnidadePacoteSalvando}>
+              {novaUnidadePacoteSalvando ? "Criando unidade..." : "Criar e usar unidade"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+export default function ImportacaoEvoP0Page() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight">Importação EVO</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Carregando parâmetros da importação...</p>
+          </div>
+        </div>
+      }
+    >
+      <ImportacaoEvoP0PageContent />
+    </Suspense>
   );
 }

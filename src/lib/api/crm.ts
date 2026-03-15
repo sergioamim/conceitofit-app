@@ -1,4 +1,6 @@
 import type {
+  CampanhaCRM,
+  CampanhaStatus,
   ConverterProspectInput,
   ConverterProspectResponse,
   CrmActivity,
@@ -18,13 +20,14 @@ import type {
   StatusAgendamento,
   StatusProspect,
 } from "@/lib/types";
-import { apiRequest } from "./http";
+import { ApiRequestError, apiRequest } from "./http";
 
 type ProspectApiResponse = Partial<
   Pick<
     Prospect,
     | "id"
     | "tenantId"
+    | "responsavelId"
     | "nome"
     | "telefone"
     | "email"
@@ -107,9 +110,50 @@ function extractListItems<T>(response: GenericListResponse<T>): T[] {
   return response.items ?? response.content ?? response.data ?? response.rows ?? response.result ?? response.itens ?? [];
 }
 
+type CrmPlaybookUpsertData = {
+  nome: string;
+  objetivo: string;
+  stageStatus: StatusProspect;
+  ativo: boolean;
+  passos: Array<{
+    id?: string;
+    titulo: string;
+    descricao?: string;
+    acao: CrmPlaybook["passos"][number]["acao"];
+    prazoHoras: number;
+    obrigatoria: boolean;
+  }>;
+};
+
+type CrmCadenciaUpsertData = {
+  nome: string;
+  objetivo: string;
+  stageStatus: StatusProspect;
+  gatilho: CrmCadencia["gatilho"];
+  ativo: boolean;
+  passos: Array<{
+    id?: string;
+    titulo: string;
+    acao: CrmCadencia["passos"][number]["acao"];
+    delayDias: number;
+    template?: string;
+    automatica: boolean;
+  }>;
+};
+
+function mapUnavailableCapability(error: unknown, message: string): never {
+  if (error instanceof ApiRequestError && [404, 405, 501].includes(error.status)) {
+    throw new Error(message);
+  }
+  throw error;
+}
+
 export function buildProspectUpsertApiRequest(
   tenantId: string,
-  data: Pick<CreateProspectInput, "nome" | "telefone" | "email" | "cpf" | "origem" | "observacoes">
+  data: Pick<
+    CreateProspectInput,
+    "nome" | "telefone" | "email" | "cpf" | "origem" | "observacoes" | "responsavelId"
+  >
 ): ProspectUpsertApiRequest {
   return {
     tenantId,
@@ -129,7 +173,7 @@ export function normalizeProspectApiResponse(
   return {
     id: cleanString(input.id) ?? fallback?.id ?? "",
     tenantId: cleanString(input.tenantId) ?? fallback?.tenantId ?? "",
-    responsavelId: fallback?.responsavelId,
+    responsavelId: cleanString(input.responsavelId) ?? fallback?.responsavelId,
     nome: cleanString(input.nome) ?? fallback?.nome ?? "",
     telefone: cleanString(input.telefone) ?? fallback?.telefone ?? "",
     email: cleanString(input.email) ?? fallback?.email,
@@ -209,7 +253,10 @@ export async function createProspectApi(input: {
 export async function updateProspectApi(input: {
   tenantId: string;
   id: string;
-  data: Pick<CreateProspectInput, "nome" | "telefone" | "email" | "cpf" | "origem" | "observacoes">;
+  data: Pick<
+    CreateProspectInput,
+    "nome" | "telefone" | "email" | "cpf" | "origem" | "observacoes" | "responsavelId"
+  >;
 }): Promise<Prospect> {
   const response = await apiRequest<ProspectApiResponse>({
     path: `/api/v1/academia/prospects/${input.id}`,
@@ -227,6 +274,7 @@ export async function updateProspectApi(input: {
     cpf: input.data.cpf,
     origem: input.data.origem,
     observacoes: input.data.observacoes,
+    responsavelId: input.data.responsavelId,
   });
 }
 
@@ -291,7 +339,7 @@ export async function checkProspectDuplicateApi(input: {
   email?: string;
 }): Promise<boolean> {
   return apiRequest<boolean>({
-    path: "/api/v1/academia/prospects/verificar-duplicado",
+    path: "/api/v1/academia/prospects/check-duplicate",
     query: {
       tenantId: input.tenantId,
       telefone: cleanString(input.telefone),
@@ -387,11 +435,15 @@ export async function updateProspectAgendamentoApi(input: {
 export async function listCrmPipelineStagesApi(input: {
   tenantId: string;
 }): Promise<CrmPipelineStage[]> {
-  const response = await apiRequest<GenericListResponse<CrmPipelineStage>>({
-    path: "/api/v1/crm/pipeline/stages",
-    query: { tenantId: input.tenantId },
-  });
-  return extractListItems(response);
+  try {
+    const response = await apiRequest<GenericListResponse<CrmPipelineStage>>({
+      path: "/api/v1/crm/pipeline-stages",
+      query: { tenantId: input.tenantId },
+    });
+    return extractListItems(response);
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe estágios do pipeline CRM neste ambiente.");
+  }
 }
 
 export async function listCrmTasksApi(input: {
@@ -402,7 +454,7 @@ export async function listCrmTasksApi(input: {
   responsavelId?: string;
 }): Promise<CrmTask[]> {
   const response = await apiRequest<GenericListResponse<CrmTask>>({
-    path: "/api/v1/crm/tasks",
+    path: "/api/v1/crm/tarefas",
     query: {
       tenantId: input.tenantId,
       status: input.status,
@@ -428,12 +480,16 @@ export async function createCrmTaskApi(input: {
     vencimentoEm: string;
   };
 }): Promise<CrmTask> {
-  return apiRequest<CrmTask>({
-    path: "/api/v1/crm/tasks",
-    method: "POST",
-    query: { tenantId: input.tenantId },
-    body: input.data,
-  });
+  try {
+    return await apiRequest<CrmTask>({
+      path: "/api/v1/crm/tarefas",
+      method: "POST",
+      query: { tenantId: input.tenantId },
+      body: input.data,
+    });
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe criação de tarefas CRM neste ambiente.");
+  }
 }
 
 export async function updateCrmTaskApi(input: {
@@ -451,12 +507,16 @@ export async function updateCrmTaskApi(input: {
     vencimentoEm: string;
   }>;
 }): Promise<CrmTask> {
-  return apiRequest<CrmTask>({
-    path: `/api/v1/crm/tasks/${input.id}`,
-    method: "PATCH",
-    query: { tenantId: input.tenantId },
-    body: input.data,
-  });
+  try {
+    return await apiRequest<CrmTask>({
+      path: `/api/v1/crm/tarefas/${input.id}`,
+      method: "PUT",
+      query: { tenantId: input.tenantId },
+      body: input.data,
+    });
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe atualização de tarefas CRM neste ambiente.");
+  }
 }
 
 export async function listCrmPlaybooksApi(input: {
@@ -471,7 +531,7 @@ export async function listCrmPlaybooksApi(input: {
 
 export async function createCrmPlaybookApi(input: {
   tenantId: string;
-  data: Omit<CrmPlaybook, "id" | "tenantId" | "dataCriacao" | "dataAtualizacao">;
+  data: CrmPlaybookUpsertData;
 }): Promise<CrmPlaybook> {
   return apiRequest<CrmPlaybook>({
     path: "/api/v1/crm/playbooks",
@@ -484,11 +544,11 @@ export async function createCrmPlaybookApi(input: {
 export async function updateCrmPlaybookApi(input: {
   tenantId: string;
   id: string;
-  data: Partial<Omit<CrmPlaybook, "id" | "tenantId" | "dataCriacao" | "dataAtualizacao">>;
+  data: Partial<CrmPlaybookUpsertData>;
 }): Promise<CrmPlaybook> {
   return apiRequest<CrmPlaybook>({
     path: `/api/v1/crm/playbooks/${input.id}`,
-    method: "PATCH",
+    method: "PUT",
     query: { tenantId: input.tenantId },
     body: input.data,
   });
@@ -497,36 +557,48 @@ export async function updateCrmPlaybookApi(input: {
 export async function listCrmCadenciasApi(input: {
   tenantId: string;
 }): Promise<CrmCadencia[]> {
-  const response = await apiRequest<GenericListResponse<CrmCadencia>>({
-    path: "/api/v1/crm/cadencias",
-    query: { tenantId: input.tenantId },
-  });
-  return extractListItems(response);
+  try {
+    const response = await apiRequest<GenericListResponse<CrmCadencia>>({
+      path: "/api/v1/crm/cadencias",
+      query: { tenantId: input.tenantId },
+    });
+    return extractListItems(response);
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe cadências CRM neste ambiente.");
+  }
 }
 
 export async function createCrmCadenciaApi(input: {
   tenantId: string;
-  data: Omit<CrmCadencia, "id" | "tenantId" | "dataCriacao" | "dataAtualizacao" | "ultimaExecucao">;
+  data: CrmCadenciaUpsertData;
 }): Promise<CrmCadencia> {
-  return apiRequest<CrmCadencia>({
-    path: "/api/v1/crm/cadencias",
-    method: "POST",
-    query: { tenantId: input.tenantId },
-    body: input.data,
-  });
+  try {
+    return await apiRequest<CrmCadencia>({
+      path: "/api/v1/crm/cadencias",
+      method: "POST",
+      query: { tenantId: input.tenantId },
+      body: input.data,
+    });
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe criação de cadências CRM neste ambiente.");
+  }
 }
 
 export async function updateCrmCadenciaApi(input: {
   tenantId: string;
   id: string;
-  data: Partial<Omit<CrmCadencia, "id" | "tenantId" | "dataCriacao" | "dataAtualizacao">>;
+  data: Partial<CrmCadenciaUpsertData>;
 }): Promise<CrmCadencia> {
-  return apiRequest<CrmCadencia>({
-    path: `/api/v1/crm/cadencias/${input.id}`,
-    method: "PATCH",
-    query: { tenantId: input.tenantId },
-    body: input.data,
-  });
+  try {
+    return await apiRequest<CrmCadencia>({
+      path: `/api/v1/crm/cadencias/${input.id}`,
+      method: "PUT",
+      query: { tenantId: input.tenantId },
+      body: input.data,
+    });
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe atualização de cadências CRM neste ambiente.");
+  }
 }
 
 export async function listCrmAutomacoesApi(input: {
@@ -546,7 +618,7 @@ export async function updateCrmAutomacaoApi(input: {
 }): Promise<CrmAutomation> {
   return apiRequest<CrmAutomation>({
     path: `/api/v1/crm/automacoes/${input.id}`,
-    method: "PATCH",
+    method: "PUT",
     query: { tenantId: input.tenantId },
     body: input.data,
   });
@@ -557,13 +629,106 @@ export async function listCrmActivitiesApi(input: {
   prospectId?: string;
   limit?: number;
 }): Promise<CrmActivity[]> {
-  const response = await apiRequest<GenericListResponse<CrmActivity>>({
-    path: "/api/v1/crm/atividades",
-    query: {
-      tenantId: input.tenantId,
-      prospectId: input.prospectId,
-      limit: input.limit,
-    },
-  });
-  return extractListItems(response);
+  try {
+    const response = await apiRequest<GenericListResponse<CrmActivity>>({
+      path: "/api/v1/crm/atividades",
+      query: {
+        tenantId: input.tenantId,
+        prospectId: input.prospectId,
+        limit: input.limit,
+      },
+    });
+    return extractListItems(response);
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe histórico de atividades CRM neste ambiente.");
+  }
+}
+
+export async function listCrmCampanhasApi(input: {
+  tenantId: string;
+  status?: CampanhaStatus;
+}): Promise<CampanhaCRM[]> {
+  try {
+    const response = await apiRequest<GenericListResponse<CampanhaCRM>>({
+      path: "/api/v1/crm/campanhas",
+      query: {
+        tenantId: input.tenantId,
+        status: input.status,
+      },
+    });
+    return extractListItems(response);
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe campanhas CRM neste ambiente.");
+  }
+}
+
+export async function createCrmCampanhaApi(input: {
+  tenantId: string;
+  data: Omit<
+    CampanhaCRM,
+    "id" | "tenantId" | "disparosRealizados" | "ultimaExecucao" | "dataCriacao" | "dataAtualizacao" | "audienceEstimado"
+  >;
+}): Promise<CampanhaCRM> {
+  try {
+    return await apiRequest<CampanhaCRM>({
+      path: "/api/v1/crm/campanhas",
+      method: "POST",
+      query: { tenantId: input.tenantId },
+      body: input.data,
+    });
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe criação de campanhas CRM neste ambiente.");
+  }
+}
+
+export async function updateCrmCampanhaApi(input: {
+  tenantId: string;
+  id: string;
+  data: Partial<
+    Omit<
+      CampanhaCRM,
+      "id" | "tenantId" | "disparosRealizados" | "ultimaExecucao" | "dataCriacao" | "dataAtualizacao" | "audienceEstimado"
+    >
+  >;
+}): Promise<CampanhaCRM> {
+  try {
+    return await apiRequest<CampanhaCRM>({
+      path: `/api/v1/crm/campanhas/${input.id}`,
+      method: "PUT",
+      query: { tenantId: input.tenantId },
+      body: input.data,
+    });
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe atualização de campanhas CRM neste ambiente.");
+  }
+}
+
+export async function dispararCrmCampanhaApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<CampanhaCRM> {
+  try {
+    return await apiRequest<CampanhaCRM>({
+      path: `/api/v1/crm/campanhas/${input.id}/disparar`,
+      method: "POST",
+      query: { tenantId: input.tenantId },
+    });
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe disparo auditável de campanhas CRM neste ambiente.");
+  }
+}
+
+export async function encerrarCrmCampanhaApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<CampanhaCRM> {
+  try {
+    return await apiRequest<CampanhaCRM>({
+      path: `/api/v1/crm/campanhas/${input.id}/encerrar`,
+      method: "PATCH",
+      query: { tenantId: input.tenantId },
+    });
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe encerramento de campanhas CRM neste ambiente.");
+  }
 }

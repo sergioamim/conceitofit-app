@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { listVendasPage } from "@/lib/mock/services";
-import { getStore } from "@/lib/mock/store";
-import { isRealApiEnabled } from "@/lib/api/http";
+import { getBusinessTodayIso } from "@/lib/business-date";
+import { listVendasPageService, resolveVendaFluxoStatusFromApi } from "@/lib/comercial/runtime";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { TipoFormaPagamento, Venda } from "@/lib/types";
-import { resolveFluxoComercialStatus, STATUS_FLUXO_COMERCIAL_LABEL } from "@/lib/comercial/plano-flow";
+import { STATUS_FLUXO_COMERCIAL_LABEL } from "@/lib/comercial/plano-flow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -74,16 +74,6 @@ function formatItensResumo(venda: Venda): string {
   return itens.join(" | ");
 }
 
-function resolveVendaFluxoStatus(venda: Venda) {
-  if (!venda.matriculaId) return undefined;
-  const store = getStore();
-  const matricula = store.matriculas.find((item) => item.id === venda.matriculaId);
-  if (!matricula) return undefined;
-  const plano = store.planos.find((item) => item.id === matricula.planoId);
-  const pagamento = store.pagamentos.find((item) => item.matriculaId === matricula.id);
-  return resolveFluxoComercialStatus({ matricula, plano, pagamento });
-}
-
 function getFluxoBadgeClass(value: string | undefined) {
   if (value === "ATIVO") return "bg-gym-teal/15 text-gym-teal";
   if (value === "AGUARDANDO_ASSINATURA") return "bg-amber-500/15 text-amber-400";
@@ -98,8 +88,7 @@ type FormaPagamentoFiltro = "TODOS" | TipoFormaPagamento;
 const MIN_FILTER_YEAR = 2000;
 
 function todayIso() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return getBusinessTodayIso();
 }
 
 const PAGE_SIZE = 20;
@@ -113,6 +102,7 @@ function isValidFilterDate(value: string): boolean {
 }
 
 export default function VendasPage() {
+  const { tenantId, tenantResolved } = useTenantContext();
   const today = todayIso();
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [page, setPage] = useState(0);
@@ -136,6 +126,7 @@ export default function VendasPage() {
   }, [periodoInicio, periodoFim]);
 
   const load = useCallback(async () => {
+    if (!tenantId) return;
     if (!inicioNormalizado || !fimNormalizado) {
       setError(`Período inválido. Use datas a partir de ${MIN_FILTER_YEAR} no formato YYYY-MM-DD.`);
       setVendas([]);
@@ -149,14 +140,14 @@ export default function VendasPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await listVendasPage({
-        page: page + 1,
+      const response = await listVendasPageService({
+        tenantId,
+        page,
         size: 20,
         dataInicio: inicioNormalizado || undefined,
         dataFim: fimNormalizado || undefined,
         tipoVenda: filtroTipo === "TODOS" ? undefined : filtroTipo,
         formaPagamento: filtroFormaPagamento === "TODOS" ? undefined : filtroFormaPagamento,
-        includeTotals: true,
       });
       setVendas(response.items);
       setHasNext(response.hasNext);
@@ -173,7 +164,7 @@ export default function VendasPage() {
     } finally {
       setLoading(false);
     }
-  }, [filtroFormaPagamento, filtroTipo, fimNormalizado, inicioNormalizado, page]);
+  }, [filtroFormaPagamento, filtroTipo, fimNormalizado, inicioNormalizado, page, tenantId]);
 
   const totalPaginas = useMemo(() => {
     if (typeof totalRegistros === "number" && totalRegistros > 0) {
@@ -185,14 +176,9 @@ export default function VendasPage() {
   }, [hasNext, page, totalRegistros]);
 
   useEffect(() => {
+    if (!tenantResolved || !tenantId) return;
     void load();
-    if (isRealApiEnabled()) return;
-    function handleUpdate() {
-      void load();
-    }
-    window.addEventListener("academia-store-updated", handleUpdate);
-    return () => window.removeEventListener("academia-store-updated", handleUpdate);
-  }, [load]);
+  }, [load, tenantId, tenantResolved]);
 
   const totalFiltrado = useMemo(() => {
     if (typeof totalGeralPeriodo === "number") return totalGeralPeriodo;
@@ -359,7 +345,7 @@ export default function VendasPage() {
         getRowKey={(venda) => venda.id}
         renderCells={(venda) => {
           const forma = resolveFormaPagamento(venda);
-          const fluxoStatus = resolveVendaFluxoStatus(venda);
+          const fluxoStatus = resolveVendaFluxoStatusFromApi(venda);
           return (
             <>
               <TableCell className="px-4 py-3 text-sm text-muted-foreground">{formatDateTime(venda.dataCriacao)}</TableCell>

@@ -1,5 +1,5 @@
 import type { Pagamento, ReceberPagamentoInput, StatusPagamento } from "@/lib/types";
-import { apiRequest } from "./http";
+import { ApiRequestError, apiRequest } from "./http";
 
 type PagamentoApiResponse = Pagamento;
 
@@ -42,7 +42,7 @@ export async function listPagamentosApi(input: {
   size?: number;
 }): Promise<Pagamento[]> {
   const response = await apiRequest<PagamentoApiResponse[]>({
-    path: "/api/v1/academia/pagamentos",
+    path: "/api/v1/comercial/pagamentos",
     query: {
       tenantId: input.tenantId,
       status: input.status,
@@ -60,7 +60,7 @@ export async function receberPagamentoApi(input: {
   data: ReceberPagamentoInput;
 }): Promise<Pagamento> {
   const response = await apiRequest<PagamentoApiResponse>({
-    path: `/api/v1/academia/pagamentos/${input.id}/receber`,
+    path: `/api/v1/comercial/pagamentos/${input.id}/receber`,
     method: "POST",
     query: { tenantId: input.tenantId },
     body: input.data,
@@ -72,9 +72,38 @@ export async function emitirNfsePagamentoApi(input: {
   tenantId: string;
   id: string;
 }): Promise<Pagamento> {
-  return apiRequest<Pagamento>({
-    path: `/api/v1/comercial/pagamentos/${input.id}/emitir-nfse`,
-    method: "POST",
-    query: { tenantId: input.tenantId },
-  });
+  try {
+    const response = await apiRequest<PagamentoApiResponse>({
+      path: `/api/v1/comercial/pagamentos/${input.id}/nfse`,
+      method: "POST",
+      query: { tenantId: input.tenantId },
+    });
+    return normalizePagamento(response);
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 404) {
+      throw new Error("Backend ainda não expõe emissão de NFSe por pagamento neste ambiente.");
+    }
+    throw error;
+  }
+}
+
+export async function emitirNfseEmLoteApi(input: {
+  tenantId: string;
+  ids: string[];
+}): Promise<Pagamento[]> {
+  try {
+    const response = await apiRequest<PagamentoApiResponse[] | { items?: PagamentoApiResponse[]; data?: PagamentoApiResponse[] }>({
+      path: "/api/v1/comercial/pagamentos/nfse/lote",
+      method: "POST",
+      query: { tenantId: input.tenantId },
+      body: { ids: input.ids },
+    });
+    const rows = Array.isArray(response) ? response : response.items ?? response.data ?? [];
+    return rows.map(normalizePagamento);
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 404) {
+      throw new Error("Backend ainda não expõe emissão de NFSe em lote neste ambiente.");
+    }
+    throw error;
+  }
 }

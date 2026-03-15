@@ -1,9 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { listAtividadeGrades, listAtividades, listFuncionarios, listHorarios, listSalas } from "@/lib/mock/services";
+import {
+  listAtividadeGradesApi,
+  listAtividadesApi,
+  listFuncionariosApi,
+  listSalasApi,
+} from "@/lib/api/administrativo";
+import { getBusinessTodayDate, getBusinessTodayIso } from "@/lib/business-date";
+import { listHorariosApi } from "@/lib/api/contexto-unidades";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type { Atividade, AtividadeGrade, DiaSemana, Funcionario, HorarioFuncionamento, Sala } from "@/lib/types";
+import { useTenantContext } from "@/hooks/use-session-context";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -54,32 +64,57 @@ function formatMinutes(totalMinutes: number) {
 }
 
 export default function GradePage() {
-  const [weekStart, setWeekStart] = useState(startOfWeek(new Date()));
+  const tenantContext = useTenantContext();
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(getBusinessTodayDate()));
   const [grades, setGrades] = useState<AtividadeGrade[]>([]);
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [horarios, setHorarios] = useState<HorarioFuncionamento[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
-  async function load() {
-    const [g, a, sal, pro, h] = await Promise.all([
-      listAtividadeGrades({ apenasAtivas: true }),
-      listAtividades({ apenasAtivas: true }),
-      listSalas({ apenasAtivas: true }),
-      listFuncionarios({ apenasAtivos: true }),
-      listHorarios(),
-    ]);
-    setGrades(g);
-    setAtividades(a);
-    setSalas(sal);
-    setFuncionarios(pro);
-    setHorarios(h);
-  }
+  const load = useCallback(async () => {
+    if (!tenantId) {
+      setGrades([]);
+      setAtividades([]);
+      setSalas([]);
+      setFuncionarios([]);
+      setHorarios([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const [g, a, sal, pro, h] = await Promise.all([
+        listAtividadeGradesApi({ apenasAtivas: true }),
+        listAtividadesApi({ tenantId, apenasAtivas: true }),
+        listSalasApi(true),
+        listFuncionariosApi(true),
+        listHorariosApi(tenantId),
+      ]);
+      setGrades(g);
+      setAtividades(a);
+      setSalas(sal);
+      setFuncionarios(pro);
+      setHorarios(h);
+    } catch (loadError) {
+      setGrades([]);
+      setAtividades([]);
+      setSalas([]);
+      setFuncionarios([]);
+      setHorarios([]);
+      setError(normalizeErrorMessage(loadError) || "Falha ao carregar grade.");
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   const atividadeMap = useMemo(() => new Map(atividades.map((a) => [a.id, a])), [atividades]);
   const salaMap = useMemo(() => new Map(salas.map((s) => [s.id, s])), [salas]);
@@ -145,7 +180,7 @@ export default function GradePage() {
 
   const weekEnd = addDays(weekStart, 6);
   const nowDate = new Date();
-  const todayIso = toIsoDate(nowDate);
+  const todayIso = getBusinessTodayIso(nowDate);
   const weekDays = DIA_ORDER.map((dia, idx) => {
     const date = addDays(weekStart, idx);
     return {
@@ -187,7 +222,17 @@ export default function GradePage() {
         </div>
       </div>
 
-      {slotMinutes.length === 0 ? (
+      {error ? (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {error}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="rounded-xl border border-dashed border-border/70 bg-card p-8 text-center text-sm text-muted-foreground">
+          Carregando grade semanal...
+        </div>
+      ) : slotMinutes.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border/70 bg-card p-8 text-center text-sm text-muted-foreground">
           Não há atividades com horário definido nesta semana.
         </div>

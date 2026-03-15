@@ -1,5 +1,14 @@
 {
 	"mcpServers": {
+		"postgres-academia": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-postgres",
+				"postgresql://academia:academia@localhost:5432/academia"
+			]
+		},
 		"task-master-ai": {
 			"type": "stdio",
 			"command": "npx",

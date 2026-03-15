@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  listVouchers,
-  createVoucher,
-  toggleVoucher,
-  listVoucherUsageCounts,
-} from "@/lib/mock/services";
+  createVoucherApi,
+  listVoucherUsageCountsApi,
+  listVouchersApi,
+  toggleVoucherApi,
+} from "@/lib/api/beneficios";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { Voucher } from "@/lib/types";
 import { NovoVoucherModal, NovoVoucherPayload } from "@/components/shared/novo-voucher-modal";
 import { EditarVoucherModal } from "@/components/shared/editar-voucher-modal";
@@ -31,6 +32,7 @@ function formatPeriodo(voucher: Voucher): string {
 }
 
 export default function VouchersPage() {
+  const { tenantId, tenantResolved } = useTenantContext();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
   const [modalOpen, setModalOpen] = useState(false);
@@ -39,27 +41,33 @@ export default function VouchersPage() {
 
   const load = useCallback(async () => {
     const [data, counts] = await Promise.all([
-      listVouchers(),
-      listVoucherUsageCounts(),
+      listVouchersApi(),
+      listVoucherUsageCountsApi(),
     ]);
     setVouchers(data);
     setUsageCounts(counts);
   }, []);
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!tenantResolved) return;
+    void Promise.all([
+      listVouchersApi(),
+      listVoucherUsageCountsApi(),
+    ]).then(([data, counts]) => {
+      setVouchers(data);
+      setUsageCounts(counts);
+    });
+  }, [load, tenantResolved]);
 
   const handleNext = async (payload: NovoVoucherPayload) => {
-    await createVoucher(payload);
+    await createVoucherApi(payload as unknown as Record<string, unknown>);
     setModalOpen(false);
-    load();
+    await load();
   };
 
   const handleToggle = async (id: string) => {
-    await toggleVoucher(id);
-    load();
+    await toggleVoucherApi(id);
+    await load();
   };
 
   return (
@@ -68,21 +76,24 @@ export default function VouchersPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onNext={handleNext}
+        tenantId={tenantId}
       />
 
       {editVoucher && (
         <EditarVoucherModal
+          tenantId={tenantId}
           voucher={editVoucher}
           onClose={() => setEditVoucher(null)}
           onSaved={() => {
             setEditVoucher(null);
-            load();
+            void load();
           }}
         />
       )}
 
       {codigosVoucher && (
         <VoucherCodigosModal
+          tenantId={tenantId}
           voucher={codigosVoucher}
           onClose={() => setCodigosVoucher(null)}
         />

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { getBusinessCurrentMonthYear } from "@/lib/business-date";
 import { cn } from "@/lib/utils";
 
 const MONTHS = [
@@ -32,9 +33,7 @@ export function MonthYearPicker({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  const { month: currentMonth, year: currentYear } = getBusinessCurrentMonthYear();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

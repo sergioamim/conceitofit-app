@@ -2,13 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  createCampanhaCrm,
-  dispararCampanhaCrm,
-  encerrarCampanhaCrm,
-  listCampanhasCrm,
-  listVouchers,
-  updateCampanhaCrm,
-} from "@/lib/mock/services";
+  createCrmCampanhaApi,
+  dispararCrmCampanhaApi,
+  encerrarCrmCampanhaApi,
+  listCrmCampanhasApi,
+  updateCrmCampanhaApi,
+} from "@/lib/api/crm";
+import { listVouchersApi } from "@/lib/api/beneficios";
+import { normalizeCapabilityError } from "@/lib/api/backend-capability";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import { getBusinessTodayIso } from "@/lib/business-date";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type {
   CampanhaCRM,
   CampanhaCanal,
@@ -45,7 +49,7 @@ type FormState = {
   status: CampanhaStatus;
 };
 
-const todayIso = new Date().toISOString().slice(0, 10);
+const todayIso = getBusinessTodayIso();
 
 const EMPTY_FORM: FormState = {
   nome: "",
@@ -65,26 +69,59 @@ function statusStyle(status: CampanhaStatus): string {
 }
 
 export default function CampanhasCrmPage() {
+  const tenantContext = useTenantContext();
   const [rows, setRows] = useState<CampanhaCRM[]>([]);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [statusFilter, setStatusFilter] = useState<"TODAS" | CampanhaStatus>("TODAS");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CampanhaCRM | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [campaignsUnavailable, setCampaignsUnavailable] = useState(false);
+  const [writeUnavailable, setWriteUnavailable] = useState(false);
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
   const load = useCallback(async () => {
-    const [campanhas, allVouchers] = await Promise.all([
-      listCampanhasCrm(statusFilter === "TODAS" ? undefined : { status: statusFilter }),
-      listVouchers(),
+    setLoading(true);
+    setError("");
+    const [campanhasResult, vouchersResult] = await Promise.allSettled([
+      listCrmCampanhasApi({
+        tenantId,
+        status: statusFilter === "TODAS" ? undefined : statusFilter,
+      }),
+      listVouchersApi(),
     ]);
-    setRows(campanhas);
-    setVouchers(allVouchers.filter((v) => v.ativo && (v.usarNaVenda || v.tipo.toUpperCase().includes("DESCONTO"))));
-  }, [statusFilter]);
+
+    if (campanhasResult.status === "fulfilled") {
+      setRows(campanhasResult.value);
+      setCampaignsUnavailable(false);
+    } else {
+      const message = normalizeCapabilityError(campanhasResult.reason, "Falha ao carregar campanhas CRM.");
+      setRows([]);
+      setCampaignsUnavailable(message.startsWith("Backend ainda não expõe"));
+      if (!message.startsWith("Backend ainda não expõe")) {
+        setError(message);
+      }
+    }
+
+    if (vouchersResult.status === "fulfilled") {
+      setVouchers(
+        vouchersResult.value.filter((v) => v.ativo && (v.usarNaVenda || v.tipo.toUpperCase().includes("DESCONTO")))
+      );
+    } else {
+      setVouchers([]);
+      setError((current) =>
+        current || normalizeCapabilityError(vouchersResult.reason, "Falha ao carregar vouchers da campanha.")
+      );
+    }
+
+    setLoading(false);
+  }, [statusFilter, tenantId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const summary = useMemo(() => {
@@ -96,16 +133,18 @@ export default function CampanhasCrmPage() {
   }, [rows]);
 
   function openCreate() {
+    if (campaignsUnavailable || writeUnavailable) return;
     setEditing(null);
     setError("");
     setForm({
       ...EMPTY_FORM,
-      dataInicio: new Date().toISOString().slice(0, 10),
+      dataInicio: getBusinessTodayIso(),
     });
     setModalOpen(true);
   }
 
   function openEdit(row: CampanhaCRM) {
+    if (campaignsUnavailable || writeUnavailable) return;
     setEditing(row);
     setError("");
     setForm({
@@ -122,6 +161,7 @@ export default function CampanhasCrmPage() {
   }
 
   async function handleSave() {
+    if (!tenantId || campaignsUnavailable || writeUnavailable) return;
     if (!form.nome.trim()) {
       setError("Informe o nome da campanha.");
       return;
@@ -134,45 +174,76 @@ export default function CampanhasCrmPage() {
     setError("");
     try {
       if (editing) {
-        await updateCampanhaCrm(editing.id, {
-          nome: form.nome.trim(),
-          descricao: form.descricao.trim() || undefined,
-          publicoAlvo: form.publicoAlvo,
-          canais: form.canais,
-          voucherId: form.voucherId === "none" ? undefined : form.voucherId,
-          dataInicio: form.dataInicio,
-          dataFim: form.dataFim || undefined,
-          status: form.status,
+        await updateCrmCampanhaApi({
+          tenantId,
+          id: editing.id,
+          data: {
+            nome: form.nome.trim(),
+            descricao: form.descricao.trim() || undefined,
+            publicoAlvo: form.publicoAlvo,
+            canais: form.canais,
+            voucherId: form.voucherId === "none" ? undefined : form.voucherId,
+            dataInicio: form.dataInicio,
+            dataFim: form.dataFim || undefined,
+            status: form.status,
+          },
         });
       } else {
-        await createCampanhaCrm({
-          nome: form.nome.trim(),
-          descricao: form.descricao.trim() || undefined,
-          publicoAlvo: form.publicoAlvo,
-          canais: form.canais,
-          voucherId: form.voucherId === "none" ? undefined : form.voucherId,
-          dataInicio: form.dataInicio,
-          dataFim: form.dataFim || undefined,
-          status: form.status,
+        await createCrmCampanhaApi({
+          tenantId,
+          data: {
+            nome: form.nome.trim(),
+            descricao: form.descricao.trim() || undefined,
+            publicoAlvo: form.publicoAlvo,
+            canais: form.canais,
+            voucherId: form.voucherId === "none" ? undefined : form.voucherId,
+            dataInicio: form.dataInicio,
+            dataFim: form.dataFim || undefined,
+            status: form.status,
+          },
         });
       }
       setModalOpen(false);
       setEditing(null);
       setForm(EMPTY_FORM);
       await load();
+    } catch (submitError) {
+      const message = normalizeCapabilityError(submitError, "Falha ao salvar campanha CRM.");
+      setError(message);
+      if (message.startsWith("Backend ainda não expõe")) {
+        setWriteUnavailable(true);
+      }
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDisparar(id: string) {
-    await dispararCampanhaCrm(id);
-    await load();
+    if (!tenantId || campaignsUnavailable || writeUnavailable) return;
+    try {
+      await dispararCrmCampanhaApi({ tenantId, id });
+      await load();
+    } catch (submitError) {
+      const message = normalizeCapabilityError(submitError, "Falha ao disparar campanha CRM.");
+      setError(message);
+      if (message.startsWith("Backend ainda não expõe")) {
+        setWriteUnavailable(true);
+      }
+    }
   }
 
   async function handleEncerrar(id: string) {
-    await encerrarCampanhaCrm(id);
-    await load();
+    if (!tenantId || campaignsUnavailable || writeUnavailable) return;
+    try {
+      await encerrarCrmCampanhaApi({ tenantId, id });
+      await load();
+    } catch (submitError) {
+      const message = normalizeCapabilityError(submitError, "Falha ao encerrar campanha CRM.");
+      setError(message);
+      if (message.startsWith("Backend ainda não expõe")) {
+        setWriteUnavailable(true);
+      }
+    }
   }
 
   function toggleCanal(canal: CampanhaCanal) {
@@ -320,7 +391,8 @@ export default function CampanhasCrmPage() {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Campanhas CRM</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Planejamento de campanhas com público alvo, voucher e canais de comunicação.
+            Planejamento de campanhas com público alvo, voucher e canais de comunicação da unidade{" "}
+            <span className="font-semibold text-foreground">{tenantContext.tenantName ?? "atual"}</span>.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -333,9 +405,27 @@ export default function CampanhasCrmPage() {
               <SelectItem value="ENCERRADA">Encerrada</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={openCreate}>Nova campanha</Button>
+          <Button onClick={openCreate} disabled={campaignsUnavailable || writeUnavailable}>
+            Nova campanha
+          </Button>
         </div>
       </div>
+
+      {error ? (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {error}
+        </div>
+      ) : null}
+      {campaignsUnavailable ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          Este ambiente ainda não expõe campanhas CRM no backend. O módulo permanece visível, mas em modo somente leitura.
+        </div>
+      ) : null}
+      {writeUnavailable && !campaignsUnavailable ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          O backend atual permite leitura das campanhas, mas ainda não expõe mutações auditáveis para este ambiente.
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="rounded-lg border border-border bg-card p-3"><p className="text-[11px] uppercase tracking-wider text-muted-foreground">Campanhas</p><p className="mt-1 font-display text-2xl font-bold">{summary.total}</p></div>
@@ -356,6 +446,13 @@ export default function CampanhasCrmPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                  Carregando campanhas CRM...
+                </td>
+              </tr>
+            ) : null}
             {rows.map((row) => (
               <tr key={row.id} className="transition-colors hover:bg-secondary/30">
                 <td className="px-4 py-3">
@@ -379,16 +476,28 @@ export default function CampanhasCrmPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" size="sm" className="border-border" onClick={() => openEdit(row)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-border"
+                      disabled={campaignsUnavailable || writeUnavailable}
+                      onClick={() => openEdit(row)}
+                    >
                       Editar
                     </Button>
                     {row.status !== "ENCERRADA" && (
-                      <Button size="sm" onClick={() => handleDisparar(row.id)}>
+                      <Button size="sm" disabled={campaignsUnavailable || writeUnavailable} onClick={() => handleDisparar(row.id)}>
                         Disparar
                       </Button>
                     )}
                     {row.status === "ATIVA" && (
-                      <Button variant="outline" size="sm" className="border-border" onClick={() => handleEncerrar(row.id)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-border"
+                        disabled={campaignsUnavailable || writeUnavailable}
+                        onClick={() => handleEncerrar(row.id)}
+                      >
                         Encerrar
                       </Button>
                     )}
@@ -396,7 +505,7 @@ export default function CampanhasCrmPage() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
                   Nenhuma campanha encontrada

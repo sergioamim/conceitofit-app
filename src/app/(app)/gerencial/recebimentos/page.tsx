@@ -6,14 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { listAgregadorTransacoesApi } from "@/lib/api/admin-financeiro";
+import { emitirNfsePagamentoApi } from "@/lib/api/pagamentos";
 import { AGREGADOR_REPASSE_LABEL, summarizeRecebimentosOperacionais } from "@/lib/admin-financeiro";
+import { getBusinessMonthRange } from "@/lib/business-date";
+import {
+  createRecebimentoAvulsoService,
+  listContasReceberOperacionais,
+  type PagamentoComAluno,
+} from "@/lib/financeiro/recebimentos";
 import { useTenantContext } from "@/hooks/use-session-context";
-import { createRecebimentoAvulso, emitirNfsePagamento, listAgregadorTransacoes, listPagamentos } from "@/lib/mock/services";
 import type { AgregadorTransacao, Pagamento, TipoFormaPagamento } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
-type PagamentoComAluno = Pagamento & { aluno?: { nome?: string; cpf?: string } };
 type StatusFiltro = "TODOS" | Pagamento["status"];
 
 type RecebimentoForm = {
@@ -49,13 +55,7 @@ function formatDate(value?: string) {
 }
 
 function monthRangeFromNow() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`,
-    end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`,
-  };
+  return getBusinessMonthRange();
 }
 
 export default function RecebimentosPage() {
@@ -84,17 +84,21 @@ export default function RecebimentosPage() {
     setError(null);
     try {
       const [pagamentosResponse, transacoesResponse] = await Promise.all([
-        listPagamentos({}),
-        listAgregadorTransacoes({ tenantId }),
+        listContasReceberOperacionais({
+          tenantId,
+          startDate,
+          endDate,
+        }),
+        listAgregadorTransacoesApi({ tenantId }),
       ]);
-      setPagamentos(pagamentosResponse as PagamentoComAluno[]);
+      setPagamentos(pagamentosResponse);
       setTransacoes(transacoesResponse);
     } catch (loadError) {
       setError(normalizeErrorMessage(loadError));
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [endDate, startDate, tenantId]);
 
   useEffect(() => {
     if (tenantResolved) {
@@ -131,6 +135,7 @@ export default function RecebimentosPage() {
   );
 
   async function handleCreateRecebimento() {
+    if (!tenantId) return;
     if (!form.descricao.trim() || !form.valor || !form.dataVencimento) {
       setError("Preencha descrição, valor e vencimento.");
       return;
@@ -140,14 +145,17 @@ export default function RecebimentosPage() {
     setError(null);
     setSuccess(null);
     try {
-      await createRecebimentoAvulso({
-        clienteNome: form.clienteNome.trim() || undefined,
-        descricao: form.descricao.trim(),
-        valor: Number(form.valor),
-        dataVencimento: form.dataVencimento,
-        status: form.status,
-        dataPagamento: form.status === "PAGO" ? form.dataPagamento : undefined,
-        formaPagamento: form.status === "PAGO" ? form.formaPagamento : undefined,
+      await createRecebimentoAvulsoService({
+        tenantId,
+        data: {
+          clienteNome: form.clienteNome.trim() || undefined,
+          descricao: form.descricao.trim(),
+          valor: Number(form.valor),
+          dataVencimento: form.dataVencimento,
+          status: form.status,
+          dataPagamento: form.status === "PAGO" ? form.dataPagamento : undefined,
+          formaPagamento: form.status === "PAGO" ? form.formaPagamento : undefined,
+        },
       });
       setModalOpen(false);
       setForm({
@@ -165,11 +173,15 @@ export default function RecebimentosPage() {
   }
 
   async function handleEmitirNfse(id: string) {
+    if (!tenantId) return;
     setSaving(true);
     setError(null);
     setSuccess(null);
     try {
-      await emitirNfsePagamento(id);
+      await emitirNfsePagamentoApi({
+        tenantId,
+        id,
+      });
       setSuccess("NFSe emitida com sucesso.");
       await load();
     } catch (emitError) {

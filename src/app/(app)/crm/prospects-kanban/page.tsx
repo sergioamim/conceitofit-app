@@ -2,14 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  listCrmPipelineStages,
-  listCrmTasks,
-  listProspects,
-  updateProspectStatus,
-  marcarProspectPerdido,
-  listFuncionarios,
-} from "@/lib/mock/services";
+  listCrmTasksApi,
+  listProspectsApi,
+  marcarProspectPerdidoApi,
+  updateProspectStatusApi,
+} from "@/lib/api/crm";
+import { listFuncionariosApi } from "@/lib/api/administrativo";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type { CrmPipelineStage, Funcionario, Prospect, StatusProspect } from "@/lib/types";
+import { buildDefaultCrmPipelineStages } from "@/lib/crm/workspace";
+import { enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/crm/runtime";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ProspectDetailModal } from "@/components/shared/prospect-detail-modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,6 +37,7 @@ function nowDateTime() {
 }
 
 export default function ProspectsKanbanPage() {
+  const tenantContext = useTenantContext();
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [stages, setStages] = useState<CrmPipelineStage[]>([]);
@@ -44,26 +48,37 @@ export default function ProspectsKanbanPage() {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [data, funcs, pipelineStages, crmTasks] = await Promise.all([
-        listProspects(),
-        listFuncionarios(),
-        listCrmPipelineStages(),
-        listCrmTasks(),
+      const [prospectRows, funcs, crmTaskRows] = await Promise.all([
+        listProspectsApi({ tenantId }),
+        listFuncionariosApi(true),
+        listCrmTasksApi({ tenantId }),
       ]);
+      const normalizedProspects = prospectRows
+        .map((prospect) => normalizeProspectRuntime(prospect))
+        .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
+      const enrichedTasks = enrichCrmTasksRuntime({
+        tasks: crmTaskRows,
+        prospects: normalizedProspects,
+        funcionarios: funcs,
+      });
+      const pipelineStages = buildDefaultCrmPipelineStages(
+        tenantId || normalizedProspects[0]?.tenantId || enrichedTasks[0]?.tenantId || "tenant-runtime"
+      );
       const taskMap = pipelineStages.reduce<Record<string, number>>((accumulator, stage) => {
-        accumulator[stage.status] = crmTasks.filter(
+        accumulator[stage.status] = enrichedTasks.filter(
           (task) =>
             task.stageStatus === stage.status &&
             !["CONCLUIDA", "CANCELADA"].includes(task.status)
         ).length;
         return accumulator;
       }, {});
-      setProspects(data);
+      setProspects(normalizedProspects);
       setFuncionarios(funcs);
       setStages(pipelineStages);
       setOpenTasksByStage(taskMap);
@@ -72,24 +87,34 @@ export default function ProspectsKanbanPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
+
+  useEffect(() => {
+    setSelectedProspect((current) =>
+      current ? prospects.find((prospect) => prospect.id === current.id) ?? current : null
+    );
+  }, [prospects]);
 
   const funcionariosMap = useMemo(() => {
     return new Map(funcionarios.map((f) => [f.id, f.nome]));
   }, [funcionarios]);
 
-  const filtered = prospects.filter((p) => {
-    const matchStatus = filtroStatus === "TODOS" || p.status === filtroStatus;
-    const matchResp =
-      filtroResponsavel === "TODOS" ||
-      (filtroResponsavel === "SEM_RESP" && !p.responsavelId) ||
-      p.responsavelId === filtroResponsavel;
-    return matchStatus && matchResp;
-  });
+  const filtered = useMemo(
+    () =>
+      prospects.filter((p) => {
+        const matchStatus = filtroStatus === "TODOS" || p.status === filtroStatus;
+        const matchResp =
+          filtroResponsavel === "TODOS" ||
+          (filtroResponsavel === "SEM_RESP" && !p.responsavelId) ||
+          p.responsavelId === filtroResponsavel;
+        return matchStatus && matchResp;
+      }),
+    [filtroResponsavel, filtroStatus, prospects]
+  );
 
   const byStatus = stages.map((stage) => ({
     ...stage,
@@ -98,41 +123,50 @@ export default function ProspectsKanbanPage() {
   }));
 
   async function handleSetStatus(id: string, status: StatusProspect) {
+    if (!tenantId) return;
+    const motivo = status === "PERDIDO" ? prompt("Motivo da perda (opcional):") : undefined;
+    if (status === "PERDIDO" && motivo === null) {
+      return;
+    }
     const at = nowDateTime();
 
-    // Atualização local imediata para não "voltar" ao status antigo após o drop.
     setProspects((prev) =>
       prev.map((item) =>
         item.id === id
-          ? {
-              ...item,
-              status,
-              dataUltimoContato: at,
-              statusLog: [...(item.statusLog ?? []), { status, data: at }],
-              motivoPerda: status === "PERDIDO" ? item.motivoPerda : undefined,
-            }
+          ? normalizeProspectRuntime(
+              {
+                ...item,
+                status,
+                dataUltimoContato: at,
+                motivoPerda: status === "PERDIDO" ? motivo || undefined : undefined,
+              },
+              item
+            )
           : item
       )
     );
 
-    if (status === "PERDIDO") {
-      const motivo = prompt("Motivo da perda (opcional):");
-      await marcarProspectPerdido(id, motivo ?? undefined);
-      if (motivo != null) {
-        setProspects((prev) =>
-          prev.map((item) =>
-            item.id === id
-              ? {
-                  ...item,
-                  motivoPerda: motivo || undefined,
-                }
-              : item
-          )
-        );
-      }
-      return;
+    try {
+      const updated =
+        status === "PERDIDO"
+          ? await marcarProspectPerdidoApi({
+              tenantId,
+              id,
+              motivo: motivo || undefined,
+            })
+          : await updateProspectStatusApi({
+              tenantId,
+              id,
+              status,
+            });
+
+      setProspects((prev) =>
+        prev.map((item) => (item.id === id ? normalizeProspectRuntime(updated, item) : item))
+      );
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Falha ao atualizar etapa do prospect.");
+      await load();
     }
-    await updateProspectStatus(id, status);
   }
 
   function handleCardClick(p: Prospect) {
@@ -143,11 +177,12 @@ export default function ProspectsKanbanPage() {
     <div className="space-y-6">
       {selectedProspect && (
         <ProspectDetailModal
+          key={selectedProspect.id}
           prospect={selectedProspect}
           funcionarios={funcionarios}
           onClose={() => setSelectedProspect(null)}
           onChanged={() => {
-            load();
+            void load();
             setSelectedProspect(null);
           }}
         />

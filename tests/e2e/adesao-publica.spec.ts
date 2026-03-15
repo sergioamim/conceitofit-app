@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { installPublicJourneyApiMocks } from "./support/backend-only-stubs";
 
 test.describe("Jornada pública de adesão", () => {
+  test.beforeEach(async ({ page }) => {
+    await installPublicJourneyApiMocks(page);
+  });
+
   test("capta trial e segue para o cadastro da unidade", async ({ page }) => {
     await page.goto("/adesao/trial?tenant=pechincha-s3");
 

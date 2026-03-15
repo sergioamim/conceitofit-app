@@ -1,5 +1,6 @@
 import type { Academia, HorarioFuncionamento, Tenant } from "@/lib/types";
-import { apiRequest } from "./http";
+import { ApiRequestError, apiRequest } from "./http";
+import { getActiveTenantIdFromSession, getAvailableTenantsFromSession, getPreferredTenantId } from "./session";
 
 interface EnderecoApi {
   cep?: string | null;
@@ -141,6 +142,53 @@ function normalizeAcademia(input: AcademiaApiResponse): Academia {
   };
 }
 
+function resolveTenantContextFallbackId(): string | undefined {
+  const activeTenantId = getActiveTenantIdFromSession()?.trim();
+  if (activeTenantId) return activeTenantId;
+
+  const preferredTenantId = getPreferredTenantId()?.trim();
+  if (preferredTenantId) return preferredTenantId;
+
+  return getAvailableTenantsFromSession()
+    .map((item) => item.tenantId.trim())
+    .find(Boolean);
+}
+
+function isMissingTenantContextError(error: unknown): boolean {
+  if (!(error instanceof ApiRequestError) || error.status !== 400) {
+    return false;
+  }
+
+  const message = [
+    error.message,
+    error.error,
+    error.responseBody,
+  ]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ")
+    .toLowerCase();
+
+  return message.includes("x-context-id sem unidade ativa");
+}
+
+async function withTenantContextRetry<T>(loader: () => Promise<T>): Promise<T> {
+  try {
+    return await loader();
+  } catch (error) {
+    if (!isMissingTenantContextError(error)) {
+      throw error;
+    }
+
+    const tenantId = resolveTenantContextFallbackId();
+    if (!tenantId) {
+      throw error;
+    }
+
+    await setTenantContextApi(tenantId);
+    return loader();
+  }
+}
+
 export async function getTenantContextApi(): Promise<{
   currentTenantId: string;
   tenantAtual: Tenant;
@@ -209,10 +257,12 @@ export async function createUnidadeApi(data: Omit<Tenant, "id">): Promise<Tenant
       nome: data.nome,
       razaoSocial: data.razaoSocial,
       documento: data.documento,
+      groupId: data.groupId,
       email: data.email,
       telefone: data.telefone,
       subdomain: data.subdomain,
       ativo: data.ativo,
+      configuracoes: data.configuracoes,
     },
   });
   return normalizeTenant(response);
@@ -226,10 +276,12 @@ export async function updateUnidadeApi(id: string, data: Partial<Tenant>): Promi
       nome: data.nome,
       razaoSocial: data.razaoSocial,
       documento: data.documento,
+      groupId: data.groupId,
       email: data.email,
       telefone: data.telefone,
       subdomain: data.subdomain,
       ativo: data.ativo,
+      configuracoes: data.configuracoes,
     },
   });
   return normalizeTenant(response);
@@ -252,17 +304,17 @@ export async function deleteUnidadeApi(id: string): Promise<void> {
 
 export async function listAcademiasApi(_tenantId?: string): Promise<Academia[]> {
   void _tenantId;
-  const response = await apiRequest<AcademiaApiResponse>({
+  const response = await withTenantContextRetry(() => apiRequest<AcademiaApiResponse>({
     path: "/api/v1/academia",
-  });
+  }));
   return [normalizeAcademia(response)];
 }
 
 export async function getAcademiaAtualApi(_tenantId?: string): Promise<Academia> {
   void _tenantId;
-  const response = await apiRequest<AcademiaApiResponse>({
+  const response = await withTenantContextRetry(() => apiRequest<AcademiaApiResponse>({
     path: "/api/v1/academia",
-  });
+  }));
   return normalizeAcademia(response);
 }
 
@@ -270,7 +322,7 @@ export async function updateAcademiaAtualApi(input: {
   tenantId?: string;
   data: Partial<Academia>;
 }): Promise<Academia> {
-  const response = await apiRequest<AcademiaApiResponse>({
+  const response = await withTenantContextRetry(() => apiRequest<AcademiaApiResponse>({
     path: "/api/v1/academia",
     method: "PUT",
     body: {
@@ -283,7 +335,7 @@ export async function updateAcademiaAtualApi(input: {
       ativo: input.data.ativo,
       branding: input.data.branding,
     },
-  });
+  }));
   return normalizeAcademia(response);
 }
 

@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 1, 3
+**Dependencies:** 1 ✓, 3 ✓
 
 **Priority:** medium
 

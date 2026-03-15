@@ -1,4 +1,3 @@
-import { getCurrentTenant } from "@/lib/mock/services";
 import type { RbacActionFilter, RbacFeature, RbacPaginatedResult, RbacPerfil as PerfilTipo, RbacPerfilCreatePayload, RbacPerfilUpdatePayload, RbacResourceTypeFilter, RbacUser } from "@/lib/types";
 import {
   createPerfilApi,
@@ -15,7 +14,7 @@ import {
   updateFeatureApi,
   updatePerfilApi,
 } from "@/lib/api/rbac";
-import { isRealApiEnabled, ApiRequestError } from "@/lib/api/http";
+import { ApiRequestError } from "@/lib/api/http";
 import { getActiveTenantIdFromSession, getAvailableTenantsFromSession } from "@/lib/api/session";
 import { meApi } from "@/lib/api/auth";
 
@@ -41,30 +40,15 @@ async function resolveTenantCandidates(preferredTenantId?: string): Promise<stri
   pushTenantCandidate(candidates, preferredTenantId);
   pushTenantCandidate(candidates, getActiveTenantIdFromSession());
 
-  if (isRealApiEnabled()) {
-    for (const item of availableInSession) {
-      pushTenantCandidate(candidates, item.tenantId);
-    }
-
-    if (!availableInSession.length) {
-      try {
-        const me = await meApi();
-        pushTenantCandidate(candidates, me.activeTenantId);
-        for (const item of me.availableTenants ?? []) {
-          pushTenantCandidate(candidates, item.tenantId);
-        }
-      } catch {
-        // fallback to contexto local na sequência
-      }
-    }
+  for (const item of availableInSession) {
+    pushTenantCandidate(candidates, item.tenantId);
   }
 
-  if (!candidates.length) {
-    try {
-      const currentTenant = await getCurrentTenant();
-      pushTenantCandidate(candidates, currentTenant.id);
-    } catch {
-      // sem contexto local também não há candidato válido
+  if (!availableInSession.length) {
+    const me = await meApi();
+    pushTenantCandidate(candidates, me.activeTenantId);
+    for (const item of me.availableTenants ?? []) {
+      pushTenantCandidate(candidates, item.tenantId);
     }
   }
 
@@ -101,7 +85,7 @@ async function withTenantFallback<T>(
     try {
       return await action(tenantId);
     } catch (error) {
-      if (!isRealApiEnabled() || !isTenantAccessDeniedError(error)) {
+      if (!isTenantAccessDeniedError(error)) {
         throw error;
       }
 

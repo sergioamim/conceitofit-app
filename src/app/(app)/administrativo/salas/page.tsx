@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createSala, deleteSala, listSalas, toggleSala, updateSala } from "@/lib/mock/services";
+import { createSalaApi, deleteSalaApi, listSalasApi, toggleSalaApi, updateSalaApi } from "@/lib/api/administrativo";
 import type { Sala } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { SalaModal } from "@/components/shared/sala-modal";
@@ -13,32 +13,42 @@ export default function SalasPage() {
   const [editing, setEditing] = useState<Sala | null>(null);
 
   async function load() {
-    const data = await listSalas();
+    const data = await listSalasApi(false);
     setSalas(data);
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    void listSalasApi(false).then(setSalas);
   }, []);
 
   async function handleSave(data: Omit<Sala, "id" | "tenantId">, id?: string) {
-    if (id) await updateSala(id, data);
-    else await createSala(data);
+    const { ativo = true, ...payload } = data;
+
+    if (id) {
+      await updateSalaApi(id, payload);
+      if (editing && editing.ativo !== ativo) {
+        await toggleSalaApi(id);
+      }
+    } else {
+      const created = await createSalaApi(payload);
+      if (!ativo) {
+        await toggleSalaApi(created.id);
+      }
+    }
     setModalOpen(false);
     setEditing(null);
-    load();
+    await load();
   }
 
   async function handleToggle(id: string) {
-    await toggleSala(id);
-    load();
+    await toggleSalaApi(id);
+    await load();
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remover esta sala?")) return;
-    await deleteSala(id);
-    load();
+    await deleteSalaApi(id);
+    await load();
   }
 
   return (

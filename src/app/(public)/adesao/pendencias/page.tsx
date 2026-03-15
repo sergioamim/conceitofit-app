@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PublicJourneyShell } from "@/components/public/public-journey-shell";
@@ -20,7 +20,15 @@ function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export default function PendenciasPublicasPage() {
+function PublicJourneyFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+      Carregando jornada pública...
+    </div>
+  );
+}
+
+function PendenciasPublicasPageContent() {
   const {
     context,
     loading,
@@ -303,5 +311,13 @@ export default function PendenciasPublicasPage() {
         </div>
       )}
     </PublicJourneyShell>
+  );
+}
+
+export default function PendenciasPublicasPage() {
+  return (
+    <Suspense fallback={<PublicJourneyFallback />}>
+      <PendenciasPublicasPageContent />
+    </Suspense>
   );
 }

@@ -1,7 +1,7 @@
 # Cenários E2E de Cadastro de Cliente (Playwright)
 
 ## Escopo
-Fluxo de cadastro na tela `/clientes` (wizard `NovoClienteWizard`), ambiente `NEXT_PUBLIC_USE_REAL_API=false`.
+Fluxo de cadastro na tela `/clientes` (wizard `NovoClienteWizard`), ambiente local de testes.
 
 ## Cenários implementados
 

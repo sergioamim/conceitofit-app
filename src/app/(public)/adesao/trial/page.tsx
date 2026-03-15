@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,15 @@ import { usePublicJourney } from "@/lib/public/use-public-journey";
 import { listPublicTenants } from "@/lib/public/services";
 import type { Tenant } from "@/lib/types";
 
-export default function TrialPage() {
+function PublicJourneyFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+      Carregando jornada pública...
+    </div>
+  );
+}
+
+function TrialPageContent() {
   const router = useRouter();
   const { context, loading, error, resolvedTenantRef, persistDraft, draft, planId } = usePublicJourney();
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
@@ -225,5 +233,13 @@ export default function TrialPage() {
         </Card>
       </div>
     </PublicJourneyShell>
+  );
+}
+
+export default function TrialPage() {
+  return (
+    <Suspense fallback={<PublicJourneyFallback />}>
+      <TrialPageContent />
+    </Suspense>
   );
 }

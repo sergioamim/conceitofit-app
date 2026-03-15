@@ -11,9 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  setCurrentTenant,
-} from "@/lib/mock/services";
+import { setTenantContextApi } from "@/lib/api/contexto-unidades";
 import {
   getPreferredTenantId,
   setPreferredTenantId,
@@ -47,7 +45,7 @@ export default function PerfilPage() {
     setTenantError(null);
     setTenantSaved(false);
     try {
-      await setCurrentTenant(preferredTenantId);
+      await setTenantContextApi(preferredTenantId);
       setPreferredTenantId(preferredTenantId);
       setTenantSaved(true);
       setTimeout(() => setTenantSaved(false), 2500);

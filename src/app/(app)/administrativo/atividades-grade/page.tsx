@@ -1,20 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import {
-  createAtividadeGrade,
-  deleteAtividadeGrade,
-  listAtividadeGrades,
-  listAtividades,
-  listFuncionarios,
-  listSalas,
-  toggleAtividadeGrade,
-  updateAtividadeGrade,
-} from "@/lib/mock/services";
+  createAtividadeGradeApi,
+  deleteAtividadeGradeApi,
+  listAtividadeGradesApi,
+  listAtividadesApi,
+  listFuncionariosApi,
+  listSalasApi,
+  toggleAtividadeGradeApi,
+  updateAtividadeGradeApi,
+} from "@/lib/api/administrativo";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type { Atividade, AtividadeGrade, DiaSemana, Funcionario, Sala } from "@/lib/types";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { AtividadeGradeModal, type AtividadeGradeForm } from "@/components/shared/atividade-grade-modal";
 
 const DIA_LABEL: Record<DiaSemana, string> = {
@@ -28,6 +31,7 @@ const DIA_LABEL: Record<DiaSemana, string> = {
 };
 
 export default function AtividadesGradePage() {
+  const tenantContext = useTenantContext();
   const [grades, setGrades] = useState<AtividadeGrade[]>([]);
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
@@ -37,24 +41,46 @@ export default function AtividadesGradePage() {
   const [filtroAtividade, setFiltroAtividade] = useState<string>("TODAS");
   const [filtroDia, setFiltroDia] = useState<DiaSemana | "TODOS">("TODOS");
   const [apenasAtivas, setApenasAtivas] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
-  async function load() {
-    const [g, a, sal, pro] = await Promise.all([
-      listAtividadeGrades(),
-      listAtividades(),
-      listSalas(),
-      listFuncionarios({ apenasAtivos: true }),
-    ]);
-    setGrades(g);
-    setAtividades(a);
-    setSalas(sal);
-    setFuncionarios(pro);
-  }
+  const load = useCallback(async () => {
+    if (!tenantId) {
+      setGrades([]);
+      setAtividades([]);
+      setSalas([]);
+      setFuncionarios([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const [g, a, sal, pro] = await Promise.all([
+        listAtividadeGradesApi(),
+        listAtividadesApi({ tenantId }),
+        listSalasApi(),
+        listFuncionariosApi(true),
+      ]);
+      setGrades(g);
+      setAtividades(a);
+      setSalas(sal);
+      setFuncionarios(pro);
+    } catch (loadError) {
+      setGrades([]);
+      setAtividades([]);
+      setSalas([]);
+      setFuncionarios([]);
+      setError(normalizeErrorMessage(loadError) || "Falha ao carregar grade de atividades.");
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   const atividadeMap = useMemo(() => new Map(atividades.map((a) => [a.id, a])), [atividades]);
   const salaMap = useMemo(() => new Map(salas.map((s) => [s.id, s])), [salas]);
@@ -99,23 +125,23 @@ export default function AtividadesGradePage() {
       instrutor: data.funcionarioId ? funcionarioMap.get(data.funcionarioId)?.nome : undefined,
     };
 
-    if (id) await updateAtividadeGrade(id, payload);
-    else await createAtividadeGrade(payload);
+    if (id) await updateAtividadeGradeApi(id, payload);
+    else await createAtividadeGradeApi(payload);
 
     setModalOpen(false);
     setEditing(null);
-    load();
+    await load();
   }
 
   async function handleToggle(id: string) {
-    await toggleAtividadeGrade(id);
-    load();
+    await toggleAtividadeGradeApi(id);
+    await load();
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remover este item da grade?")) return;
-    await deleteAtividadeGrade(id);
-    load();
+    await deleteAtividadeGradeApi(id);
+    await load();
   }
 
   return (
@@ -145,6 +171,12 @@ export default function AtividadesGradePage() {
           Nova Grade
         </Button>
       </div>
+
+      {error ? (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {error}
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-3">
         <div className="flex gap-1.5">
@@ -214,7 +246,14 @@ export default function AtividadesGradePage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {filtered.map((g) => {
+            {loading ? (
+              <tr>
+                <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                  Carregando grade de atividades...
+                </td>
+              </tr>
+            ) : null}
+            {!loading && filtered.map((g) => {
               const atividade = atividadeMap.get(g.atividadeId);
               return (
                 <tr key={g.id} className="transition-colors hover:bg-secondary/40">
@@ -278,7 +317,7 @@ export default function AtividadesGradePage() {
                 </tr>
               );
             })}
-            {filtered.length === 0 && (
+            {!loading && filtered.length === 0 && (
               <tr>
                 <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                   Nenhum item de grade encontrado

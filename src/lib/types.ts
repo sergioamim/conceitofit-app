@@ -767,12 +767,14 @@ export interface AulaOcupacao {
 export interface Treino {
   id: UUID;
   tenantId: UUID;
-  alunoId: UUID;
-  alunoNome: string;
+  alunoId?: UUID;
+  alunoNome?: string;
   nome?: string;
   objetivo?: string;
   divisao?: string; // A, B, C...
   metaSessoesSemana?: number;
+  frequenciaPlanejada?: number;
+  quantidadePrevista?: number;
   dataInicio?: LocalDate;
   dataFim?: LocalDate;
   atividadeId?: UUID;
@@ -783,12 +785,27 @@ export interface Treino {
   observacoes?: string;
   status?: "RASCUNHO" | "ATIVO" | "ARQUIVADO" | "CANCELADO";
   tipoTreino?: "PRE_MONTADO" | "CUSTOMIZADO";
+  treinoBaseId?: UUID;
+  templateNome?: string;
   diasParaVencimento?: number | null;
   statusValidade?: "ATIVO" | "VENCENDO" | "VENCIDO" | null;
+  statusCiclo?: "PLANEJADO" | "EM_DIA" | "ATENCAO" | "ATRASADO" | "ENCERRADO";
+  revisaoAtual?: number;
+  ultimaRevisaoEm?: LocalDateTime;
+  proximaRevisaoEm?: LocalDate;
+  atribuicaoOrigem?: "MANUAL" | "TEMPLATE" | "RENOVACAO";
+  atribuidoEm?: LocalDateTime;
+  encerradoEm?: LocalDateTime;
+  renovadoDeTreinoId?: UUID;
+  execucoesPrevistas?: number;
+  execucoesConcluidas?: number;
+  aderenciaPercentual?: number;
   ativo: boolean;
   criadoEm?: LocalDateTime;
   atualizadoEm?: LocalDateTime;
   itens?: TreinoItem[];
+  revisoes?: TreinoRevisao[];
+  execucoes?: TreinoExecucao[];
 }
 
 export interface TreinoItem {
@@ -796,6 +813,8 @@ export interface TreinoItem {
   treinoId: UUID;
   exercicioId: UUID;
   exercicioNome?: string;
+  grupoMuscularId?: UUID;
+  grupoMuscularNome?: string;
   ordem: number;
   series: number;
   repeticoes?: number;
@@ -815,12 +834,47 @@ export interface Exercicio {
   id: UUID;
   tenantId: UUID;
   nome: string;
+  grupoMuscularId?: UUID;
   grupoMuscular?: string;
+  grupoMuscularNome?: string;
   equipamento?: string;
   descricao?: string;
+  videoUrl?: string;
+  unidade?: string;
   ativo: boolean;
   criadoEm?: LocalDateTime;
   atualizadoEm?: LocalDateTime;
+}
+
+export interface GrupoMuscular {
+  id: UUID;
+  tenantId: UUID;
+  nome: string;
+  descricao?: string;
+  categoria?: "SUPERIOR" | "INFERIOR" | "CORE" | "FUNCIONAL" | "OUTRO";
+  ativo: boolean;
+  criadoEm?: LocalDateTime;
+  atualizadoEm?: LocalDateTime;
+}
+
+export interface TreinoRevisao {
+  id: UUID;
+  treinoId: UUID;
+  tipo: "CRIACAO" | "REVISAO" | "RENOVACAO" | "ENCERRAMENTO" | "ATRIBUICAO";
+  titulo: string;
+  observacao?: string;
+  criadoEm: LocalDateTime;
+}
+
+export interface TreinoExecucao {
+  id: UUID;
+  treinoId: UUID;
+  alunoId?: UUID;
+  data: LocalDate;
+  status: "CONCLUIDA" | "PARCIAL" | "PULADA";
+  observacao?: string;
+  cargaMedia?: number;
+  criadoEm: LocalDateTime;
 }
 
 export interface Tenant {
@@ -1454,4 +1508,85 @@ export interface RbacPaginatedResult<T> {
   size: number;
   hasNext: boolean;
   total?: number;
+}
+
+export type GlobalAdminUserStatus = "ATIVO" | "INATIVO" | "PENDENTE";
+
+export type GlobalAdminMembershipOrigin =
+  | "MANUAL"
+  | "HERDADO_POLITICA"
+  | "PERFIL_ADMIN"
+  | "IMPORTACAO"
+  | "SISTEMA";
+
+export type GlobalAdminNewUnitsPolicyScope = "ACADEMIA_ATUAL" | "REDE";
+
+export interface GlobalAdminUnitRef {
+  id: UUID;
+  nome: string;
+}
+
+export interface GlobalAdminMembershipProfile {
+  perfilId: UUID;
+  roleName: string;
+  displayName: string;
+  active: boolean;
+  inherited?: boolean;
+}
+
+export interface GlobalAdminMembership {
+  id: UUID;
+  userId: UUID;
+  tenantId: UUID;
+  tenantName: string;
+  academiaId?: UUID;
+  academiaName?: string;
+  active: boolean;
+  defaultTenant: boolean;
+  accessOrigin: GlobalAdminMembershipOrigin;
+  inheritedFrom?: string;
+  eligibleForNewUnits?: boolean;
+  profiles: GlobalAdminMembershipProfile[];
+  availableProfiles?: RbacPerfil[];
+  createdAt?: LocalDateTime;
+  updatedAt?: LocalDateTime;
+}
+
+export interface GlobalAdminNewUnitsPolicy {
+  enabled: boolean;
+  scope: GlobalAdminNewUnitsPolicyScope;
+  academiaIds?: UUID[];
+  inherited?: boolean;
+  rationale?: string;
+  updatedAt?: LocalDateTime;
+}
+
+export interface GlobalAdminUserSummary {
+  id: UUID;
+  name: string;
+  fullName?: string;
+  email: string;
+  status: GlobalAdminUserStatus;
+  active: boolean;
+  academias: GlobalAdminUnitRef[];
+  membershipsAtivos: number;
+  membershipsTotal: number;
+  perfis: string[];
+  defaultTenantId?: UUID;
+  defaultTenantName?: string;
+  eligibleForNewUnits: boolean;
+}
+
+export interface GlobalAdminUserDetail extends GlobalAdminUserSummary {
+  createdAt?: LocalDateTime;
+  lastLoginAt?: LocalDateTime;
+  memberships: GlobalAdminMembership[];
+  policy: GlobalAdminNewUnitsPolicy;
+}
+
+export interface GlobalAdminSecurityOverview {
+  totalUsers: number;
+  activeMemberships: number;
+  defaultUnitsConfigured: number;
+  eligibleForNewUnits: number;
 }

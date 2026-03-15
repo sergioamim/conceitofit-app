@@ -13,6 +13,7 @@ import {
   importarLinhasConciliacaoApi,
   listarConciliacaoLinhasApi,
 } from "@/lib/api/conciliacao-bancaria";
+import { getBusinessMonthRange } from "@/lib/business-date";
 import type {
   ConciliacaoLinha,
   ContaBancaria,
@@ -22,8 +23,9 @@ import type {
   StatusConciliacao,
   TipoMovimentoConciliacao,
 } from "@/lib/types";
-import { listContasPagar, listPagamentos } from "@/lib/mock/services";
 import { listContasBancariasApi } from "@/lib/api/contas-bancarias";
+import { listPagamentosApi } from "@/lib/api/pagamentos";
+import { listContasPagarApi } from "@/lib/api/financeiro-gerencial";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useTenantContext } from "@/hooks/use-session-context";
 
@@ -47,13 +49,7 @@ const MOVIMENTO_ICON: Record<TipoMovimentoConciliacao, string> = {
 const NONE_OPTION = "__NONE__";
 
 function normalizeDateISO(): { start: string; end: string } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`,
-    end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`,
-  };
+  return getBusinessMonthRange();
 }
 
 function formatBRL(value: number) {
@@ -154,8 +150,8 @@ export default function ConciliacaoBancariaPage() {
           endDate,
         }),
         listContasBancariasApi({ tenantId: tenantId || undefined }),
-        listPagamentos({}),
-        listContasPagar({}),
+        listPagamentosApi({ tenantId }),
+        listContasPagarApi({ tenantId }),
       ]);
       setLinhas(linhasResponse);
       setContasBancarias(contasResponse);

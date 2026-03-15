@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
-import { listPlanos } from "@/lib/mock/services";
+import { listPlanosApi } from "@/lib/api/comercial-catalogo";
 import type { Plano, VoucherAplicarEm, VoucherEscopo } from "@/lib/types";
 
 const VOUCHER_TYPES = [
@@ -51,10 +51,12 @@ export function NovoVoucherModal({
   open,
   onClose,
   onNext,
+  tenantId,
 }: {
   open: boolean;
   onClose: () => void;
   onNext: (payload: NovoVoucherPayload) => void;
+  tenantId?: string;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -79,10 +81,9 @@ export function NovoVoucherModal({
   const [aplicarEm, setAplicarEm] = useState<VoucherAplicarEm[]>(["CONTRATO"]);
 
   useEffect(() => {
-    if (open) {
-      listPlanos().then((data) => setPlanos(data.filter((p) => p.ativo)));
-    }
-  }, [open]);
+    if (!open || !tenantId) return;
+    void listPlanosApi({ tenantId, apenasAtivos: true }).then(setPlanos);
+  }, [open, tenantId]);
 
   function resetAll() {
     setStep(1);

@@ -6,9 +6,12 @@ import { CreditCard, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  listAgregadorTransacoesApi,
+  reprocessarAgregadorTransacaoApi,
+} from "@/lib/api/admin-financeiro";
 import { AGREGADOR_REPASSE_LABEL, summarizeAgregadorTransacoes } from "@/lib/admin-financeiro";
 import { useTenantContext } from "@/hooks/use-session-context";
-import { listAgregadorTransacoes, reprocessarAgregadorTransacao } from "@/lib/mock/services";
 import type { AgregadorRepasseStatus, AgregadorTransacao } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
@@ -47,7 +50,7 @@ export default function AgregadoresPage() {
     setLoading(true);
     setError(null);
     try {
-      setRows(await listAgregadorTransacoes({ tenantId }));
+      setRows(await listAgregadorTransacoesApi({ tenantId }));
     } catch (loadError) {
       setError(normalizeErrorMessage(loadError));
     } finally {
@@ -82,11 +85,15 @@ export default function AgregadoresPage() {
   const resumo = useMemo(() => summarizeAgregadorTransacoes(filtered), [filtered]);
 
   async function handleReprocess(item: AgregadorTransacao) {
+    if (!tenantId) return;
     setActionId(item.id);
     setError(null);
     setSuccess(null);
     try {
-      const updated = await reprocessarAgregadorTransacao(item.id);
+      const updated = await reprocessarAgregadorTransacaoApi({
+        tenantId,
+        id: item.id,
+      });
       setRows((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)));
       setSuccess(`Transação ${updated.nsu} reprocessada.`);
     } catch (actionError) {

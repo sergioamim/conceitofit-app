@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { updateAluno } from "@/lib/mock/services";
+import { updateAlunoService } from "@/lib/comercial/runtime";
 import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -98,7 +98,11 @@ export function ClientePhotoModal({
     if (saving) return;
     setSaving(true);
     try {
-      await updateAluno(aluno.id, { foto: preview || undefined });
+      await updateAlunoService({
+        tenantId: aluno.tenantId,
+        id: aluno.id,
+        data: { foto: preview || undefined },
+      });
       onClose();
       if (onSaved) {
         await onSaved();

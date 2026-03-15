@@ -6,7 +6,9 @@ import { ChevronLeft } from "lucide-react";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { PlanoForm } from "@/components/planos/plano-form";
-import { listAtividades, getPlano, updatePlano } from "@/lib/mock/services";
+import { useTenantContext } from "@/hooks/use-session-context";
+import { getPlanoApi, updatePlanoApi } from "@/lib/api/comercial-catalogo";
+import { listAtividadesApi } from "@/lib/api/administrativo";
 import type { Atividade, Plano } from "@/lib/types";
 import {
   buildPlanoPayload,
@@ -18,6 +20,7 @@ import {
 export default function EditarPlanoPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { tenantId, tenantResolved } = useTenantContext();
   const id = params?.id;
 
   const [atividades, setAtividades] = useState<Atividade[]>([]);
@@ -27,15 +30,19 @@ export default function EditarPlanoPage() {
 
   useEffect(() => {
     async function load() {
-      if (!id) return;
+      if (!id || !tenantId) return;
       setLoading(true);
-      const [listaAtividades, planoAtual] = await Promise.all([listAtividades(), getPlano(id)]);
+      const [listaAtividades, planoAtual] = await Promise.all([
+        listAtividadesApi({ tenantId, apenasAtivas: false }),
+        getPlanoApi({ tenantId, id }),
+      ]);
       setAtividades(listaAtividades);
       setPlano(planoAtual);
       setLoading(false);
     }
-    load();
-  }, [id]);
+    if (!tenantResolved || !tenantId) return;
+    void load();
+  }, [id, tenantId, tenantResolved]);
 
   const initialValues = useMemo<PlanoFormValues>(
     () => (plano ? planoToFormValues(plano) : getDefaultPlanoFormValues()),
@@ -43,9 +50,16 @@ export default function EditarPlanoPage() {
   );
 
   async function handleSubmit(values: PlanoFormValues) {
-    if (!id) return;
+    if (!id || !tenantId || !plano) return;
     setSaving(true);
-    await updatePlano(id, buildPlanoPayload(values));
+    await updatePlanoApi({
+      tenantId,
+      id,
+      data: {
+        ...buildPlanoPayload(values),
+        ativo: plano.ativo,
+      },
+    });
     router.push("/planos");
   }
 

@@ -3,22 +3,28 @@ import {
   resolveContratoStatusFromPlano,
   resolvePagamentoVendaStatus,
 } from "@/lib/comercial/plano-flow";
-import { getStore, setStore } from "@/lib/mock/store";
+import { getAlunoApi, createAlunoApi } from "@/lib/api/alunos";
+import { listPlanosApi, getPlanoApi } from "@/lib/api/comercial-catalogo";
+import { createProspectApi, updateProspectStatusApi } from "@/lib/api/crm";
 import {
-  createProspect,
-  createVenda,
-  criarAluno,
-  listTenantsGlobal,
-  registrarAssinaturaMatricula,
-  updateProspectStatus,
-} from "@/lib/mock/services";
+  getAcademiaAtualApi,
+  getTenantContextApi,
+  listUnidadesApi,
+  setTenantContextApi,
+} from "@/lib/api/contexto-unidades";
+import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
+import {
+  listMatriculasByAlunoApi,
+  signMatriculaContractApi,
+} from "@/lib/api/matriculas";
+import { listPagamentosApi, receberPagamentoApi } from "@/lib/api/pagamentos";
+import { getVendaApi, createVendaApi } from "@/lib/api/vendas";
 import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant-theme";
 import type {
   Academia,
   Aluno,
   Matricula,
   Pagamento,
-  PagamentoVenda,
   Plano,
   Prospect,
   Sexo,
@@ -108,10 +114,6 @@ export type PublicCheckoutSummary = {
   observacoes?: string;
   contractHtml?: string;
 };
-
-function genId(): string {
-  return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-}
 
 function now(): string {
   return new Date().toISOString().slice(0, 19);
@@ -218,61 +220,70 @@ function resolvePublicPaymentStatus(formaPagamento: TipoFormaPagamento): "PAGO" 
   return "PAGO";
 }
 
-function resolveTenantFromRef(ref?: string | null): Tenant {
-  const store = getStore();
-  const tenants = store.tenants.filter((tenant) => tenant.ativo !== false);
-  const normalizedRef = normalizeSlug(ref);
+function buildAcademiaFromTenant(tenant: Tenant): Academia {
+  return {
+    id: tenant.academiaId ?? tenant.groupId ?? tenant.id,
+    nome: tenant.nome,
+    razaoSocial: tenant.razaoSocial,
+    documento: tenant.documento,
+    email: tenant.email,
+    telefone: tenant.telefone,
+    endereco: tenant.endereco,
+    branding: tenant.branding,
+    ativo: tenant.ativo,
+  };
+}
 
+async function resolvePublicTenantsInternal(): Promise<Tenant[]> {
+  const tenants = await listUnidadesApi();
+  return tenants
+    .filter((tenant) => tenant.ativo !== false)
+    .sort((left, right) => left.nome.localeCompare(right.nome, "pt-BR"));
+}
+
+function resolveTenantFromRef(tenants: Tenant[], ref?: string | null): Tenant {
+  const normalizedRef = normalizeSlug(ref);
   if (normalizedRef) {
-    const matched = tenants.find((tenant) => {
-      return [tenant.id, tenant.subdomain, tenant.nome].some((value) => normalizeSlug(value) === normalizedRef);
-    });
+    const matched = tenants.find((tenant) =>
+      [tenant.id, tenant.subdomain, tenant.nome].some((value) => normalizeSlug(value) === normalizedRef)
+    );
     if (matched) return matched;
   }
 
-  return tenants.find((tenant) => tenant.id === store.currentTenantId) ?? store.tenant ?? tenants[0];
+  return tenants[0] ?? (() => {
+    throw new Error("Nenhuma unidade pública disponível.");
+  })();
 }
 
-function resolveAcademiaForTenant(tenant: Tenant): Academia {
-  const store = getStore();
-  const academiaId = tenant.academiaId ?? tenant.groupId;
-  return (
-    store.academias.find((academia) => academia.id === academiaId) ??
-    store.academias[0] ?? {
-      id: "acd-default",
-      nome: "Academia",
-      ativo: true,
+async function ensurePublicTenantContext(tenant: Tenant): Promise<{ tenant: Tenant; academia: Academia }> {
+  let resolvedTenant = tenant;
+  try {
+    const currentContext = await getTenantContextApi();
+    if (currentContext.currentTenantId !== tenant.id) {
+      const switched = await setTenantContextApi(tenant.id);
+      resolvedTenant = switched.tenantAtual;
+    } else {
+      resolvedTenant = currentContext.tenantAtual;
     }
-  );
-}
-
-async function withTenantScope<T>(tenantId: string, action: () => Promise<T>): Promise<T> {
-  const snapshot = getStore();
-  const previousTenantId = snapshot.currentTenantId || snapshot.tenant?.id || tenantId;
-  const previousTenant = snapshot.tenants.find((tenant) => tenant.id === previousTenantId) ?? snapshot.tenant;
-  const targetTenant = snapshot.tenants.find((tenant) => tenant.id === tenantId);
-  if (!targetTenant) throw new Error("Tenant público não encontrado.");
-
-  const shouldSwitch = previousTenantId !== tenantId || snapshot.tenant?.id !== tenantId;
-
-  if (shouldSwitch) {
-    setStore((store) => ({
-      ...store,
-      currentTenantId: tenantId,
-      tenant: targetTenant,
-    }));
+  } catch {
+    try {
+      const switched = await setTenantContextApi(tenant.id);
+      resolvedTenant = switched.tenantAtual;
+    } catch {
+      resolvedTenant = tenant;
+    }
   }
 
   try {
-    return await action();
-  } finally {
-    if (shouldSwitch && previousTenant) {
-      setStore((store) => ({
-        ...store,
-        currentTenantId: previousTenantId,
-        tenant: store.tenants.find((tenant) => tenant.id === previousTenantId) ?? previousTenant,
-      }));
-    }
+    return {
+      tenant: resolvedTenant,
+      academia: await getAcademiaAtualApi(resolvedTenant.id),
+    };
+  } catch {
+    return {
+      tenant: resolvedTenant,
+      academia: buildAcademiaFromTenant(resolvedTenant),
+    };
   }
 }
 
@@ -345,7 +356,9 @@ function buildCheckoutSummary(params: {
   pagamento?: Pagamento;
   academia: Academia;
 }): PublicCheckoutSummary {
-  const pagamentoStatus = params.pagamento?.status ?? (resolvePagamentoVendaStatus(params.venda.pagamento) === "PAGO" ? "PAGO" : "PENDENTE");
+  const pagamentoStatus =
+    params.pagamento?.status ??
+    (resolvePagamentoVendaStatus(params.venda.pagamento) === "PAGO" ? "PAGO" : "PENDENTE");
   const contratoStatus =
     params.matricula?.contratoStatus ??
     params.venda.contratoStatus ??
@@ -387,22 +400,107 @@ function buildCheckoutSummary(params: {
   };
 }
 
+function sortMatriculas(rows: Array<Matricula & { aluno?: Aluno; plano?: Plano }>): Array<Matricula & { aluno?: Aluno; plano?: Plano }> {
+  return [...rows].sort((left, right) =>
+    (right.dataCriacao ?? right.dataInicio ?? "").localeCompare(left.dataCriacao ?? left.dataInicio ?? "")
+  );
+}
+
+function selectCheckoutMatricula(params: {
+  venda: Venda;
+  matriculas: Array<Matricula & { aluno?: Aluno; plano?: Plano }>;
+}): (Matricula & { aluno?: Aluno; plano?: Plano }) | undefined {
+  const ordered = sortMatriculas(params.matriculas);
+  return (
+    ordered.find((item) => item.id === params.venda.matriculaId) ??
+    ordered.find((item) => item.planoId === params.venda.planoId) ??
+    ordered[0]
+  );
+}
+
+function selectCheckoutPagamento(params: {
+  venda: Venda;
+  matricula?: Matricula;
+  pagamentos: Pagamento[];
+}): Pagamento | undefined {
+  const ordered = [...params.pagamentos].sort((left, right) =>
+    (right.dataCriacao ?? right.dataPagamento ?? right.dataVencimento).localeCompare(
+      left.dataCriacao ?? left.dataPagamento ?? left.dataVencimento
+    )
+  );
+  return (
+    ordered.find((item) => item.matriculaId === params.matricula?.id) ??
+    ordered.find((item) => item.status === params.venda.pagamento.status && item.formaPagamento === params.venda.pagamento.formaPagamento) ??
+    ordered[0]
+  );
+}
+
+async function buildCheckoutSummaryFromVenda(params: {
+  tenant: Tenant;
+  academia: Academia;
+  vendaId: string;
+  planoId?: string;
+  alunoId?: string;
+}): Promise<PublicCheckoutSummary> {
+  const venda = await getVendaApi({
+    tenantId: params.tenant.id,
+    id: params.vendaId,
+  });
+  const alunoId = venda.clienteId ?? params.alunoId;
+  if (!alunoId) {
+    throw new Error("Cliente do checkout não encontrado.");
+  }
+
+  const planoId = venda.planoId ?? params.planoId;
+  if (!planoId) {
+    throw new Error("Plano do checkout não encontrado.");
+  }
+
+  const [plano, aluno, matriculas, pagamentos] = await Promise.all([
+    getPlanoApi({ tenantId: params.tenant.id, id: planoId }),
+    getAlunoApi({ tenantId: params.tenant.id, id: alunoId }),
+    listMatriculasByAlunoApi({ tenantId: params.tenant.id, alunoId }),
+    listPagamentosApi({ tenantId: params.tenant.id, alunoId }),
+  ]);
+
+  const matricula = selectCheckoutMatricula({
+    venda,
+    matriculas,
+  });
+  const pagamento = selectCheckoutPagamento({
+    venda,
+    matricula,
+    pagamentos,
+  });
+
+  return buildCheckoutSummary({
+    tenant: params.tenant,
+    plano,
+    venda,
+    aluno,
+    matricula,
+    pagamento,
+    academia: params.academia,
+  });
+}
+
 export async function getPublicJourneyContext(tenantRef?: string | null): Promise<PublicTenantContext> {
-  const tenant = resolveTenantFromRef(tenantRef);
-  const academia = resolveAcademiaForTenant(tenant);
-  const store = getStore();
-  const planos = [...store.planos]
-    .filter((plano) => plano.tenantId === tenant.id && plano.ativo)
+  const tenants = await resolvePublicTenantsInternal();
+  const resolved = resolveTenantFromRef(tenants, tenantRef);
+  const { tenant, academia } = await ensurePublicTenantContext(resolved);
+  const [planos, formasPagamento] = await Promise.all([
+    listPlanosApi({ tenantId: tenant.id, apenasAtivos: true }),
+    listFormasPagamentoApi({ tenantId: tenant.id, apenasAtivas: true }),
+  ]);
+
+  const normalizedPlanos = [...planos]
+    .filter((plano) => plano.ativo)
     .sort((left, right) => {
       if (left.destaque === right.destaque) {
         return (left.ordem ?? 999) - (right.ordem ?? 999);
       }
       return left.destaque ? -1 : 1;
     });
-  const formasPagamento = [...store.formasPagamento]
-    .filter((item) => item.tenantId === tenant.id && item.ativo)
-    .sort((left, right) => left.nome.localeCompare(right.nome))
-    .map((item) => item.tipo);
 
   return {
     tenant,
@@ -410,14 +508,16 @@ export async function getPublicJourneyContext(tenantRef?: string | null): Promis
     academia,
     appName: getTenantAppName(academia),
     theme: resolveTenantTheme(academia),
-    planos,
-    formasPagamento,
+    planos: normalizedPlanos,
+    formasPagamento: formasPagamento
+      .filter((item) => item.ativo)
+      .sort((left, right) => left.nome.localeCompare(right.nome, "pt-BR"))
+      .map((item) => item.tipo),
   };
 }
 
 export async function listPublicTenants(): Promise<Tenant[]> {
-  const items = await listTenantsGlobal();
-  return items.filter((tenant) => tenant.ativo !== false);
+  return resolvePublicTenantsInternal();
 }
 
 export async function submitPublicTrial(input: PublicTrialInput): Promise<Prospect> {
@@ -427,8 +527,9 @@ export async function submitPublicTrial(input: PublicTrialInput): Promise<Prospe
     throw new Error(Object.values(errors)[0]);
   }
 
-  return withTenantScope(context.tenant.id, async () => {
-    return createProspect({
+  return createProspectApi({
+    tenantId: context.tenant.id,
+    data: {
       nome: normalizeText(input.nome),
       email: normalizeText(input.email),
       telefone: normalizeText(input.telefone),
@@ -436,7 +537,7 @@ export async function submitPublicTrial(input: PublicTrialInput): Promise<Prospe
       observacoes: normalizeText(input.objetivo)
         ? `Trial digital: ${normalizeText(input.objetivo)}`
         : "Trial digital solicitado pela jornada pública.",
-    });
+    },
   });
 }
 
@@ -455,11 +556,12 @@ export async function startPublicCheckout(input: PublicCheckoutInput): Promise<P
     throw new Error(Object.values(signupErrors)[0]);
   }
 
-  return withTenantScope(context.tenant.id, async () => {
-    const quote = getPublicPlanQuote(plano);
-    const paymentStatus = resolvePublicPaymentStatus(input.pagamento.formaPagamento);
+  const quote = getPublicPlanQuote(plano);
+  const paymentStatus = resolvePublicPaymentStatus(input.pagamento.formaPagamento);
 
-    const aluno = await criarAluno({
+  const aluno = await createAlunoApi({
+    tenantId: context.tenant.id,
+    data: {
       nome: normalizeText(input.signup.nome),
       email: normalizeText(input.signup.email),
       telefone: normalizeText(input.signup.telefone),
@@ -472,9 +574,12 @@ export async function startPublicCheckout(input: PublicCheckoutInput): Promise<P
           }
         : undefined,
       observacoesMedicas: normalizeText(input.signup.objetivo) || undefined,
-    });
+    },
+  });
 
-    const venda = await createVenda({
+  const venda = await createVendaApi({
+    tenantId: context.tenant.id,
+    data: {
       tipo: "PLANO",
       clienteId: aluno.id,
       itens: buildPlanoVendaItems(plano, 1),
@@ -492,53 +597,45 @@ export async function startPublicCheckout(input: PublicCheckoutInput): Promise<P
         dataInicio: today(),
         renovacaoAutomatica: input.renovacaoAutomatica && plano.permiteRenovacaoAutomatica,
       },
-    });
-
-    if (input.leadId) {
-      await updateProspectStatus(input.leadId, "CONVERTIDO");
-    }
-
-    let matricula = getStore().matriculas.find((item) => item.id === venda.matriculaId);
-    if (input.aceitarContratoAgora && matricula?.id && plano.contratoTemplateHtml?.trim() && plano.contratoAssinatura !== "PRESENCIAL") {
-      await registrarAssinaturaMatricula(matricula.id);
-      matricula = getStore().matriculas.find((item) => item.id === matricula?.id);
-    }
-
-    setStore((store) => ({
-      ...store,
-      alunos: store.alunos.map((item) =>
-        item.id === aluno.id
-          ? {
-              ...item,
-              prospectId: input.leadId ?? item.prospectId,
-              pendenteComplementacao: false,
-              status: paymentStatus === "PAGO" ? "ATIVO" : "INATIVO",
-              dataAtualizacao: now(),
-            }
-          : item
-      ),
-    }));
-
-    const currentStore = getStore();
-    const persistedAluno = currentStore.alunos.find((item) => item.id === aluno.id) ?? aluno;
-    const persistedVenda = currentStore.vendas.find((item) => item.id === venda.id) ?? venda;
-    const persistedMatricula = persistedVenda.matriculaId
-      ? currentStore.matriculas.find((item) => item.id === persistedVenda.matriculaId)
-      : undefined;
-    const pagamento = persistedVenda.matriculaId
-      ? currentStore.pagamentos.find((item) => item.matriculaId === persistedVenda.matriculaId)
-      : undefined;
-
-    return buildCheckoutSummary({
-      tenant: context.tenant,
-      plano,
-      venda: persistedVenda,
-      aluno: persistedAluno,
-      matricula: persistedMatricula,
-      pagamento,
-      academia: context.academia,
-    });
+    },
   });
+
+  if (input.leadId) {
+    await updateProspectStatusApi({
+      tenantId: context.tenant.id,
+      id: input.leadId,
+      status: "CONVERTIDO",
+    });
+  }
+
+  let summary = await buildCheckoutSummaryFromVenda({
+    tenant: context.tenant,
+    academia: context.academia,
+    vendaId: venda.id,
+    planoId: plano.id,
+    alunoId: aluno.id,
+  });
+
+  if (
+    input.aceitarContratoAgora &&
+    summary.matriculaId &&
+    summary.allowDigitalSignature &&
+    summary.contratoStatus === "PENDENTE_ASSINATURA"
+  ) {
+    await signMatriculaContractApi({
+      tenantId: context.tenant.id,
+      id: summary.matriculaId,
+    });
+    summary = await buildCheckoutSummaryFromVenda({
+      tenant: context.tenant,
+      academia: context.academia,
+      vendaId: venda.id,
+      planoId: plano.id,
+      alunoId: aluno.id,
+    });
+  }
+
+  return summary;
 }
 
 export async function getPublicCheckoutStatus(params: {
@@ -546,37 +643,10 @@ export async function getPublicCheckoutStatus(params: {
   checkoutId: string;
 }): Promise<PublicCheckoutSummary> {
   const context = await getPublicJourneyContext(params.tenantRef);
-  const store = getStore();
-  const venda = store.vendas.find((item) => item.id === params.checkoutId && item.tenantId === context.tenant.id);
-  if (!venda) {
-    throw new Error("Checkout público não encontrado.");
-  }
-
-  const plano = store.planos.find((item) => item.id === venda.planoId && item.tenantId === context.tenant.id);
-  if (!plano) {
-    throw new Error("Plano do checkout não encontrado.");
-  }
-
-  const aluno = store.alunos.find((item) => item.id === venda.clienteId && item.tenantId === context.tenant.id);
-  if (!aluno) {
-    throw new Error("Cliente do checkout não encontrado.");
-  }
-
-  const matricula = venda.matriculaId
-    ? store.matriculas.find((item) => item.id === venda.matriculaId && item.tenantId === context.tenant.id)
-    : undefined;
-  const pagamento = matricula
-    ? store.pagamentos.find((item) => item.matriculaId === matricula.id && item.tenantId === context.tenant.id)
-    : undefined;
-
-  return buildCheckoutSummary({
+  return buildCheckoutSummaryFromVenda({
     tenant: context.tenant,
-    plano,
-    venda,
-    aluno,
-    matricula,
-    pagamento,
     academia: context.academia,
+    vendaId: params.checkoutId,
   });
 }
 
@@ -591,10 +661,13 @@ export async function signPublicCheckoutContract(params: {
   if (!summary.allowDigitalSignature) {
     throw new Error("Este contrato exige assinatura presencial.");
   }
+  if (summary.contratoStatus !== "PENDENTE_ASSINATURA") {
+    return summary;
+  }
 
-  const context = await getPublicJourneyContext(params.tenantRef);
-  await withTenantScope(context.tenant.id, async () => {
-    await registrarAssinaturaMatricula(summary.matriculaId as string);
+  await signMatriculaContractApi({
+    tenantId: summary.tenantId,
+    id: summary.matriculaId,
   });
   return getPublicCheckoutStatus(params);
 }
@@ -604,44 +677,30 @@ export async function confirmPublicCheckoutPayment(params: {
   checkoutId: string;
 }): Promise<PublicCheckoutSummary> {
   const summary = await getPublicCheckoutStatus(params);
-  const context = await getPublicJourneyContext(params.tenantRef);
-  const paidAt = today();
+  if (summary.pagamentoStatus === "PAGO") {
+    return summary;
+  }
 
-  await withTenantScope(context.tenant.id, async () => {
-    setStore((store) => ({
-      ...store,
-      vendas: store.vendas.map((item) =>
-        item.id === summary.vendaId
-          ? {
-              ...item,
-              pagamento: {
-                ...item.pagamento,
-                status: "PAGO",
-                valorPago: item.total,
-              },
-            }
-          : item
-      ),
-      pagamentos: store.pagamentos.map((item) =>
-        item.matriculaId === summary.matriculaId
-          ? {
-              ...item,
-              status: "PAGO",
-              dataPagamento: paidAt,
-              formaPagamento: summary.formaPagamento,
-            }
-          : item
-      ),
-      alunos: store.alunos.map((item) =>
-        item.id === summary.alunoId
-          ? {
-              ...item,
-              status: "ATIVO",
-              dataAtualizacao: now(),
-            }
-          : item
-      ),
-    }));
+  const pagamentos = await listPagamentosApi({
+    tenantId: summary.tenantId,
+    alunoId: summary.alunoId,
+  });
+  const pagamento =
+    pagamentos.find((item) => item.matriculaId === summary.matriculaId) ??
+    pagamentos.find((item) => item.formaPagamento === summary.formaPagamento);
+
+  if (!pagamento) {
+    throw new Error("Pagamento do checkout não encontrado.");
+  }
+
+  await receberPagamentoApi({
+    tenantId: summary.tenantId,
+    id: pagamento.id,
+    data: {
+      dataPagamento: today(),
+      formaPagamento: summary.formaPagamento,
+      observacoes: summary.observacoes,
+    },
   });
 
   return getPublicCheckoutStatus(params);

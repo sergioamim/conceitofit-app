@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, IBM_Plex_Sans, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const display = Space_Grotesk({
@@ -44,7 +45,11 @@ export default function RootLayout({
         className={`${display.variable} ${body.variable} ${geistMono.variable} font-sans antialiased`}
       >
         {isReactScanEnabled && (
-          <script src="https://unpkg.com/react-scan/dist/auto.global.js" crossOrigin="anonymous" />
+          <Script
+            src="https://unpkg.com/react-scan/dist/auto.global.js"
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+          />
         )}
         {children}
       </body>

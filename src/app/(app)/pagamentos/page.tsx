@@ -1,24 +1,27 @@
 "use client";
 
-import { ChangeEvent, Suspense, useEffect, useRef, useState } from "react";
+import { ChangeEvent, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertTriangle, BadgeCheck, FileText, Mail } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
+import { listConveniosApi } from "@/lib/api/beneficios";
+import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
+import { listMatriculasApi } from "@/lib/api/matriculas";
+import { emitirNfsePagamentoApi } from "@/lib/api/pagamentos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getBusinessCurrentMonthYear } from "@/lib/business-date";
 import {
-  importarPagamentosEmLote,
-  emitirNfsePagamento,
-  listConvenios,
-  listFormasPagamento,
-  listAlunos,
-  listMatriculas,
-  listPagamentos,
-  receberPagamento,
+  ajustarPagamentoService,
+  importarPagamentosEmLoteService,
+  listContasReceberOperacionais,
   type ImportarPagamentosResultado,
+  type PagamentoComAluno,
   type PagamentoImportItem,
-} from "@/lib/mock/services";
+} from "@/lib/financeiro/recebimentos";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";
@@ -32,8 +35,6 @@ import type {
   Matricula,
   Convenio,
 } from "@/lib/types";
-
-type PagamentoWithAluno = Pagamento & { aluno?: Aluno };
 
 type ParsedImportCsvRow = {
   clienteNome: string;
@@ -428,21 +429,22 @@ function formatDate(d: string) {
 
 function PagamentosPageContent() {
   const searchParams = useSearchParams();
-  const [pagamentos, setPagamentos] = useState<PagamentoWithAluno[]>([]);
+  const { tenantId } = useTenantContext();
+  const [pagamentos, setPagamentos] = useState<PagamentoComAluno[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [clientes, setClientes] = useState<Aluno[]>([]);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [filtro, setFiltro] = useState<StatusPagamento | "TODOS">("TODOS");
-  const [recebendo, setRecebendo] = useState<PagamentoWithAluno | null>(null);
-  const [emitindo, setEmitindo] = useState<PagamentoWithAluno | null>(null);
-  const [visualizandoNfse, setVisualizandoNfse] = useState<PagamentoWithAluno | null>(null);
+  const [recebendo, setRecebendo] = useState<PagamentoComAluno | null>(null);
+  const [emitindo, setEmitindo] = useState<PagamentoComAluno | null>(null);
+  const [visualizandoNfse, setVisualizandoNfse] = useState<PagamentoComAluno | null>(null);
   const [emailDestino, setEmailDestino] = useState("");
   const [emailResultado, setEmailResultado] = useState("");
   const [enviandoEmail, setEnviandoEmail] = useState(false);
   const [solicitandoSegundaVia, setSolicitandoSegundaVia] = useState(false);
-  const [mes, setMes] = useState(new Date().getMonth());
-  const [ano, setAno] = useState(new Date().getFullYear());
+  const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
+  const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [clienteFiltro, setClienteFiltro] = useState<string>("TODOS");
   const [importPayload, setImportPayload] = useState(IMPORTAR_PAGAMENTOS_EXEMPLO);
   const [importandoPagamentos, setImportandoPagamentos] = useState(false);
@@ -450,25 +452,25 @@ function PagamentosPageContent() {
   const [importErro, setImportErro] = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
+    if (!tenantId) return;
     const [pags, fps, cls, mats, cvs] = await Promise.all([
-      listPagamentos(),
-      listFormasPagamento(),
-      listAlunos(),
-      listMatriculas(),
-      listConvenios(),
+      listContasReceberOperacionais({ tenantId }),
+      listFormasPagamentoApi({ tenantId, apenasAtivas: false }),
+      listAlunosApi({ tenantId, page: 0, size: 500 }),
+      listMatriculasApi({ tenantId, page: 0, size: 500 }),
+      listConveniosApi(),
     ]);
     setPagamentos(pags);
     setFormasPagamento(fps);
-    setClientes(cls);
+    setClientes(extractAlunosFromListResponse(cls));
     setMatriculas(mats);
     setConvenios(cvs);
-  }
+  }, [tenantId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   const alunoId = searchParams.get("clienteId") ?? searchParams.get("alunoId");
   const filteredBase =
@@ -496,22 +498,33 @@ function PagamentosPageContent() {
     formaPagamento: TipoFormaPagamento;
     observacoes?: string;
   }) {
-    if (!recebendo) return;
-    await receberPagamento(recebendo.id, {
-      ...data,
+    if (!recebendo || !tenantId) return;
+    await ajustarPagamentoService({
+      tenantId,
+      id: recebendo.id,
+      data: {
+        status: "PAGO",
+        dataPagamento: data.dataPagamento,
+        formaPagamento: data.formaPagamento,
+        observacoes: data.observacoes,
+      },
     });
     setRecebendo(null);
-    load();
+    await load();
   }
 
   async function handleConfirmEmissao() {
-    if (!emitindo) return;
-    await emitirNfsePagamento(emitindo.id);
+    if (!emitindo || !tenantId) return;
+    await emitirNfsePagamentoApi({
+      tenantId,
+      id: emitindo.id,
+    });
     setEmitindo(null);
-    load();
+    await load();
   }
 
   async function handleImportarPagamentos() {
+    if (!tenantId) return;
     setImportErro(null);
     setImportResultado(null);
     setImportandoPagamentos(true);
@@ -522,7 +535,10 @@ function PagamentosPageContent() {
         throw new Error("Payload vazio.");
       }
 
-      const resultado = await importarPagamentosEmLote(parsed);
+      const resultado = await importarPagamentosEmLoteService({
+        tenantId,
+        items: parsed,
+      });
       setImportResultado(resultado);
       await load();
     } catch (error) {
@@ -548,17 +564,20 @@ function PagamentosPageContent() {
     }
   }
 
-  function handleAbrirDetalheNfse(pagamento: PagamentoWithAluno) {
+  function handleAbrirDetalheNfse(pagamento: PagamentoComAluno) {
     setVisualizandoNfse(pagamento);
     setEmailDestino(pagamento.aluno?.email ?? "");
     setEmailResultado("");
   }
 
   async function handleSolicitarSegundaVia() {
-    if (!visualizandoNfse) return;
+    if (!visualizandoNfse || !tenantId) return;
     setSolicitandoSegundaVia(true);
     try {
-      await emitirNfsePagamento(visualizandoNfse.id);
+      await emitirNfsePagamentoApi({
+        tenantId,
+        id: visualizandoNfse.id,
+      });
       setEmailResultado("Solicitação de segunda via concluída.");
       await load();
     } finally {

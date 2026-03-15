@@ -10,6 +10,15 @@ type PlanoApiResponse = {
   duracaoDias?: unknown;
   valor?: unknown;
   valorMatricula?: unknown;
+  cobraAnuidade?: unknown;
+  valorAnuidade?: unknown;
+  parcelasMaxAnuidade?: unknown;
+  permiteRenovacaoAutomatica?: unknown;
+  permiteCobrancaRecorrente?: unknown;
+  diaCobrancaPadrao?: unknown;
+  contratoTemplateHtml?: string | null;
+  contratoAssinatura?: Plano["contratoAssinatura"] | null;
+  contratoEnviarAutomaticoEmail?: unknown;
   atividadeIds?: string[] | null;
   atividades?: Array<Pick<Atividade, "id">> | null;
   beneficios?: string[] | null;
@@ -162,15 +171,33 @@ export function normalizePlanoApiResponse(input: PlanoApiResponse, fallback?: Pa
     duracaoDias: Math.max(1, Math.floor(toNumber(input.duracaoDias, fallback?.duracaoDias ?? 1))),
     valor: toNumber(input.valor, fallback?.valor ?? 0),
     valorMatricula: toNumber(input.valorMatricula, fallback?.valorMatricula ?? 0),
-    cobraAnuidade: fallback?.cobraAnuidade ?? false,
-    valorAnuidade: fallback?.valorAnuidade,
-    parcelasMaxAnuidade: fallback?.parcelasMaxAnuidade,
-    permiteRenovacaoAutomatica: fallback?.permiteRenovacaoAutomatica ?? tipo !== "AVULSO",
-    permiteCobrancaRecorrente: fallback?.permiteCobrancaRecorrente ?? false,
-    diaCobrancaPadrao: fallback?.diaCobrancaPadrao,
-    contratoTemplateHtml: fallback?.contratoTemplateHtml,
-    contratoAssinatura: fallback?.contratoAssinatura ?? "AMBAS",
-    contratoEnviarAutomaticoEmail: fallback?.contratoEnviarAutomaticoEmail ?? false,
+    cobraAnuidade: toBoolean(input.cobraAnuidade, fallback?.cobraAnuidade ?? false),
+    valorAnuidade:
+      input.valorAnuidade == null && fallback?.valorAnuidade == null
+        ? undefined
+        : toNumber(input.valorAnuidade, fallback?.valorAnuidade ?? 0),
+    parcelasMaxAnuidade:
+      input.parcelasMaxAnuidade == null && fallback?.parcelasMaxAnuidade == null
+        ? undefined
+        : Math.max(1, Math.floor(toNumber(input.parcelasMaxAnuidade, fallback?.parcelasMaxAnuidade ?? 1))),
+    permiteRenovacaoAutomatica: toBoolean(
+      input.permiteRenovacaoAutomatica,
+      fallback?.permiteRenovacaoAutomatica ?? tipo !== "AVULSO"
+    ),
+    permiteCobrancaRecorrente: toBoolean(
+      input.permiteCobrancaRecorrente,
+      fallback?.permiteCobrancaRecorrente ?? false
+    ),
+    diaCobrancaPadrao:
+      input.diaCobrancaPadrao == null && fallback?.diaCobrancaPadrao == null
+        ? undefined
+        : Math.max(1, Math.floor(toNumber(input.diaCobrancaPadrao, fallback?.diaCobrancaPadrao ?? 1))),
+    contratoTemplateHtml: cleanString(input.contratoTemplateHtml) ?? fallback?.contratoTemplateHtml,
+    contratoAssinatura: input.contratoAssinatura ?? fallback?.contratoAssinatura ?? "AMBAS",
+    contratoEnviarAutomaticoEmail: toBoolean(
+      input.contratoEnviarAutomaticoEmail,
+      fallback?.contratoEnviarAutomaticoEmail ?? false
+    ),
     atividades: extractPlanoAtividadeIds(input),
     beneficios: Array.isArray(input.beneficios)
       ? input.beneficios
@@ -283,7 +310,7 @@ export async function listPlanosApi(input: {
   tipo?: TipoPlano;
 }): Promise<Plano[]> {
   const response = await apiRequest<PlanoListApiResponse>({
-    path: "/api/v1/academia/planos",
+    path: "/api/v1/comercial/planos",
     query: {
       tenantId: input.tenantId,
       apenasAtivos: input.apenasAtivos ?? false,
@@ -303,7 +330,7 @@ export async function getPlanoApi(input: {
   id: string;
 }): Promise<Plano> {
   const response = await apiRequest<PlanoApiResponse>({
-    path: `/api/v1/academia/planos/${input.id}`,
+    path: `/api/v1/comercial/planos/${input.id}`,
     query: { tenantId: input.tenantId },
   });
 
@@ -318,7 +345,7 @@ export async function createPlanoApi(input: {
   data: Omit<Plano, "id" | "tenantId" | "ativo">;
 }): Promise<Plano> {
   const response = await apiRequest<PlanoApiResponse>({
-    path: "/api/v1/academia/planos",
+    path: "/api/v1/comercial/planos",
     method: "POST",
     query: { tenantId: input.tenantId },
     body: buildPlanoUpsertApiRequest(input.tenantId, input.data),
@@ -337,7 +364,7 @@ export async function updatePlanoApi(input: {
   data: Omit<Plano, "id" | "tenantId" | "ativo"> & Pick<Plano, "ativo">;
 }): Promise<Plano> {
   const response = await apiRequest<PlanoApiResponse>({
-    path: `/api/v1/academia/planos/${input.id}`,
+    path: `/api/v1/comercial/planos/${input.id}`,
     method: "PUT",
     query: { tenantId: input.tenantId },
     body: buildPlanoUpsertApiRequest(input.tenantId, input.data),
@@ -355,7 +382,7 @@ export async function togglePlanoAtivoApi(input: {
   id: string;
 }): Promise<Plano> {
   const response = await apiRequest<PlanoApiResponse>({
-    path: `/api/v1/academia/planos/${input.id}/toggle-ativo`,
+    path: `/api/v1/comercial/planos/${input.id}/toggle-ativo`,
     method: "PATCH",
     query: { tenantId: input.tenantId },
   });
@@ -371,7 +398,7 @@ export async function togglePlanoDestaqueApi(input: {
   id: string;
 }): Promise<Plano> {
   const response = await apiRequest<PlanoApiResponse>({
-    path: `/api/v1/academia/planos/${input.id}/toggle-destaque`,
+    path: `/api/v1/comercial/planos/${input.id}/toggle-destaque`,
     method: "PATCH",
     query: { tenantId: input.tenantId },
   });
@@ -387,7 +414,7 @@ export async function deletePlanoApi(input: {
   id: string;
 }): Promise<void> {
   await apiRequest<void>({
-    path: `/api/v1/academia/planos/${input.id}`,
+    path: `/api/v1/comercial/planos/${input.id}`,
     method: "DELETE",
     query: { tenantId: input.tenantId },
   });

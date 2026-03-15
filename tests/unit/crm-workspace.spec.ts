@@ -5,6 +5,11 @@ import {
   getCrmStageName,
   isCrmTaskOverdue,
 } from "../../src/lib/crm/workspace";
+import {
+  buildCrmWorkspaceSnapshotRuntime,
+  enrichCrmTasksRuntime,
+  normalizeProspectRuntime,
+} from "../../src/lib/crm/runtime";
 
 test.describe("crm workspace helpers", () => {
   test("buildDefaultCrmPipelineStages cria as etapas base em ordem", async () => {
@@ -40,5 +45,87 @@ test.describe("crm workspace helpers", () => {
     expect(isCrmTaskOverdue(overdueTask, reference)).toBeTruthy();
     expect(isCrmTaskOverdue(doneTask, reference)).toBeFalsy();
     expect(getEffectiveCrmTaskStatus(overdueTask)).toBe("ATRASADA");
+  });
+
+  test("normalizeProspectRuntime cria histórico mínimo e acumula mudança de etapa", async () => {
+    const created = normalizeProspectRuntime({
+      id: "prospect-1",
+      tenantId: "tenant-1",
+      nome: "Clara Matos",
+      telefone: "(11) 99999-0000",
+      origem: "INSTAGRAM",
+      status: "NOVO",
+      dataCriacao: "2026-03-11T09:00:00",
+    });
+    const moved = normalizeProspectRuntime(
+      {
+        ...created,
+        status: "EM_CONTATO",
+        dataUltimoContato: "2026-03-11T10:00:00",
+      },
+      created
+    );
+
+    expect(created.statusLog).toEqual([{ status: "NOVO", data: "2026-03-11T09:00:00" }]);
+    expect(moved.statusLog).toEqual([
+      { status: "NOVO", data: "2026-03-11T09:00:00" },
+      { status: "EM_CONTATO", data: "2026-03-11T10:00:00" },
+    ]);
+  });
+
+  test("runtime de CRM enriquece tarefas e consolida snapshot sem store local", async () => {
+    const prospect = normalizeProspectRuntime({
+      id: "prospect-1",
+      tenantId: "tenant-1",
+      responsavelId: "func-1",
+      nome: "Clara Matos",
+      telefone: "(11) 99999-0000",
+      origem: "INSTAGRAM",
+      status: "EM_CONTATO",
+      dataCriacao: "2026-03-11T09:00:00",
+      dataUltimoContato: "2026-03-11T10:00:00",
+    });
+    const tasks = enrichCrmTasksRuntime({
+      tasks: [
+        {
+          id: "task-1",
+          tenantId: "tenant-1",
+          prospectId: "prospect-1",
+          titulo: "Retornar WhatsApp",
+          tipo: "FOLLOW_UP",
+          prioridade: "ALTA",
+          status: "PENDENTE",
+          responsavelId: "func-1",
+          origem: "MANUAL",
+          vencimentoEm: "2000-03-12T09:00:00",
+          dataCriacao: "2026-03-11T09:30:00",
+        },
+      ],
+      prospects: [prospect],
+      funcionarios: [
+        {
+          id: "func-1",
+          nome: "Diego Paes",
+          cargo: "Consultor",
+          podeMinistrarAulas: false,
+          ativo: true,
+        },
+      ],
+    });
+    const snapshot = buildCrmWorkspaceSnapshotRuntime({
+      tenantId: "tenant-1",
+      prospects: [prospect],
+      tasks,
+      automations: [],
+    });
+
+    expect(tasks[0]?.responsavelNome).toBe("Diego Paes");
+    expect(tasks[0]?.prospectNome).toBe("Clara Matos");
+    expect(tasks[0]?.status).toBe("ATRASADA");
+    expect(snapshot.totalProspectsAbertos).toBe(1);
+    expect(snapshot.totalTarefasAbertas).toBe(1);
+    expect(snapshot.totalTarefasAtrasadas).toBe(1);
+    expect(snapshot.estagios.find((stage) => stage.stageStatus === "EM_CONTATO")?.totalProspects).toBe(1);
+    expect(snapshot.atividadesRecentes.length).toBeGreaterThan(0);
   });
 });

@@ -51,7 +51,7 @@ export async function listFormasPagamentoApi(input: {
   apenasAtivas?: boolean;
 }): Promise<FormaPagamento[]> {
   const response = await apiRequest<FormaPagamentoApiResponse[]>({
-    path: "/api/v1/academia/formas-pagamento",
+    path: "/api/v1/gerencial/financeiro/formas-pagamento",
     query: {
       tenantId: input.tenantId,
       apenasAtivas: input.apenasAtivas ?? true,
@@ -65,7 +65,7 @@ export async function createFormaPagamentoApi(input: {
   data: CreateFormaPagamentoApiInput;
 }): Promise<FormaPagamento> {
   const response = await apiRequest<FormaPagamentoApiResponse>({
-    path: "/api/v1/academia/formas-pagamento",
+    path: "/api/v1/gerencial/financeiro/formas-pagamento",
     method: "POST",
     query: { tenantId: input.tenantId },
     body: buildFormaPagamentoPayload(input.tenantId, input.data),
@@ -83,7 +83,7 @@ export async function updateFormaPagamentoApi(input: {
   data: UpdateFormaPagamentoApiInput;
 }): Promise<FormaPagamento> {
   const response = await apiRequest<FormaPagamentoApiResponse>({
-    path: `/api/v1/academia/formas-pagamento/${input.id}`,
+    path: `/api/v1/gerencial/financeiro/formas-pagamento/${input.id}`,
     method: "PUT",
     query: { tenantId: input.tenantId },
     body: buildFormaPagamentoPayload(input.tenantId, input.data),
@@ -104,7 +104,7 @@ export async function toggleFormaPagamentoApi(input: {
   id: string;
 }): Promise<FormaPagamento> {
   const response = await apiRequest<FormaPagamentoApiResponse>({
-    path: `/api/v1/academia/formas-pagamento/${input.id}/toggle-ativo`,
+    path: `/api/v1/gerencial/financeiro/formas-pagamento/${input.id}/toggle`,
     method: "PATCH",
     query: { tenantId: input.tenantId },
   });
@@ -116,7 +116,7 @@ export async function deleteFormaPagamentoApi(input: {
   id: string;
 }): Promise<void> {
   await apiRequest<void>({
-    path: `/api/v1/academia/formas-pagamento/${input.id}`,
+    path: `/api/v1/gerencial/financeiro/formas-pagamento/${input.id}`,
     method: "DELETE",
     query: { tenantId: input.tenantId },
   });

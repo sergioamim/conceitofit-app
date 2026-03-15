@@ -8,8 +8,25 @@ const nextConfig: NextConfig = {
     // Needed for EVO backup uploads (~70MB) forwarded through /backend rewrite.
     proxyClientMaxBodySize: backendProxyMaxBodySize * 1024 * 1024,
   },
+  async redirects() {
+    return [
+      {
+        source: "/admin/importacao-evo-p0",
+        destination: "/admin/importacao-evo",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
+      {
+        source: "/backend/api/v1/treinos/:id/atribuir",
+        destination: `${backendProxyTarget}/api/v1/treinos/templates/:id/atribuir`,
+      },
+      {
+        source: "/backend/api/v1/treinos/:id/atribuir-em-lote",
+        destination: `${backendProxyTarget}/api/v1/treinos/templates/:id/atribuir-em-lote`,
+      },
       {
         source: "/backend/:path*",
         destination: `${backendProxyTarget}/:path*`,

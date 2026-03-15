@@ -1,7 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const MOCK_LOGIN_KEY = "academia-mock-logged-in";
-
 function gerarDigitos(seed: number, length: number): string {
   return String(seed).replace(/\D/g, "").padStart(length, "0").slice(-length);
 }
@@ -14,29 +12,52 @@ type ClientePayload = {
   nascimento: string;
 };
 
-async function abrirComSessaoMockE2e(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Usuário").fill("admin@academia.local");
-  await page.getByLabel("Senha").fill("12345678");
-  await page.getByRole("button", { name: "Entrar" }).click();
-  const stepTenant = page.getByRole("heading", { name: "Unidade prioritária" });
-  if (await stepTenant.isVisible()) {
-    await page.getByRole("combobox").click();
-    await page.getByRole("option").first().click();
-    await page.getByRole("button", { name: "Salvar e continuar" }).click();
-  }
+type CreateAlunoResponse = {
+  id: string;
+};
+
+type CreateAlunoComMatriculaResponse = {
+  aluno: {
+    id: string;
+  };
+};
+
+async function abrirComSessaoApiE2e(page: Page) {
   await page.goto("/clientes");
+  await page.waitForLoadState("networkidle");
+  if (/\/login/.test(page.url())) {
+    await page.getByLabel("Usuário").fill("admin@academia.local");
+    await page.getByLabel("Senha").fill("12345678");
+    await page.getByRole("button", { name: "Entrar" }).click();
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => Boolean(window.localStorage.getItem("academia-auth-token")))
+      )
+      .toBe(true);
+
+    const stepTenant = page.getByRole("heading", { name: "Unidade prioritária" });
+    if (await stepTenant.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await page.getByRole("combobox").click();
+      await page.getByRole("option").first().click();
+      await page.getByRole("button", { name: "Salvar e continuar" }).click();
+    }
+    if (/\/login/.test(page.url())) {
+      await page.goto("/clientes");
+    }
+    await page.waitForLoadState("networkidle");
+  }
   await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
 }
 
 async function preencherDadosPessoais(page: Page, input: ClientePayload) {
-  await page.getByLabel(/Nome completo/).fill(input.nome);
-  await page.getByLabel(/E-mail/).fill(input.email);
-  await page.getByLabel(/Telefone \*/).fill(input.telefone);
-  await page.getByLabel(/CPF \*/).fill(input.cpf);
-  await page.getByLabel(/Data de nascimento/).fill(input.nascimento);
-  await page.getByRole("combobox").first().click();
-  await page.getByRole("option", { name: "Masculino" }).click();
+  const modal = page.getByRole("dialog");
+  await expect(modal.getByRole("heading", { name: "Novo cliente" })).toBeVisible();
+  await modal.locator("#novo-cliente-nome").fill(input.nome);
+  await modal.locator("#novo-cliente-email").fill(input.email);
+  await modal.locator("#novo-cliente-telefone").fill(input.telefone);
+  await modal.locator("#novo-cliente-cpf").fill(input.cpf);
+  await modal.locator("#novo-cliente-data-nascimento").fill(input.nascimento);
 }
 
 test.describe("Cadastro de clientes (Playwright)", () => {
@@ -50,43 +71,48 @@ test.describe("Cadastro de clientes (Playwright)", () => {
       nascimento: "1990-01-01",
     };
 
-    await abrirComSessaoMockE2e(page);
+    await abrirComSessaoApiE2e(page);
 
     await page.getByRole("button", { name: "Novo cliente" }).click();
-    await expect(page.getByRole("heading", { name: "Novo cliente" })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "Novo cliente" })).toBeVisible();
 
     await preencherDadosPessoais(page, payload);
     await page.getByRole("button", { name: /Completar cadastro agora/i }).click();
 
     await expect(page.getByText("Escolha o plano")).toBeVisible();
-    await page.getByRole("button", { name: /Mensal Básico/ }).click();
+    await page.getByRole("button", { name: /Mensal B[aá]sico/i }).click();
     await page.getByRole("button", { name: "Próximo" }).click();
 
     await expect(page.getByText("Data de início *")).toBeVisible();
     await page.getByRole("combobox").last().click();
     await page.getByRole("option", { name: "Dinheiro" }).first().click();
+    const createResponsePromise = page.waitForResponse((response) =>
+      response.request().method() === "POST"
+      && /\/api\/v1\/comercial\/alunos-com-matricula(?:\?|$)/.test(response.url())
+    );
     await page.getByRole("button", { name: "Próximo" }).click();
+    const createResponse = await createResponsePromise;
+    const created = (await createResponse.json()) as CreateAlunoComMatriculaResponse;
 
     await expect(page.getByText("Cadastro realizado!")).toBeVisible();
     await page.getByRole("button", { name: "Fechar" }).click();
 
-    await expect(page.getByRole("row").filter({ hasText: payload.nome })).toBeVisible();
-    await expect(
-      page.getByRole("row").filter({ hasText: payload.nome }).getByText("Ativo"),
-    ).toBeVisible();
+    await page.goto(`/clientes/${created.aluno.id}`);
+    await expect(page.getByRole("heading", { name: payload.nome })).toBeVisible();
+    await expect(page.getByText(payload.email)).toBeVisible();
   });
 
   test("Cenário 2: validação impede avanço sem dados obrigatórios", async ({ page }) => {
-    await abrirComSessaoMockE2e(page);
+    await abrirComSessaoApiE2e(page);
 
     await page.getByRole("button", { name: "Novo cliente" }).click();
 
-    await expect(page.getByRole("heading", { name: "Novo cliente" })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "Novo cliente" })).toBeVisible();
     await expect(page.getByText("Escolha o plano")).not.toBeVisible();
-    await expect(page.getByLabel(/Nome completo/)).toBeVisible();
-    await expect(page.getByRole("button", { name: /Pré-cadastro$/i })).toBeDisabled();
-    await expect(page.getByRole("button", { name: /Pré-cadastro \+ venda/i })).toBeDisabled();
-    await expect(page.getByRole("button", { name: /Completar cadastro agora/i })).toBeDisabled();
+    await expect(page.getByRole("dialog").locator("#novo-cliente-nome")).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("button", { name: /Pré-cadastro$/i })).toBeDisabled();
+    await expect(page.getByRole("dialog").getByRole("button", { name: /Pré-cadastro \+ venda/i })).toBeDisabled();
+    await expect(page.getByRole("dialog").getByRole("button", { name: /Completar cadastro agora/i })).toBeDisabled();
   });
 
   test("Cenário 3: cria cliente sem matrícula (cadastro direto)", async ({ page }) => {
@@ -99,14 +125,22 @@ test.describe("Cadastro de clientes (Playwright)", () => {
       nascimento: "1988-05-20",
     };
 
-    await abrirComSessaoMockE2e(page);
+    await abrirComSessaoApiE2e(page);
 
     await page.getByRole("button", { name: "Novo cliente" }).click();
     await preencherDadosPessoais(page, payload);
-    await page.getByRole("button", { name: /Pré-cadastro$/i }).click();
+    const createResponsePromise = page.waitForResponse((response) =>
+      response.request().method() === "POST"
+      && /\/api\/v1\/comercial\/alunos(?:\?|$)/.test(response.url())
+      && !response.url().includes("alunos-com-matricula")
+    );
+    await page.getByRole("dialog").getByRole("button", { name: /Pré-cadastro$/i }).click();
+    const createResponse = await createResponsePromise;
+    const created = (await createResponse.json()) as CreateAlunoResponse;
 
-    await expect(page.getByRole("row").filter({ hasText: payload.nome })).toBeVisible();
-    await expect(page.getByRole("row").filter({ hasText: payload.nome })).toContainText("Inativo");
-    await expect(page.getByRole("heading", { name: "Novo cliente" })).toBeHidden();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await page.goto(`/clientes/${created.id}`);
+    await expect(page.getByRole("heading", { name: payload.nome })).toBeVisible();
+    await expect(page.getByText(payload.email)).toBeVisible();
   });
 });

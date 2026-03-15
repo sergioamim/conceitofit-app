@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
-  createCrmCadencia,
-  createCrmPlaybook,
-  listCrmCadencias,
-  listCrmPipelineStages,
-  listCrmPlaybooks,
-  updateCrmCadencia,
-  updateCrmPlaybook,
-} from "@/lib/mock/services";
+  createCrmCadenciaApi,
+  createCrmPlaybookApi,
+  listCrmCadenciasApi,
+  listCrmPlaybooksApi,
+  updateCrmCadenciaApi,
+  updateCrmPlaybookApi,
+} from "@/lib/api/crm";
+import { normalizeCapabilityError } from "@/lib/api/backend-capability";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type {
   CrmCadencia,
   CrmCadenciaAcao,
@@ -20,6 +21,7 @@ import type {
   StatusProspect,
 } from "@/lib/types";
 import {
+  buildDefaultCrmPipelineStages,
   CRM_CADENCIA_ACTION_LABEL,
   CRM_CADENCIA_TRIGGER_LABEL,
   CRM_PLAYBOOK_ACTION_LABEL,
@@ -157,7 +159,6 @@ function formatDateTime(value?: string): string {
 
 export default function CrmPlaybooksPage() {
   const tenantContext = useTenantContext();
-  const [stages, setStages] = useState<CrmPipelineStage[]>([]);
   const [playbooks, setPlaybooks] = useState<CrmPlaybook[]>([]);
   const [cadencias, setCadencias] = useState<CrmCadencia[]>([]);
   const [editingPlaybook, setEditingPlaybook] = useState<CrmPlaybook | null>(null);
@@ -167,28 +168,42 @@ export default function CrmPlaybooksPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [cadenciasUnavailable, setCadenciasUnavailable] = useState(false);
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
+  const stages: CrmPipelineStage[] = buildDefaultCrmPipelineStages(tenantId || "tenant-runtime");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
-    try {
-      const [stageRows, playbookRows, cadenciaRows] = await Promise.all([
-        listCrmPipelineStages(),
-        listCrmPlaybooks(),
-        listCrmCadencias(),
-      ]);
-      setStages(stageRows);
-      setPlaybooks(playbookRows);
-      setCadencias(cadenciaRows);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Falha ao carregar playbooks e cadências.");
-    } finally {
-      setLoading(false);
+    const [playbookResult, cadenciaResult] = await Promise.allSettled([
+      listCrmPlaybooksApi({ tenantId }),
+      listCrmCadenciasApi({ tenantId }),
+    ]);
+
+    if (playbookResult.status === "fulfilled") {
+      setPlaybooks(playbookResult.value);
+    } else {
+      setPlaybooks([]);
+      setError(normalizeCapabilityError(playbookResult.reason, "Falha ao carregar playbooks."));
     }
-  }, []);
+
+    if (cadenciaResult.status === "fulfilled") {
+      setCadencias(cadenciaResult.value);
+      setCadenciasUnavailable(false);
+    } else {
+      const message = normalizeCapabilityError(cadenciaResult.reason, "Falha ao carregar cadências.");
+      setCadencias([]);
+      setCadenciasUnavailable(message.startsWith("Backend ainda não expõe"));
+      if (!message.startsWith("Backend ainda não expõe")) {
+        setError((current) => current || message);
+      }
+    }
+
+    setLoading(false);
+  }, [tenantId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   function resetPlaybookForm(playbook?: CrmPlaybook | null) {
@@ -203,6 +218,7 @@ export default function CrmPlaybooksPage() {
 
   async function handleSavePlaybook(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!tenantId) return;
     setSaving(true);
     setError("");
     try {
@@ -221,14 +237,21 @@ export default function CrmPlaybooksPage() {
         })),
       };
       if (editingPlaybook) {
-        await updateCrmPlaybook(editingPlaybook.id, payload);
+        await updateCrmPlaybookApi({
+          tenantId,
+          id: editingPlaybook.id,
+          data: payload,
+        });
       } else {
-        await createCrmPlaybook(payload);
+        await createCrmPlaybookApi({
+          tenantId,
+          data: payload,
+        });
       }
       resetPlaybookForm(null);
       await load();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Falha ao salvar playbook.");
+      setError(normalizeCapabilityError(submitError, "Falha ao salvar playbook."));
     } finally {
       setSaving(false);
     }
@@ -236,6 +259,7 @@ export default function CrmPlaybooksPage() {
 
   async function handleSaveCadencia(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!tenantId) return;
     setSaving(true);
     setError("");
     try {
@@ -255,14 +279,25 @@ export default function CrmPlaybooksPage() {
         })),
       };
       if (editingCadencia) {
-        await updateCrmCadencia(editingCadencia.id, payload);
+        await updateCrmCadenciaApi({
+          tenantId,
+          id: editingCadencia.id,
+          data: payload,
+        });
       } else {
-        await createCrmCadencia(payload);
+        await createCrmCadenciaApi({
+          tenantId,
+          data: payload,
+        });
       }
       resetCadenciaForm(null);
       await load();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Falha ao salvar cadência.");
+      const message = normalizeCapabilityError(submitError, "Falha ao salvar cadência.");
+      setError(message);
+      if (message.startsWith("Backend ainda não expõe")) {
+        setCadenciasUnavailable(true);
+      }
     } finally {
       setSaving(false);
     }
@@ -284,6 +319,13 @@ export default function CrmPlaybooksPage() {
       {error ? (
         <Card className="border-rose-500/40 bg-rose-500/10">
           <CardContent className="px-6 py-5 text-sm text-rose-100">{error}</CardContent>
+        </Card>
+      ) : null}
+      {cadenciasUnavailable ? (
+        <Card className="border-amber-500/40 bg-amber-500/10">
+          <CardContent className="px-6 py-5 text-sm text-amber-100">
+            Este ambiente ainda não expõe cadências CRM no backend. O tab permanece visível, mas em modo somente leitura.
+          </CardContent>
         </Card>
       ) : null}
 
@@ -697,6 +739,7 @@ export default function CrmPlaybooksPage() {
                       <Button
                         type="button"
                         variant="outline"
+                        disabled={cadenciasUnavailable}
                         onClick={() =>
                           setCadenciaForm((current) => ({
                             ...current,
@@ -811,7 +854,7 @@ export default function CrmPlaybooksPage() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button type="submit" disabled={saving}>
+                    <Button type="submit" disabled={saving || cadenciasUnavailable}>
                       {saving ? "Salvando..." : editingCadencia ? "Salvar cadência" : "Criar cadência"}
                     </Button>
                     <Button type="button" variant="outline" onClick={() => resetCadenciaForm(null)} disabled={saving}>

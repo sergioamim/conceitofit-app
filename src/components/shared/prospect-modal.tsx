@@ -192,6 +192,7 @@ function ProspectModalComponent({
 }
 
 export const ProspectModal = memo(ProspectModalComponent);
+ProspectModal.displayName = "ProspectModal";
 
 type SelectOption = {
   value: string;
@@ -226,6 +227,7 @@ const ProspectInputField = memo(
     );
   }
 );
+ProspectInputField.displayName = "ProspectInputField";
 
 const ProspectSelectField = memo(
   ({
@@ -276,5 +278,6 @@ const ProspectSelectField = memo(
     );
   }
 );
+ProspectSelectField.displayName = "ProspectSelectField";
 
 export { ProspectInputField, ProspectSelectField };

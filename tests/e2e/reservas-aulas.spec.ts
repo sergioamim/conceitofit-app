@@ -1,23 +1,18 @@
-import { expect, test, type Page } from "@playwright/test";
-
-async function abrirComSessaoMock(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Usuário").fill("admin@academia.local");
-  await page.getByLabel("Senha").fill("12345678");
-  await page.getByRole("button", { name: "Entrar" }).click();
-
-  const stepTenant = page.getByRole("heading", { name: "Unidade prioritária" });
-  if (await stepTenant.isVisible()) {
-    await page.getByRole("combobox").click();
-    await page.getByRole("option").first().click();
-    await page.getByRole("button", { name: "Salvar e continuar" }).click();
-  }
-}
+import { expect, test } from "@playwright/test";
+import {
+  installReservasApiMocks,
+  seedAuthenticatedSession,
+} from "./support/backend-only-stubs";
 
 test.describe("Reservas e operação de aulas", () => {
-  test("cria waitlist, cancela reserva, promove fila e registra check-in", async ({ page }) => {
-    await abrirComSessaoMock(page);
+  test.beforeEach(async ({ page }) => {
+    await seedAuthenticatedSession(page, {
+      tenantId: "tenant-reservas",
+    });
+    await installReservasApiMocks(page);
+  });
 
+  test("cria waitlist, cancela reserva, promove fila e registra check-in", async ({ page }) => {
     await page.goto("/reservas");
     await expect(page.getByRole("heading", { name: "Reservas, vagas e aulas" })).toBeVisible();
 

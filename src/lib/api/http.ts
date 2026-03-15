@@ -46,11 +46,21 @@ export class ApiRequestError extends Error {
 const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 const AUTH_REFRESH_PATH = "/api/v1/auth/refresh";
 const AUTH_LOGIN_PATH = "/api/v1/auth/login";
-const TENANT_QUERY_REQUIRED_PATTERNS = [
+const TENANT_CONTEXT_SYNC_PATH = "/api/v1/context/unidade-ativa";
+const TENANT_CONTEXT_MISMATCH_MESSAGE = "tenantId diverge da unidade ativa do contexto informado";
+// Rotas operacionais usam a unidade ativa do X-Context-Id no browser.
+const CONTEXT_SCOPED_OPERATIONAL_PATTERNS = [
+  /^\/api\/v1\/comercial(?:\/|$)/,
+  /^\/api\/v1\/crm(?:\/|$)/,
+  /^\/api\/v1\/agenda\/aulas(?:\/|$)/,
+  /^\/api\/v1\/administrativo\/(?:cargos|funcionarios|salas|atividades(?:-grade)?)(?:\/|$)/,
+  /^\/api\/v1\/gerencial\/financeiro\/(?!formas-pagamento(?:\/|$)|tipos-conta-pagar(?:\/|$))/,
+];
+
+// Rotas globais e catálogos ainda exigem tenantId explícito mesmo com sessão carregada.
+const EXPLICIT_TENANT_QUERY_PATTERNS = [
   /^\/api\/v1\/academia(?:\/|$)/,
   /^\/api\/v1\/dashboard(?:\/|$)/,
-  /^\/api\/v1\/administrativo(?:\/|$)/,
-  /^\/api\/v1\/comercial(?:\/|$)/,
   /^\/api\/v1\/gerencial\/financeiro\/(?:formas-pagamento|tipos-conta-pagar)(?:\/|$)/,
 ];
 
@@ -90,10 +100,6 @@ function getContextId(): string | undefined {
   }
 }
 
-export function isRealApiEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_USE_REAL_API === "true";
-}
-
 export function buildApiUrl(path: string, query?: Record<string, string | number | boolean | undefined>): string {
   const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
   const pathname = path.startsWith("/") ? path : `/${path}`;
@@ -125,15 +131,39 @@ function resolveRequestUrl(path: string, query?: Record<string, string | number 
     }
   }
   const suffix = qs.toString() ? `?${qs.toString()}` : "";
-  const shouldUseProxy = isRealApiEnabled() && (typeof window !== "undefined");
+  const shouldUseProxy = typeof window !== "undefined";
   if (shouldUseProxy) {
     return `/backend${pathname}${suffix}`;
   }
   return baseUrl ? `${baseUrl}${pathname}${suffix}` : `${pathname}${suffix}`;
 }
 
-function routeRequiresTenantQuery(path: string): boolean {
-  return TENANT_QUERY_REQUIRED_PATTERNS.some((pattern) => pattern.test(path));
+function isContextScopedOperationalRoute(path: string): boolean {
+  return CONTEXT_SCOPED_OPERATIONAL_PATTERNS.some((pattern) => pattern.test(path));
+}
+
+function routeRequiresExplicitTenantQuery(path: string): boolean {
+  return EXPLICIT_TENANT_QUERY_PATTERNS.some((pattern) => pattern.test(path));
+}
+
+function shouldStripTenantIdFromQuery(path: string, hasContextHeader: boolean): boolean {
+  return hasContextHeader && isContextScopedOperationalRoute(path);
+}
+
+function routeRequiresTenantQuery(path: string, hasContextHeader: boolean): boolean {
+  if (shouldStripTenantIdFromQuery(path, hasContextHeader)) {
+    return false;
+  }
+  return isContextScopedOperationalRoute(path) || routeRequiresExplicitTenantQuery(path);
+}
+
+function extractTenantIdFromQuery(
+  query?: Record<string, string | number | boolean | undefined>
+): string | undefined {
+  const tenantId = query?.tenantId;
+  if (typeof tenantId !== "string") return undefined;
+  const normalized = tenantId.trim();
+  return normalized || undefined;
 }
 
 function resolveTenantFallback(allowedTenants: string[]): string | undefined {
@@ -152,9 +182,13 @@ function resolveTenantFallback(allowedTenants: string[]): string | undefined {
 
 function normalizeTenantQuery(
   path: string,
-  query?: Record<string, string | number | boolean | undefined>
+  query?: Record<string, string | number | boolean | undefined>,
+  options?: {
+    hasContextHeader?: boolean;
+  }
 ): Record<string, string | number | boolean | undefined> | undefined {
   const normalized = query ? { ...query } : {};
+  const hasContextHeader = options?.hasContextHeader ?? false;
   const requestedTenant =
     typeof normalized.tenantId === "string" ? normalized.tenantId.trim() : undefined;
 
@@ -163,13 +197,11 @@ function normalizeTenantQuery(
     .filter(Boolean);
   const fallbackTenant = resolveTenantFallback(allowedTenants);
 
-  if (requestedTenant) {
-    if (allowedTenants.length > 0 && !allowedTenants.includes(requestedTenant) && fallbackTenant) {
-      normalized.tenantId = fallbackTenant;
-    } else {
-      normalized.tenantId = requestedTenant;
-    }
-  } else if (routeRequiresTenantQuery(path) && fallbackTenant) {
+  if (shouldStripTenantIdFromQuery(path, hasContextHeader)) {
+    delete normalized.tenantId;
+  } else if (requestedTenant) {
+    normalized.tenantId = requestedTenant;
+  } else if (routeRequiresTenantQuery(path, hasContextHeader) && fallbackTenant) {
     normalized.tenantId = fallbackTenant;
   }
 
@@ -310,6 +342,47 @@ function normalizeApiErrorPayload(input: unknown): ApiErrorPayload | undefined {
   };
 }
 
+function isTenantContextMismatchError(
+  response: Response,
+  payload: ApiErrorPayload | undefined,
+  parsedBody: unknown
+): boolean {
+  if (response.status !== 400) return false;
+
+  const messages = [
+    payload?.message,
+    payload?.error,
+    typeof parsedBody === "string" ? parsedBody : undefined,
+    typeof payload?.responseBody === "string" ? payload.responseBody : undefined,
+  ]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .map((value) => value.toLowerCase());
+
+  return messages.some((value) => value.includes(TENANT_CONTEXT_MISMATCH_MESSAGE.toLowerCase()));
+}
+
+async function syncTenantContext(
+  tenantId: string,
+  headers: Record<string, string>
+): Promise<boolean> {
+  const syncHeaders: Record<string, string> = {
+    Accept: "application/json",
+  };
+  if (headers.Authorization) {
+    syncHeaders.Authorization = headers.Authorization;
+  }
+  if (headers["X-Context-Id"]) {
+    syncHeaders["X-Context-Id"] = headers["X-Context-Id"];
+  }
+
+  const response = await fetch(resolveRequestUrl(`${TENANT_CONTEXT_SYNC_PATH}/${tenantId}`), {
+    method: "PUT",
+    headers: syncHeaders,
+  });
+
+  return response.ok;
+}
+
 function normalizeAuthTenantAccess(
   input?: AuthTenantAccessPayload[]
 ): { tenantId: string; defaultTenant: boolean }[] | undefined {
@@ -382,9 +455,12 @@ export async function apiRequest<T>(input: {
   if (input.body != null && !isFormData) {
     headers["Content-Type"] = "application/json";
   }
-  if (input.includeContextHeader !== false) {
-    const contextId = getContextId();
-    if (contextId) headers["X-Context-Id"] = contextId;
+  const contextId =
+    input.includeContextHeader !== false
+      ? getContextId()
+      : undefined;
+  if (contextId) {
+    headers["X-Context-Id"] = contextId;
   }
   const token = getAccessToken();
   if (token) {
@@ -392,14 +468,16 @@ export async function apiRequest<T>(input: {
   }
 
   const isAuthEndpoint = input.path.startsWith("/api/v1/auth/");
-  if (!token && !isAuthEndpoint && isRealApiEnabled()) {
+  if (!token && !isAuthEndpoint) {
     const loginToken = await tryAutoLogin();
     if (loginToken) {
       headers["Authorization"] = `${loginToken.type} ${loginToken.token}`;
     }
   }
 
-  const normalizedQuery = normalizeTenantQuery(input.path, input.query);
+  const normalizedQuery = normalizeTenantQuery(input.path, input.query, {
+    hasContextHeader: Boolean(contextId),
+  });
   const requestUrl = resolveRequestUrl(input.path, normalizedQuery);
   const requestBody =
     input.body == null
@@ -407,33 +485,53 @@ export async function apiRequest<T>(input: {
       : isFormData
         ? (input.body as unknown as BodyInit)
         : (JSON.stringify(input.body) as unknown as BodyInit);
-  let response = await fetch(requestUrl, {
-    method,
-    headers,
-    body: requestBody,
-  });
+  const tenantIdForContextSync = extractTenantIdFromQuery(normalizedQuery);
 
-  if (response.status === 401 && retryOnAuthFailure && !isAuthEndpoint) {
-    const refreshToken = getRefreshToken();
-    if (refreshToken) {
-      const refreshed = await tryRefreshToken(refreshToken);
-      if (refreshed) {
-        const retryHeaders: HeadersInit = {
-          ...headers,
-          Authorization: `${refreshed.type} ${refreshed.token}`,
-        };
-        response = await fetch(requestUrl, {
-          method,
-          headers: retryHeaders,
-          body: requestBody,
-        });
+  const executeRequest = async (): Promise<Response> => {
+    let response = await fetch(requestUrl, {
+      method,
+      headers,
+      body: requestBody,
+    });
+
+    if (response.status === 401 && retryOnAuthFailure && !isAuthEndpoint) {
+      const refreshToken = getRefreshToken();
+      if (refreshToken) {
+        const refreshed = await tryRefreshToken(refreshToken);
+        if (refreshed) {
+          headers.Authorization = `${refreshed.type} ${refreshed.token}`;
+          response = await fetch(requestUrl, {
+            method,
+            headers,
+            body: requestBody,
+          });
+        }
       }
     }
-  }
+
+    return response;
+  };
+
+  let response = await executeRequest();
 
   if (!response.ok) {
-    const { rawBody, parsedBody } = await readResponseBody(response);
-    const payload = normalizeApiErrorPayload(parsedBody);
+    let { rawBody, parsedBody } = await readResponseBody(response);
+    let payload = normalizeApiErrorPayload(parsedBody);
+
+    if (
+      tenantIdForContextSync &&
+      isTenantContextMismatchError(response, payload, parsedBody) &&
+      (await syncTenantContext(tenantIdForContextSync, headers))
+    ) {
+      response = await executeRequest();
+      if (response.ok) {
+        const { parsedBody: retriedBody } = await readResponseBody(response);
+        return retriedBody as T;
+      }
+      ({ rawBody, parsedBody } = await readResponseBody(response));
+      payload = normalizeApiErrorPayload(parsedBody);
+    }
+
     const details: ApiErrorPayload & { statusCode?: number } = {
       statusCode: response.status,
       message:

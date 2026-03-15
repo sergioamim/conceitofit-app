@@ -2,13 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  createCrmTask,
-  listCrmPipelineStages,
-  listCrmTasks,
-  listFuncionarios,
-  listProspects,
-  updateCrmTask,
-} from "@/lib/mock/services";
+  createCrmTaskApi,
+  listCrmTasksApi,
+  listProspectsApi,
+  updateCrmTaskApi,
+} from "@/lib/api/crm";
+import { listFuncionariosApi } from "@/lib/api/administrativo";
+import { normalizeCapabilityError } from "@/lib/api/backend-capability";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import { getBusinessTodayIso } from "@/lib/business-date";
+import {
+  buildDefaultCrmPipelineStages,
+  CRM_TASK_PRIORITY_LABEL,
+  CRM_TASK_STATUS_LABEL,
+  CRM_TASK_TYPE_LABEL,
+} from "@/lib/crm/workspace";
+import { enrichCrmTasksRuntime, normalizeProspectRuntime, sortCrmTasksRuntime } from "@/lib/crm/runtime";
 import type {
   CrmPipelineStage,
   CrmTask,
@@ -19,11 +28,6 @@ import type {
   Prospect,
   StatusProspect,
 } from "@/lib/types";
-import {
-  CRM_TASK_PRIORITY_LABEL,
-  CRM_TASK_STATUS_LABEL,
-  CRM_TASK_TYPE_LABEL,
-} from "@/lib/crm/workspace";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +54,7 @@ type FormState = {
   vencimentoHora: string;
 };
 
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = getBusinessTodayIso();
 const EMPTY_FORM: FormState = {
   titulo: "",
   descricao: "",
@@ -93,7 +97,6 @@ export default function CrmTarefasPage() {
   const [rows, setRows] = useState<CrmTask[]>([]);
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
-  const [stages, setStages] = useState<CrmPipelineStage[]>([]);
   const [editing, setEditing] = useState<CrmTask | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [filterStatus, setFilterStatus] = useState<CrmTaskStatus | "TODAS">("TODAS");
@@ -102,30 +105,45 @@ export default function CrmTarefasPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [writeUnavailable, setWriteUnavailable] = useState(false);
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
+  const stages = useMemo<CrmPipelineStage[]>(
+    () => buildDefaultCrmPipelineStages(tenantId || "tenant-runtime"),
+    [tenantId]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [taskRows, prospectRows, funcionarioRows, pipelineStages] = await Promise.all([
-        listCrmTasks(),
-        listProspects(),
-        listFuncionarios(),
-        listCrmPipelineStages(),
+      const [taskRows, prospectRows, funcionarioRows] = await Promise.all([
+        listCrmTasksApi({ tenantId }),
+        listProspectsApi({ tenantId }),
+        listFuncionariosApi(true),
       ]);
-      setRows(taskRows);
-      setProspects(prospectRows);
+      const normalizedProspects = prospectRows
+        .map((prospect) => normalizeProspectRuntime(prospect))
+        .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
+      setRows(
+        sortCrmTasksRuntime(
+          enrichCrmTasksRuntime({
+            tasks: taskRows,
+            prospects: normalizedProspects,
+            funcionarios: funcionarioRows,
+          })
+        )
+      );
+      setProspects(normalizedProspects);
       setFuncionarios(funcionarioRows);
-      setStages(pipelineStages);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Falha ao carregar tarefas comerciais.");
+      setError(normalizeCapabilityError(loadError, "Falha ao carregar tarefas comerciais."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const filteredRows = useMemo(() => {
@@ -152,6 +170,7 @@ export default function CrmTarefasPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!tenantId) return;
     setSaving(true);
     setError("");
     try {
@@ -167,30 +186,50 @@ export default function CrmTarefasPage() {
         vencimentoEm: `${form.vencimentoData}T${form.vencimentoHora}:00`,
       };
       if (editing) {
-        await updateCrmTask(editing.id, payload);
+        await updateCrmTaskApi({
+          tenantId,
+          id: editing.id,
+          data: payload,
+        });
       } else {
-        await createCrmTask(payload);
+        await createCrmTaskApi({
+          tenantId,
+          data: payload,
+        });
       }
       resetForm(null);
       await load();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Falha ao salvar tarefa CRM.");
+      const message = normalizeCapabilityError(submitError, "Falha ao salvar tarefa CRM.");
+      setError(message);
+      if (message.startsWith("Backend ainda não expõe")) {
+        setWriteUnavailable(true);
+      }
     } finally {
       setSaving(false);
     }
   }
 
   async function handleConcluir(task: CrmTask) {
+    if (!tenantId) return;
     setSaving(true);
     setError("");
     try {
-      await updateCrmTask(task.id, { status: "CONCLUIDA" });
+      await updateCrmTaskApi({
+        tenantId,
+        id: task.id,
+        data: { status: "CONCLUIDA" },
+      });
       if (editing?.id === task.id) {
         resetForm(null);
       }
       await load();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Falha ao concluir tarefa.");
+      const message = normalizeCapabilityError(submitError, "Falha ao concluir tarefa.");
+      setError(message);
+      if (message.startsWith("Backend ainda não expõe")) {
+        setWriteUnavailable(true);
+      }
     } finally {
       setSaving(false);
     }
@@ -234,6 +273,13 @@ export default function CrmTarefasPage() {
       {error ? (
         <Card className="border-rose-500/40 bg-rose-500/10">
           <CardContent className="px-6 py-5 text-sm text-rose-100">{error}</CardContent>
+        </Card>
+      ) : null}
+      {writeUnavailable ? (
+        <Card className="border-amber-500/40 bg-amber-500/10">
+          <CardContent className="px-6 py-5 text-sm text-amber-100">
+            Este ambiente ainda não expõe criação e edição de tarefas CRM no backend. A tela permanece em modo leitura.
+          </CardContent>
         </Card>
       ) : null}
 
@@ -340,7 +386,7 @@ export default function CrmTarefasPage() {
                         <Button
                           type="button"
                           onClick={() => handleConcluir(task)}
-                          disabled={saving || task.status === "CONCLUIDA"}
+                          disabled={saving || writeUnavailable || task.status === "CONCLUIDA"}
                         >
                           Concluir
                         </Button>
@@ -524,7 +570,7 @@ export default function CrmTarefasPage() {
               </div>
 
               <div className="flex gap-2">
-                <Button type="submit" disabled={saving}>
+                <Button type="submit" disabled={saving || writeUnavailable}>
                   {saving ? "Salvando..." : editing ? "Salvar tarefa" : "Criar tarefa"}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => resetForm(null)} disabled={saving}>

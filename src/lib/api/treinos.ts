@@ -1,7 +1,11 @@
-import { apiRequest } from "./http";
+import { ApiRequestError, apiRequest } from "./http";
 
 export type TreinoStatusApi = "RASCUNHO" | "ATIVO" | "ARQUIVADO" | "CANCELADO";
 export type TreinoTipoApi = "PRE_MONTADO" | "CUSTOMIZADO";
+export type TreinoTemplateStatusApi =
+  | TreinoStatusApi
+  | "PUBLICADO"
+  | "EM_REVISAO";
 
 export interface TreinoApiResponse {
   id: string;
@@ -20,12 +24,27 @@ export interface TreinoApiResponse {
   nome: string;
   objetivo?: string | null;
   observacoes?: string | null;
+  frequenciaPlanejada?: number | null;
+  quantidadePrevista?: number | null;
   dataInicio?: string | null;
   dataFim?: string | null;
   status?: TreinoStatusApi | null;
   tipoTreino?: TreinoTipoApi | null;
   treinoBaseId?: string | null;
+  templateNome?: string | null;
   ativo: boolean;
+  revisaoAtual?: number | null;
+  ultimaRevisaoEm?: string | null;
+  proximaRevisaoEm?: string | null;
+  statusCiclo?: "PLANEJADO" | "EM_DIA" | "ATENCAO" | "ATRASADO" | "ENCERRADO" | null;
+  atribuidoEm?: string | null;
+  encerradoEm?: string | null;
+  renovadoDeTreinoId?: string | null;
+  execucoesPrevistas?: number | null;
+  execucoesConcluidas?: number | null;
+  aderenciaPercentual?: number | null;
+  revisoes?: TreinoRevisaoApiResponse[] | null;
+  execucoes?: TreinoExecucaoApiResponse[] | null;
   atualizadoPor?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -38,6 +57,8 @@ export interface TreinoItemApiResponse {
   treinoId: string;
   exercicioId: string;
   exercicioNomeSnapshot?: string | null;
+  grupoMuscularId?: string | null;
+  grupoMuscularNome?: string | null;
   ordem: number;
   series: number;
   repeticoes?: number | null;
@@ -53,6 +74,26 @@ export interface TreinoItemApiResponse {
   updatedAt?: string | null;
 }
 
+export interface TreinoRevisaoApiResponse {
+  id: string;
+  treinoId: string;
+  tipo: "CRIACAO" | "REVISAO" | "RENOVACAO" | "ENCERRAMENTO" | "ATRIBUICAO";
+  titulo: string;
+  observacao?: string | null;
+  createdAt?: string | null;
+}
+
+export interface TreinoExecucaoApiResponse {
+  id: string;
+  treinoId: string;
+  alunoId?: string | null;
+  data: string;
+  status: "CONCLUIDA" | "PARCIAL" | "PULADA";
+  observacao?: string | null;
+  cargaMedia?: number | null;
+  createdAt?: string | null;
+}
+
 type TreinoPagedApiResponse = {
   items?: TreinoApiResponse[];
   content?: TreinoApiResponse[];
@@ -62,6 +103,41 @@ type TreinoPagedApiResponse = {
   size?: number;
   total?: number;
   hasNext?: boolean;
+};
+
+export interface TemplateResumoApiResponse {
+  id: string;
+  nome: string;
+  professorId?: string | null;
+  professorNome?: string | null;
+  status?: TreinoTemplateStatusApi | null;
+  frequenciaSemanal?: number | null;
+  totalSemanas?: number | null;
+  categoria?: string | null;
+  perfilIndicacao?: string | null;
+  versaoTemplate?: number | null;
+  precisaRevisao?: boolean | null;
+  pendenciasAbertas?: number | null;
+  atualizadoEm?: string | null;
+}
+
+export interface TemplateListTotalsApiResponse {
+  totalTemplates?: number | null;
+  publicados?: number | null;
+  emRevisao?: number | null;
+  comPendencias?: number | null;
+}
+
+type TemplateListPageApiResponse = {
+  items?: TemplateResumoApiResponse[];
+  content?: TemplateResumoApiResponse[];
+  data?: TemplateResumoApiResponse[];
+  rows?: TemplateResumoApiResponse[];
+  page?: number;
+  size?: number;
+  total?: number;
+  hasNext?: boolean;
+  totais?: TemplateListTotalsApiResponse | null;
 };
 
 export interface ListTreinosApiInput {
@@ -87,6 +163,32 @@ export interface ListTreinosApiResult {
   hasNext: boolean;
 }
 
+export interface ListTreinoTemplatesApiInput {
+  tenantId?: string;
+  professorId?: string;
+  status?: TreinoTemplateStatusApi;
+  categoria?: string;
+  perfilIndicacao?: string;
+  precisaRevisao?: boolean;
+  search?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface ListTreinoTemplatesApiResult {
+  items: TemplateResumoApiResponse[];
+  page: number;
+  size: number;
+  total?: number;
+  hasNext: boolean;
+  totais: {
+    totalTemplates: number;
+    publicados: number;
+    emRevisao: number;
+    comPendencias: number;
+  };
+}
+
 type CreateTreinoApiInput = {
   clienteId?: string;
   professorId?: string;
@@ -95,11 +197,14 @@ type CreateTreinoApiInput = {
   observacoes?: string;
   divisao?: string;
   metaSessoesSemana?: number;
+  frequenciaPlanejada?: number;
+  quantidadePrevista?: number;
   dataInicio?: string;
   dataFim?: string;
   status?: TreinoStatusApi;
   tipoTreino?: TreinoTipoApi;
   treinoBaseId?: string;
+  templateNome?: string;
   ativo?: boolean;
   itens?: Array<{
     exercicioId: string;
@@ -123,11 +228,16 @@ export type UpdateTreinoApiInput = {
   nome: string;
   objetivo?: string | null;
   observacoes?: string | null;
+  divisao?: string | null;
+  metaSessoesSemana?: number | null;
+  frequenciaPlanejada?: number | null;
+  quantidadePrevista?: number | null;
   dataInicio?: string | null;
   dataFim?: string | null;
   status?: TreinoStatusApi | null;
   tipoTreino?: TreinoTipoApi | null;
   treinoBaseId?: string | null;
+  templateNome?: string | null;
   ativo?: boolean | null;
   itens?: Array<{
     exercicioId: string;
@@ -146,11 +256,24 @@ export interface ExercicioApiResponse {
   id: string;
   tenantId: string;
   nome: string;
+  grupoMuscularId?: string | null;
   descricao?: string | null;
   grupoMuscular?: string | null;
+  grupoMuscularNome?: string | null;
   aparelho?: string | null;
   videoUrl?: string | null;
   unidade?: string | null;
+  ativo: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface GrupoMuscularApiResponse {
+  id: string;
+  tenantId: string;
+  nome: string;
+  descricao?: string | null;
+  categoria?: "SUPERIOR" | "INFERIOR" | "CORE" | "FUNCIONAL" | "OUTRO" | null;
   ativo: boolean;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -168,10 +291,22 @@ type ExercicioListApiResponse =
 type CreateExercicioApiInput = {
   nome: string;
   descricao?: string;
+  grupoMuscularId?: string;
   grupoMuscular?: string;
   aparelho?: string;
   videoUrl?: string;
   unidade?: string;
+  ativo?: boolean;
+};
+
+type UpdateExercicioApiInput = Partial<CreateExercicioApiInput> & {
+  nome: string;
+};
+
+type CreateGrupoMuscularApiInput = {
+  nome: string;
+  descricao?: string;
+  categoria?: "SUPERIOR" | "INFERIOR" | "CORE" | "FUNCIONAL" | "OUTRO";
   ativo?: boolean;
 };
 
@@ -184,6 +319,24 @@ function extractTreinoItems(value: TreinoPagedApiResponse): TreinoApiResponse[] 
   const candidates = [value.items, value.content, value.data, value.rows];
   const firstArray = candidates.find(Array.isArray);
   return Array.isArray(firstArray) ? firstArray : [];
+}
+
+function extractTemplateItems(value: TemplateListPageApiResponse): TemplateResumoApiResponse[] {
+  const candidates = [value.items, value.content, value.data, value.rows];
+  const firstArray = candidates.find(Array.isArray);
+  return Array.isArray(firstArray) ? firstArray : [];
+}
+
+function normalizeTemplateTotals(
+  totals: TemplateListTotalsApiResponse | null | undefined,
+  fallbackTotal: number,
+): ListTreinoTemplatesApiResult["totais"] {
+  return {
+    totalTemplates: toNumber(totals?.totalTemplates, fallbackTotal),
+    publicados: toNumber(totals?.publicados, 0),
+    emRevisao: toNumber(totals?.emRevisao, 0),
+    comPendencias: toNumber(totals?.comPendencias, 0),
+  };
 }
 
 function extractExercicios(value: ExercicioListApiResponse): ExercicioApiResponse[] {
@@ -240,6 +393,46 @@ export async function listTreinosApi(input: ListTreinosApiInput): Promise<ListTr
     size,
     total,
     hasNext,
+  };
+}
+
+export async function listTreinoTemplatesApi(
+  input: ListTreinoTemplatesApiInput,
+): Promise<ListTreinoTemplatesApiResult> {
+  const response = await apiRequest<TemplateListPageApiResponse>({
+    path: "/api/v1/treinos/templates",
+    query: {
+      tenantId: input.tenantId,
+      professorId: input.professorId,
+      status: input.status,
+      categoria: input.categoria,
+      perfilIndicacao: input.perfilIndicacao,
+      precisaRevisao: input.precisaRevisao,
+      search: input.search,
+      page: input.page,
+      size: input.size,
+    },
+  });
+
+  const items = extractTemplateItems(response);
+  const page = toNumber(response.page, input.page ?? 0);
+  const fallbackSize = input.size ?? items.length;
+  const size = toNumber(response.size, fallbackSize || 1);
+  const total = response.total == null ? undefined : toNumber(response.total, items.length);
+  const hasNext =
+    typeof response.hasNext === "boolean"
+      ? response.hasNext
+      : typeof total === "number"
+        ? (page + 1) * size < total
+        : false;
+
+  return {
+    items,
+    page,
+    size,
+    total,
+    hasNext,
+    totais: normalizeTemplateTotals(response.totais, total ?? items.length),
   };
 }
 
@@ -311,6 +504,19 @@ export async function createExercicioApi(input: {
   });
 }
 
+export async function updateExercicioApi(input: {
+  tenantId?: string;
+  id: string;
+  data: UpdateExercicioApiInput;
+}): Promise<ExercicioApiResponse> {
+  return apiRequest<ExercicioApiResponse>({
+    path: `/api/v1/exercicios/${input.id}`,
+    method: "PUT",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
 export async function toggleExercicioApi(input: {
   tenantId?: string;
   id: string;
@@ -330,5 +536,193 @@ export async function deleteExercicioApi(input: {
     path: `/api/v1/exercicios/${input.id}`,
     method: "DELETE",
     query: { tenantId: input.tenantId },
+  });
+}
+
+type GrupoMuscularListApiResponse =
+  | GrupoMuscularApiResponse[]
+  | {
+      items?: GrupoMuscularApiResponse[];
+      content?: GrupoMuscularApiResponse[];
+      data?: GrupoMuscularApiResponse[];
+      rows?: GrupoMuscularApiResponse[];
+    };
+
+function extractGruposMusculares(value: GrupoMuscularListApiResponse): GrupoMuscularApiResponse[] {
+  if (Array.isArray(value)) return value;
+  const candidates = [value.items, value.content, value.data, value.rows];
+  const firstArray = candidates.find(Array.isArray);
+  return Array.isArray(firstArray) ? firstArray : [];
+}
+
+export async function listGruposMuscularesApi(input?: {
+  tenantId?: string;
+  ativo?: boolean;
+  search?: string;
+}): Promise<GrupoMuscularApiResponse[]> {
+  const response = await apiRequest<GrupoMuscularListApiResponse>({
+    path: "/api/v1/grupos-musculares",
+    query: {
+      tenantId: input?.tenantId,
+      ativo: input?.ativo,
+      search: input?.search,
+    },
+  });
+  return extractGruposMusculares(response);
+}
+
+export async function createGrupoMuscularApi(input: {
+  tenantId?: string;
+  data: CreateGrupoMuscularApiInput;
+}): Promise<GrupoMuscularApiResponse> {
+  return apiRequest<GrupoMuscularApiResponse>({
+    path: "/api/v1/grupos-musculares",
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function updateGrupoMuscularApi(input: {
+  tenantId?: string;
+  id: string;
+  data: CreateGrupoMuscularApiInput;
+}): Promise<GrupoMuscularApiResponse> {
+  return apiRequest<GrupoMuscularApiResponse>({
+    path: `/api/v1/grupos-musculares/${input.id}`,
+    method: "PUT",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function toggleGrupoMuscularApi(input: {
+  tenantId?: string;
+  id: string;
+}): Promise<GrupoMuscularApiResponse> {
+  return apiRequest<GrupoMuscularApiResponse>({
+    path: `/api/v1/grupos-musculares/${input.id}/toggle`,
+    method: "PATCH",
+    query: { tenantId: input.tenantId },
+  });
+}
+
+export async function duplicateTreinoTemplateApi(input: {
+  tenantId?: string;
+  id: string;
+}): Promise<TreinoApiResponse> {
+  return apiRequest<TreinoApiResponse>({
+    path: `/api/v1/treinos/${input.id}/duplicar-template`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+  });
+}
+
+export async function assignTreinoTemplateApi(input: {
+  tenantId?: string;
+  id: string;
+  data: {
+    destinoTipo: "CLIENTE";
+    clienteId: string;
+    professorId?: string;
+    dataInicio?: string;
+    dataFim?: string;
+    observacoes?: string;
+    metaSessoesSemana?: number;
+    frequenciaSemanal?: number;
+    totalSemanas?: number;
+  };
+}): Promise<TreinoApiResponse> {
+  const paths = [
+    `/api/v1/treinos/templates/${input.id}/atribuir`,
+    `/api/v1/treinos/${input.id}/atribuir`,
+  ];
+
+  let lastError: unknown;
+  for (const path of paths) {
+    try {
+      return await apiRequest<TreinoApiResponse>({
+        path,
+        method: "POST",
+        query: { tenantId: input.tenantId },
+        body: input.data,
+      });
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 404) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Não foi possível atribuir o treino padrão.");
+}
+
+export async function revisarTreinoApi(input: {
+  tenantId?: string;
+  id: string;
+  data?: {
+    observacao?: string;
+    proximaRevisaoEm?: string;
+  };
+}): Promise<TreinoApiResponse> {
+  return apiRequest<TreinoApiResponse>({
+    path: `/api/v1/treinos/${input.id}/revisar`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function encerrarTreinoApi(input: {
+  tenantId?: string;
+  id: string;
+  data?: {
+    observacao?: string;
+  };
+}): Promise<TreinoApiResponse> {
+  return apiRequest<TreinoApiResponse>({
+    path: `/api/v1/treinos/${input.id}/encerrar-ciclo`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function renovarTreinoApi(input: {
+  tenantId?: string;
+  id: string;
+  data?: {
+    dataInicio?: string;
+    dataFim?: string;
+    quantidadePrevista?: number;
+    metaSessoesSemana?: number;
+    frequenciaPlanejada?: number;
+  };
+}): Promise<TreinoApiResponse> {
+  return apiRequest<TreinoApiResponse>({
+    path: `/api/v1/treinos/${input.id}/renovar`,
+    method: "PATCH",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+export async function registrarExecucaoTreinoApi(input: {
+  tenantId?: string;
+  id: string;
+  data?: {
+    data?: string;
+    observacao?: string;
+    cargaMedia?: number;
+    status?: "CONCLUIDA" | "PARCIAL" | "PULADA";
+  };
+}): Promise<TreinoApiResponse> {
+  return apiRequest<TreinoApiResponse>({
+    path: `/api/v1/treinos/${input.id}/execucoes`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
   });
 }

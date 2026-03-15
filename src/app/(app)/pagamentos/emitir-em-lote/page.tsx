@@ -5,11 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { emitirNfseEmLoteApi } from "@/lib/api/pagamentos";
+import { listContasReceberOperacionais, type PagamentoComAluno } from "@/lib/financeiro/recebimentos";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { emitirNfseEmLote, listPagamentos } from "@/lib/mock/services";
-import type { Pagamento, Aluno } from "@/lib/types";
-
-type PagamentoWithAluno = Pagamento & { aluno?: Aluno };
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -20,7 +19,8 @@ function formatDate(value: string) {
 }
 
 export default function EmitirNfseEmLotePage() {
-  const [pagamentos, setPagamentos] = useState<PagamentoWithAluno[]>([]);
+  const { tenantId } = useTenantContext();
+  const [pagamentos, setPagamentos] = useState<PagamentoComAluno[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmando, setConfirmando] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -28,14 +28,18 @@ export default function EmitirNfseEmLotePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const carregar = useCallback(async () => {
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const list = await listPagamentos();
+      const list = await listContasReceberOperacionais({ tenantId });
       setPagamentos(list);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     void carregar();
@@ -61,9 +65,13 @@ export default function EmitirNfseEmLotePage() {
   }
 
   async function handleConfirmarEmissao() {
+    if (!tenantId) return;
     setConfirmando(true);
     try {
-      await emitirNfseEmLote(selectedIds);
+      await emitirNfseEmLoteApi({
+        tenantId,
+        ids: selectedIds,
+      });
       setSelectedIds([]);
       setDialogOpen(false);
       await carregar();

@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CakeSlice, Clock3, ShieldCheck, Sparkles, WifiOff } from "lucide-react";
 import { listarAcessosCatracaDashboardApi, type CatracaAcesso } from "@/lib/api/catraca";
 import { getAlunoApi } from "@/lib/api/alunos";
-import { isRealApiEnabled } from "@/lib/api/http";
-import { getStore } from "@/lib/mock/store";
+import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { cn } from "@/lib/utils";
 import { ClienteThumbnail } from "@/components/shared/cliente-thumbnail";
@@ -201,45 +200,17 @@ function resolveFoto(acesso: CatracaAcesso): string | undefined {
   );
 }
 
-function getTenantLabel(tenantId: string): string {
-  const store = getStore();
-  return store.tenants.find((item) => item.id === tenantId)?.nome ?? tenantId;
-}
-
 async function loadAlunoExtra(input: { tenantId: string; memberId: string }): Promise<AlunoExtra | null> {
   if (!input.memberId.trim()) return null;
-
-  if (isRealApiEnabled()) {
-    const aluno = await getAlunoApi({
-      tenantId: input.tenantId,
-      id: input.memberId,
-    });
-    return {
-      nome: aluno.nome,
-      foto: aluno.foto,
-      dataNascimento: aluno.dataNascimento,
-    };
-  }
-
-  const store = getStore();
-  const aluno = store.alunos.find(
-    (item) => item.id === input.memberId && item.tenantId === input.tenantId
-  );
-  const matriculas = store.matriculas
-    .filter((item) => item.alunoId === input.memberId && item.tenantId === input.tenantId)
-    .sort((a, b) => toTimestamp(b.dataFim) - toTimestamp(a.dataFim));
-  const activeMatricula =
-    matriculas.find((item) => item.status === "ATIVA") ??
-    matriculas.find((item) => item.status === "VENCIDA") ??
-    matriculas[0];
-
-  if (!aluno && !activeMatricula) return null;
+  const aluno = await getAlunoApi({
+    tenantId: input.tenantId,
+    id: input.memberId,
+  });
 
   return {
-    nome: aluno?.nome,
-    foto: aluno?.foto,
-    dataNascimento: aluno?.dataNascimento,
-    dataVencimentoPlano: activeMatricula?.dataFim,
+    nome: aluno.nome,
+    foto: aluno.foto,
+    dataNascimento: aluno.dataNascimento,
   };
 }
 
@@ -306,7 +277,7 @@ async function buildEventFromAcesso(input: {
 }
 
 export function CatracaWelcomeMonitor({ tenantId }: { tenantId: string }) {
-  const tenantLabel = useMemo(() => getTenantLabel(tenantId), [tenantId]);
+  const [tenantLabel, setTenantLabel] = useState(tenantId);
 
   const [connection, setConnection] = useState<MonitorConnection>("connecting");
   const [error, setError] = useState("");
@@ -322,6 +293,28 @@ export function CatracaWelcomeMonitor({ tenantId }: { tenantId: string }) {
   const timerRef = useRef<number | ReturnType<typeof setTimeout> | null>(null);
   const alunoCacheRef = useRef<Map<string, AlunoExtra | null>>(new Map());
   const alunoInFlightRef = useRef<Map<string, Promise<AlunoExtra | null>>>(new Map());
+
+  useEffect(() => {
+    let active = true;
+    setTenantLabel(tenantId);
+    async function resolveTenantLabel() {
+      try {
+        const unidades = await listUnidadesApi();
+        const match = unidades.find((item) => item.id === tenantId);
+        if (active && match?.nome) {
+          setTenantLabel(match.nome);
+        }
+      } catch {
+        if (active) {
+          setTenantLabel(tenantId);
+        }
+      }
+    }
+    void resolveTenantLabel();
+    return () => {
+      active = false;
+    };
+  }, [tenantId]);
 
   const markAsSeen = useCallback((id: string) => {
     if (!id.trim() || seenIdsRef.current.has(id)) return;

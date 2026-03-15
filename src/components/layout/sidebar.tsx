@@ -27,11 +27,16 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import { listAcademiasApi } from "@/lib/api/contexto-unidades";
+import { clearAuthSession } from "@/lib/api/session";
 import { cn } from "@/lib/utils";
-import { authLogout } from "@/lib/mock/services";
-import { getStore } from "@/lib/mock/store";
-import { isRealApiEnabled } from "@/lib/api/http";
-import { useAuthAccess } from "@/hooks/use-session-context";
+import {
+  DEFAULT_ACADEMIA_LABEL,
+  DEFAULT_ACTIVE_TENANT_LABEL,
+  useAuthAccess,
+  useTenantContext,
+} from "@/hooks/use-session-context";
+import { TENANT_CONTEXT_UPDATED_EVENT } from "@/lib/tenant-context";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +67,7 @@ const navItems: NavItem[] = [
 
 const treinoItems: NavItem[] = [
   { href: "/treinos", label: "Treinos", icon: CalendarDays },
+  { href: "/treinos/atribuidos", label: "Treinos Atribuídos", icon: ClipboardList },
   { href: "/treinos/exercicios", label: "Exercícios", icon: Dumbbell },
   { href: "/treinos/grupos-musculares", label: "Grupos Musculares", icon: ListTree },
 ];
@@ -110,8 +116,6 @@ const gerencialItems: NavItem[] = [
   { href: "/gerencial/contas-a-receber", label: "Contas a Receber", icon: HandCoins },
   { href: "/gerencial/contas-a-pagar", label: "Contas a Pagar", icon: DollarSign },
   { href: "/gerencial/catraca-acessos", label: "Acessos Catraca", icon: ClipboardList },
-  { href: "/gerencial/contas-a-receber-experimental", label: "Contas a Receber (Protótipo)", icon: HandCoins },
-  { href: "/gerencial/contas-a-pagar-experimental", label: "Contas a Pagar (Protótipo)", icon: DollarSign },
   { href: "/gerencial/dre", label: "DRE", icon: LineChart },
   { href: "/gerencial/dre-experimental", label: "DRE (Protótipo)", icon: LineChart },
   { href: "/gerencial/recebimentos", label: "Recebimentos", icon: HandCoins },
@@ -175,9 +179,12 @@ const SidebarBrand = memo(function SidebarBrand({
       <div className="flex items-start justify-between">
         <div className="min-w-0">
           {brandLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- branding may come from tenant-provided remote URLs.
             <img
               src={brandLogo}
               alt={appName}
+              width={collapsed ? 24 : 160}
+              height={collapsed ? 24 : 32}
               className={cn(
                 collapsed ? "mx-auto h-6 w-6 object-contain" : "mb-2 h-8 w-auto max-w-full object-contain",
                 collapsed && "mt-1"
@@ -188,22 +195,29 @@ const SidebarBrand = memo(function SidebarBrand({
             <div className="font-display text-sm font-extrabold tracking-tight text-gym-accent">{getInitials(appName)}</div>
           ) : null}
           {!collapsed && (
-            <div className="font-display text-xl font-extrabold tracking-tight text-gym-accent">{appName}</div>
+            <div className="font-display text-xl font-extrabold tracking-tight text-gym-accent">
+              {appName}
+            </div>
           )}
           {!collapsed && (
             <div className="mt-1 space-y-1 text-[11px] text-muted-foreground">
               <div>
                 <span className="font-semibold uppercase tracking-widest text-muted-foreground/70">Academia</span>
-                <p className="mt-0.5 truncate text-[12px] text-foreground/90">{academiaName}</p>
+                <p className="mt-0.5 truncate text-[12px] text-foreground/90">
+                  {academiaName}
+                </p>
               </div>
               <div>
                 <span className="font-semibold uppercase tracking-widest text-muted-foreground/70">Unidade</span>
-                <p className="mt-0.5 truncate text-[12px] text-foreground/90">{tenantName}</p>
+                <p className="mt-0.5 truncate text-[12px] text-foreground/90">
+                  {tenantName}
+                </p>
               </div>
             </div>
           )}
         </div>
         <button
+          type="button"
           onClick={onToggleCollapsed}
           className="mt-0.5 hidden rounded-md border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground md:inline-flex"
           aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
@@ -270,6 +284,7 @@ const CollapsibleSection = memo(function CollapsibleSection({
   return (
     <div className="mt-4">
       <button
+        type="button"
         onClick={onToggle}
         className={cn(
           "cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 transition-colors hover:text-foreground",
@@ -312,11 +327,11 @@ function SidebarNavigation({
 }) {
   const pathname = usePathname();
   const access = useAuthAccess();
-  const [crmOpen, setCrmOpen] = useState(false);
-  const [treinosOpen, setTreinosOpen] = useState(false);
-  const [segurancaOpen, setSegurancaOpen] = useState(false);
-  const [administrativoOpen, setAdministrativoOpen] = useState(false);
-  const [gerencialOpen, setGerencialOpen] = useState(false);
+  const [crmOpen, setCrmOpen] = useState(() => pathname.startsWith("/crm"));
+  const [treinosOpen, setTreinosOpen] = useState(() => pathname.startsWith("/treinos"));
+  const [segurancaOpen, setSegurancaOpen] = useState(() => pathname.startsWith("/seguranca"));
+  const [administrativoOpen, setAdministrativoOpen] = useState(() => pathname.startsWith("/administrativo"));
+  const [gerencialOpen, setGerencialOpen] = useState(() => pathname.startsWith("/gerencial"));
   const visibleSegurancaItems = access.canAccessElevatedModules ? segurancaItemsSorted : [];
   const visibleGerencialItems = access.canAccessElevatedModules
     ? gerencialItemsSorted
@@ -344,6 +359,18 @@ function SidebarNavigation({
 
   useEffect(() => {
     setSegurancaOpen(pathname.startsWith("/seguranca"));
+  }, [pathname]);
+
+  useEffect(() => {
+    setCrmOpen(pathname.startsWith("/crm"));
+  }, [pathname]);
+
+  useEffect(() => {
+    setAdministrativoOpen(pathname.startsWith("/administrativo"));
+  }, [pathname]);
+
+  useEffect(() => {
+    setGerencialOpen(pathname.startsWith("/gerencial"));
   }, [pathname]);
 
   return (
@@ -453,6 +480,7 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
           )}
         >
           <button
+            type="button"
             onClick={() => setUserMenuOpen((v) => !v)}
             className={cn("cursor-pointer flex items-center gap-2.5", collapsed && "justify-center")}
             aria-label="Menu do usuário"
@@ -526,7 +554,7 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
               onClick={async () => {
                 setLoggingOut(true);
                 try {
-                  await authLogout();
+                  clearAuthSession();
                   router.replace("/login");
                   if (typeof window !== "undefined") {
                     window.location.assign("/login");
@@ -547,92 +575,44 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
 
 function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [academiaName, setAcademiaName] = useState("Academia");
-  const [tenantName, setTenantName] = useState("Academia");
+  const [academiaName, setAcademiaName] = useState(DEFAULT_ACADEMIA_LABEL);
   const [appName, setAppName] = useState(DEFAULT_APP_NAME);
   const [logoUrl, setLogoUrl] = useState("");
   const [defaultLogoUrl, setDefaultLogoUrl] = useState(DEFAULT_BRAND_LOGO_DARK_URL);
+  const { tenant, tenantId, tenantName } = useTenantContext();
 
   useEffect(() => {
-    const useRealApi = isRealApiEnabled();
+    let active = true;
 
-    function syncFromStore() {
-      const store = getStore();
-      const tenant = store.tenants.find((item) => item.id === store.currentTenantId) ?? store.tenant;
-      const academiaId = tenant?.academiaId ?? tenant?.groupId;
-      const academia = store.academias.find((item) => item.id === academiaId) ?? store.academias[0];
-      setTenantName(tenant?.nome ?? "Academia");
-      setAcademiaName(academia?.nome ?? "Academia");
-      setAppName(academia?.branding?.appName?.trim() || DEFAULT_APP_NAME);
-      setLogoUrl(academia?.branding?.logoUrl ?? "");
-    }
-
-    async function load() {
-      const store = getStore();
-      const activeTenants = store.tenants.filter((tenant) => tenant.ativo !== false);
-      const tenantCandidates = activeTenants.length > 0 ? activeTenants : store.tenants;
-      const activeTenant =
-        (store.currentTenantId ? store.tenants.find((tenant) => tenant.id === store.currentTenantId) : store.tenant) ??
-        activeTenants[0] ??
-        store.tenants[0];
-      const hasLocalContext = useRealApi && tenantCandidates.length > 0 && activeTenant && store.academias.length > 0;
-      if (hasLocalContext) {
-        const fallbackTenant = activeTenant
-          ? tenantCandidates.find((tenant) => tenant.id === activeTenant.id) ?? tenantCandidates[0]
-          : activeTenants[0];
-        const fallbackAcademia = store.academias.find((item) => item.id === (fallbackTenant?.academiaId ?? fallbackTenant?.groupId)) ?? store.academias[0];
-        if (fallbackTenant && fallbackAcademia) {
-          setTenantName(fallbackTenant.nome ?? "Academia");
-          setAcademiaName(fallbackAcademia.nome ?? "Academia");
-          setAppName(fallbackAcademia.branding?.appName?.trim() || DEFAULT_APP_NAME);
-          setLogoUrl(fallbackAcademia.branding?.logoUrl ?? "");
-        }
-        return;
-      }
-
-      if (store.tenants.length > 0 && store.academias.length > 0) {
-        const fallbackTenant = activeTenant ?? tenantCandidates[0] ?? store.tenants[0];
-        const fallbackAcademia = fallbackTenant
-          ? store.academias.find((item) => item.id === (fallbackTenant.academiaId ?? fallbackTenant.groupId)) ?? store.academias[0]
-          : store.academias[0];
-        if (fallbackTenant && fallbackAcademia) {
-          setTenantName(fallbackTenant.nome ?? "Academia");
-          setAcademiaName(fallbackAcademia.nome ?? "Academia");
-          setAppName(fallbackAcademia.branding?.appName?.trim() || DEFAULT_APP_NAME);
-          setLogoUrl(fallbackAcademia.branding?.logoUrl ?? "");
-          return;
-        }
-      }
-
-      if (activeTenant) {
-        const fallbackAcademia = store.academias.find((item) => item.id === (activeTenant.academiaId ?? activeTenant.groupId))
-          ?? store.academias[0]
-          ?? undefined;
-
-        setTenantName(activeTenant.nome ?? "Academia");
-        setAcademiaName(fallbackAcademia?.nome ?? "Academia");
-        setAppName(
-          fallbackAcademia?.branding?.appName?.trim() || activeTenant.branding?.appName?.trim() || DEFAULT_APP_NAME
-        );
-        setLogoUrl(activeTenant.branding?.logoUrl ?? fallbackAcademia?.branding?.logoUrl ?? "");
-      } else {
-        setTenantName("Academia");
-        setAcademiaName("Academia");
+    async function syncBranding() {
+      const tenantAppName = tenant?.branding?.appName?.trim();
+      const tenantLogoUrl = tenant?.branding?.logoUrl ?? "";
+      try {
+        const academias = tenantId ? await listAcademiasApi(tenantId) : [];
+        if (!active) return;
+        const academia = academias[0];
+        setAcademiaName(academia?.nome ?? tenant?.nome ?? DEFAULT_ACADEMIA_LABEL);
+        setAppName(academia?.branding?.appName?.trim() || tenantAppName || DEFAULT_APP_NAME);
+        setLogoUrl(tenantLogoUrl || academia?.branding?.logoUrl || "");
+      } catch {
+        if (!active) return;
+        setAcademiaName(tenant?.nome ?? DEFAULT_ACADEMIA_LABEL);
+        setAppName(tenantAppName || DEFAULT_APP_NAME);
+        setLogoUrl(tenantLogoUrl);
       }
     }
-    if (!useRealApi) {
-      syncFromStore();
-    }
-    load();
+
+    void syncBranding();
 
     function handleUpdate() {
-      syncFromStore();
+      void syncBranding();
     }
-    window.addEventListener("academia-store-updated", handleUpdate);
+    window.addEventListener(TENANT_CONTEXT_UPDATED_EVENT, handleUpdate);
     return () => {
-      window.removeEventListener("academia-store-updated", handleUpdate);
+      active = false;
+      window.removeEventListener(TENANT_CONTEXT_UPDATED_EVENT, handleUpdate);
     };
-  }, []);
+  }, [tenant, tenantId]);
 
   useEffect(() => {
     function syncDefaultLogoByTheme() {
@@ -667,7 +647,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
         collapsed={collapsed}
         appName={appName}
         academiaName={academiaName}
-        tenantName={tenantName}
+        tenantName={tenantName || DEFAULT_ACTIVE_TENANT_LABEL}
         logoUrl={logoUrl}
         defaultLogoUrl={defaultLogoUrl}
         onToggleCollapsed={() => setCollapsed((v) => !v)}

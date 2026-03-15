@@ -100,8 +100,15 @@ function mockFetchSequence(
 
 const envSnapshot = {
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
-  useRealApi: process.env.NEXT_PUBLIC_USE_REAL_API,
   devAutoLogin: process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN,
+};
+
+const runtimeSnapshot = {
+  forceLocalMode: (
+    globalThis as typeof globalThis & {
+      __ACADEMIA_FORCE_LOCAL_MODE__?: boolean;
+    }
+  ).__ACADEMIA_FORCE_LOCAL_MODE__,
 };
 
 let browser: MockBrowser | undefined;
@@ -109,8 +116,12 @@ let browser: MockBrowser | undefined;
 test.beforeEach(() => {
   browser = installMockBrowser();
   process.env.NEXT_PUBLIC_API_BASE_URL = "";
-  process.env.NEXT_PUBLIC_USE_REAL_API = "false";
   process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN = "false";
+  (
+    globalThis as typeof globalThis & {
+      __ACADEMIA_FORCE_LOCAL_MODE__?: boolean;
+    }
+  ).__ACADEMIA_FORCE_LOCAL_MODE__ = true;
   clearAuthSession();
   saveAuthSession({
     token: "access-token",
@@ -124,8 +135,20 @@ test.afterEach(() => {
   clearAuthSession();
   browser?.restore();
   process.env.NEXT_PUBLIC_API_BASE_URL = envSnapshot.apiBaseUrl;
-  process.env.NEXT_PUBLIC_USE_REAL_API = envSnapshot.useRealApi;
   process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN = envSnapshot.devAutoLogin;
+  if (runtimeSnapshot.forceLocalMode === undefined) {
+    delete (
+      globalThis as typeof globalThis & {
+        __ACADEMIA_FORCE_LOCAL_MODE__?: boolean;
+      }
+    ).__ACADEMIA_FORCE_LOCAL_MODE__;
+  } else {
+    (
+      globalThis as typeof globalThis & {
+        __ACADEMIA_FORCE_LOCAL_MODE__?: boolean;
+      }
+    ).__ACADEMIA_FORCE_LOCAL_MODE__ = runtimeSnapshot.forceLocalMode;
+  }
 });
 
 test.describe("backoffice api contracts", () => {

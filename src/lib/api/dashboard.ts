@@ -1,5 +1,5 @@
 import type { DashboardData } from "@/lib/types";
-import { ApiRequestError, apiRequest } from "./http";
+import { apiRequest } from "./http";
 
 type DashboardPayload = Partial<DashboardData> & {
   totalAlunosAtivos?: unknown;
@@ -68,21 +68,9 @@ export async function getDashboardApi(input: {
     year: input.year,
   };
 
-  try {
-    const response = await apiRequest<DashboardApiResponse>({
-      path: "/api/v1/academia/dashboard",
-      query,
-    });
-    return normalizeDashboard(response);
-  } catch (error) {
-    if (!(error instanceof ApiRequestError) || error.status !== 404) {
-      throw error;
-    }
-  }
-
-  const fallback = await apiRequest<DashboardApiResponse>({
+  const response = await apiRequest<DashboardApiResponse>({
     path: "/api/v1/dashboard",
     query,
   });
-  return normalizeDashboard(fallback);
+  return normalizeDashboard(response);
 }

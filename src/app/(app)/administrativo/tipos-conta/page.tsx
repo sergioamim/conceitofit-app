@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  createTipoContaPagar,
-  listTiposContaPagar,
-  toggleTipoContaPagar,
-  updateTipoContaPagar,
-} from "@/lib/mock/services";
-import { isRealApiEnabled } from "@/lib/api/http";
+  createTipoContaPagarApi,
+  listTiposContaPagarApi,
+  toggleTipoContaPagarApi,
+  updateTipoContaPagarApi,
+} from "@/lib/api/tipos-conta";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { CategoriaContaPagar, GrupoDre, TipoContaPagar } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,7 @@ const FORM_DEFAULT = {
 };
 
 export default function TiposContaPage() {
+  const { tenantId, tenantResolved } = useTenantContext();
   const [tipos, setTipos] = useState<TipoContaPagar[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -63,34 +64,21 @@ export default function TiposContaPage() {
   const [editing, setEditing] = useState<TipoContaPagar | null>(null);
   const [form, setForm] = useState(FORM_DEFAULT);
 
-  async function load(nextShowAll = showAll) {
+  const load = useCallback(async (nextShowAll = showAll) => {
+    if (!tenantId) return;
     setLoading(true);
     try {
-      const data = await listTiposContaPagar({ apenasAtivos: !nextShowAll });
+      const data = await listTiposContaPagarApi({ tenantId, apenasAtivos: !nextShowAll });
       setTipos(data);
     } finally {
       setLoading(false);
     }
-  }
+  }, [showAll, tenantId]);
 
   useEffect(() => {
-    load(showAll);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAll]);
-
-  useEffect(() => {
-    if (isRealApiEnabled()) return;
-    function handleUpdate() {
-      load(showAll);
-    }
-    window.addEventListener("academia-store-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-    return () => {
-      window.removeEventListener("academia-store-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAll]);
+    if (!tenantResolved || !tenantId) return;
+    void load(showAll);
+  }, [load, showAll, tenantId, tenantResolved]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -123,23 +111,30 @@ export default function TiposContaPage() {
   }
 
   async function handleSave() {
-    if (!form.nome.trim()) return;
+    if (!tenantId || !form.nome.trim()) return;
 
     if (editing) {
-      await updateTipoContaPagar(editing.id, {
-        nome: form.nome,
-        descricao: form.descricao,
-        categoriaOperacional: form.categoriaOperacional,
-        grupoDre: form.grupoDre,
-        centroCustoPadrao: form.centroCustoPadrao,
+      await updateTipoContaPagarApi({
+        tenantId,
+        id: editing.id,
+        data: {
+          nome: form.nome,
+          descricao: form.descricao,
+          categoriaOperacional: form.categoriaOperacional,
+          grupoDre: form.grupoDre,
+          centroCustoPadrao: form.centroCustoPadrao,
+        },
       });
     } else {
-      await createTipoContaPagar({
-        nome: form.nome,
-        descricao: form.descricao,
-        categoriaOperacional: form.categoriaOperacional,
-        grupoDre: form.grupoDre,
-        centroCustoPadrao: form.centroCustoPadrao,
+      await createTipoContaPagarApi({
+        tenantId,
+        data: {
+          nome: form.nome,
+          descricao: form.descricao,
+          categoriaOperacional: form.categoriaOperacional,
+          grupoDre: form.grupoDre,
+          centroCustoPadrao: form.centroCustoPadrao,
+        },
       });
     }
     setModalOpen(false);
@@ -149,7 +144,8 @@ export default function TiposContaPage() {
   }
 
   async function handleToggle(id: string) {
-    await toggleTipoContaPagar(id);
+    if (!tenantId) return;
+    await toggleTipoContaPagarApi({ tenantId, id });
     await load(showAll);
   }
 

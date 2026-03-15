@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import {
-  listServicos,
-  createServico,
-  updateServico,
-  toggleServico,
-  deleteServico,
-} from "@/lib/mock/services";
+  createServicoApi,
+  deleteServicoApi,
+  listServicosApi,
+  toggleServicoApi,
+  updateServicoApi,
+} from "@/lib/api/comercial-catalogo";
 import type { Servico } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ServicoModal } from "@/components/shared/servico-modal";
@@ -26,35 +26,45 @@ export default function ServicosPage() {
   const [editing, setEditing] = useState<Servico | null>(null);
 
   async function load() {
-    const data = await listServicos();
+    const data = await listServicosApi(false);
     setServicos(data);
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    void listServicosApi(false).then(setServicos);
   }, []);
 
   async function handleSave(
     data: Omit<Servico, "id" | "tenantId">,
     id?: string
   ) {
-    if (id) await updateServico(id, data);
-    else await createServico(data);
+    const { ativo = true, ...payload } = data;
+
+    if (id) {
+      await updateServicoApi(id, payload);
+      if (editing && editing.ativo !== ativo) {
+        await toggleServicoApi(id);
+      }
+    } else {
+      const created = await createServicoApi(payload);
+      if (!ativo) {
+        await toggleServicoApi(created.id);
+      }
+    }
     setModalOpen(false);
     setEditing(null);
-    load();
+    await load();
   }
 
   async function handleToggle(id: string) {
-    await toggleServico(id);
-    load();
+    await toggleServicoApi(id);
+    await load();
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remover este serviço?")) return;
-    await deleteServico(id);
-    load();
+    await deleteServicoApi(id);
+    await load();
   }
 
   return (

@@ -1,0 +1,13 @@
+[
+  {
+    "generatedAt": "2026-03-14T21:34:54.596Z",
+    "profile": "core",
+    "suitesExecutadas": [
+      "unit"
+    ],
+    "lines": null,
+    "statements": null,
+    "functions": null,
+    "branches": null
+  }
+]

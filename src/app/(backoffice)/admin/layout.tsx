@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ReactNode, useEffect } from "react";
+import { ReactNode, Suspense, useEffect, useState } from "react";
+import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { useAuthAccess } from "@/hooks/use-session-context";
-import { isRealApiEnabled } from "@/lib/api/http";
-import { getAccessToken, isMockSessionActive } from "@/lib/api/session";
+import { AUTH_SESSION_UPDATED_EVENT, getAccessToken } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 
@@ -13,56 +13,17 @@ const navItems = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/academias", label: "Academias" },
   { href: "/admin/unidades", label: "Unidades" },
-  { href: "/admin/importacao-evo-p0", label: "Importação EVO P0" },
+  { href: "/admin/seguranca", label: "Segurança" },
+  { href: "/admin/importacao-evo", label: "Importação EVO" },
 ];
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const access = useAuthAccess();
-
-  useEffect(() => {
-    const authenticated = isRealApiEnabled() ? !!getAccessToken() : isMockSessionActive();
-    if (!authenticated) {
-      const queryString = searchParams.toString();
-      const currentPath = `${pathname}${queryString ? `?${queryString}` : ""}`;
-      router.replace(buildLoginHref(currentPath));
-    }
-  }, [pathname, router, searchParams]);
-
-  const authenticated = isRealApiEnabled() ? !!getAccessToken() : isMockSessionActive();
-
-  if (!authenticated) {
-    return (
-      <div className="min-h-screen bg-background px-6 py-10">
-        <div className="mx-auto max-w-3xl rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          Redirecionando para o login do backoffice...
-        </div>
-      </div>
-    );
-  }
-
-  if (access.loading) {
-    return (
-      <div className="min-h-screen bg-background px-6 py-10">
-        <div className="mx-auto max-w-3xl rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          Validando permissões do backoffice...
-        </div>
-      </div>
-    );
-  }
-
-  if (!access.canAccessElevatedModules) {
-    return (
-      <div className="min-h-screen bg-background px-6 py-10">
-        <div className="mx-auto max-w-3xl rounded-xl border border-gym-danger/30 bg-gym-danger/10 p-6 text-sm text-gym-danger">
-          O backoffice global exige perfil administrativo elevado.
-        </div>
-      </div>
-    );
-  }
-
+function AdminShellFrame({
+  children,
+  pathname,
+}: {
+  children: ReactNode;
+  pathname?: string;
+}) {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto flex max-w-6xl gap-6 px-6 py-6">
@@ -73,7 +34,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
           <nav className="flex flex-col gap-1 text-sm">
             {navItems.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(item.href + "/");
+              const active = Boolean(pathname) && (pathname === item.href || pathname.startsWith(item.href + "/"));
               return (
                 <Link
                   key={item.href}
@@ -93,6 +54,111 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </aside>
         <main className="flex-1">{children}</main>
       </div>
+      <DevSessionPanel />
     </div>
+  );
+}
+
+function AdminStatusPanel({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={cn("rounded-xl border bg-card p-6 text-sm", className)}>
+      {children}
+    </div>
+  );
+}
+
+function AdminLayoutFallback({ children }: { children: ReactNode }) {
+  return (
+    <AdminShellFrame>
+      <div className="space-y-6">
+        <AdminStatusPanel className="border-border text-muted-foreground">
+          Carregando backoffice...
+        </AdminStatusPanel>
+        {children}
+      </div>
+    </AdminShellFrame>
+  );
+}
+
+function AdminLayoutContent({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const access = useAuthAccess();
+  const [hydrated, setHydrated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    function syncAuthenticated() {
+      setAuthenticated(Boolean(getAccessToken()));
+      setHydrated(true);
+    }
+
+    syncAuthenticated();
+    window.addEventListener(AUTH_SESSION_UPDATED_EVENT, syncAuthenticated);
+    window.addEventListener("storage", syncAuthenticated);
+    return () => {
+      window.removeEventListener(AUTH_SESSION_UPDATED_EVENT, syncAuthenticated);
+      window.removeEventListener("storage", syncAuthenticated);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated || authenticated) {
+      return;
+    }
+    if (!authenticated) {
+      const queryString = searchParams.toString();
+      const currentPath = `${pathname}${queryString ? `?${queryString}` : ""}`;
+      router.replace(buildLoginHref(currentPath));
+    }
+  }, [authenticated, hydrated, pathname, router, searchParams]);
+
+  if (!hydrated || access.loading) {
+    return (
+      <AdminShellFrame pathname={pathname}>
+        <AdminStatusPanel className="border-border text-muted-foreground">
+          Validando permissões do backoffice...
+        </AdminStatusPanel>
+      </AdminShellFrame>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <AdminShellFrame pathname={pathname}>
+        <AdminStatusPanel className="border-border text-muted-foreground">
+          Redirecionando para o login do backoffice...
+        </AdminStatusPanel>
+      </AdminShellFrame>
+    );
+  }
+
+  if (!access.canAccessElevatedModules) {
+    return (
+      <AdminShellFrame pathname={pathname}>
+        <AdminStatusPanel className="border-gym-danger/30 bg-gym-danger/10 text-gym-danger">
+          O backoffice global exige perfil administrativo elevado.
+        </AdminStatusPanel>
+      </AdminShellFrame>
+    );
+  }
+
+  return (
+    <AdminShellFrame pathname={pathname}>{children}</AdminShellFrame>
+  );
+}
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<AdminLayoutFallback>{children}</AdminLayoutFallback>}>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </Suspense>
   );
 }

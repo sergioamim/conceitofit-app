@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
+import { getGlobalSecurityOverview } from "@/lib/backoffice/seguranca";
 import type { Academia, Tenant } from "@/lib/types";
 import Link from "next/link";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -13,6 +14,10 @@ export default function AdminHomePage() {
   const [loading, setLoading] = useState(true);
   const [academias, setAcademias] = useState<Academia[]>([]);
   const [unidades, setUnidades] = useState<Tenant[]>([]);
+  const [seguranca, setSeguranca] = useState({
+    totalUsers: 0,
+    eligibleForNewUnits: 0,
+  });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -21,10 +26,18 @@ export default function AdminHomePage() {
       setLoading(true);
       try {
         setError(null);
-        const [acs, uns] = await Promise.all([listGlobalAcademias(), listGlobalUnidades()]);
+        const [acs, uns, segurancaOverview] = await Promise.all([
+          listGlobalAcademias(),
+          listGlobalUnidades(),
+          getGlobalSecurityOverview(),
+        ]);
         if (!mounted) return;
         setAcademias(acs);
         setUnidades(uns);
+        setSeguranca({
+          totalUsers: segurancaOverview.totalUsers,
+          eligibleForNewUnits: segurancaOverview.eligibleForNewUnits,
+        });
       } catch (loadError) {
         if (!mounted) return;
         setError(normalizeErrorMessage(loadError));
@@ -42,8 +55,10 @@ export default function AdminHomePage() {
     () => ({
       totalAcademias: academias.length,
       totalUnidades: unidades.length,
+      totalAdmins: seguranca.totalUsers,
+      elegiveisNovasUnidades: seguranca.eligibleForNewUnits,
     }),
-    [academias.length, unidades.length]
+    [academias.length, seguranca.eligibleForNewUnits, seguranca.totalUsers, unidades.length]
   );
 
   return (
@@ -51,7 +66,9 @@ export default function AdminHomePage() {
       <header className="space-y-2">
         <p className="text-sm font-medium text-gym-accent">Administração</p>
         <h1 className="text-3xl font-display font-bold leading-tight">Dashboard do backoffice</h1>
-        <p className="text-sm text-muted-foreground">Visão geral e atalhos para gestão de academias, unidades e integrações.</p>
+        <p className="text-sm text-muted-foreground">
+          Visão geral e atalhos para gestão de academias, unidades, segurança global e integrações.
+        </p>
       </header>
 
       {error ? (
@@ -60,7 +77,7 @@ export default function AdminHomePage() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Academias</CardTitle>
@@ -83,11 +100,24 @@ export default function AdminHomePage() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Segurança global</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <p className="text-3xl font-display font-bold">{loading ? "…" : stats.totalAdmins}</p>
+              <p className="text-sm text-muted-foreground">
+                {loading ? "…" : `${stats.elegiveisNovasUnidades} elegíveis para novas unidades`}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Separator />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Academias</CardTitle>
@@ -120,14 +150,29 @@ export default function AdminHomePage() {
 
         <Card>
           <CardHeader>
+            <CardTitle className="text-base">Segurança global</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <p className="text-3xl font-display font-bold">{loading ? "…" : stats.totalAdmins}</p>
+              <p className="text-sm text-muted-foreground">Usuários administrativos</p>
+            </div>
+            <Link href="/admin/seguranca">
+              <Button variant="outline" size="sm">Abrir</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base">Importação EVO</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
             <div>
-              <p className="text-3xl font-display font-bold">P0</p>
-              <p className="text-sm text-muted-foreground">Acompanhar jobs</p>
+              <p className="text-3xl font-display font-bold">EVO</p>
+              <p className="text-sm text-muted-foreground">Acompanhar jobs e onboarding</p>
             </div>
-            <Link href="/admin/importacao-evo-p0">
+            <Link href="/admin/importacao-evo">
               <Button variant="outline" size="sm">Abrir</Button>
             </Link>
           </CardContent>
@@ -143,7 +188,8 @@ export default function AdminHomePage() {
         <CardContent className="flex flex-wrap gap-2">
           <Link href="/admin/academias"><Button size="sm">Cadastrar academia</Button></Link>
           <Link href="/admin/unidades"><Button size="sm" variant="secondary">Cadastrar unidade</Button></Link>
-          <Link href="/admin/importacao-evo-p0"><Button size="sm" variant="outline">Importação EVO P0</Button></Link>
+          <Link href="/admin/seguranca"><Button size="sm" variant="outline">Segurança global</Button></Link>
+          <Link href="/admin/importacao-evo"><Button size="sm" variant="outline">Importação EVO</Button></Link>
         </CardContent>
       </Card>
     </div>

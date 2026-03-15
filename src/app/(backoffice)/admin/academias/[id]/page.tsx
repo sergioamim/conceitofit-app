@@ -23,6 +23,12 @@ type AcademiaForm = {
   ativo: "ATIVA" | "INATIVA";
 };
 
+function buildManageUnitHref(academiaId: string, unitId?: string) {
+  const params = new URLSearchParams({ academiaId });
+  if (unitId) params.set("edit", unitId);
+  return `/admin/unidades?${params.toString()}`;
+}
+
 function buildForm(academia: Academia | null): AcademiaForm {
   return {
     nome: academia?.nome ?? "",
@@ -212,8 +218,18 @@ export default function AcademiaDetalhePage() {
       <Separator />
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Unidades desta academia</CardTitle>
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-base">Unidades desta academia</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Crie uma nova unidade já vinculada a esta academia ou abra uma unidade existente para edição.
+            </p>
+          </div>
+          {academia ? (
+            <Button asChild variant="outline" className="border-border">
+              <Link href={buildManageUnitHref(academia.id)}>Nova unidade</Link>
+            </Button>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? <p className="text-sm text-muted-foreground">Carregando unidades...</p> : null}
@@ -221,19 +237,33 @@ export default function AcademiaDetalhePage() {
             <p className="text-sm text-muted-foreground">A academia solicitada não foi encontrada.</p>
           ) : null}
           {!loading && academia != null && unidadesDaAcademia.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>
+            <div className="space-y-3 rounded-xl border border-dashed border-border px-4 py-4">
+              <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>
+              <Button asChild variant="outline" className="border-border">
+                <Link href={buildManageUnitHref(academia.id)}>Criar primeira unidade</Link>
+              </Button>
+            </div>
           ) : null}
           {!loading &&
             unidadesDaAcademia.map((unit) => (
-              <div key={unit.id} className="flex items-center justify-between rounded-md border border-border px-3 py-3">
-                <div>
+              <div key={unit.id} className="flex flex-col gap-3 rounded-md border border-border px-3 py-3 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-1">
                   <p className="font-semibold">{unit.nome}</p>
                   <p className="text-xs text-muted-foreground">
                     {unit.subdomain || unit.id}
                     {unit.groupId ? ` · ${unit.groupId}` : ""}
                   </p>
+                  <p className="text-xs text-muted-foreground">{unit.email || unit.telefone || "Sem contato cadastrado"}</p>
                 </div>
-                <span className="text-xs text-muted-foreground">{unit.ativo === false ? "Inativa" : "Ativa"}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{unit.ativo === false ? "Inativa" : "Ativa"}</span>
+                  <Button asChild variant="outline" size="sm" className="border-border">
+                    <Link href={buildManageUnitHref(id, unit.id)}>Editar unidade</Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="border-border">
+                    <Link href={`/admin/importacao-evo?tenantId=${encodeURIComponent(unit.id)}`}>Importação</Link>
+                  </Button>
+                </div>
               </div>
             ))}
         </CardContent>

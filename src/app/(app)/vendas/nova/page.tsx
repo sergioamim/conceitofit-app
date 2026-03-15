@@ -4,17 +4,19 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useSearchParams } from "next/navigation";
 import { ScanLine } from "lucide-react";
 import {
-  createVenda,
-  listAlunos,
-  listConvenios,
-  listPlanos,
-  listProdutos,
-  listServicos,
-  listVoucherCodigos,
-  listVouchers,
-} from "@/lib/mock/services";
+  createVendaService,
+  listAlunosService,
+  listConveniosService,
+  listPlanosService,
+  listProdutosService,
+  resolveAlunoTenantService,
+  listServicosService,
+  listVoucherCodigosService,
+  listVouchersService,
+} from "@/lib/comercial/runtime";
+import { getBusinessTodayIso } from "@/lib/business-date";
 import { buildPlanoVendaItems } from "@/lib/comercial/plano-flow";
-import { getStore } from "@/lib/mock/store";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { Aluno, Convenio, PagamentoVenda, Plano, Produto, Servico, Tenant, TipoVenda, Venda } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,11 +52,10 @@ function inferSaleTypeFromCart(items: CartItem[]): TipoVenda {
 }
 
 function NovaVendaPageContent() {
-  const initialTenantId = getStore().currentTenantId || getStore().tenant?.id || "";
-  const [tenantId, setTenantId] = useState(() => initialTenantId);
+  const tenantContext = useTenantContext();
+  const [tenantId, setTenantId] = useState(() => tenantContext.tenantId);
   const tenantIdRef = useRef(tenantId);
-  const initialTenant = getStore().tenants.find((item) => item.id === initialTenantId) ?? getStore().tenant;
-  const [tenant, setTenant] = useState<Tenant | null>(initialTenant ?? null);
+  const [tenant, setTenant] = useState<Tenant | null>(tenantContext.tenant ?? null);
   const [tipoVenda, setTipoVenda] = useState<TipoVenda>("PLANO");
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -71,7 +72,7 @@ function NovaVendaPageContent() {
   const [qtd, setQtd] = useState("1");
   const [selectedPlanoId, setSelectedPlanoId] = useState("");
   const [parcelasAnuidade, setParcelasAnuidade] = useState("1");
-  const [dataInicioPlano, setDataInicioPlano] = useState(() => new Date().toISOString().split("T")[0]);
+  const [dataInicioPlano, setDataInicioPlano] = useState(() => getBusinessTodayIso());
   const [renovacaoAutomaticaPlano, setRenovacaoAutomaticaPlano] = useState(false);
   const [convenioPlanoId, setConvenioPlanoId] = useState("__SEM_CONVENIO__");
   const [cupomCode, setCupomCode] = useState("");
@@ -101,8 +102,8 @@ function NovaVendaPageContent() {
   const [conveniosLoaded, setConveniosLoaded] = useState(false);
 
   const loadAlunos = useCallback(async () => {
-    if (alunosLoaded) return;
-    const loaded = await listAlunos();
+    if (!tenantIdRef.current || alunosLoaded) return;
+    const loaded = await listAlunosService({ tenantId: tenantIdRef.current });
     setAlunos(loaded);
     setAlunosLoaded(true);
   }, [alunosLoaded]);
@@ -110,7 +111,11 @@ function NovaVendaPageContent() {
   const loadPlanos = useCallback(async () => {
     const targetTenantId = tenantIdRef.current;
     if (planosLoaded && planosLoadedTenantId === targetTenantId) return;
-    const planosResponse = await listPlanos();
+    if (!targetTenantId) return;
+    const planosResponse = await listPlanosService({
+      tenantId: targetTenantId,
+      apenasAtivos: true,
+    });
     setPlanos(planosResponse.filter((plano) => plano.ativo));
     setPlanosLoaded(true);
     setPlanosLoadedTenantId(targetTenantId);
@@ -118,36 +123,36 @@ function NovaVendaPageContent() {
 
   const loadServicos = useCallback(async () => {
     if (servicosLoaded) return;
-    const servicosResponse = await listServicos({ apenasAtivos: true });
+    const servicosResponse = await listServicosService(true);
     setServicos(servicosResponse);
     setServicosLoaded(true);
   }, [servicosLoaded]);
 
   const loadProdutos = useCallback(async () => {
     if (produtosLoaded) return;
-    const produtosResponse = await listProdutos({ apenasAtivos: true });
+    const produtosResponse = await listProdutosService(true);
     setProdutos(produtosResponse);
     setProdutosLoaded(true);
   }, [produtosLoaded]);
 
   const loadConvenios = useCallback(async () => {
     if (conveniosLoaded) return;
-    const conveniosResponse = await listConvenios({ apenasAtivos: true });
+    const conveniosResponse = await listConveniosService(true);
     setConvenios(conveniosResponse);
     setConveniosLoaded(true);
   }, [conveniosLoaded]);
 
-  const syncTenantFromStore = useCallback(() => {
-    const store = getStore();
-    const nextTenantId = store.currentTenantId || store.tenant?.id || tenantIdRef.current;
-    if (!nextTenantId || nextTenantId === tenantIdRef.current) {
-      setTenant(store.tenants.find((item) => item.id === tenantIdRef.current) ?? store.tenant ?? null);
+  const syncTenantFromContext = useCallback(() => {
+    const nextTenantId = tenantContext.tenantId || tenantIdRef.current;
+    if (!nextTenantId) return;
+    if (nextTenantId === tenantIdRef.current) {
+      setTenant(tenantContext.tenant ?? null);
       return;
     }
 
     tenantIdRef.current = nextTenantId;
     setTenantId(nextTenantId);
-    setTenant(store.tenants.find((item) => item.id === nextTenantId) ?? store.tenant ?? null);
+    setTenant(tenantContext.tenant ?? null);
     setAlunos([]);
     setPlanos([]);
     setPlanosLoaded(false);
@@ -160,19 +165,15 @@ function NovaVendaPageContent() {
     setProdutosLoaded(false);
     setConveniosLoaded(false);
     prefillHandledRef.current = false;
-  }, []);
+  }, [tenantContext.tenant, tenantContext.tenantId]);
 
   useEffect(() => {
     tenantIdRef.current = tenantId;
   }, [tenantId]);
 
   useEffect(() => {
-    syncTenantFromStore();
-    window.addEventListener("academia-store-updated", syncTenantFromStore);
-    return () => {
-      window.removeEventListener("academia-store-updated", syncTenantFromStore);
-    };
-  }, [syncTenantFromStore]);
+    syncTenantFromContext();
+  }, [syncTenantFromContext]);
 
   useEffect(() => {
     async function load() {
@@ -200,25 +201,59 @@ function NovaVendaPageContent() {
       setParcelasAnuidade("1");
       setConvenioPlanoId("__SEM_CONVENIO__");
       setRenovacaoAutomaticaPlano(false);
-      setDataInicioPlano(new Date().toISOString().split("T")[0]);
+      setDataInicioPlano(getBusinessTodayIso());
     }
   }, [tipoVenda]);
 
   useEffect(() => {
-    if (!prefillClienteId || prefillHandledRef.current) return;
-    if (!alunosLoaded) {
-      if (prefillClienteId) void loadAlunos();
-      return;
-    }
-    const alvo = alunos.find((a) => a.id === prefillClienteId);
-    if (!alvo) {
+    if (!prefillClienteId || prefillHandledRef.current || !tenantIdRef.current) return;
+
+    let cancelled = false;
+    async function applyPrefillCliente() {
+      if (!alunosLoaded) {
+        await loadAlunos();
+      }
+
+      const currentTenantId = tenantIdRef.current;
+      const alvoCarregado = alunos.find((aluno) => aluno.id === prefillClienteId);
+      if (alvoCarregado) {
+        if (cancelled) return;
+        setClienteId(alvoCarregado.id);
+        setClienteQuery(`${alvoCarregado.nome} · CPF ${alvoCarregado.cpf}`);
+        prefillHandledRef.current = true;
+        return;
+      }
+
+      const resolved = await resolveAlunoTenantService({
+        alunoId: prefillClienteId,
+        tenantId: currentTenantId,
+        tenantIds: tenantContext.tenants.map((item) => item.id),
+      });
+      if (cancelled) return;
+      if (!resolved) {
+        prefillHandledRef.current = true;
+        return;
+      }
+      if (resolved.tenantId !== currentTenantId) {
+        await tenantContext.setTenant(resolved.tenantId);
+        return;
+      }
+
+      setAlunos((current) =>
+        current.some((aluno) => aluno.id === resolved.aluno.id)
+          ? current
+          : [resolved.aluno, ...current]
+      );
+      setClienteId(resolved.aluno.id);
+      setClienteQuery(`${resolved.aluno.nome} · CPF ${resolved.aluno.cpf}`);
       prefillHandledRef.current = true;
-      return;
     }
-    setClienteId(alvo.id);
-    setClienteQuery(`${alvo.nome} · CPF ${alvo.cpf}`);
-    prefillHandledRef.current = true;
-  }, [alunos, alunosLoaded, prefillClienteId, loadAlunos]);
+
+    void applyPrefillCliente();
+    return () => {
+      cancelled = true;
+    };
+  }, [alunos, alunosLoaded, loadAlunos, prefillClienteId, tenantContext]);
 
   const options = useMemo(() => {
     if (tipoVenda === "PLANO") {
@@ -470,15 +505,15 @@ function NovaVendaPageContent() {
       setCupomError("");
       return;
     }
-    const now = new Date().toISOString().slice(0, 10);
-    const vouchers = (await listVouchers()).filter((v) => {
+    const now = getBusinessTodayIso();
+    const vouchers = (await listVouchersService()).filter((v) => {
       if (!v.ativo || !v.usarNaVenda) return false;
       if (v.periodoInicio > now) return false;
       if (v.prazoDeterminado && v.periodoFim && v.periodoFim < now) return false;
       return true;
     });
     for (const voucher of vouchers) {
-      const codigos = await listVoucherCodigos(voucher.id);
+      const codigos = await listVoucherCodigosService(voucher.id);
       const match = codigos.some((c) => c.codigo.trim().toUpperCase() === code);
       if (!match) continue;
       const percent = (voucher.tipo ?? "").toUpperCase().includes("DESCONTO") ? 10 : 0;
@@ -499,6 +534,10 @@ function NovaVendaPageContent() {
   }
 
   async function handleConfirmPayment(pagamento: PagamentoVenda) {
+    if (!tenantIdRef.current) {
+      alert("Tenant ativo não encontrado.");
+      return;
+    }
     if (requireCliente && !clienteId) {
       alert("Cliente é obrigatório para venda de plano/serviço.");
       return;
@@ -514,33 +553,36 @@ function NovaVendaPageContent() {
       const planId = planRef?.split(":")[0];
       const plan = planId ? planos.find((p) => p.id === planId) ?? null : null;
       const tipoFinal = inferSaleTypeFromCart(cart);
-      const venda = await createVenda({
-        tipo: tipoFinal,
-        clienteId: clienteId || undefined,
-        itens: cart.map((i) => ({
-          tipo: i.tipo,
-          referenciaId: i.referenciaId,
-          descricao: i.descricao,
-          quantidade: i.quantidade,
-          valorUnitario: i.valorUnitario,
-          desconto: i.desconto,
-        })),
-        descontoTotal,
-        acrescimoTotal: parseFloat(acrescimoGeral) || 0,
-        pagamento: {
-          ...pagamento,
-          status: "PAGO",
+      const venda = await createVendaService({
+        tenantId: tenantIdRef.current,
+        data: {
+          tipo: tipoFinal,
+          clienteId: clienteId || undefined,
+          itens: cart.map((i) => ({
+            tipo: i.tipo,
+            referenciaId: i.referenciaId,
+            descricao: i.descricao,
+            quantidade: i.quantidade,
+            valorUnitario: i.valorUnitario,
+            desconto: i.desconto,
+          })),
+          descontoTotal,
+          acrescimoTotal: parseFloat(acrescimoGeral) || 0,
+          pagamento: {
+            ...pagamento,
+            status: "PAGO",
+          },
+          planoContexto:
+            tipoFinal === "PLANO" && plan
+              ? {
+                  planoId: plan.id,
+                  dataInicio: dataInicioPlano,
+                  descontoPlano: 0,
+                  renovacaoAutomatica: renovacaoAutomaticaPlano,
+                  convenioId: selectedConvenio?.id,
+                }
+              : undefined,
         },
-        planoContexto:
-          tipoFinal === "PLANO" && plan
-            ? {
-                planoId: plan.id,
-                dataInicio: dataInicioPlano,
-                descontoPlano: 0,
-                renovacaoAutomatica: renovacaoAutomaticaPlano,
-                convenioId: selectedConvenio?.id,
-              }
-            : undefined,
       });
       const selectedCliente = alunos.find((a) => a.id === venda.clienteId) ?? null;
       setReceiptVenda(venda);

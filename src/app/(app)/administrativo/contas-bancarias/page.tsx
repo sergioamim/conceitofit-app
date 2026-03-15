@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pencil, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -59,6 +59,7 @@ function getStatusClass(status: "ATIVA" | "INATIVA") {
 }
 
 export default function ContasBancariasPage() {
+  const requestIdRef = useRef(0);
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
@@ -83,38 +84,56 @@ export default function ContasBancariasPage() {
     );
   }, [contas, search]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { reset?: boolean }) => {
     if (!tenantId) return;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    if (options?.reset) {
+      setContas([]);
+      setHasLoadedOnce(false);
+    }
     setLoading(true);
     setError(null);
     try {
       const data = await listContasBancariasApi({
         tenantId: tenantId || undefined,
       });
+      if (requestIdRef.current !== requestId) {
+        return;
+      }
       setContas(data);
     } catch (loadError) {
+      if (requestIdRef.current !== requestId) {
+        return;
+      }
       setError(normalizeErrorMessage(loadError));
     } finally {
+      if (requestIdRef.current !== requestId) {
+        return;
+      }
       setLoading(false);
       setHasLoadedOnce(true);
     }
   }, [tenantId]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
     setError(tenantError);
   }, [tenantError]);
 
   useEffect(() => {
-    setHasLoadedOnce(false);
     setModalOpen(false);
     setEditing(null);
     setForm(FORM_DEFAULT);
     setSuccess(null);
-  }, [tenantId]);
+    if (!tenantId) {
+      requestIdRef.current += 1;
+      setContas([]);
+      setHasLoadedOnce(false);
+      setLoading(false);
+      return;
+    }
+    void load({ reset: true });
+  }, [tenantId, load]);
 
   function normalizeForm(data: FormConta): Omit<ContaBancaria, "id" | "tenantId"> {
     return {

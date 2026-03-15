@@ -1,157 +1,144 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import {
+  Archive,
+  ClipboardList,
+  FileStack,
+  PencilLine,
+  Search,
+  SquareArrowOutUpRight,
+  UserPlus,
+} from "lucide-react";
 import { TreinoModal, type TreinoForm } from "@/components/shared/treino-modal";
 import { PaginatedTable } from "@/components/shared/paginated-table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createTreino, listAlunos, listExercicios, listTreinos } from "@/lib/mock/services";
-import { getStore } from "@/lib/mock/store";
-import type { Aluno, Exercicio, Treino } from "@/lib/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { DEFAULT_ACTIVE_TENANT_LABEL, useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
+import { addDaysToIsoDate, getBusinessTodayIso } from "@/lib/business-date";
+import { resolveTreinoV2Permissions } from "@/lib/treinos/v2-domain";
+import {
+  assignTreinoTemplate,
+  getTreinoWorkspace,
+  listTreinoExercicios,
+  listTreinoTemplatesWorkspace,
+  saveTreinoWorkspace,
+  type TreinoTemplateResumo,
+  type TreinoTemplateTotais,
+} from "@/lib/treinos/workspace";
+import type { Aluno, Exercicio, Treino, TreinoItem } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 12;
 
-function formatDate(value?: string): string {
+type AssignmentState = {
+  templateId: string;
+  alunoId: string;
+  dataInicio: string;
+  dataFim: string;
+  metaSessoesSemana: number;
+  frequenciaPlanejada: number;
+  quantidadePrevista: number;
+  observacoes: string;
+};
+
+type LatestAssignedState = {
+  treinoId: string;
+  nome: string;
+  alunoNome: string;
+};
+
+const EMPTY_TEMPLATE_TOTALS: TreinoTemplateTotais = {
+  totalTemplates: 0,
+  publicados: 0,
+  emRevisao: 0,
+  comPendencias: 0,
+};
+
+function formatDateTime(value?: string): string {
   if (!value) return "-";
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("pt-BR");
+  const [datePart, timePart] = value.split("T");
+  const [year, month, day] = datePart.split("-");
+  if (!year || !month || !day) return value;
+  const time = timePart?.slice(0, 5);
+  return time ? `${day}/${month}/${year} ${time}` : `${day}/${month}/${year}`;
 }
 
-export default function TreinosPage() {
-  const tenantRef = useRef<string>(getStore().currentTenantId || getStore().tenant?.id || "");
-  const [tenantId, setTenantId] = useState(() => tenantRef.current);
-  const [treinos, setTreinos] = useState<Treino[]>([]);
-  const [treinosTotal, setTreinosTotal] = useState<number | undefined>(undefined);
-  const [treinosHasNext, setTreinosHasNext] = useState(false);
-  const [treinosSize, setTreinosSize] = useState(PAGE_SIZE);
-  const [exercicios, setExercicios] = useState<Exercicio[]>([]);
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [apenasAtivosTreino, setApenasAtivosTreino] = useState(true);
-  const [buscaTreino, setBuscaTreino] = useState("");
-  const [filtroClienteId, setFiltroClienteId] = useState("");
-  const [page, setPage] = useState(0);
-  const [modalTreinoOpen, setModalTreinoOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [formOptionsLoading, setFormOptionsLoading] = useState(false);
-  const [formOptionsReady, setFormOptionsReady] = useState(false);
+function resolveTemplateStatusBadgeVariant(status?: string): "secondary" | "outline" | "destructive" {
+  if (status === "ARQUIVADO" || status === "CANCELADO") return "destructive";
+  if (status === "RASCUNHO" || status === "EM_REVISAO") return "outline";
+  return "secondary";
+}
 
-  const loadTreinos = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    try {
-      const response = await listTreinos({
-        apenasAtivas: apenasAtivosTreino,
-        page,
-        size: PAGE_SIZE,
-        search: buscaTreino,
-        clienteId: filtroClienteId || undefined,
-      });
-      setTreinos(response.items);
-      setTreinosTotal(response.total);
-      setTreinosHasNext(response.hasNext);
-      setTreinosSize(response.size);
-    } catch (error) {
-      console.error("[treinos] Falha ao carregar treinos.", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [apenasAtivosTreino, buscaTreino, filtroClienteId, page, tenantId]);
+function getTemplateDisplayName(template: { nome?: string | null; templateNome?: string | null }): string {
+  return template.templateNome ?? template.nome ?? "Template sem nome";
+}
 
-  const loadFormOptions = useCallback(async () => {
-    if (formOptionsReady || formOptionsLoading) return;
-    setFormOptionsLoading(true);
-    try {
-      const [alunosList, exerciciosList] = await Promise.all([
-        listAlunos(),
-        listExercicios({ apenasAtivos: true }),
-      ]);
-      setAlunos(alunosList);
-      setExercicios(exerciciosList);
-      setFormOptionsReady(true);
-    } catch (error) {
-      console.error("[treinos] Falha ao carregar opções do formulário.", error);
-    } finally {
-      setFormOptionsLoading(false);
-    }
-  }, [formOptionsLoading, formOptionsReady]);
+function sortTemplatesByRecency(items: TreinoTemplateResumo[]): TreinoTemplateResumo[] {
+  return [...items].sort((left, right) => {
+    const leftStamp = left.atualizadoEm ?? "";
+    const rightStamp = right.atualizadoEm ?? "";
+    return rightStamp.localeCompare(leftStamp);
+  });
+}
 
-  const syncTenantChange = useCallback(() => {
-    const current = getStore().currentTenantId || getStore().tenant?.id || "";
-    if (!current || current === tenantRef.current) return;
-    tenantRef.current = current;
-    setTenantId(current);
-    setPage(0);
-    setTreinos([]);
-    setTreinosTotal(undefined);
-    setTreinosHasNext(false);
-    setTreinosSize(PAGE_SIZE);
-    setAlunos([]);
-    setExercicios([]);
-    setFormOptionsReady(false);
-  }, []);
+function buildTreinoItems(itens: TreinoForm["itens"], exercicios: Exercicio[]): TreinoItem[] {
+  return itens.map((item, index) => {
+    const exercicio = exercicios.find((candidate) => candidate.id === item.exercicioId);
+    return {
+      id: item.id ?? "",
+      treinoId: "",
+      exercicioId: item.exercicioId,
+      exercicioNome: exercicio?.nome,
+      grupoMuscularId: exercicio?.grupoMuscularId,
+      grupoMuscularNome: exercicio?.grupoMuscularNome ?? exercicio?.grupoMuscular,
+      ordem: item.ordem ?? index + 1,
+      series: item.series,
+      repeticoesMin: item.repeticoesMin,
+      repeticoesMax: item.repeticoesMax,
+      intervaloSegundos: item.intervaloSegundos,
+      tempoExecucaoSegundos: item.tempoExecucaoSegundos,
+      cargaSugerida: item.cargaSugerida,
+      observacao: item.observacao,
+      diasSemana: item.diasSemana,
+    };
+  });
+}
 
-  useEffect(() => {
-    syncTenantChange();
-    function handleTenantUpdate() {
-      syncTenantChange();
-    }
-    window.addEventListener("academia-store-updated", handleTenantUpdate);
-    return () => window.removeEventListener("academia-store-updated", handleTenantUpdate);
-  }, [syncTenantChange]);
-
-  useEffect(() => {
-    if (!tenantId) return;
-    void loadTreinos();
-  }, [loadTreinos, tenantId]);
-
-  useEffect(() => {
-    if (modalTreinoOpen) {
-      void loadFormOptions();
-    }
-  }, [loadFormOptions, modalTreinoOpen]);
-
-  const clienteOptions = useMemo(
-    () =>
-      alunos.map((aluno) => ({
-        id: aluno.id,
-        nome: aluno.nome,
-        cpf: aluno.cpf,
-        email: aluno.email,
-      })),
-    [alunos],
-  );
-
-  const clienteFiltroOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const treino of treinos) {
-      if (treino.alunoNome && treino.alunoId) {
-        map.set(treino.alunoId, treino.alunoNome);
-      }
-    }
-    return Array.from(map.entries())
-      .sort((a, b) => a[1].localeCompare(b[1]))
-      .map(([id, nome]) => ({ id, nome }));
-  }, [treinos]);
-
-  async function handleNovoTreino(data: TreinoForm) {
-    await createTreino({
-      alunoId: data.alunoId,
-      alunoNome: data.alunoNome,
-      nome: data.nome,
-      divisao: data.divisao,
-      metaSessoesSemana: data.metaSessoesSemana,
-      dataInicio: data.dataInicio,
-      dataFim: data.dataFim,
-      observacoes: data.observacoes,
-      ativo: data.ativo,
-      itens: data.itens.map((item) => ({
-        id: "",
-        treinoId: "",
+function buildTemplateForm(template: Treino): TreinoForm {
+  return {
+    nome: template.nome ?? getTemplateDisplayName(template),
+    templateNome: template.templateNome ?? template.nome ?? getTemplateDisplayName(template),
+    objetivo: template.objetivo,
+    divisao: template.divisao,
+    metaSessoesSemana: template.metaSessoesSemana,
+    frequenciaPlanejada: template.frequenciaPlanejada,
+    quantidadePrevista: template.quantidadePrevista,
+    dataInicio: template.dataInicio ?? getBusinessTodayIso(),
+    dataFim: template.dataFim ?? template.vencimento ?? addDaysToIsoDate(getBusinessTodayIso(), 30),
+    observacoes: template.observacoes,
+    ativo: template.ativo !== false,
+    tipoTreino: "PRE_MONTADO",
+    itens:
+      template.itens?.map((item, index) => ({
+        id: item.id,
         exercicioId: item.exercicioId,
-        ordem: item.ordem,
+        ordem: item.ordem ?? index + 1,
         series: item.series,
         repeticoesMin: item.repeticoesMin,
         repeticoesMax: item.repeticoesMax,
@@ -160,130 +147,862 @@ export default function TreinosPage() {
         cargaSugerida: item.cargaSugerida,
         observacao: item.observacao,
         diasSemana: item.diasSemana,
-        ativo: true,
-      })),
-    });
-    setModalTreinoOpen(false);
+      })) ?? [],
+  };
+}
+
+function buildAssignmentState(template: Treino): AssignmentState {
+  return {
+    templateId: template.id,
+    alunoId: "",
+    dataInicio: getBusinessTodayIso(),
+    dataFim: addDaysToIsoDate(getBusinessTodayIso(), 30),
+    metaSessoesSemana: template.metaSessoesSemana ?? 3,
+    frequenciaPlanejada: template.frequenciaPlanejada ?? template.metaSessoesSemana ?? 3,
+    quantidadePrevista: template.quantidadePrevista ?? 12,
+    observacoes: template.observacoes ?? "",
+  };
+}
+
+export default function TreinosPage() {
+  const requestIdRef = useRef(0);
+  const { tenantId, tenantName, tenantResolved } = useTenantContext();
+  const access = useAuthAccess();
+  const { toast } = useToast();
+  const [templates, setTemplates] = useState<TreinoTemplateResumo[]>([]);
+  const [templatesTotal, setTemplatesTotal] = useState(0);
+  const [templatesHasNext, setTemplatesHasNext] = useState(false);
+  const [templatesSize, setTemplatesSize] = useState(PAGE_SIZE);
+  const [templateTotals, setTemplateTotals] = useState<TreinoTemplateTotais>(EMPTY_TEMPLATE_TOTALS);
+  const [exercicios, setExercicios] = useState<Exercicio[]>([]);
+  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [reviewOnly, setReviewOnly] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
+  const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<Treino | null>(null);
+  const [archiveTemplate, setArchiveTemplate] = useState<Treino | null>(null);
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [assignmentTemplate, setAssignmentTemplate] = useState<Treino | null>(null);
+  const [assignmentForm, setAssignmentForm] = useState<AssignmentState | null>(null);
+  const [latestAssigned, setLatestAssigned] = useState<LatestAssignedState | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [actionTemplateId, setActionTemplateId] = useState<string | null>(null);
+
+  const editingTemplateForm = useMemo(
+    () => (editingTemplate ? buildTemplateForm(editingTemplate) : null),
+    [editingTemplate],
+  );
+
+  const permissions = useMemo(
+    () =>
+      resolveTreinoV2Permissions({
+        role: access.loading || access.canAccessElevatedModules ? "ADMINISTRADOR" : "PROFESSOR",
+      }),
+    [access.canAccessElevatedModules, access.loading],
+  );
+
+  const alunoOptions = useMemo(
+    () =>
+      alunos
+        .map((aluno) => ({
+          id: aluno.id,
+          nome: aluno.nome,
+          cpf: aluno.cpf,
+          email: aluno.email,
+        }))
+        .sort((left, right) => left.nome.localeCompare(right.nome, "pt-BR")),
+    [alunos],
+  );
+
+  const loadData = useCallback(async () => {
+    if (!tenantId) return;
+
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [templatesResponse, exerciciosResponse, alunosResponse] = await Promise.all([
+        listTreinoTemplatesWorkspace({
+          tenantId,
+          precisaRevisao: reviewOnly || undefined,
+          search: search.trim() || undefined,
+          page,
+          size: PAGE_SIZE,
+        }),
+        listTreinoExercicios({ tenantId, ativo: true }),
+        listAlunosApi({ tenantId, status: "ATIVO", page: 0, size: 200 }),
+      ]);
+
+      if (requestIdRef.current !== requestId) return;
+
+      setTemplates(sortTemplatesByRecency(templatesResponse.items));
+      setTemplatesTotal(templatesResponse.total ?? templatesResponse.items.length);
+      setTemplatesHasNext(templatesResponse.hasNext);
+      setTemplatesSize(templatesResponse.size ?? PAGE_SIZE);
+      setTemplateTotals(templatesResponse.totais);
+      setExercicios(exerciciosResponse);
+      setAlunos(extractAlunosFromListResponse(alunosResponse));
+    } catch (loadError) {
+      if (requestIdRef.current !== requestId) return;
+      setError(normalizeErrorMessage(loadError));
+      setTemplates([]);
+      setTemplatesTotal(0);
+      setTemplatesHasNext(false);
+      setTemplatesSize(PAGE_SIZE);
+      setTemplateTotals(EMPTY_TEMPLATE_TOTALS);
+    } finally {
+      if (requestIdRef.current === requestId) {
+        setLoading(false);
+      }
+    }
+  }, [page, reviewOnly, search, tenantId]);
+
+  useEffect(() => {
     setPage(0);
-    await loadTreinos();
+    setTemplates([]);
+    setTemplatesTotal(0);
+    setTemplatesHasNext(false);
+    setTemplatesSize(PAGE_SIZE);
+    setTemplateTotals(EMPTY_TEMPLATE_TOTALS);
+    setExercicios([]);
+    setAlunos([]);
+    setError(null);
+    setLatestAssigned(null);
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantResolved || !tenantId) return;
+    void loadData();
+  }, [loadData, tenantId, tenantResolved]);
+
+  async function handleCreateTemplate(data: TreinoForm) {
+    if (!tenantId) return;
+    await saveTreinoWorkspace({
+      tenantId,
+      nome: data.nome,
+      templateNome: data.templateNome ?? data.nome,
+      objetivo: data.objetivo,
+      divisao: data.divisao,
+      metaSessoesSemana: data.metaSessoesSemana,
+      frequenciaPlanejada: data.frequenciaPlanejada,
+      quantidadePrevista: data.quantidadePrevista,
+      dataInicio: data.dataInicio,
+      dataFim: data.dataFim,
+      observacoes: data.observacoes,
+      ativo: data.ativo,
+      status: "RASCUNHO",
+      tipoTreino: "PRE_MONTADO",
+      itens: buildTreinoItems(data.itens, exercicios),
+    });
+    setCreateTemplateOpen(false);
+    setPage(0);
+    await loadData();
+    toast({
+      title: "Treino padrão criado",
+      description: data.templateNome ?? data.nome,
+    });
   }
 
-  const title = tenantId ? "Treinos" : "Treinos por unidade";
+  async function handleEditTemplate(data: TreinoForm) {
+    if (!tenantId || !editingTemplate) return;
+    await saveTreinoWorkspace({
+      tenantId,
+      id: editingTemplate.id,
+      nome: data.nome,
+      templateNome: data.templateNome ?? data.nome,
+      objetivo: data.objetivo,
+      divisao: data.divisao,
+      metaSessoesSemana: data.metaSessoesSemana,
+      frequenciaPlanejada: data.frequenciaPlanejada,
+      quantidadePrevista: data.quantidadePrevista,
+      dataInicio: data.dataInicio,
+      dataFim: data.dataFim,
+      observacoes: data.observacoes,
+      ativo: data.ativo,
+      status: editingTemplate.status ?? "RASCUNHO",
+      tipoTreino: "PRE_MONTADO",
+      itens: buildTreinoItems(data.itens, exercicios),
+    });
+    setEditingTemplate(null);
+    await loadData();
+    toast({
+      title: "Treino padrão atualizado",
+      description: data.templateNome ?? data.nome,
+    });
+  }
+
+  async function loadTemplateDetail(template: TreinoTemplateResumo): Promise<Treino | null> {
+    if (!tenantId) return null;
+    setActionTemplateId(template.id);
+    try {
+      const detail = await getTreinoWorkspace({ tenantId, id: template.id });
+      if (!detail) {
+        toast({
+          title: "Template não encontrado",
+          description: "Recarregue a listagem e tente novamente.",
+          variant: "destructive",
+        });
+        return null;
+      }
+      return detail;
+    } catch (detailError) {
+      toast({
+        title: "Não foi possível carregar o template",
+        description: normalizeErrorMessage(detailError),
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setActionTemplateId(null);
+    }
+  }
+
+  async function openEditTemplate(template: TreinoTemplateResumo) {
+    const detail = await loadTemplateDetail(template);
+    if (!detail) return;
+    setEditingTemplate(detail);
+  }
+
+  async function openAssignmentDialog(template: TreinoTemplateResumo) {
+    const detail = await loadTemplateDetail(template);
+    if (!detail) return;
+    setAssignmentTemplate(detail);
+    setAssignmentForm(buildAssignmentState(detail));
+    setAssignmentDialogOpen(true);
+  }
+
+  async function openArchiveDialog(template: TreinoTemplateResumo) {
+    const detail = await loadTemplateDetail(template);
+    if (!detail) return;
+    setArchiveTemplate(detail);
+  }
+
+  async function handleAssignTemplate() {
+    if (!tenantId || !assignmentTemplate || !assignmentForm) return;
+    if (!assignmentForm.alunoId) {
+      toast({
+        title: "Selecione um aluno para atribuição",
+        variant: "destructive",
+      });
+      return;
+    }
+    const aluno = alunos.find((item) => item.id === assignmentForm.alunoId);
+    if (!aluno) {
+      toast({
+        title: "Aluno inválido",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAssigning(true);
+    try {
+      const assigned = await assignTreinoTemplate({
+        tenantId,
+        templateId: assignmentTemplate.id,
+        templateName: getTemplateDisplayName(assignmentTemplate),
+        templateSnapshot: assignmentTemplate,
+        alunoId: aluno.id,
+        alunoNome: aluno.nome,
+        dataInicio: assignmentForm.dataInicio,
+        dataFim: assignmentForm.dataFim,
+        observacoes: assignmentForm.observacoes,
+        metaSessoesSemana: assignmentForm.metaSessoesSemana,
+        frequenciaPlanejada: assignmentForm.frequenciaPlanejada,
+        quantidadePrevista: assignmentForm.quantidadePrevista,
+      });
+
+      setLatestAssigned({
+        treinoId: assigned.id,
+        nome: assigned.nome ?? getTemplateDisplayName(assignmentTemplate),
+        alunoNome: aluno.nome,
+      });
+      setAssignmentDialogOpen(false);
+      setAssignmentTemplate(null);
+      setAssignmentForm(null);
+      await loadData();
+      toast({
+        title: "Treino atribuído",
+        description: `${getTemplateDisplayName(assignmentTemplate)} para ${aluno.nome}`,
+      });
+    } catch (assignError) {
+      toast({
+        title: "Não foi possível atribuir o treino padrão",
+        description: normalizeErrorMessage(assignError),
+        variant: "destructive",
+      });
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  async function handleArchiveTemplate() {
+    if (!tenantId || !archiveTemplate || archiving) return;
+
+    setArchiving(true);
+    try {
+      await saveTreinoWorkspace({
+        tenantId,
+        id: archiveTemplate.id,
+        nome: archiveTemplate.nome ?? getTemplateDisplayName(archiveTemplate),
+        templateNome: archiveTemplate.templateNome ?? archiveTemplate.nome ?? getTemplateDisplayName(archiveTemplate),
+        objetivo: archiveTemplate.objetivo,
+        divisao: archiveTemplate.divisao,
+        metaSessoesSemana: archiveTemplate.metaSessoesSemana,
+        frequenciaPlanejada: archiveTemplate.frequenciaPlanejada,
+        quantidadePrevista: archiveTemplate.quantidadePrevista,
+        dataInicio: archiveTemplate.dataInicio,
+        dataFim: archiveTemplate.dataFim ?? archiveTemplate.vencimento,
+        observacoes: archiveTemplate.observacoes,
+        funcionarioId: archiveTemplate.funcionarioId,
+        funcionarioNome: archiveTemplate.funcionarioNome,
+        status: "ARQUIVADO",
+        tipoTreino: "PRE_MONTADO",
+        ativo: false,
+        itens: archiveTemplate.itens,
+      });
+      setArchiveTemplate(null);
+      await loadData();
+      toast({
+        title: "Treino padrão arquivado",
+        description: getTemplateDisplayName(archiveTemplate),
+      });
+    } catch (archiveError) {
+      toast({
+        title: "Não foi possível arquivar o treino padrão",
+        description: normalizeErrorMessage(archiveError),
+        variant: "destructive",
+      });
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  const emptyText = loading
+    ? "Carregando templates..."
+    : reviewOnly
+      ? "Nenhum template com pendências encontrado"
+      : search.trim()
+        ? "Nenhum template encontrado com os filtros atuais"
+        : "Nenhum treino padrão encontrado";
 
   return (
     <div className="space-y-6">
-      <TreinoModal
-        key={modalTreinoOpen ? "treino-open" : "treino-closed"}
-        open={modalTreinoOpen}
-        onClose={() => setModalTreinoOpen(false)}
-        clientes={clienteOptions}
-        exercicios={exercicios.map((ex) => ({ id: ex.id, nome: ex.nome, grupoMuscular: ex.grupoMuscular }))}
-        onSave={handleNovoTreino}
-      />
+      {createTemplateOpen ? (
+        <TreinoModal
+          key="template-create-open"
+          open
+          onClose={() => setCreateTemplateOpen(false)}
+          clientes={[]}
+          exercicios={exercicios.map((item) => ({
+            id: item.id,
+            nome: item.nome,
+            grupoMuscular: item.grupoMuscularNome ?? item.grupoMuscular,
+          }))}
+          mode="PRE_MONTADO"
+          title="Novo treino padrão"
+          description="Cadastre um template reutilizável para encontrar, editar e atribuir com rapidez."
+          submitLabel="Salvar treino padrão"
+          onSave={handleCreateTemplate}
+        />
+      ) : null}
 
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">{title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Monte, edite e atribua treinos para os alunos da unidade.
-        </p>
-      </div>
+      {editingTemplate ? (
+        <TreinoModal
+          key={editingTemplate.id}
+          open
+          onClose={() => setEditingTemplate(null)}
+          clientes={[]}
+          exercicios={exercicios.map((item) => ({
+            id: item.id,
+            nome: item.nome,
+            grupoMuscular: item.grupoMuscularNome ?? item.grupoMuscular,
+          }))}
+          mode="PRE_MONTADO"
+          title="Editar treino padrão"
+          description="Ajuste os metadados e os exercícios do template sem sair da listagem operacional."
+          submitLabel="Salvar alterações"
+          initialData={editingTemplateForm}
+          onSave={handleEditTemplate}
+        />
+      ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1.5">
-            <button
-              onClick={() => {
-                setApenasAtivosTreino(false);
-                setPage(0);
-              }}
-              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                !apenasAtivosTreino
-                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => {
-                setApenasAtivosTreino(true);
-                setPage(0);
-              }}
-              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                apenasAtivosTreino
-                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-              }`}
-            >
-              Apenas ativos
-            </button>
+      {assignmentDialogOpen ? (
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            setAssignmentDialogOpen(open);
+            if (!open) {
+              setAssignmentTemplate(null);
+              setAssignmentForm(null);
+            }
+          }}
+        >
+          <DialogContent className="border-border bg-card sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg font-bold">Atribuir treino padrão</DialogTitle>
+              <DialogDescription>
+                Formalize a atribuição do template {assignmentTemplate ? getTemplateDisplayName(assignmentTemplate) : "-"} para um aluno.
+              </DialogDescription>
+            </DialogHeader>
+
+            {assignmentForm ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="template-assignment-aluno">Aluno *</Label>
+                  <select
+                    id="template-assignment-aluno"
+                    value={assignmentForm.alunoId}
+                    onChange={(event) =>
+                      setAssignmentForm((current) =>
+                        current ? { ...current, alunoId: event.target.value } : current,
+                      )
+                    }
+                    className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
+                  >
+                    <option value="">Selecione um aluno</option>
+                    {alunoOptions.map((aluno) => (
+                      <option key={aluno.id} value={aluno.id}>
+                        {aluno.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="template-assignment-inicio">Início</Label>
+                  <Input
+                    id="template-assignment-inicio"
+                    type="date"
+                    value={assignmentForm.dataInicio}
+                    onChange={(event) =>
+                      setAssignmentForm((current) =>
+                        current ? { ...current, dataInicio: event.target.value } : current,
+                      )
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="template-assignment-fim">Fim</Label>
+                  <Input
+                    id="template-assignment-fim"
+                    type="date"
+                    value={assignmentForm.dataFim}
+                    onChange={(event) =>
+                      setAssignmentForm((current) =>
+                        current ? { ...current, dataFim: event.target.value } : current,
+                      )
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="template-assignment-meta">Meta sessões/semana</Label>
+                  <Input
+                    id="template-assignment-meta"
+                    type="number"
+                    value={assignmentForm.metaSessoesSemana}
+                    onChange={(event) =>
+                      setAssignmentForm((current) =>
+                        current
+                          ? {
+                              ...current,
+                              metaSessoesSemana: Number(event.target.value) || 0,
+                            }
+                          : current,
+                      )
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="template-assignment-frequencia">Frequência planejada</Label>
+                  <Input
+                    id="template-assignment-frequencia"
+                    type="number"
+                    value={assignmentForm.frequenciaPlanejada}
+                    onChange={(event) =>
+                      setAssignmentForm((current) =>
+                        current
+                          ? {
+                              ...current,
+                              frequenciaPlanejada: Number(event.target.value) || 0,
+                            }
+                          : current,
+                      )
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="template-assignment-quantidade">Quantidade prevista</Label>
+                  <Input
+                    id="template-assignment-quantidade"
+                    type="number"
+                    value={assignmentForm.quantidadePrevista}
+                    onChange={(event) =>
+                      setAssignmentForm((current) =>
+                        current
+                          ? {
+                              ...current,
+                              quantidadePrevista: Number(event.target.value) || 0,
+                            }
+                          : current,
+                      )
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="template-assignment-observacoes">Observações</Label>
+                  <Textarea
+                    id="template-assignment-observacoes"
+                    value={assignmentForm.observacoes}
+                    onChange={(event) =>
+                      setAssignmentForm((current) =>
+                        current ? { ...current, observacoes: event.target.value } : current,
+                      )
+                    }
+                    className="min-h-24"
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAssignmentDialogOpen(false);
+                  setAssignmentTemplate(null);
+                  setAssignmentForm(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={() => void handleAssignTemplate()} disabled={assigning || !assignmentForm}>
+                {assigning ? "Atribuindo..." : "Atribuir treino"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      {archiveTemplate ? (
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setArchiveTemplate(null);
+            }
+          }}
+        >
+          <DialogContent className="border-border bg-card sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg font-bold">Arquivar treino padrão</DialogTitle>
+              <DialogDescription>
+                {`Confirme o arquivamento de ${getTemplateDisplayName(archiveTemplate)}. A ação remove o template do fluxo ativo de atribuição.`}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setArchiveTemplate(null)}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={() => void handleArchiveTemplate()} disabled={archiving}>
+                {archiving ? "Arquivando..." : "Arquivar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-2xl font-bold tracking-tight">Treino Padrão</h1>
+            <Badge variant="outline">{templateTotals.totalTemplates} template(s)</Badge>
+            {templateTotals.comPendencias > 0 ? (
+              <Badge variant="secondary">{templateTotals.comPendencias} com pendências</Badge>
+            ) : null}
           </div>
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={buscaTreino}
-              onChange={(event) => {
-                setBuscaTreino(event.target.value);
-                setPage(0);
-              }}
-              className="w-full bg-secondary border-border pl-8"
-              placeholder="Buscar por cliente ou professor"
-            />
-          </div>
-          <div className="relative w-full max-w-xs">
-            <SelectFiltroCliente
-              options={clienteFiltroOptions}
-              value={filtroClienteId}
-              onChange={(value) => {
-                setFiltroClienteId(value);
-                setPage(0);
-              }}
-            />
-          </div>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Biblioteca administrativa de templates reutilizáveis para a unidade {tenantResolved ? tenantName : DEFAULT_ACTIVE_TENANT_LABEL}, com busca rápida,
+            ações operacionais e ordenação por atualização mais recente.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowInfo((current) => !current)}
+            className="text-sm font-medium text-gym-accent underline underline-offset-4"
+          >
+            Saiba mais
+          </button>
         </div>
 
-        <Button onClick={() => setModalTreinoOpen(true)}>
-          <Plus className="size-4" />
-          Novo treino
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href="/treinos/atribuidos">
+              <ClipboardList className="size-4" />
+              Treinos atribuídos
+            </Link>
+          </Button>
+          <Button
+            onClick={() => setCreateTemplateOpen(true)}
+            disabled={!permissions.canCreateTemplate}
+            title={permissions.canCreateTemplate ? "Criar treino padrão" : "Seu perfil não pode criar templates"}
+          >
+            <FileStack className="size-4" />
+            Criar treino padrão
+          </Button>
+        </div>
       </div>
 
+      {showInfo ? (
+        <Card className="border-border bg-card">
+          <CardContent className="grid gap-2 p-4 text-sm text-muted-foreground md:grid-cols-3">
+            <p>Use a busca principal para localizar templates por nome ou professor, sem misturar treinos atribuídos.</p>
+            <p>As ações rápidas desta tela cobrem edição, montagem, atribuição e arquivamento sem inflar a navegação.</p>
+            <p>Treinos atribuídos seguem em uma fila separada para preservar governança, vigência e rastreabilidade.</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {latestAssigned ? (
+        <Card className="border-border bg-card">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Última atribuição criada</p>
+              <p className="text-sm text-muted-foreground">
+                {latestAssigned.nome} foi atribuído para {latestAssigned.alunoNome}.
+              </p>
+            </div>
+            <Button asChild variant="outline">
+              <Link href={`/treinos/${latestAssigned.treinoId}`}>Abrir treino atribuído</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <TreinosMetricCard
+          label="Total de templates"
+          value={String(templateTotals.totalTemplates)}
+          detail={reviewOnly ? "Filtro de pendências ativo" : "Catálogo retornado pelo endpoint canônico de templates"}
+        />
+        <TreinosMetricCard
+          label="Publicados"
+          value={String(templateTotals.publicados)}
+          detail="Templates disponíveis para operação"
+        />
+        <TreinosMetricCard
+          label="Em revisão"
+          value={String(templateTotals.emRevisao)}
+          detail="Templates atualmente em fluxo de revisão"
+        />
+        <TreinosMetricCard
+          label="Com pendências"
+          value={String(templateTotals.comPendencias)}
+          detail="Templates sinalizados para revisão ou ajuste"
+        />
+      </div>
+
+      {error ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          <span>{error}</span>
+          <Button variant="outline" className="border-gym-danger/30" onClick={() => void loadData()}>
+            Tentar novamente
+          </Button>
+        </div>
+      ) : null}
+
       <Card className="border-border bg-card">
-        <CardHeader className="space-y-2">
-          <CardTitle className="font-display text-lg">Treinos</CardTitle>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle className="font-display text-lg">Listagem operacional</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Busca principal, contador de resultados e ações rápidas para operar a biblioteca de treino padrão.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {templateTotals.comPendencias > 0 ? (
+                <Button
+                  type="button"
+                  variant={reviewOnly ? "default" : "outline"}
+                  onClick={() => {
+                    setReviewOnly((current) => !current);
+                    setPage(0);
+                  }}
+                >
+                  {reviewOnly ? "Mostrar todos" : `Pendências (${templateTotals.comPendencias})`}
+                </Button>
+              ) : null}
+              <div className="relative w-full min-w-72 max-w-md">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(0);
+                  }}
+                  className="pl-8"
+                  placeholder="Buscar por nome do template ou professor"
+                  aria-label="Buscar template por nome ou professor"
+                />
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <PaginatedTable<Treino>
+          <PaginatedTable
             columns={[
-              { label: "Cliente" },
-              { label: "Divisão" },
+              { label: "Nome do treino" },
+              { label: "Resumo" },
               { label: "Professor" },
-              { label: "Validade" },
-              { label: "Meta/sem" },
+              { label: "Ações" },
             ]}
-            items={treinos}
-            emptyText={loading ? "Carregando..." : "Nenhum treino encontrado"}
-            total={treinosTotal ?? treinos.length}
+            items={templates}
+            emptyText={emptyText}
+            total={templatesTotal}
             page={page}
-            pageSize={treinosSize}
-            hasNext={treinosHasNext}
+            pageSize={templatesSize}
+            hasNext={templatesHasNext}
             onNext={() => {
-              if (treinosHasNext) setPage((current) => current + 1);
+              if (templatesHasNext) setPage((current) => current + 1);
             }}
             onPrevious={() => setPage((current) => Math.max(0, current - 1))}
-            getRowKey={(treino) => treino.id}
-            renderCells={(treino) => {
-              const validade = treino.dataFim ?? treino.vencimento ?? "";
+            getRowKey={(template) => template.id}
+            itemLabel="templates"
+            rowClassName={(template) => (template.precisaRevisao ? "bg-amber-50/40 dark:bg-amber-950/10" : "")}
+            renderCells={(template) => {
+              const displayName = getTemplateDisplayName(template);
+              const templateStatus =
+                template.status ?? (template.precisaRevisao ? "EM_REVISAO" : "PUBLICADO");
+              const canOperate = template.status !== "ARQUIVADO" && template.status !== "CANCELADO";
+              const canEdit = permissions.canEditOwnTemplate && canOperate;
+              const canAssign = permissions.canAssignIndividual && canOperate;
+              const canArchive = permissions.canArchiveTemplate && canOperate;
+              const actionLoading = actionTemplateId === template.id;
+
               return (
                 <>
                   <td className="px-4 py-3">
-                    <p className="text-sm font-medium">{treino.alunoNome}</p>
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link href={`/treinos/${template.id}`} className="text-sm font-semibold text-foreground hover:text-gym-accent">
+                          {displayName}
+                        </Link>
+                        <Badge variant={resolveTemplateStatusBadgeVariant(templateStatus)}>{templateStatus}</Badge>
+                        {template.versaoTemplate ? <Badge variant="outline">v{template.versaoTemplate}</Badge> : null}
+                        {template.precisaRevisao ? <Badge variant="outline">Revisão pendente</Badge> : null}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {template.categoria ? `Categoria ${template.categoria}` : "Categoria não informada"}
+                        {template.perfilIndicacao ? ` · Perfil ${template.perfilIndicacao}` : ""}
+                      </p>
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-sm">{treino.divisao ?? "-"}</td>
-                  <td className="px-4 py-3 text-sm">{treino.funcionarioNome ?? "-"}</td>
-                  <td className="px-4 py-3 text-sm">{formatDate(validade)}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {treino.metaSessoesSemana ?? "-"}
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-foreground">
+                        {template.pendenciasAbertas} pendência(s) aberta(s)
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {template.precisaRevisao
+                          ? "Template sinalizado para revisão"
+                          : "Template pronto para atribuição e manutenção"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {template.frequenciaSemanal
+                          ? `${template.frequenciaSemanal}x por semana`
+                          : "Frequência não informada"}
+                        {template.totalSemanas ? ` · ${template.totalSemanas} semana(s)` : ""}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-foreground">
+                        {template.professorNome ?? "Professor não informado"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Atualizado em {formatDateTime(template.atualizadoEm)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        title={
+                          actionLoading
+                            ? "Carregando detalhes do template"
+                            : canEdit
+                              ? "Editar treino"
+                              : "Seu perfil não pode editar este template"
+                        }
+                        aria-label={`Editar treino ${displayName}`}
+                        disabled={!canEdit || actionLoading}
+                        onClick={() => void openEditTemplate(template)}
+                      >
+                        <PencilLine className="size-4" />
+                        Editar
+                      </Button>
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        title="Abrir montagem"
+                        aria-label={`Abrir montagem de ${displayName}`}
+                      >
+                        <Link href={`/treinos/${template.id}`}>
+                          <SquareArrowOutUpRight className="size-4" />
+                          Abrir montagem
+                        </Link>
+                      </Button>
+                      <Button
+                        size="sm"
+                        title={
+                          actionLoading
+                            ? "Carregando detalhes do template"
+                            : canAssign
+                              ? "Atribuir treino"
+                              : "Seu perfil não pode atribuir templates"
+                        }
+                        aria-label={`Atribuir treino ${displayName}`}
+                        disabled={!canAssign || actionLoading}
+                        onClick={() => void openAssignmentDialog(template)}
+                      >
+                        <UserPlus className="size-4" />
+                        Atribuir treino
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        title={
+                          actionLoading
+                            ? "Carregando detalhes do template"
+                            : canArchive
+                              ? "Excluir ou arquivar treino"
+                              : "Seu perfil não pode arquivar templates"
+                        }
+                        aria-label={`Arquivar treino ${displayName}`}
+                        disabled={!canArchive || actionLoading}
+                        onClick={() => void openArchiveDialog(template)}
+                      >
+                        <Archive className="size-4" />
+                        Arquivar
+                      </Button>
+                    </div>
                   </td>
                 </>
               );
@@ -291,42 +1010,26 @@ export default function TreinosPage() {
           />
         </CardContent>
       </Card>
-
-      <Card className="border-dashed border-border bg-card/50">
-        <CardHeader>
-          <CardTitle className="font-display text-lg">Templates de treino (em breve)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Vamos disponibilizar uma lista de templates para reaproveitar estruturas de treino e atribuir aos alunos rapidamente.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }
 
-function SelectFiltroCliente({
-  options,
+function TreinosMetricCard({
+  label,
   value,
-  onChange,
+  detail,
 }: {
-  options: Array<{ id: string; nome: string }>;
+  label: string;
   value: string;
-  onChange: (value: string) => void;
+  detail: string;
 }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
-    >
-      <option value="">Todos os clientes</option>
-      {options.map((opt) => (
-        <option key={opt.id} value={opt.id}>
-          {opt.nome}
-        </option>
-      ))}
-    </select>
+    <Card className="border-border bg-card">
+      <CardContent className="space-y-1 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="font-display text-2xl font-bold text-foreground">{value}</p>
+        <p className="text-xs text-muted-foreground">{detail}</p>
+      </CardContent>
+    </Card>
   );
 }

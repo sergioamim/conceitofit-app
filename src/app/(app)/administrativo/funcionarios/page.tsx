@@ -2,17 +2,17 @@
 
 import { useEffect, useState } from "react";
 import {
-  listFuncionarios,
-  createFuncionario,
-  updateFuncionario,
-  toggleFuncionario,
-  deleteFuncionario,
-  listCargos,
-  createCargo,
-  updateCargo,
-  toggleCargo,
-  deleteCargo,
-} from "@/lib/mock/services";
+  createCargoApi,
+  createFuncionarioApi,
+  deleteCargoApi,
+  deleteFuncionarioApi,
+  listCargosApi,
+  listFuncionariosApi,
+  toggleCargoApi,
+  toggleFuncionarioApi,
+  updateCargoApi,
+  updateFuncionarioApi,
+} from "@/lib/api/administrativo";
 import type { Cargo, Funcionario } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { FuncionarioModal } from "@/components/shared/funcionario-modal";
@@ -31,62 +31,73 @@ export default function FuncionariosPage() {
 
   async function load() {
     const [funcs, cargosData] = await Promise.all([
-      listFuncionarios({ apenasAtivos: false }),
-      listCargos(),
+      listFuncionariosApi(false),
+      listCargosApi(false),
     ]);
     setFuncionarios(funcs);
     setCargos(cargosData);
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    void Promise.all([listFuncionariosApi(false), listCargosApi(false)]).then(([funcs, cargosData]) => {
+      setFuncionarios(funcs);
+      setCargos(cargosData);
+    });
   }, []);
 
   async function handleSave(data: Omit<Funcionario, "id">, id?: string) {
-    if (id) await updateFuncionario(id, data);
-    else {
+    const { ativo = true, ...payload } = data;
+
+    if (id) {
+      await updateFuncionarioApi(id, payload);
+      if (editing && editing.ativo !== ativo) {
+        await toggleFuncionarioApi(id);
+      }
+    } else {
       const payload = {
         nome: data.nome,
         cargoId: data.cargoId,
         cargo: data.cargo,
         podeMinistrarAulas: data.podeMinistrarAulas,
       };
-      await createFuncionario(payload);
+      const created = await createFuncionarioApi(payload);
+      if (!ativo) {
+        await toggleFuncionarioApi(created.id);
+      }
     }
     setModalOpen(false);
     setEditing(null);
-    load();
+    await load();
   }
 
   async function handleToggle(id: string) {
-    await toggleFuncionario(id);
-    load();
+    await toggleFuncionarioApi(id);
+    await load();
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remover este funcionário?")) return;
-    await deleteFuncionario(id);
-    load();
+    await deleteFuncionarioApi(id);
+    await load();
   }
 
   async function handleSaveCargo(data: Omit<Cargo, "id" | "tenantId">, id?: string) {
-    if (id) await updateCargo(id, data);
-    else await createCargo({ nome: data.nome });
+    if (id) await updateCargoApi(id, data);
+    else await createCargoApi({ nome: data.nome });
     setCargoFormOpen(false);
     setEditingCargo(null);
     await load();
   }
 
   async function handleToggleCargo(id: string) {
-    await toggleCargo(id);
-    load();
+    await toggleCargoApi(id);
+    await load();
   }
 
   async function handleDeleteCargo(id: string) {
     if (!confirm("Remover este cargo?")) return;
-    await deleteCargo(id);
-    load();
+    await deleteCargoApi(id);
+    await load();
   }
 
   const cargoMap = new Map(cargos.map((c) => [c.id, c.nome]));

@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/select";
 import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
-import { listPlanos, updateVoucher } from "@/lib/mock/services";
+import { updateVoucherApi } from "@/lib/api/beneficios";
+import { listPlanosApi } from "@/lib/api/comercial-catalogo";
 import type { Plano, Voucher, VoucherAplicarEm, VoucherEscopo } from "@/lib/types";
 
 const VOUCHER_TYPES = [
@@ -29,10 +30,12 @@ const VOUCHER_TYPES = [
 ];
 
 export function EditarVoucherModal({
+  tenantId,
   voucher,
   onClose,
   onSaved,
 }: {
+  tenantId?: string;
   voucher: Voucher;
   onClose: () => void;
   onSaved: () => void;
@@ -57,8 +60,12 @@ export function EditarVoucherModal({
   const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
-    listPlanos().then((data) => setPlanos(data.filter((p) => p.ativo)));
-  }, []);
+    if (!tenantId) {
+      setPlanos([]);
+      return;
+    }
+    void listPlanosApi({ tenantId, apenasAtivos: true }).then(setPlanos);
+  }, [tenantId]);
 
   function togglePlano(id: string) {
     setPlanoIds((prev) =>
@@ -96,7 +103,7 @@ export function EditarVoucherModal({
     setSaving(true);
     setSaveError("");
     try {
-      await updateVoucher(voucher.id, {
+      await updateVoucherApi(voucher.id, {
         escopo,
         tipo,
         nome: nome.trim(),

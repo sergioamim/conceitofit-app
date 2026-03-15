@@ -34,7 +34,7 @@
 
 ### Autenticação, sessão e contexto de unidade
 - `Implementado`: login, logout, seleção de unidade prioritária, troca de unidade ativa, persistência de sessão e tenant preferido no navegador.
-- `Implementado`: suporte a token, refresh token e tenant ativo quando `NEXT_PUBLIC_USE_REAL_API=true`.
+- `Implementado`: suporte a token, refresh token e tenant ativo com backend real.
 - `Parcialmente implementado`: o app não expõe APIs próprias (`route.ts`: 0 arquivos); toda autenticação real depende de backend externo.
 - `Indício de implementação / precisa validação`: auto-login de desenvolvimento por variáveis de ambiente e sincronização plena de tenant via backend real.
 

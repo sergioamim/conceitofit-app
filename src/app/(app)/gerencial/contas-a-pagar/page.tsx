@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import {
-  cancelarContaPagar,
-  createContaPagar,
-  listContasPagar,
-  listFormasPagamento,
-  listRegrasRecorrenciaContaPagar,
-  listTiposContaPagar,
-  pagarContaPagar,
-  updateContaPagar,
-} from "@/lib/mock/services";
-import { isRealApiEnabled } from "@/lib/api/http";
+  cancelarContaPagarApi,
+  createContaPagarApi,
+  listContasPagarApi,
+  listRegrasRecorrenciaContaPagarApi,
+  pagarContaPagarApi,
+  updateContaPagarApi,
+} from "@/lib/api/financeiro-gerencial";
+import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
+import { listTiposContaPagarApi } from "@/lib/api/tipos-conta";
+import { useTenantContext } from "@/hooks/use-session-context";
+import { getBusinessMonthRange, getBusinessTodayIso } from "@/lib/business-date";
 import type {
   CategoriaContaPagar,
   ContaPagar,
@@ -26,6 +27,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import {
   Dialog,
   DialogContent,
@@ -87,17 +89,11 @@ function formatDate(value?: string) {
 }
 
 function monthRangeFromNow() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`,
-    end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`,
-  };
+  return getBusinessMonthRange();
 }
 
 function todayISO() {
-  return new Date().toISOString().split("T")[0];
+  return getBusinessTodayIso();
 }
 
 function contaTotal(conta: ContaPagar) {
@@ -142,8 +138,10 @@ const NOVO_PAGAMENTO_CONTA_DEFAULT = {
 };
 
 export default function ContasPagarPage() {
+  const tenantContext = useTenantContext();
   const range = monthRangeFromNow();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [contas, setContas] = useState<ContaPagar[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [tiposConta, setTiposConta] = useState<TipoContaPagar[]>([]);
@@ -229,40 +227,33 @@ export default function ContasPagarPage() {
     setOpenNovaConta(false);
   }
 
-  async function load() {
+  const load = useCallback(async () => {
+    if (!tenantContext.tenantId) return;
     setLoading(true);
+    setError(null);
     try {
       const [contasData, formasData, tiposData, regrasData] = await Promise.all([
-        listContasPagar(),
-        listFormasPagamento({ apenasAtivas: false }),
-        listTiposContaPagar({ apenasAtivos: false }),
-        listRegrasRecorrenciaContaPagar({ status: "TODAS" }),
+        listContasPagarApi({ tenantId: tenantContext.tenantId }),
+        listFormasPagamentoApi({ tenantId: tenantContext.tenantId, apenasAtivas: false }),
+        listTiposContaPagarApi({ tenantId: tenantContext.tenantId, apenasAtivos: false }),
+        listRegrasRecorrenciaContaPagarApi({ tenantId: tenantContext.tenantId, status: "TODAS" }),
       ]);
       setContas(contasData);
       setFormasPagamento(formasData);
       setTiposConta(tiposData);
       setRegrasRecorrencia(regrasData);
+    } catch (loadError) {
+      setError(normalizeErrorMessage(loadError));
     } finally {
       setLoading(false);
     }
-  }
+  }, [tenantContext.tenantId]);
 
   useEffect(() => {
-    load();
-  }, []);
-
-  useEffect(() => {
-    if (isRealApiEnabled()) return;
-    function handleUpdate() {
-      load();
+    if (tenantContext.tenantResolved && tenantContext.tenantId) {
+      void load();
     }
-    window.addEventListener("academia-store-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-    return () => {
-      window.removeEventListener("academia-store-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
-  }, []);
+  }, [load, tenantContext.tenantId, tenantContext.tenantResolved]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -389,6 +380,7 @@ export default function ContasPagarPage() {
   }
 
   async function handleCriarConta() {
+    if (!tenantContext.tenantId) return;
     if (
       !novaConta.tipoContaId ||
       !novaConta.fornecedor.trim() ||
@@ -425,46 +417,50 @@ export default function ContasPagarPage() {
 
     const diaPadraoVencimento = Number(novaConta.dataVencimento.split("-")[2] || 1);
     try {
-      const criada = await createContaPagar({
-        tipoContaId: novaConta.tipoContaId,
-        fornecedor: novaConta.fornecedor.trim(),
-        documentoFornecedor: novaConta.documentoFornecedor.trim() || undefined,
-        descricao: novaConta.descricao.trim(),
-        categoria: novaConta.categoria,
-        grupoDre: novaConta.grupoDre,
-        centroCusto: novaConta.centroCusto.trim() || undefined,
-        regime: novaConta.regime,
-        competencia: novaConta.competencia,
-        dataEmissao: novaConta.dataEmissao || undefined,
-        dataVencimento: novaConta.dataVencimento,
-        valorOriginal: Number(novaConta.valorOriginal || 0),
-        desconto: Number(novaConta.desconto || 0),
-        jurosMulta: Number(novaConta.jurosMulta || 0),
-        observacoes: novaConta.observacoes.trim() || undefined,
-        recorrencia: novaConta.recorrente
-          ? {
-              tipo: novaConta.recorrenciaTipo,
-              intervaloDias:
-                novaConta.recorrenciaTipo === "INTERVALO_DIAS"
-                  ? Number(novaConta.recorrenciaIntervaloDias || 30)
-                  : undefined,
-              diaDoMes:
-                novaConta.recorrenciaTipo === "MENSAL"
-                  ? Number(novaConta.recorrenciaDiaDoMes || diaPadraoVencimento)
-                  : undefined,
-              dataInicial: novaConta.recorrenciaDataInicial,
-              termino: novaConta.recorrenciaTermino,
-              dataFim:
-                novaConta.recorrenciaTermino === "EM_DATA"
-                  ? novaConta.recorrenciaDataFim
-                  : undefined,
-              numeroOcorrencias:
-                novaConta.recorrenciaTermino === "APOS_OCORRENCIAS"
-                  ? Number(novaConta.recorrenciaNumeroOcorrencias || 1)
-                  : undefined,
-              criarLancamentoInicial: novaConta.criarLancamentoInicialAgora,
-                }
-              : undefined,
+      setError(null);
+      const criada = await createContaPagarApi({
+        tenantId: tenantContext.tenantId,
+        data: {
+          tipoContaId: novaConta.tipoContaId,
+          fornecedor: novaConta.fornecedor.trim(),
+          documentoFornecedor: novaConta.documentoFornecedor.trim() || undefined,
+          descricao: novaConta.descricao.trim(),
+          categoria: novaConta.categoria,
+          grupoDre: novaConta.grupoDre,
+          centroCusto: novaConta.centroCusto.trim() || undefined,
+          regime: novaConta.regime,
+          competencia: novaConta.competencia,
+          dataEmissao: novaConta.dataEmissao || undefined,
+          dataVencimento: novaConta.dataVencimento,
+          valorOriginal: Number(novaConta.valorOriginal || 0),
+          desconto: Number(novaConta.desconto || 0),
+          jurosMulta: Number(novaConta.jurosMulta || 0),
+          observacoes: novaConta.observacoes.trim() || undefined,
+          recorrencia: novaConta.recorrente
+            ? {
+                tipo: novaConta.recorrenciaTipo,
+                intervaloDias:
+                  novaConta.recorrenciaTipo === "INTERVALO_DIAS"
+                    ? Number(novaConta.recorrenciaIntervaloDias || 30)
+                    : undefined,
+                diaDoMes:
+                  novaConta.recorrenciaTipo === "MENSAL"
+                    ? Number(novaConta.recorrenciaDiaDoMes || diaPadraoVencimento)
+                    : undefined,
+                dataInicial: novaConta.recorrenciaDataInicial,
+                termino: novaConta.recorrenciaTermino,
+                dataFim:
+                  novaConta.recorrenciaTermino === "EM_DATA"
+                    ? novaConta.recorrenciaDataFim
+                    : undefined,
+                numeroOcorrencias:
+                  novaConta.recorrenciaTermino === "APOS_OCORRENCIAS"
+                    ? Number(novaConta.recorrenciaNumeroOcorrencias || 1)
+                    : undefined,
+                criarLancamentoInicial: novaConta.criarLancamentoInicialAgora,
+              }
+            : undefined,
+        },
       });
 
       if (registrarComoPagaNoCadastro) {
@@ -474,15 +470,19 @@ export default function ContasPagarPage() {
 
         const valorPago = Number(pagamentoNoCadastro.valorPago);
         const valorFinal = valorPago > 0 ? valorPago : valorContaLiquida;
-        await pagarContaPagar(criada.id, {
-          dataPagamento: pagamentoNoCadastro.dataPagamento || todayISO(),
-          formaPagamento: pagamentoNoCadastro.formaPagamento,
-          valorPago: valorFinal,
-          observacoes: pagamentoNoCadastro.observacoes.trim() || undefined,
+        await pagarContaPagarApi({
+          tenantId: tenantContext.tenantId,
+          id: criada.id,
+          data: {
+            dataPagamento: pagamentoNoCadastro.dataPagamento || todayISO(),
+            formaPagamento: pagamentoNoCadastro.formaPagamento,
+            valorPago: valorFinal,
+            observacoes: pagamentoNoCadastro.observacoes.trim() || undefined,
+          },
         });
       }
-    } catch (error) {
-      console.error("Erro ao criar conta a pagar", error);
+    } catch (submitError) {
+      setError(normalizeErrorMessage(submitError));
       return;
     }
 
@@ -491,19 +491,29 @@ export default function ContasPagarPage() {
   }
 
   async function handlePagarConta() {
-    if (!selectedConta || !pagamento.dataPagamento) return;
-    await pagarContaPagar(selectedConta.id, {
-      dataPagamento: pagamento.dataPagamento,
-      formaPagamento: pagamento.formaPagamento,
-      valorPago: pagamento.valorPago ? Number(pagamento.valorPago) : undefined,
-      observacoes: pagamento.observacoes.trim() || undefined,
-    });
-    setSelectedConta(null);
-    setOpenPagarConta(false);
-    await load();
+    if (!tenantContext.tenantId || !selectedConta || !pagamento.dataPagamento) return;
+    try {
+      setError(null);
+      await pagarContaPagarApi({
+        tenantId: tenantContext.tenantId,
+        id: selectedConta.id,
+        data: {
+          dataPagamento: pagamento.dataPagamento,
+          formaPagamento: pagamento.formaPagamento,
+          valorPago: pagamento.valorPago ? Number(pagamento.valorPago) : undefined,
+          observacoes: pagamento.observacoes.trim() || undefined,
+        },
+      });
+      setSelectedConta(null);
+      setOpenPagarConta(false);
+      await load();
+    } catch (submitError) {
+      setError(normalizeErrorMessage(submitError));
+    }
   }
 
   async function handleSalvarEdicaoConta() {
+    if (!tenantContext.tenantId) return;
     if (
       !contaEditandoId ||
       !edicaoConta.tipoContaId ||
@@ -541,28 +551,12 @@ export default function ContasPagarPage() {
     const contaEditando = contas.find((c) => c.id === contaEditandoId);
     const jaTemRegra = !!contaEditando?.regraRecorrenciaId;
 
-    await updateContaPagar(contaEditandoId, {
-      tipoContaId: edicaoConta.tipoContaId,
-      fornecedor: edicaoConta.fornecedor.trim(),
-      documentoFornecedor: edicaoConta.documentoFornecedor.trim() || undefined,
-      descricao: edicaoConta.descricao.trim(),
-      categoria: edicaoConta.categoria,
-      grupoDre: edicaoConta.grupoDre,
-      centroCusto: edicaoConta.centroCusto.trim() || undefined,
-      regime: edicaoConta.recorrente ? "FIXA" : edicaoConta.regime,
-      competencia: edicaoConta.competencia,
-      dataEmissao: edicaoConta.dataEmissao || undefined,
-      dataVencimento: edicaoConta.dataVencimento,
-      valorOriginal: Number(edicaoConta.valorOriginal || 0),
-      desconto: Number(edicaoConta.desconto || 0),
-      jurosMulta: Number(edicaoConta.jurosMulta || 0),
-      observacoes: edicaoConta.observacoes.trim() || undefined,
-    });
-
-    if (edicaoConta.recorrente && !jaTemRegra) {
-      const diaPadraoVencimento = Number(edicaoConta.dataVencimento.split("-")[2] || 1);
-      try {
-        await createContaPagar({
+    try {
+      setError(null);
+      await updateContaPagarApi({
+        tenantId: tenantContext.tenantId,
+        id: contaEditandoId,
+        data: {
           tipoContaId: edicaoConta.tipoContaId,
           fornecedor: edicaoConta.fornecedor.trim(),
           documentoFornecedor: edicaoConta.documentoFornecedor.trim() || undefined,
@@ -570,7 +564,7 @@ export default function ContasPagarPage() {
           categoria: edicaoConta.categoria,
           grupoDre: edicaoConta.grupoDre,
           centroCusto: edicaoConta.centroCusto.trim() || undefined,
-          regime: "FIXA",
+          regime: edicaoConta.recorrente ? "FIXA" : edicaoConta.regime,
           competencia: edicaoConta.competencia,
           dataEmissao: edicaoConta.dataEmissao || undefined,
           dataVencimento: edicaoConta.dataVencimento,
@@ -578,42 +572,76 @@ export default function ContasPagarPage() {
           desconto: Number(edicaoConta.desconto || 0),
           jurosMulta: Number(edicaoConta.jurosMulta || 0),
           observacoes: edicaoConta.observacoes.trim() || undefined,
-          recorrencia: {
-            tipo: edicaoConta.recorrenciaTipo,
-            intervaloDias:
-              edicaoConta.recorrenciaTipo === "INTERVALO_DIAS"
-                ? Number(edicaoConta.recorrenciaIntervaloDias || 30)
-                : undefined,
-            diaDoMes:
-              edicaoConta.recorrenciaTipo === "MENSAL"
-                ? Number(edicaoConta.recorrenciaDiaDoMes || diaPadraoVencimento)
-                : undefined,
-            dataInicial: edicaoConta.recorrenciaDataInicial,
-            termino: edicaoConta.recorrenciaTermino,
-            dataFim:
-              edicaoConta.recorrenciaTermino === "EM_DATA"
-                ? edicaoConta.recorrenciaDataFim
-                : undefined,
-            numeroOcorrencias:
-              edicaoConta.recorrenciaTermino === "APOS_OCORRENCIAS"
-                ? Number(edicaoConta.recorrenciaNumeroOcorrencias || 1)
-                : undefined,
-            criarLancamentoInicial: false,
+        },
+      });
+
+      if (edicaoConta.recorrente && !jaTemRegra) {
+        const diaPadraoVencimento = Number(edicaoConta.dataVencimento.split("-")[2] || 1);
+        await createContaPagarApi({
+          tenantId: tenantContext.tenantId,
+          data: {
+            tipoContaId: edicaoConta.tipoContaId,
+            fornecedor: edicaoConta.fornecedor.trim(),
+            documentoFornecedor: edicaoConta.documentoFornecedor.trim() || undefined,
+            descricao: edicaoConta.descricao.trim(),
+            categoria: edicaoConta.categoria,
+            grupoDre: edicaoConta.grupoDre,
+            centroCusto: edicaoConta.centroCusto.trim() || undefined,
+            regime: "FIXA",
+            competencia: edicaoConta.competencia,
+            dataEmissao: edicaoConta.dataEmissao || undefined,
+            dataVencimento: edicaoConta.dataVencimento,
+            valorOriginal: Number(edicaoConta.valorOriginal || 0),
+            desconto: Number(edicaoConta.desconto || 0),
+            jurosMulta: Number(edicaoConta.jurosMulta || 0),
+            observacoes: edicaoConta.observacoes.trim() || undefined,
+            recorrencia: {
+              tipo: edicaoConta.recorrenciaTipo,
+              intervaloDias:
+                edicaoConta.recorrenciaTipo === "INTERVALO_DIAS"
+                  ? Number(edicaoConta.recorrenciaIntervaloDias || 30)
+                  : undefined,
+              diaDoMes:
+                edicaoConta.recorrenciaTipo === "MENSAL"
+                  ? Number(edicaoConta.recorrenciaDiaDoMes || diaPadraoVencimento)
+                  : undefined,
+              dataInicial: edicaoConta.recorrenciaDataInicial,
+              termino: edicaoConta.recorrenciaTermino,
+              dataFim:
+                edicaoConta.recorrenciaTermino === "EM_DATA"
+                  ? edicaoConta.recorrenciaDataFim
+                  : undefined,
+              numeroOcorrencias:
+                edicaoConta.recorrenciaTermino === "APOS_OCORRENCIAS"
+                  ? Number(edicaoConta.recorrenciaNumeroOcorrencias || 1)
+                  : undefined,
+              criarLancamentoInicial: false,
+            },
           },
         });
-      } catch (error) {
-        console.error("Erro ao criar regra de recorrência", error);
       }
-    }
 
-    setOpenEditarConta(false);
-    setContaEditandoId(null);
-    await load();
+      setOpenEditarConta(false);
+      setContaEditandoId(null);
+      await load();
+    } catch (submitError) {
+      setError(normalizeErrorMessage(submitError));
+    }
   }
 
   async function handleCancelarConta(contaId: string) {
-    await cancelarContaPagar(contaId, "Cancelada via gestão financeira");
-    await load();
+    if (!tenantContext.tenantId) return;
+    try {
+      setError(null);
+      await cancelarContaPagarApi({
+        tenantId: tenantContext.tenantId,
+        id: contaId,
+        observacoes: "Cancelada via gestão financeira",
+      });
+      await load();
+    } catch (submitError) {
+      setError(normalizeErrorMessage(submitError));
+    }
   }
 
   const tiposAtivos = useMemo(() => tiposConta.filter((tipo) => tipo.ativo), [tiposConta]);
@@ -635,6 +663,12 @@ export default function ContasPagarPage() {
 
   return (
     <div className="space-y-6">
+      {error ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {error}
+        </div>
+      ) : null}
+
       <Dialog
         open={openNovaConta}
         onOpenChange={(nextOpen) => {

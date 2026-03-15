@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createProduto, deleteProduto, listProdutos, toggleProduto, updateProduto } from "@/lib/mock/services";
+import {
+  createProdutoApi,
+  deleteProdutoApi,
+  listProdutosApi,
+  toggleProdutoApi,
+  updateProdutoApi,
+} from "@/lib/api/comercial-catalogo";
 import type { Produto } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ProdutoModal } from "@/components/shared/produto-modal";
@@ -20,32 +26,42 @@ export default function ProdutosPage() {
   const [editing, setEditing] = useState<Produto | null>(null);
 
   async function load() {
-    const data = await listProdutos();
+    const data = await listProdutosApi(false);
     setProdutos(data);
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    void listProdutosApi(false).then(setProdutos);
   }, []);
 
   async function handleSave(data: Omit<Produto, "id" | "tenantId">, id?: string) {
-    if (id) await updateProduto(id, data);
-    else await createProduto(data);
+    const { ativo = true, ...payload } = data;
+
+    if (id) {
+      await updateProdutoApi(id, payload);
+      if (editing && editing.ativo !== ativo) {
+        await toggleProdutoApi(id);
+      }
+    } else {
+      const created = await createProdutoApi(payload);
+      if (!ativo) {
+        await toggleProdutoApi(created.id);
+      }
+    }
     setModalOpen(false);
     setEditing(null);
-    load();
+    await load();
   }
 
   async function handleToggle(id: string) {
-    await toggleProduto(id);
-    load();
+    await toggleProdutoApi(id);
+    await load();
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remover este produto?")) return;
-    await deleteProduto(id);
-    load();
+    await deleteProdutoApi(id);
+    await load();
   }
 
   return (

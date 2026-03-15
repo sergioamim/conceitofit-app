@@ -6,27 +6,19 @@ Aplicação Next.js (App Router) para operação de academias multiunidade.
 
 - Node.js 20+
 - npm 10+
-- Backend Java disponível (quando usar API real)
+- Backend Java disponível
 
 ## Modos de execução
 
-### 1) Desenvolvimento com mock/localStorage
-
-```bash
-npm run dev:mock
-```
-
-### 2) Desenvolvimento com API real local
+### 1) Desenvolvimento com API real local
 
 ```bash
 npm run dev:api
 ```
 
-Isso ativa:
-- `NEXT_PUBLIC_USE_REAL_API=true`
-- proxy local `/backend/* -> http://localhost:8080/*`
+Isso ativa o proxy local `/backend/* -> http://localhost:8080/*`.
 
-### 3) Produção local (build otimizado)
+### 2) Produção local (build otimizado)
 
 ```bash
 npm run prod:local
@@ -46,10 +38,6 @@ npm run prod:local
 2. Desenvolvimento (API real):
 ```bash
 npm run dev:3001:api
-```
-ou mock:
-```bash
-npm run dev:3001:mock
 ```
 
 ## Domínios locais sem porta na URL (`local.prod` e `local.dev`)
@@ -80,7 +68,6 @@ URLs finais:
 Crie um `.env.local` baseado em `.env.example`.
 
 Chaves principais:
-- `NEXT_PUBLIC_USE_REAL_API`: `true|false`
 - `NEXT_PUBLIC_API_BASE_URL`: base da API (quando não usar proxy `/backend`)
 - `BACKEND_PROXY_TARGET`: alvo do rewrite de `/backend/*`
 - `NEXT_PUBLIC_DEV_AUTO_LOGIN`: auto login em dev
@@ -95,11 +82,10 @@ Configuração recomendada:
 1. Build command: `npm run build:preview`
 2. Start command: `npm run start`
 3. Environment variables:
-   - `NEXT_PUBLIC_USE_REAL_API=true`
    - `BACKEND_PROXY_TARGET=https://SEU_BACKEND_PREVIEW`
    - `NEXT_PUBLIC_API_BASE_URL` (opcional, manter vazio se usar proxy `/backend`)
 
 ## Observações técnicas
 
-- O frontend mantém fallback para mock/localStorage em partes migradas, evitando quebra quando backend estiver indisponível.
+- O frontend opera com backend real por padrão.
 - O contexto de unidade ativa continua obrigatório e é propagado por header `X-Context-Id` quando aplicável.

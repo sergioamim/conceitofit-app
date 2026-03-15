@@ -1,18 +1,31 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { authLogin, getCurrentTenant, listTenants, setCurrentTenant } from "@/lib/mock/services";
-import { getAccessToken, getPreferredTenantId, isMockSessionActive, setPreferredTenantId } from "@/lib/api/session";
-import { isRealApiEnabled } from "@/lib/api/http";
+import { loginApi } from "@/lib/api/auth";
+import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-unidades";
+import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/lib/api/session";
 import type { Tenant } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { resolvePostLoginPath } from "@/lib/auth-redirect";
 
-export default function LoginPage() {
+function LoginFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Acesso</CardTitle>
+          <CardDescription>Carregando autenticacao...</CardDescription>
+        </CardHeader>
+      </Card>
+    </div>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState("admin@academia.local");
@@ -25,7 +38,7 @@ export default function LoginPage() {
   const nextPath = resolvePostLoginPath(searchParams.get("next"));
 
   useEffect(() => {
-    if (isRealApiEnabled() ? getAccessToken() : isMockSessionActive()) {
+    if (getAccessToken()) {
       router.replace(nextPath);
     }
   }, [nextPath, router]);
@@ -35,20 +48,20 @@ export default function LoginPage() {
     setSaving(true);
     setError(null);
     try {
-      await authLogin({ email: username.trim(), password });
-      const [allTenants, currentTenant] = await Promise.all([listTenants(), getCurrentTenant()]);
-      const activeTenants = allTenants.filter((item) => item.ativo !== false);
+      await loginApi({ email: username.trim(), password });
+      const context = await getTenantContextApi();
+      const activeTenants = context.unidadesDisponiveis.filter((item) => item.ativo !== false);
       const preferredTenantId = getPreferredTenantId();
       const preferredIsValid = preferredTenantId && activeTenants.some((item) => item.id === preferredTenantId);
 
       if (preferredIsValid && preferredTenantId) {
-        await setCurrentTenant(preferredTenantId);
+        await setTenantContextApi(preferredTenantId);
         router.push(nextPath);
         return;
       }
 
       setTenantOptions(activeTenants);
-      setTenantId(currentTenant.id || activeTenants[0]?.id || "");
+      setTenantId(context.currentTenantId || activeTenants[0]?.id || "");
       setStep("TENANT");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao autenticar.");
@@ -65,7 +78,7 @@ export default function LoginPage() {
     setSaving(true);
     setError(null);
     try {
-      await setCurrentTenant(tenantId);
+      await setTenantContextApi(tenantId);
       setPreferredTenantId(tenantId);
       router.push(nextPath);
     } catch (err) {
@@ -146,5 +159,13 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

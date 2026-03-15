@@ -80,7 +80,7 @@ Resumo objetivo:
 1. Fase A - Infra de adapter
 - Criar `src/lib/api/client.ts` (base URL, headers, erro padronizado).
 - Criar `src/lib/api/adapters/services-api.ts` com mesma assinatura de `services.ts`.
-- Feature flag: `NEXT_PUBLIC_USE_REAL_API=true/false`.
+- Backend real como padrão único de execução.
 
 2. Fase B - Contexto + financeiro gerencial (primeiro domínio)
 - Migrar no adapter:

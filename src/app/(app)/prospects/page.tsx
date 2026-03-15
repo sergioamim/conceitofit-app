@@ -4,15 +4,19 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, Plus, ChevronDown } from "lucide-react";
 import {
-  listProspectsPage,
-  createProspect,
-  updateProspect,
-  updateProspectStatus,
-  marcarProspectPerdido,
-  deleteProspect,
-  checkProspectDuplicate,
-  listFuncionarios,
-} from "@/lib/mock/services";
+  checkProspectDuplicateApi,
+  createProspectApi,
+  deleteProspectApi,
+  listProspectsApi,
+  marcarProspectPerdidoApi,
+  updateProspectApi,
+  updateProspectStatusApi,
+} from "@/lib/api/crm";
+import { listFuncionariosApi } from "@/lib/api/administrativo";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import { getBusinessCurrentMonthYear } from "@/lib/business-date";
+import { normalizeProspectRuntime } from "@/lib/crm/runtime";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";
 import { Button } from "@/components/ui/button";
@@ -167,6 +171,7 @@ const ProspectTableRow = memo(function ProspectTableRow({
 });
 
 export default function ProspectsPage() {
+  const tenantContext = useTenantContext();
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<StatusProspect | "TODOS">("TODOS");
@@ -175,33 +180,38 @@ export default function ProspectsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Prospect | null>(null);
   const [timeline, setTimeline] = useState<Prospect | null>(null);
-  const [mes, setMes] = useState(new Date().getMonth());
-  const [ano, setAno] = useState(new Date().getFullYear());
+  const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
+  const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
   const [page, setPage] = useState(1);
-  const [hasNextPage, setHasNextPage] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
   const load = useCallback(async () => {
-    const [paged, funcs] = await Promise.all([
-      listProspectsPage({
-        status: filtroStatus === "TODOS" ? undefined : filtroStatus,
-        page,
-        size: pageSize,
-      }),
-      listFuncionarios(),
-    ]);
-    setProspects(paged.items);
-    setHasNextPage(paged.hasNext);
-    setFuncionarios(funcs);
-  }, [filtroStatus, page, pageSize]);
+    setLoading(true);
+    setError("");
+    try {
+      const [prospectRows, funcs] = await Promise.all([
+        listProspectsApi({ tenantId }),
+        listFuncionariosApi(true),
+      ]);
+      setProspects(
+        prospectRows
+          .map((prospect) => normalizeProspectRuntime(prospect))
+          .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao))
+      );
+      setFuncionarios(funcs);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Falha ao carregar prospects.");
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    void load();
   }, [load]);
-
-  const buscaDigits = useMemo(() => busca.replace(/\D/g, ""), [busca]);
-  const buscaTermo = useMemo(() => busca.toLowerCase(), [busca]);
 
   const prospectsByMonth = useMemo(() => {
     return prospects.filter((p) => {
@@ -211,6 +221,9 @@ export default function ProspectsPage() {
   }, [prospects, ano, mes]);
 
   const filtered = useMemo(() => {
+    const buscaDigits = busca.replace(/\D/g, "");
+    const buscaTermo = busca.toLowerCase();
+
     return prospectsByMonth.filter((p) => {
       const matchStatus = filtroStatus === "TODOS" || p.status === filtroStatus;
       const matchOrigem = filtroOrigem === "TODAS" || p.origem === filtroOrigem;
@@ -220,11 +233,12 @@ export default function ProspectsPage() {
         (buscaDigits && p.telefone.replace(/\D/g, "").includes(buscaDigits));
       return matchStatus && matchOrigem && matchBusca;
     });
-  }, [buscaDigits, buscaTermo, filtroOrigem, filtroStatus, prospectsByMonth]);
+  }, [busca, filtroOrigem, filtroStatus, prospectsByMonth]);
 
   const startIndex = (page - 1) * pageSize;
-  const endIndex = startIndex + filtered.length;
-  const displayed = filtered;
+  const displayed = filtered.slice(startIndex, startIndex + pageSize);
+  const endIndex = displayed.length === 0 ? 0 : startIndex + displayed.length;
+  const hasNextPage = endIndex < filtered.length;
 
   const statusTotals = useMemo(
     () =>
@@ -294,7 +308,11 @@ export default function ProspectsPage() {
 
   const handleSave = useCallback(
     async (data: CreateProspectInput) => {
-      const isDup = await checkProspectDuplicate({
+      if (!tenantId) {
+        throw new Error("Unidade ativa não definida para criar prospect.");
+      }
+      const isDup = await checkProspectDuplicateApi({
+        tenantId,
         telefone: data.telefone,
         cpf: data.cpf,
         email: data.email,
@@ -303,31 +321,43 @@ export default function ProspectsPage() {
         alert("Já existe prospect com este telefone, CPF ou e-mail.");
         return;
       }
-      await createProspect(data);
-      load();
+      await createProspectApi({
+        tenantId,
+        data,
+      });
+      await load();
     },
-    [load]
+    [load, tenantId]
   );
 
   const handleEditSave = useCallback(
     async (data: CreateProspectInput) => {
-      if (!editing) return;
-      await updateProspect(editing.id, {
-        ...data,
-        responsavelId: data.responsavelId || undefined,
+      if (!editing || !tenantId) return;
+      await updateProspectApi({
+        tenantId,
+        id: editing.id,
+        data: {
+          ...data,
+          responsavelId: data.responsavelId || undefined,
+        },
       });
       setEditing(null);
-      load();
+      await load();
     },
-    [editing, load]
+    [editing, load, tenantId]
   );
 
   const handleStatus = useCallback(
     async (id: string, status: StatusProspect) => {
-      await updateProspectStatus(id, status);
-      load();
+      if (!tenantId) return;
+      await updateProspectStatusApi({
+        tenantId,
+        id,
+        status,
+      });
+      await load();
     },
-    [load]
+    [load, tenantId]
   );
 
   const handleAdvance = useCallback(
@@ -342,20 +372,29 @@ export default function ProspectsPage() {
 
   const handlePerdido = useCallback(
     async (id: string) => {
+      if (!tenantId) return;
       const motivo = prompt("Motivo da perda (opcional):");
-      await marcarProspectPerdido(id, motivo ?? undefined);
-      load();
+      await marcarProspectPerdidoApi({
+        tenantId,
+        id,
+        motivo: motivo ?? undefined,
+      });
+      await load();
     },
-    [load]
+    [load, tenantId]
   );
 
   const handleDelete = useCallback(
     async (id: string) => {
+      if (!tenantId) return;
       if (!confirm("Remover este prospect?")) return;
-      await deleteProspect(id);
-      load();
+      await deleteProspectApi({
+        tenantId,
+        id,
+      });
+      await load();
     },
-    [load]
+    [load, tenantId]
   );
 
   const handlePreviousPage = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
@@ -383,6 +422,12 @@ export default function ProspectsPage() {
           Novo Prospect
         </Button>
       </div>
+
+      {error ? (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {error}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-6 gap-3">
         {STATUS_LABELS.map((s) => (
@@ -481,13 +526,19 @@ export default function ProspectsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {displayed.length === 0 && (
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                  Carregando prospects...
+                </td>
+              </tr>
+            ) : displayed.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                   Nenhum prospect encontrado
                 </td>
               </tr>
-            )}
+            ) : null}
             {displayed.map((p) => (
               <ProspectTableRow
                 key={p.id}

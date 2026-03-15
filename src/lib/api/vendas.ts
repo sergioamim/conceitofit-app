@@ -41,6 +41,14 @@ type CreateVendaApiInput = {
     status?: "PAGO" | "PENDENTE";
     observacoes?: string;
   };
+  planoContexto?: {
+    planoId: string;
+    dataInicio: string;
+    descontoPlano?: number;
+    motivoDesconto?: string;
+    renovacaoAutomatica?: boolean;
+    convenioId?: string;
+  };
 };
 
 type VendaApiResponse = {
@@ -78,6 +86,40 @@ type VendaApiResponse = {
   } | null;
   dataCriacao: string;
 };
+
+function normalizeCreateVendaItems(input: CreateVendaApiInput["itens"], planoContexto?: CreateVendaApiInput["planoContexto"]) {
+  if (!planoContexto?.planoId) {
+    return input.map((item) => ({
+      tipo: item.tipo,
+      referenciaId: item.referenciaId,
+      descricao: item.descricao,
+      quantidade: item.quantidade,
+      valorUnitario: item.valorUnitario,
+      desconto: item.desconto,
+    }));
+  }
+
+  const normalizedPlanoId = planoContexto.planoId.trim();
+  const emittedPlanoIds = new Set<string>();
+
+  return input
+    .filter((item) => {
+      if (item.tipo !== "PLANO") return true;
+      const baseId = item.referenciaId.split(":")[0]?.trim() || normalizedPlanoId;
+      if (!baseId || baseId !== normalizedPlanoId) return false;
+      if (emittedPlanoIds.has(baseId)) return false;
+      emittedPlanoIds.add(baseId);
+      return true;
+    })
+    .map((item) => ({
+      tipo: item.tipo,
+      referenciaId: item.tipo === "PLANO" ? normalizedPlanoId : item.referenciaId,
+      descricao: item.descricao,
+      quantidade: item.quantidade,
+      valorUnitario: item.valorUnitario,
+      desconto: item.desconto,
+    }));
+}
 
 type ListVendasEnvelopeApiResponse = {
   items?: VendaApiResponse[];
@@ -304,11 +346,26 @@ export async function createVendaApi(input: {
   tenantId: string;
   data: CreateVendaApiInput;
 }): Promise<Venda> {
+  const itens = normalizeCreateVendaItems(input.data.itens, input.data.planoContexto);
   const response = await apiRequest<VendaApiResponse>({
     path: "/api/v1/comercial/vendas",
     method: "POST",
     query: { tenantId: input.tenantId },
-    body: input.data,
+    body: {
+      ...input.data,
+      itens,
+    },
+  });
+  return normalizeVenda(response);
+}
+
+export async function getVendaApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<Venda> {
+  const response = await apiRequest<VendaApiResponse>({
+    path: `/api/v1/comercial/vendas/${input.id}`,
+    query: { tenantId: input.tenantId },
   });
   return normalizeVenda(response);
 }

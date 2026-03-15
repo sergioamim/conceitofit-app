@@ -1,0 +1,63 @@
+- generic [active] [ref=e1]:
+  - main [ref=e3]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - generic [ref=e8]:
+            - heading "Treino Padrão" [level=1] [ref=e9]
+            - generic [ref=e10]: 0 resultado(s)
+          - paragraph [ref=e11]: Biblioteca administrativa de templates reutilizáveis para a unidade Unidade ativa, com busca rápida, ações operacionais e ordenação por atualização mais recente.
+          - button "Saiba mais" [ref=e12] [cursor=pointer]
+        - generic [ref=e13]:
+          - link "Treinos atribuídos" [ref=e14] [cursor=pointer]:
+            - /url: /treinos/atribuidos
+            - img
+            - text: Treinos atribuídos
+          - button "Criar treino padrão" [ref=e15] [cursor=pointer]:
+            - img
+            - text: Criar treino padrão
+      - generic [ref=e16]:
+        - generic [ref=e18]:
+          - paragraph [ref=e19]: Fila de revisão
+          - paragraph [ref=e20]: "0"
+          - paragraph [ref=e21]: Templates aguardando triagem ou publicação
+        - generic [ref=e23]:
+          - paragraph [ref=e24]: Publicados na página
+          - paragraph [ref=e25]: "0"
+          - paragraph [ref=e26]: Templates prontos para atribuição nesta janela
+        - generic [ref=e28]:
+          - paragraph [ref=e29]: Pendências técnicas
+          - paragraph [ref=e30]: "0"
+          - paragraph [ref=e31]: Itens com bloqueio de publicação ou revisão
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: Clientes impactados
+          - paragraph [ref=e35]: "0"
+          - paragraph [ref=e36]: 0 job(s) de atribuição visíveis na página
+      - generic [ref=e37]:
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - generic [ref=e41]: Listagem operacional
+            - paragraph [ref=e42]: Busca principal, contador de resultados e ações rápidas para operar a biblioteca de treino padrão.
+          - generic [ref=e44]:
+            - img
+            - textbox "Buscar template por nome ou professor" [ref=e45]:
+              - /placeholder: Buscar por nome do template ou professor
+        - generic [ref=e47]:
+          - table [ref=e50]:
+            - rowgroup [ref=e51]:
+              - row "Nome do treino Governança Criado por Ações" [ref=e52]:
+                - columnheader "Nome do treino" [ref=e53]
+                - columnheader "Governança" [ref=e54]
+                - columnheader "Criado por" [ref=e55]
+                - columnheader "Ações" [ref=e56]
+            - rowgroup [ref=e57]:
+              - row "Nenhum treino padrão encontrado" [ref=e58]:
+                - cell "Nenhum treino padrão encontrado" [ref=e59]
+          - generic [ref=e60]:
+            - paragraph [ref=e61]: Mostrando 0 até 0 de 0 templates · página 1 de 1
+            - generic [ref=e62]:
+              - button "Anterior" [disabled]
+              - button "Próxima" [disabled]
+  - button "Open Next.js Dev Tools" [ref=e68] [cursor=pointer]:
+    - img [ref=e69]
+  - alert [ref=e72]

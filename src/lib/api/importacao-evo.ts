@@ -15,6 +15,14 @@ function buildTenantHeaders(tenantId?: string): Record<string, string> {
   };
 }
 
+function buildExplicitTenantHeaders(tenantId?: string): Record<string, string> {
+  const tenant = normalizeTenantId(tenantId);
+  if (!tenant) return {};
+  return {
+    "X-Tenant-Id": tenant,
+  };
+}
+
 export type UploadAnaliseArquivo = {
   chave: string;
   rotulo: string;
@@ -24,10 +32,24 @@ export type UploadAnaliseArquivo = {
   tamanhoBytes?: number | null;
 };
 
+export type UploadAnaliseFilial = {
+  evoFilialId?: number | null;
+  evoAcademiaId?: number | null;
+  nome?: string | null;
+  documento?: string | null;
+  cidade?: string | null;
+  bairro?: string | null;
+  email?: string | null;
+  telefone?: string | null;
+  abreviacao?: string | null;
+};
+
 export type UploadAnaliseResponse = {
   uploadId: string;
-  tenantId: string;
-  evoUnidadeId: number;
+  tenantId?: string | null;
+  evoUnidadeId?: number | null;
+  filialResolvida?: UploadAnaliseFilial | null;
+  filiaisEncontradas?: UploadAnaliseFilial[] | null;
   criadoEm: string;
   expiraEm: string;
   totalArquivosDisponiveis: number;
@@ -110,21 +132,29 @@ export type EvoCsvJobResponse = {
 };
 
 export async function uploadEvoP0PacoteApi(input: {
-  tenantId: string;
-  evoUnidadeId: number;
+  tenantId?: string;
+  evoUnidadeId?: number | null;
   arquivo: File;
   contextoTenantId?: string;
 }): Promise<UploadAnaliseResponse> {
   const formData = new FormData();
-  formData.append("tenantId", input.tenantId);
-  formData.append("evoUnidadeId", String(input.evoUnidadeId));
+  if (typeof input.tenantId === "string" && input.tenantId.trim()) {
+    formData.append("tenantId", input.tenantId.trim());
+  }
+  if (
+    typeof input.evoUnidadeId === "number" &&
+    Number.isFinite(input.evoUnidadeId) &&
+    input.evoUnidadeId > 0
+  ) {
+    formData.append("evoUnidadeId", String(input.evoUnidadeId));
+  }
   formData.append("arquivo", input.arquivo, input.arquivo.name);
 
   return apiRequest<UploadAnaliseResponse>({
     path: "/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote",
     method: "POST",
     body: formData,
-    headers: buildTenantHeaders(input.contextoTenantId || input.tenantId),
+    headers: buildExplicitTenantHeaders(input.contextoTenantId || input.tenantId),
   });
 }
 
@@ -135,7 +165,7 @@ export async function getEvoP0PacoteAnaliseApi(input: {
 }): Promise<UploadAnaliseResponse> {
   return apiRequest<UploadAnaliseResponse>({
     path: `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/${input.uploadId}`,
-    headers: buildTenantHeaders(input.tenantId ?? input.contextoTenantId),
+    headers: buildExplicitTenantHeaders(input.tenantId ?? input.contextoTenantId),
   });
 }
 
@@ -145,12 +175,15 @@ export async function createEvoP0PacoteJobApi(input: {
   maxRejeicoesRetorno: number;
   arquivos?: string[] | null;
   tenantId?: string;
+  evoUnidadeId?: number | null;
   contextoTenantId?: string;
 }): Promise<PacoteJobAceitoResponse> {
   const body: {
     dryRun: boolean;
     maxRejeicoesRetorno: number;
     arquivos?: string[];
+    tenantId?: string;
+    evoUnidadeId?: number;
   } = {
     dryRun: input.dryRun,
     maxRejeicoesRetorno: input.maxRejeicoesRetorno,
@@ -158,12 +191,23 @@ export async function createEvoP0PacoteJobApi(input: {
   if (Array.isArray(input.arquivos) && input.arquivos.length > 0) {
     body.arquivos = input.arquivos;
   }
+  const tenantId = normalizeTenantId(input.tenantId ?? input.contextoTenantId);
+  if (tenantId) {
+    body.tenantId = tenantId;
+  }
+  if (
+    typeof input.evoUnidadeId === "number" &&
+    Number.isFinite(input.evoUnidadeId) &&
+    input.evoUnidadeId > 0
+  ) {
+    body.evoUnidadeId = input.evoUnidadeId;
+  }
 
   return apiRequest<PacoteJobAceitoResponse>({
     path: `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/${input.uploadId}/job`,
     method: "POST",
     body,
-    headers: buildTenantHeaders(input.tenantId ?? input.contextoTenantId),
+    headers: buildExplicitTenantHeaders(tenantId),
   });
 }
 

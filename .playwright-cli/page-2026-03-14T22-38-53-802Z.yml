@@ -1,0 +1,16 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e180] [cursor=pointer]:
+    - img [ref=e181]
+  - alert [ref=e184]
+  - generic [ref=e186]:
+    - generic [ref=e187]:
+      - generic [ref=e188]: Acesso
+      - generic [ref=e189]: Entre com usuário e senha para continuar.
+    - generic [ref=e191]:
+      - generic [ref=e192]:
+        - text: Usuário
+        - textbox "Usuário" [ref=e193]: admin@academia.local
+      - generic [ref=e194]:
+        - text: Senha
+        - textbox "Senha" [ref=e195]: "12345678"
+      - button "Entrar" [ref=e196] [cursor=pointer]

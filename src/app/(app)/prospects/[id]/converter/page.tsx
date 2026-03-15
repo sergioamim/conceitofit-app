@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2 } from "lucide-react";
+import { getBusinessTodayIso } from "@/lib/business-date";
 import {
-  getProspect,
-  listPlanos,
-  listFormasPagamento,
-  converterProspect,
-} from "@/lib/mock/services";
+  converterProspectApi,
+  getProspectApi,
+} from "@/lib/api/crm";
+import { listPlanosApi } from "@/lib/api/comercial-catalogo";
+import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
@@ -477,6 +480,7 @@ function Step4({
 export default function ConverterPage() {
   const params = useParams();
   const router = useRouter();
+  const tenantContext = useTenantContext();
   const prospectId = params.id as string;
 
   const [step, setStep] = useState(1);
@@ -484,8 +488,10 @@ export default function ConverterPage() {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [result, setResult] = useState<ConverterProspectResponse | null>(null);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
   const [dadosPessoais, setDadosPessoais] = useState<DadosPessoais>({
     cpf: "",
@@ -499,7 +505,7 @@ export default function ConverterPage() {
   const [planoId, setPlanoId] = useState("");
 
   const [pagamentoData, setPagamentoData] = useState<PagamentoData>({
-    dataInicio: new Date().toISOString().split("T")[0],
+    dataInicio: getBusinessTodayIso(),
     formaPagamento: "",
     desconto: "",
     motivoDesconto: "",
@@ -512,20 +518,40 @@ export default function ConverterPage() {
   }, [prospect]);
 
   useEffect(() => {
-    Promise.all([
-      getProspect(prospectId),
-      listPlanos(),
-      listFormasPagamento(),
-    ]).then(([p, pl, fp]) => {
-      if (!p) {
-        router.push("/prospects");
-        return;
+    let cancelled = false;
+
+    async function load() {
+      setBootstrapping(true);
+      setError(null);
+      try {
+        const [prospectRow, planoRows, formasRows] = await Promise.all([
+          getProspectApi({ tenantId, id: prospectId }),
+          listPlanosApi({ tenantId, apenasAtivos: true }),
+          listFormasPagamentoApi({ tenantId, apenasAtivas: true }),
+        ]);
+        if (cancelled) return;
+        setProspect(prospectRow);
+        setPlanos(planoRows);
+        setFormasPagamento(formasRows);
+      } catch (loadError) {
+        if (cancelled) return;
+        if (loadError instanceof Error && /404/.test(loadError.message)) {
+          router.push("/prospects");
+          return;
+        }
+        setError(loadError instanceof Error ? loadError.message : "Erro ao carregar conversão.");
+      } finally {
+        if (!cancelled) {
+          setBootstrapping(false);
+        }
       }
-      setProspect(p);
-      setPlanos(pl);
-      setFormasPagamento(fp);
-    });
-  }, [prospectId, router]);
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [prospectId, router, tenantId]);
 
   const selectedPlano = planos.find((p) => p.id === planoId);
 
@@ -539,28 +565,31 @@ export default function ConverterPage() {
   }
 
   async function handleFinish() {
-    if (!prospect || !planoId || !pagamentoData.formaPagamento) return;
+    if (!prospect || !planoId || !pagamentoData.formaPagamento || !tenantId) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await converterProspect({
-        prospectId: prospect.id,
-        cpf: dadosPessoais.cpf,
-        dataNascimento: dadosPessoais.dataNascimento,
-        sexo: dadosPessoais.sexo as "M" | "F" | "OUTRO",
-        rg: dadosPessoais.rg || undefined,
-        contatoEmergencia:
-          dadosPessoais.emergenciaNome
-            ? {
-                nome: dadosPessoais.emergenciaNome,
-                telefone: dadosPessoais.emergenciaTelefone,
-              }
-            : undefined,
-        planoId,
-        dataInicio: pagamentoData.dataInicio,
-        formaPagamento: pagamentoData.formaPagamento as TipoFormaPagamento,
-        desconto: parseFloat(pagamentoData.desconto) || undefined,
-        motivoDesconto: pagamentoData.motivoDesconto || undefined,
+      const res = await converterProspectApi({
+        tenantId,
+        data: {
+          prospectId: prospect.id,
+          cpf: dadosPessoais.cpf,
+          dataNascimento: dadosPessoais.dataNascimento,
+          sexo: dadosPessoais.sexo as "M" | "F" | "OUTRO",
+          rg: dadosPessoais.rg || undefined,
+          contatoEmergencia:
+            dadosPessoais.emergenciaNome
+              ? {
+                  nome: dadosPessoais.emergenciaNome,
+                  telefone: dadosPessoais.emergenciaTelefone,
+                }
+              : undefined,
+          planoId,
+          dataInicio: pagamentoData.dataInicio,
+          formaPagamento: pagamentoData.formaPagamento as TipoFormaPagamento,
+          desconto: parseFloat(pagamentoData.desconto) || undefined,
+          motivoDesconto: pagamentoData.motivoDesconto || undefined,
+        },
       });
       setResult(res);
       setStep(4);
@@ -569,6 +598,14 @@ export default function ConverterPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (bootstrapping) {
+    return (
+      <div className="mx-auto max-w-2xl rounded-xl border border-dashed border-border/70 px-4 py-10 text-center text-sm text-muted-foreground">
+        Carregando dados da conversão...
+      </div>
+    );
   }
 
   if (!prospect) return null;

@@ -2,17 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  cancelarReservaAula,
-  getAulaOcupacao,
-  listAlunos,
-  listAtividades,
-  listAulasAgenda,
-  listMatriculas,
-  listReservasAulas,
-  promoverReservaWaitlist,
-  registrarCheckinAula,
-  reservarAula,
-} from "@/lib/mock/services";
+  extractAlunosFromListResponse,
+  listAlunosApi,
+} from "@/lib/api/alunos";
+import { listAtividadesApi } from "@/lib/api/administrativo";
+import { listMatriculasApi } from "@/lib/api/matriculas";
+import {
+  cancelarReservaAulaApi,
+  getAulaOcupacaoApi,
+  listAulasAgendaApi,
+  listReservasAulaApi,
+  promoverReservaWaitlistApi,
+  registrarCheckinAulaApi,
+  reservarAulaApi,
+} from "@/lib/api/reservas";
+import { addDaysToIsoDate, getBusinessTodayIso } from "@/lib/business-date";
 import type {
   Aluno,
   Atividade,
@@ -35,14 +39,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-function addDays(date: Date, days: number): string {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next.toISOString().slice(0, 10);
-}
+const RESERVAS_DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+});
 
 function formatDate(value: string): string {
-  return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR");
+  return RESERVAS_DATE_FORMATTER.format(new Date(`${value}T12:00:00`));
 }
 
 function sessionLabel(session: AulaSessao): string {
@@ -58,8 +60,8 @@ function badgeClass(status: ReservaAula["status"]): string {
 
 export default function ReservasPage() {
   const tenantContext = useTenantContext();
-  const [dateFrom, setDateFrom] = useState(() => new Date().toISOString().slice(0, 10));
-  const [dateTo, setDateTo] = useState(() => addDays(new Date(), 6));
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [atividadeId, setAtividadeId] = useState("TODAS");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -75,18 +77,32 @@ export default function ReservasPage() {
   const [portalAlunoId, setPortalAlunoId] = useState("");
 
   const load = useCallback(async () => {
+    if (!dateFrom || !dateTo) {
+      return;
+    }
+    if (!tenantContext.tenantId) {
+      setSessions([]);
+      setAtividades([]);
+      setAlunos([]);
+      setMatriculas([]);
+      setSelectedSessionId("");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       const [sessionRows, atividadeRows, alunoRows, matriculaRows] = await Promise.all([
-        listAulasAgenda({
+        listAulasAgendaApi({
+          tenantId: tenantContext.tenantId,
           dateFrom,
           dateTo,
         }),
-        listAtividades({ apenasAtivas: true }),
-        listAlunos({ status: "ATIVO" }),
-        listMatriculas({ status: "ATIVA" }),
+        listAtividadesApi({ tenantId: tenantContext.tenantId, apenasAtivas: true }),
+        listAlunosApi({ tenantId: tenantContext.tenantId, status: "ATIVO", page: 0, size: 200 }),
+        listMatriculasApi({ tenantId: tenantContext.tenantId, status: "ATIVA" }),
       ]);
+      const alunosRows = extractAlunosFromListResponse(alunoRows);
 
       const filteredSessions = atividadeId === "TODAS"
         ? sessionRows
@@ -94,10 +110,10 @@ export default function ReservasPage() {
 
       setSessions(filteredSessions);
       setAtividades(atividadeRows);
-      setAlunos(alunoRows);
+      setAlunos(alunosRows);
       setMatriculas(matriculaRows);
-      setBackofficeAlunoId((current) => current || alunoRows[0]?.id || "");
-      setPortalAlunoId((current) => current || alunoRows[0]?.id || "");
+      setBackofficeAlunoId((current) => current || alunosRows[0]?.id || "");
+      setPortalAlunoId((current) => current || alunosRows[0]?.id || "");
       setSelectedSessionId((current) => {
         if (current && filteredSessions.some((session) => session.id === current)) {
           return current;
@@ -109,15 +125,24 @@ export default function ReservasPage() {
     } finally {
       setLoading(false);
     }
-  }, [atividadeId, dateFrom, dateTo]);
+  }, [atividadeId, dateFrom, dateTo, tenantContext.tenantId]);
 
   const loadOccupancy = useCallback(async (sessaoId: string) => {
-    if (!sessaoId) {
+    if (!sessaoId || !tenantContext.tenantId) {
       setSelectedOccupancy(null);
       return;
     }
-    const occupancy = await getAulaOcupacao(sessaoId);
+    const occupancy = await getAulaOcupacaoApi({
+      tenantId: tenantContext.tenantId,
+      sessaoId,
+    });
     setSelectedOccupancy(occupancy);
+  }, [tenantContext.tenantId]);
+
+  useEffect(() => {
+    const today = getBusinessTodayIso();
+    setDateFrom((current) => current || today);
+    setDateTo((current) => current || addDaysToIsoDate(today, 6));
   }, []);
 
   useEffect(() => {
@@ -152,11 +177,14 @@ export default function ReservasPage() {
   useEffect(() => {
     let mounted = true;
     async function syncPortalReservations() {
-      if (!portalAlunoId) {
+      if (!tenantContext.tenantId || !portalAlunoId) {
         setPortalReservationRows([]);
         return;
       }
-      const rows = await listReservasAulas({ alunoId: portalAlunoId });
+      const rows = await listReservasAulaApi({
+        tenantId: tenantContext.tenantId,
+        alunoId: portalAlunoId,
+      });
       if (mounted) {
         setPortalReservationRows(rows.filter((row) => row.status !== "CANCELADA"));
       }
@@ -165,7 +193,7 @@ export default function ReservasPage() {
     return () => {
       mounted = false;
     };
-  }, [portalAlunoId, sessions]);
+  }, [portalAlunoId, sessions, tenantContext.tenantId]);
 
   async function refreshAll(nextSessionId?: string) {
     await load();
@@ -176,16 +204,19 @@ export default function ReservasPage() {
   }
 
   async function handleBackofficeReserve() {
-    if (!selectedSession || !backofficeAlunoId) return;
+    if (!selectedSession || !backofficeAlunoId || !tenantContext.tenantId) return;
     setSaving(true);
     setError("");
     setFeedback("");
     try {
-      const reserva = await reservarAula({
-        atividadeGradeId: selectedSession.atividadeGradeId,
-        data: selectedSession.data,
-        alunoId: backofficeAlunoId,
-        origem: "BACKOFFICE",
+      const reserva = await reservarAulaApi({
+        tenantId: tenantContext.tenantId,
+        data: {
+          atividadeGradeId: selectedSession.atividadeGradeId,
+          data: selectedSession.data,
+          alunoId: backofficeAlunoId,
+          origem: "BACKOFFICE",
+        },
       });
       setFeedback(
         reserva.status === "LISTA_ESPERA"
@@ -201,11 +232,15 @@ export default function ReservasPage() {
   }
 
   async function handleCancel(id: string) {
+    if (!tenantContext.tenantId) return;
     setSaving(true);
     setError("");
     setFeedback("");
     try {
-      await cancelarReservaAula(id);
+      await cancelarReservaAulaApi({
+        tenantId: tenantContext.tenantId,
+        id,
+      });
       setFeedback("Reserva cancelada.");
       await refreshAll();
     } catch (saveError) {
@@ -216,12 +251,15 @@ export default function ReservasPage() {
   }
 
   async function handlePromoteWaitlist() {
-    if (!selectedSession) return;
+    if (!selectedSession || !tenantContext.tenantId) return;
     setSaving(true);
     setError("");
     setFeedback("");
     try {
-      const promoted = await promoverReservaWaitlist(selectedSession.id);
+      const promoted = await promoverReservaWaitlistApi({
+        tenantId: tenantContext.tenantId,
+        sessaoId: selectedSession.id,
+      });
       setFeedback(promoted ? "Primeira reserva da waitlist promovida." : "Não havia reservas em espera.");
       await refreshAll(selectedSession.id);
     } catch (saveError) {
@@ -232,11 +270,15 @@ export default function ReservasPage() {
   }
 
   async function handleCheckin(id: string) {
+    if (!tenantContext.tenantId) return;
     setSaving(true);
     setError("");
     setFeedback("");
     try {
-      await registrarCheckinAula(id);
+      await registrarCheckinAulaApi({
+        tenantId: tenantContext.tenantId,
+        id,
+      });
       setFeedback("Check-in registrado.");
       await refreshAll();
     } catch (saveError) {
@@ -247,6 +289,7 @@ export default function ReservasPage() {
   }
 
   async function handlePortalAction(session: AulaSessao) {
+    if (!tenantContext.tenantId) return;
     setSaving(true);
     setError("");
     setFeedback("");
@@ -255,14 +298,20 @@ export default function ReservasPage() {
         (row) => row.sessaoId === session.id && row.status !== "CANCELADA"
       );
       if (currentReservation) {
-        await cancelarReservaAula(currentReservation.id);
+        await cancelarReservaAulaApi({
+          tenantId: tenantContext.tenantId,
+          id: currentReservation.id,
+        });
         setFeedback("Reserva do portal cancelada.");
       } else {
-        const reserva = await reservarAula({
-          atividadeGradeId: session.atividadeGradeId,
-          data: session.data,
-          alunoId: portalAlunoId,
-          origem: "PORTAL_CLIENTE",
+        const reserva = await reservarAulaApi({
+          tenantId: tenantContext.tenantId,
+          data: {
+            atividadeGradeId: session.atividadeGradeId,
+            data: session.data,
+            alunoId: portalAlunoId,
+            origem: "PORTAL_CLIENTE",
+          },
         });
         setFeedback(
           reserva.status === "LISTA_ESPERA"

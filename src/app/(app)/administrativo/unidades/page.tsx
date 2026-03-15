@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  createTenant,
-  deleteTenant,
-  gerarCredencialCatraca,
-  listTenants,
-  setCurrentTenant,
-  toggleTenant,
-  updateTenantById,
-} from "@/lib/mock/services";
+  createUnidadeApi,
+  deleteUnidadeApi,
+  listUnidadesApi,
+  toggleUnidadeApi,
+  updateUnidadeApi,
+} from "@/lib/api/contexto-unidades";
 import type { Tenant } from "@/lib/types";
 import { ApiRequestError } from "@/lib/api/http";
 import { Button } from "@/components/ui/button";
@@ -23,10 +21,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Copy, Check, KeyRound } from "lucide-react";
-import { isRealApiEnabled } from "@/lib/api/http";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import type { CatracaCredentialResponse } from "@/lib/api/catraca";
+import { gerarCatracaCredencialApi, type CatracaCredentialResponse } from "@/lib/api/catraca";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
 
 type UnitForm = {
@@ -102,6 +99,7 @@ export default function UnidadesPage() {
   const [credentialError, setCredentialError] = useState("");
   const [credentialSuccess, setCredentialSuccess] = useState("");
   const [manualCatracaAdminToken, setManualCatracaAdminToken] = useState("");
+  const [loading, setLoading] = useState(true);
   const hasConfiguredCatracaTokenFromEnv =
     !!process.env.NEXT_PUBLIC_CATRACA_ADMIN_TOKEN?.trim() ||
     !!process.env.NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN?.trim() ||
@@ -110,14 +108,23 @@ export default function UnidadesPage() {
   const tenantSelecionado = rows.find((tenant) => tenant.id === currentTenantId);
   const tenantDisplay = tenantSelecionado?.nome || tenantSelecionado?.id || "Nenhuma unidade selecionada";
 
-  async function load() {
-    const all = await listTenants();
-    setRows(all);
-  }
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const all = await listUnidadesApi();
+      setRows(all);
+    } catch (loadError) {
+      setRows([]);
+      setError(normalizeErrorMessage(loadError));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, [tenantContext.tenantId]);
+  }, [load, tenantContext.tenantId]);
 
   useEffect(() => {
     setCurrentTenantId(tenantContext.tenantId);
@@ -150,7 +157,10 @@ export default function UnidadesPage() {
       return;
     }
     try {
-      const generated = await gerarCredencialCatraca(currentTenantId, adminToken);
+      const generated = await gerarCatracaCredencialApi({
+        tenantId: currentTenantId,
+        adminToken,
+      });
       setCredentialSuccess(credentialResult ? "Credencial regenerada, atualize o Tray." : "Credencial gerada. Atualize o Tray.");
       setCredentialResult(generated);
       setConfirmCredencialOpen(false);
@@ -216,7 +226,7 @@ export default function UnidadesPage() {
     setError("");
     try {
       if (editing) {
-        await updateTenantById(editing.id, {
+        await updateUnidadeApi(editing.id, {
           nome: form.nome.trim(),
           razaoSocial: form.razaoSocial.trim() || undefined,
           documento: form.documento.trim() || undefined,
@@ -232,7 +242,7 @@ export default function UnidadesPage() {
           },
         });
       } else {
-        await createTenant({
+        await createUnidadeApi({
           nome: form.nome.trim(),
           razaoSocial: form.razaoSocial.trim() || undefined,
           documento: form.documento.trim() || undefined,
@@ -259,18 +269,19 @@ export default function UnidadesPage() {
   }
 
   async function handleSetCurrent(id: string) {
-    await setCurrentTenant(id);
+    await tenantContext.setTenant(id);
+    setCurrentTenantId(id);
     await load();
   }
 
   async function handleToggle(id: string) {
-    await toggleTenant(id);
+    await toggleUnidadeApi(id);
     await load();
   }
 
   async function handleDelete(id: string) {
     try {
-      await deleteTenant(id);
+      await deleteUnidadeApi(id);
       await load();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Não foi possível remover a unidade.";
@@ -445,8 +456,7 @@ export default function UnidadesPage() {
           </Button>
         </div>
 
-        {isRealApiEnabled() &&
-        !process.env.NEXT_PUBLIC_CATRACA_ADMIN_TOKEN &&
+        {!process.env.NEXT_PUBLIC_CATRACA_ADMIN_TOKEN &&
         !process.env.NEXT_PUBLIC_ADMIN_TOKEN &&
         !process.env.NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN ? (
           <div className="space-y-1">
@@ -534,7 +544,14 @@ export default function UnidadesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {sorted.map((row) => {
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                  Carregando unidades...
+                </td>
+              </tr>
+            ) : null}
+            {!loading && sorted.map((row) => {
               const isCurrent = row.id === currentTenantId;
               return (
                 <tr key={row.id} className="transition-colors hover:bg-secondary/40">
@@ -595,7 +612,7 @@ export default function UnidadesPage() {
                 </tr>
               );
             })}
-            {sorted.length === 0 ? (
+            {!loading && sorted.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
                   Nenhuma unidade cadastrada

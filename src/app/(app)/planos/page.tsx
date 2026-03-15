@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Plus, Pencil, Power, Star } from "lucide-react";
 import {
-  listPlanos,
-  togglePlanoAtivo,
-  togglePlanoDestaque,
-} from "@/lib/mock/services";
+  listPlanosService,
+  togglePlanoAtivoService,
+  togglePlanoDestaqueService,
+} from "@/lib/comercial/runtime";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,24 +19,47 @@ function formatBRL(v: number) {
 }
 
 export default function PlanosPage() {
+  const { tenantId, tenantResolved } = useTenantContext();
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [filtroAtivo, setFiltroAtivo] = useState<"ATIVOS" | "TODOS">("ATIVOS");
+  const loadingRef = useRef(false);
+  const initialLoadDoneRef = useRef(false);
+
+  const loadPlanos = useCallback(async () => {
+    if (!tenantId || loadingRef.current) return;
+    loadingRef.current = true;
+    try {
+      const response = await listPlanosService({ tenantId, apenasAtivos: false });
+      setPlanos(response);
+    } finally {
+      loadingRef.current = false;
+    }
+  }, [tenantId]);
 
   useEffect(() => {
-    listPlanos().then(setPlanos);
-  }, []);
+    if (!tenantResolved || !tenantId || initialLoadDoneRef.current) return;
+    initialLoadDoneRef.current = true;
+    void loadPlanos();
+  }, [loadPlanos, tenantId, tenantResolved]);
+
+  useEffect(() => {
+    initialLoadDoneRef.current = false;
+    setPlanos([]);
+  }, [tenantId]);
 
   async function reload() {
-    setPlanos(await listPlanos());
+    await loadPlanos();
   }
 
   async function handleToggleAtivo(id: string) {
-    await togglePlanoAtivo(id);
+    if (!tenantId) return;
+    await togglePlanoAtivoService({ tenantId, id });
     reload();
   }
 
   async function handleToggleDestaque(id: string) {
-    await togglePlanoDestaque(id);
+    if (!tenantId) return;
+    await togglePlanoDestaqueService({ tenantId, id });
     reload();
   }
 

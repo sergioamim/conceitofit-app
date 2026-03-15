@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { PagamentoVenda, TipoFormaPagamento } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,16 +26,17 @@ export function CheckoutPayment({
   const [observacoes, setObservacoes] = useState("");
 
   const totalPreview = useMemo(() => formatBRL(total || 0), [total]);
-
-  useEffect(() => {
-    if (!disabledFormasPagamento.includes(formaPagamento)) return;
-    setFormaPagamento("PIX");
-  }, [disabledFormasPagamento, formaPagamento]);
+  const effectiveFormaPagamento = disabledFormasPagamento.includes(formaPagamento)
+    ? "PIX"
+    : formaPagamento;
 
   function handleConfirm() {
     onConfirm({
-      formaPagamento,
-      parcelas: formaPagamento === "CARTAO_CREDITO" ? Math.max(1, parseInt(parcelas, 10) || 1) : undefined,
+      formaPagamento: effectiveFormaPagamento,
+      parcelas:
+        effectiveFormaPagamento === "CARTAO_CREDITO"
+          ? Math.max(1, parseInt(parcelas, 10) || 1)
+          : undefined,
       valorPago: Math.max(0, total),
       observacoes: observacoes.trim() || undefined,
     });
@@ -47,7 +48,7 @@ export function CheckoutPayment({
       <div className="mt-3 space-y-3">
         <div className="space-y-1.5">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Forma de pagamento</label>
-          <Select value={formaPagamento} onValueChange={(v) => setFormaPagamento(v as TipoFormaPagamento)}>
+          <Select value={effectiveFormaPagamento} onValueChange={(v) => setFormaPagamento(v as TipoFormaPagamento)}>
             <SelectTrigger className="w-full bg-secondary border-border"><SelectValue /></SelectTrigger>
             <SelectContent className="bg-card border-border">
               <SelectItem value="PIX">PIX</SelectItem>
@@ -69,7 +70,7 @@ export function CheckoutPayment({
               value={parcelas}
               onChange={(e) => setParcelas(e.target.value)}
               className="bg-secondary border-border"
-              disabled={formaPagamento !== "CARTAO_CREDITO"}
+              disabled={effectiveFormaPagamento !== "CARTAO_CREDITO"}
             />
           </div>
           <div className="space-y-1.5">

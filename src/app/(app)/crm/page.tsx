@@ -3,11 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
-  getCrmWorkspaceSnapshot,
-  listCrmAutomacoes,
-  updateCrmAutomacao,
-} from "@/lib/mock/services";
+  listCrmAutomacoesApi,
+  listCrmTasksApi,
+  listProspectsApi,
+  updateCrmAutomacaoApi,
+} from "@/lib/api/crm";
+import { listFuncionariosApi } from "@/lib/api/administrativo";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type { CrmAutomation, CrmWorkspaceSnapshot } from "@/lib/types";
+import { buildCrmWorkspaceSnapshotRuntime, enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/crm/runtime";
 import {
   CRM_ACTIVITY_LABEL,
   CRM_AUTOMATION_ACTION_LABEL,
@@ -38,32 +42,53 @@ export default function CrmWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingAutomationId, setSavingAutomationId] = useState<string | null>(null);
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [workspace, automationRows] = await Promise.all([
-        getCrmWorkspaceSnapshot(),
-        listCrmAutomacoes(),
+      const [prospectRows, taskRows, automationRows, funcionarioRows] = await Promise.all([
+        listProspectsApi({ tenantId }),
+        listCrmTasksApi({ tenantId }),
+        listCrmAutomacoesApi({ tenantId }),
+        listFuncionariosApi(true),
       ]);
-      setSnapshot(workspace);
+      const prospects = prospectRows.map((prospect) => normalizeProspectRuntime(prospect));
+      const tasks = enrichCrmTasksRuntime({
+        tasks: taskRows,
+        prospects,
+        funcionarios: funcionarioRows,
+      });
+      setSnapshot(
+        buildCrmWorkspaceSnapshotRuntime({
+          tenantId,
+          prospects,
+          tasks,
+          automations: automationRows,
+        })
+      );
       setAutomations(automationRows);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Falha ao carregar workspace de CRM.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function handleToggleAutomation(row: CrmAutomation) {
+    if (!tenantId) return;
     setSavingAutomationId(row.id);
     try {
-      await updateCrmAutomacao(row.id, { ativo: !row.ativo });
+      await updateCrmAutomacaoApi({
+        tenantId,
+        id: row.id,
+        data: { ativo: !row.ativo },
+      });
       await load();
     } finally {
       setSavingAutomationId(null);

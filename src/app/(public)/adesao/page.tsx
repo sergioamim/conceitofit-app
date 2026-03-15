@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,15 @@ function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export default function AdesaoLandingPage() {
+function PublicJourneyFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+      Carregando jornada pública...
+    </div>
+  );
+}
+
+function AdesaoLandingPageContent() {
   const { context, loading, error, resolvedTenantRef } = usePublicJourney();
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
 
@@ -234,5 +242,13 @@ export default function AdesaoLandingPage() {
         })}
       </section>
     </PublicJourneyShell>
+  );
+}
+
+export default function AdesaoLandingPage() {
+  return (
+    <Suspense fallback={<PublicJourneyFallback />}>
+      <AdesaoLandingPageContent />
+    </Suspense>
   );
 }

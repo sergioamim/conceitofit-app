@@ -235,7 +235,7 @@ export async function listAtividadesApi(params: {
   categoria?: CategoriaAtividade;
 }): Promise<Atividade[]> {
   const response = await apiRequest<AtividadeListApiResponse>({
-    path: "/api/v1/academia/atividades",
+    path: "/api/v1/administrativo/atividades",
     query: {
       tenantId: params.tenantId,
       apenasAtivas: params.apenasAtivas,
@@ -255,7 +255,7 @@ export async function createAtividadeApi(input: {
   data: Omit<Atividade, "id" | "tenantId" | "ativo">;
 }): Promise<Atividade> {
   const response = await apiRequest<AtividadeApiResponse>({
-    path: "/api/v1/academia/atividades",
+    path: "/api/v1/administrativo/atividades",
     method: "POST",
     query: { tenantId: input.tenantId },
     body: buildAtividadeUpsertApiRequest(input.tenantId, input.data),
@@ -274,7 +274,7 @@ export async function updateAtividadeApi(input: {
   data: Omit<Atividade, "id" | "tenantId">;
 }): Promise<Atividade> {
   const response = await apiRequest<AtividadeApiResponse>({
-    path: `/api/v1/academia/atividades/${input.id}`,
+    path: `/api/v1/administrativo/atividades/${input.id}`,
     method: "PUT",
     query: { tenantId: input.tenantId },
     body: buildAtividadeUpsertApiRequest(input.tenantId, input.data),
@@ -292,7 +292,7 @@ export async function toggleAtividadeApi(input: {
   id: string;
 }): Promise<Atividade> {
   const response = await apiRequest<AtividadeApiResponse>({
-    path: `/api/v1/academia/atividades/${input.id}/toggle-ativo`,
+    path: `/api/v1/administrativo/atividades/${input.id}/toggle`,
     method: "PATCH",
     query: { tenantId: input.tenantId },
   });
@@ -308,19 +308,21 @@ export async function deleteAtividadeApi(input: {
   id: string;
 }): Promise<void> {
   await apiRequest<void>({
-    path: `/api/v1/academia/atividades/${input.id}`,
+    path: `/api/v1/administrativo/atividades/${input.id}`,
     method: "DELETE",
     query: { tenantId: input.tenantId },
   });
 }
 
 export async function listAtividadeGradesApi(params?: {
+  tenantId?: string;
   atividadeId?: string;
   apenasAtivas?: boolean;
 }): Promise<AtividadeGrade[]> {
   return apiRequest<AtividadeGrade[]>({
     path: "/api/v1/administrativo/atividades-grade",
     query: {
+      tenantId: params?.tenantId,
       atividadeId: params?.atividadeId,
       apenasAtivas: params?.apenasAtivas,
     },

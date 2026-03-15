@@ -1,0 +1,58 @@
+name: coverage-core
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  coverage-core:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Generate Coverage Baseline
+        run: npm run coverage:baseline
+
+      - name: Enforce Coverage Gate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base_sha=""
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+          else
+            base_sha="${{ github.event.before }}"
+          fi
+
+          if [[ -n "${base_sha}" ]] && [[ "${base_sha}" != "0000000000000000000000000000000000000000" ]] && git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+            export COVERAGE_CHANGED_FILES="$(git diff --name-only "${base_sha}" "${GITHUB_SHA}")"
+          fi
+
+          npm run coverage:gate
+
+      - name: Upload Coverage Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-core
+          path: |
+            coverage/
+            docs/TEST_COVERAGE_CORE.json
+            docs/TEST_COVERAGE_CORE.md
+            docs/TEST_COVERAGE_HISTORY_CORE.json
+            docs/TEST_COVERAGE_GOVERNANCE.md

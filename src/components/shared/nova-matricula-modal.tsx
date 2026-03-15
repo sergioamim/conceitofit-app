@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import {
-  createVenda,
-  listAlunos,
-  listConvenios,
-  listFormasPagamento,
-  listPlanos,
-} from "@/lib/mock/services";
+  createVendaService,
+  listAlunosService,
+  listConveniosService,
+  listFormasPagamentoService,
+  listPlanosService,
+} from "@/lib/comercial/runtime";
+import { getBusinessTodayIso } from "@/lib/business-date";
 import { buildPlanoVendaItems } from "@/lib/comercial/plano-flow";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { Aluno, Plano, TipoFormaPagamento, Convenio } from "@/lib/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -30,6 +32,7 @@ export function NovaMatriculaModal({
   onDone: () => void;
   prefillClienteId?: string;
 }) {
+  const { tenantId, tenantResolved } = useTenantContext();
   const CONVENIO_SEM_CONVENIO = "__SEM_CONVENIO__";
 
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -38,7 +41,7 @@ export function NovaMatriculaModal({
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [alunoId, setAlunoId] = useState("");
   const [planoId, setPlanoId] = useState("");
-  const [dataInicio, setDataInicio] = useState(new Date().toISOString().split("T")[0]);
+  const [dataInicio, setDataInicio] = useState(getBusinessTodayIso());
   const [formaPagamento, setFormaPagamento] = useState<TipoFormaPagamento | "">("");
   const [desconto, setDesconto] = useState("");
   const [motivoDesconto, setMotivoDesconto] = useState("");
@@ -50,9 +53,14 @@ export function NovaMatriculaModal({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!open) return;
-    Promise.all([listAlunos(), listPlanos(), listFormasPagamento(), listConvenios({ apenasAtivos: true })]).then(
-      ([als, pls, fps, cvs]) => {
+    if (!open || !tenantResolved || !tenantId) return;
+    Promise.all([
+      listAlunosService({ tenantId }),
+      listPlanosService({ tenantId, apenasAtivos: true }),
+      listFormasPagamentoService({ tenantId }),
+      listConveniosService(true),
+    ])
+      .then(([als, pls, fps, cvs]) => {
         setAlunos(als);
         setPlanos(pls);
         setFormas(fps);
@@ -60,9 +68,14 @@ export function NovaMatriculaModal({
         if (prefillClienteId) {
           setAlunoId(prefillClienteId);
         }
-      }
-    );
-  }, [open, prefillClienteId]);
+      })
+      .catch(() => {
+        setAlunos([]);
+        setPlanos([]);
+        setFormas([]);
+        setConvenios([]);
+      });
+  }, [open, prefillClienteId, tenantId, tenantResolved]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -72,7 +85,7 @@ export function NovaMatriculaModal({
   function reset() {
     setAlunoId("");
     setPlanoId("");
-    setDataInicio(new Date().toISOString().split("T")[0]);
+    setDataInicio(getBusinessTodayIso());
     setFormaPagamento("");
     setDesconto("");
     setMotivoDesconto("");
@@ -84,7 +97,7 @@ export function NovaMatriculaModal({
   }
 
   async function handleSave() {
-    if (!alunoId || !planoId || !dataInicio || !formaPagamento) return;
+    if (!tenantId || !alunoId || !planoId || !dataInicio || !formaPagamento) return;
     const plano = planos.find((p) => p.id === planoId);
     if (!plano) return;
     if (pagamentoPendente) {
@@ -105,30 +118,33 @@ export function NovaMatriculaModal({
       const subtotal = items.reduce((sum, item) => sum + item.valorUnitario * item.quantidade, 0);
       const total = Math.max(0, subtotal - descontoTotal);
 
-      await createVenda({
-        tipo: "PLANO",
-        clienteId: alunoId,
-        itens: items.map((item) => ({
-          tipo: item.tipo,
-          referenciaId: item.referenciaId,
-          descricao: item.descricao,
-          quantidade: item.quantidade,
-          valorUnitario: item.valorUnitario,
-          desconto: item.desconto,
-        })),
-        descontoTotal,
-        pagamento: {
-          formaPagamento: formaPagamento as TipoFormaPagamento,
-          valorPago: pagamentoPendente ? 0 : total,
-          status: pagamentoPendente ? "PENDENTE" : "PAGO",
-        },
-        planoContexto: {
-          planoId,
-          dataInicio,
-          descontoPlano: manualDiscount,
-          motivoDesconto: motivoDesconto || undefined,
-          renovacaoAutomatica: renovacao,
-          convenioId: convenioSelecionado?.id,
+      await createVendaService({
+        tenantId,
+        data: {
+          tipo: "PLANO",
+          clienteId: alunoId,
+          itens: items.map((item) => ({
+            tipo: item.tipo,
+            referenciaId: item.referenciaId,
+            descricao: item.descricao,
+            quantidade: item.quantidade,
+            valorUnitario: item.valorUnitario,
+            desconto: item.desconto,
+          })),
+          descontoTotal,
+          pagamento: {
+            formaPagamento: formaPagamento as TipoFormaPagamento,
+            valorPago: pagamentoPendente ? 0 : total,
+            status: pagamentoPendente ? "PENDENTE" : "PAGO",
+          },
+          planoContexto: {
+            planoId,
+            dataInicio,
+            descontoPlano: manualDiscount,
+            motivoDesconto: motivoDesconto || undefined,
+            renovacaoAutomatica: renovacao,
+            convenioId: convenioSelecionado?.id,
+          },
         },
       });
       setLoading(false);

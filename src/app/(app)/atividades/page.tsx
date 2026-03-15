@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, Power } from "lucide-react";
 import {
-  listAtividades,
-  createAtividade,
-  updateAtividade,
-  toggleAtividade,
-  deleteAtividade,
-} from "@/lib/mock/services";
+  createAtividadeApi,
+  deleteAtividadeApi,
+  listAtividadesApi,
+  toggleAtividadeApi,
+  updateAtividadeApi,
+} from "@/lib/api/administrativo";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type { Atividade, CategoriaAtividade } from "@/lib/types";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -19,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { AtividadeModal, type AtividadeForm } from "@/components/shared/atividade-modal";
 import { ActivityIconChip } from "@/components/shared/activity-icon-chip";
 
@@ -43,30 +46,43 @@ const CATEGORIA_OPTIONS: { value: CategoriaAtividade | "TODAS"; label: string }[
   ];
 
 export default function AtividadesPage() {
+  const tenantContext = useTenantContext();
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [categoria, setCategoria] =
     useState<CategoriaAtividade | "TODAS">("TODAS");
   const [apenasAtivas, setApenasAtivas] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Atividade | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
-  async function load() {
+  const load = useCallback(async () => {
+    if (!tenantId) {
+      setAtividades([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
     try {
-      const data = await listAtividades();
+      const data = await listAtividadesApi({ tenantId });
       setAtividades(
         Array.isArray(data)
           ? data.filter((item): item is Atividade => Boolean(item && item.id))
           : []
       );
-    } catch {
+    } catch (loadError) {
       setAtividades([]);
+      setError(normalizeErrorMessage(loadError) || "Falha ao carregar atividades.");
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [tenantId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   const filtered = atividades.filter((a) => {
     const matchCategoria = categoria === "TODAS" || a.categoria === categoria;
@@ -75,25 +91,44 @@ export default function AtividadesPage() {
   });
 
   async function handleSave(data: AtividadeForm, id?: string) {
+    if (!tenantId) return;
     if (id) {
-      await updateAtividade(id, data);
+      await updateAtividadeApi({
+        tenantId,
+        id,
+        data: {
+          ...data,
+          ativo: editing?.ativo ?? true,
+        },
+      });
     } else {
-      await createAtividade(data);
+      await createAtividadeApi({
+        tenantId,
+        data,
+      });
     }
     setModalOpen(false);
     setEditing(undefined);
-    load();
+    await load();
   }
 
   async function handleToggle(id: string) {
-    await toggleAtividade(id);
-    load();
+    if (!tenantId) return;
+    await toggleAtividadeApi({
+      tenantId,
+      id,
+    });
+    await load();
   }
 
   async function handleDelete(id: string) {
+    if (!tenantId) return;
     if (!confirm("Remover esta atividade?")) return;
-    await deleteAtividade(id);
-    load();
+    await deleteAtividadeApi({
+      tenantId,
+      id,
+    });
+    await load();
   }
 
   return (
@@ -122,6 +157,12 @@ export default function AtividadesPage() {
           Nova Atividade
         </Button>
       </div>
+
+      {error ? (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {error}
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-3">
         <div className="flex gap-1.5">
@@ -168,12 +209,17 @@ export default function AtividadesPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        {filtered.length === 0 && (
+        {loading ? (
+          <div className="col-span-3 rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            Carregando atividades...
+          </div>
+        ) : null}
+        {!loading && filtered.length === 0 && (
           <div className="col-span-3 rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
             Nenhuma atividade encontrada
           </div>
         )}
-        {filtered.map((a) => (
+        {!loading && filtered.map((a) => (
           <div
             key={a.id}
             className={cn(

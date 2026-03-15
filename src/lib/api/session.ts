@@ -19,7 +19,6 @@ const EXPIRES_IN_KEY = "academia-auth-expires-in";
 const ACTIVE_TENANT_ID_KEY = "academia-auth-active-tenant-id";
 const AVAILABLE_TENANTS_KEY = "academia-auth-available-tenants";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
-const MOCK_LOGGED_IN_KEY = "academia-mock-logged-in";
 export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
 
 function isBrowser(): boolean {
@@ -155,18 +154,6 @@ export function clearAuthSession(): void {
   window.localStorage.removeItem(EXPIRES_IN_KEY);
   window.localStorage.removeItem(ACTIVE_TENANT_ID_KEY);
   window.localStorage.removeItem(AVAILABLE_TENANTS_KEY);
-  window.localStorage.removeItem(MOCK_LOGGED_IN_KEY);
-  notifyAuthSessionUpdated();
-}
-
-export function isMockSessionActive(): boolean {
-  if (!isBrowser()) return false;
-  return window.localStorage.getItem(MOCK_LOGGED_IN_KEY) === "1";
-}
-
-export function setMockSessionActive(): void {
-  if (!isBrowser()) return;
-  window.localStorage.setItem(MOCK_LOGGED_IN_KEY, "1");
   notifyAuthSessionUpdated();
 }
 

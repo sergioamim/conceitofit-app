@@ -14,6 +14,7 @@ import {
 } from "@/lib/public/storage";
 
 type UsePublicJourneyState = {
+  tenantRef: string | null;
   context: PublicTenantContext | null;
   draft: PublicJourneyDraft;
   loading: boolean;
@@ -27,6 +28,7 @@ export function usePublicJourney() {
   const checkoutId = searchParams.get("checkout");
 
   const [state, setState] = useState<UsePublicJourneyState>({
+    tenantRef,
     context: null,
     draft: {},
     loading: true,
@@ -35,17 +37,13 @@ export function usePublicJourney() {
 
   useEffect(() => {
     let active = true;
-    setState((current) => ({
-      ...current,
-      loading: true,
-      error: "",
-    }));
 
     async function load() {
       try {
         const context = await getPublicJourneyContext(tenantRef);
         if (!active) return;
         setState({
+          tenantRef,
           context,
           draft: loadPublicJourneyDraft(context.tenant.id),
           loading: false,
@@ -54,6 +52,7 @@ export function usePublicJourney() {
       } catch (error) {
         if (!active) return;
         setState({
+          tenantRef,
           context: null,
           draft: {},
           loading: false,
@@ -68,6 +67,8 @@ export function usePublicJourney() {
       active = false;
     };
   }, [tenantRef]);
+
+  const isCurrentTenant = state.tenantRef === tenantRef;
 
   function refreshDraft() {
     if (!state.context) return;
@@ -96,7 +97,10 @@ export function usePublicJourney() {
   }
 
   return {
-    ...state,
+    context: isCurrentTenant ? state.context : null,
+    draft: isCurrentTenant ? state.draft : {},
+    loading: !isCurrentTenant || state.loading,
+    error: isCurrentTenant ? state.error : "",
     tenantRef,
     planId,
     checkoutId,

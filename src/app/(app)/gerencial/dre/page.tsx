@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getDreGerencial, getDreProjecao } from "@/lib/mock/services";
-import { isRealApiEnabled } from "@/lib/api/http";
+import { useTenantContext } from "@/hooks/use-session-context";
+import { getDreGerencialApi, getDreProjecaoApi } from "@/lib/api/financeiro-gerencial";
+import { getBusinessCurrentMonthYear, getBusinessMonthRange } from "@/lib/business-date";
 import type { CategoriaContaPagar, DREProjecao, DREGerencial, DreProjectionScenario, GrupoDre } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   FOLHA: "Folha",
@@ -36,13 +38,7 @@ function percentLabel(value: number) {
 }
 
 function monthRangeFromNow() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`,
-    end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`,
-  };
+  return getBusinessMonthRange();
 }
 
 function addMonths(date: Date, months: number) {
@@ -62,72 +58,80 @@ const CENARIO_LABEL: Record<DreProjectionScenario, string> = {
 };
 
 export default function DrePage() {
+  const tenantContext = useTenantContext();
   const [loading, setLoading] = useState(true);
   const [loadingProjecao, setLoadingProjecao] = useState(true);
   const [dre, setDre] = useState<DREGerencial | null>(null);
   const [projecao, setProjecao] = useState<DREProjecao | null>(null);
-  const [mes, setMes] = useState(new Date().getMonth());
-  const [ano, setAno] = useState(new Date().getFullYear());
+  const [error, setError] = useState<string | null>(null);
+  const [projecaoError, setProjecaoError] = useState<string | null>(null);
+  const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
+  const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [customRange, setCustomRange] = useState(false);
   const defaultRange = monthRangeFromNow();
   const [startDate, setStartDate] = useState(defaultRange.start);
   const [endDate, setEndDate] = useState(defaultRange.end);
   const [cenarioProjecao, setCenarioProjecao] = useState<DreProjectionScenario>("BASE");
-  const [projecaoStartDate, setProjecaoStartDate] = useState(toISODate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)));
-  const [projecaoEndDate, setProjecaoEndDate] = useState(toISODate(addMonths(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0), 3)));
+  const [projecaoStartDate, setProjecaoStartDate] = useState(() => {
+    const { month, year } = getBusinessCurrentMonthYear();
+    return toISODate(new Date(year, month, 1));
+  });
+  const [projecaoEndDate, setProjecaoEndDate] = useState(() => {
+    const { month, year } = getBusinessCurrentMonthYear();
+    return toISODate(addMonths(new Date(year, month + 1, 0), 3));
+  });
 
   async function load() {
+    if (!tenantContext.tenantId) return;
     setLoading(true);
+    setError(null);
     try {
-      const data = await getDreGerencial(
-        customRange
+      const data = await getDreGerencialApi({
+        tenantId: tenantContext.tenantId,
+        ...(customRange
           ? { startDate, endDate }
-          : { month: mes, year: ano }
-      );
+          : { month: mes, year: ano }),
+      });
       setDre(data);
+    } catch (loadError) {
+      setError(normalizeErrorMessage(loadError));
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    load();
+    if (tenantContext.tenantResolved && tenantContext.tenantId) {
+      void load();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mes, ano, customRange, startDate, endDate]);
+  }, [mes, ano, customRange, startDate, endDate, tenantContext.tenantId, tenantContext.tenantResolved]);
 
   async function loadProjecao() {
+    if (!tenantContext.tenantId) return;
     setLoadingProjecao(true);
+    setProjecaoError(null);
     try {
-      const data = await getDreProjecao({
+      const data = await getDreProjecaoApi({
+        tenantId: tenantContext.tenantId,
         startDate: projecaoStartDate,
         endDate: projecaoEndDate,
         cenario: cenarioProjecao,
       });
       setProjecao(data);
+    } catch (loadError) {
+      setProjecaoError(normalizeErrorMessage(loadError));
     } finally {
       setLoadingProjecao(false);
     }
   }
 
   useEffect(() => {
-    loadProjecao();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projecaoStartDate, projecaoEndDate, cenarioProjecao]);
-
-  useEffect(() => {
-    if (isRealApiEnabled()) return;
-    function handleUpdate() {
-      load();
-      loadProjecao();
+    if (tenantContext.tenantResolved && tenantContext.tenantId) {
+      void loadProjecao();
     }
-    window.addEventListener("academia-store-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-    return () => {
-      window.removeEventListener("academia-store-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mes, ano, customRange, startDate, endDate, projecaoStartDate, projecaoEndDate, cenarioProjecao]);
+  }, [projecaoStartDate, projecaoEndDate, cenarioProjecao, tenantContext.tenantId, tenantContext.tenantResolved]);
 
   const margins = useMemo(() => {
     if (!dre || dre.receitaLiquida <= 0) return { margem: 0, ebitda: 0, resultado: 0 };
@@ -201,6 +205,12 @@ export default function DrePage() {
           <p className="mt-1 text-xs text-muted-foreground">{percentLabel(margins.resultado)}</p>
         </div>
       </div>
+
+      {error ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {error}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
         <div className="rounded-xl border border-border bg-card">
@@ -441,6 +451,12 @@ export default function DrePage() {
           </div>
         </div>
       </div>
+
+      {projecaoError ? (
+        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {projecaoError}
+        </div>
+      ) : null}
     </div>
   );
 }

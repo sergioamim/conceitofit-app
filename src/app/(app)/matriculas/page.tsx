@@ -1,22 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCheck, Plus, RefreshCcw, XCircle } from "lucide-react";
-import { getStore } from "@/lib/mock/store";
 import {
-  cancelarMatricula,
-  listMatriculas,
-  registrarAssinaturaMatricula,
-  renovarMatricula,
-} from "@/lib/mock/services";
-import { isRealApiEnabled } from "@/lib/api/http";
+  cancelarMatriculaService,
+  listMatriculasService,
+  listPagamentosService,
+  renovarMatriculaService,
+} from "@/lib/comercial/runtime";
+import { Plus, RefreshCcw, XCircle } from "lucide-react";
 import {
   resolveContratoStatusFromPlano,
   resolveFluxoComercialStatus,
   STATUS_CONTRATO_LABEL,
   STATUS_FLUXO_COMERCIAL_LABEL,
 } from "@/lib/comercial/plano-flow";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { Aluno, Matricula, Pagamento, Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 
@@ -51,19 +50,31 @@ function getBadgeClass(kind: "contrato" | "fluxo", value: string | undefined) {
 }
 
 export default function MatriculasPage() {
+  const { tenantId, tenantResolved } = useTenantContext();
   const [rows, setRows] = useState<MatriculaRow[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
+    if (!tenantId) return;
     try {
-      const matriculas = await listMatriculas();
-      const store = getStore();
+      const [matriculas, pagamentos] = await Promise.all([
+        listMatriculasService({
+          tenantId,
+          page: 0,
+          size: 500,
+        }),
+        listPagamentosService({
+          tenantId,
+          page: 0,
+          size: 500,
+        }),
+      ]);
       setRows(
         matriculas.map((matricula) => ({
           ...matricula,
-          pagamento: store.pagamentos.find((pagamento) => pagamento.matriculaId === matricula.id),
+          pagamento: pagamentos.find((pagamento) => pagamento.matriculaId === matricula.id),
         }))
       );
       setError(null);
@@ -71,17 +82,12 @@ export default function MatriculasPage() {
       setRows([]);
       setError("Não foi possível carregar os contratos da unidade ativa.");
     }
-  }
+  }, [tenantId]);
 
   useEffect(() => {
+    if (!tenantResolved || !tenantId) return;
     void load();
-    if (isRealApiEnabled()) return;
-    function handleUpdate() {
-      void load();
-    }
-    window.addEventListener("academia-store-updated", handleUpdate);
-    return () => window.removeEventListener("academia-store-updated", handleUpdate);
-  }, []);
+  }, [load, tenantId, tenantResolved]);
 
   return (
     <div className="space-y-6">
@@ -154,7 +160,6 @@ export default function MatriculasPage() {
                 pagamento: row.pagamento,
                 plano: row.plano,
               });
-              const canSign = contratoStatus === "PENDENTE_ASSINATURA";
               const canCancel = row.status === "ATIVA";
               const canRenew = row.status === "VENCIDA" || row.status === "CANCELADA";
 
@@ -191,35 +196,16 @@ export default function MatriculasPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      {canSign ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={actionId === row.id}
-                          onClick={async () => {
-                            setActionId(row.id);
-                            try {
-                              await registrarAssinaturaMatricula(row.id);
-                              setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} marcado como assinado.`);
-                              await load();
-                            } finally {
-                              setActionId(null);
-                            }
-                          }}
-                        >
-                          <CheckCheck className="mr-1 size-4" />
-                          Assinar
-                        </Button>
-                      ) : null}
                       {canRenew ? (
                         <Button
                           size="sm"
                           variant="outline"
                           disabled={actionId === row.id}
                           onClick={async () => {
+                            if (!tenantId) return;
                             setActionId(row.id);
                             try {
-                              await renovarMatricula(row.id);
+                              await renovarMatriculaService({ tenantId, id: row.id });
                               setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} renovado.`);
                               await load();
                             } finally {
@@ -237,11 +223,12 @@ export default function MatriculasPage() {
                           variant="outline"
                           disabled={actionId === row.id}
                           onClick={async () => {
+                            if (!tenantId) return;
                             const confirmed = window.confirm("Cancelar esta contratação?");
                             if (!confirmed) return;
                             setActionId(row.id);
                             try {
-                              await cancelarMatricula(row.id);
+                              await cancelarMatriculaService({ tenantId, id: row.id });
                               setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} cancelado.`);
                               await load();
                             } finally {

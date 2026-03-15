@@ -4,20 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  getAluno,
-  getCurrentTenant,
-  listMatriculas,
-  listPlanos,
-  listPagamentos,
-  listPresencasByAluno,
-  updateAluno,
-  listFormasPagamento,
-  receberPagamento,
-  listConvenios,
-  liberarAcessoCatraca,
-  setCurrentTenant,
-} from "@/lib/mock/services";
-import { getStore } from "@/lib/mock/store";
+  liberarAcessoCatracaService,
+  listConveniosService,
+  listFormasPagamentoService,
+  listMatriculasByAlunoService,
+  listPagamentosService,
+  listPlanosService,
+  listPresencasByAlunoService,
+  receberPagamentoService,
+  resolveAlunoTenantService,
+  updateAlunoService,
+} from "@/lib/comercial/runtime";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { Aluno, Matricula, Plano, Pagamento, Presenca, FormaPagamento, Convenio } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { NovaMatriculaModal } from "@/components/shared/nova-matricula-modal";
@@ -44,6 +42,7 @@ function formatBRL(v: number) {
 export default function ClienteDetalhePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { tenantId, tenantResolved, tenants, setTenant } = useTenantContext();
   const [aluno, setAluno] = useState<Aluno | null>(null);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -65,26 +64,21 @@ export default function ClienteDetalhePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const ensureTenantContext = useCallback(async (alunoId: string) => {
-    const current = await getCurrentTenant();
-    const cached = getStore().alunos.find((item) => item.id === alunoId);
-    if (cached?.tenantId && cached.tenantId !== current.id) {
-      await setCurrentTenant(cached.tenantId);
-    }
-  }, []);
-
   const reload = useCallback(async () => {
     const id = params?.id;
-    if (!id) {
+    if (!id || !tenantResolved) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setLoadError(null);
     try {
-      await ensureTenantContext(id);
-      const alunoAtual = await getAluno(id);
-      if (!alunoAtual) {
+      const resolved = await resolveAlunoTenantService({
+        alunoId: id,
+        tenantId,
+        tenantIds: tenants.map((item) => item.id),
+      });
+      if (!resolved) {
         setAluno(null);
         setMatriculas([]);
         setPlanos([]);
@@ -94,44 +88,56 @@ export default function ClienteDetalhePage() {
         setConvenios([]);
         return;
       }
-      const [ms, ps, pres, fps, cvs] = await Promise.all([
-        listMatriculas(),
-        listPlanos(),
-        listPresencasByAluno(id),
-        listFormasPagamento(),
-        listConvenios(),
+      if (resolved.tenantId !== tenantId) {
+        await setTenant(resolved.tenantId);
+      }
+      const currentTenantId = resolved.tenantId;
+      const [ms, ps, pres, fps, cvs, pags] = await Promise.all([
+        listMatriculasByAlunoService({
+          tenantId: currentTenantId,
+          alunoId: id,
+          page: 0,
+          size: 200,
+        }),
+        listPlanosService({
+          tenantId: currentTenantId,
+          apenasAtivos: false,
+        }),
+        listPresencasByAlunoService({
+          tenantId: currentTenantId,
+          alunoId: id,
+        }),
+        listFormasPagamentoService({
+          tenantId: currentTenantId,
+          apenasAtivas: false,
+        }),
+        listConveniosService(),
+        listPagamentosService({
+          tenantId: currentTenantId,
+          alunoId: id,
+          page: 0,
+          size: 80,
+        }),
       ]);
-      setAluno(alunoAtual);
+      setAluno(resolved.aluno);
       setMatriculas(ms.filter((m) => m.alunoId === id));
       setPlanos(ps);
-      setPagamentos([]);
+      setPagamentos(pags);
       setPresencas(pres);
       setFormasPagamento(fps);
       setConvenios(cvs);
-      void listPagamentos({
-        alunoId: id,
-        page: 0,
-        size: 80,
-      })
-        .then((pags) => {
-          setPagamentos(pags);
-        })
-        .catch(() => {
-          setPagamentos([]);
-        });
     } catch (error) {
       setLoadError(normalizeErrorMessage(error));
       setAluno(null);
     } finally {
       setLoading(false);
     }
-  }, [ensureTenantContext, params?.id]);
+  }, [params?.id, setTenant, tenantId, tenantResolved, tenants]);
 
   useEffect(() => {
-    if (!params?.id) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!params?.id || !tenantResolved) return;
     void reload();
-  }, [params?.id, reload]);
+  }, [params?.id, reload, tenantResolved]);
 
   const planoAtivo = useMemo(() => {
     return matriculas.find((m) => m.status === "ATIVA");
@@ -246,7 +252,11 @@ export default function ClienteDetalhePage() {
           })()}
           onClose={() => setRecebendo(null)}
           onConfirm={async (data) => {
-            await receberPagamento(recebendo.id, data);
+            await receberPagamentoService({
+              tenantId: aluno.tenantId,
+              id: recebendo.id,
+              data,
+            });
             setRecebendo(null);
             await reload();
           }}
@@ -267,10 +277,14 @@ export default function ClienteDetalhePage() {
             ...payload,
             dataRegistro: new Date().toISOString().slice(0, 19),
           };
-          await updateAluno(aluno.id, {
-            status: "SUSPENSO",
-            suspensao: payload,
-            suspensoes: [registro, ...(aluno.suspensoes ?? [])],
+          await updateAlunoService({
+            tenantId: aluno.tenantId,
+            id: aluno.id,
+            data: {
+              status: "SUSPENSO",
+              suspensao: payload,
+              suspensoes: [registro, ...(aluno.suspensoes ?? [])],
+            },
           });
           setSuspenderOpen(false);
           await reload();
@@ -344,7 +358,12 @@ export default function ClienteDetalhePage() {
                 setLiberarAcessoErro("");
                 setLiberandoAcesso(true);
                 try {
-                  const requestId = await liberarAcessoCatraca(aluno.id, reason);
+                  const requestId = await liberarAcessoCatracaService({
+                    tenantId: aluno.tenantId,
+                    alunoId: aluno.id,
+                    justificativa: reason,
+                    issuedBy: "frontend",
+                  });
                   setLiberarAcessoOpen(false);
                   setLiberarAcessoJustificativa("");
                   setLiberarAcessoInfo(`Comando de liberação enviado com sucesso (requestId: ${requestId}).`);
@@ -380,9 +399,13 @@ export default function ClienteDetalhePage() {
           onNovaVenda={() => setNovaMatriculaOpen(true)}
           onSuspender={() => setSuspenderOpen(true)}
           onReativar={async () => {
-            await updateAluno(aluno.id, {
-              status: "INATIVO",
-              suspensao: undefined,
+            await updateAlunoService({
+              tenantId: aluno.tenantId,
+              id: aluno.id,
+              data: {
+                status: "INATIVO",
+                suspensao: undefined,
+              },
             });
             await reload();
           }}

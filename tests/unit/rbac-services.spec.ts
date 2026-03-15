@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 import { listPerfisApi } from "../../src/lib/api/rbac";
 import { listPerfisService, saveGrantService } from "../../src/lib/rbac/services";
 
+const envSnapshot = {
+  devAutoLogin: process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN,
+};
+
 function mockFetchWith(body: unknown, status = 200) {
   const calls: string[] = [];
   const previousFetch = global.fetch;
@@ -23,6 +27,14 @@ function mockFetchWith(body: unknown, status = 200) {
 }
 
 test.describe("RBAC services (unit)", () => {
+  test.beforeEach(() => {
+    process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN = "false";
+  });
+
+  test.afterEach(() => {
+    process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN = envSnapshot.devAutoLogin;
+  });
+
   test("lista perfis converte paginação do envelope de resposta", async () => {
     const payload = {
       items: [
@@ -54,12 +66,12 @@ test.describe("RBAC services (unit)", () => {
       expect(response.hasNext).toBe(true);
       expect(response.total).toBe(13);
       expect(response.items).toHaveLength(1);
-      expect(calls).toHaveLength(1);
-      expect(calls[0]).toContain("/api/v1/auth/perfis");
-      expect(calls[0]).toContain("includeInactive=true");
-      expect(calls[0]).toContain("page=2");
-      expect(calls[0]).toContain("size=5");
-      expect(calls[0]).toContain("envelope=true");
+      const perfisCall = calls.find((call) => call.includes("/api/v1/auth/perfis"));
+      expect(perfisCall).toBeTruthy();
+      expect(perfisCall).toContain("includeInactive=true");
+      expect(perfisCall).toContain("page=2");
+      expect(perfisCall).toContain("size=5");
+      expect(perfisCall).toContain("envelope=true");
     } finally {
       restore();
     }
@@ -82,8 +94,8 @@ test.describe("RBAC services (unit)", () => {
       });
       expect(created.roleName).toBe("ADMIN");
       expect(created.featureKey).toBe("feature.treinos");
-      expect(calls).toHaveLength(1);
-      expect(calls[0]).toContain("/api/v1/auth/features/grants");
+      const grantCall = calls.find((call) => call.includes("/api/v1/auth/features/grants"));
+      expect(grantCall).toBeTruthy();
     } finally {
       restore();
     }

@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { getStore } from "@/lib/mock/store";
+import { useEffect, useState } from "react";
+import { listAcademiasApi } from "@/lib/api/contexto-unidades";
+import type { Academia } from "@/lib/types";
 import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant-theme";
+import { TENANT_CONTEXT_UPDATED_EVENT } from "@/lib/tenant-context";
+import { useTenantContext } from "@/hooks/use-session-context";
 
-function applyThemeVars() {
-  const store = getStore();
-  const tenant = store.tenants.find((item) => item.id === store.currentTenantId) ?? store.tenant;
-  const academiaId = tenant?.academiaId ?? tenant?.groupId;
-  const academia = store.academias.find((item) => item.id === academiaId) ?? store.academias[0];
+function applyThemeVars(academia?: Academia) {
   const root = document.documentElement;
   const theme = resolveTenantTheme(academia);
 
@@ -43,19 +42,63 @@ function applyThemeVars() {
   root.style.setProperty("--color-surface", theme.surface);
   root.style.setProperty("--color-surface2", theme.secondary);
 
-  document.title = `${getTenantAppName(academia)} – Gestão de Academia`;
+  document.title = `${getTenantAppName(academia)} - Gestão de Academia`;
 }
 
 export function TenantThemeSync() {
+  const { tenantId, tenant } = useTenantContext();
+  const [academia, setAcademia] = useState<Academia | undefined>(undefined);
+
   useEffect(() => {
-    applyThemeVars();
-    window.addEventListener("academia-store-updated", applyThemeVars);
-    window.addEventListener("storage", applyThemeVars);
+    let active = true;
+
+    async function loadAcademia() {
+      if (!tenantId) {
+        if (!active) return;
+        setAcademia(undefined);
+        return;
+      }
+
+      try {
+        const academias = await listAcademiasApi(tenantId);
+        if (!active) return;
+        setAcademia(academias[0]);
+      } catch {
+        if (!active) return;
+        setAcademia(
+          tenant
+            ? {
+                id: tenant.academiaId ?? tenant.groupId ?? tenant.id,
+                nome: tenant.nome,
+                branding: tenant.branding,
+                ativo: tenant.ativo,
+              }
+            : undefined
+        );
+      }
+    }
+
+    void loadAcademia();
+
     return () => {
-      window.removeEventListener("academia-store-updated", applyThemeVars);
-      window.removeEventListener("storage", applyThemeVars);
+      active = false;
     };
-  }, []);
+  }, [tenant, tenantId]);
+
+  useEffect(() => {
+    applyThemeVars(academia);
+
+    function handleUpdate() {
+      applyThemeVars(academia);
+    }
+
+    window.addEventListener(TENANT_CONTEXT_UPDATED_EVENT, handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener(TENANT_CONTEXT_UPDATED_EVENT, handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, [academia]);
 
   return null;
 }

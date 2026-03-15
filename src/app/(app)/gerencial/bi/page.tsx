@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
 import { BI_KPI_CATALOG, buildBiExportCsv, resolveBiScopeAccess } from "@/lib/bi/analytics";
-import { getBiOperacionalSnapshot, listAcademias, listTenants } from "@/lib/mock/services";
+import { getBusinessMonthRange } from "@/lib/business-date";
+import { getBiOperacionalSnapshotApi } from "@/lib/api/bi";
+import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
 import type { Academia, BiEscopo, BiOperationalSnapshot, BiSegmento, Tenant } from "@/lib/types";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
@@ -26,13 +28,7 @@ const SEGMENTO_OPTIONS: Array<{ value: BiSegmento; label: string }> = [
 ];
 
 function monthRangeFromNow() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`,
-    end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`,
-  };
+  return getBusinessMonthRange();
 }
 
 function formatBRL(value: number) {
@@ -104,7 +100,7 @@ export default function BiOperacionalPage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadFilters = useCallback(async () => {
-    const [academiasResponse, tenantsResponse] = await Promise.all([listAcademias(), listTenants()]);
+    const [academiasResponse, tenantsResponse] = await Promise.all([listAcademiasApi(), listUnidadesApi()]);
     setAcademias(academiasResponse);
     setTenants(tenantsResponse);
     setSelectedTenantId((current) => current || tenantContext.tenantId || tenantsResponse[0]?.id || "");
@@ -120,9 +116,9 @@ export default function BiOperacionalPage() {
     setLoading(true);
     setError(null);
     try {
-      const nextSnapshot = await getBiOperacionalSnapshot({
+      const nextSnapshot = await getBiOperacionalSnapshotApi({
         scope,
-        tenantId: scope === "UNIDADE" ? selectedTenantId || tenantContext.tenantId : selectedTenantId || tenantContext.tenantId,
+        tenantId: selectedTenantId || tenantContext.tenantId,
         academiaId: selectedAcademiaId,
         startDate,
         endDate,
@@ -156,18 +152,6 @@ export default function BiOperacionalPage() {
       void loadSnapshot();
     }
   }, [loadSnapshot, tenantContext.tenantResolved]);
-
-  useEffect(() => {
-    function handleStoreUpdate() {
-      void loadSnapshot();
-    }
-    window.addEventListener("academia-store-updated", handleStoreUpdate);
-    window.addEventListener("storage", handleStoreUpdate);
-    return () => {
-      window.removeEventListener("academia-store-updated", handleStoreUpdate);
-      window.removeEventListener("storage", handleStoreUpdate);
-    };
-  }, [loadSnapshot]);
 
   const visibleTenantOptions = useMemo(() => {
     if (scope === "UNIDADE") {

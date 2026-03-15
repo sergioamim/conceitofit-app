@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { getBusinessTodayIso } from "@/lib/business-date";
 import type { FormaPagamento, Pagamento, TipoFormaPagamento } from "@/lib/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,7 @@ export function ReceberPagamentoModal({
   }) => void;
 }) {
   const [dataPagamento, setDataPagamento] = useState(
-    new Date().toISOString().split("T")[0]
+    getBusinessTodayIso()
   );
   const [formaPagamento, setFormaPagamento] = useState<TipoFormaPagamento | "">("");
   const [observacoes, setObservacoes] = useState("");

@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { listPagamentos } from "@/lib/mock/services";
-import { isRealApiEnabled } from "@/lib/api/http";
-import type { Aluno, Pagamento } from "@/lib/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getBusinessMonthRange } from "@/lib/business-date";
+import { listContasReceberOperacionais, type PagamentoComAluno } from "@/lib/financeiro/recebimentos";
+import { useTenantContext } from "@/hooks/use-session-context";
+import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/shared/status-badge";
 
-type PagamentoWithAluno = Pagamento & { aluno?: Aluno };
+type PagamentoWithAluno = PagamentoComAluno & { aluno?: Aluno };
 type StatusFiltro = "TODOS" | "PENDENTE" | "VENCIDO" | "PAGO" | "CANCELADO" | "EM_ABERTO";
 
 function formatBRL(value: number) {
@@ -21,16 +22,11 @@ function formatDate(value: string) {
 }
 
 function monthRangeFromNow() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`,
-    end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`,
-  };
+  return getBusinessMonthRange();
 }
 
 export default function ContasReceberPage() {
+  const { tenantId } = useTenantContext();
   const initialRange = monthRangeFromNow();
   const [loading, setLoading] = useState(true);
   const [pagamentos, setPagamentos] = useState<PagamentoWithAluno[]>([]);
@@ -39,32 +35,27 @@ export default function ContasReceberPage() {
   const [startDate, setStartDate] = useState(initialRange.start);
   const [endDate, setEndDate] = useState(initialRange.end);
 
-  async function load() {
+  const load = useCallback(async () => {
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const data = await listPagamentos();
+      const data = await listContasReceberOperacionais({
+        tenantId,
+        startDate,
+        endDate,
+      });
       setPagamentos(data);
     } finally {
       setLoading(false);
     }
-  }
+  }, [endDate, startDate, tenantId]);
 
   useEffect(() => {
-    load();
-  }, []);
-
-  useEffect(() => {
-    if (isRealApiEnabled()) return;
-    function handleUpdate() {
-      load();
-    }
-    window.addEventListener("academia-store-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-    return () => {
-      window.removeEventListener("academia-store-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
-  }, []);
+    void load();
+  }, [load]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();

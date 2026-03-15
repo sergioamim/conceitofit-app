@@ -3,20 +3,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  listCartoesCliente,
-  listBandeirasCartao,
-  createCartaoCliente,
-  deleteCartaoCliente,
-  setCartaoPadrao,
-  getAluno,
-  getCurrentTenant,
-  listMatriculas,
-  listPlanos,
-  listPagamentos,
-  setCurrentTenant,
-  updateAluno,
-} from "@/lib/mock/services";
-import { getStore } from "@/lib/mock/store";
+  createCartaoClienteService,
+  deleteCartaoClienteService,
+  listBandeirasCartaoService,
+  listCartoesClienteService,
+  listMatriculasByAlunoService,
+  listPagamentosService,
+  listPlanosService,
+  resolveAlunoTenantService,
+  setCartaoPadraoService,
+  updateAlunoService,
+} from "@/lib/comercial/runtime";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { CartaoCliente, BandeiraCartao, Aluno, Matricula, Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { NovoCartaoModal } from "@/components/shared/novo-cartao-modal";
@@ -42,6 +40,7 @@ function cardGradient(name?: string) {
 export default function CartoesClientePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { tenantId, tenantResolved, tenants, setTenant } = useTenantContext();
   const [cartoes, setCartoes] = useState<CartaoCliente[]>([]);
   const [bandeiras, setBandeiras] = useState<BandeiraCartao[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -54,26 +53,21 @@ export default function CartoesClientePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const ensureTenantContext = useCallback(async (alunoId: string) => {
-    const current = await getCurrentTenant();
-    const cached = getStore().alunos.find((item) => item.id === alunoId);
-    if (cached?.tenantId && cached.tenantId !== current.id) {
-      await setCurrentTenant(cached.tenantId);
-    }
-  }, []);
-
   const load = useCallback(async () => {
     const id = params?.id;
-    if (!id) {
+    if (!id || !tenantResolved) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setLoadError(null);
     try {
-      await ensureTenantContext(id);
-      const alunoAtual = await getAluno(id);
-      if (!alunoAtual) {
+      const resolved = await resolveAlunoTenantService({
+        alunoId: id,
+        tenantId,
+        tenantIds: tenants.map((item) => item.id),
+      });
+      if (!resolved) {
         setAluno(null);
         setCartoes([]);
         setMatriculas([]);
@@ -81,42 +75,47 @@ export default function CartoesClientePage() {
         setPendenteFinanceiro(false);
         return;
       }
-      const [cards, brands, ms, ps] = await Promise.all([
-        listCartoesCliente(id),
-        listBandeirasCartao({ apenasAtivas: true }),
-        listMatriculas(),
-        listPlanos(),
+      if (resolved.tenantId !== tenantId) {
+        await setTenant(resolved.tenantId);
+      }
+      const currentTenantId = resolved.tenantId;
+      const [cards, brands, ms, ps, pags] = await Promise.all([
+        listCartoesClienteService({ tenantId: currentTenantId, alunoId: id }),
+        listBandeirasCartaoService({ apenasAtivas: true }),
+        listMatriculasByAlunoService({
+          tenantId: currentTenantId,
+          alunoId: id,
+          page: 0,
+          size: 200,
+        }),
+        listPlanosService({ tenantId: currentTenantId, apenasAtivos: false }),
+        listPagamentosService({
+          tenantId: currentTenantId,
+          alunoId: id,
+          page: 0,
+          size: 40,
+        }),
       ]);
       setCartoes(cards);
       setBandeiras(brands);
-      setAluno(alunoAtual);
+      setAluno(resolved.aluno);
       setMatriculas(ms.filter((m) => m.alunoId === id));
       setPlanos(ps);
-      setPendenteFinanceiro(false);
-      void listPagamentos({
-        alunoId: id,
-        page: 0,
-        size: 40,
-      })
-        .then((pags) => {
-          setPendenteFinanceiro(
-            pags.some((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
-          );
-        })
-        .catch(() => {
-          setPendenteFinanceiro(false);
-        });
+      setPendenteFinanceiro(
+        pags.some((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
+      );
     } catch (error) {
       setLoadError(normalizeErrorMessage(error));
       setAluno(null);
     } finally {
       setLoading(false);
     }
-  }, [ensureTenantContext, params?.id]);
+  }, [params?.id, setTenant, tenantId, tenantResolved, tenants]);
 
   useEffect(() => {
+    if (!tenantResolved) return;
     void load();
-  }, [load]);
+  }, [load, tenantResolved]);
 
   const planoAtivo = useMemo(
     () => matriculas.find((m) => m.status === "ATIVA"),
@@ -163,10 +162,14 @@ export default function CartoesClientePage() {
             ...payload,
             dataRegistro: new Date().toISOString().slice(0, 19),
           };
-          await updateAluno(aluno.id, {
-            status: "SUSPENSO",
-            suspensao: payload,
-            suspensoes: [registro, ...(aluno.suspensoes ?? [])],
+          await updateAlunoService({
+            tenantId: aluno.tenantId,
+            id: aluno.id,
+            data: {
+              status: "SUSPENSO",
+              suspensao: payload,
+              suspensoes: [registro, ...(aluno.suspensoes ?? [])],
+            },
           });
           setSuspenderOpen(false);
           await load();
@@ -179,13 +182,16 @@ export default function CartoesClientePage() {
         onSave={async (data) => {
           const id = params?.id;
           if (!id) return;
-          await createCartaoCliente({
+          await createCartaoClienteService({
+            tenantId: aluno.tenantId,
             alunoId: id,
-            bandeiraId: data.bandeiraId,
-            titular: data.titular,
-            ultimos4: data.ultimos4,
-            validade: data.validade,
-            cpfTitular: data.cpfTitular,
+            data: {
+              bandeiraId: data.bandeiraId,
+              titular: data.titular,
+              ultimos4: data.ultimos4,
+              validade: data.validade,
+              cpfTitular: data.cpfTitular,
+            },
           });
           setModalOpen(false);
           await load();
@@ -209,9 +215,13 @@ export default function CartoesClientePage() {
         onNovaVenda={() => setNovaMatriculaOpen(true)}
         onSuspender={() => setSuspenderOpen(true)}
         onReativar={async () => {
-          await updateAluno(aluno.id, {
-            status: "INATIVO",
-            suspensao: undefined,
+          await updateAlunoService({
+            tenantId: aluno.tenantId,
+            id: aluno.id,
+            data: {
+              status: "INATIVO",
+              suspensao: undefined,
+            },
           });
           await load();
         }}
@@ -277,7 +287,7 @@ export default function CartoesClientePage() {
                       size="sm"
                       className="border-border"
                       onClick={async () => {
-                        await setCartaoPadrao(c.id);
+                        await setCartaoPadraoService({ tenantId: aluno.tenantId, id: c.id });
                         await load();
                       }}
                     >
@@ -290,7 +300,7 @@ export default function CartoesClientePage() {
                     className="border-border text-gym-danger hover:text-gym-danger"
                     onClick={async () => {
                       if (!confirm("Remover este cartão?")) return;
-                      await deleteCartaoCliente(c.id);
+                      await deleteCartaoClienteService({ tenantId: aluno.tenantId, id: c.id });
                       await load();
                     }}
                   >

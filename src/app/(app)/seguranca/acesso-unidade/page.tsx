@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { TableCell } from "@/components/ui/table";
-import { listTenants } from "@/lib/mock/services";
+import { SecurityActiveBadge } from "@/components/security/security-badges";
+import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import {
   linkUserPerfilApi,
   listPerfisApi,
@@ -62,7 +63,7 @@ export default function AcessoUnidadePage() {
   }, [activePerfis]);
 
   const loadTenants = useCallback(async () => {
-    const loaded = await listTenants();
+    const loaded = await listUnidadesApi();
     const deduped = Array.from(new Map(loaded.map((item) => [item.id, item] as const)).values());
     setTenants(deduped);
     setTenantId((current) => current || deduped[0]?.id || "");
@@ -337,7 +338,13 @@ export default function AcessoUnidadePage() {
             renderCells={(user) => (
               <>
                 <TableCell className="px-3 py-2">{user.fullName || user.name || user.email || "Funcionário"}</TableCell>
-                <TableCell className="px-3 py-2">{hasInternalAccess ? "Ativo" : "Sem acesso"}</TableCell>
+                <TableCell className="px-3 py-2">
+                  <SecurityActiveBadge
+                    active={hasInternalAccess}
+                    activeLabel="Ativo"
+                    inactiveLabel="Sem acesso"
+                  />
+                </TableCell>
                 <TableCell className="px-3 py-2">
                   <Button
                     type="button"

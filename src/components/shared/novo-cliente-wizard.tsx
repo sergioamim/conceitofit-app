@@ -3,8 +3,14 @@
 import { useEffect, useState } from "react";
 import React from "react";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2 } from "lucide-react";
-import { listPlanos, listFormasPagamento, criarAlunoComMatricula, criarAluno } from "@/lib/mock/services";
-import type { CriarAlunoComMatriculaResponse } from "@/lib/mock/services";
+import { getBusinessTodayIso } from "@/lib/business-date";
+import {
+  createAlunoComMatriculaService,
+  createAlunoService,
+  listFormasPagamentoService,
+  listPlanosService,
+} from "@/lib/comercial/runtime";
+import { useTenantContext } from "@/hooks/use-session-context";
 import type { Aluno, FormaPagamento, Plano, Sexo, TipoFormaPagamento } from "@/lib/types";
 import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
@@ -27,6 +33,8 @@ function formatBRL(v: number) {
 // ─── Step indicator ────────────────────────────────────────────────────────
 
 const STEP_LABELS = ["Dados", "Plano", "Pagamento"];
+
+type CriarAlunoComMatriculaResponse = Awaited<ReturnType<typeof createAlunoComMatriculaService>>;
 
 function StepDot({ step, current }: { step: number; current: number }) {
   const done = step < current;
@@ -505,6 +513,7 @@ export function NovoClienteWizard({
   onClose: () => void;
   onDone?: (created?: Aluno, opts?: CreateOnlyOptions) => void | Promise<void>;
 }) {
+  const { tenantId, tenantResolved } = useTenantContext();
   const [step, setStep] = useState(1);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
@@ -519,7 +528,7 @@ export function NovoClienteWizard({
     observacoesMedicas: "", foto: "",
   });
   const [pagamento, setPagamento] = useState<{ dataInicio: string; formaPagamento: TipoFormaPagamento | ""; desconto: string }>({
-    dataInicio: new Date().toISOString().split("T")[0],
+    dataInicio: getBusinessTodayIso(),
     formaPagamento: "",
     desconto: "",
   });
@@ -527,12 +536,20 @@ export function NovoClienteWizard({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
-    Promise.all([listPlanos(), listFormasPagamento()]).then(([pls, fps]) => {
-      setPlanos(pls);
-      setFormas(fps);
-    });
-  }, [open]);
+    if (!open || !tenantResolved || !tenantId) return;
+    Promise.all([
+      listPlanosService({ tenantId, apenasAtivos: true }),
+      listFormasPagamentoService({ tenantId }),
+    ])
+      .then(([pls, fps]) => {
+        setPlanos(pls);
+        setFormas(fps);
+      })
+      .catch(() => {
+        setPlanos([]);
+        setFormas([]);
+      });
+  }, [open, tenantId, tenantResolved]);
 
   function reset() {
     setStep(1);
@@ -547,7 +564,7 @@ export function NovoClienteWizard({
       observacoesMedicas: "", foto: "",
     });
     setPagamento({
-      dataInicio: new Date().toISOString().split("T")[0],
+      dataInicio: getBusinessTodayIso(),
       formaPagamento: "",
       desconto: "",
     });
@@ -566,12 +583,62 @@ export function NovoClienteWizard({
       return;
     }
     if (step === 3) {
-      if (!pagamento.formaPagamento) return;
+      if (!tenantId || !pagamento.formaPagamento) return;
       const plano = planos.find((p) => p.id === selectedPlano);
       if (!plano) return;
       setLoading(true);
       try {
-        const resp = await criarAlunoComMatricula({
+        const resp = await createAlunoComMatriculaService({
+          tenantId,
+          data: {
+            nome: dados.nome,
+            email: normalizeDraftEmail(dados.nome, dados.cpf, dados.email),
+            telefone: dados.telefone,
+            telefoneSec: dados.telefoneSec || undefined,
+            cpf: dados.cpf,
+            rg: dados.rg || undefined,
+            dataNascimento: dados.dataNascimento || "2000-01-01",
+            sexo: (dados.sexo || "OUTRO") as Sexo,
+            endereco: dados.enderecoCep ? {
+              cep: dados.enderecoCep,
+              logradouro: dados.enderecoLogradouro,
+              numero: dados.enderecoNumero,
+              complemento: dados.enderecoComplemento,
+              bairro: dados.enderecoBairro,
+              cidade: dados.enderecoCidade,
+              estado: dados.enderecoEstado,
+            } : undefined,
+            contatoEmergencia: dados.emergenciaNome ? {
+              nome: dados.emergenciaNome,
+              telefone: dados.emergenciaTelefone,
+              parentesco: dados.emergenciaParentesco,
+            } : undefined,
+            observacoesMedicas: dados.observacoesMedicas || undefined,
+            foto: dados.foto || undefined,
+            planoId: selectedPlano,
+            dataInicio: pagamento.dataInicio,
+            formaPagamento: pagamento.formaPagamento as TipoFormaPagamento,
+            desconto: parseFloat(pagamento.desconto) || 0,
+          },
+        });
+        setResult(resp);
+        setStep(4);
+        if (onDone) {
+          void onDone(resp.aluno);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  async function handleCreateOnly(options?: CreateOnlyOptions) {
+    if (!tenantId || !dados.nome || !dados.telefone || !dados.cpf) return;
+    setLoading(true);
+    try {
+      const created = await createAlunoService({
+        tenantId,
+        data: {
           nome: dados.nome,
           email: normalizeDraftEmail(dados.nome, dados.cpf, dados.email),
           telefone: dados.telefone,
@@ -596,51 +663,7 @@ export function NovoClienteWizard({
           } : undefined,
           observacoesMedicas: dados.observacoesMedicas || undefined,
           foto: dados.foto || undefined,
-          planoId: selectedPlano,
-          dataInicio: pagamento.dataInicio,
-          formaPagamento: pagamento.formaPagamento as TipoFormaPagamento,
-          desconto: parseFloat(pagamento.desconto) || 0,
-        });
-        setResult(resp);
-        setStep(4);
-        if (onDone) {
-          void onDone(resp.aluno);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-  }
-
-  async function handleCreateOnly(options?: CreateOnlyOptions) {
-    if (!dados.nome || !dados.telefone || !dados.cpf) return;
-    setLoading(true);
-    try {
-      const created = await criarAluno({
-        nome: dados.nome,
-        email: normalizeDraftEmail(dados.nome, dados.cpf, dados.email),
-        telefone: dados.telefone,
-        telefoneSec: dados.telefoneSec || undefined,
-        cpf: dados.cpf,
-        rg: dados.rg || undefined,
-        dataNascimento: dados.dataNascimento || "2000-01-01",
-        sexo: (dados.sexo || "OUTRO") as Sexo,
-        endereco: dados.enderecoCep ? {
-          cep: dados.enderecoCep,
-          logradouro: dados.enderecoLogradouro,
-          numero: dados.enderecoNumero,
-          complemento: dados.enderecoComplemento,
-          bairro: dados.enderecoBairro,
-          cidade: dados.enderecoCidade,
-          estado: dados.enderecoEstado,
-        } : undefined,
-        contatoEmergencia: dados.emergenciaNome ? {
-          nome: dados.emergenciaNome,
-          telefone: dados.emergenciaTelefone,
-          parentesco: dados.emergenciaParentesco,
-        } : undefined,
-        observacoesMedicas: dados.observacoesMedicas || undefined,
-        foto: dados.foto || undefined,
+        },
       });
       if (onDone) {
         await onDone(created, options);

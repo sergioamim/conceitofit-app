@@ -1,0 +1,156 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - img "Conceito.Fit" [ref=e7]
+          - generic [ref=e8]: Conceito.Fit
+          - generic [ref=e9]:
+            - generic [ref=e10]:
+              - text: Academia
+              - paragraph [ref=e11]: Academia
+            - generic [ref=e12]:
+              - text: Unidade
+              - paragraph [ref=e13]: Unidade ativa
+        - button "Recolher menu" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+      - navigation [ref=e18]:
+        - paragraph [ref=e19]: Principal
+        - link "Clientes" [ref=e20] [cursor=pointer]:
+          - /url: /clientes
+          - img [ref=e21]
+          - text: Clientes
+        - link "Contratos" [ref=e26] [cursor=pointer]:
+          - /url: /matriculas
+          - img [ref=e27]
+          - text: Contratos
+        - link "Dashboard" [ref=e30] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e31]
+          - text: Dashboard
+        - link "Grade" [ref=e36] [cursor=pointer]:
+          - /url: /grade
+          - img [ref=e37]
+          - text: Grade
+        - link "Pagamentos" [ref=e39] [cursor=pointer]:
+          - /url: /pagamentos
+          - img [ref=e40]
+          - text: Pagamentos
+        - link "Planos" [ref=e42] [cursor=pointer]:
+          - /url: /planos
+          - img [ref=e43]
+          - text: Planos
+        - link "Prospects" [ref=e45] [cursor=pointer]:
+          - /url: /prospects
+          - img [ref=e46]
+          - text: Prospects
+        - link "Reservas" [ref=e49] [cursor=pointer]:
+          - /url: /reservas
+          - img [ref=e50]
+          - text: Reservas
+        - link "Vendas" [ref=e52] [cursor=pointer]:
+          - /url: /vendas
+          - img [ref=e53]
+          - text: Vendas
+        - button "Treinos" [ref=e58] [cursor=pointer]:
+          - generic [ref=e59]:
+            - img [ref=e60]
+            - text: Treinos
+          - img [ref=e62]
+        - button "CRM" [ref=e65] [cursor=pointer]:
+          - generic [ref=e66]:
+            - img [ref=e67]
+            - text: CRM
+          - img [ref=e71]
+        - button "Gerencial" [ref=e74] [cursor=pointer]:
+          - generic [ref=e75]:
+            - img [ref=e76]
+            - text: Gerencial
+          - img [ref=e79]
+        - button "Administrativo" [ref=e82] [cursor=pointer]:
+          - generic [ref=e83]:
+            - img [ref=e84]
+            - text: Administrativo
+          - img [ref=e87]
+      - button "Menu do usuário" [ref=e91] [cursor=pointer]:
+        - generic [ref=e92]: S
+        - generic [ref=e93]:
+          - paragraph [ref=e94]: Sergio
+          - paragraph [ref=e95]: Administrador
+    - main [ref=e96]:
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - img [ref=e100]
+          - generic [ref=e104]:
+            - paragraph [ref=e105]: Unidade ativa
+            - paragraph [ref=e106]: Carregando...
+          - combobox [disabled] [ref=e107]:
+            - generic: Selecionar unidade
+            - img
+        - generic [ref=e108]:
+          - img [ref=e109]
+          - textbox "Buscar cliente por nome ou CPF" [ref=e113]
+          - button "Buscar" [ref=e114] [cursor=pointer]
+      - generic [ref=e116]:
+        - generic [ref=e117]:
+          - generic [ref=e118]:
+            - generic [ref=e119]:
+              - heading "Treino Padrão" [level=1] [ref=e120]
+              - generic [ref=e121]: 0 resultado(s)
+            - paragraph [ref=e122]: Biblioteca administrativa de templates reutilizáveis para a unidade Unidade ativa, com busca rápida, ações operacionais e ordenação por atualização mais recente.
+            - button "Saiba mais" [ref=e123] [cursor=pointer]
+          - generic [ref=e124]:
+            - link "Treinos atribuídos" [ref=e125] [cursor=pointer]:
+              - /url: /treinos/atribuidos
+              - img
+              - text: Treinos atribuídos
+            - button "Criar treino padrão" [ref=e126] [cursor=pointer]:
+              - img
+              - text: Criar treino padrão
+        - generic [ref=e127]:
+          - generic [ref=e129]:
+            - paragraph [ref=e130]: Fila de revisão
+            - paragraph [ref=e131]: "0"
+            - paragraph [ref=e132]: Templates aguardando triagem ou publicação
+          - generic [ref=e134]:
+            - paragraph [ref=e135]: Publicados na página
+            - paragraph [ref=e136]: "0"
+            - paragraph [ref=e137]: Templates prontos para atribuição nesta janela
+          - generic [ref=e139]:
+            - paragraph [ref=e140]: Pendências técnicas
+            - paragraph [ref=e141]: "0"
+            - paragraph [ref=e142]: Itens com bloqueio de publicação ou revisão
+          - generic [ref=e144]:
+            - paragraph [ref=e145]: Clientes impactados
+            - paragraph [ref=e146]: "0"
+            - paragraph [ref=e147]: 0 job(s) de atribuição visíveis na página
+        - generic [ref=e148]:
+          - generic [ref=e150]:
+            - generic [ref=e151]:
+              - generic [ref=e152]: Listagem operacional
+              - paragraph [ref=e153]: Busca principal, contador de resultados e ações rápidas para operar a biblioteca de treino padrão.
+            - generic [ref=e155]:
+              - img
+              - textbox "Buscar template por nome ou professor" [ref=e156]:
+                - /placeholder: Buscar por nome do template ou professor
+          - generic [ref=e158]:
+            - table [ref=e161]:
+              - rowgroup [ref=e162]:
+                - row "Nome do treino Governança Criado por Ações" [ref=e163]:
+                  - columnheader "Nome do treino" [ref=e164]
+                  - columnheader "Governança" [ref=e165]
+                  - columnheader "Criado por" [ref=e166]
+                  - columnheader "Ações" [ref=e167]
+              - rowgroup [ref=e168]:
+                - row "Nenhum treino padrão encontrado" [ref=e169]:
+                  - cell "Nenhum treino padrão encontrado" [ref=e170]
+            - generic [ref=e171]:
+              - paragraph [ref=e172]: Mostrando 0 até 0 de 0 templates · página 1 de 1
+              - generic [ref=e173]:
+                - button "Anterior" [disabled]
+                - button "Próxima" [disabled]
+    - button "Abrir debug de sessao" [ref=e174] [cursor=pointer]:
+      - img
+  - button "Open Next.js Dev Tools" [ref=e180] [cursor=pointer]:
+    - img [ref=e181]
+  - alert [ref=e184]

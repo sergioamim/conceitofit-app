@@ -6,9 +6,12 @@ import { Activity, RefreshCw, Siren, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  listIntegracoesOperacionaisApi,
+  reprocessarIntegracaoOperacionalApi,
+} from "@/lib/api/admin-financeiro";
 import { INTEGRACAO_STATUS_LABEL, summarizeIntegracoesOperacionais } from "@/lib/admin-financeiro";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
-import { listIntegracoesOperacionais, reprocessarIntegracaoOperacional } from "@/lib/mock/services";
 import type { IntegracaoOperacional, IntegracaoOperacionalStatus } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
@@ -48,7 +51,7 @@ export default function MonitoramentoIntegracoesPage() {
     setLoading(true);
     setError(null);
     try {
-      setIntegracoes(await listIntegracoesOperacionais({ tenantId }));
+      setIntegracoes(await listIntegracoesOperacionaisApi({ tenantId }));
     } catch (loadError) {
       setError(normalizeErrorMessage(loadError));
     } finally {
@@ -74,11 +77,12 @@ export default function MonitoramentoIntegracoesPage() {
   const resumo = useMemo(() => summarizeIntegracoesOperacionais(filtered), [filtered]);
 
   async function handleReprocess(id: string) {
+    if (!tenantId) return;
     setActionLoadingId(id);
     setError(null);
     setSuccess(null);
     try {
-      const updated = await reprocessarIntegracaoOperacional(id);
+      const updated = await reprocessarIntegracaoOperacionalApi({ tenantId, id });
       setIntegracoes((current) => current.map((item) => (item.id === updated.id ? updated : item)));
       setSuccess("Integração reprocessada com sucesso.");
     } catch (actionError) {
