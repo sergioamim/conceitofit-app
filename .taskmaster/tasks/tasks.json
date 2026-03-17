@@ -1,8 +1,8 @@
 {
   "master": {
-    "tasks": [
+  "tasks": [
       {
-        "id": 1,
+        "id": "1",
         "title": "Alinhar contrato HTTP e camada de consumo da API",
         "description": "Revisar clients, services, schemas e tratamento de erro para refletir a API real no web.",
         "details": "Inclui normalizacao de fetchers, contratos tipados, estados de erro e consumo consistente do backend.",
@@ -85,7 +85,7 @@
         "updatedAt": "2026-03-10T23:59:00.000Z"
       },
       {
-        "id": 2,
+        "id": "2",
         "title": "Consolidar fluxo web de contratos, matricula e venda",
         "description": "Ajustar telas administrativas e comerciais para o fluxo canonico de contratos, venda e matricula.",
         "details": "Abrange jornada de venda, assinatura administrativa, estados de contrato e convergencia com o backend.",
@@ -161,7 +161,7 @@
         "expansionPrompt": "Gerar subtarefas para: mapear telas e serviços do fluxo atual (vendas, matrículas, planos), alinhar contratos/estados com APIs existentes (src/lib/api/vendas.ts e catálogo), ajustar UI/validações e navegação, e fechar cobertura de testes end-to-end do fluxo comercial."
       },
       {
-        "id": 3,
+        "id": "3",
         "title": "Corrigir contexto, sessao e experiencia multiunidade",
         "description": "Tornar consistente a troca de unidade, contexto ativo, permissoes e navegacao por academia/unidade.",
         "details": "Inclui cabecalhos de contexto, bootstrap da sessao e guardas de navegacao multiunidade.",
@@ -224,7 +224,7 @@
         "expansionPrompt": "Divida em: auditoria de sessão/localStorage e eventos de store, implementação de troca de unidade usando APIs de contexto (src/lib/api/contexto-unidades.ts, src/lib/api/auth.ts), alinhamento de permissões e guardas de navegação, e testes de refresh/reentrada e troca de unidade."
       },
       {
-        "id": 4,
+        "id": "4",
         "title": "Construir CRM operacional com automacoes",
         "description": "Evoluir o frontend para suportar pipeline, tarefas, playbooks, cadencias e follow-up comercial.",
         "details": "Inclui telas de funil, tarefas comerciais, filtros, produtividade e automacoes visiveis ao operador.",
@@ -318,7 +318,7 @@
         "expansionPrompt": "Planeje subtarefas para: definir telas e componentes do workspace de CRM (pipeline, tarefas, playbooks), implementar views e filtros, integrar novas superfícies de automação e histórico com APIs, tratar estados UX (loading/erro/vazio), e adicionar testes de fluxo comercial."
       },
       {
-        "id": 5,
+        "id": "5",
         "title": "Construir reservas, vagas e operacao de aulas",
         "description": "Criar as telas de backoffice e portal para reservas, lista de espera, ocupacao e check-in de aula.",
         "details": "Abrange agenda operacional, estados da reserva, ocupacao e visoes por atividade e turma.",
@@ -409,7 +409,7 @@
         "expansionPrompt": "Crie subtarefas para: modelar o domínio de reservas/vagas (tipos e APIs), construir telas de agenda/ocupação/waitlist, implementar operações de reserva/cancelamento/check-in, tratar responsividade e estados, e validar com testes de integração."
       },
       {
-        "id": 6,
+        "id": "6",
         "title": "Criar jornada digital web de adesao e checkout",
         "description": "Implementar paginas e fluxos para trial, signup, checkout, formularios e contratos.",
         "details": "Inclui landing flow, formularios, selecao de plano, checkout e acompanhamento de pendencias.",
@@ -501,7 +501,7 @@
         "expansionPrompt": "Divida em: mapear rotas públicas da jornada, construir formulários e catálogo de planos, integrar checkout/contrato com APIs, ajustar validações e mensagens de erro, e adicionar testes de navegação e conversão."
       },
       {
-        "id": 7,
+        "id": "7",
         "title": "Expandir modulos administrativos, financeiros e de integracao",
         "description": "Cobrir configuracoes e operacao de NFSe, agregadores, recebimentos, dashboards e areas administrativas ausentes.",
         "details": "Inclui telas de configuracao, monitoramento, recebimentos e integracoes operacionais.",
@@ -579,7 +579,7 @@
         "expansionPrompt": "Estruture subtarefas para: inventariar lacunas nas telas administrativas/financeiras, implementar configurações e operações faltantes (NFSe/agregadores/recebimentos), integrar monitoramento e auditoria, e alinhar permissões e testes."
       },
       {
-        "id": 8,
+        "id": "8",
         "title": "Criar BI operacional e visao de rede",
         "description": "Entregar dashboards e visoes consolidadas por unidade e por academia para uso gerencial.",
         "details": "Inclui indicadores de conversao, ocupacao, inadimplencia, retencao e comparativos de rede.",
@@ -656,7 +656,7 @@
         "expansionPrompt": "Gere subtarefas para: definir o shell analítico e filtros por unidade/rede, construir dashboards e cards principais, integrar gráficos/exportações e tratamento de estados, e validar performance/permissões com testes."
       },
       {
-        "id": 9,
+        "id": "9",
         "title": "Estruturar backoffice global de academias e unidades",
         "description": "Migrar `/admin`, `/admin/academias` e `/admin/unidades` para contratos reais, sem depender de mock services.",
         "details": "Cobrir dashboard, listagens, detalhe, create/update de academia, create/update/toggle de unidade, vinculo academia -> unidade e alinhamento entre payloads do backoffice e o backend.",
@@ -747,7 +747,7 @@
         ]
       },
       {
-        "id": 10,
+        "id": "10",
         "title": "Consolidar importacao ETL e onboarding de unidades no backoffice",
         "description": "Completar a tela de importacao e integra-la ao fluxo de criacao de unidade com carga inicial padrao ou importacao futura.",
         "details": "Conectar o `EVO BACKUP` e a trilha EVO P0 ao backoffice real, removendo lookups em mock e exibindo status de onboarding/importacao por unidade.",
@@ -837,7 +837,7 @@
         ]
       },
       {
-        "id": 11,
+        "id": "11",
         "title": "Completar operacao web de treinos com catalogo, templates e prescricao",
         "description": "Evoluir as telas de treinos para consumir o backend atual de grupos musculares, templates e prescricao do treino do cliente.",
         "details": "Abrange `src/app/(app)/treinos*`, `src/components/shared/treino-modal.tsx`, `src/lib/api/treinos.ts` e a reducao dos fallbacks em `src/lib/mock/services.ts`, cobrindo CRUD real de grupos musculares, biblioteca de templates, atribuicao para cliente, validade/frequencia/revisao e indicadores de aderencia.",
@@ -926,16 +926,16 @@
         ]
       },
       {
-        "id": 12,
+        "id": "12",
         "title": "Migrar fiscal, agregadores e integrações operacionais para API real",
         "description": "Concluir a migração backend-only das áreas de NFSe, agregadores e monitoramento operacional, removendo dependências locais restantes.",
         "details": "Cobrir adapters reais para NFSe/configurações/solicitações, agregadores/transações/visitas e integrações operacionais; revisar páginas em src/app/(app)/administrativo/* e src/app/(app)/gerencial/*; remover trechos locais de src/lib/mock/services.ts que ainda existem apenas como fallback histórico. Incluir a identificação dos gaps de backend ainda abertos, especialmente emissão de NFSe por pagamento quando não houver endpoint 1:1 compatível.",
         "testStrategy": "",
         "status": "done",
         "dependencies": [
-          1,
-          7,
-          10
+          "1",
+          "7",
+          "10"
         ],
         "priority": "high",
         "subtasks": [
@@ -946,7 +946,8 @@
             "details": "Revisar OpenAPI e os consumers em /src/app/(app)/administrativo/*, /src/app/(app)/gerencial/* e /src/lib/mock/services.ts para identificar cobertura real de NFSe, agregadores, visitas, reprocessamentos e integrações operacionais.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 12
+            "parentTaskId": 12,
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -955,7 +956,8 @@
             "details": "Adicionar ou revisar módulos dedicados em /src/lib/api para configurações de NFSe, solicitações/eventos, agregadores, visitas e integrações operacionais, com normalização de payloads e erros padronizados.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 12
+            "parentTaskId": 12,
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -964,7 +966,8 @@
             "details": "Refatorar páginas como /administrativo/nfse, /administrativo/integracoes e superfícies correlatas para usar apenas adapters reais, com loading/erro/vazio coerentes e sem fallback local operacional.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 12
+            "parentTaskId": 12,
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -973,7 +976,8 @@
             "details": "Fechar consumo de listagens gerenciais, visitas, repasses, conciliação e ações operacionais ligadas a agregadores, removendo dependências locais remanescentes.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 12
+            "parentTaskId": 12,
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -982,7 +986,8 @@
             "details": "Documentar especialmente emissão de NFSe por pagamento, reprocessamentos ou ações operacionais ausentes na OpenAPI, com prompt objetivo para o backend quando faltar endpoint 1:1.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 12
+            "parentTaskId": 12,
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -991,21 +996,22 @@
             "details": "Eliminar ramos locais em /src/lib/mock/services.ts relacionados a NFSe/agregadores/integrações e validar build, tipagem e cenários principais das telas afetadas.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 12
+            "parentTaskId": 12,
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 13,
+        "id": "13",
         "title": "Migrar recebimentos auxiliares, ajustes e importações financeiras para API real",
         "description": "Substituir helpers locais de recebimentos/ajustes/importações por contratos reais do backend e alinhar as telas financeiras ao fluxo canônico.",
         "details": "Cobrir createRecebimentoAvulso, importarPagamentosEmLote, ajustarPagamento e quaisquer variações experimentais de contas a receber/pagamentos; alinhar páginas de recebimentos, pagamentos e importações financeiras ao backend; explicitar gaps de contrato que ainda impedem a remoção total do código local.",
         "testStrategy": "",
         "status": "done",
         "dependencies": [
-          1,
-          7,
-          10
+          "1",
+          "7",
+          "10"
         ],
         "priority": "high",
         "subtasks": [
@@ -1016,7 +1022,8 @@
             "details": "Revisar /src/lib/mock/services.ts e as telas financeiras para localizar createRecebimentoAvulso, importarPagamentosEmLote, ajustarPagamento e fluxos experimentais ainda sem contrato real consolidado.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 13
+            "parentTaskId": 13,
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1025,7 +1032,8 @@
             "details": "Revisar /src/lib/api/contas-receber.ts, /src/lib/api/pagamentos.ts e a OpenAPI para mapear o que já pode substituir código local e quais payloads precisam de normalização adicional.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 13
+            "parentTaskId": 13,
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1034,7 +1042,8 @@
             "details": "Substituir os caminhos locais das páginas de recebimentos/pagamentos por clients reais, garantindo paginação, totais, filtros e atualização consistente do cache em memória.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 13
+            "parentTaskId": 13,
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1043,7 +1052,8 @@
             "details": "Usar endpoint real quando existir; se faltar contrato específico para importação em lote ou ajuste operacional, isolar o gap, remover heurísticas locais e preparar prompt técnico para o backend.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 13
+            "parentTaskId": 13,
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1052,7 +1062,8 @@
             "details": "Eliminar ou consolidar variantes experimentais de contas a receber/recebimentos para que a UI passe a operar em um único fluxo suportado por backend real.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 13
+            "parentTaskId": 13,
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1061,22 +1072,23 @@
             "details": "Executar build/tipagem, revisar fluxos principais e produzir handoff para qualquer endpoint ainda faltante no backend antes da remoção final do legado.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 13
+            "parentTaskId": 13,
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 14,
+        "id": "14",
         "title": "Eliminar legado restante de mock/services e store para fechar backend-only",
         "description": "Remover o restante do caminho legado baseado em store/localStorage onde o backend real já cobre a operação.",
         "details": "Inventariar exports residuais de src/lib/mock/services.ts, src/lib/mock/store.ts, src/lib/public/services.ts e src/lib/public/storage.ts; migrar o que ainda depende de contrato real; remover leitura direta de store/localStorage das telas; padronizar a aplicação para sessão + API real como única fonte operacional.",
         "testStrategy": "",
         "status": "done",
         "dependencies": [
-          1,
-          3,
-          12,
-          13
+          "1",
+          "3",
+          "12",
+          "13"
         ],
         "priority": "high",
         "subtasks": [
@@ -1087,7 +1099,8 @@
             "details": "Auditar /src/lib/mock/services.ts, /src/lib/mock/store.ts, /src/lib/public/services.ts, /src/lib/public/storage.ts e páginas/componentes que ainda leem getStore() ou localStorage como fonte operacional.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 14
+            "parentTaskId": 14,
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1096,7 +1109,8 @@
             "details": "Criar um mapa por domínio indicando se o código residual é apenas legado morto, se depende de contrato backend ainda ausente ou se permanece apenas como cache auxiliar sem valor de verdade.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 14
+            "parentTaskId": 14,
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1106,7 +1120,8 @@
             "status": "done",
             "dependencies": [],
             "parentTaskId": 14,
-            "updatedAt": "2026-03-13T03:40:00.000Z"
+            "updatedAt": "2026-03-13T03:40:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1116,7 +1131,8 @@
             "status": "done",
             "dependencies": [],
             "parentTaskId": 14,
-            "updatedAt": "2026-03-13T03:40:00.000Z"
+            "updatedAt": "2026-03-13T03:40:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1126,7 +1142,8 @@
             "status": "done",
             "dependencies": [],
             "parentTaskId": 14,
-            "updatedAt": "2026-03-13T03:40:00.000Z"
+            "updatedAt": "2026-03-13T03:40:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1136,22 +1153,23 @@
             "status": "done",
             "dependencies": [],
             "parentTaskId": 14,
-            "updatedAt": "2026-03-13T03:40:00.000Z"
+            "updatedAt": "2026-03-13T03:40:00.000Z",
+            "parentId": "undefined"
           }
         ],
         "updatedAt": "2026-03-13T03:40:00.000Z"
       },
       {
-        "id": 15,
+        "id": "15",
         "title": "Erradicar runtime mock e consolidar frontend backend-only",
         "description": "Eliminar integralmente `src/lib/mock/*` do runtime, migrando toda fonte de dados para API/Session e limitando localStorage a exceções explícitas.",
         "details": "Criar um fechamento definitivo da transição: remover imports de `@/lib/mock/*` de `src/`, substituir store e serviços mock por clients reais em todos os domínios, restringir `localStorage` a sessão/preferências/drafts excepcionais, apagar branches mortos e instituir guardrails para evitar regressão.",
         "testStrategy": "",
         "status": "done",
         "dependencies": [
-          12,
-          13,
-          14
+          "12",
+          "13",
+          "14"
         ],
         "priority": "high",
         "subtasks": [
@@ -1162,7 +1180,8 @@
             "details": "Mapear todos os imports de `@/lib/mock/*`, referências a `getStore()/setStore()` e usos operacionais de `localStorage`; documentar a política final: somente API/Session e, excepcionalmente, drafts/cache local explicitamente transitórios.",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 15
+            "parentTaskId": 15,
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1174,7 +1193,8 @@
               1
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-12T14:30:00.000Z"
+            "updatedAt": "2026-03-12T14:30:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1187,7 +1207,8 @@
               2
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-12T17:10:00.000Z"
+            "updatedAt": "2026-03-12T17:10:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1201,7 +1222,8 @@
               3
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-12T22:30:00.000Z"
+            "updatedAt": "2026-03-12T22:30:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1215,7 +1237,8 @@
               3
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-12T23:40:00.000Z"
+            "updatedAt": "2026-03-12T23:40:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1229,7 +1252,8 @@
               3
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-13T06:20:00.000Z"
+            "updatedAt": "2026-03-13T06:20:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -1243,7 +1267,8 @@
               3
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-13T06:20:00.000Z"
+            "updatedAt": "2026-03-13T06:20:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 8,
@@ -1258,7 +1283,8 @@
               4
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-13T06:20:00.000Z"
+            "updatedAt": "2026-03-13T06:20:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 9,
@@ -1272,7 +1298,8 @@
               3
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-13T06:20:00.000Z"
+            "updatedAt": "2026-03-13T06:20:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 10,
@@ -1290,7 +1317,8 @@
               9
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-13T06:20:00.000Z"
+            "updatedAt": "2026-03-13T06:20:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 11,
@@ -1308,7 +1336,8 @@
               10
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-13T06:20:00.000Z"
+            "updatedAt": "2026-03-13T06:20:00.000Z",
+            "parentId": "undefined"
           },
           {
             "id": 12,
@@ -1321,7 +1350,8 @@
               11
             ],
             "parentTaskId": 15,
-            "updatedAt": "2026-03-13T06:20:00.000Z"
+            "updatedAt": "2026-03-13T06:20:00.000Z",
+            "parentId": "undefined"
           }
         ],
         "complexity": 10,
@@ -1330,15 +1360,15 @@
         "updatedAt": "2026-03-13T06:20:00.000Z"
       },
       {
-        "id": 16,
+        "id": "16",
         "title": "Criar area global de seguranca no backoffice administrativo",
         "description": "Adicionar telas novas em `/admin/seguranca/*` para consulta global de usuarios administrativos, memberships e perfis por unidade.",
         "details": "O frontend ja possui as paginas contextuais `src/app/(app)/seguranca/rbac` e `src/app/(app)/seguranca/acesso-unidade`, mas elas operam por tenant e nao servem como backoffice global de rede. Este epico deve criar telas novas dentro do shell `/admin`, reaproveitando componentes, clients e padroes de UI das telas atuais quando fizer sentido, sem mover a pagina inteira.",
         "testStrategy": "Executar `npm run lint` e os testes da area de backoffice/seguranca cobrindo navegacao, carregamento e estados de erro.",
         "status": "done",
         "dependencies": [
-          9,
-          15
+          "9",
+          "15"
         ],
         "priority": "high",
         "subtasks": [
@@ -1411,14 +1441,14 @@
         "updatedAt": "2026-03-13T16:30:00.000Z"
       },
       {
-        "id": 17,
+        "id": "17",
         "title": "Operar usuarios, unidades e perfis pelo backoffice global",
         "description": "Permitir associar usuario a unidade, remover acesso, trocar unidade padrao e gerir perfis administrativos por unidade no path `/admin`.",
         "details": "Este epico fecha a parte operacional da nova area administrativa de seguranca. A abordagem deve criar telas novas no backoffice global, mas reaproveitar os widgets e comportamentos das telas contextuais de RBAC/acesso-unidade sempre que isso reduzir duplicacao sem carregar o modelo antigo por tenant.",
         "testStrategy": "Executar `npm run lint` e testes da area administrativa cobrindo mutacoes, mensagens de feedback e atualizacao de estado apos sucesso/erro.",
         "status": "done",
         "dependencies": [
-          16
+          "16"
         ],
         "priority": "high",
         "subtasks": [
@@ -1492,15 +1522,15 @@
         "updatedAt": "2026-03-13T16:30:00.000Z"
       },
       {
-        "id": 18,
+        "id": "18",
         "title": "Integrar politica de novas unidades ao administrativo e onboarding",
         "description": "Exibir e operar a elegibilidade de usuarios para novas unidades, alem de refletir acesso herdado/manual nas telas de seguranca e de unidades.",
         "details": "O backend vai passar a formalizar a politica de quem recebe acesso automaticamente quando uma nova unidade e criada. O frontend precisa refletir isso no backoffice global de seguranca e nos fluxos ja existentes de cadastro/onboarding de unidade, sem misturar essa visao com as telas contextuais por tenant.",
         "testStrategy": "Executar `npm run lint` e testes do backoffice cobrindo unidade nova, origem do acesso e integracao entre seguranca e onboarding.",
         "status": "done",
         "dependencies": [
-          10,
-          17
+          "10",
+          "17"
         ],
         "priority": "medium",
         "subtasks": [
@@ -1574,7 +1604,7 @@
         "updatedAt": "2026-03-13T16:30:00.000Z"
       },
       {
-        "id": 19,
+        "id": "19",
         "title": "Definir dominio, contratos e governanca de Treinos V2",
         "description": "Formalizar o dominio funcional de Treinos V2 a partir do PRD consolidado, preparando entidades, contratos e regras de negocio para a implementacao.",
         "details": "Tomar `docs/TREINOS_V2_PRD.md` como fonte de produto e fechar o recorte tecnico do modulo, distinguindo template, treino atribuido, snapshot/versionamento, atribuicao em massa e governanca de revisao/publicacao. O resultado desta task deve deixar backend/frontend alinhados antes da implementacao visual pesada, com artefatos tecnicos em `docs/TREINOS_V2_TECH_SPEC.md`, `src/lib/treinos/v2-domain.ts`, `src/lib/api/treinos-v2.ts` e `src/lib/treinos/v2-backlog.ts`.",
@@ -1652,14 +1682,14 @@
         "updatedAt": "2026-03-14T12:08:18.000Z"
       },
       {
-        "id": 20,
+        "id": "20",
         "title": "Entregar listagem operacional de Treino Padrao",
         "description": "Construir a nova listagem enxuta de `Treino Padrao`, com busca, tabela paginada e acoes operacionais coerentes com as referencias.",
         "details": "A V1 da listagem deve ser administrativa e rapida, sem inflar a tela com filtros avancados. O foco e localizar templates, criar novos e disparar rapidamente as acoes principais de editar, abrir montagem, atribuir e excluir/arquivar. A listagem so deve mostrar `Treino Padrao`, usar ordenacao padrao por recencia e expor quick filter de revisao apenas quando houver backlog tecnico.",
         "testStrategy": "Executar testes de UI e navegacao cobrindo busca, paginacao, acoes por linha, loading, erro e estados vazios na listagem de templates.",
         "status": "done",
         "dependencies": [
-          19
+          "19"
         ],
         "priority": "high",
         "subtasks": [
@@ -1732,15 +1762,15 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": 21,
+        "id": "21",
         "title": "Construir editor unificado de treino e template",
         "description": "Implementar a nova tela-base de montagem para `Treino Padrao` e `Treino atribuido`, concentrando no editor a complexidade operacional do modulo.",
         "details": "O editor unificado deve reaproveitar a mesma estrutura para template e treino atribuido, com blocos/series em abas, grade central densa, edicao inline, tecnicas especiais, exportacao e acoes operacionais no topo. O shell precisa assumir como metadados canonicos `nome`, `frequencia semanal`, `total de semanas`, categoria, status e toggle de versao simplificada.",
         "testStrategy": "Validar cenarios de criacao, edicao, reorder, tecnicas especiais, salvar/exportar e consistencia entre template e treino atribuido no editor unificado.",
         "status": "done",
         "dependencies": [
-          19,
-          20
+          "19",
+          "20"
         ],
         "priority": "high",
         "subtasks": [
@@ -1813,15 +1843,15 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": 22,
+        "id": "22",
         "title": "Evoluir biblioteca de exercicios e drawer de cadastro",
         "description": "Transformar a biblioteca lateral de exercicios em um componente central do editor, com busca, filtros, insercao rapida e drawer de criacao/edicao.",
         "details": "A biblioteca deve permitir encontrar, criar e reaproveitar exercicios sem sair do contexto da montagem. O drawer lateral deve sustentar o cadastro rico de exercicio, incluindo codigo, grupo de exercicios, grupo muscular, tipo, objetivo padrao, unidade de carga, midia, descricao e disponibilidade no app.",
         "testStrategy": "Executar testes cobrindo busca, filtros, criacao/edicao de exercicio, insercao rapida no treino e validacoes do cadastro no drawer lateral.",
         "status": "done",
         "dependencies": [
-          19,
-          21
+          "19",
+          "21"
         ],
         "priority": "high",
         "subtasks": [
@@ -1894,17 +1924,17 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": 23,
+        "id": "23",
         "title": "Implementar atribuicao individual e em massa de treinos",
         "description": "Entregar os fluxos de atribuicao a partir de `Treino Padrao`, cobrindo um cliente, varios clientes, snapshot de versao e politicas de conflito.",
         "details": "Esta task fecha o principal ganho operacional da V2: pegar um template pronto e aplica-lo com seguranca a um ou muitos clientes, com rastreabilidade, vigencia e controle de overwrite. A atribuicao em massa deve rodar via job assincrono, com lista final de clientes resolvida e resumo terminal por cliente.",
         "testStrategy": "Cobrir cenarios de atribuicao individual e em massa, conflitos com treino ativo, snapshot/versionamento, resumo do resultado e regressao do editor apos atribuir.",
         "status": "done",
         "dependencies": [
-          19,
-          20,
-          21,
-          22
+          "19",
+          "20",
+          "21",
+          "22"
         ],
         "priority": "high",
         "subtasks": [
@@ -1978,15 +2008,15 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": 24,
+        "id": "24",
         "title": "Fechar revisao, publicacao e operacao pos-atribuicao de Treinos V2",
         "description": "Concluir a governanca operacional do modulo com revisao/publicacao de templates, visao de treinos atribuidos e rastreabilidade completa da origem e da versao.",
         "details": "Depois de listagem, editor, biblioteca e atribuicao, falta consolidar a camada de governanca: status de template, fila de revisao, operacao sobre treinos atribuidos e indicadores que permitam acompanhar quem recebeu qual versao. Exportar treino de cliente como template e importar do ADM Geral continuam fora do P0 e nao devem poluir esta task.",
         "testStrategy": "Executar testes cobrindo revisao/publicacao, gestao de treinos atribuidos, rastreabilidade de versao/origem e navegacao ponta a ponta entre template, atribuicao e operacao pos-atribuicao.",
         "status": "done",
         "dependencies": [
-          21,
-          23
+          "21",
+          "23"
         ],
         "priority": "medium",
         "subtasks": [
@@ -2060,7 +2090,7 @@
         "updatedAt": "2026-03-14T15:02:00.000Z"
       },
       {
-        "id": 25,
+        "id": "25",
         "title": "Estabelecer baseline real de cobertura automatizada",
         "description": "Instrumentar cobertura de codigo, publicar baseline e definir medicao confiavel para a meta de 60%.",
         "details": "Hoje o repositorio tem baseline funcional de 116 testes Playwright, sendo 29 testes E2E em 19 arquivos e 87 testes unitarios em 26 arquivos. Ainda nao existe percentual instrumentado de cobertura em linhas, statements, branches ou functions. Esta task fecha a medicao real, scripts de coleta, politicas de exclusao e o relatorio base para orientar o aumento ate 60%. Baseline fechado em 2026-03-14 com 9.54% lines, 13.47% statements, 11.73% functions e 16.54% branches, publicado em coverage/* e docs/TEST_COVERAGE_BASELINE.*.",
@@ -2137,14 +2167,14 @@
         "updatedAt": "2026-03-14T21:11:31.000Z"
       },
       {
-        "id": 26,
+        "id": "26",
         "title": "Elevar cobertura automatizada das camadas core ate 60%",
         "description": "Aumentar a cobertura real do codigo nas camadas de maior risco ate atingir pelo menos 60% no agregado instrumentado.",
         "details": "Com o baseline real definido, a meta desta task foi fechada sobre o runtime compartilhado de maior risco em src/lib/**/*.{ts,tsx}, onde a instrumentacao V8/Node e confiavel hoje. Foram adicionados testes unitarios de alto retorno em wrappers de API, financeiro gerencial, vendas, reservas, contexto de tenant, utilitarios e runtime comercial, levando o perfil core a 62.74% lines, 67.73% statements, 69.09% functions e 79.51% branches via coverage:report -- --suites=unit.",
         "testStrategy": "Executar relatorio de coverage a cada onda de testes e validar evolucao continua ate atingir pelo menos 60% no agregado instrumentado.",
         "status": "done",
         "dependencies": [
-          25
+          "25"
         ],
         "priority": "high",
         "subtasks": [
@@ -2235,15 +2265,15 @@
         "updatedAt": "2026-03-14T23:59:00.000Z"
       },
       {
-        "id": 27,
+        "id": "27",
         "title": "Sustentar cobertura com gates de CI e governanca continua",
         "description": "Transformar a meta de cobertura em rotina de engenharia, com gates, dashboards e criterios de regressao.",
         "details": "Atingir 60% uma vez nao basta. Esta task foi concluida com gate automatizado de coverage core (coverage:gate), workflow de CI em .github/workflows/coverage-core.yml, suite smoke consolidada por dominio no coletor e politica operacional documentada em docs/TEST_COVERAGE_GOVERNANCE.md. Os artefatos publicados agora incluem resumo/LCOV/HTML do perfil core e historico em docs/TEST_COVERAGE_HISTORY_CORE.json.",
         "testStrategy": "Validar pipelines com gates ativos, artefatos publicados e bloqueio intencional quando a cobertura ficar abaixo dos thresholds definidos.",
         "status": "done",
         "dependencies": [
-          25,
-          26
+          "25",
+          "26"
         ],
         "priority": "medium",
         "subtasks": [
@@ -2303,15 +2333,15 @@
         "updatedAt": "2026-03-14T23:59:00.000Z"
       },
       {
-        "id": 28,
+        "id": "28",
         "title": "Estabilizar shell SSR e eliminar hydration mismatch sem escape hatches",
         "description": "Corrigir de forma estrutural o shell principal e as telas de treinos para eliminar mismatch de hidratacao sem usar `suppressHydrationWarning`.",
         "details": "O frontend ainda mistura fallback de SSR diferente do shell final, labels tenant-aware mutaveis no primeiro paint e formatacao/calculo temporal durante o render hidratavel. Esta task fecha o problema na raiz: padronizar o estado inicial do contexto e do branding, fazer sidebar/topbar/backoffice renderizarem a mesma arvore entre servidor e primeiro render do cliente, remover `suppressHydrationWarning` do escopo e reescrever pontos de treinos que ainda dependem de `new Date()`, locale do navegador ou outros valores nao deterministas em render. O trabalho tambem inclui ajustes basicos de acessibilidade e estabilidade visual do layout, como rotulos de controles, logo com dimensoes estaveis e fallback textual unico para unidade ativa, sem mascarar divergencias de HTML.",
         "testStrategy": "Executar testes unitarios dos componentes e helpers afetados, smoke/e2e nas rotas do shell e de treinos, e validar em dev que o overlay de hydration do Next.js nao reaparece no app shell, no backoffice nem nas paginas de treinos.",
         "status": "done",
         "dependencies": [
-          3,
-          24
+          "3",
+          "24"
         ],
         "priority": "high",
         "subtasks": [
@@ -2426,19 +2456,592 @@
         "recommendedSubtasks": 7,
         "expansionPrompt": "Quebrar em subtarefas para: auditoria do shell e hotspots de hydration, padronizacao do estado inicial de tenant/branding, reestruturacao de app/backoffice para shell SSR deterministico, ajustes de acessibilidade e estabilidade visual em sidebar/topbar, eliminacao de datas e labels nao deterministas em treinos, remocao de `suppressHydrationWarning` e fechamento com testes unitarios/e2e de hidratacao.",
         "updatedAt": "2026-03-15T04:15:00.000Z"
+      },
+      {
+        "id": "29",
+        "title": "Fechar aderência de hidratação, contexto e data/hora no frontend",
+        "description": "Ajustar pontos remanescentes de aderência em UI/HTTP para eliminar causas reais de hydration mismatch e reduzir risco de comportamento divergente entre SSR e cliente, sem regressão funcional em contratos já estabilizados.",
+        "details": "A auditoria recente identificou quatro ajustes práticos fora de escopo funcional amplo: (1) uso residual de `suppressHydrationWarning` em componente base de Select; (2) formatação temporal não determinística no render do fluxo de importação de pacote; (3) fallback de contexto com ID não determinístico no `getContextId`; (4) revisão pontual da classificação de rotas context-scoped em `http.ts` que afeta consistência de tenant scoping. Esta task agrupa esses fechamentos com subtarefas curtas e validadas por teste.",
+        "testStrategy": "Executar `npx eslint` nos arquivos alterados, os testes unitários de `src/lib/api/http.ts` e o teste de contrato de importação em `tests/unit/backoffice-importacao-evo.spec.ts` (ou equivalente), além de smoke em tela de login + importação de pacote no dev para validar ausência de overlay de hydration.",
+        "status": "done",
+        "dependencies": [
+          "28"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Remover `suppressHydrationWarning` do componente Select compartilhado",
+            "description": "Remover o uso de `suppressHydrationWarning` em `src/components/ui/select.tsx` (trigger), garantindo que qualquer estado de cliente continue com fallback estável e não dependa de escape hatch.",
+            "dependencies": [],
+            "details": "Remover o uso de `suppressHydrationWarning` em `src/components/ui/select.tsx` (trigger), garantindo que qualquer estado de cliente continue com fallback estável e não dependa de escape hatch.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 29,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-15T22:50:00.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Tornar `formatDateTime` do fluxo de pacote determinístico",
+            "description": "Refatorar `formatDateTime` e usos correlatos em `src/app/(backoffice)/admin/importacao-evo-p0/page.tsx` para não depender de `Intl` com parsing/locale no path de render inicial.",
+            "dependencies": [
+              1
+            ],
+            "details": "Refatorar `formatDateTime` e usos correlatos em `src/app/(backoffice)/admin/importacao-evo-p0/page.tsx` para não depender de `Intl` com parsing/locale no path de render inicial, preservando o mesmo valor serializável entre SSR e primeiro render.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 29,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-15T22:50:00.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Remover fallback não determinístico de `getContextId`",
+            "description": "Substituir a geração de `crypto.randomUUID()` / `Math.random()` em `getContextId` (`src/lib/api/http.ts`) por fonte determinística derivada do estado de sessão/tenant ativo.",
+            "dependencies": [],
+            "details": "Substituir a geração de `crypto.randomUUID()` / `Math.random()` em `getContextId` (`src/lib/api/http.ts`) por fonte determinística derivada do estado de sessão/tenant ativo, evitando IDs mutáveis sem relação com contexto real e mantendo sincronização segura quando não houver contexto explícito.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 29,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-15T22:50:00.000Z"
+          },
+          {
+            "id": 4,
+            "title": "Validar regra de rota context-scoped para `administrativo`",
+            "description": "Revisar os padrões `CONTEXT_SCOPED_OPERATIONAL_PATTERNS` e `EXPLICIT_TENANT_QUERY_PATTERNS` em `src/lib/api/http.ts`, com foco em `/api/v1/administrativo/*`.",
+            "dependencies": [],
+            "details": "Revisar os padrões `CONTEXT_SCOPED_OPERATIONAL_PATTERNS` e `EXPLICIT_TENANT_QUERY_PATTERNS` em `src/lib/api/http.ts`, com foco em `/api/v1/administrativo/*`, adicionando comentário objetivo da decisão quando rota exigir tenant explícito ou contexto ativo.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 29,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-15T22:50:00.000Z"
+          },
+          {
+            "id": 5,
+            "title": "Expandir cobertura de regressão para os ajustes de aderência",
+            "description": "Adicionar/ajustar testes unitários para garantir ausência de `tenantId` redundante nas rotas context-scoped e validação de dados determinísticos no fluxo de pacote.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Adicionar/ajustar testes unitários para garantir: ausência de `suppressHydrationWarning` no componente de Select, datas não mutáveis no retorno de render da tela de pacote e ausência de `tenantId` redundante em rotas context-scoped com `X-Context-Id` ativo.",
+            "status": "done",
+            "testStrategy": "npx eslint src/components/ui/select.tsx src/app/'(backoffice)'/admin/importacao-evo-p0/page.tsx src/lib/api/http.ts tests/unit/http.spec.ts tests/unit/backoffice-importacao-evo.spec.ts",
+            "parentTaskId": 29,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-15T22:50:00.000Z"
+          }
+        ],
+        "complexity": 5,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Quebrar em subtarefas para eliminar fallback aleatório de contexto, remover suppressHydrationWarning no componente Select, corrigir formatação de data não determinística no fluxo EVO e validar padrão de rotas context-scoped no wrapper HTTP com cobertura em testes unitários.",
+        "updatedAt": "2026-03-15T22:50:00.000Z"
+      },
+      {
+        "id": "30",
+        "title": "Endurecer sessão inválida, refresh e relogin no frontend",
+        "description": "Tornar determinístico o fluxo de recuperação de autenticação no web para que 401 por token inválido, malformado ou expirado tente refresh uma única vez e, se não houver recuperação, execute logout completo com limpeza do contexto local de tenant.",
+        "details": "O frontend já possui a base do fluxo em `src/lib/api/http.ts`, `src/lib/api/session.ts` e `src/lib/tenant-context.ts`, mas ainda há uma lacuna importante: quando o refresh falha, a autenticação é limpa sem limpar o `academia-api-context-id`, o que pode deixar o navegador com contexto de unidade stale. Esta task fecha o fluxo de ponta a ponta: centralizar uma invalidação completa de sessão, endurecer o retry único de refresh, garantir redirecionamento previsível para `/login` e preservar a regra de multi-tenant por `X-Context-Id` sem reintroduzir `tenantId` redundante em rotas operacionais.",
+        "testStrategy": "Executar os testes unitários do wrapper HTTP e da store de sessão/contexto, cobrindo 401 com refresh bem-sucedido, 401 com refresh falhando, request repetida retornando novo 401 e limpeza do `academia-api-context-id`; complementar com smoke manual do login, expiração simulada de token e redirect automático para `/login`.",
+        "status": "done",
+        "dependencies": [
+          "3",
+          "29"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar o fluxo atual de 401, refresh e limpeza de sessão",
+            "description": "Mapear o comportamento atual em `src/lib/api/http.ts`, `src/lib/api/session.ts`, `src/lib/tenant-context.ts` e shells que observam `AUTH_SESSION_UPDATED_EVENT`.",
+            "dependencies": [],
+            "details": "Confirmar onde hoje acontece retry, onde a sessão é limpa, quais chaves de storage permanecem após falha de refresh e como o redirect para `/login` é disparado no app e no backoffice.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 30,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-15T23:40:00.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Centralizar invalidação completa de sessão e contexto",
+            "description": "Criar helper dedicado para invalidar autenticação de forma completa, sem lógica espalhada no wrapper HTTP.",
+            "dependencies": [
+              1
+            ],
+            "details": "O helper deve limpar access token, refresh token, token type, expiresIn, active tenant, available tenants, preferred tenant e o `academia-api-context-id`, além de resetar qualquer memória local de contexto e disparar os eventos necessários para sincronizar a UI.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 30,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-15T23:40:00.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Endurecer `apiRequest` e `tryRefreshToken` para retry único",
+            "description": "Garantir que 401 faça no máximo uma tentativa de refresh e que qualquer falha leve a logout completo.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Manter uma única repetição da request original após refresh bem-sucedido; se o refresh falhar ou a request repetida retornar novo 401, invalidar sessão/contexto e propagar erro sem loop. Não aplicar sync de tenant/contexto em respostas 401.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 30,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-15T23:40:00.000Z"
+          },
+          {
+            "id": 4,
+            "title": "Ajustar reação do shell e preservar a regra multi-tenant",
+            "description": "Garantir que a UI reaja de forma determinística à invalidação da sessão e que o contexto stale não sobreviva ao relogin.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Revisar `use-session-context`, layouts e guardas de navegação para confirmar o redirect para `/login` ao perder token, sem popup obrigatório e sem reutilizar `X-Context-Id` antigo. Preservar a regra atual de não enviar `tenantId` redundante em rotas operacionais context-scoped.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 30,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-15T23:40:00.000Z"
+          },
+          {
+            "id": 5,
+            "title": "Cobrir regressão com testes focados",
+            "description": "Adicionar testes unitários e de integração leve para os cenários críticos de sessão inválida.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Cobrir os cenários: 401 com refresh válido, 401 com refresh inválido, token malformado levando a logout, request repetida ainda retornando 401 e limpeza do `academia-api-context-id` e tenant local após invalidação.",
+            "status": "done",
+            "testStrategy": "Executar a suíte unitária do wrapper HTTP/sessão, mais smoke manual de login, expiração simulada e redirect automático.",
+            "parentTaskId": 30,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-15T23:40:00.000Z"
+          }
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Quebrar em subtarefas para: auditar o fluxo atual de 401/refresh em http.ts, centralizar invalidação completa de sessão e contexto, endurecer retry único e falha de refresh, ajustar reação do shell/layouts ao logout automático e adicionar testes cobrindo refresh bem-sucedido, refresh falho e limpeza do X-Context-Id.",
+        "updatedAt": "2026-03-15T23:40:00.000Z"
+      },
+      {
+        "id": "31",
+        "title": "Consolidar bootstrap global de sessão, tenant ativo e branding no frontend",
+        "description": "Transformar sessão, unidade ativa e branding em um store global reutilizável do shell autenticado, eliminando fetches redundantes de `/auth/me`, `/context/unidade-ativa` e `/academia` na navegação interna.",
+        "details": "Implementar a estratégia frontend-first descrita em `docs/SESSION_BOOTSTRAP_CACHE_PRD.md`: promover o contexto atual para um store global de bootstrap, tratar `activeTenantId` como ponto único de verdade da aplicação, migrar `Sidebar`, `TenantThemeSync`, `AppTopbar` e `useAuthAccess` para selectors desse store, e sincronizar o snapshot após troca de unidade, login, refresh, logout e recovery de contexto. O rollout deve preservar SSR seguro, evitar preload redundante por rota e manter `X-Context-Id` como referência operacional efetiva.",
+        "testStrategy": "Medir baseline de chamadas em dev e produção local, cobrir com testes unitários os selectors e invalidadores do store, adicionar smoke/e2e para navegação autenticada sem refetch redundante e validar no Network tab que `/clientes` e rotas equivalentes não repetem `/auth/me`, `/context/unidade-ativa` e `/academia` sem invalidação explícita.",
+        "status": "done",
+        "dependencies": [
+          "3",
+          "28",
+          "30"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Medir o baseline real do bootstrap do shell",
+            "description": "Levantar a linha de base atual de chamadas de bootstrap em primeira carga, navegação interna e troca de unidade.",
+            "dependencies": [],
+            "details": "Instrumentar ou medir em dev e em build local de produção quantas chamadas ocorrem para `/api/v1/auth/me`, `/api/v1/context/unidade-ativa` e `/api/v1/academia`, distinguindo duplicação estrutural de duplicação amplificada por Strict Mode/HMR.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 31,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-16T19:05:51.173Z"
+          },
+          {
+            "id": 2,
+            "title": "Expandir o contexto atual para um store global de bootstrap",
+            "description": "Consolidar no frontend autenticado o snapshot global de sessão, tenant ativo, claims e branding.",
+            "dependencies": [
+              1
+            ],
+            "details": "Reaproveitar `src/hooks/use-session-context.tsx`, `src/lib/api/session.ts` e `src/lib/tenant-context.ts` para expor um store unificado com `authUser`, `roles`, `canAccessElevatedModules`, `activeTenantId`, `activeTenant`, `availableTenants`, `academia`, `brandingSnapshot`, `status`, `lastBootstrapAt` e `lastTenantSyncAt`.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 31,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-16T19:05:52.573Z"
+          },
+          {
+            "id": 3,
+            "title": "Migrar consumidores do shell para selectors",
+            "description": "Eliminar fetches próprios de sessão e academia nos componentes estruturais do shell.",
+            "dependencies": [
+              2
+            ],
+            "details": "Refatorar `Sidebar`, `TenantThemeSync`, `AppTopbar` e `useAuthAccess` para consumirem selectors do store global, removendo `meApi()` por mount e `listAcademiasApi()` duplicado no shell autenticado.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 31,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-16T19:05:53.975Z"
+          },
+          {
+            "id": 4,
+            "title": "Centralizar a troca de unidade ativa e a invalidação do snapshot",
+            "description": "Fazer a troca de unidade ocorrer por uma única ação formal e refletir em toda a UI.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Implementar ou consolidar `switchActiveTenant(tenantId)` para chamar o endpoint canônico de contexto, atualizar o snapshot global, recalcular branding, decidir invalidação de claims e academia quando necessário e sincronizar eventos entre abas.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 31,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-16T19:05:55.393Z"
+          },
+          {
+            "id": 5,
+            "title": "Sincronizar o store com refresh, logout e recovery de contexto",
+            "description": "Garantir que o snapshot global continue consistente após mudanças de sessão e reparos automáticos do wrapper HTTP.",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "Acoplar o store aos fluxos já endurecidos de login, refresh, logout e recovery em `src/lib/api/http.ts`, limpando ou atualizando snapshot quando o backend mudar claims, tenant ativo ou `X-Context-Id`.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 31,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-16T19:05:56.809Z"
+          },
+          {
+            "id": 6,
+            "title": "Validar regressão e reduzir chamadas redundantes nas rotas críticas",
+            "description": "Fechar a task com evidência objetiva de redução de bootstrap redundante.",
+            "dependencies": [
+              1,
+              3,
+              4,
+              5
+            ],
+            "details": "Adicionar cobertura unitária e e2e para shell autenticado, troca de unidade e rotas como `/clientes`; comparar baseline com resultado final e registrar os números obtidos conforme os critérios do PRD.",
+            "status": "done",
+            "testStrategy": "Executar testes unitários do store e smoke/e2e das rotas críticas, além de validar o Network tab em build local de produção.",
+            "parentTaskId": 31,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-16T19:05:58.208Z"
+          }
+        ],
+        "complexity": 8,
+        "recommendedSubtasks": 6,
+        "expansionPrompt": "Quebrar em subtarefas para medir o baseline atual do bootstrap, consolidar um store global com sessão, tenant e branding, migrar Sidebar/TenantThemeSync/AppTopbar/useAuthAccess para selectors, centralizar switchActiveTenant, sincronizar o snapshot com refresh/logout/recovery e validar queda de chamadas redundantes nas rotas autenticadas.",
+        "updatedAt": "2026-03-16T19:05:58.208Z"
+      },
+      {
+        "id": "32",
+        "title": "Expor bootstrap consolidado do app no backend e migrar o frontend",
+        "description": "Evoluir o desenho de bootstrap para um endpoint único do app que consolide usuário, contexto ativo, academia, branding e capacidades, reduzindo round-trips no cold start.",
+        "details": "Implementar a fase opcional descrita em `docs/SESSION_BOOTSTRAP_CACHE_PRD.md`: desenhar um endpoint como `GET /api/v1/app/bootstrap`, alinhar contrato, controller e testes no backend, e adaptar o frontend para consumir esse payload consolidado com fallback temporário para os endpoints legados durante a transição.",
+        "testStrategy": "Validar contrato no backend com testes de integração e `openapi.yaml`, cobrir no frontend o consumo do bootstrap unificado com fallback de compatibilidade e medir a redução de round-trips na primeira carga autenticada.",
+        "status": "done",
+        "dependencies": [
+          "31"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir contrato e regras de consistência do bootstrap unificado",
+            "description": "Fechar o payload canônico e as regras de invalidação antes de implementar o endpoint.",
+            "dependencies": [],
+            "details": "Especificar no backend o shape mínimo com `user`, `tenantContext`, `academia`, `branding` e `capabilities`, incluindo a política de atualização quando claims ou tenant mudarem.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 32,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-16T20:36:08.317Z"
+          },
+          {
+            "id": 2,
+            "title": "Implementar endpoint consolidado no backend com contrato alinhado",
+            "description": "Adicionar o endpoint unificado preservando a modelagem modular do monólito e o contrato OpenAPI.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implementar controller, service e DTOs no backend, atualizar `openapi.yaml` e cobrir o fluxo com testes de integração, mantendo compatibilidade com `X-Context-Id` e as regras atuais de multiunidade.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 32,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-16T20:36:09.688Z"
+          },
+          {
+            "id": 3,
+            "title": "Migrar o store global do frontend para consumir o endpoint novo",
+            "description": "Substituir a composição local de bootstrap por consumo do payload consolidado.",
+            "dependencies": [
+              2
+            ],
+            "details": "Adaptar o `SessionBootstrapStore` para usar o endpoint unificado no cold start e em refresh controlado, mantendo fallback temporário para `/auth/me`, `/context/unidade-ativa` e `/academia` enquanto a migração não estiver totalmente estabilizada.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 32,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-16T20:36:11.057Z"
+          },
+          {
+            "id": 4,
+            "title": "Remover fallback legado quando a migração estiver estável",
+            "description": "Encerrar a transição e simplificar o bootstrap da aplicação.",
+            "dependencies": [
+              3
+            ],
+            "details": "Depois de validada a nova rota em produção e nos testes, eliminar os caminhos legados redundantes do shell autenticado e atualizar a documentação operacional do fluxo de bootstrap.",
+            "status": "done",
+            "testStrategy": "Executar testes de integração do backend, regressão do frontend e comparação de métricas de bootstrap antes e depois da remoção do fallback.",
+            "parentTaskId": 32,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-16T20:36:12.474Z"
+          }
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 4,
+        "expansionPrompt": "Quebrar em subtarefas para definir o contrato do endpoint `GET /api/v1/app/bootstrap`, implementá-lo no backend com OpenAPI e testes alinhados, migrar o store global do frontend para o novo payload e remover os fallbacks legados quando a transição estiver estável.",
+        "updatedAt": "2026-03-16T20:36:12.474Z"
+      },
+      {
+        "id": "33",
+        "title": "Migrar Dashboard para endpoint unificado de dados e reduzir round-trips",
+        "description": "Migrar a tela /dashboard para consumir um endpoint consolidado e reduzir múltiplas chamadas paralelas atuais.",
+        "details": "Implementar/validar endpoint unificado, adaptar adapter de dashboard, migrar página para 1 chamada por estado/scope e manter fallback seguro.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [
+          "32"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Validar contrato alvo e alinhamento de campos",
+            "description": "Confirmar contrato da API e regras de cálculo/date window no backend",
+            "details": "Fechar contrato canônico para /api/v1/academia/dashboard: required/optional fields, referência temporal e serialização.",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 33,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T03:32:33.525Z"
+          },
+          {
+            "id": 2,
+            "title": "Atualizar adapter de dashboard para contrato consolidado (com fallback)",
+            "description": "Ajustar src/lib/api/dashboard.ts para novo contrato sem quebrar legacy",
+            "details": "Aceitar wrappers antigos e novos campos de summary/listas; defaults seguros.",
+            "status": "done",
+            "dependencies": [
+              "33.1"
+            ],
+            "parentTaskId": 33,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T03:33:04.683Z"
+          },
+          {
+            "id": 4,
+            "title": "Migrar src/app/(app)/dashboard/page.tsx para fetch único",
+            "description": "Trocar listagens paralelas por getDashboardApi",
+            "details": "Remover listProspectsApi/listAlunosApi/listMatriculasApi/listPagamentosApi e usar summary do endpoint por scope (CLIENTES/VENDAS/FINANCEIRO).",
+            "status": "done",
+            "dependencies": [
+              "33.2"
+            ],
+            "parentTaskId": 33,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T03:33:06.120Z"
+          },
+          {
+            "id": 5,
+            "title": "Criar fallback controlado para ambiente sem endpoint completo",
+            "description": "Evitar quebra quando backend parcial",
+            "details": "Aplicar defaults e fallback parcial/legacy, manter UI funcional.",
+            "status": "done",
+            "dependencies": [
+              "33.4"
+            ],
+            "parentTaskId": 33,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T03:33:07.688Z"
+          },
+          {
+            "id": 6,
+            "title": "Otimizar carregamento por aba e observabilidade",
+            "description": "Trocar scope por aba sem repetir chamadas desnecessárias",
+            "details": "Memoização por referenceDate/scope e evidência de redução de chamadas.",
+            "status": "done",
+            "dependencies": [
+              "33.4"
+            ],
+            "parentTaskId": 33,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T03:33:09.239Z"
+          },
+          {
+            "id": 7,
+            "title": "Atualizar tipos e fechar evidência de aceite",
+            "description": "Ajustar DashboardData e comprovar redução de chamadas",
+            "details": "Validar tipos, mocks e critério de aceite: 1 chamada por combinação.",
+            "status": "done",
+            "dependencies": [
+              "33.5",
+              "33.6"
+            ],
+            "parentTaskId": 33,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T03:33:10.808Z"
+          }
+        ],
+        "updatedAt": "2026-03-17T03:33:10.808Z"
+      },
+      {
+        "id": "34",
+        "title": "Cobrir CRUD da área administrativa com Playwright",
+        "description": "Adicionar cobertura E2E nas telas administrativas críticas, com foco em fluxo de criação, edição, exclusão/inativação e validações em operações CRUD.",
+        "details": "Escalar os testes Playwright para `/admin/*` e `/administrativo/*` com cenários repetíveis e stubs de API controlados, garantindo confiança de regressão sem alterar comportamento funcional.",
+        "testStrategy": "Implementar suíte por domínio com cenários de sucesso, validação de form, erro de API e estado vazio; medir ganho de regressão sem introduzir dependência de dados globais e sem flakiness por timing.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Inventariar telas e elementos estáveis para testes",
+            "description": "Mapear páginas CRUD da área administrativa e confirmar seletores/contratos atuais.",
+            "dependencies": [],
+            "details": "Conferir `src/app/(backoffice)/admin/*` e `src/app/(app)/administrativo/*`, identificar páginas com Create/Edit/Delete/List/Search e montar matriz de cobertura com criticidade por rota.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 34,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T20:10:00.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Padronizar infraestrutura de testes administrativos",
+            "description": "Criar helpers para autenticação com contexto, rotas mockadas e semântica de dados determinísticos.",
+            "dependencies": [
+              "34.1"
+            ],
+            "details": "Criar utilitários em `tests/e2e/support/admin*` para login/sessão com tenant ativo, seed de admin por suite e interceptadores por entidade (`academias`, `unidades`, `funcionarios`, catálogos).",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 34,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T20:10:00.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Cobrir backoffice global (academias, unidades, segurança)",
+            "description": "Implementar testes CRUD para `/admin/academias`, `/admin/unidades` e módulos de segurança global.",
+            "dependencies": [
+              "34.2"
+            ],
+            "details": "Criar suíte para listagem, criação e edição de academias/unidades e operações de usuário/perfil/acesso em `/admin/seguranca*` com cenário de sucesso e erro de API.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 34,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T20:10:00.000Z"
+          },
+          {
+            "id": 4,
+            "title": "Cobrir administração por unidade: base e equipe",
+            "description": "Cobrir `/administrativo/academia` e `/administrativo/funcionarios` com CRUD operacional.",
+            "dependencies": [
+              "34.2"
+            ],
+            "details": "Implementar cenários felizes, edição, validação e exclusão/arquivamento para as páginas de configuração da unidade e gestão de funcionários, incluindo mensagens de feedback.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 34,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T20:10:00.000Z"
+          },
+          {
+            "id": 5,
+            "title": "Cobrir catálogo administrativo (serviços, produtos, planos, vouchers, convênios)",
+            "description": "Adicionar testes de CRUD para páginas de catálogo no fluxo administrativo unitário.",
+            "dependencies": [
+              "34.4"
+            ],
+            "details": "Cobrir `/administrativo/servicos`, `/administrativo/produtos`, `/administrativo/planos`, `/administrativo/vouchers`, `/administrativo/convenios` com fluxo create/edit/inativar e validações por formulário.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 34,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T20:10:00.000Z"
+          },
+          {
+            "id": 6,
+            "title": "Cobrir páginas financeiras e operacionais administrativas",
+            "description": "Adicionar e/ou ampliar testes para formas de pagamento, contas e atividades.",
+            "dependencies": [
+              "34.5"
+            ],
+            "details": "Cobrir `/administrativo/formas-pagamento`, `/administrativo/tipos-conta`, `/administrativo/contas-bancarias`, `/administrativo/atividades`, `/administrativo/atividades-grade`, `/administrativo/maquininhas` com cenários de CRUD e erro.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 34,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T20:10:00.000Z"
+          },
+          {
+            "id": 7,
+            "title": "Consolidar suíte, execução e evidência de aceite",
+            "description": "Unificar organização dos specs e registrar critérios de aceite por página.",
+            "dependencies": [
+              "34.3",
+              "34.4",
+              "34.5",
+              "34.6"
+            ],
+            "details": "Refatorar specs para reduzir duplicação, ajustar timeouts/waits sem flakiness, rodar `npm run e2e -- admin*`, e registrar evidência de coberturas mínima feliz/erro por rota priorizada.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 34,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T20:10:00.000Z"
+          },
+          {
+            "id": 8,
+            "title": "Gerar prompt de alinhamento com backend para contratos usados no PRD de testes",
+            "description": "Entregar instruções objetivas de contrato para QA e backend validar payloads esperados.",
+            "dependencies": [
+              "34.1"
+            ],
+            "details": "Criar texto pronto para backend com rota esperada, status codes, contrato de erro, payloads de sucesso/empty/invalid e estratégia de versão para suportar os testes de CRUD admin.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 34,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T20:10:00.000Z"
+          }
+        ],
+        "complexity": 8,
+        "recommendedSubtasks": 8,
+        "expansionPrompt": "Divida em subtarefas por domínio de backoffice e administrativo: inventário de páginas, padronização de infra e fixtures, cobertura por suíte de CRUD, consolidação de execução de e2e e alinhamento backend dos contratos esperados.",
+        "updatedAt": "2026-03-17T20:10:00.000Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-15T04:15:00Z",
-      "taskCount": 28,
-      "completedCount": 28,
+      "lastModified": "2026-03-17T20:10:00.000Z",
+      "taskCount": 34,
+      "completedCount": 33,
       "tags": [
         "master"
-      ],
-      "created": "2026-03-12T01:30:55.093Z",
-      "description": "Tasks for master context",
-      "updated": "2026-03-15T04:15:00.000Z"
+      ]
     }
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Menu, Search } from "lucide-react";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
@@ -11,54 +11,68 @@ import { useTenantContext } from "@/hooks/use-session-context";
 
 type AppTopbarProps = {
   onOpenMenu?: () => void;
+  shellReady?: boolean;
 };
 
-function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
+function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [clienteOptions, setClienteOptions] = useState<SuggestionOption[]>([]);
+  const [loadingClientes, setLoadingClientes] = useState(false);
   const [savingTenant, setSavingTenant] = useState(false);
-  const [clienteOptionsLoadedTenant, setClienteOptionsLoadedTenant] = useState("");
   const { tenantId, tenantName, tenants, setTenant, loading: tenantLoading } = useTenantContext();
 
-  const loadClienteOptions = useCallback(async () => {
-    if (!tenantId || clienteOptionsLoadedTenant === tenantId) return;
-    try {
-      const result = await listAlunosApi({
-        tenantId,
-        page: 0,
-        size: 200,
-      });
-      const mapped = extractAlunosFromListResponse(result).map((aluno) => ({
-        id: aluno.id,
-        label: aluno.cpf ? `${aluno.nome} • ${aluno.cpf}` : aluno.nome,
-        searchText: [aluno.nome, aluno.cpf, aluno.email, aluno.telefone].filter(Boolean).join(" "),
-      }));
-      setClienteOptions(mapped);
-      setClienteOptionsLoadedTenant(tenantId);
-    } catch {
-      setClienteOptions([]);
-      setClienteOptionsLoadedTenant("");
-    }
-  }, [tenantId, clienteOptionsLoadedTenant]);
-
   useEffect(() => {
-    if (!tenantId) return;
-    if (clienteOptionsLoadedTenant && clienteOptionsLoadedTenant !== tenantId) {
+    const searchTerm = query.trim();
+    if (!tenantId || searchTerm.length < 3) {
       setClienteOptions([]);
-      setClienteOptionsLoadedTenant("");
+      setLoadingClientes(false);
+      return;
     }
-  }, [tenantId, clienteOptionsLoadedTenant]);
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setLoadingClientes(true);
+      try {
+        const result = await listAlunosApi({
+          search: searchTerm,
+          page: 0,
+          size: 12,
+        });
+        if (cancelled) return;
+        const mapped = extractAlunosFromListResponse(result).map((aluno) => ({
+          id: aluno.id,
+          label: aluno.cpf ? `${aluno.nome} • ${aluno.cpf}` : aluno.nome,
+          searchText: [aluno.nome, aluno.cpf, aluno.email, aluno.telefone].filter(Boolean).join(" "),
+        }));
+        setClienteOptions(mapped);
+      } catch {
+        if (!cancelled) {
+          setClienteOptions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingClientes(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [tenantId, query]);
 
   async function handleChangeTenant(nextId: string) {
     setSavingTenant(true);
     try {
       await setTenant(nextId);
       setClienteOptions([]);
-      setClienteOptionsLoadedTenant("");
+      setLoadingClientes(false);
+      setQuery("");
     } catch {
       setClienteOptions([]);
-      setClienteOptionsLoadedTenant("");
+      setLoadingClientes(false);
     } finally {
       setSavingTenant(false);
     }
@@ -94,6 +108,7 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
           tenantId={tenantId}
           tenantName={tenantName}
           tenants={tenants}
+          ready={shellReady}
           disabled={savingTenant || tenantLoading}
           onChange={handleChangeTenant}
         />
@@ -113,9 +128,8 @@ function AppTopbarComponent({ onOpenMenu }: AppTopbarProps) {
               setQuery("");
               router.push(`/clientes/${option.id}`);
             }}
-            onFocusOpen={loadClienteOptions}
             options={clienteOptions}
-            emptyText="Nenhum cliente encontrado"
+            emptyText={loadingClientes ? "Buscando clientes..." : "Nenhum cliente encontrado"}
             minCharsToSearch={3}
             className="w-full"
           />

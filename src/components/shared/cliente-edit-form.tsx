@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 interface EditForm {
   nome: string;
@@ -65,8 +66,10 @@ export function ClienteEditForm({
 }) {
   const [form, setForm] = useState<EditForm>(() => buildForm(aluno));
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   useEffect(() => {
     setForm(buildForm(aluno));
+    setError("");
   }, [aluno]);
 
   useEffect(() => {
@@ -89,6 +92,7 @@ export function ClienteEditForm({
 
   const handleSave = async () => {
     setLoading(true);
+    setError("");
     try {
       await updateAlunoService({
         tenantId: aluno.tenantId,
@@ -124,6 +128,8 @@ export function ClienteEditForm({
       if (onSaved) {
         await onSaved();
       }
+    } catch (saveError) {
+      setError(normalizeErrorMessage(saveError));
     } finally {
       setLoading(false);
     }
@@ -249,6 +255,7 @@ export function ClienteEditForm({
           {loading ? "Salvando..." : "Salvar alterações"}
         </Button>
       </div>
+      {error ? <p className="text-sm text-gym-danger">{error}</p> : null}
     </div>
   );
 }

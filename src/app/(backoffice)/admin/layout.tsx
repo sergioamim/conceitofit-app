@@ -34,7 +34,7 @@ function AdminShellFrame({
           </div>
           <nav className="flex flex-col gap-1 text-sm">
             {navItems.map((item) => {
-              const active = Boolean(pathname) && (pathname === item.href || pathname.startsWith(item.href + "/"));
+              const active = pathname != null && (pathname === item.href || pathname.startsWith(item.href + "/"));
               return (
                 <Link
                   key={item.href}

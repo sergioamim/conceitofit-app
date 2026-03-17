@@ -29,23 +29,45 @@ function getTodayDate(): string {
   return getBusinessTodayIso();
 }
 
-function parseDateTime(value?: string): Date | null {
+function parseDateTime(value?: string): {
+  year: string;
+  month: string;
+  day: string;
+  hour?: string;
+  minute?: string;
+  second?: string;
+} | null {
   if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed;
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/
+  );
+  if (!match) return null;
+  return {
+    year: match[1],
+    month: match[2],
+    day: match[3],
+    hour: match[4],
+    minute: match[5],
+    second: match[6],
+  };
 }
 
 function formatDay(value?: string): string {
   const parsed = parseDateTime(value);
   if (!parsed) return "—";
-  return parsed.toLocaleDateString("pt-BR");
+  return `${parsed.day}/${parsed.month}/${parsed.year}`;
 }
 
 function formatTime(value?: string): string {
   const parsed = parseDateTime(value);
+  if (!parsed?.hour || !parsed.minute) return "—";
+  return `${parsed.hour}:${parsed.minute}:${parsed.second ?? "00"}`;
+}
+
+function formatMonthDay(value?: string): string {
+  const parsed = parseDateTime(value);
   if (!parsed) return "—";
-  return parsed.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return `${parsed.day}/${parsed.month}`;
 }
 
 function formatText(value?: string): string {
@@ -140,7 +162,7 @@ function buildSearchText(item: CatracaAcesso): string {
 
 function toTimestamp(value?: string): number {
   if (!value) return 0;
-  const parsed = new Date(value).getTime();
+  const parsed = Date.parse(value);
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
@@ -332,11 +354,6 @@ export default function CatracaAcessosPage() {
       setLoadingClienteOptions(false);
     }
   }, [tenantId, loadingClienteOptions, clienteOptionsLoadedTenant, clienteOptions.length]);
-
-  useEffect(() => {
-    if (activeTab !== "ACESSOS") return;
-    void loadClienteOptions();
-  }, [activeTab, loadClienteOptions]);
 
   const globallyFilteredItems = useMemo(() => {
     let scoped = items;
@@ -592,7 +609,7 @@ export default function CatracaAcessosPage() {
                     return (
                       <div key={ponto.date} className="grid grid-cols-[78px_1fr_54px] items-center gap-2">
                         <span className="text-xs text-muted-foreground">
-                          {new Date(`${ponto.date}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                          {formatMonthDay(ponto.date)}
                         </span>
                         <div className="h-2 rounded-full bg-secondary">
                           <div className="h-2 rounded-full bg-gym-teal" style={{ width: `${width}%` }} />

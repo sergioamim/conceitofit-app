@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { listAcademiasApi } from "@/lib/api/contexto-unidades";
+import { useEffect, useMemo } from "react";
 import type { Academia } from "@/lib/types";
 import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant-theme";
-import { TENANT_CONTEXT_UPDATED_EVENT } from "@/lib/tenant-context";
 import { useTenantContext } from "@/hooks/use-session-context";
 
 function applyThemeVars(academia?: Academia) {
@@ -46,59 +44,28 @@ function applyThemeVars(academia?: Academia) {
 }
 
 export function TenantThemeSync() {
-  const { tenantId, tenant } = useTenantContext();
-  const [academia, setAcademia] = useState<Academia | undefined>(undefined);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadAcademia() {
-      if (!tenantId) {
-        if (!active) return;
-        setAcademia(undefined);
-        return;
-      }
-
-      try {
-        const academias = await listAcademiasApi(tenantId);
-        if (!active) return;
-        setAcademia(academias[0]);
-      } catch {
-        if (!active) return;
-        setAcademia(
-          tenant
-            ? {
-                id: tenant.academiaId ?? tenant.groupId ?? tenant.id,
-                nome: tenant.nome,
-                branding: tenant.branding,
-                ativo: tenant.ativo,
-              }
-            : undefined
-        );
-      }
+  const { tenant, academia, brandingSnapshot } = useTenantContext();
+  const themedAcademia = useMemo<Academia | undefined>(() => {
+    if (academia) {
+      return {
+        ...academia,
+        branding: brandingSnapshot ?? academia.branding,
+      };
     }
 
-    void loadAcademia();
+    if (!tenant) return undefined;
 
-    return () => {
-      active = false;
+    return {
+      id: tenant.academiaId ?? tenant.groupId ?? tenant.id,
+      nome: tenant.nome,
+      ativo: tenant.ativo,
+      branding: brandingSnapshot ?? tenant.branding,
     };
-  }, [tenant, tenantId]);
+  }, [academia, brandingSnapshot, tenant]);
 
   useEffect(() => {
-    applyThemeVars(academia);
-
-    function handleUpdate() {
-      applyThemeVars(academia);
-    }
-
-    window.addEventListener(TENANT_CONTEXT_UPDATED_EVENT, handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-    return () => {
-      window.removeEventListener(TENANT_CONTEXT_UPDATED_EVENT, handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
-  }, [academia]);
+    applyThemeVars(themedAcademia);
+  }, [themedAcademia]);
 
   return null;
 }

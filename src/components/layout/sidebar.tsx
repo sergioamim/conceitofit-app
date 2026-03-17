@@ -27,7 +27,6 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { listAcademiasApi } from "@/lib/api/contexto-unidades";
 import { clearAuthSession } from "@/lib/api/session";
 import { cn } from "@/lib/utils";
 import {
@@ -36,7 +35,6 @@ import {
   useAuthAccess,
   useTenantContext,
 } from "@/hooks/use-session-context";
-import { TENANT_CONTEXT_UPDATED_EVENT } from "@/lib/tenant-context";
 import {
   Dialog,
   DialogContent,
@@ -140,6 +138,7 @@ const DEFAULT_BRAND_LOGO_DARK_URL = "/conceito-fit_tech_horizontal_dark.svg";
 type SidebarProps = {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  shellReady?: boolean;
 };
 
 function isActivePath(pathname: string, href: string): boolean {
@@ -573,46 +572,16 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
   );
 });
 
-function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
+function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = false }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [academiaName, setAcademiaName] = useState(DEFAULT_ACADEMIA_LABEL);
-  const [appName, setAppName] = useState(DEFAULT_APP_NAME);
-  const [logoUrl, setLogoUrl] = useState("");
   const [defaultLogoUrl, setDefaultLogoUrl] = useState(DEFAULT_BRAND_LOGO_DARK_URL);
-  const { tenant, tenantId, tenantName } = useTenantContext();
-
-  useEffect(() => {
-    let active = true;
-
-    async function syncBranding() {
-      const tenantAppName = tenant?.branding?.appName?.trim();
-      const tenantLogoUrl = tenant?.branding?.logoUrl ?? "";
-      try {
-        const academias = tenantId ? await listAcademiasApi(tenantId) : [];
-        if (!active) return;
-        const academia = academias[0];
-        setAcademiaName(academia?.nome ?? tenant?.nome ?? DEFAULT_ACADEMIA_LABEL);
-        setAppName(academia?.branding?.appName?.trim() || tenantAppName || DEFAULT_APP_NAME);
-        setLogoUrl(tenantLogoUrl || academia?.branding?.logoUrl || "");
-      } catch {
-        if (!active) return;
-        setAcademiaName(tenant?.nome ?? DEFAULT_ACADEMIA_LABEL);
-        setAppName(tenantAppName || DEFAULT_APP_NAME);
-        setLogoUrl(tenantLogoUrl);
-      }
-    }
-
-    void syncBranding();
-
-    function handleUpdate() {
-      void syncBranding();
-    }
-    window.addEventListener(TENANT_CONTEXT_UPDATED_EVENT, handleUpdate);
-    return () => {
-      active = false;
-      window.removeEventListener(TENANT_CONTEXT_UPDATED_EVENT, handleUpdate);
-    };
-  }, [tenant, tenantId]);
+  const { tenant, tenantName, academia, brandingSnapshot } = useTenantContext();
+  const stableTenantName =
+    shellReady && tenantName.trim() ? tenantName : DEFAULT_ACTIVE_TENANT_LABEL;
+  const branding = brandingSnapshot ?? tenant?.branding;
+  const appName = branding?.appName?.trim() || DEFAULT_APP_NAME;
+  const logoUrl = branding?.logoUrl || "";
+  const academiaName = academia?.nome || tenant?.nome || DEFAULT_ACADEMIA_LABEL;
 
   useEffect(() => {
     function syncDefaultLogoByTheme() {
@@ -647,7 +616,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
         collapsed={collapsed}
         appName={appName}
         academiaName={academiaName}
-        tenantName={tenantName || DEFAULT_ACTIVE_TENANT_LABEL}
+        tenantName={stableTenantName}
         logoUrl={logoUrl}
         defaultLogoUrl={defaultLogoUrl}
         onToggleCollapsed={() => setCollapsed((v) => !v)}

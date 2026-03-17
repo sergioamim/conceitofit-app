@@ -1,15 +1,79 @@
 import type { DashboardData } from "@/lib/types";
 import { apiRequest } from "./http";
 
-type DashboardPayload = Partial<DashboardData> & {
+export type DashboardScope = "FULL" | "CLIENTES" | "VENDAS" | "FINANCEIRO";
+
+type DashboardSummaryPayload = {
   totalAlunosAtivos?: unknown;
+  prospectsEmAberto?: unknown;
+  followupPendente?: unknown;
+  visitasAguardandoRetorno?: unknown;
   prospectsNovos?: unknown;
   matriculasDoMes?: unknown;
+  receitas?: unknown;
   receitaDoMes?: unknown;
+  matriculasNovas?: unknown;
+  matriculasDoMesAnterior?: unknown;
+  prospectsNovosAnterior?: unknown;
+  receitaDoMesAnterior?: unknown;
+  ticketMedio?: unknown;
+  ticketMedioAnterior?: unknown;
+  pagamentosRecebidosMes?: unknown;
+  pagamentosRecebidosMesAnterior?: unknown;
+  vendasNovas?: unknown;
+  vendasRecorrentes?: unknown;
+  inadimplencia?: unknown;
+  aReceber?: unknown;
+  statusAlunoCount?: Record<string, unknown>;
   prospectsRecentes?: unknown;
   matriculasVencendo?: unknown;
   pagamentosPendentes?: unknown;
+  tenantId?: unknown;
+  referenceDate?: unknown;
 };
+
+type DashboardSummaryPayloadWithLegacy = {
+  clientes?: DashboardSummaryPayload;
+  vendas?: DashboardSummaryPayload;
+  financeiro?: DashboardSummaryPayload;
+};
+
+type DashboardPayload = Partial<DashboardData> &
+  DashboardSummaryPayloadWithLegacy & {
+    scope?: DashboardScope;
+    tenantId?: unknown;
+    referenceDate?: string;
+    summary?: DashboardSummaryPayloadWithLegacy;
+    metadados?: {
+      generatedAt?: string;
+      sourceWindow?: {
+        month?: unknown;
+        year?: unknown;
+      };
+    };
+    totalAlunosAtivos?: unknown;
+    prospectsNovos?: unknown;
+    prospectsEmAberto?: unknown;
+    followupPendente?: unknown;
+    visitasAguardandoRetorno?: unknown;
+    matriculasDoMes?: unknown;
+    matriculasDoMesAnterior?: unknown;
+    receitaDoMes?: unknown;
+    receitaDoMesAnterior?: unknown;
+    ticketMedio?: unknown;
+    ticketMedioAnterior?: unknown;
+    pagamentosRecebidosMes?: unknown;
+    pagamentosRecebidosMesAnterior?: unknown;
+    vendasNovas?: unknown;
+    vendasRecorrentes?: unknown;
+    inadimplencia?: unknown;
+    aReceber?: unknown;
+    prospectsNovosAnterior?: unknown;
+    statusAlunoCount?: Record<string, unknown>;
+    prospectsRecentes?: unknown;
+    matriculasVencendo?: unknown;
+    pagamentosPendentes?: unknown;
+  };
 
 type DashboardApiResponse =
   | DashboardPayload
@@ -30,6 +94,18 @@ function toArray<T>(value: unknown): T[] {
   return value as T[];
 }
 
+function normalizeStatusAlunoCount(raw?: Record<string, unknown>): Record<string, number> {
+  const source = raw ?? {};
+
+  return {
+    ATIVO: toNumber(source.ATIVO, 0),
+    INATIVO: toNumber(source.INATIVO, 0),
+    SUSPENSO: toNumber(source.SUSPENSO, 0),
+    CANCELADO: toNumber(source.CANCELADO, 0),
+    ...(Object.fromEntries(Object.entries(source).filter(([key]) => !["ATIVO", "INATIVO", "SUSPENSO", "CANCELADO"].includes(key)))),
+  };
+}
+
 function extractPayload(response: DashboardApiResponse): DashboardPayload {
   if (!response || typeof response !== "object") return {};
   if ("totalAlunosAtivos" in response || "prospectsNovos" in response || "receitaDoMes" in response) {
@@ -41,35 +117,85 @@ function extractPayload(response: DashboardApiResponse): DashboardPayload {
     result?: DashboardPayload;
     dashboard?: DashboardPayload;
   };
-  return wrapped.data ?? wrapped.content ?? wrapped.result ?? wrapped.dashboard ?? {};
+  const candidate = wrapped.data ?? wrapped.content ?? wrapped.result ?? wrapped.dashboard ?? {};
+  if (candidate && "summary" in candidate) {
+    return candidate as DashboardPayload;
+  }
+  return candidate;
+}
+
+function normalizeSummary(payload: DashboardPayload): DashboardSummaryPayload {
+  const summary = (payload.summary || payload) as DashboardSummaryPayloadWithLegacy;
+  return {
+    ...(summary.clientes ?? {}),
+    ...(summary.vendas ?? {}),
+    ...(summary.financeiro ?? {}),
+  };
 }
 
 function normalizeDashboard(response: DashboardApiResponse): DashboardData {
   const payload = extractPayload(response);
+  const summaryPayload = normalizeSummary(payload);
+  const statusAlunoCountRaw = (summaryPayload.statusAlunoCount ??
+    payload.statusAlunoCount ??
+    {}) as Record<string, unknown>;
+
   return {
-    totalAlunosAtivos: toNumber(payload.totalAlunosAtivos),
-    prospectsNovos: toNumber(payload.prospectsNovos),
-    matriculasDoMes: toNumber(payload.matriculasDoMes),
-    receitaDoMes: toNumber(payload.receitaDoMes),
-    prospectsRecentes: toArray<DashboardData["prospectsRecentes"][number]>(payload.prospectsRecentes),
-    matriculasVencendo: toArray<DashboardData["matriculasVencendo"][number]>(payload.matriculasVencendo),
-    pagamentosPendentes: toArray<DashboardData["pagamentosPendentes"][number]>(payload.pagamentosPendentes),
+    totalAlunosAtivos: toNumber(summaryPayload.totalAlunosAtivos ?? payload.totalAlunosAtivos),
+    prospectsNovos: toNumber(summaryPayload.prospectsNovos ?? payload.prospectsNovos),
+    matriculasDoMes: toNumber(summaryPayload.matriculasDoMes ?? summaryPayload.matriculasNovas ?? payload.matriculasDoMes),
+    receitaDoMes: toNumber(summaryPayload.receitaDoMes ?? summaryPayload.receitas ?? payload.receitaDoMes),
+    prospectsRecentes: toArray<DashboardData["prospectsRecentes"][number]>(
+      summaryPayload.prospectsRecentes ?? payload.prospectsRecentes
+    ),
+    matriculasVencendo: toArray<DashboardData["matriculasVencendo"][number]>(
+      summaryPayload.matriculasVencendo ?? payload.matriculasVencendo
+    ),
+    pagamentosPendentes: toArray<DashboardData["pagamentosPendentes"][number]>(
+      summaryPayload.pagamentosPendentes ?? payload.pagamentosPendentes
+    ),
+    statusAlunoCount: {
+      ATIVO: toNumber(normalizeStatusAlunoCount(statusAlunoCountRaw).ATIVO, 0),
+      INATIVO: toNumber(normalizeStatusAlunoCount(statusAlunoCountRaw).INATIVO, 0),
+      SUSPENSO: toNumber(normalizeStatusAlunoCount(statusAlunoCountRaw).SUSPENSO, 0),
+      CANCELADO: toNumber(normalizeStatusAlunoCount(statusAlunoCountRaw).CANCELADO, 0),
+    },
+    prospectsEmAberto: toNumber(summaryPayload.prospectsEmAberto ?? payload.prospectsEmAberto),
+    followupPendente: toNumber(summaryPayload.followupPendente ?? payload.followupPendente),
+    visitasAguardandoRetorno: toNumber(summaryPayload.visitasAguardandoRetorno ?? payload.visitasAguardandoRetorno),
+    prospectsNovosAnterior: toNumber(summaryPayload.prospectsNovosAnterior ?? payload.prospectsNovosAnterior),
+    matriculasDoMesAnterior: toNumber(summaryPayload.matriculasDoMesAnterior ?? payload.matriculasDoMesAnterior),
+    receitaDoMesAnterior: toNumber(summaryPayload.receitaDoMesAnterior ?? payload.receitaDoMesAnterior),
+    ticketMedio: toNumber(summaryPayload.ticketMedio ?? payload.ticketMedio),
+    ticketMedioAnterior: toNumber(summaryPayload.ticketMedioAnterior ?? payload.ticketMedioAnterior),
+    pagamentosRecebidosMes: toNumber(summaryPayload.pagamentosRecebidosMes ?? payload.pagamentosRecebidosMes),
+    pagamentosRecebidosMesAnterior: toNumber(
+      summaryPayload.pagamentosRecebidosMesAnterior ?? payload.pagamentosRecebidosMesAnterior
+    ),
+    vendasNovas: toNumber(summaryPayload.vendasNovas ?? payload.vendasNovas),
+    vendasRecorrentes: toNumber(summaryPayload.vendasRecorrentes ?? payload.vendasRecorrentes),
+    inadimplencia: toNumber(summaryPayload.inadimplencia ?? payload.inadimplencia),
+    aReceber: toNumber(summaryPayload.aReceber ?? payload.aReceber),
   };
 }
 
 export async function getDashboardApi(input: {
   tenantId: string;
+  referenceDate?: string;
+  scope?: DashboardScope;
   month?: number;
   year?: number;
 }): Promise<DashboardData> {
   const query = {
     tenantId: input.tenantId,
+    referenceDate: input.referenceDate,
+    scope: input.scope,
     month: input.month,
     year: input.year,
   };
 
   const response = await apiRequest<DashboardApiResponse>({
-    path: "/api/v1/dashboard",
+    path: "/api/v1/academia/dashboard",
     query,
   });
   return normalizeDashboard(response);

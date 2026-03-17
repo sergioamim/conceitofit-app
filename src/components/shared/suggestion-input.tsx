@@ -22,6 +22,7 @@ export function SuggestionInput({
   emptyText = "Nenhum resultado",
   className,
   minCharsToSearch = 0,
+  preloadOnFocus = false,
 }: {
   inputId?: string;
   inputAriaLabel?: string;
@@ -34,6 +35,7 @@ export function SuggestionInput({
   emptyText?: string;
   className?: string;
   minCharsToSearch?: number;
+  preloadOnFocus?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -71,7 +73,7 @@ export function SuggestionInput({
         value={value}
         onFocus={() => {
           const shouldOpen = value.trim().length >= minCharsToSearch;
-          if (shouldOpen && onFocusOpen) onFocusOpen();
+          if (shouldOpen && preloadOnFocus && onFocusOpen) onFocusOpen();
           setOpen(shouldOpen);
         }}
         onBlur={() => window.setTimeout(() => setOpen(false), 120)}

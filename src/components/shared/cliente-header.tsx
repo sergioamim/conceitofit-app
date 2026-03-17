@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Camera, KeyRound, MoreVertical, Pencil } from "lucide-react";
 
 function formatDate(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+  const [year, month, day] = d.split("-");
+  if (!year || !month || !day) return d;
+  return `${day}/${month}/${year}`;
 }
 
 export function ClienteHeader({
@@ -102,14 +104,14 @@ export function ClienteHeader({
             <span>
               Plano:{" "}
               {planoAtivo ? (
-                <span className="text-gym-teal">Ativo</span>
+                <span className="text-gym-teal">{planoAtivoInfo?.nome ?? "Ativo"}</span>
               ) : (
                 <span className="text-gym-warning">Sem plano ativo</span>
               )}
             </span>
             {planoAtivoInfo && planoAtivo && (
               <span className="text-muted-foreground">
-                {planoAtivoInfo.nome} · até {formatDate(planoAtivo.dataFim)}
+                Vigente até {formatDate(planoAtivo.dataFim)}
               </span>
             )}
           </div>

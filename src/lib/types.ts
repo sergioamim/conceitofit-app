@@ -198,6 +198,13 @@ export interface Aluno {
   contatoEmergencia?: ContatoEmergencia;
   observacoesMedicas?: string;
   foto?: string;
+  estadoAtual?: {
+    dataInicioContratoAtual?: LocalDate;
+    dataFimContratoAtual?: LocalDate;
+    descricaoContratoAtual?: string;
+    dataInicioTreino?: LocalDate;
+    dataValidadeTreino?: LocalDate;
+  };
   status: StatusAluno;
   suspensao?: {
     motivo: string;
@@ -322,9 +329,19 @@ export interface Matricula {
   contratoEnviadoAutomaticamente?: boolean;
   contratoUltimoEnvioEm?: LocalDateTime;
   contratoAssinadoEm?: LocalDateTime;
+  pagamento?: PagamentoResumo;
   dataCriacao: LocalDateTime;
   dataAtualizacao?: LocalDateTime;
   convenioId?: UUID;
+}
+
+export interface PagamentoResumo {
+  id: UUID;
+  status: StatusPagamento;
+  valorFinal: number;
+  dataVencimento?: LocalDate;
+  dataPagamento?: LocalDate;
+  formaPagamento?: TipoFormaPagamento;
 }
 
 export interface Pagamento {
@@ -1277,6 +1294,21 @@ export interface DashboardData {
   prospectsRecentes: Prospect[];
   matriculasVencendo: (Matricula & { aluno?: Aluno; plano?: Plano })[];
   pagamentosPendentes: (Pagamento & { aluno?: Aluno })[];
+  statusAlunoCount: Record<StatusAluno, number>;
+  prospectsEmAberto: number;
+  followupPendente: number;
+  visitasAguardandoRetorno: number;
+  prospectsNovosAnterior: number;
+  matriculasDoMesAnterior: number;
+  receitaDoMesAnterior: number;
+  ticketMedio: number;
+  ticketMedioAnterior: number;
+  pagamentosRecebidosMes: number;
+  pagamentosRecebidosMesAnterior: number;
+  vendasNovas: number;
+  vendasRecorrentes: number;
+  inadimplencia: number;
+  aReceber: number;
 }
 
 export type BiEscopo = "UNIDADE" | "ACADEMIA";

@@ -6,8 +6,6 @@ import { Search, Plus } from "lucide-react";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import {
   listAlunosPageService,
-  listMatriculasService,
-  listPlanosService,
   updateAlunoService,
 } from "@/lib/comercial/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
@@ -21,7 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { maskCPF, maskPhone } from "@/lib/utils";
-import type { Aluno, Matricula, Plano, StatusAluno } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import type { Aluno, StatusAluno } from "@/lib/types";
 
 const STATUS_FILTERS: { value: StatusAluno | "TODOS"; label: string }[] = [
   { value: "TODOS", label: "Todos" },
@@ -40,7 +39,7 @@ function formatDate(d: string) {
 function ClientesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { tenantId, tenantResolved } = useTenantContext();
+  const { tenantId, tenantResolved, setTenant } = useTenantContext();
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [filtro, setFiltro] = useState<StatusAluno | "TODOS">("TODOS");
   const [busca, setBusca] = useState("");
@@ -61,30 +60,9 @@ function ClientesPageContent() {
   const [resumoOpen, setResumoOpen] = useState(false);
   const [clienteResumo, setClienteResumo] = useState<Aluno | null>(null);
   const [liberandoSuspensao, setLiberandoSuspensao] = useState(false);
-  const [matriculasAtivas, setMatriculasAtivas] = useState<Matricula[]>([]);
-  const [planos, setPlanos] = useState<Plano[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    const [paged, matriculas, planosResponse] = await Promise.all([
-      listAlunosPageService({
-        tenantId,
-        status: filtro === "TODOS" ? undefined : filtro,
-        page,
-        size: pageSize,
-      }),
-      listMatriculasService({
-        tenantId,
-        status: "ATIVA",
-        page: 0,
-        size: 500,
-      }),
-      listPlanosService({
-        tenantId,
-        apenasAtivos: false,
-      }),
-    ]);
-
+  const applyLoadedData = useCallback((paged: Awaited<ReturnType<typeof listAlunosPageService>>) => {
     setAlunos(paged.items);
     setHasNextPage(paged.hasNext);
     setTotalClientes(paged.total ?? paged.items.length);
@@ -105,17 +83,52 @@ function ClientesPageContent() {
       INATIVO: inativos,
       CANCELADO: cancelados,
     });
-    setMatriculasAtivas(matriculas.filter((item) => item.status === "ATIVA"));
-    setPlanos(planosResponse);
-  }, [filtro, page, pageSize, tenantId]);
+  }, []);
+
+  const loadSnapshot = useCallback(async (currentTenantId: string) => {
+    return listAlunosPageService({
+      tenantId: currentTenantId,
+      status: filtro === "TODOS" ? undefined : filtro,
+      page,
+      size: pageSize,
+    });
+  }, [filtro, page, pageSize]);
+
+  const load = useCallback(async () => {
+    if (!tenantId) return;
+    setLoadError(null);
+
+    try {
+      const snapshot = await loadSnapshot(tenantId);
+      applyLoadedData(snapshot);
+    } catch (error) {
+      const message = normalizeErrorMessage(error);
+      const normalizedMessage = message.toLowerCase();
+      const shouldRetryWithTenantSync =
+        normalizedMessage.includes("x-context-id sem unidade ativa") ||
+        normalizedMessage.includes("tenantid diverge da unidade ativa do contexto informado");
+
+      if (!shouldRetryWithTenantSync) {
+        setLoadError(message);
+        return;
+      }
+
+      try {
+        await setTenant(tenantId);
+        const snapshot = await loadSnapshot(tenantId);
+        applyLoadedData(snapshot);
+      } catch (retryError) {
+        setLoadError(normalizeErrorMessage(retryError));
+      }
+    }
+  }, [applyLoadedData, loadSnapshot, setTenant, tenantId]);
 
   useEffect(() => {
     setPage(0);
     setAlunos([]);
     setHasNextPage(false);
     setTotalClientes(0);
-    setMatriculasAtivas([]);
-    setPlanos([]);
+    setLoadError(null);
   }, [tenantId]);
 
   useEffect(() => {
@@ -165,16 +178,15 @@ function ClientesPageContent() {
 
   const clienteResumoPlano = useMemo(() => {
     if (!clienteResumo) return null;
-    const matriculaAtiva = matriculasAtivas.find(
-      (item) => item.alunoId === clienteResumo.id && item.status === "ATIVA"
-    );
-    if (!matriculaAtiva) return null;
-    const plano = planos.find((item) => item.id === matriculaAtiva.planoId);
+    const estadoAtual = clienteResumo.estadoAtual;
+    if (!estadoAtual?.descricaoContratoAtual && !estadoAtual?.dataFimContratoAtual) {
+      return null;
+    }
     return {
-      nome: plano?.nome ?? "Plano ativo",
-      dataFim: matriculaAtiva.dataFim,
+      nome: estadoAtual?.descricaoContratoAtual ?? "Plano ativo",
+      dataFim: estadoAtual?.dataFimContratoAtual,
     };
-  }, [clienteResumo, matriculasAtivas, planos]);
+  }, [clienteResumo]);
 
   const clienteResumoBaseHref = useMemo(() => {
     if (!clienteResumo) return "";
@@ -207,6 +219,12 @@ function ClientesPageContent() {
           Novo cliente
         </Button>
       </div>
+
+      {loadError ? (
+        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {loadError}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-4 gap-4">
         <div className="rounded-xl border border-border bg-card p-4">

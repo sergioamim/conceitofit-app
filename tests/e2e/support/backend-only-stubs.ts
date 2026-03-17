@@ -611,7 +611,7 @@ export async function installPublicJourneyApiMocks(page: Page) {
       return;
     }
 
-    if (/^\/api\/v1\/comercial\/alunos\/[^/]+\/matriculas$/.test(path) && method === "GET") {
+    if (/^\/api\/v1\/comercial\/alunos\/[^/]+\/(?:matriculas|adesoes)$/.test(path) && method === "GET") {
       const alunoId = path.split("/").at(-2) ?? "";
       await fulfillJson(route, matriculas.filter((item) => item.alunoId === alunoId));
       return;
@@ -1117,17 +1117,34 @@ export async function installReservasApiMocks(page: Page) {
     }
 
     if (path === "/api/v1/comercial/alunos" && method === "GET") {
-      await fulfillJson(route, {
-        items: alunos,
+      const search = url.searchParams.get("search")?.trim().toLowerCase();
+      const filteredAlunos = search
+        ? alunos.filter((aluno) => {
+            const haystack = [aluno.nome, aluno.cpf, aluno.email, aluno.telefone]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
+            return haystack.includes(search);
+          })
+        : alunos;
+      const totaisStatus = {
         total: alunos.length,
+        ativos: alunos.length,
+        suspensos: 0,
+        inativos: 0,
+        cancelados: 0,
+      };
+      await fulfillJson(route, {
+        items: filteredAlunos,
         page: Number(url.searchParams.get("page") ?? 0),
-        size: Number(url.searchParams.get("size") ?? alunos.length),
+        size: Number(url.searchParams.get("size") ?? filteredAlunos.length),
         hasNext: false,
+        totaisStatus,
       });
       return;
     }
 
-    if (path === "/api/v1/comercial/matriculas" && method === "GET") {
+    if ((path === "/api/v1/comercial/adesoes" || path === "/api/v1/comercial/matriculas") && method === "GET") {
       await fulfillJson(route, matriculas);
       return;
     }

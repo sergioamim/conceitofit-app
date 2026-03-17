@@ -1,6 +1,7 @@
 import type {
   Matricula,
   Pagamento,
+  PagamentoResumo,
   PagamentoVenda,
   Plano,
   StatusContratoPlano,
@@ -104,7 +105,7 @@ export function resolveContratoStatusFromPlano(
 
 export function resolveFluxoComercialStatus(params: {
   matricula?: Matricula | null;
-  pagamento?: Pagamento | null;
+  pagamento?: Pagamento | PagamentoResumo | null;
   plano?: Plano | null;
 }): StatusFluxoComercial | undefined {
   const { matricula, pagamento, plano } = params;

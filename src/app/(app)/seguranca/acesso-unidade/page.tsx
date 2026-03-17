@@ -274,9 +274,6 @@ export default function AcessoUnidadePage() {
                   setSelectedUserId(option.id);
                   setUserQuery(option.label);
                 }}
-                onFocusOpen={() => {
-                  void loadUsersOnDemand();
-                }}
                 options={users.map((user) => ({
                   id: user.id,
                   label: user.fullName || user.name || user.email || "Sem nome",

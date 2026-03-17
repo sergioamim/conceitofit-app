@@ -61,6 +61,7 @@ export default function ClienteDetalhePage() {
   const [liberandoAcesso, setLiberandoAcesso] = useState(false);
   const [liberarAcessoErro, setLiberarAcessoErro] = useState("");
   const [liberarAcessoInfo, setLiberarAcessoInfo] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -252,13 +253,18 @@ export default function ClienteDetalhePage() {
           })()}
           onClose={() => setRecebendo(null)}
           onConfirm={async (data) => {
-            await receberPagamentoService({
-              tenantId: aluno.tenantId,
-              id: recebendo.id,
-              data,
-            });
-            setRecebendo(null);
-            await reload();
+            try {
+              setActionError(null);
+              await receberPagamentoService({
+                tenantId: aluno.tenantId,
+                id: recebendo.id,
+                data,
+              });
+              setRecebendo(null);
+              await reload();
+            } catch (error) {
+              setActionError(normalizeErrorMessage(error));
+            }
           }}
         />
       )}
@@ -273,21 +279,26 @@ export default function ClienteDetalhePage() {
         onClose={() => setSuspenderOpen(false)}
         initial={aluno.suspensao}
         onConfirm={async (payload) => {
-          const registro = {
-            ...payload,
-            dataRegistro: new Date().toISOString().slice(0, 19),
-          };
-          await updateAlunoService({
-            tenantId: aluno.tenantId,
-            id: aluno.id,
-            data: {
-              status: "SUSPENSO",
-              suspensao: payload,
-              suspensoes: [registro, ...(aluno.suspensoes ?? [])],
-            },
-          });
-          setSuspenderOpen(false);
-          await reload();
+          try {
+            setActionError(null);
+            const registro = {
+              ...payload,
+              dataRegistro: new Date().toISOString().slice(0, 19),
+            };
+            await updateAlunoService({
+              tenantId: aluno.tenantId,
+              id: aluno.id,
+              data: {
+                status: "SUSPENSO",
+                suspensao: payload,
+                suspensoes: [registro, ...(aluno.suspensoes ?? [])],
+              },
+            });
+            setSuspenderOpen(false);
+            await reload();
+          } catch (error) {
+            setActionError(normalizeErrorMessage(error));
+          }
         }}
       />
       <ClientePhotoModal
@@ -399,19 +410,25 @@ export default function ClienteDetalhePage() {
           onNovaVenda={() => setNovaMatriculaOpen(true)}
           onSuspender={() => setSuspenderOpen(true)}
           onReativar={async () => {
-            await updateAlunoService({
-              tenantId: aluno.tenantId,
-              id: aluno.id,
-              data: {
-                status: "INATIVO",
-                suspensao: undefined,
-              },
-            });
-            await reload();
+            try {
+              setActionError(null);
+              await updateAlunoService({
+                tenantId: aluno.tenantId,
+                id: aluno.id,
+                data: {
+                  status: "INATIVO",
+                  suspensao: undefined,
+                },
+              });
+              await reload();
+            } catch (error) {
+              setActionError(normalizeErrorMessage(error));
+            }
           }}
           onCompletarCadastro={() => setTab("editar")}
           showCartoesAction={false}
           onLiberarAcesso={() => {
+            setActionError(null);
             setLiberarAcessoErro("");
             setLiberarAcessoInfo(null);
             setLiberarAcessoJustificativa("");
@@ -423,6 +440,11 @@ export default function ClienteDetalhePage() {
         {liberarAcessoInfo ? (
           <div className="mt-3 rounded-xl border border-gym-accent/40 bg-gym-accent/10 p-3 text-sm text-gym-accent">
             {liberarAcessoInfo}
+          </div>
+        ) : null}
+        {actionError ? (
+          <div className="mt-3 rounded-xl border border-gym-danger/40 bg-gym-danger/10 p-3 text-sm text-gym-danger">
+            {actionError}
           </div>
         ) : null}
       </div>

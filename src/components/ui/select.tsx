@@ -2,25 +2,69 @@
 
 import * as React from "react"
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
-import { Select as SelectPrimitive } from "radix-ui"
+import * as SelectPrimitive from "@radix-ui/react-select"
 
 import { cn } from "@/lib/utils"
+
+type SelectHydrationState = {
+  mounted: boolean
+  disabled?: boolean
+}
+
+const SelectHydrationContext = React.createContext<SelectHydrationState>({
+  mounted: true,
+})
 
 function Select({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <SelectHydrationContext.Provider
+        value={{ mounted: false, disabled: props.disabled }}
+      >
+        {props.children}
+      </SelectHydrationContext.Provider>
+    )
+  }
+
+  return (
+    <SelectHydrationContext.Provider
+      value={{ mounted: true, disabled: props.disabled }}
+    >
+      <SelectPrimitive.Root data-slot="select" {...props} />
+    </SelectHydrationContext.Provider>
+  )
 }
 
 function SelectGroup({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Group>) {
+  const hydration = React.useContext(SelectHydrationContext)
+  if (!hydration.mounted) return null
   return <SelectPrimitive.Group data-slot="select-group" {...props} />
 }
 
 function SelectValue({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Value>) {
+  const hydration = React.useContext(SelectHydrationContext)
+  if (!hydration.mounted) {
+    return (
+      <span
+        data-slot="select-value"
+        className="line-clamp-1 flex items-center gap-2"
+      >
+        {props.placeholder ?? ""}
+      </span>
+    )
+  }
   return <SelectPrimitive.Value data-slot="select-value" {...props} />
 }
 
@@ -32,9 +76,29 @@ function SelectTrigger({
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default"
 }) {
+  const hydration = React.useContext(SelectHydrationContext)
+
+  if (!hydration.mounted) {
+    return (
+      <button
+        type="button"
+        data-slot="select-trigger"
+        data-size={size}
+        className={cn(
+          "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          className
+        )}
+        aria-label={props["aria-label"]}
+        disabled={props.disabled ?? hydration.disabled}
+      >
+        {children}
+        <ChevronDownIcon className="size-4 opacity-50" />
+      </button>
+    )
+  }
+
   return (
     <SelectPrimitive.Trigger
-      suppressHydrationWarning
       data-slot="select-trigger"
       data-size={size}
       className={cn(
@@ -58,6 +122,9 @@ function SelectContent({
   align = "center",
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  const hydration = React.useContext(SelectHydrationContext)
+  if (!hydration.mounted) return null
+
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -92,6 +159,9 @@ function SelectLabel({
   className,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Label>) {
+  const hydration = React.useContext(SelectHydrationContext)
+  if (!hydration.mounted) return null
+
   return (
     <SelectPrimitive.Label
       data-slot="select-label"
@@ -106,6 +176,9 @@ function SelectItem({
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Item>) {
+  const hydration = React.useContext(SelectHydrationContext)
+  if (!hydration.mounted) return null
+
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -132,6 +205,9 @@ function SelectSeparator({
   className,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Separator>) {
+  const hydration = React.useContext(SelectHydrationContext)
+  if (!hydration.mounted) return null
+
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
@@ -145,6 +221,9 @@ function SelectScrollUpButton({
   className,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.ScrollUpButton>) {
+  const hydration = React.useContext(SelectHydrationContext)
+  if (!hydration.mounted) return null
+
   return (
     <SelectPrimitive.ScrollUpButton
       data-slot="select-scroll-up-button"
@@ -163,6 +242,9 @@ function SelectScrollDownButton({
   className,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.ScrollDownButton>) {
+  const hydration = React.useContext(SelectHydrationContext)
+  if (!hydration.mounted) return null
+
   return (
     <SelectPrimitive.ScrollDownButton
       data-slot="select-scroll-down-button"

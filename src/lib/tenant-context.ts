@@ -36,6 +36,14 @@ let tenantContextMemory: TenantContextMemory = {
   tenants: [],
 };
 
+export function resetTenantContextMemory(): void {
+  tenantContextMemory = {
+    currentTenantId: undefined,
+    tenantAtual: null,
+    tenants: [],
+  };
+}
+
 function normalizeTenantId(value: string | null | undefined): string | undefined {
   const normalized = typeof value === "string" ? value.trim() : "";
   return normalized || undefined;

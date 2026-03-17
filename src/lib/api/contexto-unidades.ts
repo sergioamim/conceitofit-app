@@ -1,6 +1,14 @@
 import type { Academia, HorarioFuncionamento, Tenant } from "@/lib/types";
 import { ApiRequestError, apiRequest } from "./http";
+import type { AuthUser } from "./auth";
 import { getActiveTenantIdFromSession, getAvailableTenantsFromSession, getPreferredTenantId } from "./session";
+
+const BOOTSTRAP_ENDPOINT_ENABLED = new Set(["1", "true", "yes", "on"]).has(
+  (process.env.NEXT_PUBLIC_APP_BOOTSTRAP_ENABLED ?? "").trim().toLowerCase(),
+);
+const BOOTSTRAP_STRICT_MODE = new Set(["1", "true", "yes", "on"]).has(
+  (process.env.NEXT_PUBLIC_APP_BOOTSTRAP_STRICT ?? "").trim().toLowerCase(),
+);
 
 interface EnderecoApi {
   cep?: string | null;
@@ -59,10 +67,80 @@ interface AcademiaApiResponse {
   ativo?: boolean | null;
 }
 
+interface TenantAccessFromBootstrapApiResponse {
+  tenantId?: string | null;
+  defaultTenant?: boolean;
+}
+
+interface TenantBootstrapUserApiResponse {
+  id?: string;
+  nome?: string;
+  email?: string;
+  roles?: string[];
+  activeTenantId?: string;
+  availableTenants?: TenantAccessFromBootstrapApiResponse[] | null;
+}
+
+interface TenantBootstrapCapabilitiesApiResponse {
+  canAccessElevatedModules?: boolean;
+}
+
+interface TenantBootstrapApiResponse {
+  user?: TenantBootstrapUserApiResponse;
+  tenantContext?: TenantContextApiResponse;
+  academia?: AcademiaApiResponse;
+  branding?: TenantBrandingApi | null;
+  capabilities?: TenantBootstrapCapabilitiesApiResponse;
+}
+
+export const isSessionBootstrapEndpointEnabled = (): boolean =>
+  BOOTSTRAP_ENDPOINT_ENABLED || BOOTSTRAP_STRICT_MODE;
+
+export const isSessionBootstrapFallbackEnabled = (): boolean => !BOOTSTRAP_STRICT_MODE;
+
+function isMissingAppBootstrapEndpointError(error: unknown): boolean {
+  return (
+    isSessionBootstrapFallbackEnabled()
+    && error instanceof ApiRequestError
+    && [404, 405, 501].includes(error.status)
+  );
+}
+
+function parseAvailableTenantsFromBootstrap(
+  raw?: TenantAccessFromBootstrapApiResponse[] | null,
+): AuthUser["availableTenants"] {
+  if (!raw?.length) return [];
+  return raw
+    .map((item) => {
+      const tenantId = typeof item.tenantId === "string" ? item.tenantId.trim() : "";
+      if (!tenantId) return null;
+      return {
+        tenantId,
+        defaultTenant: Boolean(item.defaultTenant),
+      };
+    })
+    .filter((item): item is AuthUser["availableTenants"][number] => item !== null);
+}
+
 interface TenantContextApiResponse {
   currentTenantId: string;
   tenantAtual: TenantApiResponse;
   unidadesDisponiveis: TenantApiResponse[];
+}
+
+function normalizeTenantBranding(input?: TenantBrandingApi | null) {
+  if (!input) return undefined;
+  return {
+    appName: input.appName ?? undefined,
+    logoUrl: input.logoUrl ?? undefined,
+    themePreset: input.themePreset ?? undefined,
+    useCustomColors: input.useCustomColors ?? false,
+    colors: input.colors ?? undefined,
+  };
+}
+
+export function isSessionBootstrapMissingRouteError(error: unknown): boolean {
+  return isMissingAppBootstrapEndpointError(error);
 }
 
 function normalizeTenant(input: TenantApiResponse): Tenant {
@@ -89,13 +167,7 @@ function normalizeTenant(input: TenantApiResponse): Tenant {
         }
       : undefined,
     branding: input.branding
-      ? {
-          appName: input.branding.appName ?? undefined,
-          logoUrl: input.branding.logoUrl ?? undefined,
-          themePreset: input.branding.themePreset ?? undefined,
-          useCustomColors: input.branding.useCustomColors ?? false,
-          colors: input.branding.colors ?? undefined,
-        }
+      ? normalizeTenantBranding(input.branding)
       : undefined,
     configuracoes: input.configuracoes
       ? {
@@ -130,13 +202,7 @@ function normalizeAcademia(input: AcademiaApiResponse): Academia {
         }
       : undefined,
     branding: input.branding
-      ? {
-          appName: input.branding.appName ?? undefined,
-          logoUrl: input.branding.logoUrl ?? undefined,
-          themePreset: input.branding.themePreset ?? undefined,
-          useCustomColors: input.branding.useCustomColors ?? false,
-          colors: input.branding.colors ?? undefined,
-        }
+      ? normalizeTenantBranding(input.branding)
       : undefined,
     ativo: input.ativo ?? undefined,
   };
@@ -201,6 +267,47 @@ export async function getTenantContextApi(): Promise<{
     currentTenantId: response.currentTenantId,
     tenantAtual: normalizeTenant(response.tenantAtual),
     unidadesDisponiveis: response.unidadesDisponiveis.map(normalizeTenant),
+  };
+}
+
+export async function getSessionBootstrapApi(): Promise<{
+  tenantContext: {
+    currentTenantId: string;
+    tenantAtual: Tenant;
+    unidadesDisponiveis: Tenant[];
+  };
+  user: AuthUser;
+  academia?: Academia;
+  branding?: Tenant["branding"];
+  capabilities?: TenantBootstrapCapabilitiesApiResponse;
+}> {
+  const response = await apiRequest<TenantBootstrapApiResponse>({
+    path: "/api/v1/app/bootstrap",
+  });
+
+  if (!response.tenantContext || !response.user) {
+    throw new Error("Resposta de bootstrap incompleta: tenantContext ou user ausente.");
+  }
+
+  return {
+    tenantContext: {
+      currentTenantId: response.tenantContext.currentTenantId,
+      tenantAtual: normalizeTenant(response.tenantContext.tenantAtual),
+      unidadesDisponiveis: response.tenantContext.unidadesDisponiveis.map(normalizeTenant),
+    },
+    user: {
+      id: response.user.id,
+      nome: response.user.nome,
+      email: response.user.email,
+      roles: response.user.roles ?? [],
+      activeTenantId: response.user.activeTenantId,
+      availableTenants: parseAvailableTenantsFromBootstrap(response.user.availableTenants),
+    },
+    academia: response.academia ? normalizeAcademia(response.academia) : undefined,
+    branding: response.branding
+      ? normalizeTenantBranding(response.branding)
+      : undefined,
+    capabilities: response.capabilities,
   };
 }
 

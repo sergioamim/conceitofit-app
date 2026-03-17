@@ -19,24 +19,19 @@ import {
   Users,
 } from "lucide-react";
 import { useTenantContext } from "@/hooks/use-session-context";
-import { extractAlunosFromListResponse, extractAlunosTotais, listAlunosApi } from "@/lib/api/alunos";
-import { listMatriculasApi } from "@/lib/api/matriculas";
-import { listPagamentosApi } from "@/lib/api/pagamentos";
-import { listProspectsApi } from "@/lib/api/crm";
+import { getDashboardApi, type DashboardScope } from "@/lib/api/dashboard";
 import { StatusBadge } from "@/components/shared/status-badge";
-import type {
-  Aluno,
-  Matricula,
-  Pagamento,
-  Prospect,
-  StatusAluno,
-} from "@/lib/types";
+import type { DashboardData, Prospect, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 type DashboardTab = "CLIENTES" | "VENDAS" | "FINANCEIRO";
 const PROSPECTS_PAGE_SIZE = 10;
-const DASHBOARD_PAGE_SIZE = 1000;
+const SCOPE_BY_TAB: Record<DashboardTab, DashboardScope> = {
+  CLIENTES: "CLIENTES",
+  VENDAS: "VENDAS",
+  FINANCEIRO: "FINANCEIRO",
+};
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -44,28 +39,6 @@ function formatBRL(value: number) {
 
 function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
-function monthPrefix(month: number, year: number) {
-  return `${year}-${String(month + 1).padStart(2, "0")}`;
-}
-
-function previousMonth(month: number, year: number) {
-  if (month === 0) return { month: 11, year: year - 1 };
-  return { month: month - 1, year };
-}
-
-function addDaysIso(isoDate: string, days: number) {
-  const next = new Date(`${isoDate}T00:00:00`);
-  next.setDate(next.getDate() + days);
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
-}
-
-function daysDiffFromReference(isoDateTime: string | undefined, referenceDateIso: string) {
-  if (!isoDateTime) return 999;
-  const now = new Date(`${referenceDateIso}T23:59:59`).getTime();
-  const past = new Date(isoDateTime).getTime();
-  return Math.floor((now - past) / (1000 * 60 * 60 * 24));
 }
 
 function deltaLabel(current: number, prev: number) {
@@ -120,84 +93,90 @@ function MetricCard({
 
 export default function DashboardPage() {
   const tenantContext = useTenantContext();
-  const [prospects, setProspects] = useState<Prospect[]>([]);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardDataCache, setDashboardDataCache] = useState<Record<string, DashboardData>>({});
   const [showAllProspects, setShowAllProspects] = useState(false);
   const [prospectsPage, setProspectsPage] = useState<Prospect[]>([]);
   const [prospectsPageNumber, setProspectsPageNumber] = useState(1);
   const [prospectsPageHasNext, setProspectsPageHasNext] = useState(false);
   const [prospectsPageLoading, setProspectsPageLoading] = useState(false);
-  const [pagamentos, setPagamentos] = useState<(Pagamento & { aluno?: Aluno })[]>([]);
-  const [matriculas, setMatriculas] = useState<(Matricula & { aluno?: Aluno })[]>([]);
-  const [statusAlunoCount, setStatusAlunoCount] = useState<Record<StatusAluno, number>>({
-    ATIVO: 0,
-    INATIVO: 0,
-    SUSPENSO: 0,
-    CANCELADO: 0,
-  });
   const [todayIso, setTodayIso] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false);
-  const financialLoadedDateRef = useRef<string | null>(null);
+
+  const openProspects = useMemo(() => {
+    if (!dashboardData?.prospectsRecentes) return [] as Prospect[];
+    return [...dashboardData.prospectsRecentes]
+      .filter((prospect) => prospect.status !== "CONVERTIDO" && prospect.status !== "PERDIDO")
+      .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
+  }, [dashboardData?.prospectsRecentes]);
+
+  const dashboardCacheKey = useCallback(
+    (scope: DashboardScope, referenceDate: string) => {
+      if (!tenantContext.tenantId) {
+        return `${referenceDate}-${scope}`;
+      }
+      return `${tenantContext.tenantId}-${referenceDate}-${scope}`;
+    },
+    [tenantContext.tenantId]
+  );
 
   const loadProspectsPageData = useCallback((page: number) => {
     setProspectsPageLoading(true);
-    const activeProspects = [...prospects]
-      .filter((prospect) => prospect.status !== "CONVERTIDO" && prospect.status !== "PERDIDO")
-      .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
     const startIndex = Math.max(0, (page - 1) * PROSPECTS_PAGE_SIZE);
-    const pageItems = activeProspects.slice(startIndex, startIndex + PROSPECTS_PAGE_SIZE);
+    const pageItems = openProspects.slice(startIndex, startIndex + PROSPECTS_PAGE_SIZE);
     setProspectsPage(pageItems);
     setProspectsPageNumber(page);
-    setProspectsPageHasNext(startIndex + PROSPECTS_PAGE_SIZE < activeProspects.length);
+    setProspectsPageHasNext(startIndex + PROSPECTS_PAGE_SIZE < openProspects.length);
     setProspectsPageLoading(false);
-  }, [prospects]);
+  }, [openProspects]);
 
-  const load = useCallback(async (referenceDate: string, includeFinancial = false) => {
+  const load = useCallback(async (referenceDate: string) => {
     if (!referenceDate || !tenantContext.tenantId) return;
+
+    const scope = SCOPE_BY_TAB[tab];
+    const cacheKey = dashboardCacheKey(scope, referenceDate);
+    const cachedData = dashboardDataCache[cacheKey];
+
+    if (cachedData) {
+      setDashboardData(cachedData);
+      setLoading(false);
+      setError(null);
+      setProspectsPage([]);
+      setShowAllProspects(false);
+      setProspectsPageNumber(1);
+      setProspectsPageHasNext(false);
+      return;
+    }
+
     loadingRef.current = true;
     setLoading(true);
     setError(null);
     try {
-      const [prospectsList, alunosResponse, mats] = await Promise.all([
-        listProspectsApi({ tenantId: tenantContext.tenantId }),
-        listAlunosApi({ tenantId: tenantContext.tenantId, page: 0, size: DASHBOARD_PAGE_SIZE }),
-        listMatriculasApi({ tenantId: tenantContext.tenantId }),
-      ]);
-      const totais = extractAlunosTotais(alunosResponse);
-      const alunos = extractAlunosFromListResponse(alunosResponse);
-      const alunosMap = new Map(alunos.map((aluno) => [aluno.id, aluno] as const));
-      setProspects(
-        [...prospectsList].sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao))
-      );
-      setMatriculas(mats);
-      setStatusAlunoCount({
-        ATIVO: totais?.totalAtivo ?? 0,
-        INATIVO: totais?.totalInativo ?? 0,
-        SUSPENSO: totais?.totalSuspenso ?? 0,
-        CANCELADO: totais?.totalCancelado ?? totais?.cancelados ?? 0,
+      const nextDashboardData = await getDashboardApi({
+        tenantId: tenantContext.tenantId,
+        referenceDate,
+        scope,
       });
-      if (includeFinancial) {
-        const pags = await listPagamentosApi({
-          tenantId: tenantContext.tenantId,
-          page: 0,
-          size: DASHBOARD_PAGE_SIZE,
-        });
-        setPagamentos(pags.map((pagamento) => ({ ...pagamento, aluno: alunosMap.get(pagamento.alunoId) })));
-        financialLoadedDateRef.current = referenceDate;
-      } else if (financialLoadedDateRef.current && financialLoadedDateRef.current !== referenceDate) {
-        setPagamentos([]);
-        financialLoadedDateRef.current = null;
-      }
+      setDashboardData(nextDashboardData);
+      setDashboardDataCache((prev) => ({
+        ...prev,
+        [cacheKey]: nextDashboardData,
+      }));
+      setProspectsPage([]);
+      setShowAllProspects(false);
+      setProspectsPageNumber(1);
+      setProspectsPageHasNext(false);
     } catch (loadError) {
       setError(normalizeErrorMessage(loadError));
     } finally {
       loadingRef.current = false;
       setLoading(false);
     }
-  }, [tenantContext.tenantId]);
+  }, [tenantContext.tenantId, tab, dashboardCacheKey, dashboardDataCache]);
 
   useEffect(() => {
     setShowAllProspects(false);
@@ -215,10 +194,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!selectedDate) return;
-    const shouldLoadFinancial = tab !== "CLIENTES";
-    if (shouldLoadFinancial && financialLoadedDateRef.current === selectedDate) return;
     if (tenantContext.tenantResolved) {
-      void load(selectedDate, shouldLoadFinancial);
+      void load(selectedDate);
     }
   }, [load, selectedDate, tab, tenantContext.tenantResolved]);
 
@@ -228,148 +205,46 @@ export default function DashboardPage() {
     }
   }, [loadProspectsPageData, prospectsPageNumber, showAllProspects]);
 
-  const recentProspects = useMemo(
-    () => prospects.filter((p) => p.status !== "CONVERTIDO" && p.status !== "PERDIDO").slice(0, 5),
-    [prospects]
-  );
+  const recentProspects = useMemo(() => openProspects.slice(0, 5), [openProspects]);
 
-  const matriculasVencendo = useMemo(() => {
-    const referenceToday = todayIso || selectedDate;
-    if (!referenceToday) return [];
-    const in7Days = addDaysIso(referenceToday, 7);
-    return matriculas
-      .filter((m) => m.status === "ATIVA" && m.dataFim >= referenceToday && m.dataFim <= in7Days)
-      .sort((a, b) => a.dataFim.localeCompare(b.dataFim));
-  }, [matriculas, selectedDate, todayIso]);
+  const conversionRate = useMemo(() => {
+    if (!dashboardData || dashboardData.prospectsNovos === 0) {
+      return "0.0";
+    }
+    return ((dashboardData.matriculasDoMes / dashboardData.prospectsNovos) * 100).toFixed(1);
+  }, [dashboardData]);
 
-  const pagamentosPendentes = useMemo(
-    () =>
-      pagamentos
-        .filter((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
-        .sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento)),
-    [pagamentos]
-  );
+  const previousConversionRate = useMemo(() => {
+    if (!dashboardData || dashboardData.prospectsNovosAnterior === 0) {
+      return "0.0";
+    }
+    return ((dashboardData.matriculasDoMesAnterior / dashboardData.prospectsNovosAnterior) * 100).toFixed(1);
+  }, [dashboardData]);
+
+  const conversionDelta = useMemo(() => {
+    const current = Number(conversionRate);
+    const previous = Number(previousConversionRate);
+    return deltaLabel(current, previous);
+  }, [conversionRate, previousConversionRate]);
 
   const metrics = useMemo(() => {
-    if (!selectedDate) return null;
+    if (!dashboardData) return null;
 
-    const ref = new Date(`${selectedDate}T00:00:00`);
-    const mes = ref.getMonth();
-    const ano = ref.getFullYear();
-    const currentPrefix = monthPrefix(mes, ano);
-    const prevRef = previousMonth(mes, ano);
-    const prevPrefix = monthPrefix(prevRef.month, prevRef.year);
-
-    let emAbertoCount = 0;
-    let followupPendente = 0;
-    let visitsWaiting = 0;
-    let convertedCurrent = 0;
-    let convertedPrev = 0;
-    let prospectsCurrent = 0;
-    let prospectsPrev = 0;
-
-    for (const prospect of prospects) {
-      const isAberto = prospect.status !== "CONVERTIDO" && prospect.status !== "PERDIDO";
-      if (isAberto) {
-        emAbertoCount += 1;
-        if (daysDiffFromReference(prospect.dataUltimoContato || prospect.dataCriacao, selectedDate) >= 2) {
-          followupPendente += 1;
-        }
-      }
-      if (prospect.status === "VISITOU") {
-        visitsWaiting += 1;
-      }
-      if (prospect.dataCriacao.startsWith(currentPrefix)) {
-        prospectsCurrent += 1;
-      }
-      if (prospect.dataCriacao.startsWith(prevPrefix)) {
-        prospectsPrev += 1;
-      }
-      const logs = prospect.statusLog ?? [];
-      let convertedInCurrent = false;
-      let convertedInPrev = false;
-      for (const log of logs) {
-        if (log.status !== "CONVERTIDO") continue;
-        if (!convertedInCurrent && log.data.startsWith(currentPrefix)) convertedInCurrent = true;
-        if (!convertedInPrev && log.data.startsWith(prevPrefix)) convertedInPrev = true;
-        if (convertedInCurrent && convertedInPrev) break;
-      }
-      if (convertedInCurrent) convertedCurrent += 1;
-      if (convertedInPrev) convertedPrev += 1;
-    }
-
-    let receitaCurrent = 0;
-    let receitaPrev = 0;
-    let pagosCurrentCount = 0;
-    let pagosPrevCount = 0;
-    let inadimplenciaValor = 0;
-    let receberValor = 0;
-    let vendasMensalidade = 0;
-    let vendasNovas = 0;
-
-    for (const pagamento of pagamentos) {
-      if (pagamento.status === "VENCIDO") {
-        inadimplenciaValor += pagamento.valorFinal;
-      }
-      if (pagamento.status === "PENDENTE") {
-        receberValor += pagamento.valorFinal;
-      }
-      if (pagamento.status === "PAGO" && pagamento.dataPagamento) {
-        if (pagamento.dataPagamento.startsWith(currentPrefix)) {
-          receitaCurrent += pagamento.valorFinal;
-          pagosCurrentCount += 1;
-          if (pagamento.tipo === "MENSALIDADE") vendasMensalidade += pagamento.valorFinal;
-          if (pagamento.tipo === "MATRICULA") vendasNovas += pagamento.valorFinal;
-        }
-        if (pagamento.dataPagamento.startsWith(prevPrefix)) {
-          receitaPrev += pagamento.valorFinal;
-          pagosPrevCount += 1;
-        }
-      }
-    }
-
-    let matriculasCurrent = 0;
-    let matriculasPrev = 0;
-    let valorVendasCurrent = 0;
-    let valorVendasPrev = 0;
-
-    for (const matricula of matriculas) {
-      if (matricula.dataCriacao.startsWith(currentPrefix)) {
-        matriculasCurrent += 1;
-        valorVendasCurrent += matricula.valorPago;
-      }
-      if (matricula.dataCriacao.startsWith(prevPrefix)) {
-        matriculasPrev += 1;
-        valorVendasPrev += matricula.valorPago;
-      }
-    }
-
-    const ticketCurrent = pagosCurrentCount ? receitaCurrent / pagosCurrentCount : 0;
-    const ticketPrev = pagosPrevCount ? receitaPrev / pagosPrevCount : 0;
+    const defaultStatusCount: Record<StatusAluno, number> = {
+      ATIVO: 0,
+      INATIVO: 0,
+      SUSPENSO: 0,
+      CANCELADO: 0,
+    };
 
     return {
-      emAbertoCount,
-      followupPendente,
-      visitsWaiting,
-      prospectsCurrent,
-      prospectsPrev,
-      convertedCurrent,
-      convertedPrev,
-      receitaCurrent,
-      receitaPrev,
-      ticketCurrent,
-      ticketPrev,
-      inadimplenciaValor,
-      receberValor,
-      valorVendasCurrent,
-      valorVendasPrev,
-      matriculasCurrent,
-      matriculasPrev,
-      vendasMensalidade,
-      vendasNovas,
-      statusAlunoCount,
+      ...dashboardData,
+      statusAlunoCount: {
+        ...defaultStatusCount,
+        ...(dashboardData.statusAlunoCount ?? {}),
+      },
     };
-  }, [prospects, pagamentos, matriculas, selectedDate, statusAlunoCount]);
+  }, [dashboardData]);
 
   if (!metrics) {
     return (
@@ -404,14 +279,14 @@ export default function DashboardPage() {
       </div>
 
       <div className="inline-flex rounded-lg border border-border bg-card p-1">
-        {([
+        {[
           ["CLIENTES", "Clientes"],
           ["VENDAS", "Vendas"],
           ["FINANCEIRO", "Financeiro"],
-        ] as [DashboardTab, string][]).map(([key, label]) => (
+        ].map(([key, label]) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => setTab(key as DashboardTab)}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               tab === key
                 ? "bg-gym-accent/10 text-gym-accent"
@@ -441,15 +316,15 @@ export default function DashboardPage() {
             />
             <MetricCard
               title="Novos prospects"
-              value={String(metrics.prospectsCurrent)}
+              value={String(metrics.prospectsNovos)}
               subtitle="entradas no mês"
               icon={UserPlus}
               tone="accent"
-              delta={{ ...deltaLabel(metrics.prospectsCurrent, metrics.prospectsPrev), label: "vs mês anterior" }}
+              delta={{ ...deltaLabel(metrics.prospectsNovos, metrics.prospectsNovosAnterior), label: "vs mês anterior" }}
             />
             <MetricCard
               title="Visitas aguardando contato"
-              value={String(metrics.visitsWaiting)}
+              value={String(metrics.visitasAguardandoRetorno)}
               subtitle="prioridade comercial"
               icon={CalendarClock}
               tone="warning"
@@ -531,17 +406,17 @@ export default function DashboardPage() {
                 recentProspects.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Nenhum prospect ativo</p>
                 ) : (
-                <div className="space-y-3">
-                  {recentProspects.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium">{p.nome}</p>
-                        <p className="text-xs text-muted-foreground">{p.telefone}</p>
+                  <div className="space-y-3">
+                    {recentProspects.map((p) => (
+                      <div key={p.id} className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{p.nome}</p>
+                          <p className="text-xs text-muted-foreground">{p.telefone}</p>
+                        </div>
+                        <StatusBadge status={p.status} />
                       </div>
-                      <StatusBadge status={p.status} />
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
                 )
               )}
             </div>
@@ -551,11 +426,11 @@ export default function DashboardPage() {
                 <h2 className="font-display text-base font-bold">Matrículas vencendo em 7 dias</h2>
                 <Link href="/matriculas" className="text-xs text-gym-accent hover:underline">Ver todas</Link>
               </div>
-              {matriculasVencendo.length === 0 ? (
+              {metrics.matriculasVencendo.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma matrícula vencendo</p>
               ) : (
                 <div className="divide-y divide-border">
-                  {matriculasVencendo.map((m) => (
+                  {metrics.matriculasVencendo.map((m) => (
                     <div key={m.id} className="flex items-center justify-between py-3">
                       <div>
                         <p className="text-sm font-medium">{m.aluno?.nome ?? "—"}</p>
@@ -576,33 +451,34 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
             <MetricCard
               title="Contratos vendidos"
-              value={String(metrics.matriculasCurrent)}
+              value={String(metrics.matriculasDoMes)}
               subtitle="matrículas criadas no mês"
               icon={BarChart3}
               tone="accent"
-              delta={{ ...deltaLabel(metrics.matriculasCurrent, metrics.matriculasPrev), label: "vs mês anterior" }}
+              delta={{ ...deltaLabel(metrics.matriculasDoMes, metrics.matriculasDoMesAnterior), label: "vs mês anterior" }}
             />
             <MetricCard
               title="Valor total vendido"
-              value={formatBRL(metrics.valorVendasCurrent)}
+              value={formatBRL(metrics.receitaDoMes)}
               subtitle="somatório dos contratos"
               icon={CircleDollarSign}
               tone="teal"
-              delta={{ ...deltaLabel(metrics.valorVendasCurrent, metrics.valorVendasPrev), label: "vs mês anterior" }}
+              delta={{ ...deltaLabel(metrics.receitaDoMes, metrics.receitaDoMesAnterior), label: "vs mês anterior" }}
             />
             <MetricCard
               title="Média por contrato"
-              value={formatBRL(metrics.matriculasCurrent ? metrics.valorVendasCurrent / metrics.matriculasCurrent : 0)}
+              value={formatBRL(metrics.matriculasDoMes ? metrics.receitaDoMes / metrics.matriculasDoMes : 0)}
               subtitle="ticket médio de contrato"
               icon={TrendingUp}
               tone="teal"
             />
             <MetricCard
               title="Taxa de conversão"
-              value={`${metrics.prospectsCurrent ? ((metrics.convertedCurrent / metrics.prospectsCurrent) * 100).toFixed(1) : "0.0"}%`}
-              subtitle="conversões sobre novos prospects do mês"
+              value={`${conversionRate}%`}
+              subtitle="matrículas / prospects novos"
               icon={UserCheck}
               tone="accent"
+              delta={{ ...conversionDelta, label: "vs mês anterior" }}
             />
           </div>
 
@@ -616,7 +492,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="rounded-lg border border-border bg-secondary/30 p-3">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Recorrente (mensalidades)</p>
-                  <p className="mt-1 font-display text-2xl font-bold text-gym-teal">{formatBRL(metrics.vendasMensalidade)}</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-gym-teal">{formatBRL(metrics.vendasRecorrentes)}</p>
                 </div>
               </div>
             </div>
@@ -626,7 +502,7 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3">
                   <span className="text-sm text-muted-foreground">Prospects em aberto</span>
-                  <span className="font-bold">{metrics.emAbertoCount}</span>
+                  <span className="font-bold">{metrics.prospectsEmAberto}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3">
                   <span className="text-sm text-muted-foreground">Sem contato recente</span>
@@ -634,7 +510,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3">
                   <span className="text-sm text-muted-foreground">Visitaram e aguardam retorno</span>
-                  <span className="font-bold text-gym-accent">{metrics.visitsWaiting}</span>
+                  <span className="font-bold text-gym-accent">{metrics.visitasAguardandoRetorno}</span>
                 </div>
               </div>
             </div>
@@ -647,30 +523,30 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
             <MetricCard
               title="Recebimentos do mês"
-              value={formatBRL(metrics.receitaCurrent)}
+              value={formatBRL(metrics.receitaDoMes)}
               subtitle="pagamentos efetivamente recebidos"
               icon={Banknote}
               tone="teal"
-              delta={{ ...deltaLabel(metrics.receitaCurrent, metrics.receitaPrev), label: "vs mês anterior" }}
+              delta={{ ...deltaLabel(metrics.receitaDoMes, metrics.receitaDoMesAnterior), label: "vs mês anterior" }}
             />
             <MetricCard
               title="Ticket médio"
-              value={formatBRL(metrics.ticketCurrent)}
+              value={formatBRL(metrics.ticketMedio)}
               subtitle="por pagamento recebido"
               icon={CreditCard}
               tone="accent"
-              delta={{ ...deltaLabel(metrics.ticketCurrent, metrics.ticketPrev), label: "vs mês anterior" }}
+              delta={{ ...deltaLabel(metrics.ticketMedio, metrics.ticketMedioAnterior), label: "vs mês anterior" }}
             />
             <MetricCard
               title="Inadimplência (vencidos)"
-              value={formatBRL(metrics.inadimplenciaValor)}
+              value={formatBRL(metrics.inadimplencia)}
               subtitle="valor vencido não recebido"
               icon={TrendingDown}
               tone="danger"
             />
             <MetricCard
               title="A receber (pendente)"
-              value={formatBRL(metrics.receberValor)}
+              value={formatBRL(metrics.aReceber)}
               subtitle="pagamentos ainda em aberto"
               icon={HandCoins}
               tone="warning"
@@ -682,12 +558,15 @@ export default function DashboardPage() {
               <h2 className="font-display text-base font-bold">Pagamentos pendentes e vencidos</h2>
               <Link href="/pagamentos" className="text-xs text-gym-accent hover:underline">Ver todos</Link>
             </div>
-            {pagamentosPendentes.length === 0 ? (
+            {metrics.pagamentosPendentes.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">Nenhum pagamento pendente</p>
             ) : (
               <div className="space-y-3">
-                {pagamentosPendentes.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 p-3">
+                {metrics.pagamentosPendentes.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 p-3"
+                  >
                     <div>
                       <p className="text-sm font-medium">{p.aluno?.nome ?? "—"}</p>
                       <p className="text-xs text-muted-foreground">Vence {formatDate(p.dataVencimento)}</p>

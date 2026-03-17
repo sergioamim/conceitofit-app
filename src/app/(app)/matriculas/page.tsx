@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   cancelarMatriculaService,
-  listMatriculasService,
-  listPagamentosService,
+  listMatriculasPageService,
   renovarMatriculaService,
 } from "@/lib/comercial/runtime";
 import { Plus, RefreshCcw, XCircle } from "lucide-react";
@@ -16,21 +15,21 @@ import {
   STATUS_FLUXO_COMERCIAL_LABEL,
 } from "@/lib/comercial/plano-flow";
 import { useTenantContext } from "@/hooks/use-session-context";
-import type { Aluno, Matricula, Pagamento, Plano } from "@/lib/types";
+import type { Matricula } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { Button } from "@/components/ui/button";
 
-type MatriculaRow = Matricula & {
-  aluno?: Aluno;
-  plano?: Plano;
-  pagamento?: Pagamento;
-};
+const PAGE_SIZE = 20;
+
+type MatriculaRow = Matricula;
 
 function formatBRL(value: number) {
   const safe = Number.isFinite(value) ? value : 0;
   return safe.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function formatDate(value: string) {
+function formatDate(value?: string) {
+  if (!value) return "-";
   return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR");
 }
 
@@ -50,44 +49,99 @@ function getBadgeClass(kind: "contrato" | "fluxo", value: string | undefined) {
 }
 
 export default function MatriculasPage() {
-  const { tenantId, tenantResolved } = useTenantContext();
+  const { tenantId, tenantResolved, setTenant } = useTenantContext();
   const [rows, setRows] = useState<MatriculaRow[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [metaPage, setMetaPage] = useState(0);
+  const [metaSize, setMetaSize] = useState(PAGE_SIZE);
+  const [totalRows, setTotalRows] = useState<number | undefined>(undefined);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const applyLoadedData = useCallback(
+    (snapshot: Awaited<ReturnType<typeof listMatriculasPageService>>) => {
+      setRows(snapshot.items);
+      setMetaPage(snapshot.page);
+      setMetaSize(snapshot.size);
+      setTotalRows(snapshot.total);
+      setHasNextPage(snapshot.hasNext);
+    },
+    []
+  );
+
+  const loadSnapshot = useCallback(
+    async (currentTenantId: string) =>
+      listMatriculasPageService({
+        tenantId: currentTenantId,
+        page,
+        size: PAGE_SIZE,
+      }),
+    [page]
+  );
 
   const load = useCallback(async () => {
     if (!tenantId) return;
+    setLoading(true);
+    setError(null);
+
     try {
-      const [matriculas, pagamentos] = await Promise.all([
-        listMatriculasService({
-          tenantId,
-          page: 0,
-          size: 500,
-        }),
-        listPagamentosService({
-          tenantId,
-          page: 0,
-          size: 500,
-        }),
-      ]);
-      setRows(
-        matriculas.map((matricula) => ({
-          ...matricula,
-          pagamento: pagamentos.find((pagamento) => pagamento.matriculaId === matricula.id),
-        }))
-      );
-      setError(null);
-    } catch {
-      setRows([]);
-      setError("Não foi possível carregar os contratos da unidade ativa.");
+      const snapshot = await loadSnapshot(tenantId);
+      applyLoadedData(snapshot);
+    } catch (loadError) {
+      const message = normalizeErrorMessage(loadError);
+      const normalizedMessage = message.toLowerCase();
+      const shouldRetryWithTenantSync =
+        normalizedMessage.includes("x-context-id sem unidade ativa") ||
+        normalizedMessage.includes("tenantid diverge da unidade ativa do contexto informado");
+
+      if (!shouldRetryWithTenantSync) {
+        setRows([]);
+        setHasNextPage(false);
+        setTotalRows(undefined);
+        setError(message || "Não foi possível carregar os contratos da unidade ativa.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        await setTenant(tenantId);
+        const snapshot = await loadSnapshot(tenantId);
+        applyLoadedData(snapshot);
+      } catch (retryError) {
+        setRows([]);
+        setHasNextPage(false);
+        setTotalRows(undefined);
+        setError(normalizeErrorMessage(retryError));
+      }
+    } finally {
+      setLoading(false);
     }
+  }, [applyLoadedData, loadSnapshot, setTenant, tenantId]);
+
+  useEffect(() => {
+    setPage(0);
+    setRows([]);
+    setMetaPage(0);
+    setMetaSize(PAGE_SIZE);
+    setHasNextPage(false);
+    setTotalRows(undefined);
+    setFeedback(null);
+    setError(null);
+    setActionId(null);
   }, [tenantId]);
 
   useEffect(() => {
     if (!tenantResolved || !tenantId) return;
     void load();
   }, [load, tenantId, tenantResolved]);
+
+  const pageLabel = metaPage + 1;
+  const showingFrom = rows.length === 0 ? 0 : metaPage * metaSize + 1;
+  const showingTo = rows.length === 0 ? 0 : metaPage * metaSize + rows.length;
+  const effectiveTotal = totalRows ?? rows.length;
 
   return (
     <div className="space-y-6">
@@ -149,7 +203,7 @@ export default function MatriculasPage() {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhum contrato encontrado
+                  {loading ? "Carregando contratos..." : "Nenhum contrato encontrado"}
                 </td>
               </tr>
             ) : null}
@@ -175,7 +229,7 @@ export default function MatriculasPage() {
                   <td className="px-4 py-3 text-sm">
                     <div className="font-medium">{row.plano?.nome ?? "Plano não encontrado"}</div>
                     <div className="text-xs text-muted-foreground">
-                      {formatBRL(row.valorPago)} · {row.formaPagamento}
+                      {formatBRL(row.valorPago)} · {row.pagamento?.formaPagamento ?? row.formaPagamento}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
@@ -200,7 +254,7 @@ export default function MatriculasPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={actionId === row.id}
+                          disabled={loading || actionId === row.id}
                           onClick={async () => {
                             if (!tenantId) return;
                             setActionId(row.id);
@@ -221,7 +275,7 @@ export default function MatriculasPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={actionId === row.id}
+                          disabled={loading || actionId === row.id}
                           onClick={async () => {
                             if (!tenantId) return;
                             const confirmed = window.confirm("Cancelar esta contratação?");
@@ -247,6 +301,35 @@ export default function MatriculasPage() {
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+        <p className="text-xs text-muted-foreground">
+          Mostrando <span className="font-semibold text-foreground">{showingFrom}</span> até{" "}
+          <span className="font-semibold text-foreground">{showingTo}</span> de{" "}
+          <span className="font-semibold text-foreground">{effectiveTotal}</span> · página{" "}
+          <span className="font-semibold text-foreground">{pageLabel}</span>
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="border-border"
+            disabled={loading || page <= 0}
+            onClick={() => setPage((current) => Math.max(0, current - 1))}
+          >
+            Anterior
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="border-border"
+            disabled={loading || !hasNextPage}
+            onClick={() => setPage((current) => current + 1)}
+          >
+            Próxima
+          </Button>
+        </div>
       </div>
     </div>
   );

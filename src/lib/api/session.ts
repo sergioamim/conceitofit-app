@@ -19,7 +19,9 @@ const EXPIRES_IN_KEY = "academia-auth-expires-in";
 const ACTIVE_TENANT_ID_KEY = "academia-auth-active-tenant-id";
 const AVAILABLE_TENANTS_KEY = "academia-auth-available-tenants";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
+export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
+export const AUTH_SESSION_CLEARED_EVENT = "academia-session-cleared";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -29,6 +31,19 @@ function notifyAuthSessionUpdated(): void {
   if (!isBrowser()) return;
   if (typeof window.dispatchEvent !== "function") return;
   window.dispatchEvent(new Event(AUTH_SESSION_UPDATED_EVENT));
+}
+
+function notifyAuthSessionCleared(): void {
+  if (!isBrowser()) return;
+  if (typeof window.dispatchEvent !== "function") return;
+  window.dispatchEvent(new Event(AUTH_SESSION_CLEARED_EVENT));
+}
+
+function clearAuthStorageKeys(keys: string[]): void {
+  if (!isBrowser()) return;
+  for (const key of keys) {
+    window.localStorage.removeItem(key);
+  }
 }
 
 export function getAccessToken(): string | undefined {
@@ -147,14 +162,18 @@ export function clearAvailableTenants(): void {
 }
 
 export function clearAuthSession(): void {
-  if (!isBrowser()) return;
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-  window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-  window.localStorage.removeItem(TOKEN_TYPE_KEY);
-  window.localStorage.removeItem(EXPIRES_IN_KEY);
-  window.localStorage.removeItem(ACTIVE_TENANT_ID_KEY);
-  window.localStorage.removeItem(AVAILABLE_TENANTS_KEY);
+  clearAuthStorageKeys([
+    ACCESS_TOKEN_KEY,
+    REFRESH_TOKEN_KEY,
+    TOKEN_TYPE_KEY,
+    EXPIRES_IN_KEY,
+    ACTIVE_TENANT_ID_KEY,
+    AVAILABLE_TENANTS_KEY,
+    PREFERRED_TENANT_ID_KEY,
+    CONTEXT_STORAGE_KEY,
+  ]);
   notifyAuthSessionUpdated();
+  notifyAuthSessionCleared();
 }
 
 export function getPreferredTenantId(): string | undefined {

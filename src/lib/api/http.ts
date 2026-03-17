@@ -7,6 +7,7 @@ import {
   getPreferredTenantId,
   getRefreshToken,
   saveAuthSession,
+  setActiveTenantId,
 } from "./session";
 
 export interface ApiErrorPayload {
@@ -18,6 +19,11 @@ export interface ApiErrorPayload {
   fieldErrors?: Record<string, string> | null;
   responseBody?: string;
   contextId?: string;
+}
+
+export interface ApiResponseWithMeta<T> {
+  data: T;
+  headers: Record<string, string>;
 }
 
 export class ApiRequestError extends Error {
@@ -48,11 +54,13 @@ const AUTH_REFRESH_PATH = "/api/v1/auth/refresh";
 const AUTH_LOGIN_PATH = "/api/v1/auth/login";
 const TENANT_CONTEXT_SYNC_PATH = "/api/v1/context/unidade-ativa";
 const TENANT_CONTEXT_MISMATCH_MESSAGE = "tenantId diverge da unidade ativa do contexto informado";
+const TENANT_CONTEXT_MISSING_MESSAGE = "x-context-id sem unidade ativa";
 // Rotas operacionais usam a unidade ativa do X-Context-Id no browser.
 const CONTEXT_SCOPED_OPERATIONAL_PATTERNS = [
   /^\/api\/v1\/comercial(?:\/|$)/,
   /^\/api\/v1\/crm(?:\/|$)/,
   /^\/api\/v1\/agenda\/aulas(?:\/|$)/,
+  // Só rotas administrativas operacionais já auditadas seguem o contexto ativo.
   /^\/api\/v1\/administrativo\/(?:cargos|funcionarios|salas|atividades(?:-grade)?)(?:\/|$)/,
   /^\/api\/v1\/gerencial\/financeiro\/(?!formas-pagamento(?:\/|$)|tipos-conta-pagar(?:\/|$))/,
 ];
@@ -89,11 +97,14 @@ function getContextId(): string | undefined {
   try {
     const existing = window.localStorage.getItem(CONTEXT_STORAGE_KEY);
     if (existing) return existing;
+
     const generated =
       typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
-        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-    window.localStorage.setItem(CONTEXT_STORAGE_KEY, generated);
+        : undefined;
+    if (generated) {
+      window.localStorage.setItem(CONTEXT_STORAGE_KEY, generated);
+    }
     return generated;
   } catch {
     return undefined;
@@ -178,6 +189,22 @@ function resolveTenantFallback(allowedTenants: string[]): string | undefined {
   }
 
   return allowedTenants[0];
+}
+
+function resolveTenantIdForContextSync(
+  inputQuery?: Record<string, string | number | boolean | undefined>,
+  normalizedQuery?: Record<string, string | number | boolean | undefined>
+): string | undefined {
+  const explicitTenant = extractTenantIdFromQuery(inputQuery);
+  if (explicitTenant) return explicitTenant;
+
+  const normalizedTenant = extractTenantIdFromQuery(normalizedQuery);
+  if (normalizedTenant) return normalizedTenant;
+
+  const allowedTenants = getAvailableTenantsFromSession()
+    .map((item) => item.tenantId.trim())
+    .filter(Boolean);
+  return resolveTenantFallback(allowedTenants);
 }
 
 function normalizeTenantQuery(
@@ -342,7 +369,15 @@ function normalizeApiErrorPayload(input: unknown): ApiErrorPayload | undefined {
   };
 }
 
-function isTenantContextMismatchError(
+function normalizeResponseHeaders(headers: Headers): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    normalized[key.toLowerCase()] = value;
+  });
+  return normalized;
+}
+
+function isTenantContextSyncError(
   response: Response,
   payload: ApiErrorPayload | undefined,
   parsedBody: unknown
@@ -358,7 +393,11 @@ function isTenantContextMismatchError(
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     .map((value) => value.toLowerCase());
 
-  return messages.some((value) => value.includes(TENANT_CONTEXT_MISMATCH_MESSAGE.toLowerCase()));
+  return messages.some(
+    (value) =>
+      value.includes(TENANT_CONTEXT_MISMATCH_MESSAGE.toLowerCase()) ||
+      value.includes(TENANT_CONTEXT_MISSING_MESSAGE)
+  );
 }
 
 async function syncTenantContext(
@@ -431,7 +470,7 @@ function persistAuthSessionFromPayload(
   };
 }
 
-export async function apiRequest<T>(input: {
+async function performApiRequest<T>(input: {
   path: string;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   query?: Record<string, string | number | boolean | undefined>;
@@ -439,7 +478,7 @@ export async function apiRequest<T>(input: {
   includeContextHeader?: boolean;
   headers?: Record<string, string>;
   retryOnAuthFailure?: boolean;
-}): Promise<T> {
+}): Promise<ApiResponseWithMeta<T>> {
   const method = input.method ?? "GET";
   const retryOnAuthFailure = input.retryOnAuthFailure ?? true;
   const isFormData =
@@ -485,28 +524,42 @@ export async function apiRequest<T>(input: {
       : isFormData
         ? (input.body as unknown as BodyInit)
         : (JSON.stringify(input.body) as unknown as BodyInit);
-  const tenantIdForContextSync = extractTenantIdFromQuery(normalizedQuery);
+  const tenantIdForContextSync = resolveTenantIdForContextSync(
+    input.query,
+    normalizedQuery
+  );
 
-  const executeRequest = async (): Promise<Response> => {
-    let response = await fetch(requestUrl, {
+  const executeRequest = async (retriedAfterRefresh = false): Promise<Response> => {
+    const response = await fetch(requestUrl, {
       method,
       headers,
       body: requestBody,
     });
 
-    if (response.status === 401 && retryOnAuthFailure && !isAuthEndpoint) {
+    if (
+      response.status === 401 &&
+      retryOnAuthFailure &&
+      !isAuthEndpoint &&
+      !retriedAfterRefresh
+    ) {
       const refreshToken = getRefreshToken();
       if (refreshToken) {
         const refreshed = await tryRefreshToken(refreshToken);
         if (refreshed) {
           headers.Authorization = `${refreshed.type} ${refreshed.token}`;
-          response = await fetch(requestUrl, {
+          const retriedResponse = await fetch(requestUrl, {
             method,
             headers,
             body: requestBody,
           });
+          if (retriedResponse.status === 401) {
+            clearAuthSession();
+          }
+          return retriedResponse;
         }
       }
+      clearAuthSession();
+      return response;
     }
 
     return response;
@@ -520,13 +573,17 @@ export async function apiRequest<T>(input: {
 
     if (
       tenantIdForContextSync &&
-      isTenantContextMismatchError(response, payload, parsedBody) &&
+      isTenantContextSyncError(response, payload, parsedBody) &&
       (await syncTenantContext(tenantIdForContextSync, headers))
     ) {
+      setActiveTenantId(tenantIdForContextSync);
       response = await executeRequest();
       if (response.ok) {
         const { parsedBody: retriedBody } = await readResponseBody(response);
-        return retriedBody as T;
+        return {
+          data: retriedBody as T,
+          headers: normalizeResponseHeaders(response.headers),
+        };
       }
       ({ rawBody, parsedBody } = await readResponseBody(response));
       payload = normalizeApiErrorPayload(parsedBody);
@@ -550,7 +607,35 @@ export async function apiRequest<T>(input: {
   }
 
   const { parsedBody } = await readResponseBody(response);
-  return parsedBody as T;
+  return {
+    data: parsedBody as T,
+    headers: normalizeResponseHeaders(response.headers),
+  };
+}
+
+export async function apiRequest<T>(input: {
+  path: string;
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  query?: Record<string, string | number | boolean | undefined>;
+  body?: unknown;
+  includeContextHeader?: boolean;
+  headers?: Record<string, string>;
+  retryOnAuthFailure?: boolean;
+}): Promise<T> {
+  const response = await performApiRequest<T>(input);
+  return response.data;
+}
+
+export async function apiRequestWithMeta<T>(input: {
+  path: string;
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  query?: Record<string, string | number | boolean | undefined>;
+  body?: unknown;
+  includeContextHeader?: boolean;
+  headers?: Record<string, string>;
+  retryOnAuthFailure?: boolean;
+}): Promise<ApiResponseWithMeta<T>> {
+  return performApiRequest<T>(input);
 }
 
 let refreshInFlight: Promise<{ token: string; type: string } | undefined> | null = null;

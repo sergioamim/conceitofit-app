@@ -57,6 +57,7 @@ import type { Academia, GlobalAdminUserSummary, Tenant, UnidadeOnboardingState }
 import { formatCnpj, isValidCnpj } from "@/lib/utils/cnpj";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { normalizeSubdomain } from "@/lib/utils/subdomain";
+import { formatDateTime, formatJobAliasDate } from "./date-time-format";
 
 export const dynamic = "force-dynamic";
 
@@ -237,18 +238,6 @@ function normalizeSearchKey(value?: string | null): string {
 function normalizeJobAlias(value?: string | null): string | undefined {
   const normalized = typeof value === "string" ? value.trim() : "";
   return normalized ? normalized : undefined;
-}
-
-function formatJobAliasDate(value?: string | null): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
 }
 
 function buildDefaultJobAlias(input: {
@@ -2101,13 +2090,6 @@ function ImportacaoEvoP0PageContent() {
       default:
         return { variant: "outline" as const, className: "" };
     }
-  }
-
-  function formatDateTime(value?: string | null) {
-    if (!value) return "—";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return value;
-    return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(d);
   }
 
   function resumoValue(field: keyof EntidadeResumo, resumo?: EntidadeResumo) {

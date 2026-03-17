@@ -250,7 +250,6 @@ export function TreinoModal({
                     alunoNome: selected.nome,
                   }));
                 }}
-                onFocusOpen={() => setClienteQuery(clienteQuery)}
                 options={clienteOptions}
                 placeholder="Digite o nome, CPF ou e-mail"
                 minCharsToSearch={0}

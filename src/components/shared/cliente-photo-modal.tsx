@@ -5,6 +5,7 @@ import { updateAlunoService } from "@/lib/comercial/runtime";
 import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 export function ClientePhotoModal({
   open,
@@ -21,6 +22,7 @@ export function ClientePhotoModal({
   const [hasCaptured, setHasCaptured] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cameraError, setCameraError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -60,6 +62,7 @@ export function ClientePhotoModal({
     setHasCaptured(false);
     setSaving(false);
     setCameraError("");
+    setSaveError("");
     void startCamera();
     return () => {
       stopCamera();
@@ -97,6 +100,7 @@ export function ClientePhotoModal({
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
+    setSaveError("");
     try {
       await updateAlunoService({
         tenantId: aluno.tenantId,
@@ -107,6 +111,8 @@ export function ClientePhotoModal({
       if (onSaved) {
         await onSaved();
       }
+    } catch (error) {
+      setSaveError(normalizeErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -181,6 +187,7 @@ export function ClientePhotoModal({
               </>
             )}
           </div>
+          {saveError ? <p className="text-sm text-gym-danger">{saveError}</p> : null}
         </div>
       </DialogContent>
     </Dialog>

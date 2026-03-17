@@ -1,7 +1,7 @@
-import type { Aluno, Matricula, Plano, TipoFormaPagamento } from "@/lib/types";
-import { apiRequest } from "./http";
+import type { Aluno, Matricula, PaginatedResult, PagamentoResumo, Plano, TipoFormaPagamento } from "@/lib/types";
+import { ApiRequestError, apiRequest, apiRequestWithMeta } from "./http";
 
-type MatriculaApiResponse = {
+export type MatriculaResponse = {
   id?: string;
   tenantId?: string;
   clienteId?: string | null;
@@ -20,10 +20,79 @@ type MatriculaApiResponse = {
   dataCriacao?: string;
   dataAtualizacao?: string | null;
   convenioId?: string | null;
+  contratoStatus?: Matricula["contratoStatus"] | null;
+  contratoAdesaoStatus?: Matricula["contratoStatus"] | null;
+  contratoModoAssinatura?: Plano["contratoAssinatura"] | null;
+  contratoEnviadoAutomaticamente?: unknown;
+  contratoUltimoEnvioEm?: string | null;
+  contratoAssinadoEm?: string | null;
   cliente?: Partial<Aluno> | null;
   aluno?: Partial<Aluno> | null;
   plano?: Partial<Plano> | null;
+  pagamento?: {
+    id?: string;
+    status?: PagamentoResumo["status"] | null;
+    valorFinal?: unknown;
+    dataVencimento?: string | null;
+    dataPagamento?: string | null;
+    formaPagamento?: TipoFormaPagamento | null;
+  } | null;
 };
+
+const LIST_ADESOES_PATH = "/api/v1/comercial/adesoes";
+const LIST_MATRICULAS_PATH = "/api/v1/comercial/matriculas";
+
+function canFallbackToLegacyMatriculas(error: unknown): boolean {
+  return error instanceof ApiRequestError && [404, 405, 501].includes(error.status);
+}
+
+async function requestMatriculasList(
+  paths: string[],
+  query: Record<string, string | number | boolean | undefined>
+): Promise<MatriculaResponse[]> {
+  let lastError: unknown;
+
+  for (const path of paths) {
+    try {
+      return await apiRequest<MatriculaResponse[]>({
+        path,
+        query,
+      });
+    } catch (error) {
+      if (canFallbackToLegacyMatriculas(error)) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Não foi possível carregar as adesões.");
+}
+
+async function requestMatriculasListWithMeta(
+  paths: string[],
+  query: Record<string, string | number | boolean | undefined>
+): Promise<{ data: MatriculaResponse[]; headers: Record<string, string> }> {
+  let lastError: unknown;
+
+  for (const path of paths) {
+    try {
+      return await apiRequestWithMeta<MatriculaResponse[]>({
+        path,
+        query,
+      });
+    } catch (error) {
+      if (canFallbackToLegacyMatriculas(error)) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Não foi possível carregar as adesões.");
+}
 
 export type CreateMatriculaApiInput = {
   alunoId: string;
@@ -117,13 +186,40 @@ function normalizePlanoEmbedded(input: Partial<Plano> | null | undefined, tenant
   };
 }
 
-export function normalizeMatriculaApiResponse(input: MatriculaApiResponse): Matricula & {
+function normalizePagamentoResumoEmbedded(
+  input: MatriculaResponse["pagamento"]
+): PagamentoResumo | undefined {
+  if (!input || typeof input !== "object" || typeof input.id !== "string") {
+    return undefined;
+  }
+
+  return {
+    id: input.id,
+    status: input.status ?? "PENDENTE",
+    valorFinal: toNumber(input.valorFinal),
+    dataVencimento: typeof input.dataVencimento === "string" ? input.dataVencimento : undefined,
+    dataPagamento: typeof input.dataPagamento === "string" ? input.dataPagamento : undefined,
+    formaPagamento: input.formaPagamento ?? undefined,
+  };
+}
+
+function getHeaderNumber(headers: Record<string, string>, key: string): number | undefined {
+  const raw = headers[key];
+  if (typeof raw !== "string" || raw.trim() === "") {
+    return undefined;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+export function normalizeMatriculaApiResponse(input: MatriculaResponse): Matricula & {
   aluno?: Aluno;
   plano?: Plano;
 } {
   const tenantId = typeof input.tenantId === "string" ? input.tenantId : "";
   const aluno = normalizeAlunoEmbedded(input.aluno ?? input.cliente);
   const plano = normalizePlanoEmbedded(input.plano, tenantId);
+  const pagamento = normalizePagamentoResumoEmbedded(input.pagamento);
 
   return {
     id: typeof input.id === "string" ? input.id : "",
@@ -147,11 +243,21 @@ export function normalizeMatriculaApiResponse(input: MatriculaApiResponse): Matr
     status: input.status ?? "ATIVA",
     renovacaoAutomatica: toBoolean(input.renovacaoAutomatica, false),
     observacoes: typeof input.observacoes === "string" ? input.observacoes : undefined,
+    contratoStatus: input.contratoStatus ?? input.contratoAdesaoStatus ?? undefined,
+    contratoModoAssinatura: input.contratoModoAssinatura ?? undefined,
+    contratoEnviadoAutomaticamente: toBoolean(input.contratoEnviadoAutomaticamente, false),
+    contratoUltimoEnvioEm:
+      typeof input.contratoUltimoEnvioEm === "string" ? input.contratoUltimoEnvioEm : undefined,
+    contratoAssinadoEm:
+      typeof input.contratoAssinadoEm === "string" ? input.contratoAssinadoEm : undefined,
+    pagamento,
     dataCriacao: typeof input.dataCriacao === "string" ? input.dataCriacao : new Date().toISOString(),
     dataAtualizacao: typeof input.dataAtualizacao === "string" ? input.dataAtualizacao : undefined,
     convenioId: typeof input.convenioId === "string" ? input.convenioId : undefined,
   };
 }
+
+export type MatriculaPageResult = PaginatedResult<Matricula & { aluno?: Aluno; plano?: Plano }>;
 
 export async function listMatriculasApi(input: {
   tenantId?: string;
@@ -159,16 +265,54 @@ export async function listMatriculasApi(input: {
   page?: number;
   size?: number;
 }): Promise<Array<Matricula & { aluno?: Aluno; plano?: Plano }>> {
-  const response = await apiRequest<MatriculaApiResponse[]>({
-    path: "/api/v1/comercial/matriculas",
-    query: {
+  const response = await requestMatriculasList(
+    [LIST_ADESOES_PATH, LIST_MATRICULAS_PATH],
+    {
       tenantId: input.tenantId,
       status: input.status,
       page: input.page,
       size: input.size,
-    },
-  });
+    }
+  );
   return response.map(normalizeMatriculaApiResponse);
+}
+
+export async function listMatriculasPageApi(input: {
+  tenantId?: string;
+  status?: string;
+  page?: number;
+  size?: number;
+}): Promise<MatriculaPageResult> {
+  const fallbackPage = input.page ?? 0;
+  const fallbackSize = input.size ?? 20;
+  const response = await requestMatriculasListWithMeta(
+    [LIST_ADESOES_PATH, LIST_MATRICULAS_PATH],
+    {
+      tenantId: input.tenantId,
+      status: input.status,
+      page: input.page,
+      size: input.size,
+    }
+  );
+  const items = response.data.map(normalizeMatriculaApiResponse);
+  const page = getHeaderNumber(response.headers, "x-page") ?? fallbackPage;
+  const size = getHeaderNumber(response.headers, "x-size") ?? fallbackSize;
+  const total = getHeaderNumber(response.headers, "x-total-count");
+  const totalPages = getHeaderNumber(response.headers, "x-total-pages");
+  const hasNext =
+    typeof totalPages === "number"
+      ? page + 1 < totalPages
+      : typeof total === "number"
+        ? (page + 1) * size < total
+        : items.length >= size;
+
+  return {
+    items,
+    page,
+    size,
+    total,
+    hasNext,
+  };
 }
 
 export async function listMatriculasByAlunoApi(input: {
@@ -177,14 +321,17 @@ export async function listMatriculasByAlunoApi(input: {
   page?: number;
   size?: number;
 }): Promise<Array<Matricula & { aluno?: Aluno; plano?: Plano }>> {
-  const response = await apiRequest<MatriculaApiResponse[]>({
-    path: `/api/v1/comercial/alunos/${input.alunoId}/matriculas`,
-    query: {
+  const response = await requestMatriculasList(
+    [
+      `/api/v1/comercial/alunos/${input.alunoId}/adesoes`,
+      `/api/v1/comercial/alunos/${input.alunoId}/matriculas`,
+    ],
+    {
       tenantId: input.tenantId,
       page: input.page,
       size: input.size,
-    },
-  });
+    }
+  );
   return response.map(normalizeMatriculaApiResponse);
 }
 
@@ -192,7 +339,7 @@ export async function createMatriculaApi(input: {
   tenantId?: string;
   data: CreateMatriculaApiInput;
 }): Promise<Matricula & { aluno?: Aluno; plano?: Plano }> {
-  const response = await apiRequest<MatriculaApiResponse>({
+  const response = await apiRequest<MatriculaResponse>({
     path: "/api/v1/comercial/matriculas",
     method: "POST",
     query: {
@@ -248,7 +395,7 @@ export async function signMatriculaContractApi(input: {
   tenantId?: string;
   id: string;
 }): Promise<Matricula & { aluno?: Aluno; plano?: Plano }> {
-  const response = await apiRequest<MatriculaApiResponse>({
+  const response = await apiRequest<MatriculaResponse>({
     path: `/api/v1/comercial/matriculas/${input.id}/contrato/assinar`,
     method: "POST",
     query: {

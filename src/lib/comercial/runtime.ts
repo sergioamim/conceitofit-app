@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type ClienteListEnvelopeResponse,
   createAlunoApi,
   createAlunoComMatriculaApi,
   extractAlunosFromListResponse,
@@ -8,7 +9,6 @@ import {
   getAlunoApi,
   listAlunosApi,
   updateAlunoApi,
-  type ListAlunosApiResponse,
 } from "@/lib/api/alunos";
 import { listConveniosApi, listVoucherCodigosApi, listVouchersApi } from "@/lib/api/beneficios";
 import {
@@ -19,7 +19,14 @@ import {
   togglePlanoDestaqueApi,
 } from "@/lib/api/comercial-catalogo";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
-import { cancelarMatriculaApi, createMatriculaApi, listMatriculasApi, listMatriculasByAlunoApi, renovarMatriculaApi } from "@/lib/api/matriculas";
+import {
+  cancelarMatriculaApi,
+  createMatriculaApi,
+  listMatriculasApi,
+  listMatriculasByAlunoApi,
+  listMatriculasPageApi,
+  renovarMatriculaApi,
+} from "@/lib/api/matriculas";
 import { emitirNfsePagamentoApi, listPagamentosApi, receberPagamentoApi } from "@/lib/api/pagamentos";
 import { listPresencasByAlunoApi } from "@/lib/api/presencas";
 import { createVendaApi, listVendasApi, type ListVendasApiEnvelopeResult } from "@/lib/api/vendas";
@@ -65,11 +72,10 @@ export type ListAlunosPageServiceResult = {
   totaisStatus?: AlunoTotaisStatus;
 };
 
-function extractPageMeta(response: ListAlunosApiResponse, fallbackPage: number, fallbackSize: number) {
+function extractPageMeta(response: ClienteListEnvelopeResponse, fallbackPage: number, fallbackSize: number) {
   return {
     page: typeof response.page === "number" ? response.page : fallbackPage,
     size: typeof response.size === "number" ? response.size : fallbackSize,
-    total: typeof response.total === "number" ? response.total : undefined,
     hasNext: Boolean(response.hasNext),
   };
 }
@@ -87,6 +93,7 @@ export async function listAlunosPageService(input: {
     size: input.size,
   });
   const items = extractAlunosFromListResponse(response);
+  const totaisStatus = extractAlunosTotais(response);
   if (Array.isArray(response)) {
     return {
       items,
@@ -102,9 +109,9 @@ export async function listAlunosPageService(input: {
     items,
     page: meta.page,
     size: meta.size,
-    total: meta.total,
+    total: totaisStatus?.total,
     hasNext: meta.hasNext,
-    totaisStatus: extractAlunosTotais(response),
+    totaisStatus,
   };
 }
 
@@ -237,6 +244,15 @@ export async function listMatriculasService(input: {
   size?: number;
 }) {
   return listMatriculasApi(input);
+}
+
+export async function listMatriculasPageService(input: {
+  tenantId: string;
+  status?: string;
+  page?: number;
+  size?: number;
+}) {
+  return listMatriculasPageApi(input);
 }
 
 export async function listMatriculasByAlunoService(input: {
