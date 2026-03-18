@@ -202,6 +202,9 @@ type AulaSessaoSeed = {
   local?: string;
   salaNome?: string;
   instrutorNome?: string;
+  origemTipo?: "GRADE_RECORRENTE" | "OCORRENCIA_AVULSA";
+  ocorrenciaId?: string;
+  definicaoHorario?: "PREVIAMENTE" | "SOB_DEMANDA";
 };
 
 type ReservaSeed = {
@@ -938,6 +941,8 @@ export async function installReservasApiMocks(page: Page) {
       salaNome: "Bike Studio",
       local: "Sala 2",
       instrutorNome: "Professor Caio",
+      origemTipo: "GRADE_RECORRENTE",
+      definicaoHorario: "PREVIAMENTE",
     },
     {
       id: "sessao-recovery-2026-03-13",
@@ -961,6 +966,34 @@ export async function installReservasApiMocks(page: Page) {
       salaNome: "Studio Recovery",
       local: "Sala 1",
       instrutorNome: "Professora Nanda",
+      origemTipo: "GRADE_RECORRENTE",
+      definicaoHorario: "PREVIAMENTE",
+    },
+    {
+      id: "sessao-yoga-ocorrencia-2026-03-14",
+      tenantId: tenant.id,
+      atividadeGradeId: "grade-yoga-sob-demanda",
+      atividadeId: "atividade-recovery",
+      atividadeNome: "Recovery",
+      data: "2026-03-14",
+      diaSemana: "SAB",
+      horaInicio: "10:00",
+      horaFim: "10:50",
+      capacidade: 6,
+      permiteReserva: true,
+      listaEsperaHabilitada: true,
+      acessoClientes: "TODOS_CLIENTES",
+      exibirNoAppCliente: true,
+      exibirNoAutoatendimento: true,
+      checkinLiberadoMinutosAntes: 10,
+      permiteCheckin: false,
+      checkinObrigatorio: false,
+      salaNome: "Studio Recovery",
+      local: "Sala 1",
+      instrutorNome: "Professora Nanda",
+      origemTipo: "OCORRENCIA_AVULSA",
+      ocorrenciaId: "ocorrencia-yoga-1",
+      definicaoHorario: "SOB_DEMANDA",
     },
   ];
 
@@ -2238,6 +2271,7 @@ export async function installAdminCrudApiMocks(page: Page) {
           branding: buildActiveAcademiaPayload().branding,
           capabilities: {
             canAccessElevatedModules: true,
+            canDeleteClient: true,
           },
         });
         return;

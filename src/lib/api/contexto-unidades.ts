@@ -83,6 +83,7 @@ interface TenantBootstrapUserApiResponse {
 
 interface TenantBootstrapCapabilitiesApiResponse {
   canAccessElevatedModules?: boolean;
+  canDeleteClient?: boolean;
 }
 
 interface TenantBootstrapApiResponse {

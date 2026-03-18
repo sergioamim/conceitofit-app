@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  criarOcorrenciaAtividadeGradeApi,
   createAtividadeApi,
   listAtividadesApi,
   updateAtividadeApi,
@@ -188,6 +189,65 @@ test.describe("administrativo api - atividades", () => {
       expect(created.checkinObrigatorio).toBe(false);
       expect(updated.permiteCheckin).toBe(true);
       expect(updated.checkinObrigatorio).toBe(true);
+    } finally {
+      restore();
+    }
+  });
+
+  test("criarOcorrenciaAtividadeGradeApi envia contrato da ocorrência sob demanda", async () => {
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        status: 201,
+        body: {
+          id: "occ-1",
+          tenantId: "tenant-atividade",
+          atividadeGradeId: "grade-1",
+          atividadeId: "atividade-1",
+          atividadeNome: "Yoga Flow",
+          data: "2026-03-25",
+          horaInicio: "19:00",
+          horaFim: "20:00",
+          capacidade: 18,
+          local: "Studio 3",
+          salaNome: "Studio 3",
+          instrutorNome: "Paula",
+          observacoes: "Turma extra",
+          origemTipo: "OCORRENCIA_AVULSA",
+        },
+      },
+    ]);
+
+    try {
+      const ocorrencia = await criarOcorrenciaAtividadeGradeApi({
+        tenantId: "tenant-atividade",
+        atividadeGradeId: "grade-1",
+        data: {
+          data: "2026-03-25",
+          horaInicio: "19:00",
+          horaFim: "20:00",
+          capacidade: 18,
+          local: "Studio 3",
+          salaNome: "Studio 3",
+          instrutorNome: "Paula",
+          observacoes: "Turma extra",
+        },
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.method).toBe("POST");
+      expect(calls[0]?.url).toContain("/api/v1/administrativo/atividades-grade/grade-1/ocorrencias");
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        tenantId: "tenant-atividade",
+        data: "2026-03-25",
+        horaInicio: "19:00",
+        horaFim: "20:00",
+        capacidade: 18,
+        local: "Studio 3",
+        salaNome: "Studio 3",
+        instrutorNome: "Paula",
+        observacoes: "Turma extra",
+      });
+      expect(ocorrencia.origemTipo).toBe("OCORRENCIA_AVULSA");
     } finally {
       restore();
     }

@@ -4,6 +4,7 @@ import {
   type ClienteListEnvelopeResponse,
   createAlunoApi,
   createAlunoComMatriculaApi,
+  excluirAlunoApi,
   extractAlunosFromListResponse,
   extractAlunosTotais,
   getAlunoApi,
@@ -44,6 +45,7 @@ import type {
   AlunoTotaisStatus,
   BandeiraCartao,
   CartaoCliente,
+  ClienteExclusaoResult,
   Convenio,
   FormaPagamento,
   Pagamento,
@@ -149,6 +151,28 @@ export async function updateAlunoService(input: {
   data: Parameters<typeof updateAlunoApi>[0]["data"];
 }) {
   return updateAlunoApi(input);
+}
+
+export async function excluirAlunoService(input: {
+  tenantId: string;
+  id: string;
+  justificativa: string;
+  issuedBy?: string;
+}): Promise<ClienteExclusaoResult> {
+  const justificativa = input.justificativa.trim();
+  if (!justificativa) {
+    throw new Error("A justificativa é obrigatória.");
+  }
+
+  return excluirAlunoApi({
+    tenantId: input.tenantId,
+    id: input.id,
+    data: {
+      tenantId: input.tenantId,
+      justificativa,
+      issuedBy: input.issuedBy ?? "frontend",
+    },
+  });
 }
 
 export async function resolveAlunoTenantService(input: {

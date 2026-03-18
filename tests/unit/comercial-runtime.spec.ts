@@ -3,6 +3,7 @@ import {
   createAlunoComMatriculaService,
   createAlunoService,
   createVendaService,
+  excluirAlunoService,
   liberarAcessoCatracaService,
   listAlunosPageService,
   listAlunosService,
@@ -46,11 +47,13 @@ test.describe("comercial runtime", () => {
           ],
           page: 2,
           size: 15,
-          total: 40,
           hasNext: true,
-          totalAtivo: "30",
-          totalSuspenso: "2",
-          totalInativo: "8",
+          totaisStatus: {
+            total: 40,
+            totalAtivo: "30",
+            totalSuspenso: "2",
+            totalInativo: "8",
+          },
         },
       },
       {
@@ -447,6 +450,49 @@ test.describe("comercial runtime", () => {
           dataCriacao: "2026-03-14T12:00:00Z",
         })
       ).toBeUndefined();
+    } finally {
+      restore();
+    }
+  });
+
+  test("excluirAlunoService exige justificativa e envia payload auditável", async () => {
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
+          success: true,
+          auditId: "audit-1",
+          eventType: "CLIENT_DELETED",
+        },
+      },
+    ]);
+
+    try {
+      await expect(
+        excluirAlunoService({
+          tenantId: "tenant-1",
+          id: "al-1",
+          justificativa: "   ",
+        })
+      ).rejects.toThrow("A justificativa é obrigatória.");
+
+      const result = await excluirAlunoService({
+        tenantId: "tenant-1",
+        id: "al-1",
+        justificativa: "Cadastro duplicado confirmado",
+        issuedBy: "backoffice",
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.auditId).toBe("audit-1");
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.method).toBe("DELETE");
+      expect(calls[0]?.url).toContain("/api/v1/comercial/alunos/al-1");
+      expect(calls[0]?.url).toContain("tenantId=tenant-1");
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        tenantId: "tenant-1",
+        justificativa: "Cadastro duplicado confirmado",
+        issuedBy: "backoffice",
+      });
     } finally {
       restore();
     }

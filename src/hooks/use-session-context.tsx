@@ -18,7 +18,7 @@ import {
   AUTH_SESSION_UPDATED_EVENT,
   getAccessToken,
 } from "@/lib/api/session";
-import { hasElevatedAccess, normalizeRoles } from "@/lib/access-control";
+import { hasClientDeleteCapability, hasElevatedAccess, normalizeRoles } from "@/lib/access-control";
 import { Academia, Tenant, TenantBranding } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import {
@@ -44,6 +44,7 @@ type TenantContextState = TenantContextSnapshot & {
   authUser: AuthUser | null;
   roles: string[];
   canAccessElevatedModules: boolean;
+  canDeleteClient: boolean;
   activeTenantId: string;
   activeTenant: Tenant | null;
   availableTenants: Tenant[];
@@ -64,6 +65,7 @@ type SessionBootstrapLoadResult = {
   authUser?: AuthUser;
   roles?: string[];
   canAccessElevatedModules?: boolean;
+  canDeleteClient?: boolean;
   academia?: Academia;
   brandingSnapshotOverride?: TenantBranding;
   error: string | null;
@@ -99,6 +101,7 @@ function buildTenantContextState(
     roles,
     canAccessElevatedModules:
       input.canAccessElevatedModules ?? hasElevatedAccess(roles),
+    canDeleteClient: input.canDeleteClient ?? hasClientDeleteCapability(roles),
     activeTenantId: input.activeTenantId ?? snapshot.tenantId,
     activeTenant: input.activeTenant ?? snapshot.tenant ?? null,
     availableTenants: input.availableTenants ?? snapshot.tenants,
@@ -157,6 +160,7 @@ async function loadSessionBootstrapFromLegacy(): Promise<SessionBootstrapLoadRes
     authUser: derived.authUser,
     roles: derived.roles,
     canAccessElevatedModules: derived.canAccessElevatedModules,
+    canDeleteClient: derived.canDeleteClient,
     academia: derived.academia,
     brandingSnapshotOverride: undefined,
     error: derived.error,
@@ -167,6 +171,7 @@ async function loadAuthAndAcademiaState(): Promise<{
   authUser?: AuthUser;
   roles?: string[];
   canAccessElevatedModules?: boolean;
+  canDeleteClient?: boolean;
   academia?: Academia;
   error: string | null;
 }> {
@@ -178,12 +183,14 @@ async function loadAuthAndAcademiaState(): Promise<{
   let authUser: AuthUser | undefined;
   let roles: string[] | undefined;
   let canAccessElevatedModules: boolean | undefined;
+  let canDeleteClient: boolean | undefined;
   let academia: Academia | undefined;
   let error: string | null = null;
 
   if (meResult.status === "fulfilled") {
     roles = normalizeRoles(meResult.value.roles);
     canAccessElevatedModules = hasElevatedAccess(roles);
+    canDeleteClient = hasClientDeleteCapability(roles);
     authUser = meResult.value;
   } else {
     error = normalizeErrorMessage(meResult.reason);
@@ -199,6 +206,7 @@ async function loadAuthAndAcademiaState(): Promise<{
     authUser,
     roles,
     canAccessElevatedModules,
+    canDeleteClient,
     academia,
     error,
   };
@@ -222,6 +230,8 @@ async function loadSessionBootstrapState(): Promise<SessionBootstrapLoadResult> 
       roles,
       canAccessElevatedModules:
         bootstrap.capabilities?.canAccessElevatedModules ?? hasElevatedAccess(roles),
+      canDeleteClient:
+        bootstrap.capabilities?.canDeleteClient ?? hasClientDeleteCapability(roles),
       academia: bootstrap.academia,
       brandingSnapshotOverride: bootstrap.branding,
       error: null,

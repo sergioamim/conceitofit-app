@@ -765,6 +765,9 @@ export interface AulaSessao {
   local?: string;
   salaNome?: string;
   instrutorNome?: string;
+  origemTipo?: "GRADE_RECORRENTE" | "OCORRENCIA_AVULSA";
+  ocorrenciaId?: UUID;
+  definicaoHorario?: AtividadeGrade["definicaoHorario"];
 }
 
 export interface ReservaAula {
@@ -796,6 +799,36 @@ export interface AulaOcupacao {
   waitlist: ReservaAula[];
   canceladas: ReservaAula[];
   checkinsRealizados: number;
+}
+
+export interface AtividadeOcorrenciaAvulsa {
+  id: UUID;
+  tenantId: UUID;
+  atividadeGradeId: UUID;
+  atividadeId: UUID;
+  atividadeNome?: string;
+  data: LocalDate;
+  horaInicio: string;
+  horaFim: string;
+  capacidade: number;
+  local?: string;
+  salaNome?: string;
+  instrutorNome?: string;
+  observacoes?: string;
+  origemTipo: "OCORRENCIA_AVULSA";
+}
+
+export interface ClienteExclusaoBlockedBy {
+  code: string;
+  message: string;
+}
+
+export interface ClienteExclusaoResult {
+  success: boolean;
+  auditId?: string;
+  eventType?: string;
+  blockedBy?: ClienteExclusaoBlockedBy[];
+  message?: string;
 }
 
 export interface Treino {

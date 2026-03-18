@@ -71,4 +71,21 @@ test.describe("Reservas e operação de aulas", () => {
       .locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
     await expect(camilaRow.getByRole("button", { name: "Check-in indisponível" })).toBeDisabled();
   });
+
+  test("destaca ocorrência avulsa vinda de grade sob demanda", async ({ page }) => {
+    await page.goto("/reservas");
+    await expect(page.getByRole("heading", { name: "Reservas, vagas e aulas" })).toBeVisible();
+
+    await expect(page.getByText("1 ocorrência(s) avulsa(s)")).toBeVisible();
+
+    const ocorrencia = page
+      .getByRole("button")
+      .filter({ hasText: "Recovery" })
+      .filter({ hasText: "Ocorrência" })
+      .first();
+
+    await expect(ocorrencia).toBeVisible();
+    await ocorrencia.click();
+    await expect(page.getByText("Sessão criada manualmente a partir de uma grade sob demanda.")).toBeVisible();
+  });
 });

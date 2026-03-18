@@ -44,6 +44,9 @@ type AulaSessaoApiResponse = Partial<AulaSessao> & {
   local?: string | null;
   salaNome?: string | null;
   instrutorNome?: string | null;
+  origemTipo?: AulaSessao["origemTipo"] | null;
+  ocorrenciaId?: string | null;
+  definicaoHorario?: AulaSessao["definicaoHorario"] | null;
 };
 
 type ReservaAulaApiResponse = Partial<ReservaAula> & {
@@ -149,6 +152,9 @@ function normalizeSessao(input: AulaSessaoApiResponse, fallback?: Partial<AulaSe
     local: cleanString(input.local) ?? fallback?.local,
     salaNome: cleanString(input.salaNome) ?? fallback?.salaNome,
     instrutorNome: cleanString(input.instrutorNome) ?? fallback?.instrutorNome,
+    origemTipo: input.origemTipo ?? fallback?.origemTipo ?? "GRADE_RECORRENTE",
+    ocorrenciaId: cleanString(input.ocorrenciaId) ?? fallback?.ocorrenciaId,
+    definicaoHorario: input.definicaoHorario ?? fallback?.definicaoHorario,
   };
 }
 

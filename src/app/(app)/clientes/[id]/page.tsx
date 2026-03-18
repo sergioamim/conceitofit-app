@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
 import {
+  excluirAlunoService,
   liberarAcessoCatracaService,
   listConveniosService,
   listFormasPagamentoService,
@@ -16,9 +17,20 @@ import {
   resolveAlunoTenantService,
   updateAlunoService,
 } from "@/lib/comercial/runtime";
+import { ApiRequestError } from "@/lib/api/http";
 import { getNfseBloqueioMensagem } from "@/lib/admin-financeiro";
 import { useTenantContext } from "@/hooks/use-session-context";
-import type { Aluno, Matricula, Plano, Pagamento, Presenca, FormaPagamento, Convenio, NfseConfiguracao } from "@/lib/types";
+import type {
+  Aluno,
+  ClienteExclusaoBlockedBy,
+  Matricula,
+  Plano,
+  Pagamento,
+  Presenca,
+  FormaPagamento,
+  Convenio,
+  NfseConfiguracao,
+} from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { NovaMatriculaModal } from "@/components/shared/nova-matricula-modal";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
@@ -46,7 +58,8 @@ function formatBRL(v: number) {
 export default function ClienteDetalhePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { tenantId, tenantResolved, tenants, setTenant } = useTenantContext();
+  const searchParams = useSearchParams();
+  const { tenantId, tenantResolved, tenants, setTenant, canDeleteClient } = useTenantContext();
   const [aluno, setAluno] = useState<Aluno | null>(null);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -66,6 +79,11 @@ export default function ClienteDetalhePage() {
   const [liberandoAcesso, setLiberandoAcesso] = useState(false);
   const [liberarAcessoErro, setLiberarAcessoErro] = useState("");
   const [liberarAcessoInfo, setLiberarAcessoInfo] = useState<string | null>(null);
+  const [excluirOpen, setExcluirOpen] = useState(false);
+  const [excluirJustificativa, setExcluirJustificativa] = useState("");
+  const [excluindo, setExcluindo] = useState(false);
+  const [excluirErro, setExcluirErro] = useState("");
+  const [excluirBlockedBy, setExcluirBlockedBy] = useState<ClienteExclusaoBlockedBy[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -146,6 +164,16 @@ export default function ClienteDetalhePage() {
     if (!params?.id || !tenantResolved) return;
     void reload();
   }, [params?.id, reload, tenantResolved]);
+
+  useEffect(() => {
+    if (!canDeleteClient || !aluno) return;
+    if (searchParams.get("action") !== "delete") return;
+    setExcluirErro("");
+    setExcluirBlockedBy([]);
+    setExcluirJustificativa("");
+    setExcluirOpen(true);
+    router.replace(`/clientes/${aluno.id}`);
+  }, [aluno, canDeleteClient, router, searchParams]);
 
   const planoAtivo = useMemo(() => {
     return matriculas.find((m) => m.status === "ATIVA");
@@ -246,6 +274,47 @@ export default function ClienteDetalhePage() {
     { value: "PAUSA_CONTRATO", label: "Pausa de contrato" },
     { value: "OUTROS", label: "Outros" },
   ];
+
+  function closeExcluirModal() {
+    setExcluirOpen(false);
+    setExcluirJustificativa("");
+    setExcluirErro("");
+    setExcluirBlockedBy([]);
+  }
+
+  function parseExcluirErro(error: unknown): { message: string; blockedBy: ClienteExclusaoBlockedBy[] } {
+    if (error instanceof ApiRequestError) {
+      let blockedBy: ClienteExclusaoBlockedBy[] = [];
+      if (error.responseBody) {
+        try {
+          const parsed = JSON.parse(error.responseBody) as { blockedBy?: ClienteExclusaoBlockedBy[]; message?: string };
+          if (Array.isArray(parsed.blockedBy)) {
+            blockedBy = parsed.blockedBy.filter(
+              (item): item is ClienteExclusaoBlockedBy =>
+                typeof item?.code === "string" && typeof item?.message === "string"
+            );
+          }
+        } catch {
+          blockedBy = [];
+        }
+      }
+
+      if (error.status === 403) {
+        return { message: "Seu perfil não possui permissão para excluir clientes.", blockedBy };
+      }
+      if (error.status === 409) {
+        return {
+          message: blockedBy[0]?.message ?? "O cliente possui dependências que impedem a exclusão.",
+          blockedBy,
+        };
+      }
+      if (error.status === 422) {
+        return { message: "Informe uma justificativa válida para excluir o cliente.", blockedBy };
+      }
+    }
+
+    return { message: normalizeErrorMessage(error), blockedBy: [] };
+  }
 
   return (
     <div className="space-y-6">
@@ -399,6 +468,86 @@ export default function ClienteDetalhePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={excluirOpen} onOpenChange={(next) => { if (!next) closeExcluirModal(); }}>
+        <DialogContent className="border-border bg-card sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold">
+              Excluir cliente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Esta ação deve ser usada apenas quando a exclusão controlada estiver permitida para o cliente. Informe a justificativa para auditoria.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Justificativa *
+              </label>
+              <textarea
+                value={excluirJustificativa}
+                onChange={(event) => {
+                  setExcluirJustificativa(event.target.value);
+                  if (excluirErro) setExcluirErro("");
+                  if (excluirBlockedBy.length > 0) setExcluirBlockedBy([]);
+                }}
+                rows={4}
+                maxLength={500}
+                className="min-h-24 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
+                placeholder="Descreva o motivo da exclusão controlada..."
+              />
+            </div>
+            {excluirErro ? <p className="text-xs text-gym-danger">{excluirErro}</p> : null}
+            {excluirBlockedBy.length > 0 ? (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">
+                  Bloqueios encontrados
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-amber-100">
+                  {excluirBlockedBy.map((item) => (
+                    <li key={item.code}>{item.message}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeExcluirModal} disabled={excluindo}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                const justificativa = excluirJustificativa.trim();
+                if (!justificativa) {
+                  setExcluirErro("Justificativa é obrigatória.");
+                  return;
+                }
+                setExcluindo(true);
+                setExcluirErro("");
+                try {
+                  await excluirAlunoService({
+                    tenantId: aluno.tenantId,
+                    id: aluno.id,
+                    justificativa,
+                    issuedBy: "frontend",
+                  });
+                  closeExcluirModal();
+                  router.push("/clientes?deleted=1");
+                } catch (error) {
+                  const parsed = parseExcluirErro(error);
+                  setExcluirErro(parsed.message);
+                  setExcluirBlockedBy(parsed.blockedBy);
+                } finally {
+                  setExcluindo(false);
+                }
+              }}
+              disabled={excluindo || !excluirJustificativa.trim()}
+            >
+              {excluindo ? "Excluindo..." : "Excluir cliente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
 
       <div className="space-y-3">
@@ -441,6 +590,14 @@ export default function ClienteDetalhePage() {
             setLiberarAcessoInfo(null);
             setLiberarAcessoJustificativa("");
             setLiberarAcessoOpen(true);
+          }}
+          canDeleteCliente={canDeleteClient}
+          onExcluir={() => {
+            setActionError(null);
+            setExcluirErro("");
+            setExcluirBlockedBy([]);
+            setExcluirJustificativa("");
+            setExcluirOpen(true);
           }}
           onEdit={() => setTab("editar")}
           onChangeFoto={() => setPhotoModalOpen(true)}

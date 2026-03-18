@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { buildLoginHref, resolvePostLoginPath } from "../../src/lib/auth-redirect";
-import { hasElevatedAccess, normalizeRoles } from "../../src/lib/access-control";
+import { hasClientDeleteCapability, hasElevatedAccess, normalizeRoles } from "../../src/lib/access-control";
 
 test.describe("session context helpers", () => {
   test("resolvePostLoginPath aceita apenas caminhos internos seguros", async () => {
@@ -27,5 +27,11 @@ test.describe("session context helpers", () => {
     expect(hasElevatedAccess(["recepcao"])).toBeFalsy();
     expect(hasElevatedAccess([])).toBeFalsy();
   });
-});
 
+  test("hasClientDeleteCapability respeita contrato ALTO/CLIENT_DELETE", async () => {
+    expect(hasClientDeleteCapability([" alto "])).toBeTruthy();
+    expect(hasClientDeleteCapability(["CLIENT_DELETE"])).toBeTruthy();
+    expect(hasClientDeleteCapability(["ADMIN"])).toBeFalsy();
+    expect(hasClientDeleteCapability(["recepcao"])).toBeFalsy();
+  });
+});

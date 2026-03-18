@@ -1,4 +1,11 @@
-import type { Aluno, AlunoTotaisStatus, Matricula, Pagamento, StatusAluno } from "@/lib/types";
+import type {
+  Aluno,
+  AlunoTotaisStatus,
+  ClienteExclusaoResult,
+  Matricula,
+  Pagamento,
+  StatusAluno,
+} from "@/lib/types";
 import { apiRequest } from "./http";
 
 type CreateAlunoInput = {
@@ -130,6 +137,12 @@ type CreateAlunoComMatriculaResponse = {
   pagamento: Pagamento;
 };
 
+type ExcluirAlunoApiRequest = {
+  tenantId: string;
+  justificativa: string;
+  issuedBy?: string;
+};
+
 export async function listAlunosApi(input: {
   tenantId?: string;
   status?: StatusAluno;
@@ -221,5 +234,22 @@ export async function createAlunoComMatriculaApi(input: {
     method: "POST",
     query: { tenantId: input.tenantId },
     body: input.data,
+  });
+}
+
+export async function excluirAlunoApi(input: {
+  tenantId: string;
+  id: string;
+  data: ExcluirAlunoApiRequest;
+}): Promise<ClienteExclusaoResult> {
+  return apiRequest<ClienteExclusaoResult>({
+    path: `/api/v1/comercial/alunos/${input.id}`,
+    method: "DELETE",
+    query: { tenantId: input.tenantId },
+    body: {
+      tenantId: input.tenantId,
+      justificativa: input.data.justificativa,
+      issuedBy: input.data.issuedBy,
+    },
   });
 }

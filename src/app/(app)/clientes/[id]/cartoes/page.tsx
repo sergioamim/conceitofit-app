@@ -40,7 +40,7 @@ function cardGradient(name?: string) {
 export default function CartoesClientePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { tenantId, tenantResolved, tenants, setTenant } = useTenantContext();
+  const { tenantId, tenantResolved, tenants, setTenant, canDeleteClient } = useTenantContext();
   const [cartoes, setCartoes] = useState<CartaoCliente[]>([]);
   const [bandeiras, setBandeiras] = useState<BandeiraCartao[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -225,6 +225,8 @@ export default function CartoesClientePage() {
           });
           await load();
         }}
+        canDeleteCliente={canDeleteClient}
+        onExcluir={() => router.push(`/clientes/${aluno.id}?action=delete`)}
         showCartoesAction={false}
       />
 

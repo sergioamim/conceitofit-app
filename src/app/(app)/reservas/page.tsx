@@ -48,7 +48,8 @@ function formatDate(value: string): string {
 }
 
 function sessionLabel(session: AulaSessao): string {
-  return `${session.atividadeNome} · ${formatDate(session.data)} · ${session.horaInicio}`;
+  const occurrenceLabel = session.origemTipo === "OCORRENCIA_AVULSA" ? " · Ocorrência" : "";
+  return `${session.atividadeNome}${occurrenceLabel} · ${formatDate(session.data)} · ${session.horaInicio}`;
 }
 
 function badgeClass(status: ReservaAula["status"]): string {
@@ -166,6 +167,7 @@ export default function ReservasPage() {
   const summary = useMemo(() => {
     return {
       sessoes: sessions.length,
+      ocorrencias: sessions.filter((session) => session.origemTipo === "OCORRENCIA_AVULSA").length,
       vagasOcupadas: sessions.reduce((total, session) => total + session.vagasOcupadas, 0),
       vagasDisponiveis: sessions.reduce((total, session) => total + session.vagasDisponiveis, 0),
       waitlist: sessions.reduce((total, session) => total + session.waitlistTotal, 0),
@@ -411,6 +413,9 @@ export default function ReservasPage() {
           <CardContent className="px-4 py-4">
             <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Sessões</p>
             <p className="mt-2 font-display text-2xl text-sky-300">{summary.sessoes}</p>
+            {summary.ocorrencias > 0 ? (
+              <p className="mt-1 text-xs text-muted-foreground">{summary.ocorrencias} ocorrência(s) avulsa(s)</p>
+            ) : null}
           </CardContent>
         </Card>
         <Card className="border-border/70 bg-card/80">
@@ -471,7 +476,14 @@ export default function ReservasPage() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold">{session.atividadeNome}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-semibold">{session.atividadeNome}</p>
+                              {session.origemTipo === "OCORRENCIA_AVULSA" ? (
+                                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
+                                  Ocorrência
+                                </span>
+                              ) : null}
+                            </div>
                             <p className="mt-1 text-sm text-muted-foreground">
                               {formatDate(session.data)} · {session.horaInicio} - {session.horaFim}
                             </p>
@@ -526,6 +538,11 @@ export default function ReservasPage() {
                     </div>
                   ) : (
                     <>
+                      {selectedSession.origemTipo === "OCORRENCIA_AVULSA" ? (
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                          Sessão criada manualmente a partir de uma grade sob demanda.
+                        </div>
+                      ) : null}
                       <div className="grid gap-3 md:grid-cols-3">
                         <div className="rounded-xl border border-border/70 bg-secondary/20 p-4">
                           <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Confirmadas</p>
@@ -732,7 +749,14 @@ export default function ReservasPage() {
                       <div key={session.id} className="rounded-xl border border-border/70 bg-secondary/20 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold">{session.atividadeNome}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-semibold">{session.atividadeNome}</p>
+                              {session.origemTipo === "OCORRENCIA_AVULSA" ? (
+                                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
+                                  Ocorrência
+                                </span>
+                              ) : null}
+                            </div>
                             <p className="mt-1 text-sm text-muted-foreground">
                               {formatDate(session.data)} · {session.horaInicio} - {session.horaFim}
                             </p>

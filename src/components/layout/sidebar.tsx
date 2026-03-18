@@ -51,6 +51,7 @@ type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  exact?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -71,14 +72,14 @@ const atividadeItems: NavItem[] = [
 ];
 
 const treinoItems: NavItem[] = [
-  { href: "/treinos", label: "Treinos", icon: CalendarDays },
+  { href: "/treinos", label: "Treinos", icon: CalendarDays, exact: true },
   { href: "/treinos/atribuidos", label: "Treinos Atribuídos", icon: ClipboardList },
   { href: "/treinos/exercicios", label: "Exercícios", icon: Dumbbell },
   { href: "/treinos/grupos-musculares", label: "Grupos Musculares", icon: ListTree },
 ];
 
 const crmItems: NavItem[] = [
-  { href: "/crm", label: "Workspace CRM", icon: BriefcaseBusiness },
+  { href: "/crm", label: "Workspace CRM", icon: BriefcaseBusiness, exact: true },
   { href: "/crm/prospects-kanban", label: "Funil de Vendas", icon: Kanban },
   { href: "/crm/tarefas", label: "Tarefas Comerciais", icon: ClipboardList },
   { href: "/crm/playbooks", label: "Playbooks e Cadências", icon: ListTree },
@@ -151,8 +152,15 @@ function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function isActiveNavItem(pathname: string, item: NavItem): boolean {
+  if (item.exact) {
+    return pathname === item.href;
+  }
+  return isActivePath(pathname, item.href);
+}
+
 function matchesAnyPath(pathname: string, items: NavItem[]): boolean {
-  return items.some((item) => isActivePath(pathname, item.href));
+  return items.some((item) => isActiveNavItem(pathname, item));
 }
 
 function getInitials(name: string): string {
@@ -313,7 +321,7 @@ const CollapsibleSection = memo(function CollapsibleSection({
             <NavLinkItem
               key={item.href}
               item={item}
-              active={isActivePath(pathname, item.href)}
+              active={isActiveNavItem(pathname, item)}
               collapsed={collapsed}
               onNavigate={onNavigate}
               dense
@@ -402,7 +410,7 @@ function SidebarNavigation({
         <NavLinkItem
           key={item.href}
           item={item}
-          active={isActivePath(pathname, item.href)}
+          active={isActiveNavItem(pathname, item)}
           collapsed={collapsed}
           onNavigate={onMobileClose}
         />

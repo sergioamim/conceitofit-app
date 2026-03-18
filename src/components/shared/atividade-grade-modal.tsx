@@ -333,7 +333,9 @@ export function AtividadeGradeModal({
             <h3 className="text-sm font-semibold">Agenda e participação</h3>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Hora início *</label>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {form.definicaoHorario === "SOB_DEMANDA" ? "Hora padrão início *" : "Hora início *"}
+                </label>
                 <Input
                   type="time"
                   value={form.horaInicio}
@@ -343,7 +345,9 @@ export function AtividadeGradeModal({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Hora fim *</label>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {form.definicaoHorario === "SOB_DEMANDA" ? "Hora padrão fim *" : "Hora fim *"}
+                </label>
                 <Input
                   type="time"
                   value={form.horaFim}
@@ -354,7 +358,7 @@ export function AtividadeGradeModal({
               </div>
               {form.definicaoHorario === "SOB_DEMANDA" ? (
                 <p className="col-span-2 text-[11px] text-muted-foreground">
-                  Mesmo em atividades sob demanda, informe a faixa horária para manter o cadastro consistente com a API.
+                  A faixa horária funciona como padrão para novas ocorrências avulsas. A publicação no cliente acontece quando a ocorrência é criada.
                 </p>
               ) : null}
               <div className="space-y-1.5">

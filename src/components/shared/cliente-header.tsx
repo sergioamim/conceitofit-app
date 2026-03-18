@@ -4,7 +4,7 @@ import type { Aluno, Plano } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, KeyRound, MoreVertical, Pencil } from "lucide-react";
+import { Camera, KeyRound, MoreVertical, Pencil, Trash2 } from "lucide-react";
 
 function formatDate(d: string) {
   const [year, month, day] = d.split("-");
@@ -22,6 +22,8 @@ export function ClienteHeader({
   onSuspender,
   onReativar,
   onLiberarAcesso,
+  canDeleteCliente = false,
+  onExcluir,
   sticky = true,
   showCartoesAction = true,
   onEdit,
@@ -37,6 +39,8 @@ export function ClienteHeader({
   onSuspender: () => void;
   onReativar: () => void;
   onLiberarAcesso?: () => void;
+  canDeleteCliente?: boolean;
+  onExcluir?: () => void;
   sticky?: boolean;
   showCartoesAction?: boolean;
   onEdit?: () => void;
@@ -171,6 +175,18 @@ export function ClienteHeader({
                   Suspender
                 </button>
               )}
+              {canDeleteCliente && onExcluir ? (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onExcluir();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-gym-danger hover:bg-secondary"
+                >
+                  <Trash2 className="size-4" />
+                  Excluir cliente
+                </button>
+              ) : null}
             </div>
           )}
         </div>

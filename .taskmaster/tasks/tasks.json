@@ -3335,16 +3335,215 @@
           }
         ],
         "updatedAt": "2026-03-18T15:30:00Z"
+      },
+      {
+        "id": "39",
+        "title": "Estruturar ocorrências avulsas para atividades sob demanda",
+        "description": "Fechar o modelo funcional e técnico para que atividades `SOB_DEMANDA` virem catálogo de ocorrências avulsas, com fluxo administrativo claro e alinhado ao backend.",
+        "details": "Hoje o frontend diferencia `PREVIAMENTE` e `SOB_DEMANDA` na grade, mas só o modo recorrente possui um fluxo operacional completo. A aplicação precisa separar com clareza modalidade, recorrência e sessão concreta, permitindo que grades `SOB_DEMANDA` gerem ocorrências manuais para datas específicas sem poluir a grade semanal nem depender de comportamento implícito do backend.",
+        "testStrategy": "Cobrir a trilha com testes de integração/E2E do fluxo administrativo de criação de ocorrência sob demanda e sua aparição em reservas, além de validar que a grade semanal continua exibindo apenas ocorrências recorrentes `PREVIAMENTE`.",
+        "status": "done",
+        "dependencies": [
+          "38"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Fechar o modelo funcional de `SOB_DEMANDA` no frontend",
+            "description": "Documentar e refletir no backlog que `SOB_DEMANDA` não significa uso único, e sim catálogo para gerar ocorrências avulsas.",
+            "dependencies": [],
+            "details": "Usar `docs/ATIVIDADES_SOB_DEMANDA_OCORRENCIAS_PRD.md` para consolidar o modelo de produto nas superfícies afetadas (`/administrativo/atividades-grade`, `/grade`, `/reservas`) e remover ambiguidades entre recorrência fixa, evento esporádico e sessão concreta.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 39,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-18T16:36:08.718Z"
+          },
+          {
+            "id": 2,
+            "title": "Desenhar a superfície administrativa de criação de ocorrência",
+            "description": "Definir a ação e a UX para transformar uma grade `SOB_DEMANDA` em sessão concreta.",
+            "dependencies": [
+              "39.1"
+            ],
+            "details": "Projetar CTA, modal/formulário e estados de sucesso/erro para `Criar ocorrência`, incluindo data, hora, capacidade, local, instrutor e herança de configurações operacionais. Revisar onde essa ação vive melhor: na linha da grade, em drawer dedicado ou em tela de ocorrências.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 39,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-18T16:36:08.718Z"
+          },
+          {
+            "id": 3,
+            "title": "Alinhar clients, types e contrato HTTP com o backend",
+            "description": "Preparar a camada frontend para o endpoint de criação/listagem de ocorrências sob demanda.",
+            "dependencies": [
+              "39.2"
+            ],
+            "details": "Atualizar `src/lib/types.ts`, `src/lib/api/reservas.ts`, `src/lib/api/administrativo.ts` e superfícies consumidoras para suportar sessões avulsas ligadas a grades `SOB_DEMANDA`, preservando compatibilidade com o fluxo atual de reservas e com sessões recorrentes.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 39,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-18T16:36:08.718Z"
+          },
+          {
+            "id": 4,
+            "title": "Integrar grade, agenda e reservas ao fluxo de ocorrência avulsa",
+            "description": "Conectar a criação da ocorrência ao consumo em agenda e reservas.",
+            "dependencies": [
+              "39.3"
+            ],
+            "details": "Fazer com que a ocorrência criada apareça em `/reservas` e nas demais superfícies de agenda publicáveis, mantendo a matriz semanal de `/grade` restrita a `PREVIAMENTE`. Revisar listagem, filtros e feedback visual para evitar que itens `SOB_DEMANDA` pareçam cadastros incompletos.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 39,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-18T16:36:08.718Z"
+          },
+          {
+            "id": 5,
+            "title": "Validar regressão e fechar alinhamento documental com backend",
+            "description": "Fechar testes e a trilha de alinhamento entre frontend e backend.",
+            "dependencies": [
+              "39.4"
+            ],
+            "details": "Adicionar cobertura de testes para criação da ocorrência e consumo em reservas, e registrar o contrato esperado para o backend com critérios de aceite compartilhados. Garantir consistência entre PRD, backlog e prompt de handoff para o repositório Java.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 39,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-18T16:36:08.718Z"
+          }
+        ],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": 40,
+        "title": "Definir capability e RBAC de exclusão no backend",
+        "description": "Criar contrato de capacidade canDeleteClient ligado ao perfil ALTO e expor na sessão/bootstrp para permitir a UI decidir a visibilidade da ação.",
+        "details": "Atualizar o payload do bootstrap (ex.: /api/v1/app/bootstrap) ou do me para incluir capabilities.canDeleteClient. Mapear o perfil ALTO para essa capacidade no backend, sem inferir por ADMIN genérico. Pseudo-código: canDeleteClient = user.profile === \"ALTO\" || permissions.includes(\"CLIENT_DELETE\"). Documentar o contrato para o frontend consumir a flag booleana.",
+        "testStrategy": "Testar respostas do bootstrap/me para usuário ALTO e não-ALTO, garantindo canDeleteClient true/false conforme esperado.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": 41,
+        "title": "Implementar endpoint de exclusão controlada de cliente",
+        "description": "Criar endpoint dedicado para excluir cliente com validações e regras impeditivas de negócio.",
+        "details": "Implementar DELETE /api/v1/comercial/alunos/{id} (ou POST /api/v1/comercial/alunos/{id}/excluir) aceitando body { tenantId, justificativa, issuedBy }. Validar justificativa (422), existência do aluno (404), permissão (403) e regras impeditivas (409) com motivos de bloqueio. Pseudo-código: if (!canDeleteClient) throw 403; if (!justificativa) throw 422; if (hasDependencies) throw 409 { blockedBy: [...] }; delete aluno; return { success: true, auditId, eventType }.",
+        "testStrategy": "Testes de integração no backend cobrindo 403/404/409/422 e fluxo de sucesso com payload mínimo exigido.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": 42,
+        "title": "Auditoria backend para exclusão e tentativas negadas",
+        "description": "Registrar eventos de auditoria obrigatórios para exclusão e negativas, garantindo rastreabilidade.",
+        "details": "Adicionar eventos CLIENTE_EXCLUIDO, CLIENTE_EXCLUSAO_NEGADA_SEM_PERMISSAO e CLIENTE_EXCLUSAO_NEGADA_POR_REGRA. Incluir payload mínimo (tenantId, alunoId, alunoNome, justificativa, executadoPor, perfilEfetivo, origem, timestamp, auditId/requestId). Pseudo-código: audit.log({ eventType, tenantId, alunoId, justificativa, ... }). Garantir retorno de auditId/eventType no sucesso.",
+        "testStrategy": "Validar no backend que eventos são emitidos em sucesso e falhas, e que o response de sucesso inclui auditId/eventType.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": 43,
+        "title": "Adicionar tipos e API client de exclusão no frontend",
+        "description": "Definir contratos de resposta/erro e implementar chamada de exclusão no client de alunos.",
+        "details": "Em src/lib/types.ts, criar tipos para resposta de exclusão (success, auditId, eventType) e payload de bloqueio (ex.: blockedBy, motivo). Em src/lib/api/alunos.ts, adicionar excluirAlunoApi usando apiRequest com method DELETE ou POST, enviando tenantId, justificativa e issuedBy. Pseudo-código: return apiRequest<ClienteExclusaoResponse>({ path: `/api/v1/comercial/alunos/${id}`, method: \"DELETE\", query: { tenantId }, body: { tenantId, justificativa, issuedBy } }).",
+        "testStrategy": "Teste unitário/contractual do client garantindo método, path e payload corretos; validação manual com backend real.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": 44,
+        "title": "Criar service runtime para exclusão de cliente",
+        "description": "Expor um service de alto nível no runtime comercial para encapsular a chamada de exclusão.",
+        "details": "Em src/lib/comercial/runtime.ts, adicionar excluirAlunoService({ tenantId, alunoId, justificativa, issuedBy }) delegando ao excluirAlunoApi. Manter assinatura simples para uso em UI. Pseudo-código: return excluirAlunoApi({ tenantId, id: alunoId, justificativa, issuedBy }).",
+        "testStrategy": "Teste unitário leve verificando que o service repassa parâmetros corretamente (mock do excluirAlunoApi).",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": 45,
+        "title": "Expor canDeleteClient na sessão do frontend",
+        "description": "Evoluir o contexto de sessão para carregar a capability de exclusão.",
+        "details": "Em src/lib/api/contexto-unidades.ts, adicionar canDeleteClient a TenantBootstrapCapabilitiesApiResponse e manter o valor no getSessionBootstrapApi. Em src/hooks/use-session-context.tsx, incluir canDeleteClient no estado e no TenantContextValue. Pseudo-código: canDeleteClient = bootstrap.capabilities?.canDeleteClient ?? false; return { ...state, canDeleteClient }.",
+        "testStrategy": "Teste manual: carregar app com bootstrap real e verificar a flag no hook via React DevTools.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": 46,
+        "title": "Atualizar ClienteHeader e usos para ação Excluir",
+        "description": "Adicionar entrada de menu Excluir cliente e novos props de controle, mantendo compatibilidade com outras telas.",
+        "details": "Em src/components/shared/cliente-header.tsx, aceitar props canDeleteCliente e onExcluir; renderizar item de menu abaixo das ações existentes, fechando o menu antes de chamar o callback. Manter árvore estável e sem condicional client-only. Atualizar usos em src/app/(app)/clientes/[id]/page.tsx e src/app/(app)/clientes/[id]/cartoes/page.tsx para passar canDeleteCliente (do useTenantContext) e onExcluir (abre modal). Pseudo-código: if (canDeleteCliente && onExcluir) render <button>Excluir cliente</button>.",
+        "testStrategy": "Teste manual nas duas telas garantindo que o menu não quebra e que a ação só aparece com a flag true.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": 47,
+        "title": "Implementar modal de exclusão com justificativa",
+        "description": "Criar o modal de confirmação no detalhe do cliente com campo obrigatório e contador de caracteres.",
+        "details": "Em src/app/(app)/clientes/[id]/page.tsx, adicionar estado para open/justificativa/erro/loading e renderizar Dialog com nome do cliente, alerta de irreversibilidade, textarea obrigatório, contador (ex.: `${justificativa.length}/500`), botões Cancelar e Excluir cliente. Botão confirm disabled quando justificativa.trim() vazio. Pseudo-código: const [excluirOpen, setExcluirOpen] = useState(false); disabled = excluindo || !justificativa.trim().",
+        "testStrategy": "Teste manual: abrir modal, validar contador, bloqueio de envio sem justificativa e reset ao fechar.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": 48,
+        "title": "Implementar fluxo de exclusão e tratamento de erros",
+        "description": "Ligar o modal à API, com feedback de sucesso, redirecionamento e mensagens de erro específicas.",
+        "details": "No detalhe do cliente, chamar excluirAlunoService no confirmar. Em sucesso: fechar modal, mostrar feedback (toast ou banner), limpar estado e redirecionar para /clientes. Em erro: manter modal aberto, mapear ApiRequestError.status para mensagens (403: sem permissão, 409: bloqueio por regra com motivo, 422: justificativa inválida) e usar normalizeErrorMessage como fallback. Pseudo-código: try { await excluirAlunoService(...); router.push('/clientes'); } catch (err) { if (err.status===409) setErro(motivoBloqueio); }.",
+        "testStrategy": "Teste manual com backend real/estágio simulando 403/409/422 e confirmando redirecionamento no sucesso.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": 49,
+        "title": "Testes e regressão da exclusão controlada",
+        "description": "Adicionar cobertura de testes para visibilidade, validação e fluxo de exclusão.",
+        "details": "Criar/estender testes Playwright em tests/e2e para: menu visível apenas com canDeleteClient; modal exige justificativa; erro 403/409/422 exibe mensagem; sucesso redireciona para /clientes e ação não aparece em cartoes sem permissão. Se houver stubs, atualizar em tests/e2e/support/backend-only-stubs.ts. Pseudo-código: expect(menu).toContain('Excluir cliente') quando capability true; interceptar DELETE/POST e retornar 409.",
+        "testStrategy": "Executar playwright test focado no cenário de cliente e validar asserts de visibilidade, mensagens e redirect.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-18T16:36:08.718Z"
       }
     ],
     "metadata": {
-      "version": "1.0.0",
-      "lastModified": "2026-03-18T12:00:00Z",
-      "taskCount": 38,
-      "completedCount": 33,
-      "tags": [
-        "master"
-      ]
+      "created": "2026-03-18T15:32:36.203Z",
+      "updated": "2026-03-18T15:33:21.061Z",
+      "description": "Tasks for master context"
     }
   }
 }

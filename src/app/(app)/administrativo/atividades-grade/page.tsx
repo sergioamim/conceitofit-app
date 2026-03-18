@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   createAtividadeGradeApi,
+  criarOcorrenciaAtividadeGradeApi,
   deleteAtividadeGradeApi,
   listAtividadeGradesApi,
   listAtividadesApi,
@@ -19,6 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { AtividadeGradeModal, type AtividadeGradeForm } from "@/components/shared/atividade-grade-modal";
+import {
+  AtividadeOcorrenciaModal,
+  type AtividadeOcorrenciaForm,
+} from "@/components/shared/atividade-ocorrencia-modal";
 
 const DIA_LABEL: Record<DiaSemana, string> = {
   SEG: "Segunda",
@@ -37,12 +42,16 @@ export default function AtividadesGradePage() {
   const [salas, setSalas] = useState<Sala[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
   const [editing, setEditing] = useState<AtividadeGrade | null>(null);
+  const [occurrenceGrade, setOccurrenceGrade] = useState<AtividadeGrade | null>(null);
   const [filtroAtividade, setFiltroAtividade] = useState<string>("TODAS");
   const [filtroDia, setFiltroDia] = useState<DiaSemana | "TODOS">("TODOS");
   const [apenasAtivas, setApenasAtivas] = useState(true);
+  const [savingOccurrence, setSavingOccurrence] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState("");
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
   const load = useCallback(async () => {
@@ -146,6 +155,48 @@ export default function AtividadesGradePage() {
     await load();
   }
 
+  async function handleCreateOccurrence(data: AtividadeOcorrenciaForm) {
+    if (!occurrenceGrade || !tenantId) return;
+    setSavingOccurrence(true);
+    setError("");
+    setFeedback("");
+    try {
+      await criarOcorrenciaAtividadeGradeApi({
+        tenantId,
+        atividadeGradeId: occurrenceGrade.id,
+        data: {
+          data: data.data,
+          horaInicio: data.horaInicio,
+          horaFim: data.horaFim,
+          capacidade: Math.max(1, parseInt(data.capacidade, 10) || occurrenceGrade.capacidade || 1),
+          local: data.local || undefined,
+          salaNome: data.salaNome || undefined,
+          instrutorNome: data.instrutorNome || undefined,
+          observacoes: data.observacoes || undefined,
+        },
+      });
+      setOccurrenceModalOpen(false);
+      setOccurrenceGrade(null);
+      setFeedback("Ocorrência criada e disponibilizada para reservas.");
+      await load();
+    } catch (saveError) {
+      setError(normalizeErrorMessage(saveError) || "Falha ao criar ocorrência sob demanda.");
+    } finally {
+      setSavingOccurrence(false);
+    }
+  }
+
+  const occurrenceDefaults = occurrenceGrade
+    ? {
+        horaInicio: occurrenceGrade.horaInicio,
+        horaFim: occurrenceGrade.horaFim,
+        capacidade: String(occurrenceGrade.capacidade),
+        local: occurrenceGrade.local ?? salaMap.get(occurrenceGrade.salaId ?? "")?.nome ?? "",
+        salaNome: salaMap.get(occurrenceGrade.salaId ?? "")?.nome ?? "",
+        instrutorNome: funcionarioMap.get(occurrenceGrade.funcionarioId ?? "")?.nome ?? occurrenceGrade.instrutor ?? "",
+      }
+    : undefined;
+
   return (
     <div className="space-y-6">
       <AtividadeGradeModal
@@ -159,6 +210,17 @@ export default function AtividadesGradePage() {
         salas={salas}
         funcionarios={funcionarios}
         initial={editing}
+      />
+      <AtividadeOcorrenciaModal
+        open={occurrenceModalOpen}
+        onClose={() => {
+          setOccurrenceModalOpen(false);
+          setOccurrenceGrade(null);
+        }}
+        onSave={handleCreateOccurrence}
+        saving={savingOccurrence}
+        atividadeNome={occurrenceGrade ? atividadeMap.get(occurrenceGrade.atividadeId)?.nome : undefined}
+        initial={occurrenceDefaults}
       />
 
       <div className="flex items-center justify-between">
@@ -177,6 +239,11 @@ export default function AtividadesGradePage() {
       {error ? (
         <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           {error}
+        </div>
+      ) : null}
+      {feedback ? (
+        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          {feedback}
         </div>
       ) : null}
 
@@ -279,7 +346,7 @@ export default function AtividadesGradePage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {g.definicaoHorario === "SOB_DEMANDA"
-                      ? "Sob demanda"
+                      ? `Sob demanda · padrão ${g.horaInicio} - ${g.horaFim}`
                       : `${g.horaInicio} - ${g.horaFim}`}
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">{g.capacidade}</td>
@@ -298,6 +365,20 @@ export default function AtividadesGradePage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setError("");
+                          setFeedback("");
+                          setOccurrenceGrade(g);
+                          setOccurrenceModalOpen(true);
+                        }}
+                        className="border-border"
+                        disabled={g.definicaoHorario !== "SOB_DEMANDA" || !g.ativo}
+                      >
+                        Criar ocorrência
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

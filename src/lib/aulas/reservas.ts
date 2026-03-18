@@ -111,6 +111,8 @@ export function buildAulaSessao(input: {
     local: input.grade.local,
     salaNome: input.sala?.nome ?? input.grade.local,
     instrutorNome: input.funcionario?.nome ?? input.grade.instrutor,
+    origemTipo: "GRADE_RECORRENTE",
+    definicaoHorario: input.grade.definicaoHorario,
   };
 }
 

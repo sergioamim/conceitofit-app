@@ -1,5 +1,6 @@
 import type {
   Atividade,
+  AtividadeOcorrenciaAvulsa,
   AtividadeGrade,
   Cargo,
   CategoriaAtividade,
@@ -378,5 +379,32 @@ export async function deleteAtividadeGradeApi(id: string): Promise<void> {
   await apiRequest<void>({
     path: `/api/v1/administrativo/atividades-grade/${id}`,
     method: "DELETE",
+  });
+}
+
+export async function criarOcorrenciaAtividadeGradeApi(input: {
+  tenantId: string;
+  atividadeGradeId: string;
+  data: {
+    data: string;
+    horaInicio: string;
+    horaFim: string;
+    capacidade: number;
+    local?: string;
+    salaNome?: string;
+    instrutorNome?: string;
+    observacoes?: string;
+  };
+}): Promise<AtividadeOcorrenciaAvulsa> {
+  return apiRequest<AtividadeOcorrenciaAvulsa>({
+    path: `/api/v1/administrativo/atividades-grade/${input.atividadeGradeId}/ocorrencias`,
+    method: "POST",
+    query: {
+      tenantId: input.tenantId,
+    },
+    body: {
+      tenantId: input.tenantId,
+      ...input.data,
+    },
   });
 }

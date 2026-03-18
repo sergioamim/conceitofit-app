@@ -131,6 +131,7 @@ test.describe("reservas api", () => {
       expect(agenda[0]?.vagasDisponiveis).toBe(12);
       expect(agenda[0]?.permiteReserva).toBe(true);
       expect(agenda[0]?.permiteCheckin).toBe(true);
+      expect(agenda[0]?.origemTipo).toBe("GRADE_RECORRENTE");
 
       const reservas = await listReservasAulaApi({
         tenantId: "tenant-1",
@@ -153,6 +154,57 @@ test.describe("reservas api", () => {
       expect(calls[0].url).toContain("/api/v1/agenda/aulas/sessoes");
       expect(calls[1].url).toContain("/api/v1/agenda/aulas/reservas");
       expect(calls[2].url).toContain("/api/v1/agenda/aulas/sessoes/sessao-3/ocupacao");
+    } finally {
+      restore();
+    }
+  });
+
+  test("normaliza metadados de ocorrência avulsa vindos da agenda", async () => {
+    const { restore } = mockFetchWithSequence([
+      {
+        body: [
+          {
+            id: "sessao-ocorrencia-1",
+            tenantId: "tenant-1",
+            atividadeGradeId: "grade-sob-demanda",
+            atividadeId: "atividade-1",
+            atividadeNome: "Pilates Solo",
+            data: "2026-03-26",
+            diaSemana: "QUI",
+            horaInicio: "19:30",
+            horaFim: "20:20",
+            capacidade: 14,
+            vagasOcupadas: 3,
+            origemTipo: "OCORRENCIA_AVULSA",
+            ocorrenciaId: "occ-1",
+            definicaoHorario: "SOB_DEMANDA",
+            exibirNoAppCliente: true,
+            exibirNoAutoatendimento: true,
+            permiteReserva: true,
+            listaEsperaHabilitada: true,
+            permiteCheckin: true,
+            checkinObrigatorio: false,
+          },
+        ],
+      },
+    ]);
+
+    try {
+      const agenda = await listAulasAgendaApi({
+        tenantId: "tenant-1",
+        dateFrom: "2026-03-26",
+        dateTo: "2026-03-26",
+      });
+
+      expect(agenda[0]).toEqual(
+        expect.objectContaining({
+          id: "sessao-ocorrencia-1",
+          origemTipo: "OCORRENCIA_AVULSA",
+          ocorrenciaId: "occ-1",
+          definicaoHorario: "SOB_DEMANDA",
+          vagasDisponiveis: 11,
+        })
+      );
     } finally {
       restore();
     }

@@ -10,3 +10,7 @@ export function hasElevatedAccess(input?: string[] | null): boolean {
   return roles.some((role) => role === "ADMIN" || role.includes("ADMIN"));
 }
 
+export function hasClientDeleteCapability(input?: string[] | null): boolean {
+  const roles = normalizeRoles(input);
+  return roles.some((role) => role === "ALTO" || role === "CLIENT_DELETE");
+}
