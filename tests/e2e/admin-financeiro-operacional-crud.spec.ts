@@ -107,14 +107,34 @@ test.describe("Admin financeiro e operacional CRUD", () => {
 
     await page.getByRole("button", { name: "Nova Atividade" }).click();
     await page.getByPlaceholder("Ex: Musculação").fill(atividadeNome);
+    await page.getByLabel("Permitir check-in para clientes").uncheck();
     await page.getByRole("dialog").getByRole("button", { name: "Criar" }).click();
 
     await expect(page.getByText(atividadeNome, { exact: true })).toBeVisible();
+    await expect(page.getByText("Sem check-in")).toBeVisible();
     await page.getByRole("button", { name: `Editar atividade ${atividadeNome}` }).click();
     await page.getByPlaceholder("Ex: Musculação").fill(atividadeEditada);
+    await page.getByLabel("Permitir check-in para clientes").check();
+    await page.getByLabel("Check-in obrigatório para participar").check();
     await page.getByRole("dialog").getByRole("button", { name: "Salvar" }).click();
 
     await expect(page.getByText(atividadeEditada, { exact: true })).toBeVisible();
+    await expect(page.getByText("Check-in obrigatório")).toBeVisible();
+
+    await page.goto("/administrativo/atividades-grade");
+    await page.getByRole("button", { name: "Nova Grade" }).click();
+    await page.getByRole("combobox").first().click();
+    await page.getByRole("option", { name: atividadeEditada }).click();
+    await expect(page.getByText("Check-in da atividade:")).toBeVisible();
+    await expect(page.getByText("obrigatório")).toBeVisible();
+    await page.getByRole("button", { name: "Cancelar" }).click();
+
+    await page.goto("/planos/novo");
+    await page.getByRole("button", { name: "Atividades e benefícios" }).click();
+    await expect(page.getByText(atividadeEditada, { exact: true })).toBeVisible();
+    await expect(page.getByText("Check-in obrigatório")).toBeVisible();
+
+    await page.goto("/atividades");
     await page.getByRole("button", { name: `Desativar atividade ${atividadeEditada}` }).click();
     await page.getByRole("button", { name: "Apenas ativas" }).click();
     await expect(page.getByText(atividadeEditada)).toHaveCount(0);

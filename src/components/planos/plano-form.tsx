@@ -417,7 +417,16 @@ export function PlanoForm({
                         : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
                     )}
                   >
-                    {atividade.nome}
+                    <span className="block font-medium">{atividade.nome}</span>
+                    <span className="mt-1 block text-[11px] opacity-80">
+                      {!atividade.ativo
+                        ? "Inativa"
+                        : atividade.permiteCheckin
+                          ? atividade.checkinObrigatorio
+                            ? "Check-in obrigatório"
+                            : "Check-in opcional"
+                          : "Sem check-in"}
+                    </span>
                   </button>
                 ))}
               </div>

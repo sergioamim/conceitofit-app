@@ -3266,12 +3266,81 @@
           }
         ],
         "updatedAt": "2026-03-17T18:05:00Z"
+      },
+      {
+        "id": "38",
+        "title": "Fechar adaptação do frontend ao novo contrato da API de atividades",
+        "description": "Concluir o alinhamento do frontend para a evolução recente da API de atividades, eliminando gaps de request, response e telas dependentes.",
+        "details": "Hoje a UI já expõe campos e comportamentos novos de atividades, mas a camada HTTP ainda não envia nem normaliza todo o contrato novo. Esta task fecha o fluxo ponta a ponta para atividades e superfícies consumidoras, evitando fallbacks frágeis e divergência entre o que o usuário edita e o que o backend realmente persiste.",
+        "testStrategy": "Cobrir adapter e rotas consumidoras com testes unitários e de integração, validando create, update, listagem e consumo dos campos novos de atividade sem depender de fallback local.",
+        "status": "done",
+        "dependencies": [
+          "1"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear contrato novo de atividades e superfícies impactadas",
+            "description": "Confirmar os campos efetivos da API e inventariar todas as rotas do frontend que dependem do cadastro de atividades.",
+            "dependencies": [],
+            "details": "Revisar `src/lib/api/administrativo.ts`, `src/lib/types.ts` e as telas consumidoras de `listAtividadesApi`, `createAtividadeApi` e `updateAtividadeApi` para consolidar o contrato atualizado e o impacto em `/atividades`, `/administrativo/atividades`, `/administrativo/atividades-grade`, `/grade`, `/reservas` e fluxos de planos.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 38,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-18T15:30:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Ajustar request e normalização da API de atividades",
+            "description": "Enviar e ler corretamente os campos evoluídos do contrato de atividades.",
+            "dependencies": [
+              "38.1"
+            ],
+            "details": "Atualizar `AtividadeApiResponse`, `AtividadeUpsertApiRequest`, `buildAtividadeUpsertApiRequest` e `normalizeAtividadeApiResponse` em `src/lib/api/administrativo.ts` para contemplar campos como `permiteCheckin` e `checkinObrigatorio`, reduzindo dependência de fallback local e preservando compatibilidade de rollout quando necessário.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 38,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-18T15:30:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Revisar telas e fluxos dependentes do cadastro de atividades",
+            "description": "Garantir consistência visual e funcional nas rotas que consomem atividades após o ajuste do contrato.",
+            "dependencies": [
+              "38.2"
+            ],
+            "details": "Revisar `src/app/(app)/atividades/page.tsx`, `src/app/(app)/administrativo/atividades-grade/page.tsx`, `src/app/(app)/grade/page.tsx`, `src/app/(app)/reservas/page.tsx`, `src/app/(app)/planos/novo/page.tsx` e `src/app/(app)/planos/[id]/editar/page.tsx` para garantir que a UI reflita os dados do backend sem mascarar inconsistências via fallback.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 38,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-18T15:30:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Cobrir contrato e regressão das rotas de atividades com testes",
+            "description": "Fechar a trilha de confiança para o novo contrato de atividades no frontend.",
+            "dependencies": [
+              "38.3"
+            ],
+            "details": "Adicionar ou atualizar testes unitários, integração e E2E para o adapter e para os fluxos críticos de atividades, incluindo CRUD, grade, reservas e uso indireto em planos, com evidência de que os campos novos são persistidos e lidos corretamente.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 38,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-18T15:30:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-18T15:30:00Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-17T18:05:00Z",
-      "taskCount": 37,
+      "lastModified": "2026-03-18T12:00:00Z",
+      "taskCount": 38,
       "completedCount": 33,
       "tags": [
         "master"

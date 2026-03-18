@@ -331,6 +331,9 @@ export default function ReservasPage() {
     if (!portalAlunoId) return "Selecione um aluno.";
     if (!session.exibirNoAppCliente) return "Oculta no portal do cliente.";
     if (!session.permiteReserva) return "Reserva desabilitada para esta aula.";
+    if (!session.permiteCheckin && session.checkinObrigatorio) {
+      return "Configuração inválida de check-in para esta aula.";
+    }
     if (session.acessoClientes === "APENAS_COM_CONTRATO_OU_SERVICO" && !activeMatriculasByAluno.has(portalAlunoId)) {
       return "Contrato ativo obrigatório para reservar.";
     }
@@ -494,7 +497,11 @@ export default function ReservasPage() {
                             {session.vagasDisponiveis} vaga(s) disponível(is)
                           </span>
                           <span className="rounded-full bg-secondary px-2 py-0.5">
-                            {session.checkinObrigatorio ? "Check-in obrigatório" : "Check-in opcional"}
+                            {session.permiteCheckin
+                              ? session.checkinObrigatorio
+                                ? "Check-in obrigatório"
+                                : "Check-in opcional"
+                              : "Sem check-in"}
                           </span>
                         </div>
                       </button>
@@ -602,8 +609,20 @@ export default function ReservasPage() {
                                 <Button type="button" variant="outline" onClick={() => handleCancel(row.id)} disabled={saving || row.status === "CHECKIN"}>
                                   Cancelar
                                 </Button>
-                                <Button type="button" onClick={() => handleCheckin(row.id)} disabled={saving || row.status === "CHECKIN"}>
-                                  {row.status === "CHECKIN" ? "Check-in OK" : "Registrar check-in"}
+                                <Button
+                                  type="button"
+                                  onClick={() => handleCheckin(row.id)}
+                                  disabled={
+                                    saving
+                                    || row.status === "CHECKIN"
+                                    || !selectedSession.permiteCheckin
+                                  }
+                                >
+                                  {!selectedSession.permiteCheckin
+                                    ? "Check-in indisponível"
+                                    : row.status === "CHECKIN"
+                                      ? "Check-in OK"
+                                      : "Registrar check-in"}
                                 </Button>
                               </div>
                             </div>

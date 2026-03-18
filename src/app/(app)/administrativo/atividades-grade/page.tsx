@@ -58,8 +58,12 @@ export default function AtividadesGradePage() {
     setError("");
     try {
       const [g, a, sal, pro] = await Promise.all([
-        listAtividadeGradesApi(),
-        listAtividadesApi({ tenantId }),
+        listAtividadeGradesApi({
+          tenantId,
+          atividadeId: filtroAtividade === "TODAS" ? undefined : filtroAtividade,
+          apenasAtivas: apenasAtivas ? true : undefined,
+        }),
+        listAtividadesApi({ tenantId, apenasAtivas: false }),
         listSalasApi(),
         listFuncionariosApi(true),
       ]);
@@ -76,7 +80,7 @@ export default function AtividadesGradePage() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [apenasAtivas, filtroAtividade, tenantId]);
 
   useEffect(() => {
     void load();
@@ -87,10 +91,8 @@ export default function AtividadesGradePage() {
   const funcionarioMap = useMemo(() => new Map(funcionarios.map((f) => [f.id, f])), [funcionarios]);
 
   const filtered = grades.filter((g) => {
-    const matchAtividade = filtroAtividade === "TODAS" || g.atividadeId === filtroAtividade;
     const matchDia = filtroDia === "TODOS" || g.diasSemana.includes(filtroDia);
-    const matchAtiva = !apenasAtivas || g.ativo;
-    return matchAtividade && matchDia && matchAtiva;
+    return matchDia;
   });
 
   async function handleSave(data: AtividadeGradeForm, id?: string) {
@@ -259,7 +261,18 @@ export default function AtividadesGradePage() {
                 <tr key={g.id} className="transition-colors hover:bg-secondary/40">
                   <td className="px-4 py-3">
                     <p className="text-sm font-medium">{atividade?.nome ?? "Atividade removida"}</p>
-                    <p className="text-xs text-muted-foreground">{atividade?.categoria ?? "—"}</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+                        {atividade?.categoria ?? "—"}
+                      </span>
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+                        {atividade?.permiteCheckin
+                          ? atividade.checkinObrigatorio
+                            ? "Check-in obrigatório"
+                            : "Check-in opcional"
+                          : "Sem check-in"}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {g.diasSemana.map((dia) => DIA_LABEL[dia]).join(", ")}

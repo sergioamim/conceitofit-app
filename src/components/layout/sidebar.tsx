@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { memo, useEffect, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   BriefcaseBusiness,
   CalendarDays,
   ChevronDown,
@@ -55,13 +56,18 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/prospects", label: "Prospects", icon: UserPlus },
-  { href: "/reservas", label: "Reservas", icon: CalendarDays },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/matriculas", label: "Contratos", icon: ClipboardList },
   { href: "/planos", label: "Planos", icon: CreditCard },
-  { href: "/grade", label: "Grade", icon: CalendarDays },
   { href: "/vendas", label: "Vendas", icon: ShoppingCart },
   { href: "/pagamentos", label: "Pagamentos", icon: DollarSign },
+];
+
+const atividadeItems: NavItem[] = [
+  { href: "/atividades", label: "Atividades", icon: Activity },
+  { href: "/administrativo/atividades-grade", label: "Atividades - Grade", icon: Settings },
+  { href: "/grade", label: "Grade", icon: CalendarDays },
+  { href: "/reservas", label: "Reservas", icon: CalendarDays },
 ];
 
 const treinoItems: NavItem[] = [
@@ -97,8 +103,6 @@ const administrativoItems: NavItem[] = [
   { href: "/administrativo/academia", label: "Academia", icon: Settings },
   { href: "/administrativo/funcionarios", label: "Funcionários", icon: Settings },
   { href: "/administrativo/salas", label: "Salas", icon: Settings },
-  { href: "/administrativo/atividades", label: "Atividades", icon: Settings },
-  { href: "/administrativo/atividades-grade", label: "Atividades - Grade", icon: Settings },
   { href: "/administrativo/horarios", label: "Horários", icon: Settings },
   { href: "/administrativo/convenios", label: "Convênios", icon: Settings },
   { href: "/administrativo/produtos", label: "Produtos", icon: Settings },
@@ -127,6 +131,7 @@ function sortNavItemsByLabel(items: NavItem[]): NavItem[] {
 }
 
 const navItemsSorted = sortNavItemsByLabel(navItems);
+const atividadeItemsSorted = sortNavItemsByLabel(atividadeItems);
 const treinoItemsSorted = sortNavItemsByLabel(treinoItems);
 const crmItemsSorted = sortNavItemsByLabel(crmItems);
 const segurancaItemsSorted = sortNavItemsByLabel(segurancaItems);
@@ -144,6 +149,10 @@ type SidebarProps = {
 
 function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function matchesAnyPath(pathname: string, items: NavItem[]): boolean {
+  return items.some((item) => isActivePath(pathname, item.href));
 }
 
 function getInitials(name: string): string {
@@ -329,6 +338,7 @@ function SidebarNavigation({
 }) {
   const pathname = usePathname();
   const access = useAuthAccess();
+  const [atividadeOpen, setAtividadeOpen] = useState(() => matchesAnyPath(pathname, atividadeItemsSorted));
   const [crmOpen, setCrmOpen] = useState(() => pathname.startsWith("/crm"));
   const [treinosOpen, setTreinosOpen] = useState(() => pathname.startsWith("/treinos"));
   const [segurancaOpen, setSegurancaOpen] = useState(() => pathname.startsWith("/seguranca"));
@@ -354,6 +364,10 @@ function SidebarNavigation({
       onMobileClose?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  useEffect(() => {
+    setAtividadeOpen(matchesAnyPath(pathname, atividadeItemsSorted));
   }, [pathname]);
 
   useEffect(() => {
@@ -393,6 +407,17 @@ function SidebarNavigation({
           onNavigate={onMobileClose}
         />
       ))}
+
+      <CollapsibleSection
+        title="Atividade"
+        icon={Activity}
+        collapsed={collapsed}
+        open={atividadeOpen}
+        onToggle={() => setAtividadeOpen((v) => !v)}
+        items={atividadeItemsSorted}
+        pathname={pathname}
+        onNavigate={onMobileClose}
+      />
 
       <CollapsibleSection
         title="Treinos"

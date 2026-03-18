@@ -16,6 +16,8 @@ type AtividadeApiResponse = {
   categoria?: CategoriaAtividade | null;
   icone?: string | null;
   cor?: string | null;
+  permiteCheckin?: unknown;
+  checkinObrigatorio?: unknown;
   ativo?: unknown;
 };
 
@@ -37,6 +39,8 @@ export interface AtividadeUpsertApiRequest {
   categoria: CategoriaAtividade;
   icone?: string;
   cor?: string;
+  permiteCheckin: boolean;
+  checkinObrigatorio: boolean;
 }
 
 const MAX_ATIVIDADE_NAME_LENGTH = 100;
@@ -86,8 +90,13 @@ function extractAtividadeItems(response: AtividadeListApiResponse): AtividadeApi
 
 export function buildAtividadeUpsertApiRequest(
   tenantId: string,
-  data: Pick<Atividade, "nome" | "descricao" | "categoria" | "icone" | "cor">
+  data: Pick<
+    Atividade,
+    "nome" | "descricao" | "categoria" | "icone" | "cor" | "permiteCheckin" | "checkinObrigatorio"
+  >
 ): AtividadeUpsertApiRequest {
+  const permiteCheckin = toBoolean(data.permiteCheckin, true);
+
   return {
     tenantId,
     nome: limitString(cleanString(data.nome) ?? "", MAX_ATIVIDADE_NAME_LENGTH) ?? "",
@@ -95,6 +104,10 @@ export function buildAtividadeUpsertApiRequest(
     categoria: data.categoria,
     icone: limitString(cleanString(data.icone), MAX_ATIVIDADE_ICON_LENGTH),
     cor: limitString(cleanString(data.cor), MAX_ATIVIDADE_COLOR_LENGTH),
+    permiteCheckin,
+    checkinObrigatorio: permiteCheckin
+      ? toBoolean(data.checkinObrigatorio, false)
+      : false,
   };
 }
 
@@ -102,6 +115,8 @@ export function normalizeAtividadeApiResponse(
   input: AtividadeApiResponse,
   fallback?: Partial<Atividade>
 ): Atividade {
+  const permiteCheckin = toBoolean(input.permiteCheckin, fallback?.permiteCheckin ?? true);
+
   return {
     id: cleanString(input.id) ?? fallback?.id ?? "",
     tenantId: cleanString(input.tenantId) ?? fallback?.tenantId ?? "",
@@ -110,8 +125,10 @@ export function normalizeAtividadeApiResponse(
     categoria: input.categoria ?? fallback?.categoria ?? "OUTRA",
     icone: cleanString(input.icone) ?? fallback?.icone ?? "",
     cor: cleanString(input.cor) ?? fallback?.cor ?? "#3de8a0",
-    permiteCheckin: fallback?.permiteCheckin ?? true,
-    checkinObrigatorio: fallback?.checkinObrigatorio ?? false,
+    permiteCheckin,
+    checkinObrigatorio: permiteCheckin
+      ? toBoolean(input.checkinObrigatorio, fallback?.checkinObrigatorio ?? false)
+      : false,
     ativo: toBoolean(input.ativo, fallback?.ativo ?? true),
   };
 }

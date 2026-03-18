@@ -176,15 +176,16 @@ export function AtividadeGradeModal({
   }
 
   function handleSave() {
-    const needsTime = form.definicaoHorario === "PREVIAMENTE";
     if (!form.atividadeId || form.diasSemana.length === 0 || !form.capacidade || !form.duracaoMinutos || !form.checkinLiberadoMinutosAntes) return;
-    if (needsTime && (!form.horaInicio || !form.horaFim)) return;
+    if (!form.horaInicio || !form.horaFim) return;
     onSave(form, initial?.id);
   }
 
   const funcionariosInstrutores = funcionarios.filter(
     (f) => f.ativo && f.podeMinistrarAulas
   );
+  const atividadeOptions = atividades.filter((atividade) => atividade.ativo || atividade.id === form.atividadeId);
+  const selectedAtividade = atividades.find((atividade) => atividade.id === form.atividadeId);
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
@@ -237,11 +238,23 @@ export function AtividadeGradeModal({
                 >
                   <SelectTrigger className="w-full bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent className="bg-card border-border">
-                    {atividades.filter((a) => a.ativo).map((a) => (
+                    {atividadeOptions.map((a) => (
                       <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedAtividade ? (
+                  <p className="text-xs text-muted-foreground">
+                    Check-in da atividade:{" "}
+                    <span className="font-medium text-foreground">
+                      {selectedAtividade.permiteCheckin
+                        ? selectedAtividade.checkinObrigatorio
+                          ? "obrigatório"
+                          : "opcional"
+                        : "desabilitado"}
+                    </span>
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Grupo de atividades</label>
@@ -320,13 +333,30 @@ export function AtividadeGradeModal({
             <h3 className="text-sm font-semibold">Agenda e participação</h3>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Hora início {form.definicaoHorario === "PREVIAMENTE" ? "*" : ""}</label>
-                <Input type="time" value={form.horaInicio} onChange={(e) => set("horaInicio", e.target.value)} className="bg-secondary border-border" disabled={form.definicaoHorario !== "PREVIAMENTE"} />
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Hora início *</label>
+                <Input
+                  type="time"
+                  value={form.horaInicio}
+                  onChange={(e) => set("horaInicio", e.target.value)}
+                  className="bg-secondary border-border"
+                  required
+                />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Hora fim {form.definicaoHorario === "PREVIAMENTE" ? "*" : ""}</label>
-                <Input type="time" value={form.horaFim} onChange={(e) => set("horaFim", e.target.value)} className="bg-secondary border-border" disabled={form.definicaoHorario !== "PREVIAMENTE"} />
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Hora fim *</label>
+                <Input
+                  type="time"
+                  value={form.horaFim}
+                  onChange={(e) => set("horaFim", e.target.value)}
+                  className="bg-secondary border-border"
+                  required
+                />
               </div>
+              {form.definicaoHorario === "SOB_DEMANDA" ? (
+                <p className="col-span-2 text-[11px] text-muted-foreground">
+                  Mesmo em atividades sob demanda, informe a faixa horária para manter o cadastro consistente com a API.
+                </p>
+              ) : null}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sala</label>
                 <Select value={form.salaId || "NONE"} onValueChange={(v) => set("salaId", v === "NONE" ? "" : v)}>

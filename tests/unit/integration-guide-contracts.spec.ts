@@ -323,16 +323,19 @@ test.describe("integration guide contracts", () => {
     }
   });
 
-  test("createAtividadeApi envia o payload enxuto documentado no guia", async () => {
+  test("createAtividadeApi envia o payload atual da API de atividades", async () => {
     const { calls, restore } = mockFetchSequence([
       new Response(
         JSON.stringify({
           id: "atividade-1",
           tenantId: "tenant-guide",
           nome: "Yoga",
+          descricao: "Alongamento e mobilidade",
           categoria: "COLETIVA",
           icone: "lotus",
           cor: "#22cc88",
+          permiteCheckin: false,
+          checkinObrigatorio: false,
           ativo: true,
         }),
         { status: 201, headers: { "Content-Type": "application/json" } }
@@ -340,7 +343,7 @@ test.describe("integration guide contracts", () => {
     ]);
 
     try {
-      await createAtividadeApi({
+      const created = await createAtividadeApi({
         tenantId: "tenant-guide",
         data: {
           nome: "  Yoga  ",
@@ -353,6 +356,18 @@ test.describe("integration guide contracts", () => {
         },
       });
 
+      expect(created).toMatchObject({
+        id: "atividade-1",
+        tenantId: "tenant-guide",
+        nome: "Yoga",
+        descricao: "Alongamento e mobilidade",
+        categoria: "COLETIVA",
+        icone: "lotus",
+        cor: "#22cc88",
+        permiteCheckin: false,
+        checkinObrigatorio: false,
+      });
+
       expect(calls).toHaveLength(1);
       expect(calls[0].method).toBe("POST");
       expect(calls[0].url).toContain("/api/v1/administrativo/atividades");
@@ -363,6 +378,8 @@ test.describe("integration guide contracts", () => {
         categoria: "COLETIVA",
         icone: "lotus",
         cor: "#22cc88",
+        permiteCheckin: false,
+        checkinObrigatorio: false,
       });
     } finally {
       restore();

@@ -906,6 +906,13 @@ export async function installReservasApiMocks(page: Page) {
       categoria: "COLETIVA",
       ativo: true,
     },
+    {
+      id: "atividade-recovery",
+      tenantId: tenant.id,
+      nome: "Recovery",
+      categoria: "COLETIVA",
+      ativo: true,
+    },
   ];
 
   const sessoes: AulaSessaoSeed[] = [
@@ -931,6 +938,29 @@ export async function installReservasApiMocks(page: Page) {
       salaNome: "Bike Studio",
       local: "Sala 2",
       instrutorNome: "Professor Caio",
+    },
+    {
+      id: "sessao-recovery-2026-03-13",
+      tenantId: tenant.id,
+      atividadeGradeId: "grade-recovery",
+      atividadeId: "atividade-recovery",
+      atividadeNome: "Recovery",
+      data: "2026-03-13",
+      diaSemana: "SEX",
+      horaInicio: "07:00",
+      horaFim: "07:45",
+      capacidade: 4,
+      permiteReserva: true,
+      listaEsperaHabilitada: false,
+      acessoClientes: "TODOS_CLIENTES",
+      exibirNoAppCliente: true,
+      exibirNoAutoatendimento: true,
+      checkinLiberadoMinutosAntes: 0,
+      permiteCheckin: false,
+      checkinObrigatorio: false,
+      salaNome: "Studio Recovery",
+      local: "Sala 1",
+      instrutorNome: "Professora Nanda",
     },
   ];
 
@@ -1910,7 +1940,7 @@ export async function installAdminCrudApiMocks(page: Page) {
     },
   ];
 
-  let counters = {
+  const counters = {
     academia: 10,
     unidade: 10,
     cargo: 10,

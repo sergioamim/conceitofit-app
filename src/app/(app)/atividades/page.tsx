@@ -67,7 +67,11 @@ export default function AtividadesPage() {
     setLoading(true);
     setError("");
     try {
-      const data = await listAtividadesApi({ tenantId });
+      const data = await listAtividadesApi({
+        tenantId,
+        apenasAtivas: apenasAtivas ? true : undefined,
+        categoria: categoria === "TODAS" ? undefined : categoria,
+      });
       setAtividades(
         Array.isArray(data)
           ? data.filter((item): item is Atividade => Boolean(item && item.id))
@@ -79,18 +83,14 @@ export default function AtividadesPage() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [apenasAtivas, categoria, tenantId]);
 
   useEffect(() => {
     setReady(true);
     void load();
   }, [load]);
 
-  const filtered = atividades.filter((a) => {
-    const matchCategoria = categoria === "TODAS" || a.categoria === categoria;
-    const matchAtivas = !apenasAtivas || a.ativo;
-    return matchCategoria && matchAtivas;
-  });
+  const filtered = atividades;
 
   async function handleSave(data: AtividadeForm, id?: string) {
     if (!tenantId) return;

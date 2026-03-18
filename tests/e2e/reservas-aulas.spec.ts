@@ -48,4 +48,27 @@ test.describe("Reservas e operação de aulas", () => {
     await expect(page.getByText("Check-in registrado.")).toBeVisible();
     await expect(rafaelRow.getByRole("button", { name: "Check-in OK" })).toBeVisible();
   });
+
+  test("reflete sessões sem check-in na operação", async ({ page }) => {
+    await page.goto("/reservas");
+    await expect(page.getByRole("heading", { name: "Reservas, vagas e aulas" })).toBeVisible();
+
+    const sessaoSemCheckin = page
+      .getByRole("button")
+      .filter({ hasText: "Recovery" })
+      .filter({ hasText: "Sem check-in" })
+      .first();
+
+    await expect(sessaoSemCheckin).toBeVisible();
+    await sessaoSemCheckin.click();
+
+    await page.getByLabel("Reservar para aluno").selectOption("al-demo-025");
+    await page.getByRole("button", { name: "Reservar vaga" }).click();
+    await expect(page.getByText("Reserva criada com sucesso.")).toBeVisible();
+
+    const camilaRow = page
+      .locator("p.font-semibold", { hasText: "Camila Almeida 25" })
+      .locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
+    await expect(camilaRow.getByRole("button", { name: "Check-in indisponível" })).toBeDisabled();
+  });
 });
