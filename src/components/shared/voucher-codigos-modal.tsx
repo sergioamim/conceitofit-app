@@ -102,14 +102,15 @@ export function VoucherCodigosModal({
     async function load() {
       setLoading(true);
       try {
-        const [codData, alunosData] = await Promise.all([
+        const [codigosResult, alunosResult] = await Promise.allSettled([
           listVoucherCodigosApi(voucher.id),
           tenantId
             ? listAlunosApi({ tenantId, page: 0, size: 500 }).then(extractAlunosFromListResponse)
             : Promise.resolve([]),
         ]);
-        setCodigos(codData);
-        setAlunos(alunosData);
+
+        setCodigos(codigosResult.status === "fulfilled" ? codigosResult.value : []);
+        setAlunos(alunosResult.status === "fulfilled" ? alunosResult.value : []);
       } finally {
         setLoading(false);
       }
@@ -137,7 +138,7 @@ export function VoucherCodigosModal({
     voucher.codigoTipo === "UNICO" && voucher.ilimitado;
 
   return (
-    <Dialog open onOpenChange={onClose}>
+    <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="bg-card border-border max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">

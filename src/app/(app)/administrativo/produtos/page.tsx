@@ -24,6 +24,7 @@ export default function ProdutosPage() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Produto | null>(null);
+  const [ready, setReady] = useState(false);
 
   async function load() {
     const data = await listProdutosApi(false);
@@ -31,6 +32,7 @@ export default function ProdutosPage() {
   }
 
   useEffect(() => {
+    setReady(true);
     void listProdutosApi(false).then(setProdutos);
   }, []);
 
@@ -81,7 +83,7 @@ export default function ProdutosPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight">Produtos</h1>
           <p className="mt-1 text-sm text-muted-foreground">Cadastro completo para venda de produtos físicos e controle de margem/estoque</p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>Novo produto</Button>
+        <Button onClick={() => setModalOpen(true)} disabled={!ready}>Novo produto</Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">

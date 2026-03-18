@@ -21,6 +21,7 @@ export default function ConveniosPage() {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Convenio | null>(null);
+  const [ready, setReady] = useState(false);
 
   async function load() {
     if (!tenantId) return;
@@ -33,6 +34,7 @@ export default function ConveniosPage() {
   }
 
   useEffect(() => {
+    setReady(true);
     if (!tenantResolved || !tenantId) return;
     void Promise.all([
       listConveniosApi(false),
@@ -80,7 +82,7 @@ export default function ConveniosPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight">Convênios</h1>
           <p className="mt-1 text-sm text-muted-foreground">Descontos por plano ou grupo</p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>Novo convênio</Button>
+        <Button onClick={() => setModalOpen(true)} disabled={!ready || !tenantResolved || !tenantId}>Novo convênio</Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">

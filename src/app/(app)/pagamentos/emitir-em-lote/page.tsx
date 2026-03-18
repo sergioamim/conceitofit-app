@@ -5,17 +5,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
 import { emitirNfseEmLoteApi } from "@/lib/api/pagamentos";
+import { getNfseBloqueioMensagem } from "@/lib/admin-financeiro";
 import { listContasReceberOperacionais, type PagamentoComAluno } from "@/lib/financeiro/recebimentos";
 import { useTenantContext } from "@/hooks/use-session-context";
+import type { NfseConfiguracao } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function formatDate(value: string) {
-  return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
 }
 
 export default function EmitirNfseEmLotePage() {
@@ -24,8 +30,9 @@ export default function EmitirNfseEmLotePage() {
   const [loading, setLoading] = useState(true);
   const [confirmando, setConfirmando] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [nfseConfiguracao, setNfseConfiguracao] = useState<NfseConfiguracao | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const carregar = useCallback(async () => {
     if (!tenantId) {
@@ -34,8 +41,12 @@ export default function EmitirNfseEmLotePage() {
     }
     setLoading(true);
     try {
-      const list = await listContasReceberOperacionais({ tenantId });
+      const [list, nfseConfig] = await Promise.all([
+        listContasReceberOperacionais({ tenantId }),
+        getNfseConfiguracaoAtualApi({ tenantId }).catch(() => null),
+      ]);
       setPagamentos(list);
+      setNfseConfiguracao(nfseConfig);
     } finally {
       setLoading(false);
     }
@@ -50,6 +61,7 @@ export default function EmitirNfseEmLotePage() {
     [pagamentos]
   );
   const totalSelecionado = candidatos.filter((item) => selectedIds.includes(item.id));
+  const bloqueioFiscal = getNfseBloqueioMensagem(nfseConfiguracao);
 
   function setAllSelected(next: boolean) {
     setSelectedIds(next ? candidatos.map((item) => item.id) : []);
@@ -68,13 +80,18 @@ export default function EmitirNfseEmLotePage() {
     if (!tenantId) return;
     setConfirmando(true);
     try {
+      setFeedback(null);
       await emitirNfseEmLoteApi({
         tenantId,
         ids: selectedIds,
       });
       setSelectedIds([]);
       setDialogOpen(false);
+      setFeedback({ type: "success", message: "NFSe emitida em lote com sucesso." });
       await carregar();
+    } catch (error) {
+      setFeedback({ type: "error", message: normalizeErrorMessage(error) });
+      setDialogOpen(false);
     } finally {
       setConfirmando(false);
     }
@@ -94,6 +111,22 @@ export default function EmitirNfseEmLotePage() {
       </div>
 
       <div className="rounded-xl border border-border bg-card p-5">
+        {feedback ? (
+          <div
+            className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+              feedback.type === "error"
+                ? "border-gym-danger/30 bg-gym-danger/10 text-gym-danger"
+                : "border-gym-teal/30 bg-gym-teal/10 text-gym-teal"
+            }`}
+          >
+            {feedback.message}
+          </div>
+        ) : null}
+        {bloqueioFiscal ? (
+          <div className="mb-4 rounded-lg border border-gym-warning/30 bg-gym-warning/10 px-4 py-3 text-sm text-gym-warning">
+            {bloqueioFiscal}
+          </div>
+        ) : null}
         {loading ? (
           <p className="text-sm text-muted-foreground">Carregando pagamentos...</p>
         ) : (
@@ -106,7 +139,7 @@ export default function EmitirNfseEmLotePage() {
                 size="sm"
                 variant="outline"
                 className="border-border text-xs"
-                disabled={candidatos.length === 0}
+                disabled={candidatos.length === 0 || Boolean(bloqueioFiscal)}
                 onClick={() => setAllSelected(selectedIds.length !== candidatos.length)}
               >
                 {selectedIds.length === candidatos.length ? "Desmarcar todos" : "Selecionar todos"}
@@ -146,6 +179,7 @@ export default function EmitirNfseEmLotePage() {
                           <input
                             type="checkbox"
                             checked={selectedIds.includes(item.id)}
+                            disabled={Boolean(bloqueioFiscal)}
                             onChange={(event) => toggleSelected(item.id, event.target.checked)}
                           />
                           <div>
@@ -172,7 +206,7 @@ export default function EmitirNfseEmLotePage() {
               <Button
                 size="sm"
                 className="h-8"
-                disabled={totalSelecionado.length === 0}
+                disabled={totalSelecionado.length === 0 || Boolean(bloqueioFiscal)}
                 onClick={() => setDialogOpen(true)}
               >
                 Emitir em lote ({totalSelecionado.length})

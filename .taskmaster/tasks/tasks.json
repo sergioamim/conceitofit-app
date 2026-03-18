@@ -1,6 +1,6 @@
 {
   "master": {
-  "tasks": [
+    "tasks": [
       {
         "id": "1",
         "title": "Alinhar contrato HTTP e camada de consumo da API",
@@ -2910,7 +2910,7 @@
         "description": "Adicionar cobertura E2E nas telas administrativas críticas, com foco em fluxo de criação, edição, exclusão/inativação e validações em operações CRUD.",
         "details": "Escalar os testes Playwright para `/admin/*` e `/administrativo/*` com cenários repetíveis e stubs de API controlados, garantindo confiança de regressão sem alterar comportamento funcional.",
         "testStrategy": "Implementar suíte por domínio com cenários de sucesso, validação de form, erro de API e estado vazio; medir ganho de regressão sem introduzir dependência de dados globais e sem flakiness por timing.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [
@@ -2920,11 +2920,11 @@
             "description": "Mapear páginas CRUD da área administrativa e confirmar seletores/contratos atuais.",
             "dependencies": [],
             "details": "Conferir `src/app/(backoffice)/admin/*` e `src/app/(app)/administrativo/*`, identificar páginas com Create/Edit/Delete/List/Search e montar matriz de cobertura com criticidade por rota.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 34,
             "parentId": "undefined",
-            "updatedAt": "2026-03-17T20:10:00.000Z"
+            "updatedAt": "2026-03-17T13:37:40.867Z"
           },
           {
             "id": 2,
@@ -2934,11 +2934,11 @@
               "34.1"
             ],
             "details": "Criar utilitários em `tests/e2e/support/admin*` para login/sessão com tenant ativo, seed de admin por suite e interceptadores por entidade (`academias`, `unidades`, `funcionarios`, catálogos).",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 34,
             "parentId": "undefined",
-            "updatedAt": "2026-03-17T20:10:00.000Z"
+            "updatedAt": "2026-03-17T03:50:06.647Z"
           },
           {
             "id": 3,
@@ -2948,11 +2948,11 @@
               "34.2"
             ],
             "details": "Criar suíte para listagem, criação e edição de academias/unidades e operações de usuário/perfil/acesso em `/admin/seguranca*` com cenário de sucesso e erro de API.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 34,
             "parentId": "undefined",
-            "updatedAt": "2026-03-17T20:10:00.000Z"
+            "updatedAt": "2026-03-17T13:37:58.550Z"
           },
           {
             "id": 4,
@@ -2962,11 +2962,11 @@
               "34.2"
             ],
             "details": "Implementar cenários felizes, edição, validação e exclusão/arquivamento para as páginas de configuração da unidade e gestão de funcionários, incluindo mensagens de feedback.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 34,
             "parentId": "undefined",
-            "updatedAt": "2026-03-17T20:10:00.000Z"
+            "updatedAt": "2026-03-17T13:22:22.387Z"
           },
           {
             "id": 5,
@@ -2976,7 +2976,7 @@
               "34.4"
             ],
             "details": "Cobrir `/administrativo/servicos`, `/administrativo/produtos`, `/administrativo/planos`, `/administrativo/vouchers`, `/administrativo/convenios` com fluxo create/edit/inativar e validações por formulário.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 34,
             "parentId": "undefined",
@@ -2990,11 +2990,11 @@
               "34.5"
             ],
             "details": "Cobrir `/administrativo/formas-pagamento`, `/administrativo/tipos-conta`, `/administrativo/contas-bancarias`, `/administrativo/atividades`, `/administrativo/atividades-grade`, `/administrativo/maquininhas` com cenários de CRUD e erro.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 34,
             "parentId": "undefined",
-            "updatedAt": "2026-03-17T20:10:00.000Z"
+            "updatedAt": "2026-03-17T13:22:37.582Z"
           },
           {
             "id": 7,
@@ -3007,11 +3007,11 @@
               "34.6"
             ],
             "details": "Refatorar specs para reduzir duplicação, ajustar timeouts/waits sem flakiness, rodar `npm run e2e -- admin*`, e registrar evidência de coberturas mínima feliz/erro por rota priorizada.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 34,
             "parentId": "undefined",
-            "updatedAt": "2026-03-17T20:10:00.000Z"
+            "updatedAt": "2026-03-17T13:23:45.418Z"
           },
           {
             "id": 8,
@@ -3021,7 +3021,7 @@
               "34.1"
             ],
             "details": "Criar texto pronto para backend com rota esperada, status codes, contrato de erro, payloads de sucesso/empty/invalid e estratégia de versão para suportar os testes de CRUD admin.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 34,
             "parentId": "undefined",
@@ -3031,13 +3031,247 @@
         "complexity": 8,
         "recommendedSubtasks": 8,
         "expansionPrompt": "Divida em subtarefas por domínio de backoffice e administrativo: inventário de páginas, padronização de infra e fixtures, cobertura por suíte de CRUD, consolidação de execução de e2e e alinhamento backend dos contratos esperados.",
-        "updatedAt": "2026-03-17T20:10:00.000Z"
+        "updatedAt": "2026-03-17T13:37:58.550Z"
+      },
+      {
+        "id": "35",
+        "title": "Adaptar tela administrativa de NFSe aos novos campos fiscais da reforma tributaria",
+        "description": "Atualizar a tela `/administrativo/nfse` para suportar os novos campos obrigatorios da reforma tributaria e alinhar o formulario ao contrato fiscal real do backend.",
+        "details": "A tela atual de NFSe do frontend trabalha com um contrato administrativo proprio, centrado em prefeitura, inscricao municipal, CNAE, serie RPS e regime tributario. A adaptacao precisa incorporar os novos campos fiscais obrigatorios, revisar validacoes, checklist, tipagem e estados de UX sem depender de JSONs livres ou placeholders ambiguos.",
+        "testStrategy": "Cobrir o adapter e a tela com testes unitarios/componentes para validacao, serializacao e renderizacao dos novos campos, incluindo estados de erro retornados pelo backend fiscal.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Fechar contrato alvo e lacunas da tela atual",
+            "description": "Comparar o contrato atual do frontend com o novo contrato fiscal do backend e consolidar os gaps funcionais.",
+            "dependencies": [],
+            "details": "Revisar `src/lib/types.ts`, `src/lib/api/admin-financeiro.ts` e `src/app/(app)/administrativo/nfse/page.tsx`, mapeando o que precisa entrar, sair ou ser renomeado para acomodar `codigoTributacaoNacional`, `codigoNbs`, `classificacaoTributaria`, `consumidorFinal` e `indicadorOperacao`.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 35,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Atualizar tipos, normalizadores e adapter da configuracao NFSe",
+            "description": "Levar os novos campos fiscais para a camada de tipos e API client do frontend.",
+            "dependencies": [
+              "35.1"
+            ],
+            "details": "Atualizar `NfseConfiguracao`, enums auxiliares, normalizadores, defaults e serializacao em `src/lib/types.ts`, `src/lib/admin-financeiro.ts` e `src/lib/api/admin-financeiro.ts`, mantendo compatibilidade transitória com respostas parciais durante o rollout.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 35,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Refatorar formulario e checklist da pagina administrativo/nfse",
+            "description": "Ajustar a UI para editar e validar os novos campos obrigatorios da reforma tributaria.",
+            "dependencies": [
+              "35.2"
+            ],
+            "details": "Atualizar `src/app/(app)/administrativo/nfse/page.tsx` para incluir os novos campos, revisar labels/ajuda contextual, checklist fiscal, feedback de erro e ordem de preenchimento, preservando hidratação estável e sem regressão visual no formulário existente.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 35,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Ajustar estados de loading, validação e erro para contrato fiscal novo",
+            "description": "Tratar corretamente bloqueios locais e mensagens acionaveis vindas do backend.",
+            "dependencies": [
+              "35.3"
+            ],
+            "details": "Garantir que a tela apresente erro claro para configuracao incompleta, sucesso de validacao, fallback seguro quando o backend ainda nao devolver todos os campos e mensagens coerentes para operadores administrativos.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 35,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Cobrir adapter e pagina com testes",
+            "description": "Fechar a trilha de confianca da configuracao fiscal no frontend.",
+            "dependencies": [
+              "35.4"
+            ],
+            "details": "Criar/atualizar testes para os normalizadores e para a pagina de NFSe, cobrindo renderizacao dos novos campos, validacao local e tratamento de respostas de erro do backend fiscal.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 35,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-17T18:05:00Z"
+      },
+      {
+        "id": "36",
+        "title": "Adaptar fluxos de emissao e exibicao de NFSe ao novo bloqueio fiscal",
+        "description": "Atualizar os fluxos de pagamentos e consultas de NFSe no frontend para refletir os novos bloqueios e mensagens da reforma tributaria.",
+        "details": "A emissao de NFSe por pagamento e as superficies que mostram status fiscal precisam refletir o novo comportamento do backend: emissao bloqueada quando a unidade nao estiver configurada com os campos obrigatorios e mensagens mais especificas de validacao fiscal.",
+        "testStrategy": "Cobrir fluxos de emissao individual e lote com mocks de sucesso, validacao fiscal e ambiente sem suporte, validando UX de erro, reload e estados do documento fiscal.",
+        "status": "done",
+        "dependencies": [
+          "35"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear superficies impactadas por emissao e consulta de NFSe",
+            "description": "Levantar telas e componentes que dependem do status ou da acao de emissao fiscal.",
+            "dependencies": [],
+            "details": "Mapear `src/app/(app)/pagamentos/page.tsx`, `src/app/(app)/pagamentos/emitir-em-lote/page.tsx`, `src/app/(app)/clientes/[id]/page.tsx` e utilitarios relacionados, identificando pontos de erro/sucesso e textos que precisam mudar com o novo contrato fiscal.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 36,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Atualizar client de pagamentos para novas respostas e erros fiscais",
+            "description": "Ajustar o adapter de emissao de NFSe por pagamento para o novo comportamento do backend.",
+            "dependencies": [
+              "36.1"
+            ],
+            "details": "Revisar `src/lib/api/pagamentos.ts` para tratar corretamente erros de validacao fiscal, mensagens de configuracao incompleta e possiveis mudancas de payload/status code sem mascarar falhas reais como 'backend nao expoe'.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 36,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Ajustar UX de emissao individual e em lote",
+            "description": "Refletir o novo bloqueio fiscal nas telas operacionais de pagamentos.",
+            "dependencies": [
+              "36.2"
+            ],
+            "details": "Atualizar CTAs, toasts, modais e mensagens nas telas de pagamentos para orientar o operador quando a configuracao fiscal da unidade estiver incompleta ou quando a emissao falhar por falta dos novos campos obrigatorios.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 36,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Revisar exibição de status fiscal em cliente e recebimentos",
+            "description": "Garantir consistencia de exibição de NFSe emitida, pendente e bloqueada.",
+            "dependencies": [
+              "36.3"
+            ],
+            "details": "Alinhar badges, labels, filtros e textos nas telas que listam pagamentos/NFSe para diferenciar pendencia operacional de bloqueio por configuracao tributaria, sem inferencias frágeis no cliente.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 36,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Cobrir fluxos operacionais de NFSe com testes do frontend",
+            "description": "Fechar cobertura dos cenarios de emissao e falha fiscal no frontend.",
+            "dependencies": [
+              "36.4"
+            ],
+            "details": "Adicionar testes para emissao individual/em lote, mensagem de erro por configuracao fiscal pendente e manutencao do estado exibido apos resposta do backend.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 36,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-17T18:05:00Z"
+      },
+      {
+        "id": "37",
+        "title": "Fechar rollout, documentação e cobertura E2E do frontend para NFSe da reforma tributaria",
+        "description": "Consolidar a adaptação fiscal de NFSe no frontend com documentação, evidência de teste e estratégia de rollout visual/operacional.",
+        "details": "Depois de atualizar a configuração e os fluxos de emissão, o frontend precisa fechar a trilha pública e operacional: documentação de uso da tela fiscal, testes E2E ou smoke relevantes, alinhamento com o backend e checklist de rollout para operadores administrativos.",
+        "testStrategy": "Executar cobertura de regressão nas páginas impactadas e registrar evidência mínima de funcionamento para configuração fiscal e emissão de NFSe, priorizando cenários administrativos críticos.",
+        "status": "done",
+        "dependencies": [
+          "35",
+          "36"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Atualizar documentação operacional do frontend fiscal",
+            "description": "Documentar o novo fluxo de preenchimento e validação fiscal no backoffice web.",
+            "dependencies": [],
+            "details": "Registrar onde os operadores encontram os novos campos, como o frontend se comporta quando a unidade nao esta pronta para emitir NFSe e quais mensagens/estados devem ser esperados nas telas administrativas e de pagamentos.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 37,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Adicionar ou ampliar smoke/E2E das telas impactadas",
+            "description": "Cobrir os caminhos mais críticos do fluxo fiscal no navegador.",
+            "dependencies": [
+              "37.1"
+            ],
+            "details": "Criar ou ampliar cenarios de smoke/E2E para `/administrativo/nfse` e os fluxos de emissao de NFSe em pagamentos, com mocks/fixtures estáveis e sem depender de ambiente fiscal real.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 37,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Alinhar inventario de contratos frontend x backend",
+            "description": "Registrar os endpoints e payloads efetivamente usados pelo frontend apos a adaptacao.",
+            "dependencies": [
+              "37.2"
+            ],
+            "details": "Atualizar a documentacao interna do frontend sobre os endpoints de configuracao e emissao NFSe, destacando qualquer compatibilidade transitória e o ponto de remocao de fallbacks antigos.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 37,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Registrar critérios de aceite e riscos residuais do rollout",
+            "description": "Fechar a trilha com critérios observáveis e riscos conhecidos do frontend fiscal.",
+            "dependencies": [
+              "37.3"
+            ],
+            "details": "Consolidar evidências esperadas de aceite visual/funcional, riscos de contrato parcial durante rollout e pontos futuros como overrides por servico/plano ou enriquecimento de UX fiscal.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 37,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-17T18:05:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-17T18:05:00Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-17T20:10:00.000Z",
-      "taskCount": 34,
+      "lastModified": "2026-03-17T18:05:00Z",
+      "taskCount": 37,
       "completedCount": 33,
       "tags": [
         "master"

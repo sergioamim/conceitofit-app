@@ -19,7 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { useTenantContext } from "@/hooks/use-session-context";
-import { getDashboardApi, type DashboardScope } from "@/lib/api/dashboard";
+import { getDashboardApi } from "@/lib/api/dashboard";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { DashboardData, Prospect, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -27,11 +27,6 @@ import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 type DashboardTab = "CLIENTES" | "VENDAS" | "FINANCEIRO";
 const PROSPECTS_PAGE_SIZE = 10;
-const SCOPE_BY_TAB: Record<DashboardTab, DashboardScope> = {
-  CLIENTES: "CLIENTES",
-  VENDAS: "VENDAS",
-  FINANCEIRO: "FINANCEIRO",
-};
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -94,7 +89,6 @@ function MetricCard({
 export default function DashboardPage() {
   const tenantContext = useTenantContext();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [dashboardDataCache, setDashboardDataCache] = useState<Record<string, DashboardData>>({});
   const [showAllProspects, setShowAllProspects] = useState(false);
   const [prospectsPage, setProspectsPage] = useState<Prospect[]>([]);
   const [prospectsPageNumber, setProspectsPageNumber] = useState(1);
@@ -105,7 +99,8 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const loadingRef = useRef(false);
+  const dashboardDataCacheRef = useRef<Record<string, DashboardData>>({});
+  const activeRequestKeyRef = useRef<string | null>(null);
 
   const openProspects = useMemo(() => {
     if (!dashboardData?.prospectsRecentes) return [] as Prospect[];
@@ -114,12 +109,19 @@ export default function DashboardPage() {
       .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
   }, [dashboardData?.prospectsRecentes]);
 
+  const resetProspectsPagination = useCallback(() => {
+    setShowAllProspects(false);
+    setProspectsPage([]);
+    setProspectsPageNumber(1);
+    setProspectsPageHasNext(false);
+  }, []);
+
   const dashboardCacheKey = useCallback(
-    (scope: DashboardScope, referenceDate: string) => {
+    (referenceDate: string) => {
       if (!tenantContext.tenantId) {
-        return `${referenceDate}-${scope}`;
+        return referenceDate;
       }
-      return `${tenantContext.tenantId}-${referenceDate}-${scope}`;
+      return `${tenantContext.tenantId}-${referenceDate}`;
     },
     [tenantContext.tenantId]
   );
@@ -137,53 +139,46 @@ export default function DashboardPage() {
   const load = useCallback(async (referenceDate: string) => {
     if (!referenceDate || !tenantContext.tenantId) return;
 
-    const scope = SCOPE_BY_TAB[tab];
-    const cacheKey = dashboardCacheKey(scope, referenceDate);
-    const cachedData = dashboardDataCache[cacheKey];
+    const cacheKey = dashboardCacheKey(referenceDate);
+    activeRequestKeyRef.current = cacheKey;
+    const cachedData = dashboardDataCacheRef.current[cacheKey];
+    resetProspectsPagination();
 
     if (cachedData) {
       setDashboardData(cachedData);
       setLoading(false);
       setError(null);
-      setProspectsPage([]);
-      setShowAllProspects(false);
-      setProspectsPageNumber(1);
-      setProspectsPageHasNext(false);
       return;
     }
 
-    loadingRef.current = true;
     setLoading(true);
     setError(null);
     try {
       const nextDashboardData = await getDashboardApi({
         tenantId: tenantContext.tenantId,
         referenceDate,
-        scope,
+        scope: "FULL",
       });
+      dashboardDataCacheRef.current[cacheKey] = nextDashboardData;
+      if (activeRequestKeyRef.current !== cacheKey) {
+        return;
+      }
       setDashboardData(nextDashboardData);
-      setDashboardDataCache((prev) => ({
-        ...prev,
-        [cacheKey]: nextDashboardData,
-      }));
-      setProspectsPage([]);
-      setShowAllProspects(false);
-      setProspectsPageNumber(1);
-      setProspectsPageHasNext(false);
     } catch (loadError) {
+      if (activeRequestKeyRef.current !== cacheKey) {
+        return;
+      }
       setError(normalizeErrorMessage(loadError));
     } finally {
-      loadingRef.current = false;
-      setLoading(false);
+      if (activeRequestKeyRef.current === cacheKey) {
+        setLoading(false);
+      }
     }
-  }, [tenantContext.tenantId, tab, dashboardCacheKey, dashboardDataCache]);
+  }, [tenantContext.tenantId, dashboardCacheKey, resetProspectsPagination]);
 
   useEffect(() => {
-    setShowAllProspects(false);
-    setProspectsPage([]);
-    setProspectsPageNumber(1);
-    setProspectsPageHasNext(false);
-  }, [selectedDate]);
+    resetProspectsPagination();
+  }, [resetProspectsPagination, selectedDate]);
 
   useEffect(() => {
     const now = new Date();
@@ -197,7 +192,7 @@ export default function DashboardPage() {
     if (tenantContext.tenantResolved) {
       void load(selectedDate);
     }
-  }, [load, selectedDate, tab, tenantContext.tenantResolved]);
+  }, [load, selectedDate, tenantContext.tenantResolved]);
 
   useEffect(() => {
     if (showAllProspects) {

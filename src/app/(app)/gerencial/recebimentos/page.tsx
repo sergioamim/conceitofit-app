@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { listAgregadorTransacoesApi } from "@/lib/api/admin-financeiro";
+import { getNfseConfiguracaoAtualApi, listAgregadorTransacoesApi } from "@/lib/api/admin-financeiro";
 import { emitirNfsePagamentoApi } from "@/lib/api/pagamentos";
-import { AGREGADOR_REPASSE_LABEL, summarizeRecebimentosOperacionais } from "@/lib/admin-financeiro";
+import { AGREGADOR_REPASSE_LABEL, getNfseBloqueioMensagem, summarizeRecebimentosOperacionais } from "@/lib/admin-financeiro";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import {
   createRecebimentoAvulsoService,
@@ -16,7 +16,7 @@ import {
   type PagamentoComAluno,
 } from "@/lib/financeiro/recebimentos";
 import { useTenantContext } from "@/hooks/use-session-context";
-import type { AgregadorTransacao, Pagamento, TipoFormaPagamento } from "@/lib/types";
+import type { AgregadorTransacao, NfseConfiguracao, Pagamento, TipoFormaPagamento } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
@@ -51,7 +51,10 @@ function formatBRL(value: number) {
 
 function formatDate(value?: string) {
   if (!value) return "-";
-  return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR");
+  const normalized = value.includes("T") ? value.split("T")[0] : value;
+  const [year, month, day] = normalized.split("-");
+  if (!year || !month || !day) return normalized;
+  return `${day}/${month}/${year}`;
 }
 
 function monthRangeFromNow() {
@@ -70,6 +73,7 @@ export default function RecebimentosPage() {
   const [startDate, setStartDate] = useState(initialRange.start);
   const [endDate, setEndDate] = useState(initialRange.end);
   const [modalOpen, setModalOpen] = useState(false);
+  const [nfseConfiguracao, setNfseConfiguracao] = useState<NfseConfiguracao | null>(null);
   const [form, setForm] = useState<RecebimentoForm>({
     ...RECEBIMENTO_FORM_DEFAULT,
     dataVencimento: initialRange.end,
@@ -83,16 +87,18 @@ export default function RecebimentosPage() {
     setLoading(true);
     setError(null);
     try {
-      const [pagamentosResponse, transacoesResponse] = await Promise.all([
+      const [pagamentosResponse, transacoesResponse, nfseConfig] = await Promise.all([
         listContasReceberOperacionais({
           tenantId,
           startDate,
           endDate,
         }),
         listAgregadorTransacoesApi({ tenantId }),
+        getNfseConfiguracaoAtualApi({ tenantId }).catch(() => null),
       ]);
       setPagamentos(pagamentosResponse);
       setTransacoes(transacoesResponse);
+      setNfseConfiguracao(nfseConfig);
     } catch (loadError) {
       setError(normalizeErrorMessage(loadError));
     } finally {
@@ -133,6 +139,7 @@ export default function RecebimentosPage() {
     () => new Map(transacoes.map((item) => [item.pagamentoId, item] as const)),
     [transacoes]
   );
+  const nfseBloqueio = getNfseBloqueioMensagem(nfseConfiguracao);
 
   async function handleCreateRecebimento() {
     if (!tenantId) return;
@@ -332,6 +339,10 @@ export default function RecebimentosPage() {
                           <p className="font-medium text-gym-teal">{item.nfseNumero ?? "Emitida"}</p>
                           <p className="text-xs text-muted-foreground">OK</p>
                         </div>
+                      ) : nfseBloqueio ? (
+                        <span className="text-xs font-medium text-gym-danger" title={nfseBloqueio}>
+                          Bloqueada
+                        </span>
                       ) : (
                         <span className="text-xs font-medium text-gym-warning">Pendente</span>
                       )}
@@ -349,7 +360,7 @@ export default function RecebimentosPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {item.status === "PAGO" && !item.nfseEmitida ? (
+                      {item.status === "PAGO" && !item.nfseEmitida && !nfseBloqueio ? (
                         <Button
                           size="sm"
                           variant="outline"

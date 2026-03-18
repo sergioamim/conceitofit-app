@@ -24,6 +24,7 @@ export default function ServicosPage() {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Servico | null>(null);
+  const [ready, setReady] = useState(false);
 
   async function load() {
     const data = await listServicosApi(false);
@@ -31,6 +32,7 @@ export default function ServicosPage() {
   }
 
   useEffect(() => {
+    setReady(true);
     void listServicosApi(false).then(setServicos);
   }, []);
 
@@ -88,7 +90,7 @@ export default function ServicosPage() {
             Itens cobrados à parte, com número de sessões
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>Novo serviço</Button>
+        <Button onClick={() => setModalOpen(true)} disabled={!ready}>Novo serviço</Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">

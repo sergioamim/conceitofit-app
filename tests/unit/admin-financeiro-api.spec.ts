@@ -65,6 +65,10 @@ test.describe("admin financeiro api", () => {
         body: {
           tenantId: "tenant-1",
           prefeitura: "Rio",
+          codigoTributacaoNacional: "1301",
+          codigoNbs: "1.1301.25.00",
+          classificacaoTributaria: "SERVICO_TRIBUTAVEL",
+          indicadorOperacao: "SERVICO_MUNICIPIO",
           loteInicial: "2",
           aliquotaPadrao: "3.5",
           status: "PENDENTE",
@@ -77,6 +81,11 @@ test.describe("admin financeiro api", () => {
           prefeitura: "Rio Atualizado",
           inscricaoMunicipal: "123",
           cnaePrincipal: "9313-1/00",
+          codigoTributacaoNacional: "1301",
+          codigoNbs: "1.1301.25.00",
+          classificacaoTributaria: "SERVICO_TRIBUTAVEL",
+          consumidorFinal: true,
+          indicadorOperacao: "SERVICO_MUNICIPIO",
           serieRps: "S1",
           loteInicial: 2,
           aliquotaPadrao: 3.5,
@@ -94,6 +103,11 @@ test.describe("admin financeiro api", () => {
           prefeitura: "Rio Atualizado",
           inscricaoMunicipal: "123",
           cnaePrincipal: "9313-1/00",
+          codigoTributacaoNacional: "1301",
+          codigoNbs: "1.1301.25.00",
+          classificacaoTributaria: "SERVICO_TRIBUTAVEL",
+          consumidorFinal: true,
+          indicadorOperacao: "SERVICO_MUNICIPIO",
           serieRps: "S1",
           loteInicial: 2,
           aliquotaPadrao: 3.5,
@@ -109,6 +123,7 @@ test.describe("admin financeiro api", () => {
     try {
       const loaded = await getNfseConfiguracaoAtualApi({ tenantId: "tenant-1" });
       expect(loaded.prefeitura).toBe("Rio");
+      expect(loaded.codigoTributacaoNacional).toBe("1301");
       expect(loaded.loteInicial).toBe(2);
       expect(loaded.aliquotaPadrao).toBe(3.5);
 

@@ -3,8 +3,10 @@ import type {
   AgregadorTransacao,
   IntegracaoOperacional,
   IntegracaoOperacionalStatus,
+  NfseClassificacaoTributaria,
   NfseConfiguracao,
   NfseConfiguracaoStatus,
+  NfseIndicadorOperacao,
   Pagamento,
 } from "@/lib/types";
 
@@ -28,6 +30,20 @@ export const INTEGRACAO_STATUS_LABEL: Record<IntegracaoOperacionalStatus, string
   CONFIGURACAO_PENDENTE: "Configuração pendente",
 };
 
+export const NFSE_CLASSIFICACAO_TRIBUTARIA_LABEL: Record<NfseClassificacaoTributaria, string> = {
+  SERVICO_TRIBUTAVEL: "Serviço tributável",
+  RETENCAO: "Retenção na fonte",
+  ISENTO: "Isento",
+  IMUNE: "Imune",
+  NAO_INCIDENTE: "Não incidente",
+};
+
+export const NFSE_INDICADOR_OPERACAO_LABEL: Record<NfseIndicadorOperacao, string> = {
+  SERVICO_MUNICIPIO: "Serviço no município",
+  SERVICO_FORA_MUNICIPIO: "Serviço fora do município",
+  EXPORTACAO: "Exportação",
+};
+
 export function createEmptyNfseConfiguracao(tenantId: string): NfseConfiguracao {
   return {
     id: `nfse-${tenantId}`,
@@ -37,6 +53,11 @@ export function createEmptyNfseConfiguracao(tenantId: string): NfseConfiguracao 
     prefeitura: "",
     inscricaoMunicipal: "",
     cnaePrincipal: "",
+    codigoTributacaoNacional: "",
+    codigoNbs: "",
+    classificacaoTributaria: "SERVICO_TRIBUTAVEL",
+    consumidorFinal: true,
+    indicadorOperacao: "SERVICO_MUNICIPIO",
     serieRps: "",
     loteInicial: 1,
     aliquotaPadrao: 2,
@@ -51,8 +72,18 @@ export function validateNfseConfiguracaoDraft(input: Partial<NfseConfiguracao>):
   if (!input.prefeitura?.trim()) errors.prefeitura = "Informe a prefeitura emissora.";
   if (!input.inscricaoMunicipal?.trim()) errors.inscricaoMunicipal = "Informe a inscrição municipal.";
   if (!input.cnaePrincipal?.trim()) errors.cnaePrincipal = "Informe o CNAE principal.";
+  if (!input.codigoTributacaoNacional?.trim()) {
+    errors.codigoTributacaoNacional = "Informe o código de tributação nacional.";
+  }
+  if (!input.codigoNbs?.trim()) errors.codigoNbs = "Informe o código NBS.";
   if (!input.serieRps?.trim()) errors.serieRps = "Informe a série do RPS.";
   if (!input.provedor) errors.provedor = "Selecione o provedor fiscal.";
+  if (!input.classificacaoTributaria) {
+    errors.classificacaoTributaria = "Selecione a classificação tributária.";
+  }
+  if (!input.indicadorOperacao) {
+    errors.indicadorOperacao = "Selecione o indicador da operação.";
+  }
 
   const loteInicial = Number(input.loteInicial ?? 0);
   if (!Number.isFinite(loteInicial) || loteInicial <= 0) {
@@ -83,21 +114,30 @@ export function buildNfseChecklist(input: Partial<NfseConfiguracao>) {
       done: !errors.prefeitura && !errors.inscricaoMunicipal && !errors.cnaePrincipal,
     },
     {
+      id: "reforma-tributaria",
+      label: "Campos da reforma tributária",
+      done: !errors.codigoTributacaoNacional && !errors.codigoNbs && !errors.classificacaoTributaria,
+    },
+    {
       id: "parametros-rps",
-      label: "Parâmetros de RPS",
-      done: !errors.serieRps && !errors.loteInicial && !errors.aliquotaPadrao,
+      label: "Parâmetros de RPS e operação",
+      done: !errors.serieRps && !errors.loteInicial && !errors.aliquotaPadrao && !errors.indicadorOperacao,
     },
     {
       id: "integracao",
-      label: "Provedor e ambiente",
-      done: Boolean(input.provedor && input.ambiente),
-    },
-    {
-      id: "webhook",
-      label: "Webhook/retorno fiscal",
-      done: Boolean(input.webhookFiscalUrl?.trim()),
+      label: "Provedor, ambiente e retorno",
+      done: Boolean(input.provedor && input.ambiente && input.webhookFiscalUrl?.trim()),
     },
   ];
+}
+
+export function getNfseBloqueioMensagem(input?: Partial<NfseConfiguracao> | null) {
+  if (!input) return null;
+  if (input.status === "CONFIGURADA") return null;
+  if (input.ultimoErro?.trim()) {
+    return `Emissão fiscal bloqueada: ${input.ultimoErro.trim()}`;
+  }
+  return "Emissão fiscal bloqueada até concluir e validar a configuração tributária da unidade.";
 }
 
 export function summarizeAgregadorTransacoes(transacoes: AgregadorTransacao[]) {

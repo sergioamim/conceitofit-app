@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, Suspense, useEffect, useState } from "react";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
+import { TenantContextProvider } from "@/hooks/use-session-context";
 import { useAuthAccess } from "@/hooks/use-session-context";
 import { AUTH_SESSION_UPDATED_EVENT, getAccessToken } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/auth-redirect";
@@ -157,8 +158,10 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<AdminLayoutFallback>{children}</AdminLayoutFallback>}>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
-    </Suspense>
+    <TenantContextProvider>
+      <Suspense fallback={<AdminLayoutFallback>{children}</AdminLayoutFallback>}>
+        <AdminLayoutContent>{children}</AdminLayoutContent>
+      </Suspense>
+    </TenantContextProvider>
   );
 }

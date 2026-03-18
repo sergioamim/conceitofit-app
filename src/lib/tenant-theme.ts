@@ -67,6 +67,7 @@ export const TENANT_THEME_OPTIONS: Array<{ id: TenantThemePreset; nome: string; 
 ];
 
 export const DEFAULT_THEME_PRESET: TenantThemePreset = "CONCEITO_DARK";
+export const DEFAULT_TENANT_APP_NAME = "Conceito Fit";
 
 export function resolveTenantTheme(academia?: Academia): TenantThemeColors {
   const preset = academia?.branding?.themePreset ?? DEFAULT_THEME_PRESET;
@@ -79,12 +80,12 @@ export function resolveTenantTheme(academia?: Academia): TenantThemeColors {
 }
 
 export function getTenantAppName(academia?: Academia): string {
-  return academia?.branding?.appName?.trim() || academia?.nome?.trim() || "Conceito Fit";
+  return academia?.branding?.appName?.trim() || academia?.nome?.trim() || DEFAULT_TENANT_APP_NAME;
 }
 
 export function createDefaultBranding(): TenantBranding {
   return {
-    appName: "Conceito Fit",
+    appName: DEFAULT_TENANT_APP_NAME,
     themePreset: DEFAULT_THEME_PRESET,
     useCustomColors: false,
   };

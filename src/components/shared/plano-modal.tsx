@@ -159,7 +159,7 @@ export function PlanoModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="bg-card border-border sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">

@@ -67,7 +67,7 @@ export function ExercicioModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="border-border bg-card sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">

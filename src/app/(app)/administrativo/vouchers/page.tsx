@@ -38,6 +38,7 @@ export default function VouchersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editVoucher, setEditVoucher] = useState<Voucher | null>(null);
   const [codigosVoucher, setCodigosVoucher] = useState<Voucher | null>(null);
+  const [ready, setReady] = useState(false);
 
   const load = useCallback(async () => {
     const [data, counts] = await Promise.all([
@@ -49,6 +50,7 @@ export default function VouchersPage() {
   }, []);
 
   useEffect(() => {
+    setReady(true);
     if (!tenantResolved) return;
     void Promise.all([
       listVouchersApi(),
@@ -106,7 +108,7 @@ export default function VouchersPage() {
             Cupões e acessos temporários
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>Novo voucher</Button>
+        <Button onClick={() => setModalOpen(true)} disabled={!ready || !tenantResolved}>Novo voucher</Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">

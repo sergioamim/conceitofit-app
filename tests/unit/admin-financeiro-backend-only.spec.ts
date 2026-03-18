@@ -8,7 +8,7 @@ import {
   salvarNfseConfiguracaoAtualApi,
   validarNfseConfiguracaoAtualApi,
 } from "../../src/lib/api/admin-financeiro";
-import { emitirNfsePagamentoApi } from "../../src/lib/api/pagamentos";
+import { emitirNfseEmLoteApi, emitirNfsePagamentoApi } from "../../src/lib/api/pagamentos";
 
 const TENANT_ID = "tn-admin-financeiro";
 
@@ -71,6 +71,11 @@ test.describe("admin financeiro backend-only bridge", () => {
           prefeitura: "Rio de Janeiro",
           inscricaoMunicipal: "123",
           cnaePrincipal: "9313-1/00",
+          codigoTributacaoNacional: "1301",
+          codigoNbs: "1.1301.25.00",
+          classificacaoTributaria: "SERVICO_TRIBUTAVEL",
+          consumidorFinal: true,
+          indicadorOperacao: "SERVICO_MUNICIPIO",
           serieRps: "S1",
           loteInicial: 2,
           aliquotaPadrao: 3.5,
@@ -88,6 +93,11 @@ test.describe("admin financeiro backend-only bridge", () => {
           prefeitura: "Rio Atualizado",
           inscricaoMunicipal: "123",
           cnaePrincipal: "9313-1/00",
+          codigoTributacaoNacional: "1301",
+          codigoNbs: "1.1301.25.00",
+          classificacaoTributaria: "SERVICO_TRIBUTAVEL",
+          consumidorFinal: true,
+          indicadorOperacao: "SERVICO_MUNICIPIO",
           serieRps: "S1",
           loteInicial: 2,
           aliquotaPadrao: 3.5,
@@ -105,6 +115,11 @@ test.describe("admin financeiro backend-only bridge", () => {
           prefeitura: "Rio Atualizado",
           inscricaoMunicipal: "123",
           cnaePrincipal: "9313-1/00",
+          codigoTributacaoNacional: "1301",
+          codigoNbs: "1.1301.25.00",
+          classificacaoTributaria: "SERVICO_TRIBUTAVEL",
+          consumidorFinal: true,
+          indicadorOperacao: "SERVICO_MUNICIPIO",
           serieRps: "S1",
           loteInicial: 2,
           aliquotaPadrao: 3.5,
@@ -137,6 +152,8 @@ test.describe("admin financeiro backend-only bridge", () => {
 
       const saveBody = JSON.parse(calls[1].body ?? "{}") as Record<string, unknown>;
       expect(saveBody.prefeitura).toBe("Rio Atualizado");
+      expect(saveBody.codigoTributacaoNacional).toBe("1301");
+      expect(saveBody.codigoNbs).toBe("1.1301.25.00");
       expect(saveBody.provedor).toBe("GINFES");
       expect(saveBody.ambiente).toBe("HOMOLOGACAO");
       expect(saveBody.regimeTributario).toBe("SIMPLES_NACIONAL");
@@ -272,6 +289,28 @@ test.describe("admin financeiro backend-only bridge", () => {
       ).rejects.toThrow("Backend ainda não expõe emissão de NFSe por pagamento neste ambiente.");
 
       expect(calls[0].url).toContain(`/api/v1/comercial/pagamentos/${pagamentoId}/nfse`);
+    } finally {
+      restore();
+    }
+  });
+
+  test("emissão em lote propaga mensagem fiscal bloqueante do backend", async () => {
+    const { restore } = mockFetchWithSequence([
+      {
+        body: {
+          message: "Emissão em lote bloqueada porque a configuração fiscal da unidade está incompleta.",
+          fieldErrors: {
+            codigoTributacaoNacional: "Informe o código de tributação nacional antes de emitir NFSe.",
+          },
+        },
+        status: 422,
+      },
+    ]);
+
+    try {
+      await expect(
+        emitirNfseEmLoteApi({ tenantId: TENANT_ID, ids: ["pg-1", "pg-2"] })
+      ).rejects.toThrow("Informe o código de tributação nacional antes de emitir NFSe.");
     } finally {
       restore();
     }

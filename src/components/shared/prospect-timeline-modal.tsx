@@ -21,7 +21,7 @@ export function ProspectTimelineModal({
 }) {
   if (!prospect) return null;
   return (
-    <Dialog open onOpenChange={onClose}>
+    <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="bg-card border-border sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">

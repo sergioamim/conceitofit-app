@@ -28,6 +28,7 @@ export default function FuncionariosPage() {
   const [cargosModalOpen, setCargosModalOpen] = useState(false);
   const [cargoFormOpen, setCargoFormOpen] = useState(false);
   const [editingCargo, setEditingCargo] = useState<Cargo | null>(null);
+  const [ready, setReady] = useState(false);
 
   async function load() {
     const [funcs, cargosData] = await Promise.all([
@@ -39,6 +40,7 @@ export default function FuncionariosPage() {
   }
 
   useEffect(() => {
+    setReady(true);
     void Promise.all([listFuncionariosApi(false), listCargosApi(false)]).then(([funcs, cargosData]) => {
       setFuncionarios(funcs);
       setCargos(cargosData);
@@ -178,8 +180,8 @@ export default function FuncionariosPage() {
           <p className="mt-1 text-sm text-muted-foreground">Gestão de equipe e responsáveis</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-border" onClick={() => setCargosModalOpen(true)}>Cargos</Button>
-          <Button onClick={() => setModalOpen(true)}>Novo funcionário</Button>
+          <Button variant="outline" className="border-border" onClick={() => setCargosModalOpen(true)} disabled={!ready}>Cargos</Button>
+          <Button onClick={() => setModalOpen(true)} disabled={!ready}>Novo funcionário</Button>
         </div>
       </div>
 

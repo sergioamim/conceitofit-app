@@ -9,8 +9,10 @@ import type {
   IntegracaoOperacionalStatus,
   IntegracaoOperacionalTipo,
   NfseAmbiente,
+  NfseClassificacaoTributaria,
   NfseConfiguracao,
   NfseConfiguracaoStatus,
+  NfseIndicadorOperacao,
   NfseProvider,
   NfseRegimeTributario,
 } from "@/lib/types";
@@ -24,6 +26,11 @@ type NfseConfiguracaoApiResponse = Partial<NfseConfiguracao> & {
   prefeitura?: string | null;
   inscricaoMunicipal?: string | null;
   cnaePrincipal?: string | null;
+  codigoTributacaoNacional?: string | null;
+  codigoNbs?: string | null;
+  classificacaoTributaria?: NfseClassificacaoTributaria | null;
+  consumidorFinal?: unknown;
+  indicadorOperacao?: NfseIndicadorOperacao | null;
   serieRps?: string | null;
   loteInicial?: unknown;
   aliquotaPadrao?: unknown;
@@ -137,6 +144,11 @@ function normalizeNfseConfiguracao(
     prefeitura: cleanString(input?.prefeitura) ?? "",
     inscricaoMunicipal: cleanString(input?.inscricaoMunicipal) ?? "",
     cnaePrincipal: cleanString(input?.cnaePrincipal) ?? "",
+    codigoTributacaoNacional: cleanString(input?.codigoTributacaoNacional) ?? "",
+    codigoNbs: cleanString(input?.codigoNbs) ?? "",
+    classificacaoTributaria: input?.classificacaoTributaria ?? "SERVICO_TRIBUTAVEL",
+    consumidorFinal: toBoolean(input?.consumidorFinal, true),
+    indicadorOperacao: input?.indicadorOperacao ?? "SERVICO_MUNICIPIO",
     serieRps: cleanString(input?.serieRps) ?? "",
     loteInicial: Math.max(1, toNumber(input?.loteInicial, 1)),
     aliquotaPadrao: Math.max(0, toNumber(input?.aliquotaPadrao, 0)),
@@ -237,6 +249,11 @@ export async function salvarNfseConfiguracaoAtualApi(
       prefeitura: input.prefeitura,
       inscricaoMunicipal: input.inscricaoMunicipal,
       cnaePrincipal: input.cnaePrincipal,
+      codigoTributacaoNacional: input.codigoTributacaoNacional,
+      codigoNbs: input.codigoNbs,
+      classificacaoTributaria: input.classificacaoTributaria,
+      consumidorFinal: input.consumidorFinal,
+      indicadorOperacao: input.indicadorOperacao,
       serieRps: input.serieRps,
       loteInicial: input.loteInicial,
       aliquotaPadrao: input.aliquotaPadrao,

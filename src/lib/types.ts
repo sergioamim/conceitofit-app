@@ -396,6 +396,18 @@ export interface Maquininha {
 export type NfseAmbiente = "HOMOLOGACAO" | "PRODUCAO";
 export type NfseProvider = "GINFES" | "ABRASF" | "BETHA" | "ISSNET" | "IPM";
 export type NfseRegimeTributario = "SIMPLES_NACIONAL" | "LUCRO_PRESUMIDO" | "LUCRO_REAL";
+export type NfseClassificacaoTributaria =
+  | "SERVICO_TRIBUTAVEL"
+  | "RETENCAO"
+  | "ISENTO"
+  | "IMUNE"
+  | "NAO_INCIDENTE"
+  | (string & {});
+export type NfseIndicadorOperacao =
+  | "SERVICO_MUNICIPIO"
+  | "SERVICO_FORA_MUNICIPIO"
+  | "EXPORTACAO"
+  | (string & {});
 export type NfseConfiguracaoStatus = "PENDENTE" | "CONFIGURADA" | "ERRO";
 
 export interface NfseConfiguracao {
@@ -406,6 +418,11 @@ export interface NfseConfiguracao {
   prefeitura: string;
   inscricaoMunicipal: string;
   cnaePrincipal: string;
+  codigoTributacaoNacional: string;
+  codigoNbs: string;
+  classificacaoTributaria: NfseClassificacaoTributaria;
+  consumidorFinal: boolean;
+  indicadorOperacao: NfseIndicadorOperacao;
   serieRps: string;
   loteInicial: number;
   aliquotaPadrao: number;

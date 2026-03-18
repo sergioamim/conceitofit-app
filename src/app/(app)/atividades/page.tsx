@@ -55,6 +55,7 @@ export default function AtividadesPage() {
   const [editing, setEditing] = useState<Atividade | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [ready, setReady] = useState(false);
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
   const load = useCallback(async () => {
@@ -81,6 +82,7 @@ export default function AtividadesPage() {
   }, [tenantId]);
 
   useEffect(() => {
+    setReady(true);
     void load();
   }, [load]);
 
@@ -152,7 +154,7 @@ export default function AtividadesPage() {
             Modalidades disponíveis na academia
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>
+        <Button onClick={() => setModalOpen(true)} disabled={!ready}>
           <Plus className="size-4" />
           Nova Atividade
         </Button>
@@ -233,18 +235,24 @@ export default function AtividadesPage() {
                   setEditing(a);
                   setModalOpen(true);
                 }}
+                aria-label={`Editar atividade ${a.nome || "sem nome"}`}
+                title={`Editar atividade ${a.nome || "sem nome"}`}
                 className="rounded-md border border-border bg-secondary px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 <Pencil className="size-3" />
               </button>
               <button
                 onClick={() => handleToggle(a.id)}
+                aria-label={`${a.ativo ? "Desativar" : "Ativar"} atividade ${a.nome || "sem nome"}`}
+                title={`${a.ativo ? "Desativar" : "Ativar"} atividade ${a.nome || "sem nome"}`}
                 className="rounded-md border border-border bg-secondary px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 <Power className="size-3" />
               </button>
               <button
                 onClick={() => handleDelete(a.id)}
+                aria-label={`Remover atividade ${a.nome || "sem nome"}`}
+                title={`Remover atividade ${a.nome || "sem nome"}`}
                 className="rounded-md border border-gym-danger/40 bg-gym-danger/10 px-2 py-1 text-xs text-gym-danger hover:border-gym-danger/70"
               >
                 <Trash2 className="size-3" />

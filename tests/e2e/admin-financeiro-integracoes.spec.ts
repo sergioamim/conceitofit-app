@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request, type Route } from "@playwright/test";
+import { installAdminCrudApiMocks, seedAuthenticatedSession } from "./support/backend-only-stubs";
 
 type TenantContextSeed = {
   currentTenantId: string;
@@ -22,6 +23,11 @@ type NfseSeed = {
   prefeitura: string;
   inscricaoMunicipal: string;
   cnaePrincipal: string;
+  codigoTributacaoNacional: string;
+  codigoNbs: string;
+  classificacaoTributaria: "SERVICO_TRIBUTAVEL" | "RETENCAO" | "ISENTO" | "IMUNE" | "NAO_INCIDENTE";
+  consumidorFinal: boolean;
+  indicadorOperacao: "SERVICO_MUNICIPIO" | "SERVICO_FORA_MUNICIPIO" | "EXPORTACAO";
   serieRps: string;
   loteInicial: number;
   aliquotaPadrao: number;
@@ -125,6 +131,8 @@ async function fulfillJson(route: Route, json: unknown, status = 200) {
 }
 
 async function installAdminFinanceiroApi(page: Page) {
+  await installAdminCrudApiMocks(page);
+
   const tenantContext: TenantContextSeed = {
     currentTenantId: "tenant-1",
     tenantAtual: {
@@ -149,12 +157,18 @@ async function installAdminFinanceiroApi(page: Page) {
     prefeitura: "Rio de Janeiro",
     inscricaoMunicipal: "12345",
     cnaePrincipal: "9313-1/00",
+    codigoTributacaoNacional: "1301",
+    codigoNbs: "1.1301.25.00",
+    classificacaoTributaria: "SERVICO_TRIBUTAVEL",
+    consumidorFinal: true,
+    indicadorOperacao: "SERVICO_MUNICIPIO",
     serieRps: "S1",
     loteInicial: 1,
     aliquotaPadrao: 2,
     regimeTributario: "SIMPLES_NACIONAL",
     emissaoAutomatica: true,
-    status: "PENDENTE",
+    webhookFiscalUrl: "https://hooks.example.test/fiscal",
+    status: "CONFIGURADA",
   };
 
   let contasReceber: ContaReceberSeed[] = [
@@ -333,6 +347,43 @@ async function installAdminFinanceiroApi(page: Page) {
     await fulfillJson(route, nfse);
   });
 
+  await page.route("**/api/v1/comercial/pagamentos/nfse/lote**", async (route) => {
+    const request = route.request();
+    const path = normalizePath(new URL(request.url()).pathname);
+    if (request.method() !== "POST" || path !== "/api/v1/comercial/pagamentos/nfse/lote") {
+      await fulfillJson(route, { message: `Unhandled ${request.method()} ${path}` }, 404);
+      return;
+    }
+
+    if (nfse.status !== "CONFIGURADA") {
+      await fulfillJson(
+        route,
+        {
+          message: "Emissão em lote bloqueada porque a configuração fiscal da unidade está incompleta.",
+          fieldErrors: {
+            codigoTributacaoNacional: "Informe o código de tributação nacional antes de emitir NFSe.",
+          },
+        },
+        422
+      );
+      return;
+    }
+
+    const payload = parseBody<{ ids?: string[] }>(request);
+    const ids = Array.isArray(payload.ids) ? payload.ids : [];
+    contasReceber = contasReceber.map((item) =>
+      ids.includes(item.id)
+        ? {
+            ...item,
+            nfseEmitida: true,
+            nfseNumero: `NFS-${item.id.toUpperCase()}`,
+            dataEmissaoNfse: "2026-03-12",
+          }
+        : item
+    );
+    await fulfillJson(route, contasReceber.filter((item) => ids.includes(item.id)));
+  });
+
   await page.route("**/api/v1/gerencial/financeiro/contas-receber**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -399,6 +450,19 @@ async function installAdminFinanceiroApi(page: Page) {
     const request = route.request();
     const path = normalizePath(new URL(request.url()).pathname);
     const pagamentoId = path.split("/").at(-2) ?? "";
+    if (nfse.status !== "CONFIGURADA") {
+      await fulfillJson(
+        route,
+        {
+          message: "Emissão fiscal bloqueada porque a configuração tributária da unidade está incompleta.",
+          fieldErrors: {
+            codigoTributacaoNacional: "Informe o código de tributação nacional antes de emitir NFSe.",
+          },
+        },
+        422
+      );
+      return;
+    }
     contasReceber = contasReceber.map((item) =>
       item.id === pagamentoId
         ? {
@@ -478,19 +542,17 @@ async function installAdminFinanceiroApi(page: Page) {
 }
 
 async function openAuthenticatedPage(page: Page, path: string, heading: string) {
-  await page.goto("/login");
-  await page.getByLabel("Usuário").fill("admin@academia.local");
-  await page.getByLabel("Senha").fill("12345678");
-  await page.getByRole("button", { name: "Entrar" }).click();
+  page.on("dialog", (dialog) => {
+    void dialog.accept();
+  });
 
-  const unitStep = page.getByRole("heading", { name: "Unidade prioritária" });
-  if (await unitStep.isVisible()) {
-    await page.getByRole("combobox").click();
-    await page.getByRole("option").first().click();
-    await page.getByRole("button", { name: /Salvar e continuar/i }).click();
-  }
+  await seedAuthenticatedSession(page, {
+    tenantId: "tenant-1",
+    availableTenants: [{ tenantId: "tenant-1", defaultTenant: true }],
+  });
 
-  await page.goto(path);
+  await page.goto(path, { waitUntil: "commit" });
+  await page.waitForLoadState("domcontentloaded");
   await expect(page.getByRole("heading", { name: heading })).toBeVisible();
 }
 
@@ -502,7 +564,13 @@ test.describe("Admin financeiro e integrações", () => {
   test("nfse salva e valida configuração fiscal", async ({ page }) => {
     await openAuthenticatedPage(page, "/administrativo/nfse", "NFSe e Fiscal");
 
+    await page.getByPlaceholder("Ex.: 1301").fill("");
     await page.getByPlaceholder("Ex.: Rio de Janeiro").fill("Rio de Janeiro Capital");
+    await page.getByRole("button", { name: "Salvar configuração" }).click();
+    await expect(page.getByText("Informe o código de tributação nacional.", { exact: true })).toBeVisible();
+
+    await page.getByPlaceholder("Ex.: 1301").fill("1402");
+    await page.getByPlaceholder("Ex.: 1.1301.25.00").fill("1.1402.10.00");
     await page.getByPlaceholder("https://...").fill("https://hooks.example.test/fiscal");
     await page.getByRole("button", { name: "Salvar configuração" }).click();
 
@@ -511,6 +579,18 @@ test.describe("Admin financeiro e integrações", () => {
     await page.getByRole("button", { name: "Validar configuração" }).click();
     await expect(page.getByText("Configuração validada com sucesso.")).toBeVisible();
     await expect(page.getByText("Configurada")).toBeVisible();
+  });
+
+  test("pagamentos em lote bloqueiam emissão quando a configuração fiscal volta para pendente", async ({ page }) => {
+    await openAuthenticatedPage(page, "/administrativo/nfse", "NFSe e Fiscal");
+    await page.getByPlaceholder("Ex.: Rio de Janeiro").fill("Rio Capital QA");
+    await page.getByRole("button", { name: "Salvar configuração" }).click();
+    await expect(page.getByText("Configuração fiscal atualizada.")).toBeVisible();
+
+    await page.goto("/pagamentos/emitir-em-lote");
+    await expect(page.getByRole("heading", { name: "Emitir NFS-e em lote" })).toBeVisible();
+    await expect(page.getByText("Emissão fiscal bloqueada até concluir e validar a configuração tributária da unidade.")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Emitir em lote/i })).toBeDisabled();
   });
 
   test("recebimentos emite nfse para cobrança paga", async ({ page }) => {

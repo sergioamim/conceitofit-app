@@ -881,7 +881,7 @@ export default function UnidadesPage() {
                           </span>
                           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                             <span>EVO: {onboardingState?.evoFilialId || "não vinculado"}</span>
-                            <span>Eventos: {onboardingState?.eventos.length ?? 0}</span>
+                            <span>Eventos: {onboardingState?.eventos?.length ?? 0}</span>
                           </div>
                         </div>
                       </td>

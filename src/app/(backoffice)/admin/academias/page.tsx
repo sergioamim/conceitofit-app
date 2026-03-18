@@ -106,6 +106,9 @@ export default function AcademiasPage() {
   );
 
   async function handleCreate() {
+    if (loading) {
+      return;
+    }
     if (!form.nome.trim()) {
       toast({ title: "Informe o nome da academia", variant: "destructive" });
       return;
@@ -163,6 +166,7 @@ export default function AcademiasPage() {
               id="academia-nome"
               placeholder="Conceito Fit - Rede Norte"
               value={form.nome}
+              disabled={loading || saving}
               onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
             />
           </div>
@@ -172,11 +176,12 @@ export default function AcademiasPage() {
               id="academia-doc"
               placeholder="CNPJ"
               value={form.documento}
+              disabled={loading || saving}
               onChange={(e) => setForm((prev) => ({ ...prev, documento: e.target.value }))}
             />
           </div>
           <div className="flex justify-end">
-            <Button onClick={handleCreate} disabled={saving}>
+            <Button onClick={handleCreate} disabled={saving || loading}>
               {saving ? "Criando..." : "Criar academia"}
             </Button>
           </div>

@@ -28,6 +28,7 @@ import {
   Users,
 } from "lucide-react";
 import { clearAuthSession } from "@/lib/api/session";
+import { DEFAULT_TENANT_APP_NAME } from "@/lib/tenant-theme";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_ACADEMIA_LABEL,
@@ -131,7 +132,7 @@ const crmItemsSorted = sortNavItemsByLabel(crmItems);
 const segurancaItemsSorted = sortNavItemsByLabel(segurancaItems);
 const administrativoItemsSorted = sortNavItemsByLabel(administrativoItems);
 const gerencialItemsSorted = sortNavItemsByLabel(gerencialItems);
-const DEFAULT_APP_NAME = "Conceito.Fit";
+const DEFAULT_APP_NAME = DEFAULT_TENANT_APP_NAME;
 const DEFAULT_BRAND_LOGO_LIGHT_URL = "/conceito-fit_tech_horizontal.svg";
 const DEFAULT_BRAND_LOGO_DARK_URL = "/conceito-fit_tech_horizontal_dark.svg";
 
@@ -319,10 +320,12 @@ function SidebarNavigation({
   collapsed,
   mobileOpen,
   onMobileClose,
+  shellReady,
 }: {
   collapsed: boolean;
   mobileOpen: boolean;
   onMobileClose?: () => void;
+  shellReady: boolean;
 }) {
   const pathname = usePathname();
   const access = useAuthAccess();
@@ -331,11 +334,12 @@ function SidebarNavigation({
   const [segurancaOpen, setSegurancaOpen] = useState(() => pathname.startsWith("/seguranca"));
   const [administrativoOpen, setAdministrativoOpen] = useState(() => pathname.startsWith("/administrativo"));
   const [gerencialOpen, setGerencialOpen] = useState(() => pathname.startsWith("/gerencial"));
-  const visibleSegurancaItems = access.canAccessElevatedModules ? segurancaItemsSorted : [];
-  const visibleGerencialItems = access.canAccessElevatedModules
+  const elevatedModulesReady = shellReady && !access.loading && access.canAccessElevatedModules;
+  const visibleSegurancaItems = elevatedModulesReady ? segurancaItemsSorted : [];
+  const visibleGerencialItems = elevatedModulesReady
     ? gerencialItemsSorted
     : gerencialItemsSorted.filter((item) => item.href !== "/gerencial/bi/rede");
-  const visibleAdministrativoItems = access.canAccessElevatedModules
+  const visibleAdministrativoItems = elevatedModulesReady
     ? administrativoItemsSorted
     : administrativoItemsSorted.filter(
         (item) =>
@@ -576,12 +580,17 @@ function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = fals
   const [collapsed, setCollapsed] = useState(false);
   const [defaultLogoUrl, setDefaultLogoUrl] = useState(DEFAULT_BRAND_LOGO_DARK_URL);
   const { tenant, tenantName, academia, brandingSnapshot } = useTenantContext();
+  const resolvedBranding = shellReady ? brandingSnapshot ?? tenant?.branding : undefined;
   const stableTenantName =
     shellReady && tenantName.trim() ? tenantName : DEFAULT_ACTIVE_TENANT_LABEL;
-  const branding = brandingSnapshot ?? tenant?.branding;
-  const appName = branding?.appName?.trim() || DEFAULT_APP_NAME;
-  const logoUrl = branding?.logoUrl || "";
-  const academiaName = academia?.nome || tenant?.nome || DEFAULT_ACADEMIA_LABEL;
+  const appName = resolvedBranding?.appName?.trim() || DEFAULT_APP_NAME;
+  const logoUrl = shellReady ? resolvedBranding?.logoUrl || "" : "";
+  const academiaName =
+    shellReady && academia?.nome?.trim()
+      ? academia.nome
+      : shellReady && tenant?.nome?.trim()
+        ? tenant.nome
+        : DEFAULT_ACADEMIA_LABEL;
 
   useEffect(() => {
     function syncDefaultLogoByTheme() {
@@ -622,7 +631,12 @@ function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = fals
         onToggleCollapsed={() => setCollapsed((v) => !v)}
       />
 
-      <SidebarNavigation collapsed={collapsed} mobileOpen={mobileOpen} onMobileClose={onMobileClose} />
+      <SidebarNavigation
+        collapsed={collapsed}
+        mobileOpen={mobileOpen}
+        onMobileClose={onMobileClose}
+        shellReady={shellReady}
+      />
 
       <SidebarUserPill collapsed={collapsed} />
     </aside>

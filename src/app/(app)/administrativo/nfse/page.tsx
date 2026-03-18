@@ -10,9 +10,23 @@ import {
   salvarNfseConfiguracaoAtualApi,
   validarNfseConfiguracaoAtualApi,
 } from "@/lib/api/admin-financeiro";
-import { buildNfseChecklist, NFSE_STATUS_LABEL } from "@/lib/admin-financeiro";
+import {
+  buildNfseChecklist,
+  getNfseBloqueioMensagem,
+  NFSE_CLASSIFICACAO_TRIBUTARIA_LABEL,
+  NFSE_INDICADOR_OPERACAO_LABEL,
+  NFSE_STATUS_LABEL,
+  validateNfseConfiguracaoDraft,
+} from "@/lib/admin-financeiro";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
-import type { NfseAmbiente, NfseConfiguracao, NfseProvider, NfseRegimeTributario } from "@/lib/types";
+import type {
+  NfseAmbiente,
+  NfseClassificacaoTributaria,
+  NfseConfiguracao,
+  NfseIndicadorOperacao,
+  NfseProvider,
+  NfseRegimeTributario,
+} from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const AMBIENTE_OPTIONS: Array<{ value: NfseAmbiente; label: string }> = [
@@ -42,7 +56,11 @@ function getStatusClass(status: NfseConfiguracao["status"]) {
 
 function formatDateTime(value?: string) {
   if (!value) return "Ainda não executado";
-  return new Date(value).toLocaleString("pt-BR");
+  const [datePart, timePart = ""] = value.split("T");
+  const [year, month, day] = datePart.split("-");
+  if (!year || !month || !day) return value;
+  const time = timePart.slice(0, 5);
+  return time ? `${day}/${month}/${year} ${time}` : `${day}/${month}/${year}`;
 }
 
 export default function AdministrativoNfsePage() {
@@ -74,9 +92,17 @@ export default function AdministrativoNfsePage() {
   }, [access.loading, load, tenantResolved]);
 
   const checklist = useMemo(() => buildNfseChecklist(form ?? {}), [form]);
+  const localErrors = useMemo(() => validateNfseConfiguracaoDraft(form ?? {}), [form]);
+  const bloqueioFiscal = useMemo(() => getNfseBloqueioMensagem(form), [form]);
 
   async function handleSave() {
     if (!tenantId || !form) return;
+    const firstLocalError = Object.values(localErrors)[0];
+    if (firstLocalError) {
+      setError(firstLocalError);
+      setSuccess(null);
+      return;
+    }
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -93,6 +119,12 @@ export default function AdministrativoNfsePage() {
 
   async function handleValidate() {
     if (!tenantId) return;
+    const firstLocalError = Object.values(localErrors)[0];
+    if (firstLocalError) {
+      setError(firstLocalError);
+      setSuccess(null);
+      return;
+    }
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -172,6 +204,9 @@ export default function AdministrativoNfsePage() {
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Emissão automática</p>
               <p className="mt-3 text-sm font-medium text-foreground">{form.emissaoAutomatica ? "Ativa" : "Manual"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {form.consumidorFinal ? "Consumidor final habilitado" : "Consumidor final desabilitado"}
+              </p>
             </div>
           </div>
 
@@ -206,6 +241,28 @@ export default function AdministrativoNfsePage() {
                   />
                 </div>
                 <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Tributação nacional *
+                  </label>
+                  <Input
+                    value={form.codigoTributacaoNacional}
+                    onChange={(event) =>
+                      setForm((prev) => (prev ? { ...prev, codigoTributacaoNacional: event.target.value } : prev))
+                    }
+                    className="border-border bg-secondary"
+                    placeholder="Ex.: 1301"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Código NBS *</label>
+                  <Input
+                    value={form.codigoNbs}
+                    onChange={(event) => setForm((prev) => (prev ? { ...prev, codigoNbs: event.target.value } : prev))}
+                    className="border-border bg-secondary"
+                    placeholder="Ex.: 1.1301.25.00"
+                  />
+                </div>
+                <div className="space-y-1">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Série RPS *</label>
                   <Input
                     value={form.serieRps}
@@ -213,6 +270,30 @@ export default function AdministrativoNfsePage() {
                     className="border-border bg-secondary"
                     placeholder="Ex.: S1"
                   />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Classificação tributária *
+                  </label>
+                  <Select
+                    value={form.classificacaoTributaria}
+                    onValueChange={(value) =>
+                      setForm((prev) =>
+                        prev ? { ...prev, classificacaoTributaria: value as NfseClassificacaoTributaria } : prev
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-full border-border bg-secondary">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="border-border bg-card">
+                      {Object.entries(NFSE_CLASSIFICACAO_TRIBUTARIA_LABEL).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ambiente</label>
@@ -271,6 +352,28 @@ export default function AdministrativoNfsePage() {
                   </Select>
                 </div>
                 <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Indicador da operação *
+                  </label>
+                  <Select
+                    value={form.indicadorOperacao}
+                    onValueChange={(value) =>
+                      setForm((prev) => (prev ? { ...prev, indicadorOperacao: value as NfseIndicadorOperacao } : prev))
+                    }
+                  >
+                    <SelectTrigger className="w-full border-border bg-secondary">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="border-border bg-card">
+                      {Object.entries(NFSE_INDICADOR_OPERACAO_LABEL).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Emissão</label>
                   <Select
                     value={form.emissaoAutomatica ? "AUTOMATICA" : "MANUAL"}
@@ -309,6 +412,28 @@ export default function AdministrativoNfsePage() {
                     }
                     className="border-border bg-secondary"
                   />
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary px-3 py-3">
+                  <input
+                    id="consumidor-final"
+                    type="checkbox"
+                    checked={form.consumidorFinal}
+                    onChange={(event) =>
+                      setForm((prev) => (prev ? { ...prev, consumidorFinal: event.target.checked } : prev))
+                    }
+                    className="size-4 rounded border-border"
+                  />
+                  <div>
+                    <label
+                      htmlFor="consumidor-final"
+                      className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                    >
+                      Consumidor final
+                    </label>
+                    <p className="mt-1 text-sm text-foreground">
+                      Marque quando a unidade emitir NFSe no cenário padrão para consumidor final.
+                    </p>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Certificado</label>
@@ -357,6 +482,11 @@ export default function AdministrativoNfsePage() {
                   <CheckCircle2 className="size-4 text-gym-teal" />
                   <h2 className="font-display text-lg font-bold">Checklist fiscal</h2>
                 </div>
+                {bloqueioFiscal ? (
+                  <div className="mt-4 rounded-lg border border-gym-warning/30 bg-gym-warning/10 px-3 py-2 text-sm text-gym-warning">
+                    {bloqueioFiscal}
+                  </div>
+                ) : null}
                 <div className="mt-4 space-y-3">
                   {checklist.map((item) => (
                     <div key={item.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
@@ -379,9 +509,12 @@ export default function AdministrativoNfsePage() {
                   <h2 className="font-display text-lg font-bold">Observações</h2>
                 </div>
                 <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                  <li>Valide o ambiente antes de mover o emissor para produção.</li>
-                  <li>Mantenha certificado e webhook fiscal alinhados ao tenant ativo.</li>
-                  <li>Pagamentos recebidos sem NFSe emitida aparecerão em Recebimentos.</li>
+                  <li>Após alterar tributação, NBS ou operação, valide a configuração antes de emitir NFSe.</li>
+                  <li>Webhook fiscal e certificado precisam refletir o provedor ativo da unidade.</li>
+                  <li>Pagamentos pagos sem NFSe emitida aparecerão como pendentes ou bloqueados nas telas operacionais.</li>
+                  {Object.keys(localErrors).length > 0 ? (
+                    <li>Campos obrigatórios pendentes: {Object.values(localErrors).join(" ")}</li>
+                  ) : null}
                 </ul>
               </div>
             </div>

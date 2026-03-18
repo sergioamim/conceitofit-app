@@ -15,6 +15,8 @@ test.describe("admin financeiro helpers", () => {
         prefeitura: "",
         inscricaoMunicipal: "",
         cnaePrincipal: "",
+        codigoTributacaoNacional: "",
+        codigoNbs: "",
         serieRps: "",
         loteInicial: 0,
         aliquotaPadrao: 0,
@@ -23,8 +25,12 @@ test.describe("admin financeiro helpers", () => {
       prefeitura: "Informe a prefeitura emissora.",
       inscricaoMunicipal: "Informe a inscrição municipal.",
       cnaePrincipal: "Informe o CNAE principal.",
+      codigoTributacaoNacional: "Informe o código de tributação nacional.",
+      codigoNbs: "Informe o código NBS.",
       serieRps: "Informe a série do RPS.",
       provedor: "Selecione o provedor fiscal.",
+      classificacaoTributaria: "Selecione a classificação tributária.",
+      indicadorOperacao: "Selecione o indicador da operação.",
       loteInicial: "Lote inicial deve ser maior que zero.",
       aliquotaPadrao: "Informe uma alíquota válida.",
     });
@@ -35,16 +41,21 @@ test.describe("admin financeiro helpers", () => {
       prefeitura: "Rio de Janeiro",
       inscricaoMunicipal: "123",
       cnaePrincipal: "9313-1/00",
+      codigoTributacaoNacional: "1301",
+      codigoNbs: "1.1301.25.00",
+      classificacaoTributaria: "SERVICO_TRIBUTAVEL",
+      indicadorOperacao: "SERVICO_MUNICIPIO",
       serieRps: "S1",
       provedor: "GINFES",
       ambiente: "HOMOLOGACAO",
       loteInicial: 1,
       aliquotaPadrao: 2.5,
+      webhookFiscalUrl: "https://hooks.example.test/fiscal",
     });
 
-    expect(checklist.every((item) => item.done)).toBeFalsy();
+    expect(checklist.every((item) => item.done)).toBeTruthy();
     expect(checklist.find((item) => item.id === "cadastro-fiscal")?.done).toBeTruthy();
-    expect(checklist.find((item) => item.id === "webhook")?.done).toBeFalsy();
+    expect(checklist.find((item) => item.id === "reforma-tributaria")?.done).toBeTruthy();
   });
 
   test("summarizeAgregadorTransacoes consolida repasses e divergências", async () => {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertTriangle, BadgeCheck, FileText, Mail } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { listConveniosApi } from "@/lib/api/beneficios";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
@@ -22,6 +23,7 @@ import {
   type PagamentoImportItem,
 } from "@/lib/financeiro/recebimentos";
 import { useTenantContext } from "@/hooks/use-session-context";
+import { getNfseBloqueioMensagem } from "@/lib/admin-financeiro";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";
@@ -34,7 +36,9 @@ import type {
   FormaPagamento,
   Matricula,
   Convenio,
+  NfseConfiguracao,
 } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 type ParsedImportCsvRow = {
   clienteNome: string;
@@ -423,7 +427,9 @@ function formatBRL(v: number) {
 }
 
 function formatDate(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+  const [year, month, day] = d.split("-");
+  if (!year || !month || !day) return d;
+  return `${day}/${month}/${year}`;
 }
 
 
@@ -443,6 +449,8 @@ function PagamentosPageContent() {
   const [emailResultado, setEmailResultado] = useState("");
   const [enviandoEmail, setEnviandoEmail] = useState(false);
   const [solicitandoSegundaVia, setSolicitandoSegundaVia] = useState(false);
+  const [nfseConfiguracao, setNfseConfiguracao] = useState<NfseConfiguracao | null>(null);
+  const [nfseFeedback, setNfseFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
   const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [clienteFiltro, setClienteFiltro] = useState<string>("TODOS");
@@ -454,18 +462,20 @@ function PagamentosPageContent() {
 
   const load = useCallback(async () => {
     if (!tenantId) return;
-    const [pags, fps, cls, mats, cvs] = await Promise.all([
+    const [pags, fps, cls, mats, cvs, nfseConfig] = await Promise.all([
       listContasReceberOperacionais({ tenantId }),
       listFormasPagamentoApi({ tenantId, apenasAtivas: false }),
       listAlunosApi({ tenantId, page: 0, size: 500 }),
       listMatriculasApi({ tenantId, page: 0, size: 500 }),
       listConveniosApi(),
+      getNfseConfiguracaoAtualApi({ tenantId }).catch(() => null),
     ]);
     setPagamentos(pags);
     setFormasPagamento(fps);
     setClientes(extractAlunosFromListResponse(cls));
     setMatriculas(mats);
     setConvenios(cvs);
+    setNfseConfiguracao(nfseConfig);
   }, [tenantId]);
 
   useEffect(() => {
@@ -492,6 +502,7 @@ function PagamentosPageContent() {
   const totalPendente = filtered
     .filter((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
     .reduce((s, p) => s + p.valorFinal, 0);
+  const nfseBloqueio = getNfseBloqueioMensagem(nfseConfiguracao);
 
   async function handleConfirmRecebimento(data: {
     dataPagamento: string;
@@ -515,12 +526,19 @@ function PagamentosPageContent() {
 
   async function handleConfirmEmissao() {
     if (!emitindo || !tenantId) return;
-    await emitirNfsePagamentoApi({
-      tenantId,
-      id: emitindo.id,
-    });
-    setEmitindo(null);
-    await load();
+    try {
+      setNfseFeedback(null);
+      await emitirNfsePagamentoApi({
+        tenantId,
+        id: emitindo.id,
+      });
+      setNfseFeedback({ type: "success", message: "NFSe emitida com sucesso." });
+      setEmitindo(null);
+      await load();
+    } catch (error) {
+      setNfseFeedback({ type: "error", message: normalizeErrorMessage(error) });
+      setEmitindo(null);
+    }
   }
 
   async function handleImportarPagamentos() {
@@ -580,6 +598,8 @@ function PagamentosPageContent() {
       });
       setEmailResultado("Solicitação de segunda via concluída.");
       await load();
+    } catch (error) {
+      setEmailResultado(normalizeErrorMessage(error));
     } finally {
       setSolicitandoSegundaVia(false);
     }
@@ -727,6 +747,24 @@ function PagamentosPageContent() {
           Gerencie cobranças e recebimentos
         </p>
       </div>
+
+      {nfseFeedback ? (
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            nfseFeedback.type === "error"
+              ? "border-gym-danger/30 bg-gym-danger/10 text-gym-danger"
+              : "border-gym-teal/30 bg-gym-teal/10 text-gym-teal"
+          }`}
+        >
+          {nfseFeedback.message}
+        </div>
+      ) : null}
+
+      {nfseBloqueio ? (
+        <div className="rounded-xl border border-gym-warning/30 bg-gym-warning/10 px-4 py-3 text-sm text-gym-warning">
+          {nfseBloqueio}
+        </div>
+      ) : null}
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-4">
@@ -969,6 +1007,14 @@ function PagamentosPageContent() {
                         <BadgeCheck className="size-4 text-gym-teal" />
                         <span className="font-semibold text-gym-teal">Emitida</span>
                       </button>
+                    ) : nfseBloqueio ? (
+                      <span
+                        className="inline-flex items-center gap-2 rounded-md"
+                        title={nfseBloqueio}
+                      >
+                        <AlertTriangle className="size-4 text-gym-danger" />
+                        <span className="font-semibold text-gym-danger">Bloqueada</span>
+                      </span>
                     ) : (
                       <button
                         type="button"

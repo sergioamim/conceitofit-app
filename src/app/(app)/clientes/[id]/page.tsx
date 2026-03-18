@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
 import {
   liberarAcessoCatracaService,
   listConveniosService,
@@ -15,8 +16,9 @@ import {
   resolveAlunoTenantService,
   updateAlunoService,
 } from "@/lib/comercial/runtime";
+import { getNfseBloqueioMensagem } from "@/lib/admin-financeiro";
 import { useTenantContext } from "@/hooks/use-session-context";
-import type { Aluno, Matricula, Plano, Pagamento, Presenca, FormaPagamento, Convenio } from "@/lib/types";
+import type { Aluno, Matricula, Plano, Pagamento, Presenca, FormaPagamento, Convenio, NfseConfiguracao } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { NovaMatriculaModal } from "@/components/shared/nova-matricula-modal";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
@@ -32,7 +34,9 @@ import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 function formatDate(d: string) {
   const normalized = d.includes("T") ? d.split("T")[0] : d;
-  return new Date(normalized + "T00:00:00").toLocaleDateString("pt-BR");
+  const [year, month, day] = normalized.split("-");
+  if (!year || !month || !day) return normalized;
+  return `${day}/${month}/${year}`;
 }
 
 function formatBRL(v: number) {
@@ -49,6 +53,7 @@ export default function ClienteDetalhePage() {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [convenios, setConvenios] = useState<Convenio[]>([]);
+  const [nfseConfiguracao, setNfseConfiguracao] = useState<NfseConfiguracao | null>(null);
   const [freqMode, setFreqMode] = useState<"7d" | "ano">("7d");
   const [presencas, setPresencas] = useState<Presenca[]>([]);
   const [tab, setTab] = useState<ClienteTabKey>("resumo");
@@ -93,7 +98,7 @@ export default function ClienteDetalhePage() {
         await setTenant(resolved.tenantId);
       }
       const currentTenantId = resolved.tenantId;
-      const [ms, ps, pres, fps, cvs, pags] = await Promise.all([
+      const [ms, ps, pres, fps, cvs, pags, nfseConfig] = await Promise.all([
         listMatriculasByAlunoService({
           tenantId: currentTenantId,
           alunoId: id,
@@ -119,6 +124,7 @@ export default function ClienteDetalhePage() {
           page: 0,
           size: 80,
         }),
+        getNfseConfiguracaoAtualApi({ tenantId: currentTenantId }).catch(() => null),
       ]);
       setAluno(resolved.aluno);
       setMatriculas(ms.filter((m) => m.alunoId === id));
@@ -127,6 +133,7 @@ export default function ClienteDetalhePage() {
       setPresencas(pres);
       setFormasPagamento(fps);
       setConvenios(cvs);
+      setNfseConfiguracao(nfseConfig);
     } catch (error) {
       setLoadError(normalizeErrorMessage(error));
       setAluno(null);
@@ -159,9 +166,10 @@ export default function ClienteDetalhePage() {
   }, [pagamentos]);
 
   const nfs = useMemo(
-    () => pagamentos.filter((p) => p.nfseEmitida),
+    () => pagamentos.filter((p) => p.status === "PAGO"),
     [pagamentos]
   );
+  const nfseBloqueio = getNfseBloqueioMensagem(nfseConfiguracao);
 
   const recorrente = useMemo(() => {
     const mat = matriculas.find((m) => m.renovacaoAutomatica);
@@ -732,7 +740,7 @@ export default function ClienteDetalhePage() {
           <div className="mt-3 divide-y divide-border">
             {nfs.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                Nenhuma NF-e emitida para este cliente
+                Nenhum pagamento pago com status fiscal para este cliente
               </p>
             )}
             {nfs.map((p) => (
@@ -748,8 +756,16 @@ export default function ClienteDetalhePage() {
                   <p className="text-sm font-bold text-gym-accent">
                     {formatBRL(p.valorFinal)}
                   </p>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gym-teal">
-                    {p.nfseNumero || "NF sem número"}
+                  <p
+                    className={`text-xs font-semibold uppercase tracking-wider ${
+                      p.nfseEmitida
+                        ? "text-gym-teal"
+                        : nfseBloqueio
+                          ? "text-gym-danger"
+                          : "text-gym-warning"
+                    }`}
+                  >
+                    {p.nfseEmitida ? p.nfseNumero || "NF sem número" : nfseBloqueio ? "Emissão bloqueada" : "Emissão pendente"}
                   </p>
                 </div>
               </div>

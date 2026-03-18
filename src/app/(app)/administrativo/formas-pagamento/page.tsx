@@ -27,6 +27,7 @@ export default function FormasPagamentoPage() {
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<FormaPagamento | null>(null);
+  const [ready, setReady] = useState(false);
 
   async function load() {
     if (!tenantId) return;
@@ -35,6 +36,7 @@ export default function FormasPagamentoPage() {
   }
 
   useEffect(() => {
+    setReady(true);
     if (!tenantResolved || !tenantId) return;
     void listFormasPagamentoApi({ tenantId, apenasAtivas: false }).then(setFormas);
   }, [tenantId, tenantResolved]);
@@ -97,7 +99,7 @@ export default function FormasPagamentoPage() {
             Configure meios e condições de pagamento
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>Nova forma</Button>
+        <Button onClick={() => setModalOpen(true)} disabled={!ready || !tenantResolved || !tenantId}>Nova forma</Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">

@@ -1292,3 +1292,2122 @@ export async function installReservasApiMocks(page: Page) {
     await fulfillJson(route, { message: `Unhandled ${method} ${path}` }, 404);
   });
 }
+
+type AdminCargoSeed = {
+  id: string;
+  tenantId: string;
+  nome: string;
+  ativo: boolean;
+};
+
+type AdminFuncionarioSeed = {
+  id: string;
+  tenantId: string;
+  nome: string;
+  cargoId?: string;
+  cargo?: string;
+  ativo: boolean;
+  podeMinistrarAulas: boolean;
+};
+
+type AdminServicoSeed = {
+  id: string;
+  tenantId: string;
+  nome: string;
+  sku?: string;
+  categoria?: string;
+  descricao?: string;
+  sessoes?: number;
+  valor: number;
+  custo?: number;
+  duracaoMinutos?: number;
+  validadeDias?: number;
+  comissaoPercentual?: number;
+  aliquotaImpostoPercentual?: number;
+  permiteDesconto: boolean;
+  tipoCobranca: "UNICO" | "RECORRENTE";
+  recorrenciaDias?: number;
+  agendavel: boolean;
+  permiteAcessoCatraca: boolean;
+  permiteVoucher: boolean;
+  ativo: boolean;
+};
+
+type AdminProdutoSeed = {
+  id: string;
+  tenantId: string;
+  nome: string;
+  sku: string;
+  codigoBarras?: string;
+  categoria?: string;
+  marca?: string;
+  unidadeMedida: "UN" | "KG" | "G" | "L" | "ML" | "CX";
+  descricao?: string;
+  valorVenda: number;
+  custo?: number;
+  comissaoPercentual?: number;
+  aliquotaImpostoPercentual?: number;
+  controlaEstoque: boolean;
+  estoqueAtual: number;
+  estoqueMinimo?: number;
+  permiteDesconto: boolean;
+  permiteVoucher: boolean;
+  ativo: boolean;
+};
+
+type AdminConvenioSeed = {
+  id: string;
+  tenantId: string;
+  nome: string;
+  descontoPercentual: number;
+  planoIds?: string[];
+  observacoes?: string;
+  ativo: boolean;
+};
+
+type AdminVoucherSeed = {
+  id: string;
+  tenantId: string;
+  escopo: "UNIDADE" | "GRUPO";
+  tipo: "DESCONTO" | "ACESSO" | "SESSAO";
+  nome: string;
+  periodoInicio: string;
+  periodoFim?: string;
+  prazoDeterminado: boolean;
+  quantidade?: number;
+  ilimitado: boolean;
+  codigoTipo: "UNICO" | "ALEATORIO";
+  codigoUnicoCustom?: string;
+  usarNaVenda: boolean;
+  planoIds: string[];
+  umaVezPorCliente: boolean;
+  aplicarEm: Array<"CONTRATO" | "ANUIDADE">;
+  ativo: boolean;
+};
+
+type AdminVoucherCodigoSeed = {
+  id: string;
+  voucherId: string;
+  codigo: string;
+  status: "DISPONIVEL" | "UTILIZADO";
+};
+
+type AdminTipoContaSeed = {
+  id: string;
+  tenantId: string;
+  nome: string;
+  descricao?: string;
+  categoriaOperacional:
+    | "FOLHA"
+    | "ALUGUEL"
+    | "UTILIDADES"
+    | "IMPOSTOS"
+    | "MARKETING"
+    | "MANUTENCAO"
+    | "FORNECEDORES"
+    | "OUTROS";
+  grupoDre:
+    | "CUSTO_VARIAVEL"
+    | "DESPESA_OPERACIONAL"
+    | "DESPESA_FINANCEIRA"
+    | "IMPOSTOS";
+  centroCustoPadrao?: string;
+  ativo: boolean;
+};
+
+type AdminContaBancariaSeed = {
+  id: string;
+  tenantId: string;
+  apelido: string;
+  banco: string;
+  agencia: string;
+  conta: string;
+  digito: string;
+  tipo: "CORRENTE" | "POUPANCA" | "PAGAMENTO";
+  titular: string;
+  pixChave?: string;
+  pixTipo?: "CPF" | "CNPJ" | "EMAIL" | "TELEFONE" | "CHAVE_ALEATORIA" | "OUTRA";
+  statusCadastro: "ATIVA" | "INATIVA";
+};
+
+type AdminMaquininhaSeed = {
+  id: string;
+  tenantId: string;
+  nome: string;
+  adquirente: "STONE" | "CIELO" | "REDE" | "GETNET" | "PAGARME_POS" | "OUTROS";
+  terminal: string;
+  contaBancariaId: string;
+  statusCadastro: "ATIVA" | "INATIVA";
+};
+
+type AdminOnboardingSeed = {
+  tenantId: string;
+  academiaId?: string;
+  estrategia: "CARGA_INICIAL" | "IMPORTAR_DEPOIS" | "PREPARAR_ETL";
+  status: "PENDENTE_SEED" | "AGUARDANDO_IMPORTACAO" | "EM_IMPORTACAO" | "PRONTA" | "ERRO";
+  evoFilialId?: string;
+  ultimaMensagem?: string;
+};
+
+type AdminSecurityMembershipState = {
+  id: string;
+  tenantId: string;
+  active: boolean;
+  defaultTenant: boolean;
+  accessOrigin: "MANUAL" | "HERDADO_POLITICA" | "PERFIL_ADMIN";
+  inheritedFrom?: string;
+  profiles: string[];
+};
+
+type AdminSecurityPolicyState = {
+  enabled: boolean;
+  scope: "ACADEMIA_ATUAL" | "REDE";
+  academiaIds?: string[];
+  inherited: boolean;
+  rationale?: string;
+  updatedAt?: string;
+};
+
+type AdminSecurityUserState = {
+  id: string;
+  name: string;
+  fullName?: string;
+  email: string;
+  active: boolean;
+  createdAt?: string;
+  lastLoginAt?: string;
+  memberships: AdminSecurityMembershipState[];
+  policy: AdminSecurityPolicyState;
+};
+
+export async function installAdminCrudApiMocks(page: Page) {
+  let academias: TenantSeed[] = [
+    {
+      id: "academia-rede-principal",
+      academiaId: "academia-rede-principal",
+      groupId: "academia-rede-principal",
+      nome: "Conceito Fit",
+      razaoSocial: "Conceito Fit Academia LTDA",
+      documento: "12.345.678/0001-90",
+      subdomain: "conceito-fit",
+      email: "contato@conceitofit.local",
+      telefone: "(21) 3000-1000",
+      ativo: true,
+      branding: {
+        appName: "Conceito Fit",
+        themePreset: "premium",
+        useCustomColors: false,
+      },
+    },
+    {
+      id: "academia-rede-leste",
+      academiaId: "academia-rede-leste",
+      groupId: "academia-rede-leste",
+      nome: "Conceito Fit Leste",
+      razaoSocial: "Conceito Fit Leste LTDA",
+      documento: "98.765.432/0001-10",
+      subdomain: "conceito-fit-leste",
+      email: "leste@conceitofit.local",
+      telefone: "(11) 3111-2000",
+      ativo: true,
+      branding: {
+        appName: "Conceito Fit Leste",
+        themePreset: "corporate",
+        useCustomColors: false,
+      },
+    },
+  ];
+
+  let unidades: TenantSeed[] = [
+    {
+      id: "tenant-centro",
+      academiaId: "academia-rede-principal",
+      groupId: "academia-rede-principal",
+      nome: "Unidade Centro",
+      razaoSocial: "Conceito Fit Centro LTDA",
+      documento: "12.345.678/0002-70",
+      subdomain: "centro",
+      email: "centro@conceitofit.local",
+      telefone: "(21) 98888-1001",
+      ativo: true,
+      branding: {
+        appName: "Conceito Fit Centro",
+        themePreset: "premium",
+        useCustomColors: false,
+      },
+    },
+    {
+      id: "tenant-barra",
+      academiaId: "academia-rede-principal",
+      groupId: "academia-rede-principal",
+      nome: "Unidade Barra",
+      razaoSocial: "Conceito Fit Barra LTDA",
+      documento: "12.345.678/0003-51",
+      subdomain: "barra",
+      email: "barra@conceitofit.local",
+      telefone: "(21) 97777-2002",
+      ativo: true,
+      branding: {
+        appName: "Conceito Fit Barra",
+        themePreset: "premium",
+        useCustomColors: false,
+      },
+    },
+    {
+      id: "tenant-vila-maria",
+      academiaId: "academia-rede-leste",
+      groupId: "academia-rede-leste",
+      nome: "Unidade Vila Maria",
+      razaoSocial: "Conceito Fit Vila Maria LTDA",
+      documento: "98.765.432/0002-91",
+      subdomain: "vila-maria",
+      email: "vila-maria@conceitofit.local",
+      telefone: "(11) 96666-3003",
+      ativo: true,
+      branding: {
+        appName: "Conceito Fit Vila Maria",
+        themePreset: "corporate",
+        useCustomColors: false,
+      },
+    },
+  ];
+
+  let currentTenantId = "tenant-centro";
+
+  const planosByTenant = new Map<string, PlanoSeed[]>([
+    [
+      "tenant-centro",
+      [
+        {
+          id: "plano-centro-premium",
+          tenantId: "tenant-centro",
+          nome: "Plano Premium Centro",
+          descricao: "Acesso livre às áreas molhadas e musculação.",
+          tipo: "MENSAL",
+          duracaoDias: 30,
+          valor: 199.9,
+          valorMatricula: 49.9,
+          destaque: true,
+          ativo: true,
+          ordem: 1,
+          beneficios: ["Musculação", "Bike indoor"],
+        },
+        {
+          id: "plano-centro-smart",
+          tenantId: "tenant-centro",
+          nome: "Plano Smart Centro",
+          descricao: "Plano enxuto para o horário comercial.",
+          tipo: "MENSAL",
+          duracaoDias: 30,
+          valor: 139.9,
+          valorMatricula: 29.9,
+          ativo: true,
+          ordem: 2,
+          beneficios: ["Musculação"],
+        },
+      ],
+    ],
+    [
+      "tenant-barra",
+      [
+        {
+          id: "plano-barra-gold",
+          tenantId: "tenant-barra",
+          nome: "Plano Gold Barra",
+          descricao: "Plano com aulas coletivas premium.",
+          tipo: "MENSAL",
+          duracaoDias: 30,
+          valor: 229.9,
+          valorMatricula: 59.9,
+          destaque: true,
+          ativo: true,
+          ordem: 1,
+          beneficios: ["Musculação", "Pilates solo"],
+        },
+      ],
+    ],
+  ]);
+
+  let onboarding: AdminOnboardingSeed[] = [
+    {
+      tenantId: "tenant-centro",
+      academiaId: "academia-rede-principal",
+      estrategia: "IMPORTAR_DEPOIS",
+      status: "PRONTA",
+      evoFilialId: "101",
+      ultimaMensagem: "Seed inicial concluído.",
+    },
+    {
+      tenantId: "tenant-barra",
+      academiaId: "academia-rede-principal",
+      estrategia: "PREPARAR_ETL",
+      status: "AGUARDANDO_IMPORTACAO",
+      evoFilialId: "202",
+    },
+    {
+      tenantId: "tenant-vila-maria",
+      academiaId: "academia-rede-leste",
+      estrategia: "CARGA_INICIAL",
+      status: "PENDENTE_SEED",
+      evoFilialId: "303",
+    },
+  ];
+
+  let cargos: AdminCargoSeed[] = [
+    { id: "cargo-recepcao", tenantId: "tenant-centro", nome: "Recepção", ativo: true },
+    { id: "cargo-coordenacao", tenantId: "tenant-centro", nome: "Coordenação", ativo: true },
+  ];
+
+  let funcionarios: AdminFuncionarioSeed[] = [
+    {
+      id: "funcionario-lucia",
+      tenantId: "tenant-centro",
+      nome: "Lúcia Souza",
+      cargoId: "cargo-recepcao",
+      ativo: true,
+      podeMinistrarAulas: false,
+    },
+  ];
+
+  let servicos: AdminServicoSeed[] = [
+    {
+      id: "servico-avaliacao",
+      tenantId: "tenant-centro",
+      nome: "Avaliação física",
+      sku: "SERV-AVAL",
+      categoria: "Saúde",
+      descricao: "Avaliação física completa.",
+      sessoes: 1,
+      valor: 79.9,
+      custo: 15,
+      duracaoMinutos: 50,
+      validadeDias: 30,
+      comissaoPercentual: 10,
+      aliquotaImpostoPercentual: 4,
+      permiteDesconto: true,
+      tipoCobranca: "UNICO",
+      agendavel: true,
+      permiteAcessoCatraca: false,
+      permiteVoucher: true,
+      ativo: true,
+    },
+  ];
+
+  let produtos: AdminProdutoSeed[] = [
+    {
+      id: "produto-whey",
+      tenantId: "tenant-centro",
+      nome: "Whey Protein",
+      sku: "WHEY-900",
+      categoria: "Suplementos",
+      marca: "Conceito Labs",
+      unidadeMedida: "UN",
+      descricao: "Pote 900g.",
+      valorVenda: 149.9,
+      custo: 92,
+      comissaoPercentual: 8,
+      aliquotaImpostoPercentual: 12,
+      controlaEstoque: true,
+      estoqueAtual: 18,
+      estoqueMinimo: 5,
+      permiteDesconto: true,
+      permiteVoucher: false,
+      ativo: true,
+    },
+  ];
+
+  let convenios: AdminConvenioSeed[] = [
+    {
+      id: "convenio-empresa-x",
+      tenantId: "tenant-centro",
+      nome: "Empresa X",
+      descontoPercentual: 12,
+      planoIds: ["plano-centro-premium"],
+      observacoes: "Ativo para contratos corporativos.",
+      ativo: true,
+    },
+  ];
+
+  let vouchers: AdminVoucherSeed[] = [
+    {
+      id: "voucher-inverno",
+      tenantId: "tenant-centro",
+      escopo: "UNIDADE",
+      tipo: "DESCONTO",
+      nome: "Campanha de Inverno",
+      periodoInicio: "2026-03-01",
+      periodoFim: "2026-04-01",
+      prazoDeterminado: true,
+      quantidade: 50,
+      ilimitado: false,
+      codigoTipo: "UNICO",
+      codigoUnicoCustom: "INVERNO26",
+      usarNaVenda: true,
+      planoIds: ["plano-centro-premium"],
+      umaVezPorCliente: true,
+      aplicarEm: ["CONTRATO"],
+      ativo: true,
+    },
+  ];
+
+  const voucherCodigosByVoucher = new Map<string, AdminVoucherCodigoSeed[]>([
+    [
+      "voucher-inverno",
+      [
+        { id: "voucher-codigo-1", voucherId: "voucher-inverno", codigo: "INVERNO26", status: "DISPONIVEL" },
+      ],
+    ],
+  ]);
+
+  let formasPagamento: FormaPagamentoSeed[] = [
+    {
+      id: "fp-pix-centro",
+      tenantId: "tenant-centro",
+      nome: "PIX imediato",
+      tipo: "PIX",
+      ativo: true,
+      parcelasMax: 1,
+      taxaPercentual: 0,
+    },
+  ];
+
+  const formaPagamentoExtras = new Map<string, { emitirAutomaticamente: boolean; instrucoes?: string }>([
+    ["fp-pix-centro", { emitirAutomaticamente: false, instrucoes: "Confirmar comprovante." }],
+  ]);
+
+  let tiposConta: AdminTipoContaSeed[] = [
+    {
+      id: "tipo-energia",
+      tenantId: "tenant-centro",
+      nome: "Energia elétrica",
+      descricao: "Conta mensal da concessionária.",
+      categoriaOperacional: "UTILIDADES",
+      grupoDre: "DESPESA_OPERACIONAL",
+      centroCustoPadrao: "Operacional",
+      ativo: true,
+    },
+  ];
+
+  let contasBancarias: AdminContaBancariaSeed[] = [
+    {
+      id: "conta-principal",
+      tenantId: "tenant-centro",
+      apelido: "Conta principal",
+      banco: "Banco do Brasil",
+      agencia: "0001",
+      conta: "12345",
+      digito: "6",
+      tipo: "CORRENTE",
+      titular: "Conceito Fit Academia LTDA",
+      pixChave: "financeiro@conceitofit.local",
+      pixTipo: "EMAIL",
+      statusCadastro: "ATIVA",
+    },
+  ];
+
+  let maquininhas: AdminMaquininhaSeed[] = [
+    {
+      id: "maquininha-stone-1",
+      tenantId: "tenant-centro",
+      nome: "Stone recepção",
+      adquirente: "STONE",
+      terminal: "STONE-01",
+      contaBancariaId: "conta-principal",
+      statusCadastro: "ATIVA",
+    },
+  ];
+
+  let atividades: Array<AtividadeSeed & { descricao?: string; icone?: string; cor?: string; permiteCheckin?: boolean; checkinObrigatorio?: boolean }> = [
+    {
+      id: "atividade-musculacao",
+      tenantId: "tenant-centro",
+      nome: "Musculação",
+      categoria: "MUSCULACAO",
+      ativo: true,
+      descricao: "Treino livre na sala de musculação.",
+      icone: "dumbbell",
+      cor: "#3de8a0",
+      permiteCheckin: true,
+      checkinObrigatorio: false,
+    },
+  ];
+
+  const profileCatalog = [
+    {
+      id: "perfil-owner",
+      roleName: "OWNER",
+      displayName: "OWNER",
+      active: true,
+    },
+    {
+      id: "perfil-financeiro",
+      roleName: "FINANCEIRO",
+      displayName: "FINANCEIRO",
+      active: true,
+    },
+    {
+      id: "perfil-operacoes",
+      roleName: "OPERACOES",
+      displayName: "OPERACOES",
+      active: true,
+    },
+  ];
+
+  let securityUsers: AdminSecurityUserState[] = [
+    {
+      id: "user-admin-global",
+      name: "Sergio",
+      fullName: "Sergio Amim",
+      email: "admin@academia.local",
+      active: true,
+      createdAt: "2026-01-05T10:00:00",
+      lastLoginAt: "2026-03-12T09:00:00",
+      memberships: [
+        {
+          id: "membership-centro",
+          tenantId: "tenant-centro",
+          active: true,
+          defaultTenant: true,
+          accessOrigin: "MANUAL",
+          profiles: ["perfil-owner"],
+        },
+      ],
+      policy: {
+        enabled: true,
+        scope: "ACADEMIA_ATUAL",
+        academiaIds: ["academia-rede-principal"],
+        inherited: false,
+        rationale: "Diretoria regional da rede principal.",
+        updatedAt: "2026-03-12T09:00:00",
+      },
+    },
+    {
+      id: "user-financeiro-leste",
+      name: "Priscila",
+      fullName: "Priscila Mota",
+      email: "priscila@academia.local",
+      active: true,
+      createdAt: "2026-01-12T10:00:00",
+      lastLoginAt: "2026-03-10T08:30:00",
+      memberships: [
+        {
+          id: "membership-leste",
+          tenantId: "tenant-vila-maria",
+          active: true,
+          defaultTenant: true,
+          accessOrigin: "MANUAL",
+          profiles: ["perfil-financeiro"],
+        },
+      ],
+      policy: {
+        enabled: false,
+        scope: "ACADEMIA_ATUAL",
+        academiaIds: ["academia-rede-leste"],
+        inherited: false,
+        rationale: "Escopo restrito à unidade atual.",
+        updatedAt: "2026-03-01T12:00:00",
+      },
+    },
+  ];
+
+  let counters = {
+    academia: 10,
+    unidade: 10,
+    cargo: 10,
+    funcionario: 10,
+    servico: 10,
+    produto: 10,
+    convenio: 10,
+    voucher: 10,
+    tipoConta: 10,
+    conta: 10,
+    maquininha: 10,
+    atividade: 10,
+    membership: 10,
+  };
+
+  function nextId(prefix: string, counterKey: keyof typeof counters) {
+    counters[counterKey] += 1;
+    return `${prefix}-${counters[counterKey]}`;
+  }
+
+  function resolveTenantId(url: URL) {
+    return url.searchParams.get("tenantId")?.trim() || currentTenantId;
+  }
+
+  function getAcademia(academiaId: string) {
+    return academias.find((item) => item.id === academiaId);
+  }
+
+  function getTenant(tenantId: string) {
+    return unidades.find((item) => item.id === tenantId);
+  }
+
+  function buildAcademiaPayload(academiaId: string) {
+    const unidade = unidades.find((item) => item.academiaId === academiaId);
+    const academia = getAcademia(academiaId) ?? academias[0];
+    return {
+      id: academia.id,
+      nome: academia.nome,
+      razaoSocial: academia.razaoSocial,
+      documento: academia.documento,
+      email: academia.email,
+      telefone: academia.telefone,
+      endereco: unidade
+        ? {
+            cidade: unidade.nome.includes("Barra") ? "Rio de Janeiro" : "Niterói",
+          }
+        : undefined,
+      branding: academia.branding,
+      ativo: academia.ativo,
+    };
+  }
+
+  function buildActiveAcademiaPayload() {
+    const tenant = getTenant(currentTenantId) ?? unidades[0];
+    return buildAcademiaPayload(tenant.academiaId);
+  }
+
+  function getOnboardingState(tenantId: string) {
+    return onboarding.find((item) => item.tenantId === tenantId) ?? null;
+  }
+
+  function mergeOnboardingState(state: AdminOnboardingSeed) {
+    onboarding = [state, ...onboarding.filter((item) => item.tenantId !== state.tenantId)];
+    return state;
+  }
+
+  function buildAuthPayload() {
+    return {
+      id: "user-admin-global",
+      nome: "Sergio Amim",
+      email: "admin@academia.local",
+      roles: ["OWNER", "ADMIN"],
+      activeTenantId: currentTenantId,
+      availableTenants: unidades.map((item) => ({
+        tenantId: item.id,
+        defaultTenant: item.id === currentTenantId,
+      })),
+    };
+  }
+
+  function buildSessionPayload() {
+    return {
+      token: "token-e2e",
+      refreshToken: "refresh-e2e",
+      type: "Bearer",
+      activeTenantId: currentTenantId,
+      availableTenants: unidades.map((item) => ({
+        tenantId: item.id,
+        defaultTenant: item.id === currentTenantId,
+      })),
+    };
+  }
+
+  function normalizeBooleanInput(value: unknown, fallback = false) {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === "true" || normalized === "1" || normalized === "sim") return true;
+      if (normalized === "false" || normalized === "0" || normalized === "nao" || normalized === "não") return false;
+    }
+    if (typeof value === "number") return value === 1;
+    return fallback;
+  }
+
+  function normalizeNumberInput(value: unknown, fallback = 0) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  function filterActiveItems<T extends { ativo?: boolean }>(items: T[], activeOnly: boolean) {
+    return activeOnly ? items.filter((item) => item.ativo !== false) : items;
+  }
+
+  function uniqueStrings(values: string[]) {
+    return Array.from(new Set(values.filter(Boolean)));
+  }
+
+  function buildMembershipPayload(user: AdminSecurityUserState, membership: AdminSecurityMembershipState) {
+    const tenant = getTenant(membership.tenantId);
+    const academiaId = tenant?.academiaId ?? tenant?.groupId ?? "";
+    const academia = getAcademia(academiaId);
+    const assignedProfiles = membership.profiles
+      .map((perfilId) => profileCatalog.find((profile) => profile.id === perfilId))
+      .filter((profile): profile is (typeof profileCatalog)[number] => Boolean(profile))
+      .map((profile) => ({
+        perfilId: profile.id,
+        roleName: profile.roleName,
+        displayName: profile.displayName,
+        active: true,
+        inherited: membership.accessOrigin !== "MANUAL",
+      }));
+
+    return {
+      id: membership.id,
+      userId: user.id,
+      tenantId: membership.tenantId,
+      tenantName: tenant?.nome ?? membership.tenantId,
+      academiaId,
+      academiaName: academia?.nome ?? academiaId,
+      active: membership.active,
+      defaultTenant: membership.defaultTenant,
+      accessOrigin: membership.accessOrigin,
+      inheritedFrom: membership.inheritedFrom,
+      eligibleForNewUnits: user.policy.enabled,
+      profiles: assignedProfiles,
+      availableProfiles: profileCatalog,
+      createdAt: user.createdAt,
+      updatedAt: user.policy.updatedAt ?? nowIso(),
+    };
+  }
+
+  function buildUserDetail(user: AdminSecurityUserState) {
+    const memberships = user.memberships.map((membership) => buildMembershipPayload(user, membership));
+    const defaultMembership = memberships.find((membership) => membership.defaultTenant);
+    const academiasRefs = uniqueStrings(
+      memberships.map((membership) => membership.academiaId).filter(Boolean),
+    )
+      .map((academiaId) => {
+        const academia = getAcademia(academiaId);
+        return academia ? { id: academia.id, nome: academia.nome } : null;
+      })
+      .filter((item): item is { id: string; nome: string } => item !== null);
+    const perfis = uniqueStrings(
+      memberships.flatMap((membership) => membership.profiles.map((profile) => profile.displayName)),
+    );
+
+    return {
+      id: user.id,
+      name: user.name,
+      fullName: user.fullName,
+      email: user.email,
+      status: user.active ? "ATIVO" : "INATIVO",
+      active: user.active,
+      academias: academiasRefs,
+      membershipsAtivos: memberships.filter((membership) => membership.active).length,
+      membershipsTotal: memberships.length,
+      perfis,
+      defaultTenantId: defaultMembership?.tenantId,
+      defaultTenantName: defaultMembership?.tenantName,
+      eligibleForNewUnits: user.policy.enabled,
+      createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+      memberships,
+      policy: {
+        enabled: user.policy.enabled,
+        scope: user.policy.scope,
+        academiaIds: user.policy.academiaIds,
+        inherited: user.policy.inherited,
+        rationale: user.policy.rationale,
+        updatedAt: user.policy.updatedAt,
+      },
+    };
+  }
+
+  function buildSecurityOverview() {
+    const details = securityUsers.map(buildUserDetail);
+    return {
+      totalUsers: details.length,
+      activeMemberships: details.reduce((sum, item) => sum + item.membershipsAtivos, 0),
+      defaultUnitsConfigured: details.filter((item) => Boolean(item.defaultTenantId)).length,
+      eligibleForNewUnits: details.filter((item) => item.eligibleForNewUnits).length,
+    };
+  }
+
+  function listSecurityUsers(url: URL) {
+    const query = url.searchParams.get("query")?.trim().toLowerCase() ?? "";
+    const tenantId = url.searchParams.get("tenantId")?.trim() ?? "";
+    const academiaId = url.searchParams.get("academiaId")?.trim() ?? "";
+    const status = url.searchParams.get("status")?.trim().toUpperCase() ?? "";
+    const profile = url.searchParams.get("profile")?.trim().toUpperCase() ?? "";
+    const eligibleOnly = normalizeBooleanInput(url.searchParams.get("eligibleForNewUnits"), false);
+    const page = Number(url.searchParams.get("page") ?? 0);
+    const size = Number(url.searchParams.get("size") ?? 20);
+
+    const filtered = securityUsers
+      .map(buildUserDetail)
+      .filter((user) => {
+        if (query) {
+          const haystack = `${user.fullName ?? user.name} ${user.email}`.toLowerCase();
+          if (!haystack.includes(query)) return false;
+        }
+        if (academiaId && !user.academias.some((academia) => academia.id === academiaId)) return false;
+        if (tenantId && !user.memberships.some((membership) => membership.tenantId === tenantId)) return false;
+        if (status && status !== user.status) return false;
+        if (profile && !user.perfis.some((item) => item.toUpperCase().includes(profile))) return false;
+        if (eligibleOnly && !user.eligibleForNewUnits) return false;
+        return true;
+      });
+
+    const start = page * size;
+    const items = filtered.slice(start, start + size).map((item) => ({
+      id: item.id,
+      name: item.name,
+      fullName: item.fullName,
+      email: item.email,
+      status: item.status,
+      active: item.active,
+      academias: item.academias,
+      membershipsAtivos: item.membershipsAtivos,
+      membershipsTotal: item.membershipsTotal,
+      perfis: item.perfis,
+      defaultTenantId: item.defaultTenantId,
+      defaultTenantName: item.defaultTenantName,
+      eligibleForNewUnits: item.eligibleForNewUnits,
+    }));
+
+    return {
+      items,
+      total: filtered.length,
+      page,
+      size,
+      hasNext: start + size < filtered.length,
+    };
+  }
+
+  async function fulfillNoContent(route: Route, status = 204) {
+    await route.fulfill({
+      status,
+      contentType: "application/json; charset=utf-8",
+      body: "",
+    });
+  }
+
+  await page.route("**/api/v1/**", async (route) => {
+    try {
+      const request = route.request();
+      const url = new URL(request.url());
+      const path = normalizeApiPath(url.pathname);
+      const method = request.method();
+
+      if (path === "/api/v1/auth/me" && method === "GET") {
+        await fulfillJson(route, buildAuthPayload());
+        return;
+      }
+
+      if (path === "/api/v1/auth/context/tenant" && method === "POST") {
+        const payload = parseBody<{ tenantId?: string }>(request);
+        const requestedTenantId = payload.tenantId?.trim();
+        if (requestedTenantId && getTenant(requestedTenantId)) {
+          currentTenantId = requestedTenantId;
+        }
+        await fulfillJson(route, buildSessionPayload());
+        return;
+      }
+
+      if (path === "/api/v1/app/bootstrap" && method === "GET") {
+        await fulfillJson(route, {
+          user: buildAuthPayload(),
+          tenantContext: {
+            currentTenantId,
+            tenantAtual: getTenant(currentTenantId),
+            unidadesDisponiveis: unidades,
+          },
+          academia: buildActiveAcademiaPayload(),
+          branding: buildActiveAcademiaPayload().branding,
+          capabilities: {
+            canAccessElevatedModules: true,
+          },
+        });
+        return;
+      }
+
+    if (path === "/api/v1/context/unidade-ativa" && method === "GET") {
+      await fulfillJson(route, {
+        currentTenantId,
+        tenantAtual: getTenant(currentTenantId),
+        unidadesDisponiveis: unidades,
+      });
+      return;
+    }
+
+    if (/^\/api\/v1\/context\/unidade-ativa\/[^/]+$/.test(path) && method === "PUT") {
+      currentTenantId = path.split("/").at(-1) ?? currentTenantId;
+      await fulfillJson(route, {
+        currentTenantId,
+        tenantAtual: getTenant(currentTenantId),
+        unidadesDisponiveis: unidades,
+      });
+      return;
+    }
+
+    if (path === "/api/v1/context/tenant-atual" && method === "GET") {
+      await fulfillJson(route, getTenant(currentTenantId));
+      return;
+    }
+
+    if (path === "/api/v1/context/tenant-atual" && method === "PUT") {
+      const payload = parseBody<Partial<TenantSeed>>(request);
+      unidades = unidades.map((item) =>
+        item.id === currentTenantId
+          ? {
+              ...item,
+              nome: payload.nome?.trim() || item.nome,
+              razaoSocial: payload.razaoSocial?.trim() || item.razaoSocial,
+              email: payload.email?.trim() || item.email,
+              telefone: payload.telefone?.trim() || item.telefone,
+              ativo: payload.ativo ?? item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, getTenant(currentTenantId));
+      return;
+    }
+
+    if (path === "/api/v1/unidades" && method === "GET") {
+      await fulfillJson(route, unidades);
+      return;
+    }
+
+    if (path === "/api/v1/academia" && method === "GET") {
+      await fulfillJson(route, buildActiveAcademiaPayload());
+      return;
+    }
+
+    if (path === "/api/v1/academia" && method === "PUT") {
+      const payload = parseBody<Partial<TenantSeed>>(request);
+      const tenant = getTenant(currentTenantId) ?? unidades[0];
+      academias.splice(
+        academias.findIndex((item) => item.id === tenant.academiaId),
+        1,
+        {
+          ...(getAcademia(tenant.academiaId) ?? academias[0]),
+          nome: payload.nome?.trim() || buildActiveAcademiaPayload().nome,
+          razaoSocial: payload.razaoSocial?.trim() || buildActiveAcademiaPayload().razaoSocial,
+          documento: payload.documento?.trim() || buildActiveAcademiaPayload().documento,
+          email: payload.email?.trim() || buildActiveAcademiaPayload().email,
+          telefone: payload.telefone?.trim() || buildActiveAcademiaPayload().telefone,
+          ativo: payload.ativo ?? true,
+          branding: payload.branding ?? buildActiveAcademiaPayload().branding,
+        },
+      );
+      await fulfillJson(route, buildActiveAcademiaPayload());
+      return;
+    }
+
+    if (path === "/api/v1/comercial/planos" && method === "GET") {
+      const tenantId = resolveTenantId(url);
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivos"), false);
+      const planos = planosByTenant.get(tenantId) ?? [];
+      await fulfillJson(route, activeOnly ? planos.filter((item) => item.ativo) : planos);
+      return;
+    }
+
+    if (/^\/api\/v1\/comercial\/planos\/[^/]+$/.test(path) && method === "GET") {
+      const tenantId = resolveTenantId(url);
+      const planoId = path.split("/").at(-1) ?? "";
+      const plano = (planosByTenant.get(tenantId) ?? []).find((item) => item.id === planoId);
+      await fulfillJson(route, plano ?? { message: "Plano não encontrado" }, plano ? 200 : 404);
+      return;
+    }
+
+    if (path === "/api/v1/admin/academias" && method === "GET") {
+      await fulfillJson(
+        route,
+        academias.map((item) => buildAcademiaPayload(item.id)),
+      );
+      return;
+    }
+
+    if (path === "/api/v1/admin/academias" && method === "POST") {
+      const payload = parseBody<Partial<TenantSeed>>(request);
+      const created: TenantSeed = {
+        id: nextId("academia", "academia"),
+        academiaId: "",
+        groupId: "",
+        nome: payload.nome?.trim() || "Nova academia",
+        razaoSocial: payload.razaoSocial?.trim(),
+        documento: payload.documento?.trim(),
+        subdomain: payload.subdomain?.trim() || "rede",
+        email: payload.email?.trim(),
+        telefone: payload.telefone?.trim(),
+        ativo: payload.ativo ?? true,
+        branding: payload.branding,
+      };
+      created.academiaId = created.id;
+      created.groupId = created.id;
+      academias = [created, ...academias];
+      await fulfillJson(route, buildAcademiaPayload(created.id), 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/academias\/[^/]+$/.test(path) && method === "GET") {
+      const academiaId = path.split("/").at(-1) ?? "";
+      const academia = academias.find((item) => item.id === academiaId);
+      await fulfillJson(route, academia ? buildAcademiaPayload(academia.id) : { message: "Academia não encontrada" }, academia ? 200 : 404);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/academias\/[^/]+$/.test(path) && method === "PUT") {
+      const academiaId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<TenantSeed>>(request);
+      academias = academias.map((item) =>
+        item.id === academiaId
+          ? {
+              ...item,
+              nome: payload.nome?.trim() || item.nome,
+              razaoSocial: payload.razaoSocial?.trim() || item.razaoSocial,
+              documento: payload.documento?.trim() || item.documento,
+              email: payload.email?.trim() || item.email,
+              telefone: payload.telefone?.trim() || item.telefone,
+              ativo: payload.ativo ?? item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, buildAcademiaPayload(academiaId));
+      return;
+    }
+
+    if (path === "/api/v1/admin/unidades" && method === "GET") {
+      await fulfillJson(route, unidades);
+      return;
+    }
+
+    if (path === "/api/v1/admin/unidades" && method === "POST") {
+      const payload = parseBody<Partial<TenantSeed> & { configuracoes?: TenantSeed["branding"] }>(request);
+      const academiaId = payload.academiaId?.trim() || payload.groupId?.trim() || academias[0].id;
+      const created: TenantSeed = {
+        id: nextId("tenant", "unidade"),
+        academiaId,
+        groupId: payload.groupId?.trim() || academiaId,
+        nome: payload.nome?.trim() || "Nova unidade",
+        razaoSocial: payload.razaoSocial?.trim(),
+        documento: payload.documento?.trim(),
+        subdomain: payload.subdomain?.trim() || `tenant-${counters.unidade}`,
+        email: payload.email?.trim(),
+        telefone: payload.telefone?.trim(),
+        ativo: payload.ativo ?? true,
+        branding: payload.branding,
+      };
+      unidades = [created, ...unidades];
+      mergeOnboardingState({
+        tenantId: created.id,
+        academiaId,
+        estrategia: "IMPORTAR_DEPOIS",
+        status: "AGUARDANDO_IMPORTACAO",
+      });
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/unidades\/[^/]+$/.test(path) && method === "GET") {
+      const tenantId = path.split("/").at(-1) ?? "";
+      const tenant = getTenant(tenantId);
+      await fulfillJson(route, tenant ?? { message: "Unidade não encontrada" }, tenant ? 200 : 404);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/unidades\/[^/]+$/.test(path) && method === "PUT") {
+      const tenantId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<TenantSeed>>(request);
+      unidades = unidades.map((item) =>
+        item.id === tenantId
+          ? {
+              ...item,
+              academiaId: payload.academiaId?.trim() || item.academiaId,
+              groupId: payload.groupId?.trim() || payload.academiaId?.trim() || item.groupId,
+              nome: payload.nome?.trim() || item.nome,
+              razaoSocial: payload.razaoSocial?.trim() || item.razaoSocial,
+              documento: payload.documento?.trim() || item.documento,
+              subdomain: payload.subdomain?.trim() || item.subdomain,
+              email: payload.email?.trim() || item.email,
+              telefone: payload.telefone?.trim() || item.telefone,
+              ativo: payload.ativo ?? item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, getTenant(tenantId));
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/unidades\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const tenantId = path.split("/").at(-2) ?? "";
+      unidades = unidades.map((item) =>
+        item.id === tenantId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, getTenant(tenantId));
+      return;
+    }
+
+    if (path === "/api/v1/admin/unidades/onboarding" && method === "GET") {
+      await fulfillJson(route, onboarding);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/unidades\/[^/]+\/onboarding$/.test(path) && method === "GET") {
+      const tenantId = path.split("/").at(-2) ?? "";
+      const state = getOnboardingState(tenantId);
+      await fulfillJson(route, state ?? { message: "Onboarding não encontrado" }, state ? 200 : 404);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/unidades\/[^/]+\/onboarding$/.test(path) && method === "PUT") {
+      const tenantId = path.split("/").at(-2) ?? "";
+      const payload = parseBody<Partial<AdminOnboardingSeed>>(request);
+      const tenant = getTenant(tenantId);
+      const saved = mergeOnboardingState({
+        tenantId,
+        academiaId: payload.academiaId?.trim() || tenant?.academiaId,
+        estrategia: payload.estrategia ?? "IMPORTAR_DEPOIS",
+        status: payload.status ?? "AGUARDANDO_IMPORTACAO",
+        evoFilialId: payload.evoFilialId?.trim() || undefined,
+        ultimaMensagem: payload.ultimaMensagem?.trim() || undefined,
+      });
+      await fulfillJson(route, saved);
+      return;
+    }
+
+    if (path === "/api/v1/admin/seguranca/overview" && method === "GET") {
+      await fulfillJson(route, buildSecurityOverview());
+      return;
+    }
+
+    if (path === "/api/v1/admin/seguranca/usuarios" && method === "GET") {
+      await fulfillJson(route, listSecurityUsers(url));
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/seguranca\/usuarios\/[^/]+$/.test(path) && method === "GET") {
+      const userId = path.split("/").at(-1) ?? "";
+      const user = securityUsers.find((item) => item.id === userId);
+      await fulfillJson(route, user ? buildUserDetail(user) : { message: "Usuário não encontrado" }, user ? 200 : 404);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/seguranca\/usuarios\/[^/]+\/memberships$/.test(path) && method === "POST") {
+      const userId = path.split("/").at(-2) ?? "";
+      const payload = parseBody<{ tenantId?: string; defaultTenant?: boolean }>(request);
+      securityUsers = securityUsers.map((user) => {
+        if (user.id !== userId) return user;
+        const nextMembership: AdminSecurityMembershipState = {
+          id: nextId("membership", "membership"),
+          tenantId: payload.tenantId?.trim() || currentTenantId,
+          active: true,
+          defaultTenant: payload.defaultTenant ?? false,
+          accessOrigin: "MANUAL",
+          profiles: [],
+        };
+        const memberships = user.memberships.map((membership) => ({
+          ...membership,
+          defaultTenant: nextMembership.defaultTenant ? false : membership.defaultTenant,
+        }));
+        return {
+          ...user,
+          memberships: [...memberships, nextMembership],
+        };
+      });
+      const updated = securityUsers.find((item) => item.id === userId);
+      await fulfillJson(route, updated ? buildUserDetail(updated) : null);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/seguranca\/usuarios\/[^/]+\/memberships\/[^/]+$/.test(path) && method === "PATCH") {
+      const userId = path.split("/").at(-3) ?? "";
+      const membershipId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<{ active?: boolean; defaultTenant?: boolean }>(request);
+      securityUsers = securityUsers.map((user) => {
+        if (user.id !== userId) return user;
+        return {
+          ...user,
+          memberships: user.memberships.map((membership) => {
+            if (membership.id !== membershipId) {
+              return payload.defaultTenant ? { ...membership, defaultTenant: false } : membership;
+            }
+            return {
+              ...membership,
+              active: payload.active ?? membership.active,
+              defaultTenant: payload.defaultTenant ?? membership.defaultTenant,
+            };
+          }),
+        };
+      });
+      const updated = securityUsers.find((item) => item.id === userId);
+      await fulfillJson(route, updated ? buildUserDetail(updated) : null);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/seguranca\/usuarios\/[^/]+\/memberships\/[^/]+$/.test(path) && method === "DELETE") {
+      const userId = path.split("/").at(-3) ?? "";
+      const membershipId = path.split("/").at(-1) ?? "";
+      securityUsers = securityUsers.map((user) =>
+        user.id === userId
+          ? {
+              ...user,
+              memberships: user.memberships.filter((membership) => membership.id !== membershipId),
+            }
+          : user,
+      );
+      const updated = securityUsers.find((item) => item.id === userId);
+      await fulfillJson(route, updated ? buildUserDetail(updated) : null);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/seguranca\/usuarios\/[^/]+\/memberships\/[^/]+\/perfis\/[^/]+$/.test(path) && method === "PUT") {
+      const parts = path.split("/");
+      const userId = parts.at(-5) ?? "";
+      const membershipId = parts.at(-3) ?? "";
+      const perfilId = parts.at(-1) ?? "";
+      securityUsers = securityUsers.map((user) =>
+        user.id === userId
+          ? {
+              ...user,
+              memberships: user.memberships.map((membership) =>
+                membership.id === membershipId
+                  ? {
+                      ...membership,
+                      profiles: uniqueStrings([...membership.profiles, perfilId]),
+                    }
+                  : membership,
+              ),
+            }
+          : user,
+      );
+      const updated = securityUsers.find((item) => item.id === userId);
+      await fulfillJson(route, updated ? buildUserDetail(updated) : null);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/seguranca\/usuarios\/[^/]+\/memberships\/[^/]+\/perfis\/[^/]+$/.test(path) && method === "DELETE") {
+      const parts = path.split("/");
+      const userId = parts.at(-5) ?? "";
+      const membershipId = parts.at(-3) ?? "";
+      const perfilId = parts.at(-1) ?? "";
+      securityUsers = securityUsers.map((user) =>
+        user.id === userId
+          ? {
+              ...user,
+              memberships: user.memberships.map((membership) =>
+                membership.id === membershipId
+                  ? {
+                      ...membership,
+                      profiles: membership.profiles.filter((item) => item !== perfilId),
+                    }
+                  : membership,
+              ),
+            }
+          : user,
+      );
+      const updated = securityUsers.find((item) => item.id === userId);
+      await fulfillJson(route, updated ? buildUserDetail(updated) : null);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/seguranca\/usuarios\/[^/]+\/policy\/new-units$/.test(path) && method === "PUT") {
+      const userId = path.split("/").at(-3) ?? "";
+      const payload = parseBody<{
+        enabled?: boolean;
+        scope?: "ACADEMIA_ATUAL" | "REDE";
+        academiaIds?: string[];
+        rationale?: string;
+      }>(request);
+      securityUsers = securityUsers.map((user) =>
+        user.id === userId
+          ? {
+              ...user,
+              policy: {
+                enabled: payload.enabled ?? user.policy.enabled,
+                scope: payload.scope ?? user.policy.scope,
+                academiaIds: payload.academiaIds ?? user.policy.academiaIds,
+                inherited: false,
+                rationale: payload.rationale?.trim() || user.policy.rationale,
+                updatedAt: nowIso(),
+              },
+            }
+          : user,
+      );
+      const updated = securityUsers.find((item) => item.id === userId);
+      await fulfillJson(route, updated ? buildUserDetail(updated) : null);
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/cargos" && method === "GET") {
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivos"), false);
+      const tenantId = resolveTenantId(url);
+      await fulfillJson(route, filterActiveItems(cargos.filter((item) => item.tenantId === tenantId), activeOnly));
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/cargos" && method === "POST") {
+      const payload = parseBody<Partial<AdminCargoSeed>>(request);
+      const tenantId = resolveTenantId(url);
+      const created: AdminCargoSeed = {
+        id: nextId("cargo", "cargo"),
+        tenantId,
+        nome: payload.nome?.trim() || "Novo cargo",
+        ativo: payload.ativo ?? true,
+      };
+      cargos = [created, ...cargos];
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/cargos\/[^/]+$/.test(path) && method === "PUT") {
+      const cargoId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<AdminCargoSeed>>(request);
+      cargos = cargos.map((item) =>
+        item.id === cargoId
+          ? {
+              ...item,
+              nome: payload.nome?.trim() || item.nome,
+              ativo: payload.ativo ?? item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, cargos.find((item) => item.id === cargoId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/cargos\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const cargoId = path.split("/").at(-2) ?? "";
+      cargos = cargos.map((item) =>
+        item.id === cargoId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, cargos.find((item) => item.id === cargoId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/cargos\/[^/]+$/.test(path) && method === "DELETE") {
+      const cargoId = path.split("/").at(-1) ?? "";
+      cargos = cargos.filter((item) => item.id !== cargoId);
+      await fulfillNoContent(route);
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/funcionarios" && method === "GET") {
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivos"), true);
+      const tenantId = resolveTenantId(url);
+      await fulfillJson(
+        route,
+        filterActiveItems(funcionarios.filter((item) => item.tenantId === tenantId), activeOnly),
+      );
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/funcionarios" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<AdminFuncionarioSeed>>(request);
+      const cargo = cargos.find((item) => item.id === payload.cargoId);
+      const created: AdminFuncionarioSeed = {
+        id: nextId("funcionario", "funcionario"),
+        tenantId,
+        nome: payload.nome?.trim() || "Novo funcionário",
+        cargoId: payload.cargoId?.trim() || undefined,
+        cargo: cargo?.nome,
+        ativo: true,
+        podeMinistrarAulas: payload.podeMinistrarAulas ?? false,
+      };
+      funcionarios = [created, ...funcionarios];
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/funcionarios\/[^/]+$/.test(path) && method === "PUT") {
+      const funcionarioId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<AdminFuncionarioSeed>>(request);
+      const cargo = cargos.find((item) => item.id === payload.cargoId);
+      funcionarios = funcionarios.map((item) =>
+        item.id === funcionarioId
+          ? {
+              ...item,
+              nome: payload.nome?.trim() || item.nome,
+              cargoId: payload.cargoId?.trim() || undefined,
+              cargo: cargo?.nome,
+              podeMinistrarAulas: payload.podeMinistrarAulas ?? item.podeMinistrarAulas,
+            }
+          : item,
+      );
+      await fulfillJson(route, funcionarios.find((item) => item.id === funcionarioId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/funcionarios\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const funcionarioId = path.split("/").at(-2) ?? "";
+      funcionarios = funcionarios.map((item) =>
+        item.id === funcionarioId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, funcionarios.find((item) => item.id === funcionarioId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/funcionarios\/[^/]+$/.test(path) && method === "DELETE") {
+      const funcionarioId = path.split("/").at(-1) ?? "";
+      funcionarios = funcionarios.filter((item) => item.id !== funcionarioId);
+      await fulfillNoContent(route);
+      return;
+    }
+
+    if (path === "/api/v1/comercial/servicos" && method === "GET") {
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivos"), false);
+      const tenantId = resolveTenantId(url);
+      await fulfillJson(route, filterActiveItems(servicos.filter((item) => item.tenantId === tenantId), activeOnly));
+      return;
+    }
+
+    if (path === "/api/v1/comercial/servicos" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<AdminServicoSeed>>(request);
+      const created: AdminServicoSeed = {
+        id: nextId("servico", "servico"),
+        tenantId,
+        nome: payload.nome?.trim() || "Novo serviço",
+        sku: payload.sku?.trim() || undefined,
+        categoria: payload.categoria?.trim() || undefined,
+        descricao: payload.descricao?.trim() || undefined,
+        sessoes: payload.sessoes,
+        valor: normalizeNumberInput(payload.valor, 0),
+        custo: payload.custo == null ? undefined : normalizeNumberInput(payload.custo, 0),
+        duracaoMinutos: payload.duracaoMinutos,
+        validadeDias: payload.validadeDias,
+        comissaoPercentual: payload.comissaoPercentual,
+        aliquotaImpostoPercentual: payload.aliquotaImpostoPercentual,
+        permiteDesconto: payload.permiteDesconto ?? true,
+        tipoCobranca: payload.tipoCobranca ?? "UNICO",
+        recorrenciaDias: payload.recorrenciaDias,
+        agendavel: payload.agendavel ?? false,
+        permiteAcessoCatraca: payload.permiteAcessoCatraca ?? false,
+        permiteVoucher: payload.permiteVoucher ?? false,
+        ativo: true,
+      };
+      servicos = [created, ...servicos];
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/comercial\/servicos\/[^/]+$/.test(path) && method === "PUT") {
+      const servicoId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<AdminServicoSeed>>(request);
+      servicos = servicos.map((item) =>
+        item.id === servicoId
+          ? {
+              ...item,
+              ...payload,
+              nome: payload.nome?.trim() || item.nome,
+              sku: payload.sku?.trim() || item.sku,
+              categoria: payload.categoria?.trim() || item.categoria,
+              descricao: payload.descricao?.trim() || item.descricao,
+              valor: payload.valor == null ? item.valor : normalizeNumberInput(payload.valor, item.valor),
+            }
+          : item,
+      );
+      await fulfillJson(route, servicos.find((item) => item.id === servicoId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/comercial\/servicos\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const servicoId = path.split("/").at(-2) ?? "";
+      servicos = servicos.map((item) =>
+        item.id === servicoId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, servicos.find((item) => item.id === servicoId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/comercial\/servicos\/[^/]+$/.test(path) && method === "DELETE") {
+      const servicoId = path.split("/").at(-1) ?? "";
+      servicos = servicos.filter((item) => item.id !== servicoId);
+      await fulfillNoContent(route);
+      return;
+    }
+
+    if (path === "/api/v1/comercial/produtos" && method === "GET") {
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivos"), false);
+      const tenantId = resolveTenantId(url);
+      await fulfillJson(route, filterActiveItems(produtos.filter((item) => item.tenantId === tenantId), activeOnly));
+      return;
+    }
+
+    if (path === "/api/v1/comercial/produtos" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<AdminProdutoSeed>>(request);
+      const created: AdminProdutoSeed = {
+        id: nextId("produto", "produto"),
+        tenantId,
+        nome: payload.nome?.trim() || "Novo produto",
+        sku: payload.sku?.trim() || `SKU-${counters.produto}`,
+        codigoBarras: payload.codigoBarras?.trim() || undefined,
+        categoria: payload.categoria?.trim() || undefined,
+        marca: payload.marca?.trim() || undefined,
+        unidadeMedida: payload.unidadeMedida ?? "UN",
+        descricao: payload.descricao?.trim() || undefined,
+        valorVenda: normalizeNumberInput(payload.valorVenda, 0),
+        custo: payload.custo == null ? undefined : normalizeNumberInput(payload.custo, 0),
+        comissaoPercentual: payload.comissaoPercentual,
+        aliquotaImpostoPercentual: payload.aliquotaImpostoPercentual,
+        controlaEstoque: payload.controlaEstoque ?? true,
+        estoqueAtual: normalizeNumberInput(payload.estoqueAtual, 0),
+        estoqueMinimo: payload.estoqueMinimo,
+        permiteDesconto: payload.permiteDesconto ?? true,
+        permiteVoucher: payload.permiteVoucher ?? false,
+        ativo: true,
+      };
+      produtos = [created, ...produtos];
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/comercial\/produtos\/[^/]+$/.test(path) && method === "PUT") {
+      const produtoId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<AdminProdutoSeed>>(request);
+      produtos = produtos.map((item) =>
+        item.id === produtoId
+          ? {
+              ...item,
+              ...payload,
+              nome: payload.nome?.trim() || item.nome,
+              sku: payload.sku?.trim() || item.sku,
+              valorVenda: payload.valorVenda == null ? item.valorVenda : normalizeNumberInput(payload.valorVenda, item.valorVenda),
+            }
+          : item,
+      );
+      await fulfillJson(route, produtos.find((item) => item.id === produtoId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/comercial\/produtos\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const produtoId = path.split("/").at(-2) ?? "";
+      produtos = produtos.map((item) =>
+        item.id === produtoId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, produtos.find((item) => item.id === produtoId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/comercial\/produtos\/[^/]+$/.test(path) && method === "DELETE") {
+      const produtoId = path.split("/").at(-1) ?? "";
+      produtos = produtos.filter((item) => item.id !== produtoId);
+      await fulfillNoContent(route);
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/convenios" && method === "GET") {
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivos"), false);
+      const tenantId = resolveTenantId(url);
+      await fulfillJson(route, filterActiveItems(convenios.filter((item) => item.tenantId === tenantId), activeOnly));
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/convenios" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<AdminConvenioSeed>>(request);
+      const created: AdminConvenioSeed = {
+        id: nextId("convenio", "convenio"),
+        tenantId,
+        nome: payload.nome?.trim() || "Novo convênio",
+        descontoPercentual: normalizeNumberInput(payload.descontoPercentual, 0),
+        planoIds: payload.planoIds ?? [],
+        observacoes: payload.observacoes?.trim() || undefined,
+        ativo: payload.ativo ?? true,
+      };
+      convenios = [created, ...convenios];
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/convenios\/[^/]+$/.test(path) && method === "PUT") {
+      const convenioId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<AdminConvenioSeed>>(request);
+      convenios = convenios.map((item) =>
+        item.id === convenioId
+          ? {
+              ...item,
+              nome: payload.nome?.trim() || item.nome,
+              descontoPercentual:
+                payload.descontoPercentual == null
+                  ? item.descontoPercentual
+                  : normalizeNumberInput(payload.descontoPercentual, item.descontoPercentual),
+              planoIds: payload.planoIds ?? item.planoIds,
+              observacoes: payload.observacoes?.trim() || item.observacoes,
+              ativo: payload.ativo ?? item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, convenios.find((item) => item.id === convenioId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/convenios\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const convenioId = path.split("/").at(-2) ?? "";
+      convenios = convenios.map((item) =>
+        item.id === convenioId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, convenios.find((item) => item.id === convenioId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/convenios\/[^/]+$/.test(path) && method === "DELETE") {
+      const convenioId = path.split("/").at(-1) ?? "";
+      convenios = convenios.filter((item) => item.id !== convenioId);
+      await fulfillNoContent(route);
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/vouchers" && method === "GET") {
+      const tenantId = resolveTenantId(url);
+      await fulfillJson(route, vouchers.filter((item) => item.tenantId === tenantId));
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/vouchers" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<AdminVoucherSeed>>(request);
+      const voucherId = nextId("voucher", "voucher");
+      const created: AdminVoucherSeed = {
+        id: voucherId,
+        tenantId,
+        escopo: payload.escopo ?? "UNIDADE",
+        tipo: payload.tipo ?? "DESCONTO",
+        nome: payload.nome?.trim() || "Novo voucher",
+        periodoInicio: payload.periodoInicio?.trim() || todayIso(),
+        periodoFim: payload.periodoFim?.trim() || undefined,
+        prazoDeterminado: payload.prazoDeterminado ?? true,
+        quantidade: payload.quantidade,
+        ilimitado: payload.ilimitado ?? false,
+        codigoTipo: payload.codigoTipo ?? "UNICO",
+        codigoUnicoCustom: payload.codigoUnicoCustom?.trim() || undefined,
+        usarNaVenda: payload.usarNaVenda ?? false,
+        planoIds: payload.planoIds ?? [],
+        umaVezPorCliente: payload.umaVezPorCliente ?? false,
+        aplicarEm: payload.aplicarEm ?? ["CONTRATO"],
+        ativo: true,
+      };
+      vouchers = [created, ...vouchers];
+      voucherCodigosByVoucher.set(voucherId, [
+        {
+          id: `${voucherId}-codigo-1`,
+          voucherId,
+          codigo:
+            created.codigoTipo === "UNICO"
+              ? created.codigoUnicoCustom || `COD-${voucherId.toUpperCase()}`
+              : `AUTO-${voucherId.toUpperCase()}`,
+          status: "DISPONIVEL",
+        },
+      ]);
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/vouchers\/[^/]+$/.test(path) && method === "PUT") {
+      const voucherId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<AdminVoucherSeed>>(request);
+      vouchers = vouchers.map((item) =>
+        item.id === voucherId
+          ? {
+              ...item,
+              ...payload,
+              nome: payload.nome?.trim() || item.nome,
+            }
+          : item,
+      );
+      await fulfillJson(route, vouchers.find((item) => item.id === voucherId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/vouchers\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const voucherId = path.split("/").at(-2) ?? "";
+      vouchers = vouchers.map((item) =>
+        item.id === voucherId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, vouchers.find((item) => item.id === voucherId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/vouchers\/[^/]+\/codigos$/.test(path) && method === "GET") {
+      const voucherId = path.split("/").at(-2) ?? "";
+      await fulfillJson(route, voucherCodigosByVoucher.get(voucherId) ?? []);
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/vouchers/usage-counts" && method === "GET") {
+      const usageCounts = vouchers.reduce<Record<string, number>>((acc, voucher) => {
+        acc[voucher.id] = 0;
+        return acc;
+      }, {});
+      await fulfillJson(route, usageCounts);
+      return;
+    }
+
+    if (path === "/api/v1/gerencial/financeiro/formas-pagamento" && method === "GET") {
+      const tenantId = resolveTenantId(url);
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivas"), true);
+      const rows = formasPagamento
+        .filter((item) => item.tenantId === tenantId)
+        .filter((item) => (activeOnly ? item.ativo : true))
+        .map((item) => ({
+          ...item,
+          emitirAutomaticamente: formaPagamentoExtras.get(item.id)?.emitirAutomaticamente ?? false,
+          instrucoes: formaPagamentoExtras.get(item.id)?.instrucoes,
+        }));
+      await fulfillJson(route, rows);
+      return;
+    }
+
+    if (path === "/api/v1/gerencial/financeiro/formas-pagamento" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<FormaPagamentoSeed> & { emitirAutomaticamente?: boolean; instrucoes?: string }>(request);
+      const created: FormaPagamentoSeed = {
+        id: nextId("forma-pagamento", "servico"),
+        tenantId,
+        nome: payload.nome?.trim() || "Nova forma",
+        tipo: payload.tipo ?? "PIX",
+        ativo: true,
+        parcelasMax: Math.max(1, normalizeNumberInput(payload.parcelasMax, 1)),
+        taxaPercentual: normalizeNumberInput(payload.taxaPercentual, 0),
+      };
+      formasPagamento = [created, ...formasPagamento];
+      formaPagamentoExtras.set(created.id, {
+        emitirAutomaticamente: payload.emitirAutomaticamente ?? false,
+        instrucoes: payload.instrucoes?.trim() || undefined,
+      });
+      await fulfillJson(route, {
+        ...created,
+        emitirAutomaticamente: formaPagamentoExtras.get(created.id)?.emitirAutomaticamente ?? false,
+        instrucoes: formaPagamentoExtras.get(created.id)?.instrucoes,
+      }, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/gerencial\/financeiro\/formas-pagamento\/[^/]+$/.test(path) && method === "PUT") {
+      const formaId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<FormaPagamentoSeed> & { emitirAutomaticamente?: boolean; instrucoes?: string }>(request);
+      formasPagamento = formasPagamento.map((item) =>
+        item.id === formaId
+          ? {
+              ...item,
+              nome: payload.nome?.trim() || item.nome,
+              tipo: payload.tipo ?? item.tipo,
+              parcelasMax: payload.parcelasMax == null ? item.parcelasMax : Math.max(1, normalizeNumberInput(payload.parcelasMax, item.parcelasMax ?? 1)),
+              taxaPercentual: payload.taxaPercentual == null ? item.taxaPercentual : normalizeNumberInput(payload.taxaPercentual, item.taxaPercentual ?? 0),
+            }
+          : item,
+      );
+      formaPagamentoExtras.set(formaId, {
+        emitirAutomaticamente: payload.emitirAutomaticamente ?? formaPagamentoExtras.get(formaId)?.emitirAutomaticamente ?? false,
+        instrucoes: payload.instrucoes?.trim() || formaPagamentoExtras.get(formaId)?.instrucoes,
+      });
+      const updated = formasPagamento.find((item) => item.id === formaId);
+      await fulfillJson(route, updated ? {
+        ...updated,
+        emitirAutomaticamente: formaPagamentoExtras.get(formaId)?.emitirAutomaticamente ?? false,
+        instrucoes: formaPagamentoExtras.get(formaId)?.instrucoes,
+      } : null);
+      return;
+    }
+
+    if (/^\/api\/v1\/gerencial\/financeiro\/formas-pagamento\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const formaId = path.split("/").at(-2) ?? "";
+      formasPagamento = formasPagamento.map((item) =>
+        item.id === formaId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      const updated = formasPagamento.find((item) => item.id === formaId);
+      await fulfillJson(route, updated ? {
+        ...updated,
+        emitirAutomaticamente: formaPagamentoExtras.get(formaId)?.emitirAutomaticamente ?? false,
+        instrucoes: formaPagamentoExtras.get(formaId)?.instrucoes,
+      } : null);
+      return;
+    }
+
+    if (/^\/api\/v1\/gerencial\/financeiro\/formas-pagamento\/[^/]+$/.test(path) && method === "DELETE") {
+      const formaId = path.split("/").at(-1) ?? "";
+      formasPagamento = formasPagamento.filter((item) => item.id !== formaId);
+      formaPagamentoExtras.delete(formaId);
+      await fulfillNoContent(route);
+      return;
+    }
+
+    if (path === "/api/v1/gerencial/financeiro/tipos-conta-pagar" && method === "GET") {
+      const tenantId = resolveTenantId(url);
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivos"), true);
+      await fulfillJson(route, filterActiveItems(tiposConta.filter((item) => item.tenantId === tenantId), activeOnly));
+      return;
+    }
+
+    if (path === "/api/v1/gerencial/financeiro/tipos-conta-pagar" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<AdminTipoContaSeed>>(request);
+      const created: AdminTipoContaSeed = {
+        id: nextId("tipo-conta", "tipoConta"),
+        tenantId,
+        nome: payload.nome?.trim() || "Novo tipo",
+        descricao: payload.descricao?.trim() || undefined,
+        categoriaOperacional: payload.categoriaOperacional ?? "OUTROS",
+        grupoDre: payload.grupoDre ?? "DESPESA_OPERACIONAL",
+        centroCustoPadrao: payload.centroCustoPadrao?.trim() || undefined,
+        ativo: true,
+      };
+      tiposConta = [created, ...tiposConta];
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/gerencial\/financeiro\/tipos-conta-pagar\/[^/]+$/.test(path) && method === "PUT") {
+      const tipoId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<AdminTipoContaSeed>>(request);
+      tiposConta = tiposConta.map((item) =>
+        item.id === tipoId
+          ? {
+              ...item,
+              nome: payload.nome?.trim() || item.nome,
+              descricao: payload.descricao?.trim() || item.descricao,
+              categoriaOperacional: payload.categoriaOperacional ?? item.categoriaOperacional,
+              grupoDre: payload.grupoDre ?? item.grupoDre,
+              centroCustoPadrao: payload.centroCustoPadrao?.trim() || item.centroCustoPadrao,
+            }
+          : item,
+      );
+      await fulfillJson(route, tiposConta.find((item) => item.id === tipoId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/gerencial\/financeiro\/tipos-conta-pagar\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const tipoId = path.split("/").at(-2) ?? "";
+      tiposConta = tiposConta.map((item) =>
+        item.id === tipoId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, tiposConta.find((item) => item.id === tipoId) ?? null);
+      return;
+    }
+
+    if (path === "/api/v1/gerencial/financeiro/contas-bancarias" && method === "GET") {
+      const tenantId = resolveTenantId(url);
+      await fulfillJson(route, contasBancarias.filter((item) => item.tenantId === tenantId));
+      return;
+    }
+
+    if (path === "/api/v1/gerencial/financeiro/contas-bancarias" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<AdminContaBancariaSeed>>(request);
+      const created: AdminContaBancariaSeed = {
+        id: nextId("conta", "conta"),
+        tenantId,
+        apelido: payload.apelido?.trim() || "Nova conta",
+        banco: payload.banco?.trim() || "Banco",
+        agencia: payload.agencia?.trim() || "0001",
+        conta: payload.conta?.trim() || "12345",
+        digito: payload.digito?.trim() || "0",
+        tipo: payload.tipo ?? "CORRENTE",
+        titular: payload.titular?.trim() || "Titular",
+        pixChave: payload.pixChave?.trim() || undefined,
+        pixTipo: payload.pixTipo,
+        statusCadastro: "ATIVA",
+      };
+      contasBancarias = [created, ...contasBancarias];
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/gerencial\/financeiro\/contas-bancarias\/[^/]+$/.test(path) && method === "PUT") {
+      const contaId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<AdminContaBancariaSeed>>(request);
+      contasBancarias = contasBancarias.map((item) =>
+        item.id === contaId
+          ? {
+              ...item,
+              apelido: payload.apelido?.trim() || item.apelido,
+              banco: payload.banco?.trim() || item.banco,
+              agencia: payload.agencia?.trim() || item.agencia,
+              conta: payload.conta?.trim() || item.conta,
+              digito: payload.digito?.trim() || item.digito,
+              tipo: payload.tipo ?? item.tipo,
+              titular: payload.titular?.trim() || item.titular,
+              pixChave: payload.pixChave?.trim() || undefined,
+              pixTipo: payload.pixTipo ?? item.pixTipo,
+            }
+          : item,
+      );
+      await fulfillJson(route, contasBancarias.find((item) => item.id === contaId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/gerencial\/financeiro\/contas-bancarias\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const contaId = path.split("/").at(-2) ?? "";
+      contasBancarias = contasBancarias.map((item) =>
+        item.id === contaId
+          ? {
+              ...item,
+              statusCadastro: item.statusCadastro === "ATIVA" ? "INATIVA" : "ATIVA",
+            }
+          : item,
+      );
+      await fulfillJson(route, contasBancarias.find((item) => item.id === contaId) ?? null);
+      return;
+    }
+
+    if (path === "/api/v1/gerencial/financeiro/maquininhas" && method === "GET") {
+      const tenantId = resolveTenantId(url);
+      await fulfillJson(route, maquininhas.filter((item) => item.tenantId === tenantId));
+      return;
+    }
+
+    if (path === "/api/v1/gerencial/financeiro/maquininhas" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<AdminMaquininhaSeed>>(request);
+      const created: AdminMaquininhaSeed = {
+        id: nextId("maquininha", "maquininha"),
+        tenantId,
+        nome: payload.nome?.trim() || "Nova maquininha",
+        adquirente: payload.adquirente ?? "STONE",
+        terminal: payload.terminal?.trim() || "TERM-01",
+        contaBancariaId: payload.contaBancariaId?.trim() || contasBancarias[0]?.id || "",
+        statusCadastro: "ATIVA",
+      };
+      maquininhas = [created, ...maquininhas];
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/gerencial\/financeiro\/maquininhas\/[^/]+$/.test(path) && method === "PUT") {
+      const maquininhaId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<AdminMaquininhaSeed>>(request);
+      maquininhas = maquininhas.map((item) =>
+        item.id === maquininhaId
+          ? {
+              ...item,
+              nome: payload.nome?.trim() || item.nome,
+              adquirente: payload.adquirente ?? item.adquirente,
+              terminal: payload.terminal?.trim() || item.terminal,
+              contaBancariaId: payload.contaBancariaId?.trim() || item.contaBancariaId,
+            }
+          : item,
+      );
+      await fulfillJson(route, maquininhas.find((item) => item.id === maquininhaId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/gerencial\/financeiro\/maquininhas\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const maquininhaId = path.split("/").at(-2) ?? "";
+      maquininhas = maquininhas.map((item) =>
+        item.id === maquininhaId
+          ? {
+              ...item,
+              statusCadastro: item.statusCadastro === "ATIVA" ? "INATIVA" : "ATIVA",
+            }
+          : item,
+      );
+      await fulfillJson(route, maquininhas.find((item) => item.id === maquininhaId) ?? null);
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/atividades" && method === "GET") {
+      const tenantId = resolveTenantId(url);
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivas"), false);
+      await fulfillJson(route, filterActiveItems(atividades.filter((item) => item.tenantId === tenantId), activeOnly));
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/atividades" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<AtividadeSeed> & { descricao?: string; icone?: string; cor?: string; permiteCheckin?: boolean; checkinObrigatorio?: boolean }>(request);
+      const created = {
+        id: nextId("atividade", "atividade"),
+        tenantId,
+        nome: payload.nome?.trim() || "Nova atividade",
+        descricao: payload.descricao?.trim() || undefined,
+        categoria: payload.categoria ?? "OUTRA",
+        icone: payload.icone?.trim() || "",
+        cor: payload.cor?.trim() || "#3de8a0",
+        permiteCheckin: payload.permiteCheckin ?? true,
+        checkinObrigatorio: payload.checkinObrigatorio ?? false,
+        ativo: true,
+      };
+      atividades = [created, ...atividades];
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/atividades\/[^/]+$/.test(path) && method === "PUT") {
+      const atividadeId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<AtividadeSeed> & { descricao?: string; icone?: string; cor?: string; permiteCheckin?: boolean; checkinObrigatorio?: boolean }>(request);
+      atividades = atividades.map((item) =>
+        item.id === atividadeId
+          ? {
+              ...item,
+              nome: payload.nome?.trim() || item.nome,
+              descricao: payload.descricao?.trim() || item.descricao,
+              categoria: payload.categoria ?? item.categoria,
+              icone: payload.icone?.trim() || item.icone,
+              cor: payload.cor?.trim() || item.cor,
+              permiteCheckin: payload.permiteCheckin ?? item.permiteCheckin,
+              checkinObrigatorio: payload.checkinObrigatorio ?? item.checkinObrigatorio,
+              ativo: payload.ativo ?? item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, atividades.find((item) => item.id === atividadeId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/atividades\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const atividadeId = path.split("/").at(-2) ?? "";
+      atividades = atividades.map((item) =>
+        item.id === atividadeId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, atividades.find((item) => item.id === atividadeId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/atividades\/[^/]+$/.test(path) && method === "DELETE") {
+      const atividadeId = path.split("/").at(-1) ?? "";
+      atividades = atividades.filter((item) => item.id !== atividadeId);
+      await fulfillNoContent(route);
+      return;
+    }
+
+      await fulfillJson(route, { message: `Unhandled ${method} ${path}` }, 404);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await fulfillJson(route, { message: `Admin stub failure: ${message}` }, 500);
+    }
+  });
+}
