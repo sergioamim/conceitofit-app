@@ -337,7 +337,7 @@ test.describe("Backoffice segurança rollout", () => {
     await page.goto("/admin/seguranca");
     await expect(page.getByRole("heading", { name: "Segurança global" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Revisões e auditoria" }).click();
+    await page.getByRole("link", { name: "Revisões e auditoria", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Revisões e auditoria" })).toBeVisible();
     await expect(page.getByText("Recertificar acesso amplo")).toBeVisible();
 

@@ -42,12 +42,14 @@ import {
   updateUserMembership,
   updateUserNewUnitsPolicy,
 } from "@/lib/backoffice/seguranca";
+import { listPerfisService } from "@/lib/rbac/services";
 import type {
   Academia,
   GlobalAdminAccessException,
   GlobalAdminMembership,
   GlobalAdminNewUnitsPolicyScope,
   GlobalAdminUserDetail,
+  RbacPerfil,
   Tenant,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -87,6 +89,9 @@ export default function AdminSegurancaUsuarioDetalhePage() {
   const [error, setError] = useState<string | null>(null);
   const [newTenantId, setNewTenantId] = useState("");
   const [newMembershipDefault, setNewMembershipDefault] = useState(false);
+  const [newMembershipProfileId, setNewMembershipProfileId] = useState("");
+  const [newMembershipProfiles, setNewMembershipProfiles] = useState<RbacPerfil[]>([]);
+  const [loadingNewMembershipProfiles, setLoadingNewMembershipProfiles] = useState(false);
   const [profileSelection, setProfileSelection] = useState<Record<string, string>>({});
   const [policyEnabled, setPolicyEnabled] = useState("NAO");
   const [policyScope, setPolicyScope] = useState<GlobalAdminNewUnitsPolicyScope>("ACADEMIA_ATUAL");
@@ -142,6 +147,21 @@ export default function AdminSegurancaUsuarioDetalhePage() {
     [membershipTenantIds, unidades]
   );
 
+  const selectedNewTenant = useMemo(
+    () => unidades.find((tenant) => tenant.id === newTenantId) ?? null,
+    [newTenantId, unidades]
+  );
+
+  const selectedNewTenantAcademia = useMemo(
+    () => academias.find((academia) => academia.id === (selectedNewTenant?.academiaId ?? selectedNewTenant?.groupId)) ?? null,
+    [academias, selectedNewTenant]
+  );
+
+  const selectedNewMembershipProfile = useMemo(
+    () => newMembershipProfiles.find((profile) => profile.id === newMembershipProfileId) ?? null,
+    [newMembershipProfileId, newMembershipProfiles]
+  );
+
   const sortedMemberships = useMemo(() => {
     return [...(detail?.memberships ?? [])].sort((left, right) => {
       if (left.defaultTenant !== right.defaultTenant) return left.defaultTenant ? -1 : 1;
@@ -159,6 +179,46 @@ export default function AdminSegurancaUsuarioDetalhePage() {
     ];
     return [...new Set(items)];
   }, [detail]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadNewMembershipProfiles() {
+      if (!newTenantId) {
+        setNewMembershipProfiles([]);
+        setNewMembershipProfileId("");
+        return;
+      }
+
+      setLoadingNewMembershipProfiles(true);
+      try {
+        const response = await listPerfisService({
+          tenantId: newTenantId,
+          includeInactive: false,
+          page: 0,
+          size: 100,
+        });
+        if (!mounted) return;
+        setNewMembershipProfiles(response.items.filter((profile) => profile.active));
+        setNewMembershipProfileId("");
+      } catch (loadProfilesError) {
+        if (!mounted) return;
+        toast({
+          title: "Não foi possível carregar os papéis da unidade",
+          description: normalizeErrorMessage(loadProfilesError),
+          variant: "destructive",
+        });
+        setNewMembershipProfiles([]);
+      } finally {
+        if (mounted) setLoadingNewMembershipProfiles(false);
+      }
+    }
+
+    void loadNewMembershipProfiles();
+    return () => {
+      mounted = false;
+    };
+  }, [newTenantId, toast]);
 
   async function runMutation(
     action: () => Promise<GlobalAdminUserDetail>,
@@ -203,20 +263,42 @@ export default function AdminSegurancaUsuarioDetalhePage() {
       toast({ title: "Selecione uma unidade", variant: "destructive" });
       return;
     }
+    if (!newMembershipProfileId) {
+      toast({
+        title: "Escolha o papel do novo acesso",
+        description: "A concessão principal agora exige perfil explícito no mesmo fluxo.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSaving(true);
     try {
-      const updated = await addUserMembership({
+      const membershipSnapshot = await addUserMembership({
         userId,
         tenantId: newTenantId,
         defaultTenant: newMembershipDefault,
       });
+      const createdMembership = membershipSnapshot.memberships.find((membership) => membership.tenantId === newTenantId);
+      if (!createdMembership) {
+        throw new Error("A unidade foi associada, mas o vínculo não voltou no resumo do backend.");
+      }
+      const updated = await assignUserMembershipProfile({
+        userId,
+        membershipId: createdMembership.id,
+        perfilId: newMembershipProfileId,
+      });
       updateDetailSnapshot(updated);
       setNewTenantId("");
       setNewMembershipDefault(false);
-      toast({ title: "Acesso associado", description: "A unidade foi vinculada à pessoa." });
+      setNewMembershipProfileId("");
+      setNewMembershipProfiles([]);
+      toast({
+        title: "Acesso concedido",
+        description: "A unidade foi vinculada com papel explícito e resumo de impacto.",
+      });
     } catch (mutationError) {
       toast({
-        title: "Não foi possível associar a unidade",
+        title: "Não foi possível conceder o acesso",
         description: normalizeErrorMessage(mutationError),
         variant: "destructive",
       });
@@ -403,12 +485,12 @@ export default function AdminSegurancaUsuarioDetalhePage() {
           <TabsContent value="acessos" className="space-y-4">
             <Card>
               <CardHeader className="space-y-1">
-                <CardTitle className="text-base">Adicionar escopo operacional</CardTitle>
+                <CardTitle className="text-base">Conceder novo acesso</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Vincule a pessoa a uma nova unidade e, se necessário, já marque essa unidade como base operacional.
+                  Escolha o escopo e o papel no mesmo fluxo, com um resumo simples antes da confirmação.
                 </p>
               </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px_auto]">
+              <CardContent className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px_minmax(0,1fr)_auto]">
                 <div className="space-y-2">
                   <Label>Unidade</Label>
                   <Select value={newTenantId || "__empty__"} onValueChange={(value) => setNewTenantId(value === "__empty__" ? "" : value)}>
@@ -440,10 +522,59 @@ export default function AdminSegurancaUsuarioDetalhePage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Papel inicial</Label>
+                  <Select
+                    value={newMembershipProfileId || "__empty__"}
+                    onValueChange={(value) => setNewMembershipProfileId(value === "__empty__" ? "" : value)}
+                    disabled={!newTenantId || loadingNewMembershipProfiles}
+                  >
+                    <SelectTrigger aria-label="Papel inicial do acesso">
+                      <SelectValue placeholder={loadingNewMembershipProfiles ? "Carregando papéis" : "Selecione o papel"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__empty__">Selecione</SelectItem>
+                      {newMembershipProfiles.map((profile) => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          {profile.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex items-end">
-                  <Button onClick={handleCreateMembership} disabled={saving || !newTenantId}>
-                    Associar unidade
+                  <Button onClick={handleCreateMembership} disabled={saving || !newTenantId || !newMembershipProfileId}>
+                    Confirmar acesso
                   </Button>
+                </div>
+                <div className="rounded-2xl border border-border bg-secondary/30 px-4 py-4 xl:col-span-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview do impacto</p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    <SummaryBlock
+                      label="Escopo"
+                      value={
+                        selectedNewTenant
+                          ? selectedNewTenantAcademia?.nome
+                            ? `${selectedNewTenantAcademia.nome} · ${selectedNewTenant.nome}`
+                            : selectedNewTenant.nome
+                          : "Selecione a unidade"
+                      }
+                    />
+                    <SummaryBlock
+                      label="Papel"
+                      value={selectedNewMembershipProfile?.displayName ?? "Escolha o papel explicitamente"}
+                      secondary={selectedNewMembershipProfile?.description}
+                    />
+                    <SummaryBlock
+                      label="Efeito imediato"
+                      value={newMembershipDefault ? "Também vira base operacional" : "Acesso adicional sem trocar a base"}
+                      secondary={
+                        selectedNewMembershipProfile
+                          ? "O acesso nasce com papel definido, sem depender de perfil implícito."
+                          : "Sem papel não há concessão do novo acesso."
+                      }
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

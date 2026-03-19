@@ -2,7 +2,7 @@
 
 **Title:** Implementar Perfis padronizados e Catálogo de funcionalidades
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 50, 51
 
@@ -22,7 +22,7 @@ Cobrir a nova governança com testes de integração e E2E para lista, detalhe, 
 
 ### 52.1. Preparar clients e tipos de perfis padronizados, versões e funcionalidades
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None
 
 Atualizar a camada de contrato do frontend para a nova governança.
@@ -33,7 +33,7 @@ Evoluir types, normalizadores e API clients para suportar perfis versionados, es
 
 ### 52.2. Construir a tela de Perfis padronizados com resumo e histórico
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 52.1
 
 Governar papéis reutilizáveis sem expor apenas artefatos técnicos.
@@ -44,7 +44,7 @@ Criar a lista e o detalhe de perfis com nome amigável, objetivo, escopo recomen
 
 ### 52.3. Implementar o Catálogo de funcionalidades com busca, filtros e criticidade
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 52.1
 
 Materializar a demanda de listar tudo que pode ser liberado no sistema.
@@ -55,7 +55,7 @@ Criar a tela do catálogo com filtros por módulo, ação, criticidade e escopo,
 
 ### 52.4. Entregar edição visual da matriz de permissões com preview de impacto
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 52.2, 52.3
 
 Permitir ajuste de perfil com visibilidade real do efeito da mudança.
@@ -66,7 +66,7 @@ Implementar a matriz de funcionalidades por perfil com filtros, seleção contro
 
 ### 52.5. Cobrir perfis e catálogo com testes de regressão e contrato
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 52.4
 
 Fechar a trilha de confiança da nova governança fina de RBAC.

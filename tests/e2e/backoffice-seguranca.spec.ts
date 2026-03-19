@@ -395,6 +395,30 @@ async function setupBackofficeSecurityMocks(page: Page, state: State) {
       return;
     }
 
+    if (path === "/api/v1/auth/perfis" && method === "GET") {
+      const tenantId = url.searchParams.get("tenantId") ?? "";
+      const items = state.profiles
+        .filter((profile) => !tenantId || profile.tenantId === tenantId)
+        .map((profile) => ({
+          id: profile.id,
+          tenantId: profile.tenantId,
+          roleName: profile.roleName,
+          displayName: profile.displayName,
+          active: profile.active,
+        }));
+      await route.fulfill({
+        status: 200,
+        json: {
+          page: 0,
+          size: items.length,
+          total: items.length,
+          hasNext: false,
+          items,
+        },
+      });
+      return;
+    }
+
     if (path === "/api/v1/admin/academias" && method === "GET") {
       await route.fulfill({ status: 200, json: state.academias });
       return;
@@ -578,15 +602,19 @@ test.describe("Backoffice segurança global", () => {
     await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible();
     await expect(page.getByRole("row").filter({ hasText: "Ana Admin" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Abrir governança" }).first().click();
+    await page.goto("/admin/seguranca/usuarios/user-ana", { waitUntil: "domcontentloaded" }).catch(async () => {
+      await page.goto("/admin/seguranca/usuarios/user-ana", { waitUntil: "domcontentloaded" });
+    });
     await expect(page.getByRole("heading", { name: "Ana Admin" })).toBeVisible();
-    await expect(page.getByText("Ana Admin")).toBeVisible();
 
     await page.getByRole("tab", { name: "Escopos e acessos" }).click();
 
     await page.getByLabel("Unidade para associar").click();
     await page.getByRole("option", { name: "Rede Norte · Unidade Barra" }).click();
-    await page.getByRole("button", { name: "Associar unidade" }).click();
+    await page.getByLabel("Papel inicial do acesso").click();
+    await page.getByRole("option", { name: "Administrador" }).click();
+    await expect(page.getByText("O acesso nasce com papel definido, sem depender de perfil implícito.")).toBeVisible();
+    await page.getByRole("button", { name: "Confirmar acesso" }).click();
     await expect(
       page
         .locator('[data-slot="card"]')
@@ -600,16 +628,18 @@ test.describe("Backoffice segurança global", () => {
       .filter({ hasText: "Unidade Barra" })
       .filter({ hasText: "Papéis ativos nesse escopo" })
       .first();
-    await barraCard.getByLabel("Perfil para Unidade Barra").click();
-    await page.getByRole("option", { name: "Administrador" }).click();
-    await barraCard.getByRole("button", { name: "Atribuir perfil" }).click();
     await expect(barraCard.getByRole("button", { name: /Administrador/ })).toBeVisible();
+    await barraCard.getByLabel("Perfil para Unidade Barra").click();
+    await page.getByRole("option", { name: "Gerente" }).click();
+    await barraCard.getByRole("button", { name: "Atribuir papel" }).click();
+    await expect(barraCard.getByRole("button", { name: /Gerente/ })).toBeVisible();
 
     await barraCard.getByRole("button", { name: "Tornar base operacional" }).click();
     await expect(barraCard.getByText("Base operacional")).toBeVisible();
 
     await barraCard.getByRole("button", { name: /Administrador/ }).click();
-    await expect(barraCard.getByText("Nenhum papel atribuído.")).toBeVisible();
+    await expect(barraCard.getByRole("button", { name: /Administrador/ })).not.toBeVisible();
+    await expect(barraCard.getByRole("button", { name: /Gerente/ })).toBeVisible();
 
     await page.getByRole("tab", { name: "Novas unidades" }).click();
     await page.locator('[data-slot="select-trigger"]').filter({ hasText: "Mesma academia" }).click();

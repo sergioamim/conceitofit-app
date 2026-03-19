@@ -1739,3 +1739,61 @@ export interface GlobalAdminSecurityOverview {
   rolloutPercentage?: number;
   compatibilityModeUsers?: number;
 }
+
+export type SecurityBusinessScope = "UNIDADE" | "ACADEMIA" | "REDE";
+
+export interface SecurityFeatureCatalogItem {
+  featureKey: string;
+  moduleKey: string;
+  moduleLabel: string;
+  capabilityLabel: string;
+  businessLabel: string;
+  description: string;
+  actionLabels: string[];
+  permissionLevels: RbacPermission[];
+  riskLevel: GlobalAdminRiskLevel;
+  scopes: SecurityBusinessScope[];
+  requiresAudit: boolean;
+  requiresApproval: boolean;
+  requiresMfa: boolean;
+  dependencies: string[];
+  enabled: boolean;
+  rollout: number;
+  assignedProfiles: string[];
+}
+
+export interface SecurityProfileImpactSummary {
+  users: number;
+  memberships: number;
+  academias: number;
+  exceptions: number;
+  broadAccessUsers: number;
+  pendingReviews: number;
+}
+
+export interface SecurityProfileMatrixItem extends SecurityFeatureCatalogItem {
+  permissions: RbacPermission[];
+  impactedUsers: number;
+  impactedMemberships: number;
+}
+
+export interface SecurityStandardizedProfile {
+  id: UUID;
+  tenantId: UUID;
+  roleName: string;
+  displayName: string;
+  description?: string;
+  active: boolean;
+  objective: string;
+  recommendedScope: SecurityBusinessScope;
+  riskLevel: GlobalAdminRiskLevel;
+  modules: string[];
+  versionLabel: string;
+  lastUpdatedAt?: LocalDateTime;
+  featureCount: number;
+  criticalFeatureCount: number;
+  usersImpacted: number;
+  membershipsImpacted: number;
+  impact: SecurityProfileImpactSummary;
+  matrix: SecurityProfileMatrixItem[];
+}

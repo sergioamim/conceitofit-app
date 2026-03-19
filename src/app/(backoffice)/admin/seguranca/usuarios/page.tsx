@@ -13,16 +13,16 @@ import {
   SecurityRiskBadge,
 } from "@/components/security/security-badges";
 import { SecuritySectionFeedback } from "@/components/security/security-feedback";
+import { PaginatedTable } from "@/components/shared/paginated-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TableCell } from "@/components/ui/table";
-import { PaginatedTable } from "@/components/shared/paginated-table";
 import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
 import { listGlobalSecurityUsers } from "@/lib/backoffice/seguranca";
-import type { Academia, GlobalAdminUserSummary, Tenant } from "@/lib/types";
+import type { Academia, GlobalAdminReviewStatus, GlobalAdminUserSummary, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 type Filters = {
@@ -32,11 +32,22 @@ type Filters = {
   status: string;
   profile: string;
   eligibleOnly: boolean;
+  reviewStatus: "" | GlobalAdminReviewStatus;
+  broadAccessOnly: boolean;
+  exceptionsOnly: boolean;
 };
 
 const PAGE_SIZE = 20;
+const SNAPSHOT_PAGE_SIZE = 100;
+const SNAPSHOT_MAX_PAGES = 10;
 
 function buildInitialFilters(searchParams: URLSearchParams): Filters {
+  const reviewStatusRaw = searchParams.get("reviewStatus")?.trim() ?? "";
+  const reviewStatus =
+    reviewStatusRaw === "EM_DIA" || reviewStatusRaw === "PENDENTE" || reviewStatusRaw === "VENCIDA"
+      ? reviewStatusRaw
+      : "";
+
   return {
     query: searchParams.get("query")?.trim() ?? "",
     academiaId: searchParams.get("academiaId")?.trim() ?? "",
@@ -44,7 +55,40 @@ function buildInitialFilters(searchParams: URLSearchParams): Filters {
     status: searchParams.get("status")?.trim() ?? "ATIVO",
     profile: searchParams.get("profile")?.trim() ?? "",
     eligibleOnly: searchParams.get("eligible") === "1",
+    reviewStatus,
+    broadAccessOnly: searchParams.get("broadAccess") === "1",
+    exceptionsOnly: searchParams.get("exceptions") === "1",
   };
+}
+
+function matchesUserFilters(item: GlobalAdminUserSummary, filters: Filters) {
+  if (filters.reviewStatus && item.reviewStatus !== filters.reviewStatus) return false;
+  if (filters.broadAccessOnly && !item.broadAccess) return false;
+  if (filters.exceptionsOnly && (item.exceptionsCount ?? 0) <= 0) return false;
+  return true;
+}
+
+async function loadUsersSnapshot(filters: Filters) {
+  const items: GlobalAdminUserSummary[] = [];
+
+  for (let currentPage = 0; currentPage < SNAPSHOT_MAX_PAGES; currentPage += 1) {
+    const response = await listGlobalSecurityUsers({
+      query: filters.query,
+      academiaId: filters.academiaId || undefined,
+      tenantId: filters.tenantId || undefined,
+      status: filters.status === "TODOS" ? undefined : filters.status,
+      profile: filters.profile || undefined,
+      eligibleForNewUnits: filters.eligibleOnly || undefined,
+      page: currentPage,
+      size: SNAPSHOT_PAGE_SIZE,
+    });
+    items.push(...response.items);
+    if (!response.hasNext || response.items.length === 0) {
+      break;
+    }
+  }
+
+  return items.filter((item) => matchesUserFilters(item, filters));
 }
 
 export default function AdminSegurancaUsuariosPage() {
@@ -55,11 +99,7 @@ export default function AdminSegurancaUsuariosPage() {
   const [filters, setFilters] = useState<Filters>(() => buildInitialFilters(searchParams));
   const [appliedFilters, setAppliedFilters] = useState<Filters>(() => buildInitialFilters(searchParams));
   const [page, setPage] = useState(0);
-  const [result, setResult] = useState({
-    items: [] as GlobalAdminUserSummary[],
-    total: 0,
-    hasNext: false,
-  });
+  const [allItems, setAllItems] = useState<GlobalAdminUserSummary[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,19 +109,27 @@ export default function AdminSegurancaUsuariosPage() {
     return unidades.filter((item) => (item.academiaId ?? item.groupId) === filters.academiaId);
   }, [filters.academiaId, unidades]);
 
+  const pagedItems = useMemo(() => {
+    const start = page * PAGE_SIZE;
+    return allItems.slice(start, start + PAGE_SIZE);
+  }, [allItems, page]);
+
+  const hasNext = useMemo(() => (page + 1) * PAGE_SIZE < allItems.length, [allItems.length, page]);
+
   const summary = useMemo(() => {
-    const pageItems = result.items;
     return {
-      broadAccess: pageItems.filter((item) => item.broadAccess).length,
-      pendingReview: pageItems.filter((item) => item.reviewStatus === "PENDENTE" || item.reviewStatus === "VENCIDA").length,
-      compatibility: pageItems.filter((item) => item.compatibilityMode).length,
-      exceptions: pageItems.reduce((total, item) => total + (item.exceptionsCount ?? 0), 0),
+      broadAccess: allItems.filter((item) => item.broadAccess).length,
+      pendingReview: allItems.filter((item) => item.reviewStatus === "PENDENTE" || item.reviewStatus === "VENCIDA")
+        .length,
+      compatibility: allItems.filter((item) => item.compatibilityMode).length,
+      exceptions: allItems.reduce((total, item) => total + (item.exceptionsCount ?? 0), 0),
     };
-  }, [result.items]);
+  }, [allItems]);
 
   useEffect(() => {
-    setFilters(buildInitialFilters(searchParams));
-    setAppliedFilters(buildInitialFilters(searchParams));
+    const next = buildInitialFilters(searchParams);
+    setFilters(next);
+    setAppliedFilters(next);
     setPage(0);
   }, [searchParams]);
 
@@ -119,26 +167,13 @@ export default function AdminSegurancaUsuariosPage() {
       setLoading(true);
       try {
         setError(null);
-        const response = await listGlobalSecurityUsers({
-          query: appliedFilters.query,
-          academiaId: appliedFilters.academiaId || undefined,
-          tenantId: appliedFilters.tenantId || undefined,
-          status: appliedFilters.status === "TODOS" ? undefined : appliedFilters.status,
-          profile: appliedFilters.profile || undefined,
-          eligibleForNewUnits: appliedFilters.eligibleOnly || undefined,
-          page,
-          size: PAGE_SIZE,
-        });
+        const responseItems = await loadUsersSnapshot(appliedFilters);
         if (!mounted) return;
-        setResult({
-          items: response.items,
-          total: response.total ?? response.items.length,
-          hasNext: response.hasNext,
-        });
+        setAllItems(responseItems);
       } catch (loadError) {
         if (!mounted) return;
         setError(normalizeErrorMessage(loadError));
-        setResult({ items: [], total: 0, hasNext: false });
+        setAllItems([]);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -148,7 +183,13 @@ export default function AdminSegurancaUsuariosPage() {
     return () => {
       mounted = false;
     };
-  }, [appliedFilters, page]);
+  }, [appliedFilters]);
+
+  useEffect(() => {
+    if (page > 0 && page * PAGE_SIZE >= allItems.length) {
+      setPage(0);
+    }
+  }, [allItems.length, page]);
 
   function applyFilters() {
     const params = new URLSearchParams();
@@ -158,6 +199,9 @@ export default function AdminSegurancaUsuariosPage() {
     if (filters.status && filters.status !== "ATIVO") params.set("status", filters.status);
     if (filters.profile.trim()) params.set("profile", filters.profile.trim());
     if (filters.eligibleOnly) params.set("eligible", "1");
+    if (filters.reviewStatus) params.set("reviewStatus", filters.reviewStatus);
+    if (filters.broadAccessOnly) params.set("broadAccess", "1");
+    if (filters.exceptionsOnly) params.set("exceptions", "1");
     setAppliedFilters(filters);
     setPage(0);
     router.replace(`/admin/seguranca/usuarios${params.toString() ? `?${params.toString()}` : ""}`);
@@ -171,6 +215,9 @@ export default function AdminSegurancaUsuariosPage() {
       status: "ATIVO",
       profile: "",
       eligibleOnly: false,
+      reviewStatus: "",
+      broadAccessOnly: false,
+      exceptionsOnly: false,
     } satisfies Filters;
     setFilters(next);
     setAppliedFilters(next);
@@ -189,17 +236,17 @@ export default function AdminSegurancaUsuariosPage() {
       }
     >
       <div className="grid gap-4 xl:grid-cols-4">
-        <StatCard title="Resultados" value={loading ? "…" : String(result.total)} subtitle="Pessoas encontradas para o recorte atual" />
-        <StatCard title="Acessos amplos" value={loading ? "…" : String(summary.broadAccess)} subtitle="Pessoas com alcance acima do padrão" />
-        <StatCard title="Revisões acionáveis" value={loading ? "…" : String(summary.pendingReview)} subtitle="Pendentes ou vencidas no recorte" />
-        <StatCard title="Exceções visíveis" value={loading ? "…" : String(summary.exceptions)} subtitle="Somatório do que precisa governança" />
+        <StatCard title="Resultados" value={loading ? "…" : String(allItems.length)} subtitle="Pessoas no recorte atual" />
+        <StatCard title="Acessos amplos" value={loading ? "…" : String(summary.broadAccess)} subtitle="Pessoas acima do padrão esperado" />
+        <StatCard title="Revisões acionáveis" value={loading ? "…" : String(summary.pendingReview)} subtitle="Pendentes ou vencidas" />
+        <StatCard title="Exceções visíveis" value={loading ? "…" : String(summary.exceptions)} subtitle="Somatório de exceções no recorte" />
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Filtros de operação</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <CardContent className="grid gap-4 md:grid-cols-3 xl:grid-cols-8">
           <div className="space-y-2 xl:col-span-2">
             <Label htmlFor="security-user-query">Pessoa ou e-mail</Label>
             <Input
@@ -209,6 +256,7 @@ export default function AdminSegurancaUsuariosPage() {
               onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))}
             />
           </div>
+
           <div className="space-y-2">
             <Label>Academia</Label>
             <Select
@@ -234,6 +282,7 @@ export default function AdminSegurancaUsuariosPage() {
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
             <Label>Unidade</Label>
             <Select
@@ -255,9 +304,13 @@ export default function AdminSegurancaUsuariosPage() {
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select value={filters.status || "ATIVO"} onValueChange={(value) => setFilters((current) => ({ ...current, status: value }))}>
+            <Select
+              value={filters.status || "ATIVO"}
+              onValueChange={(value) => setFilters((current) => ({ ...current, status: value }))}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -269,6 +322,7 @@ export default function AdminSegurancaUsuariosPage() {
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="security-user-profile">Papel em uso</Label>
             <Input
@@ -278,6 +332,7 @@ export default function AdminSegurancaUsuariosPage() {
               onChange={(event) => setFilters((current) => ({ ...current, profile: event.target.value }))}
             />
           </div>
+
           <div className="space-y-2">
             <Label>Novas unidades</Label>
             <Select
@@ -294,7 +349,62 @@ export default function AdminSegurancaUsuariosPage() {
             </Select>
           </div>
 
-          <div className="flex gap-2 md:col-span-3 xl:col-span-6">
+          <div className="space-y-2">
+            <Label>Revisão</Label>
+            <Select
+              value={filters.reviewStatus || "__all__"}
+              onValueChange={(value) =>
+                setFilters((current) => ({
+                  ...current,
+                  reviewStatus: value === "__all__" ? "" : (value as GlobalAdminReviewStatus),
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todas</SelectItem>
+                <SelectItem value="EM_DIA">Em dia</SelectItem>
+                <SelectItem value="PENDENTE">Pendente</SelectItem>
+                <SelectItem value="VENCIDA">Vencida</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Acesso amplo</Label>
+            <Select
+              value={filters.broadAccessOnly ? "SIM" : "TODOS"}
+              onValueChange={(value) => setFilters((current) => ({ ...current, broadAccessOnly: value === "SIM" }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value="SIM">Só amplos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Exceções</Label>
+            <Select
+              value={filters.exceptionsOnly ? "SIM" : "TODOS"}
+              onValueChange={(value) => setFilters((current) => ({ ...current, exceptionsOnly: value === "SIM" }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value="SIM">Só com exceção</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex gap-2 md:col-span-3 xl:col-span-8">
             <Button onClick={applyFilters} disabled={loading || loadingCatalog}>
               Aplicar filtros
             </Button>
@@ -316,14 +426,14 @@ export default function AdminSegurancaUsuariosPage() {
           { label: "Estado" },
           { label: "Ações", className: "text-right" },
         ]}
-        items={result.items}
+        items={pagedItems}
         emptyText="Nenhuma pessoa administrativa encontrada para os filtros atuais."
         getRowKey={(item) => item.id}
         itemLabel="pessoas"
         page={page}
         pageSize={PAGE_SIZE}
-        total={result.total}
-        hasNext={result.hasNext}
+        total={allItems.length}
+        hasNext={hasNext}
         onPrevious={() => setPage((current) => Math.max(0, current - 1))}
         onNext={() => setPage((current) => current + 1)}
         renderCells={(item) => (
@@ -359,6 +469,9 @@ export default function AdminSegurancaUsuariosPage() {
                 <SecurityBroadAccessBadge broadAccess={item.broadAccess} />
                 <SecurityCompatibilityBadge compatibilityMode={item.compatibilityMode} />
               </div>
+              {(item.exceptionsCount ?? 0) > 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">{item.exceptionsCount} exceção(ões) visíveis</p>
+              ) : null}
             </TableCell>
             <TableCell className="px-4 py-3">
               <div className="space-y-1 text-sm">
