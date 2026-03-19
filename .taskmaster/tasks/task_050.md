@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 37
+**Dependencies:** 37 ✓
 
 **Priority:** high
 
@@ -23,7 +23,7 @@ Validar a IA com testes de navegação e smoke visual, garantindo consistência 
 ### 50.1. Reestruturar a navegação principal da segurança
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Substituir a navegação orientada a termos técnicos por áreas de produto.
 
@@ -34,7 +34,7 @@ Reorganizar a entrada de segurança para trabalhar com `Visão geral`, `Usuário
 ### 50.2. Padronizar linguagem de negócio nas superfícies de segurança
 
 **Status:** done  
-**Dependencies:** 50.1
+**Dependencies:** 50.1  
 
 Trocar labels técnicas por termos compreensíveis sem perder rastreabilidade.
 
@@ -45,7 +45,7 @@ Substituir `grant`, `feature`, `roleName` e termos similares por linguagem de pr
 ### 50.3. Definir layouts base, estados vazios e resumos textuais da nova área
 
 **Status:** done  
-**Dependencies:** 50.1, 50.2
+**Dependencies:** 50.1, 50.2  
 
 Dar consistência visual e semântica para todas as páginas de segurança.
 
@@ -56,7 +56,7 @@ Criar padrões de cabeçalho, filtros, cards de resumo, empty states, avisos de 
 ### 50.4. Alinhar tipagem e feature flags para o rollout gradual da segurança
 
 **Status:** done  
-**Dependencies:** 50.3
+**Dependencies:** 50.3  
 
 Permitir convivência controlada entre a IA antiga e a nova.
 

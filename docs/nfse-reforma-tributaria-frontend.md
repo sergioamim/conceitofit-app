@@ -19,7 +19,7 @@ Esses campos ficam em `/administrativo/nfse` e influenciam diretamente a emissã
 3. Salvar a configuração.
 4. Validar a configuração antes de tentar emitir NFSe em `Recebimentos` ou `Pagamentos`.
 
-Enquanto o status não for `Configurada`, o frontend passa a exibir bloqueio fiscal nas superfícies operacionais.
+Enquanto o status não for `Configurada`, o frontend passa a exibir bloqueio fiscal apenas nas superfícies que realmente tentam emitir NFSe ou dependem da configuração fiscal para concluir a ação.
 
 ## Superfícies impactadas
 
@@ -27,7 +27,12 @@ Enquanto o status não for `Configurada`, o frontend passa a exibir bloqueio fis
 - `/pagamentos`
 - `/pagamentos/emitir-em-lote`
 - `/gerencial/recebimentos`
-- `/clientes/[id]`
+
+### Regra específica do perfil do cliente
+
+- `/clientes/[id]` não deve consultar `GET /api/v1/administrativo/nfse/configuracao-atual` no carregamento inicial do perfil.
+- A aba `NFS-e` do cliente deve focar na listagem dos documentos já emitidos e estados fiscais vinculados aos pagamentos já faturados.
+- Qualquer carregamento adicional da aba `NFS-e` deve acontecer sob demanda, somente após o usuário navegar para essa aba.
 
 ## Contratos usados pelo frontend
 
@@ -80,7 +85,8 @@ Cobertura mínima:
 
 - operadores conseguem identificar campos faltantes antes de chamar o backend;
 - telas operacionais não deixam a emissão seguir silenciosamente quando a unidade está pendente;
-- a aba NFS-e do cliente diferencia emissão concluída de pendência ou bloqueio;
+- a aba NFS-e do cliente diferencia emissão concluída de pendência ou bloqueio a partir dos dados fiscais já existentes no pagamento, sem depender de `configuracao-atual` no carregamento inicial;
+- o perfil do cliente não faz fetch fiscal adicional antes de o usuário abrir a aba `NFS-e`;
 - mensagens do backend fiscal aparecem sem serem mascaradas por textos genéricos.
 
 ## Riscos residuais

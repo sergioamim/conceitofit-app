@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 19, 20
+**Dependencies:** 19 ✓, 20 ✓
 
 **Priority:** high
 
@@ -29,7 +29,7 @@ Montar a espinha dorsal da experiencia.
 
 **Details:**
 
-Implementar cabeçalho com nome, autor/responsável, ações de salvar/exportar/imprimir/fechar, metadados obrigatorios do template e o layout base compartilhado entre template e treino atribuido.
+Implementar cabecalho com nome, autor/responsavel, acoes de salvar/exportar/imprimir/fechar, metadados obrigatorios do template e o layout base compartilhado entre template e treino atribuido.
 
 ### 21.2. Implementar blocos e series em abas com CRUD e reorder
 
@@ -40,7 +40,7 @@ Dar estrutura real ao treino.
 
 **Details:**
 
-Permitir criar, editar, duplicar, remover e reordenar blocos/séries nomeados como abas horizontais (`A`, `B`, `C`, `+`), mantendo o bloco ativo, o drag handle e os estados coerentes.
+Permitir criar, editar, duplicar, remover e reordenar blocos/series nomeados como abas horizontais (`A`, `B`, `C`, `+`), mantendo o bloco ativo, o drag handle e os estados coerentes.
 
 ### 21.3. Implementar grade central com edicao inline por exercicio
 
@@ -51,7 +51,7 @@ Reproduzir a experiencia operacional densa das referencias.
 
 **Details:**
 
-Construir a grade de itens de exercício com edição inline de séries, objetivo, carga, unidade, intervalo, regulagem e observações, incluindo reorder da lista e suporte a campos migrados invalidos para revisao tecnica.
+Construir a grade de itens de exercicio com edicao inline de series, objetivo, carga, unidade, intervalo, regulagem e observacoes, incluindo reorder da lista e suporte a campos migrados invalidos para revisao tecnica.
 
 ### 21.4. Implementar tecnicas especiais e composicoes por linha
 
@@ -62,7 +62,7 @@ Fechar os comportamentos mais caracteristicos do editor.
 
 **Details:**
 
-Adicionar suporte a `conjugado`, `progressivo`, `drop-set` e `replicar serie`, com indicacao visual na própria linha, composicoes coerentes e validacoes compativeis com snapshot/publicacao.
+Adicionar suporte a `conjugado`, `progressivo`, `drop-set` e `replicar serie`, com indicacao visual na propria linha, composicoes coerentes e validacoes compativeis com snapshot/publicacao.
 
 ### 21.5. Implementar salvar, exportar, imprimir e estados do editor
 
@@ -73,4 +73,4 @@ Concluir a experiencia funcional da montagem.
 
 **Details:**
 
-Finalizar ações de salvar rascunho, enviar para revisao, publicar quando permitido, exportar/imprimir e refletir corretamente os estados de edição, validação e saída do editor.
+Finalizar acoes de salvar rascunho, enviar para revisao, publicar quando permitido, exportar/imprimir e refletir corretamente os estados de edicao, validacao e saida do editor.

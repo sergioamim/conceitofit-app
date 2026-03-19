@@ -186,7 +186,12 @@ async function installClienteDeleteMocks(
     }
 
     if (
-      (path === "/api/v1/comercial/adesoes" || path === "/api/v1/comercial/matriculas")
+      (
+        path === "/api/v1/comercial/adesoes"
+        || path === "/api/v1/comercial/matriculas"
+        || path === `/api/v1/comercial/alunos/${ALUNO.id}/adesoes`
+        || path === `/api/v1/comercial/alunos/${ALUNO.id}/matriculas`
+      )
       && method === "GET"
     ) {
       await fulfillJson(route, []);

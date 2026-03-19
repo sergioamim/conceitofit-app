@@ -23,7 +23,7 @@ Cobrir o adapter e a tela com testes unitarios/componentes para validacao, seria
 ### 35.1. Fechar contrato alvo e lacunas da tela atual
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Comparar o contrato atual do frontend com o novo contrato fiscal do backend e consolidar os gaps funcionais.
 
@@ -34,7 +34,7 @@ Revisar `src/lib/types.ts`, `src/lib/api/admin-financeiro.ts` e `src/app/(app)/a
 ### 35.2. Atualizar tipos, normalizadores e adapter da configuracao NFSe
 
 **Status:** done  
-**Dependencies:** 35.1
+**Dependencies:** 35.1  
 
 Levar os novos campos fiscais para a camada de tipos e API client do frontend.
 
@@ -45,7 +45,7 @@ Atualizar `NfseConfiguracao`, enums auxiliares, normalizadores, defaults e seria
 ### 35.3. Refatorar formulario e checklist da pagina administrativo/nfse
 
 **Status:** done  
-**Dependencies:** 35.2
+**Dependencies:** 35.2  
 
 Ajustar a UI para editar e validar os novos campos obrigatorios da reforma tributaria.
 
@@ -56,7 +56,7 @@ Atualizar `src/app/(app)/administrativo/nfse/page.tsx` para incluir os novos cam
 ### 35.4. Ajustar estados de loading, validação e erro para contrato fiscal novo
 
 **Status:** done  
-**Dependencies:** 35.3
+**Dependencies:** 35.3  
 
 Tratar corretamente bloqueios locais e mensagens acionaveis vindas do backend.
 
@@ -67,7 +67,7 @@ Garantir que a tela apresente erro claro para configuracao incompleta, sucesso d
 ### 35.5. Cobrir adapter e pagina com testes
 
 **Status:** done  
-**Dependencies:** 35.4
+**Dependencies:** 35.4  
 
 Fechar a trilha de confianca da configuracao fiscal no frontend.
 

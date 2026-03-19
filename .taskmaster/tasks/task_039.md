@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 38
+**Dependencies:** 38 ✓
 
 **Priority:** high
 
@@ -13,16 +13,6 @@
 **Details:**
 
 Hoje o frontend diferencia `PREVIAMENTE` e `SOB_DEMANDA` na grade, mas só o modo recorrente possui um fluxo operacional completo. A aplicação precisa separar com clareza modalidade, recorrência e sessão concreta, permitindo que grades `SOB_DEMANDA` gerem ocorrências manuais para datas específicas sem poluir a grade semanal nem depender de comportamento implícito do backend.
-
-O recorte desta task é fechar o lado frontend e o alinhamento de contrato:
-
-- consolidar o modelo mental `Atividade` vs `Grade` vs `Ocorrência`;
-- definir a superfície de UI para criar ocorrência a partir de item `SOB_DEMANDA`;
-- preparar tipos, clients e estados da agenda/reservas para receber sessões avulsas;
-- manter `PREVIAMENTE` como recorrência fixa;
-- sincronizar o plano com o backend para evitar drift de contrato.
-
-Referência principal: `docs/ATIVIDADES_SOB_DEMANDA_OCORRENCIAS_PRD.md`.
 
 **Test Strategy:**
 
@@ -33,7 +23,7 @@ Cobrir a trilha com testes de integração/E2E do fluxo administrativo de criaç
 ### 39.1. Fechar o modelo funcional de `SOB_DEMANDA` no frontend
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Documentar e refletir no backlog que `SOB_DEMANDA` não significa uso único, e sim catálogo para gerar ocorrências avulsas.
 
@@ -44,7 +34,7 @@ Usar `docs/ATIVIDADES_SOB_DEMANDA_OCORRENCIAS_PRD.md` para consolidar o modelo d
 ### 39.2. Desenhar a superfície administrativa de criação de ocorrência
 
 **Status:** done  
-**Dependencies:** 39.1
+**Dependencies:** 39.1  
 
 Definir a ação e a UX para transformar uma grade `SOB_DEMANDA` em sessão concreta.
 
@@ -55,7 +45,7 @@ Projetar CTA, modal/formulário e estados de sucesso/erro para `Criar ocorrênci
 ### 39.3. Alinhar clients, types e contrato HTTP com o backend
 
 **Status:** done  
-**Dependencies:** 39.2
+**Dependencies:** 39.2  
 
 Preparar a camada frontend para o endpoint de criação/listagem de ocorrências sob demanda.
 
@@ -66,7 +56,7 @@ Atualizar `src/lib/types.ts`, `src/lib/api/reservas.ts`, `src/lib/api/administra
 ### 39.4. Integrar grade, agenda e reservas ao fluxo de ocorrência avulsa
 
 **Status:** done  
-**Dependencies:** 39.3
+**Dependencies:** 39.3  
 
 Conectar a criação da ocorrência ao consumo em agenda e reservas.
 
@@ -77,7 +67,7 @@ Fazer com que a ocorrência criada apareça em `/reservas` e nas demais superfí
 ### 39.5. Validar regressão e fechar alinhamento documental com backend
 
 **Status:** done  
-**Dependencies:** 39.4
+**Dependencies:** 39.4  
 
 Fechar testes e a trilha de alinhamento entre frontend e backend.
 

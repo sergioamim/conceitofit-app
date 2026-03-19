@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 25
+**Dependencies:** 25 ✓
 
 **Priority:** high
 
@@ -12,7 +12,7 @@
 
 **Details:**
 
-Com o baseline real definido, a meta desta task foi fechada sobre o runtime compartilhado de maior risco em `src/lib/**/*.{ts,tsx}`, onde a instrumentacao V8/Node e confiavel hoje. Foram adicionados testes unitarios de alto retorno em wrappers de API, financeiro gerencial, vendas, reservas, contexto de tenant, utilitarios e runtime comercial, levando o perfil `core` a `62.74%` lines, `67.73%` statements, `69.09%` functions e `79.51%` branches via `coverage:report -- --suites=unit`.
+Com o baseline real definido, a meta desta task foi fechada sobre o runtime compartilhado de maior risco em src/lib/**/*.{ts,tsx}, onde a instrumentacao V8/Node e confiavel hoje. Foram adicionados testes unitarios de alto retorno em wrappers de API, financeiro gerencial, vendas, reservas, contexto de tenant, utilitarios e runtime comercial, levando o perfil core a 62.74% lines, 67.73% statements, 69.09% functions e 79.51% branches via coverage:report -- --suites=unit.
 
 **Test Strategy:**
 
@@ -40,7 +40,7 @@ Cobrir wrappers, normalizadores, helpers e hooks transversais.
 
 **Details:**
 
-Expandir testes sobre `src/lib/api`, `src/lib/utils`, sessao, tenant, erros, guards e contratos reutilizados por varios modulos para ganhar cobertura e reduzir regressao sistemica.
+Expandir testes sobre `src/lib/api`, `src/lib/utils`, sessao, tenant, erros, guards e contratos reutilizados por varios modulos para ganhar cobertura e reduzir regressao sistêmica.
 
 ### 26.3. Aumentar cobertura dos dominios comercial, financeiro e seguranca
 
@@ -73,7 +73,7 @@ Evitar que a cobertura suba apenas pelos happy paths.
 
 **Details:**
 
-Adicionar testes para erros de contrato, validacao, permissao, paginacao, estados vazios, reprocessamento, conflitos e regressao de dados incompletos ou inconsistentes.
+Adicionar testes para erros de contrato, validacao, permissao, paginação, estados vazios, reprocessamento, conflitos e regressao de dados incompletos ou inconsistentes.
 
 ### 26.6. Levar cobertura global instrumentada a pelo menos 60%
 

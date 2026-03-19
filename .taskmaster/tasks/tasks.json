@@ -2,7 +2,7 @@
   "master": {
     "tasks": [
       {
-        "id": "1",
+        "id": 1,
         "title": "Alinhar contrato HTTP e camada de consumo da API",
         "description": "Revisar clients, services, schemas e tratamento de erro para refletir a API real no web.",
         "details": "Inclui normalizacao de fetchers, contratos tipados, estados de erro e consumo consistente do backend.",
@@ -85,7 +85,7 @@
         "updatedAt": "2026-03-10T23:59:00.000Z"
       },
       {
-        "id": "2",
+        "id": 2,
         "title": "Consolidar fluxo web de contratos, matricula e venda",
         "description": "Ajustar telas administrativas e comerciais para o fluxo canonico de contratos, venda e matricula.",
         "details": "Abrange jornada de venda, assinatura administrativa, estados de contrato e convergencia com o backend.",
@@ -161,7 +161,7 @@
         "expansionPrompt": "Gerar subtarefas para: mapear telas e serviços do fluxo atual (vendas, matrículas, planos), alinhar contratos/estados com APIs existentes (src/lib/api/vendas.ts e catálogo), ajustar UI/validações e navegação, e fechar cobertura de testes end-to-end do fluxo comercial."
       },
       {
-        "id": "3",
+        "id": 3,
         "title": "Corrigir contexto, sessao e experiencia multiunidade",
         "description": "Tornar consistente a troca de unidade, contexto ativo, permissoes e navegacao por academia/unidade.",
         "details": "Inclui cabecalhos de contexto, bootstrap da sessao e guardas de navegacao multiunidade.",
@@ -224,7 +224,7 @@
         "expansionPrompt": "Divida em: auditoria de sessão/localStorage e eventos de store, implementação de troca de unidade usando APIs de contexto (src/lib/api/contexto-unidades.ts, src/lib/api/auth.ts), alinhamento de permissões e guardas de navegação, e testes de refresh/reentrada e troca de unidade."
       },
       {
-        "id": "4",
+        "id": 4,
         "title": "Construir CRM operacional com automacoes",
         "description": "Evoluir o frontend para suportar pipeline, tarefas, playbooks, cadencias e follow-up comercial.",
         "details": "Inclui telas de funil, tarefas comerciais, filtros, produtividade e automacoes visiveis ao operador.",
@@ -318,7 +318,7 @@
         "expansionPrompt": "Planeje subtarefas para: definir telas e componentes do workspace de CRM (pipeline, tarefas, playbooks), implementar views e filtros, integrar novas superfícies de automação e histórico com APIs, tratar estados UX (loading/erro/vazio), e adicionar testes de fluxo comercial."
       },
       {
-        "id": "5",
+        "id": 5,
         "title": "Construir reservas, vagas e operacao de aulas",
         "description": "Criar as telas de backoffice e portal para reservas, lista de espera, ocupacao e check-in de aula.",
         "details": "Abrange agenda operacional, estados da reserva, ocupacao e visoes por atividade e turma.",
@@ -409,7 +409,7 @@
         "expansionPrompt": "Crie subtarefas para: modelar o domínio de reservas/vagas (tipos e APIs), construir telas de agenda/ocupação/waitlist, implementar operações de reserva/cancelamento/check-in, tratar responsividade e estados, e validar com testes de integração."
       },
       {
-        "id": "6",
+        "id": 6,
         "title": "Criar jornada digital web de adesao e checkout",
         "description": "Implementar paginas e fluxos para trial, signup, checkout, formularios e contratos.",
         "details": "Inclui landing flow, formularios, selecao de plano, checkout e acompanhamento de pendencias.",
@@ -501,7 +501,7 @@
         "expansionPrompt": "Divida em: mapear rotas públicas da jornada, construir formulários e catálogo de planos, integrar checkout/contrato com APIs, ajustar validações e mensagens de erro, e adicionar testes de navegação e conversão."
       },
       {
-        "id": "7",
+        "id": 7,
         "title": "Expandir modulos administrativos, financeiros e de integracao",
         "description": "Cobrir configuracoes e operacao de NFSe, agregadores, recebimentos, dashboards e areas administrativas ausentes.",
         "details": "Inclui telas de configuracao, monitoramento, recebimentos e integracoes operacionais.",
@@ -579,7 +579,7 @@
         "expansionPrompt": "Estruture subtarefas para: inventariar lacunas nas telas administrativas/financeiras, implementar configurações e operações faltantes (NFSe/agregadores/recebimentos), integrar monitoramento e auditoria, e alinhar permissões e testes."
       },
       {
-        "id": "8",
+        "id": 8,
         "title": "Criar BI operacional e visao de rede",
         "description": "Entregar dashboards e visoes consolidadas por unidade e por academia para uso gerencial.",
         "details": "Inclui indicadores de conversao, ocupacao, inadimplencia, retencao e comparativos de rede.",
@@ -656,7 +656,7 @@
         "expansionPrompt": "Gere subtarefas para: definir o shell analítico e filtros por unidade/rede, construir dashboards e cards principais, integrar gráficos/exportações e tratamento de estados, e validar performance/permissões com testes."
       },
       {
-        "id": "9",
+        "id": 9,
         "title": "Estruturar backoffice global de academias e unidades",
         "description": "Migrar `/admin`, `/admin/academias` e `/admin/unidades` para contratos reais, sem depender de mock services.",
         "details": "Cobrir dashboard, listagens, detalhe, create/update de academia, create/update/toggle de unidade, vinculo academia -> unidade e alinhamento entre payloads do backoffice e o backend.",
@@ -747,7 +747,7 @@
         ]
       },
       {
-        "id": "10",
+        "id": 10,
         "title": "Consolidar importacao ETL e onboarding de unidades no backoffice",
         "description": "Completar a tela de importacao e integra-la ao fluxo de criacao de unidade com carga inicial padrao ou importacao futura.",
         "details": "Conectar o `EVO BACKUP` e a trilha EVO P0 ao backoffice real, removendo lookups em mock e exibindo status de onboarding/importacao por unidade.",
@@ -837,7 +837,7 @@
         ]
       },
       {
-        "id": "11",
+        "id": 11,
         "title": "Completar operacao web de treinos com catalogo, templates e prescricao",
         "description": "Evoluir as telas de treinos para consumir o backend atual de grupos musculares, templates e prescricao do treino do cliente.",
         "details": "Abrange `src/app/(app)/treinos*`, `src/components/shared/treino-modal.tsx`, `src/lib/api/treinos.ts` e a reducao dos fallbacks em `src/lib/mock/services.ts`, cobrindo CRUD real de grupos musculares, biblioteca de templates, atribuicao para cliente, validade/frequencia/revisao e indicadores de aderencia.",
@@ -926,7 +926,7 @@
         ]
       },
       {
-        "id": "12",
+        "id": 12,
         "title": "Migrar fiscal, agregadores e integrações operacionais para API real",
         "description": "Concluir a migração backend-only das áreas de NFSe, agregadores e monitoramento operacional, removendo dependências locais restantes.",
         "details": "Cobrir adapters reais para NFSe/configurações/solicitações, agregadores/transações/visitas e integrações operacionais; revisar páginas em src/app/(app)/administrativo/* e src/app/(app)/gerencial/*; remover trechos locais de src/lib/mock/services.ts que ainda existem apenas como fallback histórico. Incluir a identificação dos gaps de backend ainda abertos, especialmente emissão de NFSe por pagamento quando não houver endpoint 1:1 compatível.",
@@ -1002,7 +1002,7 @@
         ]
       },
       {
-        "id": "13",
+        "id": 13,
         "title": "Migrar recebimentos auxiliares, ajustes e importações financeiras para API real",
         "description": "Substituir helpers locais de recebimentos/ajustes/importações por contratos reais do backend e alinhar as telas financeiras ao fluxo canônico.",
         "details": "Cobrir createRecebimentoAvulso, importarPagamentosEmLote, ajustarPagamento e quaisquer variações experimentais de contas a receber/pagamentos; alinhar páginas de recebimentos, pagamentos e importações financeiras ao backend; explicitar gaps de contrato que ainda impedem a remoção total do código local.",
@@ -1078,7 +1078,7 @@
         ]
       },
       {
-        "id": "14",
+        "id": 14,
         "title": "Eliminar legado restante de mock/services e store para fechar backend-only",
         "description": "Remover o restante do caminho legado baseado em store/localStorage onde o backend real já cobre a operação.",
         "details": "Inventariar exports residuais de src/lib/mock/services.ts, src/lib/mock/store.ts, src/lib/public/services.ts e src/lib/public/storage.ts; migrar o que ainda depende de contrato real; remover leitura direta de store/localStorage das telas; padronizar a aplicação para sessão + API real como única fonte operacional.",
@@ -1160,7 +1160,7 @@
         "updatedAt": "2026-03-13T03:40:00.000Z"
       },
       {
-        "id": "15",
+        "id": 15,
         "title": "Erradicar runtime mock e consolidar frontend backend-only",
         "description": "Eliminar integralmente `src/lib/mock/*` do runtime, migrando toda fonte de dados para API/Session e limitando localStorage a exceções explícitas.",
         "details": "Criar um fechamento definitivo da transição: remover imports de `@/lib/mock/*` de `src/`, substituir store e serviços mock por clients reais em todos os domínios, restringir `localStorage` a sessão/preferências/drafts excepcionais, apagar branches mortos e instituir guardrails para evitar regressão.",
@@ -1360,7 +1360,7 @@
         "updatedAt": "2026-03-13T06:20:00.000Z"
       },
       {
-        "id": "16",
+        "id": 16,
         "title": "Criar area global de seguranca no backoffice administrativo",
         "description": "Adicionar telas novas em `/admin/seguranca/*` para consulta global de usuarios administrativos, memberships e perfis por unidade.",
         "details": "O frontend ja possui as paginas contextuais `src/app/(app)/seguranca/rbac` e `src/app/(app)/seguranca/acesso-unidade`, mas elas operam por tenant e nao servem como backoffice global de rede. Este epico deve criar telas novas dentro do shell `/admin`, reaproveitando componentes, clients e padroes de UI das telas atuais quando fizer sentido, sem mover a pagina inteira.",
@@ -1441,7 +1441,7 @@
         "updatedAt": "2026-03-13T16:30:00.000Z"
       },
       {
-        "id": "17",
+        "id": 17,
         "title": "Operar usuarios, unidades e perfis pelo backoffice global",
         "description": "Permitir associar usuario a unidade, remover acesso, trocar unidade padrao e gerir perfis administrativos por unidade no path `/admin`.",
         "details": "Este epico fecha a parte operacional da nova area administrativa de seguranca. A abordagem deve criar telas novas no backoffice global, mas reaproveitar os widgets e comportamentos das telas contextuais de RBAC/acesso-unidade sempre que isso reduzir duplicacao sem carregar o modelo antigo por tenant.",
@@ -1522,7 +1522,7 @@
         "updatedAt": "2026-03-13T16:30:00.000Z"
       },
       {
-        "id": "18",
+        "id": 18,
         "title": "Integrar politica de novas unidades ao administrativo e onboarding",
         "description": "Exibir e operar a elegibilidade de usuarios para novas unidades, alem de refletir acesso herdado/manual nas telas de seguranca e de unidades.",
         "details": "O backend vai passar a formalizar a politica de quem recebe acesso automaticamente quando uma nova unidade e criada. O frontend precisa refletir isso no backoffice global de seguranca e nos fluxos ja existentes de cadastro/onboarding de unidade, sem misturar essa visao com as telas contextuais por tenant.",
@@ -1604,7 +1604,7 @@
         "updatedAt": "2026-03-13T16:30:00.000Z"
       },
       {
-        "id": "19",
+        "id": 19,
         "title": "Definir dominio, contratos e governanca de Treinos V2",
         "description": "Formalizar o dominio funcional de Treinos V2 a partir do PRD consolidado, preparando entidades, contratos e regras de negocio para a implementacao.",
         "details": "Tomar `docs/TREINOS_V2_PRD.md` como fonte de produto e fechar o recorte tecnico do modulo, distinguindo template, treino atribuido, snapshot/versionamento, atribuicao em massa e governanca de revisao/publicacao. O resultado desta task deve deixar backend/frontend alinhados antes da implementacao visual pesada, com artefatos tecnicos em `docs/TREINOS_V2_TECH_SPEC.md`, `src/lib/treinos/v2-domain.ts`, `src/lib/api/treinos-v2.ts` e `src/lib/treinos/v2-backlog.ts`.",
@@ -1682,7 +1682,7 @@
         "updatedAt": "2026-03-14T12:08:18.000Z"
       },
       {
-        "id": "20",
+        "id": 20,
         "title": "Entregar listagem operacional de Treino Padrao",
         "description": "Construir a nova listagem enxuta de `Treino Padrao`, com busca, tabela paginada e acoes operacionais coerentes com as referencias.",
         "details": "A V1 da listagem deve ser administrativa e rapida, sem inflar a tela com filtros avancados. O foco e localizar templates, criar novos e disparar rapidamente as acoes principais de editar, abrir montagem, atribuir e excluir/arquivar. A listagem so deve mostrar `Treino Padrao`, usar ordenacao padrao por recencia e expor quick filter de revisao apenas quando houver backlog tecnico.",
@@ -1762,7 +1762,7 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": "21",
+        "id": 21,
         "title": "Construir editor unificado de treino e template",
         "description": "Implementar a nova tela-base de montagem para `Treino Padrao` e `Treino atribuido`, concentrando no editor a complexidade operacional do modulo.",
         "details": "O editor unificado deve reaproveitar a mesma estrutura para template e treino atribuido, com blocos/series em abas, grade central densa, edicao inline, tecnicas especiais, exportacao e acoes operacionais no topo. O shell precisa assumir como metadados canonicos `nome`, `frequencia semanal`, `total de semanas`, categoria, status e toggle de versao simplificada.",
@@ -1843,7 +1843,7 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": "22",
+        "id": 22,
         "title": "Evoluir biblioteca de exercicios e drawer de cadastro",
         "description": "Transformar a biblioteca lateral de exercicios em um componente central do editor, com busca, filtros, insercao rapida e drawer de criacao/edicao.",
         "details": "A biblioteca deve permitir encontrar, criar e reaproveitar exercicios sem sair do contexto da montagem. O drawer lateral deve sustentar o cadastro rico de exercicio, incluindo codigo, grupo de exercicios, grupo muscular, tipo, objetivo padrao, unidade de carga, midia, descricao e disponibilidade no app.",
@@ -1924,7 +1924,7 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": "23",
+        "id": 23,
         "title": "Implementar atribuicao individual e em massa de treinos",
         "description": "Entregar os fluxos de atribuicao a partir de `Treino Padrao`, cobrindo um cliente, varios clientes, snapshot de versao e politicas de conflito.",
         "details": "Esta task fecha o principal ganho operacional da V2: pegar um template pronto e aplica-lo com seguranca a um ou muitos clientes, com rastreabilidade, vigencia e controle de overwrite. A atribuicao em massa deve rodar via job assincrono, com lista final de clientes resolvida e resumo terminal por cliente.",
@@ -2008,7 +2008,7 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": "24",
+        "id": 24,
         "title": "Fechar revisao, publicacao e operacao pos-atribuicao de Treinos V2",
         "description": "Concluir a governanca operacional do modulo com revisao/publicacao de templates, visao de treinos atribuidos e rastreabilidade completa da origem e da versao.",
         "details": "Depois de listagem, editor, biblioteca e atribuicao, falta consolidar a camada de governanca: status de template, fila de revisao, operacao sobre treinos atribuidos e indicadores que permitam acompanhar quem recebeu qual versao. Exportar treino de cliente como template e importar do ADM Geral continuam fora do P0 e nao devem poluir esta task.",
@@ -2090,7 +2090,7 @@
         "updatedAt": "2026-03-14T15:02:00.000Z"
       },
       {
-        "id": "25",
+        "id": 25,
         "title": "Estabelecer baseline real de cobertura automatizada",
         "description": "Instrumentar cobertura de codigo, publicar baseline e definir medicao confiavel para a meta de 60%.",
         "details": "Hoje o repositorio tem baseline funcional de 116 testes Playwright, sendo 29 testes E2E em 19 arquivos e 87 testes unitarios em 26 arquivos. Ainda nao existe percentual instrumentado de cobertura em linhas, statements, branches ou functions. Esta task fecha a medicao real, scripts de coleta, politicas de exclusao e o relatorio base para orientar o aumento ate 60%. Baseline fechado em 2026-03-14 com 9.54% lines, 13.47% statements, 11.73% functions e 16.54% branches, publicado em coverage/* e docs/TEST_COVERAGE_BASELINE.*.",
@@ -2167,7 +2167,7 @@
         "updatedAt": "2026-03-14T21:11:31.000Z"
       },
       {
-        "id": "26",
+        "id": 26,
         "title": "Elevar cobertura automatizada das camadas core ate 60%",
         "description": "Aumentar a cobertura real do codigo nas camadas de maior risco ate atingir pelo menos 60% no agregado instrumentado.",
         "details": "Com o baseline real definido, a meta desta task foi fechada sobre o runtime compartilhado de maior risco em src/lib/**/*.{ts,tsx}, onde a instrumentacao V8/Node e confiavel hoje. Foram adicionados testes unitarios de alto retorno em wrappers de API, financeiro gerencial, vendas, reservas, contexto de tenant, utilitarios e runtime comercial, levando o perfil core a 62.74% lines, 67.73% statements, 69.09% functions e 79.51% branches via coverage:report -- --suites=unit.",
@@ -2265,7 +2265,7 @@
         "updatedAt": "2026-03-14T23:59:00.000Z"
       },
       {
-        "id": "27",
+        "id": 27,
         "title": "Sustentar cobertura com gates de CI e governanca continua",
         "description": "Transformar a meta de cobertura em rotina de engenharia, com gates, dashboards e criterios de regressao.",
         "details": "Atingir 60% uma vez nao basta. Esta task foi concluida com gate automatizado de coverage core (coverage:gate), workflow de CI em .github/workflows/coverage-core.yml, suite smoke consolidada por dominio no coletor e politica operacional documentada em docs/TEST_COVERAGE_GOVERNANCE.md. Os artefatos publicados agora incluem resumo/LCOV/HTML do perfil core e historico em docs/TEST_COVERAGE_HISTORY_CORE.json.",
@@ -2333,7 +2333,7 @@
         "updatedAt": "2026-03-14T23:59:00.000Z"
       },
       {
-        "id": "28",
+        "id": 28,
         "title": "Estabilizar shell SSR e eliminar hydration mismatch sem escape hatches",
         "description": "Corrigir de forma estrutural o shell principal e as telas de treinos para eliminar mismatch de hidratacao sem usar `suppressHydrationWarning`.",
         "details": "O frontend ainda mistura fallback de SSR diferente do shell final, labels tenant-aware mutaveis no primeiro paint e formatacao/calculo temporal durante o render hidratavel. Esta task fecha o problema na raiz: padronizar o estado inicial do contexto e do branding, fazer sidebar/topbar/backoffice renderizarem a mesma arvore entre servidor e primeiro render do cliente, remover `suppressHydrationWarning` do escopo e reescrever pontos de treinos que ainda dependem de `new Date()`, locale do navegador ou outros valores nao deterministas em render. O trabalho tambem inclui ajustes basicos de acessibilidade e estabilidade visual do layout, como rotulos de controles, logo com dimensoes estaveis e fallback textual unico para unidade ativa, sem mascarar divergencias de HTML.",
@@ -2458,7 +2458,7 @@
         "updatedAt": "2026-03-15T04:15:00.000Z"
       },
       {
-        "id": "29",
+        "id": 29,
         "title": "Fechar aderência de hidratação, contexto e data/hora no frontend",
         "description": "Ajustar pontos remanescentes de aderência em UI/HTTP para eliminar causas reais de hydration mismatch e reduzir risco de comportamento divergente entre SSR e cliente, sem regressão funcional em contratos já estabilizados.",
         "details": "A auditoria recente identificou quatro ajustes práticos fora de escopo funcional amplo: (1) uso residual de `suppressHydrationWarning` em componente base de Select; (2) formatação temporal não determinística no render do fluxo de importação de pacote; (3) fallback de contexto com ID não determinístico no `getContextId`; (4) revisão pontual da classificação de rotas context-scoped em `http.ts` que afeta consistência de tenant scoping. Esta task agrupa esses fechamentos com subtarefas curtas e validadas por teste.",
@@ -2543,7 +2543,7 @@
         "updatedAt": "2026-03-15T22:50:00.000Z"
       },
       {
-        "id": "30",
+        "id": 30,
         "title": "Endurecer sessão inválida, refresh e relogin no frontend",
         "description": "Tornar determinístico o fluxo de recuperação de autenticação no web para que 401 por token inválido, malformado ou expirado tente refresh uma única vez e, se não houver recuperação, execute logout completo com limpeza do contexto local de tenant.",
         "details": "O frontend já possui a base do fluxo em `src/lib/api/http.ts`, `src/lib/api/session.ts` e `src/lib/tenant-context.ts`, mas ainda há uma lacuna importante: quando o refresh falha, a autenticação é limpa sem limpar o `academia-api-context-id`, o que pode deixar o navegador com contexto de unidade stale. Esta task fecha o fluxo de ponta a ponta: centralizar uma invalidação completa de sessão, endurecer o retry único de refresh, garantir redirecionamento previsível para `/login` e preservar a regra de multi-tenant por `X-Context-Id` sem reintroduzir `tenantId` redundante em rotas operacionais.",
@@ -2634,7 +2634,7 @@
         "updatedAt": "2026-03-15T23:40:00.000Z"
       },
       {
-        "id": "31",
+        "id": 31,
         "title": "Consolidar bootstrap global de sessão, tenant ativo e branding no frontend",
         "description": "Transformar sessão, unidade ativa e branding em um store global reutilizável do shell autenticado, eliminando fetches redundantes de `/auth/me`, `/context/unidade-ativa` e `/academia` na navegação interna.",
         "details": "Implementar a estratégia frontend-first descrita em `docs/SESSION_BOOTSTRAP_CACHE_PRD.md`: promover o contexto atual para um store global de bootstrap, tratar `activeTenantId` como ponto único de verdade da aplicação, migrar `Sidebar`, `TenantThemeSync`, `AppTopbar` e `useAuthAccess` para selectors desse store, e sincronizar o snapshot após troca de unidade, login, refresh, logout e recovery de contexto. O rollout deve preservar SSR seguro, evitar preload redundante por rota e manter `X-Context-Id` como referência operacional efetiva.",
@@ -2741,7 +2741,7 @@
         "updatedAt": "2026-03-16T19:05:58.208Z"
       },
       {
-        "id": "32",
+        "id": 32,
         "title": "Expor bootstrap consolidado do app no backend e migrar o frontend",
         "description": "Evoluir o desenho de bootstrap para um endpoint único do app que consolide usuário, contexto ativo, academia, branding e capacidades, reduzindo round-trips no cold start.",
         "details": "Implementar a fase opcional descrita em `docs/SESSION_BOOTSTRAP_CACHE_PRD.md`: desenhar um endpoint como `GET /api/v1/app/bootstrap`, alinhar contrato, controller e testes no backend, e adaptar o frontend para consumir esse payload consolidado com fallback temporário para os endpoints legados durante a transição.",
@@ -2813,7 +2813,7 @@
         "updatedAt": "2026-03-16T20:36:12.474Z"
       },
       {
-        "id": "33",
+        "id": 33,
         "title": "Migrar Dashboard para endpoint unificado de dados e reduzir round-trips",
         "description": "Migrar a tela /dashboard para consumir um endpoint consolidado e reduzir múltiplas chamadas paralelas atuais.",
         "details": "Implementar/validar endpoint unificado, adaptar adapter de dashboard, migrar página para 1 chamada por estado/scope e manter fallback seguro.",
@@ -2905,7 +2905,7 @@
         "updatedAt": "2026-03-17T03:33:10.808Z"
       },
       {
-        "id": "34",
+        "id": 34,
         "title": "Cobrir CRUD da área administrativa com Playwright",
         "description": "Adicionar cobertura E2E nas telas administrativas críticas, com foco em fluxo de criação, edição, exclusão/inativação e validações em operações CRUD.",
         "details": "Escalar os testes Playwright para `/admin/*` e `/administrativo/*` com cenários repetíveis e stubs de API controlados, garantindo confiança de regressão sem alterar comportamento funcional.",
@@ -3034,7 +3034,7 @@
         "updatedAt": "2026-03-17T13:37:58.550Z"
       },
       {
-        "id": "35",
+        "id": 35,
         "title": "Adaptar tela administrativa de NFSe aos novos campos fiscais da reforma tributaria",
         "description": "Atualizar a tela `/administrativo/nfse` para suportar os novos campos obrigatorios da reforma tributaria e alinhar o formulario ao contrato fiscal real do backend.",
         "details": "A tela atual de NFSe do frontend trabalha com um contrato administrativo proprio, centrado em prefeitura, inscricao municipal, CNAE, serie RPS e regime tributario. A adaptacao precisa incorporar os novos campos fiscais obrigatorios, revisar validacoes, checklist, tipagem e estados de UX sem depender de JSONs livres ou placeholders ambiguos.",
@@ -3115,7 +3115,7 @@
         "updatedAt": "2026-03-17T18:05:00Z"
       },
       {
-        "id": "36",
+        "id": 36,
         "title": "Adaptar fluxos de emissao e exibicao de NFSe ao novo bloqueio fiscal",
         "description": "Atualizar os fluxos de pagamentos e consultas de NFSe no frontend para refletir os novos bloqueios e mensagens da reforma tributaria.",
         "details": "A emissao de NFSe por pagamento e as superficies que mostram status fiscal precisam refletir o novo comportamento do backend: emissao bloqueada quando a unidade nao estiver configurada com os campos obrigatorios e mensagens mais especificas de validacao fiscal.",
@@ -3198,7 +3198,7 @@
         "updatedAt": "2026-03-17T18:05:00Z"
       },
       {
-        "id": "37",
+        "id": 37,
         "title": "Fechar rollout, documentação e cobertura E2E do frontend para NFSe da reforma tributaria",
         "description": "Consolidar a adaptação fiscal de NFSe no frontend com documentação, evidência de teste e estratégia de rollout visual/operacional.",
         "details": "Depois de atualizar a configuração e os fluxos de emissão, o frontend precisa fechar a trilha pública e operacional: documentação de uso da tela fiscal, testes E2E ou smoke relevantes, alinhamento com o backend e checklist de rollout para operadores administrativos.",
@@ -3268,7 +3268,7 @@
         "updatedAt": "2026-03-17T18:05:00Z"
       },
       {
-        "id": "38",
+        "id": 38,
         "title": "Fechar adaptação do frontend ao novo contrato da API de atividades",
         "description": "Concluir o alinhamento do frontend para a evolução recente da API de atividades, eliminando gaps de request, response e telas dependentes.",
         "details": "Hoje a UI já expõe campos e comportamentos novos de atividades, mas a camada HTTP ainda não envia nem normaliza todo o contrato novo. Esta task fecha o fluxo ponta a ponta para atividades e superfícies consumidoras, evitando fallbacks frágeis e divergência entre o que o usuário edita e o que o backend realmente persiste.",
@@ -3337,7 +3337,7 @@
         "updatedAt": "2026-03-18T15:30:00Z"
       },
       {
-        "id": "39",
+        "id": 39,
         "title": "Estruturar ocorrências avulsas para atividades sob demanda",
         "description": "Fechar o modelo funcional e técnico para que atividades `SOB_DEMANDA` virem catálogo de ocorrências avulsas, com fluxo administrativo claro e alinhado ao backend.",
         "details": "Hoje o frontend diferencia `PREVIAMENTE` e `SOB_DEMANDA` na grade, mas só o modo recorrente possui um fluxo operacional completo. A aplicação precisa separar com clareza modalidade, recorrência e sessão concreta, permitindo que grades `SOB_DEMANDA` gerem ocorrências manuais para datas específicas sem poluir a grade semanal nem depender de comportamento implícito do backend.",
@@ -3540,7 +3540,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "50",
+        "id": 50,
         "title": "Redesenhar a arquitetura de informação da área de segurança",
         "description": "Transformar o PRD revisado em uma IA clara para gestores, separando usuários, acessos, perfis, funcionalidades e revisões.",
         "details": "A área de segurança precisa sair da navegação técnica atual e ganhar uma arquitetura de informação orientada a produto, com visão geral, usuários e acessos, perfis padronizados, catálogo de funcionalidades e revisões/auditoria. Esta task fecha o backbone de navegação, linguagem e estados base para o restante do rollout.",
@@ -3610,7 +3610,7 @@
         "updatedAt": "2026-03-19T14:10:00Z"
       },
       {
-        "id": "51",
+        "id": 51,
         "title": "Implementar as telas de Usuários e acessos com resumo de acesso efetivo",
         "description": "Entregar a principal superfície operacional da nova segurança, centrada em pessoas, escopos, perfis e risco.",
         "details": "A nova experiência precisa começar pela operação diária: listar pessoas, filtrar por escopo e risco, abrir o detalhe do usuário e enxergar claramente acesso direto, herdado ou global, perfil principal, perfis adicionais, exceções e revisão. Esta task cobre clients, estado de tela, detalhe e fluxo de concessão com escolha explícita de escopo e perfil.",
@@ -3694,7 +3694,7 @@
         "updatedAt": "2026-03-19T00:00:00Z"
       },
       {
-        "id": "52",
+        "id": 52,
         "title": "Implementar Perfis padronizados e Catálogo de funcionalidades",
         "description": "Dar superfície de governança para perfis reutilizáveis e para o inventário de capacidades do sistema.",
         "details": "Depois de resolver a operação por usuário, o frontend precisa expor com clareza a governança de papéis e funcionalidades: lista e detalhe de perfis, matriz de permissões, catálogo pesquisável, labels de negócio, criticidade e impacto de mudanças. Esta task entrega a camada visual que substitui a leitura crua de RBAC por feature/grant.",
@@ -3779,7 +3779,7 @@
         "updatedAt": "2026-03-19T00:00:00Z"
       },
       {
-        "id": "53",
+        "id": 53,
         "title": "Implementar Exceções, política de novas unidades, revisões e rollout da nova segurança",
         "description": "Fechar a governança avançada da nova área com exceções controladas, revisões periódicas e migração segura.",
         "details": "A fase final do frontend precisa materializar a governança avançada prevista no PRD: fluxo de exceção com justificativa e prazo, política separada para novas unidades, abas de revisão e auditoria, indicadores de acesso amplo e documentação de rollout. Esta task conclui a transição da segurança atual para a nova experiência.",
@@ -3862,11 +3862,24 @@
           }
         ],
         "updatedAt": "2026-03-19T14:10:00Z"
+      },
+      {
+        "id": 54,
+        "title": "Desacoplar a aba NFS-e do perfil do cliente da configuração fiscal global",
+        "description": "Remover a dependência de configuracao-atual do carregamento inicial de /clientes/[id] e carregar os dados da aba NFS-e somente sob demanda.",
+        "details": "Refatorar src/app/(app)/clientes/[id]/page.tsx para que o perfil do cliente não chame GET /api/v1/administrativo/nfse/configuracao-atual no carregamento inicial. A aba NFS-e deve focar na listagem das NFS-e já emitidas e estados fiscais derivados dos pagamentos do cliente, carregando qualquer dado adicional apenas quando o usuário abrir a aba correspondente. Revisar o contrato consumido, estados de loading/erro da aba e cobertura de regressão para evitar chamadas fiscais desnecessárias e 404 incidentais no perfil.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [
+          12
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2026-03-18T15:32:36.203Z",
-      "updated": "2026-03-19T00:00:00.000Z",
+      "updated": "2026-03-19T17:21:34.878Z",
       "description": "Tasks for master context"
     }
   }

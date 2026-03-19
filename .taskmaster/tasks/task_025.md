@@ -12,9 +12,7 @@
 
 **Details:**
 
-Hoje o repositorio tem baseline funcional de 116 testes Playwright, sendo 29 testes E2E em 19 arquivos e 87 testes unitarios em 26 arquivos. Ainda nao existe percentual instrumentado de cobertura em linhas, statements, branches ou functions. Esta task fecha a medicao real, scripts de coleta, politicas de exclusao e o relatorio base para orientar o aumento ate 60%.
-
-Baseline fechado em 2026-03-14 com cobertura instrumentada de 9.54% lines, 13.47% statements, 11.73% functions e 16.54% branches. Os artefatos foram publicados em `coverage/` e `docs/TEST_COVERAGE_BASELINE.*`, com smoke suite reprodutível de 5 arquivos e gates iniciais documentados rumo a 60%.
+Hoje o repositorio tem baseline funcional de 116 testes Playwright, sendo 29 testes E2E em 19 arquivos e 87 testes unitarios em 26 arquivos. Ainda nao existe percentual instrumentado de cobertura em linhas, statements, branches ou functions. Esta task fecha a medicao real, scripts de coleta, politicas de exclusao e o relatorio base para orientar o aumento ate 60%. Baseline fechado em 2026-03-14 com 9.54% lines, 13.47% statements, 11.73% functions e 16.54% branches, publicado em coverage/* e docs/TEST_COVERAGE_BASELINE.*.
 
 **Test Strategy:**
 

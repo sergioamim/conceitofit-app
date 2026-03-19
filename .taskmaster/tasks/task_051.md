@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 50
+**Dependencies:** 50 ✓
 
 **Priority:** high
 
@@ -23,7 +23,7 @@ Cobrir estados de lista, detalhe, filtros e fluxo de concessão com testes de in
 ### 51.1. Preparar types e API clients de acesso efetivo por usuário
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Consumir o novo resumo canônico de segurança do backend.
 
@@ -34,7 +34,7 @@ Atualizar `src/lib/types.ts` e clients da área de segurança para suportar esco
 ### 51.2. Construir a tela Usuários e acessos com filtros de negócio e risco
 
 **Status:** done  
-**Dependencies:** 51.1
+**Dependencies:** 51.1  
 
 Fazer a listagem responder rápido quem é a pessoa, onde atua e qual o nível de risco.
 
@@ -45,7 +45,7 @@ Implementar a nova listagem com busca, filtros por unidade, academia, perfil, ex
 ### 51.3. Redesenhar o detalhe do usuário com blocos de resumo, escopos, perfis e exceções
 
 **Status:** done  
-**Dependencies:** 51.1
+**Dependencies:** 51.1  
 
 Separar governança, operação e auditoria na página de detalhe.
 
@@ -56,7 +56,7 @@ Reorganizar o detalhe para trabalhar com `Resumo efetivo`, `Escopos e acessos`, 
 ### 51.4. Implementar o fluxo de conceder acesso com escolha explícita de escopo e perfil
 
 **Status:** done  
-**Dependencies:** 51.2, 51.3
+**Dependencies:** 51.2, 51.3  
 
 Remover o perfil implícito da experiência principal.
 
@@ -67,7 +67,7 @@ Criar o fluxo curto de concessão com escolha de escopo, tipo de acesso quando a
 ### 51.5. Cobrir listagem, detalhe e concessão com testes de regressão
 
 **Status:** done  
-**Dependencies:** 51.4
+**Dependencies:** 51.4  
 
 Blindar a nova superfície central de operação da segurança.
 

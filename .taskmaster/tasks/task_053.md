@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 51, 52
+**Dependencies:** 51 ✓, 52 ✓
 
 **Priority:** high
 
@@ -23,7 +23,7 @@ Executar smoke e E2E do fluxo de exceções, política de novas unidades, revis�
 ### 53.1. Implementar a UX de exceções com justificativa, prazo e destaque no acesso efetivo
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Dar um fluxo próprio e controlado para exceções de segurança.
 
@@ -34,7 +34,7 @@ Construir o fluxo de adicionar, listar e remover exceções com justificativa, e
 ### 53.2. Criar a superfície de política de novas unidades como governança separada
 
 **Status:** done  
-**Dependencies:** 53.1
+**Dependencies:** 53.1  
 
 Tirar a política ampla do detalhe operacional comum do usuário.
 
@@ -45,7 +45,7 @@ Implementar a leitura e edição da política de novas unidades com linguagem cl
 ### 53.3. Construir a tela de Revisões e auditoria com filas e alertas
 
 **Status:** done  
-**Dependencies:** 53.1
+**Dependencies:** 53.1  
 
 Permitir recertificação e monitoramento contínuo dos acessos sensíveis.
 
@@ -56,7 +56,7 @@ Criar as abas de revisões pendentes, exceções vencendo, mudanças recentes, a
 ### 53.4. Finalizar flags de risco, acessos amplos e estado de rollout da nova segurança
 
 **Status:** done  
-**Dependencies:** 53.2, 53.3
+**Dependencies:** 53.2, 53.3  
 
 Concluir a leitura operacional da área com indicadores claros de risco e transição.
 
@@ -67,7 +67,7 @@ Adicionar indicadores de acesso amplo, risco, revisão vencida e compatibilidade
 ### 53.5. Fechar documentação e E2E do rollout completo da segurança
 
 **Status:** done  
-**Dependencies:** 53.4
+**Dependencies:** 53.4  
 
 Encerrar a trilha do frontend com evidência e documentação operacional.
 

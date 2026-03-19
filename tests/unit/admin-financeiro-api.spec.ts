@@ -59,6 +59,56 @@ function mockFetchWithSequence(
 }
 
 test.describe("admin financeiro api", () => {
+  test("retorna draft padrão quando a configuração atual de nfse ainda não existe", async () => {
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
+          status: 404,
+          error: "Not Found",
+          path: "/api/v1/administrativo/nfse/configuracao-atual",
+        },
+        status: 404,
+      },
+    ]);
+
+    try {
+      const loaded = await getNfseConfiguracaoAtualApi({ tenantId: "tenant-404" });
+
+      expect(loaded.id).toBe("nfse-tenant-404");
+      expect(loaded.tenantId).toBe("tenant-404");
+      expect(loaded.status).toBe("PENDENTE");
+      expect(loaded.prefeitura).toBe("");
+      expect(loaded.loteInicial).toBe(1);
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.url).toContain("/api/v1/administrativo/nfse/configuracao-atual");
+    } finally {
+      restore();
+    }
+  });
+
+  test("propaga erros inesperados ao carregar a configuração atual de nfse", async () => {
+    const { restore } = mockFetchWithSequence([
+      {
+        body: {
+          status: 500,
+          error: "Internal Server Error",
+          message: "Falha ao consultar configuração fiscal",
+          path: "/api/v1/administrativo/nfse/configuracao-atual",
+        },
+        status: 500,
+      },
+    ]);
+
+    try {
+      await expect(getNfseConfiguracaoAtualApi({ tenantId: "tenant-500" })).rejects.toMatchObject({
+        name: "ApiRequestError",
+        status: 500,
+      });
+    } finally {
+      restore();
+    }
+  });
+
   test("normaliza configuracao nfse e usa rotas canônicas", async () => {
     const { calls, restore } = mockFetchWithSequence([
       {

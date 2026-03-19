@@ -16,7 +16,7 @@ import type {
   NfseProvider,
   NfseRegimeTributario,
 } from "@/lib/types";
-import { apiRequest } from "./http";
+import { ApiRequestError, apiRequest } from "./http";
 
 type NfseConfiguracaoApiResponse = Partial<NfseConfiguracao> & {
   id?: string | null;
@@ -229,11 +229,18 @@ function normalizeIntegracaoOperacional(input: IntegracaoOperacionalApiResponse)
 export async function getNfseConfiguracaoAtualApi(input: {
   tenantId: string;
 }): Promise<NfseConfiguracao> {
-  const response = await apiRequest<NfseConfiguracaoApiResponse | null>({
-    path: "/api/v1/administrativo/nfse/configuracao-atual",
-    query: { tenantId: input.tenantId },
-  });
-  return normalizeNfseConfiguracao(input.tenantId, response);
+  try {
+    const response = await apiRequest<NfseConfiguracaoApiResponse | null>({
+      path: "/api/v1/administrativo/nfse/configuracao-atual",
+      query: { tenantId: input.tenantId },
+    });
+    return normalizeNfseConfiguracao(input.tenantId, response);
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 404) {
+      return normalizeNfseConfiguracao(input.tenantId, null);
+    }
+    throw error;
+  }
 }
 
 export async function salvarNfseConfiguracaoAtualApi(

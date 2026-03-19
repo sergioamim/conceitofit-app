@@ -12,7 +12,7 @@
 
 **Details:**
 
-Implementar a estratégia frontend-first descrita em `/Users/sergioamim/dev/pessoal/academia-app/docs/SESSION_BOOTSTRAP_CACHE_PRD.md`: promover o contexto atual para um store global de bootstrap, tratar `activeTenantId` como ponto único de verdade da aplicação, migrar `Sidebar`, `TenantThemeSync`, `AppTopbar` e `useAuthAccess` para selectors desse store, e sincronizar o snapshot após troca de unidade, login, refresh, logout e recovery de contexto. O rollout deve preservar SSR seguro, evitar preload redundante por rota e manter `X-Context-Id` como referência operacional efetiva.
+Implementar a estratégia frontend-first descrita em `docs/SESSION_BOOTSTRAP_CACHE_PRD.md`: promover o contexto atual para um store global de bootstrap, tratar `activeTenantId` como ponto único de verdade da aplicação, migrar `Sidebar`, `TenantThemeSync`, `AppTopbar` e `useAuthAccess` para selectors desse store, e sincronizar o snapshot após troca de unidade, login, refresh, logout e recovery de contexto. O rollout deve preservar SSR seguro, evitar preload redundante por rota e manter `X-Context-Id` como referência operacional efetiva.
 
 **Test Strategy:**
 
@@ -22,8 +22,8 @@ Medir baseline de chamadas em dev e produção local, cobrir com testes unitári
 
 ### 31.1. Medir o baseline real do bootstrap do shell
 
-**Status:** done
-**Dependencies:** None
+**Status:** done  
+**Dependencies:** None  
 
 Levantar a linha de base atual de chamadas de bootstrap em primeira carga, navegação interna e troca de unidade.
 
@@ -33,8 +33,8 @@ Instrumentar ou medir em dev e em build local de produção quantas chamadas oco
 
 ### 31.2. Expandir o contexto atual para um store global de bootstrap
 
-**Status:** done
-**Dependencies:** 31.1
+**Status:** done  
+**Dependencies:** 31.1  
 
 Consolidar no frontend autenticado o snapshot global de sessão, tenant ativo, claims e branding.
 
@@ -44,8 +44,8 @@ Reaproveitar `src/hooks/use-session-context.tsx`, `src/lib/api/session.ts` e `sr
 
 ### 31.3. Migrar consumidores do shell para selectors
 
-**Status:** done
-**Dependencies:** 31.2
+**Status:** done  
+**Dependencies:** 31.2  
 
 Eliminar fetches próprios de sessão e academia nos componentes estruturais do shell.
 
@@ -55,19 +55,19 @@ Refatorar `Sidebar`, `TenantThemeSync`, `AppTopbar` e `useAuthAccess` para consu
 
 ### 31.4. Centralizar a troca de unidade ativa e a invalidação do snapshot
 
-**Status:** done
-**Dependencies:** 31.2, 31.3
+**Status:** done  
+**Dependencies:** 31.2, 31.3  
 
 Fazer a troca de unidade ocorrer por uma única ação formal e refletir em toda a UI.
 
 **Details:**
 
-Implementar ou consolidar `switchActiveTenant(tenantId)` para chamar o endpoint canônico de contexto, atualizar o snapshot global, recalcular branding, decidir invalidação de claims/academia quando necessário e sincronizar eventos entre abas.
+Implementar ou consolidar `switchActiveTenant(tenantId)` para chamar o endpoint canônico de contexto, atualizar o snapshot global, recalcular branding, decidir invalidação de claims e academia quando necessário e sincronizar eventos entre abas.
 
 ### 31.5. Sincronizar o store com refresh, logout e recovery de contexto
 
-**Status:** done
-**Dependencies:** 31.2, 31.4
+**Status:** done  
+**Dependencies:** 31.2, 31.4  
 
 Garantir que o snapshot global continue consistente após mudanças de sessão e reparos automáticos do wrapper HTTP.
 
@@ -77,20 +77,11 @@ Acoplar o store aos fluxos já endurecidos de login, refresh, logout e recovery 
 
 ### 31.6. Validar regressão e reduzir chamadas redundantes nas rotas críticas
 
-**Status:** done
-**Dependencies:** 31.1, 31.3, 31.4, 31.5
+**Status:** done  
+**Dependencies:** 31.1, 31.3, 31.4, 31.5  
 
 Fechar a task com evidência objetiva de redução de bootstrap redundante.
 
 **Details:**
 
-Adicionar cobertura unitária/e2e para shell autenticado, troca de unidade e rotas como `/clientes`; comparar baseline com resultado final e registrar os números obtidos conforme os critérios do PRD.
-
-## Completion Notes
-
-- Implementado o bootstrap global em `src/hooks/use-session-context.tsx` consolidando `authUser`, `roles`, permissões derivadas, `activeTenantId`, `activeTenant`, `availableTenants`, `academia`, `brandingSnapshot` e timestamps (`lastBootstrapAt`, `lastTenantSyncAt`) em um store único.
-- Consolidada a atualização de contexto no shell autenticado (hidratação, eventos de sessão/tenant/contexto, `AUTH_SESSION_CLEARED_EVENT`, `AUTH_SESSION_UPDATED_EVENT`, `TENANT_CONTEXT_UPDATED_EVENT`, `storage`) com refresh controlado no `TenantContextProvider`.
-- Removidos `listAcademiasApi` e fetches próprios de sessão no shell estrutural: `Sidebar` e `TenantThemeSync` agora consomem apenas estado do contexto.
-- `AppTopbar` e `useAuthAccess` passaram a depender de selectors do contexto global (`tenantId`, `setTenant`, `roles`, `canAccessElevatedModules`) em vez de chamadas individuais de sessão/academia.
-- Ação de troca de unidade centralizada por `switchActiveTenant` (com fallback para `setTenant`) e sincronização via tenant-context.
-- `clearAuthSession` e o fluxo de refresh 401 já foram endurecidos previamente na Task 30 e passam a refletir no snapshot global do provider.
+Adicionar cobertura unitária e e2e para shell autenticado, troca de unidade e rotas como `/clientes`; comparar baseline com resultado final e registrar os números obtidos conforme os critérios do PRD.

@@ -2,9 +2,9 @@
 
 **Title:** Expor bootstrap consolidado do app no backend e migrar o frontend
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 31
+**Dependencies:** 31 ✓
 
 **Priority:** medium
 
@@ -12,7 +12,7 @@
 
 **Details:**
 
-Implementar a fase opcional descrita em `/Users/sergioamim/dev/pessoal/academia-app/docs/SESSION_BOOTSTRAP_CACHE_PRD.md`: desenhar um endpoint como `GET /api/v1/app/bootstrap`, alinhar contrato, controller e testes no backend, e adaptar o frontend para consumir esse payload consolidado com fallback temporário para os endpoints legados durante a transição.
+Implementar a fase opcional descrita em `docs/SESSION_BOOTSTRAP_CACHE_PRD.md`: desenhar um endpoint como `GET /api/v1/app/bootstrap`, alinhar contrato, controller e testes no backend, e adaptar o frontend para consumir esse payload consolidado com fallback temporário para os endpoints legados durante a transição.
 
 **Test Strategy:**
 
@@ -22,8 +22,8 @@ Validar contrato no backend com testes de integração e `openapi.yaml`, cobrir 
 
 ### 32.1. Definir contrato e regras de consistência do bootstrap unificado
 
-**Status:** pending
-**Dependencies:** None
+**Status:** done  
+**Dependencies:** None  
 
 Fechar o payload canônico e as regras de invalidação antes de implementar o endpoint.
 
@@ -33,19 +33,19 @@ Especificar no backend o shape mínimo com `user`, `tenantContext`, `academia`, 
 
 ### 32.2. Implementar endpoint consolidado no backend com contrato alinhado
 
-**Status:** pending
-**Dependencies:** 32.1
+**Status:** done  
+**Dependencies:** 32.1  
 
 Adicionar o endpoint unificado preservando a modelagem modular do monólito e o contrato OpenAPI.
 
 **Details:**
 
-Implementar controller/service/DTOs no backend, atualizar `openapi.yaml` e cobrir o fluxo com testes de integração, mantendo compatibilidade com `X-Context-Id` e as regras atuais de multiunidade.
+Implementar controller, service e DTOs no backend, atualizar `openapi.yaml` e cobrir o fluxo com testes de integração, mantendo compatibilidade com `X-Context-Id` e as regras atuais de multiunidade.
 
 ### 32.3. Migrar o store global do frontend para consumir o endpoint novo
 
-**Status:** pending
-**Dependencies:** 32.2
+**Status:** done  
+**Dependencies:** 32.2  
 
 Substituir a composição local de bootstrap por consumo do payload consolidado.
 
@@ -55,8 +55,8 @@ Adaptar o `SessionBootstrapStore` para usar o endpoint unificado no cold start e
 
 ### 32.4. Remover fallback legado quando a migração estiver estável
 
-**Status:** pending
-**Dependencies:** 32.3
+**Status:** done  
+**Dependencies:** 32.3  
 
 Encerrar a transição e simplificar o bootstrap da aplicação.
 

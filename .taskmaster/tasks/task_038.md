@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 1
+**Dependencies:** 1 ✓
 
 **Priority:** high
 
@@ -23,7 +23,7 @@ Cobrir adapter e rotas consumidoras com testes unitários e de integração, val
 ### 38.1. Mapear contrato novo de atividades e superfícies impactadas
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Confirmar os campos efetivos da API e inventariar todas as rotas do frontend que dependem do cadastro de atividades.
 
@@ -34,7 +34,7 @@ Revisar `src/lib/api/administrativo.ts`, `src/lib/types.ts` e as telas consumido
 ### 38.2. Ajustar request e normalização da API de atividades
 
 **Status:** done  
-**Dependencies:** 38.1
+**Dependencies:** 38.1  
 
 Enviar e ler corretamente os campos evoluídos do contrato de atividades.
 
@@ -45,7 +45,7 @@ Atualizar `AtividadeApiResponse`, `AtividadeUpsertApiRequest`, `buildAtividadeUp
 ### 38.3. Revisar telas e fluxos dependentes do cadastro de atividades
 
 **Status:** done  
-**Dependencies:** 38.2
+**Dependencies:** 38.2  
 
 Garantir consistência visual e funcional nas rotas que consomem atividades após o ajuste do contrato.
 
@@ -56,7 +56,7 @@ Revisar `src/app/(app)/atividades/page.tsx`, `src/app/(app)/administrativo/ativi
 ### 38.4. Cobrir contrato e regressão das rotas de atividades com testes
 
 **Status:** done  
-**Dependencies:** 38.3
+**Dependencies:** 38.3  
 
 Fechar a trilha de confiança para o novo contrato de atividades no frontend.
 

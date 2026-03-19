@@ -12,9 +12,7 @@
 
 **Details:**
 
-O frontend hoje ainda mistura fallback de SSR diferente do shell final, labels tenant-aware mutaveis no primeiro paint e formatacao/calculo temporal durante o render hidratavel. Esta task fecha o problema na raiz: padronizar o estado inicial do contexto e do branding, fazer sidebar/topbar/backoffice renderizarem a mesma arvore entre servidor e primeiro render do cliente, remover `suppressHydrationWarning` do escopo e reescrever pontos de treinos que ainda dependem de `new Date()`, locale do navegador ou outros valores nao deterministas em render.
-
-O trabalho tambem inclui ajustes basicos de acessibilidade e estabilidade visual do layout, como rotulos de controles, logo com dimensoes estaveis e fallback textual unico para unidade ativa, sem mascarar divergencias de HTML.
+O frontend ainda mistura fallback de SSR diferente do shell final, labels tenant-aware mutaveis no primeiro paint e formatacao/calculo temporal durante o render hidratavel. Esta task fecha o problema na raiz: padronizar o estado inicial do contexto e do branding, fazer sidebar/topbar/backoffice renderizarem a mesma arvore entre servidor e primeiro render do cliente, remover `suppressHydrationWarning` do escopo e reescrever pontos de treinos que ainda dependem de `new Date()`, locale do navegador ou outros valores nao deterministas em render. O trabalho tambem inclui ajustes basicos de acessibilidade e estabilidade visual do layout, como rotulos de controles, logo com dimensoes estaveis e fallback textual unico para unidade ativa, sem mascarar divergencias de HTML.
 
 **Test Strategy:**
 
@@ -98,11 +96,3 @@ Validar a regressao do shell e das paginas onde o problema ja apareceu.
 **Details:**
 
 Adicionar ou ajustar testes unitarios/e2e para o shell principal, backoffice, seletor de unidade e paginas de treinos; validar que as rotas renderizam com fallback consistente, sem mismatch de labels tenant-aware e sem overlay de hydration no ambiente dev.
-
-## Completion Notes
-
-- Shell principal e backoffice passaram a compartilhar a mesma moldura SSR/base entre fallback e layout final, evitando troca estrutural no primeiro paint.
-- Sidebar, topbar e paginas de treinos agora usam fallback textual unico para unidade ativa, sem `suppressHydrationWarning` local e sem labels mutaveis no primeiro render.
-- `treinos/atribuidos` saiu de `new Date()`/`toLocaleDateString()` no render hidratavel e passou a usar formatacao deterministica e `statusValidade`.
-- Verificacao local concluida com `npx eslint` nos arquivos alterados e `npx playwright test tests/unit/tenant-context.spec.ts tests/unit/treinos-api.spec.ts tests/unit/treinos-workspace.spec.ts --config=playwright.unit.config.ts` com 11 testes passando.
-- As specs E2E alvo (`sessao-multiunidade`, `treinos-template-list`, `treinos-atribuidos`) ficaram bloqueadas no sandbox porque o `webServer` do Playwright nao conseguiu subir devido a `.next/dev/lock` em uso.

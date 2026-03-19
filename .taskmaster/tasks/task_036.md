@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 35
+**Dependencies:** 35 ✓
 
 **Priority:** high
 
@@ -23,7 +23,7 @@ Cobrir fluxos de emissao individual e lote com mocks de sucesso, validacao fisca
 ### 36.1. Mapear superficies impactadas por emissao e consulta de NFSe
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Levantar telas e componentes que dependem do status ou da acao de emissao fiscal.
 
@@ -34,7 +34,7 @@ Mapear `src/app/(app)/pagamentos/page.tsx`, `src/app/(app)/pagamentos/emitir-em-
 ### 36.2. Atualizar client de pagamentos para novas respostas e erros fiscais
 
 **Status:** done  
-**Dependencies:** 36.1
+**Dependencies:** 36.1  
 
 Ajustar o adapter de emissao de NFSe por pagamento para o novo comportamento do backend.
 
@@ -45,7 +45,7 @@ Revisar `src/lib/api/pagamentos.ts` para tratar corretamente erros de validacao 
 ### 36.3. Ajustar UX de emissao individual e em lote
 
 **Status:** done  
-**Dependencies:** 36.2
+**Dependencies:** 36.2  
 
 Refletir o novo bloqueio fiscal nas telas operacionais de pagamentos.
 
@@ -56,7 +56,7 @@ Atualizar CTAs, toasts, modais e mensagens nas telas de pagamentos para orientar
 ### 36.4. Revisar exibição de status fiscal em cliente e recebimentos
 
 **Status:** done  
-**Dependencies:** 36.3
+**Dependencies:** 36.3  
 
 Garantir consistencia de exibição de NFSe emitida, pendente e bloqueada.
 
@@ -67,7 +67,7 @@ Alinhar badges, labels, filtros e textos nas telas que listam pagamentos/NFSe pa
 ### 36.5. Cobrir fluxos operacionais de NFSe com testes do frontend
 
 **Status:** done  
-**Dependencies:** 36.4
+**Dependencies:** 36.4  
 
 Fechar cobertura dos cenarios de emissao e falha fiscal no frontend.
 

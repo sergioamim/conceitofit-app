@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 19, 20, 21, 22
+**Dependencies:** 19 ✓, 20 ✓, 21 ✓, 22 ✓
 
 **Priority:** high
 
@@ -12,7 +12,7 @@
 
 **Details:**
 
-Esta task fecha o principal ganho operacional da V2: pegar um template pronto e aplicá-lo com segurança a um ou muitos clientes, com rastreabilidade, vigência e controle de overwrite. A atribuicao em massa deve rodar via job assincrono, com lista final de clientes resolvida e resumo terminal por cliente.
+Esta task fecha o principal ganho operacional da V2: pegar um template pronto e aplica-lo com seguranca a um ou muitos clientes, com rastreabilidade, vigencia e controle de overwrite. A atribuicao em massa deve rodar via job assincrono, com lista final de clientes resolvida e resumo terminal por cliente.
 
 **Test Strategy:**
 
@@ -29,7 +29,7 @@ Fechar a acao basica do modulo.
 
 **Details:**
 
-Adicionar modal/drawer para selecionar um cliente, definir vigência, professor responsável, observação, politica de conflito e confirmar a criação do treino atribuído a partir do template com snapshot da versao.
+Adicionar modal/drawer para selecionar um cliente, definir vigencia, professor responsavel, observacao, politica de conflito e confirmar a criacao do treino atribuido a partir do template com snapshot da versao.
 
 ### 23.2. Implementar fluxo de selecao e atribuicao para varios clientes
 
@@ -40,29 +40,29 @@ Escalar a operacao para lote.
 
 **Details:**
 
-Permitir seleção múltipla manual e por filtros, revisão da lista final e confirmação operacional para aplicar o mesmo template a vários clientes. A aba `Segmento` deve ficar preparada para futuro, mas fora do comportamento funcional P0.
+Permitir selecao multipla manual e por filtros, revisao da lista final e confirmacao operacional para aplicar o mesmo template a varios clientes. A aba `Segmento` deve ficar preparada para futuro, mas fora do comportamento funcional P0.
 
 ### 23.3. Persistir snapshot e versionamento no momento da atribuicao
 
 **Status:** done  
 **Dependencies:** 23.1, 23.2  
 
-Garantir separacao entre origem e instância.
+Garantir separacao entre origem e instancia.
 
 **Details:**
 
-Registrar a versão do template usada, origem da atribuição, snapshot completo do template e vínculo de rastreabilidade para que alterações futuras no template não afetem automaticamente os treinos já atribuídos.
+Registrar a versao do template usada, origem da atribuicao, snapshot completo do template e vinculo de rastreabilidade para que alteracoes futuras no template nao afetem automaticamente os treinos ja atribuidos.
 
 ### 23.4. Implementar politicas de conflito e overwrite
 
 **Status:** done  
 **Dependencies:** 23.2, 23.3  
 
-Evitar colisão operacional com treinos ativos.
+Evitar colisao operacional com treinos ativos.
 
 **Details:**
 
-Suportar regras de `manter treino atual`, `substituir treino atual` e `agendar novo`, com feedback claro antes da confirmação e resolucao explicita por cliente no job.
+Suportar regras de `manter treino atual`, `substituir treino atual` e `agendar novo`, com feedback claro antes da confirmacao e resolucao explicita por cliente no job.
 
 ### 23.5. Exibir resumo operacional e historico do resultado da atribuicao
 
@@ -73,4 +73,4 @@ Fechar o fluxo com rastreabilidade e retorno para a operacao.
 
 **Details:**
 
-Apresentar total selecionado, total atribuído, ignorados e motivos, além de manter histórico consultável por template/job/cliente e polling ate estado terminal do job.
+Apresentar total selecionado, total atribuido, ignorados e motivos, alem de manter historico consultavel por template/job/cliente e polling ate estado terminal do job.

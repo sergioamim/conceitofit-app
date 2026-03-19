@@ -65,3 +65,7 @@ O backend passou a formalizar uma nova trilha administrativa de seguranca em `/a
 
 ### 18. Integrar politica de novas unidades ao administrativo e onboarding
 - Exibir e operar a elegibilidade de usuarios para novas unidades, alem de refletir acesso herdado/manual nas telas de seguranca e de unidades.
+
+## Complemento 2026-03-19 - Perfil do cliente e aba NFS-e
+
+No detalhe do cliente em `src/app/(app)/clientes/[id]/page.tsx`, a aba `NFS-e` nao deve depender de `GET /api/v1/administrativo/nfse/configuracao-atual` no carregamento inicial da pagina. O comportamento esperado e carregar sob demanda apenas quando o usuario abrir a aba e priorizar a exibicao das NFS-e ja emitidas e dos estados fiscais refletidos nos pagamentos, sem introduzir fetch fiscal global desnecessario no perfil.

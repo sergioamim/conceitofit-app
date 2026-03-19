@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
@@ -44,6 +44,13 @@ import { ClientePhotoModal } from "@/components/shared/cliente-photo-modal";
 import { ClienteTabs, ClienteTabKey } from "@/components/shared/cliente-tabs";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
+type NfseTabState = {
+  tenantId: string | null;
+  configuracao: NfseConfiguracao | null;
+  status: "idle" | "loading" | "ready" | "error";
+  error: string | null;
+};
+
 function formatDate(d: string) {
   const normalized = d.includes("T") ? d.split("T")[0] : d;
   const [year, month, day] = normalized.split("-");
@@ -53,6 +60,15 @@ function formatDate(d: string) {
 
 function formatBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function createIdleNfseTabState(tenantId: string | null = null): NfseTabState {
+  return {
+    tenantId,
+    configuracao: null,
+    status: "idle",
+    error: null,
+  };
 }
 
 export default function ClienteDetalhePage() {
@@ -66,7 +82,7 @@ export default function ClienteDetalhePage() {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [convenios, setConvenios] = useState<Convenio[]>([]);
-  const [nfseConfiguracao, setNfseConfiguracao] = useState<NfseConfiguracao | null>(null);
+  const [nfseTabState, setNfseTabState] = useState<NfseTabState>(() => createIdleNfseTabState());
   const [freqMode, setFreqMode] = useState<"7d" | "ano">("7d");
   const [presencas, setPresencas] = useState<Presenca[]>([]);
   const [tab, setTab] = useState<ClienteTabKey>("resumo");
@@ -87,6 +103,52 @@ export default function ClienteDetalhePage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const nfseTabStateRef = useRef(nfseTabState);
+
+  useEffect(() => {
+    nfseTabStateRef.current = nfseTabState;
+  }, [nfseTabState]);
+
+  const loadNfseTabData = useCallback(async (currentTenantId: string) => {
+    const current = nfseTabStateRef.current;
+    if (
+      current.tenantId === currentTenantId
+      && (current.status === "loading" || current.status === "ready")
+    ) {
+      return;
+    }
+
+    setNfseTabState({
+      tenantId: currentTenantId,
+      configuracao: null,
+      status: "loading",
+      error: null,
+    });
+
+    try {
+      const configuracao = await getNfseConfiguracaoAtualApi({ tenantId: currentTenantId });
+      setNfseTabState((current) => {
+        if (current.tenantId !== currentTenantId) return current;
+        return {
+          tenantId: currentTenantId,
+          configuracao,
+          status: "ready",
+          error: null,
+        };
+      });
+    } catch (error) {
+      const message = normalizeErrorMessage(error);
+      setNfseTabState((current) => {
+        if (current.tenantId !== currentTenantId) return current;
+        return {
+          tenantId: currentTenantId,
+          configuracao: null,
+          status: "error",
+          error: message,
+        };
+      });
+    }
+  }, []);
 
   const reload = useCallback(async () => {
     const id = params?.id;
@@ -110,13 +172,14 @@ export default function ClienteDetalhePage() {
         setPresencas([]);
         setFormasPagamento([]);
         setConvenios([]);
+        setNfseTabState(createIdleNfseTabState());
         return;
       }
       if (resolved.tenantId !== tenantId) {
         await setTenant(resolved.tenantId);
       }
       const currentTenantId = resolved.tenantId;
-      const [ms, ps, pres, fps, cvs, pags, nfseConfig] = await Promise.all([
+      const [ms, ps, pres, fps, cvs, pags] = await Promise.all([
         listMatriculasByAlunoService({
           tenantId: currentTenantId,
           alunoId: id,
@@ -142,7 +205,6 @@ export default function ClienteDetalhePage() {
           page: 0,
           size: 80,
         }),
-        getNfseConfiguracaoAtualApi({ tenantId: currentTenantId }).catch(() => null),
       ]);
       setAluno(resolved.aluno);
       setMatriculas(ms.filter((m) => m.alunoId === id));
@@ -151,10 +213,13 @@ export default function ClienteDetalhePage() {
       setPresencas(pres);
       setFormasPagamento(fps);
       setConvenios(cvs);
-      setNfseConfiguracao(nfseConfig);
+      setNfseTabState((current) =>
+        current.tenantId === currentTenantId ? current : createIdleNfseTabState(currentTenantId)
+      );
     } catch (error) {
       setLoadError(normalizeErrorMessage(error));
       setAluno(null);
+      setNfseTabState(createIdleNfseTabState());
     } finally {
       setLoading(false);
     }
@@ -175,6 +240,11 @@ export default function ClienteDetalhePage() {
     router.replace(`/clientes/${aluno.id}`);
   }, [aluno, canDeleteClient, router, searchParams]);
 
+  useEffect(() => {
+    if (tab !== "nfse" || !aluno?.tenantId) return;
+    void loadNfseTabData(aluno.tenantId);
+  }, [aluno?.tenantId, loadNfseTabData, tab]);
+
   const planoAtivo = useMemo(() => {
     return matriculas.find((m) => m.status === "ATIVA");
   }, [matriculas]);
@@ -193,11 +263,23 @@ export default function ClienteDetalhePage() {
     return pago - aberto;
   }, [pagamentos]);
 
-  const nfs = useMemo(
-    () => pagamentos.filter((p) => p.status === "PAGO"),
-    [pagamentos]
-  );
+  const nfs = useMemo(() => {
+    return pagamentos
+      .filter((p) => p.status === "PAGO")
+      .slice()
+      .sort((left, right) => {
+        if (Boolean(left.nfseEmitida) !== Boolean(right.nfseEmitida)) {
+          return left.nfseEmitida ? -1 : 1;
+        }
+        const leftDate = left.dataEmissaoNfse ?? left.dataPagamento ?? left.dataVencimento ?? left.dataCriacao;
+        const rightDate = right.dataEmissaoNfse ?? right.dataPagamento ?? right.dataVencimento ?? right.dataCriacao;
+        if (leftDate === rightDate) return 0;
+        return leftDate > rightDate ? -1 : 1;
+      });
+  }, [pagamentos]);
+  const nfseConfiguracao = nfseTabState.tenantId === aluno?.tenantId ? nfseTabState.configuracao : null;
   const nfseBloqueio = getNfseBloqueioMensagem(nfseConfiguracao);
+  const nfseEmissaoBloqueada = nfseTabState.status === "ready" && Boolean(nfseBloqueio);
 
   const recorrente = useMemo(() => {
     const mat = matriculas.find((m) => m.renovacaoAutomatica);
@@ -894,6 +976,22 @@ export default function ClienteDetalhePage() {
       {tab === "nfse" && (
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="font-display text-base font-bold">NFS-e do cliente</h2>
+          {nfseTabState.status === "loading" ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Verificando bloqueios fiscais da unidade...
+            </p>
+          ) : null}
+          {nfseTabState.status === "error" ? (
+            <div className="mt-3 rounded-xl border border-gym-warning/40 bg-gym-warning/10 p-3 text-sm text-gym-warning">
+              Não foi possível validar a configuração fiscal da unidade agora.
+              {nfseTabState.error ? ` ${nfseTabState.error}` : ""}
+            </div>
+          ) : null}
+          {nfseEmissaoBloqueada ? (
+            <div className="mt-3 rounded-xl border border-gym-danger/40 bg-gym-danger/10 p-3 text-sm text-gym-danger">
+              {nfseBloqueio}
+            </div>
+          ) : null}
           <div className="mt-3 divide-y divide-border">
             {nfs.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">
@@ -917,12 +1015,12 @@ export default function ClienteDetalhePage() {
                     className={`text-xs font-semibold uppercase tracking-wider ${
                       p.nfseEmitida
                         ? "text-gym-teal"
-                        : nfseBloqueio
+                        : nfseEmissaoBloqueada
                           ? "text-gym-danger"
                           : "text-gym-warning"
                     }`}
                   >
-                    {p.nfseEmitida ? p.nfseNumero || "NF sem número" : nfseBloqueio ? "Emissão bloqueada" : "Emissão pendente"}
+                    {p.nfseEmitida ? p.nfseNumero || "NF sem número" : nfseEmissaoBloqueada ? "Emissão bloqueada" : "Emissão pendente"}
                   </p>
                 </div>
               </div>

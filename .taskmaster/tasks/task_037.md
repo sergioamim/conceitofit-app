@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 35, 36
+**Dependencies:** 35 ✓, 36 ✓
 
 **Priority:** medium
 
@@ -23,7 +23,7 @@ Executar cobertura de regressão nas páginas impactadas e registrar evidência 
 ### 37.1. Atualizar documentação operacional do frontend fiscal
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Documentar o novo fluxo de preenchimento e validação fiscal no backoffice web.
 
@@ -34,7 +34,7 @@ Registrar onde os operadores encontram os novos campos, como o frontend se compo
 ### 37.2. Adicionar ou ampliar smoke/E2E das telas impactadas
 
 **Status:** done  
-**Dependencies:** 37.1
+**Dependencies:** 37.1  
 
 Cobrir os caminhos mais críticos do fluxo fiscal no navegador.
 
@@ -45,7 +45,7 @@ Criar ou ampliar cenarios de smoke/E2E para `/administrativo/nfse` e os fluxos d
 ### 37.3. Alinhar inventario de contratos frontend x backend
 
 **Status:** done  
-**Dependencies:** 37.2
+**Dependencies:** 37.2  
 
 Registrar os endpoints e payloads efetivamente usados pelo frontend apos a adaptacao.
 
@@ -56,7 +56,7 @@ Atualizar a documentacao interna do frontend sobre os endpoints de configuracao 
 ### 37.4. Registrar critérios de aceite e riscos residuais do rollout
 
 **Status:** done  
-**Dependencies:** 37.3
+**Dependencies:** 37.3  
 
 Fechar a trilha com critérios observáveis e riscos conhecidos do frontend fiscal.
 

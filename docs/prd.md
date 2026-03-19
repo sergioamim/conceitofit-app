@@ -256,6 +256,8 @@
   - receber pagamento altera status e pode reativar cliente;
   - importação em lote valida descrição, valor, desconto e datas;
   - emissão de NFSe é marcada no pagamento.
+  - o perfil do cliente não deve consultar configuração fiscal no carregamento inicial apenas para exibir a aba `NFS-e`;
+  - a aba `NFS-e` do perfil do cliente carrega sob demanda e prioriza listar documentos emitidos e estados fiscais já refletidos nos pagamentos.
 - Saídas: pagamentos atualizados, títulos recebidos e NFSe marcada/emitida.
 - Módulos envolvidos: `pagamentos`, `pagamentos/emitir-em-lote`, `receber-pagamento-modal`, `mock/services`.
 

@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 19, 21
+**Dependencies:** 19 ✓, 21 ✓
 
 **Priority:** high
 
@@ -12,7 +12,7 @@
 
 **Details:**
 
-A biblioteca deve permitir encontrar, criar e reaproveitar exercícios sem sair do contexto da montagem. O drawer lateral deve sustentar o cadastro rico de exercício, incluindo codigo, grupo de exercicios, grupo muscular, tipo, objetivo padrao, unidade de carga, mídia, descrição e disponibilidade no app.
+A biblioteca deve permitir encontrar, criar e reaproveitar exercicios sem sair do contexto da montagem. O drawer lateral deve sustentar o cadastro rico de exercicio, incluindo codigo, grupo de exercicios, grupo muscular, tipo, objetivo padrao, unidade de carga, midia, descricao e disponibilidade no app.
 
 **Test Strategy:**
 
@@ -40,7 +40,7 @@ Conectar o catalogo diretamente a montagem do treino.
 
 **Details:**
 
-Adicionar busca instantanea, listagem lateral, CTA `Novo exercicio` e ação `+` para inserir itens no bloco ativo sem sair do editor.
+Adicionar busca instantanea, listagem lateral, CTA `Novo exercicio` e acao `+` para inserir itens no bloco ativo sem sair do editor.
 
 ### 22.3. Implementar drawer de criacao e edicao de exercicio
 
@@ -51,26 +51,26 @@ Permitir gestao do catalogo dentro do fluxo.
 
 **Details:**
 
-Construir o drawer com campos de nome, código, grupo de exercícios, grupo muscular, tipo, objetivo padrao, unidade de carga e descrições, seguindo a lógica das telas de referência.
+Construir o drawer com campos de nome, codigo, grupo de exercicios, grupo muscular, tipo, objetivo padrao, unidade de carga e descricoes, seguindo a logica das telas de referencia.
 
 ### 22.4. Suportar midia, descricao rica e flag de exibicao no app
 
 **Status:** done  
 **Dependencies:** 22.3  
 
-Enriquecer a qualidade do exercício cadastrado.
+Enriquecer a qualidade do exercicio cadastrado.
 
 **Details:**
 
-Adicionar mídia (`imagem`, `gif`, `video`), editor de descrição, opção de exibição no app do cliente e regras de validação compatíveis com o consumo no app e no snapshot do treino atribuido.
+Adicionar midia (`imagem`, `gif`, `video`), editor de descricao, opcao de exibicao no app do cliente e regras de validacao compativeis com o consumo no app e no snapshot do treino atribuido.
 
 ### 22.5. Implementar similares, validacoes e reutilizacao no editor
 
 **Status:** done  
 **Dependencies:** 22.3, 22.4  
 
-Fechar o ciclo de catalogo até a montagem.
+Fechar o ciclo de catalogo ate a montagem.
 
 **Details:**
 
-Exibir exercícios similares, validar cadastros inconsistentes e garantir que um exercício criado/atualizado possa ser reutilizado imediatamente na biblioteca do editor e nos itens ja em montagem.
+Exibir exercicios similares, validar cadastros inconsistentes e garantir que um exercicio criado/atualizado possa ser reutilizado imediatamente na biblioteca do editor e nos itens ja em montagem.

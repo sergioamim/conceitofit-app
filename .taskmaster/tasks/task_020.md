@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 19
+**Dependencies:** 19 ✓
 
 **Priority:** high
 
@@ -16,7 +16,7 @@ A V1 da listagem deve ser administrativa e rapida, sem inflar a tela com filtros
 
 **Test Strategy:**
 
-Executar testes de UI e navegacao cobrindo busca, paginação, ações por linha, loading, erro e estados vazios na listagem de templates.
+Executar testes de UI e navegacao cobrindo busca, paginacao, acoes por linha, loading, erro e estados vazios na listagem de templates.
 
 ## Subtasks
 
@@ -29,7 +29,7 @@ Traduzir a referencia visual em uma tela administrativa objetiva.
 
 **Details:**
 
-Definir cabeçalho com `Treino Padrao`, busca principal, link `Saiba mais`, CTA `Criar treino padrao` e tabela simples com colunas `Nome do treino`, `Criado por` e `Acoes`, preservando contador de resultados e superficie limpa sem filtros avancados na area principal.
+Definir cabecalho com `Treino Padrao`, busca principal, link `Saiba mais`, CTA `Criar treino padrao` e tabela simples com colunas `Nome do treino`, `Criado por` e `Acoes`, preservando contador de resultados e superficie limpa sem filtros avancados na area principal.
 
 ### 20.2. Implementar busca, tabela e paginacao server-side
 
@@ -40,7 +40,7 @@ Fechar a base operacional da listagem.
 
 **Details:**
 
-Implementar a consulta de templates com busca por nome ou professor, paginação server-side, contador de resultados e ordenacao padrao por recencia, garantindo que a API da tela retorne apenas templates e nunca treinos atribuidos.
+Implementar a consulta de templates com busca por nome ou professor, paginacao server-side, contador de resultados e ordenacao padrao por recencia, garantindo que a API da tela retorne apenas templates e nunca treinos atribuidos.
 
 ### 20.3. Adicionar acoes por linha e tooltips obrigatorios
 
@@ -51,7 +51,7 @@ Garantir que a operacao principal esteja disponivel sem abrir a edicao completa.
 
 **Details:**
 
-Adicionar ações de `Editar treino`, `Abrir montagem`, `Atribuir treino` e `Excluir/arquivar`, com tooltips explicitos e sem ambiguidades visuais.
+Adicionar acoes de `Editar treino`, `Abrir montagem`, `Atribuir treino` e `Excluir/arquivar`, com tooltips explicitos e sem ambiguidades visuais.
 
 ### 20.4. Conectar navegacao, permissao e atalhos do modulo
 
@@ -62,15 +62,15 @@ Integrar a listagem ao fluxo geral de treinos.
 
 **Details:**
 
-Garantir que a tela respeite permissões por perfil, navegue corretamente para o editor e os fluxos de atribuição, e preserve o contexto de unidade/professor quando aplicável.
+Garantir que a tela respeite permissoes por perfil, navegue corretamente para o editor e os fluxos de atribuicao, e preserve o contexto de unidade/professor quando aplicavel.
 
 ### 20.5. Cobrir loading, empty state, erro e regressao da listagem
 
 **Status:** done  
 **Dependencies:** 20.3, 20.4  
 
-Estabilizar a tela antes de avançar para o editor.
+Estabilizar a tela antes de avancar para o editor.
 
 **Details:**
 
-Adicionar cobertura para estados vazios, erros de carregamento, paginação, busca e quick filter de revisao quando aplicavel, incluindo testes automatizados e checklist de regressão visual/funcional.
+Adicionar cobertura para estados vazios, erros de carregamento, paginacao, busca e quick filter de revisao quando aplicavel, incluindo testes automatizados e checklist de regressao visual/funcional.

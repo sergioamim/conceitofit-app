@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 25, 26
+**Dependencies:** 25 ✓, 26 ✓
 
 **Priority:** medium
 
@@ -12,7 +12,7 @@
 
 **Details:**
 
-Atingir 60% uma vez nao basta. Esta task foi concluida com gate automatizado de coverage core (`coverage:gate`), workflow de CI em `.github/workflows/coverage-core.yml`, suite smoke consolidada por dominio no coletor e politica operacional documentada em `docs/TEST_COVERAGE_GOVERNANCE.md`. Os artefatos publicados agora incluem resumo/LCOV/HTML do perfil core e historico em `docs/TEST_COVERAGE_HISTORY_CORE.json`.
+Atingir 60% uma vez nao basta. Esta task foi concluida com gate automatizado de coverage core (coverage:gate), workflow de CI em .github/workflows/coverage-core.yml, suite smoke consolidada por dominio no coletor e politica operacional documentada em docs/TEST_COVERAGE_GOVERNANCE.md. Os artefatos publicados agora incluem resumo/LCOV/HTML do perfil core e historico em docs/TEST_COVERAGE_HISTORY_CORE.json.
 
 **Test Strategy:**
 
