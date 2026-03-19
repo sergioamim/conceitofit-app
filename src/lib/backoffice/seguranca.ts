@@ -1,4 +1,5 @@
 import type {
+  GlobalAdminReviewBoard,
   GlobalAdminNewUnitsPolicyScope,
   GlobalAdminSecurityOverview,
   GlobalAdminUserDetail,
@@ -7,8 +8,11 @@ import type {
 } from "@/lib/types";
 import {
   assignGlobalAdminMembershipProfileApi,
+  createGlobalAdminAccessExceptionApi,
   createGlobalAdminMembershipApi,
+  deleteGlobalAdminAccessExceptionApi,
   deleteGlobalAdminMembershipApi,
+  getGlobalAdminReviewBoardApi,
   getGlobalAdminSecurityOverviewApi,
   getGlobalAdminUserDetailApi,
   listGlobalAdminUsersApi,
@@ -150,6 +154,46 @@ export async function updateUserNewUnitsPolicy(input: {
     academiaIds: input.academiaIds?.map((item) => item.trim()).filter(Boolean),
     rationale: trimString(input.rationale),
   });
+}
+
+export async function createUserAccessException(input: {
+  userId: string;
+  membershipId?: string;
+  title: string;
+  scopeLabel?: string;
+  justification: string;
+  expiresAt?: string;
+}): Promise<GlobalAdminUserDetail> {
+  const userId = trimString(input.userId);
+  const title = trimString(input.title);
+  const justification = trimString(input.justification);
+  if (!userId || !title || !justification) {
+    throw new Error("Usuário, título e justificativa são obrigatórios.");
+  }
+  return createGlobalAdminAccessExceptionApi({
+    userId,
+    membershipId: trimString(input.membershipId),
+    title,
+    scopeLabel: trimString(input.scopeLabel),
+    justification,
+    expiresAt: trimString(input.expiresAt),
+  });
+}
+
+export async function removeUserAccessException(input: {
+  userId: string;
+  exceptionId: string;
+}): Promise<GlobalAdminUserDetail> {
+  const userId = trimString(input.userId);
+  const exceptionId = trimString(input.exceptionId);
+  if (!userId || !exceptionId) {
+    throw new Error("Exceção inválida.");
+  }
+  return deleteGlobalAdminAccessExceptionApi({ userId, exceptionId });
+}
+
+export async function getGlobalSecurityReviewBoard(): Promise<GlobalAdminReviewBoard> {
+  return getGlobalAdminReviewBoardApi();
 }
 
 export async function listEligibleNewUnitAdminsPreview(input?: {

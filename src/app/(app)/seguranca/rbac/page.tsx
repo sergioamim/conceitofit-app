@@ -163,8 +163,8 @@ export default function RbacPage() {
   const tabButtons: Array<{ id: RbacTab; label: string }> = useMemo(
     () => [
       { id: "perfis", label: "Perfis" },
-      { id: "usuarios", label: "Usuário x Perfis" },
-      { id: "grants", label: "Grants por Feature" },
+      { id: "usuarios", label: "Pessoas e Perfis" },
+      { id: "grants", label: "Funcionalidades por Perfil" },
       { id: "auditoria", label: "Auditoria" },
     ],
     []
@@ -327,7 +327,7 @@ export default function RbacPage() {
 
   const grantColumns = [
     { label: "Perfil", className: "w-52" },
-    { label: "Feature", className: "w-52" },
+    { label: "Funcionalidade", className: "w-52" },
     { label: "Permissão", className: "w-28" },
     { label: "Permitido", className: "w-24" },
     { label: "Atualizado", className: "w-36" },
@@ -337,9 +337,9 @@ export default function RbacPage() {
     <div className="space-y-5">
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Segurança</p>
-        <h1 className="font-display text-2xl font-bold tracking-tight">RBAC</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Perfis e Funcionalidades</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Gestão de perfis, vínculos e auditoria de permissões do tenant atual:
+          Base técnica da segurança para governar perfis, vínculos e auditoria do tenant atual:
           <span className="font-semibold text-foreground"> {tenant.tenantName}</span>
         </p>
       </div>
@@ -364,7 +364,7 @@ export default function RbacPage() {
 
       {!access.loading && !access.canAccessElevatedModules ? (
         <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          Acesso negado. Apenas perfis administrativos podem gerenciar RBAC.
+          Acesso negado. Apenas perfis administrativos podem gerenciar a base técnica de perfis e funcionalidades.
         </div>
       ) : null}
 
@@ -507,7 +507,7 @@ export default function RbacPage() {
         <section className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="font-display">Usuário x Perfis</CardTitle>
+              <CardTitle className="font-display">Pessoas e Perfis</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
@@ -593,12 +593,12 @@ export default function RbacPage() {
         <section className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="font-display">Features da plataforma</CardTitle>
+              <CardTitle className="font-display">Funcionalidades da plataforma</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {features.length === 0 ? (
-                  <SecurityEmptyState text="Nenhuma feature definida." />
+                  <SecurityEmptyState text="Nenhuma funcionalidade definida." />
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {features.map((feature) => (
@@ -621,7 +621,7 @@ export default function RbacPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="font-display">Grants</CardTitle>
+              <CardTitle className="font-display">Permissões detalhadas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <form className="grid gap-3 md:grid-cols-5" onSubmit={submitGrant}>
@@ -644,7 +644,7 @@ export default function RbacPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Feature</label>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Funcionalidade</label>
                   <Select
                     value={grantForm.featureKey}
                     onValueChange={(value) => setGrantForm((state) => ({ ...state, featureKey: value }))}

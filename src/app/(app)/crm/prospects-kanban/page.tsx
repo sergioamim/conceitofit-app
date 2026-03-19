@@ -9,6 +9,7 @@ import {
 } from "@/lib/api/crm";
 import { listFuncionariosApi } from "@/lib/api/administrativo";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import { canTransitionProspectStatus } from "@/lib/crm/prospect-status";
 import type { CrmPipelineStage, Funcionario, Prospect, StatusProspect } from "@/lib/types";
 import { buildDefaultCrmPipelineStages } from "@/lib/crm/workspace";
 import { enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/crm/runtime";
@@ -124,6 +125,12 @@ export default function ProspectsKanbanPage() {
 
   async function handleSetStatus(id: string, status: StatusProspect) {
     if (!tenantId) return;
+    const current = prospects.find((item) => item.id === id);
+    if (!current) return;
+    if (!canTransitionProspectStatus(current.status, status)) {
+      setError("Mova o prospect apenas para a proxima etapa valida do funil.");
+      return;
+    }
     const motivo = status === "PERDIDO" ? prompt("Motivo da perda (opcional):") : undefined;
     if (status === "PERDIDO" && motivo === null) {
       return;

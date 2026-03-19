@@ -572,15 +572,17 @@ test.describe("Backoffice segurança global", () => {
 
     await page.goto("/admin/seguranca");
     await expect(page.getByRole("heading", { name: "Segurança global" })).toBeVisible();
-    await expect(page.getByText("Usuários com política ativa para receber acesso automático")).toBeVisible();
+    await expect(page.getByText("Política ativa para novas unidades")).toBeVisible();
 
-    await page.getByRole("link", { name: "Abrir usuários" }).click();
-    await expect(page.getByRole("heading", { name: "Usuários administrativos" })).toBeVisible();
+    await page.getByRole("link", { name: "Abrir usuários e acessos" }).click();
+    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible();
     await expect(page.getByRole("row").filter({ hasText: "Ana Admin" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Abrir" }).first().click();
-    await expect(page.getByRole("heading", { name: "Detalhe do usuário" })).toBeVisible();
+    await page.getByRole("link", { name: "Abrir governança" }).first().click();
+    await expect(page.getByRole("heading", { name: "Ana Admin" })).toBeVisible();
     await expect(page.getByText("Ana Admin")).toBeVisible();
+
+    await page.getByRole("tab", { name: "Escopos e acessos" }).click();
 
     await page.getByLabel("Unidade para associar").click();
     await page.getByRole("option", { name: "Rede Norte · Unidade Barra" }).click();
@@ -589,31 +591,31 @@ test.describe("Backoffice segurança global", () => {
       page
         .locator('[data-slot="card"]')
         .filter({ hasText: "Unidade Barra" })
-        .filter({ hasText: "Perfis administrativos" })
+        .filter({ hasText: "Papéis ativos nesse escopo" })
         .first()
     ).toBeVisible();
 
     const barraCard = page
       .locator('[data-slot="card"]')
       .filter({ hasText: "Unidade Barra" })
-      .filter({ hasText: "Perfis administrativos" })
+      .filter({ hasText: "Papéis ativos nesse escopo" })
       .first();
     await barraCard.getByLabel("Perfil para Unidade Barra").click();
     await page.getByRole("option", { name: "Administrador" }).click();
     await barraCard.getByRole("button", { name: "Atribuir perfil" }).click();
     await expect(barraCard.getByRole("button", { name: /Administrador/ })).toBeVisible();
 
-    await barraCard.getByRole("button", { name: "Tornar padrão" }).click();
-    await expect(barraCard.getByText("Padrão")).toBeVisible();
+    await barraCard.getByRole("button", { name: "Tornar base operacional" }).click();
+    await expect(barraCard.getByText("Base operacional")).toBeVisible();
 
     await barraCard.getByRole("button", { name: /Administrador/ }).click();
-    await expect(barraCard.getByText("Nenhum perfil vinculado.")).toBeVisible();
+    await expect(barraCard.getByText("Nenhum papel atribuído.")).toBeVisible();
 
     await page.getByRole("tab", { name: "Novas unidades" }).click();
     await page.locator('[data-slot="select-trigger"]').filter({ hasText: "Mesma academia" }).click();
     await page.getByRole("option", { name: "Rede inteira" }).click();
     await page.getByRole("button", { name: "Salvar política" }).click();
-    await expect(page.getByText("Esse usuário recebe acesso automático em todas as novas unidades da rede.")).toBeVisible();
+    await expect(page.getByText("Essa pessoa recebe acesso automático em toda nova unidade da rede.")).toBeVisible();
 
     await page.goto("/admin/unidades?academiaId=academia-norte");
     await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible();

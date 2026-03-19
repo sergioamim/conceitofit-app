@@ -11,6 +11,11 @@ import {
   updateProspectStatusApi,
 } from "@/lib/api/crm";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import {
+  canTransitionProspectStatus,
+  getNextProspectStatus,
+  getSelectableProspectStatuses,
+} from "@/lib/crm/prospect-status";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type {
   Prospect,
@@ -40,32 +45,6 @@ const STATUS_COLUMNS: { key: StatusProspect; label: string }[] = [
   { key: "CONVERTIDO", label: "Convertido" },
   { key: "PERDIDO", label: "Perdido" },
 ];
-
-function getNextStatus(prospect: Prospect): StatusProspect | null {
-  const isPresencial = prospect.origem === "VISITA_PRESENCIAL";
-
-  if (isPresencial) {
-    const presencialFlow: Record<StatusProspect, StatusProspect | null> = {
-      NOVO: "VISITOU",
-      AGENDOU_VISITA: "VISITOU",
-      VISITOU: "EM_CONTATO",
-      EM_CONTATO: "CONVERTIDO",
-      CONVERTIDO: null,
-      PERDIDO: null,
-    };
-    return presencialFlow[prospect.status];
-  }
-
-  const digitalFlow: Record<StatusProspect, StatusProspect | null> = {
-    NOVO: "AGENDOU_VISITA",
-    AGENDOU_VISITA: "VISITOU",
-    VISITOU: "EM_CONTATO",
-    EM_CONTATO: "CONVERTIDO",
-    CONVERTIDO: null,
-    PERDIDO: null,
-  };
-  return digitalFlow[prospect.status];
-}
 
 const ORIGEM_LABEL: Record<string, string> = {
   VISITA_PRESENCIAL: "Visita presencial",
@@ -183,6 +162,8 @@ export function ProspectDetailModal({
 
   async function handleStatusChange(status: StatusProspect) {
     if (!prospect || !tenantId) return;
+    if (status === prospect.status) return;
+    if (!canTransitionProspectStatus(prospect.status, status)) return;
     if (status === "PERDIDO") {
       const motivo = prompt("Motivo da perda (opcional):");
       await marcarProspectPerdidoApi({
@@ -248,7 +229,8 @@ export function ProspectDetailModal({
 
   if (!prospect) return null;
 
-  const nextStatus = getNextStatus(prospect);
+  const nextStatus = getNextProspectStatus(prospect.status);
+  const selectableStatuses = getSelectableProspectStatuses(prospect.status);
   const responsavel = prospect.responsavelId ? funcionariosMap.get(prospect.responsavelId) : null;
 
   return (
@@ -361,7 +343,7 @@ export function ProspectDetailModal({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="border-border bg-card">
-                        {STATUS_COLUMNS.map((s) => (
+                        {STATUS_COLUMNS.filter((s) => selectableStatuses.includes(s.key)).map((s) => (
                           <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
                         ))}
                       </SelectContent>

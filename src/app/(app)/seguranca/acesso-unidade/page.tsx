@@ -207,9 +207,9 @@ export default function AcessoUnidadePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Acesso por Unidade</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Usuários e Acessos</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Conceda acesso de funcionário interno para operar em uma unidade específica.
+          Conceda acesso operacional por unidade para pessoas internas da academia.
         </p>
       </div>
 
@@ -227,7 +227,7 @@ export default function AcessoUnidadePage() {
 
       {!access.loading && !access.canAccessElevatedModules ? (
         <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          Acesso negado. Apenas perfis administrativos podem gerenciar acessos por unidade.
+          Acesso negado. Apenas perfis administrativos podem gerenciar usuários e acessos por unidade.
         </div>
       ) : null}
 
@@ -236,7 +236,7 @@ export default function AcessoUnidadePage() {
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="font-display text-lg">Conceder acesso</CardTitle>
+          <CardTitle className="font-display text-lg">Conceder acesso operacional</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <form className="grid gap-4 md:grid-cols-4" onSubmit={handleGrant}>
@@ -287,7 +287,7 @@ export default function AcessoUnidadePage() {
 
             <div className="md:col-span-4 flex justify-end">
               <Button type="submit" disabled={saving || loading || !tenantId || !selectedUserId || !defaultPerfil}>
-                {saving ? "Salvando..." : "Conceder acesso"}
+                {saving ? "Salvando..." : "Conceder acesso operacional"}
               </Button>
             </div>
           </form>

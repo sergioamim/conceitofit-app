@@ -3538,11 +3538,335 @@
         "status": "done",
         "subtasks": [],
         "updatedAt": "2026-03-18T16:36:08.718Z"
+      },
+      {
+        "id": "50",
+        "title": "Redesenhar a arquitetura de informação da área de segurança",
+        "description": "Transformar o PRD revisado em uma IA clara para gestores, separando usuários, acessos, perfis, funcionalidades e revisões.",
+        "details": "A área de segurança precisa sair da navegação técnica atual e ganhar uma arquitetura de informação orientada a produto, com visão geral, usuários e acessos, perfis padronizados, catálogo de funcionalidades e revisões/auditoria. Esta task fecha o backbone de navegação, linguagem e estados base para o restante do rollout.",
+        "testStrategy": "Validar a IA com testes de navegação e smoke visual, garantindo consistência entre rotas, labels e estados vazios/carregamento.",
+        "status": "done",
+        "dependencies": [
+          "37"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Reestruturar a navegação principal da segurança",
+            "description": "Substituir a navegação orientada a termos técnicos por áreas de produto.",
+            "dependencies": [],
+            "details": "Reorganizar a entrada de segurança para trabalhar com `Visão geral`, `Usuários e acessos`, `Perfis padronizados`, `Funcionalidades` e `Revisões e auditoria`, preservando links legados enquanto durar a transição.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 50,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Padronizar linguagem de negócio nas superfícies de segurança",
+            "description": "Trocar labels técnicas por termos compreensíveis sem perder rastreabilidade.",
+            "dependencies": [
+              "50.1"
+            ],
+            "details": "Substituir `grant`, `feature`, `roleName` e termos similares por linguagem de produto, mantendo o código técnico apenas em detalhes secundários para auditoria e suporte.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 50,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Definir layouts base, estados vazios e resumos textuais da nova área",
+            "description": "Dar consistência visual e semântica para todas as páginas de segurança.",
+            "dependencies": [
+              "50.1",
+              "50.2"
+            ],
+            "details": "Criar padrões de cabeçalho, filtros, cards de resumo, empty states, avisos de risco e blocos de explicação textual que serão reutilizados nas telas de usuários, perfis, catálogo e revisões.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 50,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Alinhar tipagem e feature flags para o rollout gradual da segurança",
+            "description": "Permitir convivência controlada entre a IA antiga e a nova.",
+            "dependencies": [
+              "50.3"
+            ],
+            "details": "Preparar constantes, rotas, guards e feature flags para expor as novas superfícies sem quebrar o fluxo atual enquanto o backend ainda evolui.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 50,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T14:10:00Z"
+      },
+      {
+        "id": "51",
+        "title": "Implementar as telas de Usuários e acessos com resumo de acesso efetivo",
+        "description": "Entregar a principal superfície operacional da nova segurança, centrada em pessoas, escopos, perfis e risco.",
+        "details": "A nova experiência precisa começar pela operação diária: listar pessoas, filtrar por escopo e risco, abrir o detalhe do usuário e enxergar claramente acesso direto, herdado ou global, perfil principal, perfis adicionais, exceções e revisão. Esta task cobre clients, estado de tela, detalhe e fluxo de concessão com escolha explícita de escopo e perfil.",
+        "testStrategy": "Cobrir estados de lista, detalhe, filtros e fluxo de concessão com testes de integração e E2E em cima do contrato novo.",
+        "status": "pending",
+        "dependencies": [
+          "50"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Preparar types e API clients de acesso efetivo por usuário",
+            "description": "Consumir o novo resumo canônico de segurança do backend.",
+            "dependencies": [],
+            "details": "Atualizar `src/lib/types.ts` e clients da área de segurança para suportar escopo, origem do acesso, perfil principal, perfis adicionais, exceções, risco e justificativas.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 51,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Construir a tela Usuários e acessos com filtros de negócio e risco",
+            "description": "Fazer a listagem responder rápido quem é a pessoa, onde atua e qual o nível de risco.",
+            "dependencies": [
+              "51.1"
+            ],
+            "details": "Implementar a nova listagem com busca, filtros por unidade, academia, perfil, exceção, acesso amplo e revisão, usando linguagem de negócio e indicadores claros de risco.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 51,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Redesenhar o detalhe do usuário com blocos de resumo, escopos, perfis e exceções",
+            "description": "Separar governança, operação e auditoria na página de detalhe.",
+            "dependencies": [
+              "51.1"
+            ],
+            "details": "Reorganizar o detalhe para trabalhar com `Resumo efetivo`, `Escopos e acessos`, `Perfis`, `Exceções`, `Política de novas unidades` e `Auditoria e revisões`, com clareza sobre origem e impacto do acesso.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 51,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Implementar o fluxo de conceder acesso com escolha explícita de escopo e perfil",
+            "description": "Remover o perfil implícito da experiência principal.",
+            "dependencies": [
+              "51.2",
+              "51.3"
+            ],
+            "details": "Criar o fluxo curto de concessão com escolha de escopo, tipo de acesso quando aplicável, perfil padronizado e preview do impacto antes de confirmar.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 51,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Cobrir listagem, detalhe e concessão com testes de regressão",
+            "description": "Blindar a nova superfície central de operação da segurança.",
+            "dependencies": [
+              "51.4"
+            ],
+            "details": "Adicionar testes de integração e E2E para a lista, detalhe do usuário, filtros, estados de risco e fluxo de conceder acesso, incluindo cenários de acesso amplo e exceções visíveis.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 51,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T00:00:00Z"
+      },
+      {
+        "id": "52",
+        "title": "Implementar Perfis padronizados e Catálogo de funcionalidades",
+        "description": "Dar superfície de governança para perfis reutilizáveis e para o inventário de capacidades do sistema.",
+        "details": "Depois de resolver a operação por usuário, o frontend precisa expor com clareza a governança de papéis e funcionalidades: lista e detalhe de perfis, matriz de permissões, catálogo pesquisável, labels de negócio, criticidade e impacto de mudanças. Esta task entrega a camada visual que substitui a leitura crua de RBAC por feature/grant.",
+        "testStrategy": "Cobrir a nova governança com testes de integração e E2E para lista, detalhe, filtros, edição e preview de impacto de perfis.",
+        "status": "pending",
+        "dependencies": [
+          "50",
+          "51"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Preparar clients e tipos de perfis padronizados, versões e funcionalidades",
+            "description": "Atualizar a camada de contrato do frontend para a nova governança.",
+            "dependencies": [],
+            "details": "Evoluir types, normalizadores e API clients para suportar perfis versionados, escopo recomendado, criticidade, funcionalidades ligadas e indicadores de impacto.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 52,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Construir a tela de Perfis padronizados com resumo e histórico",
+            "description": "Governar papéis reutilizáveis sem expor apenas artefatos técnicos.",
+            "dependencies": [
+              "52.1"
+            ],
+            "details": "Criar a lista e o detalhe de perfis com nome amigável, objetivo, escopo recomendado, criticidade, histórico, usuários impactados e matriz de funcionalidades.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 52,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Implementar o Catálogo de funcionalidades com busca, filtros e criticidade",
+            "description": "Materializar a demanda de listar tudo que pode ser liberado no sistema.",
+            "dependencies": [
+              "52.1"
+            ],
+            "details": "Criar a tela do catálogo com filtros por módulo, ação, criticidade e escopo, exibindo nome amigável, código técnico, descrição e dependências.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 52,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Entregar edição visual da matriz de permissões com preview de impacto",
+            "description": "Permitir ajuste de perfil com visibilidade real do efeito da mudança.",
+            "dependencies": [
+              "52.2",
+              "52.3"
+            ],
+            "details": "Implementar a matriz de funcionalidades por perfil com filtros, seleção controlada, preview de usuários/escopos afetados e reforço visual para mudanças sensíveis.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 52,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Cobrir perfis e catálogo com testes de regressão e contrato",
+            "description": "Fechar a trilha de confiança da nova governança fina de RBAC.",
+            "dependencies": [
+              "52.4"
+            ],
+            "details": "Adicionar testes para lista/detalhe de perfis, catálogo, filtros, matriz, preview de impacto e estados de erro, garantindo aderência ao contrato do backend.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 52,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T00:00:00Z"
+      },
+      {
+        "id": "53",
+        "title": "Implementar Exceções, política de novas unidades, revisões e rollout da nova segurança",
+        "description": "Fechar a governança avançada da nova área com exceções controladas, revisões periódicas e migração segura.",
+        "details": "A fase final do frontend precisa materializar a governança avançada prevista no PRD: fluxo de exceção com justificativa e prazo, política separada para novas unidades, abas de revisão e auditoria, indicadores de acesso amplo e documentação de rollout. Esta task conclui a transição da segurança atual para a nova experiência.",
+        "testStrategy": "Executar smoke e E2E do fluxo de exceções, política de novas unidades, revisões e navegação final da área de segurança.",
+        "status": "done",
+        "dependencies": [
+          "51",
+          "52"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implementar a UX de exceções com justificativa, prazo e destaque no acesso efetivo",
+            "description": "Dar um fluxo próprio e controlado para exceções de segurança.",
+            "dependencies": [],
+            "details": "Construir o fluxo de adicionar, listar e remover exceções com justificativa, expiração e avisos visuais, sempre separado do perfil base e do fluxo de concessão principal.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 53,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Criar a superfície de política de novas unidades como governança separada",
+            "description": "Tirar a política ampla do detalhe operacional comum do usuário.",
+            "dependencies": [
+              "53.1"
+            ],
+            "details": "Implementar a leitura e edição da política de novas unidades com linguagem clara sobre origem, escopo, perfil herdado e justificativa, sem competir com as ações cotidianas de acesso local.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 53,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Construir a tela de Revisões e auditoria com filas e alertas",
+            "description": "Permitir recertificação e monitoramento contínuo dos acessos sensíveis.",
+            "dependencies": [
+              "53.1"
+            ],
+            "details": "Criar as abas de revisões pendentes, exceções vencendo, mudanças recentes, acessos amplos e perfis sem dono claro, priorizando severidade e acionabilidade.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 53,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Finalizar flags de risco, acessos amplos e estado de rollout da nova segurança",
+            "description": "Concluir a leitura operacional da área com indicadores claros de risco e transição.",
+            "dependencies": [
+              "53.2",
+              "53.3"
+            ],
+            "details": "Adicionar indicadores de acesso amplo, risco, revisão vencida e compatibilidade transitória, além de finalizar feature flags e handoff entre área antiga e nova.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 53,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Fechar documentação e E2E do rollout completo da segurança",
+            "description": "Encerrar a trilha do frontend com evidência e documentação operacional.",
+            "dependencies": [
+              "53.4"
+            ],
+            "details": "Atualizar documentação interna, registrar critérios de aceite, riscos residuais e executar E2E dos caminhos críticos da nova área de segurança.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 53,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T14:10:00Z"
       }
     ],
     "metadata": {
       "created": "2026-03-18T15:32:36.203Z",
-      "updated": "2026-03-18T15:33:21.061Z",
+      "updated": "2026-03-19T00:00:00.000Z",
       "description": "Tasks for master context"
     }
   }

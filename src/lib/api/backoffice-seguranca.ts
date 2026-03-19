@@ -1,9 +1,15 @@
 import type {
+  GlobalAdminAccessException,
   GlobalAdminMembership,
   GlobalAdminMembershipOrigin,
   GlobalAdminMembershipProfile,
   GlobalAdminNewUnitsPolicy,
   GlobalAdminNewUnitsPolicyScope,
+  GlobalAdminRecentChange,
+  GlobalAdminReviewBoard,
+  GlobalAdminReviewBoardItem,
+  GlobalAdminReviewStatus,
+  GlobalAdminRiskLevel,
   GlobalAdminSecurityOverview,
   GlobalAdminUserDetail,
   GlobalAdminUserStatus,
@@ -95,7 +101,59 @@ type RawPolicy = {
   inherited?: unknown;
   rationale?: string | null;
   motivo?: string | null;
+  sourceLabel?: string | null;
+  origemLabel?: string | null;
   updatedAt?: string | null;
+};
+
+type RawException = {
+  id?: string | null;
+  title?: string | null;
+  titulo?: string | null;
+  scopeLabel?: string | null;
+  escopoLabel?: string | null;
+  justification?: string | null;
+  justificativa?: string | null;
+  expiresAt?: string | null;
+  expiraEm?: string | null;
+  createdAt?: string | null;
+  criadoEm?: string | null;
+  createdBy?: string | null;
+  criadoPor?: string | null;
+  active?: unknown;
+  ativo?: unknown;
+};
+
+type RawRecentChange = {
+  id?: string | null;
+  title?: string | null;
+  titulo?: string | null;
+  description?: string | null;
+  descricao?: string | null;
+  happenedAt?: string | null;
+  ocorreuEm?: string | null;
+  actorName?: string | null;
+  autorNome?: string | null;
+  severity?: string | null;
+  criticidade?: string | null;
+};
+
+type RawReviewItem = {
+  id?: string | null;
+  userId?: string | null;
+  usuarioId?: string | null;
+  userName?: string | null;
+  usuarioNome?: string | null;
+  title?: string | null;
+  titulo?: string | null;
+  description?: string | null;
+  descricao?: string | null;
+  severity?: string | null;
+  criticidade?: string | null;
+  dueAt?: string | null;
+  prazoEm?: string | null;
+  category?: string | null;
+  categoria?: string | null;
 };
 
 type RawUserSummary = {
@@ -121,6 +179,20 @@ type RawUserSummary = {
   defaultUnitName?: string | null;
   eligibleForNewUnits?: unknown;
   elegivelNovasUnidades?: unknown;
+  broadAccess?: unknown;
+  acessoAmplo?: unknown;
+  compatibilityMode?: unknown;
+  modoCompatibilidade?: unknown;
+  riskLevel?: string | null;
+  nivelRisco?: string | null;
+  riskFlags?: string[] | null;
+  alertasRisco?: string[] | null;
+  exceptionsCount?: number | null;
+  totalExcecoes?: number | null;
+  reviewStatus?: string | null;
+  statusRevisao?: string | null;
+  nextReviewAt?: string | null;
+  proximaRevisaoEm?: string | null;
 };
 
 type RawUserDetail = RawUserSummary & {
@@ -128,6 +200,23 @@ type RawUserDetail = RawUserSummary & {
   lastLoginAt?: string | null;
   memberships?: RawMembership[] | null;
   policy?: RawPolicy | null;
+  exceptions?: RawException[] | null;
+  excecoes?: RawException[] | null;
+  recentChanges?: RawRecentChange[] | null;
+  mudancasRecentes?: RawRecentChange[] | null;
+};
+
+type RawReviewBoard = {
+  pendingReviews?: RawReviewItem[] | null;
+  revisoesPendentes?: RawReviewItem[] | null;
+  expiringExceptions?: RawReviewItem[] | null;
+  excecoesExpirando?: RawReviewItem[] | null;
+  recentChanges?: RawReviewItem[] | null;
+  mudancasRecentes?: RawReviewItem[] | null;
+  broadAccess?: RawReviewItem[] | null;
+  acessosAmplos?: RawReviewItem[] | null;
+  orphanProfiles?: RawReviewItem[] | null;
+  perfisSemDono?: RawReviewItem[] | null;
 };
 
 function cleanString(value: unknown): string | undefined {
@@ -241,6 +330,73 @@ function normalizePolicyScope(value?: string | null): GlobalAdminNewUnitsPolicyS
   return normalized === "REDE" ? "REDE" : "ACADEMIA_ATUAL";
 }
 
+function normalizeRiskLevel(value?: string | null): GlobalAdminRiskLevel | undefined {
+  const normalized = cleanString(value)?.toUpperCase();
+  if (normalized === "BAIXO" || normalized === "MEDIO" || normalized === "ALTO" || normalized === "CRITICO") {
+    return normalized;
+  }
+  return undefined;
+}
+
+function normalizeReviewStatus(value?: string | null): GlobalAdminReviewStatus | undefined {
+  const normalized = cleanString(value)?.toUpperCase();
+  if (normalized === "EM_DIA" || normalized === "PENDENTE" || normalized === "VENCIDA") {
+    return normalized;
+  }
+  return undefined;
+}
+
+function normalizeAccessException(raw: RawException): GlobalAdminAccessException {
+  return {
+    id: cleanString(raw.id) ?? "",
+    title: cleanString(raw.title) ?? cleanString(raw.titulo) ?? "Exceção sem título",
+    scopeLabel: cleanString(raw.scopeLabel) ?? cleanString(raw.escopoLabel),
+    justification: cleanString(raw.justification) ?? cleanString(raw.justificativa) ?? "",
+    expiresAt: cleanString(raw.expiresAt) ?? cleanString(raw.expiraEm),
+    createdAt: cleanString(raw.createdAt) ?? cleanString(raw.criadoEm),
+    createdBy: cleanString(raw.createdBy) ?? cleanString(raw.criadoPor),
+    active: normalizeBoolean(raw.active ?? raw.ativo, true),
+  };
+}
+
+function normalizeRecentChange(raw: RawRecentChange): GlobalAdminRecentChange {
+  return {
+    id: cleanString(raw.id) ?? "",
+    title: cleanString(raw.title) ?? cleanString(raw.titulo) ?? "Mudança",
+    description: cleanString(raw.description) ?? cleanString(raw.descricao),
+    happenedAt: cleanString(raw.happenedAt) ?? cleanString(raw.ocorreuEm),
+    actorName: cleanString(raw.actorName) ?? cleanString(raw.autorNome),
+    severity: normalizeRiskLevel(raw.severity ?? raw.criticidade),
+  };
+}
+
+function normalizeReviewCategory(value?: string | null): GlobalAdminReviewBoardItem["category"] {
+  const normalized = cleanString(value)?.toUpperCase();
+  switch (normalized) {
+    case "REVISAO_PENDENTE":
+    case "EXCECAO_EXPIRANDO":
+    case "MUDANCA_RECENTE":
+    case "ACESSO_AMPLO":
+    case "PERFIL_SEM_DONO":
+      return normalized;
+    default:
+      return "REVISAO_PENDENTE";
+  }
+}
+
+function normalizeReviewItem(raw: RawReviewItem): GlobalAdminReviewBoardItem {
+  return {
+    id: cleanString(raw.id) ?? "",
+    userId: cleanString(raw.userId) ?? cleanString(raw.usuarioId),
+    userName: cleanString(raw.userName) ?? cleanString(raw.usuarioNome) ?? "Usuário",
+    title: cleanString(raw.title) ?? cleanString(raw.titulo) ?? "Item de revisão",
+    description: cleanString(raw.description) ?? cleanString(raw.descricao),
+    severity: normalizeRiskLevel(raw.severity ?? raw.criticidade) ?? "MEDIO",
+    dueAt: cleanString(raw.dueAt) ?? cleanString(raw.prazoEm),
+    category: normalizeReviewCategory(raw.category ?? raw.categoria),
+  };
+}
+
 function normalizeUserSummary(raw: RawUserSummary): GlobalAdminUserSummary {
   const perfis = [...(raw.perfis ?? []), ...(raw.profiles ?? [])]
     .map((item) =>
@@ -264,6 +420,13 @@ function normalizeUserSummary(raw: RawUserSummary): GlobalAdminUserSummary {
     defaultTenantId: cleanString(raw.defaultTenantId) ?? cleanString(raw.defaultUnitId),
     defaultTenantName: cleanString(raw.defaultTenantName) ?? cleanString(raw.defaultUnitName),
     eligibleForNewUnits: normalizeBoolean(raw.eligibleForNewUnits ?? raw.elegivelNovasUnidades, false),
+    broadAccess: normalizeBoolean(raw.broadAccess ?? raw.acessoAmplo, false),
+    compatibilityMode: normalizeBoolean(raw.compatibilityMode ?? raw.modoCompatibilidade, false),
+    riskLevel: normalizeRiskLevel(raw.riskLevel ?? raw.nivelRisco),
+    riskFlags: [...(raw.riskFlags ?? []), ...(raw.alertasRisco ?? [])].map((item) => item.trim()).filter(Boolean),
+    exceptionsCount: Number(raw.exceptionsCount ?? raw.totalExcecoes ?? 0),
+    reviewStatus: normalizeReviewStatus(raw.reviewStatus ?? raw.statusRevisao),
+    nextReviewAt: cleanString(raw.nextReviewAt) ?? cleanString(raw.proximaRevisaoEm),
   };
 }
 
@@ -283,6 +446,18 @@ function normalizeMembership(raw: RawMembership, userId: string): GlobalAdminMem
     eligibleForNewUnits: normalizeBoolean(raw.eligibleForNewUnits ?? raw.elegivelNovasUnidades, false),
     profiles,
     availableProfiles: [...(raw.availableProfiles ?? []), ...(raw.catalogoPerfis ?? [])].map(normalizePerfil),
+    riskLevel: normalizeRiskLevel((raw as RawMembership & { riskLevel?: string | null; nivelRisco?: string | null }).riskLevel ?? (raw as RawMembership & { nivelRisco?: string | null }).nivelRisco),
+    riskFlags: [
+      ...(((raw as RawMembership & { riskFlags?: string[] | null }).riskFlags) ?? []),
+      ...(((raw as RawMembership & { alertasRisco?: string[] | null }).alertasRisco) ?? []),
+    ].map((item) => item.trim()).filter(Boolean),
+    broadAccess: normalizeBoolean((raw as RawMembership & { broadAccess?: unknown; acessoAmplo?: unknown }).broadAccess ?? (raw as RawMembership & { acessoAmplo?: unknown }).acessoAmplo, false),
+    reviewStatus: normalizeReviewStatus((raw as RawMembership & { reviewStatus?: string | null; statusRevisao?: string | null }).reviewStatus ?? (raw as RawMembership & { statusRevisao?: string | null }).statusRevisao),
+    nextReviewAt: cleanString((raw as RawMembership & { nextReviewAt?: string | null; proximaRevisaoEm?: string | null }).nextReviewAt) ?? cleanString((raw as RawMembership & { proximaRevisaoEm?: string | null }).proximaRevisaoEm),
+    exceptions: [
+      ...(((raw as RawMembership & { exceptions?: RawException[] | null }).exceptions) ?? []),
+      ...(((raw as RawMembership & { excecoes?: RawException[] | null }).excecoes) ?? []),
+    ].map(normalizeAccessException),
     createdAt: cleanString(raw.createdAt),
     updatedAt: cleanString(raw.updatedAt),
   };
@@ -295,6 +470,7 @@ function normalizePolicy(raw?: RawPolicy | null): GlobalAdminNewUnitsPolicy {
     academiaIds: raw?.academiaIds?.map((item) => item.trim()).filter(Boolean),
     inherited: normalizeBoolean(raw?.inherited, false),
     rationale: cleanString(raw?.rationale) ?? cleanString(raw?.motivo),
+    sourceLabel: cleanString(raw?.sourceLabel) ?? cleanString(raw?.origemLabel),
     updatedAt: cleanString(raw?.updatedAt),
   };
 }
@@ -322,6 +498,11 @@ export async function getGlobalAdminSecurityOverviewApi(): Promise<GlobalAdminSe
     activeMemberships: Number(response.activeMemberships ?? 0),
     defaultUnitsConfigured: Number(response.defaultUnitsConfigured ?? 0),
     eligibleForNewUnits: Number(response.eligibleForNewUnits ?? 0),
+    broadAccessUsers: Number(response.broadAccessUsers ?? 0),
+    expiringExceptions: Number(response.expiringExceptions ?? 0),
+    pendingReviews: Number(response.pendingReviews ?? 0),
+    rolloutPercentage: Number(response.rolloutPercentage ?? 0),
+    compatibilityModeUsers: Number(response.compatibilityModeUsers ?? 0),
   };
 }
 
@@ -363,6 +544,54 @@ export async function getGlobalAdminUserDetailApi(userId: string): Promise<Globa
     lastLoginAt: cleanString(response.lastLoginAt),
     memberships: (response.memberships ?? []).map((item) => normalizeMembership(item, summary.id)),
     policy: normalizePolicy(response.policy),
+    exceptions: [...(response.exceptions ?? []), ...(response.excecoes ?? [])].map(normalizeAccessException),
+    recentChanges: [...(response.recentChanges ?? []), ...(response.mudancasRecentes ?? [])].map(normalizeRecentChange),
+  };
+}
+
+export async function createGlobalAdminAccessExceptionApi(input: {
+  userId: string;
+  membershipId?: string;
+  title: string;
+  scopeLabel?: string;
+  justification: string;
+  expiresAt?: string;
+}): Promise<GlobalAdminUserDetail> {
+  const response = await apiRequest<RawUserDetail | null>({
+    path: `/api/v1/admin/seguranca/usuarios/${input.userId}/exceptions`,
+    method: "POST",
+    body: {
+      membershipId: input.membershipId,
+      title: cleanString(input.title),
+      scopeLabel: cleanString(input.scopeLabel),
+      justification: cleanString(input.justification),
+      expiresAt: cleanString(input.expiresAt),
+    },
+  });
+  return resolveUserDetailAfterMutation(input.userId, response);
+}
+
+export async function deleteGlobalAdminAccessExceptionApi(input: {
+  userId: string;
+  exceptionId: string;
+}): Promise<GlobalAdminUserDetail> {
+  const response = await apiRequest<RawUserDetail | null>({
+    path: `/api/v1/admin/seguranca/usuarios/${input.userId}/exceptions/${input.exceptionId}`,
+    method: "DELETE",
+  });
+  return resolveUserDetailAfterMutation(input.userId, response);
+}
+
+export async function getGlobalAdminReviewBoardApi(): Promise<GlobalAdminReviewBoard> {
+  const response = await apiRequest<RawReviewBoard>({
+    path: "/api/v1/admin/seguranca/reviews",
+  });
+  return {
+    pendingReviews: [...(response.pendingReviews ?? []), ...(response.revisoesPendentes ?? [])].map(normalizeReviewItem),
+    expiringExceptions: [...(response.expiringExceptions ?? []), ...(response.excecoesExpirando ?? [])].map(normalizeReviewItem),
+    recentChanges: [...(response.recentChanges ?? []), ...(response.mudancasRecentes ?? [])].map(normalizeReviewItem),
+    broadAccess: [...(response.broadAccess ?? []), ...(response.acessosAmplos ?? [])].map(normalizeReviewItem),
+    orphanProfiles: [...(response.orphanProfiles ?? []), ...(response.perfisSemDono ?? [])].map(normalizeReviewItem),
   };
 }
 
@@ -462,5 +691,7 @@ function getGlobalAdminUserDetailFromRaw(response: RawUserDetail): GlobalAdminUs
     lastLoginAt: cleanString(response.lastLoginAt),
     memberships: (response.memberships ?? []).map((item) => normalizeMembership(item, summary.id)),
     policy: normalizePolicy(response.policy),
+    exceptions: [...(response.exceptions ?? []), ...(response.excecoes ?? [])].map(normalizeAccessException),
+    recentChanges: [...(response.recentChanges ?? []), ...(response.mudancasRecentes ?? [])].map(normalizeRecentChange),
   };
 }

@@ -16,16 +16,39 @@ Hoje esses conceitos aparecem fragmentados e com vocabulario tecnico, o que aume
 Este PRD propoe reorganizar a area de seguranca em torno de um modelo mental mais simples:
 
 1. Quem e a pessoa.
-2. Em quais unidades ela atua.
-3. Qual perfil ela tem em cada unidade.
-4. O que esse perfil permite fazer.
-5. Quais excecoes foram abertas e por que.
+2. Onde ela pode atuar.
+3. Qual papel exerce em cada escopo.
+4. O que esse papel permite fazer.
+5. Quais excecoes ou politicas especiais estao ativas.
+6. Por que esse acesso existe.
 
 Objetivo final: permitir que um gestor nao tecnico consiga conceder, revisar, restringir e auditar acessos com seguranca, previsibilidade e baixo risco de erro.
 
-## 2. Contexto e diagnostico
+## 2. Premissas do modelo alvo
 
-### 2.1 Estado atual no frontend
+Este PRD assume evolucao controlada do backend para refletir de forma explicita o modelo de seguranca desejado pelo produto.
+
+Premissas:
+
+- usuario pode ter perfis diferentes por unidade;
+- usuario pode atuar em mais de um escopo ao mesmo tempo;
+- acesso operacional deve nascer preferencialmente no menor escopo possivel;
+- perfis continuam sendo o mecanismo padrao de concessao;
+- excecoes existem, mas sao restritas, temporarias, auditaveis e visiveis;
+- politica de novas unidades deve ser tratada como governanca separada do acesso cotidiano;
+- o sistema deve calcular e mostrar acesso efetivo resultante.
+
+Decisoes estruturais deste PRD:
+
+- o sistema deve distinguir acesso, perfil, permissao efetiva e excecao;
+- o sistema deve suportar escopo Unidade, Academia e Global/Rede;
+- o sistema deve preferir um perfil principal por escopo;
+- perfis adicionais no mesmo escopo devem ser excepcionais e visiveis;
+- o frontend deve operar com linguagem de negocio, sem perder rastreabilidade tecnica.
+
+## 3. Contexto e diagnostico
+
+### 3.1 Estado atual no frontend
 
 Leitura das telas atuais indica tres problemas principais.
 
@@ -35,7 +58,7 @@ Em [src/app/(app)/seguranca/acesso-unidade/page.tsx](/Users/sergioamim/dev/pesso
 
 Efeito pratico:
 
-- o operador pode achar que esta apenas "liberando uma unidade";
+- o operador pode achar que esta apenas liberando uma unidade;
 - na pratica ele esta vinculando um perfil inteiro;
 - isso dificulta explicar o impacto real da operacao.
 
@@ -70,23 +93,24 @@ Em [src/app/(backoffice)/admin/seguranca/usuarios/[id]/page.tsx](/Users/sergioam
 
 Tudo isso e importante, mas ainda falta uma camada de sintese:
 
-- "qual e o acesso efetivo desta pessoa agora?";
-- "por que ela tem esse acesso?";
-- "qual o menor ajuste possivel para corrigir excesso de privilegio?".
+- qual e o acesso efetivo desta pessoa agora;
+- por que ela tem esse acesso;
+- qual o menor ajuste possivel para corrigir excesso de privilegio.
 
-### 2.2 Diagnostico de produto
+### 3.2 Diagnostico de produto
 
 O problema nao e apenas de layout. E de modelagem visivel.
 
-Hoje o sistema mistura tres perguntas diferentes:
+Hoje o sistema mistura quatro perguntas diferentes:
 
-1. Escopo: em quais unidades a pessoa pode atuar.
-2. Papel: qual perfil ela exerce em cada unidade.
-3. Autorizacao fina: quais funcionalidades esse perfil libera.
+1. Escopo: onde a pessoa pode atuar.
+2. Acesso: como ela entrou naquele escopo.
+3. Papel: qual perfil ela exerce naquele escopo.
+4. Autorizacao fina: quais funcionalidades esse perfil libera.
 
-Enquanto essas tres dimensoes nao forem separadas na experiencia, o operador continuara tendo dificuldade para prever consequencias.
+Enquanto essas quatro dimensoes nao forem separadas na experiencia, o operador continuara tendo dificuldade para prever consequencias.
 
-## 3. Referencias externas consideradas
+## 4. Referencias externas consideradas
 
 As recomendacoes abaixo foram alinhadas com referencias consolidadas de IAM e AppSec:
 
@@ -102,10 +126,10 @@ Principios aplicados ao contexto do produto:
 - `least privilege`: conceder apenas o necessario no menor escopo possivel.
 - `all access through roles`: permissao deve ser concedida via perfis, nao diretamente ao usuario como regra geral.
 - `role hierarchy and constraints`: perfis podem herdar capacidade, mas com regras explicitas e separacao de funcoes.
-- `smallest scope needed`: conceder acesso na menor unidade/escopo possivel.
+- `smallest scope needed`: conceder acesso no menor escopo aplicavel.
 - `audit and recurring review`: acessos sensiveis precisam de trilha e recertificacao periodica.
 
-## 4. Objetivo de negocio
+## 5. Objetivo de negocio
 
 Permitir que a rede:
 
@@ -116,61 +140,72 @@ Permitir que a rede:
 - trate excecoes de forma controlada, auditavel e temporaria;
 - reduza risco de privilegio excessivo e erro operacional em expansao multiunidade.
 
-## 5. Objetivos do produto
+## 6. Objetivos do produto
 
 - Tornar compreensivel para gestor e operador o que cada pessoa pode fazer.
-- Separar visualmente escopo, perfil e permissao.
+- Separar visualmente escopo, acesso, perfil e permissao.
 - Reduzir dependencia de termos tecnicos como `grant`, `featureKey` e `roleName`.
 - Criar perfis padronizados reaproveitaveis.
 - Exibir impacto efetivo antes de salvar alteracoes sensiveis.
 - Manter flexibilidade sem abrir uma superficie insegura de permissoes diretas por usuario.
+- Tratar politica de novas unidades e acessos amplos como governanca, nao como operacao do dia a dia.
 
-## 6. Fora de escopo inicial
+## 7. Fora de escopo inicial
 
-- Reescrever toda a seguranca do backend.
 - Migrar o sistema para ABAC completo.
 - Criar motor generico de politicas condicionais complexas na V1.
 - Liberar edicao irrestrita de permissao diretamente por usuario.
+- Permitir combinacao livre e silenciosa de perfis sem visibilidade de impacto.
 
-## 7. Principios de desenho
+## 8. Principios de desenho
 
-### 7.1 Modelo mental unico
+### 8.1 Modelo mental unico
 
 Toda tela de seguranca deve responder sempre as mesmas perguntas, na mesma ordem:
 
 1. Quem.
 2. Onde.
 3. Como entra.
-4. O que pode fazer.
-5. Por que pode fazer.
+4. Qual papel exerce.
+5. O que pode fazer.
+6. Por que pode fazer.
 
-### 7.2 Perfis primeiro, excecoes depois
+### 8.2 Acesso primeiro, perfil em seguida
 
 O caminho padrao deve ser:
 
-- vincular usuario a uma ou mais unidades;
-- atribuir um perfil padronizado;
-- revisar o acesso efetivo;
-- abrir excecao apenas quando estritamente necessario.
+1. definir em quais escopos a pessoa pode atuar;
+2. atribuir o perfil padronizado em cada escopo;
+3. revisar o acesso efetivo resultante;
+4. aplicar excecao apenas quando estritamente necessario.
 
-### 7.3 Linguagem de negocio
+Conceitos distintos:
+
+- Acesso: onde a pessoa pode operar.
+- Perfil: qual funcao ela exerce naquele escopo.
+- Permissao efetiva: resultado calculado pelo sistema a partir de acesso + perfil + politicas + excecoes.
+
+### 8.3 Linguagem de negocio
 
 Substituir linguagem tecnica por termos mais claros:
 
 - `Perfil` no lugar de `roleName`.
 - `Funcionalidade` no lugar de `feature`.
 - `Ação permitida` no lugar de `grant`.
-- `Acesso efetivo` no lugar de `origem herdada + permissao + membership`.
+- `Acesso efetivo` no lugar de composicoes tecnicas de membership, heranca e grants.
 
-### 7.4 Menor escopo possivel
+A linguagem tecnica pode existir em detalhe secundario para auditoria e suporte, mas nao como linguagem principal da UX.
+
+### 8.4 Menor escopo possivel
 
 A interface deve induzir a conceder acesso:
 
 - primeiro por unidade;
-- depois por academia/rede apenas quando justificavel;
-- com aviso claro quando o escopo for amplo.
+- depois por academia apenas quando justificavel;
+- por global/rede somente para papeis sistemicos e corporativos;
+- sempre com aviso claro quando o escopo for amplo.
 
-### 7.5 Seguranca explicavel
+### 8.5 Seguranca explicavel
 
 Toda concessao relevante precisa mostrar:
 
@@ -178,25 +213,38 @@ Toda concessao relevante precisa mostrar:
 - escopo atingido;
 - perfil aplicado;
 - funcionalidades criticas liberadas;
-- justificativa quando houver excecao.
+- justificativa quando houver excecao;
+- impacto estimado da alteracao.
 
-## 8. Modelo conceitual proposto
+## 9. Modelo conceitual proposto
 
-## 8.1 Entidades visiveis ao usuario
+### 9.1 Entidades visiveis ao usuario
 
-### Usuario
+#### Usuario
 
 Pessoa que recebera acesso.
 
-### Escopo de acesso
+#### Escopo
 
-Onde o usuario pode operar:
+Onde o usuario pode operar.
 
-- unidade especifica;
-- academia;
-- rede inteira.
+Tipos de escopo:
 
-### Perfil padronizado
+- Unidade: acesso operacional direto a uma unidade especifica.
+- Academia: politica administrativa que pode conceder acesso padrao a unidades de uma mesma academia.
+- Global/Rede: acesso excepcional e corporativo, reservado a perfis sistemicos autorizados.
+
+#### Acesso
+
+Vinculo que habilita o usuario a atuar em um escopo.
+
+O sistema deve deixar claro se o acesso e:
+
+- direto;
+- herdado por politica;
+- global.
+
+#### Perfil padronizado
 
 Conjunto de permissoes orientado a funcao de negocio.
 
@@ -209,7 +257,7 @@ Exemplos:
 - Administrador de Rede
 - Auditor
 
-### Funcionalidade
+#### Funcionalidade
 
 Capacidade de negocio listada no sistema, organizada por modulo.
 
@@ -223,25 +271,40 @@ Exemplos:
 - Administrativo > gerenciar funcionarios
 - Segurança > alterar perfis e acessos
 
-### Excecao
+#### Excecao
 
-Ajuste pontual fora do perfil padrao.
+Ajuste pontual fora do caminho padrao de perfil.
 
-Regra: permitido apenas com justificativa, rastreio e opcionalmente prazo de validade.
+Na V1, excecoes devem ser restritas a:
 
-## 8.2 Regras estruturais
+- acesso temporario a unidade;
+- complemento pontual de privilegio para papeis permitidos;
+- governanca de novas unidades quando houver necessidade de tratamento diferenciado.
 
-- Usuarios nao recebem permissoes soltas por padrao.
-- Usuarios recebem perfis dentro de um escopo.
-- Perfis recebem funcionalidades.
-- Excecoes ficam em camada separada e visivel.
-- O sistema calcula e mostra acesso efetivo resultante.
+Toda excecao deve registrar:
 
-## 9. Taxonomia de permissao recomendada
+- justificativa;
+- solicitante;
+- aprovador, quando aplicavel;
+- data de inicio;
+- data de expiracao, quando aplicavel;
+- trilha de auditoria.
+
+### 9.2 Regras estruturais
+
+- usuarios nao recebem permissoes soltas por padrao;
+- usuarios recebem acesso em um escopo e perfil dentro desse escopo;
+- perfis recebem funcionalidades;
+- excecoes ficam em camada separada e visivel;
+- o sistema calcula e mostra acesso efetivo resultante;
+- o sistema deve preferir um perfil principal por escopo;
+- perfis adicionais no mesmo escopo devem ser excepcionais e visiveis.
+
+## 10. Taxonomia de permissao recomendada
 
 Padronizar o catalogo de funcionalidades em tres niveis:
 
-### 9.1 Modulo
+### 10.1 Modulo
 
 Exemplos:
 
@@ -252,7 +315,7 @@ Exemplos:
 - Segurança
 - Relatorios
 
-### 9.2 Funcionalidade
+### 10.2 Funcionalidade
 
 Exemplos:
 
@@ -262,7 +325,7 @@ Exemplos:
 - Unidades
 - Perfis e acessos
 
-### 9.3 Acoes
+### 10.3 Acoes
 
 Padrao sugerido:
 
@@ -275,9 +338,9 @@ Padrao sugerido:
 - Excluir
 - Administrar
 
-Observacao: `VIEW/EDIT/MANAGE` e pouco expressivo para o produto. A V2 pode manter esses codigos internamente, mas a UI deve traduzi-los para a taxonomia de negocio.
+Observacao: `VIEW/EDIT/MANAGE` pode continuar existindo internamente, mas a UI deve traduzi-los para a taxonomia de negocio.
 
-## 10. Catalogo minimo de funcionalidades
+## 11. Catalogo minimo de funcionalidades
 
 O sistema precisa ter uma tela catalogo de funcionalidades, com busca, filtro e criticidade.
 
@@ -288,10 +351,10 @@ Estrutura recomendada para cada item:
 - acao;
 - descricao simples;
 - nivel de risco: baixo, medio, alto, critico;
-- dependencia: exige outra permissao?;
-- escopo suportado: unidade, academia, rede;
-- visivel em perfis padrao?;
-- auditavel obrigatoriamente?;
+- dependencia: exige outra permissao;
+- escopo suportado: unidade, academia, global;
+- visivel em perfis padrao;
+- auditavel obrigatoriamente.
 
 ### Exemplo de catalogo inicial
 
@@ -341,9 +404,9 @@ Estrutura recomendada para cada item:
 - Ver indicadores da rede
 - Exportar base completa
 
-## 11. Perfis padronizados recomendados
+## 12. Perfis padronizados recomendados
 
-Os perfis abaixo devem nascer como templates oficiais, editaveis por administradores de rede.
+Os perfis abaixo devem nascer como templates oficiais, editaveis por administradores autorizados.
 
 ### Recepcao
 
@@ -389,11 +452,11 @@ Os perfis abaixo devem nascer como templates oficiais, editaveis por administrad
 - sem poder de alteracao;
 - foco em rastreabilidade e conformidade.
 
-## 12. Nova arquitetura de informacao da area de seguranca
+## 13. Nova arquitetura de informacao da area de seguranca
 
 Substituir a experiencia atual fragmentada por cinco areas principais.
 
-### 12.1 Visao geral
+### 13.1 Visao geral
 
 Objetivo:
 
@@ -405,10 +468,10 @@ Widgets sugeridos:
 - usuarios sem revisao recente;
 - perfis padrao ativos;
 - excecoes ativas;
-- acessos amplos em nivel rede;
+- acessos amplos em nivel global;
 - usuarios elegiveis para novas unidades.
 
-### 12.2 Usuarios e acessos
+### 13.2 Usuarios e acessos
 
 Objetivo:
 
@@ -417,7 +480,7 @@ Objetivo:
 A lista precisa responder:
 
 - quem e a pessoa;
-- em quantas unidades atua;
+- em quais escopos atua;
 - qual perfil principal possui;
 - se tem excecao;
 - se tem acesso amplo;
@@ -426,14 +489,14 @@ A lista precisa responder:
 Colunas sugeridas:
 
 - usuario;
-- escopo atual;
+- escopos ativos;
 - perfis ativos;
 - excecoes;
 - ultima revisao;
 - risco;
 - acoes.
 
-### 12.3 Perfis padronizados
+### 13.3 Perfis padronizados
 
 Objetivo:
 
@@ -450,15 +513,15 @@ Cada perfil deve exibir:
 - quantos usuarios usam;
 - versao do perfil.
 
-### 12.4 Catalogo de funcionalidades
+### 13.4 Catalogo de funcionalidades
 
 Objetivo:
 
 - listar tudo que pode ser liberado no sistema.
 
-Essa tela e essencial para resolver a demanda do negocio de "ter as funcionalidades listadas no sistema".
+Essa tela e essencial para resolver a demanda do negocio de ter as funcionalidades listadas no sistema.
 
-### 12.5 Revisoes e auditoria
+### 13.5 Revisoes e auditoria
 
 Objetivo:
 
@@ -467,34 +530,36 @@ Objetivo:
 - identificar excesso de privilegio;
 - monitorar excecoes vencidas.
 
-## 13. Redesenho de fluxos
+## 14. Redesenho de fluxos
 
-## 13.1 Fluxo: conceder acesso a usuario
+### 14.1 Fluxo: conceder acesso a usuario
 
 Fluxo ideal:
 
 1. Buscar usuario.
 2. Escolher escopo.
-3. Escolher perfil padronizado.
-4. Ver resumo do acesso efetivo.
-5. Confirmar.
+3. Escolher tipo de acesso, quando houver politicas especiais.
+4. Escolher perfil padronizado.
+5. Ver resumo do acesso efetivo.
+6. Confirmar.
 
 Resumo antes de salvar:
 
-- unidades atingidas;
+- escopos atingidos;
 - modulos liberados;
 - funcionalidades criticas liberadas;
 - origem do acesso;
 - se cria acesso em novas unidades;
 - se o escopo e maior que o habitual.
 
-### Melhorias em relacao ao atual
+Melhorias em relacao ao atual:
 
 - deixar de conceder via perfil implicito;
 - tornar obrigatorio escolher o perfil conscientemente;
-- mostrar impacto antes da gravacao.
+- mostrar impacto antes da gravacao;
+- separar acesso operacional de politica ampla.
 
-## 13.2 Fluxo: editar permissoes de um perfil
+### 14.2 Fluxo: editar permissoes de um perfil
 
 Fluxo ideal:
 
@@ -508,19 +573,19 @@ Fluxo ideal:
 Impacto exibido:
 
 - usuarios afetados;
-- unidades afetadas;
-- funcionalidades criticas adicionadas/removidas;
+- escopos afetados;
+- funcionalidades criticas adicionadas ou removidas;
 - recomendacao de revisao manual se a mudanca for sensivel.
 
-## 13.3 Fluxo: tratar excecao
+### 14.3 Fluxo: tratar excecao
 
 Fluxo ideal:
 
 1. Abrir usuario.
-2. Clicar em "Adicionar excecao".
-3. Escolher funcionalidade especifica.
+2. Clicar em Adicionar excecao.
+3. Escolher funcionalidade especifica ou acesso temporario, conforme o caso.
 4. Informar justificativa.
-5. Informar prazo final opcional ou obrigatorio conforme criticidade.
+5. Informar prazo final quando aplicavel.
 6. Salvar.
 
 Regras:
@@ -529,75 +594,75 @@ Regras:
 - excecao aparece destacada no acesso efetivo;
 - excecao pode exigir aprovacao para itens criticos.
 
-## 13.4 Fluxo: revisar acesso de usuario
+### 14.4 Fluxo: revisar acesso de usuario
 
 Fluxo ideal:
 
 1. Abrir usuario.
 2. Ver cartao de acesso efetivo.
 3. Ver origem de cada permissao.
-4. Ver ultimo uso de modulos criticos.
+4. Ver ultimo uso de modulos criticos, quando disponivel.
 5. Confirmar manutencao, reduzir ou remover acesso.
 
-## 13.5 Fluxo: novas unidades
+### 14.5 Fluxo: novas unidades
 
-Hoje essa regra existe, mas esta dificil de entender. A nova UX deve tratar isso como politica separada:
+A nova UX deve tratar isso como politica separada:
 
-- "Recebe automaticamente acesso a novas unidades?"
-- "Em qual escopo?"
-- "Com qual perfil?"
-- "Qual a justificativa?"
+- recebe automaticamente acesso a novas unidades;
+- em qual escopo;
+- com qual perfil;
+- qual a justificativa.
 
 Regra de UX:
 
 - esse controle nao deve ficar misturado com o fluxo diario de concessao local;
 - ele pertence a governanca global.
 
-## 14. Proposta de telas
+## 15. Proposta de telas
 
-## 14.1 Tela "Usuarios e acessos"
+### 15.1 Tela Usuarios e acessos
 
 Resumo:
 
-- busca por nome/e-mail;
+- busca por nome e email;
 - filtros por unidade, academia, perfil, risco, excecao e status de revisao;
 - tabela com leitura humana;
-- CTA principal: `Conceder acesso`.
+- CTA principal: Conceder acesso.
 
 Card expandido ou detalhe rapido:
 
-- unidades do usuario;
-- perfil por unidade;
+- escopos do usuario;
+- perfil por escopo;
 - excecoes ativas;
 - riscos detectados.
 
-## 14.2 Tela "Detalhe do usuario"
+### 15.2 Tela Detalhe do usuario
 
 Organizacao sugerida:
 
-### Bloco 1. Resumo efetivo
+#### Bloco 1. Resumo efetivo
 
-- nome, e-mail, status;
-- unidades ativas;
-- perfil principal por unidade;
+- nome, email, status;
+- escopos ativos;
+- perfil principal por escopo;
 - nivel de acesso;
 - proxima revisao;
 - acessos criticos.
 
-### Bloco 2. Escopo
+#### Bloco 2. Escopos e acessos
 
-- lista de unidades;
-- unidade padrao;
-- origem do acesso;
-- botao para adicionar/remover unidade.
+- lista de escopos ativos;
+- acesso direto, herdado ou global;
+- unidade padrao, quando fizer sentido;
+- botao para adicionar ou remover acesso.
 
-### Bloco 3. Perfis
+#### Bloco 3. Perfis
 
-- um perfil principal por unidade;
+- um perfil principal por escopo;
 - perfis adicionais apenas quando permitido pela regra;
 - explicacao textual do que cada perfil libera.
 
-### Bloco 4. Excecoes
+#### Bloco 4. Excecoes
 
 - funcionalidades fora do perfil;
 - justificativa;
@@ -605,19 +670,19 @@ Organizacao sugerida:
 - expiracao;
 - status.
 
-### Bloco 5. Politica de novas unidades
+#### Bloco 5. Politica de novas unidades
 
 - separado do resto;
 - sem competir visualmente com as operacoes do dia a dia.
 
-### Bloco 6. Auditoria e revisoes
+#### Bloco 6. Auditoria e revisoes
 
 - ultimas alteracoes;
 - revisao pendente;
 - ultimo login;
 - ultimo uso de modulos sensiveis, quando disponivel.
 
-## 14.3 Tela "Perfis padronizados"
+### 15.3 Tela Perfis padronizados
 
 Lista:
 
@@ -634,10 +699,10 @@ Detalhe do perfil:
 - matriz de funcionalidades;
 - dependencias;
 - restricoes de segregacao;
-- usuarios afetados;
+- usuarios impactados;
 - historico de versoes.
 
-## 14.4 Tela "Catalogo de funcionalidades"
+### 15.4 Tela Catalogo de funcionalidades
 
 Lista com:
 
@@ -652,11 +717,11 @@ Para cada funcionalidade:
 - codigo tecnico interno;
 - descricao simples;
 - risco;
-- exige auditoria?;
-- exige MFA/aprovacao?;
-- disponivel para qual escopo?;
+- exige auditoria;
+- exige MFA ou aprovacao;
+- disponivel para qual escopo.
 
-## 14.5 Tela "Revisoes e auditoria"
+### 15.5 Tela Revisoes e auditoria
 
 Abas sugeridas:
 
@@ -666,7 +731,7 @@ Abas sugeridas:
 - Acessos amplos
 - Perfis sem dono claro
 
-## 15. Requisitos funcionais
+## 16. Requisitos funcionais
 
 ### RF-01
 
@@ -690,11 +755,11 @@ O sistema deve exibir acesso efetivo consolidado por usuario, incluindo origem e
 
 ### RF-06
 
-O sistema deve permitir excecoes por funcionalidade apenas em fluxo proprio, com justificativa.
+O sistema deve permitir excecoes apenas em fluxo proprio, com justificativa.
 
 ### RF-07
 
-O sistema deve suportar expiracao de excecao para funcionalidades sensiveis.
+O sistema deve suportar expiracao de excecao para itens sensiveis.
 
 ### RF-08
 
@@ -714,9 +779,17 @@ O sistema deve permitir revisao periodica de acessos privilegiados.
 
 ### RF-12
 
-O sistema deve permitir identificar usuarios com acesso por unidade, por academia e por rede.
+O sistema deve permitir identificar usuarios com acesso por unidade, por academia e por global ou rede.
 
-## 16. Requisitos de seguranca
+### RF-13
+
+O sistema deve preferir um perfil principal por escopo e destacar perfis adicionais quando existirem.
+
+### RF-14
+
+O sistema deve permitir distinguir visualmente acesso direto, acesso herdado por politica e acesso global.
+
+## 17. Requisitos de seguranca
 
 ### RS-01
 
@@ -763,13 +836,13 @@ Exemplos:
 
 ### RS-07
 
-Acesso amplo em nivel rede deve ser excepcional, visivel e periodicamente revisto.
+Acesso amplo em nivel global deve ser excepcional, visivel e periodicamente revisto.
 
 ### RS-08
 
 Excecoes devem ser recertificadas e poder expirar automaticamente.
 
-## 17. Requisitos de UX
+## 18. Requisitos de UX
 
 ### UX-01
 
@@ -791,7 +864,7 @@ Toda permissao deve ser apresentavel em linguagem de negocio.
 
 O usuario deve conseguir responder em menos de 10 segundos:
 
-- em quais unidades a pessoa atua;
+- em quais escopos a pessoa atua;
 - qual perfil ela tem;
 - quais riscos especiais existem.
 
@@ -803,53 +876,61 @@ Alertas de risco devem ser priorizados por severidade, nao por ordem cronologica
 
 O fluxo comum de atribuicao deve caber em uma unica jornada curta, sem navegar por multiplas abas tecnicas.
 
-## 18. Regras de negocio
+## 19. Regras de negocio
 
 - Um usuario pode ter escopos diferentes em unidades diferentes.
-- O sistema deve preferir um perfil principal por unidade.
-- Multiplos perfis por unidade devem ser excepcionais e visiveis.
+- O sistema deve preferir um perfil principal por escopo.
+- Multiplos perfis no mesmo escopo devem ser excepcionais e visiveis.
 - Excecao por usuario nao substitui governanca de perfil.
 - Politica de novas unidades deve ser independente do acesso cotidiano.
-- Remover uma unidade nao deve remover historico de auditoria.
+- Remover um escopo nao deve remover historico de auditoria.
 - Trocar permissoes de um perfil deve considerar usuarios impactados.
 - Acesso herdado deve aparecer explicitamente como herdado.
+- Acesso global deve aparecer explicitamente como global.
 - Acesso direto excepcional deve aparecer explicitamente como excecao.
 
-## 19. Proposta de evolucao tecnica
+## 20. Impactos de backend assumidos por este PRD
 
-Sem romper a base atual, a recomendacao e evoluir para as seguintes camadas:
+Este PRD assume evolucoes de backend que passam a fazer parte do target state.
 
-### 19.1 Catalogo canonico de funcionalidades
+### 20.1 Catalogo canonico de funcionalidades
 
-Novo registro canonico das capacidades do sistema, ligado aos modulos da plataforma.
+Novo registro canonico das capacidades do sistema, ligado aos modulos da plataforma, com label de negocio, codigo tecnico, criticidade e escopo suportado.
 
-### 19.2 Perfis padronizados versionados
+### 20.2 Perfis padronizados versionados
 
-Perfis passam a ser tratados como artefatos governados, nao apenas linhas tecnicas de `role profile`.
+Perfis passam a ser tratados como artefatos governados, nao apenas linhas tecnicas de role profile.
 
-### 19.3 Camada de acesso efetivo
+### 20.3 Camada de acesso efetivo
 
-DTO/view model para frontend que resolva:
+DTO ou view model para frontend que resolva:
 
 - escopo;
-- perfil;
+- origem do acesso;
+- perfil principal;
+- perfis adicionais;
 - permissoes herdadas;
 - excecoes;
 - risco;
 - justificativas.
 
-### 19.4 Camada de revisao
+### 20.4 Distincao formal entre acesso e perfil
 
-Eventos, pendencias e recertificacao.
+O backend deve poder representar, de forma explicita, o vinculo ao escopo e o papel exercido dentro dele.
 
-## 20. Proposta de rollout
+### 20.5 Camada de revisao
+
+Eventos, pendencias e recertificacao de acessos privilegiados.
+
+## 21. Proposta de rollout
 
 ### Fase 1 - Fundacao de produto
 
 - criar catalogo de funcionalidades;
 - traduzir `featureKey` para linguagem de negocio;
 - mapear perfis padrao iniciais;
-- redesenhar lista de usuarios e detalhe de usuario.
+- redesenhar lista de usuarios e detalhe de usuario;
+- publicar resumo de acesso efetivo.
 
 ### Fase 2 - Governanca de perfis
 
@@ -863,23 +944,23 @@ Eventos, pendencias e recertificacao.
 - fila de revisao periodica;
 - alertas de acesso amplo e excesso de privilegio.
 
-### Fase 4 - Politica global de novas unidades
+### Fase 4 - Politica global de novas unidades e escopos amplos
 
 - separar de vez governanca global do fluxo local;
 - permitir politicas por escopo e por perfil;
 - exibir impacto claro na expansao de rede.
 
-## 21. Metricas de sucesso
+## 22. Metricas de sucesso
 
-- reducao do tempo medio para conceder acesso.
-- reducao do tempo medio para revisar acesso de um usuario.
-- reducao de erros de concessao/revogacao.
-- percentual de usuarios em perfis padronizados versus excecoes.
-- percentual de excecoes expiradas/removidas no prazo.
-- percentual de acessos administrativos revisados dentro do ciclo.
+- reducao do tempo medio para conceder acesso;
+- reducao do tempo medio para revisar acesso de um usuario;
+- reducao de erros de concessao e revogacao;
+- percentual de usuarios em perfis padronizados versus excecoes;
+- percentual de excecoes expiradas ou removidas no prazo;
+- percentual de acessos administrativos revisados dentro do ciclo;
 - reducao de tickets de duvida sobre permissao.
 
-## 22. Riscos e mitigacoes
+## 23. Riscos e mitigacoes
 
 ### Risco 1
 
@@ -897,7 +978,7 @@ Continuar misturando escopo com permissao.
 
 Mitigacao:
 
-- UX separada entre `onde atua` e `o que pode fazer`.
+- UX separada entre onde atua, como entrou e o que pode fazer.
 
 ### Risco 3
 
@@ -916,10 +997,10 @@ Manter acesso amplo por inercia.
 Mitigacao:
 
 - revisao periodica;
-- alertas de acesso em nivel rede;
+- alertas de acesso em nivel global;
 - destaque para excesso de privilegio.
 
-## 23. Decisoes recomendadas
+## 24. Decisoes recomendadas
 
 ### Decisao 1
 
@@ -941,44 +1022,52 @@ Permitir excecao por usuario apenas com justificativa e, para itens criticos, pr
 
 Introduzir revisao periodica de acessos privilegiados no produto.
 
-## 24. Backlog priorizado
+### Decisao 6
+
+Modelar explicitamente os tres tipos de escopo: Unidade, Academia e Global ou Rede.
+
+### Decisao 7
+
+Preferir um perfil principal por escopo e tratar perfis adicionais como caso especial.
+
+## 25. Backlog priorizado
 
 ### P0
 
-- catalogo de funcionalidades
-- perfis padronizados iniciais
-- resumo de acesso efetivo por usuario
-- fluxo novo de conceder acesso por unidade + perfil
+- catalogo de funcionalidades;
+- perfis padronizados iniciais;
+- resumo de acesso efetivo por usuario;
+- fluxo novo de conceder acesso por escopo + perfil.
 
 ### P1
 
-- matriz de permissoes por perfil
-- preview de impacto
-- tratamento formal de excecoes
-- score de risco de acesso
+- matriz de permissoes por perfil;
+- preview de impacto;
+- tratamento formal de excecoes;
+- score de risco de acesso.
 
 ### P2
 
-- recertificacao periodica
-- expiracao automatica de excecoes
-- analytics de uso de permissoes
-- sugestoes automatizadas de reducao de privilegio
+- recertificacao periodica;
+- expiracao automatica de excecoes;
+- analytics de uso de permissoes;
+- sugestoes automatizadas de reducao de privilegio.
 
-## 25. Recomendacao objetiva para a proxima iteracao
+## 26. Recomendacao objetiva para a proxima iteracao
 
 Se fosse priorizar a implementacao agora, a melhor sequencia seria:
 
 1. Criar o catalogo de funcionalidades e traduzir a linguagem da UI.
-2. Redesenhar `Acesso por Unidade` para exigir escolha explicita de perfil e mostrar impacto.
-3. Substituir a tela atual de `RBAC` por `Perfis padronizados`, `Funcionalidades` e `Revisoes`.
+2. Redesenhar Acesso por Unidade para exigir escolha explicita de perfil e mostrar impacto.
+3. Substituir a tela atual de RBAC por Perfis padronizados, Funcionalidades e Revisoes.
 4. Reestruturar o detalhe do usuario com foco em acesso efetivo, excecoes e risco.
 5. Deixar politica de novas unidades como governanca global separada.
 
-## 26. Anexo - mapeamento do problema atual para a proposta
+## 27. Anexo - mapeamento do problema atual para a proposta
 
 ### Problema atual
 
-`Acesso por Unidade` concede acesso usando perfil default.
+Acesso por Unidade concede acesso usando perfil default.
 
 ### Solucao
 
@@ -986,7 +1075,7 @@ Escolha explicita de perfil + resumo de impacto + confirmacao.
 
 ### Problema atual
 
-`RBAC` esta orientado a objetos tecnicos.
+RBAC esta orientado a objetos tecnicos.
 
 ### Solucao
 

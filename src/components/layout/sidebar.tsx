@@ -87,8 +87,8 @@ const crmItems: NavItem[] = [
 ];
 
 const segurancaItems: NavItem[] = [
-  { href: "/seguranca/rbac", label: "RBAC", icon: ShieldCheck },
-  { href: "/seguranca/acesso-unidade", label: "Acesso por Unidade", icon: ShieldCheck },
+  { href: "/seguranca/rbac", label: "Perfis e Funcionalidades", icon: ShieldCheck },
+  { href: "/seguranca/acesso-unidade", label: "Usuários e Acessos", icon: ShieldCheck },
 ];
 
 const administrativoItems: NavItem[] = [

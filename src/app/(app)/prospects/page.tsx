@@ -15,6 +15,7 @@ import {
 import { listFuncionariosApi } from "@/lib/api/administrativo";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { getBusinessCurrentMonthYear } from "@/lib/business-date";
+import { canAdvanceProspect, getNextProspectStatus } from "@/lib/crm/prospect-status";
 import { normalizeProspectRuntime } from "@/lib/crm/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -68,13 +69,6 @@ const ORIGEM_LABELS: Record<OrigemProspect, string> = {
   OUTROS: "Outros",
 };
 
-const STATUS_PROGRESSION: StatusProspect[] = [
-  "NOVO",
-  "EM_CONTATO",
-  "AGENDOU_VISITA",
-  "VISITOU",
-];
-
 type ProspectRowProps = {
   prospect: Prospect;
   origemLabel: string;
@@ -94,7 +88,7 @@ const ProspectTableRow = memo(function ProspectTableRow({
   onMarkLost,
   onDelete,
 }: ProspectRowProps) {
-  const canAdvance = STATUS_PROGRESSION.includes(prospect.status as StatusProspect);
+  const canAdvance = canAdvanceProspect(prospect.status);
   const canLose = prospect.status !== "PERDIDO";
   const canConvert = prospect.status !== "CONVERTIDO" && prospect.status !== "PERDIDO";
 
@@ -362,9 +356,9 @@ export default function ProspectsPage() {
 
   const handleAdvance = useCallback(
     (id: string, currentStatus: StatusProspect) => {
-      const idx = STATUS_PROGRESSION.indexOf(currentStatus);
-      if (idx < STATUS_PROGRESSION.length - 1) {
-        void handleStatus(id, STATUS_PROGRESSION[idx + 1]);
+      const nextStatus = getNextProspectStatus(currentStatus);
+      if (nextStatus) {
+        void handleStatus(id, nextStatus);
       }
     },
     [handleStatus]

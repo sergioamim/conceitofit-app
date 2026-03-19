@@ -1,4 +1,4 @@
-# AGENTS.md
+#    AGENTS.md
 
 Este arquivo define guardrails para agentes de IA neste repositório.
 

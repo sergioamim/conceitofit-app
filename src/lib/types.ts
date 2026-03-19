@@ -1602,6 +1602,52 @@ export type GlobalAdminMembershipOrigin =
   | "SISTEMA";
 
 export type GlobalAdminNewUnitsPolicyScope = "ACADEMIA_ATUAL" | "REDE";
+export type GlobalAdminRiskLevel = "BAIXO" | "MEDIO" | "ALTO" | "CRITICO";
+export type GlobalAdminReviewStatus = "EM_DIA" | "PENDENTE" | "VENCIDA";
+
+export interface GlobalAdminAccessException {
+  id: UUID;
+  title: string;
+  scopeLabel?: string;
+  justification: string;
+  expiresAt?: LocalDateTime;
+  createdAt?: LocalDateTime;
+  createdBy?: string;
+  active: boolean;
+}
+
+export interface GlobalAdminRecentChange {
+  id: UUID;
+  title: string;
+  description?: string;
+  happenedAt?: LocalDateTime;
+  actorName?: string;
+  severity?: GlobalAdminRiskLevel;
+}
+
+export interface GlobalAdminReviewBoardItem {
+  id: UUID;
+  userId?: UUID;
+  userName: string;
+  title: string;
+  description?: string;
+  severity: GlobalAdminRiskLevel;
+  dueAt?: LocalDateTime;
+  category:
+    | "REVISAO_PENDENTE"
+    | "EXCECAO_EXPIRANDO"
+    | "MUDANCA_RECENTE"
+    | "ACESSO_AMPLO"
+    | "PERFIL_SEM_DONO";
+}
+
+export interface GlobalAdminReviewBoard {
+  pendingReviews: GlobalAdminReviewBoardItem[];
+  expiringExceptions: GlobalAdminReviewBoardItem[];
+  recentChanges: GlobalAdminReviewBoardItem[];
+  broadAccess: GlobalAdminReviewBoardItem[];
+  orphanProfiles: GlobalAdminReviewBoardItem[];
+}
 
 export interface GlobalAdminUnitRef {
   id: UUID;
@@ -1630,6 +1676,12 @@ export interface GlobalAdminMembership {
   eligibleForNewUnits?: boolean;
   profiles: GlobalAdminMembershipProfile[];
   availableProfiles?: RbacPerfil[];
+  riskLevel?: GlobalAdminRiskLevel;
+  riskFlags?: string[];
+  broadAccess?: boolean;
+  reviewStatus?: GlobalAdminReviewStatus;
+  nextReviewAt?: LocalDateTime;
+  exceptions?: GlobalAdminAccessException[];
   createdAt?: LocalDateTime;
   updatedAt?: LocalDateTime;
 }
@@ -1640,6 +1692,7 @@ export interface GlobalAdminNewUnitsPolicy {
   academiaIds?: UUID[];
   inherited?: boolean;
   rationale?: string;
+  sourceLabel?: string;
   updatedAt?: LocalDateTime;
 }
 
@@ -1657,6 +1710,13 @@ export interface GlobalAdminUserSummary {
   defaultTenantId?: UUID;
   defaultTenantName?: string;
   eligibleForNewUnits: boolean;
+  broadAccess?: boolean;
+  compatibilityMode?: boolean;
+  riskLevel?: GlobalAdminRiskLevel;
+  riskFlags?: string[];
+  exceptionsCount?: number;
+  reviewStatus?: GlobalAdminReviewStatus;
+  nextReviewAt?: LocalDateTime;
 }
 
 export interface GlobalAdminUserDetail extends GlobalAdminUserSummary {
@@ -1664,6 +1724,8 @@ export interface GlobalAdminUserDetail extends GlobalAdminUserSummary {
   lastLoginAt?: LocalDateTime;
   memberships: GlobalAdminMembership[];
   policy: GlobalAdminNewUnitsPolicy;
+  exceptions: GlobalAdminAccessException[];
+  recentChanges: GlobalAdminRecentChange[];
 }
 
 export interface GlobalAdminSecurityOverview {
@@ -1671,4 +1733,9 @@ export interface GlobalAdminSecurityOverview {
   activeMemberships: number;
   defaultUnitsConfigured: number;
   eligibleForNewUnits: number;
+  broadAccessUsers?: number;
+  expiringExceptions?: number;
+  pendingReviews?: number;
+  rolloutPercentage?: number;
+  compatibilityModeUsers?: number;
 }

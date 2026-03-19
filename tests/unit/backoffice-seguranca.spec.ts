@@ -1,10 +1,14 @@
 import { expect, test } from "@playwright/test";
 import {
+  createGlobalAdminAccessExceptionApi,
   getGlobalAdminUserDetailApi,
+  getGlobalAdminReviewBoardApi,
   listGlobalAdminUsersApi,
 } from "../../src/lib/api/backoffice-seguranca";
 import {
+  createUserAccessException,
   listEligibleNewUnitAdminsPreview,
+  removeUserAccessException,
   updateUserNewUnitsPolicy,
 } from "../../src/lib/backoffice/seguranca";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
@@ -175,7 +179,7 @@ test.describe("backoffice segurança", () => {
     }
   });
 
-  test("getGlobalAdminUserDetailApi normaliza memberships, perfis e política", async () => {
+  test("getGlobalAdminUserDetailApi normaliza memberships, perfis, exceções e política", async () => {
     const { restore } = mockFetchSequence([
       new Response(
         JSON.stringify({
@@ -188,6 +192,11 @@ test.describe("backoffice segurança", () => {
           membershipsTotal: 1,
           defaultTenantName: "Centro",
           eligibleForNewUnits: true,
+          broadAccess: true,
+          riskLevel: "ALTO",
+          riskFlags: ["acesso em múltiplas unidades"],
+          reviewStatus: "PENDENTE",
+          nextReviewAt: "2026-03-20T10:00:00",
           memberships: [
             {
               id: "mem-centro",
@@ -200,6 +209,11 @@ test.describe("backoffice segurança", () => {
               accessOrigin: "HERDADO",
               inheritedFrom: "Política regional",
               eligibleForNewUnits: true,
+              broadAccess: true,
+              riskLevel: "ALTO",
+              riskFlags: ["alçada regional"],
+              reviewStatus: "PENDENTE",
+              nextReviewAt: "2026-03-20T10:00:00",
               profiles: [
                 {
                   perfilId: "perfil-admin",
@@ -225,12 +239,47 @@ test.describe("backoffice segurança", () => {
                   active: true,
                 },
               ],
+              exceptions: [
+                {
+                  id: "exc-membership-1",
+                  title: "Cobertura temporária",
+                  scopeLabel: "Unidade Centro",
+                  justification: "Fechamento contábil",
+                  expiresAt: "2026-03-18T18:00:00",
+                  createdAt: "2026-03-10T10:00:00",
+                  createdBy: "Root Admin",
+                  active: true,
+                },
+              ],
+            },
+          ],
+          exceptions: [
+            {
+              id: "exc-user-1",
+              titulo: "Auditoria externa",
+              escopoLabel: "Rede Norte",
+              justificativa: "Acesso assistido por consultoria",
+              expiraEm: "2026-03-25T10:00:00",
+              criadoEm: "2026-03-12T10:00:00",
+              criadoPor: "Compliance",
+              ativo: true,
+            },
+          ],
+          recentChanges: [
+            {
+              id: "change-1",
+              title: "Perfil elevado",
+              description: "Administrador atribuído em Centro",
+              happenedAt: "2026-03-12T12:00:00",
+              actorName: "Root Admin",
+              severity: "MEDIO",
             },
           ],
           policy: {
             autoAssignToNewUnits: true,
             scope: "REDE",
             rationale: "Diretoria regional",
+            sourceLabel: "Regra global",
             updatedAt: "2026-03-12T10:00:00",
           },
         }),
@@ -256,14 +305,142 @@ test.describe("backoffice segurança", () => {
           inherited: true,
         })
       );
+      expect(detail.memberships[0]).toEqual(
+        expect.objectContaining({
+          broadAccess: true,
+          riskLevel: "ALTO",
+          reviewStatus: "PENDENTE",
+        })
+      );
+      expect(detail.memberships[0]?.exceptions).toHaveLength(1);
       expect(detail.memberships[0]?.availableProfiles).toHaveLength(2);
+      expect(detail.exceptions[0]).toEqual(
+        expect.objectContaining({
+          title: "Auditoria externa",
+          scopeLabel: "Rede Norte",
+          justification: "Acesso assistido por consultoria",
+        })
+      );
+      expect(detail.recentChanges[0]).toEqual(
+        expect.objectContaining({
+          title: "Perfil elevado",
+          actorName: "Root Admin",
+          severity: "MEDIO",
+        })
+      );
       expect(detail.policy).toEqual(
         expect.objectContaining({
           enabled: true,
           scope: "REDE",
           rationale: "Diretoria regional",
+          sourceLabel: "Regra global",
         })
       );
+    } finally {
+      restore();
+    }
+  });
+
+  test("createGlobalAdminAccessExceptionApi usa o endpoint canônico e refaz o snapshot", async () => {
+    const { calls, restore } = mockFetchSequence([
+      new Response(null, { status: 204 }),
+      new Response(
+        JSON.stringify({
+          id: "user-ana",
+          nome: "Ana Admin",
+          email: "ana@qa.local",
+          active: true,
+          membershipsAtivos: 1,
+          membershipsTotal: 1,
+          defaultTenantName: "Centro",
+          eligibleForNewUnits: true,
+          memberships: [],
+          exceptions: [
+            {
+              id: "exc-1",
+              title: "Suporte temporário",
+              justification: "Virada de sistema",
+              active: true,
+            },
+          ],
+          policy: {
+            enabled: true,
+            scope: "ACADEMIA_ATUAL",
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ),
+    ]);
+
+    try {
+      const detail = await createGlobalAdminAccessExceptionApi({
+        userId: "user-ana",
+        membershipId: "mem-centro",
+        title: "  Suporte temporário  ",
+        scopeLabel: "Unidade Centro",
+        justification: "  Virada de sistema  ",
+        expiresAt: "2026-03-18T18:00",
+      });
+
+      expect(calls[0]?.url).toContain("/api/v1/admin/seguranca/usuarios/user-ana/exceptions");
+      expect(calls[0]?.method).toBe("POST");
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        membershipId: "mem-centro",
+        title: "Suporte temporário",
+        scopeLabel: "Unidade Centro",
+        justification: "Virada de sistema",
+        expiresAt: "2026-03-18T18:00",
+      });
+      expect(calls[1]?.url).toContain("/api/v1/admin/seguranca/usuarios/user-ana");
+      expect(detail.exceptions[0]?.title).toBe("Suporte temporário");
+    } finally {
+      restore();
+    }
+  });
+
+  test("getGlobalAdminReviewBoardApi normaliza filas de revisão", async () => {
+    const { restore } = mockFetchSequence([
+      new Response(
+        JSON.stringify({
+          revisoesPendentes: [
+            {
+              id: "review-1",
+              usuarioId: "user-ana",
+              usuarioNome: "Ana Admin",
+              titulo: "Recertificar acesso regional",
+              descricao: "Acesso amplo em academia crítica",
+              criticidade: "ALTO",
+              prazoEm: "2026-03-22T10:00:00",
+              categoria: "REVISAO_PENDENTE",
+            },
+          ],
+          excecoesExpirando: [
+            {
+              id: "review-2",
+              usuarioNome: "Ana Admin",
+              titulo: "Exceção vencendo",
+              criticidade: "MEDIO",
+              categoria: "EXCECAO_EXPIRANDO",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ),
+    ]);
+
+    try {
+      const board = await getGlobalAdminReviewBoardApi();
+      expect(board.pendingReviews[0]).toEqual(
+        expect.objectContaining({
+          userId: "user-ana",
+          userName: "Ana Admin",
+          title: "Recertificar acesso regional",
+          severity: "ALTO",
+          category: "REVISAO_PENDENTE",
+        })
+      );
+      expect(board.expiringExceptions[0]?.category).toBe("EXCECAO_EXPIRANDO");
+      expect(board.recentChanges).toEqual([]);
     } finally {
       restore();
     }
@@ -334,6 +511,78 @@ test.describe("backoffice segurança", () => {
       });
       expect(calls[2]?.url).toContain("/api/v1/admin/seguranca/usuarios/user-ana");
       expect(updated.policy.rationale).toBe("Direção local");
+    } finally {
+      restore();
+    }
+  });
+
+  test("services de exceção validam payload e usam o contrato novo", async () => {
+    const { calls, restore } = mockFetchSequence([
+      new Response(null, { status: 204 }),
+      new Response(
+        JSON.stringify({
+          id: "user-ana",
+          nome: "Ana Admin",
+          email: "ana@qa.local",
+          active: true,
+          membershipsAtivos: 1,
+          membershipsTotal: 1,
+          defaultTenantName: "Centro",
+          eligibleForNewUnits: true,
+          memberships: [],
+          exceptions: [
+            {
+              id: "exc-1",
+              title: "Cobertura crítica",
+              justification: "Atendimento de auditoria",
+              active: true,
+            },
+          ],
+          policy: {
+            enabled: false,
+            scope: "ACADEMIA_ATUAL",
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ),
+      new Response(null, { status: 204 }),
+      new Response(
+        JSON.stringify({
+          id: "user-ana",
+          nome: "Ana Admin",
+          email: "ana@qa.local",
+          active: true,
+          membershipsAtivos: 1,
+          membershipsTotal: 1,
+          defaultTenantName: "Centro",
+          eligibleForNewUnits: true,
+          memberships: [],
+          exceptions: [],
+          policy: {
+            enabled: false,
+            scope: "ACADEMIA_ATUAL",
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ),
+    ]);
+
+    try {
+      const created = await createUserAccessException({
+        userId: "user-ana",
+        title: "  Cobertura crítica  ",
+        justification: "  Atendimento de auditoria  ",
+      });
+      expect(calls[0]?.url).toContain("/api/v1/admin/seguranca/usuarios/user-ana/exceptions");
+      expect(created.exceptions).toHaveLength(1);
+
+      const removed = await removeUserAccessException({
+        userId: "user-ana",
+        exceptionId: "exc-1",
+      });
+      expect(calls[2]?.url).toContain("/api/v1/admin/seguranca/usuarios/user-ana/exceptions/exc-1");
+      expect(calls[2]?.method).toBe("DELETE");
+      expect(removed.exceptions).toHaveLength(0);
     } finally {
       restore();
     }
