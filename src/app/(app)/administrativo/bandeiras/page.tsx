@@ -11,6 +11,7 @@ import {
 import type { BandeiraCartao } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { BandeiraCartaoModal } from "@/components/shared/bandeira-cartao-modal";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 export default function BandeirasPage() {
@@ -145,35 +146,28 @@ export default function BandeirasPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditing(b);
-                        setModalOpen(true);
-                      }}
-                      className="border-border"
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggle(b.id)}
-                      className="border-border"
-                    >
-                      {b.ativo ? "Desativar" : "Ativar"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(b.id)}
-                      className="border-border text-gym-danger hover:text-gym-danger"
-                    >
-                      Remover
-                    </Button>
-                  </div>
+                  <DataTableRowActions
+                    actions={[
+                      {
+                        label: "Editar",
+                        kind: "edit",
+                        onClick: () => {
+                          setEditing(b);
+                          setModalOpen(true);
+                        },
+                      },
+                      {
+                        label: b.ativo ? "Desativar" : "Ativar",
+                        kind: "toggle",
+                        onClick: () => handleToggle(b.id),
+                      },
+                      {
+                        label: "Remover",
+                        kind: "delete",
+                        onClick: () => handleDelete(b.id),
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

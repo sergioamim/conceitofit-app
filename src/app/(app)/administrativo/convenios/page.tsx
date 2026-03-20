@@ -13,6 +13,7 @@ import { useTenantContext } from "@/hooks/use-session-context";
 import type { Convenio, Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ConvenioModal } from "@/components/shared/convenio-modal";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { cn } from "@/lib/utils";
 
 export default function ConveniosPage() {
@@ -21,7 +22,6 @@ export default function ConveniosPage() {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Convenio | null>(null);
-  const [ready, setReady] = useState(false);
 
   async function load() {
     if (!tenantId) return;
@@ -34,7 +34,6 @@ export default function ConveniosPage() {
   }
 
   useEffect(() => {
-    setReady(true);
     if (!tenantResolved || !tenantId) return;
     void Promise.all([
       listConveniosApi(false),
@@ -82,7 +81,7 @@ export default function ConveniosPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight">Convênios</h1>
           <p className="mt-1 text-sm text-muted-foreground">Descontos por plano ou grupo</p>
         </div>
-        <Button onClick={() => setModalOpen(true)} disabled={!ready || !tenantResolved || !tenantId}>Novo convênio</Button>
+        <Button onClick={() => setModalOpen(true)} disabled={!tenantResolved || !tenantId}>Novo convênio</Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">
@@ -113,11 +112,28 @@ export default function ConveniosPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setEditing(c); setModalOpen(true); }} className="h-7 text-xs">Editar</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleToggle(c.id)} className="h-7 text-xs">{c.ativo ? "Desativar" : "Ativar"}</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(c.id)} className="h-7 text-xs border-gym-danger/30 text-gym-danger hover:border-gym-danger/60">Remover</Button>
-                  </div>
+                  <DataTableRowActions
+                    actions={[
+                      {
+                        label: "Editar",
+                        kind: "edit",
+                        onClick: () => {
+                          setEditing(c);
+                          setModalOpen(true);
+                        },
+                      },
+                      {
+                        label: c.ativo ? "Desativar" : "Ativar",
+                        kind: "toggle",
+                        onClick: () => handleToggle(c.id),
+                      },
+                      {
+                        label: "Remover",
+                        kind: "delete",
+                        onClick: () => handleDelete(c.id),
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

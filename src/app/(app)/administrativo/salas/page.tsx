@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createSalaApi, deleteSalaApi, listSalasApi, toggleSalaApi, updateSalaApi } from "@/lib/api/administrativo";
 import type { Sala } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { SalaModal } from "@/components/shared/sala-modal";
 import { cn } from "@/lib/utils";
 
@@ -99,11 +100,28 @@ export default function SalasPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setEditing(sala); setModalOpen(true); }} className="h-7 text-xs">Editar</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleToggle(sala.id)} className="h-7 text-xs">{sala.ativo ? "Desativar" : "Ativar"}</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(sala.id)} className="h-7 text-xs border-gym-danger/30 text-gym-danger hover:border-gym-danger/60">Remover</Button>
-                  </div>
+                  <DataTableRowActions
+                    actions={[
+                      {
+                        label: "Editar",
+                        kind: "edit",
+                        onClick: () => {
+                          setEditing(sala);
+                          setModalOpen(true);
+                        },
+                      },
+                      {
+                        label: sala.ativo ? "Desativar" : "Ativar",
+                        kind: "toggle",
+                        onClick: () => handleToggle(sala.id),
+                      },
+                      {
+                        label: "Remover",
+                        kind: "delete",
+                        onClick: () => handleDelete(sala.id),
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { AtividadeGradeModal, type AtividadeGradeForm } from "@/components/shared/atividade-grade-modal";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import {
   AtividadeOcorrenciaModal,
   type AtividadeOcorrenciaForm,
@@ -364,49 +365,40 @@ export default function AtividadesGradePage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setError("");
-                          setFeedback("");
-                          setOccurrenceGrade(g);
-                          setOccurrenceModalOpen(true);
-                        }}
-                        className="border-border"
-                        disabled={g.definicaoHorario !== "SOB_DEMANDA" || !g.ativo}
-                      >
-                        Criar ocorrência
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditing(g);
-                          setModalOpen(true);
-                        }}
-                        className="border-border"
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggle(g.id)}
-                        className="border-border"
-                      >
-                        {g.ativo ? "Desativar" : "Ativar"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(g.id)}
-                        className="border-border text-gym-danger hover:text-gym-danger"
-                      >
-                        Remover
-                      </Button>
-                    </div>
+                    <DataTableRowActions
+                      actions={[
+                        {
+                          label: "Criar ocorrência",
+                          kind: "open",
+                          icon: Plus,
+                          disabled: g.definicaoHorario !== "SOB_DEMANDA" || !g.ativo,
+                          onClick: () => {
+                            setError("");
+                            setFeedback("");
+                            setOccurrenceGrade(g);
+                            setOccurrenceModalOpen(true);
+                          },
+                        },
+                        {
+                          label: "Editar",
+                          kind: "edit",
+                          onClick: () => {
+                            setEditing(g);
+                            setModalOpen(true);
+                          },
+                        },
+                        {
+                          label: g.ativo ? "Desativar" : "Ativar",
+                          kind: "toggle",
+                          onClick: () => handleToggle(g.id),
+                        },
+                        {
+                          label: "Remover",
+                          kind: "delete",
+                          onClick: () => handleDelete(g.id),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               );

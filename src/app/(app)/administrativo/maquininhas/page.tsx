@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { createMaquininhaApi, listMaquininhasApi, toggleMaquininhaApi, updateMaquininhaApi } from "@/lib/api/maquininhas";
 import { listContasBancariasApi } from "@/lib/api/contas-bancarias";
 import type { AdquirenteMaquininha, ContaBancaria } from "@/lib/types";
@@ -406,26 +406,20 @@ export default function MaquininhasPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border"
-                        onClick={() => openEdit(item)}
-                      >
-                        <Pencil className="mr-1.5 size-4" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border"
-                        onClick={() => handleToggle(item)}
-                      >
-                        <Power className="mr-1.5 size-4" />
-                        {item.statusCadastro === "ATIVA" ? "Inativar" : "Ativar"}
-                      </Button>
-                    </div>
+                    <DataTableRowActions
+                      actions={[
+                        {
+                          label: "Editar",
+                          kind: "edit",
+                          onClick: () => openEdit(item),
+                        },
+                        {
+                          label: item.statusCadastro === "ATIVA" ? "Inativar" : "Ativar",
+                          kind: "toggle",
+                          onClick: () => handleToggle(item),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

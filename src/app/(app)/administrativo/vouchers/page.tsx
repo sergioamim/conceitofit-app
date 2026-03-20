@@ -12,6 +12,7 @@ import { useTenantContext } from "@/hooks/use-session-context";
 import type { Voucher } from "@/lib/types";
 import { NovoVoucherModal, NovoVoucherPayload } from "@/components/shared/novo-voucher-modal";
 import { EditarVoucherModal } from "@/components/shared/editar-voucher-modal";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { VoucherCodigosModal } from "@/components/shared/voucher-codigos-modal";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -21,7 +22,9 @@ const TIPO_LABEL: Record<string, string> = {
 };
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR");
+  const [year, month, day] = dateStr.split("-");
+  if (!year || !month || !day) return dateStr;
+  return `${day}/${month}/${year}`;
 }
 
 function formatPeriodo(voucher: Voucher): string {
@@ -38,7 +41,6 @@ export default function VouchersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editVoucher, setEditVoucher] = useState<Voucher | null>(null);
   const [codigosVoucher, setCodigosVoucher] = useState<Voucher | null>(null);
-  const [ready, setReady] = useState(false);
 
   const load = useCallback(async () => {
     const [data, counts] = await Promise.all([
@@ -50,7 +52,6 @@ export default function VouchersPage() {
   }, []);
 
   useEffect(() => {
-    setReady(true);
     if (!tenantResolved) return;
     void Promise.all([
       listVouchersApi(),
@@ -108,7 +109,7 @@ export default function VouchersPage() {
             Cupões e acessos temporários
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)} disabled={!ready || !tenantResolved}>Novo voucher</Button>
+        <Button onClick={() => setModalOpen(true)} disabled={!tenantResolved}>Novo voucher</Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">
@@ -183,34 +184,29 @@ export default function VouchersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border text-xs"
-                        onClick={() => setCodigosVoucher(voucher)}
-                      >
-                        Ver códigos
-                      </Button>
-                      {canEdit && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-border text-xs"
-                          onClick={() => setEditVoucher(voucher)}
-                        >
-                          Editar
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border text-xs"
-                        onClick={() => handleToggle(voucher.id)}
-                      >
-                        {voucher.ativo ? "Desativar" : "Ativar"}
-                      </Button>
-                    </div>
+                    <DataTableRowActions
+                      actions={[
+                        {
+                          label: "Ver códigos",
+                          kind: "view",
+                          onClick: () => setCodigosVoucher(voucher),
+                        },
+                        ...(canEdit
+                          ? [
+                              {
+                                label: "Editar",
+                                kind: "edit" as const,
+                                onClick: () => setEditVoucher(voucher),
+                              },
+                            ]
+                          : []),
+                        {
+                          label: voucher.ativo ? "Desativar" : "Ativar",
+                          kind: "toggle",
+                          onClick: () => handleToggle(voucher.id),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               );

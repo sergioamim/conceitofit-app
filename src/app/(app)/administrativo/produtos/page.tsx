@@ -11,6 +11,7 @@ import {
 import type { Produto } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ProdutoModal } from "@/components/shared/produto-modal";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { cn } from "@/lib/utils";
 
 function formatBRL(value: number) {
@@ -24,7 +25,6 @@ export default function ProdutosPage() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Produto | null>(null);
-  const [ready, setReady] = useState(false);
 
   async function load() {
     const data = await listProdutosApi(false);
@@ -32,7 +32,6 @@ export default function ProdutosPage() {
   }
 
   useEffect(() => {
-    setReady(true);
     void listProdutosApi(false).then(setProdutos);
   }, []);
 
@@ -83,7 +82,7 @@ export default function ProdutosPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight">Produtos</h1>
           <p className="mt-1 text-sm text-muted-foreground">Cadastro completo para venda de produtos físicos e controle de margem/estoque</p>
         </div>
-        <Button onClick={() => setModalOpen(true)} disabled={!ready}>Novo produto</Button>
+        <Button onClick={() => setModalOpen(true)}>Novo produto</Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">
@@ -127,11 +126,28 @@ export default function ProdutosPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setEditing(p); setModalOpen(true); }} className="border-border">Editar</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleToggle(p.id)} className="border-border">{p.ativo ? "Desativar" : "Ativar"}</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(p.id)} className="border-border text-gym-danger hover:text-gym-danger">Remover</Button>
-                  </div>
+                  <DataTableRowActions
+                    actions={[
+                      {
+                        label: "Editar",
+                        kind: "edit",
+                        onClick: () => {
+                          setEditing(p);
+                          setModalOpen(true);
+                        },
+                      },
+                      {
+                        label: p.ativo ? "Desativar" : "Ativar",
+                        kind: "toggle",
+                        onClick: () => handleToggle(p.id),
+                      },
+                      {
+                        label: "Remover",
+                        kind: "delete",
+                        onClick: () => handleDelete(p.id),
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { TableCell } from "@/components/ui/table";
 import { PaginatedTable } from "@/components/shared/paginated-table";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { SecurityActiveBadge } from "@/components/security/security-badges";
 import { SecurityEmptyState, SecuritySectionFeedback } from "@/components/security/security-feedback";
@@ -476,26 +477,20 @@ export default function RbacPage() {
                   <SecurityActiveBadge active={perfil.active} />
                 </TableCell>
                 <TableCell className="px-3 py-2">
-                  <div className="flex flex-wrap gap-1.5">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="border-border"
-                      onClick={() => editPerfil(perfil.id)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="border-gym-danger/40 text-gym-danger"
-                      onClick={() => desativarPerfil(perfil.id)}
-                    >
-                      {perfil.active ? "Desativar" : "Remover"}
-                    </Button>
-                  </div>
+                  <DataTableRowActions
+                    actions={[
+                      {
+                        label: "Editar",
+                        kind: "edit",
+                        onClick: () => editPerfil(perfil.id),
+                      },
+                      {
+                        label: perfil.active ? "Desativar" : "Remover",
+                        kind: "delete",
+                        onClick: () => desativarPerfil(perfil.id),
+                      },
+                    ]}
+                  />
                 </TableCell>
               </>
             )}
@@ -566,15 +561,15 @@ export default function RbacPage() {
                       <SecurityActiveBadge active={item.active} />
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="border-gym-danger/40 text-gym-danger"
-                        onClick={() => removeUserPerfil(item.id)}
-                      >
-                        Remover
-                      </Button>
+                      <DataTableRowActions
+                        actions={[
+                          {
+                            label: "Remover",
+                            kind: "delete",
+                            onClick: () => removeUserPerfil(item.id),
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </>
                 )}

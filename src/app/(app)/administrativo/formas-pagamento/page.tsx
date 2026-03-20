@@ -11,6 +11,7 @@ import {
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { FormaPagamento, TipoFormaPagamento } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { FormaPagamentoModal } from "@/components/shared/forma-pagamento-modal";
 
 const TIPO_LABEL: Record<TipoFormaPagamento, string> = {
@@ -27,7 +28,6 @@ export default function FormasPagamentoPage() {
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<FormaPagamento | null>(null);
-  const [ready, setReady] = useState(false);
 
   async function load() {
     if (!tenantId) return;
@@ -36,7 +36,6 @@ export default function FormasPagamentoPage() {
   }
 
   useEffect(() => {
-    setReady(true);
     if (!tenantResolved || !tenantId) return;
     void listFormasPagamentoApi({ tenantId, apenasAtivas: false }).then(setFormas);
   }, [tenantId, tenantResolved]);
@@ -99,7 +98,7 @@ export default function FormasPagamentoPage() {
             Configure meios e condições de pagamento
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)} disabled={!ready || !tenantResolved || !tenantId}>Nova forma</Button>
+        <Button onClick={() => setModalOpen(true)} disabled={!tenantResolved || !tenantId}>Nova forma</Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">
@@ -165,35 +164,28 @@ export default function FormasPagamentoPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditing(f);
-                        setModalOpen(true);
-                      }}
-                      className="border-border"
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggle(f.id)}
-                      className="border-border"
-                    >
-                      {f.ativo ? "Desativar" : "Ativar"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(f.id)}
-                      className="border-border text-gym-danger hover:text-gym-danger"
-                    >
-                      Remover
-                    </Button>
-                  </div>
+                  <DataTableRowActions
+                    actions={[
+                      {
+                        label: "Editar",
+                        kind: "edit",
+                        onClick: () => {
+                          setEditing(f);
+                          setModalOpen(true);
+                        },
+                      },
+                      {
+                        label: f.ativo ? "Desativar" : "Ativar",
+                        kind: "toggle",
+                        onClick: () => handleToggle(f.id),
+                      },
+                      {
+                        label: "Remover",
+                        kind: "delete",
+                        onClick: () => handleDelete(f.id),
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

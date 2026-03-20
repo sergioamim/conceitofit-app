@@ -11,6 +11,7 @@ import {
 import type { Servico } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ServicoModal } from "@/components/shared/servico-modal";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { cn } from "@/lib/utils";
 
 function formatBRL(value: number) {
@@ -24,7 +25,6 @@ export default function ServicosPage() {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Servico | null>(null);
-  const [ready, setReady] = useState(false);
 
   async function load() {
     const data = await listServicosApi(false);
@@ -32,7 +32,6 @@ export default function ServicosPage() {
   }
 
   useEffect(() => {
-    setReady(true);
     void listServicosApi(false).then(setServicos);
   }, []);
 
@@ -90,7 +89,7 @@ export default function ServicosPage() {
             Itens cobrados à parte, com número de sessões
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)} disabled={!ready}>Novo serviço</Button>
+        <Button onClick={() => setModalOpen(true)}>Novo serviço</Button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">
@@ -185,37 +184,30 @@ export default function ServicosPage() {
                       {s.ativo ? "Ativo" : "Inativo"}
                     </span>
                   </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditing(s);
-                        setModalOpen(true);
-                      }}
-                      className="border-border"
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggle(s.id)}
-                      className="border-border"
-                    >
-                      {s.ativo ? "Desativar" : "Ativar"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(s.id)}
-                      className="border-border text-gym-danger hover:text-gym-danger"
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                </td>
+                  <td className="px-4 py-3">
+                    <DataTableRowActions
+                      actions={[
+                        {
+                          label: "Editar",
+                          kind: "edit",
+                          onClick: () => {
+                            setEditing(s);
+                            setModalOpen(true);
+                          },
+                        },
+                        {
+                          label: s.ativo ? "Desativar" : "Ativar",
+                          kind: "toggle",
+                          onClick: () => handleToggle(s.id),
+                        },
+                        {
+                          label: "Remover",
+                          kind: "delete",
+                          onClick: () => handleDelete(s.id),
+                        },
+                      ]}
+                    />
+                  </td>
               </tr>
             ))}
             {servicos.length === 0 && (

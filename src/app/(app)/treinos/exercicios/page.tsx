@@ -5,6 +5,7 @@ import { Plus, Search } from "lucide-react";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { ExercicioModal, type ExercicioForm } from "@/components/shared/exercicio-modal";
 import { PaginatedTable } from "@/components/shared/paginated-table";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -212,21 +213,23 @@ export default function ExerciciosPage() {
                   <Badge variant={item.ativo ? "secondary" : "outline"}>{item.ativo ? "Ativo" : "Inativo"}</Badge>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditing(item);
-                        setModalOpen(true);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => void handleToggle(item)}>
-                      {item.ativo ? "Inativar" : "Reativar"}
-                    </Button>
-                  </div>
+                  <DataTableRowActions
+                    actions={[
+                      {
+                        label: "Editar",
+                        kind: "edit",
+                        onClick: () => {
+                          setEditing(item);
+                          setModalOpen(true);
+                        },
+                      },
+                      {
+                        label: item.ativo ? "Inativar" : "Reativar",
+                        kind: "toggle",
+                        onClick: () => void handleToggle(item),
+                      },
+                    ]}
+                  />
                 </td>
               </>
             )}

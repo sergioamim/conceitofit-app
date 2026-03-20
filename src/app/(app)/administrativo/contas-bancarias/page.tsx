@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pencil, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { createContaBancariaApi, listContasBancariasApi, toggleContaBancariaApi, updateContaBancariaApi } from "@/lib/api/contas-bancarias";
 import type { ContaBancaria, PixTipo, TipoContaBancaria } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -500,26 +500,20 @@ export default function ContasBancariasPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border"
-                        onClick={() => openEdit(conta)}
-                      >
-                        <Pencil className="mr-1.5 size-4" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border"
-                        onClick={() => handleToggle(conta)}
-                      >
-                        <Power className="mr-1.5 size-4" />
-                        {conta.statusCadastro === "ATIVA" ? "Inativar" : "Ativar"}
-                      </Button>
-                    </div>
+                    <DataTableRowActions
+                      actions={[
+                        {
+                          label: "Editar",
+                          kind: "edit",
+                          onClick: () => openEdit(conta),
+                        },
+                        {
+                          label: conta.statusCadastro === "ATIVA" ? "Inativar" : "Ativar",
+                          kind: "toggle",
+                          onClick: () => handleToggle(conta),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

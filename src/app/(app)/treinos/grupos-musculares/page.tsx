@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ListTree, Search } from "lucide-react";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { PaginatedTable } from "@/components/shared/paginated-table";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -271,14 +272,20 @@ export default function GruposMuscularesPage() {
                     <Badge variant={item.ativo ? "secondary" : "outline"}>{item.ativo ? "Ativo" : "Inativo"}</Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" onClick={() => startEdit(item)}>
-                        Editar
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => void handleToggle(item)}>
-                        {item.ativo ? "Inativar" : "Reativar"}
-                      </Button>
-                    </div>
+                    <DataTableRowActions
+                      actions={[
+                        {
+                          label: "Editar",
+                          kind: "edit",
+                          onClick: () => startEdit(item),
+                        },
+                        {
+                          label: item.ativo ? "Inativar" : "Reativar",
+                          kind: "toggle",
+                          onClick: () => void handleToggle(item),
+                        },
+                      ]}
+                    />
                   </td>
                 </>
               );

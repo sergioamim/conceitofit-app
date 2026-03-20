@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Copy, Check, KeyRound } from "lucide-react";
 import { PhoneInput } from "@/components/shared/phone-input";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { gerarCatracaCredencialApi, type CatracaCredentialResponse } from "@/lib/api/catraca";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
@@ -580,34 +581,36 @@ export default function UnidadesPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {!isCurrent && row.ativo !== false ? (
-                        <Button variant="outline" size="sm" className="border-border" onClick={() => handleSetCurrent(row.id)}>
-                          Ativar contexto
-                        </Button>
-                      ) : null}
-                      <Button variant="outline" size="sm" className="border-border" onClick={() => openEdit(row)}>
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border"
-                        onClick={() => handleToggle(row.id)}
-                        disabled={isCurrent}
-                      >
-                        {row.ativo === false ? "Ativar" : "Desativar"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border text-gym-danger hover:text-gym-danger"
-                        disabled={isCurrent}
-                        onClick={() => handleDelete(row.id)}
-                      >
-                        Remover
-                      </Button>
-                    </div>
+                    <DataTableRowActions
+                      actions={[
+                        ...(!isCurrent && row.ativo !== false
+                          ? [
+                              {
+                                label: "Ativar contexto",
+                                kind: "open" as const,
+                                onClick: () => handleSetCurrent(row.id),
+                              },
+                            ]
+                          : []),
+                        {
+                          label: "Editar",
+                          kind: "edit" as const,
+                          onClick: () => openEdit(row),
+                        },
+                        {
+                          label: row.ativo === false ? "Ativar" : "Desativar",
+                          kind: "toggle" as const,
+                          disabled: isCurrent,
+                          onClick: () => handleToggle(row.id),
+                        },
+                        {
+                          label: "Remover",
+                          kind: "delete" as const,
+                          disabled: isCurrent,
+                          onClick: () => handleDelete(row.id),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               );

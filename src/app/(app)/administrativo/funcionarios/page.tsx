@@ -16,6 +16,7 @@ import {
 import type { Cargo, Funcionario } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { FuncionarioModal } from "@/components/shared/funcionario-modal";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CargoModal } from "@/components/shared/cargo-modal";
@@ -28,7 +29,6 @@ export default function FuncionariosPage() {
   const [cargosModalOpen, setCargosModalOpen] = useState(false);
   const [cargoFormOpen, setCargoFormOpen] = useState(false);
   const [editingCargo, setEditingCargo] = useState<Cargo | null>(null);
-  const [ready, setReady] = useState(false);
 
   async function load() {
     const [funcs, cargosData] = await Promise.all([
@@ -40,7 +40,6 @@ export default function FuncionariosPage() {
   }
 
   useEffect(() => {
-    setReady(true);
     void Promise.all([listFuncionariosApi(false), listCargosApi(false)]).then(([funcs, cargosData]) => {
       setFuncionarios(funcs);
       setCargos(cargosData);
@@ -159,11 +158,28 @@ export default function FuncionariosPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setEditingCargo(cargo); setCargoFormOpen(true); }}>Editar</Button>
-                          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleToggleCargo(cargo.id)}>{cargo.ativo ? "Desativar" : "Ativar"}</Button>
-                          <Button variant="outline" size="sm" className="h-7 text-xs border-gym-danger/30 text-gym-danger hover:border-gym-danger/60" onClick={() => handleDeleteCargo(cargo.id)}>Remover</Button>
-                        </div>
+                        <DataTableRowActions
+                          actions={[
+                            {
+                              label: "Editar",
+                              kind: "edit",
+                              onClick: () => {
+                                setEditingCargo(cargo);
+                                setCargoFormOpen(true);
+                              },
+                            },
+                            {
+                              label: cargo.ativo ? "Desativar" : "Ativar",
+                              kind: "toggle",
+                              onClick: () => handleToggleCargo(cargo.id),
+                            },
+                            {
+                              label: "Remover",
+                              kind: "delete",
+                              onClick: () => handleDeleteCargo(cargo.id),
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -180,8 +196,8 @@ export default function FuncionariosPage() {
           <p className="mt-1 text-sm text-muted-foreground">Gestão de equipe e responsáveis</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-border" onClick={() => setCargosModalOpen(true)} disabled={!ready}>Cargos</Button>
-          <Button onClick={() => setModalOpen(true)} disabled={!ready}>Novo funcionário</Button>
+          <Button variant="outline" className="border-border" onClick={() => setCargosModalOpen(true)}>Cargos</Button>
+          <Button onClick={() => setModalOpen(true)}>Novo funcionário</Button>
         </div>
       </div>
 
@@ -213,11 +229,28 @@ export default function FuncionariosPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setEditing(f); setModalOpen(true); }} className="h-7 text-xs">Editar</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleToggle(f.id)} className="h-7 text-xs">{f.ativo ? "Desativar" : "Ativar"}</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(f.id)} className="h-7 text-xs border-gym-danger/30 text-gym-danger hover:border-gym-danger/60">Remover</Button>
-                  </div>
+                  <DataTableRowActions
+                    actions={[
+                      {
+                        label: "Editar",
+                        kind: "edit",
+                        onClick: () => {
+                          setEditing(f);
+                          setModalOpen(true);
+                        },
+                      },
+                      {
+                        label: f.ativo ? "Desativar" : "Ativar",
+                        kind: "toggle",
+                        onClick: () => handleToggle(f.id),
+                      },
+                      {
+                        label: "Remover",
+                        kind: "delete",
+                        onClick: () => handleDelete(f.id),
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

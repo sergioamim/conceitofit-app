@@ -10,6 +10,7 @@ import {
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { CategoriaContaPagar, GrupoDre, TipoContaPagar } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -344,24 +345,20 @@ export default function TiposContaPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 border-border"
-                        onClick={() => openEdit(tipo)}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 border-border"
-                        onClick={() => handleToggle(tipo.id)}
-                      >
-                        {tipo.ativo ? "Desativar" : "Ativar"}
-                      </Button>
-                    </div>
+                    <DataTableRowActions
+                      actions={[
+                        {
+                          label: "Editar",
+                          kind: "edit",
+                          onClick: () => openEdit(tipo),
+                        },
+                        {
+                          label: tipo.ativo ? "Desativar" : "Ativar",
+                          kind: "toggle",
+                          onClick: () => handleToggle(tipo.id),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

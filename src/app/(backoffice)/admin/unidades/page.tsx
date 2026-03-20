@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { PaginatedTable } from "@/components/shared/paginated-table";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import {
   createGlobalUnidade,
   listGlobalAcademias,
@@ -899,17 +900,25 @@ export default function UnidadesPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2">
-                          <Button asChild variant="outline" size="sm" className="border-border">
-                            <Link href={`/admin/importacao-evo?tenantId=${encodeURIComponent(unit.id)}`}>Importação</Link>
-                          </Button>
-                          <Button variant="outline" size="sm" className="border-border" onClick={() => void handleEdit(unit)}>
-                            Editar
-                          </Button>
-                          <Button variant="outline" size="sm" className="border-border" onClick={() => void handleToggle(unit)}>
-                            {unit.ativo === false ? "Ativar" : "Desativar"}
-                          </Button>
-                        </div>
+                        <DataTableRowActions
+                          actions={[
+                            {
+                              label: "Importação",
+                              kind: "open",
+                              href: `/admin/importacao-evo?tenantId=${encodeURIComponent(unit.id)}`,
+                            },
+                            {
+                              label: "Editar",
+                              kind: "edit",
+                              onClick: () => void handleEdit(unit),
+                            },
+                            {
+                              label: unit.ativo === false ? "Ativar" : "Desativar",
+                              kind: "toggle",
+                              onClick: () => void handleToggle(unit),
+                            },
+                          ]}
+                        />
                       </td>
                     </>
                   );
