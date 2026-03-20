@@ -119,6 +119,7 @@ type ColaboradorArquivoConfig = {
   label: string;
   field: string;
   pacoteChave: PacoteArquivoChave;
+  aliases: string[];
   bloco: ColaboradorBlocoKey;
   rotuloResumo: string;
   descricao: string;
@@ -131,6 +132,7 @@ const COLABORADOR_ARQUIVOS_CONFIG: ColaboradorArquivoConfig[] = [
     label: "FUNCIONARIOS.csv",
     field: "funcionariosFile",
     pacoteChave: "funcionarios",
+    aliases: ["funcionarios", "FUNCIONARIOS.csv"],
     bloco: "fichaPrincipal",
     rotuloResumo: "Cadastro principal",
     descricao: "Base do colaborador, vínculo principal e dados cadastrais.",
@@ -141,6 +143,7 @@ const COLABORADOR_ARQUIVOS_CONFIG: ColaboradorArquivoConfig[] = [
     label: "FUNCIONARIOS_FUNCOES.csv",
     field: "funcionariosFuncoesFile",
     pacoteChave: "funcionariosFuncoes",
+    aliases: ["funcionarios_funcoes", "FUNCIONARIOS_FUNCOES.csv"],
     bloco: "funcoes",
     rotuloResumo: "Catálogo de funções",
     descricao: "Catálogo legado de cargos e funções vindos do EVO.",
@@ -151,6 +154,7 @@ const COLABORADOR_ARQUIVOS_CONFIG: ColaboradorArquivoConfig[] = [
     label: "FUNCIONARIOS_FUNCOES_EXERCIDAS.csv",
     field: "funcionariosFuncoesExercidasFile",
     pacoteChave: "funcionariosFuncoesExercidas",
+    aliases: ["funcionarios_funcoes_exercidas", "FUNCIONARIOS_FUNCOES_EXERCIDAS.csv"],
     bloco: "funcoes",
     rotuloResumo: "Funções exercidas",
     descricao: "Relaciona cada colaborador às funções exercidas na operação.",
@@ -161,6 +165,7 @@ const COLABORADOR_ARQUIVOS_CONFIG: ColaboradorArquivoConfig[] = [
     label: "TIPOS_FUNCIONARIOS.csv",
     field: "tiposFuncionariosFile",
     pacoteChave: "tiposFuncionarios",
+    aliases: ["tipos_funcionarios", "TIPOS_FUNCIONARIOS.csv"],
     bloco: "tiposOperacionais",
     rotuloResumo: "Tipos operacionais",
     descricao: "Catálogo de tipos operacionais e perfis técnicos usados na contratação.",
@@ -171,6 +176,7 @@ const COLABORADOR_ARQUIVOS_CONFIG: ColaboradorArquivoConfig[] = [
     label: "FUNCIONARIOS_TIPOS.csv",
     field: "funcionariosTiposFile",
     pacoteChave: "funcionariosTipos",
+    aliases: ["funcionarios_tipos", "FUNCIONARIOS_TIPOS.csv"],
     bloco: "contratacao",
     rotuloResumo: "Contratação e vínculos",
     descricao: "Relaciona o colaborador aos tipos operacionais e vínculos contratuais.",
@@ -181,6 +187,7 @@ const COLABORADOR_ARQUIVOS_CONFIG: ColaboradorArquivoConfig[] = [
     label: "FUNCIONARIOS_HORARIOS.csv",
     field: "funcionariosHorariosFile",
     pacoteChave: "funcionariosHorarios",
+    aliases: ["funcionarios_horarios", "FUNCIONARIOS_HORARIOS.csv"],
     bloco: "horarios",
     rotuloResumo: "Horários semanais",
     descricao: "Jornadas e grade horária semanal do colaborador.",
@@ -191,6 +198,7 @@ const COLABORADOR_ARQUIVOS_CONFIG: ColaboradorArquivoConfig[] = [
     label: "PERMISSOES.csv",
     field: "permissoesFile",
     pacoteChave: "permissoes",
+    aliases: ["permissoes", "PERMISSOES.csv", "permissoes_legadas", "PERMISSOES_LEGADAS.csv"],
     bloco: "perfilLegado",
     rotuloResumo: "Perfil legado",
     descricao: "Permissões/perfil legado para reconciliação com papéis administrativos.",
@@ -365,13 +373,22 @@ const BLOCO_TODOS = "__todos_blocos__";
 const resolveTenantForStorage = (tenantId?: string | null) =>
   (tenantId ?? "global").trim().toLowerCase() || "global";
 
-const colaboradorArquivoMetaIndex = new Map(
-  COLABORADOR_ARQUIVOS_CONFIG.map((arquivo) => [arquivo.pacoteChave, arquivo] as const)
-);
+const colaboradorArquivoAliasIndex = new Map<string, ColaboradorArquivoConfig>();
+COLABORADOR_ARQUIVOS_CONFIG.forEach((arquivo) => {
+  [arquivo.pacoteChave, arquivo.label, arquivo.field, ...arquivo.aliases].forEach((alias) => {
+    colaboradorArquivoAliasIndex.set(normalizeSearchKey(alias).replace(/[^a-z0-9]/g, ""), arquivo);
+  });
+});
 
 const colaboradorBlocoMetaIndex = new Map(
   COLABORADOR_BLOCO_CONFIG.map((bloco) => [bloco.key, bloco] as const)
 );
+
+type PacoteArquivoDisponivel = UploadAnaliseArquivo & {
+  chaveOriginal: string;
+  chaveCanonica: PacoteArquivoChave | null;
+  catalogadoPeloBackend: boolean;
+};
 
 type RejeicaoClassificada = Rejeicao & {
   idNormalizado: string;
@@ -442,8 +459,38 @@ function buildDefaultJobAlias(input: {
   return data ? `${origem} · ${contexto} · ${data}` : `${origem} · ${contexto}`;
 }
 
+function normalizeCatalogAlias(value?: string | null): string {
+  return normalizeSearchKey(value).replace(/[^a-z0-9]/g, "");
+}
+
+function resolveColaboradorArquivoMetaFromValue(value?: string | null): ColaboradorArquivoConfig | null {
+  if (!value) return null;
+  return colaboradorArquivoAliasIndex.get(normalizeCatalogAlias(value)) ?? null;
+}
+
+function resolveColaboradorArquivoMetaFromUpload(
+  arquivo?: Partial<UploadAnaliseArquivo> | null
+): ColaboradorArquivoConfig | null {
+  if (!arquivo) return null;
+  return (
+    resolveColaboradorArquivoMetaFromValue(arquivo.chave) ??
+    resolveColaboradorArquivoMetaFromValue(arquivo.arquivoEsperado) ??
+    resolveColaboradorArquivoMetaFromValue(arquivo.nomeArquivoEnviado) ??
+    resolveColaboradorArquivoMetaFromValue(arquivo.rotulo)
+  );
+}
+
+function resolvePacoteArquivoCanonico(value?: string | null): PacoteArquivoChave | null {
+  const colaboradorMeta = resolveColaboradorArquivoMetaFromValue(value);
+  if (colaboradorMeta) return colaboradorMeta.pacoteChave;
+  if (value && PACOTE_CHAVES_DISPONIVEIS.includes(value as PacoteArquivoChave)) {
+    return value as PacoteArquivoChave;
+  }
+  return null;
+}
+
 function isColaboradorArquivoChave(chave?: string | null): chave is PacoteArquivoChave {
-  return Boolean(chave && colaboradorArquivoMetaIndex.has(chave as PacoteArquivoChave));
+  return Boolean(resolveColaboradorArquivoMetaFromValue(chave));
 }
 
 function inferColaboradorBlocoFromText(value?: string | null): ColaboradorBlocoKey | null {
@@ -461,8 +508,9 @@ function inferColaboradorBlocoFromText(value?: string | null): ColaboradorBlocoK
 function resolveColaboradorBlocoFromRejeicao(rejeicao: Rejeicao): ColaboradorBlocoKey | null {
   const blocoExplcito = inferColaboradorBlocoFromText(rejeicao.bloco ?? rejeicao.subdominio);
   if (blocoExplcito) return blocoExplcito;
-  if (isColaboradorArquivoChave(rejeicao.arquivo)) {
-    return colaboradorArquivoMetaIndex.get(rejeicao.arquivo)?.bloco ?? null;
+  const arquivoMeta = resolveColaboradorArquivoMetaFromValue(rejeicao.arquivo);
+  if (arquivoMeta) {
+    return arquivoMeta.bloco;
   }
   return (
     inferColaboradorBlocoFromText(rejeicao.entidade) ??
@@ -489,7 +537,21 @@ function getColaboradorResumoBloco(
   bloco: ColaboradorBlocoKey
 ): EvoImportColaboradoresBlocoResumo | undefined {
   if (!resumo) return undefined;
-  return resumo[bloco];
+  const direto = resumo[bloco];
+  if (direto) return direto;
+  const aliasMap: Record<ColaboradorBlocoKey, string[]> = {
+    fichaPrincipal: ["cadastroPrincipal", "principal", "funcionarios"],
+    funcoes: ["funcoesCargos", "funcoesECargos"],
+    tiposOperacionais: ["tipos", "tiposOperacionaisCatalogo"],
+    horarios: ["jornadas", "gradeHoraria"],
+    contratacao: ["vinculos", "tiposVinculados"],
+    perfilLegado: ["permissoes", "perfilLegadoReconciliado"],
+  };
+  for (const alias of aliasMap[bloco]) {
+    const candidate = (resumo as Record<string, EvoImportColaboradoresBlocoResumo | undefined>)[alias];
+    if (candidate) return candidate;
+  }
+  return undefined;
 }
 
 const FILE_FIELDS: { key: keyof FileMap; label: string; field: string }[] = [
@@ -674,6 +736,10 @@ function buildNovaUnidadePacoteForm(filial: UploadAnaliseFilial | null, academia
 
 function resolveUnidadeAcademiaId(unidade?: Tenant | null): string {
   return unidade?.academiaId ?? unidade?.groupId ?? "";
+}
+
+function buildEligibleAdminsResumo(total: number): string {
+  return `${total} usuário(s) administrativos da academia receberão acesso automático em unidades novas.`;
 }
 
 function ImportacaoEvoP0PageContent() {
@@ -1184,13 +1250,23 @@ function ImportacaoEvoP0PageContent() {
       .slice(0, 8);
   }, [jobsHistorico]);
 
-  const pacoteArquivosDisponiveis = useMemo<UploadAnaliseArquivo[]>(() => {
+  const pacoteArquivosDisponiveis = useMemo<PacoteArquivoDisponivel[]>(() => {
     if (!pacoteAnalise) return [];
     const enriched = [...pacoteAnalise.arquivos].map((arquivo) => {
-      const meta = colaboradorArquivoMetaIndex.get(arquivo.chave as PacoteArquivoChave);
-      if (!meta) return arquivo;
+      const meta = resolveColaboradorArquivoMetaFromUpload(arquivo);
+      if (!meta) {
+        return {
+          ...arquivo,
+          chaveOriginal: arquivo.chave,
+          chaveCanonica: resolvePacoteArquivoCanonico(arquivo.chave),
+          catalogadoPeloBackend: true,
+        };
+      }
       return {
         ...arquivo,
+        chaveOriginal: arquivo.chave,
+        chaveCanonica: meta.pacoteChave,
+        catalogadoPeloBackend: true,
         rotulo: arquivo.rotulo || meta.rotuloResumo,
         arquivoEsperado: arquivo.arquivoEsperado || meta.label,
         bloco: arquivo.bloco ?? meta.bloco,
@@ -1200,9 +1276,12 @@ function ImportacaoEvoP0PageContent() {
       };
     });
     COLABORADOR_ARQUIVOS_CONFIG.forEach((meta) => {
-      if (enriched.some((arquivo) => arquivo.chave === meta.pacoteChave)) return;
+      if (enriched.some((arquivo) => arquivo.chaveCanonica === meta.pacoteChave)) return;
       enriched.push({
         chave: meta.pacoteChave,
+        chaveOriginal: meta.pacoteChave,
+        chaveCanonica: meta.pacoteChave,
+        catalogadoPeloBackend: false,
         rotulo: meta.rotuloResumo,
         arquivoEsperado: meta.label,
         disponivel: false,
@@ -1212,10 +1291,22 @@ function ImportacaoEvoP0PageContent() {
         impactoAusencia: meta.impactoAusencia,
       });
     });
-    const ordenado = enriched
+    const deduplicado = new Map<string, PacoteArquivoDisponivel>();
+    enriched.forEach((arquivo) => {
+      const dedupeKey = arquivo.chaveCanonica ?? arquivo.chaveOriginal;
+      const existente = deduplicado.get(dedupeKey);
+      if (!existente) {
+        deduplicado.set(dedupeKey, arquivo);
+        return;
+      }
+      if (!existente.disponivel && arquivo.disponivel) {
+        deduplicado.set(dedupeKey, arquivo);
+      }
+    });
+    const ordenado = [...deduplicado.values()]
       .sort((a, b) => {
-        const indexA = PACOTE_CHAVES_DISPONIVEIS.indexOf(a.chave as (typeof PACOTE_CHAVES_DISPONIVEIS)[number]);
-        const indexB = PACOTE_CHAVES_DISPONIVEIS.indexOf(b.chave as (typeof PACOTE_CHAVES_DISPONIVEIS)[number]);
+        const indexA = a.chaveCanonica ? PACOTE_CHAVES_DISPONIVEIS.indexOf(a.chaveCanonica) : -1;
+        const indexB = b.chaveCanonica ? PACOTE_CHAVES_DISPONIVEIS.indexOf(b.chaveCanonica) : -1;
         if (indexA === -1 && indexB === -1) return a.rotulo.localeCompare(b.rotulo, "pt-BR");
         if (indexA === -1) return 1;
         if (indexB === -1) return -1;
@@ -1225,7 +1316,11 @@ function ImportacaoEvoP0PageContent() {
   }, [pacoteAnalise]);
 
   const pacoteColaboradoresBlocos = useMemo(() => {
-    const index = new Map(pacoteArquivosDisponiveis.map((arquivo) => [arquivo.chave, arquivo] as const));
+    const index = new Map(
+      pacoteArquivosDisponiveis
+        .filter((arquivo) => arquivo.chaveCanonica)
+        .map((arquivo) => [arquivo.chaveCanonica as PacoteArquivoChave, arquivo] as const)
+    );
     return COLABORADOR_BLOCO_CONFIG.map((bloco) => {
       const arquivos = bloco.arquivos.map((meta) => {
         const arquivo = index.get(meta.pacoteChave);
@@ -1235,6 +1330,9 @@ function ImportacaoEvoP0PageContent() {
             rotulo: meta.rotuloResumo,
             arquivoEsperado: meta.label,
             disponivel: false,
+            chaveOriginal: meta.pacoteChave,
+            chaveCanonica: meta.pacoteChave,
+            catalogadoPeloBackend: false,
             bloco: meta.bloco,
             dominio: "colaboradores",
             descricao: meta.descricao,
@@ -1244,7 +1342,13 @@ function ImportacaoEvoP0PageContent() {
       });
       const disponiveis = arquivos.filter((arquivo) => arquivo.disponivel);
       const status =
-        disponiveis.length === 0 ? "ausente" : disponiveis.length === arquivos.length ? "completo" : "parcial";
+        disponiveis.length === arquivos.length
+          ? "completo"
+          : disponiveis.length > 0
+            ? "parcial"
+            : arquivos.every((arquivo) => arquivo.catalogadoPeloBackend)
+              ? "naoEnviado"
+              : "naoReconhecido";
       return {
         ...bloco,
         arquivos,
@@ -1350,6 +1454,10 @@ function ImportacaoEvoP0PageContent() {
   }, []);
 
   const pacoteArquivosSelecionadosSet = useMemo(() => new Set(pacoteArquivosSelecionados), [pacoteArquivosSelecionados]);
+  const pacoteResumoAcessoAutomatico = useMemo(() => {
+    if (eligibleAdminsPreview.loading || eligibleAdminsPreview.total <= 0) return null;
+    return buildEligibleAdminsResumo(eligibleAdminsPreview.total);
+  }, [eligibleAdminsPreview.loading, eligibleAdminsPreview.total]);
   const arquivoCanonicoPorCsvField = useMemo(
     () => new Map(IMPORT_RESUMO_CARD_CONFIG.map((item) => [item.csvField, item.arquivoChave] as const)),
     []
@@ -1453,6 +1561,14 @@ function ImportacaoEvoP0PageContent() {
     () => Array.from(new Set(jobHistoricoAtual?.arquivosDisponiveis?.filter(Boolean) ?? [])),
     [jobHistoricoAtual?.arquivosDisponiveis]
   );
+  const jobArquivosSelecionadosCanonicos = useMemo(
+    () => new Set(jobArquivosSelecionados.map((arquivo) => resolvePacoteArquivoCanonico(arquivo)).filter(Boolean)),
+    [jobArquivosSelecionados]
+  );
+  const jobArquivosDisponiveisCanonicos = useMemo(
+    () => new Set(jobArquivosDisponiveis.map((arquivo) => resolvePacoteArquivoCanonico(arquivo)).filter(Boolean)),
+    [jobArquivosDisponiveis]
+  );
   const jobTemMalhaColaboradores = useMemo(
     () => jobArquivosSelecionados.some((arquivo) => isColaboradorArquivoChave(arquivo)),
     [jobArquivosSelecionados]
@@ -1466,9 +1582,11 @@ function ImportacaoEvoP0PageContent() {
       if (card.key === "funcionarios") {
         return jobTemMalhaColaboradores || selecionados.has("funcionarios");
       }
-      return card.arquivoChave ? selecionados.has(card.arquivoChave) : false;
+      return card.arquivoChave
+        ? selecionados.has(card.arquivoChave) || jobArquivosSelecionadosCanonicos.has(card.arquivoChave)
+        : false;
     });
-  }, [jobArquivosSelecionados, jobTemMalhaColaboradores, resumoCards]);
+  }, [jobArquivosSelecionados, jobArquivosSelecionadosCanonicos, jobTemMalhaColaboradores, resumoCards]);
 
   const resumoCardsOcultos = useMemo(() => {
     if (!jobArquivosSelecionados.length) return [] as typeof resumoCards;
@@ -1481,19 +1599,29 @@ function ImportacaoEvoP0PageContent() {
       if (card.key === "funcionarios") {
         return colaboradorDisponivel && !jobTemMalhaColaboradores;
       }
-      return disponiveis.has(card.arquivoChave) && !selecionados.has(card.arquivoChave);
+      return (
+        (disponiveis.has(card.arquivoChave) || jobArquivosDisponiveisCanonicos.has(card.arquivoChave)) &&
+        !selecionados.has(card.arquivoChave) &&
+        !jobArquivosSelecionadosCanonicos.has(card.arquivoChave)
+      );
     });
-  }, [jobArquivosDisponiveis, jobArquivosSelecionados, jobTemMalhaColaboradores, resumoCards]);
+  }, [
+    jobArquivosDisponiveis,
+    jobArquivosDisponiveisCanonicos,
+    jobArquivosSelecionados,
+    jobArquivosSelecionadosCanonicos,
+    jobTemMalhaColaboradores,
+    resumoCards,
+  ]);
 
   const colaboradoresResumoDetalhado = jobResumo?.colaboradoresDetalhe;
 
   const colaboradoresResumoCards = useMemo(() => {
     if (!jobTemMalhaColaboradores && !colaboradoresResumoDetalhado && !jobResumo?.funcionarios) return [];
-    const selecionados = new Set(jobArquivosSelecionados);
     return COLABORADOR_BLOCO_CONFIG.map((bloco) => {
       const resumo = getColaboradorResumoBloco(colaboradoresResumoDetalhado, bloco.key);
-      const arquivosSelecionados = bloco.arquivos.filter((arquivo) => selecionados.has(arquivo.pacoteChave));
-      const arquivosAusentes = bloco.arquivos.filter((arquivo) => !selecionados.has(arquivo.pacoteChave));
+      const arquivosSelecionados = bloco.arquivos.filter((arquivo) => jobArquivosSelecionadosCanonicos.has(arquivo.pacoteChave));
+      const arquivosAusentes = bloco.arquivos.filter((arquivo) => !jobArquivosSelecionadosCanonicos.has(arquivo.pacoteChave));
       const fallbackResumo =
         !resumo && bloco.key === "fichaPrincipal" ? (jobResumo?.funcionarios as EvoImportColaboradoresBlocoResumo | undefined) : undefined;
       return {
@@ -1503,7 +1631,12 @@ function ImportacaoEvoP0PageContent() {
         arquivosAusentes,
       };
     });
-  }, [colaboradoresResumoDetalhado, jobArquivosSelecionados, jobResumo?.funcionarios, jobTemMalhaColaboradores]);
+  }, [
+    colaboradoresResumoDetalhado,
+    jobArquivosSelecionadosCanonicos,
+    jobResumo?.funcionarios,
+    jobTemMalhaColaboradores,
+  ]);
 
   const colaboradoresResumoAlertas = useMemo(() => {
     const alertas =
@@ -2722,30 +2855,6 @@ function ImportacaoEvoP0PageContent() {
         </div>
       ) : null}
 
-      {tenantFocoAcademiaId ? (
-        <div className="flex flex-col gap-2 rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="font-medium">
-              {eligibleAdminsPreview.loading
-                ? "Consultando usuários elegíveis para novas unidades..."
-                : eligibleAdminsPreview.total > 0
-                  ? `${eligibleAdminsPreview.total} usuário(s) administrativos receberão acesso automático em unidades novas desta academia.`
-                  : "Nenhum usuário está elegível para propagação automática nesta academia."}
-            </p>
-            {eligibleAdminsPreview.items.length > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Preview: {eligibleAdminsPreview.items.map((item) => item.fullName || item.name).join(", ")}.
-              </p>
-            ) : null}
-          </div>
-          <Button asChild size="sm" variant="outline" className="border-border">
-            <Link href={`/admin/seguranca/usuarios?academiaId=${tenantFocoAcademiaId}&eligible=1`}>
-              Abrir segurança
-            </Link>
-          </Button>
-        </div>
-      ) : null}
-
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
         <TabsList>
           <TabsTrigger value="nova">Nova Importação</TabsTrigger>
@@ -3243,7 +3352,7 @@ function ImportacaoEvoP0PageContent() {
                   <div className="space-y-2">
                     <p className="text-sm font-semibold">Arquivos reconhecidos</p>
                     <p className="text-xs text-muted-foreground">
-                      A malha de colaboradores abaixo já evidencia os blocos completos, parciais ou ausentes para evitar leitura enganosa do pacote.
+                      A malha de colaboradores abaixo evidencia o que o backend reconheceu no pacote, para deixar explícitos blocos completos, parciais e não reconhecidos.
                     </p>
                   </div>
                   {pacoteArquivosDisponiveis.length === 0 ? (
@@ -3254,7 +3363,7 @@ function ImportacaoEvoP0PageContent() {
                         <div className="space-y-1">
                           <p className="text-sm font-semibold">Malha de colaboradores</p>
                           <p className="text-xs text-muted-foreground">
-                            O backend pode reconhecer apenas parte dos auxiliares. Os blocos abaixo deixam explícito o impacto operacional de cada ausência.
+                            Se um arquivo existir no ZIP, mas não estiver nesta malha, ele não foi reconhecido pelo backend durante a análise do pacote.
                           </p>
                         </div>
                         <div className="grid gap-3 md:grid-cols-2">
@@ -3264,13 +3373,17 @@ function ImportacaoEvoP0PageContent() {
                                 ? "Completo"
                                 : bloco.status === "parcial"
                                   ? "Parcial"
-                                  : "Ausente";
+                                  : bloco.status === "naoEnviado"
+                                    ? "Não enviado"
+                                    : "Não reconhecido";
                             const badgeClassName =
                               bloco.status === "completo"
                                 ? "bg-emerald-500/15 text-emerald-200 border-emerald-400/40"
                                 : bloco.status === "parcial"
                                   ? "bg-amber-500/15 text-amber-200 border-amber-400/40"
-                                  : "bg-destructive/10 text-destructive border-destructive/40";
+                                  : bloco.status === "naoEnviado"
+                                    ? "bg-slate-500/15 text-slate-200 border-slate-400/40"
+                                    : "bg-destructive/10 text-destructive border-destructive/40";
                             return (
                               <div key={bloco.key} className="rounded-md border border-border bg-muted/20 p-3">
                                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -3295,7 +3408,11 @@ function ImportacaoEvoP0PageContent() {
                                         </p>
                                       </div>
                                       <Badge variant={arquivo.disponivel ? "secondary" : "outline"}>
-                                        {arquivo.disponivel ? "Disponível" : "Ausente"}
+                                        {arquivo.disponivel
+                                          ? "Disponível"
+                                          : arquivo.catalogadoPeloBackend
+                                            ? "Não enviado"
+                                            : "Não reconhecido"}
                                       </Badge>
                                     </div>
                                   ))}
@@ -3352,6 +3469,28 @@ function ImportacaoEvoP0PageContent() {
                                   {arquivo.arquivoEsperado} | enviado: {arquivo.nomeArquivoEnviado ?? "—"} | {formatBytes(arquivo.tamanhoBytes)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">Chave: {arquivo.chave}</p>
+                                {selecionado && (arquivo.chave === "clientes" || arquivo.chave === "funcionarios") ? (
+                                  <div className="rounded-md border border-border bg-secondary/20 px-2.5 py-2 text-xs text-muted-foreground">
+                                    <p className="font-medium text-foreground">
+                                      {eligibleAdminsPreview.loading
+                                        ? "Consultando propagação automática de acessos..."
+                                        : pacoteResumoAcessoAutomatico ?? "Nenhum usuário administrativo está elegível para propagação automática nesta academia."}
+                                    </p>
+                                    {!eligibleAdminsPreview.loading && eligibleAdminsPreview.items.length > 0 ? (
+                                      <p className="mt-1">
+                                        Preview: {eligibleAdminsPreview.items.map((item) => item.fullName || item.name).join(", ")}.
+                                      </p>
+                                    ) : null}
+                                    {tenantFocoAcademiaId ? (
+                                      <Link
+                                        href={`/admin/seguranca/usuarios?academiaId=${tenantFocoAcademiaId}&eligible=1`}
+                                        className="mt-2 inline-flex text-xs font-medium text-gym-accent hover:underline"
+                                      >
+                                        Abrir segurança
+                                      </Link>
+                                    ) : null}
+                                  </div>
+                                ) : null}
                                 {arquivo.descricao ? (
                                   <p className="text-xs text-muted-foreground">{arquivo.descricao}</p>
                                 ) : null}
@@ -3366,7 +3505,11 @@ function ImportacaoEvoP0PageContent() {
                                   checked={selecionado}
                                   onChange={(e) => togglePacoteArquivo(arquivo.chave, e.target.checked)}
                                 />
-                                {!arquivo.disponivel && <span className="ml-2 text-xs text-destructive">Não disponível</span>}
+                                {!arquivo.disponivel && (
+                                  <span className="ml-2 text-xs text-destructive">
+                                    {arquivo.catalogadoPeloBackend ? "Não enviado" : "Não reconhecido"}
+                                  </span>
+                                )}
                               </div>
                             </label>
                           );

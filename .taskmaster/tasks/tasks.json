@@ -5536,6 +5536,75 @@
             "updatedAt": "2026-03-20T14:05:00Z"
           }
         ]
+      },
+      {
+        "id": 77,
+        "title": "Ajustar tela ETL para deixar de marcar arquivos auxiliares de colaboradores como ausentes",
+        "description": "Sincronizar a UI de importação com o novo catálogo backend de arquivos auxiliares de colaboradores.",
+        "details": "Depois que o backend passar a reconhecer os CSVs auxiliares de colaboradores, a tela ETL deve mostrar presença real desses arquivos no ZIP, refletir os blocos auxiliares corretamente e exibir resumo/rejeições alinhados ao novo contrato.",
+        "testStrategy": "Validar análise de pacote, cards de presença/ausência e resumo pós-job com os novos blocos de colaboradores.",
+        "status": "done",
+        "dependencies": [
+          74,
+          75,
+          76
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Consumir o catálogo atualizado de arquivos na análise do pacote",
+            "description": "Parar de marcar como ausentes arquivos que o backend passou a reconhecer.",
+            "dependencies": [],
+            "details": "Ajustar o parser/UI da análise do upload para usar o retorno atualizado do backend para funções, tipos, horários e permissões legadas de colaboradores.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T16:10:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Atualizar cards e mensagens da malha de colaboradores",
+            "description": "Refletir corretamente presença, ausência e dependências dos novos arquivos.",
+            "dependencies": [
+              1
+            ],
+            "details": "Revisar o bloco visual de colaboradores na ETL para mostrar status real por arquivo e por agrupamento funcional.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T16:10:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Sincronizar resumo e rejeições com o contrato expandido",
+            "description": "Exibir os novos blocos de resultado da importação de colaboradores.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Ajustar a tela de histórico/detalhe do job para exibir resultados e rejeições de funções, tipos, horários e perfil legado quando o backend os retornar.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T16:10:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Cobrir a regressão visual da ETL de colaboradores",
+            "description": "Garantir que a UI não volte a acusar falso ausente.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Adicionar testes da análise do pacote e do resumo do job com exemplos contendo os arquivos auxiliares reais de colaboradores.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T16:10:00Z"
+          }
+        ]
       }
     ],
     "metadata": {

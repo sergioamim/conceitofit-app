@@ -186,7 +186,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
             descricao: "Base do colaborador",
           },
           {
-            chave: "funcionariosHorarios",
+            chave: "FUNCIONARIOS_HORARIOS.csv",
             rotulo: "Horários semanais",
             arquivoEsperado: "FUNCIONARIOS_HORARIOS.csv",
             disponivel: false,
@@ -207,7 +207,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(analise.filialResolvida?.nome).toBe("Academia Centro");
       expect(analise.filiaisEncontradas).toHaveLength(1);
       expect(analise.arquivos.find((arquivo) => arquivo.chave === "funcionarios")?.bloco).toBe("fichaPrincipal");
-      expect(analise.arquivos.find((arquivo) => arquivo.chave === "funcionariosHorarios")?.impactoAusencia).toContain(
+      expect(analise.arquivos.find((arquivo) => arquivo.chave === "FUNCIONARIOS_HORARIOS.csv")?.impactoAusencia).toContain(
         "parcial"
       );
 
@@ -382,7 +382,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
           {
             id: "rej-1",
             entidade: "FUNCIONARIOS_HORARIOS",
-            arquivo: "funcionariosHorarios",
+            arquivo: "FUNCIONARIOS_HORARIOS.csv",
             linhaArquivo: 19,
             sourceId: "FUNC-10",
             motivo: "Horário inválido",

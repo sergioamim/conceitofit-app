@@ -10,7 +10,17 @@ async function loginWithRedirect(page: Page, targetPath: string) {
 }
 
 async function installImportacaoEvoJobStubs(page: Page) {
-  let arquivosSelecionadosNoJob = ["clientes", "contratos", "funcionarios", "funcionariosFuncoesExercidas", "permissoes"];
+  let arquivosSelecionadosNoJob = [
+    "clientes",
+    "contratos",
+    "funcionarios",
+    "funcionarios_funcoes",
+    "funcionarios_funcoes_exercidas",
+    "tipos_funcionarios",
+    "funcionarios_tipos",
+    "funcionarios_horarios",
+    "permissoes",
+  ];
   let pollingCount = 0;
 
   await page.route("**/admin/unidades/*/onboarding/job-status", async (route) => {
@@ -102,7 +112,7 @@ async function installImportacaoEvoJobStubs(page: Page) {
         ],
         criadoEm: "2026-03-13T10:00:00Z",
         expiraEm: "2026-03-13T11:00:00Z",
-        totalArquivosDisponiveis: 6,
+        totalArquivosDisponiveis: 10,
         arquivos: [
           {
             chave: "clientes",
@@ -140,7 +150,18 @@ async function installImportacaoEvoJobStubs(page: Page) {
             descricao: "Base do colaborador.",
           },
           {
-            chave: "funcionariosFuncoesExercidas",
+            chave: "funcionarios_funcoes",
+            rotulo: "Catálogo de funções",
+            arquivoEsperado: "FUNCIONARIOS_FUNCOES.csv",
+            disponivel: true,
+            nomeArquivoEnviado: "FUNCIONARIOS_FUNCOES.csv",
+            tamanhoBytes: 84,
+            dominio: "colaboradores",
+            bloco: "funcoes",
+            descricao: "Catálogo legado de funções.",
+          },
+          {
+            chave: "funcionarios_funcoes_exercidas",
             rotulo: "Funções exercidas",
             arquivoEsperado: "FUNCIONARIOS_FUNCOES_EXERCIDAS.csv",
             disponivel: true,
@@ -149,6 +170,39 @@ async function installImportacaoEvoJobStubs(page: Page) {
             dominio: "colaboradores",
             bloco: "funcoes",
             descricao: "Relaciona colaboradores às funções.",
+          },
+          {
+            chave: "tipos_funcionarios",
+            rotulo: "Tipos operacionais",
+            arquivoEsperado: "TIPOS_FUNCIONARIOS.csv",
+            disponivel: true,
+            nomeArquivoEnviado: "TIPOS_FUNCIONARIOS.csv",
+            tamanhoBytes: 73,
+            dominio: "colaboradores",
+            bloco: "tiposOperacionais",
+            descricao: "Catálogo de tipos.",
+          },
+          {
+            chave: "funcionarios_tipos",
+            rotulo: "Contratação e vínculos",
+            arquivoEsperado: "FUNCIONARIOS_TIPOS.csv",
+            disponivel: true,
+            nomeArquivoEnviado: "FUNCIONARIOS_TIPOS.csv",
+            tamanhoBytes: 79,
+            dominio: "colaboradores",
+            bloco: "contratacao",
+            descricao: "Vínculo do colaborador com tipos operacionais.",
+          },
+          {
+            chave: "funcionarios_horarios",
+            rotulo: "Horários semanais",
+            arquivoEsperado: "FUNCIONARIOS_HORARIOS.csv",
+            disponivel: true,
+            nomeArquivoEnviado: "FUNCIONARIOS_HORARIOS.csv",
+            tamanhoBytes: 91,
+            dominio: "colaboradores",
+            bloco: "horarios",
+            descricao: "Jornada semanal do colaborador.",
           },
           {
             chave: "permissoes",
@@ -201,17 +255,40 @@ async function installImportacaoEvoJobStubs(page: Page) {
       clientes: { total: 5, processadas: 5, criadas: 4, atualizadas: 1, rejeitadas: 0 },
       contratos: { total: 4, processadas: 4, criadas: 3, atualizadas: 1, rejeitadas: 0 },
       recebimentos: { total: 3, processadas: 3, criadas: 2, atualizadas: 1, rejeitadas: 0 },
-      funcionarios: { total: 7, processadas: 7, criadas: 4, atualizadas: 1, rejeitadas: concluiu ? 2 : 0 },
+      funcionarios: { total: 12, processadas: 12, criadas: 7, atualizadas: 3, rejeitadas: concluiu ? 2 : 0 },
       colaboradoresDetalhe: {
         fichaPrincipal: { total: 4, processadas: 4, criadas: 3, atualizadas: 1, rejeitadas: 0 },
         funcoes: {
-          total: 2,
-          processadas: 2,
+          total: 3,
+          processadas: 3,
           criadas: 0,
-          atualizadas: 1,
+          atualizadas: 2,
           rejeitadas: 1,
           parcial: true,
-          mensagemParcial: "Catálogo de funções ausente; vínculo legado reaproveitado parcialmente.",
+          mensagemParcial: "Uma função veio inválida e exigirá retry do bloco de cargos.",
+        },
+        tiposOperacionais: {
+          total: 1,
+          processadas: 1,
+          criadas: 1,
+          atualizadas: 0,
+          rejeitadas: 0,
+        },
+        contratacao: {
+          total: 1,
+          processadas: 1,
+          criadas: 1,
+          atualizadas: 0,
+          rejeitadas: 0,
+        },
+        horarios: {
+          total: 2,
+          processadas: 2,
+          criadas: 1,
+          atualizadas: 0,
+          rejeitadas: 1,
+          parcial: true,
+          mensagemParcial: "Um horário semanal veio fora do intervalo permitido.",
         },
         perfilLegado: {
           total: 1,
@@ -220,13 +297,6 @@ async function installImportacaoEvoJobStubs(page: Page) {
           atualizadas: 1,
           rejeitadas: 0,
         },
-        alertas: [
-          {
-            bloco: "horarios",
-            mensagem: "Horários não foram incluídos nesta execução.",
-            severidade: "warning",
-          },
-        ],
       },
     };
 
@@ -235,11 +305,13 @@ async function installImportacaoEvoJobStubs(page: Page) {
       clientes: arquivosSelecionadosNoJob.includes("clientes") ? resumoBase.clientes : undefined,
       contratos: arquivosSelecionadosNoJob.includes("contratos") ? resumoBase.contratos : undefined,
       recebimentos: resumoBase.recebimentos,
-      funcionarios: arquivosSelecionadosNoJob.some((item) => item.startsWith("funcionarios") || item === "permissoes")
+      funcionarios: arquivosSelecionadosNoJob.some(
+        (item) => item.startsWith("funcionarios") || item === "permissoes" || item === "tipos_funcionarios"
+      )
         ? resumoBase.funcionarios
         : undefined,
       colaboradoresDetalhe: arquivosSelecionadosNoJob.some(
-        (item) => item.startsWith("funcionarios") || item === "permissoes"
+        (item) => item.startsWith("funcionarios") || item === "permissoes" || item === "tipos_funcionarios"
       )
         ? resumoBase.colaboradoresDetalhe
         : undefined,
@@ -259,7 +331,7 @@ async function installImportacaoEvoJobStubs(page: Page) {
           {
             id: "rej-funcao",
             entidade: "FUNCIONARIOS_FUNCOES_EXERCIDAS",
-            arquivo: "funcionariosFuncoesExercidas",
+            arquivo: "FUNCIONARIOS_FUNCOES_EXERCIDAS.csv",
             linhaArquivo: 12,
             sourceId: "COLAB-12",
             motivo: "Função não encontrada no catálogo legado",
@@ -277,7 +349,7 @@ async function installImportacaoEvoJobStubs(page: Page) {
           {
             id: "rej-horario",
             entidade: "FUNCIONARIOS_HORARIOS",
-            arquivo: "funcionariosHorarios",
+            arquivo: "FUNCIONARIOS_HORARIOS.csv",
             linhaArquivo: 19,
             sourceId: "COLAB-99",
             motivo: "Horário semanal inválido",
@@ -345,7 +417,8 @@ test.describe("Backoffice importacao EVO", () => {
     await expect(page.getByText("Upload ID:")).toBeVisible();
     await expect(page.getByText("Malha de colaboradores", { exact: true })).toBeVisible();
     await expect(page.getByText("Horários", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Ausente").first()).toBeVisible();
+    await expect(page.getByText("Completo").first()).toBeVisible();
+    await expect(page.getByText("Não reconhecido", { exact: true })).toHaveCount(0);
     await expect(page.getByText(/Selecionados:\s+\d+\s+de\s+\d+\s+disponíveis/i)).toBeVisible();
     await expect(page.getByRole("button", { name: "Desmarcar todos" })).toBeVisible();
     await page.getByRole("button", { name: "Desmarcar todos" }).click();
@@ -353,7 +426,7 @@ test.describe("Backoffice importacao EVO", () => {
     await page.getByRole("button", { name: "Selecionar disponíveis" }).click();
     await expect(page.getByRole("button", { name: "Criar Job" })).toBeEnabled();
     await page.locator('label:has-text("Recebimentos") input[type="checkbox"]').uncheck();
-    await expect(page.getByText("Selecionados: 5 de 6 disponíveis")).toBeVisible();
+    await expect(page.getByText("Selecionados: 9 de 10 disponíveis")).toBeVisible();
     await page.getByRole("tabpanel", { name: "Importar por Pacote (ZIP/CSV)" }).getByLabel("Alias do job").fill(jobAlias);
     await page.getByRole("button", { name: "Criar Job" }).click();
 
@@ -362,8 +435,10 @@ test.describe("Backoffice importacao EVO", () => {
     await expect(acompanhamento.getByText("CONCLUIDO").first()).toBeVisible({ timeout: 15000 });
     await expect(acompanhamento.getByLabel("Alias do job")).toHaveValue(jobAlias);
     await expect(acompanhamento.getByText("Diagnóstico de colaboradores")).toBeVisible();
-    await expect(acompanhamento.getByText("Horários não foram incluídos nesta execução.")).toBeVisible();
     await expect(acompanhamento.getByText("Funções e cargos")).toBeVisible();
+    await expect(acompanhamento.getByText("Tipos operacionais", { exact: true })).toBeVisible();
+    await expect(acompanhamento.getByText("Contratação", { exact: true })).toBeVisible();
+    await expect(acompanhamento.getByText("Perfil legado", { exact: true })).toBeVisible();
     await expect(acompanhamento.getByText("Últimos jobs salvos")).toBeVisible();
     await expect(acompanhamento.locator("summary").filter({ hasText: "Arquivos ignorados nesta execução (1)" })).toBeVisible();
 
