@@ -1367,10 +1367,78 @@ type AdminFuncionarioSeed = {
   id: string;
   tenantId: string;
   nome: string;
+  nomeRegistro?: string;
+  apelido?: string;
+  cpf?: string;
+  rg?: string;
+  dataNascimento?: string;
   cargoId?: string;
   cargo?: string;
+  emailProfissional?: string;
+  emailPessoal?: string;
+  celular?: string;
+  telefone?: string;
   ativo: boolean;
   podeMinistrarAulas: boolean;
+  permiteCatraca?: boolean;
+  permiteForaHorario?: boolean;
+  utilizaTecladoAcesso?: boolean;
+  bloqueiaAcessoSistema?: boolean;
+  coordenador?: boolean;
+  alertaFuncionarios?: boolean;
+  statusOperacional?: "ATIVO" | "BLOQUEADO" | "INATIVO" | "DESLIGADO";
+  statusAcesso?: "SEM_ACESSO" | "ATIVO" | "CONVITE_PENDENTE" | "PRIMEIRO_ACESSO" | "BLOQUEADO";
+  origemCadastro?: "MANUAL" | "IMPORTADO_EVO" | "CONVITE" | "SINCRONIZADO";
+  possuiAcessoSistema?: boolean;
+  provisionamentoAcesso?: "SEM_ACESSO" | "CONVITE" | "REUTILIZAR_USUARIO";
+  tenantBaseId?: string;
+  tenantBaseNome?: string;
+  perfilAcessoInicialId?: string;
+  perfilAcessoInicialNome?: string;
+  memberships?: Array<{
+    tenantId: string;
+    tenantNome: string;
+    roleName?: string;
+    roleDisplayName?: string;
+    defaultTenant?: boolean;
+    active?: boolean;
+    accessOrigin?: "MANUAL" | "HERDADO_POLITICA";
+  }>;
+  endereco?: {
+    cep?: string;
+    logradouro?: string;
+    numero?: string;
+    bairro?: string;
+  };
+  emergencia?: {
+    nomeResponsavel?: string;
+    telefoneResponsavel?: string;
+  };
+  contratacao?: {
+    tipo?: "CLT" | "PJ" | "ESTAGIO" | "AUTONOMO" | "HORISTA" | "OUTRO";
+    dataAdmissao?: string;
+    dataDemissao?: string;
+    cargoContratual?: string;
+    salarioAtual?: number;
+    banco?: string;
+    agencia?: string;
+    conta?: string;
+  };
+  horarios?: Array<{
+    diaSemana: "SEG" | "TER" | "QUA" | "QUI" | "SEX" | "SAB" | "DOM";
+    horaInicio?: string;
+    horaFim?: string;
+    permiteForaHorario?: boolean;
+    ativo?: boolean;
+  }>;
+  observacoes?: string;
+  informacoesInternas?: string;
+  notificacoes?: {
+    email?: boolean;
+    whatsapp?: boolean;
+    pendenciasOperacionais?: boolean;
+    escala?: boolean;
+  };
 };
 
 type AdminServicoSeed = {
@@ -1726,9 +1794,81 @@ export async function installAdminCrudApiMocks(page: Page) {
       id: "funcionario-lucia",
       tenantId: "tenant-centro",
       nome: "Lúcia Souza",
+      nomeRegistro: "Lúcia Souza",
+      apelido: "Lúcia",
+      cpf: "111.222.333-44",
       cargoId: "cargo-recepcao",
+      cargo: "Recepção",
+      emailProfissional: "lucia@academia.local",
+      celular: "(21) 99888-7766",
       ativo: true,
       podeMinistrarAulas: false,
+      permiteCatraca: true,
+      permiteForaHorario: false,
+      utilizaTecladoAcesso: false,
+      bloqueiaAcessoSistema: false,
+      coordenador: false,
+      statusOperacional: "ATIVO",
+      statusAcesso: "ATIVO",
+      origemCadastro: "MANUAL",
+      possuiAcessoSistema: true,
+      provisionamentoAcesso: "REUTILIZAR_USUARIO",
+      tenantBaseId: "tenant-centro",
+      tenantBaseNome: "Unidade Centro",
+      perfilAcessoInicialId: "perfil-admin",
+      perfilAcessoInicialNome: "Administrador",
+      memberships: [
+        {
+          tenantId: "tenant-centro",
+          tenantNome: "Unidade Centro",
+          roleName: "ADMIN",
+          roleDisplayName: "Administrador",
+          defaultTenant: true,
+          active: true,
+          accessOrigin: "MANUAL",
+        },
+        {
+          tenantId: "tenant-barra",
+          tenantNome: "Unidade Barra",
+          roleName: "GERENTE",
+          roleDisplayName: "Gerente",
+          defaultTenant: false,
+          active: true,
+          accessOrigin: "MANUAL",
+        },
+      ],
+      endereco: {
+        cep: "20000-000",
+        logradouro: "Rua das Flores",
+        numero: "200",
+        bairro: "Centro",
+      },
+      emergencia: {
+        nomeResponsavel: "Marta Souza",
+        telefoneResponsavel: "(21) 97777-3344",
+      },
+      contratacao: {
+        tipo: "CLT",
+        dataAdmissao: "2025-01-10",
+        cargoContratual: "Recepcionista líder",
+        salarioAtual: 3200,
+        banco: "Banco do Brasil",
+        agencia: "1234",
+        conta: "445566-7",
+      },
+      horarios: [
+        { diaSemana: "SEG", horaInicio: "08:00", horaFim: "17:00", ativo: true },
+        { diaSemana: "TER", horaInicio: "08:00", horaFim: "17:00", ativo: true },
+        { diaSemana: "QUA", horaInicio: "08:00", horaFim: "17:00", ativo: true },
+      ],
+      observacoes: "Responsável pela abertura da unidade.",
+      informacoesInternas: "Acompanha indicadores de recepção.",
+      notificacoes: {
+        email: true,
+        whatsapp: false,
+        pendenciasOperacionais: true,
+        escala: true,
+      },
     },
   ];
 
@@ -2763,13 +2903,21 @@ export async function installAdminCrudApiMocks(page: Page) {
       const payload = parseBody<Partial<AdminFuncionarioSeed>>(request);
       const cargo = cargos.find((item) => item.id === payload.cargoId);
       const created: AdminFuncionarioSeed = {
+        ...payload,
         id: nextId("funcionario", "funcionario"),
         tenantId,
         nome: payload.nome?.trim() || "Novo funcionário",
         cargoId: payload.cargoId?.trim() || undefined,
-        cargo: cargo?.nome,
-        ativo: true,
+        cargo: cargo?.nome ?? payload.cargo?.trim() ?? undefined,
+        ativo: payload.ativo ?? true,
         podeMinistrarAulas: payload.podeMinistrarAulas ?? false,
+        statusOperacional: payload.statusOperacional ?? (payload.ativo === false ? "INATIVO" : "ATIVO"),
+        statusAcesso: payload.statusAcesso ?? (payload.possuiAcessoSistema ? "CONVITE_PENDENTE" : "SEM_ACESSO"),
+        origemCadastro: payload.origemCadastro ?? "MANUAL",
+        tenantBaseId: payload.tenantBaseId ?? tenantId,
+        tenantBaseNome: payload.tenantBaseNome ?? "Unidade",
+        possuiAcessoSistema: payload.possuiAcessoSistema ?? false,
+        memberships: payload.memberships ?? [],
       };
       funcionarios = [created, ...funcionarios];
       await fulfillJson(route, created, 201);
@@ -2784,9 +2932,10 @@ export async function installAdminCrudApiMocks(page: Page) {
         item.id === funcionarioId
           ? {
               ...item,
+              ...payload,
               nome: payload.nome?.trim() || item.nome,
               cargoId: payload.cargoId?.trim() || undefined,
-              cargo: cargo?.nome,
+              cargo: cargo?.nome ?? payload.cargo?.trim() ?? item.cargo,
               podeMinistrarAulas: payload.podeMinistrarAulas ?? item.podeMinistrarAulas,
             }
           : item,
@@ -2802,6 +2951,7 @@ export async function installAdminCrudApiMocks(page: Page) {
           ? {
               ...item,
               ativo: !item.ativo,
+              statusOperacional: item.ativo ? "INATIVO" : "ATIVO",
             }
           : item,
       );

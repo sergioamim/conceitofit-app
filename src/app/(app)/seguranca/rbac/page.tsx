@@ -617,7 +617,7 @@ export default function RbacPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF opcional</label>
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</label>
                     <Input
                       aria-label="CPF do usuário da rede"
                       value={tenantUserForm.cpf}

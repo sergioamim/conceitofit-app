@@ -374,7 +374,7 @@ export default function AdminSegurancaUsuariosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="global-user-cpf">CPF opcional</Label>
+                <Label htmlFor="global-user-cpf">CPF</Label>
                 <Input
                   id="global-user-cpf"
                   value={createForm.cpf}

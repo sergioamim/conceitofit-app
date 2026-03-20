@@ -8,6 +8,7 @@ import type {
   Sala,
 } from "@/lib/types";
 import { apiRequest } from "./http";
+import { normalizeFuncionarioRecord } from "@/lib/administrativo-colaboradores";
 
 type AtividadeApiResponse = {
   id?: string;
@@ -31,6 +32,27 @@ type AtividadeListApiResponse =
       rows?: AtividadeApiResponse[];
       result?: AtividadeApiResponse[];
       itens?: AtividadeApiResponse[];
+    };
+
+type FuncionarioApiResponse = Partial<Funcionario> & {
+  id?: string;
+  tenantId?: string;
+  nome?: string;
+  cargoId?: string;
+  cargo?: string;
+  ativo?: boolean;
+  podeMinistrarAulas?: boolean;
+};
+
+type FuncionarioListApiResponse =
+  | FuncionarioApiResponse[]
+  | {
+      items?: FuncionarioApiResponse[];
+      content?: FuncionarioApiResponse[];
+      data?: FuncionarioApiResponse[];
+      rows?: FuncionarioApiResponse[];
+      result?: FuncionarioApiResponse[];
+      itens?: FuncionarioApiResponse[];
     };
 
 export interface AtividadeUpsertApiRequest {
@@ -74,6 +96,22 @@ function toBoolean(value: unknown, fallback = false): boolean {
 }
 
 function extractAtividadeItems(response: AtividadeListApiResponse): AtividadeApiResponse[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  return (
+    response.items ??
+    response.content ??
+    response.data ??
+    response.rows ??
+    response.result ??
+    response.itens ??
+    []
+  );
+}
+
+function extractFuncionarioItems(response: FuncionarioListApiResponse): FuncionarioApiResponse[] {
   if (Array.isArray(response)) {
     return response;
   }
@@ -172,35 +210,39 @@ export async function deleteCargoApi(id: string): Promise<void> {
 }
 
 export async function listFuncionariosApi(apenasAtivos?: boolean): Promise<Funcionario[]> {
-  return apiRequest<Funcionario[]>({
+  const response = await apiRequest<FuncionarioListApiResponse>({
     path: "/api/v1/administrativo/funcionarios",
     query: { apenasAtivos: apenasAtivos ?? true },
   });
+  return extractFuncionarioItems(response).map((item) => normalizeFuncionarioRecord(item));
 }
 
 export async function createFuncionarioApi(
   data: Omit<Funcionario, "id" | "ativo">
 ): Promise<Funcionario> {
-  return apiRequest<Funcionario>({
+  const response = await apiRequest<FuncionarioApiResponse>({
     path: "/api/v1/administrativo/funcionarios",
     method: "POST",
     body: data,
   });
+  return normalizeFuncionarioRecord(response, data.tenantId);
 }
 
 export async function updateFuncionarioApi(id: string, data: Partial<Funcionario>): Promise<Funcionario> {
-  return apiRequest<Funcionario>({
+  const response = await apiRequest<FuncionarioApiResponse>({
     path: `/api/v1/administrativo/funcionarios/${id}`,
     method: "PUT",
     body: data,
   });
+  return normalizeFuncionarioRecord(response, data.tenantId);
 }
 
 export async function toggleFuncionarioApi(id: string): Promise<Funcionario> {
-  return apiRequest<Funcionario>({
+  const response = await apiRequest<FuncionarioApiResponse>({
     path: `/api/v1/administrativo/funcionarios/${id}/toggle`,
     method: "PATCH",
   });
+  return normalizeFuncionarioRecord(response);
 }
 
 export async function deleteFuncionarioApi(id: string): Promise<void> {

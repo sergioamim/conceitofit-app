@@ -4923,11 +4923,624 @@
         "complexity": 7,
         "recommendedSubtasks": 5,
         "expansionPrompt": "Quebre em subtarefas para definir permissões por superfície, adicionar criação de usuário no segurança global, criar fluxo restrito na área admin da academia, aplicar guardrails de escopo e fechar testes/documentação."
+      },
+      {
+        "id": 68,
+        "title": "Estruturar experiencia de colaboradores no backoffice administrativo",
+        "description": "Preparar a trilha de colaboradores para o novo modelo operacional do backend, sem copiar a interface do EVO.",
+        "details": "Usar como referencia o PRD backend `academia-java/docs/prd-colaboradores-identidade-acesso.md` e o execplan `academia-java/docs/execplans/evoluir-colaboradores-identidade-acesso.md` para desenhar a experiencia administrativa de colaboradores no web, com foco em operacao, onboarding de acesso e manutencao da ficha completa.",
+        "testStrategy": "Validar navegacao, renderizacao e estados de permissao das novas superficies com testes de componentes e smoke tests do backoffice.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar telas atuais de colaboradores e pontos de entrada",
+            "description": "Mapear o que ja existe no frontend para cadastro/listagem de colaboradores.",
+            "dependencies": [],
+            "details": "Inventariar rotas, componentes, services e tipos atuais relacionados a colaboradores/funcionarios, identificando lacunas frente ao novo contrato do backend.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Definir shell e navegacao do modulo de colaboradores",
+            "description": "Fechar a arquitetura de navegação da area administrativa de colaboradores.",
+            "dependencies": [
+              1
+            ],
+            "details": "Especificar listagem, cadastro rapido, perfil detalhado e navegacao por abas, mantendo coerencia com o backoffice atual e sem reproduzir tela a tela do EVO.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Planejar estados e guardas de permissao",
+            "description": "Garantir acesso correto às superficies novas.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Definir quais perfis podem listar, criar, editar, conceder acesso, alterar contratacao e visualizar dados sensiveis de salario/conta bancaria.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Fechar modelo visual do perfil do colaborador",
+            "description": "Estruturar a ficha detalhada em blocos operacionais claros.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Desenhar a organizacao por abas ou secoes para cadastro, contratacao, permissoes, horario, informacoes internas e notificacoes, com foco em densidade boa e manutencao pratica.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          }
+        ]
+      },
+      {
+        "id": 69,
+        "title": "Implementar listagem e busca de colaboradores alinhadas ao novo backend",
+        "description": "Atualizar a listagem administrativa de colaboradores para refletir o novo perfil operacional e os novos filtros.",
+        "details": "A listagem deve suportar status operacional, cargo, acesso ao sistema, flags operacionais e futura leitura de contratos/horarios, consumindo a API nova do backend com tipagem forte e estados de loading/erro consistentes.",
+        "testStrategy": "Cobrir listagem, filtros, vazios, erro e paginação com testes de componentes ou integração conforme infraestrutura do frontend.",
+        "status": "done",
+        "dependencies": [
+          68
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Atualizar clients e schemas de colaboradores",
+            "description": "Alinhar a camada de consumo do frontend ao novo contrato.",
+            "dependencies": [],
+            "details": "Criar/ajustar `src/lib/api` para suportar listagem, detalhe e mutacoes de colaboradores com os novos campos e enums.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Refatorar tabela/lista de colaboradores",
+            "description": "Exibir dados operacionais relevantes na listagem.",
+            "dependencies": [
+              1
+            ],
+            "details": "Incluir nome, cargo, status, acesso ao sistema, unidade, telefone/email principal e indicadores operacionais sem poluir a tela.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Adicionar filtros operacionais e de acesso",
+            "description": "Permitir localizar colaboradores por estados de trabalho e acesso.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implementar filtros por status operacional, acesso criado, cargo, permissao de aulas, catraca, bloqueio e busca textual.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Tratar estados vazios, loading e erro",
+            "description": "Fechar a UX da listagem em cenarios reais.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Garantir placeholders, erros de API, mensagens de contexto e ações de retry, sem depender de mocks silenciosos.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          }
+        ]
+      },
+      {
+        "id": 70,
+        "title": "Implementar cadastro rapido de colaborador com criacao opcional de acesso",
+        "description": "Criar o fluxo inicial de novo colaborador com ou sem usuario no mesmo formulario.",
+        "details": "O cadastro rapido deve permitir nome, contato principal, cargo, perfil inicial de acesso e toggles operacionais basicos, com suporte a colaborador sem acesso por tempo indeterminado.",
+        "testStrategy": "Cobrir envio com e sem acesso, validacoes de campos e tratamento de erros de vinculo de usuario/perfis.",
+        "status": "done",
+        "dependencies": [
+          68,
+          69
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Desenhar formulario inicial de criacao",
+            "description": "Definir os campos minimos e a organizacao do fluxo.",
+            "dependencies": [],
+            "details": "Fechar campos obrigatorios, opcionais e toggles do formulario rapido de colaborador, alinhando com o novo caso de uso do backend.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Implementar toggle de criar acesso ao sistema",
+            "description": "Permitir separar colaborador operacional de identidade de acesso.",
+            "dependencies": [
+              1
+            ],
+            "details": "Adicionar comportamento condicional para criar colaborador sem acesso ou com onboarding de usuario, exibindo campos adicionais apenas quando necessario.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Integrar seleção de perfil inicial e unidade",
+            "description": "Conectar o fluxo de onboarding de acesso ao contexto da unidade ativa.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Consumir as opcoes de role/perfil aceitas pelo backend e refletir a unidade ativa no cadastro do membership inicial.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Tratar usuario existente, convite e erros de vinculo",
+            "description": "Exibir mensagens claras para conflitos de identidade.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Cobrir erros como email ja existente, usuario ja vinculado, role invalida ou falta de permissao para conceder acesso.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Fechar feedback de sucesso e continuidade",
+            "description": "Guiar o operador apos salvar o colaborador.",
+            "dependencies": [
+              4
+            ],
+            "details": "Definir se o fluxo retorna para a listagem, abre o perfil completo ou mostra CTA para completar contratacao/horario, sem perder contexto.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          }
+        ]
+      },
+      {
+        "id": 71,
+        "title": "Construir perfil completo do colaborador com abas operacionais",
+        "description": "Entregar a ficha detalhada do colaborador com blocos de cadastro, contratação, permissões, horário, informações e notificações.",
+        "details": "O perfil detalhado deve organizar os dados de forma clara e operacional, permitindo edição progressiva de cadastro, endereço, documentos, emergência, contratação/salário/conta bancária, horários, permissões e notas internas.",
+        "testStrategy": "Validar renderização por abas, edição de blocos, persistência incremental e controle de permissões para dados sensíveis.",
+        "status": "done",
+        "dependencies": [
+          68,
+          69,
+          70
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implementar aba Cadastro",
+            "description": "Cobrir dados pessoais, contato, endereço e documentos básicos.",
+            "dependencies": [],
+            "details": "Construir os formulários da aba de cadastro com persistência alinhada ao modelo operacional do backend.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Implementar aba Contratação",
+            "description": "Tratar salário, conta bancária e dados contratuais na fase 1.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar a superfície de contratação com admissão, demissão, tipo de contratação, salário, conta bancária/PIX e documentos profissionais relevantes.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Implementar aba Permissões",
+            "description": "Exibir e editar o onboarding de acesso e memberships.",
+            "dependencies": [
+              1
+            ],
+            "details": "Permitir visualizar se existe usuário, perfil atual, status de convite, memberships por unidade e ações de bloqueio/reativação conforme o contrato do backend.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Implementar aba Horário",
+            "description": "Tratar jornada semanal e previsibilidade operacional.",
+            "dependencies": [
+              2
+            ],
+            "details": "Adicionar edição de horários por dia da semana, estados vazios e mensagens explicando o impacto futuro em previsibilidade de folha.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Implementar abas Informações e Notificações",
+            "description": "Cobrir notas internas e preferências operacionais complementares.",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Entregar superfície de anotações internas, observações e preferências de notificações expostas pelo backend.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          }
+        ]
+      },
+      {
+        "id": 72,
+        "title": "Integrar permissões multiunidade e flags operacionais do colaborador",
+        "description": "Refletir no frontend a distinção entre role/membership e flags operacionais locais como catraca e fora do horário.",
+        "details": "A UI precisa deixar claro o que é perfil de acesso por unidade e o que é toggle operacional da ficha do colaborador, sem misturar as duas coisas na experiência.",
+        "testStrategy": "Cobrir cenários de colaborador sem acesso, com acesso em uma unidade e com memberships adicionais, além de bloqueios por permissão do operador atual.",
+        "status": "done",
+        "dependencies": [
+          70,
+          71
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Distinguir visualmente acesso ao sistema e flags locais",
+            "description": "Evitar confusão semântica na UI.",
+            "dependencies": [],
+            "details": "Separar na interface o que é perfil de acesso/auth e o que é catraca, fora do horário, teclado e ministrar aulas.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Exibir memberships em outras unidades",
+            "description": "Mostrar o alcance multiunidade do colaborador quando existir.",
+            "dependencies": [
+              1
+            ],
+            "details": "Adicionar leitura e gestão visual dos memberships adicionais retornados pelo backend, com contexto claro da unidade principal.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Tratar bloqueio, inativação e desligamento",
+            "description": "Refletir os estados operacionais na UI sem ambiguidade.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Exibir status, ações disponíveis, confirmações e efeitos práticos sobre acesso/login em cada estado do colaborador.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Aplicar guardas e mascaramento por sensibilidade",
+            "description": "Restringir o que operadores sem permissão podem ver ou editar.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Proteger salario, conta bancaria e operacoes de acesso conforme as permissoes do operador logado e o contrato backend.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          }
+        ]
+      },
+      {
+        "id": 73,
+        "title": "Fechar contratos, testes e rollout frontend do modulo de colaboradores",
+        "description": "Garantir que a nova trilha de colaboradores fique estável, testada e alinhada ao rollout do backend.",
+        "details": "Consolidar tipos, clients, estados, testes e documentação da experiência de colaboradores, cobrindo também a adaptação gradual da UI atual enquanto o backend evolui.",
+        "testStrategy": "Executar lint, testes de componentes/integracao aplicáveis e smoke tests das rotas administrativas de colaboradores.",
+        "status": "done",
+        "dependencies": [
+          69,
+          70,
+          71,
+          72
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Consolidar tipos e schemas compartilhados do frontend",
+            "description": "Padronizar o modelo tipado de colaborador na app web.",
+            "dependencies": [],
+            "details": "Revisar tipos, zod schemas e helpers usados nas superfícies de colaboradores para evitar duplicidade e drift de contrato.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Adicionar testes dos fluxos críticos",
+            "description": "Cobrir criação, edição e status do colaborador.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar testes para listagem, cadastro sem acesso, cadastro com acesso, edição de contratação e mudanças de estado/permissão.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Planejar compatibilidade com telas atuais",
+            "description": "Garantir transição sem quebra para operadores.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Mapear o que permanece da UI atual, o que será substituído e quais adaptadores temporários de contrato/estado são necessários.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Documentar checklist de rollout da UI",
+            "description": "Registrar dependências de backend e passos de validação.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Descrever pré-requisitos de API, flags, permissões, smoke tests e ordem de ativação da nova experiência de colaboradores no backoffice.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T19:10:00Z"
+          }
+        ]
+      },
+      {
+        "id": 74,
+        "title": "Evoluir tela ETL para malha enriquecida de colaboradores EVO",
+        "description": "Adaptar a UI de importação ETL para refletir que colaboradores agora dependem de múltiplos arquivos EVO além de `FUNCIONARIOS.csv`.",
+        "details": "A tela de importação deve reconhecer e comunicar os arquivos auxiliares de colaboradores (`FUNCIONARIOS_FUNCOES.csv`, `FUNCIONARIOS_FUNCOES_EXERCIDAS.csv`, `FUNCIONARIOS_TIPOS.csv`, `TIPOS_FUNCIONARIOS.csv`, `FUNCIONARIOS_HORARIOS.csv`, `PERMISSOES.csv`), explicando o papel de cada bloco no resultado final da importação.",
+        "testStrategy": "Cobrir análise de pacote, seleção/upload e exibição de blocos auxiliares com testes da tela ETL.",
+        "status": "pending",
+        "dependencies": [
+          10
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Atualizar catálogo de arquivos reconhecidos para colaboradores",
+            "description": "Exibir os arquivos auxiliares de colaboradores na análise do pacote.",
+            "dependencies": [],
+            "details": "Ajustar a camada de UI da análise do ZIP para identificar e rotular arquivos de funções, tipos, horários e permissões legadas de colaboradores.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Agrupar arquivos por bloco funcional de colaboradores",
+            "description": "Evitar exibir uma lista solta de CSVs sem contexto.",
+            "dependencies": [
+              1
+            ],
+            "details": "Organizar a visualização em blocos como cadastro principal, cargos/funções, tipos operacionais, horários e perfil legado reconciliado.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Explicar dependências e impacto da ausência de arquivos",
+            "description": "Ajudar o operador a entender o que será importado parcialmente.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Exibir mensagens como “sem horários”, “sem tipos operacionais” ou “perfil legado sem reconciliação”, evitando falsa impressão de importação completa.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Atualizar seleção/upload para a malha auxiliar",
+            "description": "Permitir envio coerente dos arquivos auxiliares quando o fluxo não vier via ZIP completo.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Adequar o formulário de upload avulso/multipart para contemplar os CSVs auxiliares de colaboradores quando o backend expuser essa capacidade.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          }
+        ]
+      },
+      {
+        "id": 75,
+        "title": "Exibir resumo ETL de colaboradores por bloco importado",
+        "description": "Mostrar no frontend o resultado detalhado da importação de colaboradores enriquecida.",
+        "details": "Após a execução do job, o backoffice deve apresentar resumo separado para ficha principal, funções/cargos, tipos operacionais, horários, contratação e perfil legado reconciliado, em vez de tratar “funcionários” como um bloco único opaco.",
+        "testStrategy": "Cobrir renderização do resumo pós-job com cenários completos, parciais e com rejeições.",
+        "status": "pending",
+        "dependencies": [
+          74
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir contratos de resumo ETL de colaboradores",
+            "description": "Preparar a camada tipada para os novos contadores e blocos.",
+            "dependencies": [],
+            "details": "Ajustar types/clients da tela ETL para consumir contadores e métricas detalhadas do bloco de colaboradores quando o backend os expuser.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Renderizar cards/blocos de resultado por domínio",
+            "description": "Exibir importação de colaboradores com granularidade útil.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar UI para separar o resultado em cadastro principal, funções, tipos, horários, contratação e perfil legado, com totais de processados, criados, atualizados e rejeitados.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Sinalizar importação parcial com clareza",
+            "description": "Evitar leitura enganosa do sucesso do job.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Mostrar alertas quando o colaborador foi importado sem horários, sem função resolvida ou sem reconciliação de perfil legado.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Conectar navegação para rejeições e diagnóstico",
+            "description": "Facilitar troubleshooting do operador.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Adicionar links/ações para abrir rejeições específicas de colaboradores e seus subblocos diretamente da visão de resumo.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          }
+        ]
+      },
+      {
+        "id": 76,
+        "title": "Tratar rejeições ETL de colaboradores com foco em funções, horários e perfil legado",
+        "description": "Aprimorar o diagnóstico de falhas de importação de colaboradores no frontend administrativo.",
+        "details": "A tela ETL deve deixar claro se a rejeição ocorreu na ficha principal do colaborador, no vínculo de função/tipo, no horário semanal ou na reconciliação de perfil legado, com payload útil para correção operacional.",
+        "testStrategy": "Cobrir a visualização de rejeições com diferentes origens de erro e ações de reprocesso quando existentes.",
+        "status": "pending",
+        "dependencies": [
+          74,
+          75
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Classificar rejeições por subdomínio de colaboradores",
+            "description": "Separar erros de cadastro, função, horário e perfil legado.",
+            "dependencies": [],
+            "details": "Ajustar a tela/lista de rejeições para agrupar e filtrar falhas específicas do domínio de colaboradores.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Exibir payloads e mensagens acionáveis",
+            "description": "Dar contexto suficiente para correção manual.",
+            "dependencies": [
+              1
+            ],
+            "details": "Mostrar campos relevantes do CSV e mensagens de erro como função não resolvida, horário inválido, tipo inexistente ou perfil legado sem mapeamento.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Preparar UX para reprocesso seletivo",
+            "description": "Conectar o troubleshooting ao fluxo de retry do job.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Quando o backend suportar retry granular, permitir selecionar rejeições de colaboradores por bloco e iniciar reprocessamento com feedback claro.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T14:05:00Z"
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2026-03-18T15:32:36.203Z",
-      "updated": "2026-03-20T12:30:00.000Z",
+      "updated": "2026-03-20T19:10:00.000Z",
       "description": "Tasks for master context"
     }
   }

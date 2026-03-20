@@ -682,12 +682,113 @@ export interface FormaPagamento {
   ativo: boolean;
 }
 
+export type FuncionarioStatusOperacional = "ATIVO" | "BLOQUEADO" | "INATIVO" | "DESLIGADO";
+export type FuncionarioStatusAcesso = "SEM_ACESSO" | "ATIVO" | "CONVITE_PENDENTE" | "PRIMEIRO_ACESSO" | "BLOQUEADO";
+export type FuncionarioOrigemCadastro = "MANUAL" | "IMPORTADO_EVO" | "CONVITE" | "SINCRONIZADO";
+export type FuncionarioTipoContratacao = "CLT" | "PJ" | "ESTAGIO" | "AUTONOMO" | "HORISTA" | "OUTRO";
+export type FuncionarioProvisionamentoAcesso = "SEM_ACESSO" | "CONVITE" | "REUTILIZAR_USUARIO";
+
+export interface FuncionarioMembership {
+  tenantId: UUID;
+  tenantNome: string;
+  roleName?: string;
+  roleDisplayName?: string;
+  defaultTenant?: boolean;
+  active?: boolean;
+  accessOrigin?: "MANUAL" | "HERDADO_POLITICA";
+}
+
+export interface FuncionarioEndereco {
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  pais?: string;
+}
+
+export interface FuncionarioEmergencia {
+  nomeResponsavel?: string;
+  telefoneResponsavel?: string;
+  convenioMedico?: string;
+  hospitalPreferencia?: string;
+  alergias?: string;
+  observacoes?: string;
+}
+
+export interface FuncionarioContratacao {
+  tipo?: FuncionarioTipoContratacao;
+  dataAdmissao?: string;
+  dataDemissao?: string;
+  cargoContratual?: string;
+  salarioAtual?: number;
+  banco?: string;
+  agencia?: string;
+  conta?: string;
+  pixTipo?: "CPF" | "EMAIL" | "TELEFONE" | "ALEATORIA";
+  pixValor?: string;
+  observacoes?: string;
+}
+
+export interface FuncionarioHorario {
+  id?: UUID;
+  diaSemana: DiaSemana;
+  horaInicio?: string;
+  horaFim?: string;
+  permiteForaHorario?: boolean;
+  ativo?: boolean;
+}
+
+export interface FuncionarioNotificacoes {
+  email?: boolean;
+  whatsapp?: boolean;
+  pendenciasOperacionais?: boolean;
+  escala?: boolean;
+}
+
 export interface Funcionario {
   id: UUID;
+  tenantId?: UUID;
+  usuarioId?: string;
+  externalId?: string;
   nome: string;
+  nomeRegistro?: string;
+  apelido?: string;
+  cpf?: string;
+  rg?: string;
+  dataNascimento?: string;
   cargoId?: UUID;
   cargo?: string;
+  emailProfissional?: string;
+  emailPessoal?: string;
+  celular?: string;
+  telefone?: string;
   podeMinistrarAulas: boolean;
+  permiteCatraca?: boolean;
+  permiteForaHorario?: boolean;
+  utilizaTecladoAcesso?: boolean;
+  bloqueiaAcessoSistema?: boolean;
+  coordenador?: boolean;
+  alertaFuncionarios?: boolean;
+  statusOperacional?: FuncionarioStatusOperacional;
+  statusAcesso?: FuncionarioStatusAcesso;
+  origemCadastro?: FuncionarioOrigemCadastro;
+  possuiAcessoSistema?: boolean;
+  provisionamentoAcesso?: FuncionarioProvisionamentoAcesso;
+  tenantBaseId?: UUID;
+  tenantBaseNome?: string;
+  perfilAcessoInicialId?: string;
+  perfilAcessoInicialNome?: string;
+  memberships?: FuncionarioMembership[];
+  endereco?: FuncionarioEndereco;
+  emergencia?: FuncionarioEmergencia;
+  contratacao?: FuncionarioContratacao;
+  horarios?: FuncionarioHorario[];
+  observacoes?: string;
+  informacoesInternas?: string;
+  notificacoes?: FuncionarioNotificacoes;
   ativo: boolean;
 }
 

@@ -295,6 +295,17 @@ export function useUserPerfilManager(tenantId: string) {
           tenantId,
           data,
         });
+        if ((data.initialPerfilIds?.length ?? 0) > 0) {
+          await Promise.all(
+            data.initialPerfilIds!.map((perfilId) =>
+              linkPerfilUsuarioService({
+                tenantId,
+                userId: created.id,
+                perfilId,
+              })
+            )
+          );
+        }
         await loadUsers();
         setSelectedUserId(created.id);
         await loadPerfisUsuario(created.id);

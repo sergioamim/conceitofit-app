@@ -47,6 +47,67 @@ interface RbacFeatureApiResponse {
   rolloutPercentage?: number;
 }
 
+interface RbacUserApiResponse {
+  id?: string | number;
+  tenantId?: string | null;
+  username?: string | null;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
+  fullName?: string | null;
+  active?: boolean | null;
+}
+
+function cleanString(value?: string | null): string | undefined {
+  const normalized = value?.trim();
+  return normalized ? normalized : undefined;
+}
+
+function splitNameParts(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const firstName = parts[0] ?? "";
+  const lastName = parts.slice(1).join(" ") || "Usuario";
+  return {
+    firstName,
+    lastName,
+  };
+}
+
+function resolveUsername(input: RbacUserCreatePayload) {
+  const email = cleanString(input.email);
+  if (email) return email.toLowerCase();
+  const loginIdentifier = input.loginIdentifiers?.find((item) => cleanString(item.value))?.value;
+  const normalizedIdentifier = cleanString(loginIdentifier);
+  if (normalizedIdentifier) return normalizedIdentifier.toLowerCase();
+  return input.name.trim().toLowerCase().replace(/\s+/g, ".");
+}
+
+function buildTemporaryPassword() {
+  return "Temp@1234";
+}
+
+function normalizeRbacUser(input: RbacUserApiResponse): RbacUser {
+  const firstName = cleanString(input.firstName);
+  const lastName = cleanString(input.lastName);
+  const fullName =
+    cleanString(input.fullName)
+    ?? cleanString(input.name)
+    ?? [firstName, lastName].filter(Boolean).join(" ")
+    ?? cleanString(input.username)
+    ?? cleanString(input.email)
+    ?? "";
+
+  return {
+    id: String(input.id ?? ""),
+    tenantId: cleanString(input.tenantId) ?? "",
+    name: fullName,
+    fullName,
+    email: cleanString(input.email) ?? "",
+    active: input.active ?? undefined,
+  };
+}
+
 function normalizeRbacPerfil(input: RbacPerfilApiResponse): RbacPerfil {
   return {
     id: String(input.id),
@@ -187,39 +248,39 @@ export async function deletePerfilApi(input: {
 export async function listUsersApi(input: {
   tenantId?: string;
 }): Promise<RbacUser[]> {
-  const response = await apiRequest<RbacUser[] | RbacAnyListResponse<RbacUser>>({
+  const response = await apiRequest<RbacUserApiResponse[] | RbacAnyListResponse<RbacUserApiResponse>>({
     path: "/api/v1/auth/users",
     query: {
       tenantId: input.tenantId,
     },
   });
-  return toArray(response);
+  return toArray(response).map(normalizeRbacUser);
 }
 
 export async function createUserApi(input: {
   tenantId: string;
   data: RbacUserCreatePayload;
 }): Promise<RbacUser> {
-  return apiRequest<RbacUser>({
+  const fullName = input.data.fullName?.trim() || input.data.name.trim();
+  const { firstName, lastName } = splitNameParts(fullName);
+  const response = await apiRequest<RbacUserApiResponse>({
     path: "/api/v1/auth/users",
     method: "POST",
     query: {
       tenantId: input.tenantId,
     },
     body: {
-      name: input.data.name,
-      fullName: input.data.fullName,
+      username: resolveUsername(input.data),
       email: input.data.email,
-      userKind: input.data.userKind,
-      networkId: input.data.networkId,
-      networkName: input.data.networkName,
-      networkSubdomain: input.data.networkSubdomain,
-      tenantIds: input.data.tenantIds,
-      defaultTenantId: input.data.defaultTenantId,
-      initialPerfilIds: input.data.initialPerfilIds,
-      loginIdentifiers: input.data.loginIdentifiers,
+      password: buildTemporaryPassword(),
+      firstName,
+      lastName,
+      fullName,
+      tenantId: input.data.defaultTenantId ?? input.tenantId,
+      active: true,
     },
   });
+  return normalizeRbacUser(response);
 }
 
 export async function listUserPerfisApi(input: {

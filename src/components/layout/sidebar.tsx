@@ -103,7 +103,7 @@ const administrativoItems: NavItem[] = [
   { href: "/administrativo/catraca-status", label: "Status de Conexões", icon: Settings },
   { href: "/administrativo/unidades", label: "Unidades", icon: Settings },
   { href: "/administrativo/academia", label: "Academia", icon: Settings },
-  { href: "/administrativo/funcionarios", label: "Funcionários", icon: Settings },
+  { href: "/administrativo/funcionarios", label: "Colaboradores", icon: Settings },
   { href: "/administrativo/salas", label: "Salas", icon: Settings },
   { href: "/administrativo/horarios", label: "Horários", icon: Settings },
   { href: "/administrativo/convenios", label: "Convênios", icon: Settings },

@@ -20,48 +20,59 @@ test.describe("Admin unidade base e equipe", () => {
   test("cobre cargos e funcionários da unidade", async ({ page }) => {
     const suffix = uniqueSuffix();
     const cargoNome = `Cargo ${suffix}`;
-    const funcionarioNome = `Funcionario ${suffix}`;
-    const funcionarioEditado = `${funcionarioNome} Editado`;
+    const funcionarioNome = `Colaborador ${suffix}`;
+    const nomeRegistro = `${funcionarioNome} Registro`;
 
     await openAdminCrudPage(page, "/administrativo/funcionarios");
 
-    await expect(page.getByRole("heading", { name: "Funcionários" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Trilha operacional de equipe e acesso" })).toBeVisible();
+    await expect(page.getByRole("button").filter({ hasText: "Lúcia Souza" })).toBeVisible();
+    await page.getByRole("tab", { name: "Permissões" }).click();
+    await expect(page.getByText("Unidade Barra")).toBeVisible();
+
     await page.getByRole("button", { name: "Cargos" }).click();
     await page.getByRole("button", { name: "Novo cargo" }).click();
     await page.getByRole("dialog").locator("input").first().fill(cargoNome);
     await page.getByRole("dialog").getByRole("button", { name: "Criar" }).click();
     await expect(page.getByRole("row").filter({ hasText: cargoNome })).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Cadastro de Cargos" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Catálogo de cargos" })).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Novo funcionário" }).click();
-    await page.getByRole("dialog").locator("input").first().fill(funcionarioNome);
+    await page.getByRole("button", { name: "Novo colaborador" }).click();
+    await page.getByLabel("Nome do colaborador").fill(funcionarioNome);
+    await page.getByLabel("Contato principal do colaborador").fill(`(21) 98888-${suffix}`);
+    await page.getByLabel("E-mail profissional do colaborador").fill(`colaborador-${suffix}@qa.local`);
     await selectComboboxOption(
       page,
-      page.getByRole("dialog").getByRole("combobox").first(),
+      page.getByLabel("Cargo do colaborador"),
       cargoNome,
     );
-    await page
-      .getByRole("dialog")
-      .getByText("Pode ministrar atividades/aulas")
-      .locator("..")
-      .locator("input")
-      .check();
-    await page.getByRole("dialog").getByRole("button", { name: "Criar" }).click();
+    await page.getByRole("checkbox", { name: "Opera catraca" }).check();
+    await selectComboboxOption(page, page.getByLabel("Perfil inicial de acesso"), "Administrador");
+    const createButton = page.getByRole("dialog").getByRole("button", { name: "Criar colaborador" });
+    await createButton.evaluate((element: HTMLButtonElement) => element.click());
 
-    let funcionarioRow = page.getByRole("row").filter({ hasText: funcionarioNome });
+    await expect(page.getByText("Colaborador criado e pronto para continuidade do onboarding.")).toBeVisible();
+
+    let funcionarioRow = page.getByRole("button").filter({ hasText: funcionarioNome });
     await expect(funcionarioRow).toBeVisible();
+    await funcionarioRow.click();
 
-    await funcionarioRow.getByRole("button", { name: "Editar" }).click();
-    await page.getByRole("dialog").locator("input").first().fill(funcionarioEditado);
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar" }).click();
+    await page.getByRole("tab", { name: "Cadastro" }).click();
+    await page.getByLabel("Nome de registro").fill(nomeRegistro);
+    await page.getByRole("button", { name: "Salvar ficha" }).click();
+    await expect(page.getByText("Ficha do colaborador atualizada.")).toBeVisible();
 
-    funcionarioRow = page.getByRole("row").filter({ hasText: funcionarioEditado });
+    funcionarioRow = page.getByRole("button").filter({ hasText: funcionarioNome });
     await expect(funcionarioRow).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Nome de registro" })).toHaveValue(nomeRegistro);
+
     await funcionarioRow.getByRole("button", { name: "Desativar" }).click();
-    await expect(funcionarioRow.getByText("Inativo")).toBeVisible();
+    await expect(page.getByText("Colaborador inativado.")).toBeVisible();
+    funcionarioRow = page.getByRole("button").filter({ hasText: funcionarioNome }).first();
+    await expect(funcionarioRow).toContainText("INATIVO");
 
     await funcionarioRow.getByRole("button", { name: "Remover" }).click();
-    await expect(page.getByRole("row").filter({ hasText: funcionarioEditado })).toHaveCount(0);
+    await expect(page.getByRole("button").filter({ hasText: funcionarioNome })).toHaveCount(0);
   });
 });

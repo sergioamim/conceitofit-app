@@ -21,7 +21,7 @@ import {
 import { validateAcademiaUserCreateDraft } from "@/lib/security-user-create";
 import type { RbacPerfil, RbacUser, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { useAuthAccess } from "@/hooks/use-session-context";
+import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
 
 function isCustomerRole(roleName: string | undefined): boolean {
   return (roleName ?? "").trim().toUpperCase() === "CUSTOMER";
@@ -29,6 +29,7 @@ function isCustomerRole(roleName: string | undefined): boolean {
 
 export default function AcessoUnidadePage() {
   const access = useAuthAccess();
+  const tenantContext = useTenantContext();
   const [createName, setCreateName] = useState("");
   const [createEmail, setCreateEmail] = useState("");
   const [createCpf, setCreateCpf] = useState("");
@@ -45,10 +46,13 @@ export default function AcessoUnidadePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const effectiveTenantId = tenantId || tenantContext.tenantId || "";
 
   const selectedTenant = useMemo(
-    () => tenants.find((tenant) => tenant.id === tenantId) ?? null,
-    [tenantId, tenants]
+    () =>
+      tenants.find((tenant) => tenant.id === effectiveTenantId)
+      ?? (tenantContext.activeTenant?.id === effectiveTenantId ? tenantContext.activeTenant : null),
+    [effectiveTenantId, tenantContext.activeTenant, tenants]
   );
 
   const activePerfis = useMemo(
@@ -78,10 +82,15 @@ export default function AcessoUnidadePage() {
 
   const loadTenants = useCallback(async () => {
     const loaded = await listUnidadesApi();
-    const deduped = Array.from(new Map(loaded.map((item) => [item.id, item] as const)).values());
+    const merged = [
+      ...loaded,
+      ...tenantContext.availableTenants,
+      ...(tenantContext.activeTenant ? [tenantContext.activeTenant] : []),
+    ];
+    const deduped = Array.from(new Map(merged.map((item) => [item.id, item] as const)).values());
     setTenants(deduped);
-    setTenantId((current) => current || deduped[0]?.id || "");
-  }, []);
+    setTenantId((current) => current || tenantContext.tenantId || deduped[0]?.id || "");
+  }, [tenantContext.activeTenant, tenantContext.availableTenants, tenantContext.tenantId]);
 
   const loadTenantData = useCallback(async (targetTenantId: string) => {
     if (!targetTenantId) return;
@@ -109,11 +118,11 @@ export default function AcessoUnidadePage() {
   }, []);
 
   const loadUsersOnDemand = useCallback(async () => {
-    if (!tenantId || usersLoaded) return;
+    if (!effectiveTenantId || usersLoaded) return;
     setLoading(true);
     setError(null);
     try {
-      const usersResponse = await listUsersApi({ tenantId });
+      const usersResponse = await listUsersApi({ tenantId: effectiveTenantId });
       setUsers(usersResponse);
       setUsersLoaded(true);
     } catch (loadError) {
@@ -123,7 +132,7 @@ export default function AcessoUnidadePage() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, usersLoaded]);
+  }, [effectiveTenantId, usersLoaded]);
 
   const loadUserPerfisFor = useCallback(async (targetTenantId: string, targetUserId: string) => {
     if (!targetTenantId || !targetUserId) {
@@ -149,6 +158,12 @@ export default function AcessoUnidadePage() {
   useEffect(() => {
     void loadTenants();
   }, [loadTenants]);
+
+  useEffect(() => {
+    if (!tenantId && tenantContext.tenantId) {
+      setTenantId(tenantContext.tenantId);
+    }
+  }, [tenantContext.tenantId, tenantId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -181,7 +196,7 @@ export default function AcessoUnidadePage() {
         perfilId: defaultPerfil.id,
       });
       setSuccess("Acesso concedido na unidade selecionada.");
-      await loadUserPerfis();
+      await loadUserPerfisFor(tenantId, selectedUserId);
     } catch (grantError) {
       setError(normalizeErrorMessage(grantError));
     } finally {
@@ -206,7 +221,7 @@ export default function AcessoUnidadePage() {
         )
       );
       setSuccess("Acesso removido da unidade selecionada.");
-      await loadUserPerfis();
+      await loadUserPerfisFor(tenantId, selectedUserId);
     } catch (removeError) {
       setError(normalizeErrorMessage(removeError));
     } finally {
@@ -222,7 +237,7 @@ export default function AcessoUnidadePage() {
     event.preventDefault();
     setError(null);
     setSuccess(null);
-    if (!tenantId) {
+    if (!effectiveTenantId) {
       setError("Selecione a unidade atual antes de criar o usuário.");
       return;
     }
@@ -234,22 +249,33 @@ export default function AcessoUnidadePage() {
         email: createEmail,
         cpf: createCpf,
         networkId,
-        networkName: selectedTenant?.nome,
-        tenantIds: [tenantId],
-        defaultTenantId: tenantId,
+        networkName: selectedTenant?.nome ?? tenantContext.tenantName,
+        tenantIds: [effectiveTenantId],
+        defaultTenantId: effectiveTenantId,
         initialPerfilIds: createProfileIds,
         allowedTenantIds: networkTenantOptions.map((tenant) => tenant.id),
         allowedPerfilIds: activePerfis.map((perfil) => perfil.id),
       });
       const created = await createUserApi({
-        tenantId,
+        tenantId: effectiveTenantId,
         data: payload,
       });
+      if (createProfileIds.length > 0) {
+        await Promise.all(
+          createProfileIds.map((perfilId) =>
+            linkUserPerfilApi({
+              tenantId: effectiveTenantId,
+              userId: created.id,
+              perfilId,
+            })
+          )
+        );
+      }
       setUsers((current) => [...current, created]);
       setUsersLoaded(true);
       setSelectedUserId(created.id);
       setUserQuery(created.fullName || created.name || created.email);
-      await loadUserPerfisFor(tenantId, created.id);
+      await loadUserPerfisFor(effectiveTenantId, created.id);
       setCreateName("");
       setCreateEmail("");
       setCreateCpf("");
@@ -325,7 +351,7 @@ export default function AcessoUnidadePage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF opcional</label>
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</label>
               <Input
                 aria-label="CPF do usuário da unidade"
                 value={createCpf}
@@ -338,7 +364,7 @@ export default function AcessoUnidadePage() {
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unidade base</label>
               <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm text-muted-foreground">
-                {selectedTenant?.nome ?? "Selecione a unidade acima para fixar a base do novo usuário."}
+                {selectedTenant?.nome ?? tenantContext.tenantName ?? "Selecione a unidade ativa para fixar a base do novo usuário."}
               </div>
             </div>
 
@@ -372,7 +398,7 @@ export default function AcessoUnidadePage() {
             </div>
 
             <div className="md:col-span-2 flex justify-end">
-              <Button type="submit" disabled={saving || loading || !tenantId}>
+              <Button type="submit" disabled={saving || loading || !effectiveTenantId}>
                 {saving ? "Criando..." : "Criar usuário"}
               </Button>
             </div>

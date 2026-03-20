@@ -64,20 +64,14 @@ test.describe("rbac users api", () => {
       expect(calls[0]?.url).toContain("tenantId=tenant-centro");
       expect(calls[0]?.method).toBe("POST");
       expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
-        name: "Carla Operações",
-        fullName: "Carla Operações",
+        username: "carla@qa.local",
         email: "carla@qa.local",
-        userKind: "COLABORADOR",
-        networkId: "rede-norte",
-        networkName: "Rede Norte",
-        networkSubdomain: "rede-norte",
-        tenantIds: ["tenant-centro", "tenant-barra"],
-        defaultTenantId: "tenant-centro",
-        initialPerfilIds: ["perfil-admin"],
-        loginIdentifiers: [
-          { label: "E-mail", value: "carla@qa.local" },
-          { label: "CPF", value: "111.222.333-44" },
-        ],
+        password: "Temp@1234",
+        firstName: "Carla",
+        lastName: "Operações",
+        fullName: "Carla Operações",
+        tenantId: "tenant-centro",
+        active: true,
       });
       expect(response).toEqual({
         id: "user-carla",
