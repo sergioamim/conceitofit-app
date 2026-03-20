@@ -31,6 +31,7 @@ type Filters = {
   tenantId: string;
   status: string;
   profile: string;
+  scopeType: "" | "UNIDADE" | "REDE" | "GLOBAL";
   eligibleOnly: boolean;
   reviewStatus: "" | GlobalAdminReviewStatus;
   broadAccessOnly: boolean;
@@ -47,6 +48,11 @@ function buildInitialFilters(searchParams: URLSearchParams): Filters {
     reviewStatusRaw === "EM_DIA" || reviewStatusRaw === "PENDENTE" || reviewStatusRaw === "VENCIDA"
       ? reviewStatusRaw
       : "";
+  const scopeTypeRaw = searchParams.get("scopeType")?.trim() ?? "";
+  const scopeType =
+    scopeTypeRaw === "UNIDADE" || scopeTypeRaw === "REDE" || scopeTypeRaw === "GLOBAL"
+      ? scopeTypeRaw
+      : "";
 
   return {
     query: searchParams.get("query")?.trim() ?? "",
@@ -54,6 +60,7 @@ function buildInitialFilters(searchParams: URLSearchParams): Filters {
     tenantId: searchParams.get("tenantId")?.trim() ?? "",
     status: searchParams.get("status")?.trim() ?? "ATIVO",
     profile: searchParams.get("profile")?.trim() ?? "",
+    scopeType,
     eligibleOnly: searchParams.get("eligible") === "1",
     reviewStatus,
     broadAccessOnly: searchParams.get("broadAccess") === "1",
@@ -62,10 +69,24 @@ function buildInitialFilters(searchParams: URLSearchParams): Filters {
 }
 
 function matchesUserFilters(item: GlobalAdminUserSummary, filters: Filters) {
+  if (filters.scopeType && item.scopeType !== filters.scopeType) return false;
   if (filters.reviewStatus && item.reviewStatus !== filters.reviewStatus) return false;
   if (filters.broadAccessOnly && !item.broadAccess) return false;
   if (filters.exceptionsOnly && (item.exceptionsCount ?? 0) <= 0) return false;
   return true;
+}
+
+function getScopeLabel(scopeType?: GlobalAdminUserSummary["scopeType"]) {
+  switch (scopeType) {
+    case "GLOBAL":
+      return "Global";
+    case "REDE":
+      return "Rede";
+    case "UNIDADE":
+      return "Unidade";
+    default:
+      return "Não informado";
+  }
 }
 
 async function loadUsersSnapshot(filters: Filters) {
@@ -78,6 +99,7 @@ async function loadUsersSnapshot(filters: Filters) {
       tenantId: filters.tenantId || undefined,
       status: filters.status === "TODOS" ? undefined : filters.status,
       profile: filters.profile || undefined,
+      scopeType: filters.scopeType || undefined,
       eligibleForNewUnits: filters.eligibleOnly || undefined,
       page: currentPage,
       size: SNAPSHOT_PAGE_SIZE,
@@ -124,6 +146,10 @@ export default function AdminSegurancaUsuariosPage() {
       compatibility: allItems.filter((item) => item.compatibilityMode).length,
       exceptions: allItems.reduce((total, item) => total + (item.exceptionsCount ?? 0), 0),
     };
+  }, [allItems]);
+
+  const contextualNetworkNames = useMemo(() => {
+    return [...new Set(allItems.map((item) => item.networkName).filter((value): value is string => Boolean(value)))];
   }, [allItems]);
 
   useEffect(() => {
@@ -198,6 +224,7 @@ export default function AdminSegurancaUsuariosPage() {
     if (filters.tenantId) params.set("tenantId", filters.tenantId);
     if (filters.status && filters.status !== "ATIVO") params.set("status", filters.status);
     if (filters.profile.trim()) params.set("profile", filters.profile.trim());
+    if (filters.scopeType) params.set("scopeType", filters.scopeType);
     if (filters.eligibleOnly) params.set("eligible", "1");
     if (filters.reviewStatus) params.set("reviewStatus", filters.reviewStatus);
     if (filters.broadAccessOnly) params.set("broadAccess", "1");
@@ -214,6 +241,7 @@ export default function AdminSegurancaUsuariosPage() {
       tenantId: "",
       status: "ATIVO",
       profile: "",
+      scopeType: "",
       eligibleOnly: false,
       reviewStatus: "",
       broadAccessOnly: false,
@@ -228,7 +256,7 @@ export default function AdminSegurancaUsuariosPage() {
   return (
     <GlobalSecurityShell
       title="Usuários e acessos"
-      description="Procure uma pessoa, entenda onde ela opera, quais papéis estão ativos e quais sinais de risco exigem ação."
+      description="Procure uma pessoa por rede, identificador e escopo. A leitura separa identidade, unidade-base, unidade ativa e vínculos operacionais."
       actions={
         <Button asChild variant="outline" className="border-border">
           <Link href="/admin/seguranca/revisoes">Abrir fila de revisões</Link>
@@ -246,12 +274,12 @@ export default function AdminSegurancaUsuariosPage() {
         <CardHeader>
           <CardTitle className="text-base">Filtros de operação</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3 xl:grid-cols-8">
+        <CardContent className="grid gap-4 md:grid-cols-3 xl:grid-cols-9">
           <div className="space-y-2 xl:col-span-2">
-            <Label htmlFor="security-user-query">Pessoa ou e-mail</Label>
+            <Label htmlFor="security-user-query">Pessoa, e-mail ou CPF</Label>
             <Input
               id="security-user-query"
-              placeholder="Buscar pessoa"
+              placeholder="Buscar por nome, e-mail ou CPF"
               value={filters.query}
               onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))}
             />
@@ -331,6 +359,29 @@ export default function AdminSegurancaUsuariosPage() {
               value={filters.profile}
               onChange={(event) => setFilters((current) => ({ ...current, profile: event.target.value }))}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Escopo</Label>
+            <Select
+              value={filters.scopeType || "__all__"}
+              onValueChange={(value) =>
+                setFilters((current) => ({
+                  ...current,
+                  scopeType: value === "__all__" ? "" : (value as Filters["scopeType"]),
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todos</SelectItem>
+                <SelectItem value="UNIDADE">Unidade</SelectItem>
+                <SelectItem value="REDE">Rede</SelectItem>
+                <SelectItem value="GLOBAL">Global</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -415,19 +466,33 @@ export default function AdminSegurancaUsuariosPage() {
         </CardContent>
       </Card>
 
+      {contextualNetworkNames.length > 0 ? (
+        <Card>
+          <CardContent className="flex flex-wrap items-center gap-2 px-6 py-4 text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">Redes no recorte:</span>
+            <span>{contextualNetworkNames.join(" · ")}</span>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <SecuritySectionFeedback loading={loadingCatalog || loading} error={error} />
 
       <PaginatedTable
         columns={[
-          { label: "Pessoa" },
-          { label: "Cobertura operacional" },
+          { label: "Pessoa e login" },
+          { label: "Rede e escopo" },
+          { label: "Vínculos operacionais" },
           { label: "Papéis em uso" },
           { label: "Governança" },
           { label: "Estado" },
           { label: "Ações", className: "text-right" },
         ]}
         items={pagedItems}
-        emptyText="Nenhuma pessoa administrativa encontrada para os filtros atuais."
+        emptyText={
+          appliedFilters.scopeType
+            ? `Nenhuma pessoa administrativa encontrada para o escopo ${getScopeLabel(appliedFilters.scopeType).toLowerCase()}.`
+            : "Nenhuma pessoa administrativa encontrada para os filtros atuais."
+        }
         getRowKey={(item) => item.id}
         itemLabel="pessoas"
         page={page}
@@ -442,11 +507,31 @@ export default function AdminSegurancaUsuariosPage() {
               <div className="space-y-1">
                 <p className="font-medium">{item.fullName || item.name}</p>
                 <p className="text-xs text-muted-foreground">{item.email}</p>
+                {item.loginIdentifiers?.length ? (
+                  <p className="text-xs text-muted-foreground">
+                    {item.loginIdentifiers.map((identifier) => `${identifier.label}: ${identifier.value}`).join(" · ")}
+                  </p>
+                ) : null}
               </div>
+            </TableCell>
+            <TableCell className="px-4 py-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">{item.networkName || "Rede não informada"}</p>
+              <p className="text-xs">Escopo efetivo: {getScopeLabel(item.scopeType)}</p>
+              {item.domainLinksSummary?.length ? (
+                <p className="text-xs">{item.domainLinksSummary.join(" · ")}</p>
+              ) : (
+                <p className="text-xs">{item.userKind ? `Tipo: ${item.userKind}` : "Sem agregações gerenciais informadas"}</p>
+              )}
             </TableCell>
             <TableCell className="px-4 py-3 text-sm text-muted-foreground">
               <p>{item.membershipsAtivos} acessos ativos</p>
               <p className="text-xs">{item.academias.map((academia) => academia.nome).join(", ") || "Sem academia vinculada"}</p>
+              <p className="text-xs">
+                Base: {item.defaultTenantName || "não definida"}
+                {item.activeTenantName && item.activeTenantName !== item.defaultTenantName
+                  ? ` · Ativa: ${item.activeTenantName}`
+                  : ""}
+              </p>
             </TableCell>
             <TableCell className="px-4 py-3">
               <div className="flex flex-wrap gap-1">

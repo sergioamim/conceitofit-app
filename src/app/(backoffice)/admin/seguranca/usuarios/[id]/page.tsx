@@ -54,6 +54,19 @@ import type {
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
+function getScopeLabel(scopeType?: GlobalAdminUserDetail["scopeType"]) {
+  switch (scopeType) {
+    case "GLOBAL":
+      return "Global";
+    case "REDE":
+      return "Rede";
+    case "UNIDADE":
+      return "Unidade";
+    default:
+      return "Não informado";
+  }
+}
+
 function buildPolicySummary(detail: GlobalAdminUserDetail | null) {
   if (!detail) return "Carregando governança...";
   if (!detail.policy.enabled) return "Essa pessoa não recebe acesso automático quando uma nova unidade é criada.";
@@ -404,18 +417,41 @@ export default function AdminSegurancaUsuarioDetalhePage() {
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-base">Leitura operacional</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Quem é a pessoa, qual a base operacional, onde há risco e o que precisa de governança separada.
+                    Quem é a pessoa, em qual rede ela autentica, qual a base estrutural e onde o contexto ativo pode variar.
                   </p>
                 </CardHeader>
-                <CardContent className="grid gap-4 md:grid-cols-2">
+                <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   <SummaryBlock label="Pessoa" value={detail.fullName || detail.name} secondary={detail.email} />
-                  <SummaryBlock label="Base operacional" value={detail.defaultTenantName || "Sem unidade base"} />
+                  <SummaryBlock
+                    label="Rede"
+                    value={detail.networkName || "Rede não informada"}
+                    secondary={detail.networkSlug ? `slug: ${detail.networkSlug}` : detail.userKind}
+                  />
+                  <SummaryBlock
+                    label="Identificadores de login"
+                    value={
+                      detail.loginIdentifiers?.length
+                        ? detail.loginIdentifiers.map((identifier) => `${identifier.label}: ${identifier.value}`).join(" · ")
+                        : detail.email
+                    }
+                  />
+                  <SummaryBlock label="Escopo efetivo" value={getScopeLabel(detail.scopeType)} />
+                  <SummaryBlock label="Unidade-base" value={detail.defaultTenantName || "Sem unidade base"} />
+                  <SummaryBlock
+                    label="Unidade ativa da sessão"
+                    value={detail.activeTenantName || detail.defaultTenantName || "Sem unidade ativa informada"}
+                    secondary={
+                      detail.activeTenantName && detail.activeTenantName !== detail.defaultTenantName
+                        ? "Diferente da base estrutural"
+                        : "Mesmo contexto da base"
+                    }
+                  />
                   <SummaryBlock
                     label="Academias em atuação"
                     value={detail.academias.map((item) => item.nome).join(", ") || "Sem academia vinculada"}
                   />
                   <SummaryBlock label="Próxima revisão" value={formatSecurityDateTime(detail.nextReviewAt, "Sem data definida")} />
-                  <div className="space-y-2 md:col-span-2">
+                  <div className="space-y-2 md:col-span-2 xl:col-span-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sinais de governança</p>
                     <div className="flex flex-wrap gap-2">
                       <SecurityActiveBadge active={detail.active} activeLabel={detail.status} inactiveLabel={detail.status} />
@@ -450,6 +486,12 @@ export default function AdminSegurancaUsuarioDetalhePage() {
                       : riskFlags.join(" · ")
                   }
                 />
+                {detail.domainLinksSummary?.length ? (
+                  <SecurityContextNote
+                    title="Leituras gerenciais agregadas"
+                    text={`${detail.domainLinksSummary.join(" · ")}. Essas visões são somente leitura e não mudam o escopo operacional do login.`}
+                  />
+                ) : null}
               </div>
             </div>
 
@@ -590,6 +632,11 @@ export default function AdminSegurancaUsuarioDetalhePage() {
                       <p className="text-sm text-muted-foreground">
                         {membership.academiaName || "Sem academia"} · atualizado em {formatSecurityDateTime(membership.updatedAt)}
                       </p>
+                      <p className="text-xs text-muted-foreground">
+                        {membership.networkName || detail.networkName || "Rede não informada"}
+                        {" · "}
+                        Escopo: {getScopeLabel(membership.scopeType ?? detail.scopeType)}
+                      </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <SecurityActiveBadge active={membership.active} />
@@ -607,6 +654,27 @@ export default function AdminSegurancaUsuarioDetalhePage() {
                         Origem detalhada: {membership.inheritedFrom}
                       </div>
                     ) : null}
+
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <SummaryBlock
+                        label="Unidade-base"
+                        value={membership.tenantBaseName || detail.defaultTenantName || "Sem base informada"}
+                      />
+                      <SummaryBlock
+                        label="Unidade ativa"
+                        value={membership.activeTenantName || detail.activeTenantName || membership.tenantName}
+                        secondary={
+                          membership.activeTenantName && membership.activeTenantName !== (membership.tenantBaseName || detail.defaultTenantName)
+                            ? "Contexto transitório de sessão"
+                            : "Mesmo contexto da base"
+                        }
+                      />
+                      <SummaryBlock
+                        label="Origem do acesso"
+                        value={membership.inheritedFrom || membership.accessOrigin}
+                        secondary="Mostra de onde veio a concessão efetiva"
+                      />
+                    </div>
 
                     {membership.exceptions && membership.exceptions.length > 0 ? (
                       <div className="rounded-2xl border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-900">

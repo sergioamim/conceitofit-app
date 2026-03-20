@@ -2,13 +2,19 @@
 
 import { Building2, ChevronDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DEFAULT_ACTIVE_TENANT_LABEL } from "@/hooks/use-session-context";
+import { DEFAULT_ACTIVE_TENANT_LABEL, DEFAULT_BASE_TENANT_LABEL } from "@/hooks/use-session-context";
 import type { Tenant } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type ActiveTenantSelectorProps = {
   tenantId: string;
   tenantName: string;
   tenants: Tenant[];
+  baseTenantId?: string;
+  baseTenantName?: string;
+  networkName?: string;
+  availableScopes?: string[];
+  broadAccess?: boolean;
   ready?: boolean;
   disabled?: boolean;
   onChange: (tenantId: string) => void | Promise<void>;
@@ -18,6 +24,11 @@ export function ActiveTenantSelector({
   tenantId,
   tenantName,
   tenants,
+  baseTenantId = "",
+  baseTenantName = DEFAULT_BASE_TENANT_LABEL,
+  networkName,
+  availableScopes = [],
+  broadAccess = false,
   ready = false,
   disabled = false,
   onChange,
@@ -31,13 +42,37 @@ export function ActiveTenantSelector({
     : undefined;
   const selectValue = ready ? selectedTenant?.id : undefined;
   const selectLabel = selectedTenant?.nome ?? "Selecionar unidade";
+  const normalizedBaseTenantId = baseTenantId.trim();
+  const hasDistinctBaseTenant =
+    Boolean(normalizedBaseTenantId) && normalizedBaseTenantId !== normalizedTenantId;
+  const scopeLabel = availableScopes.length > 0 ? availableScopes.join(" · ") : "UNIDADE";
 
   return (
     <div className="flex w-full flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2 sm:flex-row sm:items-center">
       <Building2 className="size-4 text-muted-foreground" />
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Unidade ativa</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Unidade ativa</p>
+          <span
+            className={cn(
+              "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+              broadAccess
+                ? "bg-gym-danger/10 text-gym-danger"
+                : "bg-secondary text-muted-foreground"
+            )}
+          >
+            {scopeLabel}
+          </span>
+          {networkName ? (
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {networkName}
+            </span>
+          ) : null}
+        </div>
         <p className="truncate text-sm font-medium text-foreground">{resolvedTenantName}</p>
+        {hasDistinctBaseTenant ? (
+          <p className="truncate text-xs text-muted-foreground">Base estrutural: {baseTenantName}</p>
+        ) : null}
       </div>
       {ready ? (
         <Select

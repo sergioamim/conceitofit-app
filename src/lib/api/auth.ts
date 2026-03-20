@@ -1,9 +1,18 @@
-import type { TenantAccess } from "./session";
+import type { AuthSessionScope, TenantAccess } from "./session";
 import { apiRequest } from "./http";
 import {
+  getAvailableScopesFromSession,
   getAccessTokenType,
   getActiveTenantIdFromSession,
   getAvailableTenantsFromSession,
+  getBaseTenantIdFromSession,
+  getBroadAccessFromSession,
+  getDisplayNameFromSession,
+  getNetworkIdFromSession,
+  getNetworkNameFromSession,
+  getNetworkSlugFromSession,
+  getUserIdFromSession,
+  getUserKindFromSession,
   saveAuthSession,
   type AuthSession,
 } from "./session";
@@ -18,17 +27,46 @@ interface LoginApiResponse {
   refreshToken: string;
   type?: string;
   expiresIn?: number;
+  userId?: string;
+  userKind?: string;
+  displayName?: string;
+  redeId?: string;
+  redeSlug?: string;
+  redeNome?: string;
   activeTenantId?: string;
+  tenantBaseId?: string;
   availableTenants?: TenantAccessApiResponse[];
+  availableScopes?: string[];
+  broadAccess?: boolean;
 }
 
 interface MeApiResponse {
   id?: string;
+  userId?: string;
   nome?: string;
+  displayName?: string;
   email?: string;
   roles?: string[];
+  userKind?: string;
+  redeId?: string;
+  redeSlug?: string;
+  redeNome?: string;
   activeTenantId?: string;
+  tenantBaseId?: string;
   availableTenants?: TenantAccessApiResponse[];
+  availableScopes?: string[];
+  broadAccess?: boolean;
+}
+
+interface AccessNetworkContextApiResponse {
+  id?: string;
+  slug?: string;
+  nome?: string;
+  appName?: string;
+  logoUrl?: string;
+  supportText?: string;
+  accentLabel?: string;
+  helpEmail?: string;
 }
 
 interface SwitchTenantApiRequest {
@@ -40,12 +78,14 @@ function normalizeSession(
   options?: {
     preserveTenantContext?: boolean;
     fallbackActiveTenantId?: string;
+    fallbackNetworkSlug?: string;
   }
 ): AuthSession {
   const availableTenants = response.availableTenants?.map((item) => ({
     tenantId: item.tenantId,
     defaultTenant: item.defaultTenant,
   }));
+  const availableScopes = normalizeAvailableScopes(response.availableScopes);
 
   return {
     token: response.token,
@@ -55,23 +95,84 @@ function normalizeSession(
       (options?.preserveTenantContext ? getAccessTokenType() : undefined) ??
       "Bearer",
     expiresIn: response.expiresIn,
+    userId:
+      response.userId ??
+      (options?.preserveTenantContext ? getUserIdFromSession() : undefined),
+    userKind:
+      response.userKind ??
+      (options?.preserveTenantContext ? getUserKindFromSession() : undefined),
+    displayName:
+      response.displayName ??
+      (options?.preserveTenantContext ? getDisplayNameFromSession() : undefined),
+    networkId:
+      response.redeId ??
+      (options?.preserveTenantContext ? getNetworkIdFromSession() : undefined),
+    networkSlug:
+      response.redeSlug ??
+      options?.fallbackNetworkSlug ??
+      (options?.preserveTenantContext ? getNetworkSlugFromSession() : undefined),
+    networkName:
+      response.redeNome ??
+      (options?.preserveTenantContext ? getNetworkNameFromSession() : undefined),
     activeTenantId:
       response.activeTenantId ??
       options?.fallbackActiveTenantId ??
       (options?.preserveTenantContext ? getActiveTenantIdFromSession() : undefined),
+    baseTenantId:
+      response.tenantBaseId ??
+      (options?.preserveTenantContext ? getBaseTenantIdFromSession() : undefined),
     availableTenants:
       availableTenants ??
       (options?.preserveTenantContext ? getAvailableTenantsFromSession() : undefined),
+    availableScopes:
+      availableScopes.length > 0
+        ? availableScopes
+        : options?.preserveTenantContext
+          ? getAvailableScopesFromSession()
+          : undefined,
+    broadAccess:
+      typeof response.broadAccess === "boolean"
+        ? response.broadAccess
+        : options?.preserveTenantContext
+          ? getBroadAccessFromSession()
+          : undefined,
   };
 }
 
 export interface AuthUser {
   id?: string;
+  userId?: string;
   nome?: string;
+  displayName?: string;
   email?: string;
   roles?: string[];
+  userKind?: string;
+  networkId?: string;
+  networkSlug?: string;
+  networkName?: string;
   activeTenantId?: string;
+  baseTenantId?: string;
   availableTenants: TenantAccess[];
+  availableScopes?: AuthSessionScope[];
+  broadAccess?: boolean;
+}
+
+export interface AccessNetworkContext {
+  id?: string;
+  slug: string;
+  name: string;
+  appName: string;
+  logoUrl?: string;
+  supportText: string;
+  accentLabel?: string;
+  helpEmail?: string;
+}
+
+function normalizeAvailableScopes(raw?: string[]): AuthSessionScope[] {
+  if (!raw?.length) return [];
+  return raw
+    .map((item) => item.trim().toUpperCase())
+    .filter((item): item is AuthSessionScope => item === "UNIDADE" || item === "REDE" || item === "GLOBAL");
 }
 
 function parseAvailableTenants(raw?: TenantAccessApiResponse[]): TenantAccess[] {
@@ -90,19 +191,33 @@ function parseAvailableTenants(raw?: TenantAccessApiResponse[]): TenantAccess[] 
 }
 
 export async function loginApi(input: {
-  email: string;
+  email?: string;
+  identifier?: string;
   password: string;
+  redeIdentifier?: string;
+  channel?: "APP" | "BACKOFFICE";
 }): Promise<AuthSession> {
+  const identifier = input.identifier?.trim();
+  const email = input.email?.trim();
   const response = await apiRequest<LoginApiResponse>({
     path: "/api/v1/auth/login",
     method: "POST",
     includeContextHeader: false,
-    body: {
-      email: input.email,
-      password: input.password,
-    },
+    body: identifier
+      ? {
+          redeIdentifier: input.redeIdentifier?.trim() || undefined,
+          identifier,
+          password: input.password,
+          channel: input.channel ?? "APP",
+        }
+      : {
+          email: email ?? "",
+          password: input.password,
+        },
   });
-  const session = normalizeSession(response);
+  const session = normalizeSession(response, {
+    fallbackNetworkSlug: input.redeIdentifier?.trim() || undefined,
+  });
   saveAuthSession(session);
   return session;
 }
@@ -124,12 +239,21 @@ export async function meApi(): Promise<AuthUser> {
     path: "/api/v1/auth/me",
   });
   return {
-    id: response.id,
+    id: response.id ?? response.userId,
+    userId: response.userId ?? response.id,
     nome: response.nome,
+    displayName: response.displayName ?? response.nome,
     email: response.email,
     roles: response.roles ?? [],
+    userKind: response.userKind,
+    networkId: response.redeId,
+    networkSlug: response.redeSlug,
+    networkName: response.redeNome,
     activeTenantId: response.activeTenantId,
+    baseTenantId: response.tenantBaseId,
     availableTenants: parseAvailableTenants(response.availableTenants),
+    availableScopes: normalizeAvailableScopes(response.availableScopes),
+    broadAccess: response.broadAccess,
   };
 }
 
@@ -145,4 +269,89 @@ export async function switchTenantApi(tenantId: string): Promise<AuthSession> {
   });
   saveAuthSession(session);
   return session;
+}
+
+function buildDefaultAccessNetworkContext(redeSlug: string): AccessNetworkContext {
+  const normalizedSlug = redeSlug.trim().toLowerCase();
+  const name = normalizedSlug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+  return {
+    slug: normalizedSlug || "rede",
+    name: name || "Rede",
+    appName: name ? `${name} Acesso` : "Acesso da rede",
+    supportText: "Autentique-se no contexto correto da rede para evitar conflito com identificadores iguais em redes diferentes.",
+    accentLabel: "Acesso por rede",
+  };
+}
+
+export async function getAccessNetworkContextApi(redeSlug: string): Promise<AccessNetworkContext> {
+  const normalizedSlug = redeSlug.trim();
+  try {
+    const response = await apiRequest<AccessNetworkContextApiResponse>({
+      path: "/api/v1/auth/rede-contexto",
+      includeContextHeader: false,
+      query: {
+        redeIdentifier: normalizedSlug,
+      },
+    });
+
+    return {
+      id: response.id,
+      slug: response.slug?.trim() || normalizedSlug,
+      name: response.nome?.trim() || buildDefaultAccessNetworkContext(normalizedSlug).name,
+      appName: response.appName?.trim() || buildDefaultAccessNetworkContext(normalizedSlug).appName,
+      logoUrl: response.logoUrl?.trim() || undefined,
+      supportText: response.supportText?.trim() || buildDefaultAccessNetworkContext(normalizedSlug).supportText,
+      accentLabel: response.accentLabel?.trim() || buildDefaultAccessNetworkContext(normalizedSlug).accentLabel,
+      helpEmail: response.helpEmail?.trim() || undefined,
+    };
+  } catch {
+    return buildDefaultAccessNetworkContext(normalizedSlug);
+  }
+}
+
+export async function requestPasswordRecoveryApi(input: {
+  redeIdentifier: string;
+  identifier: string;
+  channel?: "APP" | "BACKOFFICE";
+}): Promise<{ message: string }> {
+  const response = await apiRequest<{ message?: string }>({
+    path: "/api/v1/auth/password/recovery",
+    method: "POST",
+    includeContextHeader: false,
+    body: {
+      redeIdentifier: input.redeIdentifier.trim(),
+      identifier: input.identifier.trim(),
+      channel: input.channel ?? "APP",
+    },
+  });
+
+  return {
+    message: response.message?.trim() || "Se o identificador existir nesta rede, enviaremos as instruções de recuperação.",
+  };
+}
+
+export async function requestFirstAccessApi(input: {
+  redeIdentifier: string;
+  identifier: string;
+  channel?: "APP" | "BACKOFFICE";
+}): Promise<{ message: string }> {
+  const response = await apiRequest<{ message?: string }>({
+    path: "/api/v1/auth/first-access",
+    method: "POST",
+    includeContextHeader: false,
+    body: {
+      redeIdentifier: input.redeIdentifier.trim(),
+      identifier: input.identifier.trim(),
+      channel: input.channel ?? "APP",
+    },
+  });
+
+  return {
+    message: response.message?.trim() || "Se o identificador estiver apto para primeiro acesso nesta rede, enviaremos as próximas instruções.",
+  };
 }

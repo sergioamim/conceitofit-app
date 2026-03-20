@@ -18,6 +18,10 @@ test.describe("session context helpers", () => {
     );
     expect(buildLoginHref("/dashboard")).toBe("/login");
     expect(buildLoginHref("https://malicioso.com")).toBe("/login");
+    expect(buildLoginHref("/clientes", "rede-norte")).toBe(
+      "/acesso/rede-norte/autenticacao?next=%2Fclientes"
+    );
+    expect(buildLoginHref("/dashboard", "rede-norte")).toBe("/acesso/rede-norte/autenticacao");
   });
 
   test("normalizeRoles e hasElevatedAccess tratam perfis administrativos", async () => {

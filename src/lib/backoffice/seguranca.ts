@@ -36,6 +36,7 @@ export async function listGlobalSecurityUsers(input: {
   academiaId?: string;
   status?: string;
   profile?: string;
+  scopeType?: string;
   eligibleForNewUnits?: boolean;
   page?: number;
   size?: number;
@@ -46,6 +47,7 @@ export async function listGlobalSecurityUsers(input: {
     academiaId: trimString(input.academiaId),
     status: trimString(input.status),
     profile: trimString(input.profile),
+    scopeType: trimString(input.scopeType),
     eligibleForNewUnits: input.eligibleForNewUnits,
     page: input.page,
     size: input.size,

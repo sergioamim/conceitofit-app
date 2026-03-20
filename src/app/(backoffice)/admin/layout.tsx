@@ -6,7 +6,7 @@ import { ReactNode, Suspense, useEffect, useState } from "react";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { TenantContextProvider } from "@/hooks/use-session-context";
 import { useAuthAccess } from "@/hooks/use-session-context";
-import { AUTH_SESSION_UPDATED_EVENT, getAccessToken } from "@/lib/api/session";
+import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 
@@ -117,7 +117,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     if (!authenticated) {
       const queryString = searchParams.toString();
       const currentPath = `${pathname}${queryString ? `?${queryString}` : ""}`;
-      router.replace(buildLoginHref(currentPath));
+      router.replace(buildLoginHref(currentPath, getNetworkSlugFromSession()));
     }
   }, [authenticated, hydrated, pathname, router, searchParams]);
 

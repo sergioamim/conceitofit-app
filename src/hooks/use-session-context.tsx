@@ -17,6 +17,7 @@ import {
   AUTH_SESSION_CLEARED_EVENT,
   AUTH_SESSION_UPDATED_EVENT,
   getAccessToken,
+  type AuthSessionScope,
 } from "@/lib/api/session";
 import { hasClientDeleteCapability, hasElevatedAccess, normalizeRoles } from "@/lib/access-control";
 import { Academia, Tenant, TenantBranding } from "@/lib/types";
@@ -34,6 +35,7 @@ import {
 
 export const DEFAULT_ACTIVE_TENANT_LABEL = "Unidade ativa";
 export const DEFAULT_ACADEMIA_LABEL = "Academia";
+export const DEFAULT_BASE_TENANT_LABEL = "Unidade base";
 
 type BootstrapStatus = "idle" | "loading" | "ready" | "stale" | "error";
 
@@ -47,7 +49,18 @@ type TenantContextState = TenantContextSnapshot & {
   canDeleteClient: boolean;
   activeTenantId: string;
   activeTenant: Tenant | null;
+  baseTenantId: string;
+  baseTenant: Tenant | null;
+  baseTenantName: string;
   availableTenants: Tenant[];
+  networkId?: string;
+  networkSlug?: string;
+  networkName?: string;
+  userId?: string;
+  displayName?: string;
+  userKind?: string;
+  availableScopes: AuthSessionScope[];
+  broadAccess: boolean;
   academia: Academia | null;
   brandingSnapshot: TenantBranding | undefined;
   lastBootstrapAt?: number;
@@ -87,25 +100,64 @@ function resolveBrandingSnapshot(
   return academia?.branding ?? tenant?.branding;
 }
 
+function resolveBaseTenant(
+  snapshot: TenantContextSnapshot,
+  authUser?: AuthUser | null,
+  fallbackBaseTenant?: Tenant | null
+): Tenant | null {
+  const candidateId =
+    authUser?.baseTenantId?.trim()
+    || authUser?.availableTenants.find((item) => item.defaultTenant)?.tenantId?.trim()
+    || fallbackBaseTenant?.id?.trim()
+    || "";
+
+  if (!candidateId) {
+    return fallbackBaseTenant ?? null;
+  }
+
+  return (
+    snapshot.tenants.find((tenant) => tenant.id === candidateId)
+    ?? (snapshot.tenant?.id === candidateId ? snapshot.tenant : null)
+    ?? fallbackBaseTenant
+    ?? null
+  );
+}
+
 function buildTenantContextState(
   snapshot: TenantContextSnapshot = EMPTY_TENANT_CONTEXT_SNAPSHOT,
   input: Partial<Omit<TenantContextState, keyof TenantContextSnapshot>> = {}
 ): TenantContextState {
   const roles = input.roles ?? [];
   const currentAcademia = input.academia ?? null;
+  const authUser = input.authUser ?? null;
+  const baseTenant =
+    input.baseTenant
+    ?? resolveBaseTenant(snapshot, authUser, input.activeTenant ?? snapshot.tenant ?? null);
+
   return {
     ...snapshot,
     loading: input.loading ?? false,
     status: input.status ?? "idle",
     error: input.error ?? null,
-    authUser: input.authUser ?? null,
+    authUser,
     roles,
     canAccessElevatedModules:
       input.canAccessElevatedModules ?? hasElevatedAccess(roles),
     canDeleteClient: input.canDeleteClient ?? hasClientDeleteCapability(roles),
     activeTenantId: input.activeTenantId ?? snapshot.tenantId,
     activeTenant: input.activeTenant ?? snapshot.tenant ?? null,
+    baseTenantId: input.baseTenantId ?? baseTenant?.id ?? "",
+    baseTenant,
+    baseTenantName: input.baseTenantName ?? baseTenant?.nome ?? DEFAULT_BASE_TENANT_LABEL,
     availableTenants: input.availableTenants ?? snapshot.tenants,
+    networkId: input.networkId ?? authUser?.networkId,
+    networkSlug: input.networkSlug ?? authUser?.networkSlug,
+    networkName: input.networkName ?? authUser?.networkName,
+    userId: input.userId ?? authUser?.userId ?? authUser?.id,
+    displayName: input.displayName ?? authUser?.displayName ?? authUser?.nome,
+    userKind: input.userKind ?? authUser?.userKind,
+    availableScopes: input.availableScopes ?? authUser?.availableScopes ?? [],
+    broadAccess: input.broadAccess ?? authUser?.broadAccess ?? false,
     academia: currentAcademia,
     brandingSnapshot: input.brandingSnapshot ?? resolveBrandingSnapshot(snapshot.tenant, currentAcademia),
     lastBootstrapAt: input.lastBootstrapAt,
@@ -278,7 +330,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
         return current;
       }
 
-      return {
+      return buildTenantContextState(snapshot, {
         ...current,
         ...snapshot,
         tenantResolved: snapshot.tenantResolved || current.tenantResolved,
@@ -287,7 +339,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
         availableTenants: snapshot.tenants,
         brandingSnapshot: resolveBrandingSnapshot(snapshot.tenant, current.academia),
         lastTenantSyncAt: Date.now(),
-      };
+      });
     });
   }, []);
 
@@ -346,9 +398,8 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
         const nextRoles = bootstrapState.roles ?? current.roles;
         const nextCanAccess =
           bootstrapState.canAccessElevatedModules ?? hasElevatedAccess(nextRoles);
-        return {
+        return buildTenantContextState(bootstrapState.snapshot, {
           ...current,
-          ...bootstrapState.snapshot,
           tenantResolved: bootstrapState.snapshot.tenantResolved,
           loading: false,
           status: bootstrapState.error ? "error" : "ready",
@@ -367,14 +418,13 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
           ),
           lastBootstrapAt: now,
           lastTenantSyncAt: now,
-        };
+        });
       });
     } catch (error) {
       if (requestIdRef.current !== currentRequestId) return;
       const snapshot = getTenantContextSnapshotFromStore();
-      setState((current) => ({
+      setState((current) => buildTenantContextState(snapshot, {
         ...current,
-        ...snapshot,
         activeTenantId: snapshot.tenantId,
         activeTenant: snapshot.tenant,
         availableTenants: snapshot.tenants,
@@ -412,9 +462,8 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
         const nextRoles = bootstrapState.roles ?? current.roles;
         const nextCanAccess =
           bootstrapState.canAccessElevatedModules ?? hasElevatedAccess(nextRoles);
-        return {
+        return buildTenantContextState(bootstrapState.snapshot, {
           ...current,
-          ...bootstrapState.snapshot,
           tenantResolved: bootstrapState.snapshot.tenantResolved,
           loading: false,
           status: bootstrapState.error ? "error" : "ready",
@@ -433,7 +482,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
           ),
           lastBootstrapAt: now,
           lastTenantSyncAt: now,
-        };
+        });
       });
     } catch (error) {
       if (requestIdRef.current !== currentRequestId) return;

@@ -20,7 +20,18 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
   const [clienteOptions, setClienteOptions] = useState<SuggestionOption[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [savingTenant, setSavingTenant] = useState(false);
-  const { tenantId, tenantName, tenants, setTenant, loading: tenantLoading } = useTenantContext();
+  const {
+    tenantId,
+    tenantName,
+    tenants,
+    baseTenantId,
+    baseTenantName,
+    networkName,
+    availableScopes,
+    broadAccess,
+    setTenant,
+    loading: tenantLoading,
+  } = useTenantContext();
 
   useEffect(() => {
     const searchTerm = query.trim();
@@ -108,6 +119,11 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
           tenantId={tenantId}
           tenantName={tenantName}
           tenants={tenants}
+          baseTenantId={baseTenantId}
+          baseTenantName={baseTenantName}
+          networkName={networkName}
+          availableScopes={availableScopes}
+          broadAccess={broadAccess}
           ready={shellReady}
           disabled={savingTenant || tenantLoading}
           onChange={handleChangeTenant}

@@ -41,7 +41,7 @@ export function buildMonthKeyFromDate(date: Date) {
 
 export function formatMonthLabel(monthKey: string) {
   if (!monthKey || monthKey.length < 7) return "Mês atual";
-  const [, month] = monthKey.split("-");
+  const [year, month] = monthKey.split("-");
   const months = [
     "janeiro",
     "fevereiro",
@@ -57,7 +57,9 @@ export function formatMonthLabel(monthKey: string) {
     "dezembro",
   ];
   const index = Number(month) - 1;
-  return months[index] ?? "Mês atual";
+  const monthLabel = months[index];
+  if (!monthLabel || !year) return "Mês atual";
+  return `${monthLabel}/${year}`;
 }
 
 export function formatDateLabel(value?: string) {
@@ -65,6 +67,22 @@ export function formatDateLabel(value?: string) {
   const [year, month, day] = value.split("-");
   if (!year || !month || !day) return value;
   return `${day}/${month}/${year}`;
+}
+
+export function listAvailableMonthKeys(rows: MatriculaInsightRow[], fallbackMonthKey?: string) {
+  const keys = new Set<string>();
+  if (fallbackMonthKey) {
+    keys.add(fallbackMonthKey);
+  }
+
+  for (const row of rows) {
+    const monthKey = extractMonthKey(resolveReferenceDate(row));
+    if (monthKey) {
+      keys.add(monthKey);
+    }
+  }
+
+  return [...keys].sort((left, right) => right.localeCompare(left));
 }
 
 export function buildMatriculasMonthlySnapshot(
@@ -135,4 +153,3 @@ export function buildMatriculasMonthlySnapshot(
     insight,
   };
 }
-

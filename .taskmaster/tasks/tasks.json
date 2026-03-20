@@ -3959,11 +3959,623 @@
           }
         ],
         "updatedAt": "2026-03-19T19:40:00Z"
+      },
+      {
+        "id": 56,
+        "title": "Implementar login contextual por Rede e fluxos de acesso iniciais",
+        "description": "Adaptar o frontend para autenticação orientada por rede, com rota contextual, identificador neutro e recuperação isolada.",
+        "details": "O frontend precisa sair do modelo implícito de login global e assumir o contexto de rede como primeira informação da jornada. Esta task cobre as rotas e superfícies de `/acesso/{redeSlug}`, o formulário por identificador neutro, recuperação de senha, primeiro acesso e mensagens específicas da rede corrente.",
+        "testStrategy": "Validar rotas, formulários e estados de autenticação com smoke e testes E2E do fluxo de acesso por rede.",
+        "status": "done",
+        "dependencies": [
+          "53"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar a casca de rotas contextuais `/acesso/{redeSlug}`",
+            "description": "Fazer o frontend resolver a rede pela própria URL da jornada de login.",
+            "dependencies": [],
+            "details": "Estruturar as páginas de autenticação para operar com `redeSlug` explícito, permitindo a experiência no estilo EVO sem depender de seleção de tenant no primeiro passo.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 56,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Trocar o formulário de login para `identifier` neutro em vez de email fixo",
+            "description": "Permitir email ou CPF no mesmo campo de autenticação.",
+            "dependencies": [
+              "56.1"
+            ],
+            "details": "Atualizar labels, máscara opcional, validação e mensagens do formulário para trabalhar com um identificador neutro contextualizado pela rede.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 56,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Implementar recuperação de senha e primeiro acesso no contexto da rede",
+            "description": "Manter todos os fluxos de credencial isolados por rede.",
+            "dependencies": [
+              "56.1",
+              "56.2"
+            ],
+            "details": "Criar as telas e chamadas de recuperar senha e primeiro acesso sem perder o `redeSlug`, com mensagens coerentes para usuários homônimos em redes distintas.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 56,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Aplicar branding e contexto da rede nas superfícies de acesso",
+            "description": "Deixar clara para o usuário a rede na qual ele está autenticando.",
+            "dependencies": [
+              "56.1"
+            ],
+            "details": "Exibir nome, identidade visual, instruções e variações da rede corrente nas telas de acesso, reforçando a separação entre redes diferentes.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 56,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Adaptar clientes HTTP, tipagens e guards ao novo contrato de autenticação por rede",
+            "description": "Preparar a camada de integração para o payload novo do backend.",
+            "dependencies": [
+              "56.2",
+              "56.3"
+            ],
+            "details": "Atualizar SDKs, DTOs, hooks e interceptors para consumir o contrato com `identifier`, bootstrap de rede e erros específicos do novo fluxo.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 56,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 6,
+            "title": "Cobrir a jornada de acesso por rede com smoke e E2E",
+            "description": "Garantir que login, reset e primeiro acesso não regressem.",
+            "dependencies": [
+              "56.3",
+              "56.4",
+              "56.5"
+            ],
+            "details": "Criar ou adaptar cenários automatizados para a rota contextual de acesso, incluindo mensagens de erro, recuperação de senha e redes distintas.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 56,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T00:00:00Z"
+      },
+      {
+        "id": 57,
+        "title": "Implementar bootstrap de sessão por Rede com unidade ativa separada da unidade-base",
+        "description": "Ajustar o frontend para tratar unidade-base do cliente e tenant ativo de sessão como conceitos distintos.",
+        "details": "A aplicação precisa deixar de assumir que a unidade do cliente e a unidade ativa da sessão são a mesma coisa. Esta task fecha bootstrap, stores, guards e componentes base para operar com `tenantId` estrutural do cliente e `activeTenantId` temporário de sessão.",
+        "testStrategy": "Cobrir bootstrap, troca de contexto e navegação autenticada com testes de integração do frontend e E2E básicos.",
+        "status": "done",
+        "dependencies": [
+          "56"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Atualizar o bootstrap autenticado para receber rede, unidade-base e tenant ativo",
+            "description": "Consumir a nova carga mínima do backend após o login.",
+            "dependencies": [],
+            "details": "Revisar a hidratação inicial da sessão para armazenar rede corrente, unidade-base do cliente, tenant ativo resolvido e unidades elegíveis.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 57,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Separar no estado global `tenantId` estrutural e `activeTenantId` de sessão",
+            "description": "Evitar que a UI trate a unidade-base como contexto temporário.",
+            "dependencies": [
+              "57.1"
+            ],
+            "details": "Refatorar stores, contextos e hooks para que a unidade-base continue visível como referência estrutural, enquanto a unidade ativa da experiência fica em estado específico de sessão.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 57,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Ajustar guards, providers e resolução de contexto para o tenant ativo",
+            "description": "Fazer toda a aplicação autenticada usar a unidade ativa correta.",
+            "dependencies": [
+              "57.2"
+            ],
+            "details": "Revisar interceptors, providers de contexto, persistência local e guards de rota para enviar o tenant ativo da sessão nas chamadas operacionais.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 57,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Exibir na UI a distinção entre unidade-base e unidade ativa quando necessário",
+            "description": "Dar clareza de produto sem poluir a experiência principal.",
+            "dependencies": [
+              "57.1",
+              "57.2"
+            ],
+            "details": "Adicionar labels, tooltips ou resumos discretos nos pontos críticos para explicar quando a unidade-base do cliente difere do tenant ativo da sessão.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 57,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Implementar a troca do tenant ativo da sessão usando o novo contrato",
+            "description": "Permitir mudança controlada do contexto operacional no frontend.",
+            "dependencies": [
+              "57.2",
+              "57.3"
+            ],
+            "details": "Consumir o endpoint de troca de tenant ativo, atualizar caches, invalidar consultas e refletir a mudança na navegação e nas superfícies operacionais.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 57,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 6,
+            "title": "Cobrir regressão do bootstrap e troca de contexto",
+            "description": "Garantir estabilidade do estado autenticado no novo modelo.",
+            "dependencies": [
+              "57.3",
+              "57.4",
+              "57.5"
+            ],
+            "details": "Adicionar testes para bootstrap bem-sucedido, tenant ativo inicial, troca de contexto e persistência correta entre telas e refresh.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 57,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T00:00:00Z"
+      },
+      {
+        "id": 58,
+        "title": "Redesenhar a gestão administrativa de usuários, identidades e escopos por Rede",
+        "description": "Levar a área de segurança para o novo modelo de identidade por rede, escopos e vínculos operacionais.",
+        "details": "Com o novo desenho de auth, a área administrativa precisa mostrar usuário por rede, identificadores de login, escopo efetivo, unidade-base, unidade ativa e vínculos relevantes de forma inteligível para gestores. Esta task fecha a UX das leituras administrativas do modelo rede-unidade.",
+        "testStrategy": "Cobrir navegação, listagens, detalhe e filtros da área administrativa de usuários com testes de regressão funcional.",
+        "status": "done",
+        "dependencies": [
+          "53",
+          "57"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Atualizar listagem de usuários para o contexto de Rede",
+            "description": "Fazer a tela principal operar por rede e não por visão global implícita.",
+            "dependencies": [],
+            "details": "Revisar filtros, cabeçalhos, colunas e navegação para exibir claramente a rede corrente, os escopos do usuário e sua unidade-base.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 58,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Exibir identificadores de login e origem do acesso no detalhe do usuário",
+            "description": "Dar visibilidade para email, CPF e escopos sem expor jargão excessivo.",
+            "dependencies": [
+              "58.1"
+            ],
+            "details": "Adicionar blocos de detalhe mostrando identificadores de login, escopo efetivo, origem do acesso e diferenças entre acesso local, de rede e global.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 58,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Refletir unidade-base, unidade ativa e vínculos operacionais nas superfícies administrativas",
+            "description": "Ajudar o gestor a entender onde o usuário atua de fato.",
+            "dependencies": [
+              "58.1",
+              "58.2"
+            ],
+            "details": "Mostrar quando o cadastro pertence a uma unidade-base, quais unidades adicionais o usuário/funcionário possui e quando a unidade ativa é apenas contexto temporário.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 58,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Ajustar filtros, pesquisa e estados vazios ao novo modelo rede-unidade",
+            "description": "Evitar ambiguidade quando a mesma pessoa existir em redes diferentes.",
+            "dependencies": [
+              "58.1",
+              "58.2"
+            ],
+            "details": "Revisar busca por identificador, filtros por escopo e mensagens de empty state para que a operação fique sempre contextualizada pela rede corrente.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 58,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Preparar a UI para leituras gerenciais agregadas por Grupo sem confundir escopo operacional",
+            "description": "Diferenciar visão gerencial de permissão operacional.",
+            "dependencies": [
+              "58.2",
+              "58.4"
+            ],
+            "details": "Adicionar espaços ou componentes próprios para agregações gerenciais por grupo, deixando explícito que isso é visão read-only e não escopo de login.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 58,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 6,
+            "title": "Cobrir a nova área administrativa de usuários com regressão funcional",
+            "description": "Validar filtros, detalhes e leitura dos novos conceitos.",
+            "dependencies": [
+              "58.3",
+              "58.4",
+              "58.5"
+            ],
+            "details": "Criar ou ajustar testes para listagem, detalhe, filtros e exibição correta de identificadores, rede, escopos e vínculos operacionais.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 58,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T00:00:00Z"
+      },
+      {
+        "id": 59,
+        "title": "Implementar a UX multiunidade do cliente orientada por contrato",
+        "description": "Fazer o app do cliente operar com tenant ativo elegível, e não com troca livre de unidade.",
+        "details": "A experiência do cliente dentro da rede precisa respeitar a elegibilidade definida pelo contrato. Esta task fecha os fluxos em que o app precisa escolher, trocar ou bloquear a unidade ativa conforme os contratos vigentes, sempre mantendo a unidade-base estrutural separada da sessão.",
+        "testStrategy": "Cobrir cenários de um tenant, vários tenants elegíveis, bloqueio total e troca manual de tenant ativo com testes funcionais.",
+        "status": "pending",
+        "dependencies": [
+          "57"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Modelar no frontend a lista de unidades elegíveis e seus motivos de bloqueio",
+            "description": "Consumir a decisão de elegibilidade do backend sem heurística local.",
+            "dependencies": [],
+            "details": "Criar tipagens e estados para representar unidades disponíveis, unidade ativa, unidade-base e motivos pelos quais uma unidade pode estar indisponível ao cliente.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 59,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Criar a UX de escolha e troca de unidade ativa quando houver múltiplas elegíveis",
+            "description": "Permitir ao cliente mudar de contexto apenas dentro das opções autorizadas.",
+            "dependencies": [
+              "59.1"
+            ],
+            "details": "Desenhar o seletor ou fluxo de troca de unidade ativa para cenários multiunidade, com mensagens claras de disponibilidade e impacto da troca.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 59,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Tratar o caso de unidade única elegível com entrada direta e sem atrito",
+            "description": "Evitar complexidade visual quando o contrato só libera uma unidade.",
+            "dependencies": [
+              "59.1"
+            ],
+            "details": "Garantir que clientes com apenas uma unidade elegível caiam direto no tenant ativo correto, sem seletor redundante.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 59,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Implementar o estado bloqueado para cliente autenticado sem elegibilidade operacional",
+            "description": "Dar ao usuário uma saída clara quando a rede autentica, mas nenhum contrato permite operar.",
+            "dependencies": [
+              "59.1"
+            ],
+            "details": "Criar uma tela ou estado de bloqueio explicando ausência de contrato vigente, unidade não elegível ou impossibilidade temporária de uso.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 59,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Reconciliar as páginas operacionais do app com o tenant ativo elegível",
+            "description": "Fazer home, reservas, financeiro e identidade respeitarem o contexto resolvido.",
+            "dependencies": [
+              "59.2",
+              "59.3",
+              "59.4"
+            ],
+            "details": "Ajustar leituras e ações do app para sempre usar o tenant ativo da sessão validado pelo contrato, atualizando caches e chamadas dependentes.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 59,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 6,
+            "title": "Cobrir a jornada multiunidade do cliente com regressão funcional",
+            "description": "Garantir estabilidade na combinação contrato + tenant ativo.",
+            "dependencies": [
+              "59.2",
+              "59.3",
+              "59.4",
+              "59.5"
+            ],
+            "details": "Adicionar testes para cliente com uma unidade, várias unidades, troca de contexto, estado bloqueado e persistência da unidade ativa entre telas.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 59,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T00:00:00Z"
+      },
+      {
+        "id": 60,
+        "title": "Implementar a operação administrativa migrarClienteParaUnidade no frontend",
+        "description": "Dar suporte visual e operacional ao fluxo administrativo que altera a unidade-base do cliente.",
+        "details": "Com o backend expondo `migrarClienteParaUnidade`, o frontend precisa distinguir claramente essa operação estrutural da mera troca de tenant ativo. Esta task cobre a UX administrativa, formulário, confirmação, mensagens de risco, trilha de auditoria e atualização de tela após a migração.",
+        "testStrategy": "Cobrir a UI de migração com testes funcionais e cenários de sucesso, bloqueio e erro operacional.",
+        "status": "pending",
+        "dependencies": [
+          "58",
+          "59"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir o ponto de entrada da ação migrarClienteParaUnidade nas telas administrativas",
+            "description": "Escolher onde a operação deve aparecer sem confundir com troca temporária de contexto.",
+            "dependencies": [],
+            "details": "Posicionar a ação de migração nas telas de cliente/comercial de forma explícita, com rótulo claro e contexto suficiente para o operador.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 60,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Construir modal ou fluxo dedicado com origem, destino e justificativa",
+            "description": "Coletar os dados administrativos necessários para a migração estrutural.",
+            "dependencies": [
+              "60.1"
+            ],
+            "details": "Criar o formulário que exibe unidade atual, unidade destino, validações de rede, motivo e efeitos esperados da operação.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 60,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Integrar o contrato HTTP de migração e tratar erros canônicos do backend",
+            "description": "Consumir o endpoint novo com mensagens coerentes para o operador.",
+            "dependencies": [
+              "60.2"
+            ],
+            "details": "Adicionar client, mutation e tratamento de erro para rede divergente, unidade inválida, cliente inelegível ou falha de auditoria.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 60,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Atualizar detalhe, listagens e caches do cliente após a migração",
+            "description": "Refletir imediatamente a nova unidade-base nas superfícies administrativas.",
+            "dependencies": [
+              "60.3"
+            ],
+            "details": "Recarregar ou invalidar consultas relevantes para mostrar a unidade-base atualizada, histórico e possíveis efeitos operacionais após a migração.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 60,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Exibir trilha de auditoria e mensagens de risco da operação",
+            "description": "Dar ao gestor clareza sobre permanência e criticidade da migração.",
+            "dependencies": [
+              "60.2",
+              "60.4"
+            ],
+            "details": "Mostrar resumo da operação, motivação registrada e avisos de que a migração altera a unidade-base estrutural do cliente, não apenas a sessão.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 60,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 6,
+            "title": "Cobrir a UX de migração com testes de regressão funcional",
+            "description": "Provar que a operação administrativa está compreensível e estável.",
+            "dependencies": [
+              "60.3",
+              "60.4",
+              "60.5"
+            ],
+            "details": "Adicionar cenários automatizados para abertura do fluxo, validação, sucesso, bloqueios e atualização correta da tela após a migração.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 60,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T00:00:00Z"
+      },
+      {
+        "id": 61,
+        "title": "Fechar contratos, rollout e E2E do novo modelo Rede-Unidade no frontend",
+        "description": "Concluir a trilha com tipagens estáveis, documentação, feature flags e cobertura final de ponta a ponta.",
+        "details": "Depois do ajuste de login, bootstrap, gestão administrativa, UX multiunidade e migração de cliente, o frontend precisa consolidar contratos, documentação e rollout. Esta task fecha os detalhes transversais do novo modelo contextual por rede e unidade.",
+        "testStrategy": "Executar smoke e E2E cobrindo acesso por rede, bootstrap multiunidade, gestão administrativa e migração de cliente.",
+        "status": "pending",
+        "dependencies": [
+          "56",
+          "57",
+          "58",
+          "59",
+          "60"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Atualizar tipagens e clients compartilhados para o modelo final de rede e sessão",
+            "description": "Eliminar inconsistências entre telas e integrações.",
+            "dependencies": [],
+            "details": "Consolidar tipos de autenticação, usuário, bootstrap, tenant ativo, elegibilidade multiunidade e migração de cliente em contratos frontend únicos.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 61,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Aplicar feature flags e fallback transitório para a migração gradual",
+            "description": "Permitir rollout controlado do novo modelo sem quebra imediata.",
+            "dependencies": [
+              "61.1"
+            ],
+            "details": "Preparar flags, roteamento progressivo e compatibilidades temporárias para a convivência entre o login antigo e o novo fluxo contextual por rede.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 61,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Documentar o comportamento do frontend no novo modelo contextual",
+            "description": "Dar handoff claro para produto, QA e suporte.",
+            "dependencies": [
+              "61.1",
+              "61.2"
+            ],
+            "details": "Registrar nos docs do frontend como funcionam login por rede, bootstrap, unidade-base, tenant ativo, multiunidade e migração administrativa de cliente.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 61,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Cobrir ponta a ponta a jornada de acesso, sessão e operação administrativa",
+            "description": "Concluir a trilha com evidência automatizada de alto valor.",
+            "dependencies": [
+              "61.1",
+              "61.2"
+            ],
+            "details": "Executar cenários E2E de login por rede, reset, bootstrap, troca de tenant ativo, operação multiunidade e `migrarClienteParaUnidade`.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 61,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Alinhar textos, empty states e ajuda contextual ao vocabulário final",
+            "description": "Encerrar a migração de linguagem para o modelo rede-unidade.",
+            "dependencies": [
+              "61.3"
+            ],
+            "details": "Revisar labels, mensagens e estados vazios para refletir rede, unidade-base, unidade ativa, elegibilidade e migração de cliente com terminologia consistente.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 61,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          },
+          {
+            "id": 6,
+            "title": "Registrar backlog residual e critérios de aceite do rollout",
+            "description": "Fechar o lote com rastreabilidade clara e limites conhecidos.",
+            "dependencies": [
+              "61.4",
+              "61.5"
+            ],
+            "details": "Atualizar trackers e documentação com riscos residuais, dependências de backend, critérios de aceite e próximos passos do rollout do novo modelo.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentTaskId": 61,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T00:00:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T00:00:00Z"
       }
     ],
     "metadata": {
       "created": "2026-03-18T15:32:36.203Z",
-      "updated": "2026-03-19T19:00:00.000Z",
+      "updated": "2026-03-19T18:55:00.000Z",
       "description": "Tasks for master context"
     }
   }

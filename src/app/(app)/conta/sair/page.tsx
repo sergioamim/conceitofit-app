@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { clearAuthSession } from "@/lib/api/session";
+import { clearAuthSession, getNetworkSlugFromSession } from "@/lib/api/session";
+import { buildLoginHref } from "@/lib/auth-redirect";
 
 export default function SairPage() {
   const router = useRouter();
@@ -12,10 +13,11 @@ export default function SairPage() {
   async function handleLogout() {
     setSaving(true);
     try {
+      const redirectHref = buildLoginHref(undefined, getNetworkSlugFromSession());
       clearAuthSession();
-      router.replace("/login");
+      router.replace(redirectHref);
       if (typeof window !== "undefined") {
-        window.location.assign("/login");
+        window.location.assign(redirectHref);
       }
     } finally {
       setSaving(false);

@@ -230,6 +230,7 @@ function availableProfilesForTenant(state: State, tenantId: string) {
 function buildUserSummary(state: State, user: UserSeed) {
   const activeMemberships = user.memberships.filter((membership) => membership.active);
   const tenantIds = [...new Set(activeMemberships.map((membership) => membership.tenantId))];
+  const activeTenant = activeMemberships[0] ? tenantById(state, activeMemberships[0].tenantId) : null;
   const academias = tenantIds
     .map((tenantId) => tenantById(state, tenantId))
     .filter((tenant): tenant is TenantSeed => Boolean(tenant))
@@ -249,6 +250,16 @@ function buildUserSummary(state: State, user: UserSeed) {
     id: user.id,
     nome: user.nome,
     email: user.email,
+    userKind: "COLABORADOR",
+    redeId: "rede-norte",
+    redeNome: "Rede Norte",
+    redeSlug: "rede-norte",
+    scopeType: activeMemberships.length > 1 || user.policy.scope === "REDE" ? "REDE" : "UNIDADE",
+    loginIdentifiers: [
+      { label: "E-mail", value: user.email },
+      { label: "CPF", value: "***.***.***-00" },
+    ],
+    domainLinksSummary: ["Grupo Norte (somente leitura)"],
     active: user.active,
     status: user.active ? "ATIVO" : "INATIVO",
     academias,
@@ -257,6 +268,8 @@ function buildUserSummary(state: State, user: UserSeed) {
     profiles: [...new Set(perfis)].map((displayName) => ({ displayName })),
     defaultTenantId: defaultTenant?.id,
     defaultTenantName: defaultTenant?.nome,
+    activeTenantId: activeTenant?.id,
+    activeTenantName: activeTenant?.nome,
     eligibleForNewUnits: user.policy.enabled,
   };
 }
@@ -265,6 +278,7 @@ function buildUserDetail(state: State, userId: string) {
   const user = state.users.find((item) => item.id === userId);
   if (!user) return null;
   const summary = buildUserSummary(state, user);
+  const defaultTenant = summary.defaultTenantId ? tenantById(state, summary.defaultTenantId) : null;
 
   return {
     ...summary,
@@ -277,10 +291,18 @@ function buildUserDetail(state: State, userId: string) {
         userId: user.id,
         tenantId: membership.tenantId,
         tenantName: tenant?.nome ?? "Unidade não informada",
+        redeId: "rede-norte",
+        redeNome: "Rede Norte",
+        redeSlug: "rede-norte",
+        scopeType: user.policy.scope === "REDE" ? "REDE" : "UNIDADE",
         academiaId: tenant?.academiaId,
         academiaName: academia?.nome ?? "Academia não informada",
         active: membership.active,
         defaultTenant: membership.defaultTenant,
+        tenantBaseId: defaultTenant?.id,
+        tenantBaseName: defaultTenant?.nome,
+        activeTenantId: membership.tenantId,
+        activeTenantName: tenant?.nome ?? "Unidade não informada",
         accessOrigin: membership.accessOrigin,
         inheritedFrom: membership.inheritedFrom,
         eligibleForNewUnits: user.policy.enabled,
@@ -326,13 +348,15 @@ function applyListFilters(state: State, url: URL) {
   const academiaId = url.searchParams.get("academiaId")?.trim() ?? "";
   const status = url.searchParams.get("status")?.trim().toUpperCase() ?? "";
   const profile = url.searchParams.get("profile")?.trim().toLowerCase() ?? "";
+  const scopeType = url.searchParams.get("scopeType")?.trim().toUpperCase() ?? "";
   const eligibleOnly = url.searchParams.get("eligibleForNewUnits") === "true";
   const page = Number(url.searchParams.get("page") ?? "0");
   const size = Number(url.searchParams.get("size") ?? "20");
 
   const items = state.users.filter((user) => {
     const summary = buildUserSummary(state, user);
-    if (query && !`${summary.nome} ${summary.email}`.toLowerCase().includes(query)) return false;
+    const loginIdentifiers = (summary.loginIdentifiers ?? []).map((item) => item.value.toLowerCase()).join(" ");
+    if (query && !`${summary.nome} ${summary.email} ${loginIdentifiers}`.toLowerCase().includes(query)) return false;
     if (tenantId && !user.memberships.some((membership) => membership.tenantId === tenantId)) return false;
     if (academiaId) {
       const academiaIds = user.memberships
@@ -345,6 +369,7 @@ function applyListFilters(state: State, url: URL) {
       const names = summary.profiles.map((item) => item.displayName.toLowerCase());
       if (!names.some((name) => name.includes(profile))) return false;
     }
+    if (scopeType && summary.scopeType !== scopeType) return false;
     if (eligibleOnly && !summary.eligibleForNewUnits) return false;
     return true;
   });
@@ -655,5 +680,40 @@ test.describe("Backoffice segurança global", () => {
     await page.goto("/admin/importacao-evo?tenantId=tenant-barra");
     await expect(page.getByRole("heading", { name: "Acompanhamento de Importação EVO" })).toBeVisible();
     await expect(page.getByText("usuário(s) administrativos receberão acesso automático em unidades novas desta academia.")).toBeVisible();
+  });
+
+  test("expõe rede, identificadores e distinção entre unidade-base e unidade ativa", async ({ page }) => {
+    const state = buildInitialState();
+    state.users[0].policy.scope = "REDE";
+    state.users[0].memberships.unshift({
+      id: "membership-barra-contexto",
+      tenantId: "tenant-barra",
+      active: true,
+      defaultTenant: false,
+      accessOrigin: "MANUAL",
+      profiles: [{ perfilId: "perfil-gerente-barra" }],
+    });
+
+    await seedSession(page);
+    await setupBackofficeSecurityMocks(page, state);
+
+    await page.goto("/admin/seguranca/usuarios");
+    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible();
+    const anaRow = page.getByRole("row").filter({ hasText: "Ana Admin" });
+    await expect(anaRow.getByText("E-mail: ana.admin@qa.local")).toBeVisible();
+    await expect(anaRow.getByText("CPF: ***.***.***-00")).toBeVisible();
+    await expect(anaRow.getByText("Escopo efetivo: Rede")).toBeVisible();
+    await expect(anaRow.getByText("Base: Unidade Centro · Ativa: Unidade Barra")).toBeVisible();
+
+    await page.goto("/admin/seguranca/usuarios?scopeType=REDE");
+    await expect(page.getByText("Redes no recorte:")).toBeVisible();
+    await expect(page.getByRole("row").filter({ hasText: "Ana Admin" })).toBeVisible();
+
+    await page.goto("/admin/seguranca/usuarios/user-ana");
+    await expect(page.getByText("Identificadores de login")).toBeVisible();
+    await expect(page.getByText("E-mail: ana.admin@qa.local · CPF: ***.***.***-00")).toBeVisible();
+    await expect(page.getByText("Leituras gerenciais agregadas")).toBeVisible();
+    await page.getByRole("tab", { name: "Escopos e acessos" }).click();
+    await expect(page.getByText("Contexto transitório de sessão")).toBeVisible();
   });
 });

@@ -11,6 +11,7 @@ import type {
   GlobalAdminReviewStatus,
   GlobalAdminRiskLevel,
   GlobalAdminSecurityOverview,
+  GlobalAdminScopeType,
   GlobalAdminUserDetail,
   GlobalAdminUserStatus,
   GlobalAdminUserSummary,
@@ -69,10 +70,23 @@ type RawMembership = {
   unidadeId?: string | null;
   tenantName?: string | null;
   unidadeNome?: string | null;
+  redeId?: string | null;
+  redeNome?: string | null;
+  redeSlug?: string | null;
+  scopeType?: string | null;
+  tipoEscopo?: string | null;
   academiaId?: string | null;
   groupId?: string | null;
   academiaName?: string | null;
   academiaNome?: string | null;
+  tenantBaseId?: string | null;
+  tenantBaseName?: string | null;
+  unidadeBaseId?: string | null;
+  unidadeBaseNome?: string | null;
+  activeTenantId?: string | null;
+  activeTenantName?: string | null;
+  unidadeAtivaId?: string | null;
+  unidadeAtivaNome?: string | null;
   active?: unknown;
   ativo?: unknown;
   defaultTenant?: unknown;
@@ -156,6 +170,17 @@ type RawReviewItem = {
   categoria?: string | null;
 };
 
+type RawLoginIdentifier = {
+  label?: string | null;
+  rotulo?: string | null;
+  type?: string | null;
+  tipo?: string | null;
+  value?: string | null;
+  valor?: string | null;
+  maskedValue?: string | null;
+  valorMascarado?: string | null;
+};
+
 type RawUserSummary = {
   id?: string | null;
   userId?: string | null;
@@ -163,6 +188,18 @@ type RawUserSummary = {
   nome?: string | null;
   fullName?: string | null;
   email?: string | null;
+  userKind?: string | null;
+  redeId?: string | null;
+  redeNome?: string | null;
+  redeSlug?: string | null;
+  scopeType?: string | null;
+  effectiveScope?: string | null;
+  tipoEscopo?: string | null;
+  loginIdentifiers?: RawLoginIdentifier[] | null;
+  identificadoresLogin?: RawLoginIdentifier[] | null;
+  identifiers?: RawLoginIdentifier[] | null;
+  domainLinksSummary?: string[] | null;
+  vinculosDominioResumo?: string[] | null;
   status?: string | null;
   active?: unknown;
   academias?: RawRef[] | null;
@@ -177,6 +214,10 @@ type RawUserSummary = {
   defaultUnitId?: string | null;
   defaultTenantName?: string | null;
   defaultUnitName?: string | null;
+  activeTenantId?: string | null;
+  activeTenantName?: string | null;
+  unidadeAtivaId?: string | null;
+  unidadeAtivaNome?: string | null;
   eligibleForNewUnits?: unknown;
   elegivelNovasUnidades?: unknown;
   broadAccess?: unknown;
@@ -346,6 +387,39 @@ function normalizeReviewStatus(value?: string | null): GlobalAdminReviewStatus |
   return undefined;
 }
 
+function normalizeScopeType(value?: string | null): GlobalAdminScopeType | undefined {
+  const normalized = cleanString(value)?.toUpperCase();
+  if (normalized === "UNIDADE" || normalized === "REDE" || normalized === "GLOBAL") {
+    return normalized;
+  }
+  return undefined;
+}
+
+function normalizeLoginIdentifiers(input: RawLoginIdentifier[] | null | undefined) {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((item) => {
+      const label =
+        cleanString(item.label)
+        ?? cleanString(item.rotulo)
+        ?? cleanString(item.type)
+        ?? cleanString(item.tipo)
+        ?? "Identificador";
+      const value =
+        cleanString(item.maskedValue)
+        ?? cleanString(item.valorMascarado)
+        ?? cleanString(item.value)
+        ?? cleanString(item.valor);
+      return value ? { label, value } : null;
+    })
+    .filter((item): item is NonNullable<GlobalAdminUserSummary["loginIdentifiers"]>[number] => item !== null);
+}
+
+function normalizeDomainLinksSummary(input?: string[] | null): string[] {
+  if (!Array.isArray(input)) return [];
+  return input.map((item) => item.trim()).filter(Boolean);
+}
+
 function normalizeAccessException(raw: RawException): GlobalAdminAccessException {
   return {
     id: cleanString(raw.id) ?? "",
@@ -411,6 +485,20 @@ function normalizeUserSummary(raw: RawUserSummary): GlobalAdminUserSummary {
     name: cleanString(raw.name) ?? cleanString(raw.nome) ?? cleanString(raw.fullName) ?? "",
     fullName: cleanString(raw.fullName),
     email: cleanString(raw.email) ?? "",
+    userKind: cleanString(raw.userKind),
+    networkId: cleanString(raw.redeId),
+    networkName: cleanString(raw.redeNome),
+    networkSlug: cleanString(raw.redeSlug),
+    scopeType: normalizeScopeType(raw.scopeType ?? raw.effectiveScope ?? raw.tipoEscopo),
+    loginIdentifiers: normalizeLoginIdentifiers([
+      ...(raw.loginIdentifiers ?? []),
+      ...(raw.identificadoresLogin ?? []),
+      ...(raw.identifiers ?? []),
+    ]),
+    domainLinksSummary: normalizeDomainLinksSummary([
+      ...(raw.domainLinksSummary ?? []),
+      ...(raw.vinculosDominioResumo ?? []),
+    ]),
     status: normalizeStatus(raw.status, raw.active),
     active: normalizeBoolean(raw.active, normalizeStatus(raw.status, raw.active) === "ATIVO"),
     academias: normalizeUnitRefs(raw.academias ?? raw.units),
@@ -419,6 +507,8 @@ function normalizeUserSummary(raw: RawUserSummary): GlobalAdminUserSummary {
     perfis,
     defaultTenantId: cleanString(raw.defaultTenantId) ?? cleanString(raw.defaultUnitId),
     defaultTenantName: cleanString(raw.defaultTenantName) ?? cleanString(raw.defaultUnitName),
+    activeTenantId: cleanString(raw.activeTenantId) ?? cleanString(raw.unidadeAtivaId),
+    activeTenantName: cleanString(raw.activeTenantName) ?? cleanString(raw.unidadeAtivaNome),
     eligibleForNewUnits: normalizeBoolean(raw.eligibleForNewUnits ?? raw.elegivelNovasUnidades, false),
     broadAccess: normalizeBoolean(raw.broadAccess ?? raw.acessoAmplo, false),
     compatibilityMode: normalizeBoolean(raw.compatibilityMode ?? raw.modoCompatibilidade, false),
@@ -437,12 +527,20 @@ function normalizeMembership(raw: RawMembership, userId: string): GlobalAdminMem
     userId: cleanString(raw.userId) ?? userId,
     tenantId: cleanString(raw.tenantId) ?? cleanString(raw.unidadeId) ?? "",
     tenantName: cleanString(raw.tenantName) ?? cleanString(raw.unidadeNome) ?? "",
+    networkId: cleanString(raw.redeId),
+    networkName: cleanString(raw.redeNome),
+    networkSlug: cleanString(raw.redeSlug),
+    scopeType: normalizeScopeType(raw.scopeType ?? raw.tipoEscopo),
     academiaId: cleanString(raw.academiaId) ?? cleanString(raw.groupId),
     academiaName: cleanString(raw.academiaName) ?? cleanString(raw.academiaNome),
     active: normalizeBoolean(raw.active ?? raw.ativo, true),
     defaultTenant: normalizeBoolean(raw.defaultTenant ?? raw.unidadePadrao, false),
     accessOrigin: normalizeMembershipOrigin(raw.accessOrigin ?? raw.origemAcesso),
     inheritedFrom: cleanString(raw.inheritedFrom) ?? cleanString(raw.origemDetalhe),
+    tenantBaseId: cleanString(raw.tenantBaseId) ?? cleanString(raw.unidadeBaseId),
+    tenantBaseName: cleanString(raw.tenantBaseName) ?? cleanString(raw.unidadeBaseNome),
+    activeTenantId: cleanString(raw.activeTenantId) ?? cleanString(raw.unidadeAtivaId),
+    activeTenantName: cleanString(raw.activeTenantName) ?? cleanString(raw.unidadeAtivaNome),
     eligibleForNewUnits: normalizeBoolean(raw.eligibleForNewUnits ?? raw.elegivelNovasUnidades, false),
     profiles,
     availableProfiles: [...(raw.availableProfiles ?? []), ...(raw.catalogoPerfis ?? [])].map(normalizePerfil),
@@ -512,6 +610,7 @@ export async function listGlobalAdminUsersApi(input: {
   academiaId?: string;
   status?: string;
   profile?: string;
+  scopeType?: string;
   eligibleForNewUnits?: boolean;
   page?: number;
   size?: number;
@@ -524,6 +623,7 @@ export async function listGlobalAdminUsersApi(input: {
       academiaId: cleanString(input.academiaId),
       status: cleanString(input.status),
       profile: cleanString(input.profile),
+      scopeType: cleanString(input.scopeType),
       eligibleForNewUnits: input.eligibleForNewUnits,
       page: input.page,
       size: input.size,

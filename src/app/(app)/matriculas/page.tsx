@@ -13,6 +13,7 @@ import {
   buildMonthKeyFromDate,
   formatDateLabel,
   formatMonthLabel,
+  listAvailableMonthKeys,
   sortMatriculasByRecency,
   type MatriculaActiveGroup,
   type MatriculaInsightRow,
@@ -26,6 +27,7 @@ import {
 import { useTenantContext } from "@/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const PAGE_SIZE = 20;
 const FETCH_SIZE = 200;
@@ -92,10 +94,10 @@ export default function MatriculasPage() {
   const [page, setPage] = useState(0);
   const [totalRows, setTotalRows] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(false);
-  const [currentMonthKey, setCurrentMonthKey] = useState("");
+  const [selectedMonthKey, setSelectedMonthKey] = useState("");
 
   useEffect(() => {
-    setCurrentMonthKey(buildMonthKeyFromDate(new Date()));
+    setSelectedMonthKey(buildMonthKeyFromDate(new Date()));
   }, []);
 
   const loadSnapshot = useCallback(
@@ -162,8 +164,13 @@ export default function MatriculasPage() {
   }, [load, tenantId, tenantResolved]);
 
   const snapshot = useMemo(
-    () => buildMatriculasMonthlySnapshot(rows, currentMonthKey),
-    [currentMonthKey, rows]
+    () => buildMatriculasMonthlySnapshot(rows, selectedMonthKey),
+    [selectedMonthKey, rows]
+  );
+
+  const availableMonthKeys = useMemo(
+    () => listAvailableMonthKeys(rows, selectedMonthKey),
+    [rows, selectedMonthKey]
   );
 
   const visibleRows = useMemo(() => {
@@ -174,11 +181,15 @@ export default function MatriculasPage() {
   const hasNextPage = (page + 1) * PAGE_SIZE < snapshot.monthRows.length;
   const showingFrom = visibleRows.length === 0 ? 0 : page * PAGE_SIZE + 1;
   const showingTo = visibleRows.length === 0 ? 0 : page * PAGE_SIZE + visibleRows.length;
-  const visibleMonthLabel = formatMonthLabel(currentMonthKey);
+  const visibleMonthLabel = formatMonthLabel(selectedMonthKey);
   const coverageNotice =
     typeof totalRows === "number" && totalRows > rows.length
-      ? `Visao mensal baseada nos ${rows.length} contratos mais recentes carregados.`
-      : "Visao mensal baseada em todos os contratos carregados da unidade ativa.";
+      ? `Visao de ${visibleMonthLabel} baseada nos ${rows.length} contratos mais recentes carregados.`
+      : `Visao de ${visibleMonthLabel} baseada em todos os contratos carregados da unidade ativa.`;
+
+  useEffect(() => {
+    setPage(0);
+  }, [selectedMonthKey]);
 
   return (
     <div className="space-y-6">
@@ -186,15 +197,31 @@ export default function MatriculasPage() {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Contratos e assinaturas</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Acompanhe os ultimos contratos do mes da unidade ativa, com leitura executiva da carteira e foco nos ativos.
+            Acompanhe os ultimos contratos do mes selecionado da unidade ativa, com leitura executiva da carteira e foco nos ativos.
           </p>
         </div>
-        <Link href="/vendas/nova">
-          <Button>
-            <Plus className="size-4" />
-            Nova contratação
-          </Button>
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="min-w-[220px]">
+            <label htmlFor="matriculas-month-filter" className="mb-1 block text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Mês de referência
+            </label>
+            <Input
+              id="matriculas-month-filter"
+              type="month"
+              value={selectedMonthKey}
+              min={availableMonthKeys[availableMonthKeys.length - 1]}
+              max={availableMonthKeys[0]}
+              onChange={(event) => setSelectedMonthKey(event.target.value)}
+              className="border-border bg-card"
+            />
+          </div>
+          <Link href="/vendas/nova">
+            <Button>
+              <Plus className="size-4" />
+              Nova contratação
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {feedback ? (
@@ -214,8 +241,8 @@ export default function MatriculasPage() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               label={`Contratos em ${visibleMonthLabel}`}
-              value={loading && !currentMonthKey ? "…" : String(snapshot.totalContracts)}
-              helper="recorte dos contratos mais recentes do mes atual"
+              value={loading && !selectedMonthKey ? "…" : String(snapshot.totalContracts)}
+              helper="recorte dos contratos mais recentes do mes selecionado"
             />
             <MetricCard
               label="Receita contratada"
@@ -347,7 +374,7 @@ export default function MatriculasPage() {
               {visibleRows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                    {loading ? "Carregando contratos..." : "Nenhum contrato recente encontrado no mes atual"}
+                    {loading ? "Carregando contratos..." : "Nenhum contrato recente encontrado no mes selecionado"}
                   </td>
                 </tr>
               ) : null}

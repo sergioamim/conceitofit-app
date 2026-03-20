@@ -3,6 +3,7 @@ import {
   buildMatriculasMonthlySnapshot,
   formatDateLabel,
   formatMonthLabel,
+  listAvailableMonthKeys,
 } from "../../src/lib/comercial/matriculas-insights";
 import type { Matricula } from "../../src/lib/types";
 
@@ -84,6 +85,16 @@ test.describe("matriculas insights", () => {
 
   test("formata datas e mes sem depender de locale do navegador", () => {
     expect(formatDateLabel("2026-03-19")).toBe("19/03/2026");
-    expect(formatMonthLabel("2026-03")).toBe("marco");
+    expect(formatMonthLabel("2026-03")).toBe("marco/2026");
+  });
+
+  test("lista meses disponiveis em ordem decrescente incluindo fallback atual", () => {
+    const rows = [
+      makeMatricula({ id: "mat-1", dataCriacao: "2026-03-10T09:00:00" }),
+      makeMatricula({ id: "mat-2", dataCriacao: "2026-01-08T09:00:00" }),
+      makeMatricula({ id: "mat-3", dataCriacao: "2026-03-05T09:00:00" }),
+    ];
+
+    expect(listAvailableMonthKeys(rows, "2026-04")).toEqual(["2026-04", "2026-03", "2026-01"]);
   });
 });

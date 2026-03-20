@@ -1601,6 +1601,7 @@ export interface RbacPaginatedResult<T> {
 }
 
 export type GlobalAdminUserStatus = "ATIVO" | "INATIVO" | "PENDENTE";
+export type GlobalAdminScopeType = "UNIDADE" | "REDE" | "GLOBAL";
 
 export type GlobalAdminMembershipOrigin =
   | "MANUAL"
@@ -1675,12 +1676,20 @@ export interface GlobalAdminMembership {
   userId: UUID;
   tenantId: UUID;
   tenantName: string;
+  networkId?: UUID;
+  networkName?: string;
+  networkSlug?: string;
+  scopeType?: GlobalAdminScopeType;
   academiaId?: UUID;
   academiaName?: string;
   active: boolean;
   defaultTenant: boolean;
   accessOrigin: GlobalAdminMembershipOrigin;
   inheritedFrom?: string;
+  tenantBaseId?: UUID;
+  tenantBaseName?: string;
+  activeTenantId?: UUID;
+  activeTenantName?: string;
   eligibleForNewUnits?: boolean;
   profiles: GlobalAdminMembershipProfile[];
   availableProfiles?: RbacPerfil[];
@@ -1709,6 +1718,16 @@ export interface GlobalAdminUserSummary {
   name: string;
   fullName?: string;
   email: string;
+  userKind?: string;
+  networkId?: UUID;
+  networkName?: string;
+  networkSlug?: string;
+  scopeType?: GlobalAdminScopeType;
+  loginIdentifiers?: Array<{
+    label: string;
+    value: string;
+  }>;
+  domainLinksSummary?: string[];
   status: GlobalAdminUserStatus;
   active: boolean;
   academias: GlobalAdminUnitRef[];
@@ -1717,6 +1736,8 @@ export interface GlobalAdminUserSummary {
   perfis: string[];
   defaultTenantId?: UUID;
   defaultTenantName?: string;
+  activeTenantId?: UUID;
+  activeTenantName?: string;
   eligibleForNewUnits: boolean;
   broadAccess?: boolean;
   compatibilityMode?: boolean;

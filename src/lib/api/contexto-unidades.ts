@@ -74,11 +74,20 @@ interface TenantAccessFromBootstrapApiResponse {
 
 interface TenantBootstrapUserApiResponse {
   id?: string;
+  userId?: string;
   nome?: string;
+  displayName?: string;
   email?: string;
   roles?: string[];
+  userKind?: string;
+  redeId?: string;
+  redeSlug?: string;
+  redeNome?: string;
   activeTenantId?: string;
+  tenantBaseId?: string;
   availableTenants?: TenantAccessFromBootstrapApiResponse[] | null;
+  availableScopes?: string[] | null;
+  broadAccess?: boolean;
 }
 
 interface TenantBootstrapCapabilitiesApiResponse {
@@ -297,12 +306,23 @@ export async function getSessionBootstrapApi(): Promise<{
       unidadesDisponiveis: response.tenantContext.unidadesDisponiveis.map(normalizeTenant),
     },
     user: {
-      id: response.user.id,
+      id: response.user.id ?? response.user.userId,
+      userId: response.user.userId ?? response.user.id,
       nome: response.user.nome,
+      displayName: response.user.displayName ?? response.user.nome,
       email: response.user.email,
       roles: response.user.roles ?? [],
+      userKind: response.user.userKind,
+      networkId: response.user.redeId,
+      networkSlug: response.user.redeSlug,
+      networkName: response.user.redeNome,
       activeTenantId: response.user.activeTenantId,
+      baseTenantId: response.user.tenantBaseId,
       availableTenants: parseAvailableTenantsFromBootstrap(response.user.availableTenants),
+      availableScopes: (response.user.availableScopes ?? [])
+        .map((item) => item.trim().toUpperCase())
+        .filter((item): item is NonNullable<AuthUser["availableScopes"]>[number] => item === "UNIDADE" || item === "REDE" || item === "GLOBAL"),
+      broadAccess: response.user.broadAccess,
     },
     academia: response.academia ? normalizeAcademia(response.academia) : undefined,
     branding: response.branding

@@ -82,8 +82,17 @@ interface AuthSessionPayload {
   refreshToken?: string;
   type?: string;
   expiresIn?: number;
+  userId?: string;
+  userKind?: string;
+  displayName?: string;
+  redeId?: string;
+  redeSlug?: string;
+  redeNome?: string;
   activeTenantId?: string;
+  tenantBaseId?: string;
   availableTenants?: AuthTenantAccessPayload[];
+  availableScopes?: string[];
+  broadAccess?: boolean;
 }
 
 function normalizeBaseUrl(value: string | undefined): string {
@@ -460,8 +469,21 @@ function persistAuthSessionFromPayload(
       payload.refreshToken ?? options?.fallbackRefreshToken ?? getRefreshToken() ?? "",
     type: nextType,
     expiresIn: payload.expiresIn,
+    userId: payload.userId,
+    userKind: payload.userKind,
+    displayName: payload.displayName,
+    networkId: payload.redeId,
+    networkSlug: payload.redeSlug,
+    networkName: payload.redeNome,
     activeTenantId: nextActiveTenantId,
+    baseTenantId: payload.tenantBaseId,
     availableTenants: nextAvailableTenants,
+    availableScopes: Array.isArray(payload.availableScopes)
+      ? payload.availableScopes
+          .map((item) => item.trim().toUpperCase())
+          .filter((item): item is "UNIDADE" | "REDE" | "GLOBAL" => item === "UNIDADE" || item === "REDE" || item === "GLOBAL")
+      : undefined,
+    broadAccess: payload.broadAccess,
   });
 
   return {

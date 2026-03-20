@@ -28,7 +28,8 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { clearAuthSession } from "@/lib/api/session";
+import { clearAuthSession, getNetworkSlugFromSession } from "@/lib/api/session";
+import { buildLoginHref } from "@/lib/auth-redirect";
 import { DEFAULT_TENANT_APP_NAME } from "@/lib/tenant-theme";
 import { cn } from "@/lib/utils";
 import {
@@ -590,10 +591,11 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
               onClick={async () => {
                 setLoggingOut(true);
                 try {
+                  const redirectHref = buildLoginHref(undefined, getNetworkSlugFromSession());
                   clearAuthSession();
-                  router.replace("/login");
+                  router.replace(redirectHref);
                   if (typeof window !== "undefined") {
-                    window.location.assign("/login");
+                    window.location.assign(redirectHref);
                   }
                 } finally {
                   setLoggingOut(false);

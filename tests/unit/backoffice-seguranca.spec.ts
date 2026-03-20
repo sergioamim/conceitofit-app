@@ -137,6 +137,18 @@ test.describe("backoffice segurança", () => {
               id: "user-ana",
               nome: "Ana Admin",
               email: "ana@qa.local",
+              userKind: "COLABORADOR",
+              redeId: "rede-1",
+              redeNome: "Rede Norte",
+              redeSlug: "rede-norte",
+              scopeType: "REDE",
+              loginIdentifiers: [
+                { label: "E-mail", value: "ana@qa.local" },
+                { label: "CPF", value: "***1234" },
+              ],
+              domainLinksSummary: ["Grupo Norte (somente leitura)"],
+              activeTenantId: "tenant-centro",
+              activeTenantName: "Centro",
               status: "ATIVO",
               academias: [{ id: "acd-1", nome: "Rede Norte" }],
               profiles: [{ roleName: "ADMIN", displayName: "Administrador" }],
@@ -167,13 +179,23 @@ test.describe("backoffice segurança", () => {
           id: "user-ana",
           name: "Ana Admin",
           email: "ana@qa.local",
+          userKind: "COLABORADOR",
+          networkName: "Rede Norte",
+          networkSlug: "rede-norte",
+          scopeType: "REDE",
           membershipsAtivos: 2,
           defaultTenantName: "Centro",
+          activeTenantName: "Centro",
           eligibleForNewUnits: true,
           perfis: ["Administrador"],
         })
       );
       expect(response.items[0]?.academias[0]?.nome).toBe("Rede Norte");
+      expect(response.items[0]?.loginIdentifiers).toEqual([
+        { label: "E-mail", value: "ana@qa.local" },
+        { label: "CPF", value: "***1234" },
+      ]);
+      expect(response.items[0]?.domainLinksSummary).toEqual(["Grupo Norte (somente leitura)"]);
     } finally {
       restore();
     }
@@ -186,6 +208,18 @@ test.describe("backoffice segurança", () => {
           id: "user-ana",
           nome: "Ana Admin",
           email: "ana@qa.local",
+          userKind: "COLABORADOR",
+          redeId: "rede-1",
+          redeNome: "Rede Norte",
+          redeSlug: "rede-norte",
+          scopeType: "REDE",
+          loginIdentifiers: [
+            { label: "E-mail", value: "ana@qa.local" },
+            { label: "CPF", value: "***1234" },
+          ],
+          domainLinksSummary: ["Grupo Norte (somente leitura)"],
+          activeTenantId: "tenant-centro",
+          activeTenantName: "Centro",
           active: true,
           academias: [{ id: "acd-1", nome: "Rede Norte" }],
           membershipsAtivos: 1,
@@ -202,10 +236,18 @@ test.describe("backoffice segurança", () => {
               id: "mem-centro",
               tenantId: "tenant-centro",
               tenantName: "Centro",
+              redeId: "rede-1",
+              redeNome: "Rede Norte",
+              redeSlug: "rede-norte",
+              scopeType: "REDE",
               academiaId: "acd-1",
               academiaName: "Rede Norte",
               active: true,
               defaultTenant: true,
+              tenantBaseId: "tenant-base",
+              tenantBaseName: "Base Centro",
+              activeTenantId: "tenant-centro",
+              activeTenantName: "Centro",
               accessOrigin: "HERDADO",
               inheritedFrom: "Política regional",
               eligibleForNewUnits: true,
@@ -310,10 +352,20 @@ test.describe("backoffice segurança", () => {
           broadAccess: true,
           riskLevel: "ALTO",
           reviewStatus: "PENDENTE",
+          scopeType: "REDE",
+          tenantBaseName: "Base Centro",
+          activeTenantName: "Centro",
         })
       );
       expect(detail.memberships[0]?.exceptions).toHaveLength(1);
       expect(detail.memberships[0]?.availableProfiles).toHaveLength(2);
+      expect(detail.networkName).toBe("Rede Norte");
+      expect(detail.scopeType).toBe("REDE");
+      expect(detail.activeTenantName).toBe("Centro");
+      expect(detail.loginIdentifiers).toEqual([
+        { label: "E-mail", value: "ana@qa.local" },
+        { label: "CPF", value: "***1234" },
+      ]);
       expect(detail.exceptions[0]).toEqual(
         expect.objectContaining({
           title: "Auditoria externa",
