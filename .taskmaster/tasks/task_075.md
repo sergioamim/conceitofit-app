@@ -2,7 +2,7 @@
 
 **Title:** Exibir resumo ETL de colaboradores por bloco importado
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 74
 

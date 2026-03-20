@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { ApiRequestError } from "@/lib/api/http";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import {
+  type EvoImportColaboradoresBlocoResumo,
+  type EvoImportColaboradoresResumo,
   type EvoImportEntidadeResumo as EntidadeResumo,
   type EvoImportJobResumo as JobResumo,
   type EvoImportJobStatus as EvoStatus,
@@ -87,6 +89,12 @@ const PACOTE_CHAVES_DISPONIVEIS = [
   "produtoMovimentacoes",
   "servicos",
   "funcionarios",
+  "funcionariosFuncoes",
+  "funcionariosFuncoesExercidas",
+  "funcionariosTipos",
+  "tiposFuncionarios",
+  "funcionariosHorarios",
+  "permissoes",
   "treinos",
   "treinosExercicios",
   "treinosGruposExercicios",
@@ -97,6 +105,163 @@ const PACOTE_CHAVES_DISPONIVEIS = [
 ] as const;
 
 type PacoteArquivoChave = (typeof PACOTE_CHAVES_DISPONIVEIS)[number];
+
+type ColaboradorBlocoKey =
+  | "fichaPrincipal"
+  | "funcoes"
+  | "tiposOperacionais"
+  | "horarios"
+  | "contratacao"
+  | "perfilLegado";
+
+type ColaboradorArquivoConfig = {
+  key: keyof FileMap;
+  label: string;
+  field: string;
+  pacoteChave: PacoteArquivoChave;
+  bloco: ColaboradorBlocoKey;
+  rotuloResumo: string;
+  descricao: string;
+  impactoAusencia: string;
+};
+
+const COLABORADOR_ARQUIVOS_CONFIG: ColaboradorArquivoConfig[] = [
+  {
+    key: "funcionariosFile",
+    label: "FUNCIONARIOS.csv",
+    field: "funcionariosFile",
+    pacoteChave: "funcionarios",
+    bloco: "fichaPrincipal",
+    rotuloResumo: "Cadastro principal",
+    descricao: "Base do colaborador, vínculo principal e dados cadastrais.",
+    impactoAusencia: "Sem este arquivo, a malha de colaboradores não tem base mínima para importação.",
+  },
+  {
+    key: "funcionariosFuncoesFile",
+    label: "FUNCIONARIOS_FUNCOES.csv",
+    field: "funcionariosFuncoesFile",
+    pacoteChave: "funcionariosFuncoes",
+    bloco: "funcoes",
+    rotuloResumo: "Catálogo de funções",
+    descricao: "Catálogo legado de cargos e funções vindos do EVO.",
+    impactoAusencia: "Sem o catálogo, vínculos de função podem ficar rejeitados ou sem reconciliação.",
+  },
+  {
+    key: "funcionariosFuncoesExercidasFile",
+    label: "FUNCIONARIOS_FUNCOES_EXERCIDAS.csv",
+    field: "funcionariosFuncoesExercidasFile",
+    pacoteChave: "funcionariosFuncoesExercidas",
+    bloco: "funcoes",
+    rotuloResumo: "Funções exercidas",
+    descricao: "Relaciona cada colaborador às funções exercidas na operação.",
+    impactoAusencia: "Sem este vínculo, o colaborador entra sem função/cargo operacional resolvido.",
+  },
+  {
+    key: "tiposFuncionariosFile",
+    label: "TIPOS_FUNCIONARIOS.csv",
+    field: "tiposFuncionariosFile",
+    pacoteChave: "tiposFuncionarios",
+    bloco: "tiposOperacionais",
+    rotuloResumo: "Tipos operacionais",
+    descricao: "Catálogo de tipos operacionais e perfis técnicos usados na contratação.",
+    impactoAusencia: "Sem o catálogo de tipos, a contratação fica dependente de fallback legado.",
+  },
+  {
+    key: "funcionariosTiposFile",
+    label: "FUNCIONARIOS_TIPOS.csv",
+    field: "funcionariosTiposFile",
+    pacoteChave: "funcionariosTipos",
+    bloco: "contratacao",
+    rotuloResumo: "Contratação e vínculos",
+    descricao: "Relaciona o colaborador aos tipos operacionais e vínculos contratuais.",
+    impactoAusencia: "Sem este CSV, o colaborador pode entrar sem vínculo operacional/contratual resolvido.",
+  },
+  {
+    key: "funcionariosHorariosFile",
+    label: "FUNCIONARIOS_HORARIOS.csv",
+    field: "funcionariosHorariosFile",
+    pacoteChave: "funcionariosHorarios",
+    bloco: "horarios",
+    rotuloResumo: "Horários semanais",
+    descricao: "Jornadas e grade horária semanal do colaborador.",
+    impactoAusencia: "Sem horários, a importação fica parcial para agenda e disponibilidade operacional.",
+  },
+  {
+    key: "permissoesFile",
+    label: "PERMISSOES.csv",
+    field: "permissoesFile",
+    pacoteChave: "permissoes",
+    bloco: "perfilLegado",
+    rotuloResumo: "Perfil legado",
+    descricao: "Permissões/perfil legado para reconciliação com papéis administrativos.",
+    impactoAusencia: "Sem permissões, a reconciliação do perfil legado fica pendente ou parcial.",
+  },
+];
+
+const COLABORADOR_BLOCO_CONFIG: Array<{
+  key: ColaboradorBlocoKey;
+  label: string;
+  descricao: string;
+  impactoAusencia: string;
+  entidadeFiltros: string[];
+  arquivos: ColaboradorArquivoConfig[];
+  retryLabel: string;
+}> = [
+  {
+    key: "fichaPrincipal",
+    label: "Ficha principal",
+    descricao: "Cadastro-base do colaborador.",
+    impactoAusencia: "Sem cadastro principal, os demais blocos não conseguem consolidar a ficha do colaborador.",
+    entidadeFiltros: ["FUNCIONARIOS"],
+    arquivos: COLABORADOR_ARQUIVOS_CONFIG.filter((arquivo) => arquivo.bloco === "fichaPrincipal"),
+    retryLabel: "Reprocessar ficha principal",
+  },
+  {
+    key: "funcoes",
+    label: "Funções e cargos",
+    descricao: "Catálogo legado e funções exercidas por colaborador.",
+    impactoAusencia: "Sem estes arquivos, a importação não consegue consolidar cargo/função operacional.",
+    entidadeFiltros: ["FUNCIONARIOS", "FUNCIONARIOS_FUNCOES", "FUNCIONARIOS_FUNCOES_EXERCIDAS"],
+    arquivos: COLABORADOR_ARQUIVOS_CONFIG.filter((arquivo) => arquivo.bloco === "funcoes"),
+    retryLabel: "Reprocessar funções",
+  },
+  {
+    key: "tiposOperacionais",
+    label: "Tipos operacionais",
+    descricao: "Catálogo de tipos usados pela contratação.",
+    impactoAusencia: "Sem o catálogo, vínculos contratuais podem cair em fallback ou rejeição.",
+    entidadeFiltros: ["TIPOS_FUNCIONARIOS", "FUNCIONARIOS_TIPOS"],
+    arquivos: COLABORADOR_ARQUIVOS_CONFIG.filter((arquivo) => arquivo.bloco === "tiposOperacionais"),
+    retryLabel: "Reprocessar tipos operacionais",
+  },
+  {
+    key: "contratacao",
+    label: "Contratação",
+    descricao: "Vínculos do colaborador com tipos operacionais.",
+    impactoAusencia: "Sem contratação, o colaborador entra sem vínculo operacional final.",
+    entidadeFiltros: ["FUNCIONARIOS_TIPOS", "TIPOS_FUNCIONARIOS"],
+    arquivos: COLABORADOR_ARQUIVOS_CONFIG.filter((arquivo) => arquivo.bloco === "contratacao"),
+    retryLabel: "Reprocessar contratação",
+  },
+  {
+    key: "horarios",
+    label: "Horários",
+    descricao: "Grade semanal e disponibilidade.",
+    impactoAusencia: "Sem horários, a operação precisa complementar manualmente a jornada.",
+    entidadeFiltros: ["FUNCIONARIOS_HORARIOS"],
+    arquivos: COLABORADOR_ARQUIVOS_CONFIG.filter((arquivo) => arquivo.bloco === "horarios"),
+    retryLabel: "Reprocessar horários",
+  },
+  {
+    key: "perfilLegado",
+    label: "Perfil legado",
+    descricao: "Reconciliação de permissões e papéis antigos.",
+    impactoAusencia: "Sem perfil legado, acessos administrativos dependem de ajuste posterior.",
+    entidadeFiltros: ["PERMISSOES"],
+    arquivos: COLABORADOR_ARQUIVOS_CONFIG.filter((arquivo) => arquivo.bloco === "perfilLegado"),
+    retryLabel: "Reprocessar perfil legado",
+  },
+];
 
 const IMPORT_RESUMO_CARD_CONFIG: Array<{
   key: keyof JobResumo;
@@ -127,7 +292,7 @@ const IMPORT_RESUMO_CARD_CONFIG: Array<{
   { key: "servicos", label: "Serviços", arquivoChave: "servicos", csvField: "servicosFile", entidade: "SERVICOS" },
   {
     key: "funcionarios",
-    label: "Funcionários",
+    label: "Colaboradores",
     arquivoChave: "funcionarios",
     csvField: "funcionariosFile",
     entidade: "FUNCIONARIOS",
@@ -196,8 +361,33 @@ const JOB_HISTORY_KEY = "evo-importacao-jobs-historico";
 const JOB_HISTORY_LIMIT = 30;
 const STORAGE_KEY = "evo-ultima-importacao-jobId";
 const ENTIDADE_TODAS = "__todas__";
+const BLOCO_TODOS = "__todos_blocos__";
 const resolveTenantForStorage = (tenantId?: string | null) =>
   (tenantId ?? "global").trim().toLowerCase() || "global";
+
+const colaboradorArquivoMetaIndex = new Map(
+  COLABORADOR_ARQUIVOS_CONFIG.map((arquivo) => [arquivo.pacoteChave, arquivo] as const)
+);
+
+const colaboradorBlocoMetaIndex = new Map(
+  COLABORADOR_BLOCO_CONFIG.map((bloco) => [bloco.key, bloco] as const)
+);
+
+type RejeicaoClassificada = Rejeicao & {
+  idNormalizado: string;
+  blocoClassificado: ColaboradorBlocoKey | null;
+  blocoLabel: string | null;
+  diagnostico: string | null;
+  retryConfig:
+    | {
+        suportado: boolean;
+        escopo: string;
+        label: string;
+        descricao?: string | null;
+      }
+    | null;
+  payloadFormatado: string | null;
+};
 
 function isOnboardingCollectionRouteError(message: string) {
   const normalized = message.toLowerCase();
@@ -252,6 +442,56 @@ function buildDefaultJobAlias(input: {
   return data ? `${origem} · ${contexto} · ${data}` : `${origem} · ${contexto}`;
 }
 
+function isColaboradorArquivoChave(chave?: string | null): chave is PacoteArquivoChave {
+  return Boolean(chave && colaboradorArquivoMetaIndex.has(chave as PacoteArquivoChave));
+}
+
+function inferColaboradorBlocoFromText(value?: string | null): ColaboradorBlocoKey | null {
+  const normalized = normalizeSearchKey(value);
+  if (!normalized) return null;
+  if (normalized.includes("horario")) return "horarios";
+  if (normalized.includes("permiss") || normalized.includes("perfil legado")) return "perfilLegado";
+  if (normalized.includes("funcao") || normalized.includes("cargo")) return "funcoes";
+  if (normalized.includes("tipo")) return normalized.includes("contrat") ? "contratacao" : "tiposOperacionais";
+  if (normalized.includes("contrat") || normalized.includes("vinculo")) return "contratacao";
+  if (normalized.includes("funcionario") || normalized.includes("colaborador")) return "fichaPrincipal";
+  return null;
+}
+
+function resolveColaboradorBlocoFromRejeicao(rejeicao: Rejeicao): ColaboradorBlocoKey | null {
+  const blocoExplcito = inferColaboradorBlocoFromText(rejeicao.bloco ?? rejeicao.subdominio);
+  if (blocoExplcito) return blocoExplcito;
+  if (isColaboradorArquivoChave(rejeicao.arquivo)) {
+    return colaboradorArquivoMetaIndex.get(rejeicao.arquivo)?.bloco ?? null;
+  }
+  return (
+    inferColaboradorBlocoFromText(rejeicao.entidade) ??
+    inferColaboradorBlocoFromText(rejeicao.arquivo) ??
+    inferColaboradorBlocoFromText(rejeicao.motivo)
+  );
+}
+
+function formatPayloadForDisplay(payload: unknown): string | null {
+  if (payload === undefined || payload === null) return null;
+  if (typeof payload === "string") {
+    const trimmed = payload.trim();
+    return trimmed ? trimmed : null;
+  }
+  try {
+    return JSON.stringify(payload, null, 2);
+  } catch {
+    return String(payload);
+  }
+}
+
+function getColaboradorResumoBloco(
+  resumo: EvoImportColaboradoresResumo | undefined,
+  bloco: ColaboradorBlocoKey
+): EvoImportColaboradoresBlocoResumo | undefined {
+  if (!resumo) return undefined;
+  return resumo[bloco];
+}
+
 const FILE_FIELDS: { key: keyof FileMap; label: string; field: string }[] = [
   { key: "clientesFile", label: "CLIENTES.csv", field: "clientesFile" },
   { key: "prospectsFile", label: "PROSPECTS.csv", field: "prospectsFile" },
@@ -264,7 +504,7 @@ const FILE_FIELDS: { key: keyof FileMap; label: string; field: string }[] = [
   { key: "produtosFile", label: "PRODUTOS.csv", field: "produtosFile" },
   { key: "produtoMovimentacoesFile", label: "PRODUTOS_MOVIMENTACOES.csv", field: "produtoMovimentacoesFile" },
   { key: "servicosFile", label: "SERVICOS.csv", field: "servicosFile" },
-  { key: "funcionariosFile", label: "FUNCIONARIOS.csv", field: "funcionariosFile" },
+  ...COLABORADOR_ARQUIVOS_CONFIG.map(({ key, label, field }) => ({ key, label, field })),
   { key: "treinosExerciciosFile", label: "TREINOS_EXERCICIOS.csv", field: "treinosExerciciosFile" },
   { key: "treinosFile", label: "TREINOS.csv", field: "treinosFile" },
   { key: "treinosGruposExerciciosFile", label: "TREINOS_GRUPOS_EXERCICIOS.csv", field: "treinosGruposExerciciosFile" },
@@ -272,6 +512,59 @@ const FILE_FIELDS: { key: keyof FileMap; label: string; field: string }[] = [
   { key: "treinosSeriesItensFile", label: "TREINOS_SERIES_ITENS.csv", field: "treinosSeriesItensFile" },
   { key: "contasBancariasFile", label: "CONTAS_BANCARIAS.csv", field: "contasBancariasFile" },
   { key: "contasPagarFile", label: "CONTAS_PAGAR.csv", field: "contasPagarFile" },
+];
+
+const FILE_UPLOAD_GROUPS: Array<{
+  key: string;
+  label: string;
+  description: string;
+  fields: Array<keyof FileMap>;
+}> = [
+  {
+    key: "comercial",
+    label: "Base comercial e relacionamento",
+    description: "Clientes, prospects, contratos e documentos comerciais.",
+    fields: [
+      "clientesFile",
+      "prospectsFile",
+      "contratosFile",
+      "clientesContratosFile",
+      "vendasFile",
+      "vendasItensFile",
+      "recebimentosFile",
+    ],
+  },
+  {
+    key: "financeiro",
+    label: "Financeiro e estoque",
+    description: "Caixa, produtos, serviços, maquininhas e contas.",
+    fields: [
+      "contasBancariasFile",
+      "contasPagarFile",
+      "maquininhasFile",
+      "produtosFile",
+      "produtoMovimentacoesFile",
+      "servicosFile",
+    ],
+  },
+  {
+    key: "colaboradores",
+    label: "Colaboradores",
+    description: "Malha enriquecida com cadastro principal, funções, contratação, horários e perfil legado.",
+    fields: COLABORADOR_ARQUIVOS_CONFIG.map((arquivo) => arquivo.key),
+  },
+  {
+    key: "treinos",
+    label: "Treinos",
+    description: "Estrutura de treinos, grupos, séries e exercícios.",
+    fields: [
+      "treinosExerciciosFile",
+      "treinosFile",
+      "treinosGruposExerciciosFile",
+      "treinosSeriesFile",
+      "treinosSeriesItensFile",
+    ],
+  },
 ];
 
 type FileMap = {
@@ -289,6 +582,12 @@ type FileMap = {
   produtoMovimentacoesFile?: File | null;
   servicosFile?: File | null;
   funcionariosFile?: File | null;
+  funcionariosFuncoesFile?: File | null;
+  funcionariosFuncoesExercidasFile?: File | null;
+  funcionariosTiposFile?: File | null;
+  tiposFuncionariosFile?: File | null;
+  funcionariosHorariosFile?: File | null;
+  permissoesFile?: File | null;
   treinosExerciciosFile?: File | null;
   treinosGruposExerciciosFile?: File | null;
   treinosFile?: File | null;
@@ -446,6 +745,8 @@ function ImportacaoEvoP0PageContent() {
   const [rejeicoesLoading, setRejeicoesLoading] = useState(false);
   const [showRejeicoes, setShowRejeicoes] = useState(false);
   const [entidadeFiltro, setEntidadeFiltro] = useState<string>(ENTIDADE_TODAS);
+  const [blocoFiltro, setBlocoFiltro] = useState<string>(BLOCO_TODOS);
+  const [retrySelecao, setRetrySelecao] = useState<Record<string, RejeicaoClassificada>>({});
   const lastJobStatusRef = useRef<EvoStatus | null>(null);
   const [csvJobAlias, setCsvJobAlias] = useState("");
   const [jobAliasDraft, setJobAliasDraft] = useState("");
@@ -656,12 +957,18 @@ function ImportacaoEvoP0PageContent() {
     return unidadesPorAcademia.get(academiaId) ?? [];
   }, [unidadesPorAcademia]);
   const resolveRejeicao = useCallback((rejeicao: Partial<Rejeicao> & { createdAt?: string }) => ({
+    id: rejeicao.id,
     entidade: rejeicao.entidade ?? "—",
     arquivo: rejeicao.arquivo ?? "—",
     linhaArquivo: rejeicao.linhaArquivo ?? 0,
     sourceId: rejeicao.sourceId,
     motivo: rejeicao.motivo ?? "Sem motivo informado",
-    criadoEm: rejeicao.criadoEm ?? rejeicao.createdAt ?? new Date().toISOString(),
+    criadoEm: rejeicao.criadoEm ?? rejeicao.createdAt ?? "",
+    bloco: rejeicao.bloco,
+    subdominio: rejeicao.subdominio,
+    payload: rejeicao.payload,
+    mensagemAcionavel: rejeicao.mensagemAcionavel,
+    reprocessamento: rejeicao.reprocessamento ?? null,
   }), []);
 
   const formatErrorBody = useCallback((value: unknown) => {
@@ -879,7 +1186,33 @@ function ImportacaoEvoP0PageContent() {
 
   const pacoteArquivosDisponiveis = useMemo<UploadAnaliseArquivo[]>(() => {
     if (!pacoteAnalise) return [];
-    const ordenado = [...pacoteAnalise.arquivos]
+    const enriched = [...pacoteAnalise.arquivos].map((arquivo) => {
+      const meta = colaboradorArquivoMetaIndex.get(arquivo.chave as PacoteArquivoChave);
+      if (!meta) return arquivo;
+      return {
+        ...arquivo,
+        rotulo: arquivo.rotulo || meta.rotuloResumo,
+        arquivoEsperado: arquivo.arquivoEsperado || meta.label,
+        bloco: arquivo.bloco ?? meta.bloco,
+        dominio: arquivo.dominio ?? "colaboradores",
+        descricao: arquivo.descricao ?? meta.descricao,
+        impactoAusencia: arquivo.impactoAusencia ?? meta.impactoAusencia,
+      };
+    });
+    COLABORADOR_ARQUIVOS_CONFIG.forEach((meta) => {
+      if (enriched.some((arquivo) => arquivo.chave === meta.pacoteChave)) return;
+      enriched.push({
+        chave: meta.pacoteChave,
+        rotulo: meta.rotuloResumo,
+        arquivoEsperado: meta.label,
+        disponivel: false,
+        dominio: "colaboradores",
+        bloco: meta.bloco,
+        descricao: meta.descricao,
+        impactoAusencia: meta.impactoAusencia,
+      });
+    });
+    const ordenado = enriched
       .sort((a, b) => {
         const indexA = PACOTE_CHAVES_DISPONIVEIS.indexOf(a.chave as (typeof PACOTE_CHAVES_DISPONIVEIS)[number]);
         const indexB = PACOTE_CHAVES_DISPONIVEIS.indexOf(b.chave as (typeof PACOTE_CHAVES_DISPONIVEIS)[number]);
@@ -890,6 +1223,46 @@ function ImportacaoEvoP0PageContent() {
       });
     return ordenado;
   }, [pacoteAnalise]);
+
+  const pacoteColaboradoresBlocos = useMemo(() => {
+    const index = new Map(pacoteArquivosDisponiveis.map((arquivo) => [arquivo.chave, arquivo] as const));
+    return COLABORADOR_BLOCO_CONFIG.map((bloco) => {
+      const arquivos = bloco.arquivos.map((meta) => {
+        const arquivo = index.get(meta.pacoteChave);
+        return (
+          arquivo ?? {
+            chave: meta.pacoteChave,
+            rotulo: meta.rotuloResumo,
+            arquivoEsperado: meta.label,
+            disponivel: false,
+            bloco: meta.bloco,
+            dominio: "colaboradores",
+            descricao: meta.descricao,
+            impactoAusencia: meta.impactoAusencia,
+          }
+        );
+      });
+      const disponiveis = arquivos.filter((arquivo) => arquivo.disponivel);
+      const status =
+        disponiveis.length === 0 ? "ausente" : disponiveis.length === arquivos.length ? "completo" : "parcial";
+      return {
+        ...bloco,
+        arquivos,
+        disponiveis,
+        status,
+      };
+    });
+  }, [pacoteArquivosDisponiveis]);
+
+  const csvUploadGroups = useMemo(() => {
+    const fieldIndex = new Map(FILE_FIELDS.map((field) => [field.key, field] as const));
+    return FILE_UPLOAD_GROUPS.map((group) => ({
+      ...group,
+      files: group.fields
+        .map((fieldKey) => fieldIndex.get(fieldKey))
+        .filter((field): field is { key: keyof FileMap; label: string; field: string } => Boolean(field)),
+    }));
+  }, []);
 
   const pacoteEvoUnidadeInformada = useMemo(() => parsePositiveInteger(pacoteEvoUnidadeId), [pacoteEvoUnidadeId]);
 
@@ -1080,26 +1453,80 @@ function ImportacaoEvoP0PageContent() {
     () => Array.from(new Set(jobHistoricoAtual?.arquivosDisponiveis?.filter(Boolean) ?? [])),
     [jobHistoricoAtual?.arquivosDisponiveis]
   );
+  const jobTemMalhaColaboradores = useMemo(
+    () => jobArquivosSelecionados.some((arquivo) => isColaboradorArquivoChave(arquivo)),
+    [jobArquivosSelecionados]
+  );
+
   const resumoCardsVisiveis = useMemo(() => {
     if (!jobArquivosSelecionados.length) return resumoCards;
     const selecionados = new Set(jobArquivosSelecionados);
-    return resumoCards.filter(
-      (card) => card.key === "geral" || (card.arquivoChave ? selecionados.has(card.arquivoChave) : false)
-    );
-  }, [jobArquivosSelecionados, resumoCards]);
+    return resumoCards.filter((card) => {
+      if (card.key === "geral") return true;
+      if (card.key === "funcionarios") {
+        return jobTemMalhaColaboradores || selecionados.has("funcionarios");
+      }
+      return card.arquivoChave ? selecionados.has(card.arquivoChave) : false;
+    });
+  }, [jobArquivosSelecionados, jobTemMalhaColaboradores, resumoCards]);
+
   const resumoCardsOcultos = useMemo(() => {
     if (!jobArquivosSelecionados.length) return [] as typeof resumoCards;
     if (!jobArquivosDisponiveis.length) return [] as typeof resumoCards;
     const selecionados = new Set(jobArquivosSelecionados);
     const disponiveis = new Set(jobArquivosDisponiveis);
-    return resumoCards.filter(
-      (card) =>
-        card.key !== "geral" &&
-        card.arquivoChave &&
-        disponiveis.has(card.arquivoChave) &&
-        !selecionados.has(card.arquivoChave)
-    );
-  }, [jobArquivosDisponiveis, jobArquivosSelecionados, resumoCards]);
+    const colaboradorDisponivel = jobArquivosDisponiveis.some((arquivo) => isColaboradorArquivoChave(arquivo));
+    return resumoCards.filter((card) => {
+      if (card.key === "geral" || !card.arquivoChave) return false;
+      if (card.key === "funcionarios") {
+        return colaboradorDisponivel && !jobTemMalhaColaboradores;
+      }
+      return disponiveis.has(card.arquivoChave) && !selecionados.has(card.arquivoChave);
+    });
+  }, [jobArquivosDisponiveis, jobArquivosSelecionados, jobTemMalhaColaboradores, resumoCards]);
+
+  const colaboradoresResumoDetalhado = jobResumo?.colaboradoresDetalhe;
+
+  const colaboradoresResumoCards = useMemo(() => {
+    if (!jobTemMalhaColaboradores && !colaboradoresResumoDetalhado && !jobResumo?.funcionarios) return [];
+    const selecionados = new Set(jobArquivosSelecionados);
+    return COLABORADOR_BLOCO_CONFIG.map((bloco) => {
+      const resumo = getColaboradorResumoBloco(colaboradoresResumoDetalhado, bloco.key);
+      const arquivosSelecionados = bloco.arquivos.filter((arquivo) => selecionados.has(arquivo.pacoteChave));
+      const arquivosAusentes = bloco.arquivos.filter((arquivo) => !selecionados.has(arquivo.pacoteChave));
+      const fallbackResumo =
+        !resumo && bloco.key === "fichaPrincipal" ? (jobResumo?.funcionarios as EvoImportColaboradoresBlocoResumo | undefined) : undefined;
+      return {
+        ...bloco,
+        resumo: resumo ?? fallbackResumo,
+        arquivosSelecionados,
+        arquivosAusentes,
+      };
+    });
+  }, [colaboradoresResumoDetalhado, jobArquivosSelecionados, jobResumo?.funcionarios, jobTemMalhaColaboradores]);
+
+  const colaboradoresResumoAlertas = useMemo(() => {
+    const alertas =
+      colaboradoresResumoDetalhado?.alertas?.filter((item): item is NonNullable<typeof item> => Boolean(item)) ?? [];
+    if (alertas.length > 0) {
+      return alertas.map((alerta) => ({
+        bloco: inferColaboradorBlocoFromText(alerta.bloco),
+        mensagem: alerta.mensagem,
+        severidade: alerta.severidade ?? "warning",
+      }));
+    }
+    if (!jobTemMalhaColaboradores) return [];
+    return colaboradoresResumoCards
+      .filter((bloco) => bloco.arquivosAusentes.length > 0)
+      .map((bloco) => ({
+        bloco: bloco.key,
+        mensagem:
+          bloco.arquivosSelecionados.length === 0
+            ? `${bloco.label} não foi incluído nesta execução.`
+            : `${bloco.label} executado sem ${bloco.arquivosAusentes.map((arquivo) => arquivo.label).join(", ")}.`,
+        severidade: "warning" as const,
+      }));
+  }, [colaboradoresResumoCards, colaboradoresResumoDetalhado?.alertas, jobTemMalhaColaboradores]);
 
   useEffect(() => {
     if (!jobId) {
@@ -2017,9 +2444,10 @@ function ImportacaoEvoP0PageContent() {
     });
   }
 
-  function openRejeicoesPorEntidade(entidade?: string, forceShow = true) {
+  function openRejeicoesPorEntidade(entidade?: string, bloco?: ColaboradorBlocoKey | null, forceShow = true) {
     const filtro = entidade ?? ENTIDADE_TODAS;
     setEntidadeFiltro(filtro);
+    setBlocoFiltro(bloco ?? BLOCO_TODOS);
     setRejPage(0);
     if (forceShow) setShowRejeicoes(true);
     if (jobId) {
@@ -2066,6 +2494,7 @@ function ImportacaoEvoP0PageContent() {
       const mapped = items.map((r) => resolveRejeicao(r));
       const hasNext = data.hasNext ?? (Array.isArray(mapped) && mapped.length === 50);
       setRejeicoes(mapped);
+      setRetrySelecao({});
       setRejPage(page);
       setRejHasNext(hasNext);
       setShowRejeicoes(true);
@@ -2074,6 +2503,37 @@ function ImportacaoEvoP0PageContent() {
       toast({ title: "Erro ao carregar rejeições", description: message, variant: "destructive" });
     } finally {
       setRejeicoesLoading(false);
+    }
+  }
+
+  function toggleRetrySelecao(rejeicao: RejeicaoClassificada, checked: boolean) {
+    setRetrySelecao((current) => {
+      if (!checked) {
+        const next = { ...current };
+        delete next[rejeicao.idNormalizado];
+        return next;
+      }
+      return {
+        ...current,
+        [rejeicao.idNormalizado]: rejeicao,
+      };
+    });
+  }
+
+  async function copiarPayloadRetry() {
+    if (!retryPayload) return;
+    try {
+      await navigator.clipboard.writeText(retryPayload);
+      toast({
+        title: "Payload de retry copiado",
+        description: "A seleção foi serializada para uso assim que o backend expuser o endpoint granular.",
+      });
+    } catch (error) {
+      toast({
+        title: "Falha ao copiar payload",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
     }
   }
 
@@ -2096,18 +2556,95 @@ function ImportacaoEvoP0PageContent() {
     return resumo ? resumo[field] ?? 0 : 0;
   }
 
+  const rejeicoesClassificadas = useMemo<RejeicaoClassificada[]>(() => {
+    return rejeicoes.map((rejeicao, index) => {
+      const blocoClassificado = resolveColaboradorBlocoFromRejeicao(rejeicao);
+      const blocoMeta = blocoClassificado ? colaboradorBlocoMetaIndex.get(blocoClassificado) : null;
+      const retry = rejeicao.reprocessamento
+        ? {
+            suportado: Boolean(rejeicao.reprocessamento.suportado),
+            escopo:
+              rejeicao.reprocessamento.escopo?.trim() ||
+              rejeicao.reprocessamento.chave?.trim() ||
+              blocoClassificado ||
+              "colaboradores",
+            label:
+              rejeicao.reprocessamento.label?.trim() ||
+              blocoMeta?.retryLabel ||
+              "Reprocessar bloco de colaboradores",
+            descricao: rejeicao.reprocessamento.descricao ?? rejeicao.reprocessamento.motivoBloqueio,
+          }
+        : blocoMeta
+          ? {
+              suportado: false,
+              escopo: blocoClassificado ?? "colaboradores",
+              label: blocoMeta.retryLabel,
+              descricao: "Aguardando suporte do backend para retry granular deste bloco.",
+            }
+          : null;
+      return {
+        ...rejeicao,
+        idNormalizado:
+          rejeicao.id?.trim() ||
+          [rejeicao.entidade, rejeicao.arquivo, rejeicao.linhaArquivo, rejeicao.sourceId, String(index)].join(":"),
+        blocoClassificado,
+        blocoLabel: blocoMeta?.label ?? null,
+        diagnostico: rejeicao.mensagemAcionavel ?? blocoMeta?.impactoAusencia ?? null,
+        retryConfig: retry,
+        payloadFormatado: formatPayloadForDisplay(rejeicao.payload),
+      };
+    });
+  }, [rejeicoes]);
+
   const entidadesDisponiveis = useMemo(() => {
     const mapa = new Set<string>();
-    rejeicoes.forEach((r) => {
+    rejeicoesClassificadas.forEach((r) => {
       if (r.entidade) mapa.add(r.entidade);
     });
     return Array.from(mapa).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [rejeicoes]);
+  }, [rejeicoesClassificadas]);
+
+  const blocosDisponiveis = useMemo(() => {
+    const mapa = new Set<ColaboradorBlocoKey>();
+    rejeicoesClassificadas.forEach((rejeicao) => {
+      if (rejeicao.blocoClassificado) mapa.add(rejeicao.blocoClassificado);
+    });
+    return COLABORADOR_BLOCO_CONFIG.filter((bloco) => mapa.has(bloco.key));
+  }, [rejeicoesClassificadas]);
 
   const rejeicoesFiltradas = useMemo(() => {
-    if (entidadeFiltro === ENTIDADE_TODAS) return rejeicoes;
-    return rejeicoes.filter((r) => r.entidade === entidadeFiltro);
-  }, [entidadeFiltro, rejeicoes]);
+    return rejeicoesClassificadas.filter((rejeicao) => {
+      const entidadeOk = entidadeFiltro === ENTIDADE_TODAS || rejeicao.entidade === entidadeFiltro;
+      const blocoOk = blocoFiltro === BLOCO_TODOS || rejeicao.blocoClassificado === blocoFiltro;
+      return entidadeOk && blocoOk;
+    });
+  }, [blocoFiltro, entidadeFiltro, rejeicoesClassificadas]);
+
+  const retryRejeicoesSelecionadas = useMemo(
+    () => Object.values(retrySelecao),
+    [retrySelecao]
+  );
+
+  const retryPayload = useMemo(() => {
+    if (retryRejeicoesSelecionadas.length === 0) return null;
+    return JSON.stringify(
+      {
+        jobId,
+        origem: "colaboradores",
+        itens: retryRejeicoesSelecionadas.map((rejeicao) => ({
+          id: rejeicao.idNormalizado,
+          entidade: rejeicao.entidade,
+          bloco: rejeicao.blocoClassificado,
+          escopo: rejeicao.retryConfig?.escopo,
+          sourceId: rejeicao.sourceId ?? null,
+          linhaArquivo: rejeicao.linhaArquivo,
+          arquivo: rejeicao.arquivo,
+        })),
+      },
+      null,
+      2
+    );
+  }, [jobId, retryRejeicoesSelecionadas]);
   const tenantFoco = normalizeTenantId(pacoteMapeamento.tenantId || preselectedTenantId || mapeamentos[0]?.tenantId);
   const onboardingFoco = onboardingIndex.get(tenantFoco);
   const aliasSugestaoCsv = useMemo(() => {
@@ -2302,31 +2839,41 @@ function ImportacaoEvoP0PageContent() {
 
               <div className="space-y-3">
                 <p className="text-sm font-semibold">Uploads (CSV)</p>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {FILE_FIELDS.map(({ key, label, field }) => (
-                    <label
-                      key={field}
-                      className={cn(
-                        "flex cursor-pointer items-center justify-between rounded-md border border-dashed px-3 py-2 text-sm hover:border-gym-accent",
-                        files[key] ? "border-gym-accent/80 bg-gym-accent/5" : "border-border"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <UploadCloud className="size-4 text-muted-foreground" />
-                        <div className="flex flex-col">
-                          <span className="font-medium">{label}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {files[key]?.name ?? "Selecione um arquivo CSV"}
-                          </span>
-                        </div>
+                <div className="space-y-4">
+                  {csvUploadGroups.map((group) => (
+                    <div key={group.key} className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold">{group.label}</p>
+                        <p className="text-xs text-muted-foreground">{group.description}</p>
                       </div>
-                      <Input
-                        type="file"
-                        accept=".csv,text/csv"
-                        className="hidden"
-                        onChange={(e) => setFile(key, e.target.files?.[0] ?? null)}
-                      />
-                    </label>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {group.files.map(({ key, label, field }) => (
+                          <label
+                            key={field}
+                            className={cn(
+                              "flex cursor-pointer items-center justify-between rounded-md border border-dashed px-3 py-2 text-sm hover:border-gym-accent",
+                              files[key] ? "border-gym-accent/80 bg-gym-accent/5" : "border-border"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <UploadCloud className="size-4 text-muted-foreground" />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{label}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {files[key]?.name ?? "Selecione um arquivo CSV"}
+                                </span>
+                              </div>
+                            </div>
+                            <Input
+                              type="file"
+                              accept=".csv,text/csv"
+                              className="hidden"
+                              onChange={(e) => setFile(key, e.target.files?.[0] ?? null)}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -2693,11 +3240,74 @@ function ImportacaoEvoP0PageContent() {
 
                   <Separator />
 
-                  <p className="text-sm font-semibold">Arquivos reconhecidos</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Arquivos reconhecidos</p>
+                    <p className="text-xs text-muted-foreground">
+                      A malha de colaboradores abaixo já evidencia os blocos completos, parciais ou ausentes para evitar leitura enganosa do pacote.
+                    </p>
+                  </div>
                   {pacoteArquivosDisponiveis.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Nenhum arquivo reconhecido neste pacote.</p>
                   ) : (
                     <div className="space-y-3">
+                      <div className="space-y-3 rounded-lg border border-border bg-background p-4">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold">Malha de colaboradores</p>
+                          <p className="text-xs text-muted-foreground">
+                            O backend pode reconhecer apenas parte dos auxiliares. Os blocos abaixo deixam explícito o impacto operacional de cada ausência.
+                          </p>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {pacoteColaboradoresBlocos.map((bloco) => {
+                            const badgeLabel =
+                              bloco.status === "completo"
+                                ? "Completo"
+                                : bloco.status === "parcial"
+                                  ? "Parcial"
+                                  : "Ausente";
+                            const badgeClassName =
+                              bloco.status === "completo"
+                                ? "bg-emerald-500/15 text-emerald-200 border-emerald-400/40"
+                                : bloco.status === "parcial"
+                                  ? "bg-amber-500/15 text-amber-200 border-amber-400/40"
+                                  : "bg-destructive/10 text-destructive border-destructive/40";
+                            return (
+                              <div key={bloco.key} className="rounded-md border border-border bg-muted/20 p-3">
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                  <div>
+                                    <p className="font-medium">{bloco.label}</p>
+                                    <p className="text-xs text-muted-foreground">{bloco.descricao}</p>
+                                  </div>
+                                  <Badge variant="outline" className={badgeClassName}>
+                                    {badgeLabel}
+                                  </Badge>
+                                </div>
+                                <div className="mt-3 space-y-2">
+                                  {bloco.arquivos.map((arquivo) => (
+                                    <div
+                                      key={arquivo.chave}
+                                      className="flex items-start justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
+                                    >
+                                      <div className="space-y-1">
+                                        <p className="text-sm font-medium">{arquivo.arquivoEsperado}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {arquivo.descricao ?? "Arquivo auxiliar de colaboradores."}
+                                        </p>
+                                      </div>
+                                      <Badge variant={arquivo.disponivel ? "secondary" : "outline"}>
+                                        {arquivo.disponivel ? "Disponível" : "Ausente"}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                                {bloco.status !== "completo" ? (
+                                  <p className="mt-3 text-xs text-muted-foreground">{bloco.impactoAusencia}</p>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-xs text-muted-foreground">
                           Selecionados: {arquivosSelecionadosDaAnalise.length} de {pacoteArquivosDisponiveis.filter((arquivo) => arquivo.disponivel).length} disponíveis
@@ -2742,6 +3352,12 @@ function ImportacaoEvoP0PageContent() {
                                   {arquivo.arquivoEsperado} | enviado: {arquivo.nomeArquivoEnviado ?? "—"} | {formatBytes(arquivo.tamanhoBytes)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">Chave: {arquivo.chave}</p>
+                                {arquivo.descricao ? (
+                                  <p className="text-xs text-muted-foreground">{arquivo.descricao}</p>
+                                ) : null}
+                                {!arquivo.disponivel && arquivo.impactoAusencia ? (
+                                  <p className="text-xs text-muted-foreground">{arquivo.impactoAusencia}</p>
+                                ) : null}
                               </div>
                               <div className="flex items-center">
                                 <input
@@ -3007,7 +3623,8 @@ function ImportacaoEvoP0PageContent() {
                     {resumoCardsVisiveis.map(({ key, label }) => {
                       const resumo = jobResumo?.[key] as EntidadeResumo | undefined;
                       const { percentual, temTotal } = getPercentual(resumo);
-                      const entityFilter = resumoEntidadeMap[key];
+                      const entityFilter =
+                        key === "funcionarios" && jobTemMalhaColaboradores ? ENTIDADE_TODAS : resumoEntidadeMap[key];
                       const canOpenDetails = key === "geral" || Boolean(entityFilter);
                       return (
                         <Card
@@ -3069,6 +3686,124 @@ function ImportacaoEvoP0PageContent() {
                     })}
                   </div>
 
+                  {colaboradoresResumoCards.length > 0 ? (
+                    <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold">Diagnóstico de colaboradores</p>
+                        <p className="text-xs text-muted-foreground">
+                          O job agora separa ficha principal, funções, tipos, contratação, horários e perfil legado para evidenciar importações parciais.
+                        </p>
+                      </div>
+
+                      {colaboradoresResumoAlertas.length > 0 ? (
+                        <div className="space-y-2">
+                          {colaboradoresResumoAlertas.map((alerta, index) => (
+                            <div
+                              key={`${alerta.bloco ?? "geral"}-${index}`}
+                              className={cn(
+                                "rounded-md border px-3 py-2 text-sm",
+                                alerta.severidade === "error"
+                                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                                  : "border-amber-400/40 bg-amber-500/10 text-amber-100"
+                              )}
+                            >
+                              {alerta.mensagem}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        {colaboradoresResumoCards.map((bloco) => {
+                          const resumo = bloco.resumo;
+                          const { percentual, temTotal } = getPercentual(resumo);
+                          const parcial =
+                            Boolean(resumo?.parcial) || bloco.arquivosAusentes.length > 0 || resumoValue("rejeitadas", resumo) > 0;
+                          return (
+                            <Card
+                              key={bloco.key}
+                              className="cursor-pointer border-border transition hover:bg-muted/40"
+                              role="link"
+                              tabIndex={0}
+                              onClick={() => openRejeicoesPorEntidade(ENTIDADE_TODAS, bloco.key)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  openRejeicoesPorEntidade(ENTIDADE_TODAS, bloco.key);
+                                }
+                              }}
+                            >
+                              <CardHeader className="pb-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <CardTitle className="text-sm">{bloco.label}</CardTitle>
+                                  <Badge variant={parcial ? "outline" : "secondary"}>
+                                    {parcial ? "Parcial" : "OK"}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground">{bloco.descricao}</p>
+                              </CardHeader>
+                              <CardContent className="space-y-3 text-xs text-muted-foreground">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <span>Total</span>
+                                  <span className="text-right text-foreground">{resumoValue("total", resumo)}</span>
+                                  <span>Processadas</span>
+                                  <span className="text-right text-foreground">{resumoValue("processadas", resumo)}</span>
+                                  <span>Criadas</span>
+                                  <span className="text-right text-foreground">{resumoValue("criadas", resumo)}</span>
+                                  <span>Atualizadas</span>
+                                  <span className="text-right text-foreground">{resumoValue("atualizadas", resumo)}</span>
+                                  <span className="text-gym-danger">Rejeitadas</span>
+                                  <span className="text-right font-semibold text-gym-danger">
+                                    {resumoValue("rejeitadas", resumo)}
+                                  </span>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-foreground">{temTotal ? `${percentual}%` : "Aguardando total"}</span>
+                                    <span className="h-2 flex-1 rounded-full bg-muted">
+                                      <span
+                                        className="block h-2 rounded-full bg-gym-accent transition-all duration-300"
+                                        style={{ width: temTotal ? `${percentual}%` : "0%" }}
+                                      />
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {bloco.arquivosSelecionados.length > 0 ? (
+                                      bloco.arquivosSelecionados.map((arquivo) => (
+                                        <span
+                                          key={arquivo.field}
+                                          className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground"
+                                        >
+                                          {arquivo.label}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="rounded-full border border-destructive/40 px-2 py-1 text-[11px] text-destructive">
+                                        Bloco não incluído
+                                      </span>
+                                    )}
+                                    {bloco.arquivosAusentes.length > 0 ? (
+                                      <span className="rounded-full border border-amber-400/40 px-2 py-1 text-[11px] text-amber-100">
+                                        {bloco.arquivosAusentes.length} arquivo(s) ausente(s)
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  {resumo?.mensagemParcial ? (
+                                    <p className="text-[11px] text-muted-foreground">{resumo.mensagemParcial}</p>
+                                  ) : bloco.arquivosAusentes.length > 0 ? (
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {bloco.impactoAusencia}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+
                   {resumoCardsOcultos.length > 0 ? (
                     <details className="rounded-lg border border-border bg-muted/20 p-4">
                       <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
@@ -3101,7 +3836,7 @@ function ImportacaoEvoP0PageContent() {
                   <CardTitle className="text-lg">Rejeições</CardTitle>
                   <p className="text-sm text-muted-foreground">Página {rejPage + 1}</p>
                 </div>
-                  <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <div className="min-w-56">
                     <Label htmlFor="filtro-entidade" className="text-xs">
                       Filtrar por entidade
@@ -3126,6 +3861,29 @@ function ImportacaoEvoP0PageContent() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="min-w-56">
+                    <Label htmlFor="filtro-bloco" className="text-xs">
+                      Filtrar por bloco
+                    </Label>
+                    <Select
+                      value={blocoFiltro}
+                      onValueChange={(value) => {
+                        setBlocoFiltro(value);
+                        setRejPage(0);
+                      }}
+                    >
+                      <SelectTrigger className="mt-1 h-9 w-full" id="filtro-bloco">
+                        <SelectValue placeholder="Todos os blocos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={BLOCO_TODOS}>Todos os blocos</SelectItem>
+                        {blocosDisponiveis.map((bloco) => (
+                          <SelectItem key={bloco.key} value={bloco.key}>
+                            {bloco.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" disabled={rejPage === 0 || rejeicoesLoading} onClick={() => loadRejeicoes(rejPage - 1)}>
@@ -3133,7 +3891,8 @@ function ImportacaoEvoP0PageContent() {
                     </Button>
                     <Button size="sm" variant="outline" disabled={!rejHasNext || rejeicoesLoading} onClick={() => loadRejeicoes(rejPage + 1)}>
                       Próxima
-                  </Button>
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -3144,32 +3903,99 @@ function ImportacaoEvoP0PageContent() {
                     Nenhuma rejeição encontrada nesta página.
                   </div>
                 )}
+                {!rejeicoesLoading && retryRejeicoesSelecionadas.length > 0 ? (
+                  <div className="rounded-lg border border-border bg-muted/20 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold">Reprocesso seletivo preparado</p>
+                        <p className="text-xs text-muted-foreground">
+                          {retryRejeicoesSelecionadas.length} rejeição(ões) selecionada(s) para retry granular por bloco.
+                        </p>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => void copiarPayloadRetry()}>
+                        Copiar payload de retry
+                      </Button>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {retryRejeicoesSelecionadas.map((rejeicao) => (
+                        <span
+                          key={rejeicao.idNormalizado}
+                          className="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground"
+                        >
+                          {rejeicao.blocoLabel ?? rejeicao.entidade} · linha {rejeicao.linhaArquivo}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 {!rejeicoesLoading && rejeicoesFiltradas.length > 0 && (
-                  <div className="overflow-auto rounded-md border border-border">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-semibold">Entidade</th>
-                          <th className="px-3 py-2 text-left font-semibold">Arquivo</th>
-                          <th className="px-3 py-2 text-left font-semibold">Linha</th>
-                          <th className="px-3 py-2 text-left font-semibold">Source ID</th>
-                          <th className="px-3 py-2 text-left font-semibold">Motivo</th>
-                          <th className="px-3 py-2 text-left font-semibold">Criado em</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rejeicoesFiltradas.map((r, idx) => (
-                          <tr key={idx} className="border-t border-border/70">
-                            <td className="px-3 py-2">{r.entidade}</td>
-                            <td className="px-3 py-2">{r.arquivo}</td>
-                            <td className="px-3 py-2">{r.linhaArquivo}</td>
-                            <td className="px-3 py-2">{r.sourceId ?? "—"}</td>
-                            <td className="px-3 py-2">{r.motivo}</td>
-                            <td className="px-3 py-2">{formatDateTime(r.criadoEm)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="space-y-3">
+                    {rejeicoesFiltradas.map((rejeicao) => {
+                      const retrySelecionado = Boolean(retrySelecao[rejeicao.idNormalizado]);
+                      return (
+                        <div key={rejeicao.idNormalizado} className="rounded-lg border border-border bg-background p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline">{rejeicao.entidade}</Badge>
+                                {rejeicao.blocoLabel ? <Badge variant="secondary">{rejeicao.blocoLabel}</Badge> : null}
+                                {rejeicao.retryConfig ? (
+                                  <Badge variant={rejeicao.retryConfig.suportado ? "secondary" : "outline"}>
+                                    {rejeicao.retryConfig.suportado ? "Retry disponível" : "Retry aguardando backend"}
+                                  </Badge>
+                                ) : null}
+                              </div>
+                              <p className="text-sm font-medium text-foreground">{rejeicao.motivo}</p>
+                              {rejeicao.diagnostico ? (
+                                <p className="text-xs text-muted-foreground">{rejeicao.diagnostico}</p>
+                              ) : null}
+                            </div>
+                            {rejeicao.retryConfig ? (
+                              <Label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                                <input
+                                  type="checkbox"
+                                  checked={retrySelecionado}
+                                  disabled={!rejeicao.retryConfig.suportado}
+                                  onChange={(event) => toggleRetrySelecao(rejeicao, event.target.checked)}
+                                  className="accent-gym-accent"
+                                />
+                                Selecionar para retry
+                              </Label>
+                            ) : null}
+                          </div>
+
+                          <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-2 xl:grid-cols-4">
+                            <p>
+                              <span className="font-medium text-foreground">Arquivo:</span> {rejeicao.arquivo}
+                            </p>
+                            <p>
+                              <span className="font-medium text-foreground">Linha:</span> {rejeicao.linhaArquivo}
+                            </p>
+                            <p>
+                              <span className="font-medium text-foreground">Source ID:</span> {rejeicao.sourceId ?? "—"}
+                            </p>
+                            <p>
+                              <span className="font-medium text-foreground">Criado em:</span> {formatDateTime(rejeicao.criadoEm)}
+                            </p>
+                          </div>
+
+                          {rejeicao.retryConfig?.descricao ? (
+                            <div className="mt-3 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground">Retry:</span> {rejeicao.retryConfig.descricao}
+                            </div>
+                          ) : null}
+
+                          {rejeicao.payloadFormatado ? (
+                            <div className="mt-3 space-y-2">
+                              <p className="text-xs font-medium text-foreground">Payload útil para correção</p>
+                              <pre className="overflow-auto rounded-md border border-border bg-muted/20 p-3 text-[11px] text-muted-foreground">
+                                {rejeicao.payloadFormatado}
+                              </pre>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

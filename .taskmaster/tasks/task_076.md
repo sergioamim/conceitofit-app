@@ -2,7 +2,7 @@
 
 **Title:** Tratar rejeições ETL de colaboradores com foco em funções, horários e perfil legado
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 74, 75
 

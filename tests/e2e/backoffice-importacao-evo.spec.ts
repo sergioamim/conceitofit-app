@@ -1,32 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installAdminCrudApiMocks, seedAuthenticatedSession } from "./support/backend-only-stubs";
 
 async function loginWithRedirect(page: Page, targetPath: string) {
+  await seedAuthenticatedSession(page, {
+    tenantId: "tenant-importacao-evo",
+    availableTenants: [{ tenantId: "tenant-importacao-evo", defaultTenant: true }],
+  });
   await page.goto(targetPath);
-  await expect(page).toHaveURL(new RegExp(`/login\\?next=${encodeURIComponent(targetPath).replace(/\//g, "\\/")}`));
-
-  await page.getByLabel("Usuário").fill("admin@academia.local");
-  await page.getByLabel("Senha").fill("12345678");
-  await page.getByRole("button", { name: "Entrar" }).click();
-
-  const targetRegex = new RegExp(`${targetPath.replace(/\//g, "\\/")}$`);
-  const navigatedDirectly = await page
-    .waitForURL(targetRegex, { timeout: 1500 })
-    .then(() => true)
-    .catch(() => false);
-
-  if (!navigatedDirectly) {
-    const saveTenantButton = page.getByRole("button", { name: /Salvar e continuar/i });
-    await expect(saveTenantButton).toBeVisible();
-    await page.getByRole("combobox").click();
-    await page.getByRole("option").first().click();
-    await saveTenantButton.click();
-  }
-
-  await expect(page).toHaveURL(targetRegex);
 }
 
 async function installImportacaoEvoJobStubs(page: Page) {
-  let arquivosSelecionadosNoJob = ["clientes", "contratos"];
+  let arquivosSelecionadosNoJob = ["clientes", "contratos", "funcionarios", "funcionariosFuncoesExercidas", "permissoes"];
   let pollingCount = 0;
 
   await page.route("**/admin/unidades/*/onboarding/job-status", async (route) => {
@@ -118,7 +102,7 @@ async function installImportacaoEvoJobStubs(page: Page) {
         ],
         criadoEm: "2026-03-13T10:00:00Z",
         expiraEm: "2026-03-13T11:00:00Z",
-        totalArquivosDisponiveis: 3,
+        totalArquivosDisponiveis: 6,
         arquivos: [
           {
             chave: "clientes",
@@ -143,6 +127,39 @@ async function installImportacaoEvoJobStubs(page: Page) {
             disponivel: true,
             nomeArquivoEnviado: "RECEBIMENTOS.csv",
             tamanhoBytes: 64,
+          },
+          {
+            chave: "funcionarios",
+            rotulo: "Cadastro principal",
+            arquivoEsperado: "FUNCIONARIOS.csv",
+            disponivel: true,
+            nomeArquivoEnviado: "FUNCIONARIOS.csv",
+            tamanhoBytes: 256,
+            dominio: "colaboradores",
+            bloco: "fichaPrincipal",
+            descricao: "Base do colaborador.",
+          },
+          {
+            chave: "funcionariosFuncoesExercidas",
+            rotulo: "Funções exercidas",
+            arquivoEsperado: "FUNCIONARIOS_FUNCOES_EXERCIDAS.csv",
+            disponivel: true,
+            nomeArquivoEnviado: "FUNCIONARIOS_FUNCOES_EXERCIDAS.csv",
+            tamanhoBytes: 111,
+            dominio: "colaboradores",
+            bloco: "funcoes",
+            descricao: "Relaciona colaboradores às funções.",
+          },
+          {
+            chave: "permissoes",
+            rotulo: "Perfil legado",
+            arquivoEsperado: "PERMISSOES.csv",
+            disponivel: true,
+            nomeArquivoEnviado: "PERMISSOES.csv",
+            tamanhoBytes: 72,
+            dominio: "colaboradores",
+            bloco: "perfilLegado",
+            descricao: "Permissões legadas.",
           },
         ],
       },
@@ -180,10 +197,37 @@ async function installImportacaoEvoJobStubs(page: Page) {
       status: concluiu ? "CONCLUIDO" : "PROCESSANDO",
       solicitadoEm: "2026-03-13T10:05:00Z",
       finalizadoEm: concluiu ? "2026-03-13T10:07:00Z" : null,
-      geral: { total: 12, processadas: concluiu ? 12 : 8, criadas: 9, atualizadas: 3, rejeitadas: 0 },
+      geral: { total: 19, processadas: concluiu ? 19 : 13, criadas: 13, atualizadas: 4, rejeitadas: concluiu ? 2 : 0 },
       clientes: { total: 5, processadas: 5, criadas: 4, atualizadas: 1, rejeitadas: 0 },
       contratos: { total: 4, processadas: 4, criadas: 3, atualizadas: 1, rejeitadas: 0 },
       recebimentos: { total: 3, processadas: 3, criadas: 2, atualizadas: 1, rejeitadas: 0 },
+      funcionarios: { total: 7, processadas: 7, criadas: 4, atualizadas: 1, rejeitadas: concluiu ? 2 : 0 },
+      colaboradoresDetalhe: {
+        fichaPrincipal: { total: 4, processadas: 4, criadas: 3, atualizadas: 1, rejeitadas: 0 },
+        funcoes: {
+          total: 2,
+          processadas: 2,
+          criadas: 0,
+          atualizadas: 1,
+          rejeitadas: 1,
+          parcial: true,
+          mensagemParcial: "Catálogo de funções ausente; vínculo legado reaproveitado parcialmente.",
+        },
+        perfilLegado: {
+          total: 1,
+          processadas: 1,
+          criadas: 0,
+          atualizadas: 1,
+          rejeitadas: 0,
+        },
+        alertas: [
+          {
+            bloco: "horarios",
+            mensagem: "Horários não foram incluídos nesta execução.",
+            severidade: "warning",
+          },
+        ],
+      },
     };
 
     const resumoFiltrado = {
@@ -191,11 +235,66 @@ async function installImportacaoEvoJobStubs(page: Page) {
       clientes: arquivosSelecionadosNoJob.includes("clientes") ? resumoBase.clientes : undefined,
       contratos: arquivosSelecionadosNoJob.includes("contratos") ? resumoBase.contratos : undefined,
       recebimentos: resumoBase.recebimentos,
+      funcionarios: arquivosSelecionadosNoJob.some((item) => item.startsWith("funcionarios") || item === "permissoes")
+        ? resumoBase.funcionarios
+        : undefined,
+      colaboradoresDetalhe: arquivosSelecionadosNoJob.some(
+        (item) => item.startsWith("funcionarios") || item === "permissoes"
+      )
+        ? resumoBase.colaboradoresDetalhe
+        : undefined,
     };
 
     await route.fulfill({
       status: 200,
       json: resumoFiltrado,
+    });
+  });
+
+  await page.route("**/admin/integracoes/importacao-terceiros/jobs/job-evo-777/rejeicoes**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        items: [
+          {
+            id: "rej-funcao",
+            entidade: "FUNCIONARIOS_FUNCOES_EXERCIDAS",
+            arquivo: "funcionariosFuncoesExercidas",
+            linhaArquivo: 12,
+            sourceId: "COLAB-12",
+            motivo: "Função não encontrada no catálogo legado",
+            criadoEm: "2026-03-13T10:08:00Z",
+            bloco: "funcoes",
+            payload: { funcionarioId: "COLAB-12", funcaoLegada: "Coach Senior" },
+            mensagemAcionavel: "Importe o catálogo de funções antes de reprocessar este vínculo.",
+            reprocessamento: {
+              suportado: false,
+              escopo: "funcoes",
+              label: "Reprocessar funções",
+              descricao: "Retry granular de funções ainda depende de endpoint dedicado.",
+            },
+          },
+          {
+            id: "rej-horario",
+            entidade: "FUNCIONARIOS_HORARIOS",
+            arquivo: "funcionariosHorarios",
+            linhaArquivo: 19,
+            sourceId: "COLAB-99",
+            motivo: "Horário semanal inválido",
+            criadoEm: "2026-03-13T10:09:00Z",
+            bloco: "horarios",
+            payload: { diaSemana: "SEG", inicio: "25:00", fim: "27:00" },
+            mensagemAcionavel: "Corrija o horário legado e reenvie apenas o bloco semanal.",
+            reprocessamento: {
+              suportado: true,
+              escopo: "horarios",
+              label: "Reprocessar horários",
+              descricao: "Retry granular disponível para horários.",
+            },
+          },
+        ],
+        hasNext: false,
+      },
     });
   });
 }
@@ -208,6 +307,7 @@ test.describe("Backoffice importacao EVO", () => {
     const unidadeEmail = `etl-${stamp}@qa.local`;
     const jobAlias = `Carga EVO ${stamp}`;
 
+    await installAdminCrudApiMocks(page);
     await loginWithRedirect(page, "/admin/unidades");
     await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible();
 
@@ -243,6 +343,9 @@ test.describe("Backoffice importacao EVO", () => {
     });
     await page.getByRole("button", { name: "Analisar pacote" }).click();
     await expect(page.getByText("Upload ID:")).toBeVisible();
+    await expect(page.getByText("Malha de colaboradores", { exact: true })).toBeVisible();
+    await expect(page.getByText("Horários", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Ausente").first()).toBeVisible();
     await expect(page.getByText(/Selecionados:\s+\d+\s+de\s+\d+\s+disponíveis/i)).toBeVisible();
     await expect(page.getByRole("button", { name: "Desmarcar todos" })).toBeVisible();
     await page.getByRole("button", { name: "Desmarcar todos" }).click();
@@ -250,7 +353,7 @@ test.describe("Backoffice importacao EVO", () => {
     await page.getByRole("button", { name: "Selecionar disponíveis" }).click();
     await expect(page.getByRole("button", { name: "Criar Job" })).toBeEnabled();
     await page.locator('label:has-text("Recebimentos") input[type="checkbox"]').uncheck();
-    await expect(page.getByText("Selecionados: 2 de 3 disponíveis")).toBeVisible();
+    await expect(page.getByText("Selecionados: 5 de 6 disponíveis")).toBeVisible();
     await page.getByRole("tabpanel", { name: "Importar por Pacote (ZIP/CSV)" }).getByLabel("Alias do job").fill(jobAlias);
     await page.getByRole("button", { name: "Criar Job" }).click();
 
@@ -258,8 +361,21 @@ test.describe("Backoffice importacao EVO", () => {
     await expect(acompanhamento.getByText("Job de importação")).toBeVisible();
     await expect(acompanhamento.getByText("CONCLUIDO").first()).toBeVisible({ timeout: 15000 });
     await expect(acompanhamento.getByLabel("Alias do job")).toHaveValue(jobAlias);
+    await expect(acompanhamento.getByText("Diagnóstico de colaboradores")).toBeVisible();
+    await expect(acompanhamento.getByText("Horários não foram incluídos nesta execução.")).toBeVisible();
+    await expect(acompanhamento.getByText("Funções e cargos")).toBeVisible();
     await expect(acompanhamento.getByText("Últimos jobs salvos")).toBeVisible();
     await expect(acompanhamento.locator("summary").filter({ hasText: "Arquivos ignorados nesta execução (1)" })).toBeVisible();
+
+    await acompanhamento.getByRole("button", { name: "Abrir rejeições" }).click();
+    await expect(page.getByText("Rejeições", { exact: true })).toBeVisible();
+    await page.getByLabel("Filtrar por bloco").click();
+    await page.getByRole("option", { name: "Horários" }).click();
+    await expect(page.getByText("Retry disponível")).toBeVisible();
+    await expect(page.getByText("Corrija o horário legado e reenvie apenas o bloco semanal.")).toBeVisible();
+    await expect(page.getByText('"inicio": "25:00"')).toBeVisible();
+    await page.getByLabel("Selecionar para retry").check();
+    await expect(page.getByText("Reprocesso seletivo preparado")).toBeVisible();
 
     await page.goto("/admin/unidades");
     const unidadeAtualizada = page.getByRole("row").filter({ hasText: unidadeNome });

@@ -30,6 +30,11 @@ export type UploadAnaliseArquivo = {
   disponivel: boolean;
   nomeArquivoEnviado?: string | null;
   tamanhoBytes?: number | null;
+  dominio?: string | null;
+  bloco?: string | null;
+  descricao?: string | null;
+  impactoAusencia?: string | null;
+  requerParaImportacaoCompleta?: boolean | null;
 };
 
 export type UploadAnaliseFilial = {
@@ -73,6 +78,27 @@ export type EvoImportEntidadeResumo = {
   rejeitadas: number;
 };
 
+export type EvoImportColaboradoresBlocoResumo = EvoImportEntidadeResumo & {
+  parcial?: boolean | null;
+  mensagemParcial?: string | null;
+  arquivosSelecionados?: string[] | null;
+  arquivosAusentes?: string[] | null;
+};
+
+export type EvoImportColaboradoresResumo = {
+  fichaPrincipal?: EvoImportColaboradoresBlocoResumo;
+  funcoes?: EvoImportColaboradoresBlocoResumo;
+  tiposOperacionais?: EvoImportColaboradoresBlocoResumo;
+  horarios?: EvoImportColaboradoresBlocoResumo;
+  contratacao?: EvoImportColaboradoresBlocoResumo;
+  perfilLegado?: EvoImportColaboradoresBlocoResumo;
+  alertas?: Array<{
+    bloco?: string | null;
+    mensagem: string;
+    severidade?: "info" | "warning" | "error" | null;
+  }> | null;
+};
+
 export type EvoImportJobResumo = {
   jobId?: string;
   tenantId?: string;
@@ -99,11 +125,13 @@ export type EvoImportJobResumo = {
   produtoMovimentacoes?: EvoImportEntidadeResumo;
   servicos?: EvoImportEntidadeResumo;
   funcionarios?: EvoImportEntidadeResumo;
+  colaboradoresDetalhe?: EvoImportColaboradoresResumo;
   maquininhas?: EvoImportEntidadeResumo;
   rejeicoes?: { mensagem?: string };
 };
 
 export type EvoImportRejeicao = {
+  id?: string;
   entidade: string;
   arquivo: string;
   linhaArquivo: number;
@@ -111,6 +139,18 @@ export type EvoImportRejeicao = {
   motivo: string;
   criadoEm?: string;
   createdAt?: string;
+  bloco?: string;
+  subdominio?: string;
+  payload?: unknown;
+  mensagemAcionavel?: string;
+  reprocessamento?: {
+    suportado?: boolean;
+    escopo?: string | null;
+    label?: string | null;
+    descricao?: string | null;
+    chave?: string | null;
+    motivoBloqueio?: string | null;
+  } | null;
 };
 
 export type EvoImportRejeicoesResponse = {

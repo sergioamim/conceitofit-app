@@ -2,7 +2,7 @@
 
 **Title:** Evoluir tela ETL para malha enriquecida de colaboradores EVO
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 10
 

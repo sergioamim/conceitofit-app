@@ -3,6 +3,7 @@ import {
   createBackofficeEvoP0CsvJob,
   createBackofficeEvoP0PacoteJob,
   getBackofficeEvoImportJobResumo,
+  listBackofficeEvoImportJobRejeicoes,
   uploadBackofficeEvoP0Pacote,
 } from "../../src/lib/backoffice/importacao-evo";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
@@ -163,7 +164,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
         ],
         criadoEm: "2026-03-13T10:00:00Z",
         expiraEm: "2026-03-13T11:00:00Z",
-        totalArquivosDisponiveis: 1,
+        totalArquivosDisponiveis: 3,
         arquivos: [
           {
             chave: "clientes",
@@ -172,6 +173,26 @@ test.describe("backoffice importacao EVO api wrappers", () => {
             disponivel: true,
             nomeArquivoEnviado: "CLIENTES.csv",
             tamanhoBytes: 128,
+          },
+          {
+            chave: "funcionarios",
+            rotulo: "Cadastro principal",
+            arquivoEsperado: "FUNCIONARIOS.csv",
+            disponivel: true,
+            nomeArquivoEnviado: "FUNCIONARIOS.csv",
+            tamanhoBytes: 256,
+            dominio: "colaboradores",
+            bloco: "fichaPrincipal",
+            descricao: "Base do colaborador",
+          },
+          {
+            chave: "funcionariosHorarios",
+            rotulo: "Horários semanais",
+            arquivoEsperado: "FUNCIONARIOS_HORARIOS.csv",
+            disponivel: false,
+            dominio: "colaboradores",
+            bloco: "horarios",
+            impactoAusencia: "Sem horários, a importação fica parcial.",
           },
         ],
       }),
@@ -185,6 +206,10 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(analise.evoUnidadeId).toBe(321);
       expect(analise.filialResolvida?.nome).toBe("Academia Centro");
       expect(analise.filiaisEncontradas).toHaveLength(1);
+      expect(analise.arquivos.find((arquivo) => arquivo.chave === "funcionarios")?.bloco).toBe("fichaPrincipal");
+      expect(analise.arquivos.find((arquivo) => arquivo.chave === "funcionariosHorarios")?.impactoAusencia).toContain(
+        "parcial"
+      );
 
       expect(calls).toHaveLength(1);
       expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote");
@@ -253,6 +278,19 @@ test.describe("backoffice importacao EVO api wrappers", () => {
         solicitadoEm: "2026-03-13T10:05:00Z",
         finalizadoEm: "2026-03-13T10:07:00Z",
         geral: { total: 12, processadas: 12, criadas: 10, atualizadas: 2, rejeitadas: 0 },
+        funcionarios: { total: 5, processadas: 5, criadas: 3, atualizadas: 2, rejeitadas: 0 },
+        colaboradoresDetalhe: {
+          fichaPrincipal: { total: 5, processadas: 5, criadas: 3, atualizadas: 2, rejeitadas: 0 },
+          funcoes: {
+            total: 5,
+            processadas: 5,
+            criadas: 0,
+            atualizadas: 5,
+            rejeitadas: 0,
+            parcial: true,
+            mensagemParcial: "Sem catálogo completo de funções.",
+          },
+        },
       }),
     ]);
 
@@ -273,6 +311,8 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(job.jobId).toBe("job-pacote-1");
       expect(resumo.status).toBe("CONCLUIDO");
       expect(resumo.geral?.total).toBe(12);
+      expect(resumo.colaboradoresDetalhe?.fichaPrincipal?.processadas).toBe(5);
+      expect(resumo.colaboradoresDetalhe?.funcoes?.mensagemParcial).toContain("funções");
 
       expect(calls).toHaveLength(2);
       expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/upload-1/job");
@@ -296,6 +336,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
 
   test("mantem upload CSV unitario funcionando", async () => {
     const csvFile = new File(["id,nome\n1,Ana"], "clientes.csv", { type: "text/csv" });
+    const horariosFile = new File(["id,horario\n1,08:00"], "FUNCIONARIOS_HORARIOS.csv", { type: "text/csv" });
     const { calls, restore } = mockFetchSequence([
       jsonResponse({
         jobId: "job-csv-1",
@@ -309,7 +350,10 @@ test.describe("backoffice importacao EVO api wrappers", () => {
         dryRun: true,
         maxRejeicoesRetorno: 10,
         mapeamentoFiliais: [{ idFilialEvo: 123, tenantId: "tenant-csv" }],
-        arquivos: [{ field: "clientesFile", file: csvFile }],
+        arquivos: [
+          { field: "clientesFile", file: csvFile },
+          { field: "funcionariosHorariosFile", file: horariosFile },
+        ],
         tenantId: "tenant-csv",
       });
 
@@ -325,6 +369,51 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(formData.get("maxRejeicoesRetorno")).toBe("10");
       expect(formData.get("mapeamentoFiliais")).toBe(JSON.stringify([{ idFilialEvo: 123, tenantId: "tenant-csv" }]));
       expect(formData.get("clientesFile")).toBeTruthy();
+      expect(formData.get("funcionariosHorariosFile")).toBeTruthy();
+    } finally {
+      restore();
+    }
+  });
+
+  test("lista rejeicoes com payload e hint de retry granular", async () => {
+    const { calls, restore } = mockFetchSequence([
+      jsonResponse({
+        items: [
+          {
+            id: "rej-1",
+            entidade: "FUNCIONARIOS_HORARIOS",
+            arquivo: "funcionariosHorarios",
+            linhaArquivo: 19,
+            sourceId: "FUNC-10",
+            motivo: "Horário inválido",
+            criadoEm: "2026-03-13T10:08:00Z",
+            bloco: "horarios",
+            payload: { diaSemana: "SEG", inicio: "25:00" },
+            mensagemAcionavel: "Corrija o turno legado e reenvie apenas o bloco de horários.",
+            reprocessamento: {
+              suportado: true,
+              escopo: "horarios",
+              label: "Reprocessar horários",
+            },
+          },
+        ],
+        hasNext: false,
+      }),
+    ]);
+
+    try {
+      const rejeicoes = await listBackofficeEvoImportJobRejeicoes({
+        jobId: "job-csv-1",
+        tenantId: "tenant-csv",
+      });
+
+      expect(rejeicoes.items).toHaveLength(1);
+      expect(rejeicoes.items?.[0].reprocessamento?.suportado).toBe(true);
+      expect(rejeicoes.items?.[0].payload).toEqual({ diaSemana: "SEG", inicio: "25:00" });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/jobs/job-csv-1/rejeicoes?page=0&size=50");
+      expect(calls[0].method).toBe("GET");
     } finally {
       restore();
     }

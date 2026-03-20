@@ -5357,7 +5357,7 @@
         "description": "Adaptar a UI de importação ETL para refletir que colaboradores agora dependem de múltiplos arquivos EVO além de `FUNCIONARIOS.csv`.",
         "details": "A tela de importação deve reconhecer e comunicar os arquivos auxiliares de colaboradores (`FUNCIONARIOS_FUNCOES.csv`, `FUNCIONARIOS_FUNCOES_EXERCIDAS.csv`, `FUNCIONARIOS_TIPOS.csv`, `TIPOS_FUNCIONARIOS.csv`, `FUNCIONARIOS_HORARIOS.csv`, `PERMISSOES.csv`), explicando o papel de cada bloco no resultado final da importação.",
         "testStrategy": "Cobrir análise de pacote, seleção/upload e exibição de blocos auxiliares com testes da tela ETL.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           10
         ],
@@ -5369,7 +5369,7 @@
             "description": "Exibir os arquivos auxiliares de colaboradores na análise do pacote.",
             "dependencies": [],
             "details": "Ajustar a camada de UI da análise do ZIP para identificar e rotular arquivos de funções, tipos, horários e permissões legadas de colaboradores.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
@@ -5382,7 +5382,7 @@
               1
             ],
             "details": "Organizar a visualização em blocos como cadastro principal, cargos/funções, tipos operacionais, horários e perfil legado reconciliado.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
@@ -5396,7 +5396,7 @@
               2
             ],
             "details": "Exibir mensagens como “sem horários”, “sem tipos operacionais” ou “perfil legado sem reconciliação”, evitando falsa impressão de importação completa.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
@@ -5411,7 +5411,7 @@
               3
             ],
             "details": "Adequar o formulário de upload avulso/multipart para contemplar os CSVs auxiliares de colaboradores quando o backend expuser essa capacidade.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
@@ -5424,7 +5424,7 @@
         "description": "Mostrar no frontend o resultado detalhado da importação de colaboradores enriquecida.",
         "details": "Após a execução do job, o backoffice deve apresentar resumo separado para ficha principal, funções/cargos, tipos operacionais, horários, contratação e perfil legado reconciliado, em vez de tratar “funcionários” como um bloco único opaco.",
         "testStrategy": "Cobrir renderização do resumo pós-job com cenários completos, parciais e com rejeições.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           74
         ],
@@ -5436,7 +5436,7 @@
             "description": "Preparar a camada tipada para os novos contadores e blocos.",
             "dependencies": [],
             "details": "Ajustar types/clients da tela ETL para consumir contadores e métricas detalhadas do bloco de colaboradores quando o backend os expuser.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
@@ -5449,7 +5449,7 @@
               1
             ],
             "details": "Criar UI para separar o resultado em cadastro principal, funções, tipos, horários, contratação e perfil legado, com totais de processados, criados, atualizados e rejeitados.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
@@ -5463,7 +5463,7 @@
               2
             ],
             "details": "Mostrar alertas quando o colaborador foi importado sem horários, sem função resolvida ou sem reconciliação de perfil legado.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
@@ -5477,7 +5477,7 @@
               3
             ],
             "details": "Adicionar links/ações para abrir rejeições específicas de colaboradores e seus subblocos diretamente da visão de resumo.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
@@ -5490,7 +5490,7 @@
         "description": "Aprimorar o diagnóstico de falhas de importação de colaboradores no frontend administrativo.",
         "details": "A tela ETL deve deixar claro se a rejeição ocorreu na ficha principal do colaborador, no vínculo de função/tipo, no horário semanal ou na reconciliação de perfil legado, com payload útil para correção operacional.",
         "testStrategy": "Cobrir a visualização de rejeições com diferentes origens de erro e ações de reprocesso quando existentes.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           74,
           75
@@ -5503,7 +5503,7 @@
             "description": "Separar erros de cadastro, função, horário e perfil legado.",
             "dependencies": [],
             "details": "Ajustar a tela/lista de rejeições para agrupar e filtrar falhas específicas do domínio de colaboradores.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
@@ -5516,7 +5516,7 @@
               1
             ],
             "details": "Mostrar campos relevantes do CSV e mensagens de erro como função não resolvida, horário inválido, tipo inexistente ou perfil legado sem mapeamento.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
@@ -5530,7 +5530,7 @@
               2
             ],
             "details": "Quando o backend suportar retry granular, permitir selecionar rejeições de colaboradores por bloco e iniciar reprocessamento com feedback claro.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined",
             "updatedAt": "2026-03-20T14:05:00Z"
