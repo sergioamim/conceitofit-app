@@ -13,6 +13,7 @@ type RbacUserSeed = {
   id: string;
   tenantId: string;
   name: string;
+  fullName?: string;
   email: string;
   active?: boolean;
 };
@@ -119,22 +120,31 @@ const seedState = (): MockState => ({
   ],
 });
 
-async function openPageAsAuthenticated(page: Page) {
-  await page.goto("/login");
-  const credentialInputs = page.getByRole("textbox");
-  await credentialInputs.nth(0).fill("admin@academia.local");
-  await credentialInputs.nth(1).fill("12345678");
-  await page.getByRole("button", { name: "Entrar" }).click();
-
-  const unitStep = page.getByRole("heading", { name: "Unidade prioritária" });
-  if (await unitStep.isVisible()) {
-    await page.getByRole("combobox").click();
-    await page.getByRole("option").first().click();
-    await page.getByRole("button", { name: /Salvar e continuar/i }).click();
-  }
-
-  await page.goto("/seguranca/rbac");
-  await expect(page.getByRole("heading", { name: "RBAC" })).toBeVisible();
+async function openPageAsAuthenticated(
+  page: Page,
+  input: {
+    path?: string;
+    heading: string;
+    readyControlName: string;
+  } = {
+    path: "/seguranca/rbac",
+    heading: "Perfis e Funcionalidades",
+    readyControlName: "Perfis",
+  },
+) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("academia-auth-token", "token-rbac");
+    window.localStorage.setItem("academia-auth-refresh-token", "refresh-rbac");
+    window.localStorage.setItem("academia-auth-token-type", "Bearer");
+    window.localStorage.setItem("academia-auth-active-tenant-id", "tenant-1");
+    window.localStorage.setItem(
+      "academia-auth-available-tenants",
+      JSON.stringify([{ tenantId: "tenant-1", defaultTenant: true }])
+    );
+  });
+  await page.goto(input.path ?? "/seguranca/rbac");
+  await expect(page.getByRole("heading", { name: input.heading })).toBeVisible();
+  await expect(page.getByRole("button", { name: input.readyControlName, exact: true })).toBeVisible();
 }
 
 function parseBody<T = unknown>(request: { postData: () => string | null }): T {
@@ -164,10 +174,117 @@ function normalizedPath(path: string) {
 }
 
 async function setupRbacApiMocks(page: Page, state: MockState) {
-  await page.route("**/api/v1/auth/**", async (route) => {
+  await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const method = request.method();
     const path = normalizedPath(new URL(request.url()).pathname);
+
+    if (path === "/api/v1/app/bootstrap" && method === "GET") {
+      await route.fulfill({
+        status: 200,
+        json: {
+          user: {
+            id: "user-admin",
+            userId: "user-admin",
+            nome: "Admin RBAC",
+            displayName: "Admin RBAC",
+            email: "admin@academia.local",
+            roles: ["ADMIN"],
+            userKind: "COLABORADOR",
+            redeId: "rede-academia",
+            redeNome: "Rede Academia",
+            redeSlug: "rede-academia",
+            activeTenantId: "tenant-1",
+            tenantBaseId: "tenant-1",
+            availableTenants: [{ tenantId: "tenant-1", defaultTenant: true }],
+            availableScopes: ["UNIDADE"],
+            broadAccess: false,
+          },
+          tenantContext: {
+            currentTenantId: "tenant-1",
+            tenantAtual: {
+              id: "tenant-1",
+              nome: "Unidade Centro",
+              academiaId: "rede-academia",
+              ativo: true,
+            },
+            unidadesDisponiveis: [
+              {
+                id: "tenant-1",
+                nome: "Unidade Centro",
+                academiaId: "rede-academia",
+                ativo: true,
+              },
+            ],
+          },
+          academia: {
+            id: "rede-academia",
+            nome: "Rede Academia",
+            ativo: true,
+          },
+          capabilities: {
+            canAccessElevatedModules: true,
+            canDeleteClient: false,
+          },
+        },
+      });
+      return;
+    }
+
+    if (path === "/api/v1/context/unidade-ativa" && method === "GET") {
+      await route.fulfill({
+        status: 200,
+        json: {
+          currentTenantId: "tenant-1",
+          tenantAtual: {
+            id: "tenant-1",
+            nome: "Unidade Centro",
+            academiaId: "rede-academia",
+            ativo: true,
+          },
+          unidadesDisponiveis: [
+            {
+              id: "tenant-1",
+              nome: "Unidade Centro",
+              academiaId: "rede-academia",
+              ativo: true,
+            },
+          ],
+        },
+      });
+      return;
+    }
+
+    if (path === "/api/v1/auth/me" && method === "GET") {
+      await route.fulfill({
+        status: 200,
+        json: {
+          id: "user-admin",
+          userId: "user-admin",
+          nome: "Admin RBAC",
+          email: "admin@academia.local",
+          roles: ["ADMIN"],
+          redeId: "rede-academia",
+          redeNome: "Rede Academia",
+          redeSlug: "rede-academia",
+          activeTenantId: "tenant-1",
+          availableTenants: [{ tenantId: "tenant-1", defaultTenant: true }],
+        },
+      });
+      return;
+    }
+
+    if (path === "/api/v1/academia" && method === "GET") {
+      await route.fulfill({
+        status: 200,
+        json: {
+          id: "rede-academia",
+          nome: "Rede Academia",
+          ativo: true,
+        },
+      });
+      return;
+    }
 
     if (path === "/api/v1/auth/perfis" && method === "GET") {
       await route.fulfill({ json: toPagination(state.perfis, 0, 20, state.perfis.length), status: 200 });
@@ -229,6 +346,29 @@ async function setupRbacApiMocks(page: Page, state: MockState) {
 
     if (path === "/api/v1/auth/users" && method === "GET") {
       await route.fulfill({ json: state.users, status: 200 });
+      return;
+    }
+
+    if (path === "/api/v1/auth/users" && method === "POST") {
+      const payload = parseBody<{
+        name?: string;
+        fullName?: string;
+        email?: string;
+        tenantIds?: string[];
+        defaultTenantId?: string;
+        initialPerfilIds?: string[];
+      }>(request);
+      const created: RbacUserSeed = {
+        id: `user-${state.users.length + 1}`,
+        tenantId: payload.defaultTenantId ?? payload.tenantIds?.[0] ?? state.tenantId,
+        name: payload.name ?? "Novo usuário",
+        fullName: payload.fullName ?? payload.name ?? "Novo usuário",
+        email: payload.email ?? "novo@academia.local",
+        active: true,
+      };
+      state.users = [...state.users, created];
+      state.userPerfis[created.id] = payload.initialPerfilIds ?? [];
+      await route.fulfill({ json: created, status: 201 });
       return;
     }
 
@@ -353,17 +493,37 @@ test.describe("RBAC", () => {
     await page.getByRole("button", { name: "Salvar perfil" }).click();
     await expect(page.getByText("Perfil criado com sucesso.")).toBeVisible();
 
-    await page.getByRole("button", { name: "Usuário x Perfis" }).click();
+    await page.getByRole("button", { name: "Pessoas e Perfis" }).click();
     await page.locator('[data-slot="select-trigger"]').filter({ hasText: "Selecionar perfil" }).click();
     await page.locator('[data-slot="select-item"]').filter({ hasText: "Atendente" }).first().click();
     await page.getByRole("button", { name: "Vincular" }).click();
     await expect(page.getByText("Perfil vinculado com sucesso.")).toBeVisible();
     await expect(page.getByRole("cell", { name: "ATENDENTE", exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: "Grants por Feature" }).click();
+    await page.getByRole("button", { name: "Funcionalidades por Perfil" }).click();
     await expect(page.getByRole("cell", { name: "feature.treinos" })).toBeVisible();
 
     await page.getByRole("button", { name: "Auditoria" }).click();
     await expect(page.getByText("LOGIN")).toBeVisible();
+  });
+
+  test("cria usuário restrito à rede atual na área operacional da academia", async ({ page }) => {
+    const state = seedState();
+    await setupRbacApiMocks(page, state);
+    await openPageAsAuthenticated(page);
+    await page.getByRole("button", { name: "Pessoas e Perfis" }).click();
+
+    const createCard = page.locator('[data-slot="card"]').filter({ hasText: "Criar usuário da rede atual" }).first();
+    await page.getByLabel("Nome do usuário da rede").fill("Carla Operações");
+    await page.getByLabel("E-mail do usuário da rede").fill("carla@academia.local");
+    await createCard.locator("label").filter({ hasText: "Unidade Centro" }).locator('input[type="checkbox"]').check();
+    await page.getByLabel("Unidade base da rede").click();
+    await page.getByRole("option", { name: "Unidade Centro" }).click();
+    await createCard.locator("label").filter({ hasText: "Administrador" }).locator('input[type="checkbox"]').check();
+    await page.getByRole("button", { name: "Criar usuário" }).click();
+
+    await expect(page.getByText("Usuário criado na rede atual.")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Buscar por nome ou e-mail" })).toHaveValue("Carla Operações");
+    await expect(page.getByRole("cell", { name: "ADMIN", exact: true })).toBeVisible();
   });
 });

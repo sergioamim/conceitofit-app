@@ -17,6 +17,7 @@ import { DataTableRowActions } from "@/components/shared/data-table-row-actions"
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { SecurityActiveBadge } from "@/components/security/security-badges";
 import { SecurityEmptyState, SecuritySectionFeedback } from "@/components/security/security-feedback";
+import { validateAcademiaUserCreateDraft } from "@/lib/security-user-create";
 import type { RbacPermission } from "@/lib/types";
 import {
   useAuditoriaManager,
@@ -45,11 +46,31 @@ type GrantFormState = {
   allowed: boolean;
 };
 
+type CreateTenantUserFormState = {
+  name: string;
+  email: string;
+  cpf: string;
+  userKind: string;
+  tenantIds: string[];
+  defaultTenantId: string;
+  initialPerfilIds: string[];
+};
+
 const PERFIL_DEFAULT: PerfilFormState = {
   roleName: "",
   displayName: "",
   description: "",
   active: true,
+};
+
+const TENANT_USER_DEFAULT: CreateTenantUserFormState = {
+  name: "",
+  email: "",
+  cpf: "",
+  userKind: "COLABORADOR",
+  tenantIds: [],
+  defaultTenantId: "",
+  initialPerfilIds: [],
 };
 
 const GRANT_PERMISSION_OPTIONS: RbacPermission[] = ["VIEW", "EDIT", "MANAGE"];
@@ -113,6 +134,7 @@ export default function RbacPage() {
     loadingPerfis,
     saving: userSaving,
     error: usuariosError,
+    createUser,
     assignPerfil,
     removePerfil: removeUserPerfil,
     reload: reloadUsers,
@@ -158,8 +180,16 @@ export default function RbacPage() {
     allowed: true,
   });
   const [perfilToAssign, setPerfilToAssign] = useState("");
+  const [tenantUserForm, setTenantUserForm] = useState<CreateTenantUserFormState>(TENANT_USER_DEFAULT);
 
   const [isActionLoading, setActionLoading] = useState(false);
+
+  const tenantScopeOptions = useMemo(() => {
+    if (!tenant.networkId) return tenant.availableTenants;
+    return tenant.availableTenants.filter(
+      (item) => (item.academiaId ?? item.groupId) === tenant.networkId
+    );
+  }, [tenant.availableTenants, tenant.networkId]);
 
   const tabButtons: Array<{ id: RbacTab; label: string }> = useMemo(
     () => [
@@ -185,6 +215,28 @@ export default function RbacPage() {
 
   const clearPerfilForm = useCallback(() => {
     setPerfilForm(PERFIL_DEFAULT);
+  }, []);
+
+  const toggleTenantUserTenant = useCallback((selectedTenantId: string) => {
+    setTenantUserForm((current) => {
+      const tenantIds = current.tenantIds.includes(selectedTenantId)
+        ? current.tenantIds.filter((item) => item !== selectedTenantId)
+        : [...current.tenantIds, selectedTenantId];
+      return {
+        ...current,
+        tenantIds,
+        defaultTenantId: tenantIds.includes(current.defaultTenantId) ? current.defaultTenantId : tenantIds[0] ?? "",
+      };
+    });
+  }, []);
+
+  const toggleTenantUserPerfil = useCallback((perfilId: string) => {
+    setTenantUserForm((current) => ({
+      ...current,
+      initialPerfilIds: current.initialPerfilIds.includes(perfilId)
+        ? current.initialPerfilIds.filter((item) => item !== perfilId)
+        : [...current.initialPerfilIds, perfilId],
+    }));
   }, []);
 
   const editPerfil = useCallback((id: string) => {
@@ -269,6 +321,32 @@ export default function RbacPage() {
       setActionLoading(false);
     }
   }, [assignPerfil, feedback, perfilToAssign]);
+
+  const submitTenantUser = useCallback(
+    async (event: FormEvent) => {
+      event.preventDefault();
+      feedback.clear();
+      setActionLoading(true);
+      try {
+        const payload = validateAcademiaUserCreateDraft({
+          ...tenantUserForm,
+          networkId: tenant.networkId,
+          networkName: tenant.networkName,
+          networkSubdomain: tenant.networkSubdomain,
+          allowedTenantIds: tenantScopeOptions.map((item) => item.id),
+          allowedPerfilIds: activePerfis.map((item) => item.id),
+        });
+        await createUser(payload);
+        setTenantUserForm(TENANT_USER_DEFAULT);
+        feedback.show("Usuário criado na rede atual.", "success");
+      } catch (error) {
+        feedback.show(error instanceof Error ? error.message : "Não foi possível criar o usuário.", "error");
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [activePerfis, createUser, feedback, tenant.networkId, tenant.networkName, tenant.networkSubdomain, tenantScopeOptions, tenantUserForm]
+  );
 
   const submitFeatureConfig = useCallback(
     async (featureKey: string, enabled: boolean, rolloutRaw: string) => {
@@ -505,6 +583,153 @@ export default function RbacPage() {
               <CardTitle className="font-display">Pessoas e Perfis</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="rounded-lg border border-border bg-secondary/30 p-4">
+                <p className="text-sm font-semibold text-foreground">Criar usuário da rede atual</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Este fluxo é restrito à rede
+                  <span className="font-medium text-foreground"> {tenant.networkName ?? tenant.tenantName}</span>
+                  {tenant.networkSubdomain ? ` (${tenant.networkSubdomain})` : ""}.
+                  A UI não expõe escopo global nem unidades fora do contexto disponível.
+                </p>
+
+                <form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={submitTenantUser}>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+                    <Input
+                      aria-label="Nome do usuário da rede"
+                      value={tenantUserForm.name}
+                      onChange={(event) => setTenantUserForm((current) => ({ ...current, name: event.target.value }))}
+                      className="border-border bg-background"
+                      placeholder="Carla Operações"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
+                    <Input
+                      aria-label="E-mail do usuário da rede"
+                      type="email"
+                      value={tenantUserForm.email}
+                      onChange={(event) => setTenantUserForm((current) => ({ ...current, email: event.target.value }))}
+                      className="border-border bg-background"
+                      placeholder="carla@academia.local"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF opcional</label>
+                    <Input
+                      aria-label="CPF do usuário da rede"
+                      value={tenantUserForm.cpf}
+                      onChange={(event) => setTenantUserForm((current) => ({ ...current, cpf: event.target.value }))}
+                      className="border-border bg-background"
+                      placeholder="111.222.333-44"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo</label>
+                    <Select
+                      value={tenantUserForm.userKind}
+                      onValueChange={(value) => setTenantUserForm((current) => ({ ...current, userKind: value }))}
+                    >
+                      <SelectTrigger aria-label="Tipo do usuário da rede" className="border-border bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="COLABORADOR">Colaborador</SelectItem>
+                        <SelectItem value="SUPORTE">Suporte</SelectItem>
+                        <SelectItem value="PRESTADOR">Prestador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unidades da rede</label>
+                    <div className="grid gap-2 rounded-lg border border-border bg-background p-3 md:grid-cols-2">
+                      {tenantScopeOptions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhuma unidade elegível disponível no contexto atual.</p>
+                      ) : (
+                        tenantScopeOptions.map((item) => (
+                          <label key={item.id} className="flex items-start gap-2 rounded-md border border-border/60 px-3 py-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={tenantUserForm.tenantIds.includes(item.id)}
+                              onChange={() => toggleTenantUserTenant(item.id)}
+                            />
+                            <span className="font-medium text-foreground">{item.nome}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unidade base</label>
+                    <Select
+                      value={tenantUserForm.defaultTenantId || "__none__"}
+                      onValueChange={(value) =>
+                        setTenantUserForm((current) => ({
+                          ...current,
+                          defaultTenantId: value === "__none__" ? "" : value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger aria-label="Unidade base da rede" className="border-border bg-background">
+                        <SelectValue placeholder="Selecione a base" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Selecione</SelectItem>
+                        {tenantScopeOptions
+                          .filter((item) => tenantUserForm.tenantIds.includes(item.id))
+                          .map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.nome}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Perfis iniciais</label>
+                    <div className="grid gap-2 rounded-lg border border-border bg-background p-3">
+                      {activePerfis.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhum perfil ativo disponível para vínculo inicial.</p>
+                      ) : (
+                        activePerfis.map((perfil) => (
+                          <label key={perfil.id} className="flex items-start gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={tenantUserForm.initialPerfilIds.includes(perfil.id)}
+                              onChange={() => toggleTenantUserPerfil(perfil.id)}
+                            />
+                            <span>
+                              <span className="block font-medium text-foreground">{perfil.displayName}</span>
+                              <span className="block text-xs text-muted-foreground">{perfil.roleName}</span>
+                            </span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 md:col-span-2">
+                    <Button type="submit" disabled={isActionLoading || userSaving || loadingUsers || loadingPerfis || !tenantId}>
+                      {isActionLoading ? "Criando..." : "Criar usuário"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-border"
+                      onClick={() => setTenantUserForm(TENANT_USER_DEFAULT)}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
+                </form>
+              </div>
+
               <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Usuário</label>

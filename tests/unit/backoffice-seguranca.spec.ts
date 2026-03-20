@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 import {
+  createGlobalAdminUserApi,
   createGlobalAdminAccessExceptionApi,
   getGlobalAdminUserDetailApi,
   getGlobalAdminReviewBoardApi,
   listGlobalAdminUsersApi,
 } from "../../src/lib/api/backoffice-seguranca";
 import {
+  createGlobalSecurityUser,
   createUserAccessException,
   listEligibleNewUnitAdminsPreview,
   removeUserAccessException,
@@ -391,6 +393,92 @@ test.describe("backoffice segurança", () => {
     } finally {
       restore();
     }
+  });
+
+  test("createGlobalAdminUserApi envia escopo, memberships e identificadores", async () => {
+    const { calls, restore } = mockFetchSequence([
+      new Response(
+        JSON.stringify({
+          id: "user-carla",
+          nome: "Carla Operações",
+          email: "carla@qa.local",
+          userKind: "COLABORADOR",
+          redeId: "rede-1",
+          redeNome: "Rede Norte",
+          redeSlug: "rede-norte",
+          scopeType: "REDE",
+          active: true,
+          academias: [{ id: "academia-norte", nome: "Rede Norte" }],
+          membershipsAtivos: 2,
+          membershipsTotal: 2,
+          defaultTenantId: "tenant-centro",
+          defaultTenantName: "Centro",
+          eligibleForNewUnits: true,
+          policy: {
+            enabled: true,
+            scope: "REDE",
+          },
+          memberships: [],
+          exceptions: [],
+          recentChanges: [],
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } }
+      ),
+    ]);
+
+    try {
+      const response = await createGlobalAdminUserApi({
+        name: "Carla Operações",
+        fullName: "Carla Operações",
+        email: "carla@qa.local",
+        userKind: "COLABORADOR",
+        scopeType: "REDE",
+        academiaId: "academia-norte",
+        tenantIds: ["tenant-centro", "tenant-barra"],
+        defaultTenantId: "tenant-centro",
+        eligibleForNewUnits: true,
+        policyScope: "REDE",
+        loginIdentifiers: [
+          { label: "E-mail", value: "carla@qa.local" },
+          { label: "CPF", value: "111.222.333-44" },
+        ],
+      });
+
+      expect(calls[0]?.url).toContain("/api/v1/admin/seguranca/usuarios");
+      expect(calls[0]?.method).toBe("POST");
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        name: "Carla Operações",
+        fullName: "Carla Operações",
+        email: "carla@qa.local",
+        userKind: "COLABORADOR",
+        scopeType: "REDE",
+        academiaId: "academia-norte",
+        tenantIds: ["tenant-centro", "tenant-barra"],
+        defaultTenantId: "tenant-centro",
+        broadAccess: false,
+        eligibleForNewUnits: true,
+        policyScope: "REDE",
+        loginIdentifiers: [
+          { label: "E-mail", value: "carla@qa.local" },
+          { label: "CPF", value: "111.222.333-44" },
+        ],
+      });
+      expect(response.id).toBe("user-carla");
+      expect(response.scopeType).toBe("REDE");
+      expect(response.eligibleForNewUnits).toBeTruthy();
+    } finally {
+      restore();
+    }
+  });
+
+  test("createGlobalSecurityUser valida nome e e-mail antes do submit", async () => {
+    await expect(async () => {
+      await createGlobalSecurityUser({
+        name: " ",
+        email: "",
+        scopeType: "GLOBAL",
+      });
+    }).rejects.toThrow("Nome e e-mail são obrigatórios.");
   });
 
   test("createGlobalAdminAccessExceptionApi usa o endpoint canônico e refaz o snapshot", async () => {

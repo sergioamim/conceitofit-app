@@ -1,5 +1,6 @@
-import type { RbacActionFilter, RbacFeature, RbacPaginatedResult, RbacPerfil as PerfilTipo, RbacPerfilCreatePayload, RbacPerfilUpdatePayload, RbacResourceTypeFilter, RbacUser } from "@/lib/types";
+import type { RbacActionFilter, RbacFeature, RbacPaginatedResult, RbacPerfil as PerfilTipo, RbacPerfilCreatePayload, RbacPerfilUpdatePayload, RbacResourceTypeFilter, RbacUser, RbacUserCreatePayload } from "@/lib/types";
 import {
+  createUserApi,
   createPerfilApi,
   deletePerfilApi,
   listAuditoriaPermissoesApi,
@@ -147,6 +148,20 @@ export async function removePerfilService(input: {
 
 export async function listUsersService(params: { tenantId?: string }): Promise<RbacUser[]> {
   return withTenantFallback(params.tenantId, (tenantId) => listUsersApi({ tenantId }));
+}
+
+export async function createUserService(input: {
+  tenantId?: string;
+  data: RbacUserCreatePayload;
+}): Promise<RbacUser> {
+  const tenantId = normalizeTenantId(input.tenantId);
+  if (!tenantId) {
+    throw new Error("Não foi possível identificar a unidade ativa para criar o usuário.");
+  }
+  return createUserApi({
+    tenantId,
+    data: input.data,
+  });
 }
 
 export async function listUserPerfisService(input: {

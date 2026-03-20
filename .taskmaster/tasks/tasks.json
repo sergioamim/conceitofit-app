@@ -4834,11 +4834,100 @@
         "complexity": 4,
         "recommendedSubtasks": 3,
         "expansionPrompt": "Quebre em subtarefas para testes do login por rota/host, documentação do setup local e handoff final com critérios de aceite para backend e QA."
+      },
+      {
+        "id": 67,
+        "title": "Adicionar criação de usuário no Segurança global e no Admin da própria rede",
+        "description": "Permitir cadastrar novos usuários por duas superfícies, com poderes distintos entre backoffice global e administração da academia.",
+        "details": "Criar a jornada de novo usuário no menu `/admin/seguranca` para operadores com poder global/rede e também na área administrativa da academia, mas com escopo limitado à própria rede. A superfície global poderá criar usuários com escopo amplo, memberships multi-tenant e governança avançada; já a superfície administrativa da academia deve restringir a criação à rede corrente, sem permitir alcance global ou em outras redes. A task inclui IA, regras de autorização, validações de escopo e alinhamento com a diretriz de `Usuario` independente de `Cliente`/`Funcionario`.",
+        "testStrategy": "Cobrir criação de usuário nas duas superfícies, validação de escopo permitido e bloqueio de tentativas de criar acesso fora da rede corrente na área administrativa da academia.",
+        "status": "done",
+        "dependencies": [
+          50,
+          53
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir contrato e permissões da criação de usuário por superfície",
+            "description": "Separar claramente o que o backoffice global pode fazer e o que a academia pode fazer na própria rede.",
+            "dependencies": [],
+            "details": "Mapear capabilities, endpoints e regras para dois contextos: segurança global com criação ampla e admin da academia com criação restrita à rede corrente, sem escopo global nem outras redes.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 67,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T15:45:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Adicionar ação e formulário de novo usuário no menu Segurança",
+            "description": "Expor o cadastro pela área global de usuários e acessos.",
+            "dependencies": [
+              "67.1"
+            ],
+            "details": "Adicionar CTA, rota/modal e formulário para criar usuário no backoffice de segurança, permitindo definir identidade, identificadores de login e escopo inicial compatível com a governança global.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 67,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T15:45:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Adicionar criação restrita de usuário na área Admin da academia",
+            "description": "Permitir que a academia cadastre usuários apenas para a própria rede.",
+            "dependencies": [
+              "67.1"
+            ],
+            "details": "Criar entrada de cadastro na área administrativa operacional, limitando rede, tenants e memberships à academia corrente e bloqueando qualquer tentativa de criação para outra rede ou escopo global.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 67,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T15:45:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Aplicar guardrails de escopo e mensagens de autorização",
+            "description": "Evitar que a UI ofereça poderes além do contexto do operador.",
+            "dependencies": [
+              "67.2",
+              "67.3"
+            ],
+            "details": "Reforçar no frontend os limites de escopo, escondendo opções globais na área da academia, validando payloads antes do submit e mostrando mensagens claras quando o operador não puder conceder determinado alcance.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 67,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T15:45:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Cobrir regressão e handoff de criação de usuário",
+            "description": "Garantir estabilidade nas duas jornadas e registrar os limites de poder.",
+            "dependencies": [
+              "67.2",
+              "67.3",
+              "67.4"
+            ],
+            "details": "Adicionar testes unitários/e2e e documentação curta explicando que segurança global pode criar acessos amplos, enquanto o admin da academia só cria usuários para a própria rede.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 67,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-20T15:45:00Z"
+          }
+        ],
+        "complexity": 7,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Quebre em subtarefas para definir permissões por superfície, adicionar criação de usuário no segurança global, criar fluxo restrito na área admin da academia, aplicar guardrails de escopo e fechar testes/documentação."
       }
     ],
     "metadata": {
       "created": "2026-03-18T15:32:36.203Z",
-      "updated": "2026-03-19T18:55:00.000Z",
+      "updated": "2026-03-20T12:30:00.000Z",
       "description": "Tasks for master context"
     }
   }

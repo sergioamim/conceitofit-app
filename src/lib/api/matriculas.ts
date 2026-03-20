@@ -259,6 +259,119 @@ export function normalizeMatriculaApiResponse(input: MatriculaResponse): Matricu
 
 export type MatriculaPageResult = PaginatedResult<Matricula & { aluno?: Aluno; plano?: Plano }>;
 
+export type MatriculaDashboardMensalResumo = {
+  totalContratos: number;
+  contratosAtivos: number;
+  percentualAtivos: number;
+  receitaContratada: number;
+  ticketMedio: number;
+  pendentesAssinatura: number;
+  insight: string;
+};
+
+export type MatriculaDashboardMensalPlano = {
+  planoId?: string;
+  planoNome: string;
+  quantidade: number;
+  valor: number;
+  percentual: number;
+};
+
+export type MatriculaDashboardMensalContratosPage = {
+  items: Array<Matricula & { aluno?: Aluno; plano?: Plano }>;
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+};
+
+export type MatriculaDashboardMensalResult = {
+  mes: string;
+  resumo: MatriculaDashboardMensalResumo;
+  carteiraAtivaPorPlano: MatriculaDashboardMensalPlano[];
+  contratos: MatriculaDashboardMensalContratosPage;
+};
+
+type MatriculaDashboardMensalResumoResponse = {
+  totalContratos?: unknown;
+  contratosAtivos?: unknown;
+  percentualAtivos?: unknown;
+  receitaContratada?: unknown;
+  ticketMedio?: unknown;
+  pendentesAssinatura?: unknown;
+  insight?: string | null;
+};
+
+type MatriculaDashboardMensalPlanoResponse = {
+  planoId?: string | null;
+  planoNome?: string | null;
+  quantidade?: unknown;
+  valor?: unknown;
+  percentual?: unknown;
+};
+
+type MatriculaDashboardMensalContratosPageResponse = {
+  items?: MatriculaResponse[] | null;
+  page?: unknown;
+  size?: unknown;
+  totalItems?: unknown;
+  totalPages?: unknown;
+};
+
+type MatriculaDashboardMensalResponse = {
+  mes?: string | null;
+  resumo?: MatriculaDashboardMensalResumoResponse | null;
+  carteiraAtivaPorPlano?: MatriculaDashboardMensalPlanoResponse[] | null;
+  contratos?: MatriculaDashboardMensalContratosPageResponse | null;
+};
+
+function normalizeMatriculaDashboardMensalResumo(
+  input?: MatriculaDashboardMensalResumoResponse | null
+): MatriculaDashboardMensalResumo {
+  return {
+    totalContratos: toNumber(input?.totalContratos),
+    contratosAtivos: toNumber(input?.contratosAtivos),
+    percentualAtivos: toNumber(input?.percentualAtivos),
+    receitaContratada: toNumber(input?.receitaContratada),
+    ticketMedio: toNumber(input?.ticketMedio),
+    pendentesAssinatura: toNumber(input?.pendentesAssinatura),
+    insight: input?.insight?.trim() || "Nenhum insight disponível para o mês selecionado.",
+  };
+}
+
+function normalizeMatriculaDashboardMensalPlano(
+  input: MatriculaDashboardMensalPlanoResponse
+): MatriculaDashboardMensalPlano {
+  return {
+    planoId: input.planoId?.trim() || undefined,
+    planoNome: input.planoNome?.trim() || "Sem plano",
+    quantidade: toNumber(input.quantidade),
+    valor: toNumber(input.valor),
+    percentual: toNumber(input.percentual),
+  };
+}
+
+function normalizeMatriculaDashboardMensalResponse(
+  input: MatriculaDashboardMensalResponse
+): MatriculaDashboardMensalResult {
+  return {
+    mes: input.mes?.trim() || "",
+    resumo: normalizeMatriculaDashboardMensalResumo(input.resumo),
+    carteiraAtivaPorPlano: Array.isArray(input.carteiraAtivaPorPlano)
+      ? input.carteiraAtivaPorPlano.map(normalizeMatriculaDashboardMensalPlano)
+      : [],
+    contratos: {
+      items: Array.isArray(input.contratos?.items)
+        ? input.contratos.items.map(normalizeMatriculaApiResponse)
+        : [],
+      page: toNumber(input.contratos?.page),
+      size: toNumber(input.contratos?.size, 20),
+      totalItems: toNumber(input.contratos?.totalItems),
+      totalPages: toNumber(input.contratos?.totalPages),
+    },
+  };
+}
+
 export async function listMatriculasApi(input: {
   tenantId?: string;
   status?: string;
@@ -313,6 +426,25 @@ export async function listMatriculasPageApi(input: {
     total,
     hasNext,
   };
+}
+
+export async function listMatriculasDashboardMensalApi(input: {
+  tenantId?: string;
+  mes: string;
+  page?: number;
+  size?: number;
+}): Promise<MatriculaDashboardMensalResult> {
+  const response = await apiRequest<MatriculaDashboardMensalResponse>({
+    path: "/api/v1/comercial/matriculas/dashboard-mensal",
+    query: {
+      tenantId: input.tenantId,
+      mes: input.mes,
+      page: input.page,
+      size: input.size,
+    },
+  });
+
+  return normalizeMatriculaDashboardMensalResponse(response);
 }
 
 export async function listMatriculasByAlunoApi(input: {

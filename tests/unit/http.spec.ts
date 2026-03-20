@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { listMatriculasApi } from "../../src/lib/api/matriculas";
+import { listMatriculasApi, listMatriculasDashboardMensalApi } from "../../src/lib/api/matriculas";
 import { apiRequest } from "../../src/lib/api/http";
 import {
   clearAuthSession,
@@ -557,6 +557,120 @@ test.describe("http apiRequest", () => {
       expect(calls[0].headers.get("X-Context-Id")).toBeTruthy();
       expect(calls[1].headers.get("Authorization")).toBe("Bearer access-token");
       expect(calls[1].headers.get("X-Context-Id")).toBeTruthy();
+    } finally {
+      restore();
+    }
+  });
+
+  test("listMatriculasDashboardMensalApi consome o endpoint mensal agregado com filtro por mes", async () => {
+    saveAuthSession({
+      token: "access-token",
+      refreshToken: "refresh-token",
+      activeTenantId: "tenant-comercial",
+      availableTenants: [{ tenantId: "tenant-comercial", defaultTenant: true }],
+    });
+
+    const { calls, restore } = mockFetchSequence([
+      new Response(
+        JSON.stringify({
+          mes: "2026-03",
+          resumo: {
+            totalContratos: 3,
+            contratosAtivos: 2,
+            percentualAtivos: 66.67,
+            receitaContratada: 674.95,
+            ticketMedio: 224.98,
+            pendentesAssinatura: 1,
+            insight: "1 contrato(s) aguardam assinatura neste mes.",
+          },
+          carteiraAtivaPorPlano: [
+            {
+              planoId: "plano-black",
+              planoNome: "Black",
+              quantidade: 2,
+              valor: 609.9,
+              percentual: 66.67,
+            },
+          ],
+          contratos: {
+            items: [
+              {
+                id: "mat-1",
+                tenantId: "tenant-comercial",
+                alunoId: "aluno-1",
+                planoId: "plano-black",
+                dataInicio: "2026-03-18",
+                dataFim: "2027-03-18",
+                valorPago: 299.9,
+                valorMatricula: 0,
+                desconto: 0,
+                formaPagamento: "PIX",
+                status: "ATIVA",
+                renovacaoAutomatica: false,
+                dataCriacao: "2026-03-18T14:30:00",
+                contratoStatus: "ASSINADO",
+                aluno: {
+                  id: "aluno-1",
+                  tenantId: "tenant-comercial",
+                  nome: "Ana",
+                  email: "ana@academia.local",
+                  telefone: "(11) 99999-0000",
+                  cpf: "123.456.789-00",
+                  dataNascimento: "1990-01-01",
+                  sexo: "F",
+                  status: "ATIVO",
+                  dataCadastro: "2026-03-01T09:00:00",
+                },
+                plano: {
+                  id: "plano-black",
+                  nome: "Black",
+                  tipo: "MENSAL",
+                  duracaoDias: 30,
+                  valor: 299.9,
+                  valorMatricula: 0,
+                  destaque: false,
+                  ativo: true,
+                  permiteRenovacaoAutomatica: true,
+                  permiteCobrancaRecorrente: false,
+                  contratoAssinatura: "AMBAS",
+                  contratoEnviarAutomaticoEmail: false,
+                },
+              },
+            ],
+            page: 0,
+            size: 20,
+            totalItems: 3,
+            totalPages: 1,
+          },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      ),
+    ]);
+
+    try {
+      const result = await listMatriculasDashboardMensalApi({
+        tenantId: "tenant-comercial",
+        mes: "2026-03",
+        page: 0,
+        size: 20,
+      });
+
+      expect(result.mes).toBe("2026-03");
+      expect(result.resumo.ticketMedio).toBe(224.98);
+      expect(result.resumo.pendentesAssinatura).toBe(1);
+      expect(result.carteiraAtivaPorPlano[0]?.planoNome).toBe("Black");
+      expect(result.contratos.items[0]?.aluno?.nome).toBe("Ana");
+      expect(result.contratos.totalItems).toBe(3);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toContain("/api/v1/comercial/matriculas/dashboard-mensal");
+      expect(calls[0].url).toContain("mes=2026-03");
+      expect(calls[0].url).toContain("page=0");
+      expect(calls[0].url).toContain("size=20");
+      expect(calls[0].url).not.toContain("tenantId=");
+      expect(calls[0].headers.get("X-Context-Id")).toBeTruthy();
     } finally {
       restore();
     }

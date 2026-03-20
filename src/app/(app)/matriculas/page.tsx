@@ -1,23 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, RefreshCcw, XCircle } from "lucide-react";
 import {
   cancelarMatriculaService,
-  listMatriculasPageService,
+  getMatriculasDashboardMensalService,
   renovarMatriculaService,
 } from "@/lib/comercial/runtime";
 import {
-  buildMatriculasMonthlySnapshot,
   buildMonthKeyFromDate,
   formatDateLabel,
   formatMonthLabel,
-  listAvailableMonthKeys,
-  sortMatriculasByRecency,
-  type MatriculaActiveGroup,
-  type MatriculaInsightRow,
 } from "@/lib/comercial/matriculas-insights";
+import type { MatriculaDashboardMensalPlano, MatriculaDashboardMensalResult } from "@/lib/api/matriculas";
 import {
   resolveContratoStatusFromPlano,
   resolveFluxoComercialStatus,
@@ -30,7 +26,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const PAGE_SIZE = 20;
-const FETCH_SIZE = 200;
 const PIE_COLORS = [
   "var(--color-chart-1)",
   "var(--color-chart-2)",
@@ -63,14 +58,14 @@ function getBadgeClass(kind: "contrato" | "fluxo", value: string | undefined) {
   return "bg-muted text-muted-foreground";
 }
 
-function buildPieGradient(groups: MatriculaActiveGroup[]) {
+function buildPieGradient(groups: MatriculaDashboardMensalPlano[]) {
   if (groups.length === 0) {
     return "conic-gradient(var(--muted) 0deg 360deg)";
   }
 
   let current = 0;
   const segments = groups.map((group, index) => {
-    const size = (group.percentage / 100) * 360;
+    const size = (group.percentual / 100) * 360;
     const color = PIE_COLORS[index % PIE_COLORS.length];
     const start = current;
     const end = current + size;
@@ -87,12 +82,11 @@ function buildPieGradient(groups: MatriculaActiveGroup[]) {
 
 export default function MatriculasPage() {
   const { tenantId, tenantResolved, setTenant } = useTenantContext();
-  const [rows, setRows] = useState<MatriculaInsightRow[]>([]);
+  const [dashboard, setDashboard] = useState<MatriculaDashboardMensalResult | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [totalRows, setTotalRows] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [selectedMonthKey, setSelectedMonthKey] = useState("");
 
@@ -101,24 +95,24 @@ export default function MatriculasPage() {
   }, []);
 
   const loadSnapshot = useCallback(
-    async (currentTenantId: string) =>
-      listMatriculasPageService({
+    async (currentTenantId: string, currentMonthKey: string, currentPage: number) =>
+      getMatriculasDashboardMensalService({
         tenantId: currentTenantId,
-        page: 0,
-        size: FETCH_SIZE,
+        mes: currentMonthKey,
+        page: currentPage,
+        size: PAGE_SIZE,
       }),
     []
   );
 
   const load = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId || !selectedMonthKey) return;
     setLoading(true);
     setError(null);
 
     try {
-      const snapshot = await loadSnapshot(tenantId);
-      setRows(sortMatriculasByRecency(snapshot.items));
-      setTotalRows(snapshot.total);
+      const snapshot = await loadSnapshot(tenantId, selectedMonthKey, page);
+      setDashboard(snapshot);
     } catch (loadError) {
       const message = normalizeErrorMessage(loadError);
       const normalizedMessage = message.toLowerCase();
@@ -127,8 +121,7 @@ export default function MatriculasPage() {
         normalizedMessage.includes("tenantid diverge da unidade ativa do contexto informado");
 
       if (!shouldRetryWithTenantSync) {
-        setRows([]);
-        setTotalRows(undefined);
+        setDashboard(null);
         setError(message || "Não foi possível carregar os contratos da unidade ativa.");
         setLoading(false);
         return;
@@ -136,60 +129,38 @@ export default function MatriculasPage() {
 
       try {
         await setTenant(tenantId);
-        const snapshot = await loadSnapshot(tenantId);
-        setRows(sortMatriculasByRecency(snapshot.items));
-        setTotalRows(snapshot.total);
+        const snapshot = await loadSnapshot(tenantId, selectedMonthKey, page);
+        setDashboard(snapshot);
       } catch (retryError) {
-        setRows([]);
-        setTotalRows(undefined);
+        setDashboard(null);
         setError(normalizeErrorMessage(retryError));
       }
     } finally {
       setLoading(false);
     }
-  }, [loadSnapshot, setTenant, tenantId]);
+  }, [loadSnapshot, page, selectedMonthKey, setTenant, tenantId]);
 
   useEffect(() => {
     setPage(0);
-    setRows([]);
-    setTotalRows(undefined);
+    setDashboard(null);
     setFeedback(null);
     setError(null);
     setActionId(null);
   }, [tenantId]);
 
   useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
+    if (!tenantResolved || !tenantId || !selectedMonthKey) return;
     void load();
-  }, [load, tenantId, tenantResolved]);
+  }, [load, selectedMonthKey, tenantId, tenantResolved]);
 
-  const snapshot = useMemo(
-    () => buildMatriculasMonthlySnapshot(rows, selectedMonthKey),
-    [selectedMonthKey, rows]
-  );
-
-  const availableMonthKeys = useMemo(
-    () => listAvailableMonthKeys(rows, selectedMonthKey),
-    [rows, selectedMonthKey]
-  );
-
-  const visibleRows = useMemo(() => {
-    const start = page * PAGE_SIZE;
-    return snapshot.monthRows.slice(start, start + PAGE_SIZE);
-  }, [page, snapshot.monthRows]);
-
-  const hasNextPage = (page + 1) * PAGE_SIZE < snapshot.monthRows.length;
+  const visibleRows = dashboard?.contratos.items ?? [];
+  const activeGroups = dashboard?.carteiraAtivaPorPlano ?? [];
+  const summary = dashboard?.resumo;
+  const visibleMonthLabel = formatMonthLabel(dashboard?.mes || selectedMonthKey);
+  const hasNextPage = dashboard ? page + 1 < dashboard.contratos.totalPages : false;
   const showingFrom = visibleRows.length === 0 ? 0 : page * PAGE_SIZE + 1;
   const showingTo = visibleRows.length === 0 ? 0 : page * PAGE_SIZE + visibleRows.length;
-  const visibleMonthLabel = formatMonthLabel(selectedMonthKey);
-  const coverageNotice =
-    typeof totalRows === "number" && totalRows > rows.length
-      ? `Visao de ${visibleMonthLabel} baseada nos ${rows.length} contratos mais recentes carregados.`
-      : `Visao de ${visibleMonthLabel} baseada em todos os contratos carregados da unidade ativa.`;
-
-  useEffect(() => {
-    setPage(0);
-  }, [selectedMonthKey]);
+  const coverageNotice = "Visao mensal agregada pelo endpoint do backend com paginação server-side.";
 
   return (
     <div className="space-y-6">
@@ -209,9 +180,10 @@ export default function MatriculasPage() {
               id="matriculas-month-filter"
               type="month"
               value={selectedMonthKey}
-              min={availableMonthKeys[availableMonthKeys.length - 1]}
-              max={availableMonthKeys[0]}
-              onChange={(event) => setSelectedMonthKey(event.target.value)}
+              onChange={(event) => {
+                setPage(0);
+                setSelectedMonthKey(event.target.value);
+              }}
               className="border-border bg-card"
             />
           </div>
@@ -241,36 +213,36 @@ export default function MatriculasPage() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               label={`Contratos em ${visibleMonthLabel}`}
-              value={loading && !selectedMonthKey ? "…" : String(snapshot.totalContracts)}
-              helper="recorte dos contratos mais recentes do mes selecionado"
+              value={loading && !summary ? "…" : String(summary?.totalContratos ?? 0)}
+              helper="total consolidado do mes selecionado"
             />
             <MetricCard
               label="Receita contratada"
-              value={formatBRL(snapshot.contractedRevenue)}
-              helper="somatorio dos contratos do mes"
+              value={formatBRL(summary?.receitaContratada ?? 0)}
+              helper="somatorio consolidado do mes"
             />
             <MetricCard
               label="Valor medio do contrato"
-              value={formatBRL(snapshot.averageTicket)}
-              helper="ticket medio do recorte mensal"
+              value={formatBRL(summary?.ticketMedio ?? 0)}
+              helper="ticket medio consolidado do mes"
             />
             <MetricCard
               label="Carteira ativa"
-              value={formatPercentage(snapshot.activePercentage)}
-              helper={`${snapshot.activeContracts} contrato(s) ativos no mes`}
+              value={formatPercentage(summary?.percentualAtivos ?? 0)}
+              helper={`${summary?.contratosAtivos ?? 0} contrato(s) ativos no mes`}
             />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <ContextCard
               title="Leitura sugerida"
-              text={snapshot.insight}
+              text={summary?.insight ?? "Nenhum insight disponível para o mês selecionado."}
             />
             <ContextCard
               title="Ponto de atencao"
               text={
-                snapshot.pendingSignature > 0
-                  ? `${snapshot.pendingSignature} contrato(s) ainda aguardam assinatura no mes.`
+                (summary?.pendentesAssinatura ?? 0) > 0
+                  ? `${summary?.pendentesAssinatura ?? 0} contrato(s) ainda aguardam assinatura no mes.`
                   : "Sem contratos pendentes de assinatura neste recorte."
               }
             />
@@ -290,25 +262,25 @@ export default function MatriculasPage() {
             <div className="flex justify-center">
               <div
                 className="relative size-48 rounded-full border border-border/60"
-                style={{ background: buildPieGradient(snapshot.activeGroups) }}
+                style={{ background: buildPieGradient(activeGroups) }}
                 aria-label="Grafico em pizza da carteira ativa"
               >
                 <div className="absolute inset-[22%] rounded-full border border-border bg-card shadow-inner" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="text-[11px] uppercase tracking-wide text-muted-foreground">ativos</span>
-                  <strong className="font-display text-3xl">{snapshot.activeContracts}</strong>
+                  <strong className="font-display text-3xl">{summary?.contratosAtivos ?? 0}</strong>
                 </div>
               </div>
             </div>
 
             <div className="space-y-3">
-              {snapshot.activeGroups.length === 0 ? (
+              {activeGroups.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
                   Nenhum contrato ativo para montar a pizza neste mes.
                 </p>
               ) : (
-                snapshot.activeGroups.map((group, index) => (
-                  <div key={group.label} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-background px-4 py-3">
+                activeGroups.map((group, index) => (
+                  <div key={`${group.planoId ?? group.planoNome}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-background px-4 py-3">
                     <div className="flex items-center gap-3">
                       <span
                         className="size-3 rounded-full"
@@ -316,13 +288,13 @@ export default function MatriculasPage() {
                         aria-hidden="true"
                       />
                       <div>
-                        <p className="text-sm font-semibold">{group.label}</p>
-                        <p className="text-xs text-muted-foreground">{group.count} contrato(s) ativos</p>
+                        <p className="text-sm font-semibold">{group.planoNome}</p>
+                        <p className="text-xs text-muted-foreground">{group.quantidade} contrato(s) ativos</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold">{formatPercentage(group.percentage)}</p>
-                      <p className="text-xs text-muted-foreground">{formatBRL(group.value)}</p>
+                      <p className="text-sm font-semibold">{formatPercentage(group.percentual)}</p>
+                      <p className="text-xs text-muted-foreground">{formatBRL(group.valor)}</p>
                     </div>
                   </div>
                 ))
@@ -479,7 +451,7 @@ export default function MatriculasPage() {
         <p className="text-xs text-muted-foreground">
           Mostrando <span className="font-semibold text-foreground">{showingFrom}</span> até{" "}
           <span className="font-semibold text-foreground">{showingTo}</span> de{" "}
-          <span className="font-semibold text-foreground">{snapshot.totalContracts}</span> contrato(s) do mes · página{" "}
+          <span className="font-semibold text-foreground">{dashboard?.contratos.totalItems ?? 0}</span> contrato(s) do mes · página{" "}
           <span className="font-semibold text-foreground">{page + 1}</span>
         </p>
         <div className="flex items-center gap-2">

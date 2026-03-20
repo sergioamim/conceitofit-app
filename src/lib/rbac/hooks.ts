@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  createUserService,
   createPerfilService,
   listAuditoriaService,
   listFeaturesService,
@@ -32,6 +33,10 @@ export function useRbacTenant() {
   return {
     tenantId: tenantContext.tenantId,
     tenantName: tenantContext.tenantName,
+    availableTenants: tenantContext.availableTenants,
+    networkId: tenantContext.networkId,
+    networkName: tenantContext.networkName,
+    networkSubdomain: tenantContext.networkSubdomain ?? tenantContext.networkSlug,
     loading: tenantContext.loading,
     error: tenantContext.error,
     refreshTenant: tenantContext.refresh,
@@ -278,6 +283,33 @@ export function useUserPerfilManager(tenantId: string) {
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0] ?? null;
 
+  const createUser = useCallback(
+    async (data: import("@/lib/types").RbacUserCreatePayload) => {
+      if (!tenantId) {
+        throw new Error("Tenant ativo inválido para criação do usuário.");
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        const created = await createUserService({
+          tenantId,
+          data,
+        });
+        await loadUsers();
+        setSelectedUserId(created.id);
+        await loadPerfisUsuario(created.id);
+        return created;
+      } catch (createError) {
+        const normalized = normalizeErrorMessage(createError);
+        setError(normalized);
+        throw new Error(normalized);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [loadPerfisUsuario, loadUsers, tenantId]
+  );
+
   return {
     users,
     selectedUser,
@@ -289,6 +321,7 @@ export function useUserPerfilManager(tenantId: string) {
     saving,
     error,
     reload: loadUsers,
+    createUser,
     assignPerfil,
     removePerfil,
   };
@@ -371,15 +404,6 @@ export function useGrantManager(tenantId: string) {
     },
     [reload, tenantId]
   );
-
-  const grantsByProfile = useMemo(() => {
-    const map = new Map<string, typeof grants>();
-    for (const grant of grants) {
-      const key = `${grant.roleName}::${grant.featureKey}::${grant.permission}`;
-      map.set(key, [...(map.get(key) ?? []), grant]);
-    }
-    return map;
-  }, [grants]);
 
   return {
     features,

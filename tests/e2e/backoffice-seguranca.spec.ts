@@ -469,6 +469,44 @@ async function setupBackofficeSecurityMocks(page: Page, state: State) {
       return;
     }
 
+    if (path === "/api/v1/admin/seguranca/usuarios" && method === "POST") {
+      const body = parseBody<{
+        name?: string;
+        email?: string;
+        tenantIds?: string[];
+        defaultTenantId?: string;
+        eligibleForNewUnits?: boolean;
+        policyScope?: "ACADEMIA_ATUAL" | "REDE";
+      }>(request.postData());
+      const tenantIds = body.tenantIds?.filter(Boolean) ?? [];
+      if (!body.name || !body.email) {
+        await route.fulfill({ status: 400, json: { message: "Nome e e-mail são obrigatórios." } });
+        return;
+      }
+      const userId = `user-${state.users.length + 1}`;
+      state.users.unshift({
+        id: userId,
+        nome: body.name,
+        email: body.email,
+        active: true,
+        policy: {
+          enabled: Boolean(body.eligibleForNewUnits),
+          scope: body.policyScope ?? "ACADEMIA_ATUAL",
+          updatedAt: "2026-03-20T09:00:00",
+        },
+        memberships: tenantIds.map((tenantId, index) => ({
+          id: `membership-${userId}-${index + 1}`,
+          tenantId,
+          active: true,
+          defaultTenant: body.defaultTenantId ? body.defaultTenantId === tenantId : index === 0,
+          accessOrigin: "MANUAL",
+          profiles: [],
+        })),
+      });
+      await route.fulfill({ status: 201, json: buildUserDetail(state, userId) });
+      return;
+    }
+
     if (/^\/api\/v1\/admin\/seguranca\/usuarios\/[^/]+$/.test(path) && method === "GET") {
       const userId = path.split("/").at(-1) ?? "";
       const detail = buildUserDetail(state, userId);
@@ -715,5 +753,33 @@ test.describe("Backoffice segurança global", () => {
     await expect(page.getByText("Leituras gerenciais agregadas")).toBeVisible();
     await page.getByRole("tab", { name: "Escopos e acessos" }).click();
     await expect(page.getByText("Contexto transitório de sessão")).toBeVisible();
+  });
+
+  test("cria usuário na segurança global com escopo de rede e memberships iniciais", async ({ page }) => {
+    const state = buildInitialState();
+    await seedSession(page);
+    await setupBackofficeSecurityMocks(page, state);
+
+    await page.goto("/admin/seguranca/usuarios");
+    await page.getByRole("button", { name: "Novo usuário" }).click();
+
+    await page.getByLabel("Nome completo").fill("Carla Operações");
+    await page.getByLabel("E-mail principal").fill("carla@qa.local");
+    await page.getByLabel("CPF opcional").fill("111.222.333-44");
+    await page.getByLabel("Academia de referência global").click();
+    await page.getByRole("option", { name: "Rede Norte" }).click();
+    await page.locator("label").filter({ hasText: "Unidade Centro" }).locator("input").check();
+    await page.locator("label").filter({ hasText: "Unidade Barra" }).locator("input").check();
+    await page.getByLabel("Unidade base global").click();
+    await page.getByRole("option", { name: "Unidade Centro" }).click();
+    await page.locator("label").filter({ hasText: "Propagar para novas unidades" }).locator("input").check();
+    await page.getByLabel("Política inicial global").click();
+    await page.getByRole("option", { name: "Rede inteira" }).click();
+    await page.getByRole("button", { name: "Criar usuário" }).click();
+
+    await expect(page.getByText("Usuário criado na segurança global.")).toBeVisible();
+    const createdRow = page.getByRole("row").filter({ hasText: "Carla Operações" });
+    await expect(createdRow).toBeVisible();
+    await expect(createdRow.getByText("2 acessos ativos")).toBeVisible();
   });
 });

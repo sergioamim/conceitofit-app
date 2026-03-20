@@ -86,6 +86,7 @@ export default function BiOperacionalPage() {
   const tenantContext = useTenantContext();
   const { start, end } = monthRangeFromNow();
   const scopeAccess = resolveBiScopeAccess(access.canAccessElevatedModules);
+  const [mounted, setMounted] = useState(false);
 
   const [academias, setAcademias] = useState<Academia[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -144,6 +145,10 @@ export default function BiOperacionalPage() {
   ]);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     void loadFilters();
   }, [loadFilters]);
 
@@ -160,9 +165,11 @@ export default function BiOperacionalPage() {
     return tenants.filter((tenant) => (tenant.academiaId ?? tenant.groupId) === selectedAcademiaId);
   }, [scope, selectedAcademiaId, tenants]);
 
-  const activeLabel = snapshot?.scope === "ACADEMIA"
-    ? snapshot.academiaNome ?? "Rede"
-    : snapshot?.tenantNome ?? tenantContext.tenantName;
+  const activeLabel = !mounted
+    ? "Unidade ativa"
+    : snapshot?.scope === "ACADEMIA"
+      ? snapshot.academiaNome ?? "Rede"
+      : snapshot?.tenantNome ?? tenantContext.tenantName;
 
   return (
     <div className="space-y-6">

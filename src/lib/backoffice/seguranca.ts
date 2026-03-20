@@ -1,4 +1,5 @@
 import type {
+  GlobalAdminUserCreatePayload,
   GlobalAdminReviewBoard,
   GlobalAdminNewUnitsPolicyScope,
   GlobalAdminSecurityOverview,
@@ -8,6 +9,7 @@ import type {
 } from "@/lib/types";
 import {
   assignGlobalAdminMembershipProfileApi,
+  createGlobalAdminUserApi,
   createGlobalAdminAccessExceptionApi,
   createGlobalAdminMembershipApi,
   deleteGlobalAdminAccessExceptionApi,
@@ -60,6 +62,32 @@ export async function getGlobalSecurityUser(userId: string): Promise<GlobalAdmin
     throw new Error("Usuário inválido para consulta.");
   }
   return getGlobalAdminUserDetailApi(normalizedUserId);
+}
+
+export async function createGlobalSecurityUser(
+  input: GlobalAdminUserCreatePayload
+): Promise<GlobalAdminUserDetail> {
+  const name = trimString(input.name);
+  const email = trimString(input.email);
+  if (!name || !email) {
+    throw new Error("Nome e e-mail são obrigatórios.");
+  }
+  return createGlobalAdminUserApi({
+    ...input,
+    name,
+    fullName: trimString(input.fullName) ?? name,
+    email,
+    userKind: trimString(input.userKind),
+    academiaId: trimString(input.academiaId),
+    defaultTenantId: trimString(input.defaultTenantId),
+    tenantIds: input.tenantIds?.map((item) => item.trim()).filter(Boolean),
+    loginIdentifiers: input.loginIdentifiers
+      ?.map((item) => ({
+        label: item.label.trim(),
+        value: item.value.trim(),
+      }))
+      .filter((item) => item.label && item.value),
+  });
 }
 
 export async function addUserMembership(input: {

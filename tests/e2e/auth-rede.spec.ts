@@ -325,16 +325,42 @@ test.describe("acesso por rede", () => {
     await expect(captured.contextIdentifiers).toEqual(["rede-norte"]);
   });
 
-  test("bloqueia envio quando a rede da URL é inválida", async ({ page }) => {
+  test("usa redeIdentifier na query string de /login para abrir o fluxo por rede", async ({ page }) => {
+    const captured: CapturedRequests = { contextIdentifiers: [] };
+    await installAuthNetworkMocks(page, captured);
+
+    await page.goto("/login?redeIdentifier=sergioamim");
+
+    await expect(page.getByRole("heading", { name: "Portal Rede Norte" })).toBeVisible();
+    await expect(page.getByText("Subdomínio: rede-norte")).toBeVisible();
+    await expect(captured.contextIdentifiers).toEqual(["sergioamim"]);
+  });
+
+  test("permite envio mesmo sem contexto pré-carregado e valida a rede no submit", async ({ page }) => {
     const captured: CapturedRequests = { contextIdentifiers: [] };
     await installAuthNetworkMocks(page, captured);
 
     await page.goto("/app/rede-invalida/login");
 
     await expect(
-      page.getByText("Esta URL não corresponde a uma rede válida ou a rede não está disponível no momento.")
+      page.getByText("Não foi possível carregar o contexto visual da rede agora. Você ainda pode continuar e validar o acesso no envio.")
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Entrar" })).toBeDisabled();
-    await expect(captured.contextIdentifiers).toEqual(["rede-invalida"]);
+    await expect(page.getByLabel("Identificador")).toBeEnabled();
+    await expect(page.getByLabel("Senha")).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Entrar" })).toBeEnabled();
+
+    await page.getByLabel("Identificador").fill("admin@academia.local");
+    await page.getByLabel("Senha").fill("12345678");
+    await page.getByRole("button", { name: "Entrar" }).click();
+
+    expect(captured.contextIdentifiers).toEqual(["rede-invalida"]);
+    expect(captured.login).toEqual({
+      networkIdentifier: "rede-invalida",
+      body: {
+        identifier: "admin@academia.local",
+        password: "12345678",
+        channel: "APP",
+      },
+    });
   });
 });

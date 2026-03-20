@@ -1,4 +1,5 @@
 import type {
+  GlobalAdminUserCreatePayload,
   GlobalAdminAccessException,
   GlobalAdminMembership,
   GlobalAdminMembershipOrigin,
@@ -651,6 +652,35 @@ export async function getGlobalAdminUserDetailApi(userId: string): Promise<Globa
     exceptions: [...(response.exceptions ?? []), ...(response.excecoes ?? [])].map(normalizeAccessException),
     recentChanges: [...(response.recentChanges ?? []), ...(response.mudancasRecentes ?? [])].map(normalizeRecentChange),
   };
+}
+
+export async function createGlobalAdminUserApi(
+  input: GlobalAdminUserCreatePayload
+): Promise<GlobalAdminUserDetail> {
+  const response = await apiRequest<RawUserDetail>({
+    path: "/api/v1/admin/seguranca/usuarios",
+    method: "POST",
+    body: {
+      name: cleanString(input.name),
+      fullName: cleanString(input.fullName),
+      email: cleanString(input.email),
+      userKind: cleanString(input.userKind),
+      scopeType: cleanString(input.scopeType),
+      academiaId: cleanString(input.academiaId),
+      tenantIds: input.tenantIds?.map((item) => item.trim()).filter(Boolean),
+      defaultTenantId: cleanString(input.defaultTenantId),
+      broadAccess: input.broadAccess ?? false,
+      eligibleForNewUnits: input.eligibleForNewUnits ?? false,
+      policyScope: cleanString(input.policyScope),
+      loginIdentifiers: input.loginIdentifiers
+        ?.map((item) => ({
+          label: cleanString(item.label),
+          value: cleanString(item.value),
+        }))
+        .filter((item): item is { label: string; value: string } => Boolean(item.label && item.value)),
+    },
+  });
+  return getGlobalAdminUserDetailFromRaw(response);
 }
 
 export async function createGlobalAdminAccessExceptionApi(input: {

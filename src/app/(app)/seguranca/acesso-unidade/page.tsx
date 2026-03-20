@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { PaginatedTable } from "@/components/shared/paginated-table";
@@ -10,12 +11,14 @@ import { TableCell } from "@/components/ui/table";
 import { SecurityActiveBadge } from "@/components/security/security-badges";
 import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import {
+  createUserApi,
   linkUserPerfilApi,
   listPerfisApi,
   listUserPerfisApi,
   listUsersApi,
   unlinkUserPerfilApi,
 } from "@/lib/api/rbac";
+import { validateAcademiaUserCreateDraft } from "@/lib/security-user-create";
 import type { RbacPerfil, RbacUser, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useAuthAccess } from "@/hooks/use-session-context";
@@ -26,6 +29,10 @@ function isCustomerRole(roleName: string | undefined): boolean {
 
 export default function AcessoUnidadePage() {
   const access = useAuthAccess();
+  const [createName, setCreateName] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
+  const [createCpf, setCreateCpf] = useState("");
+  const [createProfileIds, setCreateProfileIds] = useState<string[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState("");
   const [users, setUsers] = useState<RbacUser[]>([]);
@@ -48,6 +55,13 @@ export default function AcessoUnidadePage() {
     () => perfis.filter((perfil) => perfil.active && !isCustomerRole(perfil.roleName)),
     [perfis]
   );
+
+  const networkTenantOptions = useMemo(() => {
+    if (!selectedTenant) return tenants;
+    const networkId = selectedTenant.academiaId ?? selectedTenant.groupId;
+    if (!networkId) return tenants;
+    return tenants.filter((tenant) => (tenant.academiaId ?? tenant.groupId) === networkId);
+  }, [selectedTenant, tenants]);
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -111,8 +125,8 @@ export default function AcessoUnidadePage() {
     }
   }, [tenantId, usersLoaded]);
 
-  const loadUserPerfis = useCallback(async () => {
-    if (!tenantId || !selectedUserId) {
+  const loadUserPerfisFor = useCallback(async (targetTenantId: string, targetUserId: string) => {
+    if (!targetTenantId || !targetUserId) {
       setUserPerfis([]);
       return;
     }
@@ -120,8 +134,8 @@ export default function AcessoUnidadePage() {
     setError(null);
     try {
       const linkedPerfis = await listUserPerfisApi({
-        tenantId,
-        userId: selectedUserId,
+        tenantId: targetTenantId,
+        userId: targetUserId,
       });
       setUserPerfis(linkedPerfis);
     } catch (loadError) {
@@ -130,7 +144,7 @@ export default function AcessoUnidadePage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedUserId, tenantId]);
+  }, []);
 
   useEffect(() => {
     void loadTenants();
@@ -142,8 +156,8 @@ export default function AcessoUnidadePage() {
   }, [loadTenantData, tenantId]);
 
   useEffect(() => {
-    void loadUserPerfis();
-  }, [loadUserPerfis]);
+    void loadUserPerfisFor(tenantId, selectedUserId);
+  }, [loadUserPerfisFor, selectedUserId, tenantId]);
 
   async function handleGrant(event: FormEvent) {
     event.preventDefault();
@@ -204,6 +218,50 @@ export default function AcessoUnidadePage() {
   const hasInternalAccess = internalProfilesLinked.length > 0;
   const accessRows = selectedUser && hasInternalAccess ? [selectedUser] : [];
 
+  async function handleCreateUser(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+    if (!tenantId) {
+      setError("Selecione a unidade atual antes de criar o usuário.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const networkId = selectedTenant?.academiaId ?? selectedTenant?.groupId;
+      const payload = validateAcademiaUserCreateDraft({
+        name: createName,
+        email: createEmail,
+        cpf: createCpf,
+        networkId,
+        networkName: selectedTenant?.nome,
+        tenantIds: [tenantId],
+        defaultTenantId: tenantId,
+        initialPerfilIds: createProfileIds,
+        allowedTenantIds: networkTenantOptions.map((tenant) => tenant.id),
+        allowedPerfilIds: activePerfis.map((perfil) => perfil.id),
+      });
+      const created = await createUserApi({
+        tenantId,
+        data: payload,
+      });
+      setUsers((current) => [...current, created]);
+      setUsersLoaded(true);
+      setSelectedUserId(created.id);
+      setUserQuery(created.fullName || created.name || created.email);
+      await loadUserPerfisFor(tenantId, created.id);
+      setCreateName("");
+      setCreateEmail("");
+      setCreateCpf("");
+      setCreateProfileIds([]);
+      setSuccess("Usuário criado na rede atual.");
+    } catch (createError) {
+      setError(normalizeErrorMessage(createError));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -233,6 +291,95 @@ export default function AcessoUnidadePage() {
 
       {!access.loading && access.canAccessElevatedModules ? (
         <>
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="font-display text-lg">Criar usuário da rede atual</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            A criação nesta área fica limitada à unidade e à rede operacional atual, sem alcance global nem outras redes.
+          </p>
+
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleCreateUser}>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+              <Input
+                aria-label="Nome do usuário da unidade"
+                value={createName}
+                onChange={(event) => setCreateName(event.target.value)}
+                className="border-border bg-secondary"
+                placeholder="Carla Operações"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
+              <Input
+                aria-label="E-mail do usuário da unidade"
+                type="email"
+                value={createEmail}
+                onChange={(event) => setCreateEmail(event.target.value)}
+                className="border-border bg-secondary"
+                placeholder="carla@academia.local"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF opcional</label>
+              <Input
+                aria-label="CPF do usuário da unidade"
+                value={createCpf}
+                onChange={(event) => setCreateCpf(event.target.value)}
+                className="border-border bg-secondary"
+                placeholder="111.222.333-44"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unidade base</label>
+              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm text-muted-foreground">
+                {selectedTenant?.nome ?? "Selecione a unidade acima para fixar a base do novo usuário."}
+              </div>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Perfis iniciais</label>
+              <div className="grid gap-2 rounded-lg border border-border bg-secondary/30 p-3 md:grid-cols-2">
+                {activePerfis.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum perfil interno disponível para vínculo inicial.</p>
+                ) : (
+                  activePerfis.map((perfil) => (
+                    <label key={perfil.id} className="flex items-start gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={createProfileIds.includes(perfil.id)}
+                        onChange={() =>
+                          setCreateProfileIds((current) =>
+                            current.includes(perfil.id)
+                              ? current.filter((item) => item !== perfil.id)
+                              : [...current, perfil.id]
+                          )
+                        }
+                      />
+                      <span>
+                        <span className="block font-medium text-foreground">{perfil.displayName}</span>
+                        <span className="block text-xs text-muted-foreground">{perfil.roleName}</span>
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="md:col-span-2 flex justify-end">
+              <Button type="submit" disabled={saving || loading || !tenantId}>
+                {saving ? "Criando..." : "Criar usuário"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
 
       <Card className="border-border bg-card">
         <CardHeader>

@@ -25,6 +25,7 @@ import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
 import {
   cancelarMatriculaApi,
   createMatriculaApi,
+  listMatriculasDashboardMensalApi,
   listMatriculasApi,
   listMatriculasByAlunoApi,
   listMatriculasPageApi,
@@ -352,6 +353,15 @@ export async function listMatriculasPageService(input: {
   size?: number;
 }) {
   return listMatriculasPageApi(input);
+}
+
+export async function getMatriculasDashboardMensalService(input: {
+  tenantId: string;
+  mes: string;
+  page?: number;
+  size?: number;
+}) {
+  return listMatriculasDashboardMensalApi(input);
 }
 
 export async function listMatriculasByAlunoService(input: {

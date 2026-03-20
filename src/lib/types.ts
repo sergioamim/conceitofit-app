@@ -1595,6 +1595,25 @@ export interface RbacUser {
   active?: boolean;
 }
 
+export interface SecurityUserLoginIdentifierInput {
+  label: string;
+  value: string;
+}
+
+export interface RbacUserCreatePayload {
+  name: string;
+  fullName?: string;
+  email: string;
+  userKind?: string;
+  networkId?: UUID;
+  networkName?: string;
+  networkSubdomain?: string;
+  tenantIds: UUID[];
+  defaultTenantId?: UUID;
+  initialPerfilIds?: UUID[];
+  loginIdentifiers?: SecurityUserLoginIdentifierInput[];
+}
+
 export interface RbacFeature {
   featureKey: string;
   name?: string;
@@ -1805,6 +1824,21 @@ export interface GlobalAdminUserDetail extends GlobalAdminUserSummary {
   policy: GlobalAdminNewUnitsPolicy;
   exceptions: GlobalAdminAccessException[];
   recentChanges: GlobalAdminRecentChange[];
+}
+
+export interface GlobalAdminUserCreatePayload {
+  name: string;
+  fullName?: string;
+  email: string;
+  userKind?: string;
+  scopeType: GlobalAdminScopeType;
+  academiaId?: UUID;
+  tenantIds?: UUID[];
+  defaultTenantId?: UUID;
+  broadAccess?: boolean;
+  eligibleForNewUnits?: boolean;
+  policyScope?: GlobalAdminNewUnitsPolicyScope;
+  loginIdentifiers?: SecurityUserLoginIdentifierInput[];
 }
 
 export interface GlobalAdminSecurityOverview {

@@ -11,9 +11,9 @@ import type {
   RbacPerfilUpdatePayload,
   RbacResourceTypeFilter,
   RbacUser,
+  RbacUserCreatePayload,
 } from "@/lib/types";
 import { apiRequest } from "./http";
-import type { ApiErrorPayload } from "./http";
 
 type RbacAnyListResponse<T> =
   | T[]
@@ -194,6 +194,32 @@ export async function listUsersApi(input: {
     },
   });
   return toArray(response);
+}
+
+export async function createUserApi(input: {
+  tenantId: string;
+  data: RbacUserCreatePayload;
+}): Promise<RbacUser> {
+  return apiRequest<RbacUser>({
+    path: "/api/v1/auth/users",
+    method: "POST",
+    query: {
+      tenantId: input.tenantId,
+    },
+    body: {
+      name: input.data.name,
+      fullName: input.data.fullName,
+      email: input.data.email,
+      userKind: input.data.userKind,
+      networkId: input.data.networkId,
+      networkName: input.data.networkName,
+      networkSubdomain: input.data.networkSubdomain,
+      tenantIds: input.data.tenantIds,
+      defaultTenantId: input.data.defaultTenantId,
+      initialPerfilIds: input.data.initialPerfilIds,
+      loginIdentifiers: input.data.loginIdentifiers,
+    },
+  });
 }
 
 export async function listUserPerfisApi(input: {
