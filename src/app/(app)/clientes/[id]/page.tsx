@@ -8,6 +8,7 @@ import {
   createCartaoClienteService,
   deleteCartaoClienteService,
   excluirAlunoService,
+  getClienteOperationalContextService,
   liberarAcessoCatracaService,
   listBandeirasCartaoService,
   listCartoesClienteService,
@@ -17,19 +18,22 @@ import {
   listPagamentosService,
   listPlanosService,
   listPresencasByAlunoService,
+  migrarClienteParaUnidadeService,
   receberPagamentoService,
-  resolveAlunoTenantService,
   setCartaoPadraoService,
   updateAlunoService,
 } from "@/lib/comercial/runtime";
 import { ApiRequestError } from "@/lib/api/http";
 import { getNfseBloqueioMensagem } from "@/lib/admin-financeiro";
+import { isClientMigrationEnabled } from "@/lib/feature-flags";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type {
   Aluno,
   BandeiraCartao,
   CartaoCliente,
   ClienteExclusaoBlockedBy,
+  ClienteMigracaoUnidadeResult,
+  ClienteOperationalContext,
   Matricula,
   Plano,
   Pagamento,
@@ -51,6 +55,13 @@ import { ClienteCartoesPanel } from "@/components/shared/cliente-cartoes-panel";
 import { ClientePhotoModal } from "@/components/shared/cliente-photo-modal";
 import { ClienteTabs, ClienteTabKey } from "@/components/shared/cliente-tabs";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+
+type MigrationAuditSummary = {
+  auditId?: string;
+  tenantOrigemNome?: string;
+  tenantDestinoNome?: string;
+  message?: string;
+};
 
 type TabLoadStatus = "idle" | "loading" | "ready" | "error";
 
@@ -112,8 +123,16 @@ export default function ClienteDetalhePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedTab = resolveClienteTab(searchParams.get("tab"));
-  const { tenantId, tenantResolved, tenants, setTenant, canDeleteClient } = useTenantContext();
+  const {
+    tenantId,
+    tenantResolved,
+    tenants,
+    eligibleTenants,
+    setTenant,
+    canDeleteClient,
+  } = useTenantContext();
   const [aluno, setAluno] = useState<Aluno | null>(null);
+  const [clienteContexto, setClienteContexto] = useState<ClienteOperationalContext | null>(null);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
@@ -138,6 +157,14 @@ export default function ClienteDetalhePage() {
   const [excluindo, setExcluindo] = useState(false);
   const [excluirErro, setExcluirErro] = useState("");
   const [excluirBlockedBy, setExcluirBlockedBy] = useState<ClienteExclusaoBlockedBy[]>([]);
+  const [migracaoOpen, setMigracaoOpen] = useState(false);
+  const [migracaoTenantDestinoId, setMigracaoTenantDestinoId] = useState("");
+  const [migracaoJustificativa, setMigracaoJustificativa] = useState("");
+  const [migracaoPreservaContexto, setMigracaoPreservaContexto] = useState(true);
+  const [migrandoCliente, setMigrandoCliente] = useState(false);
+  const [migracaoErro, setMigracaoErro] = useState("");
+  const [migracaoBlockedBy, setMigracaoBlockedBy] = useState<ClienteExclusaoBlockedBy[]>([]);
+  const [migracaoResumo, setMigracaoResumo] = useState<MigrationAuditSummary | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -262,13 +289,17 @@ export default function ClienteDetalhePage() {
     setLoading(true);
     setLoadError(null);
     try {
-      const resolved = await resolveAlunoTenantService({
+      const resolved = await getClienteOperationalContextService({
         alunoId: id,
         tenantId,
-        tenantIds: tenants.map((item) => item.id),
+        tenants: (eligibleTenants.length > 0 ? eligibleTenants : tenants).map((item) => ({
+          id: item.id,
+          nome: item.nome,
+        })),
       });
       if (!resolved) {
         setAluno(null);
+        setClienteContexto(null);
         setMatriculas([]);
         setPlanos([]);
         setPagamentos([]);
@@ -311,6 +342,7 @@ export default function ClienteDetalhePage() {
         }),
       ]);
       setAluno(resolved.aluno);
+      setClienteContexto(resolved);
       setMatriculas(ms.filter((m) => m.alunoId === id));
       setPlanos(ps);
       setPagamentos(pags);
@@ -326,12 +358,13 @@ export default function ClienteDetalhePage() {
     } catch (error) {
       setLoadError(normalizeErrorMessage(error));
       setAluno(null);
+      setClienteContexto(null);
       setNfseTabState(createIdleNfseTabState());
       setCartoesTabState(createIdleCartoesTabState());
     } finally {
       setLoading(false);
     }
-  }, [params?.id, setTenant, tenantId, tenantResolved, tenants]);
+  }, [eligibleTenants, params?.id, setTenant, tenantId, tenantResolved, tenants]);
 
   useEffect(() => {
     if (!params?.id || !tenantResolved) return;
@@ -469,6 +502,23 @@ export default function ClienteDetalhePage() {
     { value: "PAUSA_CONTRATO", label: "Pausa de contrato" },
     { value: "OUTROS", label: "Outros" },
   ];
+  const migracaoHabilitada = isClientMigrationEnabled();
+  const tenantCatalogo = new Map(
+    [...tenants, ...eligibleTenants].map((tenant) => [tenant.id, tenant] as const)
+  );
+  const baseTenantIdAtual = clienteContexto?.baseTenantId ?? aluno.tenantId;
+  const baseTenantNomeAtual =
+    clienteContexto?.baseTenantName
+    ?? tenantCatalogo.get(baseTenantIdAtual)?.nome
+    ?? "Unidade base não informada";
+  const opcoesMigracao = (clienteContexto?.eligibleTenants.length
+    ? clienteContexto.eligibleTenants.map((tenant) => ({
+        id: tenant.tenantId,
+        nome: tenant.tenantName ?? tenantCatalogo.get(tenant.tenantId)?.nome ?? tenant.tenantId,
+      }))
+    : [...tenantCatalogo.values()].map((tenant) => ({ id: tenant.id, nome: tenant.nome })))
+    .filter((tenant, index, items) => items.findIndex((item) => item.id === tenant.id) === index)
+    .filter((tenant) => tenant.id !== baseTenantIdAtual);
 
   function closeExcluirModal() {
     setExcluirOpen(false);
@@ -505,6 +555,49 @@ export default function ClienteDetalhePage() {
       }
       if (error.status === 422) {
         return { message: "Informe uma justificativa válida para excluir o cliente.", blockedBy };
+      }
+    }
+
+    return { message: normalizeErrorMessage(error), blockedBy: [] };
+  }
+
+  function closeMigracaoModal() {
+    setMigracaoOpen(false);
+    setMigracaoTenantDestinoId("");
+    setMigracaoJustificativa("");
+    setMigracaoPreservaContexto(true);
+    setMigracaoErro("");
+    setMigracaoBlockedBy([]);
+  }
+
+  function parseMigracaoErro(error: unknown): { message: string; blockedBy: ClienteExclusaoBlockedBy[] } {
+    if (error instanceof ApiRequestError) {
+      let blockedBy: ClienteExclusaoBlockedBy[] = [];
+      if (error.responseBody) {
+        try {
+          const parsed = JSON.parse(error.responseBody) as { blockedBy?: ClienteExclusaoBlockedBy[] };
+          if (Array.isArray(parsed.blockedBy)) {
+            blockedBy = parsed.blockedBy.filter(
+              (item): item is ClienteExclusaoBlockedBy =>
+                typeof item?.code === "string" && typeof item?.message === "string"
+            );
+          }
+        } catch {
+          blockedBy = [];
+        }
+      }
+
+      if (error.status === 403) {
+        return { message: "Seu perfil não possui permissão para migrar a unidade-base do cliente.", blockedBy };
+      }
+      if (error.status === 409) {
+        return {
+          message: blockedBy[0]?.message ?? "A migração foi bloqueada pelas regras estruturais do cliente.",
+          blockedBy,
+        };
+      }
+      if (error.status === 422) {
+        return { message: "Revise destino e justificativa antes de confirmar a migração.", blockedBy };
       }
     }
 
@@ -743,6 +836,142 @@ export default function ClienteDetalhePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={migracaoOpen} onOpenChange={(next) => { if (!next) closeMigracaoModal(); }}>
+        <DialogContent className="border-border bg-card sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold">
+              Migrar unidade-base do cliente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              Esta operação altera a unidade-base estrutural do cliente. Não é apenas uma troca temporária de contexto.
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-border bg-secondary/40 px-3 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Origem atual
+                </p>
+                <p className="mt-1 text-sm font-medium text-foreground">{baseTenantNomeAtual}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Unidade destino *
+                </label>
+                <select
+                  value={migracaoTenantDestinoId}
+                  onChange={(event) => {
+                    setMigracaoTenantDestinoId(event.target.value);
+                    if (migracaoErro) setMigracaoErro("");
+                    if (migracaoBlockedBy.length > 0) setMigracaoBlockedBy([]);
+                  }}
+                  className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
+                >
+                  <option value="">Selecione a unidade destino</option>
+                  {opcoesMigracao.map((tenant) => (
+                    <option key={tenant.id} value={tenant.id}>
+                      {tenant.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Justificativa *
+              </label>
+              <textarea
+                value={migracaoJustificativa}
+                onChange={(event) => {
+                  setMigracaoJustificativa(event.target.value);
+                  if (migracaoErro) setMigracaoErro("");
+                  if (migracaoBlockedBy.length > 0) setMigracaoBlockedBy([]);
+                }}
+                rows={4}
+                maxLength={500}
+                className="min-h-24 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
+                placeholder="Explique o motivo operacional e estrutural da migração..."
+              />
+            </div>
+            <label className="flex items-start gap-2 rounded-xl border border-border px-3 py-3 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={migracaoPreservaContexto}
+                onChange={(event) => setMigracaoPreservaContexto(event.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                Preservar o contexto comercial no tenant de destino após a migração.
+              </span>
+            </label>
+            {migracaoErro ? <p className="text-xs text-gym-danger">{migracaoErro}</p> : null}
+            {migracaoBlockedBy.length > 0 ? (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">
+                  Bloqueios encontrados
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-amber-100">
+                  {migracaoBlockedBy.map((item) => (
+                    <li key={item.code}>{item.message}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeMigracaoModal} disabled={migrandoCliente}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!migracaoTenantDestinoId) {
+                  setMigracaoErro("Selecione a unidade destino.");
+                  return;
+                }
+                const justificativa = migracaoJustificativa.trim();
+                if (!justificativa) {
+                  setMigracaoErro("Justificativa é obrigatória.");
+                  return;
+                }
+
+                setMigrandoCliente(true);
+                setMigracaoErro("");
+                try {
+                  const result: ClienteMigracaoUnidadeResult = await migrarClienteParaUnidadeService({
+                    tenantId: aluno.tenantId,
+                    id: aluno.id,
+                    tenantDestinoId: migracaoTenantDestinoId,
+                    justificativa,
+                    preservarContextoComercial: migracaoPreservaContexto,
+                  });
+                  setMigracaoResumo({
+                    auditId: result.auditId,
+                    tenantOrigemNome: result.tenantOrigemNome ?? baseTenantNomeAtual,
+                    tenantDestinoNome:
+                      result.tenantDestinoNome
+                      ?? opcoesMigracao.find((tenant) => tenant.id === migracaoTenantDestinoId)?.nome,
+                    message: result.message,
+                  });
+                  closeMigracaoModal();
+                  if (result.suggestedActiveTenantId && result.suggestedActiveTenantId !== tenantId) {
+                    await setTenant(result.suggestedActiveTenantId);
+                  }
+                  await reload();
+                } catch (error) {
+                  const parsed = parseMigracaoErro(error);
+                  setMigracaoErro(parsed.message);
+                  setMigracaoBlockedBy(parsed.blockedBy);
+                } finally {
+                  setMigrandoCliente(false);
+                }
+              }}
+              disabled={migrandoCliente || !migracaoTenantDestinoId || !migracaoJustificativa.trim()}
+            >
+              {migrandoCliente ? "Migrando..." : "Confirmar migração"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
 
       <div className="space-y-3">
@@ -794,6 +1023,19 @@ export default function ClienteDetalhePage() {
             setExcluirJustificativa("");
             setExcluirOpen(true);
           }}
+          onMigrarUnidadeBase={
+            migracaoHabilitada && opcoesMigracao.length > 0
+              ? () => {
+                  setActionError(null);
+                  setMigracaoErro("");
+                  setMigracaoBlockedBy([]);
+                  setMigracaoTenantDestinoId(opcoesMigracao[0]?.id ?? "");
+                  setMigracaoJustificativa("");
+                  setMigracaoPreservaContexto(true);
+                  setMigracaoOpen(true);
+                }
+              : undefined
+          }
           onEdit={() => setTab("editar")}
           onChangeFoto={() => setPhotoModalOpen(true)}
         />
@@ -805,6 +1047,17 @@ export default function ClienteDetalhePage() {
         {actionError ? (
           <div className="mt-3 rounded-xl border border-gym-danger/40 bg-gym-danger/10 p-3 text-sm text-gym-danger">
             {actionError}
+          </div>
+        ) : null}
+        {migracaoResumo ? (
+          <div className="mt-3 rounded-xl border border-gym-teal/40 bg-gym-teal/10 p-3 text-sm text-gym-teal">
+            <p className="font-medium">
+              Unidade-base migrada de {migracaoResumo.tenantOrigemNome ?? "origem atual"} para {migracaoResumo.tenantDestinoNome ?? "destino informado"}.
+            </p>
+            <p className="mt-1 text-xs text-gym-teal/90">
+              {migracaoResumo.message ?? "A operação estrutural foi registrada com auditoria."}
+              {migracaoResumo.auditId ? ` Auditoria: ${migracaoResumo.auditId}.` : ""}
+            </p>
           </div>
         ) : null}
       </div>
@@ -834,6 +1087,41 @@ export default function ClienteDetalhePage() {
         pendenteFinanceiro={pendenteFinanceiro}
         showEditTab={tab === "editar"}
       />
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Contexto rede-unidade
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-xs text-muted-foreground">Unidade-base</p>
+              <p className="text-sm font-medium text-foreground">{baseTenantNomeAtual}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Unidade ativa</p>
+              <p className="text-sm font-medium text-foreground">
+                {clienteContexto?.tenantName ?? tenantCatalogo.get(aluno.tenantId)?.nome ?? aluno.tenantId}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Elegibilidade operacional
+          </p>
+          <p className="mt-2 text-sm text-foreground">
+            {clienteContexto?.eligibleTenants.length
+              ? clienteContexto.eligibleTenants.map((tenant) => tenant.tenantName ?? tenant.tenantId).join(" • ")
+              : "Sem unidades elegíveis informadas"}
+          </p>
+          {clienteContexto?.blockedTenants.length ? (
+            <p className="mt-2 text-xs text-amber-300">
+              Bloqueios: {clienteContexto.blockedTenants.map((tenant) => tenant.tenantName ?? tenant.tenantId).join(" • ")}
+            </p>
+          ) : null}
+        </div>
+      </div>
 
       {tab === "resumo" && (
         <>

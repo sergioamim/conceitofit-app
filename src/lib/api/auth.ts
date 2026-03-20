@@ -1,6 +1,11 @@
 import type { AuthSessionScope, TenantAccess } from "./session";
 import { apiRequest } from "./http";
 import {
+  buildTenantAccessFromEligibility,
+  normalizeOperationalAccess,
+  type OperationalAccessState,
+} from "@/lib/tenant-operational-access";
+import {
   getAvailableScopesFromSession,
   getAccessTokenType,
   getActiveTenantIdFromSession,
@@ -22,6 +27,23 @@ interface TenantAccessApiResponse {
   defaultTenant: boolean;
 }
 
+interface OperationalAccessApiResponse {
+  blocked?: boolean;
+  message?: string;
+  eligibleTenants?: Array<{
+    tenantId?: string;
+    tenantNome?: string;
+    defaultTenant?: boolean;
+    blockedReasons?: Array<{ code?: string; message?: string }>;
+  }>;
+  blockedTenants?: Array<{
+    tenantId?: string;
+    tenantNome?: string;
+    defaultTenant?: boolean;
+    blockedReasons?: Array<{ code?: string; message?: string }>;
+  }>;
+}
+
 interface LoginApiResponse {
   token: string;
   refreshToken: string;
@@ -38,6 +60,7 @@ interface LoginApiResponse {
   availableTenants?: TenantAccessApiResponse[];
   availableScopes?: string[];
   broadAccess?: boolean;
+  operationalAccess?: OperationalAccessApiResponse;
 }
 
 interface MeApiResponse {
@@ -56,6 +79,7 @@ interface MeApiResponse {
   availableTenants?: TenantAccessApiResponse[];
   availableScopes?: string[];
   broadAccess?: boolean;
+  operationalAccess?: OperationalAccessApiResponse;
 }
 
 interface AccessNetworkContextApiResponse {
@@ -81,10 +105,11 @@ function normalizeSession(
     fallbackNetworkSlug?: string;
   }
 ): AuthSession {
+  const operationalAccess = normalizeOperationalAccess(response.operationalAccess);
   const availableTenants = response.availableTenants?.map((item) => ({
     tenantId: item.tenantId,
     defaultTenant: item.defaultTenant,
-  }));
+  })) ?? buildTenantAccessFromEligibility(operationalAccess?.eligibleTenants ?? []);
   const availableScopes = normalizeAvailableScopes(response.availableScopes);
 
   return {
@@ -155,6 +180,7 @@ export interface AuthUser {
   availableTenants: TenantAccess[];
   availableScopes?: AuthSessionScope[];
   broadAccess?: boolean;
+  operationalAccess?: OperationalAccessState;
 }
 
 export interface AccessNetworkContext {
@@ -238,6 +264,7 @@ export async function meApi(): Promise<AuthUser> {
   const response = await apiRequest<MeApiResponse>({
     path: "/api/v1/auth/me",
   });
+  const operationalAccess = normalizeOperationalAccess(response.operationalAccess);
   return {
     id: response.id ?? response.userId,
     userId: response.userId ?? response.id,
@@ -251,9 +278,13 @@ export async function meApi(): Promise<AuthUser> {
     networkName: response.redeNome,
     activeTenantId: response.activeTenantId,
     baseTenantId: response.tenantBaseId,
-    availableTenants: parseAvailableTenants(response.availableTenants),
+    availableTenants:
+      parseAvailableTenants(response.availableTenants).length > 0
+        ? parseAvailableTenants(response.availableTenants)
+        : buildTenantAccessFromEligibility(operationalAccess?.eligibleTenants ?? []),
     availableScopes: normalizeAvailableScopes(response.availableScopes),
     broadAccess: response.broadAccess,
+    operationalAccess,
   };
 }
 

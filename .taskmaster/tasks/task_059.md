@@ -2,7 +2,7 @@
 
 **Title:** Implementar a UX multiunidade do cliente orientada por contrato
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 57
 
@@ -22,7 +22,7 @@ Cobrir cenários de um tenant, vários tenants elegíveis, bloqueio total e troc
 
 ### 59.1. Modelar no frontend a lista de unidades elegíveis e seus motivos de bloqueio
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None
 
 Consumir a decisão de elegibilidade do backend sem heurística local.
@@ -33,7 +33,7 @@ Criar tipagens e estados para representar unidades disponíveis, unidade ativa, 
 
 ### 59.2. Criar a UX de escolha e troca de unidade ativa quando houver múltiplas elegíveis
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 59.1
 
 Permitir ao cliente mudar de contexto apenas dentro das opções autorizadas.
@@ -44,7 +44,7 @@ Desenhar o seletor ou fluxo de troca de unidade ativa para cenários multiunidad
 
 ### 59.3. Tratar o caso de unidade única elegível com entrada direta e sem atrito
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 59.1
 
 Evitar complexidade visual quando o contrato só libera uma unidade.
@@ -55,7 +55,7 @@ Garantir que clientes com apenas uma unidade elegível caiam direto no tenant at
 
 ### 59.4. Implementar o estado bloqueado para cliente autenticado sem elegibilidade operacional
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 59.1
 
 Dar ao usuário uma saída clara quando a rede autentica, mas nenhum contrato permite operar.
@@ -66,7 +66,7 @@ Criar uma tela ou estado de bloqueio explicando ausência de contrato vigente, u
 
 ### 59.5. Reconciliar as páginas operacionais do app com o tenant ativo elegível
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 59.2, 59.3, 59.4
 
 Fazer home, reservas, financeiro e identidade respeitarem o contexto resolvido.
@@ -77,7 +77,7 @@ Ajustar leituras e ações do app para sempre usar o tenant ativo da sessão val
 
 ### 59.6. Cobrir a jornada multiunidade do cliente com regressão funcional
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 59.2, 59.3, 59.4, 59.5
 
 Garantir estabilidade na combinação contrato + tenant ativo.

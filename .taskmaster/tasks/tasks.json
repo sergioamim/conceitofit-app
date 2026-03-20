@@ -4271,7 +4271,7 @@
         "description": "Fazer o app do cliente operar com tenant ativo elegível, e não com troca livre de unidade.",
         "details": "A experiência do cliente dentro da rede precisa respeitar a elegibilidade definida pelo contrato. Esta task fecha os fluxos em que o app precisa escolher, trocar ou bloquear a unidade ativa conforme os contratos vigentes, sempre mantendo a unidade-base estrutural separada da sessão.",
         "testStrategy": "Cobrir cenários de um tenant, vários tenants elegíveis, bloqueio total e troca manual de tenant ativo com testes funcionais.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "57"
         ],
@@ -4283,7 +4283,7 @@
             "description": "Consumir a decisão de elegibilidade do backend sem heurística local.",
             "dependencies": [],
             "details": "Criar tipagens e estados para representar unidades disponíveis, unidade ativa, unidade-base e motivos pelos quais uma unidade pode estar indisponível ao cliente.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 59,
             "parentId": "undefined",
@@ -4297,7 +4297,7 @@
               "59.1"
             ],
             "details": "Desenhar o seletor ou fluxo de troca de unidade ativa para cenários multiunidade, com mensagens claras de disponibilidade e impacto da troca.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 59,
             "parentId": "undefined",
@@ -4311,7 +4311,7 @@
               "59.1"
             ],
             "details": "Garantir que clientes com apenas uma unidade elegível caiam direto no tenant ativo correto, sem seletor redundante.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 59,
             "parentId": "undefined",
@@ -4325,7 +4325,7 @@
               "59.1"
             ],
             "details": "Criar uma tela ou estado de bloqueio explicando ausência de contrato vigente, unidade não elegível ou impossibilidade temporária de uso.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 59,
             "parentId": "undefined",
@@ -4341,7 +4341,7 @@
               "59.4"
             ],
             "details": "Ajustar leituras e ações do app para sempre usar o tenant ativo da sessão validado pelo contrato, atualizando caches e chamadas dependentes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 59,
             "parentId": "undefined",
@@ -4358,7 +4358,7 @@
               "59.5"
             ],
             "details": "Adicionar testes para cliente com uma unidade, várias unidades, troca de contexto, estado bloqueado e persistência da unidade ativa entre telas.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 59,
             "parentId": "undefined",
@@ -4373,7 +4373,7 @@
         "description": "Dar suporte visual e operacional ao fluxo administrativo que altera a unidade-base do cliente.",
         "details": "Com o backend expondo `migrarClienteParaUnidade`, o frontend precisa distinguir claramente essa operação estrutural da mera troca de tenant ativo. Esta task cobre a UX administrativa, formulário, confirmação, mensagens de risco, trilha de auditoria e atualização de tela após a migração.",
         "testStrategy": "Cobrir a UI de migração com testes funcionais e cenários de sucesso, bloqueio e erro operacional.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "58",
           "59"
@@ -4386,7 +4386,7 @@
             "description": "Escolher onde a operação deve aparecer sem confundir com troca temporária de contexto.",
             "dependencies": [],
             "details": "Posicionar a ação de migração nas telas de cliente/comercial de forma explícita, com rótulo claro e contexto suficiente para o operador.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 60,
             "parentId": "undefined",
@@ -4400,7 +4400,7 @@
               "60.1"
             ],
             "details": "Criar o formulário que exibe unidade atual, unidade destino, validações de rede, motivo e efeitos esperados da operação.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 60,
             "parentId": "undefined",
@@ -4414,7 +4414,7 @@
               "60.2"
             ],
             "details": "Adicionar client, mutation e tratamento de erro para rede divergente, unidade inválida, cliente inelegível ou falha de auditoria.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 60,
             "parentId": "undefined",
@@ -4428,7 +4428,7 @@
               "60.3"
             ],
             "details": "Recarregar ou invalidar consultas relevantes para mostrar a unidade-base atualizada, histórico e possíveis efeitos operacionais após a migração.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 60,
             "parentId": "undefined",
@@ -4443,7 +4443,7 @@
               "60.4"
             ],
             "details": "Mostrar resumo da operação, motivação registrada e avisos de que a migração altera a unidade-base estrutural do cliente, não apenas a sessão.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 60,
             "parentId": "undefined",
@@ -4459,7 +4459,7 @@
               "60.5"
             ],
             "details": "Adicionar cenários automatizados para abertura do fluxo, validação, sucesso, bloqueios e atualização correta da tela após a migração.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 60,
             "parentId": "undefined",
@@ -4474,7 +4474,7 @@
         "description": "Concluir a trilha com tipagens estáveis, documentação, feature flags e cobertura final de ponta a ponta.",
         "details": "Depois do ajuste de login, bootstrap, gestão administrativa, UX multiunidade e migração de cliente, o frontend precisa consolidar contratos, documentação e rollout. Esta task fecha os detalhes transversais do novo modelo contextual por rede e unidade.",
         "testStrategy": "Executar smoke e E2E cobrindo acesso por rede, bootstrap multiunidade, gestão administrativa e migração de cliente.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "56",
           "57",
@@ -4490,7 +4490,7 @@
             "description": "Eliminar inconsistências entre telas e integrações.",
             "dependencies": [],
             "details": "Consolidar tipos de autenticação, usuário, bootstrap, tenant ativo, elegibilidade multiunidade e migração de cliente em contratos frontend únicos.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 61,
             "parentId": "undefined",
@@ -4504,7 +4504,7 @@
               "61.1"
             ],
             "details": "Preparar flags, roteamento progressivo e compatibilidades temporárias para a convivência entre o login antigo e o novo fluxo contextual por rede.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 61,
             "parentId": "undefined",
@@ -4519,7 +4519,7 @@
               "61.2"
             ],
             "details": "Registrar nos docs do frontend como funcionam login por rede, bootstrap, unidade-base, tenant ativo, multiunidade e migração administrativa de cliente.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 61,
             "parentId": "undefined",
@@ -4534,7 +4534,7 @@
               "61.2"
             ],
             "details": "Executar cenários E2E de login por rede, reset, bootstrap, troca de tenant ativo, operação multiunidade e `migrarClienteParaUnidade`.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 61,
             "parentId": "undefined",
@@ -4548,7 +4548,7 @@
               "61.3"
             ],
             "details": "Revisar labels, mensagens e estados vazios para refletir rede, unidade-base, unidade ativa, elegibilidade e migração de cliente com terminologia consistente.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 61,
             "parentId": "undefined",
@@ -4563,7 +4563,7 @@
               "61.5"
             ],
             "details": "Atualizar trackers e documentação com riscos residuais, dependências de backend, critérios de aceite e próximos passos do rollout do novo modelo.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentTaskId": 61,
             "parentId": "undefined",

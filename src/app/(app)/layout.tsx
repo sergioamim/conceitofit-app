@@ -6,10 +6,101 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { AppContentShell } from "@/components/layout/app-content-shell";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
+import { Button } from "@/components/ui/button";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
-import { TenantContextProvider } from "@/hooks/use-session-context";
+import { TenantContextProvider, useTenantContext } from "@/hooks/use-session-context";
 import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/auth-redirect";
+import { isClientOperationalEligibilityEnabled } from "@/lib/feature-flags";
+
+function isClientScopedUser(userKind?: string): boolean {
+  const normalized = userKind?.trim().toUpperCase() ?? "";
+  return normalized === "CLIENTE" || normalized === "ALUNO";
+}
+
+function AppOperationalAccessGate({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const {
+    loading,
+    tenantId,
+    userKind,
+    eligibleTenants,
+    blockedTenants,
+    operationalAccessBlocked,
+    operationalAccessMessage,
+    refresh,
+    setTenant,
+  } = useTenantContext();
+  const eligibilityEnabled = isClientOperationalEligibilityEnabled();
+
+  useEffect(() => {
+    if (!eligibilityEnabled || !isClientScopedUser(userKind) || loading) {
+      return;
+    }
+    if (eligibleTenants.length !== 1) {
+      return;
+    }
+    if (tenantId === eligibleTenants[0]?.id) {
+      return;
+    }
+    void setTenant(eligibleTenants[0].id);
+  }, [eligibilityEnabled, eligibleTenants, loading, setTenant, tenantId, userKind]);
+
+  if (!eligibilityEnabled) {
+    return <>{children}</>;
+  }
+
+  if (!isClientScopedUser(userKind) || loading) {
+    return <>{children}</>;
+  }
+
+  if (!operationalAccessBlocked && eligibleTenants.length > 0) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div className="flex h-full items-center justify-center px-4 py-10">
+      <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+          Acesso autenticado na rede
+        </p>
+        <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground">
+          Nenhuma unidade elegível para operação
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {operationalAccessMessage
+            ?? "Seu vínculo foi autenticado, mas o contrato atual não libera uso operacional em nenhuma unidade da rede."}
+        </p>
+        {blockedTenants.length > 0 ? (
+          <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">
+              Motivos informados pela rede
+            </p>
+            <ul className="mt-2 space-y-2 text-sm text-amber-100">
+              {blockedTenants.map((tenant) => (
+                <li key={tenant.tenantId}>
+                  <span className="font-medium">{tenant.tenantName ?? tenant.tenantId}</span>
+                  {tenant.blockedReasons[0]?.message ? `: ${tenant.blockedReasons[0].message}` : ""}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Button type="button" onClick={() => void refresh()}>
+            Tentar novamente
+          </Button>
+          <Button type="button" variant="outline" onClick={() => window.location.assign("/conta/perfil")}>
+            Ver identidade e unidade-base
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AppShellFrame({
   children,
@@ -107,7 +198,7 @@ function AppLayoutContent({
       onOpenMenu={handleOpenMenu}
       onCloseMenu={handleCloseMenu}
     >
-      {children}
+      <AppOperationalAccessGate>{children}</AppOperationalAccessGate>
     </AppShellFrame>
   );
 }

@@ -2,6 +2,7 @@ import type { Academia, HorarioFuncionamento, Tenant } from "@/lib/types";
 import { ApiRequestError, apiRequest } from "./http";
 import type { AuthUser } from "./auth";
 import { getActiveTenantIdFromSession, getAvailableTenantsFromSession, getPreferredTenantId } from "./session";
+import { buildTenantAccessFromEligibility, normalizeOperationalAccess } from "@/lib/tenant-operational-access";
 
 const BOOTSTRAP_ENDPOINT_ENABLED = new Set(["1", "true", "yes", "on"]).has(
   (process.env.NEXT_PUBLIC_APP_BOOTSTRAP_ENABLED ?? "").trim().toLowerCase(),
@@ -88,6 +89,22 @@ interface TenantBootstrapUserApiResponse {
   availableTenants?: TenantAccessFromBootstrapApiResponse[] | null;
   availableScopes?: string[] | null;
   broadAccess?: boolean;
+  operationalAccess?: {
+    blocked?: boolean | null;
+    message?: string | null;
+    eligibleTenants?: Array<{
+      tenantId?: string | null;
+      tenantNome?: string | null;
+      defaultTenant?: boolean | null;
+      blockedReasons?: Array<{ code?: string | null; message?: string | null }> | null;
+    }> | null;
+    blockedTenants?: Array<{
+      tenantId?: string | null;
+      tenantNome?: string | null;
+      defaultTenant?: boolean | null;
+      blockedReasons?: Array<{ code?: string | null; message?: string | null }> | null;
+    }> | null;
+  } | null;
 }
 
 interface TenantBootstrapCapabilitiesApiResponse {
@@ -299,6 +316,9 @@ export async function getSessionBootstrapApi(): Promise<{
     throw new Error("Resposta de bootstrap incompleta: tenantContext ou user ausente.");
   }
 
+  const operationalAccess = normalizeOperationalAccess(response.user.operationalAccess);
+  const availableTenantsFromUser = parseAvailableTenantsFromBootstrap(response.user.availableTenants);
+
   return {
     tenantContext: {
       currentTenantId: response.tenantContext.currentTenantId,
@@ -318,11 +338,15 @@ export async function getSessionBootstrapApi(): Promise<{
       networkName: response.user.redeNome,
       activeTenantId: response.user.activeTenantId,
       baseTenantId: response.user.tenantBaseId,
-      availableTenants: parseAvailableTenantsFromBootstrap(response.user.availableTenants),
+      availableTenants:
+        availableTenantsFromUser.length > 0
+          ? availableTenantsFromUser
+          : buildTenantAccessFromEligibility(operationalAccess?.eligibleTenants ?? []),
       availableScopes: (response.user.availableScopes ?? [])
         .map((item) => item.trim().toUpperCase())
         .filter((item): item is NonNullable<AuthUser["availableScopes"]>[number] => item === "UNIDADE" || item === "REDE" || item === "GLOBAL"),
       broadAccess: response.user.broadAccess,
+      operationalAccess,
     },
     academia: response.academia ? normalizeAcademia(response.academia) : undefined,
     branding: response.branding

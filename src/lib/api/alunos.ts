@@ -2,9 +2,14 @@ import type {
   Aluno,
   AlunoTotaisStatus,
   ClienteExclusaoResult,
+  ClienteMigracaoUnidadePayload,
+  ClienteMigracaoUnidadeResult,
+  ClienteOperationalContext,
   Matricula,
   Pagamento,
   StatusAluno,
+  TenantOperationalEligibility,
+  TenantOperationalEligibilityReason,
 } from "@/lib/types";
 import { apiRequest } from "./http";
 
@@ -95,6 +100,86 @@ function toArray(value: unknown): Aluno[] {
   return value.filter(Boolean).map((item) => normalizeAluno(item as Aluno));
 }
 
+function normalizeEligibilityReason(
+  input: { code?: string | null; message?: string | null },
+): TenantOperationalEligibilityReason | null {
+  const code = input.code?.trim() ?? "";
+  const message = input.message?.trim() ?? "";
+  if (!code || !message) return null;
+  return { code, message };
+}
+
+function normalizeTenantEligibility(
+  input: TenantOperationalEligibilityApiResponse,
+  eligible: boolean,
+): TenantOperationalEligibility | null {
+  const tenantId = input.tenantId?.trim() ?? "";
+  if (!tenantId) return null;
+  return {
+    tenantId,
+    tenantName: input.tenantNome?.trim() || undefined,
+    eligible,
+    defaultTenant: Boolean(input.defaultTenant),
+    blockedReasons: (input.blockedReasons ?? [])
+      .map((reason) => normalizeEligibilityReason(reason))
+      .filter((reason): reason is TenantOperationalEligibilityReason => reason !== null),
+  };
+}
+
+function normalizeClienteOperationalContext(
+  input: ClienteOperationalContextApiResponse,
+): ClienteOperationalContext {
+  if (!input.aluno?.id) {
+    throw new Error("Resposta de contexto operacional do cliente sem aluno.");
+  }
+
+  return {
+    tenantId: input.tenantId?.trim() || input.aluno.tenantId,
+    tenantName: input.tenantNome?.trim() || undefined,
+    baseTenantId: input.baseTenantId?.trim() || undefined,
+    baseTenantName: input.baseTenantNome?.trim() || undefined,
+    aluno: normalizeAluno(input.aluno),
+    eligibleTenants: (input.eligibleTenants ?? [])
+      .map((tenant) => normalizeTenantEligibility(tenant, true))
+      .filter((tenant): tenant is TenantOperationalEligibility => tenant !== null),
+    blockedTenants: (input.blockedTenants ?? [])
+      .map((tenant) => normalizeTenantEligibility(tenant, false))
+      .filter((tenant): tenant is TenantOperationalEligibility => tenant !== null),
+    blocked: Boolean(input.blocked),
+    message: input.message?.trim() || undefined,
+  };
+}
+
+function normalizeClienteMigracaoResult(
+  input: ClienteMigracaoUnidadeApiResponse,
+): ClienteMigracaoUnidadeResult {
+  return {
+    success: input.success !== false,
+    auditId: input.auditId?.trim() || undefined,
+    eventType: input.eventType?.trim() || undefined,
+    message: input.message?.trim() || undefined,
+    tenantOrigemId: input.tenantOrigemId?.trim() || undefined,
+    tenantOrigemNome: input.tenantOrigemNome?.trim() || undefined,
+    tenantDestinoId: input.tenantDestinoId?.trim() || undefined,
+    tenantDestinoNome: input.tenantDestinoNome?.trim() || undefined,
+    baseTenantIdAnterior: input.baseTenantIdAnterior?.trim() || undefined,
+    baseTenantIdAtual: input.baseTenantIdAtual?.trim() || undefined,
+    suggestedActiveTenantId: input.suggestedActiveTenantId?.trim() || undefined,
+    preservarContextoComercial:
+      typeof input.preservarContextoComercial === "boolean"
+        ? input.preservarContextoComercial
+        : undefined,
+    blockedBy: (input.blockedBy ?? [])
+      .map((item) => {
+        const code = item.code?.trim() ?? "";
+        const message = item.message?.trim() ?? "";
+        return code && message ? { code, message } : null;
+      })
+      .filter((item): item is NonNullable<ClienteMigracaoUnidadeResult["blockedBy"]>[number] => item !== null),
+    aluno: input.aluno ? normalizeAluno(input.aluno) : undefined,
+  };
+}
+
 export function extractAlunosFromListResponse(response: AlunoListPayload): Aluno[] {
   if (Array.isArray(response)) return response;
   return toArray(response.items);
@@ -141,6 +226,48 @@ type ExcluirAlunoApiRequest = {
   tenantId: string;
   justificativa: string;
   issuedBy?: string;
+};
+
+type TenantOperationalEligibilityApiResponse = {
+  tenantId?: string | null;
+  tenantNome?: string | null;
+  defaultTenant?: boolean | null;
+  blockedReasons?: Array<{
+    code?: string | null;
+    message?: string | null;
+  }> | null;
+};
+
+type ClienteOperationalContextApiResponse = {
+  tenantId?: string | null;
+  tenantNome?: string | null;
+  baseTenantId?: string | null;
+  baseTenantNome?: string | null;
+  aluno?: Aluno | null;
+  eligibleTenants?: TenantOperationalEligibilityApiResponse[] | null;
+  blockedTenants?: TenantOperationalEligibilityApiResponse[] | null;
+  blocked?: boolean | null;
+  message?: string | null;
+};
+
+type ClienteMigracaoUnidadeApiResponse = {
+  success?: boolean | null;
+  auditId?: string | null;
+  eventType?: string | null;
+  message?: string | null;
+  tenantOrigemId?: string | null;
+  tenantOrigemNome?: string | null;
+  tenantDestinoId?: string | null;
+  tenantDestinoNome?: string | null;
+  baseTenantIdAnterior?: string | null;
+  baseTenantIdAtual?: string | null;
+  suggestedActiveTenantId?: string | null;
+  preservarContextoComercial?: boolean | null;
+  blockedBy?: Array<{
+    code?: string | null;
+    message?: string | null;
+  }> | null;
+  aluno?: Aluno | null;
 };
 
 export async function listAlunosApi(input: {
@@ -252,4 +379,35 @@ export async function excluirAlunoApi(input: {
       issuedBy: input.data.issuedBy,
     },
   });
+}
+
+export async function getClienteOperationalContextApi(input: {
+  id: string;
+  tenantId?: string;
+  includeContextHeader?: boolean;
+}): Promise<ClienteOperationalContext> {
+  const response = await apiRequest<ClienteOperationalContextApiResponse>({
+    path: `/api/v1/comercial/clientes/${input.id}/contexto-operacional`,
+    query: { tenantId: input.tenantId },
+    includeContextHeader: input.includeContextHeader,
+  });
+  return normalizeClienteOperationalContext(response);
+}
+
+export async function migrarClienteParaUnidadeApi(input: {
+  tenantId: string;
+  id: string;
+  data: ClienteMigracaoUnidadePayload;
+}): Promise<ClienteMigracaoUnidadeResult> {
+  const response = await apiRequest<ClienteMigracaoUnidadeApiResponse>({
+    path: `/api/v1/comercial/clientes/${input.id}/migrar-unidade`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: {
+      tenantDestinoId: input.data.tenantDestinoId,
+      justificativa: input.data.justificativa,
+      preservarContextoComercial: input.data.preservarContextoComercial ?? true,
+    },
+  });
+  return normalizeClienteMigracaoResult(response);
 }

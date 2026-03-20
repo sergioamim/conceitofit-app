@@ -208,7 +208,8 @@ test.describe("acesso por rede", () => {
     await page.getByRole("button", { name: "Entrar" }).click();
 
     await expect(page).toHaveURL(/\/dashboard$/);
-    await expect(page.getByRole("combobox", { name: "Selecionar unidade ativa" })).toContainText("Unidade Centro");
+    await expect(page.getByText("Unidade Centro").first()).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Selecionar unidade ativa" })).toHaveCount(0);
 
     expect(captured.login).toEqual({
       redeIdentifier: "rede-norte",

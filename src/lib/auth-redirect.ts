@@ -1,3 +1,5 @@
+import { isContextualNetworkAccessEnabled } from "@/lib/feature-flags";
+
 const DEFAULT_POST_LOGIN_PATH = "/dashboard";
 const DEFAULT_LOGIN_PATH = "/login";
 
@@ -19,6 +21,7 @@ export function buildLoginHref(nextPath?: string, networkSlug?: string | null): 
   const resolvedNext = resolvePostLoginPath(nextPath);
   const normalizedNetworkSlug = normalizeNetworkSlug(networkSlug);
   const loginBasePath = normalizedNetworkSlug
+    && isContextualNetworkAccessEnabled()
     ? `/acesso/${normalizedNetworkSlug}/autenticacao`
     : DEFAULT_LOGIN_PATH;
 

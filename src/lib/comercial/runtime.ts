@@ -7,8 +7,10 @@ import {
   excluirAlunoApi,
   extractAlunosFromListResponse,
   extractAlunosTotais,
+  getClienteOperationalContextApi,
   getAlunoApi,
   listAlunosApi,
+  migrarClienteParaUnidadeApi,
   updateAlunoApi,
 } from "@/lib/api/alunos";
 import { listConveniosApi, listVoucherCodigosApi, listVouchersApi } from "@/lib/api/beneficios";
@@ -46,6 +48,8 @@ import type {
   BandeiraCartao,
   CartaoCliente,
   ClienteExclusaoResult,
+  ClienteMigracaoUnidadeResult,
+  ClienteOperationalContext,
   Convenio,
   FormaPagamento,
   Pagamento,
@@ -208,6 +212,77 @@ export async function resolveAlunoTenantService(input: {
   }
 
   return null;
+}
+
+export async function getClienteOperationalContextService(input: {
+  alunoId: string;
+  tenantId?: string;
+  tenants?: Array<{ id: string; nome?: string }>;
+}): Promise<ClienteOperationalContext | null> {
+  try {
+    return await getClienteOperationalContextApi({
+      id: input.alunoId,
+      tenantId: input.tenantId,
+      // O detalhe administrativo pode consultar o contrato estrutural antes de trocar o contexto ativo.
+      includeContextHeader: false,
+    });
+  } catch (error) {
+    if (
+      !(error instanceof ApiRequestError)
+      || ![404, 405, 501].includes(error.status)
+    ) {
+      throw error;
+    }
+  }
+
+  const resolved = await resolveAlunoTenantService({
+    alunoId: input.alunoId,
+    tenantId: input.tenantId,
+    tenantIds: (input.tenants ?? []).map((tenant) => tenant.id),
+  });
+  if (!resolved) {
+    return null;
+  }
+
+  return {
+    tenantId: resolved.tenantId,
+    tenantName: input.tenants?.find((tenant) => tenant.id === resolved.tenantId)?.nome,
+    baseTenantId: resolved.aluno.tenantId,
+    baseTenantName: input.tenants?.find((tenant) => tenant.id === resolved.aluno.tenantId)?.nome,
+    aluno: resolved.aluno,
+    eligibleTenants: (input.tenants ?? []).map((tenant, index) => ({
+      tenantId: tenant.id,
+      tenantName: tenant.nome,
+      eligible: true,
+      defaultTenant: tenant.id === resolved.aluno.tenantId || index === 0,
+      blockedReasons: [],
+    })),
+    blockedTenants: [],
+    blocked: false,
+  };
+}
+
+export async function migrarClienteParaUnidadeService(input: {
+  tenantId: string;
+  id: string;
+  tenantDestinoId: string;
+  justificativa: string;
+  preservarContextoComercial?: boolean;
+}): Promise<ClienteMigracaoUnidadeResult> {
+  const justificativa = input.justificativa.trim();
+  if (!justificativa) {
+    throw new Error("A justificativa é obrigatória.");
+  }
+
+  return migrarClienteParaUnidadeApi({
+    tenantId: input.tenantId,
+    id: input.id,
+    data: {
+      tenantDestinoId: input.tenantDestinoId,
+      justificativa,
+      preservarContextoComercial: input.preservarContextoComercial ?? true,
+    },
+  });
 }
 
 export async function listPlanosService(input: {

@@ -3,7 +3,7 @@
 import { Building2, ChevronDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_ACTIVE_TENANT_LABEL, DEFAULT_BASE_TENANT_LABEL } from "@/hooks/use-session-context";
-import type { Tenant } from "@/lib/types";
+import type { Tenant, TenantOperationalEligibility } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type ActiveTenantSelectorProps = {
@@ -15,6 +15,7 @@ type ActiveTenantSelectorProps = {
   networkName?: string;
   availableScopes?: string[];
   broadAccess?: boolean;
+  blockedTenants?: TenantOperationalEligibility[];
   ready?: boolean;
   disabled?: boolean;
   onChange: (tenantId: string) => void | Promise<void>;
@@ -29,6 +30,7 @@ export function ActiveTenantSelector({
   networkName,
   availableScopes = [],
   broadAccess = false,
+  blockedTenants = [],
   ready = false,
   disabled = false,
   onChange,
@@ -46,6 +48,16 @@ export function ActiveTenantSelector({
   const hasDistinctBaseTenant =
     Boolean(normalizedBaseTenantId) && normalizedBaseTenantId !== normalizedTenantId;
   const scopeLabel = availableScopes.length > 0 ? availableScopes.join(" · ") : "UNIDADE";
+  const blockedSummary = blockedTenants
+    .slice(0, 2)
+    .map((tenant) => {
+      const reason = tenant.blockedReasons[0]?.message;
+      return reason
+        ? `${tenant.tenantName ?? tenant.tenantId}: ${reason}`
+        : (tenant.tenantName ?? tenant.tenantId);
+    })
+    .join(" • ");
+  const showSwitch = ready && tenants.length > 1;
 
   return (
     <div className="flex w-full flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2 sm:flex-row sm:items-center">
@@ -73,8 +85,11 @@ export function ActiveTenantSelector({
         {hasDistinctBaseTenant ? (
           <p className="truncate text-xs text-muted-foreground">Base estrutural: {baseTenantName}</p>
         ) : null}
+        {blockedSummary ? (
+          <p className="line-clamp-2 text-xs text-amber-300">Indisponíveis no momento: {blockedSummary}</p>
+        ) : null}
       </div>
-      {ready ? (
+      {showSwitch ? (
         <Select
           value={selectValue}
           onValueChange={onChange}
@@ -94,6 +109,12 @@ export function ActiveTenantSelector({
             ))}
           </SelectContent>
         </Select>
+      ) : ready ? (
+        <div className="border-input text-muted-foreground flex h-8 w-full items-center justify-between gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm shadow-xs sm:w-[220px]">
+          <span className={selectValue ? "truncate text-foreground" : "truncate"}>
+            {selectValue ? selectLabel : resolvedTenantName}
+          </span>
+        </div>
       ) : (
         <button
           type="button"

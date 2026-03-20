@@ -4,10 +4,12 @@ import {
   createAlunoService,
   createVendaService,
   excluirAlunoService,
+  getClienteOperationalContextService,
   liberarAcessoCatracaService,
   listAlunosPageService,
   listAlunosService,
   listVendasPageService,
+  migrarClienteParaUnidadeService,
   resolveAlunoTenantService,
   resolveVendaFluxoStatusFromApi,
   updateAlunoService,
@@ -493,6 +495,101 @@ test.describe("comercial runtime", () => {
         justificativa: "Cadastro duplicado confirmado",
         issuedBy: "backoffice",
       });
+    } finally {
+      restore();
+    }
+  });
+
+  test("carrega contexto operacional do cliente com fallback e executa migracao estrutural", async () => {
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: { message: "Route missing" },
+        status: 404,
+      },
+      {
+        body: { message: "Aluno nao encontrado" },
+        status: 404,
+      },
+      {
+        body: {
+          id: "al-contexto",
+          tenantId: "tenant-2",
+          nome: "Cliente Multiunidade",
+          email: "cliente@academia.local",
+          telefone: "11999990000",
+          cpf: "55544433322",
+          dataNascimento: "1990-01-01",
+          sexo: "F",
+          status: "ATIVO",
+          dataCadastro: "2026-03-14T10:00:00Z",
+        },
+      },
+      {
+        body: {
+          success: true,
+          auditId: "audit-migracao-1",
+          message: "Migração concluída",
+          tenantOrigemId: "tenant-2",
+          tenantOrigemNome: "Unidade Oeste",
+          tenantDestinoId: "tenant-3",
+          tenantDestinoNome: "Unidade Centro",
+          suggestedActiveTenantId: "tenant-3",
+          preservarContextoComercial: true,
+        },
+      },
+    ]);
+
+    try {
+      const contexto = await getClienteOperationalContextService({
+        alunoId: "al-contexto",
+        tenantId: "tenant-1",
+        tenants: [
+          { id: "tenant-1", nome: "Unidade Base" },
+          { id: "tenant-2", nome: "Unidade Oeste" },
+          { id: "tenant-3", nome: "Unidade Centro" },
+        ],
+      });
+
+      expect(contexto).toEqual({
+        tenantId: "tenant-2",
+        tenantName: "Unidade Oeste",
+        baseTenantId: "tenant-2",
+        baseTenantName: "Unidade Oeste",
+        aluno: expect.objectContaining({
+          id: "al-contexto",
+          tenantId: "tenant-2",
+        }),
+        eligibleTenants: [
+          expect.objectContaining({ tenantId: "tenant-1", eligible: true }),
+          expect.objectContaining({ tenantId: "tenant-2", eligible: true }),
+          expect.objectContaining({ tenantId: "tenant-3", eligible: true }),
+        ],
+        blockedTenants: [],
+        blocked: false,
+      });
+
+      await expect(
+        migrarClienteParaUnidadeService({
+          tenantId: "tenant-2",
+          id: "al-contexto",
+          tenantDestinoId: "tenant-3",
+          justificativa: "   ",
+        })
+      ).rejects.toThrow("A justificativa é obrigatória.");
+
+      const migracao = await migrarClienteParaUnidadeService({
+        tenantId: "tenant-2",
+        id: "al-contexto",
+        tenantDestinoId: "tenant-3",
+        justificativa: "Unificação operacional da carteira",
+        preservarContextoComercial: true,
+      });
+
+      expect(migracao.auditId).toBe("audit-migracao-1");
+      expect(migracao.suggestedActiveTenantId).toBe("tenant-3");
+      expect(calls[0].url).toContain("/api/v1/comercial/clientes/al-contexto/contexto-operacional");
+      expect(calls[3].url).toContain("/api/v1/comercial/clientes/al-contexto/migrar-unidade");
+      expect(calls[3].body).toContain("\"tenantDestinoId\":\"tenant-3\"");
     } finally {
       restore();
     }

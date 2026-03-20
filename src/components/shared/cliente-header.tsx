@@ -4,7 +4,7 @@ import type { Aluno, Plano } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, KeyRound, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowRightLeft, Camera, KeyRound, MoreVertical, Pencil, Trash2 } from "lucide-react";
 
 function formatDate(d: string) {
   const [year, month, day] = d.split("-");
@@ -29,6 +29,7 @@ export function ClienteHeader({
   onEdit,
   onChangeFoto,
   onCompletarCadastro,
+  onMigrarUnidadeBase,
 }: {
   aluno: Aluno;
   planoAtivo?: { dataFim: string } | null;
@@ -46,6 +47,7 @@ export function ClienteHeader({
   onEdit?: () => void;
   onChangeFoto?: () => void;
   onCompletarCadastro?: () => void;
+  onMigrarUnidadeBase?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -185,6 +187,18 @@ export function ClienteHeader({
                 >
                   <Trash2 className="size-4" />
                   Excluir cliente
+                </button>
+              ) : null}
+              {onMigrarUnidadeBase ? (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onMigrarUnidadeBase();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
+                  <ArrowRightLeft className="size-4" />
+                  Migrar unidade-base
                 </button>
               ) : null}
             </div>

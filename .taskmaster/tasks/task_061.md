@@ -2,7 +2,7 @@
 
 **Title:** Fechar contratos, rollout e E2E do novo modelo Rede-Unidade no frontend
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 56, 57, 58, 59, 60
 
@@ -22,7 +22,7 @@ Executar smoke e E2E cobrindo acesso por rede, bootstrap multiunidade, gestão a
 
 ### 61.1. Atualizar tipagens e clients compartilhados para o modelo final de rede e sessão
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None
 
 Eliminar inconsistências entre telas e integrações.
@@ -33,7 +33,7 @@ Consolidar tipos de autenticação, usuário, bootstrap, tenant ativo, elegibili
 
 ### 61.2. Aplicar feature flags e fallback transitório para a migração gradual
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 61.1
 
 Permitir rollout controlado do novo modelo sem quebra imediata.
@@ -44,7 +44,7 @@ Preparar flags, roteamento progressivo e compatibilidades temporárias para a co
 
 ### 61.3. Documentar o comportamento do frontend no novo modelo contextual
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 61.1, 61.2
 
 Dar handoff claro para produto, QA e suporte.
@@ -55,7 +55,7 @@ Registrar nos docs do frontend como funcionam login por rede, bootstrap, unidade
 
 ### 61.4. Cobrir ponta a ponta a jornada de acesso, sessão e operação administrativa
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 61.1, 61.2
 
 Concluir a trilha com evidência automatizada de alto valor.
@@ -66,7 +66,7 @@ Executar cenários E2E de login por rede, reset, bootstrap, troca de tenant ativ
 
 ### 61.5. Alinhar textos, empty states e ajuda contextual ao vocabulário final
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 61.3
 
 Encerrar a migração de linguagem para o modelo rede-unidade.
@@ -77,7 +77,7 @@ Revisar labels, mensagens e estados vazios para refletir rede, unidade-base, uni
 
 ### 61.6. Registrar backlog residual e critérios de aceite do rollout
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 61.4, 61.5
 
 Fechar o lote com rastreabilidade clara e limites conhecidos.

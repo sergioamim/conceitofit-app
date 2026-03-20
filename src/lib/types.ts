@@ -225,6 +225,54 @@ export interface Aluno {
   dataAtualizacao?: LocalDateTime;
 }
 
+export interface TenantOperationalEligibilityReason {
+  code: string;
+  message: string;
+}
+
+export interface TenantOperationalEligibility {
+  tenantId: UUID;
+  tenantName?: string;
+  eligible: boolean;
+  defaultTenant?: boolean;
+  blockedReasons: TenantOperationalEligibilityReason[];
+}
+
+export interface ClienteOperationalContext {
+  tenantId: UUID;
+  tenantName?: string;
+  baseTenantId?: UUID;
+  baseTenantName?: string;
+  aluno: Aluno;
+  eligibleTenants: TenantOperationalEligibility[];
+  blockedTenants: TenantOperationalEligibility[];
+  blocked: boolean;
+  message?: string;
+}
+
+export interface ClienteMigracaoUnidadePayload {
+  tenantDestinoId: UUID;
+  justificativa: string;
+  preservarContextoComercial?: boolean;
+}
+
+export interface ClienteMigracaoUnidadeResult {
+  success: boolean;
+  auditId?: string;
+  eventType?: string;
+  message?: string;
+  tenantOrigemId?: UUID;
+  tenantOrigemNome?: string;
+  tenantDestinoId?: UUID;
+  tenantDestinoNome?: string;
+  baseTenantIdAnterior?: UUID;
+  baseTenantIdAtual?: UUID;
+  suggestedActiveTenantId?: UUID;
+  preservarContextoComercial?: boolean;
+  blockedBy?: ClienteExclusaoBlockedBy[];
+  aluno?: Aluno;
+}
+
 export interface Atividade {
   id: UUID;
   tenantId: UUID;

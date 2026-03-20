@@ -2,6 +2,14 @@ import { expect, test } from "@playwright/test";
 import { buildLoginHref, resolvePostLoginPath } from "../../src/lib/auth-redirect";
 import { hasClientDeleteCapability, hasElevatedAccess, normalizeRoles } from "../../src/lib/access-control";
 
+const envSnapshot = {
+  contextualNetworkAccess: process.env.NEXT_PUBLIC_CONTEXTUAL_NETWORK_ACCESS_ENABLED,
+};
+
+test.afterEach(() => {
+  process.env.NEXT_PUBLIC_CONTEXTUAL_NETWORK_ACCESS_ENABLED = envSnapshot.contextualNetworkAccess;
+});
+
 test.describe("session context helpers", () => {
   test("resolvePostLoginPath aceita apenas caminhos internos seguros", async () => {
     expect(resolvePostLoginPath("/administrativo/contas-bancarias")).toBe("/administrativo/contas-bancarias");
@@ -13,6 +21,7 @@ test.describe("session context helpers", () => {
   });
 
   test("buildLoginHref preserva next apenas para rotas válidas", async () => {
+    process.env.NEXT_PUBLIC_CONTEXTUAL_NETWORK_ACCESS_ENABLED = "true";
     expect(buildLoginHref("/administrativo/maquininhas")).toBe(
       "/login?next=%2Fadministrativo%2Fmaquininhas"
     );
@@ -22,6 +31,11 @@ test.describe("session context helpers", () => {
       "/acesso/rede-norte/autenticacao?next=%2Fclientes"
     );
     expect(buildLoginHref("/dashboard", "rede-norte")).toBe("/acesso/rede-norte/autenticacao");
+  });
+
+  test("buildLoginHref volta para login legado quando a flag contextual estiver desligada", async () => {
+    process.env.NEXT_PUBLIC_CONTEXTUAL_NETWORK_ACCESS_ENABLED = "false";
+    expect(buildLoginHref("/clientes", "rede-norte")).toBe("/login?next=%2Fclientes");
   });
 
   test("normalizeRoles e hasElevatedAccess tratam perfis administrativos", async () => {

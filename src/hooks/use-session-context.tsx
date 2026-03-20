@@ -20,7 +20,8 @@ import {
   type AuthSessionScope,
 } from "@/lib/api/session";
 import { hasClientDeleteCapability, hasElevatedAccess, normalizeRoles } from "@/lib/access-control";
-import { Academia, Tenant, TenantBranding } from "@/lib/types";
+import { isClientOperationalEligibilityEnabled } from "@/lib/feature-flags";
+import { Academia, Tenant, TenantBranding, TenantOperationalEligibility } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import {
   getOptimisticTenantContextSnapshot,
@@ -53,6 +54,11 @@ type TenantContextState = TenantContextSnapshot & {
   baseTenant: Tenant | null;
   baseTenantName: string;
   availableTenants: Tenant[];
+  eligibleTenants: Tenant[];
+  blockedTenants: TenantOperationalEligibility[];
+  operationalAccessBlocked: boolean;
+  operationalAccessMessage: string | null;
+  canSwitchEligibleTenant: boolean;
   networkId?: string;
   networkSlug?: string;
   networkName?: string;
@@ -115,12 +121,57 @@ function resolveBaseTenant(
     return fallbackBaseTenant ?? null;
   }
 
+  const operationalBaseTenant = [
+    ...(authUser?.operationalAccess?.eligibleTenants ?? []),
+    ...(authUser?.operationalAccess?.blockedTenants ?? []),
+  ].find((tenant) => tenant.tenantId === candidateId);
+
   return (
     snapshot.tenants.find((tenant) => tenant.id === candidateId)
     ?? (snapshot.tenant?.id === candidateId ? snapshot.tenant : null)
+    ?? (
+      operationalBaseTenant
+        ? {
+            id: operationalBaseTenant.tenantId,
+            nome: operationalBaseTenant.tenantName ?? DEFAULT_BASE_TENANT_LABEL,
+            ativo: operationalBaseTenant.eligible,
+          }
+        : null
+    )
     ?? fallbackBaseTenant
     ?? null
   );
+}
+
+function resolveEligibleTenants(
+  snapshot: TenantContextSnapshot,
+  authUser?: AuthUser | null,
+): Tenant[] {
+  if (!isClientOperationalEligibilityEnabled()) {
+    return snapshot.tenants;
+  }
+
+  if (authUser?.operationalAccess) {
+    const eligibleIds = authUser.operationalAccess.eligibleTenants
+      .map((item) => item.tenantId.trim())
+      .filter(Boolean);
+    if (eligibleIds.length === 0) {
+      return [];
+    }
+
+    const byId = new Map(snapshot.tenants.map((tenant) => [tenant.id, tenant] as const));
+    return eligibleIds
+      .map((tenantId) => byId.get(tenantId))
+      .filter((tenant): tenant is Tenant => tenant != null);
+  }
+  return snapshot.tenants;
+}
+
+function resolveBlockedTenants(authUser?: AuthUser | null): TenantOperationalEligibility[] {
+  if (!isClientOperationalEligibilityEnabled()) {
+    return [];
+  }
+  return authUser?.operationalAccess?.blockedTenants ?? [];
 }
 
 function buildTenantContextState(
@@ -133,6 +184,23 @@ function buildTenantContextState(
   const baseTenant =
     input.baseTenant
     ?? resolveBaseTenant(snapshot, authUser, input.activeTenant ?? snapshot.tenant ?? null);
+  const eligibleTenants = input.eligibleTenants ?? resolveEligibleTenants(snapshot, authUser);
+  const blockedTenants = input.blockedTenants ?? resolveBlockedTenants(authUser);
+  const operationalAccessBlocked =
+    input.operationalAccessBlocked
+    ?? (isClientOperationalEligibilityEnabled()
+      ? (
+          authUser?.operationalAccess?.blocked
+          ?? (eligibleTenants.length === 0 && blockedTenants.length > 0)
+        )
+      : false);
+  const operationalAccessMessage =
+    input.operationalAccessMessage
+    ?? (
+      isClientOperationalEligibilityEnabled()
+        ? authUser?.operationalAccess?.message ?? null
+        : null
+    );
 
   return {
     ...snapshot,
@@ -149,7 +217,12 @@ function buildTenantContextState(
     baseTenantId: input.baseTenantId ?? baseTenant?.id ?? "",
     baseTenant,
     baseTenantName: input.baseTenantName ?? baseTenant?.nome ?? DEFAULT_BASE_TENANT_LABEL,
-    availableTenants: input.availableTenants ?? snapshot.tenants,
+    availableTenants: input.availableTenants ?? eligibleTenants,
+    eligibleTenants,
+    blockedTenants,
+    operationalAccessBlocked,
+    operationalAccessMessage,
+    canSwitchEligibleTenant: eligibleTenants.length > 1,
     networkId: input.networkId ?? authUser?.networkId,
     networkSlug: input.networkSlug ?? authUser?.networkSlug,
     networkName: input.networkName ?? authUser?.networkName,
@@ -331,12 +404,26 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
       }
 
       return buildTenantContextState(snapshot, {
-        ...current,
-        ...snapshot,
         tenantResolved: snapshot.tenantResolved || current.tenantResolved,
+        authUser: current.authUser,
+        roles: current.roles,
+        canAccessElevatedModules: current.canAccessElevatedModules,
+        canDeleteClient: current.canDeleteClient,
+        baseTenantId: current.baseTenantId,
+        baseTenant: current.baseTenant,
+        baseTenantName: current.baseTenantName,
+        networkId: current.networkId,
+        networkSlug: current.networkSlug,
+        networkName: current.networkName,
+        userId: current.userId,
+        displayName: current.displayName,
+        userKind: current.userKind,
+        availableScopes: current.availableScopes,
+        broadAccess: current.broadAccess,
+        academia: current.academia,
+        lastBootstrapAt: current.lastBootstrapAt,
         activeTenantId: snapshot.tenantId,
         activeTenant: snapshot.tenant,
-        availableTenants: snapshot.tenants,
         brandingSnapshot: resolveBrandingSnapshot(snapshot.tenant, current.academia),
         lastTenantSyncAt: Date.now(),
       });
@@ -399,7 +486,6 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
         const nextCanAccess =
           bootstrapState.canAccessElevatedModules ?? hasElevatedAccess(nextRoles);
         return buildTenantContextState(bootstrapState.snapshot, {
-          ...current,
           tenantResolved: bootstrapState.snapshot.tenantResolved,
           loading: false,
           status: bootstrapState.error ? "error" : "ready",
@@ -409,7 +495,6 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
           canAccessElevatedModules: nextCanAccess,
           activeTenantId: bootstrapState.snapshot.tenantId,
           activeTenant: bootstrapState.snapshot.tenant,
-          availableTenants: bootstrapState.snapshot.tenants,
           academia: nextAcademia,
           brandingSnapshot: finalizeSessionBrandingSnapshot(
             bootstrapState.snapshot.tenant,
@@ -424,10 +509,27 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
       if (requestIdRef.current !== currentRequestId) return;
       const snapshot = getTenantContextSnapshotFromStore();
       setState((current) => buildTenantContextState(snapshot, {
-        ...current,
+        authUser: current.authUser,
+        roles: current.roles,
+        canAccessElevatedModules: current.canAccessElevatedModules,
+        canDeleteClient: current.canDeleteClient,
+        baseTenantId: current.baseTenantId,
+        baseTenant: current.baseTenant,
+        baseTenantName: current.baseTenantName,
+        networkId: current.networkId,
+        networkSlug: current.networkSlug,
+        networkName: current.networkName,
+        userId: current.userId,
+        displayName: current.displayName,
+        userKind: current.userKind,
+        availableScopes: current.availableScopes,
+        broadAccess: current.broadAccess,
+        academia: current.academia,
+        brandingSnapshot: current.brandingSnapshot,
+        lastBootstrapAt: current.lastBootstrapAt,
+        lastTenantSyncAt: current.lastTenantSyncAt,
         activeTenantId: snapshot.tenantId,
         activeTenant: snapshot.tenant,
-        availableTenants: snapshot.tenants,
         loading: false,
         status: "error",
         error: normalizeErrorMessage(error),
@@ -463,7 +565,6 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
         const nextCanAccess =
           bootstrapState.canAccessElevatedModules ?? hasElevatedAccess(nextRoles);
         return buildTenantContextState(bootstrapState.snapshot, {
-          ...current,
           tenantResolved: bootstrapState.snapshot.tenantResolved,
           loading: false,
           status: bootstrapState.error ? "error" : "ready",
@@ -473,7 +574,6 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
           canAccessElevatedModules: nextCanAccess,
           activeTenantId: bootstrapState.snapshot.tenantId,
           activeTenant: bootstrapState.snapshot.tenant,
-          availableTenants: bootstrapState.snapshot.tenants,
           academia: nextAcademia,
           brandingSnapshot: finalizeSessionBrandingSnapshot(
             bootstrapState.snapshot.tenant,

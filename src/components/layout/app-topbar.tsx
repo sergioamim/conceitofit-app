@@ -23,9 +23,10 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
   const {
     tenantId,
     tenantName,
-    tenants,
+    eligibleTenants,
     baseTenantId,
     baseTenantName,
+    blockedTenants,
     networkName,
     availableScopes,
     broadAccess,
@@ -118,9 +119,10 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
         <ActiveTenantSelector
           tenantId={tenantId}
           tenantName={tenantName}
-          tenants={tenants}
+          tenants={eligibleTenants}
           baseTenantId={baseTenantId}
           baseTenantName={baseTenantName}
+          blockedTenants={blockedTenants}
           networkName={networkName}
           availableScopes={availableScopes}
           broadAccess={broadAccess}
