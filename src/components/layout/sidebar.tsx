@@ -192,7 +192,7 @@ const SidebarBrand = memo(function SidebarBrand({
 }) {
   const brandLogo = logoUrl || defaultLogoUrl;
   return (
-    <div className="border-b border-border px-4 py-5">
+    <div className="border-b border-sidebar-border px-4 py-5">
       <div className="flex items-start justify-between">
         <div className="min-w-0">
           {brandLogo ? (
@@ -209,24 +209,24 @@ const SidebarBrand = memo(function SidebarBrand({
             />
           ) : null}
           {collapsed && !brandLogo ? (
-            <div className="font-display text-sm font-extrabold tracking-tight text-gym-accent">{getInitials(appName)}</div>
+            <div className="font-display text-sm font-extrabold tracking-tight text-[color:var(--sidebar-primary)]">{getInitials(appName)}</div>
           ) : null}
           {!collapsed && (
-            <div className="font-display text-xl font-extrabold tracking-tight text-gym-accent">
+            <div className="font-display text-xl font-extrabold tracking-tight text-[color:var(--sidebar-primary)]">
               {appName}
             </div>
           )}
           {!collapsed && (
-            <div className="mt-1 space-y-1 text-[11px] text-muted-foreground">
+            <div className="mt-1 space-y-1 text-[11px] text-[color:color-mix(in_srgb,var(--sidebar-foreground)_68%,transparent)]">
               <div>
-                <span className="font-semibold uppercase tracking-widest text-muted-foreground/70">Academia</span>
-                <p className="mt-0.5 truncate text-[12px] text-foreground/90">
+                <span className="font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--sidebar-foreground)_55%,transparent)]">Academia</span>
+                <p className="mt-0.5 truncate text-[12px] text-sidebar-foreground">
                   {academiaName}
                 </p>
               </div>
               <div>
-                <span className="font-semibold uppercase tracking-widest text-muted-foreground/70">Unidade</span>
-                <p className="mt-0.5 truncate text-[12px] text-foreground/90">
+                <span className="font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--sidebar-foreground)_55%,transparent)]">Unidade</span>
+                <p className="mt-0.5 truncate text-[12px] text-sidebar-foreground">
                   {tenantName}
                 </p>
               </div>
@@ -236,7 +236,7 @@ const SidebarBrand = memo(function SidebarBrand({
         <button
           type="button"
           onClick={onToggleCollapsed}
-          className="mt-0.5 hidden rounded-md border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground md:inline-flex"
+          className="mt-0.5 hidden rounded-md border border-sidebar-border bg-sidebar-accent p-1.5 text-[color:color-mix(in_srgb,var(--sidebar-foreground)_72%,transparent)] hover:text-sidebar-foreground md:inline-flex"
           aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
         >
           {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
@@ -268,8 +268,8 @@ const NavLinkItem = memo(function NavLinkItem({
         "cursor-pointer flex items-center rounded-md transition-colors",
         dense ? "gap-2 px-3 py-2 text-[13px]" : "gap-2.5 px-3 py-2 text-[13.5px] font-normal",
         active
-          ? "bg-gym-accent/10 font-medium text-gym-accent"
-          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+          ? "bg-sidebar-accent font-medium text-[color:var(--sidebar-primary)]"
+          : "text-[color:color-mix(in_srgb,var(--sidebar-foreground)_68%,transparent)] hover:bg-sidebar-accent hover:text-sidebar-foreground"
       )}
       title={collapsed ? item.label : undefined}
     >
@@ -304,7 +304,7 @@ const CollapsibleSection = memo(function CollapsibleSection({
         type="button"
         onClick={onToggle}
         className={cn(
-          "cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 transition-colors hover:text-foreground",
+          "cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-2 text-[10px] font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--sidebar-foreground)_55%,transparent)] transition-colors hover:text-sidebar-foreground",
           collapsed && "justify-center"
         )}
         title={collapsed ? title : undefined}
@@ -401,7 +401,7 @@ function SidebarNavigation({
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4">
       {!collapsed && (
-        <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+        <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--sidebar-foreground)_50%,transparent)]">
           Principal
         </p>
       )}
@@ -507,11 +507,11 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
 
   return (
     <>
-      <div className="border-t border-border px-3 py-4">
+      <div className="border-t border-sidebar-border px-3 py-4">
         <div
           ref={userMenuRef}
           className={cn(
-            "relative flex items-center gap-2.5 rounded-md bg-secondary px-2.5 py-2",
+            "relative flex items-center gap-2.5 rounded-md bg-sidebar-accent px-2.5 py-2",
             collapsed && "justify-center"
           )}
         >
@@ -521,19 +521,19 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
             className={cn("cursor-pointer flex items-center gap-2.5", collapsed && "justify-center")}
             aria-label="Menu do usuário"
           >
-            <div className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-gym-accent font-display text-xs font-bold text-background">
+            <div className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-sidebar-primary font-display text-xs font-bold text-sidebar-primary-foreground">
               S
             </div>
             {!collapsed && (
               <div className="text-left">
-                <p className="text-[13px] font-medium">Sergio</p>
-                <p className="text-[11px] text-muted-foreground">Administrador</p>
+                <p className="text-[13px] font-medium text-sidebar-foreground">Sergio</p>
+                <p className="text-[11px] text-[color:color-mix(in_srgb,var(--sidebar-foreground)_64%,transparent)]">Administrador</p>
               </div>
             )}
           </button>
           {userMenuOpen && !collapsed && (
-            <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-56 rounded-md border border-border bg-card p-2 shadow-lg">
-              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-56 rounded-md border border-sidebar-border bg-sidebar p-2 shadow-lg">
+              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--sidebar-foreground)_55%,transparent)]">
                 Conta
               </p>
               {[
@@ -546,7 +546,7 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
                   key={item.label}
                   href={item.href}
                   onClick={() => setUserMenuOpen(false)}
-                  className="block w-full rounded-md px-2 py-2 text-left text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  className="block w-full rounded-md px-2 py-2 text-left text-[13px] text-[color:color-mix(in_srgb,var(--sidebar-foreground)_68%,transparent)] hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 >
                   {item.label}
                 </Link>
@@ -557,7 +557,7 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
                   setUserMenuOpen(false);
                   setLogoutOpen(true);
                 }}
-                className="mt-1 block w-full cursor-pointer rounded-md px-2 py-2 text-left text-[13px] text-gym-danger hover:bg-secondary"
+                className="mt-1 block w-full cursor-pointer rounded-md px-2 py-2 text-left text-[13px] text-gym-danger hover:bg-sidebar-accent"
               >
                 Sair
               </button>
@@ -649,7 +649,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = fals
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex h-full w-[280px] flex-col border-r border-border bg-surface transition-transform md:static md:h-screen md:translate-x-0",
+        "fixed inset-y-0 left-0 z-40 flex h-full w-[280px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform md:static md:h-screen md:translate-x-0",
         mobileOpen ? "translate-x-0" : "-translate-x-full",
         collapsed ? "md:w-[72px] md:min-w-[72px]" : "md:w-[220px] md:min-w-[220px]"
       )}

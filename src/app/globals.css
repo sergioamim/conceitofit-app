@@ -40,12 +40,12 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   /* Custom gym colors */
-  --color-gym-accent: #c8f135;
-  --color-gym-teal: #3de8a0;
-  --color-gym-danger: #ff5c5c;
-  --color-gym-warning: #ffb347;
-  --color-surface: #16181c;
-  --color-surface2: #1e2026;
+  --color-gym-accent: var(--gym-accent);
+  --color-gym-teal: var(--gym-teal);
+  --color-gym-danger: var(--gym-danger);
+  --color-gym-warning: var(--gym-warning);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface-2);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -86,6 +86,12 @@
   --sidebar-accent-foreground: #eef0f4;
   --sidebar-border: #2a2d35;
   --sidebar-ring: #c8f135;
+  --gym-accent: #c8f135;
+  --gym-teal: #3de8a0;
+  --gym-danger: #ff5c5c;
+  --gym-warning: #ffb347;
+  --surface: #16181c;
+  --surface-2: #1e2026;
 }
 
 .dark {
@@ -115,6 +121,12 @@
   --sidebar-accent-foreground: #eef0f4;
   --sidebar-border: #2a2d35;
   --sidebar-ring: #c8f135;
+  --gym-accent: #c8f135;
+  --gym-teal: #3de8a0;
+  --gym-danger: #ff5c5c;
+  --gym-warning: #ffb347;
+  --surface: #16181c;
+  --surface-2: #1e2026;
 }
 
 @layer base {

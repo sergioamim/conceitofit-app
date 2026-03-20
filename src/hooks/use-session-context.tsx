@@ -58,6 +58,7 @@ type TenantContextValue = TenantContextState & {
   refresh: () => Promise<void>;
   setTenant: (tenantId: string) => Promise<void>;
   switchActiveTenant: (tenantId: string) => Promise<void>;
+  syncAcademiaBranding: (academia: Academia) => void;
 };
 
 type SessionBootstrapLoadResult = {
@@ -450,6 +451,18 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
     await switchActiveTenant(tenantId);
   }, [switchActiveTenant]);
 
+  const syncAcademiaBranding = useCallback((academia: Academia) => {
+    setState((current) => ({
+      ...current,
+      academia,
+      brandingSnapshot: finalizeSessionBrandingSnapshot(
+        current.tenant,
+        academia,
+        academia.branding,
+      ),
+    }));
+  }, []);
+
   useEffect(() => {
     const kickoffId = window.setTimeout(() => {
       const hasSession = hasSessionContextState();
@@ -533,6 +546,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
         refresh,
         setTenant,
         switchActiveTenant,
+        syncAcademiaBranding,
       }}
     >
       {children}
@@ -553,6 +567,7 @@ export function useTenantContext(): TenantContextValue {
     refresh: async () => undefined,
     setTenant: async () => undefined,
     switchActiveTenant: async () => undefined,
+    syncAcademiaBranding: () => undefined,
   };
 }
 

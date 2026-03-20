@@ -41,10 +41,14 @@ Premissas:
 Decisoes estruturais deste PRD:
 
 - o sistema deve distinguir acesso, perfil, permissao efetiva e excecao;
-- o sistema deve suportar escopo Unidade, Academia e Global/Rede;
+- o sistema deve suportar escopo Unidade, Rede e Global;
 - o sistema deve preferir um perfil principal por escopo;
 - perfis adicionais no mesmo escopo devem ser excepcionais e visiveis;
 - o frontend deve operar com linguagem de negocio, sem perder rastreabilidade tecnica.
+
+Observacao estrutural:
+
+- `Grupo` permanece fora do nucleo operacional de autorizacao e deve aparecer na UX apenas como visao gerencial e de consolidacao quando aplicavel.
 
 ## 3. Contexto e diagnostico
 
@@ -201,8 +205,8 @@ A linguagem tecnica pode existir em detalhe secundario para auditoria e suporte,
 A interface deve induzir a conceder acesso:
 
 - primeiro por unidade;
-- depois por academia apenas quando justificavel;
-- por global/rede somente para papeis sistemicos e corporativos;
+- depois por rede apenas quando justificavel;
+- por global somente para papeis sistemicos e corporativos;
 - sempre com aviso claro quando o escopo for amplo.
 
 ### 8.5 Seguranca explicavel
@@ -231,8 +235,8 @@ Onde o usuario pode operar.
 Tipos de escopo:
 
 - Unidade: acesso operacional direto a uma unidade especifica.
-- Academia: politica administrativa que pode conceder acesso padrao a unidades de uma mesma academia.
-- Global/Rede: acesso excepcional e corporativo, reservado a perfis sistemicos autorizados.
+- Rede: acesso amplo dentro da rede, cobrindo multiplas unidades quando o papel exigir.
+- Global: acesso excepcional e corporativo, reservado a perfis sistemicos autorizados.
 
 #### Acesso
 
@@ -352,7 +356,7 @@ Estrutura recomendada para cada item:
 - descricao simples;
 - nivel de risco: baixo, medio, alto, critico;
 - dependencia: exige outra permissao;
-- escopo suportado: unidade, academia, global;
+- escopo suportado: unidade, rede, global;
 - visivel em perfis padrao;
 - auditavel obrigatoriamente.
 
@@ -400,8 +404,8 @@ Estrutura recomendada para cada item:
 #### Relatorios
 
 - Ver indicadores da propria unidade
-- Ver indicadores da academia
 - Ver indicadores da rede
+- Ver indicadores globais
 - Exportar base completa
 
 ## 12. Perfis padronizados recomendados
@@ -430,13 +434,13 @@ Os perfis abaixo devem nascer como templates oficiais, editaveis por administrad
 
 ### Financeiro Operacional
 
-- execucao financeira da unidade ou academia;
+- execucao financeira da unidade ou rede;
 - registrar, conciliar e exportar;
 - estornos e configuracoes fiscais sob controle reforcado.
 
 ### Supervisor Regional
 
-- visao multiunidade de academias designadas;
+- visao multiunidade de redes designadas;
 - leitura ampla e alteracoes seletivas;
 - sem direitos globais irrestritos por padrao.
 
@@ -625,7 +629,7 @@ Regra de UX:
 Resumo:
 
 - busca por nome e email;
-- filtros por unidade, academia, perfil, risco, excecao e status de revisao;
+- filtros por unidade, rede, perfil, risco, excecao e status de revisao;
 - tabela com leitura humana;
 - CTA principal: Conceder acesso.
 
@@ -779,7 +783,7 @@ O sistema deve permitir revisao periodica de acessos privilegiados.
 
 ### RF-12
 
-O sistema deve permitir identificar usuarios com acesso por unidade, por academia e por global ou rede.
+O sistema deve permitir identificar usuarios com acesso por unidade, por rede e por global.
 
 ### RF-13
 
@@ -1024,7 +1028,7 @@ Introduzir revisao periodica de acessos privilegiados no produto.
 
 ### Decisao 6
 
-Modelar explicitamente os tres tipos de escopo: Unidade, Academia e Global ou Rede.
+Modelar explicitamente os tres tipos de escopo: Unidade, Rede e Global.
 
 ### Decisao 7
 

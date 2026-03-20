@@ -3875,11 +3875,95 @@
         ],
         "priority": "medium",
         "subtasks": []
+      },
+      {
+        "id": 55,
+        "title": "Enriquecer a tela de contratos com resumo mensal e indicadores visuais",
+        "description": "Atualizar /matriculas para priorizar os contratos mais recentes do mes e adicionar indicadores executivos da carteira.",
+        "details": "Refatorar src/app/(app)/matriculas/page.tsx para destacar os ultimos contratos do mes na tabela principal e introduzir um bloco superior com indicadores resumidos da carteira da unidade ativa. A nova experiencia deve incluir cards com total do mes, valor medio de contrato, receita contratada do mes, percentual de contratos ativos e um grafico em pizza agrupando os contratos ativos por plano, sem adicionar dependencia externa de chart. Revisar estados de loading, empty state e ordenacao local para manter consistencia com o contrato atual da API.",
+        "testStrategy": "Cobrir a pagina de contratos com teste de regressao visual/funcional validando resumo mensal, agrupamento de ativos e recorte dos contratos mais recentes do mes.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Modelar o recorte mensal e as metricas derivadas da tela de contratos",
+            "description": "Calcular resumo do mes atual e agrupamentos sem depender de endpoint novo.",
+            "dependencies": [],
+            "details": "Derivar em memoria os contratos do mes atual, ordenar pelos mais recentes e calcular indicadores como total do mes, ticket medio, receita contratada e percentual de ativos.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 55,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T19:40:00Z"
+          },
+          {
+            "id": 2,
+            "title": "Criar o bloco superior com KPIs e contexto da carteira",
+            "description": "Dar leitura executiva imediata antes da tabela.",
+            "dependencies": [
+              "55.1"
+            ],
+            "details": "Adicionar cards superiores com valor medio do contrato, receita do mes, total de contratos recentes, percentual de ativos e sugestoes de leitura operacional.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 55,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T19:40:00Z"
+          },
+          {
+            "id": 3,
+            "title": "Adicionar grafico em pizza dos contratos ativos agrupados",
+            "description": "Visualizar distribuicao da carteira ativa por plano na propria pagina.",
+            "dependencies": [
+              "55.1"
+            ],
+            "details": "Construir um grafico em pizza com legenda, usando CSS e utilitarios nativos do projeto, agrupando os contratos ativos por plano e destacando os principais grupos.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 55,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T19:40:00Z"
+          },
+          {
+            "id": 4,
+            "title": "Reorganizar a tabela para exibir os ultimos contratos do mes",
+            "description": "Fazer a listagem principal refletir o recorte mensal e a ordenacao mais relevante.",
+            "dependencies": [
+              "55.1",
+              "55.2"
+            ],
+            "details": "Substituir a leitura generica por uma tabela focada nos contratos do mes atual, ordenados do mais recente para o mais antigo, com empty state e mensagens coerentes quando nao houver contratos recentes.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 55,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T19:40:00Z"
+          },
+          {
+            "id": 5,
+            "title": "Cobrir regressao da nova leitura mensal de contratos",
+            "description": "Garantir estabilidade visual e funcional da pagina.",
+            "dependencies": [
+              "55.2",
+              "55.3",
+              "55.4"
+            ],
+            "details": "Adicionar ou ajustar testes para validar os cards superiores, o agrupamento de ativos no grafico e a listagem dos contratos mais recentes do mes.",
+            "status": "done",
+            "testStrategy": null,
+            "parentTaskId": 55,
+            "parentId": "undefined",
+            "updatedAt": "2026-03-19T19:40:00Z"
+          }
+        ],
+        "updatedAt": "2026-03-19T19:40:00Z"
       }
     ],
     "metadata": {
       "created": "2026-03-18T15:32:36.203Z",
-      "updated": "2026-03-19T17:21:34.878Z",
+      "updated": "2026-03-19T19:00:00.000Z",
       "description": "Tasks for master context"
     }
   }

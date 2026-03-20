@@ -33,12 +33,12 @@ function applyThemeVars(academia?: Academia) {
   root.style.setProperty("--sidebar-primary-foreground", theme.background);
   root.style.setProperty("--sidebar-accent", theme.secondary);
   root.style.setProperty("--sidebar-accent-foreground", theme.foreground);
-  root.style.setProperty("--color-gym-accent", theme.accent);
-  root.style.setProperty("--color-gym-danger", theme.danger);
-  root.style.setProperty("--color-gym-warning", theme.warning);
-  root.style.setProperty("--color-gym-teal", theme.teal);
-  root.style.setProperty("--color-surface", theme.surface);
-  root.style.setProperty("--color-surface2", theme.secondary);
+  root.style.setProperty("--gym-accent", theme.accent);
+  root.style.setProperty("--gym-danger", theme.danger);
+  root.style.setProperty("--gym-warning", theme.warning);
+  root.style.setProperty("--gym-teal", theme.teal);
+  root.style.setProperty("--surface", theme.surface);
+  root.style.setProperty("--surface-2", theme.secondary);
 
   document.title = `${getTenantAppName(academia)} - Gestão de Academia`;
 }

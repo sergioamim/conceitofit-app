@@ -20,13 +20,13 @@ export function ClienteTabs({
 }: {
   current: ClienteTabKey;
   baseHref: string;
-  onSelect?: (tab: Exclude<ClienteTabKey, "cartoes">) => void;
+  onSelect?: (tab: ClienteTabKey) => void;
   pendenteFinanceiro?: boolean;
   showEditTab?: boolean;
 }) {
   const base: ClienteTabItem[] = [
     { key: "resumo", label: "Dashboard" },
-    { key: "matriculas", label: "Matrículas" },
+    { key: "matriculas", label: "Planos" },
     { key: "financeiro", label: "Financeiro" },
     { key: "nfse", label: "NFS-e", icon: FileText },
     { key: "cartoes", label: "Cartões", icon: CreditCard },
@@ -40,11 +40,11 @@ export function ClienteTabs({
       {items.map((t) => {
         const active = current === t.key;
         const Icon = t.icon;
-        if (t.key === "cartoes") {
+        if (onSelect) {
           return (
-            <Link
+            <button
               key={t.key}
-              href={`${baseHref}/cartoes`}
+              onClick={() => onSelect(t.key)}
               className={cn(
                 "rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors inline-flex items-center gap-2",
                 active
@@ -53,22 +53,6 @@ export function ClienteTabs({
               )}
             >
               {Icon && <Icon className="size-3.5" />}
-              {t.label}
-            </Link>
-          );
-        }
-        if (onSelect) {
-          return (
-            <button
-              key={t.key}
-              onClick={() => onSelect(t.key as Exclude<ClienteTabKey, "cartoes">)}
-              className={cn(
-                "rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors inline-flex items-center gap-2",
-                active
-                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-              )}
-            >
               {t.label}
               {t.key === "financeiro" && pendenteFinanceiro && (
                 <AlertTriangle className="size-3.5 text-gym-warning" />

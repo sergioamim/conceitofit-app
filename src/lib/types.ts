@@ -1018,7 +1018,15 @@ export type TenantThemePreset =
   | "CONCEITO_DARK"
   | "AZUL_OCEANO"
   | "VERDE_ENERGIA"
-  | "GRAFITE_FIRE";
+  | "GRAFITE_FIRE"
+  | "DRACULA"
+  | "AREIA_SOLAR"
+  | "NUVEM_CLARA"
+  | "ROSA_EDITORIAL"
+  | "COBALTO_NOTURNO"
+  | "AURORA_BOREAL"
+  | "TERRACOTA_SUAVE"
+  | "MENTA_MODERNA";
 
 export interface TenantThemeColors {
   accent: string;

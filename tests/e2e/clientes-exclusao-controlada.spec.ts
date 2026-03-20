@@ -284,7 +284,9 @@ test.describe("Exclusão controlada de clientes", () => {
     });
 
     await page.goto(`/clientes/${ALUNO.id}/cartoes`);
-    await expect(page.getByRole("heading", { name: "Cartões do cliente" })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/clientes/${ALUNO.id}\\?tab=cartoes$`));
+    await expect(page.getByRole("button", { name: "Cartões" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cartões" })).toBeVisible();
 
     await page.locator("button.h-9.px-2").click();
     await expect(page.getByRole("button", { name: "Excluir cliente" })).toHaveCount(0);

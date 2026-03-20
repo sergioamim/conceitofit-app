@@ -13,6 +13,7 @@ import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createDefaultBranding, TENANT_THEME_OPTIONS, resolveTenantTheme } from "@/lib/tenant-theme";
+import { useTenantContext } from "@/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const COLOR_FIELDS: Array<{ key: keyof TenantThemeColors; label: string }> = [
@@ -36,6 +37,7 @@ function normalizeHex(value: string): string {
 }
 
 export default function AcademiaAdminPage() {
+  const { syncAcademiaBranding } = useTenantContext();
   const [academia, setAcademia] = useState<Academia | null>(null);
   const [saving, setSaving] = useState(false);
   const [unitsCount, setUnitsCount] = useState(0);
@@ -62,12 +64,17 @@ export default function AcademiaAdminPage() {
 
   async function handleSave() {
     if (!academia) return;
+    setError("");
     setSaving(true);
     try {
       const updated = await updateAcademiaAtualApi({
         data: academia,
       });
-      setAcademia({ ...updated, branding: { ...createDefaultBranding(), ...(updated.branding ?? {}) } });
+      const normalized = { ...updated, branding: { ...createDefaultBranding(), ...(updated.branding ?? {}) } };
+      setAcademia(normalized);
+      syncAcademiaBranding(normalized);
+    } catch (saveError) {
+      setError(normalizeErrorMessage(saveError) || "Falha ao salvar academia.");
     } finally {
       setSaving(false);
     }

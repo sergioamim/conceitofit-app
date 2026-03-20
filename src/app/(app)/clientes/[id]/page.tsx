@@ -5,8 +5,12 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
 import {
+  createCartaoClienteService,
+  deleteCartaoClienteService,
   excluirAlunoService,
   liberarAcessoCatracaService,
+  listBandeirasCartaoService,
+  listCartoesClienteService,
   listConveniosService,
   listFormasPagamentoService,
   listMatriculasByAlunoService,
@@ -15,6 +19,7 @@ import {
   listPresencasByAlunoService,
   receberPagamentoService,
   resolveAlunoTenantService,
+  setCartaoPadraoService,
   updateAlunoService,
 } from "@/lib/comercial/runtime";
 import { ApiRequestError } from "@/lib/api/http";
@@ -22,6 +27,8 @@ import { getNfseBloqueioMensagem } from "@/lib/admin-financeiro";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type {
   Aluno,
+  BandeiraCartao,
+  CartaoCliente,
   ClienteExclusaoBlockedBy,
   Matricula,
   Plano,
@@ -40,14 +47,25 @@ import { cn } from "@/lib/utils";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { ClienteEditForm } from "@/components/shared/cliente-edit-form";
 import { ClienteHeader } from "@/components/shared/cliente-header";
+import { ClienteCartoesPanel } from "@/components/shared/cliente-cartoes-panel";
 import { ClientePhotoModal } from "@/components/shared/cliente-photo-modal";
 import { ClienteTabs, ClienteTabKey } from "@/components/shared/cliente-tabs";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
+type TabLoadStatus = "idle" | "loading" | "ready" | "error";
+
 type NfseTabState = {
   tenantId: string | null;
   configuracao: NfseConfiguracao | null;
-  status: "idle" | "loading" | "ready" | "error";
+  status: TabLoadStatus;
+  error: string | null;
+};
+
+type CartoesTabState = {
+  tenantId: string | null;
+  cartoes: CartaoCliente[];
+  bandeiras: BandeiraCartao[];
+  status: TabLoadStatus;
   error: string | null;
 };
 
@@ -71,10 +89,29 @@ function createIdleNfseTabState(tenantId: string | null = null): NfseTabState {
   };
 }
 
+function createIdleCartoesTabState(tenantId: string | null = null): CartoesTabState {
+  return {
+    tenantId,
+    cartoes: [],
+    bandeiras: [],
+    status: "idle",
+    error: null,
+  };
+}
+
+function resolveClienteTab(input: string | null): ClienteTabKey | null {
+  if (input === "matriculas" || input === "financeiro" || input === "nfse" || input === "editar" || input === "cartoes") {
+    return input;
+  }
+  if (input === "resumo") return input;
+  return null;
+}
+
 export default function ClienteDetalhePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const requestedTab = resolveClienteTab(searchParams.get("tab"));
   const { tenantId, tenantResolved, tenants, setTenant, canDeleteClient } = useTenantContext();
   const [aluno, setAluno] = useState<Aluno | null>(null);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
@@ -83,9 +120,10 @@ export default function ClienteDetalhePage() {
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [nfseTabState, setNfseTabState] = useState<NfseTabState>(() => createIdleNfseTabState());
+  const [cartoesTabState, setCartoesTabState] = useState<CartoesTabState>(() => createIdleCartoesTabState());
   const [freqMode, setFreqMode] = useState<"7d" | "ano">("7d");
   const [presencas, setPresencas] = useState<Presenca[]>([]);
-  const [tab, setTab] = useState<ClienteTabKey>("resumo");
+  const [tab, setTab] = useState<ClienteTabKey>(requestedTab ?? "resumo");
   const [suspenderOpen, setSuspenderOpen] = useState(false);
   const [novaMatriculaOpen, setNovaMatriculaOpen] = useState(false);
   const [recebendo, setRecebendo] = useState<Pagamento | null>(null);
@@ -104,10 +142,15 @@ export default function ClienteDetalhePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const nfseTabStateRef = useRef(nfseTabState);
+  const cartoesTabStateRef = useRef(cartoesTabState);
 
   useEffect(() => {
     nfseTabStateRef.current = nfseTabState;
   }, [nfseTabState]);
+
+  useEffect(() => {
+    cartoesTabStateRef.current = cartoesTabState;
+  }, [cartoesTabState]);
 
   const loadNfseTabData = useCallback(async (currentTenantId: string) => {
     const current = nfseTabStateRef.current;
@@ -150,6 +193,66 @@ export default function ClienteDetalhePage() {
     }
   }, []);
 
+  const loadCartoesTabData = useCallback(async (
+    currentTenantId: string,
+    alunoId: string,
+    options?: { force?: boolean }
+  ) => {
+    const current = cartoesTabStateRef.current;
+    if (
+      !options?.force
+      && current.tenantId === currentTenantId
+      && (current.status === "loading" || current.status === "ready")
+    ) {
+      return;
+    }
+
+    if (
+      current.tenantId === currentTenantId
+      && current.status === "loading"
+    ) {
+      return;
+    }
+
+    setCartoesTabState({
+      tenantId: currentTenantId,
+      cartoes: [],
+      bandeiras: [],
+      status: "loading",
+      error: null,
+    });
+
+    try {
+      const [cartoes, bandeiras] = await Promise.all([
+        listCartoesClienteService({ tenantId: currentTenantId, alunoId }),
+        listBandeirasCartaoService({ apenasAtivas: true }),
+      ]);
+
+      setCartoesTabState((current) => {
+        if (current.tenantId !== currentTenantId) return current;
+        return {
+          tenantId: currentTenantId,
+          cartoes,
+          bandeiras,
+          status: "ready",
+          error: null,
+        };
+      });
+    } catch (error) {
+      const message = normalizeErrorMessage(error);
+      setCartoesTabState((current) => {
+        if (current.tenantId !== currentTenantId) return current;
+        return {
+          tenantId: currentTenantId,
+          cartoes: [],
+          bandeiras: [],
+          status: "error",
+          error: message,
+        };
+      });
+    }
+  }, []);
+
   const reload = useCallback(async () => {
     const id = params?.id;
     if (!id || !tenantResolved) {
@@ -173,6 +276,7 @@ export default function ClienteDetalhePage() {
         setFormasPagamento([]);
         setConvenios([]);
         setNfseTabState(createIdleNfseTabState());
+        setCartoesTabState(createIdleCartoesTabState());
         return;
       }
       if (resolved.tenantId !== tenantId) {
@@ -216,10 +320,14 @@ export default function ClienteDetalhePage() {
       setNfseTabState((current) =>
         current.tenantId === currentTenantId ? current : createIdleNfseTabState(currentTenantId)
       );
+      setCartoesTabState((current) =>
+        current.tenantId === currentTenantId ? current : createIdleCartoesTabState(currentTenantId)
+      );
     } catch (error) {
       setLoadError(normalizeErrorMessage(error));
       setAluno(null);
       setNfseTabState(createIdleNfseTabState());
+      setCartoesTabState(createIdleCartoesTabState());
     } finally {
       setLoading(false);
     }
@@ -244,6 +352,11 @@ export default function ClienteDetalhePage() {
     if (tab !== "nfse" || !aluno?.tenantId) return;
     void loadNfseTabData(aluno.tenantId);
   }, [aluno?.tenantId, loadNfseTabData, tab]);
+
+  useEffect(() => {
+    if (tab !== "cartoes" || !aluno?.tenantId || !aluno.id) return;
+    void loadCartoesTabData(aluno.tenantId, aluno.id);
+  }, [aluno?.id, aluno?.tenantId, loadCartoesTabData, tab]);
 
   const planoAtivo = useMemo(() => {
     return matriculas.find((m) => m.status === "ATIVA");
@@ -645,7 +758,7 @@ export default function ClienteDetalhePage() {
           planoAtivo={planoAtivo ? { dataFim: planoAtivo.dataFim } : null}
           planoAtivoInfo={planoAtivoInfo ?? null}
           suspenso={suspenso}
-          onCartoes={() => router.push(`/clientes/${aluno.id}/cartoes`)}
+          onCartoes={() => setTab("cartoes")}
           onNovaVenda={() => setNovaMatriculaOpen(true)}
           onSuspender={() => setSuspenderOpen(true)}
           onReativar={async () => {
@@ -908,11 +1021,11 @@ export default function ClienteDetalhePage() {
 
       {tab === "matriculas" && (
         <div className="rounded-xl border border-border bg-card p-5">
-          <h2 className="font-display text-base font-bold">Matrículas</h2>
+          <h2 className="font-display text-base font-bold">Histórico de planos</h2>
           <div className="mt-3 divide-y divide-border">
             {matriculas.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                Nenhuma matrícula encontrada
+                Nenhum plano encontrado
               </p>
             )}
             {matriculas.map((m) => (
@@ -930,6 +1043,38 @@ export default function ClienteDetalhePage() {
             ))}
           </div>
         </div>
+      )}
+
+      {tab === "cartoes" && aluno && (
+        <ClienteCartoesPanel
+          cartoes={cartoesTabState.cartoes}
+          bandeiras={cartoesTabState.bandeiras}
+          loading={cartoesTabState.status === "loading" || cartoesTabState.status === "idle"}
+          error={cartoesTabState.status === "error" ? cartoesTabState.error : null}
+          onCreate={async (data) => {
+            await createCartaoClienteService({
+              tenantId: aluno.tenantId,
+              alunoId: aluno.id,
+              data,
+            });
+            await loadCartoesTabData(aluno.tenantId, aluno.id, { force: true });
+          }}
+          onDelete={async (id) => {
+            await deleteCartaoClienteService({
+              tenantId: aluno.tenantId,
+              id,
+            });
+          }}
+          onReload={async () => {
+            await loadCartoesTabData(aluno.tenantId, aluno.id, { force: true });
+          }}
+          onSetDefault={async (id) => {
+            await setCartaoPadraoService({
+              tenantId: aluno.tenantId,
+              id,
+            });
+          }}
+        />
       )}
 
       {tab === "financeiro" && (
