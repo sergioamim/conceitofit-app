@@ -13,6 +13,7 @@ import {
 import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-unidades";
 import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/lib/api/session";
 import { resolvePostLoginPath } from "@/lib/auth-redirect";
+import { buildNetworkAccessHref } from "@/lib/network-subdomain";
 import type { Tenant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,11 +47,11 @@ function buildDescription(mode: FlowMode, networkName: string) {
 }
 
 export function NetworkAccessFlow({
-  redeSlug,
+  networkSubdomain,
   nextPath,
   mode,
 }: {
-  redeSlug: string;
+  networkSubdomain: string;
   nextPath?: string | null;
   mode: FlowMode;
 }) {
@@ -74,13 +75,18 @@ export function NetworkAccessFlow({
     async function loadContext() {
       setLoadingContext(true);
       try {
-        const response = await getAccessNetworkContextApi(redeSlug);
+        const response = await getAccessNetworkContextApi(networkSubdomain, { allowDefaultFallback: false });
         if (!mounted) return;
         setContext(response);
         setContextError(null);
+        setError(null);
       } catch (loadError) {
         if (!mounted) return;
-        setContextError(loadError instanceof Error ? loadError.message : "Não foi possível carregar o contexto da rede.");
+        const nextError =
+          loadError instanceof Error ? loadError.message : "Não foi possível carregar o contexto da rede.";
+        setContext(null);
+        setContextError(nextError);
+        setError(nextError);
       } finally {
         if (mounted) setLoadingContext(false);
       }
@@ -90,7 +96,7 @@ export function NetworkAccessFlow({
     return () => {
       mounted = false;
     };
-  }, [redeSlug]);
+  }, [networkSubdomain]);
 
   useEffect(() => {
     if (mode === "login" && getAccessToken()) {
@@ -114,7 +120,7 @@ export function NetworkAccessFlow({
       await loginApi({
         identifier: identifier.trim(),
         password,
-        redeIdentifier: redeSlug,
+        redeIdentifier: networkSubdomain,
         channel: "APP",
       });
 
@@ -157,12 +163,12 @@ export function NetworkAccessFlow({
       const response =
         mode === "recovery"
           ? await requestPasswordRecoveryApi({
-              redeIdentifier: redeSlug,
+              redeIdentifier: networkSubdomain,
               identifier,
               channel: "APP",
             })
           : await requestFirstAccessApi({
-              redeIdentifier: redeSlug,
+              redeIdentifier: networkSubdomain,
               identifier,
               channel: "APP",
             });
@@ -193,8 +199,9 @@ export function NetworkAccessFlow({
   }
 
   const resolvedContext = context ?? {
-    slug: redeSlug,
-    name: redeSlug,
+    subdomain: networkSubdomain,
+    slug: networkSubdomain,
+    name: networkSubdomain,
     appName: "Acesso por rede",
     supportText: "Autentique-se no contexto correto da rede para evitar conflitos entre identidades iguais.",
     accentLabel: "Acesso por rede",
@@ -221,6 +228,7 @@ export function NetworkAccessFlow({
               <div className="rounded-2xl border border-border bg-background/70 px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Rede</p>
                 <p className="mt-1 text-sm font-semibold text-foreground">{resolvedContext.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Subdomínio: {resolvedContext.subdomain}</p>
               </div>
               <div className="rounded-2xl border border-border bg-background/70 px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Identificador</p>
@@ -257,6 +265,12 @@ export function NetworkAccessFlow({
           <CardContent className="space-y-4">
             {loadingContext ? (
               <p className="text-sm text-muted-foreground">Carregando branding e instruções da rede...</p>
+            ) : null}
+
+            {!loadingContext && contextError ? (
+              <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/5 px-4 py-3 text-sm text-gym-danger">
+                Esta URL não corresponde a uma rede válida ou a rede não está disponível no momento.
+              </div>
             ) : null}
 
             {step === "TENANT" ? (
@@ -312,7 +326,7 @@ export function NetworkAccessFlow({
                   />
                 </div>
                 {error ? <p className="text-sm text-gym-danger">{error}</p> : null}
-                <Button type="submit" className="w-full" disabled={saving || loadingContext}>
+                <Button type="submit" className="w-full" disabled={saving || loadingContext || Boolean(contextError)}>
                   {saving ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
@@ -336,7 +350,7 @@ export function NetworkAccessFlow({
                     {successMessage}
                   </div>
                 ) : null}
-                <Button type="submit" className="w-full" disabled={saving || loadingContext}>
+                <Button type="submit" className="w-full" disabled={saving || loadingContext || Boolean(contextError)}>
                   {saving
                     ? "Enviando..."
                     : mode === "recovery"
@@ -347,13 +361,13 @@ export function NetworkAccessFlow({
             )}
 
             <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-              <Link className="font-medium text-foreground hover:underline" href={`/acesso/${redeSlug}/autenticacao`}>
+              <Link className="font-medium text-foreground hover:underline" href={buildNetworkAccessHref("login", networkSubdomain)}>
                 Voltar ao login
               </Link>
-              <Link className="font-medium text-foreground hover:underline" href={`/acesso/${redeSlug}/recuperar-senha`}>
+              <Link className="font-medium text-foreground hover:underline" href={buildNetworkAccessHref("forgot-password", networkSubdomain)}>
                 Recuperar senha
               </Link>
-              <Link className="font-medium text-foreground hover:underline" href={`/acesso/${redeSlug}/primeiro-acesso`}>
+              <Link className="font-medium text-foreground hover:underline" href={buildNetworkAccessHref("first-access", networkSubdomain)}>
                 Primeiro acesso
               </Link>
             </div>

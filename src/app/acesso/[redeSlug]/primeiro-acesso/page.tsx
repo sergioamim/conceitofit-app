@@ -1,4 +1,5 @@
-import { NetworkAccessFlow } from "@/components/auth/network-access-flow";
+import { redirect } from "next/navigation";
+import { buildNetworkAccessHref, normalizeNetworkSubdomain } from "@/lib/network-subdomain";
 
 export default async function AccessNetworkFirstAccessPage({
   params,
@@ -6,6 +7,5 @@ export default async function AccessNetworkFirstAccessPage({
   params: Promise<{ redeSlug: string }>;
 }) {
   const { redeSlug } = await params;
-
-  return <NetworkAccessFlow redeSlug={redeSlug} mode="first-access" />;
+  redirect(buildNetworkAccessHref("first-access", normalizeNetworkSubdomain(redeSlug) ?? redeSlug));
 }

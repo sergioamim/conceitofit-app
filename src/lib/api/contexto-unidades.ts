@@ -82,6 +82,7 @@ interface TenantBootstrapUserApiResponse {
   roles?: string[];
   userKind?: string;
   redeId?: string;
+  redeSubdominio?: string;
   redeSlug?: string;
   redeNome?: string;
   activeTenantId?: string;
@@ -334,6 +335,7 @@ export async function getSessionBootstrapApi(): Promise<{
       roles: response.user.roles ?? [],
       userKind: response.user.userKind,
       networkId: response.user.redeId,
+      networkSubdomain: response.user.redeSubdominio ?? response.user.redeSlug,
       networkSlug: response.user.redeSlug,
       networkName: response.user.redeNome,
       activeTenantId: response.user.activeTenantId,

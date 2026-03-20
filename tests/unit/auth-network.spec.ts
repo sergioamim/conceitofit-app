@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { loginApi } from "../../src/lib/api/auth";
+import { getAccessNetworkContextApi, loginApi, requestPasswordRecoveryApi } from "../../src/lib/api/auth";
 import { getSessionBootstrapApi } from "../../src/lib/api/contexto-unidades";
 import {
   clearAuthSession,
   getAvailableScopesFromSession,
   getBroadAccessFromSession,
+  getNetworkSubdomainFromSession,
   getNetworkSlugFromSession,
   saveAuthSession,
 } from "../../src/lib/api/session";
@@ -52,14 +53,16 @@ test.describe("auth por rede", () => {
 
       expect(calls[0]?.url).toContain("/api/v1/auth/login");
       expect(calls[0]?.method).toBe("POST");
+      expect(calls[0]?.headers.get("X-Rede-Identifier")).toBe("rede-norte");
       expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
-        redeIdentifier: "rede-norte",
         identifier: "ana@qa.local",
         password: "12345678",
         channel: "APP",
       });
+      expect(session.networkSubdomain).toBe("rede-norte");
       expect(session.networkSlug).toBe("rede-norte");
       expect(session.baseTenantId).toBe("tenant-base");
+      expect(getNetworkSubdomainFromSession()).toBe("rede-norte");
       expect(getNetworkSlugFromSession()).toBe("rede-norte");
       expect(getAvailableScopesFromSession()).toEqual(["REDE"]);
       expect(getBroadAccessFromSession()).toBeTruthy();
@@ -113,12 +116,53 @@ test.describe("auth por rede", () => {
 
       expect(response.user.userId).toBe("user-ana");
       expect(response.user.networkName).toBe("Rede Norte");
+      expect(response.user.networkSubdomain).toBe("rede-norte");
       expect(response.user.baseTenantId).toBe("tenant-base");
       expect(response.user.activeTenantId).toBe("tenant-centro");
       expect(response.user.availableScopes).toEqual(["UNIDADE", "REDE"]);
       expect(response.user.broadAccess).toBeFalsy();
       expect(response.tenantContext.currentTenantId).toBe("tenant-centro");
       expect(response.tenantContext.unidadesDisponiveis).toHaveLength(2);
+    } finally {
+      restore();
+    }
+  });
+
+  test("fluxos sem sessão usam X-Rede-Identifier e falham sem fallback silencioso", async () => {
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
+          message: "Instruções enviadas para a rede correta.",
+        },
+      },
+      {
+        body: {
+          error: "Not Found",
+          message: "Rede inválida.",
+        },
+        status: 404,
+      },
+    ]);
+
+    try {
+      await requestPasswordRecoveryApi({
+        redeIdentifier: "rede-norte",
+        identifier: "ana@qa.local",
+      });
+
+      await expect(async () => {
+        await getAccessNetworkContextApi("rede-invalida", { allowDefaultFallback: false });
+      }).rejects.toThrow("Rede inválida.");
+
+      expect(calls[0]?.url).toContain("/api/v1/auth/forgot-password");
+      expect(calls[0]?.headers.get("X-Rede-Identifier")).toBe("rede-norte");
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        identifier: "ana@qa.local",
+        channel: "APP",
+      });
+
+      expect(calls[1]?.url).toContain("/api/v1/auth/rede-contexto");
+      expect(calls[1]?.headers.get("X-Rede-Identifier")).toBe("rede-invalida");
     } finally {
       restore();
     }

@@ -14,6 +14,7 @@ export interface AuthSession {
   userKind?: string;
   displayName?: string;
   networkId?: string;
+  networkSubdomain?: string;
   networkSlug?: string;
   networkName?: string;
   activeTenantId?: string;
@@ -31,6 +32,7 @@ const USER_ID_KEY = "academia-auth-user-id";
 const USER_KIND_KEY = "academia-auth-user-kind";
 const DISPLAY_NAME_KEY = "academia-auth-display-name";
 const NETWORK_ID_KEY = "academia-auth-network-id";
+const NETWORK_SUBDOMAIN_KEY = "academia-auth-network-subdomain";
 const NETWORK_SLUG_KEY = "academia-auth-network-slug";
 const NETWORK_NAME_KEY = "academia-auth-network-name";
 const ACTIVE_TENANT_ID_KEY = "academia-auth-active-tenant-id";
@@ -112,8 +114,16 @@ export function getNetworkIdFromSession(): string | undefined {
 }
 
 export function getNetworkSlugFromSession(): string | undefined {
+  return getNetworkSubdomainFromSession();
+}
+
+export function getNetworkSubdomainFromSession(): string | undefined {
   if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(NETWORK_SLUG_KEY) ?? undefined;
+  return (
+    window.localStorage.getItem(NETWORK_SUBDOMAIN_KEY)
+    ?? window.localStorage.getItem(NETWORK_SLUG_KEY)
+    ?? undefined
+  );
 }
 
 export function getNetworkNameFromSession(): string | undefined {
@@ -190,9 +200,12 @@ export function saveAuthSession(session: AuthSession): void {
   } else {
     window.localStorage.removeItem(NETWORK_ID_KEY);
   }
-  if (session.networkSlug) {
-    window.localStorage.setItem(NETWORK_SLUG_KEY, session.networkSlug);
+  const networkSubdomain = session.networkSubdomain ?? session.networkSlug;
+  if (networkSubdomain) {
+    window.localStorage.setItem(NETWORK_SUBDOMAIN_KEY, networkSubdomain);
+    window.localStorage.setItem(NETWORK_SLUG_KEY, networkSubdomain);
   } else {
+    window.localStorage.removeItem(NETWORK_SUBDOMAIN_KEY);
     window.localStorage.removeItem(NETWORK_SLUG_KEY);
   }
   if (session.networkName) {
@@ -287,6 +300,7 @@ export function clearAuthSession(): void {
     USER_KIND_KEY,
     DISPLAY_NAME_KEY,
     NETWORK_ID_KEY,
+    NETWORK_SUBDOMAIN_KEY,
     NETWORK_SLUG_KEY,
     NETWORK_NAME_KEY,
     ACTIVE_TENANT_ID_KEY,

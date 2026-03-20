@@ -86,6 +86,7 @@ interface AuthSessionPayload {
   userKind?: string;
   displayName?: string;
   redeId?: string;
+  redeSubdominio?: string;
   redeSlug?: string;
   redeNome?: string;
   activeTenantId?: string;
@@ -473,6 +474,7 @@ function persistAuthSessionFromPayload(
     userKind: payload.userKind,
     displayName: payload.displayName,
     networkId: payload.redeId,
+    networkSubdomain: payload.redeSubdominio ?? payload.redeSlug,
     networkSlug: payload.redeSlug,
     networkName: payload.redeNome,
     activeTenantId: nextActiveTenantId,

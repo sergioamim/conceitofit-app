@@ -1,12 +1,8 @@
 import { isContextualNetworkAccessEnabled } from "@/lib/feature-flags";
+import { buildNetworkAccessHref, normalizeNetworkSubdomain } from "@/lib/network-subdomain";
 
 const DEFAULT_POST_LOGIN_PATH = "/dashboard";
 const DEFAULT_LOGIN_PATH = "/login";
-
-function normalizeNetworkSlug(rawValue?: string | null): string | undefined {
-  const candidate = rawValue?.trim().toLowerCase();
-  return candidate ? encodeURIComponent(candidate) : undefined;
-}
 
 export function resolvePostLoginPath(rawValue?: string | null): string {
   const candidate = rawValue?.trim();
@@ -14,15 +10,17 @@ export function resolvePostLoginPath(rawValue?: string | null): string {
   if (!candidate.startsWith("/")) return DEFAULT_POST_LOGIN_PATH;
   if (candidate.startsWith("//")) return DEFAULT_POST_LOGIN_PATH;
   if (candidate.startsWith("/login")) return DEFAULT_POST_LOGIN_PATH;
+  if (/^\/app\/[^/]+\/login(?:[/?#]|$)/.test(candidate)) return DEFAULT_POST_LOGIN_PATH;
+  if (/^\/acesso\/[^/]+\/autenticacao(?:[/?#]|$)/.test(candidate)) return DEFAULT_POST_LOGIN_PATH;
   return candidate;
 }
 
 export function buildLoginHref(nextPath?: string, networkSlug?: string | null): string {
   const resolvedNext = resolvePostLoginPath(nextPath);
-  const normalizedNetworkSlug = normalizeNetworkSlug(networkSlug);
+  const normalizedNetworkSlug = normalizeNetworkSubdomain(networkSlug);
   const loginBasePath = normalizedNetworkSlug
     && isContextualNetworkAccessEnabled()
-    ? `/acesso/${normalizedNetworkSlug}/autenticacao`
+    ? buildNetworkAccessHref("login", normalizedNetworkSlug)
     : DEFAULT_LOGIN_PATH;
 
   if (resolvedNext === DEFAULT_POST_LOGIN_PATH) {

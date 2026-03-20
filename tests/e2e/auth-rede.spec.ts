@@ -1,9 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
-type CapturedBodies = {
-  login?: Record<string, unknown>;
-  recovery?: Record<string, unknown>;
-  firstAccess?: Record<string, unknown>;
+type CapturedRequest = {
+  body: Record<string, unknown>;
+  networkIdentifier?: string;
+};
+
+type CapturedRequests = {
+  login?: CapturedRequest;
+  recovery?: CapturedRequest;
+  firstAccess?: CapturedRequest;
+  contextIdentifiers: string[];
 };
 
 function normalizedPath(pathname: string) {
@@ -18,18 +24,40 @@ function parseBody(raw: string | null) {
   }
 }
 
-async function installAuthNetworkMocks(page: Page, captured: CapturedBodies) {
+function buildHostBasedUrl(baseURL: string | undefined, subdomain: string, pathname: string, search?: string): string {
+  const url = new URL(baseURL ?? "http://127.0.0.1:3000");
+  url.hostname = `${subdomain}.localhost`;
+  url.pathname = pathname;
+  url.search = search ?? "";
+  return url.toString();
+}
+
+async function installAuthNetworkMocks(page: Page, captured: CapturedRequests) {
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const method = request.method();
     const url = new URL(request.url());
     const path = normalizedPath(url.pathname);
+    const networkIdentifier = request.headers()["x-rede-identifier"];
 
     if (path === "/api/v1/auth/rede-contexto" && method === "GET") {
+      captured.contextIdentifiers.push(networkIdentifier ?? "");
+      if (networkIdentifier === "rede-invalida") {
+        await route.fulfill({
+          status: 404,
+          json: {
+            error: "Not Found",
+            message: "Rede inválida.",
+          },
+        });
+        return;
+      }
+
       await route.fulfill({
         status: 200,
         json: {
           id: "rede-1",
+          subdomain: "rede-norte",
           slug: "rede-norte",
           nome: "Rede Norte",
           appName: "Portal Rede Norte",
@@ -42,7 +70,10 @@ async function installAuthNetworkMocks(page: Page, captured: CapturedBodies) {
     }
 
     if (path === "/api/v1/auth/login" && method === "POST") {
-      captured.login = parseBody(request.postData());
+      captured.login = {
+        body: parseBody(request.postData()),
+        networkIdentifier,
+      };
       await route.fulfill({
         status: 200,
         json: {
@@ -65,8 +96,11 @@ async function installAuthNetworkMocks(page: Page, captured: CapturedBodies) {
       return;
     }
 
-    if (path === "/api/v1/auth/password/recovery" && method === "POST") {
-      captured.recovery = parseBody(request.postData());
+    if (path === "/api/v1/auth/forgot-password" && method === "POST") {
+      captured.recovery = {
+        body: parseBody(request.postData()),
+        networkIdentifier,
+      };
       await route.fulfill({
         status: 200,
         json: {
@@ -77,7 +111,10 @@ async function installAuthNetworkMocks(page: Page, captured: CapturedBodies) {
     }
 
     if (path === "/api/v1/auth/first-access" && method === "POST") {
-      captured.firstAccess = parseBody(request.postData());
+      captured.firstAccess = {
+        body: parseBody(request.postData()),
+        networkIdentifier,
+      };
       await route.fulfill({
         status: 200,
         json: {
@@ -195,13 +232,14 @@ async function installAuthNetworkMocks(page: Page, captured: CapturedBodies) {
 
 test.describe("acesso por rede", () => {
   test("autentica com identifier contextualizado pela rede e segue para o dashboard", async ({ page }) => {
-    const captured: CapturedBodies = {};
+    const captured: CapturedRequests = { contextIdentifiers: [] };
     await installAuthNetworkMocks(page, captured);
 
-    await page.goto("/acesso/rede-norte/autenticacao?next=%2Fdashboard");
+    await page.goto("/app/rede-norte/login?next=%2Fdashboard");
 
     await expect(page.getByRole("heading", { name: "Portal Rede Norte" })).toBeVisible();
     await expect(page.getByText("Suporte: suporte@redenorte.local")).toBeVisible();
+    await expect(page.getByText("Subdomínio: rede-norte")).toBeVisible();
 
     await page.getByLabel("Identificador").fill("ana@qa.local");
     await page.getByLabel("Senha").fill("12345678");
@@ -211,20 +249,25 @@ test.describe("acesso por rede", () => {
     await expect(page.getByText("Unidade Centro").first()).toBeVisible();
     await expect(page.getByRole("combobox", { name: "Selecionar unidade ativa" })).toHaveCount(0);
 
+    expect(captured.contextIdentifiers).toEqual(["rede-norte"]);
     expect(captured.login).toEqual({
-      redeIdentifier: "rede-norte",
-      identifier: "ana@qa.local",
-      password: "12345678",
-      channel: "APP",
+      networkIdentifier: "rede-norte",
+      body: {
+        identifier: "ana@qa.local",
+        password: "12345678",
+        channel: "APP",
+      },
     });
 
     const sessionSnapshot = await page.evaluate(() => ({
+      networkSubdomain: window.localStorage.getItem("academia-auth-network-subdomain"),
       networkSlug: window.localStorage.getItem("academia-auth-network-slug"),
       baseTenantId: window.localStorage.getItem("academia-auth-base-tenant-id"),
       activeTenantId: window.localStorage.getItem("academia-auth-active-tenant-id"),
     }));
 
     expect(sessionSnapshot).toEqual({
+      networkSubdomain: "rede-norte",
       networkSlug: "rede-norte",
       baseTenantId: "tenant-base",
       activeTenantId: "tenant-centro",
@@ -232,28 +275,66 @@ test.describe("acesso por rede", () => {
   });
 
   test("mantém recuperação e primeiro acesso isolados por rede", async ({ page }) => {
-    const captured: CapturedBodies = {};
+    const captured: CapturedRequests = { contextIdentifiers: [] };
     await installAuthNetworkMocks(page, captured);
 
-    await page.goto("/acesso/rede-norte/recuperar-senha");
+    await page.goto("/app/rede-norte/forgot-password");
     await page.getByLabel("Identificador").fill("ana@qa.local");
     await page.getByRole("button", { name: "Enviar instruções" }).click();
     await expect(page.getByText("Instruções enviadas para a rede correta.")).toBeVisible();
 
-    await page.goto("/acesso/rede-norte/primeiro-acesso");
+    await page.goto("/app/rede-norte/first-access");
     await page.getByLabel("Identificador").fill("111.222.333-44");
     await page.getByRole("button", { name: "Solicitar primeiro acesso" }).click();
     await expect(page.getByText("Convite de primeiro acesso emitido para esta rede.")).toBeVisible();
 
     expect(captured.recovery).toEqual({
-      redeIdentifier: "rede-norte",
-      identifier: "ana@qa.local",
-      channel: "APP",
+      networkIdentifier: "rede-norte",
+      body: {
+        identifier: "ana@qa.local",
+        channel: "APP",
+      },
     });
     expect(captured.firstAccess).toEqual({
-      redeIdentifier: "rede-norte",
-      identifier: "111.222.333-44",
-      channel: "APP",
+      networkIdentifier: "rede-norte",
+      body: {
+        identifier: "111.222.333-44",
+        channel: "APP",
+      },
     });
+  });
+
+  test("usa o subdomínio do host em /login e mantém links canônicos", async ({ page }, testInfo) => {
+    const captured: CapturedRequests = { contextIdentifiers: [] };
+    await installAuthNetworkMocks(page, captured);
+
+    await page.goto(
+      buildHostBasedUrl(
+        typeof testInfo.project.use.baseURL === "string" ? testInfo.project.use.baseURL : undefined,
+        "rede-norte",
+        "/login",
+        "next=%2Fdashboard",
+      )
+    );
+
+    await expect(page.getByRole("heading", { name: "Portal Rede Norte" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Recuperar senha" })).toHaveAttribute(
+      "href",
+      "/app/rede-norte/forgot-password"
+    );
+    await expect(captured.contextIdentifiers).toEqual(["rede-norte"]);
+  });
+
+  test("bloqueia envio quando a rede da URL é inválida", async ({ page }) => {
+    const captured: CapturedRequests = { contextIdentifiers: [] };
+    await installAuthNetworkMocks(page, captured);
+
+    await page.goto("/app/rede-invalida/login");
+
+    await expect(
+      page.getByText("Esta URL não corresponde a uma rede válida ou a rede não está disponível no momento.")
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Entrar" })).toBeDisabled();
+    await expect(captured.contextIdentifiers).toEqual(["rede-invalida"]);
   });
 });

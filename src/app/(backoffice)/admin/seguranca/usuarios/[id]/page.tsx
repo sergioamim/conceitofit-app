@@ -425,7 +425,11 @@ export default function AdminSegurancaUsuarioDetalhePage() {
                   <SummaryBlock
                     label="Rede"
                     value={detail.networkName || "Rede não informada"}
-                    secondary={detail.networkSlug ? `slug: ${detail.networkSlug}` : detail.userKind}
+                    secondary={
+                      detail.networkSubdomain || detail.networkSlug
+                        ? `subdomínio: ${detail.networkSubdomain ?? detail.networkSlug}`
+                        : detail.userKind
+                    }
                   />
                   <SummaryBlock
                     label="Identificadores de login"

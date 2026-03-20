@@ -1,4 +1,5 @@
-import { NetworkAccessFlow } from "@/components/auth/network-access-flow";
+import { redirect } from "next/navigation";
+import { buildNetworkAccessHref, normalizeNetworkSubdomain } from "@/lib/network-subdomain";
 
 export default async function AccessNetworkRecoveryPage({
   params,
@@ -6,6 +7,5 @@ export default async function AccessNetworkRecoveryPage({
   params: Promise<{ redeSlug: string }>;
 }) {
   const { redeSlug } = await params;
-
-  return <NetworkAccessFlow redeSlug={redeSlug} mode="recovery" />;
+  redirect(buildNetworkAccessHref("forgot-password", normalizeNetworkSubdomain(redeSlug) ?? redeSlug));
 }

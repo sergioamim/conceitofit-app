@@ -15,6 +15,7 @@ import {
   getDisplayNameFromSession,
   getNetworkIdFromSession,
   getNetworkNameFromSession,
+  getNetworkSubdomainFromSession,
   getNetworkSlugFromSession,
   getUserIdFromSession,
   getUserKindFromSession,
@@ -53,6 +54,7 @@ interface LoginApiResponse {
   userKind?: string;
   displayName?: string;
   redeId?: string;
+  redeSubdominio?: string;
   redeSlug?: string;
   redeNome?: string;
   activeTenantId?: string;
@@ -72,6 +74,7 @@ interface MeApiResponse {
   roles?: string[];
   userKind?: string;
   redeId?: string;
+  redeSubdominio?: string;
   redeSlug?: string;
   redeNome?: string;
   activeTenantId?: string;
@@ -84,6 +87,7 @@ interface MeApiResponse {
 
 interface AccessNetworkContextApiResponse {
   id?: string;
+  subdomain?: string;
   slug?: string;
   nome?: string;
   appName?: string;
@@ -102,6 +106,7 @@ function normalizeSession(
   options?: {
     preserveTenantContext?: boolean;
     fallbackActiveTenantId?: string;
+    fallbackNetworkSubdomain?: string;
     fallbackNetworkSlug?: string;
   }
 ): AuthSession {
@@ -132,8 +137,16 @@ function normalizeSession(
     networkId:
       response.redeId ??
       (options?.preserveTenantContext ? getNetworkIdFromSession() : undefined),
-    networkSlug:
+    networkSubdomain:
+      response.redeSubdominio ??
       response.redeSlug ??
+      options?.fallbackNetworkSubdomain ??
+      options?.fallbackNetworkSlug ??
+      (options?.preserveTenantContext ? getNetworkSubdomainFromSession() : undefined),
+    networkSlug:
+      response.redeSubdominio ??
+      response.redeSlug ??
+      options?.fallbackNetworkSubdomain ??
       options?.fallbackNetworkSlug ??
       (options?.preserveTenantContext ? getNetworkSlugFromSession() : undefined),
     networkName:
@@ -173,6 +186,7 @@ export interface AuthUser {
   roles?: string[];
   userKind?: string;
   networkId?: string;
+  networkSubdomain?: string;
   networkSlug?: string;
   networkName?: string;
   activeTenantId?: string;
@@ -185,6 +199,7 @@ export interface AuthUser {
 
 export interface AccessNetworkContext {
   id?: string;
+  subdomain: string;
   slug: string;
   name: string;
   appName: string;
@@ -216,6 +231,14 @@ function parseAvailableTenants(raw?: TenantAccessApiResponse[]): TenantAccess[] 
     .filter((item): item is TenantAccess => item !== null);
 }
 
+function buildNetworkHeader(redeIdentifier?: string): Record<string, string> | undefined {
+  const normalizedIdentifier = redeIdentifier?.trim();
+  if (!normalizedIdentifier) return undefined;
+  return {
+    "X-Rede-Identifier": normalizedIdentifier,
+  };
+}
+
 export async function loginApi(input: {
   email?: string;
   identifier?: string;
@@ -229,9 +252,9 @@ export async function loginApi(input: {
     path: "/api/v1/auth/login",
     method: "POST",
     includeContextHeader: false,
+    headers: buildNetworkHeader(input.redeIdentifier),
     body: identifier
       ? {
-          redeIdentifier: input.redeIdentifier?.trim() || undefined,
           identifier,
           password: input.password,
           channel: input.channel ?? "APP",
@@ -242,6 +265,7 @@ export async function loginApi(input: {
         },
   });
   const session = normalizeSession(response, {
+    fallbackNetworkSubdomain: input.redeIdentifier?.trim() || undefined,
     fallbackNetworkSlug: input.redeIdentifier?.trim() || undefined,
   });
   saveAuthSession(session);
@@ -274,6 +298,7 @@ export async function meApi(): Promise<AuthUser> {
     roles: response.roles ?? [],
     userKind: response.userKind,
     networkId: response.redeId,
+    networkSubdomain: response.redeSubdominio ?? response.redeSlug,
     networkSlug: response.redeSlug,
     networkName: response.redeNome,
     activeTenantId: response.activeTenantId,
@@ -302,16 +327,17 @@ export async function switchTenantApi(tenantId: string): Promise<AuthSession> {
   return session;
 }
 
-function buildDefaultAccessNetworkContext(redeSlug: string): AccessNetworkContext {
-  const normalizedSlug = redeSlug.trim().toLowerCase();
-  const name = normalizedSlug
+function buildDefaultAccessNetworkContext(networkSubdomain: string): AccessNetworkContext {
+  const normalizedSubdomain = networkSubdomain.trim().toLowerCase();
+  const name = normalizedSubdomain
     .split("-")
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 
   return {
-    slug: normalizedSlug || "rede",
+    subdomain: normalizedSubdomain || "rede",
+    slug: normalizedSubdomain || "rede",
     name: name || "Rede",
     appName: name ? `${name} Acesso` : "Acesso da rede",
     supportText: "Autentique-se no contexto correto da rede para evitar conflito com identificadores iguais em redes diferentes.",
@@ -319,29 +345,37 @@ function buildDefaultAccessNetworkContext(redeSlug: string): AccessNetworkContex
   };
 }
 
-export async function getAccessNetworkContextApi(redeSlug: string): Promise<AccessNetworkContext> {
-  const normalizedSlug = redeSlug.trim();
+export async function getAccessNetworkContextApi(
+  redeIdentifier: string,
+  options?: {
+    allowDefaultFallback?: boolean;
+  }
+): Promise<AccessNetworkContext> {
+  const normalizedIdentifier = redeIdentifier.trim();
   try {
     const response = await apiRequest<AccessNetworkContextApiResponse>({
       path: "/api/v1/auth/rede-contexto",
       includeContextHeader: false,
-      query: {
-        redeIdentifier: normalizedSlug,
-      },
+      headers: buildNetworkHeader(normalizedIdentifier),
     });
 
+    const fallbackContext = buildDefaultAccessNetworkContext(normalizedIdentifier);
     return {
       id: response.id,
-      slug: response.slug?.trim() || normalizedSlug,
-      name: response.nome?.trim() || buildDefaultAccessNetworkContext(normalizedSlug).name,
-      appName: response.appName?.trim() || buildDefaultAccessNetworkContext(normalizedSlug).appName,
+      subdomain: response.subdomain?.trim() || response.slug?.trim() || fallbackContext.subdomain,
+      slug: response.slug?.trim() || response.subdomain?.trim() || fallbackContext.slug,
+      name: response.nome?.trim() || fallbackContext.name,
+      appName: response.appName?.trim() || fallbackContext.appName,
       logoUrl: response.logoUrl?.trim() || undefined,
-      supportText: response.supportText?.trim() || buildDefaultAccessNetworkContext(normalizedSlug).supportText,
-      accentLabel: response.accentLabel?.trim() || buildDefaultAccessNetworkContext(normalizedSlug).accentLabel,
+      supportText: response.supportText?.trim() || fallbackContext.supportText,
+      accentLabel: response.accentLabel?.trim() || fallbackContext.accentLabel,
       helpEmail: response.helpEmail?.trim() || undefined,
     };
-  } catch {
-    return buildDefaultAccessNetworkContext(normalizedSlug);
+  } catch (error) {
+    if (options?.allowDefaultFallback === false) {
+      throw error;
+    }
+    return buildDefaultAccessNetworkContext(normalizedIdentifier);
   }
 }
 
@@ -351,11 +385,11 @@ export async function requestPasswordRecoveryApi(input: {
   channel?: "APP" | "BACKOFFICE";
 }): Promise<{ message: string }> {
   const response = await apiRequest<{ message?: string }>({
-    path: "/api/v1/auth/password/recovery",
+    path: "/api/v1/auth/forgot-password",
     method: "POST",
     includeContextHeader: false,
+    headers: buildNetworkHeader(input.redeIdentifier),
     body: {
-      redeIdentifier: input.redeIdentifier.trim(),
       identifier: input.identifier.trim(),
       channel: input.channel ?? "APP",
     },
@@ -375,8 +409,8 @@ export async function requestFirstAccessApi(input: {
     path: "/api/v1/auth/first-access",
     method: "POST",
     includeContextHeader: false,
+    headers: buildNetworkHeader(input.redeIdentifier),
     body: {
-      redeIdentifier: input.redeIdentifier.trim(),
       identifier: input.identifier.trim(),
       channel: input.channel ?? "APP",
     },

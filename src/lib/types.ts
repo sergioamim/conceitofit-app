@@ -1726,6 +1726,7 @@ export interface GlobalAdminMembership {
   tenantName: string;
   networkId?: UUID;
   networkName?: string;
+  networkSubdomain?: string;
   networkSlug?: string;
   scopeType?: GlobalAdminScopeType;
   academiaId?: UUID;
@@ -1769,6 +1770,7 @@ export interface GlobalAdminUserSummary {
   userKind?: string;
   networkId?: UUID;
   networkName?: string;
+  networkSubdomain?: string;
   networkSlug?: string;
   scopeType?: GlobalAdminScopeType;
   loginIdentifiers?: Array<{

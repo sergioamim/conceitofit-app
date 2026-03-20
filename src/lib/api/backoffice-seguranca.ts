@@ -72,6 +72,7 @@ type RawMembership = {
   unidadeNome?: string | null;
   redeId?: string | null;
   redeNome?: string | null;
+  redeSubdominio?: string | null;
   redeSlug?: string | null;
   scopeType?: string | null;
   tipoEscopo?: string | null;
@@ -191,6 +192,7 @@ type RawUserSummary = {
   userKind?: string | null;
   redeId?: string | null;
   redeNome?: string | null;
+  redeSubdominio?: string | null;
   redeSlug?: string | null;
   scopeType?: string | null;
   effectiveScope?: string | null;
@@ -488,6 +490,7 @@ function normalizeUserSummary(raw: RawUserSummary): GlobalAdminUserSummary {
     userKind: cleanString(raw.userKind),
     networkId: cleanString(raw.redeId),
     networkName: cleanString(raw.redeNome),
+    networkSubdomain: cleanString(raw.redeSubdominio) ?? cleanString(raw.redeSlug),
     networkSlug: cleanString(raw.redeSlug),
     scopeType: normalizeScopeType(raw.scopeType ?? raw.effectiveScope ?? raw.tipoEscopo),
     loginIdentifiers: normalizeLoginIdentifiers([
@@ -529,6 +532,7 @@ function normalizeMembership(raw: RawMembership, userId: string): GlobalAdminMem
     tenantName: cleanString(raw.tenantName) ?? cleanString(raw.unidadeNome) ?? "",
     networkId: cleanString(raw.redeId),
     networkName: cleanString(raw.redeNome),
+    networkSubdomain: cleanString(raw.redeSubdominio) ?? cleanString(raw.redeSlug),
     networkSlug: cleanString(raw.redeSlug),
     scopeType: normalizeScopeType(raw.scopeType ?? raw.tipoEscopo),
     academiaId: cleanString(raw.academiaId) ?? cleanString(raw.groupId),

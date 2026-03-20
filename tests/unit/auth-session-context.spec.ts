@@ -17,6 +17,8 @@ test.describe("session context helpers", () => {
     expect(resolvePostLoginPath("https://malicioso.com")).toBe("/dashboard");
     expect(resolvePostLoginPath("//malicioso.com")).toBe("/dashboard");
     expect(resolvePostLoginPath("/login")).toBe("/dashboard");
+    expect(resolvePostLoginPath("/app/rede-norte/login")).toBe("/dashboard");
+    expect(resolvePostLoginPath("/acesso/rede-norte/autenticacao")).toBe("/dashboard");
     expect(resolvePostLoginPath("")).toBe("/dashboard");
   });
 
@@ -28,9 +30,9 @@ test.describe("session context helpers", () => {
     expect(buildLoginHref("/dashboard")).toBe("/login");
     expect(buildLoginHref("https://malicioso.com")).toBe("/login");
     expect(buildLoginHref("/clientes", "rede-norte")).toBe(
-      "/acesso/rede-norte/autenticacao?next=%2Fclientes"
+      "/app/rede-norte/login?next=%2Fclientes"
     );
-    expect(buildLoginHref("/dashboard", "rede-norte")).toBe("/acesso/rede-norte/autenticacao");
+    expect(buildLoginHref("/dashboard", "rede-norte")).toBe("/app/rede-norte/login");
   });
 
   test("buildLoginHref volta para login legado quando a flag contextual estiver desligada", async () => {

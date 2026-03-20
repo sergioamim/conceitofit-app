@@ -60,6 +60,7 @@ type TenantContextState = TenantContextSnapshot & {
   operationalAccessMessage: string | null;
   canSwitchEligibleTenant: boolean;
   networkId?: string;
+  networkSubdomain?: string;
   networkSlug?: string;
   networkName?: string;
   userId?: string;
@@ -224,6 +225,7 @@ function buildTenantContextState(
     operationalAccessMessage,
     canSwitchEligibleTenant: eligibleTenants.length > 1,
     networkId: input.networkId ?? authUser?.networkId,
+    networkSubdomain: input.networkSubdomain ?? authUser?.networkSubdomain ?? authUser?.networkSlug,
     networkSlug: input.networkSlug ?? authUser?.networkSlug,
     networkName: input.networkName ?? authUser?.networkName,
     userId: input.userId ?? authUser?.userId ?? authUser?.id,

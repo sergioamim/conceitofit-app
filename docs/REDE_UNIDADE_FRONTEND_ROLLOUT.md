@@ -33,7 +33,10 @@ Consolidar no frontend o modelo contextual por rede com separação explícita e
 
 ### Login e sessão
 
-- o app prioriza a rota contextual `/acesso/[redeSlug]/autenticacao` quando a flag de acesso por rede estiver ligada;
+- a rota canônica de autenticação é `/app/[networkSubdomain]/login`, com `/app/[networkSubdomain]/forgot-password` e `/app/[networkSubdomain]/first-access` para fluxos auxiliares;
+- as rotas legadas `/acesso/[redeSlug]/*` redirecionam para o formato canônico;
+- `/login` continua existindo como fallback legado, mas em ambiente local também resolve o contexto pelo host `[rede].localhost`;
+- os fluxos sem sessão (`rede-contexto`, login, recuperar senha e primeiro acesso) enviam `X-Rede-Identifier` e não carregam `tenantId` antes da sessão existir;
 - clientes com uma única unidade elegível entram direto, sem seletor redundante;
 - clientes com múltiplas unidades elegíveis podem trocar apenas dentro das opções liberadas;
 - clientes autenticados sem elegibilidade operacional recebem um estado bloqueado central no layout.
@@ -53,6 +56,17 @@ Consolidar no frontend o modelo contextual por rede com separação explícita e
   - `tests/e2e/auth-rede.spec.ts`
   - `tests/e2e/app-multiunidade-contrato.spec.ts`
   - `tests/e2e/clientes-migracao-unidade.spec.ts`
+
+## Setup local de autenticação por subdomínio
+
+- rota canônica local: `http://localhost:3000/app/rede-norte/login`
+- fallback por host local: `http://rede-norte.localhost:3000/login`
+- com backend real em `3001`, o mesmo fluxo fica disponível em `http://rede-norte.localhost:3001/login`
+- para QA, validar:
+  - rota canônica e host local apontam para a mesma rede;
+  - rede inválida mostra erro explícito e bloqueia envio;
+  - links de recuperação e primeiro acesso permanecem dentro do mesmo subdomínio;
+  - o `next` continua apenas com caminhos internos seguros.
 
 ## Critérios de aceite do rollout
 

@@ -4571,6 +4571,269 @@
           }
         ],
         "updatedAt": "2026-03-19T00:00:00Z"
+      },
+      {
+        "id": 62,
+        "title": "Ajustar roteamento de login por rede usando subdominio canonico",
+        "description": "Preparar o frontend para autenticar por rede/academia via `/app/[rede]/login` e `[rede].localhost`.",
+        "details": "O backend agora resolve a rede por `Academia.subdominio`, sem depender de tenant. O frontend precisa tratar `[rede]` como identificador da academia, extrair esse valor da URL/path ou host e parar de inferir tenant no login.",
+        "testStrategy": "Validar navegação para `/app/[rede]/login`, resolução do identificador por host/path e ausência de dependência de tenant no fluxo de autenticação.",
+        "status": "done",
+        "dependencies": [
+          61
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar rotas e guardas atuais de login",
+            "description": "Mapear onde o frontend ainda assume tenant, slug ou host único no acesso.",
+            "dependencies": [],
+            "details": "Revisar `src/app`, middleware, guards, callbacks de auth e helpers de rota para identificar o ponto de entrada do login e os lugares onde a URL ainda usa tenant ou nomenclatura legada.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Definir rota canonica `/app/[rede]/login`",
+            "description": "Garantir uma rota explícita e estável para login por rede.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar ou ajustar a página para que `[rede]` represente o `subdominio` da academia, com fallback de leitura por host quando o acesso vier de `[rede].localhost`.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Normalizar helpers de resolução de rede",
+            "description": "Centralizar a leitura do identificador da rede em um utilitário único.",
+            "dependencies": [
+              2
+            ],
+            "details": "Evitar lógica duplicada entre página, layout e client HTTP. O helper deve priorizar o parâmetro de rota e cair para o host somente quando necessário.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 3,
+        "expansionPrompt": "Quebre em subtarefas para auditar rotas/guards atuais, criar a rota canonica `/app/[rede]/login`, centralizar a resolução de `subdominio` por path/host e remover inferência de tenant no login."
+      },
+      {
+        "id": 63,
+        "title": "Enviar `X-Rede-Identifier` no login e forgot-password",
+        "description": "Alinhar os clients de autenticação ao contrato backend por subdominio da rede.",
+        "details": "O backend aceita `redeIdentifier` por header, query, body e host, mas o frontend deve padronizar o envio no header `X-Rede-Identifier`. O fluxo não deve mandar tenant nem depender de slug legado.",
+        "testStrategy": "Cobrir request de login e recuperação de senha verificando presença do header `X-Rede-Identifier` e payload sem `tenantId`.",
+        "status": "done",
+        "dependencies": [
+          62
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Ajustar client de login",
+            "description": "Injetar `X-Rede-Identifier` no request de autenticação.",
+            "dependencies": [],
+            "details": "Atualizar `src/lib/api/auth.ts` ou wrapper equivalente para receber `subdominio` da rede e enviá-lo como header no `POST /backend/api/v1/auth/login`.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Ajustar fluxo de forgot-password",
+            "description": "Repetir a mesma estratégia no reset de senha.",
+            "dependencies": [
+              1
+            ],
+            "details": "Garantir que `POST /backend/api/v1/auth/forgot-password` receba o mesmo header quando a origem for `/app/[rede]/login` ou `[rede].localhost`.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Remover dependências de tenant no request inicial",
+            "description": "Eliminar parâmetros e estados que poluem o login com escopo operacional.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Revisar forms, services e stores para garantir que o login não envie `tenantId`, unidade ativa ou qualquer inferência operacional antes da sessão ser criada.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 5,
+        "recommendedSubtasks": 3,
+        "expansionPrompt": "Divida em subtarefas para ajustar login e forgot-password com `X-Rede-Identifier`, remover `tenantId` do request inicial e revisar a camada de auth para o novo contrato."
+      },
+      {
+        "id": 64,
+        "title": "Alinhar tipos, estado de sessao e vocabulário para `subdominio` de rede",
+        "description": "Atualizar tipos e estado do frontend para usar `subdominio` como identificador canônico da academia.",
+        "details": "O frontend ainda pode ter referências a `slug` ou suposições de tenant no modelo de academia/sessão. Esta task consolida `subdominio` como campo oficial em tipos, stores, bootstrap e UI.",
+        "testStrategy": "Validar tipagem compilando as superfícies de auth/bootstrap e revisar renderização sem referências legadas a `slug` ou tenant no login.",
+        "status": "done",
+        "dependencies": [
+          62,
+          63
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Atualizar tipos compartilhados de auth e academia",
+            "description": "Refletir `subdominio` nos tipos consumidos pelo frontend.",
+            "dependencies": [],
+            "details": "Revisar `src/lib/types.ts`, schemas, DTOs locais e contratos de bootstrap/academia para usar `subdominio` em vez de `slug` quando o campo representar a rede.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Revisar stores e session bootstrap",
+            "description": "Garantir que a sessão carregue e preserve a rede corretamente.",
+            "dependencies": [
+              1
+            ],
+            "details": "Verificar stores, context providers e leitura de bootstrap para manter o `subdominio` da rede disponível quando necessário, sem misturá-lo ao tenant ativo.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Trocar terminologia legada na UI",
+            "description": "Remover o termo `slug` das superfícies relacionadas a rede.",
+            "dependencies": [
+              1
+            ],
+            "details": "Ajustar labels, mensagens internas e comentários que ainda usem `slug` para o contexto de academia/rede, mantendo a terminologia consistente com o backend.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 5,
+        "recommendedSubtasks": 3,
+        "expansionPrompt": "Quebre em subtarefas para atualizar tipos/schemas de auth e academia, revisar stores/bootstrap e eliminar o vocabulário legado de `slug` nas superfícies de rede."
+      },
+      {
+        "id": 65,
+        "title": "Adaptar UX do login para rede explicita e fallback por host",
+        "description": "Refinar a experiência do login para comunicar claramente a rede corrente e suportar entrada por rota ou subdomínio.",
+        "details": "Além do contrato técnico, a tela precisa mostrar a rede selecionada, lidar com rede inválida e não depender de heurísticas implícitas. O comportamento por `/app/[rede]/login` e `[rede].localhost` deve ser observável ao operador.",
+        "testStrategy": "Cobrir cenários de rede válida, rede ausente/inválida e alternância entre entrada por rota e por host com smoke visual ou Playwright.",
+        "status": "done",
+        "dependencies": [
+          62,
+          63,
+          64
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Exibir rede corrente na tela de login",
+            "description": "Dar visibilidade ao contexto de academia selecionado.",
+            "dependencies": [],
+            "details": "Renderizar nome/subdomínio da rede atual ou um estado coerente de carregamento/erro, evitando que o usuário faça login sem saber em qual academia está entrando.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Tratar rede inválida ou inexistente",
+            "description": "Evitar falhas silenciosas no acesso por URL errada.",
+            "dependencies": [
+              1
+            ],
+            "details": "Definir comportamento para `/app/[rede]/login` inválido: mensagem clara, bloqueio do submit e fallback controlado, sem redirecionamentos ambíguos.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Revisar deep links e navegação pós-login",
+            "description": "Manter a rede coerente durante entrada e redirecionamento.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Validar callbacks, `returnTo`, redirecionamento após autenticação e compatibilidade com host baseado em subdomínio para evitar perda do contexto da rede.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 3,
+        "expansionPrompt": "Divida em subtarefas para ajustar a UI do login com rede explícita, tratar rede inválida e revisar deep links/redirects pós-login preservando o contexto de rede."
+      },
+      {
+        "id": 66,
+        "title": "Fechar testes, documentação e handoff do login por subdominio de rede",
+        "description": "Concluir a trilha com cobertura automatizada e documentação operacional para o frontend.",
+        "details": "Depois dos ajustes de rota, clients e UX, o frontend precisa deixar claro como acessar localmente por `/app/[rede]/login` e `[rede].localhost`, além de registrar o contrato com `X-Rede-Identifier` para reduzir regressões.",
+        "testStrategy": "Executar testes de integração/Playwright cobrindo login por rota e host, e revisar a documentação local de desenvolvimento.",
+        "status": "done",
+        "dependencies": [
+          63,
+          64,
+          65
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Adicionar testes do fluxo por rota e por host",
+            "description": "Cobrir os dois formatos de entrada local.",
+            "dependencies": [],
+            "details": "Criar ou atualizar testes para `http://localhost:3001/app/sergioamim/login` e `http://sergioamim.localhost:3001/login`, verificando o envio do header correto e o comportamento da UI.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Documentar setup local do login por rede",
+            "description": "Registrar como o time deve usar e testar o novo fluxo.",
+            "dependencies": [
+              1
+            ],
+            "details": "Atualizar docs/readme/frontend com os links canônicos locais, o papel do `subdominio` da academia e o contrato esperado com `X-Rede-Identifier`.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Fechar handoff com backend e QA",
+            "description": "Consolidar critérios de aceite e dependências externas.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Registrar os critérios mínimos: login sem tenant, uso de `subdominio`, suporte a `/app/[rede]/login` e `[rede].localhost`, além de observações para QA e rollout.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 4,
+        "recommendedSubtasks": 3,
+        "expansionPrompt": "Quebre em subtarefas para testes do login por rota/host, documentação do setup local e handoff final com critérios de aceite para backend e QA."
       }
     ],
     "metadata": {
