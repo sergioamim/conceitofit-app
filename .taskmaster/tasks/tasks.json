@@ -5928,11 +5928,141 @@
             "parentId": "undefined"
           }
         ]
+      },
+      {
+        "id": 80,
+        "title": "Adicionar histórico por arquivo na importação ETL EVO",
+        "description": "Planejar e implementar a visão de histórico por arquivo na página de importação ETL EVO, exibindo o último processamento por arquivo do pacote e preparando a ação de reprocessar apenas erros quando o backend suportar.",
+        "details": "Atualizar os tipos e wrappers em `src/lib/api/importacao-evo.ts` para refletir o novo contrato de histórico por arquivo (ex.: `EvoImportArquivoHistorico` com `arquivoChave`, `status` (`EvoImportJobStatus`), `resumo` (`EvoImportEntidadeResumo`), `jobId`, `alias`, `solicitadoEm/finalizadoEm` e metadados de reprocessamento), e expor um novo client (ex.: `getEvoImportPacoteHistoricoArquivosApi`) com fallback seguro para ausência de endpoint (404/501 -> lista vazia/indisponível, sem criar histórico local paralelo). Encapsular o wrapper em `src/lib/backoffice/importacao-evo.ts` seguindo o padrão das funções já exportadas. Na tela `src/app/(backoffice)/admin/importacao-evo-p0/page.tsx`, carregar o histórico quando houver `pacoteAnalise` + `pacoteMapeamento.tenantId`, mapear para o `PacoteArquivoChave` usando `resolvePacoteArquivoCanonico` e enriquecer cada item de `pacoteArquivosDisponiveis` com o histórico correspondente. Renderizar o bloco de histórico dentro da seleção de arquivos (seção “Arquivos reconhecidos”), exibindo: status (“Nunca importado”, “Sucesso”, “Parcial”, “Com erros”), contadores (processadas/criadas/atualizadas/rejeitadas via `resumoValue`), e metadados do último job (alias com fallback de `buildDefaultJobAlias`, `jobId` e data formatada por `formatDateTime`). Manter estados de carregamento/indisponível com placeholder estável e sem usar datas dinâmicas no render inicial. Preparar a ação “Reprocessar apenas erros” por arquivo reutilizando a estrutura atual de rejeições/retry: quando o backend sinalizar suporte, habilitar o botão e apontar para a rotina existente (ex.: abrir rejeições com `openRejeicoesPorEntidade`/jobId já selecionado); quando indisponível, manter CTA desabilitada com mensagem “Aguardando backend”, evitando fluxo paralelo. Ajustar a tipagem para suportar o mapeamento por arquivo e garantir consistência com os blocos de colaboradores (ex.: chave canônica `funcionarios`).",
+        "testStrategy": "Atualizar e validar testes unitários em `tests/unit/backoffice-importacao-evo.spec.ts` cobrindo o novo wrapper de histórico (requisição correta, fallback em 404/501 e mapeamento básico). Ajustar `tests/e2e/backoffice-importacao-evo.spec.ts` para mockar o novo endpoint e afirmar a renderização do histórico por arquivo (status, contadores, alias/jobId/data) e o estado desabilitado da ação de reprocesso quando suporte não existir. Rodar `npm run e2e -- tests/e2e/backoffice-importacao-evo.spec.ts` e os unitários associados.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 81,
+        "title": "Adotar Zod como padrão de schema para formulários",
+        "description": "Introduzir `zod` e `@hookform/resolvers` como padrão oficial de validação de schemas para os formulários baseados em `react-hook-form`.",
+        "details": "Adicionar `zod` e `@hookform/resolvers` como dependências diretas do frontend, alinhar a documentação/guardrails do repositório e preparar a infraestrutura mínima para uso consistente do `zodResolver` em formulários novos e refatorados. Mapear um padrão de organização para schemas de formulário, mensagens de erro e tipos inferidos, evitando drift entre interface TypeScript e regras de validação. Definir helpers ou convenções leves apenas onde fizer sentido, sem introduzir abstrações genéricas que escondam o schema real do formulário.",
+        "testStrategy": "Validar que as dependências foram adicionadas corretamente, que o projeto continua compilando/lintando e que existe ao menos uma cobertura unitária simples exercitando um schema `zod` integrado ao `react-hook-form`.",
+        "status": "pending",
+        "dependencies": [
+          79
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Adicionar dependências e consolidar a diretriz no repositório",
+            "description": "Adicionar `zod` e `@hookform/resolvers` ao projeto e atualizar os guardrails/documentação para explicitar o uso de `react-hook-form` + `zodResolver`.",
+            "details": "Adicionar `zod` e `@hookform/resolvers` ao projeto e atualizar os guardrails/documentação para explicitar o uso de `react-hook-form` + `zodResolver`.",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 81
+          },
+          {
+            "id": 2,
+            "title": "Definir convenção de organização dos schemas",
+            "description": "Documentar onde os schemas devem ficar, como nomear `schema/input/output` e quando usar `z.infer` em vez de tipos manuais.",
+            "details": "Documentar onde os schemas devem ficar, como nomear `schema/input/output` e quando usar `z.infer` em vez de tipos manuais.",
+            "status": "done",
+            "dependencies": [
+              1
+            ],
+            "parentTaskId": 81
+          },
+          {
+            "id": 3,
+            "title": "Criar um exemplo-base validado no frontend",
+            "description": "Adicionar um exemplo ou helper mínimo no código para servir de referência de integração entre `react-hook-form`, `zodResolver` e mensagens de erro.",
+            "details": "Adicionar um exemplo ou helper mínimo no código para servir de referência de integração entre `react-hook-form`, `zodResolver` e mensagens de erro.",
+            "status": "done",
+            "dependencies": [
+              1
+            ],
+            "parentTaskId": 81
+          }
+        ]
+      },
+      {
+        "id": 82,
+        "title": "Migrar formulários para react-hook-form com Zod",
+        "description": "Migrar progressivamente os formulários relevantes do frontend para usar `react-hook-form` com schemas `zod` e `zodResolver` como padrão de validação.",
+        "details": "Revisar os formulários já migrados para `react-hook-form` e substituir validações manuais, `validate` inline repetitivo e parsing ad hoc por schemas `zod` coesos, mantendo a UX atual de erros, submit e reset. Priorizar fluxos críticos ou já padronizados em `react-hook-form`, como autenticação, jornada pública, segurança/RBAC e CRUDs administrativos. Extrair schemas por domínio quando houver reaproveitamento real, evitando um arquivo monolítico de validações. Garantir compatibilidade com componentes customizados (`Select`, `SuggestionInput`, editores ricos, modais Radix) e preservar segurança de hidratação no primeiro render.",
+        "testStrategy": "Executar lint e testes unitários/E2E dos fluxos migrados, cobrindo submit válido, mensagens de erro, reset e casos condicionais importantes. Sempre validar que a troca para `zodResolver` não altera payloads nem regressa a UX atual.",
+        "status": "done",
+        "dependencies": [
+          81
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Migrar fluxos de autenticação e jornada pública",
+            "description": "Aplicar schemas `zod` aos formulários de login, primeiro acesso, recuperação de senha, cadastro, trial e checkout.",
+            "details": "Aplicar schemas `zod` aos formulários de login, primeiro acesso, recuperação de senha, cadastro, trial e checkout.",
+            "status": "done",
+            "dependencies": [
+              81
+            ],
+            "parentTaskId": 82
+          },
+          {
+            "id": 2,
+            "title": "Migrar segurança operacional e administrativa",
+            "description": "Aplicar schemas `zod` aos formulários de `acesso-unidade`, `rbac` e criação global de usuários no backoffice.",
+            "details": "Aplicar schemas `zod` aos formulários de `acesso-unidade`, `rbac` e criação global de usuários no backoffice.",
+            "status": "done",
+            "dependencies": [
+              81
+            ],
+            "parentTaskId": 82
+          },
+          {
+            "id": 3,
+            "title": "Migrar modais e CRUDs administrativos com maior volume",
+            "description": "Cobrir modais e telas administrativas que hoje usam `react-hook-form` com validação manual, como planos, produtos, serviços, vouchers, colaboradores e catálogos correlatos.",
+            "details": "Cobrir modais e telas administrativas que hoje usam `react-hook-form` com validação manual, como planos, produtos, serviços, vouchers, colaboradores e catálogos correlatos.",
+            "status": "done",
+            "dependencies": [
+              81
+            ],
+            "parentTaskId": 82
+          },
+          {
+            "id": 4,
+            "title": "Eliminar validações duplicadas e alinhar payloads",
+            "description": "Remover validações redundantes em handlers/helpers quando o schema já for fonte de verdade e garantir que os payloads finais permaneçam compatíveis com a API.",
+            "details": "Remover validações redundantes em handlers/helpers quando o schema já for fonte de verdade e garantir que os payloads finais permaneçam compatíveis com a API.",
+            "status": "done",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "parentTaskId": 82
+          },
+          {
+            "id": 5,
+            "title": "Atualizar cobertura automatizada das migrações",
+            "description": "Expandir testes unitários e E2E para validar erros por campo, regras condicionais e fluxos de sucesso dos formulários migrados para `zodResolver`.",
+            "details": "Expandir testes unitários e E2E para validar erros por campo, regras condicionais e fluxos de sucesso dos formulários migrados para `zodResolver`.",
+            "status": "done",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "parentTaskId": 82
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2026-03-18T15:32:36.203Z",
-      "updated": "2026-03-21T00:15:48.266Z",
+      "updated": "2026-03-21T16:24:03.061Z",
       "description": "Tasks for master context"
     }
   }

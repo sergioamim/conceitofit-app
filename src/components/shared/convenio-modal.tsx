@@ -2,7 +2,9 @@
 
 import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { Convenio, Plano } from "@/lib/types";
+import { convenioFormSchema } from "@/lib/forms/administrativo-schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -56,6 +58,7 @@ export function ConvenioModal({
     setValue,
     formState: { errors },
   } = useForm<ConvenioFormValues>({
+    resolver: zodResolver(convenioFormSchema),
     defaultValues: toFormValues(initial),
   });
   const planoIds = useWatch({ control, name: "planoIds" }) ?? [];
@@ -102,7 +105,7 @@ export function ConvenioModal({
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
               <Input
-                {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome do convênio." })}
+                {...register("nome")}
                 className="border-border bg-secondary"
               />
               {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}

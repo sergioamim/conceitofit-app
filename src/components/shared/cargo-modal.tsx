@@ -2,7 +2,9 @@
 
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { Cargo } from "@/lib/types";
+import { cargoFormSchema } from "@/lib/forms/administrativo-schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -42,6 +44,7 @@ export function CargoModal({
     reset,
     formState: { errors },
   } = useForm<CargoFormValues>({
+    resolver: zodResolver(cargoFormSchema),
     defaultValues: toFormValues(initial),
   });
 
@@ -74,7 +77,7 @@ export function CargoModal({
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
               <Input
-                {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome do cargo." })}
+                {...register("nome")}
                 className="border-border bg-secondary"
               />
               {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}

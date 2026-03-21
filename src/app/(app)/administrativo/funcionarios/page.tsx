@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import {
   type ColaboradorListFilters,
   type ColaboradorQuickCreateDraft,
 } from "@/lib/administrativo-colaboradores";
+import { quickCreateColaboradorFormSchema } from "@/lib/forms/administrativo-schemas";
 import {
   createCargoApi,
   createFuncionarioApi,
@@ -220,6 +222,7 @@ export default function FuncionariosPage() {
   const [editingCargo, setEditingCargo] = useState<Cargo | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
   const quickCreateForm = useForm<ColaboradorQuickCreateDraft>({
+    resolver: zodResolver(quickCreateColaboradorFormSchema),
     defaultValues: DEFAULT_QUICK_CREATE,
   });
   const quickCreate = useWatch({ control: quickCreateForm.control }) ?? DEFAULT_QUICK_CREATE;
@@ -507,6 +510,7 @@ export default function FuncionariosPage() {
                 className="border-border bg-secondary"
                 placeholder="Carla Operações"
               />
+              {quickCreateForm.formState.errors.nome ? <p className="text-xs text-gym-danger">{quickCreateForm.formState.errors.nome.message}</p> : null}
             </div>
 
             <div className="space-y-1.5">
@@ -528,6 +532,7 @@ export default function FuncionariosPage() {
                 className="border-border bg-secondary"
                 placeholder="carla@academia.local"
               />
+              {quickCreateForm.formState.errors.emailProfissional ? <p className="text-xs text-gym-danger">{quickCreateForm.formState.errors.emailProfissional.message}</p> : null}
             </div>
 
             <div className="space-y-1.5">
@@ -631,6 +636,7 @@ export default function FuncionariosPage() {
                       </Select>
                     )}
                   />
+                  {quickCreateForm.formState.errors.perfilAcessoInicialId ? <p className="text-xs text-gym-danger">{quickCreateForm.formState.errors.perfilAcessoInicialId.message}</p> : null}
                 </div>
 
                 <div className="space-y-1.5">
@@ -685,6 +691,7 @@ export default function FuncionariosPage() {
                       </label>
                     ))}
                   </div>
+                  {quickCreateForm.formState.errors.tenantIds ? <p className="text-xs text-gym-danger">{quickCreateForm.formState.errors.tenantIds.message}</p> : null}
                 </div>
 
                 <div className="space-y-1.5">
@@ -710,6 +717,7 @@ export default function FuncionariosPage() {
                       </Select>
                     )}
                   />
+                  {quickCreateForm.formState.errors.tenantBaseId ? <p className="text-xs text-gym-danger">{quickCreateForm.formState.errors.tenantBaseId.message}</p> : null}
                 </div>
               </>
             ) : (

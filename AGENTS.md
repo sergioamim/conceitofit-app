@@ -8,9 +8,11 @@ Este arquivo define guardrails para agentes de IA neste repositório.
 
 ## Formulários
 - Por padrão, todo formulário novo ou refatorado deve usar `react-hook-form`.
+- Para validação de esquema, o padrão do repositório passa a ser `zod` com `@hookform/resolvers/zod`.
+- Preferir schemas co-localizados por formulário ou domínio, com tipos inferidos via `z.infer`, evitando duplicar interfaces manuais quando o schema já for a fonte de verdade.
 - Evitar formulários controlados manualmente com `useState` campo a campo, exceto quando houver justificativa técnica clara e documentada na resposta.
 - Ao alterar formulários existentes, preferir convergir para `react-hook-form` em vez de introduzir um segundo padrão.
-- Se houver validação de esquema no projeto, integrar `react-hook-form` com o resolvedor já adotado pelo código existente, mantendo consistência com o padrão local.
+- Ao alterar formulários existentes, preferir convergir para `react-hook-form` + `zodResolver` em vez de manter validações ad hoc em handlers, helpers soltos ou estado local por campo.
 
 ## Next.js / React: Hydration Safety
 - Nunca usar `Date.now()`, `Math.random()`, `new Date()`, `crypto.randomUUID()`, UUIDs aleatórios ou qualquer valor mutável durante `render`, `useMemo` de primeiro render, `useState(initializer)` SSR-compartilhado ou JSX que participa da hidratação.

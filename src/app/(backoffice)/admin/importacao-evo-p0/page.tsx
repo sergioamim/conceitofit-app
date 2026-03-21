@@ -41,10 +41,12 @@ import { createGlobalUnidade, listGlobalAcademias, listGlobalUnidades } from "@/
 import {
   createBackofficeEvoP0CsvJob,
   createBackofficeEvoP0PacoteJob,
+  type EvoArquivoHistoricoNormalizado,
   getBackofficeEvoImportJobResumo,
   getBackofficeEvoP0PacoteAnalise,
   listBackofficeEvoImportJobRejeicoes,
   normalizeEvoColaboradorDiagnostico,
+  normalizeUploadAnaliseArquivoHistorico,
   uploadBackofficeEvoP0Pacote,
 } from "@/lib/backoffice/importacao-evo";
 import {
@@ -389,6 +391,15 @@ type PacoteArquivoDisponivel = UploadAnaliseArquivo & {
   chaveOriginal: string;
   chaveCanonica: PacoteArquivoChave | null;
   catalogadoPeloBackend: boolean;
+  historico: EvoArquivoHistoricoNormalizado & {
+    fonte: "backend" | "jobAtual" | "historicoLocal" | "nenhum";
+    aliasResolvido: string | null;
+    jobIdExibicao: string | null;
+    processadoEmExibicao: string | null;
+    jobRelacionado?: JobHistoryMeta | null;
+  };
+  entidadeFiltro: string | null;
+  blocoFiltro: ColaboradorBlocoKey | null;
 };
 
 type RejeicaoClassificada = Rejeicao & {
@@ -537,6 +548,42 @@ function formatPayloadForDisplay(payload: unknown): string | null {
     return JSON.stringify(payload, null, 2);
   } catch {
     return String(payload);
+  }
+}
+
+function formatResumoCount(value?: number | null): string {
+  return typeof value === "number" && Number.isFinite(value) ? value.toLocaleString("pt-BR") : "—";
+}
+
+function resolveArquivoHistoricoBadge(
+  historico: EvoArquivoHistoricoNormalizado
+): { label: string; className: string } {
+  switch (historico.status) {
+    case "processando":
+      return {
+        label: "Em processamento",
+        className: "border-amber-400/40 bg-amber-500/15 text-amber-200",
+      };
+    case "sucesso":
+      return {
+        label: "Sucesso",
+        className: "border-emerald-400/40 bg-emerald-500/15 text-emerald-200",
+      };
+    case "parcial":
+      return {
+        label: "Parcial",
+        className: "border-orange-400/40 bg-orange-500/15 text-orange-200",
+      };
+    case "comErros":
+      return {
+        label: "Com erros",
+        className: "border-destructive/40 bg-destructive/10 text-destructive",
+      };
+    default:
+      return {
+        label: "Nunca importado",
+        className: "border-border bg-muted/50 text-muted-foreground",
+      };
   }
 }
 
@@ -1258,8 +1305,55 @@ function ImportacaoEvoP0PageContent() {
       .slice(0, 8);
   }, [jobsHistorico]);
 
+  const entidadePorArquivoChave = useMemo(
+    () => new Map(IMPORT_RESUMO_CARD_CONFIG.map((item) => [item.arquivoChave, item.entidade] as const)),
+    []
+  );
+
+  const resumoAtualPorArquivoChave = useMemo(
+    () =>
+      new Map(
+        IMPORT_RESUMO_CARD_CONFIG.map((item) => [item.arquivoChave, jobResumo?.[item.key] as EntidadeResumo | undefined] as const)
+      ),
+    [jobResumo]
+  );
+
   const pacoteArquivosDisponiveis = useMemo<PacoteArquivoDisponivel[]>(() => {
     if (!pacoteAnalise) return [];
+    const tenantHistorico = normalizeTenantId(pacoteMapeamento.tenantId)
+      || normalizeTenantId(pacoteAnalise.tenantId)
+      || resolveCurrentTenantIdRaw();
+    const currentJobHistorico = jobsHistorico.find(
+      (job) => normalizeTenantId(job.jobId) === normalizeTenantId(jobId)
+    ) ?? null;
+    const resolveResumoAtualArquivo = (arquivo: {
+      chaveCanonica: PacoteArquivoChave | null;
+      bloco?: string | null;
+    }): EntidadeResumo | null => {
+      if (arquivo.bloco) {
+        return getColaboradorResumoBloco(jobResumo?.colaboradoresDetalhe, arquivo.bloco as ColaboradorBlocoKey) ?? null;
+      }
+      if (!arquivo.chaveCanonica) return null;
+      return resumoAtualPorArquivoChave.get(arquivo.chaveCanonica) ?? null;
+    };
+    const jobRelacionaArquivo = (
+      job: Pick<JobHistoryMeta, "tenantId" | "arquivosSelecionados" | "arquivosDisponiveis">,
+      arquivo: { chaveCanonica: PacoteArquivoChave | null; chaveOriginal: string; chave: string }
+    ) => {
+      if (tenantHistorico && normalizeTenantId(job.tenantId) !== tenantHistorico) {
+        return false;
+      }
+      const chavesDoJob = [...(job.arquivosSelecionados ?? []), ...(job.arquivosDisponiveis ?? [])];
+      return chavesDoJob.some((value) => {
+        const canonica = resolvePacoteArquivoCanonico(value);
+        if (arquivo.chaveCanonica && canonica === arquivo.chaveCanonica) return true;
+        const normalizedValue = normalizeSearchKey(value);
+        return (
+          normalizedValue === normalizeSearchKey(arquivo.chaveOriginal)
+          || normalizedValue === normalizeSearchKey(arquivo.chave)
+        );
+      });
+    };
     const enriched = [...pacoteAnalise.arquivos].map((arquivo) => {
       const meta = resolveColaboradorArquivoMetaFromUpload(arquivo);
       if (!meta) {
@@ -1312,6 +1406,89 @@ function ImportacaoEvoP0PageContent() {
       }
     });
     const ordenado = [...deduplicado.values()]
+      .map((arquivo) => {
+        const historicoBackend = normalizeUploadAnaliseArquivoHistorico(arquivo.ultimoProcessamento);
+        const resumoAtualArquivo = resolveResumoAtualArquivo(arquivo);
+        const jobAtualRelacionado =
+          currentJobHistorico && jobRelacionaArquivo(currentJobHistorico, arquivo) ? currentJobHistorico : null;
+        const historicoLocalRelacionado = [...jobsHistorico]
+          .filter((job) => jobRelacionaArquivo(job, arquivo))
+          .sort((a, b) => {
+            const aa = new Date(a.criadoEm).getTime();
+            const bb = new Date(b.criadoEm).getTime();
+            if (Number.isNaN(aa) || Number.isNaN(bb)) return 0;
+            return bb - aa;
+          })[0] ?? null;
+        const historicoAtual = jobAtualRelacionado && (resumoAtualArquivo || jobResumo?.status)
+          ? normalizeUploadAnaliseArquivoHistorico({
+              jobId: jobId || jobAtualRelacionado.jobId,
+              alias: jobAtualRelacionado.alias,
+              status: jobResumo?.status ?? jobAtualRelacionado.status ?? null,
+              processadoEm: jobResumo?.finalizadoEm ?? jobResumo?.solicitadoEm ?? jobAtualRelacionado.criadoEm,
+              resumo: resumoAtualArquivo,
+              parcial:
+                arquivo.bloco
+                  ? Boolean(getColaboradorResumoBloco(jobResumo?.colaboradoresDetalhe, arquivo.bloco as ColaboradorBlocoKey)?.parcial)
+                  : false,
+              mensagemParcial:
+                arquivo.bloco
+                  ? getColaboradorResumoBloco(jobResumo?.colaboradoresDetalhe, arquivo.bloco as ColaboradorBlocoKey)?.mensagemParcial
+                  : null,
+            })
+          : null;
+        const historicoLocal = historicoLocalRelacionado
+          ? normalizeUploadAnaliseArquivoHistorico({
+              jobId: historicoLocalRelacionado.jobId,
+              alias: historicoLocalRelacionado.alias,
+              status: historicoLocalRelacionado.status ?? null,
+              processadoEm: historicoLocalRelacionado.criadoEm,
+              resumo: null,
+            })
+          : null;
+        const historico = historicoBackend.temHistorico
+          ? {
+              ...historicoBackend,
+              fonte: "backend" as const,
+              aliasResolvido: historicoBackend.alias,
+              jobIdExibicao: historicoBackend.jobId,
+              processadoEmExibicao: historicoBackend.processadoEm,
+              jobRelacionado: null,
+            }
+          : historicoAtual?.temHistorico
+            ? {
+                ...historicoAtual,
+                fonte: "jobAtual" as const,
+                aliasResolvido: currentJobHistorico ? resolveJobAlias(currentJobHistorico) : null,
+                jobIdExibicao: historicoAtual.jobId,
+                processadoEmExibicao: historicoAtual.processadoEm,
+                jobRelacionado: currentJobHistorico,
+              }
+            : historicoLocal?.temHistorico
+              ? {
+                  ...historicoLocal,
+                  fonte: "historicoLocal" as const,
+                  aliasResolvido: historicoLocalRelacionado ? resolveJobAlias(historicoLocalRelacionado) : null,
+                  jobIdExibicao: historicoLocal.jobId,
+                  processadoEmExibicao: historicoLocal.processadoEm,
+                  jobRelacionado: historicoLocalRelacionado,
+                }
+              : {
+                  ...normalizeUploadAnaliseArquivoHistorico(null),
+                  fonte: "nenhum" as const,
+                  aliasResolvido: null,
+                  jobIdExibicao: null,
+                  processadoEmExibicao: null,
+                  jobRelacionado: null,
+                };
+        const entidadeFiltro = arquivo.chaveCanonica ? entidadePorArquivoChave.get(arquivo.chaveCanonica) ?? null : null;
+        const blocoFiltro = arquivo.bloco ? (arquivo.bloco as ColaboradorBlocoKey) : null;
+        return {
+          ...arquivo,
+          historico,
+          entidadeFiltro,
+          blocoFiltro,
+        };
+      })
       .sort((a, b) => {
         const indexA = a.chaveCanonica ? PACOTE_CHAVES_DISPONIVEIS.indexOf(a.chaveCanonica) : -1;
         const indexB = b.chaveCanonica ? PACOTE_CHAVES_DISPONIVEIS.indexOf(b.chaveCanonica) : -1;
@@ -1321,7 +1498,7 @@ function ImportacaoEvoP0PageContent() {
         return indexA - indexB;
       });
     return ordenado;
-  }, [pacoteAnalise]);
+  }, [entidadePorArquivoChave, jobId, jobResumo, jobsHistorico, pacoteAnalise, pacoteMapeamento.tenantId, resolveCurrentTenantIdRaw, resolveJobAlias, resumoAtualPorArquivoChave]);
 
   const pacoteColaboradoresBlocos = useMemo(() => {
     const index = new Map(
@@ -2254,6 +2431,105 @@ function ImportacaoEvoP0PageContent() {
     }
   }
 
+  async function tentarSomenteErrosDoArquivo(arquivo: PacoteArquivoDisponivel) {
+    const analiseAtiva = pacoteAnalise;
+    if (!analiseAtiva?.uploadId) {
+      toast({
+        title: "Analise o pacote novamente",
+        description: "O upload atual expirou ou não foi carregado para este retry.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!arquivo.historico.retrySomenteErrosSuportado) {
+      return;
+    }
+    if (arquivo.historico.status === "processando") {
+      toast({
+        title: "Retry já em andamento",
+        description: "Já existe um processamento em aberto para este arquivo lógico.",
+      });
+      return;
+    }
+    const tenant = pacoteMapeamento.tenantId || resolveCurrentTenantIdRaw();
+    if (!tenant) {
+      toast({
+        title: "Selecione a unidade",
+        description: "A unidade alvo é obrigatória para criar o retry somente erros.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const aliasBase = buildDefaultJobAlias({
+      origem: "pacote",
+      unidadeNome: pacoteMapeamento.unidadeNome || jobContextoLabel.unidadeNome,
+      academiaNome: pacoteMapeamento.academiaNome || jobContextoLabel.academiaNome,
+      criadoEm: new Date().toISOString(),
+    });
+    const alias = `Retry erros · ${arquivo.rotulo || arquivo.chave} · ${aliasBase}`;
+    const evoUnidadeIdParaJob = pacoteEvoUnidadeResolvida ?? pacoteEvoUnidadeInformada ?? undefined;
+
+    setPacoteCriandoJob(true);
+    try {
+      const job = await createBackofficeEvoP0PacoteJob({
+        uploadId: analiseAtiva.uploadId,
+        dryRun: pacoteDryRun,
+        maxRejeicoesRetorno: pacoteMaxRejeicoes,
+        arquivos: [arquivo.chave],
+        retrySomenteErros: true,
+        tenantId: tenant,
+        evoUnidadeId: evoUnidadeIdParaJob,
+      });
+      await registrarOnboardingDoJob({
+        tenantId: pacoteMapeamento.tenantId || tenant,
+        academiaId: pacoteMapeamento.academiaId,
+        evoFilialId: evoUnidadeIdParaJob ? String(evoUnidadeIdParaJob) : undefined,
+        jobId: job.jobId,
+        origem: "PACOTE",
+        mensagem: `Retry somente erros criado para ${arquivo.rotulo || arquivo.chave}.`,
+      });
+      upsertJobHistorico({
+        tenantId: tenant,
+        jobId: job.jobId,
+        alias,
+        academiaNome: pacoteMapeamento.academiaNome || jobContextoLabel.academiaNome,
+        unidadeNome: pacoteMapeamento.unidadeNome || jobContextoLabel.unidadeNome,
+        origem: "pacote",
+        criadoEm: new Date().toISOString(),
+        status: "PROCESSANDO",
+        arquivosSelecionados: [arquivo.chave],
+        arquivosDisponiveis: analiseAtiva.arquivos.filter((item) => item.disponivel).map((item) => item.chave),
+      });
+      setJobId(job.jobId);
+      setJobTenantId(tenant);
+      setJobTenantIds([tenant]);
+      setJobOrigem("pacote");
+      setJobAliasDraft(alias);
+      setStoredJobId(tenant, job.jobId);
+      lastJobStatusRef.current = null;
+      setJobLabelFromContext(
+        tenant,
+        pacoteMapeamento.academiaNome || jobContextoLabel.academiaNome,
+        pacoteMapeamento.unidadeNome || jobContextoLabel.unidadeNome
+      );
+      setActiveTab("acompanhamento");
+      startPolling(job.jobId, true, [tenant], "pacote", tenant);
+      toast({
+        title: "Retry somente erros criado",
+        description: `Job ${job.jobId} preparado para ${arquivo.rotulo || arquivo.chave}.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({
+        title: "Erro ao criar retry",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setPacoteCriandoJob(false);
+    }
+  }
+
 
 
   const validarForm = useCallback((): string | null => {
@@ -2622,14 +2898,21 @@ function ImportacaoEvoP0PageContent() {
     });
   }
 
-  function openRejeicoesPorEntidade(entidade?: string, bloco?: ColaboradorBlocoKey | null, forceShow = true) {
+  function openRejeicoesPorEntidade(
+    entidade?: string,
+    bloco?: ColaboradorBlocoKey | null,
+    forceShow = true,
+    jobIdOverride?: string,
+    tenantOverride?: string
+  ) {
     const filtro = entidade ?? ENTIDADE_TODAS;
     setEntidadeFiltro(filtro);
     setBlocoFiltro(bloco ?? BLOCO_TODOS);
     setRejPage(0);
     if (forceShow) setShowRejeicoes(true);
-    if (jobId) {
-      void loadRejeicoes(0);
+    const jobTarget = jobIdOverride ?? jobId;
+    if (jobTarget) {
+      void loadRejeicoes(0, jobTarget, tenantOverride);
     } else {
       toast({ title: "Informe um job para consultar rejeições", variant: "destructive" });
     }
@@ -2658,15 +2941,16 @@ function ImportacaoEvoP0PageContent() {
     startPolling(jobId, true, tenantParaConsulta ? [tenantParaConsulta] : [], selecionado?.origem ?? jobOrigem, tenantParaConsulta);
   }
 
-  async function loadRejeicoes(page = 0) {
-    if (!jobId) return;
+  async function loadRejeicoes(page = 0, jobIdOverride?: string, tenantIdOverride?: string) {
+    const targetJobId = jobIdOverride ?? jobId;
+    if (!targetJobId) return;
     setRejeicoesLoading(true);
     try {
       const data = await listBackofficeEvoImportJobRejeicoes({
-        jobId,
+        jobId: targetJobId,
         page,
         size: 50,
-        tenantId: jobTenantId,
+        tenantId: tenantIdOverride ?? jobTenantId,
       });
       const items = (data.items ?? data.content ?? []) as Rejeicao[];
       const mapped = items.map((r) => resolveRejeicao(r));
@@ -2682,6 +2966,45 @@ function ImportacaoEvoP0PageContent() {
     } finally {
       setRejeicoesLoading(false);
     }
+  }
+
+  function abrirRejeicoesDoHistoricoArquivo(arquivo: PacoteArquivoDisponivel) {
+    const targetJobId = arquivo.historico.jobIdExibicao;
+    const targetTenant = normalizeTenantId(arquivo.historico.jobRelacionado?.tenantId)
+      || normalizeTenantId(pacoteMapeamento.tenantId)
+      || resolveCurrentTenantIdRaw();
+    if (!targetJobId) {
+      toast({
+        title: "Sem job histórico",
+        description: "Este arquivo ainda não possui um job anterior para consulta de rejeições.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setJobId(targetJobId);
+    if (targetTenant) {
+      setJobTenantId(targetTenant);
+      setJobTenantIds([targetTenant]);
+      setStoredJobId(targetTenant, targetJobId);
+      setJobLabelFromContext(
+        targetTenant,
+        pacoteMapeamento.academiaNome || jobContextoLabel.academiaNome,
+        pacoteMapeamento.unidadeNome || jobContextoLabel.unidadeNome
+      );
+    }
+    if (arquivo.historico.aliasResolvido) {
+      setJobAliasDraft(arquivo.historico.aliasResolvido);
+    }
+    setActiveTab("acompanhamento");
+    lastJobStatusRef.current = null;
+    startPolling(targetJobId, true, targetTenant ? [targetTenant] : [], "pacote", targetTenant);
+    openRejeicoesPorEntidade(
+      arquivo.entidadeFiltro ?? ENTIDADE_TODAS,
+      arquivo.blocoFiltro ?? null,
+      true,
+      targetJobId,
+      targetTenant
+    );
   }
 
   function toggleRetrySelecao(rejeicao: RejeicaoClassificada, checked: boolean) {
@@ -3500,6 +3823,15 @@ function ImportacaoEvoP0PageContent() {
                       <div className="grid gap-2">
                         {pacoteArquivosDisponiveis.map((arquivo) => {
                           const selecionado = pacoteArquivosSelecionadosSet.has(arquivo.chave);
+                          const badgeHistorico = resolveArquivoHistoricoBadge(arquivo.historico);
+                          const podeAbrirRejeicoes = Boolean(arquivo.blocoFiltro || arquivo.entidadeFiltro)
+                            && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial");
+                          const podeRetrySomenteErros = arquivo.historico.retrySomenteErrosSuportado
+                            && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial")
+                            && arquivo.historico.status !== "processando";
+                          const labelRetrySomenteErros = arquivo.historico.retrySomenteErrosSuportado
+                            ? "Tentar somente erros"
+                            : "Tentar somente erros (aguardando backend)";
                           return (
                             <label
                               key={arquivo.chave}
@@ -3514,6 +3846,75 @@ function ImportacaoEvoP0PageContent() {
                                   {arquivo.arquivoEsperado} | enviado: {arquivo.nomeArquivoEnviado ?? "—"} | {formatBytes(arquivo.tamanhoBytes)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">Chave: {arquivo.chave}</p>
+                                <div className="rounded-md border border-border bg-secondary/20 px-2.5 py-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="outline" className={cn("text-[11px]", badgeHistorico.className)}>
+                                      {badgeHistorico.label}
+                                    </Badge>
+                                    <span className="text-[11px] text-muted-foreground">
+                                      {arquivo.historico.aliasResolvido || arquivo.historico.jobIdExibicao || "Sem job anterior"}
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 grid gap-1 text-[11px] text-muted-foreground md:grid-cols-2">
+                                    <p>
+                                      <span className="font-medium text-foreground">Job:</span> {arquivo.historico.jobIdExibicao ?? "—"}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium text-foreground">Processado em:</span>{" "}
+                                      {arquivo.historico.processadoEmExibicao ? formatDateTime(arquivo.historico.processadoEmExibicao) : "—"}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium text-foreground">Processadas:</span>{" "}
+                                      {formatResumoCount(arquivo.historico.resumo?.processadas ?? null)}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium text-foreground">Criadas:</span>{" "}
+                                      {formatResumoCount(arquivo.historico.resumo?.criadas ?? null)}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium text-foreground">Atualizadas:</span>{" "}
+                                      {formatResumoCount(arquivo.historico.resumo?.atualizadas ?? null)}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium text-foreground">Rejeitadas:</span>{" "}
+                                      {formatResumoCount(arquivo.historico.resumo?.rejeitadas ?? null)}
+                                    </p>
+                                  </div>
+                                  {arquivo.historico.mensagemParcial ? (
+                                    <p className="mt-2 text-[11px] text-muted-foreground">{arquivo.historico.mensagemParcial}</p>
+                                  ) : null}
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {podeAbrirRejeicoes ? (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7"
+                                        onClick={(event) => {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          abrirRejeicoesDoHistoricoArquivo(arquivo);
+                                        }}
+                                      >
+                                        Ver rejeições
+                                      </Button>
+                                    ) : null}
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7"
+                                      disabled={!podeRetrySomenteErros || pacoteCriandoJob}
+                                      onClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        void tentarSomenteErrosDoArquivo(arquivo);
+                                      }}
+                                    >
+                                      {labelRetrySomenteErros}
+                                    </Button>
+                                  </div>
+                                </div>
                                 {selecionado && (arquivo.chave === "clientes" || arquivo.chave === "funcionarios") ? (
                                   <div className="rounded-md border border-border bg-secondary/20 px-2.5 py-2 text-xs text-muted-foreground">
                                     <p className="font-medium text-foreground">

@@ -4,6 +4,7 @@ import {
   createBackofficeEvoP0PacoteJob,
   getBackofficeEvoImportJobResumo,
   listBackofficeEvoImportJobRejeicoes,
+  normalizeUploadAnaliseArquivoHistorico,
   uploadBackofficeEvoP0Pacote,
 } from "../../src/lib/backoffice/importacao-evo";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
@@ -173,6 +174,20 @@ test.describe("backoffice importacao EVO api wrappers", () => {
             disponivel: true,
             nomeArquivoEnviado: "CLIENTES.csv",
             tamanhoBytes: 128,
+            ultimoProcessamento: {
+              jobId: "job-clientes-1",
+              alias: "Carga clientes",
+              status: "CONCLUIDO",
+              processadoEm: "2026-03-12T10:00:00Z",
+              resumo: {
+                total: 20,
+                processadas: 20,
+                criadas: 12,
+                atualizadas: 8,
+                rejeitadas: 0,
+              },
+              retrySomenteErrosSuportado: false,
+            },
           },
           {
             chave: "funcionarios",
@@ -184,6 +199,21 @@ test.describe("backoffice importacao EVO api wrappers", () => {
             dominio: "colaboradores",
             bloco: "fichaPrincipal",
             descricao: "Base do colaborador",
+            ultimoProcessamento: {
+              jobId: "job-func-1",
+              status: "CONCLUIDO_COM_REJEICOES",
+              processadoEm: "2026-03-12T11:00:00Z",
+              resumo: {
+                total: 9,
+                processadas: 9,
+                criadas: 4,
+                atualizadas: 3,
+                rejeitadas: 2,
+              },
+              parcial: true,
+              mensagemParcial: "Pendências de função exigem reprocessamento.",
+              retrySomenteErrosSuportado: true,
+            },
           },
           {
             chave: "FUNCIONARIOS_HORARIOS.csv",
@@ -210,6 +240,8 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(analise.arquivos.find((arquivo) => arquivo.chave === "FUNCIONARIOS_HORARIOS.csv")?.impactoAusencia).toContain(
         "parcial"
       );
+      expect(analise.arquivos.find((arquivo) => arquivo.chave === "clientes")?.ultimoProcessamento?.alias).toBe("Carga clientes");
+      expect(analise.arquivos.find((arquivo) => arquivo.chave === "funcionarios")?.ultimoProcessamento?.retrySomenteErrosSuportado).toBe(true);
 
       expect(calls).toHaveLength(1);
       expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote");
@@ -334,6 +366,39 @@ test.describe("backoffice importacao EVO api wrappers", () => {
     }
   });
 
+  test("envia flag de retry somente erros ao criar job de pacote por arquivo lógico", async () => {
+    const { calls, restore } = mockFetchSequence([
+      jsonResponse({
+        jobId: "job-pacote-retry",
+        status: "PROCESSANDO",
+        dryRun: false,
+        solicitadoEm: "2026-03-13T10:10:00Z",
+      }),
+    ]);
+
+    try {
+      const job = await createBackofficeEvoP0PacoteJob({
+        uploadId: "upload-1",
+        dryRun: false,
+        maxRejeicoesRetorno: 50,
+        arquivos: ["funcionarios"],
+        retrySomenteErros: true,
+        tenantId: "tenant-pacote",
+      });
+
+      expect(job.jobId).toBe("job-pacote-retry");
+      expect(JSON.parse(String(calls[0].body))).toEqual({
+        dryRun: false,
+        maxRejeicoesRetorno: 50,
+        tenantId: "tenant-pacote",
+        arquivos: ["funcionarios"],
+        retrySomenteErros: true,
+      });
+    } finally {
+      restore();
+    }
+  });
+
   test("mantem upload CSV unitario funcionando", async () => {
     const csvFile = new File(["id,nome\n1,Ana"], "clientes.csv", { type: "text/csv" });
     const horariosFile = new File(["id,horario\n1,08:00"], "FUNCIONARIOS_HORARIOS.csv", { type: "text/csv" });
@@ -417,5 +482,32 @@ test.describe("backoffice importacao EVO api wrappers", () => {
     } finally {
       restore();
     }
+  });
+
+  test("normaliza histórico por arquivo com status, contadores e suporte a retry", () => {
+    const historico = normalizeUploadAnaliseArquivoHistorico({
+      jobId: "job-func-1",
+      alias: "Pacote EVO colaboradores",
+      status: "CONCLUIDO_COM_REJEICOES",
+      processadoEm: "2026-03-13T10:07:00Z",
+      resumo: {
+        total: 9,
+        processadas: 9,
+        criadas: 4,
+        atualizadas: 3,
+        rejeitadas: 2,
+      },
+      parcial: true,
+      mensagemParcial: "Pendências de função exigem retry do arquivo.",
+      retrySomenteErrosSuportado: true,
+    });
+
+    expect(historico.temHistorico).toBe(true);
+    expect(historico.status).toBe("comErros");
+    expect(historico.jobId).toBe("job-func-1");
+    expect(historico.alias).toBe("Pacote EVO colaboradores");
+    expect(historico.processadoEm).toBe("2026-03-13T10:07:00Z");
+    expect(historico.resumo?.rejeitadas).toBe(2);
+    expect(historico.retrySomenteErrosSuportado).toBe(true);
   });
 });

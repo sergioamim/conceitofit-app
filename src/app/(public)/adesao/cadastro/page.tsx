@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,10 +13,10 @@ import { PublicJourneyShell } from "@/components/public/public-journey-shell";
 import {
   buildPublicJourneyHref,
   getPublicPlanQuote,
-  validateSignupDraft,
   listPublicTenants,
   type PublicSignupDraft,
 } from "@/lib/public/services";
+import { publicSignupFormSchema } from "@/lib/forms/public-journey-schemas";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
 import type { Sexo, Tenant } from "@/lib/types";
 
@@ -126,10 +127,9 @@ function CadastroPublicoForm({
     control,
     handleSubmit,
     reset,
-    setError,
-    clearErrors,
     formState: { errors },
-  } = useForm<PublicSignupDraft & { planId: string }>({
+  } = useForm<import("zod").input<typeof publicSignupFormSchema>>({
+    resolver: zodResolver(publicSignupFormSchema),
     defaultValues: {
       ...initialForm,
       planId: initialPlanId,
@@ -146,8 +146,7 @@ function CadastroPublicoForm({
     });
   }, [initialForm, initialPlanId, reset]);
 
-  function onSubmit(values: PublicSignupDraft & { planId: string }) {
-    clearErrors();
+  function onSubmit(values: import("zod").input<typeof publicSignupFormSchema>) {
     const signupValues: PublicSignupDraft = {
       nome: values.nome,
       email: values.email,
@@ -158,16 +157,6 @@ function CadastroPublicoForm({
       cidade: values.cidade,
       objetivo: values.objetivo,
     };
-    const nextErrors = validateSignupDraft(signupValues);
-    if (!values.planId) {
-      nextErrors.planId = "Selecione um plano para continuar.";
-    }
-    if (Object.keys(nextErrors).length > 0 || !values.planId) {
-      Object.entries(nextErrors).forEach(([field, message]) => {
-        setError(field as keyof (PublicSignupDraft & { planId: string }), { type: "manual", message });
-      });
-      return;
-    }
 
     persistDraft({
       tenantRef: resolvedTenantRef,

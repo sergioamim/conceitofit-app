@@ -5,6 +5,10 @@ import type {
   RbacUserCreatePayload,
   SecurityUserLoginIdentifierInput,
 } from "@/lib/types";
+import {
+  academiaUserCreateFormSchema,
+  globalUserCreateFormSchema,
+} from "@/lib/forms/security-user-create-schemas";
 
 function cleanString(value?: string | null): string | undefined {
   const normalized = typeof value === "string" ? value.trim() : "";
@@ -14,6 +18,13 @@ function cleanString(value?: string | null): string | undefined {
 function normalizeIds(values?: string[]): string[] {
   if (!values?.length) return [];
   return [...new Set(values.map((item) => item.trim()).filter(Boolean))];
+}
+
+function ensureParsed<T>(result: { success: boolean; data?: T; error?: { issues: Array<{ message: string }> } }): T {
+  if (result.success && result.data) {
+    return result.data;
+  }
+  throw new Error(result.error?.issues[0]?.message ?? "Dados inválidos para criar usuário.");
 }
 
 export function buildSecurityLoginIdentifiers(input: {
@@ -47,49 +58,43 @@ export function validateGlobalUserCreateDraft(input: {
   eligibleForNewUnits?: boolean;
   policyScope?: GlobalAdminNewUnitsPolicyScope;
 }): GlobalAdminUserCreatePayload {
-  const name = cleanString(input.name);
-  const email = cleanString(input.email);
-  if (!name) {
-    throw new Error("Informe o nome do usuário.");
-  }
-  if (!email) {
-    throw new Error("Informe o e-mail principal.");
-  }
+  const parsed = ensureParsed(globalUserCreateFormSchema.safeParse({
+    name: input.name,
+    email: input.email,
+    cpf: input.cpf ?? "",
+    userKind: input.userKind ?? "COLABORADOR",
+    scopeType: input.scopeType,
+    academiaId: input.academiaId ?? "",
+    tenantIds: normalizeIds(input.tenantIds),
+    defaultTenantId: cleanString(input.defaultTenantId) ?? "",
+    broadAccess: Boolean(input.broadAccess),
+    eligibleForNewUnits: Boolean(input.eligibleForNewUnits),
+    policyScope: input.policyScope ?? "ACADEMIA_ATUAL",
+  }));
 
-  const tenantIds = normalizeIds(input.tenantIds);
-  const defaultTenantId = cleanString(input.defaultTenantId);
-
-  if (input.scopeType !== "GLOBAL" && !cleanString(input.academiaId)) {
-    throw new Error("Selecione a academia de referência para o acesso.");
-  }
-  if (input.scopeType !== "GLOBAL" && tenantIds.length === 0) {
-    throw new Error("Selecione ao menos uma unidade inicial para o acesso.");
-  }
-  if (defaultTenantId && !tenantIds.includes(defaultTenantId)) {
-    throw new Error("A unidade base precisa estar entre as unidades selecionadas.");
-  }
-  if (input.scopeType === "GLOBAL" && input.eligibleForNewUnits) {
-    throw new Error("Propagação para novas unidades só pode ser definida em escopo de rede.");
-  }
+  const name = cleanString(parsed.name)!;
+  const email = cleanString(parsed.email)!;
+  const tenantIds = normalizeIds(parsed.tenantIds);
+  const defaultTenantId = cleanString(parsed.defaultTenantId);
 
   return {
     name,
     fullName: name,
     email,
-    userKind: cleanString(input.userKind) ?? "COLABORADOR",
-    scopeType: input.scopeType,
-    academiaId: cleanString(input.academiaId),
-    tenantIds: input.scopeType === "GLOBAL" ? [] : tenantIds,
+    userKind: cleanString(parsed.userKind) ?? "COLABORADOR",
+    scopeType: parsed.scopeType,
+    academiaId: cleanString(parsed.academiaId),
+    tenantIds: parsed.scopeType === "GLOBAL" ? [] : tenantIds,
     defaultTenantId: defaultTenantId ?? tenantIds[0],
-    broadAccess: Boolean(input.broadAccess),
-    eligibleForNewUnits: input.scopeType === "REDE" ? Boolean(input.eligibleForNewUnits) : false,
+    broadAccess: parsed.broadAccess,
+    eligibleForNewUnits: parsed.scopeType === "REDE" ? parsed.eligibleForNewUnits : false,
     policyScope:
-      input.scopeType === "REDE" && input.eligibleForNewUnits
-        ? input.policyScope ?? "ACADEMIA_ATUAL"
+      parsed.scopeType === "REDE" && parsed.eligibleForNewUnits
+        ? parsed.policyScope ?? "ACADEMIA_ATUAL"
         : undefined,
     loginIdentifiers: buildSecurityLoginIdentifiers({
       email,
-      cpf: input.cpf,
+      cpf: parsed.cpf,
     }),
   };
 }
@@ -108,54 +113,42 @@ export function validateAcademiaUserCreateDraft(input: {
   allowedTenantIds?: string[];
   allowedPerfilIds?: string[];
 }): RbacUserCreatePayload {
-  const name = cleanString(input.name);
-  const email = cleanString(input.email);
-  if (!name) {
-    throw new Error("Informe o nome do usuário.");
-  }
-  if (!email) {
-    throw new Error("Informe o e-mail principal.");
-  }
+  const parsed = ensureParsed(academiaUserCreateFormSchema.safeParse({
+    name: input.name,
+    email: input.email,
+    cpf: input.cpf ?? "",
+    userKind: input.userKind ?? "COLABORADOR",
+    networkId: input.networkId ?? "",
+    networkName: input.networkName ?? "",
+    networkSubdomain: input.networkSubdomain ?? "",
+    tenantIds: normalizeIds(input.tenantIds),
+    defaultTenantId: cleanString(input.defaultTenantId) ?? "",
+    initialPerfilIds: normalizeIds(input.initialPerfilIds),
+    allowedTenantIds: normalizeIds(input.allowedTenantIds),
+    allowedPerfilIds: normalizeIds(input.allowedPerfilIds),
+  }));
 
-  const networkId = cleanString(input.networkId);
-  if (!networkId) {
-    throw new Error("A rede atual precisa estar identificada para criar o usuário.");
-  }
-
-  const tenantIds = normalizeIds(input.tenantIds);
-  const allowedTenantIds = normalizeIds(input.allowedTenantIds);
-  if (tenantIds.length === 0) {
-    throw new Error("Selecione ao menos uma unidade da rede atual.");
-  }
-  if (allowedTenantIds.length > 0 && tenantIds.some((tenantId) => !allowedTenantIds.includes(tenantId))) {
-    throw new Error("A academia só pode criar usuários dentro das unidades da própria rede.");
-  }
-
-  const defaultTenantId = cleanString(input.defaultTenantId);
-  if (defaultTenantId && !tenantIds.includes(defaultTenantId)) {
-    throw new Error("A unidade base precisa estar entre as unidades selecionadas.");
-  }
-
-  const initialPerfilIds = normalizeIds(input.initialPerfilIds);
-  const allowedPerfilIds = normalizeIds(input.allowedPerfilIds);
-  if (allowedPerfilIds.length > 0 && initialPerfilIds.some((perfilId) => !allowedPerfilIds.includes(perfilId))) {
-    throw new Error("Selecione apenas perfis disponíveis para a academia atual.");
-  }
+  const name = cleanString(parsed.name)!;
+  const email = cleanString(parsed.email)!;
+  const networkId = cleanString(parsed.networkId)!;
+  const tenantIds = normalizeIds(parsed.tenantIds);
+  const defaultTenantId = cleanString(parsed.defaultTenantId);
+  const initialPerfilIds = normalizeIds(parsed.initialPerfilIds);
 
   return {
     name,
     fullName: name,
     email,
-    userKind: cleanString(input.userKind) ?? "COLABORADOR",
+    userKind: cleanString(parsed.userKind) ?? "COLABORADOR",
     networkId,
-    networkName: cleanString(input.networkName),
-    networkSubdomain: cleanString(input.networkSubdomain),
+    networkName: cleanString(parsed.networkName),
+    networkSubdomain: cleanString(parsed.networkSubdomain),
     tenantIds,
     defaultTenantId: defaultTenantId ?? tenantIds[0],
     initialPerfilIds,
     loginIdentifiers: buildSecurityLoginIdentifiers({
       email,
-      cpf: input.cpf,
+      cpf: parsed.cpf,
     }),
   };
 }

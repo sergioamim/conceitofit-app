@@ -15,6 +15,10 @@ import type {
 } from "@/lib/types";
 import { apiRequest } from "./http";
 
+const RBAC_API_OPTIONS = {
+  includeContextHeader: false,
+} as const;
+
 type RbacAnyListResponse<T> =
   | T[]
   | {
@@ -164,6 +168,7 @@ export async function listPerfisApi(input: {
   size?: number;
 }): Promise<RbacPaginatedResult<RbacPerfil>> {
   const response = await apiRequest<RbacAnyListResponse<RbacPerfil>>({
+    ...RBAC_API_OPTIONS,
     path: "/api/v1/auth/perfis",
     query: {
       tenantId: input.tenantId,
@@ -187,6 +192,7 @@ export async function createPerfilApi(input: {
   data: RbacPerfilCreatePayload;
 }): Promise<RbacPerfil> {
   const response = await apiRequest<RbacPerfilApiResponse>({
+    ...RBAC_API_OPTIONS,
     path: "/api/v1/auth/perfis",
     method: "POST",
     query: {
@@ -222,6 +228,7 @@ export async function updatePerfilApi(input: {
   }
 
   const response = await apiRequest<RbacPerfilApiResponse>({
+    ...RBAC_API_OPTIONS,
     path: `/api/v1/auth/perfis/${input.perfilId}`,
     method: "PUT",
     query: {
@@ -237,6 +244,7 @@ export async function deletePerfilApi(input: {
   perfilId: string;
 }): Promise<void> {
   await apiRequest<void>({
+    ...RBAC_API_OPTIONS,
     path: `/api/v1/auth/perfis/${input.perfilId}`,
     method: "DELETE",
     query: {
@@ -249,6 +257,7 @@ export async function listUsersApi(input: {
   tenantId?: string;
 }): Promise<RbacUser[]> {
   const response = await apiRequest<RbacUserApiResponse[] | RbacAnyListResponse<RbacUserApiResponse>>({
+    ...RBAC_API_OPTIONS,
     path: "/api/v1/auth/users",
     query: {
       tenantId: input.tenantId,
@@ -265,6 +274,7 @@ export async function createUserApi(input: {
   const { firstName, lastName } = splitNameParts(fullName);
   const loginIdentifiers = input.data.loginIdentifiers?.filter((item) => cleanString(item.value)) ?? [];
   const response = await apiRequest<RbacUserApiResponse>({
+    ...RBAC_API_OPTIONS,
     path: "/api/v1/auth/users",
     method: "POST",
     query: {
@@ -297,6 +307,7 @@ export async function listUserPerfisApi(input: {
   userId: string;
 }): Promise<RbacPerfil[]> {
   const response = await apiRequest<RbacPerfil[] | RbacAnyListResponse<RbacPerfil>>({
+    ...RBAC_API_OPTIONS,
     path: `/api/v1/auth/users/${input.userId}/perfis`,
     query: {
       tenantId: input.tenantId,
@@ -314,6 +325,7 @@ export async function linkUserPerfilApi(input: {
   perfilId: string;
 }): Promise<void> {
   await apiRequest<void>({
+    ...RBAC_API_OPTIONS,
     path: `/api/v1/auth/users/${input.userId}/perfis/${input.perfilId}`,
     method: "PUT",
     query: {
@@ -328,6 +340,7 @@ export async function unlinkUserPerfilApi(input: {
   perfilId: string;
 }): Promise<void> {
   await apiRequest<void>({
+    ...RBAC_API_OPTIONS,
     path: `/api/v1/auth/users/${input.userId}/perfis/${input.perfilId}`,
     method: "DELETE",
     query: {
@@ -340,6 +353,7 @@ export async function listFeaturesApi(input: {
   tenantId: string;
 }): Promise<RbacFeature[]> {
   const response = await apiRequest<RbacFeature[] | RbacAnyListResponse<RbacFeature>>({
+    ...RBAC_API_OPTIONS,
     path: "/api/v1/auth/features",
     query: {
       tenantId: input.tenantId,
@@ -356,6 +370,7 @@ export async function updateFeatureApi(input: {
   data: RbacFeatureConfig;
 }): Promise<RbacFeature> {
   const response = await apiRequest<RbacFeatureApiResponse>({
+    ...RBAC_API_OPTIONS,
     path: `/api/v1/auth/features/${encodeURIComponent(input.featureKey)}`,
     method: "PUT",
     query: {
@@ -373,6 +388,7 @@ export async function listGrantsApi(input: {
   tenantId: string;
 }): Promise<RbacGrant[]> {
   const response = await apiRequest<RbacGrant[] | RbacAnyListResponse<RbacGrant>>({
+    ...RBAC_API_OPTIONS,
     path: "/api/v1/auth/features/grants",
     query: {
       tenantId: input.tenantId,
@@ -386,6 +402,7 @@ export async function saveGrantApi(input: {
   data: RbacGrantPayload;
 }): Promise<RbacGrant> {
   return apiRequest<RbacGrant>({
+    ...RBAC_API_OPTIONS,
     path: "/api/v1/auth/features/grants",
     method: "POST",
     query: {
@@ -402,6 +419,7 @@ export async function listAuditoriaPermissoesApi(input: {
   limit?: number;
 }): Promise<RbacAuditoriaItem[]> {
   const response = await apiRequest<RbacAuditoriaItem[] | RbacAnyListResponse<RbacAuditoriaItem>>({
+    ...RBAC_API_OPTIONS,
     path: "/api/v1/auth/auditoria/permissoes",
     query: {
       tenantId: input.tenantId,

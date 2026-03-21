@@ -3,6 +3,10 @@ import {
   resolveContratoStatusFromPlano,
   resolvePagamentoVendaStatus,
 } from "@/lib/comercial/plano-flow";
+import {
+  validateSignupDraftWithSchema,
+  validateTrialInputWithSchema,
+} from "@/lib/forms/public-journey-schemas";
 import { getAlunoApi, createAlunoApi } from "@/lib/api/alunos";
 import { listPlanosApi, getPlanoApi } from "@/lib/api/comercial-catalogo";
 import { createProspectApi, updateProspectStatusApi } from "@/lib/api/crm";
@@ -176,21 +180,11 @@ export function buildPublicJourneyHref(
 }
 
 export function validateTrialInput(input: PublicTrialInput): Record<string, string> {
-  const errors: Record<string, string> = {};
-  if (normalizeText(input.nome).length < 3) errors.nome = "Informe o nome completo.";
-  if (!normalizeText(input.email).includes("@")) errors.email = "Informe um e-mail válido.";
-  if (input.telefone.replace(/\D/g, "").length < 10) errors.telefone = "Informe um telefone válido.";
-  return errors;
+  return validateTrialInputWithSchema(input);
 }
 
 export function validateSignupDraft(input: PublicSignupDraft): Record<string, string> {
-  const errors: Record<string, string> = {};
-  if (normalizeText(input.nome).length < 3) errors.nome = "Informe o nome completo.";
-  if (!normalizeText(input.email).includes("@")) errors.email = "Informe um e-mail válido.";
-  if (input.telefone.replace(/\D/g, "").length < 10) errors.telefone = "Informe um telefone válido.";
-  if (toCpfDigits(input.cpf).length !== 11) errors.cpf = "CPF deve conter 11 dígitos.";
-  if (!input.dataNascimento) errors.dataNascimento = "Informe a data de nascimento.";
-  return errors;
+  return validateSignupDraftWithSchema(input);
 }
 
 export function resolvePublicNextAction(params: {

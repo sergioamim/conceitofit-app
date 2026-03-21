@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -9,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { listPlanosApi } from "@/lib/api/comercial-catalogo";
+import { novoVoucherStepSchema } from "@/lib/forms/administrativo-schemas";
 import type { Plano, VoucherAplicarEm, VoucherEscopo } from "@/lib/types";
 
 const VOUCHER_TYPES = [
@@ -87,12 +89,12 @@ export function NovoVoucherModal({
     register,
     handleSubmit,
     reset,
-    setError,
     clearErrors,
     control,
     setValue,
     formState: { errors },
   } = useForm<NovoVoucherFormValues>({
+    resolver: zodResolver(novoVoucherStepSchema),
     defaultValues: DEFAULT_VALUES,
   });
   const prazoDeterminado = useWatch({ control, name: "prazoDeterminado" });
@@ -118,21 +120,7 @@ export function NovoVoucherModal({
     onClose();
   }
 
-  function handleProximo(values: NovoVoucherFormValues) {
-    clearErrors();
-    const nextErrors: Record<string, string> = {};
-    if (!values.tipo) nextErrors.tipo = "Selecione o tipo de voucher";
-    if (!values.nome.trim()) nextErrors.nome = "Informe o nome do voucher";
-    if (!values.periodoInicio) nextErrors.periodoInicio = "Informe a data de início";
-    if (values.prazoDeterminado && !values.periodoFim) nextErrors.periodoFim = "Informe a data de término";
-    if (!values.ilimitada && !values.quantidade) nextErrors.quantidade = "Informe a quantidade ou marque ilimitada";
-    if (values.codigoTipo === "UNICO" && !values.codigoUnicoCustom.trim()) nextErrors.codigoUnicoCustom = "Digite o código único do voucher";
-    if (Object.keys(nextErrors).length > 0) {
-      Object.entries(nextErrors).forEach(([field, message]) => {
-        setError(field as keyof NovoVoucherFormValues, { type: "manual", message });
-      });
-      return;
-    }
+  function handleProximo() {
     setStep(2);
   }
 

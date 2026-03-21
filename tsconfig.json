@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@hookform/resolvers/zod": ["./src/vendor/hookform-resolvers/zod"]
     }
   },
   "include": [

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +22,7 @@ import {
   unlinkUserPerfilApi,
 } from "@/lib/api/rbac";
 import { validateAcademiaUserCreateDraft } from "@/lib/security-user-create";
+import { academiaUserCreateBaseFormSchema } from "@/lib/forms/security-user-create-schemas";
 import type { RbacPerfil, RbacUser, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
@@ -41,6 +44,12 @@ type GrantAccessFormValues = {
   userQuery: string;
 };
 
+const grantAccessFormSchema = z.object({
+  tenantId: z.string().trim().min(1, "Selecione a unidade para conceder acesso."),
+  userId: z.string().trim().min(1, "Selecione o funcionário para conceder acesso."),
+  userQuery: z.string(),
+});
+
 export default function AcessoUnidadePage() {
   const access = useAuthAccess();
   const tenantContext = useTenantContext();
@@ -54,6 +63,14 @@ export default function AcessoUnidadePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const createUserForm = useForm<CreateUserFormValues>({
+    resolver: zodResolver(
+      academiaUserCreateBaseFormSchema.pick({
+        name: true,
+        email: true,
+        cpf: true,
+        initialPerfilIds: true,
+      })
+    ),
     defaultValues: {
       name: "",
       email: "",
@@ -62,6 +79,7 @@ export default function AcessoUnidadePage() {
     },
   });
   const grantAccessForm = useForm<GrantAccessFormValues>({
+    resolver: zodResolver(grantAccessFormSchema),
     defaultValues: {
       tenantId: tenantContext.tenantId || "",
       userId: "",
@@ -209,20 +227,6 @@ export default function AcessoUnidadePage() {
   async function handleGrant(values: GrantAccessFormValues) {
     setError(null);
     setSuccess(null);
-    if (!values.tenantId) {
-      grantAccessForm.setError("tenantId", {
-        type: "manual",
-        message: "Selecione a unidade para conceder acesso.",
-      });
-      return;
-    }
-    if (!values.userId) {
-      grantAccessForm.setError("userId", {
-        type: "manual",
-        message: "Selecione o funcionário para conceder acesso.",
-      });
-      return;
-    }
 
     if (!defaultPerfil || isCustomerRole(defaultPerfil.roleName)) {
       setError("Nenhum perfil interno padrão disponível para conceder acesso.");
@@ -366,9 +370,9 @@ export default function AcessoUnidadePage() {
           <form className="grid gap-4 md:grid-cols-2" onSubmit={createUserForm.handleSubmit(handleCreateUser)}>
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-              <Input
-                aria-label="Nome do usuário da unidade"
-                {...createUserForm.register("name", { validate: (value) => value.trim().length > 0 || "Informe o nome do usuário." })}
+                <Input
+                  aria-label="Nome do usuário da unidade"
+                  {...createUserForm.register("name")}
                 className="border-border bg-secondary"
                 placeholder="Carla Operações"
               />
@@ -379,10 +383,10 @@ export default function AcessoUnidadePage() {
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
-              <Input
-                aria-label="E-mail do usuário da unidade"
-                type="email"
-                {...createUserForm.register("email", { validate: (value) => value.trim().length > 0 || "Informe o e-mail principal." })}
+                <Input
+                  aria-label="E-mail do usuário da unidade"
+                  type="email"
+                  {...createUserForm.register("email")}
                 className="border-border bg-secondary"
                 placeholder="carla@academia.local"
               />

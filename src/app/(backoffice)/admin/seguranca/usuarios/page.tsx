@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { GlobalSecurityShell } from "@/components/security/global-security-shell";
 import {
   SecurityActiveBadge,
@@ -23,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TableCell } from "@/components/ui/table";
 import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
 import { createGlobalSecurityUser, listGlobalSecurityUsers } from "@/lib/backoffice/seguranca";
+import { globalUserCreateFormSchema } from "@/lib/forms/security-user-create-schemas";
 import { validateGlobalUserCreateDraft } from "@/lib/security-user-create";
 import type { Academia, GlobalAdminNewUnitsPolicyScope, GlobalAdminReviewStatus, GlobalAdminUserSummary, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -160,6 +162,7 @@ export default function AdminSegurancaUsuariosPage() {
   const [createFeedback, setCreateFeedback] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const createUserForm = useForm<CreateGlobalUserForm>({
+    resolver: zodResolver(globalUserCreateFormSchema),
     defaultValues: CREATE_USER_DEFAULT,
   });
   const createForm = useWatch({ control: createUserForm.control }) ?? CREATE_USER_DEFAULT;
@@ -358,7 +361,7 @@ export default function AdminSegurancaUsuariosPage() {
                 <Label htmlFor="global-user-name">Nome completo</Label>
                 <Input
                   id="global-user-name"
-                  {...createUserForm.register("name", { validate: (value) => value.trim().length > 0 || "Informe o nome do usuário." })}
+                  {...createUserForm.register("name")}
                   placeholder="Ana Operações"
                 />
                 {createUserForm.formState.errors.name ? (
@@ -371,7 +374,7 @@ export default function AdminSegurancaUsuariosPage() {
                 <Input
                   id="global-user-email"
                   type="email"
-                  {...createUserForm.register("email", { validate: (value) => value.trim().length > 0 || "Informe o e-mail principal." })}
+                  {...createUserForm.register("email")}
                   placeholder="ana@qa.local"
                 />
                 {createUserForm.formState.errors.email ? (

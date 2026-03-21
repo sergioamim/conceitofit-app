@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +23,7 @@ import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { updateVoucherApi } from "@/lib/api/beneficios";
 import { listPlanosApi } from "@/lib/api/comercial-catalogo";
+import { editarVoucherFormSchema } from "@/lib/forms/administrativo-schemas";
 import type { Plano, Voucher, VoucherAplicarEm, VoucherEscopo } from "@/lib/types";
 
 const VOUCHER_TYPES = [
@@ -82,10 +84,10 @@ export function EditarVoucherModal({
     handleSubmit,
     reset,
     setValue,
-    setError,
     clearErrors,
     formState: { errors },
   } = useForm<EditarVoucherFormValues>({
+    resolver: zodResolver(editarVoucherFormSchema),
     defaultValues: buildDefaultValues(voucher),
   });
   const prazoDeterminado = useWatch({ control, name: "prazoDeterminado" });
@@ -130,25 +132,7 @@ export function EditarVoucherModal({
   }
 
   async function handleSalvar(values: EditarVoucherFormValues) {
-    clearErrors();
     setSaveError("");
-
-    const nextErrors: Partial<Record<keyof EditarVoucherFormValues, string>> = {};
-    if (!values.tipo) nextErrors.tipo = "Selecione o tipo de voucher";
-    if (!values.nome.trim()) nextErrors.nome = "Informe o nome do voucher";
-    if (!values.periodoInicio) nextErrors.periodoInicio = "Informe a data de início";
-    if (values.prazoDeterminado && !values.periodoFim) nextErrors.periodoFim = "Informe a data de término";
-    if (!values.ilimitada && !values.quantidade) nextErrors.quantidade = "Informe a quantidade ou marque ilimitada";
-
-    if (Object.keys(nextErrors).length > 0) {
-      Object.entries(nextErrors).forEach(([field, message]) => {
-        setError(field as keyof EditarVoucherFormValues, {
-          type: "manual",
-          message,
-        });
-      });
-      return;
-    }
 
     setSaving(true);
     try {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,10 +13,10 @@ import { PublicJourneyShell } from "@/components/public/public-journey-shell";
 import {
   buildPublicJourneyHref,
   submitPublicTrial,
-  validateTrialInput,
 } from "@/lib/public/services";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
 import { listPublicTenants } from "@/lib/public/services";
+import { publicTrialFormSchema } from "@/lib/forms/public-journey-schemas";
 import type { Tenant } from "@/lib/types";
 
 function PublicJourneyFallback() {
@@ -36,15 +37,10 @@ function TrialPageContent() {
     register,
     handleSubmit,
     setError,
-    clearErrors,
     reset,
     formState: { errors },
-  } = useForm<{
-    nome: string;
-    email: string;
-    telefone: string;
-    objetivo: string;
-  }>({
+  } = useForm<import("zod").input<typeof publicTrialFormSchema>>({
+    resolver: zodResolver(publicTrialFormSchema),
     defaultValues: {
       nome: "",
       email: "",
@@ -87,19 +83,7 @@ function TrialPageContent() {
     );
   }
 
-  async function onSubmit(values: { nome: string; email: string; telefone: string; objetivo: string }) {
-    clearErrors();
-    const nextErrors = validateTrialInput({
-      tenantRef: resolvedTenantRef,
-      ...values,
-    });
-    if (Object.keys(nextErrors).length > 0) {
-      Object.entries(nextErrors).forEach(([field, message]) => {
-        setError(field as "nome" | "email" | "telefone" | "objetivo", { type: "manual", message });
-      });
-      return;
-    }
-
+  async function onSubmit(values: import("zod").input<typeof publicTrialFormSchema>) {
     setSaving(true);
     try {
       const lead = await submitPublicTrial({

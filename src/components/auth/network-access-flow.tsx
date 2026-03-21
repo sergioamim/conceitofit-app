@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   getAccessNetworkContextApi,
   loginApi,
@@ -15,6 +16,11 @@ import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-uni
 import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/lib/api/session";
 import { resolvePostLoginPath } from "@/lib/auth-redirect";
 import { buildNetworkAccessHref } from "@/lib/network-subdomain";
+import {
+  networkCredentialFormSchema,
+  networkLoginFormSchema,
+  tenantStepFormSchema,
+} from "@/lib/forms/auth-schemas";
 import type { Tenant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,18 +31,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 type FlowMode = "login" | "recovery" | "first-access";
 type LoginStep = "LOGIN" | "TENANT";
 
-type LoginFormValues = {
-  identifier: string;
-  password: string;
-};
-
-type CredentialFormValues = {
-  identifier: string;
-};
-
-type TenantStepFormValues = {
-  tenantId: string;
-};
+type LoginFormValues = import("zod").input<typeof networkLoginFormSchema>;
+type CredentialFormValues = import("zod").input<typeof networkCredentialFormSchema>;
+type TenantStepFormValues = import("zod").input<typeof tenantStepFormSchema>;
 
 function buildTitle(mode: FlowMode) {
   switch (mode) {
@@ -80,17 +77,20 @@ export function NetworkAccessFlow({
   const [step, setStep] = useState<LoginStep>("LOGIN");
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
   const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(networkLoginFormSchema),
     defaultValues: {
       identifier: "",
       password: "",
     },
   });
   const credentialForm = useForm<CredentialFormValues>({
+    resolver: zodResolver(networkCredentialFormSchema),
     defaultValues: {
       identifier: "",
     },
   });
   const tenantForm = useForm<TenantStepFormValues>({
+    resolver: zodResolver(tenantStepFormSchema),
     defaultValues: {
       tenantId: "",
     },
@@ -224,11 +224,6 @@ export function NetworkAccessFlow({
   }
 
   async function handleSavePreferredTenant(values: TenantStepFormValues) {
-    if (!values.tenantId) {
-      setError("Selecione a unidade ativa para continuar.");
-      return;
-    }
-
     setSaving(true);
     setError(null);
     try {
@@ -334,7 +329,7 @@ export function NetworkAccessFlow({
                   autoComplete="username"
                   placeholder="Seu e-mail ou CPF"
                   disabled={saving}
-                  {...loginForm.register("identifier", { validate: (value) => value.trim().length > 0 || "Informe seu identificador." })}
+                  {...loginForm.register("identifier")}
                 />
                 {loginForm.formState.errors.identifier ? (
                   <p className="text-xs text-gym-danger">{loginForm.formState.errors.identifier.message}</p>
@@ -348,7 +343,7 @@ export function NetworkAccessFlow({
                   autoComplete="current-password"
                   placeholder="Digite sua senha"
                   disabled={saving}
-                  {...loginForm.register("password", { validate: (value) => value.trim().length > 0 || "Informe sua senha." })}
+                  {...loginForm.register("password")}
                 />
                 {loginForm.formState.errors.password ? (
                   <p className="text-xs text-gym-danger">{loginForm.formState.errors.password.message}</p>
@@ -369,7 +364,7 @@ export function NetworkAccessFlow({
                   autoComplete="username"
                   placeholder="Seu e-mail ou CPF"
                   disabled={saving}
-                  {...credentialForm.register("identifier", { validate: (value) => value.trim().length > 0 || "Informe seu identificador." })}
+                  {...credentialForm.register("identifier")}
                 />
                 {credentialForm.formState.errors.identifier ? (
                   <p className="text-xs text-gym-danger">{credentialForm.formState.errors.identifier.message}</p>

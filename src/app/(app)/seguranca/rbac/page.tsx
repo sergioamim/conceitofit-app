@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +21,7 @@ import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { SecurityActiveBadge } from "@/components/security/security-badges";
 import { SecurityEmptyState, SecuritySectionFeedback } from "@/components/security/security-feedback";
 import { validateAcademiaUserCreateDraft } from "@/lib/security-user-create";
+import { academiaUserCreateBaseFormSchema } from "@/lib/forms/security-user-create-schemas";
 import type { RbacPermission } from "@/lib/types";
 import {
   useAuditoriaManager,
@@ -75,6 +78,26 @@ const TENANT_USER_DEFAULT: CreateTenantUserFormState = {
 };
 
 const GRANT_PERMISSION_OPTIONS: RbacPermission[] = ["VIEW", "EDIT", "MANAGE"];
+
+const perfilFormSchema = z.object({
+  id: z.string().optional(),
+  roleName: z.string().trim().min(1, "Informe o identificador do perfil."),
+  displayName: z.string().trim().min(1, "Informe o nome de exibição."),
+  description: z.string(),
+  active: z.boolean(),
+});
+
+const grantFormSchema = z.object({
+  id: z.string().optional(),
+  roleName: z.string().trim().min(1, "Selecione perfil e feature."),
+  featureKey: z.string().trim().min(1, "Selecione perfil e feature."),
+  permission: z.enum(["VIEW", "EDIT", "MANAGE"]),
+  allowed: z.boolean(),
+});
+
+const assignPerfilFormSchema = z.object({
+  perfilId: z.string().trim().min(1, "Selecione um perfil."),
+});
 
 function useStatusMessage() {
   const [message, setMessage] = useState<string | null>(null);
@@ -168,9 +191,11 @@ export default function RbacPage() {
 
   const [userQuery, setUserQuery] = useState("");
   const perfilForm = useForm<PerfilFormState>({
+    resolver: zodResolver(perfilFormSchema),
     defaultValues: PERFIL_DEFAULT,
   });
   const grantForm = useForm<GrantFormState>({
+    resolver: zodResolver(grantFormSchema),
     defaultValues: {
       roleName: "",
       featureKey: "",
@@ -179,11 +204,23 @@ export default function RbacPage() {
     },
   });
   const assignPerfilForm = useForm<{ perfilId: string }>({
+    resolver: zodResolver(assignPerfilFormSchema),
     defaultValues: {
       perfilId: "",
     },
   });
   const tenantUserForm = useForm<CreateTenantUserFormState>({
+    resolver: zodResolver(
+      academiaUserCreateBaseFormSchema.pick({
+        name: true,
+        email: true,
+        cpf: true,
+        userKind: true,
+        tenantIds: true,
+        defaultTenantId: true,
+        initialPerfilIds: true,
+      })
+    ),
     defaultValues: TENANT_USER_DEFAULT,
   });
   const perfilFormValues = useWatch({ control: perfilForm.control }) ?? PERFIL_DEFAULT;
@@ -273,15 +310,6 @@ export default function RbacPage() {
   const submitPerfil = useCallback(
     async (values: PerfilFormState) => {
       feedback.clear();
-      if (!values.roleName.trim()) {
-        feedback.show("Informe o identificador do perfil.", "error");
-        return;
-      }
-      if (!values.displayName.trim()) {
-        feedback.show("Informe o nome de exibição.", "error");
-        return;
-      }
-
       setActionLoading(true);
       try {
         await savePerfil({
@@ -388,11 +416,6 @@ export default function RbacPage() {
   const submitGrant = useCallback(
     async (values: GrantFormState) => {
       feedback.clear();
-      if (!values.roleName || !values.featureKey) {
-        feedback.show("Selecione perfil e feature.", "error");
-        setActionLoading(false);
-        return;
-      }
       setActionLoading(true);
       try {
         await saveGrant(values);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import {
   startPublicCheckout,
   type PublicCheckoutInput,
 } from "@/lib/public/services";
+import { publicCheckoutFormSchema } from "@/lib/forms/public-journey-schemas";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
 import type { Tenant, TipoFormaPagamento } from "@/lib/types";
 
@@ -47,7 +49,8 @@ function CheckoutPublicoPageContent() {
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const { register, control, handleSubmit, reset, setValue, getValues } = useForm<CheckoutFormValues>({
+  const { register, control, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<CheckoutFormValues>({
+    resolver: zodResolver(publicCheckoutFormSchema),
     defaultValues: {
       planId: "",
       formaPagamento: "PIX",
@@ -138,11 +141,6 @@ function CheckoutPublicoPageContent() {
   }
 
   async function onSubmit(values: CheckoutFormValues) {
-    if (!values.planId) {
-      setSubmitError("Selecione um plano para concluir a adesão.");
-      return;
-    }
-
     setSaving(true);
     setSubmitError("");
     try {
@@ -275,6 +273,7 @@ function CheckoutPublicoPageContent() {
                       </select>
                     )}
                   />
+                  {errors.planId ? <p className="text-xs text-rose-300">{errors.planId.message}</p> : null}
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="checkout-payment" className="text-sm font-medium">Forma de pagamento</label>
@@ -296,6 +295,7 @@ function CheckoutPublicoPageContent() {
                       </select>
                     )}
                   />
+                  {errors.formaPagamento ? <p className="text-xs text-rose-300">{errors.formaPagamento.message}</p> : null}
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="checkout-installments" className="text-sm font-medium">Parcelas</label>
@@ -307,6 +307,7 @@ function CheckoutPublicoPageContent() {
                     disabled={formaPagamento !== "CARTAO_CREDITO"}
                     className="border-border bg-secondary"
                   />
+                  {errors.parcelas ? <p className="text-xs text-rose-300">{errors.parcelas.message}</p> : null}
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="checkout-observacoes" className="text-sm font-medium">Observações do pagamento</label>
@@ -357,6 +358,7 @@ function CheckoutPublicoPageContent() {
                     </span>
                   </span>
                 </label>
+                {errors.aceitarTermos ? <p className="text-xs text-rose-300">{errors.aceitarTermos.message}</p> : null}
               </div>
 
               {contractPreview ? (

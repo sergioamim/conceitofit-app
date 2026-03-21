@@ -11,6 +11,7 @@ import {
   type EvoImportJobStatus,
   type EvoImportRejeicao,
   type EvoImportRejeicoesResponse,
+  type UploadAnaliseArquivoUltimoProcessamento,
   type UploadAnaliseResponse,
 } from "@/lib/api/importacao-evo";
 
@@ -25,6 +26,42 @@ export type EvoColaboradorDiagnosticoNormalizado = {
   arquivosAusentes: string[];
   status: EvoColaboradorDiagnosticoStatus;
 };
+
+export type EvoArquivoHistoricoStatus =
+  | "nuncaImportado"
+  | "processando"
+  | "sucesso"
+  | "parcial"
+  | "comErros";
+
+export type EvoArquivoHistoricoNormalizado = {
+  jobId: string | null;
+  alias: string | null;
+  statusJob: EvoImportJobStatus | null;
+  processadoEm: string | null;
+  resumo: EvoImportEntidadeResumo | null;
+  status: EvoArquivoHistoricoStatus;
+  parcial: boolean;
+  mensagemParcial: string | null;
+  retrySomenteErrosSuportado: boolean;
+  temHistorico: boolean;
+};
+
+function normalizeOptionalString(value?: string | null): string | null {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  return normalized || null;
+}
+
+function normalizeOptionalResumo(value?: EvoImportEntidadeResumo | null): EvoImportEntidadeResumo | null {
+  if (!value) return null;
+  return {
+    total: Number(value.total ?? 0),
+    processadas: Number(value.processadas ?? 0),
+    criadas: Number(value.criadas ?? 0),
+    atualizadas: Number(value.atualizadas ?? 0),
+    rejeitadas: Number(value.rejeitadas ?? 0),
+  };
+}
 
 function normalizeArquivoLista(
   values: string[] | null | undefined,
@@ -79,6 +116,44 @@ export function normalizeEvoColaboradorDiagnostico(input: {
   };
 }
 
+export function normalizeUploadAnaliseArquivoHistorico(
+  input?: UploadAnaliseArquivoUltimoProcessamento | null
+): EvoArquivoHistoricoNormalizado {
+  const jobId = normalizeOptionalString(input?.jobId);
+  const alias = normalizeOptionalString(input?.alias);
+  const statusJob = input?.status ?? null;
+  const processadoEm = normalizeOptionalString(input?.processadoEm);
+  const resumo = normalizeOptionalResumo(input?.resumo);
+  const mensagemParcial = normalizeOptionalString(input?.mensagemParcial);
+  const parcial = Boolean(input?.parcial) || Boolean(mensagemParcial);
+  const retrySomenteErrosSuportado = Boolean(input?.retrySomenteErrosSuportado);
+  const temHistorico = Boolean(jobId || alias || processadoEm || statusJob || resumo);
+
+  let status: EvoArquivoHistoricoStatus = "nuncaImportado";
+  if (statusJob === "PROCESSANDO") {
+    status = "processando";
+  } else if (statusJob === "FALHA" || Number(resumo?.rejeitadas ?? 0) > 0) {
+    status = "comErros";
+  } else if (parcial || statusJob === "CONCLUIDO_COM_REJEICOES") {
+    status = "parcial";
+  } else if (statusJob === "CONCLUIDO" || Number(resumo?.processadas ?? 0) > 0) {
+    status = "sucesso";
+  }
+
+  return {
+    jobId,
+    alias,
+    statusJob,
+    processadoEm,
+    resumo,
+    status: temHistorico ? status : "nuncaImportado",
+    parcial,
+    mensagemParcial,
+    retrySomenteErrosSuportado,
+    temHistorico,
+  };
+}
+
 export type BackofficeEvoJobAceitoResponse = {
   jobId: string;
   status: string;
@@ -103,6 +178,7 @@ type PacoteJobInput = {
   dryRun: boolean;
   maxRejeicoesRetorno: number;
   arquivos?: string[] | null;
+  retrySomenteErros?: boolean;
   tenantId?: string;
   evoUnidadeId?: number | null;
   contextoTenantId?: string;
@@ -167,5 +243,6 @@ export type {
   EvoImportJobStatus,
   EvoImportRejeicao,
   EvoImportRejeicoesResponse,
+  UploadAnaliseArquivoUltimoProcessamento,
   UploadAnaliseResponse,
 };

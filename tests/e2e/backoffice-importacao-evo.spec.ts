@@ -21,7 +21,7 @@ async function installImportacaoEvoJobStubs(page: Page) {
     "funcionarios_horarios",
     "permissoes",
   ];
-  let pollingCount = 0;
+  const pollingCountByJob = new Map<string, number>();
 
   await page.route("**/admin/unidades/*/onboarding/job-status", async (route) => {
     if (route.request().method() !== "POST") {
@@ -121,6 +121,20 @@ async function installImportacaoEvoJobStubs(page: Page) {
             disponivel: true,
             nomeArquivoEnviado: "CLIENTES.csv",
             tamanhoBytes: 128,
+            ultimoProcessamento: {
+              jobId: "job-clientes-1",
+              alias: "Carga clientes completa",
+              status: "CONCLUIDO",
+              processadoEm: "2026-03-12T09:00:00Z",
+              resumo: {
+                total: 20,
+                processadas: 20,
+                criadas: 12,
+                atualizadas: 8,
+                rejeitadas: 0,
+              },
+              retrySomenteErrosSuportado: false,
+            },
           },
           {
             chave: "contratos",
@@ -129,6 +143,21 @@ async function installImportacaoEvoJobStubs(page: Page) {
             disponivel: true,
             nomeArquivoEnviado: "CONTRATOS.csv",
             tamanhoBytes: 96,
+            ultimoProcessamento: {
+              jobId: "job-contratos-1",
+              status: "CONCLUIDO_COM_REJEICOES",
+              processadoEm: "2026-03-12T09:30:00Z",
+              resumo: {
+                total: 6,
+                processadas: 6,
+                criadas: 4,
+                atualizadas: 2,
+                rejeitadas: 0,
+              },
+              parcial: true,
+              mensagemParcial: "Um contrato exigiu reconciliação manual de vigência.",
+              retrySomenteErrosSuportado: false,
+            },
           },
           {
             chave: "recebimentos",
@@ -170,6 +199,22 @@ async function installImportacaoEvoJobStubs(page: Page) {
             dominio: "colaboradores",
             bloco: "funcoes",
             descricao: "Relaciona colaboradores às funções.",
+            ultimoProcessamento: {
+              jobId: "job-funcoes-1",
+              alias: "Funções com inconsistências",
+              status: "CONCLUIDO_COM_REJEICOES",
+              processadoEm: "2026-03-12T10:10:00Z",
+              resumo: {
+                total: 8,
+                processadas: 8,
+                criadas: 0,
+                atualizadas: 5,
+                rejeitadas: 3,
+              },
+              parcial: true,
+              mensagemParcial: "Três vínculos vieram com função inexistente.",
+              retrySomenteErrosSuportado: false,
+            },
           },
           {
             chave: "tipos_funcionarios",
@@ -242,9 +287,38 @@ async function installImportacaoEvoJobStubs(page: Page) {
     });
   });
 
-  await page.route("**/admin/integracoes/importacao-terceiros/jobs/job-evo-777/p0**", async (route) => {
-    pollingCount += 1;
+  await page.route("**/admin/integracoes/importacao-terceiros/jobs/*/p0**", async (route) => {
+    const jobId = route.request().url().split("/jobs/")[1]?.split("/")[0] ?? "job-evo-777";
+    const pollingCount = (pollingCountByJob.get(jobId) ?? 0) + 1;
+    pollingCountByJob.set(jobId, pollingCount);
     const concluiu = pollingCount >= 2;
+    if (jobId === "job-funcoes-1") {
+      await route.fulfill({
+        status: 200,
+        json: {
+          jobId,
+          tenantIds: ["tenant-importacao-evo"],
+          status: "CONCLUIDO_COM_REJEICOES",
+          solicitadoEm: "2026-03-12T10:05:00Z",
+          finalizadoEm: "2026-03-12T10:10:00Z",
+          geral: { total: 8, processadas: 8, criadas: 0, atualizadas: 5, rejeitadas: 3 },
+          funcionarios: { total: 8, processadas: 8, criadas: 0, atualizadas: 5, rejeitadas: 3 },
+          colaboradoresDetalhe: {
+            funcoes: {
+              total: 8,
+              processadas: 8,
+              criadas: 0,
+              atualizadas: 5,
+              rejeitadas: 3,
+              parcial: true,
+              mensagemParcial: "Três vínculos vieram com função inexistente.",
+              arquivosSelecionados: ["FUNCIONARIOS_FUNCOES.csv", "FUNCIONARIOS_FUNCOES_EXERCIDAS.csv"],
+            },
+          },
+        },
+      });
+      return;
+    }
     const resumoBase = {
       jobId: "job-evo-777",
       tenantIds: ["tenant-importacao-evo"],
@@ -334,7 +408,37 @@ async function installImportacaoEvoJobStubs(page: Page) {
     });
   });
 
-  await page.route("**/admin/integracoes/importacao-terceiros/jobs/job-evo-777/rejeicoes**", async (route) => {
+  await page.route("**/admin/integracoes/importacao-terceiros/jobs/*/rejeicoes**", async (route) => {
+    const jobId = route.request().url().split("/jobs/")[1]?.split("/")[0] ?? "job-evo-777";
+    if (jobId === "job-funcoes-1") {
+      await route.fulfill({
+        status: 200,
+        json: {
+          items: [
+            {
+              id: "rej-funcao-historico",
+              entidade: "FUNCIONARIOS_FUNCOES_EXERCIDAS",
+              arquivo: "FUNCIONARIOS_FUNCOES_EXERCIDAS.csv",
+              linhaArquivo: 12,
+              sourceId: "COLAB-12",
+              motivo: "Função não encontrada no catálogo legado",
+              criadoEm: "2026-03-12T10:11:00Z",
+              bloco: "funcoes",
+              payload: { funcionarioId: "COLAB-12", funcaoLegada: "Coach Senior" },
+              mensagemAcionavel: "Reenvie a malha de funções após corrigir o catálogo legado.",
+              reprocessamento: {
+                suportado: false,
+                escopo: "funcoes",
+                label: "Reprocessar funções",
+                descricao: "Retry granular de funções ainda depende de endpoint dedicado.",
+              },
+            },
+          ],
+          hasNext: false,
+        },
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       json: {
@@ -432,6 +536,23 @@ test.describe("Backoffice importacao EVO", () => {
     await expect(page.getByText("Não reconhecido", { exact: true })).toHaveCount(0);
     await expect(page.getByText(/Selecionados:\s+\d+\s+de\s+\d+\s+disponíveis/i)).toBeVisible();
     await expect(page.getByRole("button", { name: "Desmarcar todos" })).toBeVisible();
+    const clientesHistoricoCard = page.locator('label').filter({ hasText: "Clientes" }).first();
+    const contratosHistoricoCard = page.locator('label').filter({ hasText: "Contratos" }).first();
+    const recebimentosHistoricoCard = page.locator('label').filter({ hasText: "Recebimentos" }).first();
+    await expect(clientesHistoricoCard.getByText("Carga clientes completa")).toBeVisible();
+    await expect(clientesHistoricoCard.getByText("job-clientes-1")).toBeVisible();
+    await expect(clientesHistoricoCard.getByText("Sucesso")).toBeVisible();
+    await expect(clientesHistoricoCard.getByText("Processadas: 20")).toBeVisible();
+    await expect(contratosHistoricoCard.getByText("Parcial")).toBeVisible();
+    await expect(recebimentosHistoricoCard.getByText("Nunca importado")).toBeVisible();
+    const funcoesHistoricoCard = page.locator('label').filter({ hasText: "Funções exercidas" }).first();
+    await expect(funcoesHistoricoCard.getByText("Com erros")).toBeVisible();
+    await expect(funcoesHistoricoCard.getByRole("button", { name: "Tentar somente erros (aguardando backend)" })).toBeDisabled();
+    await funcoesHistoricoCard.getByRole("button", { name: "Ver rejeições" }).click();
+    await expect(page.getByRole("tabpanel", { name: "Acompanhar Job" }).getByDisplayValue("job-funcoes-1")).toBeVisible();
+    await expect(page.getByText("Reenvie a malha de funções após corrigir o catálogo legado.")).toBeVisible();
+
+    await page.getByRole("tab", { name: "Importar por Pacote (ZIP/CSV)" }).click();
     await page.getByRole("button", { name: "Desmarcar todos" }).click();
     await expect(page.getByRole("button", { name: "Criar Job" })).toBeDisabled();
     await page.getByRole("button", { name: "Selecionar disponíveis" }).click();

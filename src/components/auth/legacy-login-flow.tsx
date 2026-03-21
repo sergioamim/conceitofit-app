@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,10 @@ import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/li
 import type { Tenant } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { resolvePostLoginPath } from "@/lib/auth-redirect";
+import { legacyLoginFormSchema, legacyTenantStepFormSchema } from "@/lib/forms/auth-schemas";
 
-type LegacyLoginFormValues = {
-  username: string;
-  password: string;
-};
+type LegacyLoginFormValues = import("zod").input<typeof legacyLoginFormSchema>;
+type LegacyTenantFormValues = import("zod").input<typeof legacyTenantStepFormSchema>;
 
 export function LegacyLoginFlow({
   nextPath,
@@ -28,12 +28,18 @@ export function LegacyLoginFlow({
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState<"LOGIN" | "TENANT">("LOGIN");
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
-  const [tenantId, setTenantId] = useState("");
   const resolvedNextPath = useMemo(() => resolvePostLoginPath(nextPath), [nextPath]);
-  const { register, handleSubmit, reset } = useForm<LegacyLoginFormValues>({
+  const loginForm = useForm<LegacyLoginFormValues>({
+    resolver: zodResolver(legacyLoginFormSchema),
     defaultValues: {
       username: "admin@academia.local",
       password: "12345678",
+    },
+  });
+  const tenantForm = useForm<LegacyTenantFormValues>({
+    resolver: zodResolver(legacyTenantStepFormSchema),
+    defaultValues: {
+      tenantId: "",
     },
   });
 
@@ -45,12 +51,13 @@ export function LegacyLoginFlow({
 
   useEffect(() => {
     if (step === "LOGIN") {
-      reset({
+      loginForm.reset({
         username: "admin@academia.local",
         password: "12345678",
       });
+      tenantForm.reset({ tenantId: "" });
     }
-  }, [reset, step]);
+  }, [loginForm, step, tenantForm]);
 
   async function onSubmit(values: LegacyLoginFormValues) {
     setSaving(true);
@@ -69,7 +76,7 @@ export function LegacyLoginFlow({
       }
 
       setTenantOptions(activeTenants);
-      setTenantId(context.currentTenantId || activeTenants[0]?.id || "");
+      tenantForm.reset({ tenantId: context.currentTenantId || activeTenants[0]?.id || "" });
       setStep("TENANT");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao autenticar.");
@@ -78,16 +85,12 @@ export function LegacyLoginFlow({
     }
   }
 
-  async function handleSavePreferredTenant() {
-    if (!tenantId) {
-      setError("Selecione a unidade prioritária.");
-      return;
-    }
+  async function handleSavePreferredTenant(values: LegacyTenantFormValues) {
     setSaving(true);
     setError(null);
     try {
-      await setTenantContextApi(tenantId);
-      setPreferredTenantId(tenantId);
+      await setTenantContextApi(values.tenantId);
+      setPreferredTenantId(values.tenantId);
       router.push(resolvedNextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível definir a unidade prioritária.");
@@ -111,18 +114,20 @@ export function LegacyLoginFlow({
         </CardHeader>
         <CardContent>
           {step === "LOGIN" ? (
-            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+            <form className="space-y-4" onSubmit={loginForm.handleSubmit(onSubmit)}>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="login-username">
                   Usuário
                 </label>
-                <Input id="login-username" type="text" autoComplete="username" required {...register("username", { required: true })} />
+                <Input id="login-username" type="text" autoComplete="username" required {...loginForm.register("username")} />
+                {loginForm.formState.errors.username ? <p className="text-xs text-gym-danger">{loginForm.formState.errors.username.message}</p> : null}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="login-password">
                   Senha
                 </label>
-                <Input id="login-password" type="password" autoComplete="current-password" required {...register("password", { required: true })} />
+                <Input id="login-password" type="password" autoComplete="current-password" required {...loginForm.register("password")} />
+                {loginForm.formState.errors.password ? <p className="text-xs text-gym-danger">{loginForm.formState.errors.password.message}</p> : null}
               </div>
               {error ? <p className="text-sm text-red-500">{error}</p> : null}
               <Button type="submit" className="w-full" disabled={saving}>
@@ -130,14 +135,18 @@ export function LegacyLoginFlow({
               </Button>
             </form>
           ) : (
-            <div className="space-y-4">
+            <form className="space-y-4" onSubmit={tenantForm.handleSubmit(handleSavePreferredTenant)}>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Unidade prioritária</label>
-                <Select value={tenantId} onValueChange={setTenantId}>
+                <Select
+                  value={tenantForm.watch("tenantId") || "__none__"}
+                  onValueChange={(value) => tenantForm.setValue("tenantId", value === "__none__" ? "" : value, { shouldDirty: true })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a unidade" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__none__">Selecione</SelectItem>
                     {tenantOptions.map((item) => (
                       <SelectItem key={item.id} value={item.id}>
                         {item.nome}
@@ -145,12 +154,13 @@ export function LegacyLoginFlow({
                     ))}
                   </SelectContent>
                 </Select>
+                {tenantForm.formState.errors.tenantId ? <p className="text-xs text-gym-danger">{tenantForm.formState.errors.tenantId.message}</p> : null}
               </div>
               {error ? <p className="text-sm text-red-500">{error}</p> : null}
-              <Button type="button" className="w-full" onClick={handleSavePreferredTenant} disabled={saving}>
+              <Button type="submit" className="w-full" disabled={saving}>
                 {saving ? "Salvando..." : "Salvar e continuar"}
               </Button>
-            </div>
+            </form>
           )}
         </CardContent>
       </Card>

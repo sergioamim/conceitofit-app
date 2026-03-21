@@ -35,6 +35,7 @@ export type UploadAnaliseArquivo = {
   descricao?: string | null;
   impactoAusencia?: string | null;
   requerParaImportacaoCompleta?: boolean | null;
+  ultimoProcessamento?: UploadAnaliseArquivoUltimoProcessamento | null;
 };
 
 export type UploadAnaliseFilial = {
@@ -76,6 +77,17 @@ export type EvoImportEntidadeResumo = {
   criadas: number;
   atualizadas: number;
   rejeitadas: number;
+};
+
+export type UploadAnaliseArquivoUltimoProcessamento = {
+  jobId?: string | null;
+  alias?: string | null;
+  status?: EvoImportJobStatus | null;
+  processadoEm?: string | null;
+  resumo?: EvoImportEntidadeResumo | null;
+  parcial?: boolean | null;
+  mensagemParcial?: string | null;
+  retrySomenteErrosSuportado?: boolean | null;
 };
 
 export type EvoImportColaboradoresBlocoResumo = EvoImportEntidadeResumo & {
@@ -214,6 +226,7 @@ export async function createEvoP0PacoteJobApi(input: {
   dryRun: boolean;
   maxRejeicoesRetorno: number;
   arquivos?: string[] | null;
+  retrySomenteErros?: boolean;
   tenantId?: string;
   evoUnidadeId?: number | null;
   contextoTenantId?: string;
@@ -222,6 +235,7 @@ export async function createEvoP0PacoteJobApi(input: {
     dryRun: boolean;
     maxRejeicoesRetorno: number;
     arquivos?: string[];
+    retrySomenteErros?: boolean;
     tenantId?: string;
     evoUnidadeId?: number;
   } = {
@@ -230,6 +244,9 @@ export async function createEvoP0PacoteJobApi(input: {
   };
   if (Array.isArray(input.arquivos) && input.arquivos.length > 0) {
     body.arquivos = input.arquivos;
+  }
+  if (input.retrySomenteErros) {
+    body.retrySomenteErros = true;
   }
   const tenantId = normalizeTenantId(input.tenantId ?? input.contextoTenantId);
   if (tenantId) {
