@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import {
   createCrmTaskApi,
   listCrmTasksApi,
@@ -98,7 +99,6 @@ export default function CrmTarefasPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [editing, setEditing] = useState<CrmTask | null>(null);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [filterStatus, setFilterStatus] = useState<CrmTaskStatus | "TODAS">("TODAS");
   const [filterResponsavel, setFilterResponsavel] = useState<string>("TODOS");
   const [filterPrioridade, setFilterPrioridade] = useState<CrmTaskPrioridade | "TODAS">("TODAS");
@@ -107,6 +107,9 @@ export default function CrmTarefasPage() {
   const [error, setError] = useState("");
   const [writeUnavailable, setWriteUnavailable] = useState(false);
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
+  const { register, handleSubmit, reset, setValue, getValues } = useForm<FormState>({
+    defaultValues: EMPTY_FORM,
+  });
   const stages = useMemo<CrmPipelineStage[]>(
     () => buildDefaultCrmPipelineStages(tenantId || "tenant-runtime"),
     [tenantId]
@@ -165,11 +168,10 @@ export default function CrmTarefasPage() {
 
   function resetForm(task?: CrmTask | null) {
     setEditing(task ?? null);
-    setForm(toForm(task));
+    reset(toForm(task));
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function onSubmit(form: FormState) {
     if (!tenantId) return;
     setSaving(true);
     setError("");
@@ -407,13 +409,12 @@ export default function CrmTarefasPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
               <div className="space-y-1.5">
                 <Label htmlFor="crm-task-titulo">Título da tarefa</Label>
                 <Input
                   id="crm-task-titulo"
-                  value={form.titulo}
-                  onChange={(event) => setForm((current) => ({ ...current, titulo: event.target.value }))}
+                  {...register("titulo")}
                   className="border-border bg-secondary"
                 />
               </div>
@@ -422,15 +423,12 @@ export default function CrmTarefasPage() {
                 <Label htmlFor="crm-task-prospect">Prospect</Label>
                 <select
                   id="crm-task-prospect"
-                  value={form.prospectId}
+                  {...register("prospectId")}
                   onChange={(event) => {
                     const prospect = prospects.find((item) => item.id === event.target.value);
-                    setForm((current) => ({
-                      ...current,
-                      prospectId: event.target.value,
-                      stageStatus: prospect?.status ?? current.stageStatus,
-                      responsavelId: prospect?.responsavelId ?? current.responsavelId,
-                    }));
+                    setValue("prospectId", event.target.value);
+                    setValue("stageStatus", prospect?.status ?? getValues("stageStatus"));
+                    setValue("responsavelId", prospect?.responsavelId ?? getValues("responsavelId"));
                   }}
                   className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                 >
@@ -448,10 +446,7 @@ export default function CrmTarefasPage() {
                   <Label htmlFor="crm-task-stage">Etapa do funil</Label>
                   <select
                     id="crm-task-stage"
-                    value={form.stageStatus}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, stageStatus: event.target.value as StatusProspect }))
-                    }
+                    {...register("stageStatus")}
                     className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                   >
                     {stages.map((stage) => (
@@ -466,8 +461,7 @@ export default function CrmTarefasPage() {
                   <Label htmlFor="crm-task-responsavel">Responsável</Label>
                   <select
                     id="crm-task-responsavel"
-                    value={form.responsavelId}
-                    onChange={(event) => setForm((current) => ({ ...current, responsavelId: event.target.value }))}
+                    {...register("responsavelId")}
                     className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                   >
                     <option value="">Sem responsável</option>
@@ -485,10 +479,7 @@ export default function CrmTarefasPage() {
                   <Label htmlFor="crm-task-tipo">Tipo</Label>
                   <select
                     id="crm-task-tipo"
-                    value={form.tipo}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, tipo: event.target.value as CrmTaskTipo }))
-                    }
+                    {...register("tipo")}
                     className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                   >
                     {Object.entries(CRM_TASK_TYPE_LABEL).map(([value, label]) => (
@@ -502,10 +493,7 @@ export default function CrmTarefasPage() {
                   <Label htmlFor="crm-task-prioridade">Prioridade</Label>
                   <select
                     id="crm-task-prioridade"
-                    value={form.prioridade}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, prioridade: event.target.value as CrmTaskPrioridade }))
-                    }
+                    {...register("prioridade")}
                     className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                   >
                     {Object.entries(CRM_TASK_PRIORITY_LABEL).map(([value, label]) => (
@@ -519,13 +507,7 @@ export default function CrmTarefasPage() {
                   <Label htmlFor="crm-task-status">Status</Label>
                   <select
                     id="crm-task-status"
-                    value={form.status}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        status: event.target.value as Exclude<CrmTaskStatus, "ATRASADA">,
-                      }))
-                    }
+                    {...register("status")}
                     className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                   >
                     <option value="PENDENTE">Pendente</option>
@@ -542,8 +524,7 @@ export default function CrmTarefasPage() {
                   <Input
                     id="crm-task-data"
                     type="date"
-                    value={form.vencimentoData}
-                    onChange={(event) => setForm((current) => ({ ...current, vencimentoData: event.target.value }))}
+                    {...register("vencimentoData")}
                     className="border-border bg-secondary"
                   />
                 </div>
@@ -552,8 +533,7 @@ export default function CrmTarefasPage() {
                   <Input
                     id="crm-task-hora"
                     type="time"
-                    value={form.vencimentoHora}
-                    onChange={(event) => setForm((current) => ({ ...current, vencimentoHora: event.target.value }))}
+                    {...register("vencimentoHora")}
                     className="border-border bg-secondary"
                   />
                 </div>
@@ -563,8 +543,7 @@ export default function CrmTarefasPage() {
                 <Label htmlFor="crm-task-descricao">Contexto do follow-up</Label>
                 <Textarea
                   id="crm-task-descricao"
-                  value={form.descricao}
-                  onChange={(event) => setForm((current) => ({ ...current, descricao: event.target.value }))}
+                  {...register("descricao")}
                   className="border-border bg-secondary"
                 />
               </div>

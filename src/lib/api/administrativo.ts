@@ -8,7 +8,7 @@ import type {
   Sala,
 } from "@/lib/types";
 import { apiRequest } from "./http";
-import { normalizeFuncionarioRecord } from "@/lib/administrativo-colaboradores";
+import { normalizeFuncionarioRecord, serializeFuncionarioNotificacoes } from "@/lib/administrativo-colaboradores";
 
 type AtividadeApiResponse = {
   id?: string;
@@ -220,19 +220,27 @@ export async function listFuncionariosApi(apenasAtivos?: boolean): Promise<Funci
 export async function createFuncionarioApi(
   data: Omit<Funcionario, "id" | "ativo">
 ): Promise<Funcionario> {
+  const payload = {
+    ...data,
+    notificacoes: serializeFuncionarioNotificacoes(data.notificacoes),
+  };
   const response = await apiRequest<FuncionarioApiResponse>({
     path: "/api/v1/administrativo/funcionarios",
     method: "POST",
-    body: data,
+    body: payload,
   });
   return normalizeFuncionarioRecord(response, data.tenantId);
 }
 
 export async function updateFuncionarioApi(id: string, data: Partial<Funcionario>): Promise<Funcionario> {
+  const payload = {
+    ...data,
+    notificacoes: serializeFuncionarioNotificacoes(data.notificacoes),
+  };
   const response = await apiRequest<FuncionarioApiResponse>({
     path: `/api/v1/administrativo/funcionarios/${id}`,
     method: "PUT",
-    body: data,
+    body: payload,
   });
   return normalizeFuncionarioRecord(response, data.tenantId);
 }

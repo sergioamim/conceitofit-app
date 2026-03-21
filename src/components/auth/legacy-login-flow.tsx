@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,20 +13,29 @@ import type { Tenant } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { resolvePostLoginPath } from "@/lib/auth-redirect";
 
+type LegacyLoginFormValues = {
+  username: string;
+  password: string;
+};
+
 export function LegacyLoginFlow({
   nextPath,
 }: {
   nextPath?: string | null;
 }) {
   const router = useRouter();
-  const [username, setUsername] = useState("admin@academia.local");
-  const [password, setPassword] = useState("12345678");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState<"LOGIN" | "TENANT">("LOGIN");
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState("");
-  const resolvedNextPath = resolvePostLoginPath(nextPath);
+  const resolvedNextPath = useMemo(() => resolvePostLoginPath(nextPath), [nextPath]);
+  const { register, handleSubmit, reset } = useForm<LegacyLoginFormValues>({
+    defaultValues: {
+      username: "admin@academia.local",
+      password: "12345678",
+    },
+  });
 
   useEffect(() => {
     if (getAccessToken()) {
@@ -33,12 +43,20 @@ export function LegacyLoginFlow({
     }
   }, [resolvedNextPath, router]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    if (step === "LOGIN") {
+      reset({
+        username: "admin@academia.local",
+        password: "12345678",
+      });
+    }
+  }, [reset, step]);
+
+  async function onSubmit(values: LegacyLoginFormValues) {
     setSaving(true);
     setError(null);
     try {
-      await loginApi({ email: username.trim(), password });
+      await loginApi({ email: values.username.trim(), password: values.password });
       const context = await getTenantContextApi();
       const activeTenants = context.unidadesDisponiveis.filter((item) => item.ativo !== false);
       const preferredTenantId = getPreferredTenantId();
@@ -91,32 +109,18 @@ export function LegacyLoginFlow({
         </CardHeader>
         <CardContent>
           {step === "LOGIN" ? (
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="login-username">
                   Usuário
                 </label>
-                <Input
-                  id="login-username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  required
-                />
+                <Input id="login-username" type="text" autoComplete="username" required {...register("username", { required: true })} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="login-password">
                   Senha
                 </label>
-                <Input
-                  id="login-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                />
+                <Input id="login-password" type="password" autoComplete="current-password" required {...register("password", { required: true })} />
               </div>
               {error ? <p className="text-sm text-red-500">{error}</p> : null}
               <Button type="submit" className="w-full" disabled={saving}>

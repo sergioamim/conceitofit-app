@@ -6,6 +6,12 @@ Este arquivo define guardrails para agentes de IA neste repositório.
 - Responder e documentar em pt-BR, salvo pedido explícito diferente.
 - Antes de editar, manter consistência com os padrões já existentes do projeto.
 
+## Formulários
+- Por padrão, todo formulário novo ou refatorado deve usar `react-hook-form`.
+- Evitar formulários controlados manualmente com `useState` campo a campo, exceto quando houver justificativa técnica clara e documentada na resposta.
+- Ao alterar formulários existentes, preferir convergir para `react-hook-form` em vez de introduzir um segundo padrão.
+- Se houver validação de esquema no projeto, integrar `react-hook-form` com o resolvedor já adotado pelo código existente, mantendo consistência com o padrão local.
+
 ## Next.js / React: Hydration Safety
 - Nunca usar `Date.now()`, `Math.random()`, `new Date()`, `crypto.randomUUID()`, UUIDs aleatórios ou qualquer valor mutável durante `render`, `useMemo` de primeiro render, `useState(initializer)` SSR-compartilhado ou JSX que participa da hidratação.
 - Nunca formatar datas no `render` com locale/timezone implícito quando o valor puder ser renderizado no servidor e no cliente. Se a formatação depender do navegador:

@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 53, 57
+**Dependencies:** 53 ✓, 57 ✓
 
 **Priority:** high
 
@@ -23,7 +23,7 @@ Cobrir navegação, listagens, detalhe e filtros da área administrativa de usu�
 ### 58.1. Atualizar listagem de usuários para o contexto de Rede
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Fazer a tela principal operar por rede e não por visão global implícita.
 
@@ -34,7 +34,7 @@ Revisar filtros, cabeçalhos, colunas e navegação para exibir claramente a red
 ### 58.2. Exibir identificadores de login e origem do acesso no detalhe do usuário
 
 **Status:** done  
-**Dependencies:** 58.1
+**Dependencies:** 58.1  
 
 Dar visibilidade para email, CPF e escopos sem expor jargão excessivo.
 
@@ -45,7 +45,7 @@ Adicionar blocos de detalhe mostrando identificadores de login, escopo efetivo, 
 ### 58.3. Refletir unidade-base, unidade ativa e vínculos operacionais nas superfícies administrativas
 
 **Status:** done  
-**Dependencies:** 58.1, 58.2
+**Dependencies:** 58.1, 58.2  
 
 Ajudar o gestor a entender onde o usuário atua de fato.
 
@@ -56,7 +56,7 @@ Mostrar quando o cadastro pertence a uma unidade-base, quais unidades adicionais
 ### 58.4. Ajustar filtros, pesquisa e estados vazios ao novo modelo rede-unidade
 
 **Status:** done  
-**Dependencies:** 58.1, 58.2
+**Dependencies:** 58.1, 58.2  
 
 Evitar ambiguidade quando a mesma pessoa existir em redes diferentes.
 
@@ -67,7 +67,7 @@ Revisar busca por identificador, filtros por escopo e mensagens de empty state p
 ### 58.5. Preparar a UI para leituras gerenciais agregadas por Grupo sem confundir escopo operacional
 
 **Status:** done  
-**Dependencies:** 58.2, 58.4
+**Dependencies:** 58.2, 58.4  
 
 Diferenciar visão gerencial de permissão operacional.
 
@@ -78,7 +78,7 @@ Adicionar espaços ou componentes próprios para agregações gerenciais por gru
 ### 58.6. Cobrir a nova área administrativa de usuários com regressão funcional
 
 **Status:** done  
-**Dependencies:** 58.3, 58.4, 58.5
+**Dependencies:** 58.3, 58.4, 58.5  
 
 Validar filtros, detalhes e leitura dos novos conceitos.
 

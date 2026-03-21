@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 62, 63
+**Dependencies:** 62 ✓, 63 ✓
 
 **Priority:** medium
 
@@ -23,7 +23,7 @@ Validar tipagem compilando as superfícies de auth/bootstrap e revisar renderiza
 ### 64.1. Atualizar tipos compartilhados de auth e academia
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Refletir `subdominio` nos tipos consumidos pelo frontend.
 
@@ -34,7 +34,7 @@ Revisar `src/lib/types.ts`, schemas, DTOs locais e contratos de bootstrap/academ
 ### 64.2. Revisar stores e session bootstrap
 
 **Status:** done  
-**Dependencies:** 1
+**Dependencies:** 64.1  
 
 Garantir que a sessão carregue e preserve a rede corretamente.
 
@@ -45,7 +45,7 @@ Verificar stores, context providers e leitura de bootstrap para manter o `subdom
 ### 64.3. Trocar terminologia legada na UI
 
 **Status:** done  
-**Dependencies:** 1
+**Dependencies:** 64.1  
 
 Remover o termo `slug` das superfícies relacionadas a rede.
 

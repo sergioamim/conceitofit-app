@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import {
   getAccessNetworkContextApi,
@@ -23,6 +24,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type FlowMode = "login" | "recovery" | "first-access";
 type LoginStep = "LOGIN" | "TENANT";
+
+type LoginFormValues = {
+  identifier: string;
+  password: string;
+};
+
+type CredentialFormValues = {
+  identifier: string;
+};
+
+type TenantStepFormValues = {
+  tenantId: string;
+};
 
 function buildTitle(mode: FlowMode) {
   switch (mode) {
@@ -60,14 +74,27 @@ export function NetworkAccessFlow({
   const [context, setContext] = useState<AccessNetworkContext | null>(null);
   const [contextError, setContextError] = useState<string | null>(null);
   const [loadingContext, setLoadingContext] = useState(true);
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState<LoginStep>("LOGIN");
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
-  const [tenantId, setTenantId] = useState("");
+  const loginForm = useForm<LoginFormValues>({
+    defaultValues: {
+      identifier: "",
+      password: "",
+    },
+  });
+  const credentialForm = useForm<CredentialFormValues>({
+    defaultValues: {
+      identifier: "",
+    },
+  });
+  const tenantForm = useForm<TenantStepFormValues>({
+    defaultValues: {
+      tenantId: "",
+    },
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -103,22 +130,38 @@ export function NetworkAccessFlow({
     }
   }, [mode, resolvedNextPath, router]);
 
+  useEffect(() => {
+    loginForm.reset({
+      identifier: "",
+      password: "",
+    });
+    credentialForm.reset({
+      identifier: "",
+    });
+    tenantForm.reset({
+      tenantId: "",
+    });
+    setError(null);
+    setSuccessMessage(null);
+    setStep("LOGIN");
+    setTenantOptions([]);
+  }, [credentialForm, loginForm, mode, networkSubdomain, tenantForm]);
+
   async function finalizeTenantStep(targetTenantId: string) {
     await setTenantContextApi(targetTenantId);
     setPreferredTenantId(targetTenantId);
     router.push(resolvedNextPath);
   }
 
-  async function handleLoginSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleLoginSubmit(values: LoginFormValues) {
     setSaving(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
       await loginApi({
-        identifier: identifier.trim(),
-        password,
+        identifier: values.identifier.trim(),
+        password: values.password,
         redeIdentifier: networkSubdomain,
         channel: "APP",
       });
@@ -142,8 +185,9 @@ export function NetworkAccessFlow({
         }
       }
 
+      const nextTenantId = tenantContext.currentTenantId || activeTenants[0]?.id || "";
       setTenantOptions(activeTenants);
-      setTenantId(tenantContext.currentTenantId || activeTenants[0]?.id || "");
+      tenantForm.reset({ tenantId: nextTenantId });
       setStep("TENANT");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Falha ao autenticar.");
@@ -152,8 +196,7 @@ export function NetworkAccessFlow({
     }
   }
 
-  async function handleCredentialFlowSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleCredentialFlowSubmit(values: CredentialFormValues) {
     setSaving(true);
     setError(null);
     setSuccessMessage(null);
@@ -163,12 +206,12 @@ export function NetworkAccessFlow({
         mode === "recovery"
           ? await requestPasswordRecoveryApi({
               redeIdentifier: networkSubdomain,
-              identifier,
+              identifier: values.identifier.trim(),
               channel: "APP",
             })
           : await requestFirstAccessApi({
               redeIdentifier: networkSubdomain,
-              identifier,
+              identifier: values.identifier.trim(),
               channel: "APP",
             });
 
@@ -180,8 +223,8 @@ export function NetworkAccessFlow({
     }
   }
 
-  async function handleSavePreferredTenant() {
-    if (!tenantId) {
+  async function handleSavePreferredTenant(values: TenantStepFormValues) {
+    if (!values.tenantId) {
       setError("Selecione a unidade ativa para continuar.");
       return;
     }
@@ -189,7 +232,7 @@ export function NetworkAccessFlow({
     setSaving(true);
     setError(null);
     try {
-      await finalizeTenantStep(tenantId);
+      await finalizeTenantStep(values.tenantId);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Não foi possível definir a unidade ativa.");
     } finally {
@@ -234,45 +277,46 @@ export function NetworkAccessFlow({
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {loadingContext ? (
-            <p className="text-sm text-muted-foreground">Carregando contexto da rede...</p>
-          ) : null}
+          {loadingContext ? <p className="text-sm text-muted-foreground">Carregando contexto da rede...</p> : null}
 
           {!loadingContext && contextError ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-50 px-3 py-3 text-sm text-amber-900">
-              Não foi possível carregar o contexto visual da rede agora. Você ainda pode continuar e validar o
-              acesso no envio.
+              Não foi possível carregar o contexto visual da rede agora. Você ainda pode continuar e validar o acesso no envio.
             </div>
           ) : null}
 
           {step === "TENANT" ? (
-            <div className="space-y-4">
+            <form className="space-y-4" onSubmit={tenantForm.handleSubmit(handleSavePreferredTenant)}>
               <div className="space-y-2">
                 <Label>Unidade ativa da sessão</Label>
-                <Select value={tenantId || "__empty__"} onValueChange={(value) => setTenantId(value === "__empty__" ? "" : value)}>
-                  <SelectTrigger aria-label="Selecionar unidade ativa">
-                    <SelectValue placeholder="Selecione a unidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__empty__">Selecione</SelectItem>
-                    {tenantOptions.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={tenantForm.control}
+                  name="tenantId"
+                  render={({ field }) => (
+                    <Select value={field.value || "__empty__"} onValueChange={(value) => field.onChange(value === "__empty__" ? "" : value)}>
+                      <SelectTrigger aria-label="Selecionar unidade ativa">
+                        <SelectValue placeholder="Selecione a unidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__empty__">Selecione</SelectItem>
+                        {tenantOptions.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Essa seleção afeta apenas o contexto operacional atual.
-              </p>
+              <p className="text-xs text-muted-foreground">Essa seleção afeta apenas o contexto operacional atual.</p>
               {error ? <p className="text-sm text-gym-danger">{error}</p> : null}
-              <Button type="button" className="w-full" onClick={handleSavePreferredTenant} disabled={saving}>
+              <Button type="submit" className="w-full" disabled={saving}>
                 {saving ? "Confirmando..." : "Continuar"}
               </Button>
-            </div>
+            </form>
           ) : mode === "login" ? (
-            <form className="space-y-4" onSubmit={handleLoginSubmit}>
+            <form className="space-y-4" onSubmit={loginForm.handleSubmit(handleLoginSubmit)}>
               <div className="space-y-2">
                 <Label htmlFor="network-access-identifier">Identificador</Label>
                 <Input
@@ -280,11 +324,12 @@ export function NetworkAccessFlow({
                   type="text"
                   autoComplete="username"
                   placeholder="Seu e-mail ou CPF"
-                  value={identifier}
-                  onChange={(event) => setIdentifier(event.target.value)}
                   disabled={saving}
-                  required
+                  {...loginForm.register("identifier", { validate: (value) => value.trim().length > 0 || "Informe seu identificador." })}
                 />
+                {loginForm.formState.errors.identifier ? (
+                  <p className="text-xs text-gym-danger">{loginForm.formState.errors.identifier.message}</p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="network-access-password">Senha</Label>
@@ -293,11 +338,12 @@ export function NetworkAccessFlow({
                   type="password"
                   autoComplete="current-password"
                   placeholder="Digite sua senha"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
                   disabled={saving}
-                  required
+                  {...loginForm.register("password", { validate: (value) => value.trim().length > 0 || "Informe sua senha." })}
                 />
+                {loginForm.formState.errors.password ? (
+                  <p className="text-xs text-gym-danger">{loginForm.formState.errors.password.message}</p>
+                ) : null}
               </div>
               {error ? <p className="text-sm text-gym-danger">{error}</p> : null}
               <Button type="submit" className="w-full" disabled={saving}>
@@ -305,7 +351,7 @@ export function NetworkAccessFlow({
               </Button>
             </form>
           ) : (
-            <form className="space-y-4" onSubmit={handleCredentialFlowSubmit}>
+            <form className="space-y-4" onSubmit={credentialForm.handleSubmit(handleCredentialFlowSubmit)}>
               <div className="space-y-2">
                 <Label htmlFor="network-access-identifier">Identificador</Label>
                 <Input
@@ -313,11 +359,12 @@ export function NetworkAccessFlow({
                   type="text"
                   autoComplete="username"
                   placeholder="Seu e-mail ou CPF"
-                  value={identifier}
-                  onChange={(event) => setIdentifier(event.target.value)}
                   disabled={saving}
-                  required
+                  {...credentialForm.register("identifier", { validate: (value) => value.trim().length > 0 || "Informe seu identificador." })}
                 />
+                {credentialForm.formState.errors.identifier ? (
+                  <p className="text-xs text-gym-danger">{credentialForm.formState.errors.identifier.message}</p>
+                ) : null}
               </div>
               {error ? <p className="text-sm text-gym-danger">{error}</p> : null}
               {successMessage ? (
@@ -326,11 +373,7 @@ export function NetworkAccessFlow({
                 </div>
               ) : null}
               <Button type="submit" className="w-full" disabled={saving}>
-                {saving
-                  ? "Enviando..."
-                  : mode === "recovery"
-                    ? "Enviar instruções"
-                    : "Solicitar primeiro acesso"}
+                {saving ? "Enviando..." : mode === "recovery" ? "Enviar instruções" : "Solicitar primeiro acesso"}
               </Button>
             </form>
           )}

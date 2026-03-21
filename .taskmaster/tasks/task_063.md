@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 62
+**Dependencies:** 62 ✓
 
 **Priority:** high
 
@@ -23,7 +23,7 @@ Cobrir request de login e recuperação de senha verificando presença do header
 ### 63.1. Ajustar client de login
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Injetar `X-Rede-Identifier` no request de autenticação.
 
@@ -34,7 +34,7 @@ Atualizar `src/lib/api/auth.ts` ou wrapper equivalente para receber `subdominio`
 ### 63.2. Ajustar fluxo de forgot-password
 
 **Status:** done  
-**Dependencies:** 1
+**Dependencies:** 63.1  
 
 Repetir a mesma estratégia no reset de senha.
 
@@ -45,7 +45,7 @@ Garantir que `POST /backend/api/v1/auth/forgot-password` receba o mesmo header q
 ### 63.3. Remover dependências de tenant no request inicial
 
 **Status:** done  
-**Dependencies:** 1, 2
+**Dependencies:** 63.1, 63.2  
 
 Eliminar parâmetros e estados que poluem o login com escopo operacional.
 

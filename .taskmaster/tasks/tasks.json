@@ -5619,11 +5619,320 @@
         ],
         "priority": "medium",
         "subtasks": []
+      },
+      {
+        "id": 79,
+        "title": "Migrar formularios selecionados para react-hook-form",
+        "description": "Consolidar a migracao dos formularios mais aderentes ao react-hook-form em um epico unico, com uma subtask por formulario ou modal relevante.",
+        "details": "Cobrir formularios de autenticacao, jornada publica, operacionais e modais CRUD que hoje usam `useState` e validacao manual. O objetivo e padronizar registro de campos, validacao, reset, submit assincrono e integracao com componentes como `Select`, `SuggestionInput` e editores ricos sem regressao funcional nem risco de hydration.",
+        "testStrategy": "Validar cada subtask com verificacao do submit, mensagens de erro, reset entre abrir/fechar ou criar/editar, e cobertura manual ou automatizada conforme criticidade do fluxo. Ao final do epico, revisar os componentes alterados para garantir que a integracao com `react-hook-form` permaneceu consistente nos patterns do projeto.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Migrar formulario de acesso por rede para react-hook-form",
+            "description": "Substituir o gerenciamento manual de estado e validacao do login, recuperacao e primeiro acesso em `src/components/auth/network-access-flow.tsx` por react-hook-form.",
+            "details": "Aplicar react-hook-form nos campos identificador e senha, usar `Controller` nos componentes `Select` quando necessario, centralizar erros de submit e preservar a etapa de escolha de tenant com comportamento equivalente ao atual.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar login, recuperacao, primeiro acesso e etapa de tenant sem regressao de navegacao.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Migrar formulario de login legado para react-hook-form",
+            "description": "Substituir o gerenciamento manual de estado do login legado em `src/components/auth/legacy-login-flow.tsx` por react-hook-form.",
+            "details": "Usar react-hook-form para usuario e senha, manter a etapa de unidade prioritaria com integracao limpa ao fluxo atual e evitar regressao na navegacao pos-login.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar login, erro de credencial e escolha da unidade prioritaria.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Migrar formulario de cadastro publico para react-hook-form",
+            "description": "Refatorar o formulario de pre-cadastro em `src/app/(public)/adesao/cadastro/page.tsx` para react-hook-form.",
+            "details": "Mapear validacoes hoje feitas por `validateSignupDraft` para erros do form, integrar select de plano, preservar `persistDraft` e manter SSR e hydration estaveis no primeiro render.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar erros por campo, persistencia do draft e navegacao para checkout.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Migrar formulario de trial publico para react-hook-form",
+            "description": "Refatorar o formulario de trial em `src/app/(public)/adesao/trial/page.tsx` para react-hook-form.",
+            "details": "Substituir `form` e `formErrors` manuais por registro de campos, mensagens de erro por campo e submit assincrono com reset parcial conforme resultado do envio.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar erros de entrada, mensagem de sucesso e persistencia do lead.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Migrar formulario de checkout publico para react-hook-form",
+            "description": "Refatorar o fechamento digital em `src/app/(public)/adesao/checkout/page.tsx` para react-hook-form.",
+            "details": "Cobrir plano, forma de pagamento, parcelas, observacoes, flags de aceite e renovacao automatica, mantendo a montagem do payload `PublicCheckoutInput` e as regras condicionais atuais.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar montagem de payload, regras condicionais de parcelas e fluxo ate pendencias.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Migrar formulario de plano para react-hook-form",
+            "description": "Refatorar `src/components/planos/plano-form.tsx` para react-hook-form.",
+            "details": "Usar `watch`, `setValue`, `Controller` e `useFieldArray` para beneficios e atividades, preservando as abas, regras condicionais de tipo de plano e integracao com `RichTextEditor`.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar abas, listas dinamicas, regras do tipo de plano e submit final.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 7,
+            "title": "Migrar formulario de criacao de usuario por unidade para react-hook-form",
+            "description": "Refatorar o formulario Criar usuario da rede atual em `src/app/(app)/seguranca/acesso-unidade/page.tsx` para react-hook-form.",
+            "details": "Cobrir nome, email, cpf e perfis iniciais com validacao integrada a `validateAcademiaUserCreateDraft`, mantendo a dependencia do tenant efetivo e o fluxo assincrono de criacao.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar criacao, exibicao de erros e limpeza do form apos sucesso.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 8,
+            "title": "Migrar formulario de concessao de acesso por unidade para react-hook-form",
+            "description": "Refatorar o formulario Conceder acesso operacional em `src/app/(app)/seguranca/acesso-unidade/page.tsx` para react-hook-form.",
+            "details": "Integrar tenant, `SuggestionInput` e submissao com perfil padrao sem perder a busca sob demanda de usuarios nem a exibicao de mensagens globais de erro e sucesso.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar selecao de unidade, busca de usuario e concessao de acesso.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 9,
+            "title": "Migrar modal de produto para react-hook-form",
+            "description": "Refatorar `src/components/shared/produto-modal.tsx` para usar react-hook-form.",
+            "details": "Substituir estado agregado manual por `defaultValues` e `reset`, tratar parsers numericos no submit e usar `Controller` no `Select` de unidade de medida e nos toggles dependentes de estoque.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar criar, editar, reset do modal e regras de estoque.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 10,
+            "title": "Migrar modal de cargo para react-hook-form",
+            "description": "Refatorar `src/components/shared/cargo-modal.tsx` para react-hook-form.",
+            "details": "Cobrir nome e ativo com reset correto entre criar e editar e submit padronizado.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar obrigatoriedade do nome, reset e submit nos dois modos.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 11,
+            "title": "Migrar modal de funcionario para react-hook-form",
+            "description": "Refatorar `src/components/shared/funcionario-modal.tsx` para react-hook-form.",
+            "details": "Cobrir nome, cargo, ativo e `podeMinistrarAulas`, usando `Controller` para `Select` e reset consistente quando `initial` ou `open` mudar.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar criar, editar, troca de cargo e limpeza do estado do modal.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 12,
+            "title": "Migrar modal de convenio para react-hook-form",
+            "description": "Refatorar `src/components/shared/convenio-modal.tsx` para react-hook-form.",
+            "details": "Modelar nome, desconto, ativo, observacoes e `planoIds`, usando `watch` e `setValue` para multi-selecao de planos elegiveis.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar multi-selecao de planos, reset entre modos e submit final.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 13,
+            "title": "Migrar modal de servico para react-hook-form",
+            "description": "Refatorar `src/components/shared/servico-modal.tsx` para react-hook-form.",
+            "details": "Cobrir campos numericos, flags booleanas e regras condicionais de tipo de cobranca recorrente, reduzindo parsing e reset manuais.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar tipos de cobranca, valores numericos e reset ao reabrir o modal.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 14,
+            "title": "Migrar modal de exercicio para react-hook-form",
+            "description": "Refatorar `src/components/shared/exercicio-modal.tsx` para react-hook-form.",
+            "details": "Cobrir nome, grupo muscular, equipamento, video, unidade, descricao e ativo, com reset confiavel entre criacao e edicao.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar criar, editar, obrigatoriedade do nome e persistencia do grupo muscular.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 15,
+            "title": "Migrar modal legado de plano para react-hook-form",
+            "description": "Refatorar `src/components/shared/plano-modal.tsx` para react-hook-form.",
+            "details": "Modelar campos do plano, beneficios e atividades com `watch` e `useFieldArray`, preservando regras condicionais e fluxo de criar e editar.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar listas dinamicas, reset do modal e submit nos dois modos.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 16,
+            "title": "Migrar modal de sala para react-hook-form",
+            "description": "Refatorar `src/components/shared/sala-modal.tsx` para react-hook-form.",
+            "details": "Substituir o estado manual do modal por form controlado com reset consistente e validacao de campos obrigatorios.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar abrir, editar, fechar e submit com campos obrigatorios.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 17,
+            "title": "Migrar modal de forma de pagamento para react-hook-form",
+            "description": "Refatorar `src/components/shared/forma-pagamento-modal.tsx` para react-hook-form.",
+            "details": "Padronizar validacao, reset e submit do CRUD de forma de pagamento sem alterar o comportamento funcional.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar criar, editar e reset do modal sem regressao funcional.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 18,
+            "title": "Migrar modal de bandeira de cartao para react-hook-form",
+            "description": "Refatorar `src/components/shared/bandeira-cartao-modal.tsx` para react-hook-form.",
+            "details": "Cobrir criacao e edicao de bandeira com campos registrados e submit padronizado.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar obrigatoriedade de campos e reset do modal em criar e editar.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 19,
+            "title": "Migrar modal de novo voucher para react-hook-form",
+            "description": "Refatorar `src/components/shared/novo-voucher-modal.tsx` para react-hook-form.",
+            "details": "Cobrir regras condicionais de periodo, quantidade, flags e codigo customizado usando `watch` e `Controller`, reduzindo a quantidade de estados locais.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar cenarios com prazo, ilimitado, codigo customizado e submit com feedback.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 20,
+            "title": "Migrar modal de edicao de voucher para react-hook-form",
+            "description": "Refatorar `src/components/shared/editar-voucher-modal.tsx` para react-hook-form.",
+            "details": "Aplicar a mesma base do novo voucher para fluxo de edicao, com `reset` por `initial` e validacao consistente.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar reabertura com dados preenchidos, alteracoes condicionais e submit.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 21,
+            "title": "Migrar modal de novo cartao para react-hook-form",
+            "description": "Refatorar `src/components/shared/novo-cartao-modal.tsx` para react-hook-form.",
+            "details": "Integrar mascaras e validacoes de numero, validade, CPF e bandeira dentro do fluxo do form, mantendo deteccao visual da bandeira e mensagens de erro.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar cartao valido, invalido, titular externo e deteccao de bandeira.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 22,
+            "title": "Migrar modal de nova matricula para react-hook-form",
+            "description": "Refatorar `src/components/shared/nova-matricula-modal.tsx` para react-hook-form.",
+            "details": "Cobrir aluno, plano, data, desconto, renovacao, parcelas e flags de pagamento com validacao e regras condicionais centralizadas.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar variacoes de plano, pagamento pendente, desconto e submit.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 23,
+            "title": "Migrar modal de recebimento de pagamento para react-hook-form",
+            "description": "Refatorar `src/components/shared/receber-pagamento-modal.tsx` para react-hook-form.",
+            "details": "Substituir controle manual de data e observacoes por form registrado, preservando submit e feedback atuais.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar data padrao, observacoes, submit e limpeza do estado apos fechar.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 24,
+            "title": "Migrar formulario de tarefas CRM para react-hook-form",
+            "description": "Refatorar o formulario principal de `src/app/(app)/crm/tarefas/page.tsx` para react-hook-form.",
+            "details": "Cobrir criacao e edicao de tarefa, campos de vencimento, selects e textarea, mantendo `resetForm`, filtros independentes e tratamento de erros do backend.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar criar, editar, concluir tarefa e erros retornados pelo backend.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 25,
+            "title": "Migrar formulario de criacao de usuario global para react-hook-form",
+            "description": "Refatorar o formulario de criacao em `src/app/(backoffice)/admin/seguranca/usuarios/page.tsx` para react-hook-form.",
+            "details": "Cobrir escopo, academia, tenants, perfil inicial e flags globais com `watch` e `Controller`, reduzindo o estado manual `createForm` e facilitando validacao.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar filtros de escopo, tenant default, selecao de unidades e criacao com feedback.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 26,
+            "title": "Migrar formularios de RBAC para react-hook-form",
+            "description": "Refatorar os formularios operacionais de `src/app/(app)/seguranca/rbac/page.tsx` para react-hook-form.",
+            "details": "Separar cada fluxo de atribuicao e concessao em forms independentes com validacao e submit padronizados, mantendo a logica de carregamento atual.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar atribuicoes, grants, erros de permissao e estados de carregamento por formulario.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          },
+          {
+            "id": 27,
+            "title": "Migrar formulario de criacao de colaborador administrativo para react-hook-form",
+            "description": "Refatorar o formulario de criacao em `src/app/(app)/administrativo/funcionarios/page.tsx` para react-hook-form.",
+            "details": "Substituir o estado manual do formulario de colaborador por react-hook-form, com integracao limpa aos modais auxiliares e validacoes existentes.",
+            "status": "pending",
+            "dependencies": [],
+            "testStrategy": "Validar criacao de colaborador, erros de entrada e integracao com modais auxiliares.",
+            "parentTaskId": 79,
+            "parentId": "undefined"
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2026-03-18T15:32:36.203Z",
-      "updated": "2026-03-20T19:19:52.404Z",
+      "updated": "2026-03-21T00:15:48.266Z",
       "description": "Tasks for master context"
     }
   }

@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 56
+**Dependencies:** 56 ✓
 
 **Priority:** high
 
@@ -23,7 +23,7 @@ Cobrir bootstrap, troca de contexto e navegação autenticada com testes de inte
 ### 57.1. Atualizar o bootstrap autenticado para receber rede, unidade-base e tenant ativo
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Consumir a nova carga mínima do backend após o login.
 
@@ -34,7 +34,7 @@ Revisar a hidratação inicial da sessão para armazenar rede corrente, unidade-
 ### 57.2. Separar no estado global `tenantId` estrutural e `activeTenantId` de sessão
 
 **Status:** done  
-**Dependencies:** 57.1
+**Dependencies:** 57.1  
 
 Evitar que a UI trate a unidade-base como contexto temporário.
 
@@ -45,7 +45,7 @@ Refatorar stores, contextos e hooks para que a unidade-base continue visível co
 ### 57.3. Ajustar guards, providers e resolução de contexto para o tenant ativo
 
 **Status:** done  
-**Dependencies:** 57.2
+**Dependencies:** 57.2  
 
 Fazer toda a aplicação autenticada usar a unidade ativa correta.
 
@@ -56,7 +56,7 @@ Revisar interceptors, providers de contexto, persistência local e guards de rot
 ### 57.4. Exibir na UI a distinção entre unidade-base e unidade ativa quando necessário
 
 **Status:** done  
-**Dependencies:** 57.1, 57.2
+**Dependencies:** 57.1, 57.2  
 
 Dar clareza de produto sem poluir a experiência principal.
 
@@ -67,7 +67,7 @@ Adicionar labels, tooltips ou resumos discretos nos pontos críticos para explic
 ### 57.5. Implementar a troca do tenant ativo da sessão usando o novo contrato
 
 **Status:** done  
-**Dependencies:** 57.2, 57.3
+**Dependencies:** 57.2, 57.3  
 
 Permitir mudança controlada do contexto operacional no frontend.
 
@@ -78,7 +78,7 @@ Consumir o endpoint de troca de tenant ativo, atualizar caches, invalidar consul
 ### 57.6. Cobrir regressão do bootstrap e troca de contexto
 
 **Status:** done  
-**Dependencies:** 57.3, 57.4, 57.5
+**Dependencies:** 57.3, 57.4, 57.5  
 
 Garantir estabilidade do estado autenticado no novo modelo.
 

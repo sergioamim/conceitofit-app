@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,132 +47,128 @@ export function ExercicioModal({
   gruposMusculares: GrupoMuscular[];
   initial?: Exercicio | null;
 }) {
-  const [form, setForm] = useState<ExercicioForm>(() => toFormState(initial));
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ExercicioForm>({
+    defaultValues: toFormState(initial),
+  });
 
-  async function handleSave() {
-    if (!form.nome.trim()) return;
-    const grupo = gruposMusculares.find((item) => item.id === form.grupoMuscularId);
+  useEffect(() => {
+    reset(toFormState(initial));
+  }, [initial, open, reset]);
+
+  async function handleSave(values: ExercicioForm) {
+    const nome = values.nome.trim();
+    if (!nome) return;
+    const grupo = gruposMusculares.find((item) => item.id === values.grupoMuscularId);
     await onSave({
-      ...form,
-      nome: form.nome.trim(),
+      ...values,
+      nome,
       grupoMuscularId: grupo?.id,
       grupoMuscular: grupo?.nome,
       grupoMuscularNome: grupo?.nome,
-      equipamento: form.equipamento?.trim() || undefined,
-      descricao: form.descricao?.trim() || undefined,
-      videoUrl: form.videoUrl?.trim() || undefined,
-      unidade: form.unidade?.trim() || undefined,
-      ativo: form.ativo ?? true,
+      equipamento: values.equipamento?.trim() || undefined,
+      descricao: values.descricao?.trim() || undefined,
+      videoUrl: values.videoUrl?.trim() || undefined,
+      unidade: values.unidade?.trim() || undefined,
+      ativo: values.ativo ?? true,
     });
     onClose();
   }
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
       <DialogContent className="border-border bg-card sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">
-            {form.id ? "Editar exercício" : "Novo exercício"}
+            {initial?.id ? "Editar exercício" : "Novo exercício"}
           </DialogTitle>
           <DialogDescription>
             Cadastre exercícios referenciando o grupo muscular canônico do catálogo.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="exercicio-nome">Nome *</Label>
-            <Input
-              id="exercicio-nome"
-              value={form.nome}
-              onChange={(event) => setForm((current) => ({ ...current, nome: event.target.value }))}
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
+        <form onSubmit={handleSubmit(handleSave)}>
+          <div className="grid gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="exercicio-grupo">Grupo muscular</Label>
-              <select
-                id="exercicio-grupo"
-                value={form.grupoMuscularId ?? ""}
-                onChange={(event) => {
-                  const grupo = gruposMusculares.find((item) => item.id === event.target.value);
-                  setForm((current) => ({
-                    ...current,
-                    grupoMuscularId: grupo?.id,
-                    grupoMuscular: grupo?.nome,
-                    grupoMuscularNome: grupo?.nome,
-                  }));
-                }}
-                className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
-              >
-                <option value="">Sem grupo</option>
-                {gruposMusculares.map((grupo) => (
-                  <option key={grupo.id} value={grupo.id}>
-                    {grupo.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="exercicio-equipamento">Equipamento</Label>
+              <Label htmlFor="exercicio-nome">Nome *</Label>
               <Input
-                id="exercicio-equipamento"
-                value={form.equipamento || ""}
-                onChange={(event) => setForm((current) => ({ ...current, equipamento: event.target.value }))}
-                placeholder="Ex.: Halter, banco, barra"
+                id="exercicio-nome"
+                {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome do exercício." })}
               />
+              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
             </div>
-          </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="exercicio-grupo">Grupo muscular</Label>
+                <Controller
+                  control={control}
+                  name="grupoMuscularId"
+                  render={({ field }) => (
+                    <select
+                      id="exercicio-grupo"
+                      value={field.value ?? ""}
+                      onChange={(event) => field.onChange(event.target.value || undefined)}
+                      className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
+                    >
+                      <option value="">Sem grupo</option>
+                      {gruposMusculares.map((grupo) => (
+                        <option key={grupo.id} value={grupo.id}>
+                          {grupo.nome}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="exercicio-equipamento">Equipamento</Label>
+                <Input id="exercicio-equipamento" {...register("equipamento")} placeholder="Ex.: Halter, banco, barra" />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="exercicio-video">Vídeo / referência</Label>
+                <Input id="exercicio-video" {...register("videoUrl")} placeholder="https://..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="exercicio-unidade">Unidade da carga</Label>
+                <Input id="exercicio-unidade" {...register("unidade")} placeholder="kg, repetições, segundos..." />
+              </div>
+            </div>
+
             <div className="space-y-1.5">
-              <Label htmlFor="exercicio-video">Vídeo / referência</Label>
-              <Input
-                id="exercicio-video"
-                value={form.videoUrl || ""}
-                onChange={(event) => setForm((current) => ({ ...current, videoUrl: event.target.value }))}
-                placeholder="https://..."
-              />
+              <Label htmlFor="exercicio-descricao">Descrição</Label>
+              <Textarea id="exercicio-descricao" {...register("descricao")} className="min-h-20" />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="exercicio-unidade">Unidade da carga</Label>
-              <Input
-                id="exercicio-unidade"
-                value={form.unidade || ""}
-                onChange={(event) => setForm((current) => ({ ...current, unidade: event.target.value }))}
-                placeholder="kg, repetições, segundos..."
-              />
-            </div>
+
+            <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+              <input type="checkbox" {...register("ativo")} />
+              Exercício ativo
+            </label>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="exercicio-descricao">Descrição</Label>
-            <Textarea
-              id="exercicio-descricao"
-              value={form.descricao || ""}
-              onChange={(event) => setForm((current) => ({ ...current, descricao: event.target.value }))}
-              className="min-h-20"
-            />
-          </div>
-
-          <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={form.ativo ?? true}
-              onChange={(event) => setForm((current) => ({ ...current, ativo: event.target.checked }))}
-            />
-            Exercício ativo
-          </label>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="border-border">
-            Cancelar
-          </Button>
-          <Button onClick={handleSave}>{form.id ? "Salvar exercício" : "Criar exercício"}</Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="border-border">
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {initial?.id ? "Salvar exercício" : "Criar exercício"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

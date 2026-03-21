@@ -1,22 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { listPlanosApi } from "@/lib/api/comercial-catalogo";
@@ -47,6 +36,40 @@ export interface NovoVoucherPayload {
   aplicarEm: VoucherAplicarEm[];
 }
 
+type NovoVoucherFormValues = {
+  escopo: VoucherEscopo;
+  tipo: string;
+  nome: string;
+  periodoInicio: string;
+  periodoFim: string;
+  prazoDeterminado: boolean;
+  quantidade: string;
+  ilimitada: boolean;
+  codigoTipo: VoucherCodeType;
+  codigoUnicoCustom: string;
+  usarNaVenda: boolean;
+  planoIds: string[];
+  umaVezPorCliente: boolean;
+  aplicarEm: VoucherAplicarEm[];
+};
+
+const DEFAULT_VALUES: NovoVoucherFormValues = {
+  escopo: "UNIDADE",
+  tipo: "",
+  nome: "",
+  periodoInicio: "",
+  periodoFim: "",
+  prazoDeterminado: true,
+  quantidade: "",
+  ilimitada: false,
+  codigoTipo: "UNICO",
+  codigoUnicoCustom: "",
+  usarNaVenda: false,
+  planoIds: [],
+  umaVezPorCliente: false,
+  aplicarEm: ["CONTRATO"],
+};
+
 export function NovoVoucherModal({
   open,
   onClose,
@@ -59,26 +82,25 @@ export function NovoVoucherModal({
   tenantId?: string;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
-
-  // ─── Step 1 state ─────────────────────────────────────────
-  const [tipo, setTipo] = useState("");
-  const [escopo, setEscopo] = useState<VoucherEscopo>("UNIDADE");
-  const [nome, setNome] = useState("");
-  const [periodoInicio, setPeriodoInicio] = useState("");
-  const [periodoFim, setPeriodoFim] = useState("");
-  const [prazoDeterminado, setPrazoDeterminado] = useState(true);
-  const [quantidade, setQuantidade] = useState("");
-  const [ilimitada, setIlimitada] = useState(false);
-  const [codigoTipo, setCodigoTipo] = useState<VoucherCodeType>("UNICO");
-  const [codigoUnicoCustom, setCodigoUnicoCustom] = useState("");
-  const [usarNaVenda, setUsarNaVenda] = useState(false);
-  const [planoIds, setPlanoIds] = useState<string[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // ─── Step 2 state ─────────────────────────────────────────
-  const [umaVezPorCliente, setUmaVezPorCliente] = useState(false);
-  const [aplicarEm, setAplicarEm] = useState<VoucherAplicarEm[]>(["CONTRATO"]);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    clearErrors,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm<NovoVoucherFormValues>({
+    defaultValues: DEFAULT_VALUES,
+  });
+  const prazoDeterminado = useWatch({ control, name: "prazoDeterminado" });
+  const ilimitada = useWatch({ control, name: "ilimitada" });
+  const codigoTipo = useWatch({ control, name: "codigoTipo" });
+  const tipo = useWatch({ control, name: "tipo" });
+  const planoIds = useWatch({ control, name: "planoIds" }) ?? [];
+  const aplicarEm = useWatch({ control, name: "aplicarEm" }) ?? [];
 
   useEffect(() => {
     if (!open || !tenantId) return;
@@ -87,21 +109,8 @@ export function NovoVoucherModal({
 
   function resetAll() {
     setStep(1);
-    setTipo("");
-    setEscopo("UNIDADE");
-    setNome("");
-    setPeriodoInicio("");
-    setPeriodoFim("");
-    setPrazoDeterminado(true);
-    setQuantidade("");
-    setIlimitada(false);
-    setCodigoTipo("UNICO");
-    setCodigoUnicoCustom("");
-    setUsarNaVenda(false);
-    setPlanoIds([]);
-    setErrors({});
-    setUmaVezPorCliente(false);
-    setAplicarEm(["CONTRATO"]);
+    reset(DEFAULT_VALUES);
+    clearErrors();
   }
 
   function handleClose() {
@@ -109,68 +118,64 @@ export function NovoVoucherModal({
     onClose();
   }
 
-  function handleProximo() {
+  function handleProximo(values: NovoVoucherFormValues) {
+    clearErrors();
     const nextErrors: Record<string, string> = {};
-    if (!tipo) nextErrors.tipo = "Selecione o tipo de voucher";
-    if (!nome.trim()) nextErrors.nome = "Informe o nome do voucher";
-    if (!periodoInicio) nextErrors.periodoInicio = "Informe a data de início";
-    if (prazoDeterminado && !periodoFim) nextErrors.periodoFim = "Informe a data de término";
-    if (!ilimitada && !quantidade) {
-      nextErrors.quantidade = "Informe a quantidade ou marque ilimitada";
-    }
-    if (codigoTipo === "UNICO" && !codigoUnicoCustom.trim()) {
-      nextErrors.codigoUnicoCustom = "Digite o código único do voucher";
-    }
+    if (!values.tipo) nextErrors.tipo = "Selecione o tipo de voucher";
+    if (!values.nome.trim()) nextErrors.nome = "Informe o nome do voucher";
+    if (!values.periodoInicio) nextErrors.periodoInicio = "Informe a data de início";
+    if (values.prazoDeterminado && !values.periodoFim) nextErrors.periodoFim = "Informe a data de término";
+    if (!values.ilimitada && !values.quantidade) nextErrors.quantidade = "Informe a quantidade ou marque ilimitada";
+    if (values.codigoTipo === "UNICO" && !values.codigoUnicoCustom.trim()) nextErrors.codigoUnicoCustom = "Digite o código único do voucher";
     if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
+      Object.entries(nextErrors).forEach(([field, message]) => {
+        setError(field as keyof NovoVoucherFormValues, { type: "manual", message });
+      });
       return;
     }
-    setErrors({});
     setStep(2);
   }
 
-  function handleGerar() {
+  function handleGerar(values: NovoVoucherFormValues) {
     onNext({
-      escopo,
-      tipo,
-      nome: nome.trim(),
-      periodoInicio,
-      periodoFim: prazoDeterminado ? periodoFim : undefined,
-      prazoDeterminado,
-      quantidade: ilimitada ? undefined : Number(quantidade),
-      ilimitado: ilimitada,
-      codigoTipo,
-      codigoUnicoCustom:
-        codigoTipo === "UNICO" ? codigoUnicoCustom.trim().toUpperCase() : undefined,
-      usarNaVenda,
-      planoIds,
-      umaVezPorCliente,
-      aplicarEm,
+      escopo: values.escopo,
+      tipo: values.tipo,
+      nome: values.nome.trim(),
+      periodoInicio: values.periodoInicio,
+      periodoFim: values.prazoDeterminado ? values.periodoFim : undefined,
+      prazoDeterminado: values.prazoDeterminado,
+      quantidade: values.ilimitada ? undefined : Number(values.quantidade),
+      ilimitado: values.ilimitada,
+      codigoTipo: values.codigoTipo,
+      codigoUnicoCustom: values.codigoTipo === "UNICO" ? values.codigoUnicoCustom.trim().toUpperCase() : undefined,
+      usarNaVenda: values.usarNaVenda,
+      planoIds: values.planoIds,
+      umaVezPorCliente: values.umaVezPorCliente,
+      aplicarEm: values.aplicarEm,
     });
     resetAll();
   }
 
   function togglePlano(id: string) {
-    setPlanoIds((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    setValue(
+      "planoIds",
+      planoIds.includes(id) ? planoIds.filter((item) => item !== id) : [...planoIds, id],
+      { shouldDirty: true }
     );
   }
 
   function toggleAplicarEm(value: VoucherAplicarEm) {
-    setAplicarEm((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    setValue(
+      "aplicarEm",
+      aplicarEm.includes(value) ? aplicarEm.filter((item) => item !== value) : [...aplicarEm, value],
+      { shouldDirty: true }
     );
   }
 
-  const todosPlanosSelecionados =
-    planos.length > 0 && planoIds.length === planos.length;
+  const todosPlanosSelecionados = planos.length > 0 && planoIds.length === planos.length;
 
   function toggleTodosPlanos() {
-    if (todosPlanosSelecionados) {
-      setPlanoIds([]);
-    } else {
-      setPlanoIds(planos.map((p) => p.id));
-    }
+    setValue("planoIds", todosPlanosSelecionados ? [] : planos.map((plano) => plano.id), { shouldDirty: true });
   }
 
   const TIPO_LABEL: Record<string, string> = {
@@ -180,26 +185,17 @@ export function NovoVoucherModal({
   };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) handleClose();
-      }}
-    >
-      <DialogContent className="bg-card border-border max-w-lg">
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); }}>
+      <DialogContent className="max-w-lg border-border bg-card">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">
             Novo voucher
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              Passo {step} de 2
-            </span>
+            <span className="ml-2 text-sm font-normal text-muted-foreground">Passo {step} de 2</span>
           </DialogTitle>
         </DialogHeader>
 
-        {/* ─── STEP 1 ─── */}
-        {step === 1 && (
-          <div className="max-h-[65vh] overflow-y-auto space-y-5 pr-1">
-            {/* Tipo */}
+        {step === 1 ? (
+          <form className="max-h-[65vh] space-y-5 overflow-y-auto pr-1" onSubmit={handleSubmit(handleProximo)}>
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <span>Escopo</span>
@@ -207,18 +203,12 @@ export function NovoVoucherModal({
                   <HelpCircle className="size-4 text-muted-foreground" />
                 </HoverPopover>
               </div>
-              <Select value={escopo} onValueChange={(v) => setEscopo(v as VoucherEscopo)}>
-                <SelectTrigger className="w-full bg-secondary border-border text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  <SelectItem value="UNIDADE">Apenas esta unidade</SelectItem>
-                  <SelectItem value="GRUPO">Grupo (rede inteira)</SelectItem>
-                </SelectContent>
-              </Select>
+              <select {...register("escopo")} className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm">
+                <option value="UNIDADE">Apenas esta unidade</option>
+                <option value="GRUPO">Grupo (rede inteira)</option>
+              </select>
             </div>
 
-            {/* Tipo */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <span>Tipo de voucher *</span>
@@ -226,24 +216,28 @@ export function NovoVoucherModal({
                   <HelpCircle className="size-4 text-muted-foreground" />
                 </HoverPopover>
               </div>
-              <Select value={tipo} onValueChange={(v) => setTipo(v)}>
-                <SelectTrigger className="w-full bg-secondary border-border text-sm">
-                  <SelectValue placeholder="Selecione o tipo de voucher" />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  {VOUCHER_TYPES.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.tipo && (
-                <p className="text-xs text-gym-danger">{errors.tipo}</p>
-              )}
+              <Controller
+                control={control}
+                name="tipo"
+                render={({ field }) => (
+                  <Select value={field.value || "__none__"} onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}>
+                    <SelectTrigger className="w-full border-border bg-secondary text-sm">
+                      <SelectValue placeholder="Selecione o tipo de voucher" />
+                    </SelectTrigger>
+                    <SelectContent className="border-border bg-card">
+                      <SelectItem value="__none__">Selecione</SelectItem>
+                      {VOUCHER_TYPES.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.tipo ? <p className="text-xs text-gym-danger">{errors.tipo.message}</p> : null}
             </div>
 
-            {/* Nome */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <span>Nome do voucher *</span>
@@ -251,358 +245,145 @@ export function NovoVoucherModal({
                   <Info className="size-4 text-muted-foreground" />
                 </HoverPopover>
               </div>
-              <Input
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                className="bg-secondary border-border"
-                placeholder="Digite o nome do voucher"
-              />
-              {errors.nome && (
-                <p className="text-xs text-gym-danger">{errors.nome}</p>
-              )}
+              <Input {...register("nome")} className="border-border bg-secondary" placeholder="Digite o nome do voucher" />
+              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
             </div>
 
-            {/* Período de validade */}
             <div className="space-y-3 rounded-xl border border-border bg-secondary/40 p-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Período de validade
-                </p>
-                <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!prazoDeterminado}
-                    onChange={(e) => setPrazoDeterminado(!e.target.checked)}
-                  />
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Período de validade</p>
+                <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={!prazoDeterminado} onChange={(event) => setValue("prazoDeterminado", !event.target.checked)} />
                   Prazo indeterminado
                 </label>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Início *
                     <Calendar className="size-3.5" />
                   </label>
-                  <Input
-                    type="date"
-                    value={periodoInicio}
-                    onChange={(e) => setPeriodoInicio(e.target.value)}
-                    className="bg-background border-border"
-                  />
-                  {errors.periodoInicio && (
-                    <p className="text-xs text-gym-danger">{errors.periodoInicio}</p>
-                  )}
+                  <Input type="date" {...register("periodoInicio")} className="border-border bg-background" />
+                  {errors.periodoInicio ? <p className="text-xs text-gym-danger">{errors.periodoInicio.message}</p> : null}
                 </div>
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Término {prazoDeterminado ? "*" : ""}
                     <Calendar className="size-3.5" />
                   </label>
-                  <Input
-                    type="date"
-                    value={periodoFim}
-                    onChange={(e) => setPeriodoFim(e.target.value)}
-                    disabled={!prazoDeterminado}
-                    className="bg-background border-border disabled:opacity-40"
-                  />
-                  {errors.periodoFim && (
-                    <p className="text-xs text-gym-danger">{errors.periodoFim}</p>
-                  )}
+                  <Input type="date" {...register("periodoFim")} disabled={!prazoDeterminado} className="border-border bg-background disabled:opacity-40" />
+                  {errors.periodoFim ? <p className="text-xs text-gym-danger">{errors.periodoFim.message}</p> : null}
                 </div>
               </div>
             </div>
 
-            {/* Quantidade */}
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Quantidade *
-                <HoverPopover content="Quantidade máxima de vouchers que podem ser emitidos.">
-                  <Info className="size-4 text-muted-foreground" />
-                </HoverPopover>
-              </label>
-              <div className="flex items-center gap-3">
-                <Input
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={quantidade}
-                  onChange={(e) => setQuantidade(e.target.value)}
-                  disabled={ilimitada}
-                  className="w-28 bg-secondary border-border disabled:opacity-40"
-                  placeholder="Ex: 100"
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Quantidade</label>
+                  <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                    <input type="checkbox" {...register("ilimitada")} />
+                    Ilimitada
+                  </label>
+                </div>
+                <Input type="number" min={1} {...register("quantidade")} disabled={ilimitada} className="border-border bg-secondary" />
+                {errors.quantidade ? <p className="text-xs text-gym-danger">{errors.quantidade.message}</p> : null}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Código</label>
+                <Controller
+                  control={control}
+                  name="codigoTipo"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={(value) => field.onChange(value as VoucherCodeType)}>
+                      <SelectTrigger className="w-full border-border bg-secondary text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="border-border bg-card">
+                        <SelectItem value="UNICO">Único</SelectItem>
+                        <SelectItem value="ALEATORIO">Aleatório</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
-                <label className="inline-flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={ilimitada}
-                    onChange={(e) => setIlimitada(e.target.checked)}
-                  />
-                  Ilimitada
-                  <HoverPopover content="O voucher poderá ser gerado quantas vezes forem necessárias.">
-                    <HelpCircle className="size-4 text-muted-foreground" />
-                  </HoverPopover>
-                </label>
               </div>
-              {!ilimitada && errors.quantidade && (
-                <p className="text-xs text-gym-danger">{errors.quantidade}</p>
-              )}
             </div>
 
-            {/* Tipo de código */}
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Tipo de código
+            {codigoTipo === "UNICO" ? (
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Código customizado *</label>
+                <Input {...register("codigoUnicoCustom")} className="border-border bg-secondary" placeholder="EX: AMIGO30" />
+                {errors.codigoUnicoCustom ? <p className="text-xs text-gym-danger">{errors.codigoUnicoCustom.message}</p> : null}
+              </div>
+            ) : null}
+
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input type="checkbox" {...register("usarNaVenda")} />
+              Permitir aplicação direta na venda
+            </label>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleClose} className="border-border">Cancelar</Button>
+              <Button type="submit">Próximo</Button>
+            </DialogFooter>
+          </form>
+        ) : (
+          <form className="max-h-[65vh] space-y-5 overflow-y-auto pr-1" onSubmit={handleSubmit(handleGerar)}>
+            <div className="rounded-xl border border-border bg-secondary/40 p-4 text-sm">
+              <p className="font-medium">{TIPO_LABEL[tipo ?? ""] ?? "Voucher"}</p>
+              <p className="mt-1 text-muted-foreground">
+                Configure onde o voucher poderá ser usado e como ele se comporta no contrato.
               </p>
-              <div className="flex flex-col gap-2">
-                {(
-                  [
-                    {
-                      value: "UNICO" as VoucherCodeType,
-                      label: "Código único",
-                      help: "Um único código para todos os clientes — você define o código.",
-                    },
-                    {
-                      value: "ALEATORIO" as VoucherCodeType,
-                      label: "Códigos aleatórios",
-                      help: "Gera combinações únicas de 6 caracteres para cada emissão.",
-                    },
-                  ] as const
-                ).map((option) => (
-                  <label
-                    key={option.value}
-                    className="flex items-center gap-3 rounded-md border border-border/50 bg-secondary/60 px-3 py-2 text-sm font-medium cursor-pointer"
-                  >
-                    <input
-                      type="radio"
-                      name="codigoTipo"
-                      value={option.value}
-                      checked={codigoTipo === option.value}
-                      onChange={() => setCodigoTipo(option.value)}
-                    />
-                    <span className="flex-1">{option.label}</span>
-                    <HoverPopover content={option.help}>
-                      <Info className="size-4 text-muted-foreground" />
-                    </HoverPopover>
-                  </label>
-                ))}
-              </div>
-              {codigoTipo === "UNICO" && (
-                <div className="space-y-1.5 pt-1">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Código *
-                  </label>
-                  <Input
-                    value={codigoUnicoCustom}
-                    onChange={(e) => {
-                      const val = e.target.value
-                        .toUpperCase()
-                        .replace(/\s/g, "")
-                        .slice(0, 20);
-                      setCodigoUnicoCustom(val);
-                    }}
-                    className="bg-secondary border-border font-mono tracking-widest"
-                    placeholder="Ex: VERAO2025"
-                    maxLength={20}
-                  />
-                  <p className="text-[11px] text-muted-foreground/70">
-                    Sem espaços · máx. 20 caracteres · {codigoUnicoCustom.length}/20
-                  </p>
-                  {errors.codigoUnicoCustom && (
-                    <p className="text-xs text-gym-danger">{errors.codigoUnicoCustom}</p>
-                  )}
-                </div>
-              )}
             </div>
 
-            {/* Usar na venda */}
-            <div className="flex items-center gap-2">
-              <input
-                id="usarNaVenda"
-                type="checkbox"
-                checked={usarNaVenda}
-                onChange={(e) => setUsarNaVenda(e.target.checked)}
-              />
-              <label htmlFor="usarNaVenda" className="text-sm text-muted-foreground cursor-pointer">
-                Utilizar na página de vendas
-              </label>
-              <HoverPopover content="Habilita o voucher direto na tela de vendas.">
-                <HelpCircle className="size-4 text-muted-foreground" />
-              </HoverPopover>
-            </div>
-
-            {/* Contratos aplicáveis */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <span>Contratos aplicáveis</span>
-                  <HoverPopover content="Selecione os planos nos quais este voucher poderá ser utilizado. Deixe em branco para aplicar em todos.">
-                    <HelpCircle className="size-4 text-muted-foreground" />
-                  </HoverPopover>
-                </div>
-                {planos.length > 0 && (
-                  <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={todosPlanosSelecionados}
-                      onChange={toggleTodosPlanos}
-                    />
-                    Selecionar todos
-                  </label>
-                )}
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Planos elegíveis</p>
+                <Button type="button" variant="outline" size="sm" className="border-border" onClick={toggleTodosPlanos}>
+                  {todosPlanosSelecionados ? "Limpar todos" : "Selecionar todos"}
+                </Button>
               </div>
-              <div className="max-h-40 overflow-y-auto rounded-xl border border-border bg-secondary/40 p-3 space-y-1.5">
-                {planos.length === 0 && (
-                  <p className="text-xs text-muted-foreground">Carregando planos…</p>
-                )}
+              <div className="grid grid-cols-2 gap-2">
                 {planos.map((plano) => (
-                  <label
+                  <button
                     key={plano.id}
-                    className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-secondary cursor-pointer transition-colors"
+                    type="button"
+                    onClick={() => togglePlano(plano.id)}
+                    className={`rounded-md border px-2.5 py-2 text-left text-xs transition-colors ${
+                      planoIds.includes(plano.id)
+                        ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                        : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                    }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={planoIds.includes(plano.id)}
-                      onChange={() => togglePlano(plano.id)}
-                    />
-                    <span className="flex-1">{plano.nome}</span>
-                    <span className="text-xs text-muted-foreground">
-                      R$ {plano.valor.toFixed(2).replace(".", ",")}
-                    </span>
-                  </label>
+                    {plano.nome}
+                  </button>
                 ))}
               </div>
-              {planoIds.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground/70">
-                  Nenhum plano selecionado — válido para todos os contratos.
-                </p>
-              ) : (
-                <p className="text-[11px] text-muted-foreground/70">
-                  {planoIds.length} plano(s) selecionado(s).
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ─── STEP 2 ─── */}
-        {step === 2 && (
-          <div className="space-y-6">
-            {/* Resumo */}
-            <div className="rounded-xl border border-border bg-secondary/40 p-4 space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Resumo
-              </p>
-              <p className="text-sm font-semibold">{nome}</p>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
-                <span>Tipo: {TIPO_LABEL[tipo]}</span>
-                <span>
-                  Período:{" "}
-                  {periodoInicio}
-                  {prazoDeterminado && periodoFim ? ` → ${periodoFim}` : " · Indeterminado"}
-                </span>
-                <span>Qtd: {ilimitada ? "Ilimitada" : quantidade}</span>
-                <span>
-                  Código: {codigoTipo === "UNICO" ? codigoUnicoCustom || "Único" : "Aleatório"}
-                </span>
-                {planoIds.length > 0 && (
-                  <span>{planoIds.length} contrato(s) selecionado(s)</span>
-                )}
-              </div>
             </div>
 
-            {/* Regras de uso */}
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input type="checkbox" {...register("umaVezPorCliente")} />
+              Permitir uso apenas uma vez por cliente
+            </label>
+
             <div className="space-y-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Regras de uso
-              </p>
-
-              <label className="flex items-start gap-3 rounded-xl border border-border bg-secondary/40 px-4 py-3 cursor-pointer hover:bg-secondary/60 transition-colors">
-                <input
-                  type="checkbox"
-                  className="mt-0.5"
-                  checked={umaVezPorCliente}
-                  onChange={(e) => setUmaVezPorCliente(e.target.checked)}
-                />
-                <div>
-                  <p className="text-sm font-medium">Utilizar uma única vez por cliente</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Cada cliente poderá resgatar este voucher somente uma vez.
-                  </p>
-                </div>
-              </label>
-            </div>
-
-            {/* Aplicar em */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                <span>Aplicar no valor de</span>
-                <HoverPopover content="Define se o voucher incide sobre o contrato (mensalidade), a anuidade, ou ambos.">
-                  <Info className="size-4 text-muted-foreground" />
-                </HoverPopover>
-              </div>
-              <div className="flex flex-col gap-2">
-                {(
-                  [
-                    {
-                      value: "CONTRATO" as VoucherAplicarEm,
-                      label: "Contrato",
-                      desc: "Aplica o benefício no valor do plano/mensalidade.",
-                    },
-                    {
-                      value: "ANUIDADE" as VoucherAplicarEm,
-                      label: "Anuidade",
-                      desc: "Aplica o benefício no valor anual do plano.",
-                    },
-                  ] as const
-                ).map((opt) => (
-                  <label
-                    key={opt.value}
-                    className="flex items-start gap-3 rounded-xl border border-border/50 bg-secondary/60 px-3 py-2.5 cursor-pointer hover:bg-secondary transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      value={opt.value}
-                      checked={aplicarEm.includes(opt.value)}
-                      onChange={() => toggleAplicarEm(opt.value)}
-                      className="mt-0.5"
-                    />
-                    <div>
-                      <p className="text-sm font-medium">{opt.label}</p>
-                      <p className="text-xs text-muted-foreground">{opt.desc}</p>
-                    </div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Aplicar em</p>
+              <div className="grid grid-cols-2 gap-2">
+                {(["CONTRATO", "VENDA", "CHECKOUT", "PENDENCIA"] as VoucherAplicarEm[]).map((item) => (
+                  <label key={item} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
+                    <input type="checkbox" checked={aplicarEm.includes(item)} onChange={() => toggleAplicarEm(item)} />
+                    {item}
                   </label>
                 ))}
               </div>
             </div>
-          </div>
-        )}
 
-        <DialogFooter className="justify-between gap-2">
-          <div>
-            {step === 2 && (
-              <Button variant="ghost" onClick={() => setStep(1)}>
-                ← Voltar
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleClose}>
-              Cancelar
-            </Button>
-            {step === 1 && (
-              <Button onClick={handleProximo}>Próximo →</Button>
-            )}
-            {step === 2 && (
-              <Button
-                onClick={handleGerar}
-                className="bg-gym-accent text-black hover:bg-gym-accent/90"
-              >
-                Gerar Voucher
-              </Button>
-            )}
-          </div>
-        </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setStep(1)} className="border-border">Voltar</Button>
+              <Button type="submit">Gerar voucher</Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

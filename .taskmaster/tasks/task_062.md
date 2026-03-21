@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 61
+**Dependencies:** 61 ✓
 
 **Priority:** high
 
@@ -23,7 +23,7 @@ Validar navegação para `/app/[rede]/login`, resolução do identificador por h
 ### 62.1. Auditar rotas e guardas atuais de login
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Mapear onde o frontend ainda assume tenant, slug ou host único no acesso.
 
@@ -34,7 +34,7 @@ Revisar `src/app`, middleware, guards, callbacks de auth e helpers de rota para 
 ### 62.2. Definir rota canonica `/app/[rede]/login`
 
 **Status:** done  
-**Dependencies:** 1
+**Dependencies:** 62.1  
 
 Garantir uma rota explícita e estável para login por rede.
 
@@ -45,7 +45,7 @@ Criar ou ajustar a página para que `[rede]` represente o `subdominio` da academ
 ### 62.3. Normalizar helpers de resolução de rede
 
 **Status:** done  
-**Dependencies:** 2
+**Dependencies:** 62.2  
 
 Centralizar a leitura do identificador da rede em um utilitário único.
 

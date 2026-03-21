@@ -1,10 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
 import type { BandeiraCartao } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+type BandeiraCartaoFormValues = {
+  nome: string;
+  taxaPercentual: string;
+  diasRepasse: string;
+  ativo: boolean;
+};
+
+const DEFAULT_VALUES: BandeiraCartaoFormValues = {
+  nome: "",
+  taxaPercentual: "0",
+  diasRepasse: "30",
+  ativo: true,
+};
+
+function toFormValues(initial?: BandeiraCartao | null): BandeiraCartaoFormValues {
+  if (!initial) return DEFAULT_VALUES;
+  return {
+    nome: initial.nome,
+    taxaPercentual: String(initial.taxaPercentual ?? 0),
+    diasRepasse: String(initial.diasRepasse ?? 30),
+    ativo: initial.ativo,
+  };
+}
 
 export function BandeiraCartaoModal({
   open,
@@ -17,112 +42,87 @@ export function BandeiraCartaoModal({
   onSave: (data: Omit<BandeiraCartao, "id">, id?: string) => void;
   initial?: BandeiraCartao | null;
 }) {
-  const [form, setForm] = useState({
-    nome: "",
-    taxaPercentual: "0",
-    diasRepasse: "30",
-    ativo: true,
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<BandeiraCartaoFormValues>({
+    defaultValues: toFormValues(initial),
   });
 
   useEffect(() => {
-    if (initial) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
-        nome: initial.nome,
-        taxaPercentual: String(initial.taxaPercentual ?? 0),
-        diasRepasse: String(initial.diasRepasse ?? 30),
-        ativo: initial.ativo,
-      });
-    } else {
-      setForm({
-        nome: "",
-        taxaPercentual: "0",
-        diasRepasse: "30",
-        ativo: true,
-      });
-    }
-  }, [initial, open]);
+    reset(toFormValues(initial));
+  }, [initial, open, reset]);
 
-  function handleSave() {
-    if (!form.nome) return;
+  function handleSave(values: BandeiraCartaoFormValues) {
+    const nome = values.nome.trim();
+    if (!nome) return;
     onSave(
       {
-        nome: form.nome,
-        taxaPercentual: parseFloat(form.taxaPercentual) || 0,
-        diasRepasse: parseInt(form.diasRepasse, 10) || 0,
-        ativo: form.ativo,
+        nome,
+        taxaPercentual: Number.parseFloat(values.taxaPercentual) || 0,
+        diasRepasse: Number.parseInt(values.diasRepasse, 10) || 0,
+        ativo: values.ativo,
       },
       initial?.id
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
-      <DialogContent className="bg-card border-border sm:max-w-lg">
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <DialogContent className="border-border bg-card sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">
             {initial ? "Editar bandeira" : "Nova bandeira"}
           </DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-2">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Nome *
-            </label>
-            <Input
-              value={form.nome}
-              onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-              className="bg-secondary border-border"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit(handleSave)}>
+          <div className="grid gap-4 py-2">
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Taxa (%)
+                Nome *
               </label>
               <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.taxaPercentual}
-                onChange={(e) => setForm((f) => ({ ...f, taxaPercentual: e.target.value }))}
-                className="bg-secondary border-border"
+                {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome da bandeira." })}
+                className="border-border bg-secondary"
               />
+              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Dias para repasse
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step="1"
-                value={form.diasRepasse}
-                onChange={(e) => setForm((f) => ({ ...f, diasRepasse: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Ativo
-              </label>
-              <div className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.ativo}
-                  onChange={(e) => setForm((f) => ({ ...f, ativo: e.target.checked }))}
-                />
-                <span className="text-muted-foreground">Disponível</span>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Taxa (%)
+                </label>
+                <Input type="number" min={0} step="0.01" {...register("taxaPercentual")} className="border-border bg-secondary" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Dias para repasse
+                </label>
+                <Input type="number" min={0} step="1" {...register("diasRepasse")} className="border-border bg-secondary" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ativo</label>
+                <div className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" {...register("ativo")} />
+                  <span className="text-muted-foreground">Disponível</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="border-border">
-            Cancelar
-          </Button>
-          <Button onClick={handleSave}>{initial ? "Salvar" : "Criar"}</Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="border-border">
+              Cancelar
+            </Button>
+            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

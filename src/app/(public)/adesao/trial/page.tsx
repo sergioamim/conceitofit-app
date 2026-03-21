@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,19 +30,42 @@ function TrialPageContent() {
   const router = useRouter();
   const { context, loading, error, resolvedTenantRef, persistDraft, draft, planId } = usePublicJourney();
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
-  const [form, setForm] = useState({
-    nome: "",
-    email: "",
-    telefone: "",
-    objetivo: "",
-  });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
+  const {
+    register,
+    handleSubmit,
+    setError,
+    clearErrors,
+    reset,
+    formState: { errors },
+  } = useForm<{
+    nome: string;
+    email: string;
+    telefone: string;
+    objetivo: string;
+  }>({
+    defaultValues: {
+      nome: "",
+      email: "",
+      telefone: "",
+      objetivo: "",
+    },
+  });
 
   useEffect(() => {
     void listPublicTenants().then(setTenantOptions);
   }, []);
+
+  useEffect(() => {
+    if (!success) return;
+    reset({
+      nome: "",
+      email: "",
+      telefone: "",
+      objetivo: "",
+    });
+  }, [reset, success]);
 
   if (loading) {
     return (
@@ -63,20 +87,24 @@ function TrialPageContent() {
     );
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function onSubmit(values: { nome: string; email: string; telefone: string; objetivo: string }) {
+    clearErrors();
     const nextErrors = validateTrialInput({
       tenantRef: resolvedTenantRef,
-      ...form,
+      ...values,
     });
-    setFormErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (Object.keys(nextErrors).length > 0) {
+      Object.entries(nextErrors).forEach(([field, message]) => {
+        setError(field as "nome" | "email" | "telefone" | "objetivo", { type: "manual", message });
+      });
+      return;
+    }
 
     setSaving(true);
     try {
       const lead = await submitPublicTrial({
         tenantRef: resolvedTenantRef,
-        ...form,
+        ...values,
       });
       persistDraft({
         tenantRef: resolvedTenantRef,
@@ -85,8 +113,9 @@ function TrialPageContent() {
       });
       setSuccess("Trial registrado. Um consultor vai assumir esse lead no CRM.");
     } catch (submitError) {
-      setFormErrors({
-        form: submitError instanceof Error ? submitError.message : "Falha ao registrar o trial.",
+      setError("root", {
+        type: "manual",
+        message: submitError instanceof Error ? submitError.message : "Falha ao registrar o trial.",
       });
     } finally {
       setSaving(false);
@@ -164,19 +193,18 @@ function TrialPageContent() {
                 </Button>
               </div>
             ) : (
-              <form className="space-y-4" onSubmit={handleSubmit}>
+              <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
                 <div className="space-y-1.5">
                   <label htmlFor="trial-nome" className="text-sm font-medium">
                     Nome completo
                   </label>
                   <Input
                     id="trial-nome"
-                    value={form.nome}
-                    onChange={(event) => setForm((current) => ({ ...current, nome: event.target.value }))}
+                    {...register("nome")}
                     placeholder="Ex: Mariana Costa"
                     className="border-border bg-secondary"
                   />
-                  {formErrors.nome ? <p className="text-xs text-rose-300">{formErrors.nome}</p> : null}
+                  {errors.nome ? <p className="text-xs text-rose-300">{errors.nome.message}</p> : null}
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
@@ -186,12 +214,11 @@ function TrialPageContent() {
                     <Input
                       id="trial-email"
                       type="email"
-                      value={form.email}
-                      onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                      {...register("email")}
                       placeholder="voce@email.com"
                       className="border-border bg-secondary"
                     />
-                    {formErrors.email ? <p className="text-xs text-rose-300">{formErrors.email}</p> : null}
+                    {errors.email ? <p className="text-xs text-rose-300">{errors.email.message}</p> : null}
                   </div>
                   <div className="space-y-1.5">
                     <label htmlFor="trial-telefone" className="text-sm font-medium">
@@ -199,12 +226,11 @@ function TrialPageContent() {
                     </label>
                     <Input
                       id="trial-telefone"
-                      value={form.telefone}
-                      onChange={(event) => setForm((current) => ({ ...current, telefone: event.target.value }))}
+                      {...register("telefone")}
                       placeholder="(11) 99999-9999"
                       className="border-border bg-secondary"
                     />
-                    {formErrors.telefone ? <p className="text-xs text-rose-300">{formErrors.telefone}</p> : null}
+                    {errors.telefone ? <p className="text-xs text-rose-300">{errors.telefone.message}</p> : null}
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -213,15 +239,14 @@ function TrialPageContent() {
                   </label>
                   <Textarea
                     id="trial-objetivo"
-                    value={form.objetivo}
-                    onChange={(event) => setForm((current) => ({ ...current, objetivo: event.target.value }))}
+                    {...register("objetivo")}
                     placeholder="Ex: emagrecimento, musculação, aulas coletivas"
                     className="border-border bg-secondary"
                   />
                 </div>
-                {formErrors.form ? (
+                {errors.root?.message ? (
                   <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
-                    {formErrors.form}
+                    {errors.root.message}
                   </div>
                 ) : null}
                 <Button type="submit" className="w-full" disabled={saving}>

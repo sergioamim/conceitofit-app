@@ -23,7 +23,7 @@ Cobrir a pagina de contratos com teste de regressao visual/funcional validando r
 ### 55.1. Modelar o recorte mensal e as metricas derivadas da tela de contratos
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Calcular resumo do mes atual e agrupamentos sem depender de endpoint novo.
 
@@ -34,7 +34,7 @@ Derivar em memoria os contratos do mes atual, ordenar pelos mais recentes e calc
 ### 55.2. Criar o bloco superior com KPIs e contexto da carteira
 
 **Status:** done  
-**Dependencies:** 55.1
+**Dependencies:** 55.1  
 
 Dar leitura executiva imediata antes da tabela.
 
@@ -45,7 +45,7 @@ Adicionar cards superiores com valor medio do contrato, receita do mes, total de
 ### 55.3. Adicionar grafico em pizza dos contratos ativos agrupados
 
 **Status:** done  
-**Dependencies:** 55.1
+**Dependencies:** 55.1  
 
 Visualizar distribuicao da carteira ativa por plano na propria pagina.
 
@@ -56,7 +56,7 @@ Construir um grafico em pizza com legenda, usando CSS e utilitarios nativos do p
 ### 55.4. Reorganizar a tabela para exibir os ultimos contratos do mes
 
 **Status:** done  
-**Dependencies:** 55.1, 55.2
+**Dependencies:** 55.1, 55.2  
 
 Fazer a listagem principal refletir o recorte mensal e a ordenacao mais relevante.
 
@@ -67,7 +67,7 @@ Substituir a leitura generica por uma tabela focada nos contratos do mes atual, 
 ### 55.5. Cobrir regressao da nova leitura mensal de contratos
 
 **Status:** done  
-**Dependencies:** 55.2, 55.3, 55.4
+**Dependencies:** 55.2, 55.3, 55.4  
 
 Garantir estabilidade visual e funcional da pagina.
 

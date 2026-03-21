@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 58, 59
+**Dependencies:** 58 ✓, 59 ✓
 
 **Priority:** medium
 
@@ -23,7 +23,7 @@ Cobrir a UI de migração com testes funcionais e cenários de sucesso, bloqueio
 ### 60.1. Definir o ponto de entrada da ação migrarClienteParaUnidade nas telas administrativas
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Escolher onde a operação deve aparecer sem confundir com troca temporária de contexto.
 
@@ -34,7 +34,7 @@ Posicionar a ação de migração nas telas de cliente/comercial de forma explí
 ### 60.2. Construir modal ou fluxo dedicado com origem, destino e justificativa
 
 **Status:** done  
-**Dependencies:** 60.1
+**Dependencies:** 60.1  
 
 Coletar os dados administrativos necessários para a migração estrutural.
 
@@ -45,7 +45,7 @@ Criar o formulário que exibe unidade atual, unidade destino, validações de re
 ### 60.3. Integrar o contrato HTTP de migração e tratar erros canônicos do backend
 
 **Status:** done  
-**Dependencies:** 60.2
+**Dependencies:** 60.2  
 
 Consumir o endpoint novo com mensagens coerentes para o operador.
 
@@ -56,7 +56,7 @@ Adicionar client, mutation e tratamento de erro para rede divergente, unidade in
 ### 60.4. Atualizar detalhe, listagens e caches do cliente após a migração
 
 **Status:** done  
-**Dependencies:** 60.3
+**Dependencies:** 60.3  
 
 Refletir imediatamente a nova unidade-base nas superfícies administrativas.
 
@@ -67,7 +67,7 @@ Recarregar ou invalidar consultas relevantes para mostrar a unidade-base atualiz
 ### 60.5. Exibir trilha de auditoria e mensagens de risco da operação
 
 **Status:** done  
-**Dependencies:** 60.2, 60.4
+**Dependencies:** 60.2, 60.4  
 
 Dar ao gestor clareza sobre permanência e criticidade da migração.
 
@@ -78,7 +78,7 @@ Mostrar resumo da operação, motivação registrada e avisos de que a migraçã
 ### 60.6. Cobrir a UX de migração com testes de regressão funcional
 
 **Status:** done  
-**Dependencies:** 60.3, 60.4, 60.5
+**Dependencies:** 60.3, 60.4, 60.5  
 
 Provar que a operação administrativa está compreensível e estável.
 

@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 50, 53
+**Dependencies:** 50 ✓, 53 ✓
 
 **Priority:** high
 
@@ -23,7 +23,7 @@ Cobrir criação de usuário nas duas superfícies, validação de escopo permit
 ### 67.1. Definir contrato e permissões da criação de usuário por superfície
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Separar claramente o que o backoffice global pode fazer e o que a academia pode fazer na própria rede.
 
@@ -34,7 +34,7 @@ Mapear capabilities, endpoints e regras para dois contextos: segurança global c
 ### 67.2. Adicionar ação e formulário de novo usuário no menu Segurança
 
 **Status:** done  
-**Dependencies:** 67.1
+**Dependencies:** 67.1  
 
 Expor o cadastro pela área global de usuários e acessos.
 
@@ -45,7 +45,7 @@ Adicionar CTA, rota/modal e formulário para criar usuário no backoffice de seg
 ### 67.3. Adicionar criação restrita de usuário na área Admin da academia
 
 **Status:** done  
-**Dependencies:** 67.1
+**Dependencies:** 67.1  
 
 Permitir que a academia cadastre usuários apenas para a própria rede.
 
@@ -56,7 +56,7 @@ Criar entrada de cadastro na área administrativa operacional, limitando rede, t
 ### 67.4. Aplicar guardrails de escopo e mensagens de autorização
 
 **Status:** done  
-**Dependencies:** 67.2, 67.3
+**Dependencies:** 67.2, 67.3  
 
 Evitar que a UI ofereça poderes além do contexto do operador.
 
@@ -67,7 +67,7 @@ Reforçar no frontend os limites de escopo, escondendo opções globais na área
 ### 67.5. Cobrir regressão e handoff de criação de usuário
 
 **Status:** done  
-**Dependencies:** 67.2, 67.3, 67.4
+**Dependencies:** 67.2, 67.3, 67.4  
 
 Garantir estabilidade nas duas jornadas e registrar os limites de poder.
 

@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 62, 63, 64
+**Dependencies:** 62 ✓, 63 ✓, 64 ✓
 
 **Priority:** medium
 
@@ -23,7 +23,7 @@ Cobrir cenários de rede válida, rede ausente/inválida e alternância entre en
 ### 65.1. Exibir rede corrente na tela de login
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Dar visibilidade ao contexto de academia selecionado.
 
@@ -34,7 +34,7 @@ Renderizar nome/subdomínio da rede atual ou um estado coerente de carregamento/
 ### 65.2. Tratar rede inválida ou inexistente
 
 **Status:** done  
-**Dependencies:** 1
+**Dependencies:** 65.1  
 
 Evitar falhas silenciosas no acesso por URL errada.
 
@@ -45,7 +45,7 @@ Definir comportamento para `/app/[rede]/login` inválido: mensagem clara, bloque
 ### 65.3. Revisar deep links e navegação pós-login
 
 **Status:** done  
-**Dependencies:** 1, 2
+**Dependencies:** 65.1, 65.2  
 
 Manter a rede coerente durante entrada e redirecionamento.
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,16 @@ import {
 import { usePublicJourney } from "@/lib/public/use-public-journey";
 import type { Tenant, TipoFormaPagamento } from "@/lib/types";
 
+type CheckoutFormValues = {
+  planId: string;
+  formaPagamento: TipoFormaPagamento;
+  parcelas: string;
+  observacoes: string;
+  renovacaoAutomatica: boolean;
+  aceitarContratoAgora: boolean;
+  aceitarTermos: boolean;
+};
+
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -32,25 +43,21 @@ function PublicJourneyFallback() {
 
 function CheckoutPublicoPageContent() {
   const router = useRouter();
-  const {
-    context,
-    loading,
-    error,
-    resolvedTenantRef,
-    persistDraft,
-    draft,
-    planId,
-  } = usePublicJourney();
+  const { context, loading, error, resolvedTenantRef, persistDraft, draft, planId } = usePublicJourney();
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
-  const [selectedPlanId, setSelectedPlanId] = useState("");
-  const [formaPagamento, setFormaPagamento] = useState<TipoFormaPagamento>("PIX");
-  const [parcelas, setParcelas] = useState("1");
-  const [observacoes, setObservacoes] = useState("");
-  const [renovacaoAutomatica, setRenovacaoAutomatica] = useState(false);
-  const [aceitarContratoAgora, setAceitarContratoAgora] = useState(true);
-  const [aceitarTermos, setAceitarTermos] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const { register, control, handleSubmit, reset, setValue, getValues } = useForm<CheckoutFormValues>({
+    defaultValues: {
+      planId: "",
+      formaPagamento: "PIX",
+      parcelas: "1",
+      observacoes: "",
+      renovacaoAutomatica: false,
+      aceitarContratoAgora: true,
+      aceitarTermos: false,
+    },
+  });
 
   useEffect(() => {
     void listPublicTenants().then(setTenantOptions);
@@ -60,13 +67,20 @@ function CheckoutPublicoPageContent() {
     if (!context) return;
     const defaultPlanId = planId ?? draft.planId ?? context.planos[0]?.id ?? "";
     const defaultForma = context.formasPagamento[0] ?? "PIX";
-    setSelectedPlanId(defaultPlanId);
-    setFormaPagamento(defaultForma);
-    setRenovacaoAutomatica(Boolean(context.planos.find((plan) => plan.id === defaultPlanId)?.permiteRenovacaoAutomatica));
-  }, [context, draft.planId, planId]);
+    reset({
+      planId: defaultPlanId,
+      formaPagamento: defaultForma,
+      parcelas: "1",
+      observacoes: "",
+      renovacaoAutomatica: Boolean(context.planos.find((plan) => plan.id === defaultPlanId)?.permiteRenovacaoAutomatica),
+      aceitarContratoAgora: true,
+      aceitarTermos: false,
+    });
+  }, [context, draft.planId, planId, reset]);
 
+  const selectedPlanId = useWatch({ control, name: "planId" });
+  const formaPagamento = useWatch({ control, name: "formaPagamento" });
   const selectedPlan = context?.planos.find((plan) => plan.id === selectedPlanId) ?? context?.planos[0] ?? null;
-
   const quote = selectedPlan ? getPublicPlanQuote(selectedPlan) : null;
   const contractPreview =
     context && selectedPlan && draft.signup
@@ -123,9 +137,8 @@ function CheckoutPublicoPageContent() {
     );
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedPlanId) {
+  async function onSubmit(values: CheckoutFormValues) {
+    if (!values.planId) {
       setSubmitError("Selecione um plano para concluir a adesão.");
       return;
     }
@@ -139,29 +152,32 @@ function CheckoutPublicoPageContent() {
       }
       const payload: PublicCheckoutInput = {
         tenantRef: resolvedTenantRef,
-        planId: selectedPlanId,
+        planId: values.planId,
         signup,
         pagamento: {
-          formaPagamento,
-          parcelas: formaPagamento === "CARTAO_CREDITO" ? Math.max(1, Number.parseInt(parcelas, 10) || 1) : undefined,
-          observacoes: observacoes.trim() || undefined,
+          formaPagamento: values.formaPagamento,
+          parcelas:
+            values.formaPagamento === "CARTAO_CREDITO"
+              ? Math.max(1, Number.parseInt(values.parcelas, 10) || 1)
+              : undefined,
+          observacoes: values.observacoes.trim() || undefined,
         },
-        aceitarContratoAgora,
-        aceitarTermos,
-        renovacaoAutomatica,
+        aceitarContratoAgora: values.aceitarContratoAgora,
+        aceitarTermos: values.aceitarTermos,
+        renovacaoAutomatica: values.renovacaoAutomatica,
         leadId: draft.trialLeadId,
       };
 
       const checkout = await startPublicCheckout(payload);
       persistDraft({
         tenantRef: resolvedTenantRef,
-        planId: selectedPlanId,
+        planId: values.planId,
         checkout,
       });
       router.replace(
         buildPublicJourneyHref("/adesao/pendencias", {
           tenantRef: resolvedTenantRef,
-          planId: selectedPlanId,
+          planId: values.planId,
           checkoutId: checkout.checkoutId,
         })
       );
@@ -224,64 +240,79 @@ function CheckoutPublicoPageContent() {
             <CardTitle>Fechamento digital</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="space-y-5" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label htmlFor="checkout-plan" className="text-sm font-medium">
-                    Plano
-                  </label>
-                  <select
-                    id="checkout-plan"
-                    value={selectedPlanId}
-                    onChange={(event) => setSelectedPlanId(event.target.value)}
-                    className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                  >
-                    {context.planos.map((plan) => (
-                      <option key={plan.id} value={plan.id}>
-                        {plan.nome}
-                      </option>
-                    ))}
-                  </select>
+                  <label htmlFor="checkout-plan" className="text-sm font-medium">Plano</label>
+                  <Controller
+                    control={control}
+                    name="planId"
+                    render={({ field }) => (
+                      <select
+                        id="checkout-plan"
+                        value={field.value}
+                        onChange={(event) => {
+                          const nextPlanId = event.target.value;
+                          const nextPlan = context.planos.find((plan) => plan.id === nextPlanId);
+                          const currentValues = getValues();
+                          field.onChange(nextPlanId);
+                          setValue("parcelas", "1");
+                          setValue(
+                            "formaPagamento",
+                            !nextPlan?.permiteCobrancaRecorrente && currentValues.formaPagamento === "RECORRENTE"
+                              ? (context.formasPagamento[0] ?? "PIX")
+                              : currentValues.formaPagamento
+                          );
+                          setValue("renovacaoAutomatica", Boolean(nextPlan?.permiteRenovacaoAutomatica));
+                        }}
+                        className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
+                      >
+                        {context.planos.map((plan) => (
+                          <option key={plan.id} value={plan.id}>
+                            {plan.nome}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="checkout-payment" className="text-sm font-medium">
-                    Forma de pagamento
-                  </label>
-                  <select
-                    id="checkout-payment"
-                    value={formaPagamento}
-                    onChange={(event) => setFormaPagamento(event.target.value as TipoFormaPagamento)}
-                    className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                  >
-                    {context.formasPagamento.map((paymentType) => (
-                      <option key={paymentType} value={paymentType}>
-                        {paymentType.replaceAll("_", " ")}
-                      </option>
-                    ))}
-                  </select>
+                  <label htmlFor="checkout-payment" className="text-sm font-medium">Forma de pagamento</label>
+                  <Controller
+                    control={control}
+                    name="formaPagamento"
+                    render={({ field }) => (
+                      <select
+                        id="checkout-payment"
+                        value={field.value}
+                        onChange={(event) => field.onChange(event.target.value as TipoFormaPagamento)}
+                        className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
+                      >
+                        {context.formasPagamento.map((paymentType) => (
+                          <option key={paymentType} value={paymentType}>
+                            {paymentType.replaceAll("_", " ")}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="checkout-installments" className="text-sm font-medium">
-                    Parcelas
-                  </label>
+                  <label htmlFor="checkout-installments" className="text-sm font-medium">Parcelas</label>
                   <Input
                     id="checkout-installments"
                     type="number"
                     min={1}
-                    value={parcelas}
-                    onChange={(event) => setParcelas(event.target.value)}
+                    {...register("parcelas")}
                     disabled={formaPagamento !== "CARTAO_CREDITO"}
                     className="border-border bg-secondary"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="checkout-observacoes" className="text-sm font-medium">
-                    Observações do pagamento
-                  </label>
+                  <label htmlFor="checkout-observacoes" className="text-sm font-medium">Observações do pagamento</label>
                   <Input
                     id="checkout-observacoes"
-                    value={observacoes}
-                    onChange={(event) => setObservacoes(event.target.value)}
+                    {...register("observacoes")}
                     className="border-border bg-secondary"
                     placeholder="Opcional"
                   />
@@ -292,8 +323,7 @@ function CheckoutPublicoPageContent() {
                 <label className="flex items-start gap-3">
                   <input
                     type="checkbox"
-                    checked={renovacaoAutomatica}
-                    onChange={(event) => setRenovacaoAutomatica(event.target.checked)}
+                    {...register("renovacaoAutomatica")}
                     disabled={!selectedPlan?.permiteRenovacaoAutomatica}
                     className="mt-1"
                   />
@@ -307,8 +337,7 @@ function CheckoutPublicoPageContent() {
                 <label className="flex items-start gap-3">
                   <input
                     type="checkbox"
-                    checked={aceitarContratoAgora}
-                    onChange={(event) => setAceitarContratoAgora(event.target.checked)}
+                    {...register("aceitarContratoAgora")}
                     disabled={selectedPlan?.contratoAssinatura === "PRESENCIAL" || !contractPreview}
                     className="mt-1"
                   />
@@ -320,12 +349,7 @@ function CheckoutPublicoPageContent() {
                   </span>
                 </label>
                 <label className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={aceitarTermos}
-                    onChange={(event) => setAceitarTermos(event.target.checked)}
-                    className="mt-1"
-                  />
+                  <input type="checkbox" {...register("aceitarTermos")} className="mt-1" />
                   <span>
                     Aceito os termos da adesão e da cobrança
                     <span className="block text-muted-foreground">

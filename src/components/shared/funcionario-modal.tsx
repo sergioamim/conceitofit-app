@@ -1,11 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { Controller, useForm } from "react-hook-form";
 import type { Cargo, Funcionario } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+type FuncionarioFormValues = {
+  nome: string;
+  cargoId: string;
+  ativo: boolean;
+  podeMinistrarAulas: boolean;
+};
+
+function buildDefaultValues(cargos: Cargo[], initial?: Funcionario | null): FuncionarioFormValues {
+  if (initial) {
+    return {
+      nome: initial.nome,
+      cargoId: initial.cargoId ?? "",
+      ativo: initial.ativo,
+      podeMinistrarAulas: initial.podeMinistrarAulas,
+    };
+  }
+  return {
+    nome: "",
+    cargoId: cargos.find((cargo) => cargo.ativo)?.id ?? "",
+    ativo: true,
+    podeMinistrarAulas: false,
+  };
+}
 
 export function FuncionarioModal({
   open,
@@ -22,120 +47,106 @@ export function FuncionarioModal({
   onOpenCargoModal: () => void;
   initial?: Funcionario | null;
 }) {
-  const [form, setForm] = useState({
-    nome: "",
-    cargoId: "",
-    ativo: true,
-    podeMinistrarAulas: false,
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<FuncionarioFormValues>({
+    defaultValues: buildDefaultValues(cargos, initial),
   });
 
   useEffect(() => {
-    if (initial) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
-        nome: initial.nome,
-        cargoId: initial.cargoId ?? "",
-        ativo: initial.ativo,
-        podeMinistrarAulas: initial.podeMinistrarAulas,
-      });
-    } else {
-      setForm({
-        nome: "",
-        cargoId: cargos.find((c) => c.ativo)?.id ?? "",
-        ativo: true,
-        podeMinistrarAulas: false,
-      });
-    }
-  }, [initial, open, cargos]);
+    reset(buildDefaultValues(cargos, initial));
+  }, [cargos, initial, open, reset]);
 
-  function handleSave() {
-    if (!form.nome) return;
+  function handleSave(values: FuncionarioFormValues) {
+    const nome = values.nome.trim();
+    if (!nome) return;
     onSave(
       {
-        nome: form.nome,
-        cargoId: form.cargoId || undefined,
-        ativo: form.ativo,
-        podeMinistrarAulas: form.podeMinistrarAulas,
+        nome,
+        cargoId: values.cargoId || undefined,
+        ativo: values.ativo,
+        podeMinistrarAulas: values.podeMinistrarAulas,
       },
       initial?.id
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
-      <DialogContent className="bg-card border-border sm:max-w-sm">
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <DialogContent className="border-border bg-card sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">
             {initial ? "Editar funcionário" : "Novo funcionário"}
           </DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-2">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Nome *
-            </label>
-            <Input
-              value={form.nome}
-              onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-              className="bg-secondary border-border"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Cargo
-            </label>
-            <div className="flex items-center gap-2">
-              <Select value={form.cargoId || "NONE"} onValueChange={(v) => setForm((f) => ({ ...f, cargoId: v === "NONE" ? "" : v }))}>
-                <SelectTrigger className="w-full bg-secondary border-border">
-                  <SelectValue placeholder="Selecione um cargo" />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  <SelectItem value="NONE">Sem cargo</SelectItem>
-                  {cargos.filter((c) => c.ativo).map((cargo) => (
-                    <SelectItem key={cargo.id} value={cargo.id}>
-                      {cargo.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button type="button" variant="outline" size="sm" className="border-border" onClick={onOpenCargoModal}>
-                + Cargo
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Atuação em aulas
-            </label>
-            <div className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.podeMinistrarAulas}
-                onChange={(e) => setForm((f) => ({ ...f, podeMinistrarAulas: e.target.checked }))}
+        <form onSubmit={handleSubmit(handleSave)}>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+              <Input
+                {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome do funcionário." })}
+                className="border-border bg-secondary"
               />
-              <span className="text-muted-foreground">Pode ministrar atividades/aulas</span>
+              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cargo</label>
+              <div className="flex items-center gap-2">
+                <Controller
+                  control={control}
+                  name="cargoId"
+                  render={({ field }) => (
+                    <Select value={field.value || "NONE"} onValueChange={(value) => field.onChange(value === "NONE" ? "" : value)}>
+                      <SelectTrigger className="w-full border-border bg-secondary">
+                        <SelectValue placeholder="Selecione um cargo" />
+                      </SelectTrigger>
+                      <SelectContent className="border-border bg-card">
+                        <SelectItem value="NONE">Sem cargo</SelectItem>
+                        {cargos.filter((cargo) => cargo.ativo).map((cargo) => (
+                          <SelectItem key={cargo.id} value={cargo.id}>
+                            {cargo.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <Button type="button" variant="outline" size="sm" className="border-border" onClick={onOpenCargoModal}>
+                  + Cargo
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Atuação em aulas</label>
+              <div className="flex items-center gap-2 text-sm">
+                <input type="checkbox" {...register("podeMinistrarAulas")} />
+                <span className="text-muted-foreground">Pode ministrar atividades/aulas</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ativo</label>
+              <div className="flex items-center gap-2 text-sm">
+                <input type="checkbox" {...register("ativo")} />
+                <span className="text-muted-foreground">Disponível</span>
+              </div>
             </div>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Ativo
-            </label>
-            <div className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.ativo}
-                onChange={(e) => setForm((f) => ({ ...f, ativo: e.target.checked }))}
-              />
-              <span className="text-muted-foreground">Disponível</span>
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="border-border">
-            Cancelar
-          </Button>
-          <Button onClick={handleSave}>{initial ? "Salvar" : "Criar"}</Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="border-border">
+              Cancelar
+            </Button>
+            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

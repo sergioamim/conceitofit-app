@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -120,35 +121,64 @@ function CadastroPublicoForm({
   persistDraft: (patch: Partial<Parameters<ReturnType<typeof usePublicJourney>["persistDraft"]>[0]>) => void;
 }) {
   const router = useRouter();
-  const [form, setForm] = useState<PublicSignupDraft>(initialForm);
-  const [selectedPlanId, setSelectedPlanId] = useState(initialPlanId);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } = useForm<PublicSignupDraft & { planId: string }>({
+    defaultValues: {
+      ...initialForm,
+      planId: initialPlanId,
+    },
+  });
+  const selectedPlanId = useWatch({ control, name: "planId" });
   const selectedPlan = context.planos.find((item) => item.id === selectedPlanId) ?? context.planos[0];
   const quote = selectedPlan ? getPublicPlanQuote(selectedPlan) : null;
 
-  function update<K extends keyof PublicSignupDraft>(key: K, value: PublicSignupDraft[K]) {
-    setForm((current) => ({ ...current, [key]: value }));
-  }
+  useEffect(() => {
+    reset({
+      ...initialForm,
+      planId: initialPlanId,
+    });
+  }, [initialForm, initialPlanId, reset]);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const nextErrors = validateSignupDraft(form);
-    if (!selectedPlanId) {
+  function onSubmit(values: PublicSignupDraft & { planId: string }) {
+    clearErrors();
+    const signupValues: PublicSignupDraft = {
+      nome: values.nome,
+      email: values.email,
+      telefone: values.telefone,
+      cpf: values.cpf,
+      dataNascimento: values.dataNascimento,
+      sexo: values.sexo,
+      cidade: values.cidade,
+      objetivo: values.objetivo,
+    };
+    const nextErrors = validateSignupDraft(signupValues);
+    if (!values.planId) {
       nextErrors.planId = "Selecione um plano para continuar.";
     }
-    setFormErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0 || !selectedPlanId) return;
+    if (Object.keys(nextErrors).length > 0 || !values.planId) {
+      Object.entries(nextErrors).forEach(([field, message]) => {
+        setError(field as keyof (PublicSignupDraft & { planId: string }), { type: "manual", message });
+      });
+      return;
+    }
 
     persistDraft({
       tenantRef: resolvedTenantRef,
-      planId: selectedPlanId,
-      signup: form,
+      planId: values.planId,
+      signup: signupValues,
     });
 
     router.push(
       buildPublicJourneyHref("/adesao/checkout", {
         tenantRef: resolvedTenantRef,
-        planId: selectedPlanId,
+        planId: values.planId,
       })
     );
   }
@@ -160,24 +190,30 @@ function CadastroPublicoForm({
           <CardTitle>Dados do cliente</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-1.5">
               <label htmlFor="signup-plan" className="text-sm font-medium">
                 Plano escolhido
               </label>
-              <select
-                id="signup-plan"
-                value={selectedPlanId}
-                onChange={(event) => setSelectedPlanId(event.target.value)}
-                className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-              >
-                {context.planos.map((plan) => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.nome}
-                  </option>
-                ))}
-              </select>
-              {formErrors.planId ? <p className="text-xs text-rose-300">{formErrors.planId}</p> : null}
+              <Controller
+                control={control}
+                name="planId"
+                render={({ field }) => (
+                  <select
+                    id="signup-plan"
+                    value={field.value}
+                    onChange={field.onChange}
+                    className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
+                  >
+                    {context.planos.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.nome}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              />
+              {errors.planId ? <p className="text-xs text-rose-300">{errors.planId.message}</p> : null}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -187,11 +223,10 @@ function CadastroPublicoForm({
                 </label>
                 <Input
                   id="signup-nome"
-                  value={form.nome}
-                  onChange={(event) => update("nome", event.target.value)}
+                  {...register("nome")}
                   className="border-border bg-secondary"
                 />
-                {formErrors.nome ? <p className="text-xs text-rose-300">{formErrors.nome}</p> : null}
+                {errors.nome ? <p className="text-xs text-rose-300">{errors.nome.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="signup-email" className="text-sm font-medium">
@@ -200,11 +235,10 @@ function CadastroPublicoForm({
                 <Input
                   id="signup-email"
                   type="email"
-                  value={form.email}
-                  onChange={(event) => update("email", event.target.value)}
+                  {...register("email")}
                   className="border-border bg-secondary"
                 />
-                {formErrors.email ? <p className="text-xs text-rose-300">{formErrors.email}</p> : null}
+                {errors.email ? <p className="text-xs text-rose-300">{errors.email.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="signup-telefone" className="text-sm font-medium">
@@ -212,11 +246,10 @@ function CadastroPublicoForm({
                 </label>
                 <Input
                   id="signup-telefone"
-                  value={form.telefone}
-                  onChange={(event) => update("telefone", event.target.value)}
+                  {...register("telefone")}
                   className="border-border bg-secondary"
                 />
-                {formErrors.telefone ? <p className="text-xs text-rose-300">{formErrors.telefone}</p> : null}
+                {errors.telefone ? <p className="text-xs text-rose-300">{errors.telefone.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="signup-cpf" className="text-sm font-medium">
@@ -224,11 +257,10 @@ function CadastroPublicoForm({
                 </label>
                 <Input
                   id="signup-cpf"
-                  value={form.cpf}
-                  onChange={(event) => update("cpf", event.target.value)}
+                  {...register("cpf")}
                   className="border-border bg-secondary"
                 />
-                {formErrors.cpf ? <p className="text-xs text-rose-300">{formErrors.cpf}</p> : null}
+                {errors.cpf ? <p className="text-xs text-rose-300">{errors.cpf.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="signup-data" className="text-sm font-medium">
@@ -237,26 +269,31 @@ function CadastroPublicoForm({
                 <Input
                   id="signup-data"
                   type="date"
-                  value={form.dataNascimento}
-                  onChange={(event) => update("dataNascimento", event.target.value)}
+                  {...register("dataNascimento")}
                   className="border-border bg-secondary"
                 />
-                {formErrors.dataNascimento ? <p className="text-xs text-rose-300">{formErrors.dataNascimento}</p> : null}
+                {errors.dataNascimento ? <p className="text-xs text-rose-300">{errors.dataNascimento.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="signup-sexo" className="text-sm font-medium">
                   Sexo
                 </label>
-                <select
-                  id="signup-sexo"
-                  value={form.sexo}
-                  onChange={(event) => update("sexo", event.target.value as Sexo)}
-                  className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                >
-                  <option value="F">Feminino</option>
-                  <option value="M">Masculino</option>
-                  <option value="OUTRO">Outro</option>
-                </select>
+                <Controller
+                  control={control}
+                  name="sexo"
+                  render={({ field }) => (
+                    <select
+                      id="signup-sexo"
+                      value={field.value}
+                      onChange={(event) => field.onChange(event.target.value as Sexo)}
+                      className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
+                    >
+                      <option value="F">Feminino</option>
+                      <option value="M">Masculino</option>
+                      <option value="OUTRO">Outro</option>
+                    </select>
+                  )}
+                />
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="signup-cidade" className="text-sm font-medium">
@@ -264,8 +301,7 @@ function CadastroPublicoForm({
                 </label>
                 <Input
                   id="signup-cidade"
-                  value={form.cidade ?? ""}
-                  onChange={(event) => update("cidade", event.target.value)}
+                  {...register("cidade")}
                   className="border-border bg-secondary"
                 />
               </div>
@@ -277,8 +313,7 @@ function CadastroPublicoForm({
               </label>
               <Textarea
                 id="signup-objetivo"
-                value={form.objetivo ?? ""}
-                onChange={(event) => update("objetivo", event.target.value)}
+                {...register("objetivo")}
                 className="border-border bg-secondary"
                 placeholder="Ex: foco em musculação e aulas de spinning no período da manhã"
               />

@@ -11,6 +11,19 @@ import type {
   Tenant,
 } from "@/lib/types";
 
+type FuncionarioNotificacaoApiEvento =
+  | "ESCALA_ALTERADA"
+  | "AULA_ATRIBUIDA"
+  | "ACESSO_BLOQUEADO"
+  | "COMUNICADO_OPERACIONAL";
+
+type FuncionarioNotificacaoApiRequest = {
+  evento: FuncionarioNotificacaoApiEvento;
+  email: boolean;
+  push: boolean;
+  inApp: boolean;
+};
+
 export type ColaboradorFlagFiltro =
   | "TODOS"
   | "AULAS"
@@ -107,6 +120,104 @@ function normalizeStatusAcesso(value: unknown, input: {
   }
   if (input.bloqueiaAcessoSistema) return "BLOQUEADO";
   return input.possuiAcessoSistema ? "ATIVO" : "SEM_ACESSO";
+}
+
+function notificationHasAnyChannel(input: {
+  email?: unknown;
+  push?: unknown;
+  inApp?: unknown;
+}) {
+  return cleanBoolean(input.email, false) || cleanBoolean(input.push, false) || cleanBoolean(input.inApp, false);
+}
+
+function normalizeNotificacoes(input: unknown): Funcionario["notificacoes"] | undefined {
+  if (Array.isArray(input)) {
+    const enabledEvents = input.reduce(
+      (acc, item) => {
+        if (!item || typeof item !== "object") return acc;
+        const record = item as Record<string, unknown>;
+        const evento = cleanString(record.evento)?.toUpperCase() as FuncionarioNotificacaoApiEvento | undefined;
+        if (!evento || !notificationHasAnyChannel(record)) return acc;
+
+        if (evento === "ESCALA_ALTERADA" || evento === "AULA_ATRIBUIDA") {
+          acc.escala = true;
+        }
+        if (evento === "COMUNICADO_OPERACIONAL" || evento === "ACESSO_BLOQUEADO") {
+          acc.pendenciasOperacionais = true;
+        }
+        if (cleanBoolean(record.email, false)) {
+          acc.email = true;
+        }
+        if (cleanBoolean(record.push, false)) {
+          acc.whatsapp = true;
+        }
+        return acc;
+      },
+      {
+        email: false,
+        whatsapp: false,
+        pendenciasOperacionais: false,
+        escala: false,
+      }
+    );
+
+    return enabledEvents;
+  }
+
+  if (input && typeof input === "object") {
+    const record = input as Record<string, unknown>;
+    return {
+      email: cleanBoolean(record.email, false),
+      whatsapp: cleanBoolean(record.whatsapp, false),
+      pendenciasOperacionais: cleanBoolean(record.pendenciasOperacionais, false),
+      escala: cleanBoolean(record.escala, false),
+    };
+  }
+
+  return undefined;
+}
+
+export function serializeFuncionarioNotificacoes(input: Funcionario["notificacoes"] | undefined): FuncionarioNotificacaoApiRequest[] | undefined {
+  if (!input) return undefined;
+
+  const email = cleanBoolean(input.email, false);
+  const push = cleanBoolean(input.whatsapp, false);
+  const operacional = cleanBoolean(input.pendenciasOperacionais, false);
+  const escala = cleanBoolean(input.escala, false);
+
+  const requests: FuncionarioNotificacaoApiRequest[] = [];
+
+  if (operacional) {
+    requests.push({
+      evento: "COMUNICADO_OPERACIONAL",
+      email,
+      push,
+      inApp: true,
+    });
+    requests.push({
+      evento: "ACESSO_BLOQUEADO",
+      email,
+      push,
+      inApp: true,
+    });
+  }
+
+  if (escala) {
+    requests.push({
+      evento: "ESCALA_ALTERADA",
+      email,
+      push,
+      inApp: true,
+    });
+    requests.push({
+      evento: "AULA_ATRIBUIDA",
+      email,
+      push,
+      inApp: true,
+    });
+  }
+
+  return requests;
 }
 
 function normalizeMemberships(
@@ -282,15 +393,7 @@ export function normalizeFuncionarioRecord(input: Record<string, unknown>, fallb
       : [],
     observacoes: cleanString(input.observacoes),
     informacoesInternas: cleanString(input.informacoesInternas),
-    notificacoes:
-      input.notificacoes && typeof input.notificacoes === "object"
-        ? {
-            email: cleanBoolean((input.notificacoes as Record<string, unknown>).email, false),
-            whatsapp: cleanBoolean((input.notificacoes as Record<string, unknown>).whatsapp, false),
-            pendenciasOperacionais: cleanBoolean((input.notificacoes as Record<string, unknown>).pendenciasOperacionais, false),
-            escala: cleanBoolean((input.notificacoes as Record<string, unknown>).escala, false),
-          }
-        : undefined,
+    notificacoes: normalizeNotificacoes(input.notificacoes),
     ativo,
   };
 }

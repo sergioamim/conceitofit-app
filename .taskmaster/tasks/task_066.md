@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 63, 64, 65
+**Dependencies:** 63 ✓, 64 ✓, 65 ✓
 
 **Priority:** medium
 
@@ -23,7 +23,7 @@ Executar testes de integração/Playwright cobrindo login por rota e host, e rev
 ### 66.1. Adicionar testes do fluxo por rota e por host
 
 **Status:** done  
-**Dependencies:** None
+**Dependencies:** None  
 
 Cobrir os dois formatos de entrada local.
 
@@ -34,7 +34,7 @@ Criar ou atualizar testes para `http://localhost:3001/app/sergioamim/login` e `h
 ### 66.2. Documentar setup local do login por rede
 
 **Status:** done  
-**Dependencies:** 1
+**Dependencies:** 66.1  
 
 Registrar como o time deve usar e testar o novo fluxo.
 
@@ -45,7 +45,7 @@ Atualizar docs/readme/frontend com os links canônicos locais, o papel do `subdo
 ### 66.3. Fechar handoff com backend e QA
 
 **Status:** done  
-**Dependencies:** 1, 2
+**Dependencies:** 66.1, 66.2  
 
 Consolidar critérios de aceite e dependências externas.
 
