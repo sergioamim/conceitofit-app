@@ -1,4 +1,5 @@
 import {
+  type EvoImportColaboradoresBlocoResumo,
   createEvoP0CsvUploadApi,
   createEvoP0PacoteJobApi,
   getEvoImportJobResumoApi,
@@ -12,6 +13,71 @@ import {
   type EvoImportRejeicoesResponse,
   type UploadAnaliseResponse,
 } from "@/lib/api/importacao-evo";
+
+export type EvoColaboradorDiagnosticoStatus =
+  | "naoSelecionado"
+  | "semLinhas"
+  | "comRejeicoes"
+  | "sucesso";
+
+export type EvoColaboradorDiagnosticoNormalizado = {
+  arquivosSelecionados: string[];
+  arquivosAusentes: string[];
+  status: EvoColaboradorDiagnosticoStatus;
+};
+
+function normalizeArquivoLista(
+  values: string[] | null | undefined,
+  canonicalizeFile?: (value?: string | null) => string | null
+): string[] {
+  if (!Array.isArray(values)) return [];
+  const deduplicated = new Set<string>();
+  values.forEach((value) => {
+    if (typeof value !== "string") return;
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const canonical = canonicalizeFile?.(trimmed) ?? trimmed;
+    if (!canonical) return;
+    deduplicated.add(canonical);
+  });
+  return Array.from(deduplicated);
+}
+
+export function normalizeEvoColaboradorDiagnostico(input: {
+  resumo?: EvoImportColaboradoresBlocoResumo | null;
+  fallbackArquivosSelecionados?: string[];
+  fallbackArquivosAusentes?: string[];
+  canonicalizeFile?: (value?: string | null) => string | null;
+}): EvoColaboradorDiagnosticoNormalizado {
+  const arquivosSelecionados = normalizeArquivoLista(
+    input.resumo?.arquivosSelecionados ?? input.fallbackArquivosSelecionados,
+    input.canonicalizeFile
+  );
+  const arquivosAusentes = normalizeArquivoLista(
+    input.resumo?.arquivosAusentes ?? input.fallbackArquivosAusentes,
+    input.canonicalizeFile
+  );
+  const total = Number(input.resumo?.total ?? 0);
+  const rejeitadas = Number(input.resumo?.rejeitadas ?? 0);
+  const mensagemParcial = input.resumo?.mensagemParcial?.trim();
+
+  let status: EvoColaboradorDiagnosticoStatus;
+  if (arquivosSelecionados.length === 0) {
+    status = "naoSelecionado";
+  } else if (rejeitadas > 0 || Boolean(input.resumo?.parcial) || Boolean(mensagemParcial)) {
+    status = "comRejeicoes";
+  } else if (!Number.isFinite(total) || total <= 0) {
+    status = "semLinhas";
+  } else {
+    status = "sucesso";
+  }
+
+  return {
+    arquivosSelecionados,
+    arquivosAusentes,
+    status,
+  };
+}
 
 export type BackofficeEvoJobAceitoResponse = {
   jobId: string;
@@ -95,6 +161,7 @@ export async function listBackofficeEvoImportJobRejeicoes(input: RejeicoesInput)
 }
 
 export type {
+  EvoImportColaboradoresBlocoResumo,
   EvoImportEntidadeResumo,
   EvoImportJobResumo,
   EvoImportJobStatus,

@@ -44,6 +44,7 @@ import {
   getBackofficeEvoImportJobResumo,
   getBackofficeEvoP0PacoteAnalise,
   listBackofficeEvoImportJobRejeicoes,
+  normalizeEvoColaboradorDiagnostico,
   uploadBackofficeEvoP0Pacote,
 } from "@/lib/backoffice/importacao-evo";
 import {
@@ -404,6 +405,13 @@ type RejeicaoClassificada = Rejeicao & {
       }
     | null;
   payloadFormatado: string | null;
+};
+
+type ColaboradorResumoCard = (typeof COLABORADOR_BLOCO_CONFIG)[number] & {
+  resumo?: EvoImportColaboradoresBlocoResumo;
+  arquivosSelecionados: ColaboradorArquivoConfig[];
+  arquivosAusentes: ColaboradorArquivoConfig[];
+  status: "naoSelecionado" | "semLinhas" | "comRejeicoes" | "sucesso";
 };
 
 function isOnboardingCollectionRouteError(message: string) {
@@ -1569,9 +1577,25 @@ function ImportacaoEvoP0PageContent() {
     () => new Set(jobArquivosDisponiveis.map((arquivo) => resolvePacoteArquivoCanonico(arquivo)).filter(Boolean)),
     [jobArquivosDisponiveis]
   );
+  const colaboradoresResumoDetalhado = jobResumo?.colaboradoresDetalhe;
   const jobTemMalhaColaboradores = useMemo(
-    () => jobArquivosSelecionados.some((arquivo) => isColaboradorArquivoChave(arquivo)),
-    [jobArquivosSelecionados]
+    () => {
+      if (!colaboradoresResumoDetalhado) {
+        return jobArquivosSelecionados.some((arquivo) => isColaboradorArquivoChave(arquivo));
+      }
+      return COLABORADOR_BLOCO_CONFIG.some((bloco) => {
+        const resumo = getColaboradorResumoBloco(colaboradoresResumoDetalhado, bloco.key);
+        const diagnostico = normalizeEvoColaboradorDiagnostico({
+          resumo,
+          fallbackArquivosSelecionados: bloco.arquivos
+            .filter((arquivo) => jobArquivosSelecionadosCanonicos.has(arquivo.pacoteChave))
+            .map((arquivo) => arquivo.pacoteChave),
+          canonicalizeFile: (value) => resolvePacoteArquivoCanonico(value),
+        });
+        return diagnostico.status !== "naoSelecionado" || Boolean(resumo);
+      });
+    },
+    [colaboradoresResumoDetalhado, jobArquivosSelecionados, jobArquivosSelecionadosCanonicos]
   );
 
   const resumoCardsVisiveis = useMemo(() => {
@@ -1614,22 +1638,41 @@ function ImportacaoEvoP0PageContent() {
     resumoCards,
   ]);
 
-  const colaboradoresResumoDetalhado = jobResumo?.colaboradoresDetalhe;
-
-  const colaboradoresResumoCards = useMemo(() => {
+  const colaboradoresResumoCards = useMemo<ColaboradorResumoCard[]>(() => {
     if (!jobTemMalhaColaboradores && !colaboradoresResumoDetalhado && !jobResumo?.funcionarios) return [];
     return COLABORADOR_BLOCO_CONFIG.map((bloco) => {
       const resumo = getColaboradorResumoBloco(colaboradoresResumoDetalhado, bloco.key);
-      const arquivosSelecionados = bloco.arquivos.filter((arquivo) => jobArquivosSelecionadosCanonicos.has(arquivo.pacoteChave));
-      const arquivosAusentes = bloco.arquivos.filter((arquivo) => !jobArquivosSelecionadosCanonicos.has(arquivo.pacoteChave));
       const fallbackResumo =
         !resumo && bloco.key === "fichaPrincipal" ? (jobResumo?.funcionarios as EvoImportColaboradoresBlocoResumo | undefined) : undefined;
+      const resumoEfetivo = resumo ?? fallbackResumo;
+      const diagnostico = normalizeEvoColaboradorDiagnostico({
+        resumo: resumoEfetivo,
+        fallbackArquivosSelecionados: bloco.arquivos
+          .filter((arquivo) => jobArquivosSelecionadosCanonicos.has(arquivo.pacoteChave))
+          .map((arquivo) => arquivo.pacoteChave),
+        fallbackArquivosAusentes: colaboradoresResumoDetalhado
+          ? []
+          : bloco.arquivos
+              .filter((arquivo) => !jobArquivosSelecionadosCanonicos.has(arquivo.pacoteChave))
+              .map((arquivo) => arquivo.pacoteChave),
+        canonicalizeFile: (value) => resolvePacoteArquivoCanonico(value),
+      });
       return {
         ...bloco,
-        resumo: resumo ?? fallbackResumo,
-        arquivosSelecionados,
-        arquivosAusentes,
+        resumo: resumoEfetivo,
+        arquivosSelecionados: bloco.arquivos.filter((arquivo) =>
+          diagnostico.arquivosSelecionados.includes(arquivo.pacoteChave)
+        ),
+        arquivosAusentes: bloco.arquivos.filter((arquivo) =>
+          diagnostico.arquivosAusentes.includes(arquivo.pacoteChave)
+        ),
+        status: diagnostico.status,
       };
+    }).filter((bloco) => {
+      if (colaboradoresResumoDetalhado) {
+        return bloco.status !== "naoSelecionado" || Boolean(bloco.resumo);
+      }
+      return bloco.status !== "naoSelecionado" || Boolean(bloco.resumo);
     });
   }, [
     colaboradoresResumoDetalhado,
@@ -1650,14 +1693,16 @@ function ImportacaoEvoP0PageContent() {
     }
     if (!jobTemMalhaColaboradores) return [];
     return colaboradoresResumoCards
-      .filter((bloco) => bloco.arquivosAusentes.length > 0)
+      .filter((bloco) => bloco.status !== "sucesso")
       .map((bloco) => ({
         bloco: bloco.key,
         mensagem:
-          bloco.arquivosSelecionados.length === 0
-            ? `${bloco.label} não foi incluído nesta execução.`
-            : `${bloco.label} executado sem ${bloco.arquivosAusentes.map((arquivo) => arquivo.label).join(", ")}.`,
-        severidade: "warning" as const,
+          bloco.status === "naoSelecionado"
+            ? `${bloco.label} não foi selecionado neste job.`
+            : bloco.status === "semLinhas"
+              ? `${bloco.label} foi executado sem linhas no pacote importado.`
+              : bloco.resumo?.mensagemParcial?.trim() || `${bloco.label} retornou rejeições ou execução parcial.`,
+        severidade: bloco.status === "comRejeicoes" ? ("error" as const) : ("warning" as const),
       }));
   }, [colaboradoresResumoCards, colaboradoresResumoDetalhado?.alertas, jobTemMalhaColaboradores]);
 
@@ -3476,11 +3521,6 @@ function ImportacaoEvoP0PageContent() {
                                         ? "Consultando propagação automática de acessos..."
                                         : pacoteResumoAcessoAutomatico ?? "Nenhum usuário administrativo está elegível para propagação automática nesta academia."}
                                     </p>
-                                    {!eligibleAdminsPreview.loading && eligibleAdminsPreview.items.length > 0 ? (
-                                      <p className="mt-1">
-                                        Preview: {eligibleAdminsPreview.items.map((item) => item.fullName || item.name).join(", ")}.
-                                      </p>
-                                    ) : null}
                                     {tenantFocoAcademiaId ? (
                                       <Link
                                         href={`/admin/seguranca/usuarios?academiaId=${tenantFocoAcademiaId}&eligible=1`}
@@ -3860,8 +3900,15 @@ function ImportacaoEvoP0PageContent() {
                         {colaboradoresResumoCards.map((bloco) => {
                           const resumo = bloco.resumo;
                           const { percentual, temTotal } = getPercentual(resumo);
-                          const parcial =
-                            Boolean(resumo?.parcial) || bloco.arquivosAusentes.length > 0 || resumoValue("rejeitadas", resumo) > 0;
+                          const statusLabel =
+                            bloco.status === "naoSelecionado"
+                              ? "Não selecionado"
+                              : bloco.status === "semLinhas"
+                                ? "Sem linhas"
+                                : bloco.status === "comRejeicoes"
+                                  ? "Com rejeições"
+                                  : "Sucesso";
+                          const statusVariant = bloco.status === "sucesso" ? ("secondary" as const) : ("outline" as const);
                           return (
                             <Card
                               key={bloco.key}
@@ -3879,8 +3926,8 @@ function ImportacaoEvoP0PageContent() {
                               <CardHeader className="pb-2">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                   <CardTitle className="text-sm">{bloco.label}</CardTitle>
-                                  <Badge variant={parcial ? "outline" : "secondary"}>
-                                    {parcial ? "Parcial" : "OK"}
+                                  <Badge variant={statusVariant}>
+                                    {statusLabel}
                                   </Badge>
                                 </div>
                                 <p className="text-xs text-muted-foreground">{bloco.descricao}</p>
@@ -3925,7 +3972,7 @@ function ImportacaoEvoP0PageContent() {
                                         Bloco não incluído
                                       </span>
                                     )}
-                                    {bloco.arquivosAusentes.length > 0 ? (
+                                    {bloco.arquivosAusentes.length > 0 && bloco.status !== "naoSelecionado" ? (
                                       <span className="rounded-full border border-amber-400/40 px-2 py-1 text-[11px] text-amber-100">
                                         {bloco.arquivosAusentes.length} arquivo(s) ausente(s)
                                       </span>
@@ -3933,6 +3980,14 @@ function ImportacaoEvoP0PageContent() {
                                   </div>
                                   {resumo?.mensagemParcial ? (
                                     <p className="text-[11px] text-muted-foreground">{resumo.mensagemParcial}</p>
+                                  ) : bloco.status === "semLinhas" ? (
+                                    <p className="text-[11px] text-muted-foreground">
+                                      O backend executou este bloco, mas não encontrou linhas aplicáveis no job.
+                                    </p>
+                                  ) : bloco.status === "naoSelecionado" ? (
+                                    <p className="text-[11px] text-muted-foreground">
+                                      O resumo do backend indica que este bloco não participou da execução.
+                                    </p>
                                   ) : bloco.arquivosAusentes.length > 0 ? (
                                     <p className="text-[11px] text-muted-foreground">
                                       {bloco.impactoAusencia}

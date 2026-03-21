@@ -257,7 +257,14 @@ async function installImportacaoEvoJobStubs(page: Page) {
       recebimentos: { total: 3, processadas: 3, criadas: 2, atualizadas: 1, rejeitadas: 0 },
       funcionarios: { total: 12, processadas: 12, criadas: 7, atualizadas: 3, rejeitadas: concluiu ? 2 : 0 },
       colaboradoresDetalhe: {
-        fichaPrincipal: { total: 4, processadas: 4, criadas: 3, atualizadas: 1, rejeitadas: 0 },
+        fichaPrincipal: {
+          total: 4,
+          processadas: 4,
+          criadas: 3,
+          atualizadas: 1,
+          rejeitadas: 0,
+          arquivosSelecionados: ["FUNCIONARIOS.csv"],
+        },
         funcoes: {
           total: 3,
           processadas: 3,
@@ -266,6 +273,7 @@ async function installImportacaoEvoJobStubs(page: Page) {
           rejeitadas: 1,
           parcial: true,
           mensagemParcial: "Uma função veio inválida e exigirá retry do bloco de cargos.",
+          arquivosSelecionados: ["FUNCIONARIOS_FUNCOES.csv", "FUNCIONARIOS_FUNCOES_EXERCIDAS.csv"],
         },
         tiposOperacionais: {
           total: 1,
@@ -273,6 +281,7 @@ async function installImportacaoEvoJobStubs(page: Page) {
           criadas: 1,
           atualizadas: 0,
           rejeitadas: 0,
+          arquivosSelecionados: ["TIPOS_FUNCIONARIOS.csv"],
         },
         contratacao: {
           total: 1,
@@ -280,22 +289,24 @@ async function installImportacaoEvoJobStubs(page: Page) {
           criadas: 1,
           atualizadas: 0,
           rejeitadas: 0,
+          arquivosSelecionados: ["FUNCIONARIOS_TIPOS.csv"],
         },
         horarios: {
-          total: 2,
-          processadas: 2,
-          criadas: 1,
+          total: 0,
+          processadas: 0,
+          criadas: 0,
           atualizadas: 0,
-          rejeitadas: 1,
-          parcial: true,
-          mensagemParcial: "Um horário semanal veio fora do intervalo permitido.",
+          rejeitadas: 0,
+          arquivosSelecionados: ["FUNCIONARIOS_HORARIOS.csv"],
         },
         perfilLegado: {
-          total: 1,
-          processadas: 1,
+          total: 0,
+          processadas: 0,
           criadas: 0,
-          atualizadas: 1,
+          atualizadas: 0,
           rejeitadas: 0,
+          arquivosSelecionados: [],
+          arquivosAusentes: ["PERMISSOES.csv"],
         },
       },
     };
@@ -439,6 +450,8 @@ test.describe("Backoffice importacao EVO", () => {
     await expect(acompanhamento.getByText("Tipos operacionais", { exact: true })).toBeVisible();
     await expect(acompanhamento.getByText("Contratação", { exact: true })).toBeVisible();
     await expect(acompanhamento.getByText("Perfil legado", { exact: true })).toBeVisible();
+    await expect(acompanhamento.getByText("Sem linhas", { exact: true })).toBeVisible();
+    await expect(acompanhamento.getByText("Não selecionado", { exact: true })).toBeVisible();
     await expect(acompanhamento.getByText("Últimos jobs salvos")).toBeVisible();
     await expect(acompanhamento.locator("summary").filter({ hasText: "Arquivos ignorados nesta execução (1)" })).toBeVisible();
 
