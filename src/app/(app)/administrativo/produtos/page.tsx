@@ -67,15 +67,17 @@ export default function ProdutosPage() {
 
   return (
     <div className="space-y-6">
-      <ProdutoModal
-        open={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          setEditing(null);
-        }}
-        onSave={handleSave}
-        initial={editing}
-      />
+      {modalOpen ? (
+        <ProdutoModal
+          open={modalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setEditing(null);
+          }}
+          onSave={handleSave}
+          initial={editing}
+        />
+      ) : null}
 
       <div className="flex items-center justify-between">
         <div>

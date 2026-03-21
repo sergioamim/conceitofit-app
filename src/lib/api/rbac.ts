@@ -263,6 +263,7 @@ export async function createUserApi(input: {
 }): Promise<RbacUser> {
   const fullName = input.data.fullName?.trim() || input.data.name.trim();
   const { firstName, lastName } = splitNameParts(fullName);
+  const loginIdentifiers = input.data.loginIdentifiers?.filter((item) => cleanString(item.value)) ?? [];
   const response = await apiRequest<RbacUserApiResponse>({
     path: "/api/v1/auth/users",
     method: "POST",
@@ -276,7 +277,15 @@ export async function createUserApi(input: {
       firstName,
       lastName,
       fullName,
+      userKind: input.data.userKind,
+      networkId: input.data.networkId,
+      networkName: input.data.networkName,
+      networkSubdomain: input.data.networkSubdomain,
+      tenantIds: input.data.tenantIds,
       tenantId: input.data.defaultTenantId ?? input.tenantId,
+      defaultTenantId: input.data.defaultTenantId ?? input.tenantId,
+      initialPerfilIds: input.data.initialPerfilIds ?? [],
+      loginIdentifiers,
       active: true,
     },
   });

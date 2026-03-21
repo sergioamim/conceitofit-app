@@ -2,7 +2,7 @@
 
 **Title:** Migrar formularios selecionados para react-hook-form
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,7 +22,7 @@ Validar cada subtask com verificacao do submit, mensagens de erro, reset entre a
 
 ### 79.1. Migrar formulario de acesso por rede para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Substituir o gerenciamento manual de estado e validacao do login, recuperacao e primeiro acesso em `src/components/auth/network-access-flow.tsx` por react-hook-form.
@@ -33,7 +33,7 @@ Aplicar react-hook-form nos campos identificador e senha, usar `Controller` nos 
 
 ### 79.2. Migrar formulario de login legado para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Substituir o gerenciamento manual de estado do login legado em `src/components/auth/legacy-login-flow.tsx` por react-hook-form.
@@ -44,7 +44,7 @@ Usar react-hook-form para usuario e senha, manter a etapa de unidade prioritaria
 
 ### 79.3. Migrar formulario de cadastro publico para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar o formulario de pre-cadastro em `src/app/(public)/adesao/cadastro/page.tsx` para react-hook-form.
@@ -55,7 +55,7 @@ Mapear validacoes hoje feitas por `validateSignupDraft` para erros do form, inte
 
 ### 79.4. Migrar formulario de trial publico para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar o formulario de trial em `src/app/(public)/adesao/trial/page.tsx` para react-hook-form.
@@ -66,7 +66,7 @@ Substituir `form` e `formErrors` manuais por registro de campos, mensagens de er
 
 ### 79.5. Migrar formulario de checkout publico para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar o fechamento digital em `src/app/(public)/adesao/checkout/page.tsx` para react-hook-form.
@@ -77,7 +77,7 @@ Cobrir plano, forma de pagamento, parcelas, observacoes, flags de aceite e renov
 
 ### 79.6. Migrar formulario de plano para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/planos/plano-form.tsx` para react-hook-form.
@@ -88,7 +88,7 @@ Usar `watch`, `setValue`, `Controller` e `useFieldArray` para beneficios e ativi
 
 ### 79.7. Migrar formulario de criacao de usuario por unidade para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar o formulario Criar usuario da rede atual em `src/app/(app)/seguranca/acesso-unidade/page.tsx` para react-hook-form.
@@ -99,7 +99,7 @@ Cobrir nome, email, cpf e perfis iniciais com validacao integrada a `validateAca
 
 ### 79.8. Migrar formulario de concessao de acesso por unidade para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar o formulario Conceder acesso operacional em `src/app/(app)/seguranca/acesso-unidade/page.tsx` para react-hook-form.
@@ -110,7 +110,7 @@ Integrar tenant, `SuggestionInput` e submissao com perfil padrao sem perder a bu
 
 ### 79.9. Migrar modal de produto para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/produto-modal.tsx` para usar react-hook-form.
@@ -121,7 +121,7 @@ Substituir estado agregado manual por `defaultValues` e `reset`, tratar parsers 
 
 ### 79.10. Migrar modal de cargo para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/cargo-modal.tsx` para react-hook-form.
@@ -132,7 +132,7 @@ Cobrir nome e ativo com reset correto entre criar e editar e submit padronizado.
 
 ### 79.11. Migrar modal de funcionario para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/funcionario-modal.tsx` para react-hook-form.
@@ -143,7 +143,7 @@ Cobrir nome, cargo, ativo e `podeMinistrarAulas`, usando `Controller` para `Sele
 
 ### 79.12. Migrar modal de convenio para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/convenio-modal.tsx` para react-hook-form.
@@ -154,7 +154,7 @@ Modelar nome, desconto, ativo, observacoes e `planoIds`, usando `watch` e `setVa
 
 ### 79.13. Migrar modal de servico para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/servico-modal.tsx` para react-hook-form.
@@ -165,7 +165,7 @@ Cobrir campos numericos, flags booleanas e regras condicionais de tipo de cobran
 
 ### 79.14. Migrar modal de exercicio para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/exercicio-modal.tsx` para react-hook-form.
@@ -176,7 +176,7 @@ Cobrir nome, grupo muscular, equipamento, video, unidade, descricao e ativo, com
 
 ### 79.15. Migrar modal legado de plano para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/plano-modal.tsx` para react-hook-form.
@@ -187,7 +187,7 @@ Modelar campos do plano, beneficios e atividades com `watch` e `useFieldArray`, 
 
 ### 79.16. Migrar modal de sala para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/sala-modal.tsx` para react-hook-form.
@@ -198,7 +198,7 @@ Substituir o estado manual do modal por form controlado com reset consistente e 
 
 ### 79.17. Migrar modal de forma de pagamento para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/forma-pagamento-modal.tsx` para react-hook-form.
@@ -209,7 +209,7 @@ Padronizar validacao, reset e submit do CRUD de forma de pagamento sem alterar o
 
 ### 79.18. Migrar modal de bandeira de cartao para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/bandeira-cartao-modal.tsx` para react-hook-form.
@@ -220,7 +220,7 @@ Cobrir criacao e edicao de bandeira com campos registrados e submit padronizado.
 
 ### 79.19. Migrar modal de novo voucher para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/novo-voucher-modal.tsx` para react-hook-form.
@@ -231,7 +231,7 @@ Cobrir regras condicionais de periodo, quantidade, flags e codigo customizado us
 
 ### 79.20. Migrar modal de edicao de voucher para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/editar-voucher-modal.tsx` para react-hook-form.
@@ -242,7 +242,7 @@ Aplicar a mesma base do novo voucher para fluxo de edicao, com `reset` por `init
 
 ### 79.21. Migrar modal de novo cartao para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/novo-cartao-modal.tsx` para react-hook-form.
@@ -253,7 +253,7 @@ Integrar mascaras e validacoes de numero, validade, CPF e bandeira dentro do flu
 
 ### 79.22. Migrar modal de nova matricula para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/nova-matricula-modal.tsx` para react-hook-form.
@@ -264,7 +264,7 @@ Cobrir aluno, plano, data, desconto, renovacao, parcelas e flags de pagamento co
 
 ### 79.23. Migrar modal de recebimento de pagamento para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar `src/components/shared/receber-pagamento-modal.tsx` para react-hook-form.
@@ -275,7 +275,7 @@ Substituir controle manual de data e observacoes por form registrado, preservand
 
 ### 79.24. Migrar formulario de tarefas CRM para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar o formulario principal de `src/app/(app)/crm/tarefas/page.tsx` para react-hook-form.
@@ -286,7 +286,7 @@ Cobrir criacao e edicao de tarefa, campos de vencimento, selects e textarea, man
 
 ### 79.25. Migrar formulario de criacao de usuario global para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar o formulario de criacao em `src/app/(backoffice)/admin/seguranca/usuarios/page.tsx` para react-hook-form.
@@ -297,7 +297,7 @@ Cobrir escopo, academia, tenants, perfil inicial e flags globais com `watch` e `
 
 ### 79.26. Migrar formularios de RBAC para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar os formularios operacionais de `src/app/(app)/seguranca/rbac/page.tsx` para react-hook-form.
@@ -308,7 +308,7 @@ Separar cada fluxo de atribuicao e concessao em forms independentes com validaca
 
 ### 79.27. Migrar formulario de criacao de colaborador administrativo para react-hook-form
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Refatorar o formulario de criacao em `src/app/(app)/administrativo/funcionarios/page.tsx` para react-hook-form.

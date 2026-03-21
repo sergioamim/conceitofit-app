@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -29,6 +30,38 @@ const VOUCHER_TYPES = [
   { value: "SESSAO", label: "Sessão avulsa" },
 ];
 
+type EditarVoucherFormValues = {
+  escopo: VoucherEscopo;
+  tipo: string;
+  nome: string;
+  periodoInicio: string;
+  periodoFim: string;
+  prazoDeterminado: boolean;
+  quantidade: string;
+  ilimitada: boolean;
+  usarNaVenda: boolean;
+  planoIds: string[];
+  umaVezPorCliente: boolean;
+  aplicarEm: VoucherAplicarEm[];
+};
+
+function buildDefaultValues(voucher: Voucher): EditarVoucherFormValues {
+  return {
+    escopo: voucher.escopo,
+    tipo: voucher.tipo,
+    nome: voucher.nome,
+    periodoInicio: voucher.periodoInicio,
+    periodoFim: voucher.periodoFim ?? "",
+    prazoDeterminado: voucher.prazoDeterminado,
+    quantidade: voucher.quantidade?.toString() ?? "",
+    ilimitada: voucher.ilimitado,
+    usarNaVenda: voucher.usarNaVenda,
+    planoIds: voucher.planoIds ?? [],
+    umaVezPorCliente: voucher.umaVezPorCliente,
+    aplicarEm: voucher.aplicarEm,
+  };
+}
+
 export function EditarVoucherModal({
   tenantId,
   voucher,
@@ -40,24 +73,31 @@ export function EditarVoucherModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [tipo, setTipo] = useState(voucher.tipo);
-  const [escopo, setEscopo] = useState<VoucherEscopo>(voucher.escopo);
-  const [nome, setNome] = useState(voucher.nome);
-  const [periodoInicio, setPeriodoInicio] = useState(voucher.periodoInicio);
-  const [periodoFim, setPeriodoFim] = useState(voucher.periodoFim ?? "");
-  const [prazoDeterminado, setPrazoDeterminado] = useState(voucher.prazoDeterminado);
-  const [quantidade, setQuantidade] = useState(
-    voucher.quantidade?.toString() ?? ""
-  );
-  const [ilimitada, setIlimitada] = useState(voucher.ilimitado);
-  const [usarNaVenda, setUsarNaVenda] = useState(voucher.usarNaVenda);
-  const [planoIds, setPlanoIds] = useState<string[]>(voucher.planoIds ?? []);
   const [planos, setPlanos] = useState<Plano[]>([]);
-  const [umaVezPorCliente, setUmaVezPorCliente] = useState(voucher.umaVezPorCliente);
-  const [aplicarEm, setAplicarEm] = useState<VoucherAplicarEm[]>(voucher.aplicarEm);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } = useForm<EditarVoucherFormValues>({
+    defaultValues: buildDefaultValues(voucher),
+  });
+  const prazoDeterminado = useWatch({ control, name: "prazoDeterminado" });
+  const ilimitada = useWatch({ control, name: "ilimitada" });
+  const planoIds = useWatch({ control, name: "planoIds" }) ?? [];
+  const aplicarEm = useWatch({ control, name: "aplicarEm" }) ?? [];
+
+  useEffect(() => {
+    reset(buildDefaultValues(voucher));
+    clearErrors();
+    setSaveError("");
+  }, [clearErrors, reset, voucher]);
 
   useEffect(() => {
     if (!tenantId) {
@@ -67,59 +107,68 @@ export function EditarVoucherModal({
     void listPlanosApi({ tenantId, apenasAtivos: true }).then(setPlanos);
   }, [tenantId]);
 
+  const todosPlanosSelecionados = planos.length > 0 && planoIds.length === planos.length;
+
   function togglePlano(id: string) {
-    setPlanoIds((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    setValue(
+      "planoIds",
+      planoIds.includes(id) ? planoIds.filter((item) => item !== id) : [...planoIds, id],
+      { shouldDirty: true }
     );
   }
 
   function toggleAplicarEm(value: VoucherAplicarEm) {
-    setAplicarEm((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    setValue(
+      "aplicarEm",
+      aplicarEm.includes(value) ? aplicarEm.filter((item) => item !== value) : [...aplicarEm, value],
+      { shouldDirty: true }
     );
   }
 
-  const todosPlanosSelecionados =
-    planos.length > 0 && planoIds.length === planos.length;
-
   function toggleTodosPlanos() {
-    setPlanoIds(todosPlanosSelecionados ? [] : planos.map((p) => p.id));
+    setValue("planoIds", todosPlanosSelecionados ? [] : planos.map((plano) => plano.id), { shouldDirty: true });
   }
 
-  async function handleSalvar() {
-    const nextErrors: Record<string, string> = {};
-    if (!tipo) nextErrors.tipo = "Selecione o tipo de voucher";
-    if (!nome.trim()) nextErrors.nome = "Informe o nome do voucher";
-    if (!periodoInicio) nextErrors.periodoInicio = "Informe a data de início";
-    if (prazoDeterminado && !periodoFim)
-      nextErrors.periodoFim = "Informe a data de término";
-    if (!ilimitada && !quantidade)
-      nextErrors.quantidade = "Informe a quantidade ou marque ilimitada";
+  async function handleSalvar(values: EditarVoucherFormValues) {
+    clearErrors();
+    setSaveError("");
+
+    const nextErrors: Partial<Record<keyof EditarVoucherFormValues, string>> = {};
+    if (!values.tipo) nextErrors.tipo = "Selecione o tipo de voucher";
+    if (!values.nome.trim()) nextErrors.nome = "Informe o nome do voucher";
+    if (!values.periodoInicio) nextErrors.periodoInicio = "Informe a data de início";
+    if (values.prazoDeterminado && !values.periodoFim) nextErrors.periodoFim = "Informe a data de término";
+    if (!values.ilimitada && !values.quantidade) nextErrors.quantidade = "Informe a quantidade ou marque ilimitada";
+
     if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
+      Object.entries(nextErrors).forEach(([field, message]) => {
+        setError(field as keyof EditarVoucherFormValues, {
+          type: "manual",
+          message,
+        });
+      });
       return;
     }
-    setErrors({});
+
     setSaving(true);
-    setSaveError("");
     try {
       await updateVoucherApi(voucher.id, {
-        escopo,
-        tipo,
-        nome: nome.trim(),
-        periodoInicio,
-        periodoFim: prazoDeterminado ? periodoFim : undefined,
-        prazoDeterminado,
-        quantidade: ilimitada ? undefined : Number(quantidade),
-        ilimitado: ilimitada,
-        usarNaVenda,
-        planoIds,
-        umaVezPorCliente,
-        aplicarEm,
+        escopo: values.escopo,
+        tipo: values.tipo,
+        nome: values.nome.trim(),
+        periodoInicio: values.periodoInicio,
+        periodoFim: values.prazoDeterminado ? values.periodoFim : undefined,
+        prazoDeterminado: values.prazoDeterminado,
+        quantidade: values.ilimitada ? undefined : Number(values.quantidade),
+        ilimitado: values.ilimitada,
+        usarNaVenda: values.usarNaVenda,
+        planoIds: values.planoIds,
+        umaVezPorCliente: values.umaVezPorCliente,
+        aplicarEm: values.aplicarEm,
       });
       onSaved();
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Erro ao salvar voucher.");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Erro ao salvar voucher.");
     } finally {
       setSaving(false);
     }
@@ -127,22 +176,19 @@ export function EditarVoucherModal({
 
   return (
     <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
-      <DialogContent className="bg-card border-border max-w-lg">
+      <DialogContent className="max-w-lg border-border bg-card">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
-            Editar voucher
-          </DialogTitle>
+          <DialogTitle className="font-display text-lg font-bold">Editar voucher</DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-[65vh] overflow-y-auto space-y-5 pr-1">
-          {saveError && (
+        <form className="max-h-[65vh] space-y-5 overflow-y-auto pr-1" onSubmit={handleSubmit(handleSalvar)}>
+          {saveError ? (
             <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
               {saveError}
             </div>
-          )}
+          ) : null}
 
-          {/* Código (read-only) */}
-          <div className="rounded-xl border border-border bg-secondary/40 p-3 space-y-0.5">
+          <div className="space-y-0.5 rounded-xl border border-border bg-secondary/40 p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Tipo de código (não editável)
             </p>
@@ -151,7 +197,6 @@ export function EditarVoucherModal({
             </p>
           </div>
 
-          {/* Tipo */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               <span>Escopo</span>
@@ -159,18 +204,23 @@ export function EditarVoucherModal({
                 <HelpCircle className="size-4 text-muted-foreground" />
               </HoverPopover>
             </div>
-            <Select value={escopo} onValueChange={(v) => setEscopo(v as VoucherEscopo)}>
-              <SelectTrigger className="w-full bg-secondary border-border text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                <SelectItem value="UNIDADE">Apenas esta unidade</SelectItem>
-                <SelectItem value="GRUPO">Grupo (rede inteira)</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="escopo"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={(value) => field.onChange(value as VoucherEscopo)}>
+                  <SelectTrigger className="w-full border-border bg-secondary text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-border bg-card">
+                    <SelectItem value="UNIDADE">Apenas esta unidade</SelectItem>
+                    <SelectItem value="GRUPO">Grupo (rede inteira)</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
-          {/* Tipo */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               <span>Tipo de voucher *</span>
@@ -178,24 +228,28 @@ export function EditarVoucherModal({
                 <HelpCircle className="size-4 text-muted-foreground" />
               </HoverPopover>
             </div>
-            <Select value={tipo} onValueChange={(v) => setTipo(v)}>
-              <SelectTrigger className="w-full bg-secondary border-border text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {VOUCHER_TYPES.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.tipo && (
-              <p className="text-xs text-gym-danger">{errors.tipo}</p>
-            )}
+            <Controller
+              control={control}
+              name="tipo"
+              render={({ field }) => (
+                <Select value={field.value || "__none__"} onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}>
+                  <SelectTrigger className="w-full border-border bg-secondary text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-border bg-card">
+                    <SelectItem value="__none__">Selecione</SelectItem>
+                    {VOUCHER_TYPES.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.tipo ? <p className="text-xs text-gym-danger">{errors.tipo.message}</p> : null}
           </div>
 
-          {/* Nome */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               <span>Nome do voucher *</span>
@@ -203,27 +257,20 @@ export function EditarVoucherModal({
                 <Info className="size-4 text-muted-foreground" />
               </HoverPopover>
             </div>
-            <Input
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              className="bg-secondary border-border"
-            />
-            {errors.nome && (
-              <p className="text-xs text-gym-danger">{errors.nome}</p>
-            )}
+            <Input {...register("nome")} className="border-border bg-secondary" />
+            {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
           </div>
 
-          {/* Período */}
           <div className="space-y-3 rounded-xl border border-border bg-secondary/40 p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Período de validade
               </p>
-              <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
                   checked={!prazoDeterminado}
-                  onChange={(e) => setPrazoDeterminado(!e.target.checked)}
+                  onChange={(event) => setValue("prazoDeterminado", !event.target.checked, { shouldDirty: true })}
                 />
                 Prazo indeterminado
               </label>
@@ -234,15 +281,8 @@ export function EditarVoucherModal({
                   Início *
                   <Calendar className="size-3.5" />
                 </label>
-                <Input
-                  type="date"
-                  value={periodoInicio}
-                  onChange={(e) => setPeriodoInicio(e.target.value)}
-                  className="bg-background border-border"
-                />
-                {errors.periodoInicio && (
-                  <p className="text-xs text-gym-danger">{errors.periodoInicio}</p>
-                )}
+                <Input type="date" {...register("periodoInicio")} className="border-border bg-background" />
+                {errors.periodoInicio ? <p className="text-xs text-gym-danger">{errors.periodoInicio.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -251,19 +291,15 @@ export function EditarVoucherModal({
                 </label>
                 <Input
                   type="date"
-                  value={periodoFim}
-                  onChange={(e) => setPeriodoFim(e.target.value)}
+                  {...register("periodoFim")}
                   disabled={!prazoDeterminado}
-                  className="bg-background border-border disabled:opacity-40"
+                  className="border-border bg-background disabled:opacity-40"
                 />
-                {errors.periodoFim && (
-                  <p className="text-xs text-gym-danger">{errors.periodoFim}</p>
-                )}
+                {errors.periodoFim ? <p className="text-xs text-gym-danger">{errors.periodoFim.message}</p> : null}
               </div>
             </div>
           </div>
 
-          {/* Quantidade */}
           <div className="space-y-1.5">
             <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Quantidade *
@@ -276,50 +312,31 @@ export function EditarVoucherModal({
                 type="number"
                 min={1}
                 step={1}
-                value={quantidade}
-                onChange={(e) => setQuantidade(e.target.value)}
+                {...register("quantidade")}
                 disabled={ilimitada}
-                className="w-28 bg-secondary border-border disabled:opacity-40"
+                className="w-28 border-border bg-secondary disabled:opacity-40"
                 placeholder="Ex: 100"
               />
-              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={ilimitada}
-                  onChange={(e) => setIlimitada(e.target.checked)}
-                />
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                <input type="checkbox" {...register("ilimitada")} />
                 Ilimitada
               </label>
             </div>
-            {!ilimitada && errors.quantidade && (
-              <p className="text-xs text-gym-danger">{errors.quantidade}</p>
-            )}
+            {!ilimitada && errors.quantidade ? <p className="text-xs text-gym-danger">{errors.quantidade.message}</p> : null}
           </div>
 
-          {/* Usar na venda */}
-          <div className="flex items-center gap-2">
-            <input
-              id="usarNaVendaEdit"
-              type="checkbox"
-              checked={usarNaVenda}
-              onChange={(e) => setUsarNaVenda(e.target.checked)}
-            />
-            <label
-              htmlFor="usarNaVendaEdit"
-              className="text-sm text-muted-foreground cursor-pointer"
-            >
-              Utilizar na página de vendas
-            </label>
-          </div>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <input id="usarNaVendaEdit" type="checkbox" {...register("usarNaVenda")} />
+            Utilizar na página de vendas
+          </label>
 
-          {/* Contratos */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Contratos aplicáveis
               </p>
-              {planos.length > 0 && (
-                <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+              {planos.length > 0 ? (
+                <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
                   <input
                     type="checkbox"
                     checked={todosPlanosSelecionados}
@@ -327,13 +344,13 @@ export function EditarVoucherModal({
                   />
                   Selecionar todos
                 </label>
-              )}
+              ) : null}
             </div>
-            <div className="max-h-36 overflow-y-auto rounded-xl border border-border bg-secondary/40 p-3 space-y-1.5">
+            <div className="max-h-36 space-y-1.5 overflow-y-auto rounded-xl border border-border bg-secondary/40 p-3">
               {planos.map((plano) => (
                 <label
                   key={plano.id}
-                  className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-secondary cursor-pointer transition-colors"
+                  className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-secondary"
                 >
                   <input
                     type="checkbox"
@@ -349,28 +366,21 @@ export function EditarVoucherModal({
             </div>
           </div>
 
-          {/* Regras */}
           <div className="space-y-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Regras de uso
             </p>
-            <label className="flex items-start gap-3 rounded-xl border border-border bg-secondary/40 px-4 py-3 cursor-pointer hover:bg-secondary/60 transition-colors">
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                checked={umaVezPorCliente}
-                onChange={(e) => setUmaVezPorCliente(e.target.checked)}
-              />
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-secondary/40 px-4 py-3 transition-colors hover:bg-secondary/60">
+              <input type="checkbox" className="mt-0.5" {...register("umaVezPorCliente")} />
               <div>
                 <p className="text-sm font-medium">Utilizar uma única vez por cliente</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   Cada cliente poderá resgatar este voucher somente uma vez.
                 </p>
               </div>
             </label>
           </div>
 
-          {/* Aplicar em */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               <span>Aplicar no valor de</span>
@@ -384,35 +394,35 @@ export function EditarVoucherModal({
                   { value: "CONTRATO" as VoucherAplicarEm, label: "Contrato", desc: "Aplica no valor do plano/mensalidade." },
                   { value: "ANUIDADE" as VoucherAplicarEm, label: "Anuidade", desc: "Aplica no valor anual do plano." },
                 ] as const
-              ).map((opt) => (
+              ).map((option) => (
                 <label
-                  key={opt.value}
-                  className="flex items-start gap-3 rounded-xl border border-border/50 bg-secondary/60 px-3 py-2.5 cursor-pointer hover:bg-secondary transition-colors"
+                  key={option.value}
+                  className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/50 bg-secondary/60 px-3 py-2.5 transition-colors hover:bg-secondary"
                 >
                   <input
                     type="checkbox"
-                    checked={aplicarEm.includes(opt.value)}
-                    onChange={() => toggleAplicarEm(opt.value)}
+                    checked={aplicarEm.includes(option.value)}
+                    onChange={() => toggleAplicarEm(option.value)}
                     className="mt-0.5"
                   />
                   <div>
-                    <p className="text-sm font-medium">{opt.label}</p>
-                    <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                    <p className="text-sm font-medium">{option.label}</p>
+                    <p className="text-xs text-muted-foreground">{option.desc}</p>
                   </div>
                 </label>
               ))}
             </div>
           </div>
-        </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="secondary" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSalvar} disabled={saving}>
-            {saving ? "Salvando…" : "Salvar alterações"}
-          </Button>
-        </DialogFooter>
+          <DialogFooter className="gap-2">
+            <Button variant="secondary" onClick={onClose} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Salvando…" : "Salvar alterações"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

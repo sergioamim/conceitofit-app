@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,25 +28,49 @@ function isCustomerRole(roleName: string | undefined): boolean {
   return (roleName ?? "").trim().toUpperCase() === "CUSTOMER";
 }
 
+type CreateUserFormValues = {
+  name: string;
+  email: string;
+  cpf: string;
+  initialPerfilIds: string[];
+};
+
+type GrantAccessFormValues = {
+  tenantId: string;
+  userId: string;
+  userQuery: string;
+};
+
 export default function AcessoUnidadePage() {
   const access = useAuthAccess();
   const tenantContext = useTenantContext();
-  const [createName, setCreateName] = useState("");
-  const [createEmail, setCreateEmail] = useState("");
-  const [createCpf, setCreateCpf] = useState("");
-  const [createProfileIds, setCreateProfileIds] = useState<string[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [tenantId, setTenantId] = useState("");
   const [users, setUsers] = useState<RbacUser[]>([]);
   const [usersLoaded, setUsersLoaded] = useState(false);
   const [perfis, setPerfis] = useState<RbacPerfil[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
   const [userPerfis, setUserPerfis] = useState<RbacPerfil[]>([]);
-  const [userQuery, setUserQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const createUserForm = useForm<CreateUserFormValues>({
+    defaultValues: {
+      name: "",
+      email: "",
+      cpf: "",
+      initialPerfilIds: [],
+    },
+  });
+  const grantAccessForm = useForm<GrantAccessFormValues>({
+    defaultValues: {
+      tenantId: tenantContext.tenantId || "",
+      userId: "",
+      userQuery: "",
+    },
+  });
+  const createProfileIds = useWatch({ control: createUserForm.control, name: "initialPerfilIds" }) ?? [];
+  const tenantId = useWatch({ control: grantAccessForm.control, name: "tenantId" }) ?? "";
+  const selectedUserId = useWatch({ control: grantAccessForm.control, name: "userId" }) ?? "";
   const effectiveTenantId = tenantId || tenantContext.tenantId || "";
 
   const selectedTenant = useMemo(
@@ -89,8 +114,9 @@ export default function AcessoUnidadePage() {
     ];
     const deduped = Array.from(new Map(merged.map((item) => [item.id, item] as const)).values());
     setTenants(deduped);
-    setTenantId((current) => current || tenantContext.tenantId || deduped[0]?.id || "");
-  }, [tenantContext.activeTenant, tenantContext.availableTenants, tenantContext.tenantId]);
+    const nextTenantId = grantAccessForm.getValues("tenantId") || tenantContext.tenantId || deduped[0]?.id || "";
+    grantAccessForm.setValue("tenantId", nextTenantId, { shouldDirty: false });
+  }, [grantAccessForm, tenantContext.activeTenant, tenantContext.availableTenants, tenantContext.tenantId]);
 
   const loadTenantData = useCallback(async (targetTenantId: string) => {
     if (!targetTenantId) return;
@@ -101,21 +127,27 @@ export default function AcessoUnidadePage() {
       setPerfis(perfisResponse.items);
       setUsers([]);
       setUsersLoaded(false);
-      setSelectedUserId("");
-      setUserQuery("");
+      grantAccessForm.reset({
+        tenantId: targetTenantId,
+        userId: "",
+        userQuery: "",
+      });
       setUserPerfis([]);
     } catch (loadError) {
       setUsers([]);
       setUsersLoaded(false);
       setPerfis([]);
-      setSelectedUserId("");
-      setUserQuery("");
+      grantAccessForm.reset({
+        tenantId: targetTenantId,
+        userId: "",
+        userQuery: "",
+      });
       setUserPerfis([]);
       setError(normalizeErrorMessage(loadError));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [grantAccessForm]);
 
   const loadUsersOnDemand = useCallback(async () => {
     if (!effectiveTenantId || usersLoaded) return;
@@ -161,9 +193,9 @@ export default function AcessoUnidadePage() {
 
   useEffect(() => {
     if (!tenantId && tenantContext.tenantId) {
-      setTenantId(tenantContext.tenantId);
+      grantAccessForm.setValue("tenantId", tenantContext.tenantId, { shouldDirty: false });
     }
-  }, [tenantContext.tenantId, tenantId]);
+  }, [grantAccessForm, tenantContext.tenantId, tenantId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -174,12 +206,21 @@ export default function AcessoUnidadePage() {
     void loadUserPerfisFor(tenantId, selectedUserId);
   }, [loadUserPerfisFor, selectedUserId, tenantId]);
 
-  async function handleGrant(event: FormEvent) {
-    event.preventDefault();
+  async function handleGrant(values: GrantAccessFormValues) {
     setError(null);
     setSuccess(null);
-    if (!tenantId || !selectedUserId) {
-      setError("Selecione unidade e funcionário para conceder acesso.");
+    if (!values.tenantId) {
+      grantAccessForm.setError("tenantId", {
+        type: "manual",
+        message: "Selecione a unidade para conceder acesso.",
+      });
+      return;
+    }
+    if (!values.userId) {
+      grantAccessForm.setError("userId", {
+        type: "manual",
+        message: "Selecione o funcionário para conceder acesso.",
+      });
       return;
     }
 
@@ -191,12 +232,12 @@ export default function AcessoUnidadePage() {
     setSaving(true);
     try {
       await linkUserPerfilApi({
-        tenantId,
-        userId: selectedUserId,
+        tenantId: values.tenantId,
+        userId: values.userId,
         perfilId: defaultPerfil.id,
       });
       setSuccess("Acesso concedido na unidade selecionada.");
-      await loadUserPerfisFor(tenantId, selectedUserId);
+      await loadUserPerfisFor(values.tenantId, values.userId);
     } catch (grantError) {
       setError(normalizeErrorMessage(grantError));
     } finally {
@@ -233,8 +274,7 @@ export default function AcessoUnidadePage() {
   const hasInternalAccess = internalProfilesLinked.length > 0;
   const accessRows = selectedUser && hasInternalAccess ? [selectedUser] : [];
 
-  async function handleCreateUser(event: FormEvent) {
-    event.preventDefault();
+  async function handleCreateUser(values: CreateUserFormValues) {
     setError(null);
     setSuccess(null);
     if (!effectiveTenantId) {
@@ -245,14 +285,14 @@ export default function AcessoUnidadePage() {
     try {
       const networkId = selectedTenant?.academiaId ?? selectedTenant?.groupId;
       const payload = validateAcademiaUserCreateDraft({
-        name: createName,
-        email: createEmail,
-        cpf: createCpf,
+        name: values.name,
+        email: values.email,
+        cpf: values.cpf,
         networkId,
         networkName: selectedTenant?.nome ?? tenantContext.tenantName,
         tenantIds: [effectiveTenantId],
         defaultTenantId: effectiveTenantId,
-        initialPerfilIds: createProfileIds,
+        initialPerfilIds: values.initialPerfilIds,
         allowedTenantIds: networkTenantOptions.map((tenant) => tenant.id),
         allowedPerfilIds: activePerfis.map((perfil) => perfil.id),
       });
@@ -260,9 +300,9 @@ export default function AcessoUnidadePage() {
         tenantId: effectiveTenantId,
         data: payload,
       });
-      if (createProfileIds.length > 0) {
+      if (values.initialPerfilIds.length > 0) {
         await Promise.all(
-          createProfileIds.map((perfilId) =>
+          values.initialPerfilIds.map((perfilId) =>
             linkUserPerfilApi({
               tenantId: effectiveTenantId,
               userId: created.id,
@@ -273,13 +313,10 @@ export default function AcessoUnidadePage() {
       }
       setUsers((current) => [...current, created]);
       setUsersLoaded(true);
-      setSelectedUserId(created.id);
-      setUserQuery(created.fullName || created.name || created.email);
+      grantAccessForm.setValue("userId", created.id, { shouldDirty: false });
+      grantAccessForm.setValue("userQuery", created.fullName || created.name || created.email, { shouldDirty: false });
       await loadUserPerfisFor(effectiveTenantId, created.id);
-      setCreateName("");
-      setCreateEmail("");
-      setCreateCpf("");
-      setCreateProfileIds([]);
+      createUserForm.reset();
       setSuccess("Usuário criado na rede atual.");
     } catch (createError) {
       setError(normalizeErrorMessage(createError));
@@ -326,16 +363,18 @@ export default function AcessoUnidadePage() {
             A criação nesta área fica limitada à unidade e à rede operacional atual, sem alcance global nem outras redes.
           </p>
 
-          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleCreateUser}>
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={createUserForm.handleSubmit(handleCreateUser)}>
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
               <Input
                 aria-label="Nome do usuário da unidade"
-                value={createName}
-                onChange={(event) => setCreateName(event.target.value)}
+                {...createUserForm.register("name", { validate: (value) => value.trim().length > 0 || "Informe o nome do usuário." })}
                 className="border-border bg-secondary"
                 placeholder="Carla Operações"
               />
+              {createUserForm.formState.errors.name ? (
+                <p className="text-xs text-gym-danger">{createUserForm.formState.errors.name.message}</p>
+              ) : null}
             </div>
 
             <div className="space-y-1.5">
@@ -343,19 +382,20 @@ export default function AcessoUnidadePage() {
               <Input
                 aria-label="E-mail do usuário da unidade"
                 type="email"
-                value={createEmail}
-                onChange={(event) => setCreateEmail(event.target.value)}
+                {...createUserForm.register("email", { validate: (value) => value.trim().length > 0 || "Informe o e-mail principal." })}
                 className="border-border bg-secondary"
                 placeholder="carla@academia.local"
               />
+              {createUserForm.formState.errors.email ? (
+                <p className="text-xs text-gym-danger">{createUserForm.formState.errors.email.message}</p>
+              ) : null}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</label>
               <Input
                 aria-label="CPF do usuário da unidade"
-                value={createCpf}
-                onChange={(event) => setCreateCpf(event.target.value)}
+                {...createUserForm.register("cpf")}
                 className="border-border bg-secondary"
                 placeholder="111.222.333-44"
               />
@@ -379,13 +419,12 @@ export default function AcessoUnidadePage() {
                       <input
                         type="checkbox"
                         checked={createProfileIds.includes(perfil.id)}
-                        onChange={() =>
-                          setCreateProfileIds((current) =>
-                            current.includes(perfil.id)
-                              ? current.filter((item) => item !== perfil.id)
-                              : [...current, perfil.id]
-                          )
-                        }
+                        onChange={() => {
+                          const nextValues = createProfileIds.includes(perfil.id)
+                            ? createProfileIds.filter((item) => item !== perfil.id)
+                            : [...createProfileIds, perfil.id];
+                          createUserForm.setValue("initialPerfilIds", nextValues, { shouldDirty: true });
+                        }}
                       />
                       <span>
                         <span className="block font-medium text-foreground">{perfil.displayName}</span>
@@ -412,50 +451,68 @@ export default function AcessoUnidadePage() {
           <CardTitle className="font-display text-lg">Conceder acesso operacional</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form className="grid gap-4 md:grid-cols-4" onSubmit={handleGrant}>
+          <form className="grid gap-4 md:grid-cols-4" onSubmit={grantAccessForm.handleSubmit(handleGrant)}>
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unidade</label>
-              <Select value={tenantId} onValueChange={setTenantId}>
-                <SelectTrigger className="bg-secondary border-border">
-                  <SelectValue placeholder="Selecione a unidade" />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  {tenants.map((tenant) => (
-                    <SelectItem key={tenant.id} value={tenant.id}>
-                      {tenant.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={grantAccessForm.control}
+                name="tenantId"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="bg-secondary border-border">
+                      <SelectValue placeholder="Selecione a unidade" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {tenants.map((tenant) => (
+                        <SelectItem key={tenant.id} value={tenant.id}>
+                          {tenant.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {grantAccessForm.formState.errors.tenantId ? (
+                <p className="text-xs text-gym-danger">{grantAccessForm.formState.errors.tenantId.message}</p>
+              ) : null}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Funcionário</label>
-              <SuggestionInput
-                value={userQuery}
-                onValueChange={(value) => {
-                  setUserQuery(value);
-                  if ((selectedUser?.fullName || selectedUser?.name || selectedUser?.email || "") !== value) {
-                    setSelectedUserId("");
-                    setUserPerfis([]);
-                  }
-                  if (value.trim().length >= 3) {
-                    void loadUsersOnDemand();
-                  }
-                }}
-                onSelect={(option) => {
-                  setSelectedUserId(option.id);
-                  setUserQuery(option.label);
-                }}
-                options={users.map((user) => ({
-                  id: user.id,
-                  label: user.fullName || user.name || user.email || "Sem nome",
-                  searchText: `${user.name ?? ""} ${user.fullName ?? ""} ${user.email ?? ""}`.trim(),
-                }))}
-                placeholder="Digite nome ou e-mail do funcionário"
-                emptyText="Nenhum funcionário encontrado"
-                minCharsToSearch={3}
+              <Controller
+                control={grantAccessForm.control}
+                name="userQuery"
+                render={({ field }) => (
+                  <SuggestionInput
+                    value={field.value}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      if ((selectedUser?.fullName || selectedUser?.name || selectedUser?.email || "") !== value) {
+                        grantAccessForm.setValue("userId", "", { shouldDirty: true });
+                        setUserPerfis([]);
+                      }
+                      if (value.trim().length >= 3) {
+                        void loadUsersOnDemand();
+                      }
+                    }}
+                    onSelect={(option) => {
+                      grantAccessForm.setValue("userId", option.id, { shouldDirty: true });
+                      field.onChange(option.label);
+                    }}
+                    options={users.map((user) => ({
+                      id: user.id,
+                      label: user.fullName || user.name || user.email || "Sem nome",
+                      searchText: `${user.name ?? ""} ${user.fullName ?? ""} ${user.email ?? ""}`.trim(),
+                    }))}
+                    placeholder="Digite nome ou e-mail do funcionário"
+                    emptyText="Nenhum funcionário encontrado"
+                    minCharsToSearch={3}
+                  />
+                )}
               />
+              {grantAccessForm.formState.errors.userId ? (
+                <p className="text-xs text-gym-danger">{grantAccessForm.formState.errors.userId.message}</p>
+              ) : null}
             </div>
 
             <div className="md:col-span-4 flex justify-end">
@@ -495,6 +552,7 @@ export default function AcessoUnidadePage() {
           <PaginatedTable<RbacUser>
             columns={[
               { label: "Funcionário" },
+              { label: "Perfis" },
               { label: "Status" },
               { label: "Ação" },
             ]}
@@ -508,6 +566,18 @@ export default function AcessoUnidadePage() {
             renderCells={(user) => (
               <>
                 <TableCell className="px-3 py-2">{user.fullName || user.name || user.email || "Funcionário"}</TableCell>
+                <TableCell className="px-3 py-2">
+                  <div className="flex flex-wrap gap-2">
+                    {internalProfilesLinked.map((perfil) => (
+                      <span
+                        key={perfil.id}
+                        className="rounded-full border border-border bg-secondary px-2 py-1 text-xs font-medium text-foreground"
+                      >
+                        {perfil.roleName || perfil.displayName}
+                      </span>
+                    ))}
+                  </div>
+                </TableCell>
                 <TableCell className="px-3 py-2">
                   <SecurityActiveBadge
                     active={hasInternalAccess}

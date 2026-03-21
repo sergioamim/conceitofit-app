@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -165,22 +166,41 @@ export default function RbacPage() {
 
   const feedback = useStatusMessage();
 
-  const [perfilForm, setPerfilForm] = useState<PerfilFormState>(PERFIL_DEFAULT);
   const [userQuery, setUserQuery] = useState("");
+  const perfilForm = useForm<PerfilFormState>({
+    defaultValues: PERFIL_DEFAULT,
+  });
+  const grantForm = useForm<GrantFormState>({
+    defaultValues: {
+      roleName: "",
+      featureKey: "",
+      permission: "VIEW",
+      allowed: true,
+    },
+  });
+  const assignPerfilForm = useForm<{ perfilId: string }>({
+    defaultValues: {
+      perfilId: "",
+    },
+  });
+  const tenantUserForm = useForm<CreateTenantUserFormState>({
+    defaultValues: TENANT_USER_DEFAULT,
+  });
+  const perfilFormValues = useWatch({ control: perfilForm.control }) ?? PERFIL_DEFAULT;
+  const grantFormValues = useWatch({ control: grantForm.control }) ?? {
+    roleName: "",
+    featureKey: "",
+    permission: "VIEW" as RbacPermission,
+    allowed: true,
+  };
+  const tenantUserFormValues = useWatch({ control: tenantUserForm.control }) ?? TENANT_USER_DEFAULT;
+  const perfilToAssign = useWatch({ control: assignPerfilForm.control, name: "perfilId" }) ?? "";
 
   useEffect(() => {
     if (selectedUser) {
       setUserQuery(selectedUser.fullName || selectedUser.name || selectedUser.email || "");
     }
   }, [selectedUser]);
-  const [grantForm, setGrantForm] = useState<GrantFormState>({
-    roleName: "",
-    featureKey: "",
-    permission: "VIEW",
-    allowed: true,
-  });
-  const [perfilToAssign, setPerfilToAssign] = useState("");
-  const [tenantUserForm, setTenantUserForm] = useState<CreateTenantUserFormState>(TENANT_USER_DEFAULT);
 
   const [isActionLoading, setActionLoading] = useState(false);
 
@@ -214,52 +234,50 @@ export default function RbacPage() {
   }, [activeTab, reloadGrants, reloadPerfis, reloadUsers]);
 
   const clearPerfilForm = useCallback(() => {
-    setPerfilForm(PERFIL_DEFAULT);
-  }, []);
+    perfilForm.reset(PERFIL_DEFAULT);
+  }, [perfilForm]);
 
   const toggleTenantUserTenant = useCallback((selectedTenantId: string) => {
-    setTenantUserForm((current) => {
-      const tenantIds = current.tenantIds.includes(selectedTenantId)
-        ? current.tenantIds.filter((item) => item !== selectedTenantId)
-        : [...current.tenantIds, selectedTenantId];
-      return {
-        ...current,
-        tenantIds,
-        defaultTenantId: tenantIds.includes(current.defaultTenantId) ? current.defaultTenantId : tenantIds[0] ?? "",
-      };
-    });
-  }, []);
+    const tenantIds = tenantUserFormValues.tenantIds.includes(selectedTenantId)
+      ? tenantUserFormValues.tenantIds.filter((item) => item !== selectedTenantId)
+      : [...tenantUserFormValues.tenantIds, selectedTenantId];
+    tenantUserForm.setValue("tenantIds", tenantIds, { shouldDirty: true });
+    tenantUserForm.setValue(
+      "defaultTenantId",
+      tenantIds.includes(tenantUserFormValues.defaultTenantId)
+        ? tenantUserFormValues.defaultTenantId
+        : tenantIds[0] ?? "",
+      { shouldDirty: true }
+    );
+  }, [tenantUserForm, tenantUserFormValues.defaultTenantId, tenantUserFormValues.tenantIds]);
 
   const toggleTenantUserPerfil = useCallback((perfilId: string) => {
-    setTenantUserForm((current) => ({
-      ...current,
-      initialPerfilIds: current.initialPerfilIds.includes(perfilId)
-        ? current.initialPerfilIds.filter((item) => item !== perfilId)
-        : [...current.initialPerfilIds, perfilId],
-    }));
-  }, []);
+    const nextPerfis = tenantUserFormValues.initialPerfilIds.includes(perfilId)
+      ? tenantUserFormValues.initialPerfilIds.filter((item) => item !== perfilId)
+      : [...tenantUserFormValues.initialPerfilIds, perfilId];
+    tenantUserForm.setValue("initialPerfilIds", nextPerfis, { shouldDirty: true });
+  }, [tenantUserForm, tenantUserFormValues.initialPerfilIds]);
 
   const editPerfil = useCallback((id: string) => {
     const perfil = perfis.find((item) => item.id === id);
     if (!perfil) return;
-    setPerfilForm({
+    perfilForm.reset({
       id: perfil.id,
       roleName: perfil.roleName,
       displayName: perfil.displayName,
       description: perfil.description ?? "",
       active: perfil.active,
     });
-  }, [perfis]);
+  }, [perfilForm, perfis]);
 
   const submitPerfil = useCallback(
-    async (event: FormEvent) => {
-      event.preventDefault();
+    async (values: PerfilFormState) => {
       feedback.clear();
-      if (!perfilForm.roleName.trim()) {
+      if (!values.roleName.trim()) {
         feedback.show("Informe o identificador do perfil.", "error");
         return;
       }
-      if (!perfilForm.displayName.trim()) {
+      if (!values.displayName.trim()) {
         feedback.show("Informe o nome de exibição.", "error");
         return;
       }
@@ -267,16 +285,16 @@ export default function RbacPage() {
       setActionLoading(true);
       try {
         await savePerfil({
-          id: perfilForm.id,
+          id: values.id,
           data: {
-            roleName: perfilForm.roleName.trim(),
-            displayName: perfilForm.displayName.trim(),
-            description: perfilForm.description.trim() || undefined,
-            active: perfilForm.active,
+            roleName: values.roleName.trim(),
+            displayName: values.displayName.trim(),
+            description: values.description.trim() || undefined,
+            active: values.active,
           },
         });
         feedback.show(
-          perfilForm.id ? "Perfil atualizado com sucesso." : "Perfil criado com sucesso.",
+          values.id ? "Perfil atualizado com sucesso." : "Perfil criado com sucesso.",
           "success"
         );
         clearPerfilForm();
@@ -286,7 +304,7 @@ export default function RbacPage() {
         setActionLoading(false);
       }
     },
-    [clearPerfilForm, feedback, perfilForm, savePerfil]
+    [clearPerfilForm, feedback, savePerfil]
   );
 
   const desativarPerfil = useCallback(
@@ -317,19 +335,19 @@ export default function RbacPage() {
     try {
       await assignPerfil(perfilToAssign);
       feedback.show("Perfil vinculado com sucesso.", "success");
+      assignPerfilForm.reset({ perfilId: "" });
     } finally {
       setActionLoading(false);
     }
-  }, [assignPerfil, feedback, perfilToAssign]);
+  }, [assignPerfil, assignPerfilForm, feedback, perfilToAssign]);
 
   const submitTenantUser = useCallback(
-    async (event: FormEvent) => {
-      event.preventDefault();
+    async (values: CreateTenantUserFormState) => {
       feedback.clear();
       setActionLoading(true);
       try {
         const payload = validateAcademiaUserCreateDraft({
-          ...tenantUserForm,
+          ...values,
           networkId: tenant.networkId,
           networkName: tenant.networkName,
           networkSubdomain: tenant.networkSubdomain,
@@ -337,7 +355,7 @@ export default function RbacPage() {
           allowedPerfilIds: activePerfis.map((item) => item.id),
         });
         await createUser(payload);
-        setTenantUserForm(TENANT_USER_DEFAULT);
+        tenantUserForm.reset(TENANT_USER_DEFAULT);
         feedback.show("Usuário criado na rede atual.", "success");
       } catch (error) {
         feedback.show(error instanceof Error ? error.message : "Não foi possível criar o usuário.", "error");
@@ -368,23 +386,22 @@ export default function RbacPage() {
   );
 
   const submitGrant = useCallback(
-    async (event: FormEvent) => {
-      event.preventDefault();
+    async (values: GrantFormState) => {
       feedback.clear();
-      if (!grantForm.roleName || !grantForm.featureKey) {
+      if (!values.roleName || !values.featureKey) {
         feedback.show("Selecione perfil e feature.", "error");
         setActionLoading(false);
         return;
       }
       setActionLoading(true);
       try {
-        await saveGrant(grantForm);
+        await saveGrant(values);
         feedback.show("Grant salvo com sucesso.", "success");
       } finally {
         setActionLoading(false);
       }
     },
-    [feedback, grantForm, saveGrant]
+    [feedback, saveGrant]
   );
 
   const filteredLogs = useMemo(() => logs, [logs]);
@@ -477,12 +494,11 @@ export default function RbacPage() {
               <CardTitle className="font-display">Perfil</CardTitle>
             </CardHeader>
             <CardContent>
-              <form className="grid gap-3 md:grid-cols-2 lg:grid-cols-4" onSubmit={submitPerfil}>
+              <form className="grid gap-3 md:grid-cols-2 lg:grid-cols-4" onSubmit={perfilForm.handleSubmit(submitPerfil)}>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">roleName *</label>
                   <Input
-                    value={perfilForm.roleName}
-                    onChange={(event) => setPerfilForm((state) => ({ ...state, roleName: event.target.value }))}
+                    {...perfilForm.register("roleName")}
                     className="bg-secondary border-border"
                     placeholder="ADMIN"
                   />
@@ -490,8 +506,7 @@ export default function RbacPage() {
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">displayName *</label>
                   <Input
-                    value={perfilForm.displayName}
-                    onChange={(event) => setPerfilForm((state) => ({ ...state, displayName: event.target.value }))}
+                    {...perfilForm.register("displayName")}
                     className="bg-secondary border-border"
                     placeholder="Administrador"
                   />
@@ -499,8 +514,7 @@ export default function RbacPage() {
                 <div className="space-y-1.5 md:col-span-2">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descrição</label>
                   <Input
-                    value={perfilForm.description}
-                    onChange={(event) => setPerfilForm((state) => ({ ...state, description: event.target.value }))}
+                    {...perfilForm.register("description")}
                     className="bg-secondary border-border"
                     placeholder="Acesso administrativo completo"
                   />
@@ -509,21 +523,19 @@ export default function RbacPage() {
                   <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                     <input
                       type="checkbox"
-                      checked={perfilForm.active}
-                      onChange={(event) =>
-                        setPerfilForm((state) => ({ ...state, active: event.target.checked }))
-                      }
+                      checked={perfilFormValues.active}
+                      onChange={(event) => perfilForm.setValue("active", event.target.checked, { shouldDirty: true })}
                     />
                     Perfil ativo
                   </label>
                   <div className="ml-auto flex gap-2">
-                    {perfilForm.id ? (
+                    {perfilFormValues.id ? (
                       <Button type="button" variant="outline" className="border-border" onClick={clearPerfilForm}>
                         Cancelar edição
                       </Button>
                     ) : null}
                     <Button type="submit" disabled={isActionLoading || perfilActionLoading || !tenantId}>
-                      {perfilForm.id ? "Atualizar" : "Salvar perfil"}
+                      {perfilFormValues.id ? "Atualizar" : "Salvar perfil"}
                     </Button>
                   </div>
                 </div>
@@ -592,13 +604,12 @@ export default function RbacPage() {
                   A UI não expõe escopo global nem unidades fora do contexto disponível.
                 </p>
 
-                <form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={submitTenantUser}>
+                <form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={tenantUserForm.handleSubmit(submitTenantUser)}>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
                     <Input
                       aria-label="Nome do usuário da rede"
-                      value={tenantUserForm.name}
-                      onChange={(event) => setTenantUserForm((current) => ({ ...current, name: event.target.value }))}
+                      {...tenantUserForm.register("name")}
                       className="border-border bg-background"
                       placeholder="Carla Operações"
                     />
@@ -609,8 +620,7 @@ export default function RbacPage() {
                     <Input
                       aria-label="E-mail do usuário da rede"
                       type="email"
-                      value={tenantUserForm.email}
-                      onChange={(event) => setTenantUserForm((current) => ({ ...current, email: event.target.value }))}
+                      {...tenantUserForm.register("email")}
                       className="border-border bg-background"
                       placeholder="carla@academia.local"
                     />
@@ -620,8 +630,7 @@ export default function RbacPage() {
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</label>
                     <Input
                       aria-label="CPF do usuário da rede"
-                      value={tenantUserForm.cpf}
-                      onChange={(event) => setTenantUserForm((current) => ({ ...current, cpf: event.target.value }))}
+                      {...tenantUserForm.register("cpf")}
                       className="border-border bg-background"
                       placeholder="111.222.333-44"
                     />
@@ -629,19 +638,22 @@ export default function RbacPage() {
 
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo</label>
-                    <Select
-                      value={tenantUserForm.userKind}
-                      onValueChange={(value) => setTenantUserForm((current) => ({ ...current, userKind: value }))}
-                    >
-                      <SelectTrigger aria-label="Tipo do usuário da rede" className="border-border bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="COLABORADOR">Colaborador</SelectItem>
-                        <SelectItem value="SUPORTE">Suporte</SelectItem>
-                        <SelectItem value="PRESTADOR">Prestador</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      control={tenantUserForm.control}
+                      name="userKind"
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger aria-label="Tipo do usuário da rede" className="border-border bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="COLABORADOR">Colaborador</SelectItem>
+                            <SelectItem value="SUPORTE">Suporte</SelectItem>
+                            <SelectItem value="PRESTADOR">Prestador</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
@@ -654,7 +666,7 @@ export default function RbacPage() {
                           <label key={item.id} className="flex items-start gap-2 rounded-md border border-border/60 px-3 py-2 text-sm">
                             <input
                               type="checkbox"
-                              checked={tenantUserForm.tenantIds.includes(item.id)}
+                              checked={tenantUserFormValues.tenantIds.includes(item.id)}
                               onChange={() => toggleTenantUserTenant(item.id)}
                             />
                             <span className="font-medium text-foreground">{item.nome}</span>
@@ -666,29 +678,27 @@ export default function RbacPage() {
 
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unidade base</label>
-                    <Select
-                      value={tenantUserForm.defaultTenantId || "__none__"}
-                      onValueChange={(value) =>
-                        setTenantUserForm((current) => ({
-                          ...current,
-                          defaultTenantId: value === "__none__" ? "" : value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger aria-label="Unidade base da rede" className="border-border bg-background">
-                        <SelectValue placeholder="Selecione a base" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Selecione</SelectItem>
-                        {tenantScopeOptions
-                          .filter((item) => tenantUserForm.tenantIds.includes(item.id))
-                          .map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.nome}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      control={tenantUserForm.control}
+                      name="defaultTenantId"
+                      render={({ field }) => (
+                        <Select value={field.value || "__none__"} onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}>
+                          <SelectTrigger aria-label="Unidade base da rede" className="border-border bg-background">
+                            <SelectValue placeholder="Selecione a base" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Selecione</SelectItem>
+                            {tenantScopeOptions
+                              .filter((item) => tenantUserFormValues.tenantIds.includes(item.id))
+                              .map((item) => (
+                                <SelectItem key={item.id} value={item.id}>
+                                  {item.nome}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -701,7 +711,7 @@ export default function RbacPage() {
                           <label key={perfil.id} className="flex items-start gap-2 text-sm">
                             <input
                               type="checkbox"
-                              checked={tenantUserForm.initialPerfilIds.includes(perfil.id)}
+                              checked={tenantUserFormValues.initialPerfilIds.includes(perfil.id)}
                               onChange={() => toggleTenantUserPerfil(perfil.id)}
                             />
                             <span>
@@ -722,7 +732,7 @@ export default function RbacPage() {
                       type="button"
                       variant="outline"
                       className="border-border"
-                      onClick={() => setTenantUserForm(TENANT_USER_DEFAULT)}
+                      onClick={() => tenantUserForm.reset(TENANT_USER_DEFAULT)}
                     >
                       Limpar
                     </Button>
@@ -752,18 +762,24 @@ export default function RbacPage() {
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-[1fr_auto]">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Perfil</label>
-                    <Select value={perfilToAssign} onValueChange={setPerfilToAssign}>
-                      <SelectTrigger className="bg-secondary border-border">
-                        <SelectValue placeholder="Selecionar perfil" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activePerfis.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.displayName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      control={assignPerfilForm.control}
+                      name="perfilId"
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger className="bg-secondary border-border">
+                            <SelectValue placeholder="Selecionar perfil" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {activePerfis.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.displayName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                   <Button className="mt-6" onClick={assignPerfilToUser} disabled={userSaving || loadingUsers || loadingPerfis || !selectedUserId}>
                     Vincular
@@ -844,60 +860,69 @@ export default function RbacPage() {
               <CardTitle className="font-display">Permissões detalhadas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form className="grid gap-3 md:grid-cols-5" onSubmit={submitGrant}>
+              <form className="grid gap-3 md:grid-cols-5" onSubmit={grantForm.handleSubmit(submitGrant)}>
                 <div className="space-y-1.5 md:col-span-2">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Perfil</label>
-                  <Select
-                    value={grantForm.roleName}
-                    onValueChange={(value) => setGrantForm((state) => ({ ...state, roleName: value }))}
-                  >
-                    <SelectTrigger className="bg-secondary border-border">
-                      <SelectValue placeholder="Selecione o perfil" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activePerfis.map((perfil) => (
-                        <SelectItem key={perfil.id} value={perfil.roleName}>
-                          {perfil.displayName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={grantForm.control}
+                    name="roleName"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="bg-secondary border-border">
+                          <SelectValue placeholder="Selecione o perfil" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activePerfis.map((perfil) => (
+                            <SelectItem key={perfil.id} value={perfil.roleName}>
+                              {perfil.displayName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Funcionalidade</label>
-                  <Select
-                    value={grantForm.featureKey}
-                    onValueChange={(value) => setGrantForm((state) => ({ ...state, featureKey: value }))}
-                  >
-                    <SelectTrigger className="bg-secondary border-border">
-                      <SelectValue placeholder="Selecione a feature" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {features.map((feature) => (
-                        <SelectItem key={feature.featureKey} value={feature.featureKey}>
-                          {feature.featureKey}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={grantForm.control}
+                    name="featureKey"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="bg-secondary border-border">
+                          <SelectValue placeholder="Selecione a feature" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {features.map((feature) => (
+                            <SelectItem key={feature.featureKey} value={feature.featureKey}>
+                              {feature.featureKey}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Permissão</label>
-                  <Select
-                    value={grantForm.permission}
-                    onValueChange={(value) => setGrantForm((state) => ({ ...state, permission: value as RbacPermission }))}
-                  >
-                    <SelectTrigger className="bg-secondary border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GRANT_PERMISSION_OPTIONS.map((permission) => (
-                        <SelectItem key={permission} value={permission}>
-                          {permission}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={grantForm.control}
+                    name="permission"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={(value) => field.onChange(value as RbacPermission)}>
+                        <SelectTrigger className="bg-secondary border-border">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GRANT_PERMISSION_OPTIONS.map((permission) => (
+                            <SelectItem key={permission} value={permission}>
+                              {permission}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -905,10 +930,8 @@ export default function RbacPage() {
                   <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                     <input
                       type="checkbox"
-                      checked={grantForm.allowed}
-                      onChange={(event) =>
-                        setGrantForm((state) => ({ ...state, allowed: event.target.checked }))
-                      }
+                      checked={grantFormValues.allowed}
+                      onChange={(event) => grantForm.setValue("allowed", event.target.checked, { shouldDirty: true })}
                     />
                     Sim
                   </label>

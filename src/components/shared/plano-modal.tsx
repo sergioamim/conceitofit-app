@@ -1,83 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { Plano, Atividade, ModoAssinaturaContrato, TipoPlano } from "@/lib/types";
+import { useEffect } from "react";
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
+import type { Plano, Atividade } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import {
+  type PlanoFormValues,
+  TIPO_PLANO_LABEL,
+  getDefaultPlanoFormValues,
+} from "@/lib/planos/form";
 
-const TIPO_LABEL: Record<TipoPlano, string> = {
-  MENSAL: "Mensal",
-  TRIMESTRAL: "Trimestral",
-  SEMESTRAL: "Semestral",
-  ANUAL: "Anual",
-  AVULSO: "Avulso",
+type PlanoModalFormState = Omit<PlanoFormValues, "beneficios"> & {
+  beneficioInput: string;
+  beneficios: Array<{ value: string }>;
 };
 
-export interface PlanoForm {
-  nome: string;
-  descricao: string;
-  tipo: TipoPlano;
-  duracaoDias: string;
-  valor: string;
-  valorMatricula: string;
-  cobraAnuidade: boolean;
-  valorAnuidade: string;
-  parcelasMaxAnuidade: string;
-  permiteRenovacaoAutomatica: boolean;
-  permiteCobrancaRecorrente: boolean;
-  diaCobrancaPadrao: string;
-  contratoTemplateHtml: string;
-  contratoAssinatura: ModoAssinaturaContrato;
-  contratoEnviarAutomaticoEmail: boolean;
-  atividades: string[];
-  beneficios: string[];
-  destaque: boolean;
-  ordem: string;
-}
-
-export function PlanoModal({
-  open,
-  onClose,
-  onSave,
-  atividades,
-  initial,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSave: (data: PlanoForm, id?: string) => void;
-  atividades: Atividade[];
-  initial?: Plano;
-}) {
-  const [form, setForm] = useState<PlanoForm>({
-    nome: "",
-    descricao: "",
-    tipo: "MENSAL",
-    duracaoDias: "30",
-    valor: "",
-    valorMatricula: "0",
-    cobraAnuidade: false,
-    valorAnuidade: "0",
-    parcelasMaxAnuidade: "1",
-    permiteRenovacaoAutomatica: true,
-    permiteCobrancaRecorrente: false,
-    diaCobrancaPadrao: "",
-    contratoTemplateHtml: "",
-    contratoAssinatura: "AMBAS",
-    contratoEnviarAutomaticoEmail: false,
-    atividades: [],
-    beneficios: [],
-    destaque: false,
-    ordem: "",
-  });
-  const [beneficioInput, setBeneficioInput] = useState("");
-
-  useEffect(() => {
-    if (initial) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
+function toFormState(initial?: Plano): PlanoModalFormState {
+  const seed: PlanoFormValues = initial
+    ? {
         nome: initial.nome,
         descricao: initial.descricao ?? "",
         tipo: initial.tipo,
@@ -97,407 +41,230 @@ export function PlanoModal({
         beneficios: initial.beneficios ?? [],
         destaque: initial.destaque,
         ordem: initial.ordem ? String(initial.ordem) : "",
-      });
-    } else {
-      setForm({
-        nome: "",
-        descricao: "",
-        tipo: "MENSAL",
-        duracaoDias: "30",
-        valor: "",
-        valorMatricula: "0",
-        cobraAnuidade: false,
-        valorAnuidade: "0",
-        parcelasMaxAnuidade: "1",
-        permiteRenovacaoAutomatica: true,
-        permiteCobrancaRecorrente: false,
-        diaCobrancaPadrao: "",
-        contratoTemplateHtml: "",
-        contratoAssinatura: "AMBAS",
-        contratoEnviarAutomaticoEmail: false,
-        atividades: [],
-        beneficios: [],
-        destaque: false,
-        ordem: "",
-      });
-    }
-    setBeneficioInput("");
-  }, [initial, open]);
+      }
+    : getDefaultPlanoFormValues();
+  return {
+    ...seed,
+    beneficioInput: "",
+    beneficios: seed.beneficios.map((beneficio) => ({ value: beneficio })),
+  };
+}
 
-  function set<K extends keyof PlanoForm>(key: K, value: PlanoForm[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
+function toPayload(values: PlanoModalFormState): PlanoFormValues {
+  return {
+    ...values,
+    beneficios: values.beneficios.map((item) => item.value),
+  };
+}
+
+export function PlanoModal({
+  open,
+  onClose,
+  onSave,
+  atividades,
+  initial,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (data: PlanoFormValues, id?: string) => void;
+  atividades: Atividade[];
+  initial?: Plano;
+}) {
+  const { register, control, handleSubmit, reset, setValue } = useForm<PlanoModalFormState>({
+    defaultValues: toFormState(initial),
+  });
+  const { fields, append, remove } = useFieldArray({ control, name: "beneficios" });
+  const form = useWatch({ control }) ?? toFormState(initial);
+
+  useEffect(() => {
+    reset(toFormState(initial));
+  }, [initial, open, reset]);
 
   function toggleAtividade(id: string) {
-    setForm((f) => ({
-      ...f,
-      atividades: f.atividades.includes(id)
-        ? f.atividades.filter((a) => a !== id)
-        : [...f.atividades, id],
-    }));
+    const current = form.atividades ?? [];
+    setValue("atividades", current.includes(id) ? current.filter((item) => item !== id) : [...current, id], { shouldDirty: true });
   }
 
   function addBeneficio() {
+    const beneficioInput = form.beneficioInput ?? "";
     if (!beneficioInput.trim()) return;
-    setForm((f) => ({
-      ...f,
-      beneficios: [...f.beneficios, beneficioInput.trim()],
-    }));
-    setBeneficioInput("");
+    append({ value: beneficioInput.trim() });
+    setValue("beneficioInput", "", { shouldDirty: true });
   }
 
-  function removeBeneficio(idx: number) {
-    setForm((f) => ({
-      ...f,
-      beneficios: f.beneficios.filter((_, i) => i !== idx),
-    }));
-  }
-
-  function handleSave() {
-    if (!form.nome || !form.valor || !form.duracaoDias) return;
-    onSave(form, initial?.id);
+  function handleSave(values: PlanoModalFormState) {
+    const payload = toPayload(values);
+    if (!payload.nome || !payload.valor || !payload.duracaoDias) return;
+    onSave(payload, initial?.id);
   }
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
-      <DialogContent className="bg-card border-border sm:max-w-3xl">
+      <DialogContent className="border-border bg-card sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
-            {initial ? "Editar Plano" : "Novo Plano"}
-          </DialogTitle>
+          <DialogTitle className="font-display text-lg font-bold">{initial ? "Editar Plano" : "Novo Plano"}</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-5 py-2">
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Nome *
-              </label>
-              <Input
-                placeholder="Ex: Mensal Completo"
-                value={form.nome}
-                onChange={(e) => set("nome", e.target.value)}
-                className="bg-secondary border-border"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Descrição
-              </label>
-              <Input
-                placeholder="Descrição do plano"
-                value={form.descricao}
-                onChange={(e) => set("descricao", e.target.value)}
-                className="bg-secondary border-border"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit(handleSave)}>
+          <div className="grid grid-cols-2 gap-5 py-2">
+            <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Tipo *
-                </label>
-                <Select
-                  value={form.tipo}
-                  onValueChange={(v) => {
-                    const tipo = v as TipoPlano;
-                    if (tipo === "AVULSO") {
-                      setForm((f) => ({
-                        ...f,
-                        tipo,
-                        permiteRenovacaoAutomatica: false,
-                        permiteCobrancaRecorrente: false,
-                        diaCobrancaPadrao: "",
-                      }));
-                      return;
-                    }
-                    set("tipo", tipo);
-                  }}
-                >
-                  <SelectTrigger className="w-full bg-secondary border-border">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    {Object.entries(TIPO_LABEL).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+                <Input placeholder="Ex: Mensal Completo" {...register("nome")} className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Duração (dias) *
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.duracaoDias}
-                  onChange={(e) => set("duracaoDias", e.target.value)}
-                  className="bg-secondary border-border"
-                />
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descrição</label>
+                <Input placeholder="Descrição do plano" {...register("descricao")} className="border-border bg-secondary" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Valor (R$) *
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.valor}
-                  onChange={(e) => set("valor", e.target.value)}
-                  className="bg-secondary border-border"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Matrícula (R$)
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.valorMatricula}
-                  onChange={(e) => set("valorMatricula", e.target.value)}
-                  className="bg-secondary border-border"
-                />
-              </div>
-              <div className="col-span-2 space-y-1.5 rounded-md border border-border bg-secondary/40 p-3">
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={form.cobraAnuidade}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        cobraAnuidade: e.target.checked,
-                        valorAnuidade: e.target.checked ? f.valorAnuidade : "0",
-                        parcelasMaxAnuidade: e.target.checked ? f.parcelasMaxAnuidade : "1",
-                      }))
-                    }
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo *</label>
+                  <Controller
+                    control={control}
+                    name="tipo"
+                    render={({ field }) => (
+                      <Select
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          if (value === "AVULSO") {
+                            setValue("permiteRenovacaoAutomatica", false);
+                            setValue("permiteCobrancaRecorrente", false);
+                            setValue("diaCobrancaPadrao", "");
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full border-border bg-secondary">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent className="border-border bg-card">
+                          {Object.entries(TIPO_PLANO_LABEL).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   />
-                  Cobrar anuidade (a cada 12 meses)
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Duração (dias) *</label>
+                  <Input type="number" min={1} {...register("duracaoDias")} className="border-border bg-secondary" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Valor (R$) *</label>
+                  <Input type="number" min={0} step="0.01" {...register("valor")} className="border-border bg-secondary" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Matrícula (R$)</label>
+                  <Input type="number" min={0} step="0.01" {...register("valorMatricula")} className="border-border bg-secondary" />
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-md border border-border bg-secondary/40 p-3">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" checked={form.cobraAnuidade} onChange={(event) => {
+                    setValue("cobraAnuidade", event.target.checked);
+                    if (!event.target.checked) {
+                      setValue("valorAnuidade", "0");
+                      setValue("parcelasMaxAnuidade", "1");
+                    }
+                  }} />
+                  Cobrar anuidade
                 </label>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Valor anuidade (R$)
-                    </label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={form.valorAnuidade}
-                      disabled={!form.cobraAnuidade}
-                      onChange={(e) => set("valorAnuidade", e.target.value)}
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Máx. parcelas anuidade
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={24}
-                      value={form.parcelasMaxAnuidade}
-                      disabled={!form.cobraAnuidade}
-                      onChange={(e) => set("parcelasMaxAnuidade", e.target.value)}
-                      className="bg-secondary border-border"
-                    />
-                  </div>
+                  <Input type="number" min={0} step="0.01" {...register("valorAnuidade")} disabled={!form.cobraAnuidade} className="border-border bg-secondary" />
+                  <Input type="number" min={1} max={24} {...register("parcelasMaxAnuidade")} disabled={!form.cobraAnuidade} className="border-border bg-secondary" />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" checked={form.permiteRenovacaoAutomatica} disabled={form.tipo === "AVULSO"} onChange={(event) => setValue("permiteRenovacaoAutomatica", event.target.checked)} />
+                  Renovação automática
+                </label>
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" checked={form.permiteCobrancaRecorrente} disabled={form.tipo === "AVULSO"} onChange={(event) => {
+                    setValue("permiteCobrancaRecorrente", event.target.checked);
+                    if (!event.target.checked) setValue("diaCobrancaPadrao", "");
+                  }} />
+                  Cobrança recorrente
+                </label>
+                <Input type="number" min={1} max={28} placeholder="Dia padrão" {...register("diaCobrancaPadrao")} disabled={!form.permiteCobrancaRecorrente || form.tipo === "AVULSO"} className="border-border bg-secondary" />
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" {...register("destaque")} />
+                  Destacar plano
+                </label>
+                <Input type="number" placeholder="Ordem" {...register("ordem")} className="border-border bg-secondary" />
               </div>
             </div>
 
-            <div className="space-y-2 rounded-md border border-border bg-secondary/30 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Contrato vinculado ao plano</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Assinatura
-                  </label>
-                  <Select
-                    value={form.contratoAssinatura}
-                    onValueChange={(v) => set("contratoAssinatura", v as ModoAssinaturaContrato)}
-                  >
-                    <SelectTrigger className="w-full bg-secondary border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      <SelectItem value="DIGITAL">Digital</SelectItem>
-                      <SelectItem value="PRESENCIAL">Presencial</SelectItem>
-                      <SelectItem value="AMBAS">Digital ou presencial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Envio automático
-                  </label>
-                  <div className="flex h-10 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={form.contratoEnviarAutomaticoEmail}
-                      onChange={(e) => set("contratoEnviarAutomaticoEmail", e.target.checked)}
-                    />
-                    <span className="text-muted-foreground">Enviar contrato por e-mail após venda</span>
-                  </div>
-                </div>
-              </div>
+            <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Template do contrato (HTML)
-                </label>
-                <textarea
-                  value={form.contratoTemplateHtml}
-                  onChange={(e) => set("contratoTemplateHtml", e.target.value)}
-                  placeholder="<h1>Contrato</h1><p>Cliente: {{NOME_CLIENTE}}</p>"
-                  className="h-40 w-full resize-y rounded-md border border-border bg-secondary p-3 text-sm outline-none"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Marcações disponíveis: {`{{NOME_CLIENTE}}`} {`{{CPF_CLIENTE}}`} {`{{NOME_PLANO}}`} {`{{VALOR_PLANO}}`} {`{{NOME_UNIDADE}}`} {`{{RAZAO_SOCIAL_UNIDADE}}`} {`{{CNPJ_UNIDADE}}`} {`{{DATA_ASSINATURA}}`}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Benefícios
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Adicionar benefício"
-                  value={beneficioInput}
-                  onChange={(e) => setBeneficioInput(e.target.value)}
-                  className="bg-secondary border-border"
-                />
-                <Button onClick={addBeneficio} className="shrink-0">
-                  Adicionar
-                </Button>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {form.beneficios.map((b, idx) => (
-                  <span
-                    key={`${b}-${idx}`}
-                    className="inline-flex items-center gap-2 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground"
-                  >
-                    {b}
-                    <button
-                      onClick={() => removeBeneficio(idx)}
-                      className="text-muted-foreground/60 hover:text-foreground"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Renovação automática
-                </label>
-                <div className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.permiteRenovacaoAutomatica}
-                    disabled={form.tipo === "AVULSO"}
-                    onChange={(e) => set("permiteRenovacaoAutomatica", e.target.checked)}
-                  />
-                  <span className="text-muted-foreground">Permite renovação no vencimento</span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Cobrança recorrente
-                </label>
-                <div className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.permiteCobrancaRecorrente}
-                    disabled={form.tipo === "AVULSO"}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setForm((f) => ({
-                        ...f,
-                        permiteCobrancaRecorrente: checked,
-                        diaCobrancaPadrao: checked ? f.diaCobrancaPadrao : "",
-                      }));
-                    }}
-                  />
-                  <span className="text-muted-foreground">Permite forma de pagamento recorrente</span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Dia padrão de cobrança
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={28}
-                  placeholder="1 a 28"
-                  value={form.diaCobrancaPadrao}
-                  disabled={!form.permiteCobrancaRecorrente || form.tipo === "AVULSO"}
-                  onChange={(e) => set("diaCobrancaPadrao", e.target.value)}
-                  className="bg-secondary border-border"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Destaque
-                </label>
-                <div className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.destaque}
-                    onChange={(e) => set("destaque", e.target.checked)}
-                  />
-                  <span className="text-muted-foreground">Plano em destaque</span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Ordem
-                </label>
-                <Input
-                  type="number"
-                  value={form.ordem}
-                  onChange={(e) => set("ordem", e.target.value)}
-                  className="bg-secondary border-border"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-muted-foreground">
-              Atividades incluídas
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {atividades.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => toggleAtividade(a.id)}
-                  className={cn(
-                    "rounded-md border px-2.5 py-2 text-left text-xs transition-colors",
-                    form.atividades.includes(a.id)
-                      ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                      : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Assinatura do contrato</label>
+                <Controller
+                  control={control}
+                  name="contratoAssinatura"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="w-full border-border bg-secondary"><SelectValue /></SelectTrigger>
+                      <SelectContent className="border-border bg-card">
+                        <SelectItem value="DIGITAL">Digital</SelectItem>
+                        <SelectItem value="PRESENCIAL">Presencial</SelectItem>
+                        <SelectItem value="AMBAS">Digital ou presencial</SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
-                >
-                  {a.nome}
-                </button>
-              ))}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input type="checkbox" {...register("contratoEnviarAutomaticoEmail")} />
+                Enviar contrato automaticamente por e-mail
+              </label>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Template do contrato</label>
+                <textarea {...register("contratoTemplateHtml")} className="h-40 w-full resize-y rounded-md border border-border bg-secondary p-3 text-sm" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Atividades</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {atividades.map((atividade) => (
+                    <button
+                      key={atividade.id}
+                      type="button"
+                      onClick={() => toggleAtividade(atividade.id)}
+                      className={cn(
+                        "cursor-pointer rounded-md border px-2.5 py-2 text-left text-xs transition-colors",
+                        (form.atividades ?? []).includes(atividade.id)
+                          ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                          : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                      )}
+                    >
+                      {atividade.nome}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Benefícios</label>
+                <div className="mt-2 flex gap-2">
+                  <Input {...register("beneficioInput")} className="border-border bg-secondary" />
+                  <Button type="button" onClick={addBeneficio}>Adicionar</Button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {fields.map((field, index) => (
+                    <span key={field.id} className="inline-flex items-center gap-2 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
+                      {form.beneficios?.[index]?.value ?? ""}
+                      <button type="button" onClick={() => remove(index)} className="cursor-pointer text-muted-foreground/60 hover:text-foreground">x</button>
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="border-border">
-            Cancelar
-          </Button>
-          <Button onClick={handleSave}>{initial ? "Salvar" : "Criar"}</Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="border-border">Cancelar</Button>
+            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

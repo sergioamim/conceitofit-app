@@ -248,6 +248,7 @@ export function NetworkAccessFlow({
     supportText: "Autentique-se no contexto correto da rede.",
     accentLabel: "Acesso por rede",
   };
+  const canonicalNetworkSubdomain = resolvedContext.subdomain || networkSubdomain;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
@@ -257,7 +258,15 @@ export function NetworkAccessFlow({
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
               {resolvedContext.accentLabel ?? "Acesso por rede"}
             </p>
-            <CardTitle>{step === "TENANT" ? "Escolha a unidade ativa" : buildTitle(mode)}</CardTitle>
+            <CardTitle>
+              <h1 className="text-inherit">
+                {step === "TENANT"
+                  ? "Escolha a unidade ativa"
+                  : mode === "login"
+                    ? resolvedContext.appName || buildTitle(mode)
+                    : buildTitle(mode)}
+              </h1>
+            </CardTitle>
             <CardDescription>
               {step === "TENANT"
                 ? "Sua unidade-base estrutural pode ser diferente da unidade ativa desta sessão."
@@ -379,13 +388,13 @@ export function NetworkAccessFlow({
           )}
 
           <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-            <Link className="font-medium text-foreground hover:underline" href={buildNetworkAccessHref("login", networkSubdomain)}>
+            <Link className="font-medium text-foreground hover:underline" href={buildNetworkAccessHref("login", canonicalNetworkSubdomain)}>
               Voltar ao login
             </Link>
-            <Link className="font-medium text-foreground hover:underline" href={buildNetworkAccessHref("forgot-password", networkSubdomain)}>
+            <Link className="font-medium text-foreground hover:underline" href={buildNetworkAccessHref("forgot-password", canonicalNetworkSubdomain)}>
               Recuperar senha
             </Link>
-            <Link className="font-medium text-foreground hover:underline" href={buildNetworkAccessHref("first-access", networkSubdomain)}>
+            <Link className="font-medium text-foreground hover:underline" href={buildNetworkAccessHref("first-access", canonicalNetworkSubdomain)}>
               Primeiro acesso
             </Link>
           </div>

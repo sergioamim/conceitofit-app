@@ -70,7 +70,18 @@ test.describe("rbac users api", () => {
         firstName: "Carla",
         lastName: "Operações",
         fullName: "Carla Operações",
+        userKind: "COLABORADOR",
+        networkId: "rede-norte",
+        networkName: "Rede Norte",
+        networkSubdomain: "rede-norte",
+        tenantIds: ["tenant-centro", "tenant-barra"],
         tenantId: "tenant-centro",
+        defaultTenantId: "tenant-centro",
+        initialPerfilIds: ["perfil-admin"],
+        loginIdentifiers: [
+          { label: "E-mail", value: "carla@qa.local" },
+          { label: "CPF", value: "111.222.333-44" },
+        ],
         active: true,
       });
       expect(response).toEqual({

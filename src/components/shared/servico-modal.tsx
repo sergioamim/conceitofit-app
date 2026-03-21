@@ -5,7 +5,6 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import type { Servico } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -102,12 +101,6 @@ export function ServicoModal({
     reset(toFormValues(initial));
   }, [initial, open, reset]);
 
-  useEffect(() => {
-    if (tipoCobranca !== "RECORRENTE") {
-      setValue("recorrenciaDias", "");
-    }
-  }, [setValue, tipoCobranca]);
-
   function handleSave(values: ServicoFormValues) {
     const nome = values.nome.trim();
     if (!nome) return;
@@ -141,17 +134,21 @@ export function ServicoModal({
     );
   }
 
+  if (!open) {
+    return null;
+  }
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
-      }}
-    >
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">{initial ? "Editar serviço" : "Novo serviço"}</DialogTitle>
-        </DialogHeader>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="servico-modal-title">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-lg">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <h2 id="servico-modal-title" className="font-display text-lg font-bold">
+            {initial ? "Editar serviço" : "Novo serviço"}
+          </h2>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            Fechar
+          </Button>
+        </div>
         <form onSubmit={handleSubmit(handleSave)}>
           <div className="grid gap-4 py-2">
             <div className="space-y-1.5">
@@ -200,7 +197,16 @@ export function ServicoModal({
                   control={control}
                   name="tipoCobranca"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={(value) => field.onChange(value as "UNICO" | "RECORRENTE")}>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => {
+                        const nextValue = value as "UNICO" | "RECORRENTE";
+                        field.onChange(nextValue);
+                        if (nextValue !== "RECORRENTE") {
+                          setValue("recorrenciaDias", "", { shouldDirty: true });
+                        }
+                      }}
+                    >
                       <SelectTrigger className="w-full border-border bg-secondary">
                         <SelectValue />
                       </SelectTrigger>
@@ -261,14 +267,14 @@ export function ServicoModal({
               </label>
             </div>
           </div>
-          <DialogFooter>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
             <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

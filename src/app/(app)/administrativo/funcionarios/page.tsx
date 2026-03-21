@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -209,7 +210,6 @@ export default function FuncionariosPage() {
   const [selectedId, setSelectedId] = useState("");
   const [profileTab, setProfileTab] = useState<(typeof TAB_OPTIONS)[number]["value"]>("cadastro");
   const [editor, setEditor] = useState<Funcionario | null>(null);
-  const [quickCreate, setQuickCreate] = useState<ColaboradorQuickCreateDraft>(DEFAULT_QUICK_CREATE);
   const [createOpen, setCreateOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -218,6 +218,11 @@ export default function FuncionariosPage() {
   const [cargosModalOpen, setCargosModalOpen] = useState(false);
   const [cargoFormOpen, setCargoFormOpen] = useState(false);
   const [editingCargo, setEditingCargo] = useState<Cargo | null>(null);
+  const [hasMounted, setHasMounted] = useState(false);
+  const quickCreateForm = useForm<ColaboradorQuickCreateDraft>({
+    defaultValues: DEFAULT_QUICK_CREATE,
+  });
+  const quickCreate = useWatch({ control: quickCreateForm.control }) ?? DEFAULT_QUICK_CREATE;
 
   const tenantOptions = useMemo(
     () => tenantContext.availableTenants.filter((tenant) => tenant.ativo !== false),
@@ -254,6 +259,13 @@ export default function FuncionariosPage() {
     if (!email) return null;
     return funcionarios.find((item) => (item.emailProfissional ?? "").trim().toLowerCase() === email) ?? null;
   }, [funcionarios, quickCreate.emailProfissional]);
+
+  const tenantContextLabel = hasMounted ? (tenantContext.tenantName || "Unidade ativa") : "Carregando contexto";
+  const networkContextLabel = hasMounted ? tenantContext.networkName : "";
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const upsertFuncionario = useCallback((saved: Funcionario) => {
     setFuncionarios((current) => {
@@ -317,12 +329,16 @@ export default function FuncionariosPage() {
   }, [selectedColaborador]);
 
   useEffect(() => {
-    setQuickCreate((current) => ({
-      ...current,
-      tenantIds: current.tenantIds.length > 0 ? current.tenantIds : (tenantContext.tenantId ? [tenantContext.tenantId] : []),
-      tenantBaseId: current.tenantBaseId || tenantContext.tenantId || "",
-    }));
-  }, [tenantContext.tenantId]);
+    const currentTenantIds = quickCreateForm.getValues("tenantIds");
+    const currentTenantBaseId = quickCreateForm.getValues("tenantBaseId");
+
+    if (currentTenantIds.length === 0 && tenantContext.tenantId) {
+      quickCreateForm.setValue("tenantIds", [tenantContext.tenantId], { shouldDirty: false });
+    }
+    if (!currentTenantBaseId && tenantContext.tenantId) {
+      quickCreateForm.setValue("tenantBaseId", tenantContext.tenantId, { shouldDirty: false });
+    }
+  }, [createOpen, quickCreateForm, tenantContext.tenantId]);
 
   async function handleSaveCargo(data: Omit<Cargo, "id" | "tenantId">, id?: string) {
     setSaving(true);
@@ -371,14 +387,13 @@ export default function FuncionariosPage() {
     }
   }
 
-  async function handleCreateColaborador(event: FormEvent) {
-    event.preventDefault();
+  async function handleCreateColaborador(values: ColaboradorQuickCreateDraft) {
     setSaving(true);
     setError(null);
     setSuccess(null);
     try {
       const payload = buildQuickCreateColaboradorPayload({
-        draft: quickCreate,
+        draft: values,
         cargos,
         perfis: activePerfis,
         availableTenants: tenantOptions,
@@ -387,7 +402,7 @@ export default function FuncionariosPage() {
       const created = await createFuncionarioApi(payload);
       upsertFuncionario(created);
       setCreateOpen(false);
-      setQuickCreate(DEFAULT_QUICK_CREATE);
+      quickCreateForm.reset(DEFAULT_QUICK_CREATE);
       setSuccess("Colaborador criado e pronto para continuidade do onboarding.");
     } catch (createError) {
       setError(normalizeErrorMessage(createError));
@@ -445,31 +460,50 @@ export default function FuncionariosPage() {
     }
   }
 
+  if (!hasMounted) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+          Carregando base operacional de colaboradores...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <CargoModal
-        open={cargoFormOpen}
-        onClose={() => {
-          setCargoFormOpen(false);
-          setEditingCargo(null);
-        }}
-        onSave={handleSaveCargo}
-        initial={editingCargo}
-      />
+      {cargoFormOpen ? (
+        <CargoModal
+          open={cargoFormOpen}
+          onClose={() => {
+            setCargoFormOpen(false);
+            setEditingCargo(null);
+          }}
+          onSave={handleSaveCargo}
+          initial={editingCargo}
+        />
+      ) : null}
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(nextOpen) => {
+          setCreateOpen(nextOpen);
+          if (!nextOpen) {
+            quickCreateForm.reset(DEFAULT_QUICK_CREATE);
+          }
+        }}
+      >
         <DialogContent className="border-border bg-card sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="font-display text-xl font-bold">Novo colaborador</DialogTitle>
           </DialogHeader>
 
-          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleCreateColaborador}>
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={quickCreateForm.handleSubmit(handleCreateColaborador)}>
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
               <Input
                 aria-label="Nome do colaborador"
-                value={quickCreate.nome}
-                onChange={(event) => setQuickCreate((current) => ({ ...current, nome: event.target.value }))}
+                {...quickCreateForm.register("nome")}
                 className="border-border bg-secondary"
                 placeholder="Carla Operações"
               />
@@ -479,8 +513,7 @@ export default function FuncionariosPage() {
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Contato principal</label>
               <Input
                 aria-label="Contato principal do colaborador"
-                value={quickCreate.celular}
-                onChange={(event) => setQuickCreate((current) => ({ ...current, celular: event.target.value }))}
+                {...quickCreateForm.register("celular")}
                 className="border-border bg-secondary"
                 placeholder="(21) 99999-9999"
               />
@@ -491,8 +524,7 @@ export default function FuncionariosPage() {
               <Input
                 aria-label="E-mail profissional do colaborador"
                 type="email"
-                value={quickCreate.emailProfissional}
-                onChange={(event) => setQuickCreate((current) => ({ ...current, emailProfissional: event.target.value }))}
+                {...quickCreateForm.register("emailProfissional")}
                 className="border-border bg-secondary"
                 placeholder="carla@academia.local"
               />
@@ -501,27 +533,25 @@ export default function FuncionariosPage() {
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cargo</label>
               <div className="flex items-center gap-2">
-                <Select
-                  value={quickCreate.cargoId || "__none__"}
-                  onValueChange={(value) =>
-                    setQuickCreate((current) => ({
-                      ...current,
-                      cargoId: value === "__none__" ? "" : value,
-                    }))
-                  }
-                >
-                  <SelectTrigger aria-label="Cargo do colaborador" className="border-border bg-secondary">
-                    <SelectValue placeholder="Selecione um cargo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Sem cargo</SelectItem>
-                    {cargos.filter((cargo) => cargo.ativo).map((cargo) => (
-                      <SelectItem key={cargo.id} value={cargo.id}>
-                        {cargo.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={quickCreateForm.control}
+                  name="cargoId"
+                  render={({ field }) => (
+                    <Select value={field.value || "__none__"} onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}>
+                      <SelectTrigger aria-label="Cargo do colaborador" className="border-border bg-secondary">
+                        <SelectValue placeholder="Selecione um cargo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Sem cargo</SelectItem>
+                        {cargos.filter((cargo) => cargo.ativo).map((cargo) => (
+                          <SelectItem key={cargo.id} value={cargo.id}>
+                            {cargo.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 <Button
                   type="button"
                   variant="outline"
@@ -550,12 +580,7 @@ export default function FuncionariosPage() {
                     <input
                       type="checkbox"
                       checked={Boolean(checked)}
-                      onChange={(event) =>
-                        setQuickCreate((current) => ({
-                          ...current,
-                          [String(key)]: event.target.checked,
-                        }))
-                      }
+                      onChange={(event) => quickCreateForm.setValue(String(key) as keyof ColaboradorQuickCreateDraft, event.target.checked as never, { shouldDirty: true })}
                     />
                     <span>{label}</span>
                   </label>
@@ -575,13 +600,14 @@ export default function FuncionariosPage() {
                   aria-label="Criar acesso ao sistema"
                   type="checkbox"
                   checked={quickCreate.criarAcessoSistema}
-                  onChange={(event) =>
-                    setQuickCreate((current) => ({
-                      ...current,
-                      criarAcessoSistema: event.target.checked,
-                      provisionamentoAcesso: event.target.checked ? current.provisionamentoAcesso : "SEM_ACESSO",
-                    }))
-                  }
+                  onChange={(event) => {
+                    quickCreateForm.setValue("criarAcessoSistema", event.target.checked, { shouldDirty: true });
+                    quickCreateForm.setValue(
+                      "provisionamentoAcesso",
+                      event.target.checked ? quickCreate.provisionamentoAcesso : "SEM_ACESSO",
+                      { shouldDirty: true }
+                    );
+                  }}
                 />
               </div>
             </div>
@@ -590,48 +616,44 @@ export default function FuncionariosPage() {
               <>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Provisionamento</label>
-                  <Select
-                    value={quickCreate.provisionamentoAcesso}
-                    onValueChange={(value) =>
-                      setQuickCreate((current) => ({
-                        ...current,
-                        provisionamentoAcesso: value as ColaboradorQuickCreateDraft["provisionamentoAcesso"],
-                      }))
-                    }
-                  >
-                    <SelectTrigger aria-label="Provisionamento de acesso" className="border-border bg-secondary">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CONVITE">Enviar convite</SelectItem>
-                      <SelectItem value="REUTILIZAR_USUARIO">Vincular usuário existente</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={quickCreateForm.control}
+                    name="provisionamentoAcesso"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={(value) => field.onChange(value as ColaboradorQuickCreateDraft["provisionamentoAcesso"])}>
+                        <SelectTrigger aria-label="Provisionamento de acesso" className="border-border bg-secondary">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CONVITE">Enviar convite</SelectItem>
+                          <SelectItem value="REUTILIZAR_USUARIO">Vincular usuário existente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Perfil inicial</label>
-                  <Select
-                    value={quickCreate.perfilAcessoInicialId || "__none__"}
-                    onValueChange={(value) =>
-                      setQuickCreate((current) => ({
-                        ...current,
-                        perfilAcessoInicialId: value === "__none__" ? "" : value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger aria-label="Perfil inicial de acesso" className="border-border bg-secondary">
-                      <SelectValue placeholder="Selecione um perfil" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Selecione</SelectItem>
-                      {activePerfis.map((perfil) => (
-                        <SelectItem key={perfil.id} value={perfil.id}>
-                          {perfil.displayName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={quickCreateForm.control}
+                    name="perfilAcessoInicialId"
+                    render={({ field }) => (
+                      <Select value={field.value || "__none__"} onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}>
+                        <SelectTrigger aria-label="Perfil inicial de acesso" className="border-border bg-secondary">
+                          <SelectValue placeholder="Selecione um perfil" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Selecione</SelectItem>
+                          {activePerfis.map((perfil) => (
+                            <SelectItem key={perfil.id} value={perfil.id}>
+                              {perfil.displayName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
@@ -642,18 +664,19 @@ export default function FuncionariosPage() {
                         <input
                           type="checkbox"
                           checked={quickCreate.tenantIds.includes(tenant.id)}
-                          onChange={(event) =>
-                            setQuickCreate((current) => ({
-                              ...current,
-                              tenantIds: event.target.checked
-                                ? [...new Set([...current.tenantIds, tenant.id])]
-                                : current.tenantIds.filter((item) => item !== tenant.id),
-                              tenantBaseId:
-                                current.tenantBaseId === tenant.id && !event.target.checked
-                                  ? current.tenantIds.filter((item) => item !== tenant.id)[0] ?? ""
-                                  : current.tenantBaseId,
-                            }))
-                          }
+                          onChange={(event) => {
+                            const tenantIds = event.target.checked
+                              ? [...new Set([...quickCreate.tenantIds, tenant.id])]
+                              : quickCreate.tenantIds.filter((item) => item !== tenant.id);
+                            quickCreateForm.setValue("tenantIds", tenantIds, { shouldDirty: true });
+                            quickCreateForm.setValue(
+                              "tenantBaseId",
+                              quickCreate.tenantBaseId === tenant.id && !event.target.checked
+                                ? tenantIds[0] ?? ""
+                                : quickCreate.tenantBaseId,
+                              { shouldDirty: true }
+                            );
+                          }}
                         />
                         <span>
                           <span className="block font-medium text-foreground">{tenant.nome}</span>
@@ -666,29 +689,27 @@ export default function FuncionariosPage() {
 
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unidade base</label>
-                  <Select
-                    value={quickCreate.tenantBaseId || "__none__"}
-                    onValueChange={(value) =>
-                      setQuickCreate((current) => ({
-                        ...current,
-                        tenantBaseId: value === "__none__" ? "" : value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger aria-label="Unidade base do colaborador" className="border-border bg-secondary">
-                      <SelectValue placeholder="Selecione a unidade base" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Selecione</SelectItem>
-                      {tenantOptions
-                        .filter((tenant) => quickCreate.tenantIds.includes(tenant.id))
-                        .map((tenant) => (
-                          <SelectItem key={tenant.id} value={tenant.id}>
-                            {tenant.nome}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={quickCreateForm.control}
+                    name="tenantBaseId"
+                    render={({ field }) => (
+                      <Select value={field.value || "__none__"} onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}>
+                        <SelectTrigger aria-label="Unidade base do colaborador" className="border-border bg-secondary">
+                          <SelectValue placeholder="Selecione a unidade base" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Selecione</SelectItem>
+                          {tenantOptions
+                            .filter((tenant) => quickCreate.tenantIds.includes(tenant.id))
+                            .map((tenant) => (
+                              <SelectItem key={tenant.id} value={tenant.id}>
+                                {tenant.nome}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
               </>
             ) : (
@@ -709,8 +730,7 @@ export default function FuncionariosPage() {
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações iniciais</label>
               <Textarea
                 aria-label="Observações do novo colaborador"
-                value={quickCreate.observacoes}
-                onChange={(event) => setQuickCreate((current) => ({ ...current, observacoes: event.target.value }))}
+                {...quickCreateForm.register("observacoes")}
                 className="min-h-24 border-border bg-secondary"
                 placeholder="Contexto do onboarding, turno de entrada, pendências ou recados internos."
               />
@@ -849,11 +869,11 @@ export default function FuncionariosPage() {
         <div className="flex flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
           <div className="max-w-2xl text-sm text-muted-foreground">
             Unidade ativa:
-            <span className="ml-2 font-medium text-foreground">{tenantContext.tenantName}</span>
-            {tenantContext.networkName ? (
+            <span className="ml-2 font-medium text-foreground">{tenantContextLabel}</span>
+            {networkContextLabel ? (
               <>
                 <span className="mx-2 text-border">•</span>
-                Rede: <span className="ml-1 font-medium text-foreground">{tenantContext.networkName}</span>
+                Rede: <span className="ml-1 font-medium text-foreground">{networkContextLabel}</span>
               </>
             ) : null}
           </div>
@@ -1015,10 +1035,17 @@ export default function FuncionariosPage() {
             ) : (
               <div className="space-y-3">
                 {filteredFuncionarios.map((funcionario) => (
-                  <button
+                  <div
                     key={funcionario.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedId(funcionario.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedId(funcionario.id);
+                      }
+                    }}
                     className={cn(
                       "w-full rounded-2xl border p-4 text-left transition-all",
                       selectedId === funcionario.id
@@ -1053,7 +1080,7 @@ export default function FuncionariosPage() {
                       <div className="flex flex-col gap-3 lg:items-end">
                         <div className="text-right text-xs text-muted-foreground">
                           <p>Unidade base</p>
-                          <p className="font-medium text-foreground">{funcionario.tenantBaseNome ?? tenantContext.tenantName}</p>
+                          <p className="font-medium text-foreground">{funcionario.tenantBaseNome ?? tenantContextLabel}</p>
                           <p className="mt-1">{funcionario.memberships?.length ?? 0} memberships</p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1083,7 +1110,7 @@ export default function FuncionariosPage() {
                         </div>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -1134,7 +1161,7 @@ export default function FuncionariosPage() {
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span>Origem: <span className="font-medium text-foreground">{editor.origemCadastro ?? "MANUAL"}</span></span>
-                      <span>Base: <span className="font-medium text-foreground">{editor.tenantBaseNome ?? tenantContext.tenantName}</span></span>
+                      <span>Base: <span className="font-medium text-foreground">{editor.tenantBaseNome ?? tenantContextLabel}</span></span>
                     </div>
                   </div>
                 </div>

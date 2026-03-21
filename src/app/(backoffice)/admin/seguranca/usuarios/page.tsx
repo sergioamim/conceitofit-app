@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GlobalSecurityShell } from "@/components/security/global-security-shell";
 import {
@@ -155,10 +156,13 @@ export default function AdminSegurancaUsuariosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState<CreateGlobalUserForm>(CREATE_USER_DEFAULT);
   const [creatingUser, setCreatingUser] = useState(false);
   const [createFeedback, setCreateFeedback] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const createUserForm = useForm<CreateGlobalUserForm>({
+    defaultValues: CREATE_USER_DEFAULT,
+  });
+  const createForm = useWatch({ control: createUserForm.control }) ?? CREATE_USER_DEFAULT;
 
   const unidadesFiltradas = useMemo(() => {
     if (!filters.academiaId) return unidades;
@@ -293,31 +297,29 @@ export default function AdminSegurancaUsuariosPage() {
   }
 
   function toggleCreateTenant(tenantId: string) {
-    setCreateForm((current) => {
-      const tenantIds = current.tenantIds.includes(tenantId)
-        ? current.tenantIds.filter((item) => item !== tenantId)
-        : [...current.tenantIds, tenantId];
-      return {
-        ...current,
-        tenantIds,
-        defaultTenantId: tenantIds.includes(current.defaultTenantId) ? current.defaultTenantId : tenantIds[0] ?? "",
-      };
-    });
+    const tenantIds = createForm.tenantIds.includes(tenantId)
+      ? createForm.tenantIds.filter((item) => item !== tenantId)
+      : [...createForm.tenantIds, tenantId];
+    createUserForm.setValue("tenantIds", tenantIds, { shouldDirty: true });
+    createUserForm.setValue(
+      "defaultTenantId",
+      tenantIds.includes(createForm.defaultTenantId) ? createForm.defaultTenantId : tenantIds[0] ?? "",
+      { shouldDirty: true }
+    );
   }
 
-  async function handleCreateUser(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleCreateUser(values: CreateGlobalUserForm) {
     setCreateFeedback(null);
     setCreateError(null);
     setCreatingUser(true);
 
     try {
-      const payload = validateGlobalUserCreateDraft(createForm);
+      const payload = validateGlobalUserCreateDraft(values);
       await createGlobalSecurityUser(payload);
       const responseItems = await loadUsersSnapshot(appliedFilters);
       setAllItems(responseItems);
       setShowCreateForm(false);
-      setCreateForm(CREATE_USER_DEFAULT);
+      createUserForm.reset(CREATE_USER_DEFAULT);
       setCreateFeedback("Usuário criado na segurança global.");
     } catch (submitError) {
       setCreateError(normalizeErrorMessage(submitError));
@@ -351,15 +353,17 @@ export default function AdminSegurancaUsuariosPage() {
               Esta superfície pode criar acesso global, por rede ou multiunidade. Fora daqui, a criação deve ficar restrita à rede corrente da academia.
             </p>
 
-            <form className="grid gap-4 lg:grid-cols-2" onSubmit={handleCreateUser}>
+            <form className="grid gap-4 lg:grid-cols-2" onSubmit={createUserForm.handleSubmit(handleCreateUser)}>
               <div className="space-y-2">
                 <Label htmlFor="global-user-name">Nome completo</Label>
                 <Input
                   id="global-user-name"
-                  value={createForm.name}
-                  onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
+                  {...createUserForm.register("name", { validate: (value) => value.trim().length > 0 || "Informe o nome do usuário." })}
                   placeholder="Ana Operações"
                 />
+                {createUserForm.formState.errors.name ? (
+                  <p className="text-xs text-gym-danger">{createUserForm.formState.errors.name.message}</p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -367,92 +371,103 @@ export default function AdminSegurancaUsuariosPage() {
                 <Input
                   id="global-user-email"
                   type="email"
-                  value={createForm.email}
-                  onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))}
+                  {...createUserForm.register("email", { validate: (value) => value.trim().length > 0 || "Informe o e-mail principal." })}
                   placeholder="ana@qa.local"
                 />
+                {createUserForm.formState.errors.email ? (
+                  <p className="text-xs text-gym-danger">{createUserForm.formState.errors.email.message}</p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="global-user-cpf">CPF</Label>
                 <Input
                   id="global-user-cpf"
-                  value={createForm.cpf}
-                  onChange={(event) => setCreateForm((current) => ({ ...current, cpf: event.target.value }))}
+                  {...createUserForm.register("cpf")}
                   placeholder="111.222.333-44"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label>Tipo de usuário</Label>
-                <Select
-                  value={createForm.userKind}
-                  onValueChange={(value) => setCreateForm((current) => ({ ...current, userKind: value }))}
-                >
-                  <SelectTrigger aria-label="Tipo de usuário global">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="COLABORADOR">Colaborador</SelectItem>
-                    <SelectItem value="SUPORTE">Suporte</SelectItem>
-                    <SelectItem value="PRESTADOR">Prestador</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={createUserForm.control}
+                  name="userKind"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger aria-label="Tipo de usuário global">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="COLABORADOR">Colaborador</SelectItem>
+                        <SelectItem value="SUPORTE">Suporte</SelectItem>
+                        <SelectItem value="PRESTADOR">Prestador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               <div className="space-y-2">
                 <Label>Escopo inicial</Label>
-                <Select
-                  value={createForm.scopeType}
-                  onValueChange={(value) =>
-                    setCreateForm((current) => ({
-                      ...current,
-                      scopeType: value as CreateGlobalUserForm["scopeType"],
-                      broadAccess: value === "GLOBAL" ? current.broadAccess : false,
-                      eligibleForNewUnits: value === "REDE" ? current.eligibleForNewUnits : false,
-                      academiaId: value === "GLOBAL" ? "" : current.academiaId,
-                      tenantIds: value === "GLOBAL" ? [] : current.tenantIds,
-                      defaultTenantId: value === "GLOBAL" ? "" : current.defaultTenantId,
-                    }))
-                  }
-                >
-                  <SelectTrigger aria-label="Escopo inicial global">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UNIDADE">Unidade</SelectItem>
-                    <SelectItem value="REDE">Rede</SelectItem>
-                    <SelectItem value="GLOBAL">Global</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={createUserForm.control}
+                  name="scopeType"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => {
+                        const nextScope = value as CreateGlobalUserForm["scopeType"];
+                        field.onChange(nextScope);
+                        createUserForm.setValue("broadAccess", nextScope === "GLOBAL" ? createForm.broadAccess : false, { shouldDirty: true });
+                        createUserForm.setValue("eligibleForNewUnits", nextScope === "REDE" ? createForm.eligibleForNewUnits : false, { shouldDirty: true });
+                        createUserForm.setValue("academiaId", nextScope === "GLOBAL" ? "" : createForm.academiaId, { shouldDirty: true });
+                        createUserForm.setValue("tenantIds", nextScope === "GLOBAL" ? [] : createForm.tenantIds, { shouldDirty: true });
+                        createUserForm.setValue("defaultTenantId", nextScope === "GLOBAL" ? "" : createForm.defaultTenantId, { shouldDirty: true });
+                      }}
+                    >
+                      <SelectTrigger aria-label="Escopo inicial global">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UNIDADE">Unidade</SelectItem>
+                        <SelectItem value="REDE">Rede</SelectItem>
+                        <SelectItem value="GLOBAL">Global</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               <div className="space-y-2">
                 <Label>Academia de referência</Label>
-                <Select
-                  value={createForm.academiaId || "__none__"}
-                  onValueChange={(value) =>
-                    setCreateForm((current) => ({
-                      ...current,
-                      academiaId: value === "__none__" ? "" : value,
-                      tenantIds: [],
-                      defaultTenantId: "",
-                    }))
-                  }
-                  disabled={createForm.scopeType === "GLOBAL"}
-                >
-                  <SelectTrigger aria-label="Academia de referência global">
-                    <SelectValue placeholder="Selecione a academia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Selecione</SelectItem>
-                    {academias.map((academia) => (
-                      <SelectItem key={academia.id} value={academia.id}>
-                        {academia.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={createUserForm.control}
+                  name="academiaId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || "__none__"}
+                      onValueChange={(value) => {
+                        field.onChange(value === "__none__" ? "" : value);
+                        createUserForm.setValue("tenantIds", [], { shouldDirty: true });
+                        createUserForm.setValue("defaultTenantId", "", { shouldDirty: true });
+                      }}
+                      disabled={createForm.scopeType === "GLOBAL"}
+                    >
+                      <SelectTrigger aria-label="Academia de referência global">
+                        <SelectValue placeholder="Selecione a academia" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Selecione</SelectItem>
+                        {academias.map((academia) => (
+                          <SelectItem key={academia.id} value={academia.id}>
+                            {academia.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               {createForm.scopeType !== "GLOBAL" ? (
@@ -487,9 +502,7 @@ export default function AdminSegurancaUsuariosPage() {
                   <Label>Unidade base</Label>
                   <Select
                     value={createForm.defaultTenantId || "__none__"}
-                    onValueChange={(value) =>
-                      setCreateForm((current) => ({ ...current, defaultTenantId: value === "__none__" ? "" : value }))
-                    }
+                    onValueChange={(value) => createUserForm.setValue("defaultTenantId", value === "__none__" ? "" : value, { shouldDirty: true })}
                   >
                     <SelectTrigger aria-label="Unidade base global">
                       <SelectValue placeholder="Selecione a unidade base" />
@@ -513,9 +526,7 @@ export default function AdminSegurancaUsuariosPage() {
                   <input
                     type="checkbox"
                     checked={createForm.broadAccess}
-                    onChange={(event) =>
-                      setCreateForm((current) => ({ ...current, broadAccess: event.target.checked }))
-                    }
+                    onChange={(event) => createUserForm.setValue("broadAccess", event.target.checked, { shouldDirty: true })}
                   />
                   <span>
                     <span className="block font-medium text-foreground">Marcar como acesso amplo</span>
@@ -530,9 +541,7 @@ export default function AdminSegurancaUsuariosPage() {
                     <input
                       type="checkbox"
                       checked={createForm.eligibleForNewUnits}
-                      onChange={(event) =>
-                        setCreateForm((current) => ({ ...current, eligibleForNewUnits: event.target.checked }))
-                      }
+                      onChange={(event) => createUserForm.setValue("eligibleForNewUnits", event.target.checked, { shouldDirty: true })}
                     />
                     <span>
                       <span className="block font-medium text-foreground">Propagar para novas unidades</span>
@@ -545,12 +554,7 @@ export default function AdminSegurancaUsuariosPage() {
                       <Label>Política inicial</Label>
                       <Select
                         value={createForm.policyScope}
-                        onValueChange={(value) =>
-                          setCreateForm((current) => ({
-                            ...current,
-                            policyScope: value as GlobalAdminNewUnitsPolicyScope,
-                          }))
-                        }
+                        onValueChange={(value) => createUserForm.setValue("policyScope", value as GlobalAdminNewUnitsPolicyScope, { shouldDirty: true })}
                       >
                         <SelectTrigger aria-label="Política inicial global">
                           <SelectValue />
@@ -577,7 +581,7 @@ export default function AdminSegurancaUsuariosPage() {
                   variant="outline"
                   className="border-border"
                   onClick={() => {
-                    setCreateForm(CREATE_USER_DEFAULT);
+                    createUserForm.reset(CREATE_USER_DEFAULT);
                     setCreateError(null);
                     setCreateFeedback(null);
                   }}

@@ -21,11 +21,11 @@ export async function openAdminCrudPage(page: Page, path: string) {
 
   try {
     await page.goto(path, { waitUntil: "commit" });
-    await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("load");
   } catch (error) {
     if (error instanceof Error && /ERR_ABORTED|frame was detached/i.test(error.message)) {
       await page.goto(path, { waitUntil: "commit" });
-      await page.waitForLoadState("domcontentloaded");
+      await page.waitForLoadState("load");
       return;
     }
     throw error;
