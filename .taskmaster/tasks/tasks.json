@@ -5946,7 +5946,7 @@
         "description": "Introduzir `zod` e `@hookform/resolvers` como padrão oficial de validação de schemas para os formulários baseados em `react-hook-form`.",
         "details": "Adicionar `zod` e `@hookform/resolvers` como dependências diretas do frontend, alinhar a documentação/guardrails do repositório e preparar a infraestrutura mínima para uso consistente do `zodResolver` em formulários novos e refatorados. Mapear um padrão de organização para schemas de formulário, mensagens de erro e tipos inferidos, evitando drift entre interface TypeScript e regras de validação. Definir helpers ou convenções leves apenas onde fizer sentido, sem introduzir abstrações genéricas que escondam o schema real do formulário.",
         "testStrategy": "Validar que as dependências foram adicionadas corretamente, que o projeto continua compilando/lintando e que existe ao menos uma cobertura unitária simples exercitando um schema `zod` integrado ao `react-hook-form`.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           79
         ],
