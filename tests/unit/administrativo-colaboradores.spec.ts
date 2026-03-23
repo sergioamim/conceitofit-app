@@ -4,8 +4,10 @@ import {
   filterColaboradores,
   normalizeFuncionarioRecord,
 } from "../../src/lib/administrativo-colaboradores";
+import { buildFuncionarioProfileFormSchema } from "../../src/lib/forms/administrativo-schemas";
 import { listFuncionariosApi } from "../../src/lib/api/administrativo";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
+import { createFuncionarioFormDefaults, funcionarioToFormValues } from "../../src/components/administrativo/funcionarios/shared";
 import { installMockBrowser, mockFetchWithSequence } from "./support/test-runtime";
 
 let browser: ReturnType<typeof installMockBrowser> | undefined;
@@ -142,6 +144,51 @@ test.describe("administrativo colaboradores", () => {
     expect(payload.statusAcesso).toBe("CONVITE_PENDENTE");
     expect(payload.memberships).toHaveLength(2);
     expect(payload.tenantBaseNome).toBe("Unidade Centro");
+  });
+
+  test("schema da ficha exige dados mínimos de acesso no onboarding dedicado", () => {
+    const schema = buildFuncionarioProfileFormSchema("create");
+    const parsed = schema.safeParse({
+      ...createFuncionarioFormDefaults("tenant-centro"),
+      nome: "Carla Operações",
+      criarAcessoSistema: true,
+      tenantIds: ["tenant-centro"],
+      tenantBaseId: "tenant-centro",
+    });
+
+    expect(parsed.success).toBe(false);
+    if (parsed.success) return;
+    expect(parsed.error.issues.some((issue) => issue.path.join(".") === "emailProfissional")).toBe(true);
+    expect(parsed.error.issues.some((issue) => issue.path.join(".") === "perfilAcessoInicialId")).toBe(true);
+  });
+
+  test("converte colaborador existente para valores da ficha por rota", () => {
+    const values = funcionarioToFormValues(
+      normalizeFuncionarioRecord({
+        id: "funcionario-42",
+        tenantId: "tenant-centro",
+        nome: "Marina Souza",
+        emailProfissional: "marina@academia.local",
+        tenantBaseId: "tenant-centro",
+        tenantBaseNome: "Unidade Centro",
+        memberships: [
+          {
+            tenantId: "tenant-centro",
+            tenantNome: "Unidade Centro",
+            roleDisplayName: "Administrador",
+            defaultTenant: true,
+          },
+        ],
+        horarios: [{ diaSemana: "SEG", horaInicio: "08:00", horaFim: "17:00", ativo: true }],
+        possuiAcessoSistema: true,
+        ativo: true,
+        podeMinistrarAulas: false,
+      })
+    );
+
+    expect(values.nome).toBe("Marina Souza");
+    expect(values.tenantIds).toEqual(["tenant-centro"]);
+    expect(values.horarios[0]?.horaInicio).toBe("08:00");
   });
 
   test("listFuncionariosApi normaliza envelopes ricos do backend novo", async () => {

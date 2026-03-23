@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 81
+**Dependencies:** 81 ✓
 
 **Priority:** high
 
@@ -12,10 +12,7 @@
 
 **Details:**
 
-Revisar os formulários já migrados para `react-hook-form` e substituir validações manuais, `validate` inline repetitivo e parsing ad hoc por schemas `zod` coesos, mantendo a UX atual de erros, submit e reset.
-Priorizar fluxos críticos ou já padronizados em `react-hook-form`, como autenticação, jornada pública, segurança/RBAC e CRUDs administrativos.
-Extrair schemas por domínio quando houver reaproveitamento real, evitando um arquivo monolítico de validações.
-Garantir compatibilidade com componentes customizados (`Select`, `SuggestionInput`, editores ricos, modais Radix) e preservar segurança de hidratação no primeiro render.
+Revisar os formulários já migrados para `react-hook-form` e substituir validações manuais, `validate` inline repetitivo e parsing ad hoc por schemas `zod` coesos, mantendo a UX atual de erros, submit e reset. Priorizar fluxos críticos ou já padronizados em `react-hook-form`, como autenticação, jornada pública, segurança/RBAC e CRUDs administrativos. Extrair schemas por domínio quando houver reaproveitamento real, evitando um arquivo monolítico de validações. Garantir compatibilidade com componentes customizados (`Select`, `SuggestionInput`, editores ricos, modais Radix) e preservar segurança de hidratação no primeiro render.
 
 **Test Strategy:**
 
@@ -26,21 +23,33 @@ Executar lint e testes unitários/E2E dos fluxos migrados, cobrindo submit váli
 ### 82.1. Migrar fluxos de autenticação e jornada pública
 
 **Status:** done  
-**Dependencies:** 81  
+**Dependencies:** 82.81  
+
+Aplicar schemas `zod` aos formulários de login, primeiro acesso, recuperação de senha, cadastro, trial e checkout.
+
+**Details:**
 
 Aplicar schemas `zod` aos formulários de login, primeiro acesso, recuperação de senha, cadastro, trial e checkout.
 
 ### 82.2. Migrar segurança operacional e administrativa
 
 **Status:** done  
-**Dependencies:** 81  
+**Dependencies:** 82.81  
+
+Aplicar schemas `zod` aos formulários de `acesso-unidade`, `rbac` e criação global de usuários no backoffice.
+
+**Details:**
 
 Aplicar schemas `zod` aos formulários de `acesso-unidade`, `rbac` e criação global de usuários no backoffice.
 
 ### 82.3. Migrar modais e CRUDs administrativos com maior volume
 
 **Status:** done  
-**Dependencies:** 81  
+**Dependencies:** 82.81  
+
+Cobrir modais e telas administrativas que hoje usam `react-hook-form` com validação manual, como planos, produtos, serviços, vouchers, colaboradores e catálogos correlatos.
+
+**Details:**
 
 Cobrir modais e telas administrativas que hoje usam `react-hook-form` com validação manual, como planos, produtos, serviços, vouchers, colaboradores e catálogos correlatos.
 
@@ -51,9 +60,17 @@ Cobrir modais e telas administrativas que hoje usam `react-hook-form` com valida
 
 Remover validações redundantes em handlers/helpers quando o schema já for fonte de verdade e garantir que os payloads finais permaneçam compatíveis com a API.
 
+**Details:**
+
+Remover validações redundantes em handlers/helpers quando o schema já for fonte de verdade e garantir que os payloads finais permaneçam compatíveis com a API.
+
 ### 82.5. Atualizar cobertura automatizada das migrações
 
 **Status:** done  
 **Dependencies:** 82.1, 82.2, 82.3, 82.4  
+
+Expandir testes unitários e E2E para validar erros por campo, regras condicionais e fluxos de sucesso dos formulários migrados para `zodResolver`.
+
+**Details:**
 
 Expandir testes unitários e E2E para validar erros por campo, regras condicionais e fluxos de sucesso dos formulários migrados para `zodResolver`.
