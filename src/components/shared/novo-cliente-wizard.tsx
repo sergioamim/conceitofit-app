@@ -71,7 +71,7 @@ const clienteWizardSchema = z.object({
   email: z.string().email("E-mail inválido").or(z.literal("")),
   telefone: z.string().min(10, "Informe um telefone válido com DDD"),
   telefoneSec: z.string().optional(),
-  cpf: z.string().min(11, "CPF inválido").regex(/^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$/, "Formato CPF inválido"),
+  cpf: z.string().min(11, "CPF inválido").regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato CPF inválido"),
   rg: z.string().optional(),
   dataNascimento: z.string().optional(),
   sexo: z.string().optional(),
@@ -105,10 +105,10 @@ async function checkUniqueness(tenantId: string, search: string) {
   try {
     const list = await listAlunosService({ tenantId, size: 5 });
     // Na API real, usaríamos a property search, porém vamos iterar no array resultante como mock
-    const normalizedSearch = search.replace(/\\D/g, "");
+    const normalizedSearch = search.replace(/\D/g, "");
     return list.some(a => {
       if (normalizedSearch && a.cpf) {
-        if (a.cpf.replace(/\\D/g, "") === normalizedSearch) return true;
+        if (a.cpf.replace(/\D/g, "") === normalizedSearch) return true;
       }
       if (search && a.email && a.email.toLowerCase() === search.toLowerCase()) return true;
       return false;
@@ -150,9 +150,9 @@ function Step1Dados({
 
   useEffect(() => {
     if (!watchedCep) return;
-    const cep = watchedCep.replace(/\\D/g, "");
+    const cep = watchedCep.replace(/\D/g, "");
     if (cep.length !== 8) return;
-    fetch(\`https://viacep.com.br/ws/\${cep}/json/\`)
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
       .then((r) => r.json())
       .then((res) => {
         if (res.erro) return;
@@ -286,7 +286,7 @@ function Step1Dados({
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone secundário</label>
           <Controller name="telefoneSec" control={control} render={({ field }) => (
-            <PhoneInput placeholder="(11) 90000-0000" {...field} className="bg-card border-border" />
+            <PhoneInput placeholder="(11) 90000-0000" {...field} value={field.value || ""} className="bg-card border-border" />
           )} />
         </div>
 
@@ -345,7 +345,7 @@ function Step1Dados({
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">CEP</label>
                 <Controller name="enderecoCep" control={control} render={({ field }) => (
-                  <MaskedInput mask="cep" placeholder="00000-000" {...field} className="bg-card border-border" />
+                  <MaskedInput mask="cep" placeholder="00000-000" {...field} value={field.value || ""} className="bg-card border-border" />
                 )} />
               </div>
               <div className="space-y-1.5">
@@ -385,7 +385,7 @@ function Step1Dados({
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone</label>
                 <Controller name="emergenciaTelefone" control={control} render={({ field }) => (
-                  <PhoneInput placeholder="(11) 90000-0000" {...field} className="bg-card border-border" />
+                  <PhoneInput placeholder="(11) 90000-0000" {...field} value={field.value || ""} className="bg-card border-border" />
                 )} />
               </div>
               <div className="space-y-1.5">
@@ -574,17 +574,17 @@ function StepSucesso({ result, plano, onClose }: { result: CriarAlunoComMatricul
 function normalizeDraftEmail(nome: string, cpf: string, email?: string) {
   const trimmed = email?.trim();
   if (trimmed) return trimmed;
-  const cpfDigits = (cpf || "").replace(/\\D/g, "");
+  const cpfDigits = (cpf || "").replace(/\D/g, "");
   const slug = (nome || "")
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
   const base = slug || cpfDigits || "cliente";
-  return \`\${base}.\${Date.now()}@temporario.local\`;
+  return `${base}.${Date.now()}@temporario.local`;
 }
 
 interface CreateOnlyOptions {
@@ -701,7 +701,7 @@ export function NovoClienteWizard({
             } : undefined,
             contatoEmergencia: vals.emergenciaNome ? {
               nome: vals.emergenciaNome,
-              telefone: vals.emergenciaTelefone,
+              telefone: vals.emergenciaTelefone || "",
               parentesco: vals.emergenciaParentesco,
             } : undefined,
             observacoesMedicas: vals.observacoesMedicas,
@@ -753,7 +753,7 @@ export function NovoClienteWizard({
           } : undefined,
           contatoEmergencia: vals.emergenciaNome ? {
             nome: vals.emergenciaNome,
-            telefone: vals.emergenciaTelefone,
+            telefone: vals.emergenciaTelefone || "",
             parentesco: vals.emergenciaParentesco,
           } : undefined,
           observacoesMedicas: vals.observacoesMedicas,
