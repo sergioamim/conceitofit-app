@@ -10,6 +10,7 @@ import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
 import { Button } from "@/components/ui/button";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { TenantContextProvider, useTenantContext } from "@/hooks/use-session-context";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/auth-redirect";
 import { isClientOperationalEligibilityEnabled } from "@/lib/feature-flags";
@@ -154,8 +155,16 @@ function AppLayoutContent({
   const [shellReady, setShellReady] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const { addRecent } = useUserPreferences();
   const handleOpenMenu = useCallback(() => setMobileMenuOpen(true), []);
   const handleCloseMenu = useCallback(() => setMobileMenuOpen(false), []);
+
+  useEffect(() => {
+    // Only add operational routes, skip home/login
+    if (pathname && pathname !== "/" && pathname !== "/dashboard") {
+      addRecent(pathname);
+    }
+  }, [pathname, addRecent]);
 
   useEffect(() => {
     function syncAuthenticated() {

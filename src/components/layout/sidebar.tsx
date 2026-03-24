@@ -11,13 +11,14 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  Clock,
   LineChart,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
   ShieldCheck,
+  Star,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { clearAuthSession, getNetworkSlugFromSession } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/auth-redirect";
 import { DEFAULT_TENANT_APP_NAME } from "@/lib/tenant-theme";
@@ -30,10 +31,13 @@ import {
   segurancaItems,
   administrativoItems,
   gerencialItems,
+  allNavItems,
   NavItem,
-} from "@/lib/nav-items";
-
+  } from "@/lib/nav-items";
+  import { useUserPreferences } from "@/hooks/use-user-preferences";
+  import {
   DEFAULT_ACADEMIA_LABEL,
+
   DEFAULT_ACTIVE_TENANT_LABEL,
   useAuthAccess,
   useTenantContext,
@@ -183,22 +187,44 @@ const NavLinkItem = memo(function NavLinkItem({
   dense?: boolean;
 }) {
   const Icon = item.icon;
+  const { isFavorite, toggleFavorite } = useUserPreferences();
+  const favorited = isFavorite(item.href);
+
   return (
-    <Link
-      href={item.href}
-      onClick={onNavigate}
-      className={cn(
-        "cursor-pointer flex items-center rounded-md transition-colors",
-        dense ? "gap-2 px-3 py-2 text-[13px]" : "gap-2.5 px-3 py-2 text-[13.5px] font-normal",
-        active
-          ? "bg-sidebar-accent font-medium text-[color:var(--sidebar-primary)]"
-          : "text-[color:color-mix(in_srgb,var(--sidebar-foreground)_68%,transparent)] hover:bg-sidebar-accent hover:text-sidebar-foreground"
+    <div className="group relative flex items-center">
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        className={cn(
+          "cursor-pointer flex flex-1 items-center rounded-md transition-colors",
+          dense ? "gap-2 px-3 py-2 text-[13px]" : "gap-2.5 px-3 py-2 text-[13.5px] font-normal",
+          active
+            ? "bg-sidebar-accent font-medium text-[color:var(--sidebar-primary)]"
+            : "text-[color:color-mix(in_srgb,var(--sidebar-foreground)_68%,transparent)] hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        )}
+        title={collapsed ? item.label : undefined}
+      >
+        <Icon className={cn("shrink-0", dense ? "size-[14px]" : "size-[16px]")} />
+        {!collapsed && item.label}
+      </Link>
+      {!collapsed && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite(item.href);
+          }}
+          className={cn(
+            "absolute right-2 p-1 transition-all opacity-0 group-hover:opacity-100 hover:text-gym-accent",
+            favorited ? "opacity-100 text-gym-accent" : "text-muted-foreground"
+          )}
+          aria-label={favorited ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+        >
+          <Star className={cn("size-3.5", favorited && "fill-current")} />
+        </button>
       )}
-      title={collapsed ? item.label : undefined}
-    >
-      <Icon className={cn("shrink-0", dense ? "size-[14px]" : "size-[16px]")} />
-      {!collapsed && item.label}
-    </Link>
+    </div>
   );
 });
 
@@ -269,6 +295,7 @@ function SidebarNavigation({
 }) {
   const pathname = usePathname();
   const access = useAuthAccess();
+  const { favorites, recent } = useUserPreferences();
   const [atividadeOpen, setAtividadeOpen] = useState(() => matchesAnyPath(pathname, atividadeItemsSorted));
   const [crmOpen, setCrmOpen] = useState(() => pathname.startsWith("/crm"));
   const [treinosOpen, setTreinosOpen] = useState(() => pathname.startsWith("/treinos"));
@@ -289,6 +316,16 @@ function SidebarNavigation({
           item.href !== "/administrativo/nfse" &&
           item.href !== "/administrativo/integracoes"
       );
+
+  const favoriteItems = favorites
+    .map((href) => allNavItems.find((i) => i.href === href))
+    .filter((i): i is NavItem => !!i);
+
+  const recentItems = recent
+    .filter((href) => href !== pathname)
+    .map((href) => allNavItems.find((i) => i.href === href))
+    .filter((i): i is NavItem => !!i)
+    .slice(0, 3);
 
   useEffect(() => {
     if (mobileOpen) {
@@ -323,6 +360,46 @@ function SidebarNavigation({
 
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4">
+      {favoriteItems.length > 0 && (
+        <div className="mb-4">
+          {!collapsed && (
+            <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--sidebar-foreground)_50%,transparent)]">
+              Favoritos
+            </p>
+          )}
+          {favoriteItems.map((item) => (
+            <NavLinkItem
+              key={item.href}
+              item={item}
+              active={isActiveNavItem(pathname, item)}
+              collapsed={collapsed}
+              onNavigate={onMobileClose}
+              dense={collapsed}
+            />
+          ))}
+        </div>
+      )}
+
+      {recentItems.length > 0 && (
+        <div className="mb-4">
+          {!collapsed && (
+            <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--sidebar-foreground)_50%,transparent)]">
+              Recentes
+            </p>
+          )}
+          {recentItems.map((item) => (
+            <NavLinkItem
+              key={item.href}
+              item={item}
+              active={isActiveNavItem(pathname, item)}
+              collapsed={collapsed}
+              onNavigate={onMobileClose}
+              dense
+            />
+          ))}
+        </div>
+      )}
+
       {!collapsed && (
         <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--sidebar-foreground)_50%,transparent)]">
           Principal

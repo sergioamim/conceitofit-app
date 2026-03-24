@@ -6168,7 +6168,7 @@
         "description": "Adicionar favoritos e seção de vistos recentemente para reduzir carga cognitiva na navegação principal e personalizar o fluxo de cada usuário.",
         "details": "Criar affordance de favoritar páginas na sidebar e/ou cabeçalho, manter seção de itens favoritos no topo da navegação e registrar os últimos links visitados com persistência local. A implementação inicial deve usar storage local compatível com SSR seguro, deixando a modelagem preparada para futura persistência cross-device no backend sem acoplar a UI a valores instáveis no render inicial.",
         "testStrategy": "Cobrir com testes unitários e E2E o toggle de favoritos, persistência em storage após mount, exibição de recentes limitada aos últimos cinco itens e restauração correta da navegação ao recarregar a aplicação.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "84"
         ],
@@ -6308,9 +6308,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-24T03:30:00.000Z",
+      "lastModified": "2026-03-24T03:35:00.000Z",
       "taskCount": 95,
-      "completedCount": 84,
+      "completedCount": 85,
       "tags": [
         "master"
       ]
