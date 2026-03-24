@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, Plus, X } from "lucide-react";
+import { useTableSearchParams } from "@/hooks/use-table-search-params";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import {
   listAlunosPageService,
@@ -38,14 +39,12 @@ function formatDate(d: string) {
 
 function ClientesPageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { tenantId, tenantResolved, setTenant } = useTenantContext();
   const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [filtro, setFiltro] = useState<StatusAluno | "TODOS">("TODOS");
-  const [busca, setBusca] = useState("");
+  const { q, status: filtro, page, size: pageSize, setParams, clearParams, hasActiveFilters } = useTableSearchParams();
+  const [buscaInput, setBuscaInput] = useState(q);
+  const busca = q; // alias para manter a funcionalidade preexistente da view
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
-  const [page, setPage] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalClientes, setTotalClientes] = useState(0);
   const [metaPage, setMetaPage] = useState(0);
@@ -124,7 +123,7 @@ function ClientesPageContent() {
   }, [applyLoadedData, loadSnapshot, setTenant, tenantId]);
 
   useEffect(() => {
-    setPage(0);
+    // page reseta sozinho com a exclusão da chave na URL, porém não alteramos o custom hook diretamente
     setAlunos([]);
     setHasNextPage(false);
     setTotalClientes(0);
@@ -136,18 +135,17 @@ function ClientesPageContent() {
     void load();
   }, [load, tenantId, tenantResolved]);
   useEffect(() => {
-    const q = (searchParams.get("q") ?? "").trim();
-    if (!q) return;
-    const timer = window.setTimeout(() => {
-      const digits = q.replace(/\D/g, "");
-      if (digits && digits.length >= 11) {
-        setBusca(maskCPF(digits));
-        return;
+    setBuscaInput(q);
+  }, [q]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (buscaInput !== q) {
+        setParams({ q: buscaInput || null });
       }
-      setBusca(q);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [searchParams]);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [buscaInput, q, setParams]);
 
   const buscaDigits = busca.replace(/\D/g, "");
 
@@ -250,8 +248,7 @@ function ClientesPageContent() {
         <div className="flex gap-1.5">
             {STATUS_FILTERS.map((s) => (
             <button key={s.value} onClick={() => {
-              setFiltro(s.value);
-              setPage(0);
+              setParams({ status: s.value === "TODOS" ? null : s.value });
             }}
               className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 filtro === s.value
@@ -272,27 +269,31 @@ function ClientesPageContent() {
               )}
             </button>
           ))}
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearParams} className="ml-2 h-8 border border-transparent hover:bg-muted text-xs">
+              <X className="mr-1 size-3.5" />
+              Limpar
+            </Button>
+          )}
         </div>
         <div className="relative ml-auto">
           <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome, CPF, telefone ou e-mail..."
-            value={busca}
+            value={buscaInput}
             onChange={(e) => {
               const raw = e.target.value;
               const hasLetters = /[a-zA-Z@]/.test(raw);
               if (hasLetters) {
-                setBusca(raw);
-                setPage(0);
+                setBuscaInput(raw);
                 return;
               }
               const digits = raw.replace(/\D/g, "");
               if (digits.length >= 11) {
-                setBusca(maskCPF(raw));
+                setBuscaInput(maskCPF(raw));
               } else {
-                setBusca(maskPhone(raw));
+                setBuscaInput(maskPhone(raw));
               }
-              setPage(0);
             }}
             className="w-72 bg-secondary border-border pl-8 text-sm"
           />
@@ -301,8 +302,7 @@ function ClientesPageContent() {
           <Select
             value={String(pageSize)}
             onValueChange={(v) => {
-              setPageSize(Number(v) as 20 | 50 | 100 | 200);
-              setPage(0);
+              setParams({ size: v });
             }}
           >
             <SelectTrigger className="w-full bg-secondary border-border text-xs">
@@ -397,8 +397,8 @@ function ClientesPageContent() {
         total={totalClientes}
         itemLabel="clientes"
         hasNext={isSearchFiltered ? false : hasNextPage}
-        onPrevious={() => setPage((p) => Math.max(0, p - 1))}
-        onNext={() => setPage((p) => p + 1)}
+        onPrevious={() => setParams({ page: Math.max(0, page - 1) })}
+        onNext={() => setParams({ page: page + 1 })}
       />
 
       <Dialog open={resumoOpen} onOpenChange={setResumoOpen}>
