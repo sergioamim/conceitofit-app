@@ -322,10 +322,18 @@ function SidebarNavigation({
     .filter((i): i is NavItem => !!i);
 
   const recentItems = recent
-    .filter((href) => href !== pathname)
+    .filter((href) => href !== pathname && !favorites.includes(href))
     .map((href) => allNavItems.find((i) => i.href === href))
     .filter((i): i is NavItem => !!i)
     .slice(0, 3);
+
+  const filteredNavItems = navItemsSorted.filter(i => !favorites.includes(i.href));
+  const filteredAtividadeItems = atividadeItemsSorted.filter(i => !favorites.includes(i.href));
+  const filteredTreinoItems = treinoItemsSorted.filter(i => !favorites.includes(i.href));
+  const filteredCrmItems = crmItemsSorted.filter(i => !favorites.includes(i.href));
+  const filteredSegurancaItems = visibleSegurancaItems.filter(i => !favorites.includes(i.href));
+  const filteredGerencialItems = visibleGerencialItems.filter(i => !favorites.includes(i.href));
+  const filteredAdministrativoItems = visibleAdministrativoItems.filter(i => !favorites.includes(i.href));
 
   useEffect(() => {
     if (mobileOpen) {
@@ -400,13 +408,13 @@ function SidebarNavigation({
         </div>
       )}
 
-      {!collapsed && (
+      {filteredNavItems.length > 0 && !collapsed && (
         <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--sidebar-foreground)_50%,transparent)]">
           Principal
         </p>
       )}
 
-      {navItemsSorted.map((item) => (
+      {filteredNavItems.map((item) => (
         <NavLinkItem
           key={item.href}
           item={item}
@@ -416,73 +424,83 @@ function SidebarNavigation({
         />
       ))}
 
-      <CollapsibleSection
-        title="Atividade"
-        icon={Activity}
-        collapsed={collapsed}
-        open={atividadeOpen}
-        onToggle={() => setAtividadeOpen((v) => !v)}
-        items={atividadeItemsSorted}
-        pathname={pathname}
-        onNavigate={onMobileClose}
-      />
+      {filteredAtividadeItems.length > 0 && (
+        <CollapsibleSection
+          title="Atividade"
+          icon={Activity}
+          collapsed={collapsed}
+          open={atividadeOpen}
+          onToggle={() => setAtividadeOpen((v) => !v)}
+          items={filteredAtividadeItems}
+          pathname={pathname}
+          onNavigate={onMobileClose}
+        />
+      )}
 
-      <CollapsibleSection
-        title="Treinos"
-        icon={CalendarDays}
-        collapsed={collapsed}
-        open={treinosOpen}
-        onToggle={() => setTreinosOpen((v) => !v)}
-        items={treinoItemsSorted}
-        pathname={pathname}
-        onNavigate={onMobileClose}
-      />
+      {filteredTreinoItems.length > 0 && (
+        <CollapsibleSection
+          title="Treinos"
+          icon={CalendarDays}
+          collapsed={collapsed}
+          open={treinosOpen}
+          onToggle={() => setTreinosOpen((v) => !v)}
+          items={filteredTreinoItems}
+          pathname={pathname}
+          onNavigate={onMobileClose}
+        />
+      )}
 
-      <CollapsibleSection
-        title="CRM"
-        icon={BriefcaseBusiness}
-        collapsed={collapsed}
-        open={crmOpen}
-        onToggle={() => setCrmOpen((v) => !v)}
-        items={crmItemsSorted}
-        pathname={pathname}
-        onNavigate={onMobileClose}
-      />
+      {filteredCrmItems.length > 0 && (
+        <CollapsibleSection
+          title="CRM"
+          icon={BriefcaseBusiness}
+          collapsed={collapsed}
+          open={crmOpen}
+          onToggle={() => setCrmOpen((v) => !v)}
+          items={filteredCrmItems}
+          pathname={pathname}
+          onNavigate={onMobileClose}
+        />
+      )}
 
-      {visibleSegurancaItems.length > 0 ? (
+      {filteredSegurancaItems.length > 0 && (
         <CollapsibleSection
           title="Segurança"
           icon={ShieldCheck}
           collapsed={collapsed}
           open={segurancaOpen}
           onToggle={() => setSegurancaOpen((v) => !v)}
-          items={visibleSegurancaItems}
+          items={filteredSegurancaItems}
           pathname={pathname}
           onNavigate={onMobileClose}
         />
-      ) : null}
+      )}
 
-      <CollapsibleSection
-        title="Gerencial"
-        icon={LineChart}
-        collapsed={collapsed}
-        open={gerencialOpen}
-        onToggle={() => setGerencialOpen((v) => !v)}
-        items={visibleGerencialItems}
-        pathname={pathname}
-        onNavigate={onMobileClose}
-      />
+      {filteredGerencialItems.length > 0 && (
+        <CollapsibleSection
+          title="Gerencial"
+          icon={LineChart}
+          collapsed={collapsed}
+          open={gerencialOpen}
+          onToggle={() => setGerencialOpen((v) => !v)}
+          items={filteredGerencialItems}
+          pathname={pathname}
+          onNavigate={onMobileClose}
+        />
+      )}
 
-      <CollapsibleSection
-        title="Administrativo"
-        icon={Settings}
-        collapsed={collapsed}
-        open={administrativoOpen}
-        onToggle={() => setAdministrativoOpen((v) => !v)}
-        items={visibleAdministrativoItems}
-        pathname={pathname}
-        onNavigate={onMobileClose}
-      />
+      {filteredAdministrativoItems.length > 0 && (
+        <CollapsibleSection
+          title="Administrativo"
+          icon={Settings}
+          collapsed={collapsed}
+          open={administrativoOpen}
+          onToggle={() => setAdministrativoOpen((v) => !v)}
+          items={filteredAdministrativoItems}
+          pathname={pathname}
+          onNavigate={onMobileClose}
+        />
+      )}
     </nav>
   );
 }
