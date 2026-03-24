@@ -15,6 +15,8 @@ import {
   getDefaultPlanoFormValues,
   isPlanoFormValid,
 } from "@/lib/planos/form";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
 
 type PlanoFormState = Omit<PlanoFormValues, "beneficios"> & {
   beneficios: Array<{ value: string }>;
@@ -53,14 +55,21 @@ export function PlanoForm({
   const [beneficioInput, setBeneficioInput] = useState("");
   const [activeTab, setActiveTab] = useState<"CONFIG" | "CONTRATO" | "BENEFICIOS">("CONFIG");
   const [contratoEditorMode, setContratoEditorMode] = useState<"VISUAL" | "HTML">("VISUAL");
-  const { register, control, handleSubmit, reset, setValue } = useForm<PlanoFormState>({
+  const formMethods = useForm<PlanoFormState>({
     defaultValues: toFormState(initial),
   });
+  const { register, control, handleSubmit, reset, setValue } = formMethods;
+
+  const { hasDraft, restoreDraft, discardDraft, clearDraft, lastModified } = useFormDraft({
+    key: initial ? "plano_form_edit" : "plano_form_new",
+    form: formMethods,
+  });
+
   const { fields: beneficioFields, append, remove } = useFieldArray({
     control,
     name: "beneficios",
   });
-  const form = useWatch({ control }) ?? toFormState(initial);
+  const form = (useWatch({ control }) as PlanoFormState) ?? toFormState(initial);
 
   useEffect(() => {
     reset(toFormState(initial));
@@ -89,10 +98,18 @@ export function PlanoForm({
       ...payload,
       atividades: filterAtividadesSelecionadas(atividades, payload.atividades),
     });
+    
+    clearDraft();
   }
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit(submitForm)}>
+    <>
+      <RestoreDraftModal
+        hasDraft={hasDraft}
+        onRestore={restoreDraft}
+        onDiscard={discardDraft}
+      />
+      <form className="space-y-6" onSubmit={handleSubmit(submitForm)}>
       <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2">
         <button
           type="button"
@@ -124,6 +141,9 @@ export function PlanoForm({
         >
           Atividades e benefícios
         </button>
+        <div className="ml-auto">
+          <FormDraftIndicator lastModified={lastModified} />
+        </div>
       </div>
 
       {activeTab === "CONFIG" ? (
@@ -196,8 +216,8 @@ export function PlanoForm({
                     checked={form.cobraAnuidade}
                     onChange={(event) => {
                       setValue("cobraAnuidade", event.target.checked);
-                      setValue("valorAnuidade", event.target.checked ? form.valorAnuidade : "0");
-                      setValue("parcelasMaxAnuidade", event.target.checked ? form.parcelasMaxAnuidade : "1");
+                      setValue("valorAnuidade", event.target.checked ? (form.valorAnuidade || "0") : "0");
+                      setValue("parcelasMaxAnuidade", event.target.checked ? (form.parcelasMaxAnuidade || "1") : "1");
                     }}
                   />
                   Cobrar anuidade (a cada 12 meses)
@@ -356,5 +376,6 @@ export function PlanoForm({
         </Button>
       </div>
     </form>
+    </>
   );
 }

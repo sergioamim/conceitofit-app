@@ -24,7 +24,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StickyActionFooter } from "@/components/shared/sticky-action-footer";
 import { cn } from "@/lib/utils";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
 
 const TIPO_PLANO_LABEL: Record<string, string> = { MENSAL: "Mensal", TRIMESTRAL: "Trimestral", SEMESTRAL: "Semestral", ANUAL: "Anual", AVULSO: "Avulso" };
 
@@ -629,6 +632,11 @@ export function NovoClienteWizard({
     }
   });
 
+  const { hasDraft, restoreDraft, discardDraft, clearDraft, lastModified } = useFormDraft({
+    key: "novo_cliente_wizard",
+    form,
+  });
+
   const { formState: { isDirty, isValid }, trigger, getValues, reset } = form;
 
   useEffect(() => {
@@ -713,6 +721,7 @@ export function NovoClienteWizard({
         });
         setResult(resp);
         setStep(4);
+        clearDraft();
         if (onDone) {
           void onDone(resp.aluno);
         }
@@ -759,6 +768,7 @@ export function NovoClienteWizard({
           foto: vals.foto,
         },
       });
+      clearDraft();
       if (onDone) {
         await onDone(created, options);
       }
@@ -776,13 +786,21 @@ export function NovoClienteWizard({
         fullReset();
       }
     }}>
+      <RestoreDraftModal
+        hasDraft={hasDraft && open && step === 1 && !result}
+        onRestore={restoreDraft}
+        onDiscard={discardDraft}
+      />
       <DialogContent className="bg-card border-border sm:max-w-2xl w-full max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <div className="p-6 pb-4 shrink-0 border-b border-border/50">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
-              Novo cliente
-            </DialogTitle>
-          </DialogHeader>
+          <div className="flex items-start justify-between">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg font-bold">
+                Novo cliente
+              </DialogTitle>
+            </DialogHeader>
+            <FormDraftIndicator lastModified={lastModified} />
+          </div>
 
           {step <= 3 && (
             <div className="flex items-center gap-4 text-sm mt-4">

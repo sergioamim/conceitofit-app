@@ -17,6 +17,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
 
 type NovaMatriculaFormValues = {
   alunoId: string;
@@ -55,7 +57,7 @@ export function NovaMatriculaModal({
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { control, register, handleSubmit, reset, setValue, getValues } = useForm<NovaMatriculaFormValues>({
+  const formMethods = useForm<NovaMatriculaFormValues>({
     defaultValues: {
       alunoId: "",
       planoId: "",
@@ -68,6 +70,12 @@ export function NovaMatriculaModal({
       parcelasAnuidade: "1",
       pagamentoPendente: false,
     },
+  });
+  const { control, register, handleSubmit, reset, setValue, getValues } = formMethods;
+
+  const { hasDraft, restoreDraft, discardDraft, clearDraft, lastModified } = useFormDraft({
+    key: "nova_matricula",
+    form: formMethods,
   });
 
   const alunoId = useWatch({ control, name: "alunoId" });
@@ -181,6 +189,7 @@ export function NovaMatriculaModal({
         },
       });
       setLoading(false);
+      clearDraft();
       resetForm();
       onDone();
       onClose();
@@ -197,10 +206,18 @@ export function NovaMatriculaModal({
         if (!nextOpen) onClose();
       }}
     >
+      <RestoreDraftModal
+        hasDraft={hasDraft}
+        onRestore={restoreDraft}
+        onDiscard={discardDraft}
+      />
       <DialogContent className="border-border bg-card sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Nova contratação de plano</DialogTitle>
-        </DialogHeader>
+        <div className="flex items-start justify-between">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold">Nova contratação de plano</DialogTitle>
+          </DialogHeader>
+          <FormDraftIndicator lastModified={lastModified} />
+        </div>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
