@@ -6181,12 +6181,13 @@
         "description": "Introduzir uma navegação inferior em telas pequenas com atalhos fixos para os fluxos mais usados do app.",
         "details": "Adicionar uma bottom navigation exclusiva para telas `< 768px`, com atalhos para Dashboard, Clientes, Vendas, Check-in e Perfil, complementando a sidebar atual e reduzindo dependência do menu hambúrguer para ações triviais. A solução deve respeitar o layout existente, estados ativos/inativos, tenant atual e coexistir com a command palette e os favoritos sem quebrar responsividade.",
         "testStrategy": "Cobrir com testes E2E responsivos e unitários a renderização apenas em mobile, destaque de rota ativa, navegação entre atalhos e convivência correta com a sidebar/overlay do menu principal.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "85"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-24T07:16:27.912Z"
       },
       {
         "id": "87",
@@ -6194,12 +6195,13 @@
         "description": "Garantir que os filtros, busca e paginação de tabelas sejam persistidos na URL para compartilhamento e histórico de navegação.",
         "details": "Criar o custom hook useTableSearchParams em src/hooks/, implementar suporte a parâmetros: q (busca), status (filtro), page (página) e size (tamanho). Refatorar a tela de Clientes para usar este hook. Garantir que o useEffect de carga de dados seja acionado ao mudar qualquer um dos parâmetros da URL.",
         "testStrategy": "Mudar de página atualiza o ?page= na URL. Digitar na busca atualiza o ?q= na URL. Atualizar a página do navegador (F5) mantém os filtros aplicados. Botão Voltar do navegador retorna ao estado de filtro anterior.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "83"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-24T07:26:33.256Z"
       },
       {
         "id": "88",
@@ -6207,12 +6209,13 @@
         "description": "Melhorar a percepção de performance e eliminar o Layout Shift durante o carregamento de dados.",
         "details": "Criar o componente base Skeleton em src/components/ui/. Implementar o componente TableSkeleton em src/components/shared/ que imita a estrutura de linhas do PaginatedTable. Integrar o TableSkeleton no componente PaginatedTable via prop isLoading. Substituir o texto Carregando clientes... pelo TableSkeleton na página de Clientes.",
         "testStrategy": "Skeletons têm animação suave (pulse). A tabela mantém sua estrutura visual enquanto os dados são carregados. Transição suave entre o estado de carga e o estado de dados prontos.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "87"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-24T07:31:47.399Z"
       },
       {
         "id": "89",
@@ -6308,9 +6311,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-24T03:35:00.000Z",
+      "lastModified": "2026-03-24T07:31:47.400Z",
       "taskCount": 95,
-      "completedCount": 85,
+      "completedCount": 88,
       "tags": [
         "master"
       ]
