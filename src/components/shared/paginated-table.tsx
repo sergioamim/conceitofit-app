@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
 
 export type PaginatedTableColumn = {
   label: string;
@@ -28,6 +29,7 @@ type PaginatedTableProps<T> = {
   disableNext?: boolean;
   showPagination?: boolean;
   itemLabel?: string;
+  isLoading?: boolean;
 };
 
 export function PaginatedTable<T>({
@@ -49,6 +51,7 @@ export function PaginatedTable<T>({
   disableNext,
   showPagination = true,
   itemLabel = "registros",
+  isLoading = false,
 }: PaginatedTableProps<T>) {
   const totalCount = total ?? items.length;
   const currentPage = Math.max(0, page);
@@ -66,6 +69,16 @@ export function PaginatedTable<T>({
         : undefined;
   const previousDisabled = (disablePrevious ?? false) || !hasPreviousPage || !onPrevious;
   const nextDisabled = (disableNext ?? false) || !hasNextPage || !onNext;
+
+  if (isLoading) {
+    return (
+      <TableSkeleton
+        columns={columns.map((col) => ({ label: col.label, className: col.className }))}
+        rowCount={effectiveSize > 0 ? Math.min(effectiveSize, 10) : 5}
+        showPagination={showPagination}
+      />
+    );
+  }
 
   return (
     <div className="space-y-2">

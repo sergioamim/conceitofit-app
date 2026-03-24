@@ -15,6 +15,7 @@ import { HoverPopover } from "@/components/shared/hover-popover";
 import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
 import { ClienteThumbnail } from "@/components/shared/cliente-thumbnail";
 import { PaginatedTable } from "@/components/shared/paginated-table";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -60,6 +61,7 @@ function ClientesPageContent() {
   const [clienteResumo, setClienteResumo] = useState<Aluno | null>(null);
   const [liberandoSuspensao, setLiberandoSuspensao] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const applyLoadedData = useCallback((paged: Awaited<ReturnType<typeof listAlunosPageService>>) => {
     setAlunos(paged.items);
@@ -95,6 +97,7 @@ function ClientesPageContent() {
 
   const load = useCallback(async () => {
     if (!tenantId) return;
+    setLoading(true);
     setLoadError(null);
 
     try {
@@ -119,6 +122,8 @@ function ClientesPageContent() {
       } catch (retryError) {
         setLoadError(normalizeErrorMessage(retryError));
       }
+    } finally {
+      setLoading(false);
     }
   }, [applyLoadedData, loadSnapshot, setTenant, tenantId]);
 
@@ -320,6 +325,7 @@ function ClientesPageContent() {
 
       {/* Table */}
       <PaginatedTable<Aluno>
+        isLoading={loading}
         columns={[
           { label: "Cliente" },
           { label: "CPF" },
@@ -505,7 +511,27 @@ function ClientesPageContent() {
 
 export default function ClientesPage() {
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Carregando clientes...</div>}>
+    <Suspense fallback={
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-8 w-40 animate-pulse rounded-md bg-primary/10" />
+            <div className="h-4 w-64 animate-pulse rounded-md bg-primary/10" />
+          </div>
+          <div className="h-10 w-32 animate-pulse rounded-md bg-primary/10" />
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          <div className="h-24 animate-pulse rounded-xl bg-primary/10" />
+          <div className="h-24 animate-pulse rounded-xl bg-primary/10" />
+          <div className="h-24 animate-pulse rounded-xl bg-primary/10" />
+          <div className="h-24 animate-pulse rounded-xl bg-primary/10" />
+        </div>
+        <TableSkeleton 
+          columns={[{ label: "Cliente" }, { label: "CPF" }, { label: "Telefone" }, { label: "Nascimento" }, { label: "Sexo" }, { label: "Status" }]} 
+          rowCount={10} 
+        />
+      </div>
+    }>
       <ClientesPageContent />
     </Suspense>
   );

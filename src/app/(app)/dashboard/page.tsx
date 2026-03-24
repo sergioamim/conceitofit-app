@@ -21,6 +21,7 @@ import {
 import { useTenantContext } from "@/hooks/use-session-context";
 import { getDashboardApi } from "@/lib/api/dashboard";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { DashboardSkeleton } from "@/components/shared/dashboard-skeleton";
 import type { DashboardData, Prospect, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -242,11 +243,10 @@ export default function DashboardPage() {
   }, [dashboardData]);
 
   if (!metrics) {
-    return (
-      <div className="text-sm text-muted-foreground">
-        {loading ? "Carregando dashboard..." : "Sem dados para o dashboard."}
-      </div>
-    );
+    if (!loading) {
+      return <div className="text-sm text-muted-foreground">Sem dados para o dashboard.</div>;
+    }
+    return <DashboardSkeleton />;
   }
 
   return (
