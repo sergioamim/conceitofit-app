@@ -1,4 +1,7 @@
+"use client";
+
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 import type {
   StatusProspect,
   StatusAluno,
@@ -53,7 +56,11 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     className: "bg-muted text-muted-foreground",
   };
   return (
-    <span
+    <motion.span
+      layout
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
         config.className,
@@ -61,6 +68,6 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       )}
     >
       {config.label}
-    </span>
+    </motion.span>
   );
 }

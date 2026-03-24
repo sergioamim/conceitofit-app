@@ -49,10 +49,10 @@ export function CommandPalette() {
       open={open}
       onOpenChange={setOpen}
       label="Global Command Palette"
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] animate-in fade-in duration-200"
     >
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+      <div className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-card shadow-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-200 ease-out">
         <div className="flex items-center border-b border-border px-4">
           <Search className="mr-2 size-4 shrink-0 text-muted-foreground" />
           <Command.Input

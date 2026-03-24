@@ -668,7 +668,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = fals
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex h-full w-[280px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform md:static md:h-screen md:translate-x-0",
+        "fixed inset-y-0 left-0 z-40 flex h-full w-[280px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out md:static md:h-screen md:translate-x-0",
         mobileOpen ? "translate-x-0" : "-translate-x-full",
         collapsed ? "md:w-[72px] md:min-w-[72px]" : "md:w-[220px] md:min-w-[220px]"
       )}
