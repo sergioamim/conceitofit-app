@@ -4,6 +4,9 @@ import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/shared/table-skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar, type BulkAction } from "@/components/shared/bulk-action-bar";
+import { cn } from "@/lib/utils";
 
 export type PaginatedTableColumn = {
   label: string;
@@ -30,6 +33,10 @@ type PaginatedTableProps<T> = {
   showPagination?: boolean;
   itemLabel?: string;
   isLoading?: boolean;
+  selectable?: boolean;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
+  bulkActions?: BulkAction[];
 };
 
 export function PaginatedTable<T>({
@@ -52,6 +59,10 @@ export function PaginatedTable<T>({
   showPagination = true,
   itemLabel = "registros",
   isLoading = false,
+  selectable = false,
+  selectedIds = [],
+  onSelectionChange,
+  bulkActions,
 }: PaginatedTableProps<T>) {
   const totalCount = total ?? items.length;
   const currentPage = Math.max(0, page);
@@ -70,12 +81,37 @@ export function PaginatedTable<T>({
   const previousDisabled = (disablePrevious ?? false) || !hasPreviousPage || !onPrevious;
   const nextDisabled = (disableNext ?? false) || !hasNextPage || !onNext;
 
+  const allSelectedOnPage = items.length > 0 && items.every((item) => selectedIds.includes(getRowKey(item)));
+  const someSelectedOnPage = items.length > 0 && items.some((item) => selectedIds.includes(getRowKey(item))) && !allSelectedOnPage;
+
+  const handleToggleAllOnPage = () => {
+    if (!onSelectionChange) return;
+    if (allSelectedOnPage) {
+      const visibleIds = items.map(getRowKey);
+      onSelectionChange(selectedIds.filter(id => !visibleIds.includes(id)));
+    } else {
+      const visibleIds = items.map(getRowKey);
+      const newSelected = new Set([...selectedIds, ...visibleIds]);
+      onSelectionChange(Array.from(newSelected));
+    }
+  };
+
+  const handleToggleRow = (id: string) => {
+    if (!onSelectionChange) return;
+    if (selectedIds.includes(id)) {
+      onSelectionChange(selectedIds.filter(v => v !== id));
+    } else {
+      onSelectionChange([...selectedIds, id]);
+    }
+  };
+
   if (isLoading) {
     return (
       <TableSkeleton
         columns={columns.map((col) => ({ label: col.label, className: col.className }))}
         rowCount={effectiveSize > 0 ? Math.min(effectiveSize, 10) : 5}
         showPagination={showPagination}
+        selectable={selectable}
       />
     );
   }
@@ -86,6 +122,16 @@ export function PaginatedTable<T>({
         <Table>
           <TableHeader>
             <TableRow className="border-b border-border bg-secondary">
+              {selectable && (
+                <TableHead className="w-[50px] px-4 py-3">
+                  <Checkbox 
+                    checked={allSelectedOnPage}
+                    indeterminate={someSelectedOnPage}
+                    onCheckedChange={handleToggleAllOnPage}
+                    aria-label="Selecionar todos"
+                  />
+                </TableHead>
+              )}
               {columns.map((column) => (
                 <TableHead key={column.label} className={`px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ${column.className ?? ""}`}>
                   {column.label}
@@ -103,12 +149,23 @@ export function PaginatedTable<T>({
             )}
             {items.map((item) => {
               const key = getRowKey(item);
+              const isSelected = selectedIds.includes(key);
               return (
                 <TableRow
                   key={key}
-                  className={rowClassName(item)}
+                  className={cn(rowClassName(item), isSelected && "bg-muted/50")}
                   onClick={onRowClick ? () => onRowClick(item) : undefined}
                 >
+                  {selectable && (
+                    <TableCell className="w-[50px] px-4 py-3">
+                      <Checkbox 
+                        checked={isSelected}
+                        onCheckedChange={() => handleToggleRow(key)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`Selecionar linha ${key}`}
+                      />
+                    </TableCell>
+                  )}
                   {renderCells(item)}
                 </TableRow>
               );
@@ -153,6 +210,15 @@ export function PaginatedTable<T>({
           </div>
         </div>
       ) : null}
+
+      {bulkActions && bulkActions.length > 0 && selectedIds.length > 0 && onSelectionChange && (
+        <BulkActionBar
+          selectedCount={selectedIds.length}
+          actions={bulkActions}
+          onClearSelection={() => onSelectionChange([])}
+          selectedIds={selectedIds}
+        />
+      )}
     </div>
   );
 }

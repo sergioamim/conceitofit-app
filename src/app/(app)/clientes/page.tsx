@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, X } from "lucide-react";
+import { Search, Plus, X, Download, Ban } from "lucide-react";
 import { useTableSearchParams } from "@/hooks/use-table-search-params";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import {
@@ -62,6 +62,9 @@ function ClientesPageContent() {
   const [liberandoSuspensao, setLiberandoSuspensao] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkInativarOpen, setBulkInativarOpen] = useState(false);
+  const [bulkInactivating, setBulkInactivating] = useState(false);
 
   const applyLoadedData = useCallback((paged: Awaited<ReturnType<typeof listAlunosPageService>>) => {
     setAlunos(paged.items);
@@ -133,6 +136,7 @@ function ClientesPageContent() {
     setHasNextPage(false);
     setTotalClientes(0);
     setLoadError(null);
+    setSelectedIds([]);
   }, [tenantId]);
 
   useEffect(() => {
@@ -195,6 +199,39 @@ function ClientesPageContent() {
     if (!clienteResumo) return "";
     return `/clientes/${clienteResumo.id}`;
   }, [clienteResumo]);
+
+  const exportCsv = useCallback(() => {
+    const toExport = selectedIds.map(id => alunos.find(a => a.id === id)).filter(Boolean) as Aluno[];
+    if (toExport.length === 0) return;
+    const rows = [
+      ["Nome", "CPF", "Telefone", "Email", "Status"].join(","),
+      ...toExport.map(a => `"${a.nome}","${a.cpf}","${a.telefone}","${a.email}","${a.status}"`)
+    ];
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "clientes-selecionados.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setSelectedIds([]);
+  }, [alunos, selectedIds]);
+
+  const bulkActions = useMemo(() => [
+    {
+      label: "Exportar CSV",
+      icon: Download,
+      onClick: exportCsv,
+    },
+    {
+      label: "Inativar",
+      icon: Ban,
+      variant: "destructive" as const,
+      onClick: () => setBulkInativarOpen(true),
+    }
+  ], [exportCsv]);
 
   return (
     <div className="space-y-6">
@@ -326,6 +363,10 @@ function ClientesPageContent() {
       {/* Table */}
       <PaginatedTable<Aluno>
         isLoading={loading}
+        selectable
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        bulkActions={bulkActions}
         columns={[
           { label: "Cliente" },
           { label: "CPF" },
@@ -501,6 +542,48 @@ function ClientesPageContent() {
               }}
             >
               Ver perfil completo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkInativarOpen} onOpenChange={setBulkInativarOpen}>
+        <DialogContent className="border-border bg-card">
+          <DialogHeader>
+            <DialogTitle>Inativar clientes</DialogTitle>
+            <DialogDescription>
+              Você está prestes a alterar o status de {selectedIds.length} cliente(s) para Inativo. Confirmar ação em lote?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="border-border" onClick={() => setBulkInativarOpen(false)} disabled={bulkInactivating}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={bulkInactivating}
+              onClick={async () => {
+                setBulkInactivating(true);
+                try {
+                  const toUpdate = selectedIds.map(id => alunos.find(a => a.id === id)).filter(Boolean) as Aluno[];
+                  await Promise.all(toUpdate.map(a => updateAlunoService({
+                    tenantId: a.tenantId,
+                    id: a.id,
+                    data: { status: "INATIVO" }
+                  })));
+                  setBulkInativarOpen(false);
+                  setSelectedIds([]);
+                  await load();
+                } catch (error) {
+                  console.error("[clientes] Falha no bulk inativar", error);
+                  window.alert("Ocorreu um erro ao inativar os clientes.");
+                } finally {
+                  setBulkInactivating(false);
+                }
+              }}
+            >
+              {bulkInactivating ? "Inativando..." : "Sim, Inativar em lote"}
             </Button>
           </DialogFooter>
         </DialogContent>
