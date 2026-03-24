@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { AppContentShell } from "@/components/layout/app-content-shell";
+import { CommandPalette } from "@/components/layout/command-palette";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
 import { Button } from "@/components/ui/button";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
@@ -131,6 +132,7 @@ function AppShellFrame({
         <AppTopbar onOpenMenu={onOpenMenu} shellReady={shellReady} />
         <AppContentShell>{children}</AppContentShell>
       </main>
+      <CommandPalette />
       <DevSessionPanel />
     </div>
   );

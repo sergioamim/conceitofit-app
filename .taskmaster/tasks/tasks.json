@@ -6148,13 +6148,169 @@
           }
         ],
         "updatedAt": "2026-03-23T04:32:29.696Z"
+      },
+      {
+        "id": "84",
+        "title": "Adicionar command palette global de navegação",
+        "description": "Implementar uma command palette global acionada por teclado para abrir páginas, localizar clientes rapidamente e alternar unidades sem depender da navegação extensa da sidebar.",
+        "details": "Usar `cmdk`/Command do Shadcn para criar um modal global disparado por `CMD/CTRL + K`, com busca incremental de páginas, atalhos para módulos críticos, suporte a navegação por teclado e bloco de troca rápida de tenant. A primeira fase deve priorizar frontend e reutilizar dados/rotas já existentes, preservando hidratação estável e evitando conteúdos client-only assimétricos no primeiro render.",
+        "testStrategy": "Cobrir com testes unitários e E2E a abertura por atalho, fechamento por teclado, filtragem de páginas, navegação por setas/enter e troca rápida de unidade sem regressão visual em desktop.",
+        "status": "done",
+        "dependencies": [
+          "83"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "85",
+        "title": "Implementar favoritos e acessos recentes na navegação",
+        "description": "Adicionar favoritos e seção de vistos recentemente para reduzir carga cognitiva na navegação principal e personalizar o fluxo de cada usuário.",
+        "details": "Criar affordance de favoritar páginas na sidebar e/ou cabeçalho, manter seção de itens favoritos no topo da navegação e registrar os últimos links visitados com persistência local. A implementação inicial deve usar storage local compatível com SSR seguro, deixando a modelagem preparada para futura persistência cross-device no backend sem acoplar a UI a valores instáveis no render inicial.",
+        "testStrategy": "Cobrir com testes unitários e E2E o toggle de favoritos, persistência em storage após mount, exibição de recentes limitada aos últimos cinco itens e restauração correta da navegação ao recarregar a aplicação.",
+        "status": "pending",
+        "dependencies": [
+          "84"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "86",
+        "title": "Criar bottom navigation mobile para atalhos críticos",
+        "description": "Introduzir uma navegação inferior em telas pequenas com atalhos fixos para os fluxos mais usados do app.",
+        "details": "Adicionar uma bottom navigation exclusiva para telas `< 768px`, com atalhos para Dashboard, Clientes, Vendas, Check-in e Perfil, complementando a sidebar atual e reduzindo dependência do menu hambúrguer para ações triviais. A solução deve respeitar o layout existente, estados ativos/inativos, tenant atual e coexistir com a command palette e os favoritos sem quebrar responsividade.",
+        "testStrategy": "Cobrir com testes E2E responsivos e unitários a renderização apenas em mobile, destaque de rota ativa, navegação entre atalhos e convivência correta com a sidebar/overlay do menu principal.",
+        "status": "pending",
+        "dependencies": [
+          "85"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "87",
+        "title": "Sincronização de Estado de Tabelas via URL (URL State)",
+        "description": "Garantir que os filtros, busca e paginação de tabelas sejam persistidos na URL para compartilhamento e histórico de navegação.",
+        "details": "Criar o custom hook useTableSearchParams em src/hooks/, implementar suporte a parâmetros: q (busca), status (filtro), page (página) e size (tamanho). Refatorar a tela de Clientes para usar este hook. Garantir que o useEffect de carga de dados seja acionado ao mudar qualquer um dos parâmetros da URL.",
+        "testStrategy": "Mudar de página atualiza o ?page= na URL. Digitar na busca atualiza o ?q= na URL. Atualizar a página do navegador (F5) mantém os filtros aplicados. Botão Voltar do navegador retorna ao estado de filtro anterior.",
+        "status": "pending",
+        "dependencies": [
+          "83"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "88",
+        "title": "Skeleton Loading Components para Tabelas e Listagens",
+        "description": "Melhorar a percepção de performance e eliminar o Layout Shift durante o carregamento de dados.",
+        "details": "Criar o componente base Skeleton em src/components/ui/. Implementar o componente TableSkeleton em src/components/shared/ que imita a estrutura de linhas do PaginatedTable. Integrar o TableSkeleton no componente PaginatedTable via prop isLoading. Substituir o texto Carregando clientes... pelo TableSkeleton na página de Clientes.",
+        "testStrategy": "Skeletons têm animação suave (pulse). A tabela mantém sua estrutura visual enquanto os dados são carregados. Transição suave entre o estado de carga e o estado de dados prontos.",
+        "status": "pending",
+        "dependencies": [
+          "87"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "89",
+        "title": "Bulk Actions Architecture na PaginatedTable",
+        "description": "Permitir a execução de ações em massa em registros de tabelas para aumentar a produtividade.",
+        "details": "Adicionar suporte a rowSelection na PaginatedTable. Criar a coluna de Checkbox na cabeçalho e linhas. Criar o componente BulkActionBar (flutuante) que aparece no rodapé da página quando 1+ itens são selecionados. Definir a interface de BulkAction (label, icon, handler). Implementar as primeiras ações em massa: Exportar Selecionados (CSV) e Alterar Status em Massa.",
+        "testStrategy": "Checkboxes funcionam corretamente (Selecionar Tudo/Individual). Floating Action Bar aparece e desaparece no momento certo. Ações são executadas corretamente para todos os IDs selecionados. A barra exibe a contagem de itens selecionados.",
+        "status": "pending",
+        "dependencies": [
+          "88"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "90",
+        "title": "Implementar Sticky Action Footer para Formulários Longos",
+        "description": "Manter os botões de ação (Salvar/Cancelar) sempre acessíveis, independente da posição de scroll.",
+        "details": "Criar o componente StickyActionFooter em src/components/shared/. Implementar comportamento Sticky no rodapé que aparece apenas em telas longas. Adicionar suporte a estados: isDirty (botão de salvar muda de cor ou pulsa quando há mudanças não salvas). Refatorar formulário de Cadastro de Cliente para utilizar o novo footer.",
+        "testStrategy": "Barra de ações visível na parte inferior da tela. Botões de Salvar e Cancelar funcionando corretamente. Layout responsivo (em mobile ocupa toda a largura). Visual integrado ao tema escuro da aplicação.",
+        "status": "pending",
+        "dependencies": [
+          "83"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "91",
+        "title": "Implementar Validação Inline e Feedback Assíncrono",
+        "description": "Fornecer feedback imediato de erros para o usuário, evitando o medo do submit.",
+        "details": "Configurar os formulários principais para o modo de validação onBlur ou onChange. Implementar mensagens de erro dinâmicas (Zod) em tempo real. Criar o componente FieldAsyncFeedback que exibe estado de Checando... e depois OK ou Erro. Integrar busca de unicidade (CPF/Email) no backend enquanto o usuário digita.",
+        "testStrategy": "Erros de formato (ex: email inválido) aparecem logo após o usuário sair do campo. Feedback de Checking (Spinner discreto) em campos de unicidade. Botão Salvar é desativado se houver erros críticos visíveis.",
+        "status": "pending",
+        "dependencies": [
+          "90"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "92",
+        "title": "Implementar Rascunhos e Auto-save em Formulários Críticos",
+        "description": "Proteger o usuário contra perda acidental de dados em cadastros extensos.",
+        "details": "Criar o hook customizado useFormDraft para persistência em localStorage. Implementar política de expiração de rascunhos. Adicionar um pequeno indicador de Salvo no rascunho no topo do formulário. Criar o modal Continuar preenchimento? ao reabrir um formulário inacabado. Implementar em: Cadastro de Cliente, Cadastro de Plano e Matrícula.",
+        "testStrategy": "Digitar em um formulário e fechar a aba mantém os dados ao reabrir. O sistema oferece restaurar os dados detectados no localStorage. Limpeza correta após sucesso.",
+        "status": "pending",
+        "dependencies": [
+          "91"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "93",
+        "title": "Audit de Acessibilidade, Contraste e Estados de Foco",
+        "description": "Garantir que a aplicação seja acessível e tenha uma navegação via teclado clara e vibrante.",
+        "details": "Realizar audit de contraste da cor gym-accent (#c8f135). Implementar variante de Contraste Seguro para textos pequenos. Customizar o anel de foco global (focus-visible) no Tailwind para usar a cor da marca com brilho. Testar navegação completa via teclado na Sidebar e Tabelas.",
+        "testStrategy": "Todos os elementos interativos têm foco visualmente claro. Contraste de texto respeita as normas de acessibilidade (AA). Navegação fluida sem o uso de mouse.",
+        "status": "pending",
+        "dependencies": [
+          "83"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "94",
+        "title": "Micro-interações, Transições e Polimento Visual",
+        "description": "Tornar o sistema visualmente mais vivo e polido, adicionando feedbacks táteis de interface.",
+        "details": "Instalar framer-motion. Criar animação de Page Transition (Fade-in/Up). Adicionar efeito Scale-down ao clicar em botões principais. Implementar animações de feedback em StatusBadge. Criar micro-animação para o Command Palette.",
+        "testStrategy": "Sistema se sente responsivo e premium através de feedbacks táteis. Mudanças de tela não são abruptas. Animações respeitam a configuração de reduzir movimento do sistema.",
+        "status": "pending",
+        "dependencies": [
+          "93"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "95",
+        "title": "Implementar Global Error Boundaries e Resiliência",
+        "description": "Tratar erros críticos sem quebrar a aplicação inteira e oferecer um caminho claro de recuperação.",
+        "details": "Criar o componente ErrorState reutilizável. Implementar src/app/error.tsx e src/app/(app)/error.tsx. Adicionar botão de Tentar Novamente (reset()). Capturar erros de ApiRequestError no Boundary para exibir mensagens técnicas úteis.",
+        "testStrategy": "Falhas em componentes individuais não causam tela branca total. Usuário vê uma interface clara explicando o erro. O botão de Tentar recarrega apenas a parte quebrada do app.",
+        "status": "pending",
+        "dependencies": [
+          "83"
+        ],
+        "priority": "high",
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-23T04:32:29.697Z",
-      "taskCount": 83,
-      "completedCount": 83,
+      "lastModified": "2026-03-24T03:30:00.000Z",
+      "taskCount": 95,
+      "completedCount": 84,
       "tags": [
         "master"
       ]
