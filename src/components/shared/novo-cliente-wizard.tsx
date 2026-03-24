@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StickyActionFooter } from "@/components/shared/sticky-action-footer";
 import { cn } from "@/lib/utils";
 
 const TIPO_PLANO_LABEL: Record<string, string> = { MENSAL: "Mensal", TRIMESTRAL: "Trimestral", SEMESTRAL: "Semestral", ANUAL: "Anual", AVULSO: "Avulso" };
@@ -715,7 +716,13 @@ export function NovoClienteWizard({
         </div>
 
         {step <= 3 && (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <StickyActionFooter
+            isDirty={
+              step === 1 && (!!dados.nome || !!dados.cpf || !!dados.email || !!dados.telefone) ||
+              step === 2 && !!selectedPlano ||
+              step === 3 && !!pagamento.formaPagamento
+            }
+          >
             <Button
               variant="outline"
               onClick={() => (step === 1 ? onClose() : setStep((s) => s - 1))}
@@ -756,7 +763,7 @@ export function NovoClienteWizard({
                 </Button>
               )}
             </div>
-          </div>
+          </StickyActionFooter>
         )}
       </DialogContent>
     </Dialog>
