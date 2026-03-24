@@ -104,6 +104,8 @@ function AppOperationalAccessGate({
   );
 }
 
+import { BottomNav } from "@/components/layout/bottom-nav";
+
 function AppShellFrame({
   children,
   mobileMenuOpen = false,
@@ -129,12 +131,13 @@ function AppShellFrame({
         />
       ) : null}
       <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={onCloseMenu} shellReady={shellReady} />
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="flex flex-1 flex-col overflow-hidden relative">
         <AppTopbar onOpenMenu={onOpenMenu} shellReady={shellReady} />
         <AppContentShell>{children}</AppContentShell>
       </main>
       <CommandPalette />
       <DevSessionPanel />
+      <BottomNav />
     </div>
   );
 }
