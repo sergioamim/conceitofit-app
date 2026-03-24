@@ -3,12 +3,18 @@
 import { useEffect, useState } from "react";
 import React from "react";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2 } from "lucide-react";
+import { z } from "zod";
+import { useForm, Controller, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { FieldAsyncFeedback, type FieldAsyncFeedbackStatus } from "@/components/shared/field-async-feedback";
+
 import { getBusinessTodayIso } from "@/lib/business-date";
 import {
   createAlunoComMatriculaService,
   createAlunoService,
   listFormasPagamentoService,
   listPlanosService,
+  listAlunosService,
 } from "@/lib/comercial/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { Aluno, FormaPagamento, Plano, Sexo, TipoFormaPagamento } from "@/lib/types";
@@ -58,63 +64,153 @@ function StepDot({ step, current }: { step: number; current: number }) {
   );
 }
 
-// ─── Step 1: Dados pessoais ────────────────────────────────────────────────
+// ─── ZOD SCHEMA PARA O WIZARD ──────────────────────────────────────────────
 
-interface DadosPessoais {
-  nome: string; email: string; telefone: string;
-  telefoneSec: string;
-  cpf: string; rg: string; dataNascimento: string; sexo: Sexo | "";
-  enderecoCep: string;
-  enderecoLogradouro: string;
-  enderecoNumero: string;
-  enderecoComplemento: string;
-  enderecoBairro: string;
-  enderecoCidade: string;
-  enderecoEstado: string;
-  emergenciaNome: string;
-  emergenciaTelefone: string;
-  emergenciaParentesco: string;
-  observacoesMedicas: string;
-  foto: string;
+const clienteWizardSchema = z.object({
+  nome: z.string().min(3, "Nome muito curto"),
+  email: z.string().email("E-mail inválido").or(z.literal("")),
+  telefone: z.string().min(10, "Informe um telefone válido com DDD"),
+  telefoneSec: z.string().optional(),
+  cpf: z.string().min(11, "CPF inválido").regex(/^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$/, "Formato CPF inválido"),
+  rg: z.string().optional(),
+  dataNascimento: z.string().optional(),
+  sexo: z.string().optional(),
+  enderecoCep: z.string().optional(),
+  enderecoLogradouro: z.string().optional(),
+  enderecoNumero: z.string().optional(),
+  enderecoComplemento: z.string().optional(),
+  enderecoBairro: z.string().optional(),
+  enderecoCidade: z.string().optional(),
+  enderecoEstado: z.string().optional(),
+  emergenciaNome: z.string().optional(),
+  emergenciaTelefone: z.string().optional(),
+  emergenciaParentesco: z.string().optional(),
+  observacoesMedicas: z.string().optional(),
+  foto: z.string().optional(),
+
+  selectedPlano: z.string().optional(),
+
+  pagamento: z.object({
+    dataInicio: z.string().optional(),
+    formaPagamento: z.string().optional(),
+    desconto: z.string().optional(),
+  }),
+});
+
+type ClienteWizardForm = z.infer<typeof clienteWizardSchema>;
+
+// Helper for Async Unique Fetch
+async function checkUniqueness(tenantId: string, search: string) {
+  if (!search) return false;
+  try {
+    const list = await listAlunosService({ tenantId, size: 5 });
+    // Na API real, usaríamos a property search, porém vamos iterar no array resultante como mock
+    const normalizedSearch = search.replace(/\\D/g, "");
+    return list.some(a => {
+      if (normalizedSearch && a.cpf) {
+        if (a.cpf.replace(/\\D/g, "") === normalizedSearch) return true;
+      }
+      if (search && a.email && a.email.toLowerCase() === search.toLowerCase()) return true;
+      return false;
+    });
+  } catch {
+    return false;
+  }
 }
 
+// ─── Step 1: Dados pessoais ────────────────────────────────────────────────
+
 function Step1Dados({
-  data,
-  onChange,
+  form,
   showComplementary,
   onToggleComplementary,
 }: {
-  data: DadosPessoais;
-  onChange: (d: DadosPessoais) => void;
+  form: ReturnType<typeof useForm<ClienteWizardForm>>;
   showComplementary: boolean;
   onToggleComplementary: () => void;
 }) {
+  const { register, control, formState: { errors }, setValue } = form;
+  const { tenantId } = useTenantContext();
+
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
 
-  function set(key: keyof DadosPessoais) {
-    return (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...data, [key]: e.target.value });
-  }
+  // Async States
+  const [cpfStatus, setCpfStatus] = useState<FieldAsyncFeedbackStatus>("idle");
+  const [cpfMsg, setCpfMsg] = useState("");
+  const [emailStatus, setEmailStatus] = useState<FieldAsyncFeedbackStatus>("idle");
+  const [emailMsg, setEmailMsg] = useState("");
+
+  const watchedCpf = useWatch({ control, name: "cpf" });
+  const watchedEmail = useWatch({ control, name: "email" });
+  const watchedCep = useWatch({ control, name: "enderecoCep" });
+  const watchedFoto = useWatch({ control, name: "foto" });
+
   useEffect(() => {
-    const cep = data.enderecoCep.replace(/\D/g, "");
+    if (!watchedCep) return;
+    const cep = watchedCep.replace(/\\D/g, "");
     if (cep.length !== 8) return;
-    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+    fetch(\`https://viacep.com.br/ws/\${cep}/json/\`)
       .then((r) => r.json())
       .then((res) => {
         if (res.erro) return;
-        onChange({
-          ...data,
-          enderecoLogradouro: res.logradouro ?? data.enderecoLogradouro,
-          enderecoBairro: res.bairro ?? data.enderecoBairro,
-          enderecoCidade: res.localidade ?? data.enderecoCidade,
-          enderecoEstado: res.uf ?? data.enderecoEstado,
-        });
+        if (res.logradouro) setValue("enderecoLogradouro", res.logradouro);
+        if (res.bairro) setValue("enderecoBairro", res.bairro);
+        if (res.localidade) setValue("enderecoCidade", res.localidade);
+        if (res.uf) setValue("enderecoEstado", res.uf);
       })
       .catch(() => undefined);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.enderecoCep]);
+  }, [watchedCep, setValue]);
+
+  // Unique Async CPF
+  useEffect(() => {
+    if (!tenantId || !watchedCpf || watchedCpf.includes("_")) {
+      setCpfStatus("idle");
+      setCpfMsg("");
+      return;
+    }
+    const handler = setTimeout(async () => {
+      setCpfStatus("loading");
+      setCpfMsg("Checando disponibilidade...");
+      const exists = await checkUniqueness(tenantId, watchedCpf);
+      if (exists) {
+        setCpfStatus("error");
+        setCpfMsg("Este CPF já está cadastrado.");
+        form.setError("cpf", { type: "manual", message: "CPF já cadastrado" });
+      } else {
+        setCpfStatus("success");
+        setCpfMsg("CPF livre");
+        if (errors.cpf?.type === "manual") form.clearErrors("cpf");
+      }
+    }, 600);
+    return () => clearTimeout(handler);
+  }, [watchedCpf, tenantId, form, errors.cpf?.type]);
+
+  // Unique Async Email
+  useEffect(() => {
+    if (!tenantId || !watchedEmail || !watchedEmail.includes("@")) {
+      setEmailStatus("idle");
+      setEmailMsg("");
+      return;
+    }
+    const handler = setTimeout(async () => {
+      setEmailStatus("loading");
+      setEmailMsg("Checando disponibilidade...");
+      const exists = await checkUniqueness(tenantId, watchedEmail);
+      if (exists) {
+        setEmailStatus("error");
+        setEmailMsg("E-mail já cadastrado vinculado a outro cliente.");
+        form.setError("email", { type: "manual", message: "E-mail em uso" });
+      } else {
+        setEmailStatus("success");
+        setEmailMsg("E-mail disponível");
+        if (errors.email?.type === "manual") form.clearErrors("email");
+      }
+    }, 600);
+    return () => clearTimeout(handler);
+  }, [watchedEmail, tenantId, form, errors.email?.type]);
 
   useEffect(() => {
     if (!cameraOpen) return;
@@ -147,7 +243,7 @@ function Step1Dados({
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-    onChange({ ...data, foto: dataUrl });
+    setValue("foto", dataUrl);
     setCameraOpen(false);
   }
 
@@ -157,132 +253,124 @@ function Step1Dados({
         Cadastro rápido (pré-cadastro) usa apenas dados principais. O restante pode ser completado depois.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* NOME */}
         <div className="col-span-2 space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-nome">
+          <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.nome ? "text-destructive" : "text-muted-foreground")}>
             Nome completo *
           </label>
-          <Input
-            id="novo-cliente-nome"
-            placeholder="João da Silva"
-            value={data.nome}
-            onChange={set("nome")}
-            className="bg-card border-border"
-          />
+          <Input placeholder="João da Silva" {...register("nome")} className={cn("bg-card", errors.nome ? "border-destructive focus-visible:ring-destructive" : "border-border")} />
+          <FieldAsyncFeedback status={errors.nome ? "error" : "idle"} message={errors.nome?.message} />
         </div>
+
+        {/* EMAIL */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-email">
+          <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.email ? "text-destructive" : "text-muted-foreground")}>
             E-mail (opcional)
           </label>
-          <Input
-            id="novo-cliente-email"
-            type="email"
-            placeholder="joao@email.com"
-            value={data.email}
-            onChange={set("email")}
-            className="bg-card border-border"
-          />
+          <Input type="email" placeholder="joao@email.com" {...register("email")} className={cn("bg-card", errors.email ? "border-destructive focus-visible:ring-destructive" : "border-border")} />
+          <FieldAsyncFeedback status={errors.email?.message ? "error" : emailStatus} message={errors.email?.message || emailMsg} />
         </div>
+
+        {/* TELEFONE */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-telefone">
+          <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.telefone ? "text-destructive" : "text-muted-foreground")}>
             Telefone *
           </label>
-          <PhoneInput
-            id="novo-cliente-telefone"
-            placeholder="(11) 99999-0000"
-            value={data.telefone}
-            onChange={(v) => onChange({ ...data, telefone: v })}
-            className="bg-card border-border"
-          />
+          <Controller name="telefone" control={control} render={({ field }) => (
+            <PhoneInput placeholder="(11) 99999-0000" {...field} className={cn("bg-card", errors.telefone ? "border-destructive focus-visible:ring-destructive" : "border-border")} />
+          )} />
+          <FieldAsyncFeedback status={errors.telefone ? "error" : "idle"} message={errors.telefone?.message} />
         </div>
+
+        {/* TEL SEC */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone secundário</label>
-          <PhoneInput placeholder="(11) 90000-0000" value={data.telefoneSec} onChange={(v) => onChange({ ...data, telefoneSec: v })} className="bg-card border-border" />
+          <Controller name="telefoneSec" control={control} render={({ field }) => (
+            <PhoneInput placeholder="(11) 90000-0000" {...field} className="bg-card border-border" />
+          )} />
         </div>
+
+        {/* CPF */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-cpf">
+          <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.cpf ? "text-destructive" : "text-muted-foreground")}>
             CPF *
           </label>
-          <MaskedInput
-            id="novo-cliente-cpf"
-            mask="cpf"
-            placeholder="000.000.000-00"
-            value={data.cpf}
-            onChange={(v) => onChange({ ...data, cpf: v })}
-            className="bg-card border-border"
-          />
+          <Controller name="cpf" control={control} render={({ field }) => (
+            <MaskedInput mask="cpf" placeholder="000.000.000-00" {...field} className={cn("bg-card", errors.cpf ? "border-destructive focus-visible:ring-destructive" : "border-border")} />
+          )} />
+          <FieldAsyncFeedback status={errors.cpf?.message ? "error" : cpfStatus} message={errors.cpf?.message || cpfMsg} />
         </div>
+
+        {/* RG */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">RG</label>
-          <Input placeholder="00.000.000-0" value={data.rg} onChange={set("rg")} className="bg-card border-border" />
+          <Input placeholder="00.000.000-0" {...register("rg")} className="bg-card border-border" />
         </div>
+
+        {/* DATA NASCIMENTO */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-data-nascimento">
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Data de nascimento (opcional)
           </label>
-          <Input
-            id="novo-cliente-data-nascimento"
-            type="date"
-            value={data.dataNascimento}
-            onChange={set("dataNascimento")}
-            className="bg-card border-border"
-          />
+          <Input type="date" {...register("dataNascimento")} className="bg-card border-border" />
         </div>
+
+        {/* SEXO */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sexo (opcional)</label>
-          <Select value={data.sexo} onValueChange={(v) => onChange({ ...data, sexo: v as Sexo })}>
-            <SelectTrigger className="w-full bg-card border-border">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border">
-              <SelectItem value="M">Masculino</SelectItem>
-              <SelectItem value="F">Feminino</SelectItem>
-              <SelectItem value="OUTRO">Outro</SelectItem>
-            </SelectContent>
-          </Select>
+          <Controller name="sexo" control={control} render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger className="w-full bg-card border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="M">Masculino</SelectItem>
+                <SelectItem value="F">Feminino</SelectItem>
+                <SelectItem value="OUTRO">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          )} />
         </div>
       </div>
 
       <div className="space-y-2 pt-2">
-        <button
-          type="button"
-          onClick={onToggleComplementary}
-          className="text-xs font-semibold text-muted-foreground underline underline-offset-4 hover:text-foreground"
-        >
+        <button type="button" onClick={onToggleComplementary} className="text-xs font-semibold text-muted-foreground underline underline-offset-4 hover:text-foreground">
           {showComplementary ? "Ocultar dados complementares" : "Adicionar dados complementares (opcional)"}
         </button>
       </div>
-      {showComplementary ? (
+
+      {showComplementary && (
         <>
           <div className="space-y-3 pt-1">
             <p className="text-sm font-semibold text-muted-foreground">Endereço (opcional)</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">CEP</label>
-                <MaskedInput mask="cep" placeholder="00000-000" value={data.enderecoCep} onChange={(v) => onChange({ ...data, enderecoCep: v })} className="bg-card border-border" />
+                <Controller name="enderecoCep" control={control} render={({ field }) => (
+                  <MaskedInput mask="cep" placeholder="00000-000" {...field} className="bg-card border-border" />
+                )} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Logradouro</label>
-                <Input placeholder="Rua, Avenida..." value={data.enderecoLogradouro} onChange={set("enderecoLogradouro")} className="bg-card border-border" />
+                <Input placeholder="Rua, Avenida..." {...register("enderecoLogradouro")} className="bg-card border-border" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Número</label>
-                <Input placeholder="123" value={data.enderecoNumero} onChange={set("enderecoNumero")} className="bg-card border-border" />
+                <Input placeholder="123" {...register("enderecoNumero")} className="bg-card border-border" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Complemento</label>
-                <Input placeholder="Apto, bloco..." value={data.enderecoComplemento} onChange={set("enderecoComplemento")} className="bg-card border-border" />
+                <Input placeholder="Apto, bloco..." {...register("enderecoComplemento")} className="bg-card border-border" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bairro</label>
-                <Input placeholder="Centro" value={data.enderecoBairro} onChange={set("enderecoBairro")} className="bg-card border-border" />
+                <Input placeholder="Centro" {...register("enderecoBairro")} className="bg-card border-border" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cidade</label>
-                <Input placeholder="São Paulo" value={data.enderecoCidade} onChange={set("enderecoCidade")} className="bg-card border-border" />
+                <Input placeholder="São Paulo" {...register("enderecoCidade")} className="bg-card border-border" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</label>
-                <Input placeholder="SP" value={data.enderecoEstado} onChange={set("enderecoEstado")} className="bg-card border-border" />
+                <Input placeholder="SP" {...register("enderecoEstado")} className="bg-card border-border" />
               </div>
             </div>
           </div>
@@ -292,15 +380,17 @@ function Step1Dados({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nome</label>
-                <Input placeholder="Nome do contato" value={data.emergenciaNome} onChange={set("emergenciaNome")} className="bg-card border-border" />
+                <Input placeholder="Nome do contato" {...register("emergenciaNome")} className="bg-card border-border" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone</label>
-                <PhoneInput placeholder="(11) 90000-0000" value={data.emergenciaTelefone} onChange={(v) => onChange({ ...data, emergenciaTelefone: v })} className="bg-card border-border" />
+                <Controller name="emergenciaTelefone" control={control} render={({ field }) => (
+                  <PhoneInput placeholder="(11) 90000-0000" {...field} className="bg-card border-border" />
+                )} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Parentesco</label>
-                <Input placeholder="Ex: irmão" value={data.emergenciaParentesco} onChange={set("emergenciaParentesco")} className="bg-card border-border" />
+                <Input placeholder="Ex: irmão" {...register("emergenciaParentesco")} className="bg-card border-border" />
               </div>
             </div>
           </div>
@@ -310,19 +400,13 @@ function Step1Dados({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Observações médicas</label>
-                <Input placeholder="Alergias, restrições..." value={data.observacoesMedicas} onChange={set("observacoesMedicas")} className="bg-card border-border" />
+                <Input placeholder="Alergias, restrições..." {...register("observacoesMedicas")} className="bg-card border-border" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Foto</label>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" className="border-border" onClick={() => setCameraOpen(true)}>
-                    Capturar foto
-                  </Button>
-                  {data.foto && (
-                    <Button variant="outline" className="border-border" onClick={() => onChange({ ...data, foto: "" })}>
-                      Remover
-                    </Button>
-                  )}
+                  <Button type="button" variant="outline" className="border-border" onClick={() => setCameraOpen(true)}>Capturar foto</Button>
+                  {watchedFoto && <Button type="button" variant="outline" className="border-border" onClick={() => setValue("foto", "")}>Remover</Button>}
                 </div>
                 {cameraOpen && (
                   <div className="mt-2 rounded-md border border-border bg-secondary/40 p-2">
@@ -332,37 +416,43 @@ function Step1Dados({
                       <>
                         <video ref={videoRef} autoPlay playsInline className="w-full rounded-md" />
                         <div className="mt-2 flex justify-end gap-2">
-                          <Button variant="outline" className="border-border" onClick={() => setCameraOpen(false)}>
-                            Cancelar
-                          </Button>
-                          <Button onClick={capturePhoto}>Capturar</Button>
+                          <Button type="button" variant="outline" className="border-border" onClick={() => setCameraOpen(false)}>Cancelar</Button>
+                          <Button type="button" onClick={capturePhoto}>Capturar</Button>
                         </div>
                       </>
                     )}
                   </div>
                 )}
-                {data.foto && (
+                {watchedFoto && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={data.foto} alt="Foto do cliente" className="mt-2 h-16 w-16 rounded-md object-cover" />
+                  <img src={watchedFoto} alt="Foto do cliente" className="mt-2 h-16 w-16 rounded-md object-cover" />
                 )}
               </div>
             </div>
           </div>
         </>
-      ) : null}
+      )}
     </div>
   );
 }
 
 // ─── Step 2: Plano ─────────────────────────────────────────────────────────
 
-function Step2Plano({ planos, selected, onSelect }: { planos: Plano[]; selected: string; onSelect: (id: string) => void }) {
+function Step2Plano({ 
+  planos, 
+  form,
+}: { 
+  planos: Plano[]; 
+  form: ReturnType<typeof useForm<ClienteWizardForm>>;
+}) {
+  const { control, setValue } = form;
+  const selected = useWatch({ control, name: "selectedPlano" });
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Escolha o plano</p>
+      <p className="text-sm text-muted-foreground">Escolha o plano administrativo</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {planos.map((p) => (
-          <button key={p.id} onClick={() => onSelect(p.id)}
+          <button key={p.id} type="button" onClick={() => setValue("selectedPlano", p.id)}
             className={cn("relative rounded-xl border p-4 text-left transition-all",
               selected === p.id ? "border-gym-accent bg-gym-accent/5 shadow-sm" : "border-border bg-secondary/40 hover:border-border/80"
             )}
@@ -389,13 +479,15 @@ function Step2Plano({ planos, selected, onSelect }: { planos: Plano[]; selected:
 
 // ─── Step 3: Pagamento ─────────────────────────────────────────────────────
 
-interface PagamentoForm { dataInicio: string; formaPagamento: TipoFormaPagamento | ""; desconto: string; }
-
-function Step3Pagamento({ plano, fps, data, onChange }: {
+function Step3Pagamento({ 
+  plano, fps, form
+}: {
   plano?: Plano; fps: FormaPagamento[];
-  data: PagamentoForm; onChange: (d: PagamentoForm) => void;
+  form: ReturnType<typeof useForm<ClienteWizardForm>>;
 }) {
-  const desconto = parseFloat(data.desconto) || 0;
+  const { register, control } = form;
+  const descontoVal = useWatch({ control, name: "pagamento.desconto" });
+  const desconto = parseFloat(descontoVal || "0") || 0;
   return (
     <div className="space-y-5">
       {plano && (
@@ -406,31 +498,25 @@ function Step3Pagamento({ plano, fps, data, onChange }: {
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="novo-cliente-data-inicio">
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Data de início *
           </label>
-          <Input
-            id="novo-cliente-data-inicio"
-            type="date"
-            value={data.dataInicio}
-            onChange={(e) => onChange({ ...data, dataInicio: e.target.value })}
-            className="bg-card border-border"
-          />
+          <Input type="date" {...register("pagamento.dataInicio")} className="bg-card border-border" />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Forma de pagamento *</label>
-          <Select value={data.formaPagamento} onValueChange={(v) => onChange({ ...data, formaPagamento: v as TipoFormaPagamento })}>
-            <SelectTrigger className="w-full bg-card border-border">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border">
-              {fps.map((fp) => <SelectItem key={fp.id} value={fp.tipo}>{fp.nome}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Controller name="pagamento.formaPagamento" control={control} render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger className="w-full bg-card border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                {fps.map((fp) => <SelectItem key={fp.id} value={fp.tipo}>{fp.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )} />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Desconto (R$)</label>
-          <Input type="number" min={0} placeholder="0,00" value={data.desconto} onChange={(e) => onChange({ ...data, desconto: e.target.value })} className="bg-card border-border" />
+          <Input type="number" min={0} placeholder="0,00" {...register("pagamento.desconto")} className="bg-card border-border" />
         </div>
       </div>
       {plano && (
@@ -438,7 +524,7 @@ function Step3Pagamento({ plano, fps, data, onChange }: {
           <div className="flex justify-between"><span className="text-muted-foreground">Valor do plano</span><span>{formatBRL(plano.valor)}</span></div>
           {desconto > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Desconto</span><span className="text-gym-teal">- {formatBRL(desconto)}</span></div>}
           <div className="flex justify-between border-t border-border pt-1.5 font-semibold">
-            <span>Total</span>
+            <span>Total final</span>
             <span className="font-display text-base font-bold text-gym-accent">{formatBRL(plano.valor - desconto)}</span>
           </div>
         </div>
@@ -464,17 +550,19 @@ function StepSucesso({ result, plano, onClose }: { result: CriarAlunoComMatricul
       <div className="grid grid-cols-3 gap-2 text-left text-sm">
         <div className="rounded-lg border border-border bg-secondary p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Cliente</p>
-          <p className="mt-1 font-semibold">{result.aluno.nome}</p>
+          <p className="mt-1 font-semibold truncate" title={result.aluno.nome}>{result.aluno.nome}</p>
           <p className="text-xs text-muted-foreground">{result.aluno.cpf}</p>
         </div>
         <div className="rounded-lg border border-border bg-secondary p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Matrícula</p>
-          <p className="mt-1 font-semibold">{plano?.nome}</p>
-          <p className="text-xs text-muted-foreground">{formatDate(result.matricula.dataInicio)} → {formatDate(result.matricula.dataFim)}</p>
+          <p className="mt-1 font-semibold truncate" title={plano?.nome}>{plano?.nome}</p>
+          {result.matricula && (
+            <p className="text-xs text-muted-foreground">Inicia {formatDate(result.matricula.dataInicio)}</p>
+          )}
         </div>
         <div className="rounded-lg border border-border bg-secondary p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Pagamento</p>
-          <p className="mt-1 font-display font-bold text-gym-accent">{formatBRL(result.pagamento.valorFinal)}</p>
+          <p className="mt-1 font-display font-bold text-gym-accent">{formatBRL(result.pagamento?.valorFinal || 0)}</p>
           <p className="text-xs text-gym-warning">Pendente</p>
         </div>
       </div>
@@ -486,17 +574,17 @@ function StepSucesso({ result, plano, onClose }: { result: CriarAlunoComMatricul
 function normalizeDraftEmail(nome: string, cpf: string, email?: string) {
   const trimmed = email?.trim();
   if (trimmed) return trimmed;
-  const cpfDigits = (cpf || "").replace(/\D/g, "");
+  const cpfDigits = (cpf || "").replace(/\\D/g, "");
   const slug = (nome || "")
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\\u0300-\\u036f]/g, "")
     .replace(/[^a-z0-9]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
   const base = slug || cpfDigits || "cliente";
-  return `${base}.${Date.now()}@temporario.local`;
+  return \`\${base}.\${Date.now()}@temporario.local\`;
 }
 
 interface CreateOnlyOptions {
@@ -518,23 +606,31 @@ export function NovoClienteWizard({
   const [step, setStep] = useState(1);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
-  const [selectedPlano, setSelectedPlano] = useState("");
   const [showComplementary, setShowComplementary] = useState(false);
-  const [dados, setDados] = useState<DadosPessoais>({
-    nome: "", email: "", telefone: "", telefoneSec: "", cpf: "", rg: "",
-    dataNascimento: "", sexo: "",
-    enderecoCep: "", enderecoLogradouro: "", enderecoNumero: "", enderecoComplemento: "",
-    enderecoBairro: "", enderecoCidade: "", enderecoEstado: "",
-    emergenciaNome: "", emergenciaTelefone: "", emergenciaParentesco: "",
-    observacoesMedicas: "", foto: "",
-  });
-  const [pagamento, setPagamento] = useState<{ dataInicio: string; formaPagamento: TipoFormaPagamento | ""; desconto: string }>({
-    dataInicio: getBusinessTodayIso(),
-    formaPagamento: "",
-    desconto: "",
-  });
+  
   const [result, setResult] = useState<CriarAlunoComMatriculaResponse | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const form = useForm<ClienteWizardForm>({
+    resolver: zodResolver(clienteWizardSchema),
+    mode: "onBlur",
+    defaultValues: {
+      nome: "", email: "", telefone: "", telefoneSec: "", cpf: "", rg: "",
+      dataNascimento: "", sexo: "",
+      enderecoCep: "", enderecoLogradouro: "", enderecoNumero: "", enderecoComplemento: "",
+      enderecoBairro: "", enderecoCidade: "", enderecoEstado: "",
+      emergenciaNome: "", emergenciaTelefone: "", emergenciaParentesco: "",
+      observacoesMedicas: "", foto: "",
+      selectedPlano: "",
+      pagamento: {
+        dataInicio: getBusinessTodayIso(),
+        formaPagamento: "",
+        desconto: "",
+      }
+    }
+  });
+
+  const { formState: { isDirty, isValid }, trigger, getValues, reset } = form;
 
   useEffect(() => {
     if (!open || !tenantResolved || !tenantId) return;
@@ -552,74 +648,68 @@ export function NovoClienteWizard({
       });
   }, [open, tenantId, tenantResolved]);
 
-  function reset() {
+  function fullReset() {
     setStep(1);
-    setSelectedPlano("");
     setShowComplementary(false);
-    setDados({
-      nome: "", email: "", telefone: "", telefoneSec: "", cpf: "", rg: "",
-      dataNascimento: "", sexo: "",
-      enderecoCep: "", enderecoLogradouro: "", enderecoNumero: "", enderecoComplemento: "",
-      enderecoBairro: "", enderecoCidade: "", enderecoEstado: "",
-      emergenciaNome: "", emergenciaTelefone: "", emergenciaParentesco: "",
-      observacoesMedicas: "", foto: "",
-    });
-    setPagamento({
-      dataInicio: getBusinessTodayIso(),
-      formaPagamento: "",
-      desconto: "",
-    });
+    reset();
     setResult(null);
   }
 
   async function handleNext() {
     if (step === 1) {
-      if (!dados.nome || !dados.telefone || !dados.cpf) return;
+      const ok = await trigger(["nome", "telefone", "cpf", "email"]);
+      if (!ok) return;
       setStep(2);
       return;
     }
     if (step === 2) {
-      if (!selectedPlano) return;
+      const p = getValues("selectedPlano");
+      if (!p) return;
       setStep(3);
       return;
     }
     if (step === 3) {
-      if (!tenantId || !pagamento.formaPagamento) return;
-      const plano = planos.find((p) => p.id === selectedPlano);
-      if (!plano) return;
+      if (!tenantId) return;
+      const ok = await trigger(["pagamento.formaPagamento", "pagamento.dataInicio"]);
+      if (!ok) return;
+
+      const vals = getValues();
+      const plano = planos.find((p) => p.id === vals.selectedPlano);
+      if (!plano || !vals.pagamento.formaPagamento) return;
+      
       setLoading(true);
       try {
         const resp = await createAlunoComMatriculaService({
           tenantId,
           data: {
-            nome: dados.nome,
-            email: normalizeDraftEmail(dados.nome, dados.cpf, dados.email),
-            telefone: dados.telefone,
-            telefoneSec: dados.telefoneSec || undefined,
-            cpf: dados.cpf,
-            rg: dados.rg || undefined,
-            dataNascimento: dados.dataNascimento || "2000-01-01",
-            sexo: (dados.sexo || "OUTRO") as Sexo,
-            endereco: dados.enderecoCep ? {
-              cep: dados.enderecoCep,
-              logradouro: dados.enderecoLogradouro,
-              numero: dados.enderecoNumero,
-              complemento: dados.enderecoComplemento,
-              bairro: dados.enderecoBairro,
-              cidade: dados.enderecoCidade,
-              estado: dados.enderecoEstado,
+            nome: vals.nome,
+            email: normalizeDraftEmail(vals.nome, vals.cpf, vals.email),
+            telefone: vals.telefone,
+            telefoneSec: vals.telefoneSec,
+            cpf: vals.cpf,
+            rg: vals.rg,
+            dataNascimento: vals.dataNascimento || "2000-01-01",
+            sexo: (vals.sexo || "OUTRO") as Sexo,
+            endereco: vals.enderecoCep ? {
+              cep: vals.enderecoCep,
+              logradouro: vals.enderecoLogradouro,
+              numero: vals.enderecoNumero,
+              complemento: vals.enderecoComplemento,
+              bairro: vals.enderecoBairro,
+              cidade: vals.enderecoCidade,
+              estado: vals.enderecoEstado,
             } : undefined,
-            contatoEmergencia: dados.emergenciaNome ? {
-              nome: dados.emergenciaNome,
-              telefone: dados.emergenciaTelefone,
-              parentesco: dados.emergenciaParentesco,
+            contatoEmergencia: vals.emergenciaNome ? {
+              nome: vals.emergenciaNome,
+              telefone: vals.emergenciaTelefone,
+              parentesco: vals.emergenciaParentesco,
             } : undefined,
-            observacoesMedicas: dados.observacoesMedicas || undefined,
-            foto: dados.foto || undefined,
-            planoId: selectedPlano,
-            dataInicio: pagamento.dataInicio,
-            formaPagamento: pagamento.formaPagamento as TipoFormaPagamento,
-            desconto: parseFloat(pagamento.desconto) || 0,
+            observacoesMedicas: vals.observacoesMedicas,
+            foto: vals.foto,
+            planoId: vals.selectedPlano as string,
+            dataInicio: vals.pagamento.dataInicio as string,
+            formaPagamento: vals.pagamento.formaPagamento as TipoFormaPagamento,
+            desconto: parseFloat(vals.pagamento.desconto || "0") || 0,
           },
         });
         setResult(resp);
@@ -634,43 +724,47 @@ export function NovoClienteWizard({
   }
 
   async function handleCreateOnly(options?: CreateOnlyOptions) {
-    if (!tenantId || !dados.nome || !dados.telefone || !dados.cpf) return;
+    if (!tenantId) return;
+    const ok = await trigger(["nome", "telefone", "cpf", "email"]);
+    if (!ok) return;
+
     setLoading(true);
+    const vals = getValues();
     try {
       const created = await createAlunoService({
         tenantId,
         data: {
-          nome: dados.nome,
-          email: normalizeDraftEmail(dados.nome, dados.cpf, dados.email),
-          telefone: dados.telefone,
-          telefoneSec: dados.telefoneSec || undefined,
-          cpf: dados.cpf,
-          rg: dados.rg || undefined,
-          dataNascimento: dados.dataNascimento || "2000-01-01",
-          sexo: (dados.sexo || "OUTRO") as Sexo,
-          endereco: dados.enderecoCep ? {
-            cep: dados.enderecoCep,
-            logradouro: dados.enderecoLogradouro,
-            numero: dados.enderecoNumero,
-            complemento: dados.enderecoComplemento,
-            bairro: dados.enderecoBairro,
-            cidade: dados.enderecoCidade,
-            estado: dados.enderecoEstado,
+          nome: vals.nome,
+          email: normalizeDraftEmail(vals.nome, vals.cpf, vals.email),
+          telefone: vals.telefone,
+          telefoneSec: vals.telefoneSec,
+          cpf: vals.cpf,
+          rg: vals.rg,
+          dataNascimento: vals.dataNascimento || "2000-01-01",
+          sexo: (vals.sexo || "OUTRO") as Sexo,
+          endereco: vals.enderecoCep ? {
+            cep: vals.enderecoCep,
+            logradouro: vals.enderecoLogradouro,
+            numero: vals.enderecoNumero,
+            complemento: vals.enderecoComplemento,
+            bairro: vals.enderecoBairro,
+            cidade: vals.enderecoCidade,
+            estado: vals.enderecoEstado,
           } : undefined,
-          contatoEmergencia: dados.emergenciaNome ? {
-            nome: dados.emergenciaNome,
-            telefone: dados.emergenciaTelefone,
-            parentesco: dados.emergenciaParentesco,
+          contatoEmergencia: vals.emergenciaNome ? {
+            nome: vals.emergenciaNome,
+            telefone: vals.emergenciaTelefone,
+            parentesco: vals.emergenciaParentesco,
           } : undefined,
-          observacoesMedicas: dados.observacoesMedicas || undefined,
-          foto: dados.foto || undefined,
+          observacoesMedicas: vals.observacoesMedicas,
+          foto: vals.foto,
         },
       });
       if (onDone) {
         await onDone(created, options);
       }
       onClose();
-      reset();
+      fullReset();
     } finally {
       setLoading(false);
     }
@@ -680,10 +774,10 @@ export function NovoClienteWizard({
     <Dialog open={open} onOpenChange={(nextOpen) => {
       if (!nextOpen) {
         onClose();
-        reset();
+        fullReset();
       }
     }}>
-      <DialogContent className="bg-card border-border sm:max-w-2xl w-full">
+      <DialogContent className="bg-card border-border sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold">
             Novo cliente
@@ -691,80 +785,77 @@ export function NovoClienteWizard({
         </DialogHeader>
 
         {step <= 3 && (
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-4 text-sm mt-2">
             {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center gap-2">
                 <StepDot step={s} current={step} />
-                {s < 3 && <div className="h-px w-10 bg-border/70" />}
+                {s < 3 && <div className="h-px w-10 bg-border/70 hidden sm:block" />}
               </div>
             ))}
           </div>
         )}
 
-        <div className="mt-5">
+        <form onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="mt-5 space-y-6">
           {step === 1 && (
             <Step1Dados
-              data={dados}
-              onChange={setDados}
+              form={form}
               showComplementary={showComplementary}
               onToggleComplementary={() => setShowComplementary((v) => !v)}
             />
           )}
-          {step === 2 && <Step2Plano planos={planos} selected={selectedPlano} onSelect={setSelectedPlano} />}
-          {step === 3 && <Step3Pagamento plano={planos.find((p) => p.id === selectedPlano)} fps={formas} data={pagamento} onChange={setPagamento} />}
-          {step === 4 && result && <StepSucesso result={result} plano={planos.find((p) => p.id === selectedPlano)} onClose={() => { onClose(); reset(); }} />}
-        </div>
+          {step === 2 && <Step2Plano planos={planos} form={form} />}
+          {step === 3 && <Step3Pagamento plano={planos.find((p) => p.id === form.getValues().selectedPlano)} fps={formas} form={form} />}
+          {step === 4 && result && <StepSucesso result={result} plano={planos.find((p) => p.id === form.getValues().selectedPlano)} onClose={() => { onClose(); fullReset(); }} />}
 
-        {step <= 3 && (
-          <StickyActionFooter
-            isDirty={
-              step === 1 && (!!dados.nome || !!dados.cpf || !!dados.email || !!dados.telefone) ||
-              step === 2 && !!selectedPlano ||
-              step === 3 && !!pagamento.formaPagamento
-            }
-          >
-            <Button
-              variant="outline"
-              onClick={() => (step === 1 ? onClose() : setStep((s) => s - 1))}
-              className="border-border"
-            >
-              <ArrowLeft className="size-3.5" />
-              Voltar
-            </Button>
-            <div className="flex items-center gap-2">
-              {step === 1 && (
-                <>
-                  <Button
-                    variant="secondary"
-                    onClick={() => handleCreateOnly()}
-                    disabled={loading || !dados.nome || !dados.telefone || !dados.cpf}
-                  >
-                    Pré-cadastro
+          {step <= 3 && (
+            <StickyActionFooter isDirty={isDirty}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => (step === 1 ? onClose() : setStep((s) => s - 1))}
+                className="border-border"
+              >
+                <ArrowLeft className="size-3.5" />
+                Voltar
+              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                {step === 1 && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => handleCreateOnly()}
+                      disabled={loading || !isValid}
+                    >
+                      Pré-cadastro
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="default"
+                      onClick={() => handleCreateOnly({ openSale: true })}
+                      disabled={loading || !isValid}
+                    >
+                      Pré-cadastro + venda <ArrowRight className="size-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleNext}
+                      disabled={loading || !isValid}
+                    >
+                      Completar cadastro <ArrowRight className="size-3.5" />
+                    </Button>
+                  </>
+                )}
+                {step > 1 && (
+                  <Button type="button" onClick={handleNext} disabled={loading}>
+                    {loading ? "Salvando..." : "Próximo"} <ArrowRight className="size-3.5" />
                   </Button>
-                  <Button
-                    variant="default"
-                    onClick={() => handleCreateOnly({ openSale: true })}
-                    disabled={loading || !dados.nome || !dados.telefone || !dados.cpf}
-                  >
-                    Pré-cadastro + venda <ArrowRight className="size-3.5" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleNext}
-                    disabled={loading || !dados.nome || !dados.telefone || !dados.cpf}
-                  >
-                    Completar cadastro agora <ArrowRight className="size-3.5" />
-                  </Button>
-                </>
-              )}
-              {step > 1 && (
-                <Button onClick={handleNext} disabled={loading}>
-                  {loading ? "Salvando..." : "Próximo"} <ArrowRight className="size-3.5" />
-                </Button>
-              )}
-            </div>
-          </StickyActionFooter>
-        )}
+                )}
+              </div>
+            </StickyActionFooter>
+          )}
+        </form>
       </DialogContent>
     </Dialog>
   );
