@@ -131,7 +131,11 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+  }
+  *:focus-visible {
+    @apply outline-none ring-2 ring-gym-accent ring-offset-2 ring-offset-background;
+    box-shadow: 0 0 12px 0px rgba(200, 241, 53, 0.4);
   }
   body {
     @apply bg-background text-foreground;
@@ -161,5 +165,15 @@
   a:not([aria-disabled="true"]),
   summary {
     cursor: pointer;
+  }
+}
+
+@layer utilities {
+  .text-gym-accent-accessible {
+    color: #0e0f11;
+  }
+  .bg-gym-accent-accessible {
+    background-color: var(--gym-accent);
+    color: #0e0f11;
   }
 }
