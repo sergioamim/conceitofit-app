@@ -24,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { StickyActionFooter } from "@/components/shared/sticky-action-footer";
 import { cn } from "@/lib/utils";
 
 const TIPO_PLANO_LABEL: Record<string, string> = { MENSAL: "Mensal", TRIMESTRAL: "Trimestral", SEMESTRAL: "Semestral", ANUAL: "Anual", AVULSO: "Avulso" };
@@ -777,25 +776,28 @@ export function NovoClienteWizard({
         fullReset();
       }
     }}>
-      <DialogContent className="bg-card border-border sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
-            Novo cliente
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="bg-card border-border sm:max-w-2xl w-full max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <div className="p-6 pb-4 shrink-0 border-b border-border/50">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold">
+              Novo cliente
+            </DialogTitle>
+          </DialogHeader>
 
-        {step <= 3 && (
-          <div className="flex items-center gap-4 text-sm mt-2">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="flex items-center gap-2">
-                <StepDot step={s} current={step} />
-                {s < 3 && <div className="h-px w-10 bg-border/70 hidden sm:block" />}
-              </div>
-            ))}
-          </div>
-        )}
+          {step <= 3 && (
+            <div className="flex items-center gap-4 text-sm mt-4">
+              {[1, 2, 3].map((s) => (
+                <div key={s} className="flex items-center gap-2">
+                  <StepDot step={s} current={step} />
+                  {s < 3 && <div className="h-px w-10 bg-border/70 hidden sm:block" />}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="mt-5 space-y-6">
+        <form onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="flex flex-col min-h-0 flex-1">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {step === 1 && (
             <Step1Dados
               form={form}
@@ -807,53 +809,56 @@ export function NovoClienteWizard({
           {step === 3 && <Step3Pagamento plano={planos.find((p) => p.id === form.getValues().selectedPlano)} fps={formas} form={form} />}
           {step === 4 && result && <StepSucesso result={result} plano={planos.find((p) => p.id === form.getValues().selectedPlano)} onClose={() => { onClose(); fullReset(); }} />}
 
+          </div>
           {step <= 3 && (
-            <StickyActionFooter isDirty={isDirty}>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => (step === 1 ? onClose() : setStep((s) => s - 1))}
-                className="border-border"
-              >
-                <ArrowLeft className="size-3.5" />
-                Voltar
-              </Button>
-              <div className="flex flex-wrap items-center gap-2">
-                {step === 1 && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => handleCreateOnly()}
-                      disabled={loading || !isValid}
-                    >
-                      Pré-cadastro
+            <div className={cn("shrink-0 p-4 sm:px-6 border-t bg-card transition-colors duration-300", isDirty ? "border-t-gym-accent shadow-[0_-4px_15px_-4px_rgba(var(--gym-accent),0.25)]" : "border-border")}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => (step === 1 ? onClose() : setStep((s) => s - 1))}
+                  className="border-border"
+                >
+                  <ArrowLeft className="size-3.5" />
+                  Voltar
+                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {step === 1 && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => handleCreateOnly()}
+                        disabled={loading || !isValid}
+                      >
+                        Pré-cadastro
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => handleCreateOnly({ openSale: true })}
+                        disabled={loading || !isValid}
+                      >
+                        Pré-cadastro + venda <ArrowRight className="size-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleNext}
+                        disabled={loading || !isValid}
+                      >
+                        Completar cadastro <ArrowRight className="size-3.5" />
+                      </Button>
+                    </>
+                  )}
+                  {step > 1 && (
+                    <Button type="button" onClick={handleNext} disabled={loading}>
+                      {loading ? "Salvando..." : "Próximo"} <ArrowRight className="size-3.5" />
                     </Button>
-                    <Button
-                      type="button"
-                      variant="default"
-                      onClick={() => handleCreateOnly({ openSale: true })}
-                      disabled={loading || !isValid}
-                    >
-                      Pré-cadastro + venda <ArrowRight className="size-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleNext}
-                      disabled={loading || !isValid}
-                    >
-                      Completar cadastro <ArrowRight className="size-3.5" />
-                    </Button>
-                  </>
-                )}
-                {step > 1 && (
-                  <Button type="button" onClick={handleNext} disabled={loading}>
-                    {loading ? "Salvando..." : "Próximo"} <ArrowRight className="size-3.5" />
-                  </Button>
-                )}
+                  )}
+                </div>
               </div>
-            </StickyActionFooter>
+            </div>
           )}
         </form>
       </DialogContent>
