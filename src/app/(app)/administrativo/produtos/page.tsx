@@ -16,13 +16,14 @@ import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useCrudOperations } from "@/hooks/use-crud-operations";
+import { PageError } from "@/components/shared/page-error";
 
 export default function ProdutosPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Produto | null>(null);
 
-  const { items: produtos, reload } = useCrudOperations<Produto>({
+  const { items: produtos, error, reload } = useCrudOperations<Produto>({
     listFn: () => listProdutosApi(false),
     toggleFn: toggleProdutoApi,
     deleteFn: deleteProdutoApi,
@@ -81,6 +82,8 @@ export default function ProdutosPage() {
         </div>
         <Button onClick={() => setModalOpen(true)}>Novo produto</Button>
       </div>
+
+      <PageError error={error} onRetry={reload} />
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">

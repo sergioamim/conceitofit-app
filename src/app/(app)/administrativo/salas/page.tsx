@@ -9,13 +9,14 @@ import { SalaModal } from "@/components/shared/sala-modal";
 import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useCrudOperations } from "@/hooks/use-crud-operations";
+import { PageError } from "@/components/shared/page-error";
 
 export default function SalasPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Sala | null>(null);
 
-  const { items: salas, reload } = useCrudOperations<Sala>({
+  const { items: salas, error, reload } = useCrudOperations<Sala>({
     listFn: () => listSalasApi(false),
     toggleFn: toggleSalaApi,
     deleteFn: deleteSalaApi,
@@ -72,6 +73,8 @@ export default function SalasPage() {
         </div>
         <Button onClick={() => setModalOpen(true)}>Nova sala</Button>
       </div>
+
+      <PageError error={error} onRetry={reload} />
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">

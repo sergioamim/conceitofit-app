@@ -10,6 +10,7 @@ import { createContaBancariaApi, listContasBancariasApi, toggleContaBancariaApi,
 import type { ContaBancaria, PixTipo, TipoContaBancaria } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useTenantContext } from "@/hooks/use-session-context";
+import { PageError } from "@/components/shared/page-error";
 
 const TIPO_CONTA_LABEL: Record<TipoContaBancaria, string> = {
   CORRENTE: "Conta corrente",
@@ -65,6 +66,7 @@ export default function ContasBancariasPage() {
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
@@ -93,7 +95,7 @@ export default function ContasBancariasPage() {
       setHasLoadedOnce(false);
     }
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const data = await listContasBancariasApi({
         tenantId: tenantId || undefined,
@@ -102,11 +104,11 @@ export default function ContasBancariasPage() {
         return;
       }
       setContas(data);
-    } catch (loadError) {
+    } catch (loadErr) {
       if (requestIdRef.current !== requestId) {
         return;
       }
-      setError(normalizeErrorMessage(loadError));
+      setLoadError(normalizeErrorMessage(loadErr));
     } finally {
       if (requestIdRef.current !== requestId) {
         return;
@@ -117,7 +119,7 @@ export default function ContasBancariasPage() {
   }, [tenantId]);
 
   useEffect(() => {
-    setError(tenantError);
+    setLoadError(tenantError);
   }, [tenantError]);
 
   useEffect(() => {
@@ -243,7 +245,7 @@ export default function ContasBancariasPage() {
   const isTenantUnavailable = tenantResolved && !tenantId;
   const emptyStateMessage = isTenantUnavailable
     ? "Não foi possível identificar a unidade ativa."
-    : error
+    : loadError
       ? "Não foi possível carregar as contas bancárias."
       : "Nenhuma conta bancária cadastrada.";
 
@@ -275,6 +277,8 @@ export default function ContasBancariasPage() {
           className="bg-secondary border-border"
         />
       </div>
+
+      <PageError error={loadError} onRetry={load} />
 
       {(error || success) && (
         <div

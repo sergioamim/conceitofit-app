@@ -14,6 +14,7 @@ import { INTEGRACAO_STATUS_LABEL, summarizeIntegracoesOperacionais } from "@/lib
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
 import type { IntegracaoOperacional, IntegracaoOperacionalStatus } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { PageError } from "@/components/shared/page-error";
 
 type StatusFiltro = IntegracaoOperacionalStatus | "TODAS";
 
@@ -44,16 +45,17 @@ export default function MonitoramentoIntegracoesPage() {
   const [status, setStatus] = useState<StatusFiltro>("TODAS");
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!tenantId || !access.canAccessElevatedModules) return;
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       setIntegracoes(await listIntegracoesOperacionaisApi({ tenantId }));
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
+    } catch (loadErr) {
+      setLoadError(normalizeErrorMessage(loadErr));
     } finally {
       setLoading(false);
     }
@@ -116,6 +118,8 @@ export default function MonitoramentoIntegracoesPage() {
           Apenas usuários com permissão elevada podem acompanhar o monitoramento operacional.
         </div>
       ) : null}
+
+      <PageError error={loadError} onRetry={load} />
 
       {(error || success) && (
         <div

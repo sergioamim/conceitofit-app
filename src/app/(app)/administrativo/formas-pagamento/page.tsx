@@ -15,6 +15,7 @@ import { DataTableRowActions } from "@/components/shared/data-table-row-actions"
 import { FormaPagamentoModal } from "@/components/shared/forma-pagamento-modal";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useCrudOperations } from "@/hooks/use-crud-operations";
+import { PageError } from "@/components/shared/page-error";
 
 const TIPO_LABEL: Record<TipoFormaPagamento, string> = {
   DINHEIRO: "Dinheiro",
@@ -49,7 +50,7 @@ export default function FormasPagamentoPage() {
     [tenantId]
   );
 
-  const { items: formas, reload } = useCrudOperations<FormaPagamento>(crudOptions);
+  const { items: formas, error, reload } = useCrudOperations<FormaPagamento>(crudOptions);
 
   async function handleSave(
     data: Omit<FormaPagamento, "id" | "tenantId">,
@@ -113,6 +114,8 @@ export default function FormasPagamentoPage() {
         </div>
         <Button onClick={() => setModalOpen(true)} disabled={!tenantResolved || !tenantId}>Nova forma</Button>
       </div>
+
+      <PageError error={error} onRetry={reload} />
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">

@@ -26,6 +26,7 @@ import { DataTableRowActions } from "@/components/shared/data-table-row-actions"
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { gerarCatracaCredencialApi, type CatracaCredentialResponse } from "@/lib/api/catraca";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { PageError } from "@/components/shared/page-error";
 
 type UnitForm = {
   nome: string;
@@ -94,6 +95,7 @@ export default function UnidadesPage() {
   const [form, setForm] = useState<UnitForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [modalTab, setModalTab] = useState<"DADOS" | "CONFIG">("DADOS");
   const [credentialLoading, setCredentialLoading] = useState(false);
   const [credentialResult, setCredentialResult] = useState<CatracaCredentialResponse | null>(null);
@@ -111,13 +113,13 @@ export default function UnidadesPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError("");
+    setLoadError("");
     try {
       const all = await listUnidadesApi();
       setRows(all);
-    } catch (loadError) {
+    } catch (err) {
       setRows([]);
-      setError(normalizeErrorMessage(loadError));
+      setLoadError(normalizeErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -532,6 +534,8 @@ export default function UnidadesPage() {
         </div>
         <Button onClick={openCreate}>Nova unidade</Button>
       </div>
+
+      <PageError error={loadError} onRetry={load} />
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">

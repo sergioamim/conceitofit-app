@@ -17,6 +17,7 @@ import { DataTableRowActions } from "@/components/shared/data-table-row-actions"
 import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useCrudOperations } from "@/hooks/use-crud-operations";
+import { PageError } from "@/components/shared/page-error";
 
 export default function ConveniosPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
@@ -42,7 +43,7 @@ export default function ConveniosPage() {
     [tenantId]
   );
 
-  const { items: convenios, reload } = useCrudOperations<Convenio>(crudOptions);
+  const { items: convenios, error, reload } = useCrudOperations<Convenio>(crudOptions);
 
   async function handleSave(data: Omit<Convenio, "id">, id?: string) {
     if (id) await updateConvenioApi(id, data);
@@ -85,6 +86,8 @@ export default function ConveniosPage() {
         </div>
         <Button onClick={() => setModalOpen(true)} disabled={!tenantResolved || !tenantId}>Novo convênio</Button>
       </div>
+
+      <PageError error={error} onRetry={reload} />
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">

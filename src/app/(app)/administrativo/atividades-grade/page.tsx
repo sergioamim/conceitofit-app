@@ -26,6 +26,7 @@ import {
   type AtividadeOcorrenciaForm,
 } from "@/components/shared/atividade-ocorrencia-modal";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { PageError } from "@/components/shared/page-error";
 
 const DIA_LABEL: Record<DiaSemana, string> = {
   SEG: "Segunda",
@@ -54,6 +55,7 @@ export default function AtividadesGradePage() {
   const [savingOccurrence, setSavingOccurrence] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState("");
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
@@ -67,7 +69,7 @@ export default function AtividadesGradePage() {
       return;
     }
     setLoading(true);
-    setError("");
+    setLoadError("");
     try {
       const [g, a, sal, pro] = await Promise.all([
         listAtividadeGradesApi({
@@ -83,12 +85,12 @@ export default function AtividadesGradePage() {
       setAtividades(a);
       setSalas(sal);
       setFuncionarios(pro);
-    } catch (loadError) {
+    } catch (err) {
       setGrades([]);
       setAtividades([]);
       setSalas([]);
       setFuncionarios([]);
-      setError(normalizeErrorMessage(loadError) || "Falha ao carregar grade de atividades.");
+      setLoadError(normalizeErrorMessage(err) || "Falha ao carregar grade de atividades.");
     } finally {
       setLoading(false);
     }
@@ -241,6 +243,7 @@ export default function AtividadesGradePage() {
         </Button>
       </div>
 
+      <PageError error={loadError} onRetry={load} />
       {error ? (
         <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           {error}

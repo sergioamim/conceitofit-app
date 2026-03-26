@@ -29,6 +29,7 @@ import { listContasPagarApi } from "@/lib/api/financeiro-gerencial";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { formatBRL } from "@/lib/formatters";
+import { PageError } from "@/components/shared/page-error";
 
 const ORIGEM_LABEL: Record<OrigemConciliacao, string> = {
   MANUAL: "Manual",
@@ -77,6 +78,7 @@ export default function ConciliacaoBancariaPage() {
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
@@ -134,7 +136,7 @@ export default function ConciliacaoBancariaPage() {
   const load = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const [linhasResponse, contasResponse, pagamentosResponse, contasPagarResponse] = await Promise.all([
         listarConciliacaoLinhasApi({
@@ -155,8 +157,8 @@ export default function ConciliacaoBancariaPage() {
       if (!importContaId && contasResponse.length > 0) {
         setImportContaId(contasResponse[0].id);
       }
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
+    } catch (loadErr) {
+      setLoadError(normalizeErrorMessage(loadErr));
     } finally {
       setLoading(false);
       setHasLoadedOnce(true);
@@ -168,7 +170,7 @@ export default function ConciliacaoBancariaPage() {
   }, [load]);
 
   useEffect(() => {
-    setError(tenantError);
+    setLoadError(tenantError);
   }, [tenantError]);
 
   useEffect(() => {
@@ -365,7 +367,7 @@ export default function ConciliacaoBancariaPage() {
   const isTenantUnavailable = tenantResolved && !tenantId;
   const emptyStateMessage = isTenantUnavailable
     ? "Não foi possível identificar a unidade ativa."
-    : error
+    : loadError
       ? "Não foi possível carregar os lançamentos."
       : "Nenhum lançamento para o filtro selecionado.";
 
@@ -383,6 +385,8 @@ export default function ConciliacaoBancariaPage() {
           </p>
         </div>
       </div>
+
+      <PageError error={loadError} onRetry={load} />
 
       {(error || success) && (
         <div
