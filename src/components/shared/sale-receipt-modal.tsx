@@ -31,6 +31,8 @@ export function SaleReceiptModal({
   tenant,
   plano,
   contratoAutoEnvioMensagem,
+  voucherCodigo,
+  voucherDescontoPercent,
 }: {
   open: boolean;
   onClose: () => void;
@@ -39,6 +41,8 @@ export function SaleReceiptModal({
   tenant?: Tenant | null;
   plano?: Plano | null;
   contratoAutoEnvioMensagem?: string;
+  voucherCodigo?: string;
+  voucherDescontoPercent?: number;
 }) {
   const [email, setEmail] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -321,6 +325,14 @@ export function SaleReceiptModal({
               <span className="text-muted-foreground">Subtotal</span>
               <span>{formatBRL(venda.subtotal)}</span>
             </div>
+            {voucherCodigo && venda.descontoTotal > 0 ? (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gym-teal">
+                  Cupom {voucherCodigo} aplicado{voucherDescontoPercent ? ` (${voucherDescontoPercent}%)` : ""}
+                </span>
+                <span className="text-gym-teal">- {formatBRL(venda.descontoTotal)}</span>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Desconto</span>
               <span>{formatBRL(venda.descontoTotal)}</span>

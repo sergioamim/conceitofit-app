@@ -1258,6 +1258,19 @@ export interface VoucherCodigo {
   dataUso?: LocalDateTime;
 }
 
+export interface VoucherValidacaoResult {
+  valido: boolean;
+  mensagem: string;
+  descontoPercentual: number;
+  descontoValor?: number;
+  escopo?: VoucherEscopo;
+  planoIds?: UUID[];
+  aplicarEm?: VoucherAplicarEm[];
+  umaVezPorCliente?: boolean;
+  voucherId?: UUID;
+  codigo?: string;
+}
+
 export type CampanhaCanal = "WHATSAPP" | "EMAIL" | "SMS" | "LIGACAO";
 export type CampanhaPublicoAlvo =
   | "EVADIDOS_ULTIMOS_3_MESES"

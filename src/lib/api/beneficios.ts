@@ -1,4 +1,4 @@
-import type { Convenio, Voucher, VoucherCodigo } from "@/lib/types";
+import type { Convenio, Voucher, VoucherCodigo, VoucherValidacaoResult } from "@/lib/types";
 import { apiRequest } from "./http";
 
 const toNumber = (value: unknown, fallback = 0): number => {
@@ -86,6 +86,19 @@ export async function toggleVoucherApi(id: string): Promise<Voucher> {
 export async function listVoucherCodigosApi(voucherId: string): Promise<VoucherCodigo[]> {
   return apiRequest<VoucherCodigo[]>({
     path: `/api/v1/administrativo/vouchers/${voucherId}/codigos`,
+  });
+}
+
+export async function validarVoucherCodigoApi(input: {
+  codigo: string;
+  tenantId?: string;
+  clienteId?: string;
+  planoId?: string;
+}): Promise<VoucherValidacaoResult> {
+  return apiRequest<VoucherValidacaoResult>({
+    path: "/api/v1/comercial/vouchers/validar",
+    method: "POST",
+    body: input,
   });
 }
 

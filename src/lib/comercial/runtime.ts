@@ -13,7 +13,7 @@ import {
   migrarClienteParaUnidadeApi,
   updateAlunoApi,
 } from "@/lib/api/alunos";
-import { listConveniosApi, listVoucherCodigosApi, listVouchersApi } from "@/lib/api/beneficios";
+import { listConveniosApi, listVoucherCodigosApi, listVouchersApi, validarVoucherCodigoApi } from "@/lib/api/beneficios";
 import {
   listPlanosApi,
   listProdutosApi,
@@ -68,6 +68,7 @@ import type {
   Venda,
   Voucher,
   VoucherCodigo,
+  VoucherValidacaoResult,
 } from "@/lib/types";
 
 export type ListAlunosPageServiceResult = {
@@ -464,6 +465,15 @@ export async function listVouchersService(): Promise<Voucher[]> {
 
 export async function listVoucherCodigosService(voucherId: string): Promise<VoucherCodigo[]> {
   return listVoucherCodigosApi(voucherId);
+}
+
+export async function validarVoucherCodigoService(input: {
+  codigo: string;
+  tenantId?: string;
+  clienteId?: string;
+  planoId?: string;
+}): Promise<VoucherValidacaoResult> {
+  return validarVoucherCodigoApi(input);
 }
 
 export async function togglePlanoAtivoService(input: {
