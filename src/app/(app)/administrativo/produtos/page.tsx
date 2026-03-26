@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   createProdutoApi,
   deleteProdutoApi,
@@ -15,21 +15,18 @@ import { DataTableRowActions } from "@/components/shared/data-table-row-actions"
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { useCrudOperations } from "@/hooks/use-crud-operations";
 
 export default function ProdutosPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
-  const [produtos, setProdutos] = useState<Produto[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Produto | null>(null);
 
-  async function load() {
-    const data = await listProdutosApi(false);
-    setProdutos(data);
-  }
-
-  useEffect(() => {
-    void listProdutosApi(false).then(setProdutos);
-  }, []);
+  const { items: produtos, reload } = useCrudOperations<Produto>({
+    listFn: () => listProdutosApi(false),
+    toggleFn: toggleProdutoApi,
+    deleteFn: deleteProdutoApi,
+  });
 
   async function handleSave(data: Omit<Produto, "id" | "tenantId">, id?: string) {
     const { ativo = true, ...payload } = data;
@@ -47,18 +44,18 @@ export default function ProdutosPage() {
     }
     setModalOpen(false);
     setEditing(null);
-    await load();
+    await reload();
   }
 
   async function handleToggle(id: string) {
     await toggleProdutoApi(id);
-    await load();
+    await reload();
   }
 
   function handleDelete(id: string) {
     confirm("Remover este produto?", async () => {
       await deleteProdutoApi(id);
-      await load();
+      await reload();
     });
   }
 
