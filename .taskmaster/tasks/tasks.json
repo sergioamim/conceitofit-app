@@ -7372,7 +7372,39 @@
         "status": "pending",
         "dependencies": [],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear páginas com \"use client\" e classificar A/B/C",
+            "description": "Levantar todas as páginas com \"use client\" e classificar por tipo de migração RSC.",
+            "dependencies": [],
+            "details": "Usar o resultado de `rg \"use client\" src/app` para gerar uma lista completa e documentar em `docs/RSC_BUNDLE_AUDIT.md` com rota, arquivo e classificação (A: fetch em useEffect, B: interação pesada, C: híbrida). Registrar exemplos observados como `src/app/(app)/planos/page.tsx`, `src/app/(app)/matriculas/page.tsx`, `src/app/(app)/pagamentos/page.tsx` e `src/app/(app)/clientes/page.tsx`, além de notas sobre páginas com modais pesados.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Converter listagens-chave para RSC com client islands",
+            "description": "Migrar listagens principais para Server Components e manter interações em ilhas client.",
+            "dependencies": [
+              1
+            ],
+            "details": "Para `/planos`, `/matriculas`, `/pagamentos` e `/clientes` (e notar que `/alunos` redireciona), criar um wrapper server component async em cada `page.tsx` e extrair a UI interativa para um componente client separado. Fazer o data fetching no servidor (usando funções API compatíveis com RSC) e passar dados iniciais via props. Manter ações e estados locais (filtros, toggles, modais) no client component, evitando hooks de contexto no server e preservando o comportamento atual.",
+            "status": "pending",
+            "testStrategy": "Smoke manual nas quatro rotas e comparar ausência de regressões em filtros, toggles e navegação."
+          },
+          {
+            "id": 3,
+            "title": "Lazy load de modais pesados e bundle analyzer",
+            "description": "Aplicar code splitting em modais grandes e medir impacto no bundle.",
+            "dependencies": [
+              1
+            ],
+            "details": "Identificar modais >500 linhas (ex.: `src/components/shared/novo-cliente-wizard.tsx`, `src/components/shared/prospect-detail-modal.tsx`, `src/components/shared/treino-modal.tsx`) e trocar imports diretos por `next/dynamic` com `ssr:false` e fallback estável nas páginas que usam esses modais. Adicionar suporte a bundle analyzer (ex.: `@next/bundle-analyzer` em `next.config.ts` via `ANALYZE=true`) para comparar First Load JS antes/depois.",
+            "status": "pending",
+            "testStrategy": "Rodar `ANALYZE=true npm run build` e comparar o report por rota; validar abertura dos modais carregados dinamicamente."
+          }
+        ]
       },
       {
         "id": 114,
@@ -7383,7 +7415,39 @@
         "status": "pending",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar utilitário de exportação CSV/PDF",
+            "description": "Adicionar utilitário client-side para exportar tabelas em CSV e PDF.",
+            "dependencies": [],
+            "details": "Criar `src/lib/export/table-export.ts` com tipos de coluna (label, accessor/formatter) e funções `exportToCSV` e `exportToPDF`. Para CSV, gerar conteúdo UTF-8 (com BOM opcional) e disparar download via Blob/URL; para PDF, adicionar `jspdf` + `jspdf-autotable` no `package.json` e montar tabela com título, cabeçalhos e dados formatados (incluindo valores em BRL via `formatBRL`).",
+            "status": "pending",
+            "testStrategy": "Testar exportação CSV/PDF em um conjunto simples de dados e validar arquivos gerados."
+          },
+          {
+            "id": 2,
+            "title": "Implementar componente compartilhado ExportMenu",
+            "description": "Criar dropdown reutilizável para exportar os dados visíveis.",
+            "dependencies": [
+              1
+            ],
+            "details": "Adicionar `src/components/shared/export-menu.tsx` como componente client-side, usando `Button` + `Select` (ou UI equivalente existente) para opções CSV e PDF. Receber props `data`, `columns`, `filename`, `title`, `disabled` e acionar `exportToCSV/exportToPDF` do utilitário. Manter texto estável no SSR e evitar valores dinâmicos no render inicial.",
+            "status": "pending",
+            "testStrategy": "Validar manualmente que o menu dispara a exportação correta para CSV e PDF."
+          },
+          {
+            "id": 3,
+            "title": "Integrar ExportMenu nas páginas gerenciais",
+            "description": "Adicionar botões de exportação nos relatórios financeiros e vendas.",
+            "dependencies": [
+              2
+            ],
+            "details": "Incluir `ExportMenu` nas páginas `src/app/(app)/gerencial/dre/page.tsx`, `src/app/(app)/gerencial/contas-a-receber/page.tsx`, `src/app/(app)/gerencial/contas-a-pagar/page.tsx`, `src/app/(app)/gerencial/recebimentos/page.tsx` e `src/app/(app)/vendas/page.tsx`. Para `formas-pagamento`, integrar no `src/app/(app)/administrativo/formas-pagamento/page.tsx` (já que `/gerencial/formas-pagamento` redireciona). Mapear colunas com rótulos iguais aos cabeçalhos das tabelas, exportar somente dados filtrados e excluir colunas de ação, mantendo formatação BRL e datas já exibidas na UI.",
+            "status": "pending",
+            "testStrategy": "Exportar CSV/PDF em cada página, abrir no Excel/Sheets e PDF viewer e conferir valores e formatação."
+          }
+        ]
       },
       {
         "id": 115,
@@ -7394,7 +7458,40 @@
         "status": "pending",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar componentes compartilhados de estados de lista",
+            "description": "Implementar os componentes padronizados de empty, erro e loading para listas.",
+            "dependencies": [],
+            "details": "Criar `src/components/shared/list-states.tsx` com `EmptyState` (ícone, mensagem, CTA opcional e variantes para busca sem resultado vs lista vazia), `ErrorState` unificando o visual de `error-state.tsx`/`page-error.tsx` com callback de retry e mensagem com ação, e `ListLoadingSkeleton` como wrapper genérico que aceita número de linhas (usando `Skeleton`). Garantir consistência visual com `MOTION_CLASSNAMES` e textos estáveis no render SSR.",
+            "status": "pending",
+            "testStrategy": "Validar manualmente que os três componentes renderizam corretamente, com CTA opcional e estilos consistentes."
+          },
+          {
+            "id": 2,
+            "title": "Padronizar estados nas listagens principais",
+            "description": "Substituir implementações ad hoc de loading/erro/empty nas páginas principais de listagem.",
+            "dependencies": [
+              1
+            ],
+            "details": "Auditar e atualizar `src/app/(app)/clientes/page.tsx`, `src/app/(app)/vendas/page.tsx`, `src/app/(app)/matriculas/page.tsx`, `src/app/(app)/pagamentos/page.tsx`, `src/app/(app)/planos/page.tsx` e `src/app/(app)/prospects/page.tsx` para usar `EmptyState`, `ErrorState` e `ListLoadingSkeleton`. Trocar banners e linhas vazias de tabela por componentes padronizados, ligar `onRetry` às funções `load` existentes e manter a lógica de negócio intacta.",
+            "status": "pending",
+            "testStrategy": "Simular erro de rede e ausência de resultados para verificar ErrorState com retry e EmptyState adequado; confirmar skeleton durante carregamento."
+          },
+          {
+            "id": 3,
+            "title": "Aplicar padrão nas listagens administrativas e gerenciais restantes",
+            "description": "Uniformizar os estados de lista em módulos administrativos, CRM e gerenciais.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Revisar páginas em `src/app/(app)/administrativo/**`, `src/app/(app)/gerencial/**`, `src/app/(app)/crm/**` e `src/app/(backoffice)/admin/**` que hoje usam `PageError`, mensagens inline ou loaders próprios. Substituir por `EmptyState`, `ErrorState` e `ListLoadingSkeleton`, garantindo mensagens com ação (retry ou contato suporte) e mantendo a estrutura SSR estável.",
+            "status": "pending",
+            "testStrategy": "Forçar falha de carregamento em algumas páginas administrativas e validar o retry; verificar estados vazios e skeletons em fluxos de listagem."
+          }
+        ]
       }
     ],
     "metadata": {

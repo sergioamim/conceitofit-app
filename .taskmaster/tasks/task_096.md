@@ -1,20 +1,54 @@
-# Task 096: Higienizar base React/SSR e zerar lint crítico da UI
+# Task ID: 96
 
-## Objetivo
-Limpar a base antes de continuar refinando a interface, removendo smells estruturais e regressões de SSR/hidratação que hoje atrapalham evolução segura.
+**Title:** Higienizar base React/SSR e zerar lint crítico da UI
 
-## Paralelização
-- Pode rodar em paralelo com as Tasks 097 e 098.
-- Deve terminar antes da Task 099.
+**Status:** done
 
-## Subtarefas
-- [x] Corrigir efeitos com `setState` síncrono em `useEffect` nos fluxos de rascunho, preferências e validação assíncrona.
-- [x] Remover imports mortos, ruído de layout e artefatos locais como `template.tsx.bak`.
-- [x] Revisar os componentes alterados recentemente contra o checklist de hydration safety do projeto.
-- [x] Fechar a tarefa com `npm run lint` limpo nas áreas tocadas.
+**Dependencies:** 92 ✓, 95 ✓
 
-## Definição de Pronto (DoP)
-- Erros atuais de lint relacionados a efeitos e estado foram eliminados.
-- O shell não contém arquivos temporários ou código morto introduzido por retrabalho.
-- Componentes revisados seguem os guardrails de SSR/hidratação do repositório.
-- A base fica pronta para receber os próximos ajustes de motion, erro e foco.
+**Priority:** high
+
+**Description:** Remover smells e regressões de base antes de continuar refinando a interface, atacando efeitos problemáticos, artefatos locais e desvios de SSR/hidratação.
+
+**Details:**
+
+Corrigir os erros atuais de `react-hooks/set-state-in-effect`, limpar imports mortos e arquivos temporários como `template.tsx.bak`, revisar pontos de hidratação/estado client-only introduzidos nas tasks recentes e deixar a base pronta para os próximos ajustes de acessibilidade e motion. Esta tarefa pode rodar em paralelo com 97 e 98.
+
+**Test Strategy:**
+
+Executar `npm run lint`, validar ausência de artefatos locais acidentais no fluxo principal e revisar manualmente os pontos de SSR/hidratação afetados nas telas operacionais.
+
+## Subtasks
+
+### 96.1. Corrigir efeitos com setState síncrono e estados derivados instáveis
+
+**Status:** done  
+**Dependencies:** None  
+
+Resolver os erros atuais de lint em hooks e componentes de formulário/preferências.
+
+**Details:**
+
+Revisar `src/components/shared/form-draft-components.tsx`, `src/components/shared/novo-cliente-wizard.tsx`, `src/hooks/use-user-preferences.ts` e quaisquer pontos correlatos para eliminar `setState` síncrono em `useEffect`, privilegiando estado derivado, lazy init ou callbacks adequados.
+
+### 96.2. Remover artefatos e imports mortos do shell de navegação
+
+**Status:** done  
+**Dependencies:** None  
+
+Limpar sobras de refactor e reduzir ruído estrutural no app shell.
+
+**Details:**
+
+Eliminar arquivos temporários como `src/app/(app)/template.tsx.bak`, revisar imports não usados em `app-topbar`, `command-palette`, `sidebar` e demais áreas tocadas recentemente, e garantir que o estado atual do shell reflita a intenção real do produto.
+
+### 96.3. Fechar checklist de SSR/hydration safety nas áreas alteradas
+
+**Status:** done  
+**Dependencies:** 96.1, 96.2  
+
+Garantir que os componentes recentes continuam seguros para renderização hidratável.
+
+**Details:**
+
+Repassar os guardrails de `AGENTS.md` nos componentes alterados recentemente, verificando `localStorage`, `window`, datas dinâmicas e estrutura consistente de Radix/Next no primeiro render.

@@ -1,42 +1,62 @@
 # Task ID: 108
 
-**Title:** Convergência de Domínio: Venda vs. Contrato
+**Title:** Convergir domínio de contratos entre matrícula e venda
 
-**Status:** todo
+**Status:** pending
 
-**Dependencies:** 106
+**Dependencies:** 106 ✓
 
 **Priority:** high
 
-**Description:** Resolver a inconsistência terminológica e funcional entre "Matrícula" e "Venda", focando no conceito de "Contrato/Assinatura".
+**Description:** Alinhar terminologia e fluxo funcional para que vendas de plano sejam tratadas como contratos/assinaturas em toda a camada de API, serviços e UI, eliminando discrepâncias entre Matrícula e Venda.
 
 **Details:**
 
-Garantir que toda venda de plano resulte em um contrato rastreável e que o status do aluno (Ativo/Inativo) derive de uma única fonte de verdade comercial.
+- Mapear `Matricula` e `Venda` em `src/lib/types.ts` e criar um tipo/normalizador `Contrato` (novo módulo `src/lib/comercial/contratos.ts` ou alias em `types.ts`) que represente a contratação de plano, incluindo `contratoStatus`, `dataInicioContrato` e vínculo com `origemVendaId`/`matriculaId`.
+- Estender `src/lib/api/matriculas.ts` para aceitar `origemVendaId` (se presente no backend) e criar wrappers `listContratos*`/`createContrato*` em `src/lib/comercial/runtime.ts` que apontem para as APIs de matrícula, mantendo compatibilidade com `listMatriculas*`.
+- Reutilizar e/ou unificar os resolvedores de status de contrato em `src/lib/comercial/plano-flow.ts` e `resolveVendaFluxoStatusFromApi` para que contratos vindos de venda e matrícula tenham a mesma regra de `StatusFluxoComercial`.
+- Padronizar copy e rótulos: ajustar `src/lib/nav-items.ts`, `src/components/shared/cliente-tabs.tsx`, `src/app/(app)/clientes/[id]/page.tsx`, `src/app/(app)/matriculas/page.tsx`, `src/app/(app)/vendas/page.tsx`, `src/app/(app)/vendas/nova/page.tsx`, `src/components/shared/nova-matricula-modal.tsx` e `src/components/shared/sale-receipt-modal.tsx` para usar “Contrato/Assinatura” em vendas de plano e “Venda” para itens avulsos, mantendo badges com `STATUS_CONTRATO_LABEL` e `STATUS_FLUXO_COMERCIAL_LABEL`.
+- Se o modal de contratação for mexido, migrar para `react-hook-form` + `zodResolver` com schema co-localizado e tipos via `z.infer`, evitando validações ad hoc.
+- Ao calcular itens/valores de plano, utilizar o motor unificado do Task 106 (`src/lib/comercial/plano-dry-run.ts` ou `plano-flow.ts`) para que venda e contrato compartilhem a mesma regra de cálculo.
+- Garantir segurança de hidratação (sem `new Date()`/`Math.random()` no render) nos componentes ajustados.
 
 **Test Strategy:**
 
-Verificar se a criação de uma venda de plano reflete instantaneamente no dashboard de matrículas e no status do perfil do aluno.
+- Atualizar testes unitários existentes em `tests/unit/comercial-runtime.spec.ts` e `tests/unit/vendas-api.spec.ts` (ou criar novos) para cobrir os novos helpers de contrato e o mapeamento entre venda/contrato.
+- Rodar smoke manual nas rotas `/matriculas`, `/vendas`, `/vendas/nova` e detalhe de cliente (`/clientes/[id]`), validando rótulos “Contrato/Assinatura”, badges e criação de venda de plano com vínculo de contrato.
+- Se houver E2E, ajustar/rodar `tests/e2e/app-multiunidade-contrato.spec.ts` para garantir que a terminologia de contrato permanece consistente após as mudanças.
 
 ## Subtasks
 
-### 108.1. Unificar Terminologia na UI (Renomear Matrículas para Contratos)
+### 108.1. Modelar Contrato e normalizar Matricula/Venda
 
-**Status:** todo
-**Dependencies:** None
+**Status:** pending  
+**Dependencies:** None  
 
-Ajustar menus e títulos de `/matriculas` para refletirem o conceito de gestão de contratos e assinaturas.
+Criar o tipo/normalizador de Contrato e alinhar dados de matrícula e venda.
 
-### 108.2. Sincronizar Status do Aluno via Evento de Venda
+**Details:**
 
-**Status:** todo
-**Dependencies:** None
+Atualizar `src/lib/types.ts` para incluir o tipo/alias `Contrato` com `contratoStatus`, `dataInicioContrato`, `origemVendaId` e `matriculaId`. Criar módulo `src/lib/comercial/contratos.ts` com funções de normalização a partir de `Matricula`/`Venda`. Estender `src/lib/api/matriculas.ts` para aceitar/normalizar `origemVendaId` e expor no `normalizeMatriculaApiResponse`, mantendo compatibilidade com os campos atuais.
 
-Garantir que o cálculo de status (Ativo/Inativo) no frontend e backend considere o contrato vigente gerado pela venda, eliminando o "limbo" de alunos matriculados sem venda ativa.
+### 108.2. Unificar serviços e regras de status comercial
 
-### 108.3. Unificar Listagem de Vendas e Contratos
+**Status:** pending  
+**Dependencies:** 108.1  
 
-**Status:** todo
-**Dependencies:** None
+Padronizar wrappers de contrato e regra única de status de fluxo.
 
-Garantir que a página de Vendas e a de Contratos compartilhem a mesma base de dados filtrada, evitando discrepância de valores totais.
+**Details:**
+
+Adicionar wrappers `listContratos*`/`createContrato*` em `src/lib/comercial/runtime.ts` apontando para as APIs de matrícula, mantendo `listMatriculas*` intacto. Unificar `resolveVendaFluxoStatusFromApi` com `resolveFluxoComercialStatus` em `src/lib/comercial/plano-flow.ts`, garantindo regra única para vendas e matrículas. Alinhar cálculo de itens/valores de plano usando o motor unificado em `plano-flow.ts` (ou módulo novo da task 106) dentro do fluxo de venda/contratação.
+
+### 108.3. Padronizar UI e copy para Contrato/Assinatura
+
+**Status:** pending  
+**Dependencies:** 108.1, 108.2  
+
+Trocar rótulos e ajustes de UI para refletir contratos de plano.
+
+**Details:**
+
+Atualizar textos e labels em `src/lib/nav-items.ts`, `src/components/shared/cliente-tabs.tsx`, páginas de `clientes/[id]`, `matriculas`, `vendas`, `vendas/nova`, além de `src/components/shared/nova-matricula-modal.tsx` e `src/components/shared/sale-receipt-modal.tsx` para usar “Contrato/Assinatura” para planos e “Venda” para itens avulsos, mantendo badges `STATUS_CONTRATO_LABEL`/`STATUS_FLUXO_COMERCIAL_LABEL`. Verificar segurança de hidratação nos componentes ajustados (evitar `new Date()`/`Math.random()` no render). Se o modal de contratação for alterado, migrar validação para `react-hook-form` + `zodResolver` com schema co-localizado e `z.infer`.

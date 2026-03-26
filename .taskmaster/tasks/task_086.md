@@ -2,9 +2,9 @@
 
 **Title:** Criar bottom navigation mobile para atalhos críticos
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 85
+**Dependencies:** 85 ✓
 
 **Priority:** medium
 

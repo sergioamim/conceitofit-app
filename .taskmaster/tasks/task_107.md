@@ -1,42 +1,54 @@
 # Task ID: 107
 
-**Title:** Padronização de UX e Catálogo Comercial
+**Title:** Padronizar seleção visual de planos e integrar validação real de vouchers/cuponagem
 
-**Status:** todo
+**Status:** done
 
-**Dependencies:** 106
+**Dependencies:** 106 ✓
 
 **Priority:** medium
 
-**Description:** Padronizar componentes visuais de seleção de planos e integrar o motor de Vouchers/Cupons com o backend real.
+**Description:** Unificar a experiência de escolha de planos em todas as jornadas (pública e interna) e substituir a lógica simplificada de cupom em `vendas/nova` por uma integração real com o backend, respeitando regras de validade e aplicação.
 
 **Details:**
 
-Melhorar a experiência de uso unificando como o usuário escolhe planos e como os descontos por cupom são validados e aplicados.
+Mapear os pontos de seleção de plano em `src/app/(public)/adesao/page.tsx`, `src/app/(public)/adesao/cadastro/page.tsx`, `src/app/(public)/adesao/checkout/page.tsx` e `src/app/(app)/vendas/nova/page.tsx`, criando um componente compartilhado (ex.: `src/components/shared/plano-selector-card.tsx`) que receba `Plano`, estado de seleção, badge de destaque e renderize preço/itens usando o cálculo centralizado (preferir o helper de dry-run da Task 106, mantendo compatibilidade com `getPublicPlanQuote` e `buildPlanoVendaItems`). Substituir o markup duplicado por esse componente, mantendo os fluxos com `react-hook-form` via `Controller` (cadastro/checkout) e o comportamento de clique no fluxo de venda interna. Para vouchers/cuponagem, criar uma chamada de validação real no backend (novo client em `src/lib/api/vendas.ts` ou módulo dedicado com `apiRequest`) e expor um service em `src/lib/comercial/runtime.ts` (ex.: `validarVoucherCodigoService`). Adicionar um tipo de resposta em `src/lib/types.ts` para representar o retorno de validação (percentual/valor de desconto, mensagem, escopo, restrições por plano/cliente, etc.) e atualizar `applyCupom` em `src/app/(app)/vendas/nova/page.tsx` para usar essa resposta, removendo a busca manual em `listVouchersService`/`listVoucherCodigosService` e respeitando regras de `planoIds`, `aplicarEm`, `umaVezPorCliente`, período e escopo conforme `docs/BUSINESS_RULES.md` e o gap descrito em `docs/prd.md`. Ajustar o payload de `createVendaService` para enviar `voucherCodigo` e os totais calculados com base na resposta do backend (incluindo `descontoTotal` e, se necessário, descontos por item), garantindo consistência visual no resumo e no recibo.
 
 **Test Strategy:**
 
-Validar aplicação de cupons com diferentes regras (expirado, limite de uso, plano específico) via testes de integração.
+1) Verificar visualmente nas rotas públicas (`/adesao`, `/adesao/cadastro`, `/adesao/checkout`) e em `/vendas/nova` que os cards de plano possuem o mesmo layout, estado de seleção e informação de preço/itens. 2) Em `vendas/nova`, aplicar um cupom válido e confirmar que o desconto exibido corresponde ao retorno do backend e que mensagens de erro aparecem para cupons inválidos ou fora de escopo. 3) Finalizar uma venda com cupom aplicado e confirmar via inspeção de rede/log que `voucherCodigo` e `descontoTotal` são enviados no `createVendaService`, com recibo refletindo os valores. 4) Testar um cupom restrito por plano/cliente para garantir que a UI respeita o bloqueio retornado pela API.
 
 ## Subtasks
 
-### 107.1. Criar Componente Unificado `PlanoSelector`
+### 107.1. Criar componente compartilhado de seleção de plano
 
-**Status:** todo
-**Dependencies:** None
+**Status:** done  
+**Dependencies:** None  
 
-Criar um componente visual padrão (cards com destaque para "popular") para ser usado em todos os fluxos comerciais.
+Padronizar o card de plano e substituir marcação duplicada.
 
-### 107.2. Evoluir Validação de Cupons (Vouchers)
+**Details:**
 
-**Status:** todo
-**Dependencies:** None
+Criar `src/components/shared/plano-selector-card.tsx` com props para `plano`, `selected`, `destaque/badge` e `onSelect`, renderizando preço e itens via helper central (usar o dry-run da Task 106 se existir, mantendo compatibilidade com `getPublicPlanQuote` e `buildPlanoVendaItems`). Substituir o markup atual em `src/app/(public)/adesao/page.tsx`, `src/app/(public)/adesao/cadastro/page.tsx`, `src/app/(public)/adesao/checkout/page.tsx` e `src/app/(app)/vendas/nova/page.tsx`, preservando `Controller` do `react-hook-form` e o clique direto do fluxo interno.
 
-Substituir o desconto fixo de 10% por uma chamada à API de Vouchers que valide quantidade, prazo e compatibilidade com o plano.
+### 107.2. Integrar validação real de voucher via API
 
-### 107.3. Padronizar Feedback de Sucesso e Recibo
+**Status:** done  
+**Dependencies:** 107.1  
 
-**Status:** todo
-**Dependencies:** None
+Trocar a lógica simplificada por validação backend de voucher.
 
-Garantir que o `SaleReceiptModal` seja o padrão para confirmação de qualquer operação comercial que gere cobrança.
+**Details:**
+
+Adicionar tipo de resposta em `src/lib/types.ts` (ex.: `VoucherValidacaoResult` com percentual/valor de desconto, mensagem, escopo, planoIds, aplicarEm, umaVezPorCliente e período). Criar client em `src/lib/api/vendas.ts` ou módulo dedicado usando `apiRequest` para validar voucher, expondo `validarVoucherCodigoService` em `src/lib/comercial/runtime.ts`. Atualizar `use-commercial-flow.ts` para usar o service no `applyCupom`, remover `listVouchersService/listVoucherCodigosService`, aplicar regras de plano/cliente/período e ajustar `descontoTotal` e payload de `createVendaService` com `voucherCodigo` e descontos calculados.
+
+### 107.3. Padronizar feedback de sucesso e recibo com voucher
+
+**Status:** done  
+**Dependencies:** 107.2  
+
+Alinhar o recibo/sucesso aos novos descontos e seleção de plano.
+
+**Details:**
+
+Atualizar `src/components/shared/sale-receipt-modal.tsx` para exibir breakdown de desconto/voucher e mensagens padronizadas, garantindo consistência com o resumo da venda. Ajustar o `src/app/(app)/vendas/nova/page.tsx` para repassar dados de voucher e totais retornados do backend, mantendo a UI estável (sem valores dinâmicos no SSR).

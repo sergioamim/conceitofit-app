@@ -2,9 +2,9 @@
 
 **Title:** Implementar favoritos e acessos recentes na navegação
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 84
+**Dependencies:** 84 ✓
 
 **Priority:** high
 

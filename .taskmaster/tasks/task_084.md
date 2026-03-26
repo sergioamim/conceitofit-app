@@ -2,7 +2,7 @@
 
 **Title:** Adicionar command palette global de navegação
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 83 ✓
 
