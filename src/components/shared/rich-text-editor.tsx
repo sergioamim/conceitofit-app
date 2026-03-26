@@ -59,7 +59,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "min-h-72 w-full rounded-b-xl border-x border-b border-border bg-secondary/30 px-5 py-4 text-sm text-foreground outline-none",
+          "focus-ring-brand min-h-72 w-full rounded-b-xl border-x border-b border-border bg-secondary/30 px-5 py-4 text-sm text-foreground outline-none",
       },
     },
     onUpdate: ({ editor: current }) => {

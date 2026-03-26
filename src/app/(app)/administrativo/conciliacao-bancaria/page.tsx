@@ -414,7 +414,7 @@ export default function ConciliacaoBancariaPage() {
                 value={payload}
                 onChange={(event) => setPayload(event.target.value)}
                 placeholder='Exemplo: [{"chaveConciliacao":"DOC-001","dataMovimento":"2026-02-01","valor":120,"tipoMovimento":"CREDITO","descricao":"Mensalidade"}]'
-                className="h-36 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+                className="focus-ring-brand h-36 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
               />
             </div>
             <div className="space-y-1">

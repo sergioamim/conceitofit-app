@@ -6486,7 +6486,7 @@
         "description": "Substituir o foco global agressivo por uma política previsível de foco nos primitives e componentes compartilhados do design system.",
         "details": "Revisar a task 93 para preservar os ganhos de acessibilidade sem depender de `*:focus-visible`, migrando a estratégia para tokens/classes/componentes base, validando navegação por teclado e evitando ring duplicado ou styling conflitante. Esta é a última etapa da proposta e só deve começar após 96, 97 e 98.",
         "testStrategy": "Navegar por teclado nos principais fluxos operacionais, validar contraste e foco visível em `Button`, `Input`, `Select`, `Tabs`, links e componentes Radix, e confirmar ausência de regressões visuais no shell.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "93",
           "96",
@@ -6500,50 +6500,50 @@
             "title": "Mapear conflitos entre foco global e primitives existentes",
             "description": "Identificar onde o foco está duplicado, inconsistente ou difícil de manter.",
             "details": "Levantar conflitos entre `globals.css` e os primitives/shared components (`Button`, `Input`, `Select`, `Tabs`, links de navegação e afins), priorizando os pontos que hoje recebem ring duplo ou offsets inconsistentes.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 99,
             "parentId": "undefined",
             "testStrategy": "Checklist visual e navegação por teclado nos componentes-base e no app shell.",
-            "updatedAt": "2026-03-25T12:00:00.000Z"
+            "updatedAt": "2026-03-26T10:30:00.000Z"
           },
           {
             "id": 2,
             "title": "Definir tokens e utilitários compartilhados para focus ring",
             "description": "Criar uma convenção única para foco visível e acessível no design system.",
             "details": "Extrair a aparência de foco para classes/tokens reutilizáveis, mantendo o mínimo realmente global e delegando estilo específico aos primitives e componentes compartilhados.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               1
             ],
             "parentTaskId": 99,
             "parentId": "undefined",
             "testStrategy": "Aplicar a convenção em um conjunto piloto de primitives e validar consistência visual/AA.",
-            "updatedAt": "2026-03-25T12:00:00.000Z"
+            "updatedAt": "2026-03-26T10:30:00.000Z"
           },
           {
             "id": 3,
             "title": "Migrar primitives e remover a regra global agressiva",
             "description": "Levar a nova política para os componentes-base e simplificar o CSS global.",
             "details": "Atualizar os primitives prioritários e componentes compartilhados para usar a nova convenção de foco, simplificando `globals.css` e preservando skip links e demais recursos de acessibilidade criados antes.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               2
             ],
             "parentTaskId": 99,
             "parentId": "undefined",
             "testStrategy": "Validar navegação completa por teclado, contraste e ausência de regressões visuais em desktop/mobile.",
-            "updatedAt": "2026-03-25T12:00:00.000Z"
+            "updatedAt": "2026-03-26T10:30:00.000Z"
           }
         ],
-        "updatedAt": "2026-03-25T12:00:00.000Z"
+        "updatedAt": "2026-03-26T10:30:00.000Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-25T13:15:00.000Z",
+      "lastModified": "2026-03-26T10:30:00.000Z",
       "taskCount": 99,
-      "completedCount": 98,
+      "completedCount": 99,
       "tags": [
         "master"
       ]

@@ -8,10 +8,10 @@ Preservar os ganhos da Task 093, mas migrando a política de foco para os primit
 - Só deve começar após as Tasks 096, 097 e 098.
 
 ## Subtarefas
-- [ ] Mapear conflitos entre `*:focus-visible` global e os primitives atuais.
-- [ ] Definir tokens/classes utilitárias compartilhadas para focus ring.
-- [ ] Migrar `Button`, `Input`, `Select`, `Tabs`, links e componentes compartilhados prioritários para a nova convenção.
-- [ ] Simplificar o CSS global preservando skip link, contraste e navegação por teclado.
+- [x] Mapear conflitos entre `*:focus-visible` global e os primitives atuais.
+- [x] Definir tokens/classes utilitárias compartilhadas para focus ring.
+- [x] Migrar `Button`, `Input`, `Select`, `Tabs`, links e componentes compartilhados prioritários para a nova convenção.
+- [x] Simplificar o CSS global preservando skip link, contraste e navegação por teclado.
 
 ## Definição de Pronto (DoP)
 - O foco visível continua forte e acessível.

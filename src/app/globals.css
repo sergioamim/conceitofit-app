@@ -133,10 +133,6 @@
   * {
     @apply border-border;
   }
-  *:focus-visible {
-    @apply outline-none ring-2 ring-gym-accent ring-offset-2 ring-offset-background;
-    box-shadow: 0 0 12px 0px rgba(200, 241, 53, 0.4);
-  }
   body {
     @apply bg-background text-foreground;
     font-size: 16px;
@@ -169,6 +165,12 @@
 }
 
 @layer utilities {
+  .focus-ring-brand {
+    @apply outline-none;
+  }
+  .focus-ring-destructive {
+    @apply outline-none;
+  }
   .text-gym-accent-accessible {
     color: #0e0f11;
   }
@@ -176,4 +178,14 @@
     background-color: var(--gym-accent);
     color: #0e0f11;
   }
+}
+
+:where(.focus-ring-brand):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 241, 53, 0.55), 0 0 0 5px var(--background), 0 0 16px rgba(200, 241, 53, 0.35);
+}
+
+:where(.focus-ring-destructive):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 92, 92, 0.45), 0 0 0 5px var(--background), 0 0 14px rgba(255, 92, 92, 0.22);
 }

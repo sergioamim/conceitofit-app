@@ -313,7 +313,7 @@ export function PlanoForm({
                 )}
               />
             ) : (
-              <textarea {...register("contratoTemplateHtml")} placeholder="<h1>Contrato</h1><p>Cliente: {{NOME_CLIENTE}}</p>" className="h-56 w-full resize-y rounded-md border border-border bg-secondary p-3 text-sm font-mono outline-none" />
+              <textarea {...register("contratoTemplateHtml")} placeholder="<h1>Contrato</h1><p>Cliente: {{NOME_CLIENTE}}</p>" className="focus-ring-brand h-56 w-full resize-y rounded-md border border-border bg-secondary p-3 text-sm font-mono outline-none" />
             )}
           </div>
         </div>

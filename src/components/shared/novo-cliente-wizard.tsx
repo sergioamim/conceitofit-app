@@ -260,7 +260,7 @@ function Step1Dados({
           <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.nome ? "text-destructive" : "text-muted-foreground")}>
             Nome completo *
           </label>
-          <Input placeholder="João da Silva" {...register("nome")} className={cn("bg-card", errors.nome ? "border-destructive focus-visible:ring-destructive" : "border-border")} />
+          <Input placeholder="João da Silva" {...register("nome")} className={cn("bg-card", errors.nome ? "border-destructive focus-ring-destructive" : "border-border")} />
           <FieldAsyncFeedback status={errors.nome ? "error" : "idle"} message={errors.nome?.message} />
         </div>
 
@@ -269,7 +269,7 @@ function Step1Dados({
           <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.email ? "text-destructive" : "text-muted-foreground")}>
             E-mail (opcional)
           </label>
-          <Input type="email" placeholder="joao@email.com" {...register("email")} className={cn("bg-card", errors.email ? "border-destructive focus-visible:ring-destructive" : "border-border")} />
+          <Input type="email" placeholder="joao@email.com" {...register("email")} className={cn("bg-card", errors.email ? "border-destructive focus-ring-destructive" : "border-border")} />
           <FieldAsyncFeedback status={errors.email?.message ? "error" : emailStatus} message={errors.email?.message || emailMsg} />
         </div>
 
@@ -279,7 +279,7 @@ function Step1Dados({
             Telefone *
           </label>
           <Controller name="telefone" control={control} render={({ field }) => (
-            <PhoneInput placeholder="(11) 99999-0000" {...field} className={cn("bg-card", errors.telefone ? "border-destructive focus-visible:ring-destructive" : "border-border")} />
+            <PhoneInput placeholder="(11) 99999-0000" {...field} className={cn("bg-card", errors.telefone ? "border-destructive focus-ring-destructive" : "border-border")} />
           )} />
           <FieldAsyncFeedback status={errors.telefone ? "error" : "idle"} message={errors.telefone?.message} />
         </div>
@@ -298,7 +298,7 @@ function Step1Dados({
             CPF *
           </label>
           <Controller name="cpf" control={control} render={({ field }) => (
-            <MaskedInput mask="cpf" placeholder="000.000.000-00" {...field} className={cn("bg-card", errors.cpf ? "border-destructive focus-visible:ring-destructive" : "border-border")} />
+            <MaskedInput mask="cpf" placeholder="000.000.000-00" {...field} className={cn("bg-card", errors.cpf ? "border-destructive focus-ring-destructive" : "border-border")} />
           )} />
           <FieldAsyncFeedback status={errors.cpf?.message ? "error" : cpfStatus} message={errors.cpf?.message || cpfMsg} />
         </div>

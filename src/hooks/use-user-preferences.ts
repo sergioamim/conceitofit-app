@@ -19,6 +19,20 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 // Singleton para o Client Side 
 let globalPreferences: UserPreferences = { ...DEFAULT_PREFERENCES };
 let globalHydrated = false;
+let currentSnapshot: UserPreferencesSnapshot = {
+  preferences: globalPreferences,
+  hydrated: globalHydrated,
+};
+
+type UserPreferencesSnapshot = {
+  preferences: UserPreferences;
+  hydrated: boolean;
+};
+
+const serverSnapshot: UserPreferencesSnapshot = {
+  preferences: DEFAULT_PREFERENCES,
+  hydrated: false,
+};
 
 function loadFromStorage() {
   if (typeof window === "undefined") return;
@@ -33,37 +47,28 @@ function loadFromStorage() {
     }
   }
   globalHydrated = true;
+  updateSnapshot();
 }
 
 function saveToStorageAndNotify(newPrefs: UserPreferences) {
   globalPreferences = newPrefs;
+  updateSnapshot();
   if (typeof window !== "undefined") {
     localStorage.setItem(PREFERENCES_KEY, JSON.stringify(newPrefs));
     window.dispatchEvent(new Event(SYNC_EVENT));
   }
 }
 
-type UserPreferencesSnapshot = {
-  preferences: UserPreferences;
-  hydrated: boolean;
-};
-
 function getPreferencesSnapshot(): UserPreferencesSnapshot {
   if (typeof window !== "undefined" && !globalHydrated) {
     loadFromStorage();
   }
 
-  return {
-    preferences: globalPreferences,
-    hydrated: globalHydrated,
-  };
+  return currentSnapshot;
 }
 
 function getServerPreferencesSnapshot(): UserPreferencesSnapshot {
-  return {
-    preferences: DEFAULT_PREFERENCES,
-    hydrated: false,
-  };
+  return serverSnapshot;
 }
 
 function subscribeToPreferences(onStoreChange: () => void) {
@@ -86,6 +91,13 @@ function subscribeToPreferences(onStoreChange: () => void) {
   return () => {
     window.removeEventListener(SYNC_EVENT, handleSync);
     window.removeEventListener("storage", handleStorage);
+  };
+}
+
+function updateSnapshot() {
+  currentSnapshot = {
+    preferences: globalPreferences,
+    hydrated: globalHydrated,
   };
 }
 

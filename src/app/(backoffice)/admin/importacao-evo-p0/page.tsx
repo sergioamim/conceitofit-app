@@ -4215,7 +4215,7 @@ function ImportacaoEvoP0PageContent() {
                           key={key}
                           className={cn(
                             "border-border",
-                            canOpenDetails ? "cursor-pointer transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent" : ""
+                            canOpenDetails ? "focus-ring-brand cursor-pointer transition hover:bg-muted/40" : ""
                           )}
                           role={canOpenDetails ? "link" : undefined}
                           tabIndex={canOpenDetails ? 0 : -1}

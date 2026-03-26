@@ -49,7 +49,7 @@ export function CommandPalette() {
             placeholder="O que você está procurando? (Páginas, clientes...)"
             value={search}
             onValueChange={setSearch}
-            className="flex h-12 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            className="focus-ring-brand flex h-12 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
           />
           <div className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
             ESC
@@ -64,14 +64,14 @@ export function CommandPalette() {
           <Command.Group heading="Ações Rápidas" className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             <Command.Item
               onSelect={() => onSelect("/dashboard")}
-              className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground aria-selected:bg-secondary aria-selected:text-gym-accent"
+              className="focus-ring-brand flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground aria-selected:bg-secondary aria-selected:text-gym-accent"
             >
               <LayoutDashboard className="size-4" />
               <span>Dashboard Principal</span>
             </Command.Item>
             <Command.Item
               onSelect={() => onSelect("/vendas/nova")}
-              className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground aria-selected:bg-secondary aria-selected:text-gym-accent"
+              className="focus-ring-brand flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground aria-selected:bg-secondary aria-selected:text-gym-accent"
             >
               <ShoppingCart className="size-4" />
               <span>Nova Venda</span>
@@ -87,7 +87,7 @@ export function CommandPalette() {
                 <Command.Item
                   key={item.href}
                   onSelect={() => onSelect(item.href)}
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground aria-selected:bg-secondary aria-selected:text-gym-accent"
+                  className="focus-ring-brand flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground aria-selected:bg-secondary aria-selected:text-gym-accent"
                 >
                   <Icon className="size-4" />
                   <span>{item.label}</span>

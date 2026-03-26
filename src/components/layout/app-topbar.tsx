@@ -77,7 +77,7 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
             });
             document.dispatchEvent(event);
           }}
-          className="group relative flex h-9 w-full max-w-[240px] items-center gap-2 rounded-md border border-input bg-secondary/50 px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:max-w-[320px]"
+          className="focus-ring-brand group relative flex h-9 w-full max-w-[240px] items-center gap-2 rounded-md border border-input bg-secondary/50 px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:max-w-[320px]"
         >
           <Search className="size-4 shrink-0 transition-colors group-hover:text-gym-accent" />
           <span className="flex-1 text-left">Buscar ou navegar...</span>

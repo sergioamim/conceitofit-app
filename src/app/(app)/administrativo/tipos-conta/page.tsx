@@ -239,7 +239,7 @@ export default function TiposContaPage() {
                 value={form.descricao}
                 onChange={(e) => setForm((v) => ({ ...v, descricao: e.target.value }))}
                 placeholder="Opcional"
-                className="h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+                className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
               />
             </div>
           </div>

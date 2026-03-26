@@ -889,7 +889,7 @@ export default function ContasPagarPage() {
               <textarea
                 value={novaConta.observacoes}
                 onChange={(e) => setNovaConta((v) => ({ ...v, observacoes: e.target.value }))}
-                className="h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+                className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
               />
             </div>
           </div>
@@ -1156,7 +1156,7 @@ export default function ContasPagarPage() {
                     onChange={(e) =>
                       setPagamentoNoCadastro((p) => ({ ...p, observacoes: e.target.value }))
                     }
-                    className="h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+                    className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
                   />
                 </div>
               </div>
@@ -1246,7 +1246,7 @@ export default function ContasPagarPage() {
                 onChange={(e) =>
                   setPagamento((v) => ({ ...v, observacoes: e.target.value }))
                 }
-                className="h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+                className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
               />
             </div>
           </div>
@@ -1449,7 +1449,7 @@ export default function ContasPagarPage() {
               <textarea
                 value={edicaoConta.observacoes}
                 onChange={(e) => setEdicaoConta((v) => ({ ...v, observacoes: e.target.value }))}
-                className="h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+                className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
               />
             </div>
           </div>
