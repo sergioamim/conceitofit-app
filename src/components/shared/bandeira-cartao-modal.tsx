@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
 import type { BandeiraCartao } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
+
+const FIELDS: FormFieldConfig[] = [
+  { name: "nome", label: "Nome *", type: "text", required: true },
+  { name: "taxaPercentual", label: "Taxa (%)", type: "number", min: 0, step: "0.01", className: "space-y-1.5" },
+  { name: "diasRepasse", label: "Dias para repasse", type: "number", min: 0, step: "1", className: "space-y-1.5" },
+  { name: "ativo", label: "Ativo", type: "checkbox", checkboxLabel: "Disponivel" },
+];
 
 type BandeiraCartaoFormValues = {
   nome: string;
@@ -42,19 +45,6 @@ export function BandeiraCartaoModal({
   onSave: (data: Omit<BandeiraCartao, "id">, id?: string) => void;
   initial?: BandeiraCartao | null;
 }) {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<BandeiraCartaoFormValues>({
-    defaultValues: toFormValues(initial),
-  });
-
-  useEffect(() => {
-    reset(toFormValues(initial));
-  }, [initial, open, reset]);
-
   function handleSave(values: BandeiraCartaoFormValues) {
     const nome = values.nome.trim();
     if (!nome) return;
@@ -70,60 +60,16 @@ export function BandeiraCartaoModal({
   }
 
   return (
-    <Dialog
+    <CrudModal<BandeiraCartaoFormValues>
       open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
-      }}
-    >
-      <DialogContent className="border-border bg-card sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
-            {initial ? "Editar bandeira" : "Nova bandeira"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(handleSave)}>
-          <div className="grid gap-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Nome *
-              </label>
-              <Input
-                {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome da bandeira." })}
-                className="border-border bg-secondary"
-              />
-              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Taxa (%)
-                </label>
-                <Input type="number" min={0} step="0.01" {...register("taxaPercentual")} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Dias para repasse
-                </label>
-                <Input type="number" min={0} step="1" {...register("diasRepasse")} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ativo</label>
-                <div className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" {...register("ativo")} />
-                  <span className="text-muted-foreground">Disponível</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="border-border">
-              Cancelar
-            </Button>
-            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      onClose={onClose}
+      onSave={handleSave}
+      initial={toFormValues(initial)}
+      initialId={initial?.id}
+      title="Nova bandeira"
+      editTitle="Editar bandeira"
+      fields={FIELDS}
+      fieldsClassName="grid gap-4 py-2"
+    />
   );
 }

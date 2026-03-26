@@ -1,21 +1,33 @@
 "use client";
 
-import { useEffect } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import type { FormaPagamento, TipoFormaPagamento } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
 
-const TIPO_LABEL: Record<TipoFormaPagamento, string> = {
-  DINHEIRO: "Dinheiro",
-  PIX: "PIX",
-  CARTAO_CREDITO: "Cartão de Crédito",
-  CARTAO_DEBITO: "Cartão de Débito",
-  BOLETO: "Boleto",
-  RECORRENTE: "Recorrente",
-};
+const TIPO_OPTIONS: { value: string; label: string }[] = [
+  { value: "DINHEIRO", label: "Dinheiro" },
+  { value: "PIX", label: "PIX" },
+  { value: "CARTAO_CREDITO", label: "Cartao de Credito" },
+  { value: "CARTAO_DEBITO", label: "Cartao de Debito" },
+  { value: "BOLETO", label: "Boleto" },
+  { value: "RECORRENTE", label: "Recorrente" },
+];
+
+const FIELDS: FormFieldConfig[] = [
+  { name: "nome", label: "Nome *", type: "text", required: true },
+  { name: "tipo", label: "Tipo *", type: "select", options: TIPO_OPTIONS, className: "space-y-1.5" },
+  { name: "taxaPercentual", label: "Taxa (%)", type: "number", min: 0, step: "0.01", className: "space-y-1.5" },
+  { name: "parcelasMax", label: "Parcelas maximas", type: "number", min: 1, step: "1", className: "space-y-1.5" },
+  { name: "ativo", label: "Ativo", type: "checkbox", checkboxLabel: "Disponivel" },
+  {
+    name: "emitirAutomaticamente",
+    label: "Emissao de NFSe",
+    type: "checkbox",
+    checkboxLabel: "Emitir NFSe automaticamente ao receber pagamento",
+    helperText: "Ao marcar, toda baixa desse tipo de pagamento dispara emissao automatica de NFSe.",
+  },
+  { name: "instrucoes", label: "Instrucoes", type: "text" },
+];
 
 type FormaPagamentoFormValues = {
   nome: string;
@@ -50,6 +62,19 @@ function toFormValues(initial?: FormaPagamento | null): FormaPagamentoFormValues
   };
 }
 
+function RecorrenteNote() {
+  const { control } = useFormContext<FormaPagamentoFormValues>();
+  const tipo = useWatch({ control, name: "tipo" });
+
+  if (tipo !== "RECORRENTE") return null;
+
+  return (
+    <p className="text-xs text-muted-foreground">
+      Formas recorrentes devem manter as parcelas e instrucoes alinhadas a cobranca automatica.
+    </p>
+  );
+}
+
 export function FormaPagamentoModal({
   open,
   onClose,
@@ -61,21 +86,6 @@ export function FormaPagamentoModal({
   onSave: (data: Omit<FormaPagamento, "id" | "tenantId">, id?: string) => void;
   initial?: FormaPagamento | null;
 }) {
-  const {
-    register,
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<FormaPagamentoFormValues>({
-    defaultValues: toFormValues(initial),
-  });
-  const tipo = useWatch({ control, name: "tipo" });
-
-  useEffect(() => {
-    reset(toFormValues(initial));
-  }, [initial, open, reset]);
-
   function handleSave(values: FormaPagamentoFormValues) {
     const nome = values.nome.trim();
     if (!nome) return;
@@ -94,96 +104,16 @@ export function FormaPagamentoModal({
   }
 
   return (
-    <Dialog
+    <CrudModal<FormaPagamentoFormValues>
       open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
-      }}
-    >
-      <DialogContent className="border-border bg-card sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
-            {initial ? "Editar forma de pagamento" : "Nova forma de pagamento"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(handleSave)}>
-          <div className="grid gap-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-              <Input
-                {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome da forma de pagamento." })}
-                className="border-border bg-secondary"
-              />
-              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo *</label>
-                <Controller
-                  control={control}
-                  name="tipo"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={(value) => field.onChange(value as TipoFormaPagamento)}>
-                      <SelectTrigger className="w-full border-border bg-secondary">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent className="border-border bg-card">
-                        {Object.entries(TIPO_LABEL).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Taxa (%)</label>
-                <Input type="number" min={0} step="0.01" {...register("taxaPercentual")} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parcelas máximas</label>
-                <Input type="number" min={1} step="1" {...register("parcelasMax")} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ativo</label>
-                <div className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" {...register("ativo")} />
-                  <span className="text-muted-foreground">Disponível</span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Emissão de NFSe</label>
-                <div className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" {...register("emitirAutomaticamente")} />
-                  <span className="text-muted-foreground">
-                    Emitir NFSe automaticamente ao receber pagamento
-                  </span>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Ao marcar, toda baixa desse tipo de pagamento dispara emissão automática de NFSe.
-                </p>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Instruções</label>
-              <Input {...register("instrucoes")} className="border-border bg-secondary" />
-            </div>
-            {tipo === "RECORRENTE" ? (
-              <p className="text-xs text-muted-foreground">
-                Formas recorrentes devem manter as parcelas e instruções alinhadas à cobrança automática.
-              </p>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="border-border">
-              Cancelar
-            </Button>
-            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      onClose={onClose}
+      onSave={handleSave}
+      initial={toFormValues(initial)}
+      initialId={initial?.id}
+      title="Nova forma de pagamento"
+      editTitle="Editar forma de pagamento"
+      fields={FIELDS}
+      renderAfterFields={() => <RecorrenteNote />}
+    />
   );
 }

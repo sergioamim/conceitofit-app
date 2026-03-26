@@ -1,0 +1,261 @@
+"use client";
+
+import { useEffect, type ReactNode } from "react";
+import {
+  useForm,
+  Controller,
+  FormProvider,
+  type DefaultValues,
+  type FieldValues,
+  type Path,
+} from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z, type ZodTypeAny } from "zod";
+import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+/* ---------- FormFieldConfig ---------- */
+
+export type FormFieldConfig = {
+  name: string;
+  label: string;
+  type: "text" | "number" | "textarea" | "select" | "checkbox";
+  required?: boolean;
+  placeholder?: string;
+  min?: number;
+  max?: number;
+  step?: string;
+  options?: { value: string; label: string }[];
+  /** Extra class on the field wrapper */
+  className?: string;
+  /** For checkbox: label shown next to the checkbox */
+  checkboxLabel?: string;
+  /** For checkbox: helper text below */
+  helperText?: string;
+};
+
+/* ---------- Props ---------- */
+
+export type CrudModalProps<T extends FieldValues> = {
+  open: boolean;
+  onClose: () => void;
+  onSave: (data: T, id?: string) => void;
+  initial?: Partial<T> | null;
+  initialId?: string;
+  title: string;
+  editTitle?: string;
+  fields: FormFieldConfig[];
+  /** Override the auto-built zod schema */
+  schema?: ZodTypeAny;
+  /** Grid class for the fields container (default: "grid gap-4") */
+  fieldsClassName?: string;
+  /** DialogContent extra class */
+  contentClassName?: string;
+  /** Render extra content after the auto-generated fields (receives form context via FormProvider) */
+  renderAfterFields?: () => ReactNode;
+  /** Submit button labels */
+  submitLabel?: string;
+  editSubmitLabel?: string;
+};
+
+/* ---------- Build minimal zod schema from fields ---------- */
+
+function buildSchemaFromFields(fields: FormFieldConfig[]): ZodTypeAny {
+  const shape: Record<string, ZodTypeAny> = {};
+  for (const field of fields) {
+    if (field.required && (field.type === "text" || field.type === "textarea")) {
+      shape[field.name] = requiredTrimmedString(`Informe ${field.label.toLowerCase().replace(/\s*\*$/, "")}.`);
+    } else if (field.type === "checkbox") {
+      shape[field.name] = z.boolean();
+    } else {
+      shape[field.name] = z.any();
+    }
+  }
+  return z.object(shape).passthrough();
+}
+
+/* ---------- Field renderer ---------- */
+
+function renderField<T extends FieldValues>(
+  field: FormFieldConfig,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  form: ReturnType<typeof useForm<any>>,
+) {
+  const { register, control, formState: { errors } } = form;
+  const fieldPath = field.name as Path<T>;
+  const error = errors[field.name];
+
+  if (field.type === "checkbox") {
+    return (
+      <div key={field.name} className={field.className}>
+        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {field.label}
+        </label>
+        <div className="flex items-center gap-2 text-sm">
+          <input type="checkbox" {...register(fieldPath)} />
+          {field.checkboxLabel ? (
+            <span className="text-muted-foreground">{field.checkboxLabel}</span>
+          ) : null}
+        </div>
+        {field.helperText ? (
+          <p className="text-[11px] text-muted-foreground">{field.helperText}</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (field.type === "select" && field.options) {
+    return (
+      <div key={field.name} className={field.className ?? "space-y-1.5"}>
+        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {field.label}
+        </label>
+        <Controller
+          control={control}
+          name={fieldPath}
+          render={({ field: controllerField }) => (
+            <Select
+              value={controllerField.value as string}
+              onValueChange={(value) => controllerField.onChange(value)}
+            >
+              <SelectTrigger className="w-full border-border bg-secondary">
+                <SelectValue placeholder={field.placeholder ?? "Selecione"} />
+              </SelectTrigger>
+              <SelectContent className="border-border bg-card">
+                {field.options!.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {error ? <p className="text-xs text-gym-danger">{String(error.message)}</p> : null}
+      </div>
+    );
+  }
+
+  if (field.type === "textarea") {
+    return (
+      <div key={field.name} className={field.className ?? "space-y-1.5"}>
+        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {field.label}
+        </label>
+        <Textarea
+          {...register(fieldPath)}
+          placeholder={field.placeholder}
+          className="border-border bg-secondary"
+        />
+        {error ? <p className="text-xs text-gym-danger">{String(error.message)}</p> : null}
+      </div>
+    );
+  }
+
+  // text | number
+  return (
+    <div key={field.name} className={field.className ?? "space-y-1.5"}>
+      <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {field.label}
+      </label>
+      <Input
+        type={field.type === "number" ? "number" : "text"}
+        min={field.min}
+        max={field.max}
+        step={field.step}
+        placeholder={field.placeholder}
+        {...register(fieldPath)}
+        className="border-border bg-secondary"
+      />
+      {error ? <p className="text-xs text-gym-danger">{String(error.message)}</p> : null}
+    </div>
+  );
+}
+
+/* ---------- CrudModal ---------- */
+
+export function CrudModal<T extends FieldValues>({
+  open,
+  onClose,
+  onSave,
+  initial,
+  initialId,
+  title,
+  editTitle,
+  fields,
+  schema,
+  fieldsClassName,
+  contentClassName,
+  renderAfterFields,
+  submitLabel,
+  editSubmitLabel,
+}: CrudModalProps<T>) {
+  const isEditing = !!initial;
+  const resolvedSchema = schema ?? buildSchemaFromFields(fields);
+
+  const form = useForm<T>({
+    resolver: zodResolver(resolvedSchema),
+    defaultValues: (initial ?? {}) as DefaultValues<T>,
+  });
+
+  const { handleSubmit, reset } = form;
+
+  useEffect(() => {
+    reset((initial ?? {}) as DefaultValues<T>);
+  }, [initial, open, reset]);
+
+  function onSubmit(values: T) {
+    onSave(values, initialId);
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <DialogContent className={contentClassName ?? "border-border bg-card sm:max-w-lg"}>
+        <DialogHeader>
+          <DialogTitle className="font-display text-lg font-bold">
+            {isEditing ? (editTitle ?? title) : title}
+          </DialogTitle>
+        </DialogHeader>
+        <FormProvider {...form}>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className={fieldsClassName ?? "grid gap-4 py-2"}>
+              {fields.map((field) => renderField<T>(field, form))}
+              {renderAfterFields?.()}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} className="border-border">
+                Cancelar
+              </Button>
+              <Button type="submit">
+                {isEditing
+                  ? (editSubmitLabel ?? "Salvar")
+                  : (submitLabel ?? "Criar")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </FormProvider>
+      </DialogContent>
+    </Dialog>
+  );
+}
