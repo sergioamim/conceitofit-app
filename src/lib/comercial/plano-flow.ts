@@ -1,4 +1,5 @@
 import type {
+  Convenio,
   Matricula,
   Pagamento,
   PagamentoResumo,
@@ -17,6 +18,35 @@ export type PlanoVendaItemDraft = {
   desconto: number;
   detalhes?: string;
 };
+
+export interface PlanoDryRunResult {
+  items: PlanoVendaItemDraft[];
+  subtotal: number;
+  descontoConvenio: number;
+  descontoCupom: number;
+  descontoManual: number;
+  descontoTotal: number;
+  total: number;
+  planoContexto: {
+    planoId: string;
+    dataInicio: string;
+    descontoPlano: number;
+    motivoDesconto?: string;
+    renovacaoAutomatica: boolean;
+    convenioId?: string;
+  };
+}
+
+export interface PlanoDryRunParams {
+  plano: Plano;
+  dataInicio: string;
+  parcelasAnuidade: number;
+  manualDiscount: number;
+  motivoDesconto?: string;
+  couponPercent?: number;
+  convenio?: Convenio;
+  renovacaoAutomatica: boolean;
+}
 
 export const STATUS_CONTRATO_LABEL: Record<StatusContratoPlano, string> = {
   SEM_CONTRATO: "Sem contrato",
@@ -77,6 +107,60 @@ export function buildPlanoVendaItems(plano: Plano, parcelasAnuidade: number): Pl
   }
 
   return items;
+}
+
+/**
+ * Realiza o cálculo centralizado de uma venda de plano (Dry-Run).
+ * Garante que Nova Venda, Wizard e Modal usem a mesma regra de negócio.
+ */
+export function planoDryRun(params: PlanoDryRunParams): PlanoDryRunResult {
+  const {
+    plano,
+    dataInicio,
+    parcelasAnuidade,
+    manualDiscount,
+    motivoDesconto,
+    couponPercent = 0,
+    convenio,
+    renovacaoAutomatica,
+  } = params;
+
+  // 1. Gerar itens base (Plano + Matrícula + Anuidade)
+  const items = buildPlanoVendaItems(plano, parcelasAnuidade);
+  const subtotal = items.reduce((sum, item) => sum + item.valorUnitario * item.quantidade, 0);
+
+  // 2. Calcular descontos
+  // Desconto de convênio aplica sobre o valor do plano (item base)
+  const descontoConvenio = convenio
+    ? (Number(plano.valor ?? 0) * (convenio.descontoPercentual ?? 0)) / 100
+    : 0;
+
+  // Desconto de cupom aplica sobre o valor do plano
+  const descontoCupom = (Number(plano.valor ?? 0) * couponPercent) / 100;
+
+  // Desconto manual (valor fixo informado)
+  const descontoManual = Math.max(0, manualDiscount);
+
+  const descontoTotal = descontoConvenio + descontoCupom + descontoManual;
+  const total = Math.max(0, subtotal - descontoTotal);
+
+  return {
+    items,
+    subtotal,
+    descontoConvenio,
+    descontoCupom,
+    descontoManual,
+    descontoTotal,
+    total,
+    planoContexto: {
+      planoId: plano.id,
+      dataInicio,
+      descontoPlano: descontoManual + descontoCupom, // Unificamos descontos no plano
+      motivoDesconto,
+      renovacaoAutomatica,
+      convenioId: convenio?.id,
+    },
+  };
 }
 
 export function resolvePlanoIdFromVendaItems(
