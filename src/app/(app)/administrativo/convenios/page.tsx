@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   createConvenioApi,
   deleteConvenioApi,
@@ -16,53 +16,51 @@ import { ConvenioModal } from "@/components/shared/convenio-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { useCrudOperations } from "@/hooks/use-crud-operations";
 
 export default function ConveniosPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const { tenantId, tenantResolved } = useTenantContext();
-  const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Convenio | null>(null);
 
-  async function load() {
-    if (!tenantId) return;
-    const [cvs, pls] = await Promise.all([
-      listConveniosApi(false),
-      listPlanosApi({ tenantId, apenasAtivos: false }),
-    ]);
-    setConvenios(cvs);
-    setPlanos(pls);
-  }
+  const crudOptions = useMemo(
+    () => ({
+      listFn: async () => {
+        if (!tenantId) return [];
+        const [cvs, pls] = await Promise.all([
+          listConveniosApi(false),
+          listPlanosApi({ tenantId, apenasAtivos: false }),
+        ]);
+        setPlanos(pls);
+        return cvs;
+      },
+      toggleFn: toggleConvenioApi,
+      deleteFn: deleteConvenioApi,
+    }),
+    [tenantId]
+  );
 
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void Promise.all([
-      listConveniosApi(false),
-      listPlanosApi({ tenantId, apenasAtivos: false }),
-    ]).then(([cvs, pls]) => {
-      setConvenios(cvs);
-      setPlanos(pls);
-    });
-  }, [tenantId, tenantResolved]);
+  const { items: convenios, reload } = useCrudOperations<Convenio>(crudOptions);
 
   async function handleSave(data: Omit<Convenio, "id">, id?: string) {
     if (id) await updateConvenioApi(id, data);
     else await createConvenioApi(data);
     setModalOpen(false);
     setEditing(null);
-    await load();
+    await reload();
   }
 
   async function handleToggle(id: string) {
     await toggleConvenioApi(id);
-    await load();
+    await reload();
   }
 
   function handleDelete(id: string) {
     confirm("Remover este convênio?", async () => {
       await deleteConvenioApi(id);
-      await load();
+      await reload();
     });
   }
 

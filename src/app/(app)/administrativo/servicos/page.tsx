@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   createServicoApi,
   deleteServicoApi,
@@ -15,21 +15,18 @@ import { DataTableRowActions } from "@/components/shared/data-table-row-actions"
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { useCrudOperations } from "@/hooks/use-crud-operations";
 
 export default function ServicosPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
-  const [servicos, setServicos] = useState<Servico[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Servico | null>(null);
 
-  async function load() {
-    const data = await listServicosApi(false);
-    setServicos(data);
-  }
-
-  useEffect(() => {
-    void listServicosApi(false).then(setServicos);
-  }, []);
+  const { items: servicos, reload } = useCrudOperations<Servico>({
+    listFn: () => listServicosApi(false),
+    toggleFn: toggleServicoApi,
+    deleteFn: deleteServicoApi,
+  });
 
   async function handleSave(
     data: Omit<Servico, "id" | "tenantId">,
@@ -50,18 +47,18 @@ export default function ServicosPage() {
     }
     setModalOpen(false);
     setEditing(null);
-    await load();
+    await reload();
   }
 
   async function handleToggle(id: string) {
     await toggleServicoApi(id);
-    await load();
+    await reload();
   }
 
   function handleDelete(id: string) {
     confirm("Remover este serviço?", async () => {
       await deleteServicoApi(id);
-      await load();
+      await reload();
     });
   }
 

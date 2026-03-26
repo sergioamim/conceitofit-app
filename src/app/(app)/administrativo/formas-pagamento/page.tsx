@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   createFormaPagamentoApi,
   deleteFormaPagamentoApi,
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { FormaPagamentoModal } from "@/components/shared/forma-pagamento-modal";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { useCrudOperations } from "@/hooks/use-crud-operations";
 
 const TIPO_LABEL: Record<TipoFormaPagamento, string> = {
   DINHEIRO: "Dinheiro",
@@ -27,20 +28,28 @@ const TIPO_LABEL: Record<TipoFormaPagamento, string> = {
 export default function FormasPagamentoPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const { tenantId, tenantResolved } = useTenantContext();
-  const [formas, setFormas] = useState<FormaPagamento[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<FormaPagamento | null>(null);
 
-  async function load() {
-    if (!tenantId) return;
-    const data = await listFormasPagamentoApi({ tenantId, apenasAtivas: false });
-    setFormas(data);
-  }
+  const crudOptions = useMemo(
+    () => ({
+      listFn: async () => {
+        if (!tenantId) return [];
+        return listFormasPagamentoApi({ tenantId, apenasAtivas: false });
+      },
+      toggleFn: async (id: string) => {
+        if (!tenantId) return;
+        await toggleFormaPagamentoApi({ tenantId, id });
+      },
+      deleteFn: async (id: string) => {
+        if (!tenantId) return;
+        await deleteFormaPagamentoApi({ tenantId, id });
+      },
+    }),
+    [tenantId]
+  );
 
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void listFormasPagamentoApi({ tenantId, apenasAtivas: false }).then(setFormas);
-  }, [tenantId, tenantResolved]);
+  const { items: formas, reload } = useCrudOperations<FormaPagamento>(crudOptions);
 
   async function handleSave(
     data: Omit<FormaPagamento, "id" | "tenantId">,
@@ -63,20 +72,20 @@ export default function FormasPagamentoPage() {
     }
     setModalOpen(false);
     setEditing(null);
-    await load();
+    await reload();
   }
 
   async function handleToggle(id: string) {
     if (!tenantId) return;
     await toggleFormaPagamentoApi({ tenantId, id });
-    await load();
+    await reload();
   }
 
   function handleDelete(id: string) {
     if (!tenantId) return;
     confirm("Remover esta forma de pagamento?", async () => {
       await deleteFormaPagamentoApi({ tenantId, id });
-      await load();
+      await reload();
     });
   }
 

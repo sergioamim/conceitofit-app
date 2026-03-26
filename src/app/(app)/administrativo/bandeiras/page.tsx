@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   createBandeiraCartaoApi,
   deleteBandeiraCartaoApi,
@@ -12,67 +12,40 @@ import type { BandeiraCartao } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { BandeiraCartaoModal } from "@/components/shared/bandeira-cartao-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { useCrudOperations } from "@/hooks/use-crud-operations";
 
 export default function BandeirasPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
-  const [bandeiras, setBandeiras] = useState<BandeiraCartao[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<BandeiraCartao | null>(null);
-  const [error, setError] = useState("");
 
-  async function load() {
-    try {
-      setError("");
-      const data = await listBandeirasCartaoApi();
-      setBandeiras(data);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-      setBandeiras([]);
-    }
-  }
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
-  }, []);
+  const { items: bandeiras, error, reload } = useCrudOperations<BandeiraCartao>({
+    listFn: listBandeirasCartaoApi,
+    toggleFn: toggleBandeiraCartaoApi,
+    deleteFn: deleteBandeiraCartaoApi,
+  });
 
   async function handleSave(data: Omit<BandeiraCartao, "id">, id?: string) {
-    try {
-      setError("");
-      if (id) {
-        await updateBandeiraCartaoApi({ id, ...data });
-      } else {
-        await createBandeiraCartaoApi(data);
-      }
-      setModalOpen(false);
-      setEditing(null);
-      await load();
-    } catch (submitError) {
-      setError(normalizeErrorMessage(submitError));
+    if (id) {
+      await updateBandeiraCartaoApi({ id, ...data });
+    } else {
+      await createBandeiraCartaoApi(data);
     }
+    setModalOpen(false);
+    setEditing(null);
+    await reload();
   }
 
   async function handleToggle(id: string) {
-    try {
-      setError("");
-      await toggleBandeiraCartaoApi(id);
-      await load();
-    } catch (submitError) {
-      setError(normalizeErrorMessage(submitError));
-    }
+    await toggleBandeiraCartaoApi(id);
+    await reload();
   }
 
   function handleDelete(id: string) {
     confirm("Remover esta bandeira?", async () => {
-      try {
-        setError("");
-        await deleteBandeiraCartaoApi(id);
-        await load();
-      } catch (submitError) {
-        setError(normalizeErrorMessage(submitError));
-      }
+      await deleteBandeiraCartaoApi(id);
+      await reload();
     });
   }
 

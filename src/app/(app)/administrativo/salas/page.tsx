@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createSalaApi, deleteSalaApi, listSalasApi, toggleSalaApi, updateSalaApi } from "@/lib/api/administrativo";
 import type { Sala } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -8,21 +8,18 @@ import { DataTableRowActions } from "@/components/shared/data-table-row-actions"
 import { SalaModal } from "@/components/shared/sala-modal";
 import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { useCrudOperations } from "@/hooks/use-crud-operations";
 
 export default function SalasPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
-  const [salas, setSalas] = useState<Sala[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Sala | null>(null);
 
-  async function load() {
-    const data = await listSalasApi(false);
-    setSalas(data);
-  }
-
-  useEffect(() => {
-    void listSalasApi(false).then(setSalas);
-  }, []);
+  const { items: salas, reload } = useCrudOperations<Sala>({
+    listFn: () => listSalasApi(false),
+    toggleFn: toggleSalaApi,
+    deleteFn: deleteSalaApi,
+  });
 
   async function handleSave(data: Omit<Sala, "id" | "tenantId">, id?: string) {
     const { ativo = true, ...payload } = data;
@@ -40,18 +37,18 @@ export default function SalasPage() {
     }
     setModalOpen(false);
     setEditing(null);
-    await load();
+    await reload();
   }
 
   async function handleToggle(id: string) {
     await toggleSalaApi(id);
-    await load();
+    await reload();
   }
 
   function handleDelete(id: string) {
     confirm("Remover esta sala?", async () => {
       await deleteSalaApi(id);
-      await load();
+      await reload();
     });
   }
 

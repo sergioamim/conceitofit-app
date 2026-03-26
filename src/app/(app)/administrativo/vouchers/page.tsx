@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   createVoucherApi,
@@ -14,6 +14,7 @@ import { NovoVoucherModal, NovoVoucherPayload } from "@/components/shared/novo-v
 import { EditarVoucherModal } from "@/components/shared/editar-voucher-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { VoucherCodigosModal } from "@/components/shared/voucher-codigos-modal";
+import { useCrudOperations } from "@/hooks/use-crud-operations";
 
 const TIPO_LABEL: Record<string, string> = {
   DESCONTO: "Desconto",
@@ -36,41 +37,32 @@ function formatPeriodo(voucher: Voucher): string {
 
 export default function VouchersPage() {
   const { tenantId, tenantResolved } = useTenantContext();
-  const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [editVoucher, setEditVoucher] = useState<Voucher | null>(null);
   const [codigosVoucher, setCodigosVoucher] = useState<Voucher | null>(null);
 
-  const load = useCallback(async () => {
-    const [data, counts] = await Promise.all([
-      listVouchersApi(),
-      listVoucherUsageCountsApi(),
-    ]);
-    setVouchers(data);
-    setUsageCounts(counts);
-  }, []);
-
-  useEffect(() => {
-    if (!tenantResolved) return;
-    void Promise.all([
-      listVouchersApi(),
-      listVoucherUsageCountsApi(),
-    ]).then(([data, counts]) => {
-      setVouchers(data);
+  const { items: vouchers, reload } = useCrudOperations<Voucher>({
+    listFn: async () => {
+      const [data, counts] = await Promise.all([
+        listVouchersApi(),
+        listVoucherUsageCountsApi(),
+      ]);
       setUsageCounts(counts);
-    });
-  }, [load, tenantResolved]);
+      return data;
+    },
+    toggleFn: toggleVoucherApi,
+  });
 
   const handleNext = async (payload: NovoVoucherPayload) => {
     await createVoucherApi(payload as unknown as Record<string, unknown>);
     setModalOpen(false);
-    await load();
+    await reload();
   };
 
   const handleToggle = async (id: string) => {
     await toggleVoucherApi(id);
-    await load();
+    await reload();
   };
 
   return (
@@ -89,7 +81,7 @@ export default function VouchersPage() {
           onClose={() => setEditVoucher(null)}
           onSaved={() => {
             setEditVoucher(null);
-            void load();
+            void reload();
           }}
         />
       )}
