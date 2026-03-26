@@ -2,7 +2,7 @@
   "master": {
     "tasks": [
       {
-        "id": "1",
+        "id": 1,
         "title": "Alinhar contrato HTTP e camada de consumo da API",
         "description": "Revisar clients, services, schemas e tratamento de erro para refletir a API real no web.",
         "details": "Inclui normalizacao de fetchers, contratos tipados, estados de erro e consumo consistente do backend.",
@@ -85,7 +85,7 @@
         "updatedAt": "2026-03-10T23:59:00.000Z"
       },
       {
-        "id": "2",
+        "id": 2,
         "title": "Consolidar fluxo web de contratos, matricula e venda",
         "description": "Ajustar telas administrativas e comerciais para o fluxo canonico de contratos, venda e matricula.",
         "details": "Abrange jornada de venda, assinatura administrativa, estados de contrato e convergencia com o backend.",
@@ -161,7 +161,7 @@
         "expansionPrompt": "Gerar subtarefas para: mapear telas e serviços do fluxo atual (vendas, matrículas, planos), alinhar contratos/estados com APIs existentes (src/lib/api/vendas.ts e catálogo), ajustar UI/validações e navegação, e fechar cobertura de testes end-to-end do fluxo comercial."
       },
       {
-        "id": "3",
+        "id": 3,
         "title": "Corrigir contexto, sessao e experiencia multiunidade",
         "description": "Tornar consistente a troca de unidade, contexto ativo, permissoes e navegacao por academia/unidade.",
         "details": "Inclui cabecalhos de contexto, bootstrap da sessao e guardas de navegacao multiunidade.",
@@ -224,7 +224,7 @@
         "expansionPrompt": "Divida em: auditoria de sessão/localStorage e eventos de store, implementação de troca de unidade usando APIs de contexto (src/lib/api/contexto-unidades.ts, src/lib/api/auth.ts), alinhamento de permissões e guardas de navegação, e testes de refresh/reentrada e troca de unidade."
       },
       {
-        "id": "4",
+        "id": 4,
         "title": "Construir CRM operacional com automacoes",
         "description": "Evoluir o frontend para suportar pipeline, tarefas, playbooks, cadencias e follow-up comercial.",
         "details": "Inclui telas de funil, tarefas comerciais, filtros, produtividade e automacoes visiveis ao operador.",
@@ -318,7 +318,7 @@
         "expansionPrompt": "Planeje subtarefas para: definir telas e componentes do workspace de CRM (pipeline, tarefas, playbooks), implementar views e filtros, integrar novas superfícies de automação e histórico com APIs, tratar estados UX (loading/erro/vazio), e adicionar testes de fluxo comercial."
       },
       {
-        "id": "5",
+        "id": 5,
         "title": "Construir reservas, vagas e operacao de aulas",
         "description": "Criar as telas de backoffice e portal para reservas, lista de espera, ocupacao e check-in de aula.",
         "details": "Abrange agenda operacional, estados da reserva, ocupacao e visoes por atividade e turma.",
@@ -409,7 +409,7 @@
         "expansionPrompt": "Crie subtarefas para: modelar o domínio de reservas/vagas (tipos e APIs), construir telas de agenda/ocupação/waitlist, implementar operações de reserva/cancelamento/check-in, tratar responsividade e estados, e validar com testes de integração."
       },
       {
-        "id": "6",
+        "id": 6,
         "title": "Criar jornada digital web de adesao e checkout",
         "description": "Implementar paginas e fluxos para trial, signup, checkout, formularios e contratos.",
         "details": "Inclui landing flow, formularios, selecao de plano, checkout e acompanhamento de pendencias.",
@@ -501,7 +501,7 @@
         "expansionPrompt": "Divida em: mapear rotas públicas da jornada, construir formulários e catálogo de planos, integrar checkout/contrato com APIs, ajustar validações e mensagens de erro, e adicionar testes de navegação e conversão."
       },
       {
-        "id": "7",
+        "id": 7,
         "title": "Expandir modulos administrativos, financeiros e de integracao",
         "description": "Cobrir configuracoes e operacao de NFSe, agregadores, recebimentos, dashboards e areas administrativas ausentes.",
         "details": "Inclui telas de configuracao, monitoramento, recebimentos e integracoes operacionais.",
@@ -579,7 +579,7 @@
         "expansionPrompt": "Estruture subtarefas para: inventariar lacunas nas telas administrativas/financeiras, implementar configurações e operações faltantes (NFSe/agregadores/recebimentos), integrar monitoramento e auditoria, e alinhar permissões e testes."
       },
       {
-        "id": "8",
+        "id": 8,
         "title": "Criar BI operacional e visao de rede",
         "description": "Entregar dashboards e visoes consolidadas por unidade e por academia para uso gerencial.",
         "details": "Inclui indicadores de conversao, ocupacao, inadimplencia, retencao e comparativos de rede.",
@@ -656,7 +656,7 @@
         "expansionPrompt": "Gere subtarefas para: definir o shell analítico e filtros por unidade/rede, construir dashboards e cards principais, integrar gráficos/exportações e tratamento de estados, e validar performance/permissões com testes."
       },
       {
-        "id": "9",
+        "id": 9,
         "title": "Estruturar backoffice global de academias e unidades",
         "description": "Migrar `/admin`, `/admin/academias` e `/admin/unidades` para contratos reais, sem depender de mock services.",
         "details": "Cobrir dashboard, listagens, detalhe, create/update de academia, create/update/toggle de unidade, vinculo academia -> unidade e alinhamento entre payloads do backoffice e o backend.",
@@ -747,7 +747,7 @@
         ]
       },
       {
-        "id": "10",
+        "id": 10,
         "title": "Consolidar importacao ETL e onboarding de unidades no backoffice",
         "description": "Completar a tela de importacao e integra-la ao fluxo de criacao de unidade com carga inicial padrao ou importacao futura.",
         "details": "Conectar o `EVO BACKUP` e a trilha EVO P0 ao backoffice real, removendo lookups em mock e exibindo status de onboarding/importacao por unidade.",
@@ -837,7 +837,7 @@
         ]
       },
       {
-        "id": "11",
+        "id": 11,
         "title": "Completar operacao web de treinos com catalogo, templates e prescricao",
         "description": "Evoluir as telas de treinos para consumir o backend atual de grupos musculares, templates e prescricao do treino do cliente.",
         "details": "Abrange `src/app/(app)/treinos*`, `src/components/shared/treino-modal.tsx`, `src/lib/api/treinos.ts` e a reducao dos fallbacks em `src/lib/mock/services.ts`, cobrindo CRUD real de grupos musculares, biblioteca de templates, atribuicao para cliente, validade/frequencia/revisao e indicadores de aderencia.",
@@ -926,7 +926,7 @@
         ]
       },
       {
-        "id": "12",
+        "id": 12,
         "title": "Migrar fiscal, agregadores e integrações operacionais para API real",
         "description": "Concluir a migração backend-only das áreas de NFSe, agregadores e monitoramento operacional, removendo dependências locais restantes.",
         "details": "Cobrir adapters reais para NFSe/configurações/solicitações, agregadores/transações/visitas e integrações operacionais; revisar páginas em src/app/(app)/administrativo/* e src/app/(app)/gerencial/*; remover trechos locais de src/lib/mock/services.ts que ainda existem apenas como fallback histórico. Incluir a identificação dos gaps de backend ainda abertos, especialmente emissão de NFSe por pagamento quando não houver endpoint 1:1 compatível.",
@@ -1002,7 +1002,7 @@
         ]
       },
       {
-        "id": "13",
+        "id": 13,
         "title": "Migrar recebimentos auxiliares, ajustes e importações financeiras para API real",
         "description": "Substituir helpers locais de recebimentos/ajustes/importações por contratos reais do backend e alinhar as telas financeiras ao fluxo canônico.",
         "details": "Cobrir createRecebimentoAvulso, importarPagamentosEmLote, ajustarPagamento e quaisquer variações experimentais de contas a receber/pagamentos; alinhar páginas de recebimentos, pagamentos e importações financeiras ao backend; explicitar gaps de contrato que ainda impedem a remoção total do código local.",
@@ -1078,7 +1078,7 @@
         ]
       },
       {
-        "id": "14",
+        "id": 14,
         "title": "Eliminar legado restante de mock/services e store para fechar backend-only",
         "description": "Remover o restante do caminho legado baseado em store/localStorage onde o backend real já cobre a operação.",
         "details": "Inventariar exports residuais de src/lib/mock/services.ts, src/lib/mock/store.ts, src/lib/public/services.ts e src/lib/public/storage.ts; migrar o que ainda depende de contrato real; remover leitura direta de store/localStorage das telas; padronizar a aplicação para sessão + API real como única fonte operacional.",
@@ -1160,7 +1160,7 @@
         "updatedAt": "2026-03-13T03:40:00.000Z"
       },
       {
-        "id": "15",
+        "id": 15,
         "title": "Erradicar runtime mock e consolidar frontend backend-only",
         "description": "Eliminar integralmente `src/lib/mock/*` do runtime, migrando toda fonte de dados para API/Session e limitando localStorage a exceções explícitas.",
         "details": "Criar um fechamento definitivo da transição: remover imports de `@/lib/mock/*` de `src/`, substituir store e serviços mock por clients reais em todos os domínios, restringir `localStorage` a sessão/preferências/drafts excepcionais, apagar branches mortos e instituir guardrails para evitar regressão.",
@@ -1360,7 +1360,7 @@
         "updatedAt": "2026-03-13T06:20:00.000Z"
       },
       {
-        "id": "16",
+        "id": 16,
         "title": "Criar area global de seguranca no backoffice administrativo",
         "description": "Adicionar telas novas em `/admin/seguranca/*` para consulta global de usuarios administrativos, memberships e perfis por unidade.",
         "details": "O frontend ja possui as paginas contextuais `src/app/(app)/seguranca/rbac` e `src/app/(app)/seguranca/acesso-unidade`, mas elas operam por tenant e nao servem como backoffice global de rede. Este epico deve criar telas novas dentro do shell `/admin`, reaproveitando componentes, clients e padroes de UI das telas atuais quando fizer sentido, sem mover a pagina inteira.",
@@ -1441,7 +1441,7 @@
         "updatedAt": "2026-03-13T16:30:00.000Z"
       },
       {
-        "id": "17",
+        "id": 17,
         "title": "Operar usuarios, unidades e perfis pelo backoffice global",
         "description": "Permitir associar usuario a unidade, remover acesso, trocar unidade padrao e gerir perfis administrativos por unidade no path `/admin`.",
         "details": "Este epico fecha a parte operacional da nova area administrativa de seguranca. A abordagem deve criar telas novas no backoffice global, mas reaproveitar os widgets e comportamentos das telas contextuais de RBAC/acesso-unidade sempre que isso reduzir duplicacao sem carregar o modelo antigo por tenant.",
@@ -1522,7 +1522,7 @@
         "updatedAt": "2026-03-13T16:30:00.000Z"
       },
       {
-        "id": "18",
+        "id": 18,
         "title": "Integrar politica de novas unidades ao administrativo e onboarding",
         "description": "Exibir e operar a elegibilidade de usuarios para novas unidades, alem de refletir acesso herdado/manual nas telas de seguranca e de unidades.",
         "details": "O backend vai passar a formalizar a politica de quem recebe acesso automaticamente quando uma nova unidade e criada. O frontend precisa refletir isso no backoffice global de seguranca e nos fluxos ja existentes de cadastro/onboarding de unidade, sem misturar essa visao com as telas contextuais por tenant.",
@@ -1604,7 +1604,7 @@
         "updatedAt": "2026-03-13T16:30:00.000Z"
       },
       {
-        "id": "19",
+        "id": 19,
         "title": "Definir dominio, contratos e governanca de Treinos V2",
         "description": "Formalizar o dominio funcional de Treinos V2 a partir do PRD consolidado, preparando entidades, contratos e regras de negocio para a implementacao.",
         "details": "Tomar `docs/TREINOS_V2_PRD.md` como fonte de produto e fechar o recorte tecnico do modulo, distinguindo template, treino atribuido, snapshot/versionamento, atribuicao em massa e governanca de revisao/publicacao. O resultado desta task deve deixar backend/frontend alinhados antes da implementacao visual pesada, com artefatos tecnicos em `docs/TREINOS_V2_TECH_SPEC.md`, `src/lib/treinos/v2-domain.ts`, `src/lib/api/treinos-v2.ts` e `src/lib/treinos/v2-backlog.ts`.",
@@ -1682,7 +1682,7 @@
         "updatedAt": "2026-03-14T12:08:18.000Z"
       },
       {
-        "id": "20",
+        "id": 20,
         "title": "Entregar listagem operacional de Treino Padrao",
         "description": "Construir a nova listagem enxuta de `Treino Padrao`, com busca, tabela paginada e acoes operacionais coerentes com as referencias.",
         "details": "A V1 da listagem deve ser administrativa e rapida, sem inflar a tela com filtros avancados. O foco e localizar templates, criar novos e disparar rapidamente as acoes principais de editar, abrir montagem, atribuir e excluir/arquivar. A listagem so deve mostrar `Treino Padrao`, usar ordenacao padrao por recencia e expor quick filter de revisao apenas quando houver backlog tecnico.",
@@ -1762,7 +1762,7 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": "21",
+        "id": 21,
         "title": "Construir editor unificado de treino e template",
         "description": "Implementar a nova tela-base de montagem para `Treino Padrao` e `Treino atribuido`, concentrando no editor a complexidade operacional do modulo.",
         "details": "O editor unificado deve reaproveitar a mesma estrutura para template e treino atribuido, com blocos/series em abas, grade central densa, edicao inline, tecnicas especiais, exportacao e acoes operacionais no topo. O shell precisa assumir como metadados canonicos `nome`, `frequencia semanal`, `total de semanas`, categoria, status e toggle de versao simplificada.",
@@ -1843,7 +1843,7 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": "22",
+        "id": 22,
         "title": "Evoluir biblioteca de exercicios e drawer de cadastro",
         "description": "Transformar a biblioteca lateral de exercicios em um componente central do editor, com busca, filtros, insercao rapida e drawer de criacao/edicao.",
         "details": "A biblioteca deve permitir encontrar, criar e reaproveitar exercicios sem sair do contexto da montagem. O drawer lateral deve sustentar o cadastro rico de exercicio, incluindo codigo, grupo de exercicios, grupo muscular, tipo, objetivo padrao, unidade de carga, midia, descricao e disponibilidade no app.",
@@ -1924,7 +1924,7 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": "23",
+        "id": 23,
         "title": "Implementar atribuicao individual e em massa de treinos",
         "description": "Entregar os fluxos de atribuicao a partir de `Treino Padrao`, cobrindo um cliente, varios clientes, snapshot de versao e politicas de conflito.",
         "details": "Esta task fecha o principal ganho operacional da V2: pegar um template pronto e aplica-lo com seguranca a um ou muitos clientes, com rastreabilidade, vigencia e controle de overwrite. A atribuicao em massa deve rodar via job assincrono, com lista final de clientes resolvida e resumo terminal por cliente.",
@@ -2008,7 +2008,7 @@
         "updatedAt": "2026-03-14T13:10:38.000Z"
       },
       {
-        "id": "24",
+        "id": 24,
         "title": "Fechar revisao, publicacao e operacao pos-atribuicao de Treinos V2",
         "description": "Concluir a governanca operacional do modulo com revisao/publicacao de templates, visao de treinos atribuidos e rastreabilidade completa da origem e da versao.",
         "details": "Depois de listagem, editor, biblioteca e atribuicao, falta consolidar a camada de governanca: status de template, fila de revisao, operacao sobre treinos atribuidos e indicadores que permitam acompanhar quem recebeu qual versao. Exportar treino de cliente como template e importar do ADM Geral continuam fora do P0 e nao devem poluir esta task.",
@@ -2090,7 +2090,7 @@
         "updatedAt": "2026-03-14T15:02:00.000Z"
       },
       {
-        "id": "25",
+        "id": 25,
         "title": "Estabelecer baseline real de cobertura automatizada",
         "description": "Instrumentar cobertura de codigo, publicar baseline e definir medicao confiavel para a meta de 60%.",
         "details": "Hoje o repositorio tem baseline funcional de 116 testes Playwright, sendo 29 testes E2E em 19 arquivos e 87 testes unitarios em 26 arquivos. Ainda nao existe percentual instrumentado de cobertura em linhas, statements, branches ou functions. Esta task fecha a medicao real, scripts de coleta, politicas de exclusao e o relatorio base para orientar o aumento ate 60%. Baseline fechado em 2026-03-14 com 9.54% lines, 13.47% statements, 11.73% functions e 16.54% branches, publicado em coverage/* e docs/TEST_COVERAGE_BASELINE.*.",
@@ -2167,7 +2167,7 @@
         "updatedAt": "2026-03-14T21:11:31.000Z"
       },
       {
-        "id": "26",
+        "id": 26,
         "title": "Elevar cobertura automatizada das camadas core ate 60%",
         "description": "Aumentar a cobertura real do codigo nas camadas de maior risco ate atingir pelo menos 60% no agregado instrumentado.",
         "details": "Com o baseline real definido, a meta desta task foi fechada sobre o runtime compartilhado de maior risco em src/lib/**/*.{ts,tsx}, onde a instrumentacao V8/Node e confiavel hoje. Foram adicionados testes unitarios de alto retorno em wrappers de API, financeiro gerencial, vendas, reservas, contexto de tenant, utilitarios e runtime comercial, levando o perfil core a 62.74% lines, 67.73% statements, 69.09% functions e 79.51% branches via coverage:report -- --suites=unit.",
@@ -2265,7 +2265,7 @@
         "updatedAt": "2026-03-14T23:59:00.000Z"
       },
       {
-        "id": "27",
+        "id": 27,
         "title": "Sustentar cobertura com gates de CI e governanca continua",
         "description": "Transformar a meta de cobertura em rotina de engenharia, com gates, dashboards e criterios de regressao.",
         "details": "Atingir 60% uma vez nao basta. Esta task foi concluida com gate automatizado de coverage core (coverage:gate), workflow de CI em .github/workflows/coverage-core.yml, suite smoke consolidada por dominio no coletor e politica operacional documentada em docs/TEST_COVERAGE_GOVERNANCE.md. Os artefatos publicados agora incluem resumo/LCOV/HTML do perfil core e historico em docs/TEST_COVERAGE_HISTORY_CORE.json.",
@@ -2333,7 +2333,7 @@
         "updatedAt": "2026-03-14T23:59:00.000Z"
       },
       {
-        "id": "28",
+        "id": 28,
         "title": "Estabilizar shell SSR e eliminar hydration mismatch sem escape hatches",
         "description": "Corrigir de forma estrutural o shell principal e as telas de treinos para eliminar mismatch de hidratacao sem usar `suppressHydrationWarning`.",
         "details": "O frontend ainda mistura fallback de SSR diferente do shell final, labels tenant-aware mutaveis no primeiro paint e formatacao/calculo temporal durante o render hidratavel. Esta task fecha o problema na raiz: padronizar o estado inicial do contexto e do branding, fazer sidebar/topbar/backoffice renderizarem a mesma arvore entre servidor e primeiro render do cliente, remover `suppressHydrationWarning` do escopo e reescrever pontos de treinos que ainda dependem de `new Date()`, locale do navegador ou outros valores nao deterministas em render. O trabalho tambem inclui ajustes basicos de acessibilidade e estabilidade visual do layout, como rotulos de controles, logo com dimensoes estaveis e fallback textual unico para unidade ativa, sem mascarar divergencias de HTML.",
@@ -2458,7 +2458,7 @@
         "updatedAt": "2026-03-15T04:15:00.000Z"
       },
       {
-        "id": "29",
+        "id": 29,
         "title": "Fechar aderência de hidratação, contexto e data/hora no frontend",
         "description": "Ajustar pontos remanescentes de aderência em UI/HTTP para eliminar causas reais de hydration mismatch e reduzir risco de comportamento divergente entre SSR e cliente, sem regressão funcional em contratos já estabilizados.",
         "details": "A auditoria recente identificou quatro ajustes práticos fora de escopo funcional amplo: (1) uso residual de `suppressHydrationWarning` em componente base de Select; (2) formatação temporal não determinística no render do fluxo de importação de pacote; (3) fallback de contexto com ID não determinístico no `getContextId`; (4) revisão pontual da classificação de rotas context-scoped em `http.ts` que afeta consistência de tenant scoping. Esta task agrupa esses fechamentos com subtarefas curtas e validadas por teste.",
@@ -2543,7 +2543,7 @@
         "updatedAt": "2026-03-15T22:50:00.000Z"
       },
       {
-        "id": "30",
+        "id": 30,
         "title": "Endurecer sessão inválida, refresh e relogin no frontend",
         "description": "Tornar determinístico o fluxo de recuperação de autenticação no web para que 401 por token inválido, malformado ou expirado tente refresh uma única vez e, se não houver recuperação, execute logout completo com limpeza do contexto local de tenant.",
         "details": "O frontend já possui a base do fluxo em `src/lib/api/http.ts`, `src/lib/api/session.ts` e `src/lib/tenant-context.ts`, mas ainda há uma lacuna importante: quando o refresh falha, a autenticação é limpa sem limpar o `academia-api-context-id`, o que pode deixar o navegador com contexto de unidade stale. Esta task fecha o fluxo de ponta a ponta: centralizar uma invalidação completa de sessão, endurecer o retry único de refresh, garantir redirecionamento previsível para `/login` e preservar a regra de multi-tenant por `X-Context-Id` sem reintroduzir `tenantId` redundante em rotas operacionais.",
@@ -2634,7 +2634,7 @@
         "updatedAt": "2026-03-15T23:40:00.000Z"
       },
       {
-        "id": "31",
+        "id": 31,
         "title": "Consolidar bootstrap global de sessão, tenant ativo e branding no frontend",
         "description": "Transformar sessão, unidade ativa e branding em um store global reutilizável do shell autenticado, eliminando fetches redundantes de `/auth/me`, `/context/unidade-ativa` e `/academia` na navegação interna.",
         "details": "Implementar a estratégia frontend-first descrita em `docs/SESSION_BOOTSTRAP_CACHE_PRD.md`: promover o contexto atual para um store global de bootstrap, tratar `activeTenantId` como ponto único de verdade da aplicação, migrar `Sidebar`, `TenantThemeSync`, `AppTopbar` e `useAuthAccess` para selectors desse store, e sincronizar o snapshot após troca de unidade, login, refresh, logout e recovery de contexto. O rollout deve preservar SSR seguro, evitar preload redundante por rota e manter `X-Context-Id` como referência operacional efetiva.",
@@ -2741,7 +2741,7 @@
         "updatedAt": "2026-03-16T19:05:58.208Z"
       },
       {
-        "id": "32",
+        "id": 32,
         "title": "Expor bootstrap consolidado do app no backend e migrar o frontend",
         "description": "Evoluir o desenho de bootstrap para um endpoint único do app que consolide usuário, contexto ativo, academia, branding e capacidades, reduzindo round-trips no cold start.",
         "details": "Implementar a fase opcional descrita em `docs/SESSION_BOOTSTRAP_CACHE_PRD.md`: desenhar um endpoint como `GET /api/v1/app/bootstrap`, alinhar contrato, controller e testes no backend, e adaptar o frontend para consumir esse payload consolidado com fallback temporário para os endpoints legados durante a transição.",
@@ -2813,7 +2813,7 @@
         "updatedAt": "2026-03-16T20:36:12.474Z"
       },
       {
-        "id": "33",
+        "id": 33,
         "title": "Migrar Dashboard para endpoint unificado de dados e reduzir round-trips",
         "description": "Migrar a tela /dashboard para consumir um endpoint consolidado e reduzir múltiplas chamadas paralelas atuais.",
         "details": "Implementar/validar endpoint unificado, adaptar adapter de dashboard, migrar página para 1 chamada por estado/scope e manter fallback seguro.",
@@ -2905,7 +2905,7 @@
         "updatedAt": "2026-03-17T03:33:10.808Z"
       },
       {
-        "id": "34",
+        "id": 34,
         "title": "Cobrir CRUD da área administrativa com Playwright",
         "description": "Adicionar cobertura E2E nas telas administrativas críticas, com foco em fluxo de criação, edição, exclusão/inativação e validações em operações CRUD.",
         "details": "Escalar os testes Playwright para `/admin/*` e `/administrativo/*` com cenários repetíveis e stubs de API controlados, garantindo confiança de regressão sem alterar comportamento funcional.",
@@ -3034,7 +3034,7 @@
         "updatedAt": "2026-03-17T13:37:58.550Z"
       },
       {
-        "id": "35",
+        "id": 35,
         "title": "Adaptar tela administrativa de NFSe aos novos campos fiscais da reforma tributaria",
         "description": "Atualizar a tela `/administrativo/nfse` para suportar os novos campos obrigatorios da reforma tributaria e alinhar o formulario ao contrato fiscal real do backend.",
         "details": "A tela atual de NFSe do frontend trabalha com um contrato administrativo proprio, centrado em prefeitura, inscricao municipal, CNAE, serie RPS e regime tributario. A adaptacao precisa incorporar os novos campos fiscais obrigatorios, revisar validacoes, checklist, tipagem e estados de UX sem depender de JSONs livres ou placeholders ambiguos.",
@@ -3115,7 +3115,7 @@
         "updatedAt": "2026-03-17T18:05:00Z"
       },
       {
-        "id": "36",
+        "id": 36,
         "title": "Adaptar fluxos de emissao e exibicao de NFSe ao novo bloqueio fiscal",
         "description": "Atualizar os fluxos de pagamentos e consultas de NFSe no frontend para refletir os novos bloqueios e mensagens da reforma tributaria.",
         "details": "A emissao de NFSe por pagamento e as superficies que mostram status fiscal precisam refletir o novo comportamento do backend: emissao bloqueada quando a unidade nao estiver configurada com os campos obrigatorios e mensagens mais especificas de validacao fiscal.",
@@ -3198,7 +3198,7 @@
         "updatedAt": "2026-03-17T18:05:00Z"
       },
       {
-        "id": "37",
+        "id": 37,
         "title": "Fechar rollout, documentação e cobertura E2E do frontend para NFSe da reforma tributaria",
         "description": "Consolidar a adaptação fiscal de NFSe no frontend com documentação, evidência de teste e estratégia de rollout visual/operacional.",
         "details": "Depois de atualizar a configuração e os fluxos de emissão, o frontend precisa fechar a trilha pública e operacional: documentação de uso da tela fiscal, testes E2E ou smoke relevantes, alinhamento com o backend e checklist de rollout para operadores administrativos.",
@@ -3268,7 +3268,7 @@
         "updatedAt": "2026-03-17T18:05:00Z"
       },
       {
-        "id": "38",
+        "id": 38,
         "title": "Fechar adaptação do frontend ao novo contrato da API de atividades",
         "description": "Concluir o alinhamento do frontend para a evolução recente da API de atividades, eliminando gaps de request, response e telas dependentes.",
         "details": "Hoje a UI já expõe campos e comportamentos novos de atividades, mas a camada HTTP ainda não envia nem normaliza todo o contrato novo. Esta task fecha o fluxo ponta a ponta para atividades e superfícies consumidoras, evitando fallbacks frágeis e divergência entre o que o usuário edita e o que o backend realmente persiste.",
@@ -3337,7 +3337,7 @@
         "updatedAt": "2026-03-18T15:30:00Z"
       },
       {
-        "id": "39",
+        "id": 39,
         "title": "Estruturar ocorrências avulsas para atividades sob demanda",
         "description": "Fechar o modelo funcional e técnico para que atividades `SOB_DEMANDA` virem catálogo de ocorrências avulsas, com fluxo administrativo claro e alinhado ao backend.",
         "details": "Hoje o frontend diferencia `PREVIAMENTE` e `SOB_DEMANDA` na grade, mas só o modo recorrente possui um fluxo operacional completo. A aplicação precisa separar com clareza modalidade, recorrência e sessão concreta, permitindo que grades `SOB_DEMANDA` gerem ocorrências manuais para datas específicas sem poluir a grade semanal nem depender de comportamento implícito do backend.",
@@ -3420,7 +3420,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "40",
+        "id": 40,
         "title": "Definir capability e RBAC de exclusão no backend",
         "description": "Criar contrato de capacidade canDeleteClient ligado ao perfil ALTO e expor na sessão/bootstrp para permitir a UI decidir a visibilidade da ação.",
         "details": "Atualizar o payload do bootstrap (ex.: /api/v1/app/bootstrap) ou do me para incluir capabilities.canDeleteClient. Mapear o perfil ALTO para essa capacidade no backend, sem inferir por ADMIN genérico. Pseudo-código: canDeleteClient = user.profile === \"ALTO\" || permissions.includes(\"CLIENT_DELETE\"). Documentar o contrato para o frontend consumir a flag booleana.",
@@ -3432,7 +3432,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "41",
+        "id": 41,
         "title": "Implementar endpoint de exclusão controlada de cliente",
         "description": "Criar endpoint dedicado para excluir cliente com validações e regras impeditivas de negócio.",
         "details": "Implementar DELETE /api/v1/comercial/alunos/{id} (ou POST /api/v1/comercial/alunos/{id}/excluir) aceitando body { tenantId, justificativa, issuedBy }. Validar justificativa (422), existência do aluno (404), permissão (403) e regras impeditivas (409) com motivos de bloqueio. Pseudo-código: if (!canDeleteClient) throw 403; if (!justificativa) throw 422; if (hasDependencies) throw 409 { blockedBy: [...] }; delete aluno; return { success: true, auditId, eventType }.",
@@ -3444,7 +3444,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "42",
+        "id": 42,
         "title": "Auditoria backend para exclusão e tentativas negadas",
         "description": "Registrar eventos de auditoria obrigatórios para exclusão e negativas, garantindo rastreabilidade.",
         "details": "Adicionar eventos CLIENTE_EXCLUIDO, CLIENTE_EXCLUSAO_NEGADA_SEM_PERMISSAO e CLIENTE_EXCLUSAO_NEGADA_POR_REGRA. Incluir payload mínimo (tenantId, alunoId, alunoNome, justificativa, executadoPor, perfilEfetivo, origem, timestamp, auditId/requestId). Pseudo-código: audit.log({ eventType, tenantId, alunoId, justificativa, ... }). Garantir retorno de auditId/eventType no sucesso.",
@@ -3456,7 +3456,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "43",
+        "id": 43,
         "title": "Adicionar tipos e API client de exclusão no frontend",
         "description": "Definir contratos de resposta/erro e implementar chamada de exclusão no client de alunos.",
         "details": "Em src/lib/types.ts, criar tipos para resposta de exclusão (success, auditId, eventType) e payload de bloqueio (ex.: blockedBy, motivo). Em src/lib/api/alunos.ts, adicionar excluirAlunoApi usando apiRequest com method DELETE ou POST, enviando tenantId, justificativa e issuedBy. Pseudo-código: return apiRequest<ClienteExclusaoResponse>({ path: `/api/v1/comercial/alunos/${id}`, method: \"DELETE\", query: { tenantId }, body: { tenantId, justificativa, issuedBy } }).",
@@ -3468,7 +3468,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "44",
+        "id": 44,
         "title": "Criar service runtime para exclusão de cliente",
         "description": "Expor um service de alto nível no runtime comercial para encapsular a chamada de exclusão.",
         "details": "Em src/lib/comercial/runtime.ts, adicionar excluirAlunoService({ tenantId, alunoId, justificativa, issuedBy }) delegando ao excluirAlunoApi. Manter assinatura simples para uso em UI. Pseudo-código: return excluirAlunoApi({ tenantId, id: alunoId, justificativa, issuedBy }).",
@@ -3480,7 +3480,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "45",
+        "id": 45,
         "title": "Expor canDeleteClient na sessão do frontend",
         "description": "Evoluir o contexto de sessão para carregar a capability de exclusão.",
         "details": "Em src/lib/api/contexto-unidades.ts, adicionar canDeleteClient a TenantBootstrapCapabilitiesApiResponse e manter o valor no getSessionBootstrapApi. Em src/hooks/use-session-context.tsx, incluir canDeleteClient no estado e no TenantContextValue. Pseudo-código: canDeleteClient = bootstrap.capabilities?.canDeleteClient ?? false; return { ...state, canDeleteClient }.",
@@ -3492,7 +3492,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "46",
+        "id": 46,
         "title": "Atualizar ClienteHeader e usos para ação Excluir",
         "description": "Adicionar entrada de menu Excluir cliente e novos props de controle, mantendo compatibilidade com outras telas.",
         "details": "Em src/components/shared/cliente-header.tsx, aceitar props canDeleteCliente e onExcluir; renderizar item de menu abaixo das ações existentes, fechando o menu antes de chamar o callback. Manter árvore estável e sem condicional client-only. Atualizar usos em src/app/(app)/clientes/[id]/page.tsx e src/app/(app)/clientes/[id]/cartoes/page.tsx para passar canDeleteCliente (do useTenantContext) e onExcluir (abre modal). Pseudo-código: if (canDeleteCliente && onExcluir) render <button>Excluir cliente</button>.",
@@ -3504,7 +3504,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "47",
+        "id": 47,
         "title": "Implementar modal de exclusão com justificativa",
         "description": "Criar o modal de confirmação no detalhe do cliente com campo obrigatório e contador de caracteres.",
         "details": "Em src/app/(app)/clientes/[id]/page.tsx, adicionar estado para open/justificativa/erro/loading e renderizar Dialog com nome do cliente, alerta de irreversibilidade, textarea obrigatório, contador (ex.: `${justificativa.length}/500`), botões Cancelar e Excluir cliente. Botão confirm disabled quando justificativa.trim() vazio. Pseudo-código: const [excluirOpen, setExcluirOpen] = useState(false); disabled = excluindo || !justificativa.trim().",
@@ -3516,7 +3516,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "48",
+        "id": 48,
         "title": "Implementar fluxo de exclusão e tratamento de erros",
         "description": "Ligar o modal à API, com feedback de sucesso, redirecionamento e mensagens de erro específicas.",
         "details": "No detalhe do cliente, chamar excluirAlunoService no confirmar. Em sucesso: fechar modal, mostrar feedback (toast ou banner), limpar estado e redirecionar para /clientes. Em erro: manter modal aberto, mapear ApiRequestError.status para mensagens (403: sem permissão, 409: bloqueio por regra com motivo, 422: justificativa inválida) e usar normalizeErrorMessage como fallback. Pseudo-código: try { await excluirAlunoService(...); router.push('/clientes'); } catch (err) { if (err.status===409) setErro(motivoBloqueio); }.",
@@ -3528,7 +3528,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "49",
+        "id": 49,
         "title": "Testes e regressão da exclusão controlada",
         "description": "Adicionar cobertura de testes para visibilidade, validação e fluxo de exclusão.",
         "details": "Criar/estender testes Playwright em tests/e2e para: menu visível apenas com canDeleteClient; modal exige justificativa; erro 403/409/422 exibe mensagem; sucesso redireciona para /clientes e ação não aparece em cartoes sem permissão. Se houver stubs, atualizar em tests/e2e/support/backend-only-stubs.ts. Pseudo-código: expect(menu).toContain('Excluir cliente') quando capability true; interceptar DELETE/POST e retornar 409.",
@@ -3540,7 +3540,7 @@
         "updatedAt": "2026-03-18T16:36:08.718Z"
       },
       {
-        "id": "50",
+        "id": 50,
         "title": "Redesenhar a arquitetura de informação da área de segurança",
         "description": "Transformar o PRD revisado em uma IA clara para gestores, separando usuários, acessos, perfis, funcionalidades e revisões.",
         "details": "A área de segurança precisa sair da navegação técnica atual e ganhar uma arquitetura de informação orientada a produto, com visão geral, usuários e acessos, perfis padronizados, catálogo de funcionalidades e revisões/auditoria. Esta task fecha o backbone de navegação, linguagem e estados base para o restante do rollout.",
@@ -3610,7 +3610,7 @@
         "updatedAt": "2026-03-19T14:10:00Z"
       },
       {
-        "id": "51",
+        "id": 51,
         "title": "Implementar as telas de Usuários e acessos com resumo de acesso efetivo",
         "description": "Entregar a principal superfície operacional da nova segurança, centrada em pessoas, escopos, perfis e risco.",
         "details": "A nova experiência precisa começar pela operação diária: listar pessoas, filtrar por escopo e risco, abrir o detalhe do usuário e enxergar claramente acesso direto, herdado ou global, perfil principal, perfis adicionais, exceções e revisão. Esta task cobre clients, estado de tela, detalhe e fluxo de concessão com escolha explícita de escopo e perfil.",
@@ -3694,7 +3694,7 @@
         "updatedAt": "2026-03-19T00:00:00Z"
       },
       {
-        "id": "52",
+        "id": 52,
         "title": "Implementar Perfis padronizados e Catálogo de funcionalidades",
         "description": "Dar superfície de governança para perfis reutilizáveis e para o inventário de capacidades do sistema.",
         "details": "Depois de resolver a operação por usuário, o frontend precisa expor com clareza a governança de papéis e funcionalidades: lista e detalhe de perfis, matriz de permissões, catálogo pesquisável, labels de negócio, criticidade e impacto de mudanças. Esta task entrega a camada visual que substitui a leitura crua de RBAC por feature/grant.",
@@ -3779,7 +3779,7 @@
         "updatedAt": "2026-03-19T00:00:00Z"
       },
       {
-        "id": "53",
+        "id": 53,
         "title": "Implementar Exceções, política de novas unidades, revisões e rollout da nova segurança",
         "description": "Fechar a governança avançada da nova área com exceções controladas, revisões periódicas e migração segura.",
         "details": "A fase final do frontend precisa materializar a governança avançada prevista no PRD: fluxo de exceção com justificativa e prazo, política separada para novas unidades, abas de revisão e auditoria, indicadores de acesso amplo e documentação de rollout. Esta task conclui a transição da segurança atual para a nova experiência.",
@@ -3864,7 +3864,7 @@
         "updatedAt": "2026-03-19T14:10:00Z"
       },
       {
-        "id": "54",
+        "id": 54,
         "title": "Desacoplar a aba NFS-e do perfil do cliente da configuração fiscal global",
         "description": "Remover a dependência de configuracao-atual do carregamento inicial de /clientes/[id] e carregar os dados da aba NFS-e somente sob demanda.",
         "details": "Refatorar src/app/(app)/clientes/[id]/page.tsx para que o perfil do cliente não chame GET /api/v1/administrativo/nfse/configuracao-atual no carregamento inicial. A aba NFS-e deve focar na listagem das NFS-e já emitidas e estados fiscais derivados dos pagamentos do cliente, carregando qualquer dado adicional apenas quando o usuário abrir a aba correspondente. Revisar o contrato consumido, estados de loading/erro da aba e cobertura de regressão para evitar chamadas fiscais desnecessárias e 404 incidentais no perfil.",
@@ -3877,7 +3877,7 @@
         "subtasks": []
       },
       {
-        "id": "55",
+        "id": 55,
         "title": "Enriquecer a tela de contratos com resumo mensal e indicadores visuais",
         "description": "Atualizar /matriculas para priorizar os contratos mais recentes do mes e adicionar indicadores executivos da carteira.",
         "details": "Refatorar src/app/(app)/matriculas/page.tsx para destacar os ultimos contratos do mes na tabela principal e introduzir um bloco superior com indicadores resumidos da carteira da unidade ativa. A nova experiencia deve incluir cards com total do mes, valor medio de contrato, receita contratada do mes, percentual de contratos ativos e um grafico em pizza agrupando os contratos ativos por plano, sem adicionar dependencia externa de chart. Revisar estados de loading, empty state e ordenacao local para manter consistencia com o contrato atual da API.",
@@ -3961,7 +3961,7 @@
         "updatedAt": "2026-03-19T19:40:00Z"
       },
       {
-        "id": "56",
+        "id": 56,
         "title": "Implementar login contextual por Rede e fluxos de acesso iniciais",
         "description": "Adaptar o frontend para autenticação orientada por rede, com rota contextual, identificador neutro e recuperação isolada.",
         "details": "O frontend precisa sair do modelo implícito de login global e assumir o contexto de rede como primeira informação da jornada. Esta task cobre as rotas e superfícies de `/acesso/{redeSlug}`, o formulário por identificador neutro, recuperação de senha, primeiro acesso e mensagens específicas da rede corrente.",
@@ -4062,7 +4062,7 @@
         "updatedAt": "2026-03-19T00:00:00Z"
       },
       {
-        "id": "57",
+        "id": 57,
         "title": "Implementar bootstrap de sessão por Rede com unidade ativa separada da unidade-base",
         "description": "Ajustar o frontend para tratar unidade-base do cliente e tenant ativo de sessão como conceitos distintos.",
         "details": "A aplicação precisa deixar de assumir que a unidade do cliente e a unidade ativa da sessão são a mesma coisa. Esta task fecha bootstrap, stores, guards e componentes base para operar com `tenantId` estrutural do cliente e `activeTenantId` temporário de sessão.",
@@ -4163,7 +4163,7 @@
         "updatedAt": "2026-03-19T00:00:00Z"
       },
       {
-        "id": "58",
+        "id": 58,
         "title": "Redesenhar a gestão administrativa de usuários, identidades e escopos por Rede",
         "description": "Levar a área de segurança para o novo modelo de identidade por rede, escopos e vínculos operacionais.",
         "details": "Com o novo desenho de auth, a área administrativa precisa mostrar usuário por rede, identificadores de login, escopo efetivo, unidade-base, unidade ativa e vínculos relevantes de forma inteligível para gestores. Esta task fecha a UX das leituras administrativas do modelo rede-unidade.",
@@ -4266,7 +4266,7 @@
         "updatedAt": "2026-03-19T00:00:00Z"
       },
       {
-        "id": "59",
+        "id": 59,
         "title": "Implementar a UX multiunidade do cliente orientada por contrato",
         "description": "Fazer o app do cliente operar com tenant ativo elegível, e não com troca livre de unidade.",
         "details": "A experiência do cliente dentro da rede precisa respeitar a elegibilidade definida pelo contrato. Esta task fecha os fluxos em que o app precisa escolher, trocar ou bloquear a unidade ativa conforme os contratos vigentes, sempre mantendo a unidade-base estrutural separada da sessão.",
@@ -4368,7 +4368,7 @@
         "updatedAt": "2026-03-19T00:00:00Z"
       },
       {
-        "id": "60",
+        "id": 60,
         "title": "Implementar a operação administrativa migrarClienteParaUnidade no frontend",
         "description": "Dar suporte visual e operacional ao fluxo administrativo que altera a unidade-base do cliente.",
         "details": "Com o backend expondo `migrarClienteParaUnidade`, o frontend precisa distinguir claramente essa operação estrutural da mera troca de tenant ativo. Esta task cobre a UX administrativa, formulário, confirmação, mensagens de risco, trilha de auditoria e atualização de tela após a migração.",
@@ -4469,7 +4469,7 @@
         "updatedAt": "2026-03-19T00:00:00Z"
       },
       {
-        "id": "61",
+        "id": 61,
         "title": "Fechar contratos, rollout e E2E do novo modelo Rede-Unidade no frontend",
         "description": "Concluir a trilha com tipagens estáveis, documentação, feature flags e cobertura final de ponta a ponta.",
         "details": "Depois do ajuste de login, bootstrap, gestão administrativa, UX multiunidade e migração de cliente, o frontend precisa consolidar contratos, documentação e rollout. Esta task fecha os detalhes transversais do novo modelo contextual por rede e unidade.",
@@ -4573,7 +4573,7 @@
         "updatedAt": "2026-03-19T00:00:00Z"
       },
       {
-        "id": "62",
+        "id": 62,
         "title": "Ajustar roteamento de login por rede usando subdominio canonico",
         "description": "Preparar o frontend para autenticar por rede/academia via `/app/[rede]/login` e `[rede].localhost`.",
         "details": "O backend agora resolve a rede por `Academia.subdominio`, sem depender de tenant. O frontend precisa tratar `[rede]` como identificador da academia, extrair esse valor da URL/path ou host e parar de inferir tenant no login.",
@@ -4624,7 +4624,7 @@
         "expansionPrompt": "Quebre em subtarefas para auditar rotas/guards atuais, criar a rota canonica `/app/[rede]/login`, centralizar a resolução de `subdominio` por path/host e remover inferência de tenant no login."
       },
       {
-        "id": "63",
+        "id": 63,
         "title": "Enviar `X-Rede-Identifier` no login e forgot-password",
         "description": "Alinhar os clients de autenticação ao contrato backend por subdominio da rede.",
         "details": "O backend aceita `redeIdentifier` por header, query, body e host, mas o frontend deve padronizar o envio no header `X-Rede-Identifier`. O fluxo não deve mandar tenant nem depender de slug legado.",
@@ -4676,7 +4676,7 @@
         "expansionPrompt": "Divida em subtarefas para ajustar login e forgot-password com `X-Rede-Identifier`, remover `tenantId` do request inicial e revisar a camada de auth para o novo contrato."
       },
       {
-        "id": "64",
+        "id": 64,
         "title": "Alinhar tipos, estado de sessao e vocabulário para `subdominio` de rede",
         "description": "Atualizar tipos e estado do frontend para usar `subdominio` como identificador canônico da academia.",
         "details": "O frontend ainda pode ter referências a `slug` ou suposições de tenant no modelo de academia/sessão. Esta task consolida `subdominio` como campo oficial em tipos, stores, bootstrap e UI.",
@@ -4728,7 +4728,7 @@
         "expansionPrompt": "Quebre em subtarefas para atualizar tipos/schemas de auth e academia, revisar stores/bootstrap e eliminar o vocabulário legado de `slug` nas superfícies de rede."
       },
       {
-        "id": "65",
+        "id": 65,
         "title": "Adaptar UX do login para rede explicita e fallback por host",
         "description": "Refinar a experiência do login para comunicar claramente a rede corrente e suportar entrada por rota ou subdomínio.",
         "details": "Além do contrato técnico, a tela precisa mostrar a rede selecionada, lidar com rede inválida e não depender de heurísticas implícitas. O comportamento por `/app/[rede]/login` e `[rede].localhost` deve ser observável ao operador.",
@@ -4782,7 +4782,7 @@
         "expansionPrompt": "Divida em subtarefas para ajustar a UI do login com rede explícita, tratar rede inválida e revisar deep links/redirects pós-login preservando o contexto de rede."
       },
       {
-        "id": "66",
+        "id": 66,
         "title": "Fechar testes, documentação e handoff do login por subdominio de rede",
         "description": "Concluir a trilha com cobertura automatizada e documentação operacional para o frontend.",
         "details": "Depois dos ajustes de rota, clients e UX, o frontend precisa deixar claro como acessar localmente por `/app/[rede]/login` e `[rede].localhost`, além de registrar o contrato com `X-Rede-Identifier` para reduzir regressões.",
@@ -4836,7 +4836,7 @@
         "expansionPrompt": "Quebre em subtarefas para testes do login por rota/host, documentação do setup local e handoff final com critérios de aceite para backend e QA."
       },
       {
-        "id": "67",
+        "id": 67,
         "title": "Adicionar criação de usuário no Segurança global e no Admin da própria rede",
         "description": "Permitir cadastrar novos usuários por duas superfícies, com poderes distintos entre backoffice global e administração da academia.",
         "details": "Criar a jornada de novo usuário no menu `/admin/seguranca` para operadores com poder global/rede e também na área administrativa da academia, mas com escopo limitado à própria rede. A superfície global poderá criar usuários com escopo amplo, memberships multi-tenant e governança avançada; já a superfície administrativa da academia deve restringir a criação à rede corrente, sem permitir alcance global ou em outras redes. A task inclui IA, regras de autorização, validações de escopo e alinhamento com a diretriz de `Usuario` independente de `Cliente`/`Funcionario`.",
@@ -4925,7 +4925,7 @@
         "expansionPrompt": "Quebre em subtarefas para definir permissões por superfície, adicionar criação de usuário no segurança global, criar fluxo restrito na área admin da academia, aplicar guardrails de escopo e fechar testes/documentação."
       },
       {
-        "id": "68",
+        "id": 68,
         "title": "Estruturar experiencia de colaboradores no backoffice administrativo",
         "description": "Preparar a trilha de colaboradores para o novo modelo operacional do backend, sem copiar a interface do EVO.",
         "details": "Usar como referencia o PRD backend `academia-java/docs/prd-colaboradores-identidade-acesso.md` e o execplan `academia-java/docs/execplans/evoluir-colaboradores-identidade-acesso.md` para desenhar a experiencia administrativa de colaboradores no web, com foco em operacao, onboarding de acesso e manutencao da ficha completa.",
@@ -4989,7 +4989,7 @@
         ]
       },
       {
-        "id": "69",
+        "id": 69,
         "title": "Implementar listagem e busca de colaboradores alinhadas ao novo backend",
         "description": "Atualizar a listagem administrativa de colaboradores para refletir o novo perfil operacional e os novos filtros.",
         "details": "A listagem deve suportar status operacional, cargo, acesso ao sistema, flags operacionais e futura leitura de contratos/horarios, consumindo a API nova do backend com tipagem forte e estados de loading/erro consistentes.",
@@ -5055,7 +5055,7 @@
         ]
       },
       {
-        "id": "70",
+        "id": 70,
         "title": "Implementar cadastro rapido de colaborador com criacao opcional de acesso",
         "description": "Criar o fluxo inicial de novo colaborador com ou sem usuario no mesmo formulario.",
         "details": "O cadastro rapido deve permitir nome, contato principal, cargo, perfil inicial de acesso e toggles operacionais basicos, com suporte a colaborador sem acesso por tempo indeterminado.",
@@ -5135,7 +5135,7 @@
         ]
       },
       {
-        "id": "71",
+        "id": 71,
         "title": "Construir perfil completo do colaborador com abas operacionais",
         "description": "Entregar a ficha detalhada do colaborador com blocos de cadastro, contratação, permissões, horário, informações e notificações.",
         "details": "O perfil detalhado deve organizar os dados de forma clara e operacional, permitindo edição progressiva de cadastro, endereço, documentos, emergência, contratação/salário/conta bancária, horários, permissões e notas internas.",
@@ -5215,7 +5215,7 @@
         ]
       },
       {
-        "id": "72",
+        "id": 72,
         "title": "Integrar permissões multiunidade e flags operacionais do colaborador",
         "description": "Refletir no frontend a distinção entre role/membership e flags operacionais locais como catraca e fora do horário.",
         "details": "A UI precisa deixar claro o que é perfil de acesso por unidade e o que é toggle operacional da ficha do colaborador, sem misturar as duas coisas na experiência.",
@@ -5283,7 +5283,7 @@
         ]
       },
       {
-        "id": "73",
+        "id": 73,
         "title": "Fechar contratos, testes e rollout frontend do modulo de colaboradores",
         "description": "Garantir que a nova trilha de colaboradores fique estável, testada e alinhada ao rollout do backend.",
         "details": "Consolidar tipos, clients, estados, testes e documentação da experiência de colaboradores, cobrindo também a adaptação gradual da UI atual enquanto o backend evolui.",
@@ -5352,7 +5352,7 @@
         ]
       },
       {
-        "id": "74",
+        "id": 74,
         "title": "Evoluir tela ETL para malha enriquecida de colaboradores EVO",
         "description": "Adaptar a UI de importação ETL para refletir que colaboradores agora dependem de múltiplos arquivos EVO além de `FUNCIONARIOS.csv`.",
         "details": "A tela de importação deve reconhecer e comunicar os arquivos auxiliares de colaboradores (`FUNCIONARIOS_FUNCOES.csv`, `FUNCIONARIOS_FUNCOES_EXERCIDAS.csv`, `FUNCIONARIOS_TIPOS.csv`, `TIPOS_FUNCIONARIOS.csv`, `FUNCIONARIOS_HORARIOS.csv`, `PERMISSOES.csv`), explicando o papel de cada bloco no resultado final da importação.",
@@ -5419,7 +5419,7 @@
         ]
       },
       {
-        "id": "75",
+        "id": 75,
         "title": "Exibir resumo ETL de colaboradores por bloco importado",
         "description": "Mostrar no frontend o resultado detalhado da importação de colaboradores enriquecida.",
         "details": "Após a execução do job, o backoffice deve apresentar resumo separado para ficha principal, funções/cargos, tipos operacionais, horários, contratação e perfil legado reconciliado, em vez de tratar “funcionários” como um bloco único opaco.",
@@ -5485,7 +5485,7 @@
         ]
       },
       {
-        "id": "76",
+        "id": 76,
         "title": "Tratar rejeições ETL de colaboradores com foco em funções, horários e perfil legado",
         "description": "Aprimorar o diagnóstico de falhas de importação de colaboradores no frontend administrativo.",
         "details": "A tela ETL deve deixar claro se a rejeição ocorreu na ficha principal do colaborador, no vínculo de função/tipo, no horário semanal ou na reconciliação de perfil legado, com payload útil para correção operacional.",
@@ -5538,7 +5538,7 @@
         ]
       },
       {
-        "id": "77",
+        "id": 77,
         "title": "Ajustar tela ETL para deixar de marcar arquivos auxiliares de colaboradores como ausentes",
         "description": "Sincronizar a UI de importação com o novo catálogo backend de arquivos auxiliares de colaboradores.",
         "details": "Depois que o backend passar a reconhecer os CSVs auxiliares de colaboradores, a tela ETL deve mostrar presença real desses arquivos no ZIP, refletir os blocos auxiliares corretamente e exibir resumo/rejeições alinhados ao novo contrato.",
@@ -5607,7 +5607,7 @@
         ]
       },
       {
-        "id": "78",
+        "id": 78,
         "title": "Sincronizar diagnóstico de colaboradores com resumo do job",
         "description": "Ajustar a tela de importação EVO para que a execução da malha de colaboradores use o resumo do backend como fonte de verdade, evitando inferências baseadas apenas no histórico local. O objetivo é refletir com precisão quais blocos foram executados, com ou sem linhas, e o resultado de rejeições.",
         "details": "Atualizar `src/app/(backoffice)/admin/importacao-evo-p0/page.tsx` para derivar `jobTemMalhaColaboradores`, `colaboradoresResumoCards` e `colaboradoresResumoAlertas` a partir de `jobResumo.colaboradoresDetalhe`, usando `arquivosSelecionados` e `arquivosAusentes` do backend (com `resolveColaboradorArquivoMetaFromValue`/`resolvePacoteArquivoCanonico` para mapear aliases). Criar um helper (no próprio arquivo ou extraído para `src/lib/backoffice/importacao-evo.ts`) que normalize a lista de arquivos executados por bloco e calcule um status por bloco: `naoSelecionado` (sem arquivos selecionados), `semLinhas` (selecionado com `total` 0), `comRejeicoes` (`rejeitadas` > 0 ou `parcial`/`mensagemParcial`), `sucesso` (`total` > 0 e `rejeitadas` 0). Atualizar o card “Diagnóstico de colaboradores” para renderizar badge e texto conforme esse status, além de listar chips de arquivos pelo resumo do job, removendo dependência de `jobsHistorico` para horários/perfil legado. Manter fallback para jobs antigos sem `colaboradoresDetalhe`, mas priorizar dados do backend quando presentes. Cobrir o job `7b6d9d3b-399a-4e6a-9d77-4bdd6dfc96a9`, garantindo que horários e perfil legado aparecem como não selecionados ou sem linhas conforme o resumo.",
@@ -5621,7 +5621,7 @@
         "subtasks": []
       },
       {
-        "id": "79",
+        "id": 79,
         "title": "Migrar formularios selecionados para react-hook-form",
         "description": "Consolidar a migracao dos formularios mais aderentes ao react-hook-form em um epico unico, com uma subtask por formulario ou modal relevante.",
         "details": "Cobrir formularios de autenticacao, jornada publica, operacionais e modais CRUD que hoje usam `useState` e validacao manual. O objetivo e padronizar registro de campos, validacao, reset, submit assincrono e integracao com componentes como `Select`, `SuggestionInput` e editores ricos sem regressao funcional nem risco de hydration.",
@@ -5930,7 +5930,7 @@
         ]
       },
       {
-        "id": "80",
+        "id": 80,
         "title": "Adicionar histórico por arquivo na importação ETL EVO",
         "description": "Planejar e implementar a visão de histórico por arquivo na página de importação ETL EVO, exibindo o último processamento por arquivo do pacote e preparando a ação de reprocessar apenas erros quando o backend suportar.",
         "details": "Atualizar os tipos e wrappers em `src/lib/api/importacao-evo.ts` para refletir o novo contrato de histórico por arquivo (ex.: `EvoImportArquivoHistorico` com `arquivoChave`, `status` (`EvoImportJobStatus`), `resumo` (`EvoImportEntidadeResumo`), `jobId`, `alias`, `solicitadoEm/finalizadoEm` e metadados de reprocessamento), e expor um novo client (ex.: `getEvoImportPacoteHistoricoArquivosApi`) com fallback seguro para ausência de endpoint (404/501 -> lista vazia/indisponível, sem criar histórico local paralelo). Encapsular o wrapper em `src/lib/backoffice/importacao-evo.ts` seguindo o padrão das funções já exportadas. Na tela `src/app/(backoffice)/admin/importacao-evo-p0/page.tsx`, carregar o histórico quando houver `pacoteAnalise` + `pacoteMapeamento.tenantId`, mapear para o `PacoteArquivoChave` usando `resolvePacoteArquivoCanonico` e enriquecer cada item de `pacoteArquivosDisponiveis` com o histórico correspondente. Renderizar o bloco de histórico dentro da seleção de arquivos (seção “Arquivos reconhecidos”), exibindo: status (“Nunca importado”, “Sucesso”, “Parcial”, “Com erros”), contadores (processadas/criadas/atualizadas/rejeitadas via `resumoValue`), e metadados do último job (alias com fallback de `buildDefaultJobAlias`, `jobId` e data formatada por `formatDateTime`). Manter estados de carregamento/indisponível com placeholder estável e sem usar datas dinâmicas no render inicial. Preparar a ação “Reprocessar apenas erros” por arquivo reutilizando a estrutura atual de rejeições/retry: quando o backend sinalizar suporte, habilitar o botão e apontar para a rotina existente (ex.: abrir rejeições com `openRejeicoesPorEntidade`/jobId já selecionado); quando indisponível, manter CTA desabilitada com mensagem “Aguardando backend”, evitando fluxo paralelo. Ajustar a tipagem para suportar o mapeamento por arquivo e garantir consistência com os blocos de colaboradores (ex.: chave canônica `funcionarios`).",
@@ -5941,7 +5941,7 @@
         "subtasks": []
       },
       {
-        "id": "81",
+        "id": 81,
         "title": "Adotar Zod como padrão de schema para formulários",
         "description": "Introduzir `zod` e `@hookform/resolvers` como padrão oficial de validação de schemas para os formulários baseados em `react-hook-form`.",
         "details": "Adicionar `zod` e `@hookform/resolvers` como dependências diretas do frontend, alinhar a documentação/guardrails do repositório e preparar a infraestrutura mínima para uso consistente do `zodResolver` em formulários novos e refatorados. Mapear um padrão de organização para schemas de formulário, mensagens de erro e tipos inferidos, evitando drift entre interface TypeScript e regras de validação. Definir helpers ou convenções leves apenas onde fizer sentido, sem introduzir abstrações genéricas que escondam o schema real do formulário.",
@@ -5989,7 +5989,7 @@
         ]
       },
       {
-        "id": "82",
+        "id": 82,
         "title": "Migrar formulários para react-hook-form com Zod",
         "description": "Migrar progressivamente os formulários relevantes do frontend para usar `react-hook-form` com schemas `zod` e `zodResolver` como padrão de validação.",
         "details": "Revisar os formulários já migrados para `react-hook-form` e substituir validações manuais, `validate` inline repetitivo e parsing ad hoc por schemas `zod` coesos, mantendo a UX atual de erros, submit e reset. Priorizar fluxos críticos ou já padronizados em `react-hook-form`, como autenticação, jornada pública, segurança/RBAC e CRUDs administrativos. Extrair schemas por domínio quando houver reaproveitamento real, evitando um arquivo monolítico de validações. Garantir compatibilidade com componentes customizados (`Select`, `SuggestionInput`, editores ricos, modais Radix) e preservar segurança de hidratação no primeiro render.",
@@ -6068,7 +6068,7 @@
         ]
       },
       {
-        "id": "83",
+        "id": 83,
         "title": "Reestruturar colaboradores para fluxo em páginas próprias",
         "description": "Substituir o fluxo atual de criação/edição de colaboradores via modal por páginas próprias, com listagem em datatable tradicional e formulários organizados em abas.",
         "details": "A tela atual de `src/app/(app)/administrativo/funcionarios/page.tsx` mistura listagem, criação rápida em modal e edição inline com densidade alta, o que já causa overflow visual e piora a navegação. Reestruturar o módulo para seguir um fluxo mais estável: a listagem principal deve focar em busca, filtros, métricas e uma tabela paginável tradicional; a ação de “Novo colaborador” deve levar para uma rota própria (ex.: `/administrativo/funcionarios/novo`); a edição deve ocorrer em rota dedicada (ex.: `/administrativo/funcionarios/[id]`), com cabeçalho claro e tabs para agrupar cadastro, contratação, permissões, horários, informações complementares e notificações; a listagem deve abrir a ficha do colaborador ao clicar na linha/ação de editar, evitando modal gigante para dados extensos; o fluxo deve preservar o comportamento já existente de catálogos auxiliares, permissões, dados sensíveis e compatibilidade com multiunidade. Ao implementar, priorizar extração de componentes compartilháveis para ficha/listagem sem duplicar regras de normalização ou payload. A nova navegação deve manter segurança de hidratação, responsividade e rotas previsíveis para deep-link direto na ficha.",
@@ -6150,7 +6150,7 @@
         "updatedAt": "2026-03-23T04:32:29.696Z"
       },
       {
-        "id": "84",
+        "id": 84,
         "title": "Adicionar command palette global de navegação",
         "description": "Implementar uma command palette global acionada por teclado para abrir páginas, localizar clientes rapidamente e alternar unidades sem depender da navegação extensa da sidebar.",
         "details": "Usar `cmdk`/Command do Shadcn para criar um modal global disparado por `CMD/CTRL + K`, com busca incremental de páginas, atalhos para módulos críticos, suporte a navegação por teclado e bloco de troca rápida de tenant. A primeira fase deve priorizar frontend e reutilizar dados/rotas já existentes, preservando hidratação estável e evitando conteúdos client-only assimétricos no primeiro render.",
@@ -6163,7 +6163,7 @@
         "subtasks": []
       },
       {
-        "id": "85",
+        "id": 85,
         "title": "Implementar favoritos e acessos recentes na navegação",
         "description": "Adicionar favoritos e seção de vistos recentemente para reduzir carga cognitiva na navegação principal e personalizar o fluxo de cada usuário.",
         "details": "Criar affordance de favoritar páginas na sidebar e/ou cabeçalho, manter seção de itens favoritos no topo da navegação e registrar os últimos links visitados com persistência local. A implementação inicial deve usar storage local compatível com SSR seguro, deixando a modelagem preparada para futura persistência cross-device no backend sem acoplar a UI a valores instáveis no render inicial.",
@@ -6176,7 +6176,7 @@
         "subtasks": []
       },
       {
-        "id": "86",
+        "id": 86,
         "title": "Criar bottom navigation mobile para atalhos críticos",
         "description": "Introduzir uma navegação inferior em telas pequenas com atalhos fixos para os fluxos mais usados do app.",
         "details": "Adicionar uma bottom navigation exclusiva para telas `< 768px`, com atalhos para Dashboard, Clientes, Vendas, Check-in e Perfil, complementando a sidebar atual e reduzindo dependência do menu hambúrguer para ações triviais. A solução deve respeitar o layout existente, estados ativos/inativos, tenant atual e coexistir com a command palette e os favoritos sem quebrar responsividade.",
@@ -6190,7 +6190,7 @@
         "updatedAt": "2026-03-24T07:16:27.912Z"
       },
       {
-        "id": "87",
+        "id": 87,
         "title": "Sincronização de Estado de Tabelas via URL (URL State)",
         "description": "Garantir que os filtros, busca e paginação de tabelas sejam persistidos na URL para compartilhamento e histórico de navegação.",
         "details": "Criar o custom hook useTableSearchParams em src/hooks/, implementar suporte a parâmetros: q (busca), status (filtro), page (página) e size (tamanho). Refatorar a tela de Clientes para usar este hook. Garantir que o useEffect de carga de dados seja acionado ao mudar qualquer um dos parâmetros da URL.",
@@ -6204,7 +6204,7 @@
         "updatedAt": "2026-03-24T07:26:33.256Z"
       },
       {
-        "id": "88",
+        "id": 88,
         "title": "Skeleton Loading Components para Tabelas e Listagens",
         "description": "Melhorar a percepção de performance e eliminar o Layout Shift durante o carregamento de dados.",
         "details": "Criar o componente base Skeleton em src/components/ui/. Implementar o componente TableSkeleton em src/components/shared/ que imita a estrutura de linhas do PaginatedTable. Integrar o TableSkeleton no componente PaginatedTable via prop isLoading. Substituir o texto Carregando clientes... pelo TableSkeleton na página de Clientes.",
@@ -6218,7 +6218,7 @@
         "updatedAt": "2026-03-24T07:31:47.399Z"
       },
       {
-        "id": "89",
+        "id": 89,
         "title": "Bulk Actions Architecture na PaginatedTable",
         "description": "Permitir a execução de ações em massa em registros de tabelas para aumentar a produtividade.",
         "details": "Adicionar suporte a rowSelection na PaginatedTable. Criar a coluna de Checkbox na cabeçalho e linhas. Criar o componente BulkActionBar (flutuante) que aparece no rodapé da página quando 1+ itens são selecionados. Definir a interface de BulkAction (label, icon, handler). Implementar as primeiras ações em massa: Exportar Selecionados (CSV) e Alterar Status em Massa.",
@@ -6232,7 +6232,7 @@
         "updatedAt": "2026-03-24T07:48:32.394Z"
       },
       {
-        "id": "90",
+        "id": 90,
         "title": "Implementar Sticky Action Footer para Formulários Longos",
         "description": "Manter os botões de ação (Salvar/Cancelar) sempre acessíveis, independente da posição de scroll.",
         "details": "Criar o componente StickyActionFooter em src/components/shared/. Implementar comportamento Sticky no rodapé que aparece apenas em telas longas. Adicionar suporte a estados: isDirty (botão de salvar muda de cor ou pulsa quando há mudanças não salvas). Refatorar formulário de Cadastro de Cliente para utilizar o novo footer.",
@@ -6246,7 +6246,7 @@
         "updatedAt": "2026-03-24T07:58:40.648Z"
       },
       {
-        "id": "91",
+        "id": 91,
         "title": "Implementar Validação Inline e Feedback Assíncrono",
         "description": "Fornecer feedback imediato de erros para o usuário, evitando o medo do submit.",
         "details": "Configurar os formulários principais para o modo de validação onBlur ou onChange. Implementar mensagens de erro dinâmicas (Zod) em tempo real. Criar o componente FieldAsyncFeedback que exibe estado de Checando... e depois OK ou Erro. Integrar busca de unicidade (CPF/Email) no backend enquanto o usuário digita.",
@@ -6260,7 +6260,7 @@
         "updatedAt": "2026-03-24T08:14:28.670Z"
       },
       {
-        "id": "92",
+        "id": 92,
         "title": "Implementar Rascunhos e Auto-save em Formulários Críticos",
         "description": "Proteger o usuário contra perda acidental de dados em cadastros extensos.",
         "details": "Criar o hook customizado useFormDraft para persistência em localStorage. Implementar política de expiração de rascunhos. Adicionar um pequeno indicador de Salvo no rascunho no topo do formulário. Criar o modal Continuar preenchimento? ao reabrir um formulário inacabado. Implementar em: Cadastro de Cliente, Cadastro de Plano e Matrícula.",
@@ -6274,7 +6274,7 @@
         "updatedAt": "2026-03-24T08:36:11.285Z"
       },
       {
-        "id": "93",
+        "id": 93,
         "title": "Audit de Acessibilidade, Contraste e Estados de Foco",
         "description": "Garantir que a aplicação seja acessível e tenha uma navegação via teclado clara e vibrante.",
         "details": "Realizar audit de contraste da cor gym-accent (#c8f135). Implementar variante de Contraste Seguro para textos pequenos. Customizar o anel de foco global (focus-visible) no Tailwind para usar a cor da marca com brilho. Testar navegação completa via teclado na Sidebar e Tabelas.",
@@ -6288,7 +6288,7 @@
         "updatedAt": "2026-03-24T08:40:57.943Z"
       },
       {
-        "id": "94",
+        "id": 94,
         "title": "Micro-interações, Transições e Polimento Visual",
         "description": "Tornar o sistema visualmente mais vivo e polido, adicionando feedbacks táteis de interface.",
         "details": "Instalar framer-motion. Criar animação de Page Transition (Fade-in/Up). Adicionar efeito Scale-down ao clicar em botões principais. Implementar animações de feedback em StatusBadge. Criar micro-animação para o Command Palette.",
@@ -6302,7 +6302,7 @@
         "updatedAt": "2026-03-24T08:52:50.160Z"
       },
       {
-        "id": "95",
+        "id": 95,
         "title": "Implementar Global Error Boundaries e Resiliência",
         "description": "Tratar erros críticos sem quebrar a aplicação inteira e oferecer um caminho claro de recuperação.",
         "details": "Criar o componente ErrorState reutilizável. Implementar src/app/error.tsx e src/app/(app)/error.tsx. Adicionar botão de Tentar Novamente (reset()). Capturar erros de ApiRequestError no Boundary para exibir mensagens técnicas úteis.",
@@ -6316,7 +6316,7 @@
         "updatedAt": "2026-03-24T09:01:28.456Z"
       },
       {
-        "id": "96",
+        "id": 96,
         "title": "Higienizar base React/SSR e zerar lint crítico da UI",
         "description": "Remover smells e regressões de base antes de continuar refinando a interface, atacando efeitos problemáticos, artefatos locais e desvios de SSR/hidratação.",
         "details": "Corrigir os erros atuais de `react-hooks/set-state-in-effect`, limpar imports mortos e arquivos temporários como `template.tsx.bak`, revisar pontos de hidratação/estado client-only introduzidos nas tasks recentes e deixar a base pronta para os próximos ajustes de acessibilidade e motion. Esta tarefa pode rodar em paralelo com 97 e 98.",
@@ -6371,7 +6371,7 @@
         "updatedAt": "2026-03-25T12:25:00.000Z"
       },
       {
-        "id": "97",
+        "id": 97,
         "title": "Estruturar tratamento de erro e observabilidade dos boundaries",
         "description": "Evoluir os error boundaries para consumirem erros tipados do projeto e entregarem recuperação, contexto técnico e mensagem consistente.",
         "details": "Aproveitar a infraestrutura criada na task 95 para conectar `ErrorState` ao shape real de `ApiRequestError`, reutilizar formatadores compartilhados, enriquecer diagnósticos úteis para suporte e alinhar os estados de erro global, operacional e `not-found`. Esta tarefa pode rodar em paralelo com 96 e 98.",
@@ -6426,7 +6426,7 @@
         "updatedAt": "2026-03-25T13:15:00.000Z"
       },
       {
-        "id": "98",
+        "id": 98,
         "title": "Consolidar política de motion com reduced motion e custo controlado",
         "description": "Transformar motion em uma camada compartilhada do projeto, com fallback consistente para `prefers-reduced-motion` e sem dependência espalhada sem propósito claro.",
         "details": "Revisar o que restou da task 94, decidir a política padrão de motion do app, centralizar timings/curvas/opt-out para movimento reduzido e remover efeitos redundantes ou caros que não entregam valor proporcional. Esta tarefa pode rodar em paralelo com 96 e 97.",
@@ -6481,7 +6481,7 @@
         "updatedAt": "2026-03-25T13:15:00.000Z"
       },
       {
-        "id": "99",
+        "id": 99,
         "title": "Refatorar estratégia de foco e acessibilidade por primitives",
         "description": "Substituir o foco global agressivo por uma política previsível de foco nos primitives e componentes compartilhados do design system.",
         "details": "Revisar a task 93 para preservar os ganhos de acessibilidade sem depender de `*:focus-visible`, migrando a estratégia para tokens/classes/componentes base, validando navegação por teclado e evitando ring duplicado ou styling conflitante. Esta é a última etapa da proposta e só deve começar após 96, 97 e 98.",
@@ -6539,12 +6539,12 @@
         "updatedAt": "2026-03-26T10:30:00.000Z"
       },
       {
-        "id": "100",
+        "id": 100,
         "title": "Centralizar formatadores de moeda/data/percentual em utilitário compartilhado",
         "description": "Criar um módulo único de formatação em `src/lib/formatters.ts` e substituir as funções locais nas 10 páginas listadas para reduzir duplicação sem alterar o comportamento atual.",
         "details": "Criar `src/lib/formatters.ts` exportando `formatBRL`, `formatCurrency`, `formatDate`, `formatDateTime` e `formatPercent`. Basear `formatCurrency` no padrão já usado em `src/lib/public/services.ts` (usar `toLocaleString(\"pt-BR\", { style: \"currency\", currency })` com fallback para valores não finitos), e implementar `formatBRL` como wrapper chamando `formatCurrency` com `BRL`. Para `formatPercent`, seguir o padrão de `src/app/(app)/gerencial/bi/page.tsx` (1 casa decimal via `toLocaleString` + sufixo `%`). Para `formatDate`, manter a lógica de `src/app/(app)/pagamentos/page.tsx`/`src/app/(app)/pagamentos/emitir-em-lote/page.tsx` (parse por split `YYYY-MM-DD` com fallback para string original) para evitar mudança de saída. Para `formatDateTime`, replicar o formato de `src/app/(app)/vendas/page.tsx` (dia/mês/ano + hora/minuto). Em seguida, remover as definições locais e importar os utilitários em: `src/app/(app)/planos/page.tsx`, `src/app/(app)/administrativo/produtos/page.tsx`, `src/app/(app)/administrativo/servicos/page.tsx`, `src/app/(app)/pagamentos/page.tsx`, `src/app/(app)/dashboard/page.tsx`, `src/app/(app)/vendas/page.tsx`, `src/app/(app)/vendas/nova/page.tsx`, `src/app/(app)/administrativo/conciliacao-bancaria/page.tsx`, `src/app/(app)/pagamentos/emitir-em-lote/page.tsx`, `src/app/(app)/prospects/[id]/converter/page.tsx`. Garantir que os pontos que já fazem `?? 0` ou `Number(...)` continuem iguais, preservando o comportamento atual de formatação.",
         "testStrategy": "Executar `npm run lint` para garantir que imports e tipagens ficaram corretos. Validar manualmente nas 10 páginas que moedas, datas e horários continuam com o mesmo formato (BRL, dd/mm/aaaa e data/hora), comparando exemplos visíveis antes/depois da mudança.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [
@@ -6608,15 +6608,15 @@
             "parentId": "undefined"
           }
         ],
-        "updatedAt": "2026-03-26T16:12:42.260Z"
+        "updatedAt": "2026-03-26T16:29:46.824Z"
       },
       {
-        "id": "101",
+        "id": 101,
         "title": "Criar useConfirmDialog com AlertDialog e substituir confirm nativo",
         "description": "Implementar um hook reutilizável de confirmação baseado em AlertDialog do shadcn/ui e eliminar o uso de window.confirm nas páginas administrativas e fluxos indicados.",
         "details": "- Adicionar `src/components/ui/alert-dialog.tsx` seguindo o padrão de `src/components/ui/dialog.tsx` (data-slot, `cn`, `Button`) e o layout do shadcn/ui, exportando `AlertDialog`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel` e `AlertDialogAction` com import consistente (`radix-ui` vs `@radix-ui/react-alert-dialog`) já usado no projeto.\n- Criar `src/hooks/use-confirm-dialog.tsx` (ou `.ts` se optar por `React.createElement`) com `\"use client\"`, estado controlado e callback em `useRef` para armazenar `onConfirm` sem re-render extra. A API deve expor `{ confirm, ConfirmDialog }`, onde `confirm(message, onConfirm, options?)` aceita opções para `title`, `confirmLabel`, `variant` (incluindo `destructive`) e mantém defaults estáveis no render inicial (sem `Date.now`, `Math.random` ou dependência de `window`).\n- `ConfirmDialog` deve renderizar o `AlertDialog` com título/mensagem configuráveis, botão de cancelar padrão e botão de confirmação usando `Button` com variante customizável; se `onConfirm` for async, tratar estado de loading e fechar apenas após resolução.\n- Substituir os `confirm()` nativos pelos novos handlers usando o hook e renderizar `<ConfirmDialog />` no JSX da página. Páginas identificadas pelo `rg \"confirm\"`:\n  - `src/app/(app)/administrativo/salas/page.tsx`\n  - `src/app/(app)/administrativo/produtos/page.tsx`\n  - `src/app/(app)/administrativo/servicos/page.tsx`\n  - `src/app/(app)/administrativo/bandeiras/page.tsx`\n  - `src/app/(app)/administrativo/convenios/page.tsx`\n  - `src/app/(app)/administrativo/formas-pagamento/page.tsx`\n  - `src/app/(app)/administrativo/atividades-grade/page.tsx`\n  - `src/app/(app)/atividades/page.tsx`\n  - `src/app/(app)/prospects/page.tsx`\n  - `src/app/(app)/clientes/page.tsx`\n  - `src/app/(app)/matriculas/page.tsx`\n- Revisar também `src/app/(app)/alunos/page.tsx` e `src/app/(app)/pagamentos/page.tsx` para garantir que qualquer confirmação futura já use o hook, conforme o escopo solicitado.",
         "testStrategy": "- Executar `rg \"window\\.confirm|confirm\\(\" src/app` e validar que não há ocorrências após a migração.\n- Navegar nas páginas listadas e acionar ações de remoção/cancelamento: o AlertDialog deve abrir com título/mensagem corretos, cancelar não deve executar a ação e confirmar deve disparar o fluxo atual.\n- Verificar que o botão de confirmação usa a variante `destructive` nos casos de exclusão e que o foco/teclado (Esc/Enter) funciona sem warnings de hidratação.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [
@@ -6680,15 +6680,15 @@
             "parentId": "undefined"
           }
         ],
-        "updatedAt": "2026-03-26T16:12:42.285Z"
+        "updatedAt": "2026-03-26T16:29:46.839Z"
       },
       {
-        "id": "102",
+        "id": 102,
         "title": "Criar CrudModal genérico e refatorar modais simples de CRUD",
         "description": "Implementar um componente genérico `CrudModal<T>` para reduzir duplicação de modais de CRUD e migrar os modais simples (sala, bandeira de cartão, forma de pagamento e convênio) para essa nova base, mantendo o comportamento atual e validações essenciais.",
         "details": "Criar `src/components/shared/crud-modal.tsx` com `\"use client\"` e estrutura base usando `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle` e `DialogFooter` (padrão visto em `src/components/shared/sala-modal.tsx` e `src/components/shared/bandeira-cartao-modal.tsx`). O componente deve receber `open`, `onClose`, `onSave(data, id?)`, `initial`, `title` e `fields: FormFieldConfig[]` (incluir `name`, `label`, `type`, `required`, `options` para select, `placeholder`, `min`/`max` para number) e montar o formulário com `react-hook-form` (`useForm`) e `useEffect` para `reset` quando `initial`/`open` mudarem, replicando o comportamento atual desses modais. Definir `FormFieldConfig` em `src/lib/types.ts` (ou local no `crud-modal.tsx` se preferir escopo local) e exportá-lo para reutilização. Para aderir ao padrão do repositório, incluir validação com `zod`/`zodResolver`: construir um schema mínimo baseado em `fields` (ex.: `requiredTrimmedString` de `src/lib/forms/zod-helpers.ts` para campos obrigatórios) e permitir um override opcional (prop `schema`) para casos que já possuem schema próprio, como `convenioFormSchema` em `src/lib/forms/administrativo-schemas.ts`. Implementar renderização dos tipos: `text`/`number` com `Input` (`src/components/ui/input.tsx`), `textarea` com `Textarea` (`src/components/ui/textarea.tsx`), `select` com `Select`/`SelectItem` (`src/components/ui/select.tsx`) via `Controller`, `checkbox` com `input` simples ou `Checkbox` (`src/components/ui/checkbox.tsx`) mantendo layout semelhante aos modais atuais, e `currency` usando os formatters da task 100 (ex.: util em `src/lib/formatters` quando disponível), garantindo que o valor salvo seja numérico e formatado apenas para exibição. Adicionar suporte opcional a `contentClassName`/`size` para manter diferenças de largura (`sm:max-w-sm` em sala e `sm:max-w-lg` nos demais) e um slot opcional (`children`/`renderAfterFields`) com `FormProvider` para permitir conteúdo adicional; isso é necessário para preservar a nota condicional de `tipo` em `src/components/shared/forma-pagamento-modal.tsx` e o seletor de planos em `src/components/shared/convenio-modal.tsx` usando `useFormContext`/`useWatch`. Refatorar `src/components/shared/sala-modal.tsx`, `src/components/shared/bandeira-cartao-modal.tsx`, `src/components/shared/forma-pagamento-modal.tsx` e `src/components/shared/convenio-modal.tsx` para usarem `CrudModal` e `FormFieldConfig`, mantendo a lógica de transformação de dados (trim, parse de número/currency, campos opcionais) dentro do `onSave` do wrapper e preservando mensagens auxiliares/seleção de planos via slot. Não refatorar `src/components/shared/novo-cliente-wizard.tsx` nem `src/components/planos/plano-form.tsx`. Opcionalmente exportar `CrudModal` em `src/components/shared/modals/index.ts` para uso futuro.",
         "testStrategy": "Validar manualmente os quatro modais refatorados: abrir cada modal em modo criação e edição e confirmar que `initial` preenche os campos e que `reset` ocorre ao reabrir. Conferir validação de obrigatórios (ex.: nome em sala/bandeira/forma/convênio) e mensagens de erro; checar selects (tipo de pagamento) e checkboxes (ativo, emissão automática) persistindo corretamente. Para `forma-pagamento`, verificar que o aviso de recorrente continua aparecendo quando `tipo` é `RECORRENTE`. Para `convênio`, confirmar seleção de planos e persistência em `planoIds`. Para campos `currency`, validar máscara/formatter e conversão para número no `onSave`. Conferir que o layout e tamanhos do `DialogContent` permanecem consistentes com os modais atuais.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "100"
         ],
@@ -6700,9 +6700,10 @@
             "description": "Criar o tipo de configuração de campos e o mapeamento de renderização para os inputs suportados.",
             "dependencies": [],
             "details": "Adicionar `FormFieldConfig` em `src/lib/types.ts` (ou no próprio `crud-modal.tsx` se preferir escopo local) com `name`, `label`, `type`, `required`, `options`, `placeholder`, `min`, `max`. Implementar um renderer interno que saiba montar `Input`, `Textarea`, `Select` (com `Controller`), `Checkbox` e `currency`, incluindo labels e mensagens de erro, mantendo o layout usado nos modais atuais.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Revisar manualmente o renderer conferindo labels, placeholders e erros.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:46:11.700Z"
           },
           {
             "id": 2,
@@ -6712,9 +6713,10 @@
               1
             ],
             "details": "Criar `src/components/shared/crud-modal.tsx` com `\"use client\"`, estrutura `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle`/`DialogFooter`, props `open`, `onClose`, `onSave`, `initial`, `title`, `fields`, `schema`, `contentClassName`/`size`, `children`/`renderAfterFields`. Usar `useForm` + `FormProvider`, `useEffect` para `reset` ao mudar `initial`/`open`, construir schema mínimo via `requiredTrimmedString` quando `schema` não for informado, e ligar `zodResolver`. Integrar o renderer do subtask 1 e opcionalmente exportar em `src/components/shared/modals/index.ts`.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Abrir um modal de teste local e confirmar reset ao reabrir.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:46:11.710Z"
           },
           {
             "id": 3,
@@ -6724,9 +6726,10 @@
               2
             ],
             "details": "Substituir `useForm` local por `CrudModal`, montar `fields` com `nome`, `descricao`, `capacidadePadrao` e `ativo`, preservar `sm:max-w-sm` via `size`/`contentClassName`. Manter o `onSave` com trim e parse para número e os defaults/validações obrigatórias equivalentes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Abrir o modal em criação/edição, validar campo obrigatório e checkbox ativo.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:46:11.716Z"
           },
           {
             "id": 4,
@@ -6736,9 +6739,10 @@
               2
             ],
             "details": "Montar `fields` com `nome`, `taxaPercentual`, `diasRepasse`, `ativo` e layout similar (grid), usar `sm:max-w-lg`. Preservar `onSave` com trims e parse numérico, além de mensagens de erro de nome.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Abrir o modal em criação/edição e validar campos numéricos e obrigatório.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:46:11.720Z"
           },
           {
             "id": 5,
@@ -6748,9 +6752,10 @@
               2
             ],
             "details": "Criar `fields` para `nome`, `tipo`, `taxaPercentual`, `parcelasMax`, `emitirAutomaticamente`, `instrucoes`, `ativo` usando `Select` e checkboxes. Usar `children`/`renderAfterFields` com `useWatch` via `useFormContext` para a nota quando `tipo === \"RECORRENTE\"`. Manter `onSave` com trims e parse numérico.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testar troca de tipo para exibir nota e salvar com valores numéricos.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:46:11.725Z"
           },
           {
             "id": 6,
@@ -6760,19 +6765,21 @@
               2
             ],
             "details": "Usar `CrudModal` com `schema={convenioFormSchema}` e `fields` para `nome`, `descontoPercentual`, `ativo`, `observacoes`. Manter seletor de planos dentro do slot usando `useFormContext`/`useWatch` para `planoIds`, preservando `togglePlano`. Garantir `onSave` com trims e parse numérico e `sm:max-w-lg`.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Abrir modal com planos, alternar seleção e validar obrigatórios.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:46:11.729Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-26T16:46:11.729Z"
       },
       {
-        "id": "103",
+        "id": 103,
         "title": "Consolidar estado das seções colapsáveis no Sidebar",
         "description": "Refatorar o estado interno do sidebar para substituir os seis pares de `useState`/`useEffect` por um único objeto de estado, mantendo o comportamento atual de abertura automática por rota ativa.",
         "details": "Basear a mudança em `src/components/layout/sidebar.tsx`, dentro de `SidebarNavigation`, mantendo o layout e comportamento atuais.\n\n- Criar a função `getInitialSectionStates(pathname: string): Record<string, boolean>` próxima de `matchesAnyPath`, reaproveitando as mesmas regras existentes: `atividade` usa `matchesAnyPath(pathname, atividadeItemsSorted)`, e as demais (`crm`, `treinos`, `seguranca`, `administrativo`, `gerencial`) usam `pathname.startsWith(\"/<section>\")`.\n- Substituir os seis `useState` por um único `useState<Record<string, boolean>>(() => getInitialSectionStates(pathname))`. Se necessário, declarar um mapa de chaves (ex.: `const SECTION_KEYS = {...} as const`) para evitar strings soltas.\n- Trocar os seis `useEffect` por um único `useEffect` que reage ao `pathname` e faz `setOpenSections(getInitialSectionStates(pathname))`, preservando o `useEffect` que fecha o menu mobile.\n- Atualizar cada `CollapsibleSection` para ler `open` via `openSections[\"atividade\"]` etc. e `onToggle` via `setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))`, garantindo fallback booleano quando a chave não existir.\n- Não alterar arrays de navegação (`atividadeItemsSorted`, `crmItemsSorted`, etc.) nem a lógica de favoritos/recents; o objetivo é apenas reduzir duplicação e manter o comportamento idêntico.\n- Confirmar que o arquivo mantém as restrições de hidratação: sem novos valores dinâmicos no render e sem mudança de árvore condicional dos itens Radix.\n\nResultado esperado: redução de duplicação (~600 linhas) sem mudança visual ou funcional.",
         "testStrategy": "- Navegar para cada rota principal e verificar se a seção correspondente abre automaticamente: `/atividades`, `/treinos`, `/crm`, `/seguranca`, `/administrativo`, `/gerencial`.\n- Alternar manualmente cada seção e confirmar que o estado é preservado até a próxima navegação (como hoje).\n- Validar que o menu mobile continua fechando ao mudar de rota.\n- Fazer smoke test visual do sidebar colapsado/expandido para garantir que itens e labels não mudaram.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "subtasks": [
@@ -6782,9 +6789,10 @@
             "description": "Revisar o arquivo do sidebar e identificar como os estados e efeitos atuais são usados nas seções colapsáveis.",
             "dependencies": [],
             "details": "Inspecionar `src/components/layout/sidebar.tsx` para listar os seis `useState`/`useEffect` e como cada `CollapsibleSection` consome `open`/`onToggle`, mantendo as regras de rota e filtros já existentes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:33:40.606Z"
           },
           {
             "id": 2,
@@ -6794,9 +6802,10 @@
               1
             ],
             "details": "Adicionar `getInitialSectionStates(pathname: string)` próximo de `matchesAnyPath` com a lógica atual (atividade via `matchesAnyPath`, demais via `startsWith`), e opcionalmente declarar um mapa/constante de chaves para evitar strings soltas.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:33:40.620Z"
           },
           {
             "id": 3,
@@ -6806,9 +6815,10 @@
               2
             ],
             "details": "Trocar os `useState` por `useState<Record<string, boolean>>(() => getInitialSectionStates(pathname))` e consolidar os seis `useEffect` em um único `useEffect` que faz `setOpenSections(getInitialSectionStates(pathname))`, mantendo o `useEffect` de fechamento do menu mobile.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:33:40.628Z"
           },
           {
             "id": 4,
@@ -6818,19 +6828,21 @@
               3
             ],
             "details": "Atualizar cada `CollapsibleSection` para ler `open` via `openSections[\"<chave>\"]` e `onToggle` via `setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))`, garantindo fallback booleano; revisar checklist de hidratação e confirmar que a árvore Radix e dados client-only não mudaram.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Navegar para `/atividades`, `/treinos`, `/crm`, `/seguranca`, `/administrativo` e `/gerencial` e verificar abertura automática; alternar manualmente cada seção e validar persistência até a próxima navegação.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:33:40.632Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-26T16:33:40.632Z"
       },
       {
-        "id": "104",
+        "id": 104,
         "title": "Padronizar tratamento de erro de carregamento nas páginas administrativas de CRUD",
         "description": "Uniformizar o handling de erro de carregamento nas páginas administrativas de CRUD, criando um componente compartilhado de erro com retry e aplicando-o em todas as páginas que fazem fetch de dados.",
         "details": "Criar o componente `src/components/shared/page-error.tsx` inspirado em `src/components/shared/error-state.tsx`, usando `AlertTriangle`, `Button` e `MOTION_CLASSNAMES.fadeInSubtle` para manter o visual consistente; o componente deve aceitar `error` (string ou unknown normalizado via `normalizeErrorMessage`) e `onRetry` opcional, renderizar mensagem amigável e botão “Tentar novamente”, e retornar `null` quando não houver erro. Atualizar páginas administrativas que fazem fetch e hoje têm erro inline ou nenhum tratamento para usar o novo componente: começar por `src/app/(app)/administrativo/bandeiras/page.tsx`, `src/app/(app)/administrativo/salas/page.tsx` e `src/app/(app)/administrativo/convenios/page.tsx` (adicionando `try/catch` no `load`, estado `loadError`, e renderização de `<PageError error={loadError} onRetry={load} />`), além das páginas com `setError` de carregamento já identificadas (ex.: `src/app/(app)/administrativo/academia/page.tsx`, `contas-bancarias/page.tsx`, `conciliacao-bancaria/page.tsx`, `integracoes/page.tsx`, `atividades-grade/page.tsx`, `catraca-status/page.tsx`, `nfse/page.tsx`, `unidades/page.tsx`, `maquininhas/page.tsx`). Para páginas que usam o hook `useCrudOperations` (task 102), substituir o UI de erro de carregamento manual pelo `PageError` consumindo o erro/reload expostos pelo hook. Separar erro de carregamento de erro de ação quando necessário (ex.: manter mensagens de falha de salvar/ativar em banners específicos), removendo `setError()` de string usado apenas para load e garantindo que o estado de erro seja limpo antes de novo carregamento.",
         "testStrategy": "1) Forçar erro de carregamento (ex.: mockar resposta de API ou lançar erro no `load`) em cada página administrativa e validar que o `PageError` aparece com mensagem consistente e botão de retry. 2) Clicar em “Tentar novamente” e confirmar que o `load` é reexecutado e o erro some após sucesso. 3) Verificar que erros de ações (salvar/ativar/remover) continuam sendo exibidos nos locais existentes sem interferir no estado de load. 4) Conferir páginas que usam `useCrudOperations` exibindo o `PageError` usando o erro do hook.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "102"
         ],
@@ -6842,9 +6854,10 @@
             "description": "Levantar todas as páginas CRUD administrativas com fetch e identificar como cada uma trata erro de carregamento hoje.",
             "dependencies": [],
             "details": "Usar glob em `src/app/(app)/administrativo/**/page.tsx`, grep por `setError`, `load` e `Promise.all`, e registrar quais páginas usam erro inline, não tratam erro ou misturam erro de load com erro de ação.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:56:45.287Z"
           },
           {
             "id": 2,
@@ -6854,9 +6867,10 @@
               1
             ],
             "details": "Adicionar `src/components/shared/page-error.tsx` inspirado em `error-state.tsx`, usando `AlertTriangle`, `Button` e `MOTION_CLASSNAMES.fadeInSubtle`; aceitar `error` (string ou unknown normalizado via `normalizeErrorMessage`) e `onRetry` opcional, renderizar mensagem amigável e botão “Tentar novamente”, e retornar `null` quando não houver erro.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Renderizar o componente com e sem erro e confirmar que o botão de retry chama o handler.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:56:45.295Z"
           },
           {
             "id": 3,
@@ -6866,9 +6880,10 @@
               2
             ],
             "details": "Em `src/app/(app)/administrativo/bandeiras/page.tsx`, `salas/page.tsx` e `convenios/page.tsx`, criar estado `loadError`, envolver `load` em `try/catch`, limpar erro antes de carregar, separar erro de ação quando existir e renderizar `<PageError error={loadError} onRetry={load} />` próximo ao topo.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Forçar erro no `load` (ex.: throw manual) e validar que o `PageError` aparece e o retry refaz o fetch.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:56:45.299Z"
           },
           {
             "id": 4,
@@ -6878,9 +6893,10 @@
               2
             ],
             "details": "Atualizar `academia/page.tsx`, `contas-bancarias/page.tsx`, `conciliacao-bancaria/page.tsx`, `integracoes/page.tsx`, `atividades-grade/page.tsx`, `catraca-status/page.tsx`, `nfse/page.tsx`, `unidades/page.tsx`, `maquininhas/page.tsx`; separar `loadError` de erros de ação, limpar estado antes de novo carregamento, ajustar mensagens de empty state para usar `loadError` e incluir `<PageError error={loadError} onRetry={load} />`.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Simular falha de API em cada página e verificar exibição do `PageError` sem afetar mensagens de sucesso/ação.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:56:45.304Z"
           },
           {
             "id": 5,
@@ -6890,19 +6906,21 @@
               2
             ],
             "details": "Localizar páginas que usam `useCrudOperations` (task 102) e substituir o erro de load manual por `<PageError error={loadErrorFromHook} onRetry={reloadFromHook} />`, garantindo que erros de ação continuem em banners específicos e que `loadError` seja limpo antes de recarregar.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Forçar erro no hook, validar `PageError` e confirmar que o retry usa o método de reload do hook.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:56:45.313Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-26T16:56:45.313Z"
       },
       {
-        "id": "105",
+        "id": 105,
         "title": "Criar hook de operações CRUD e refatorar páginas administrativas",
         "description": "Implementar o hook `useCrudOperations` para padronizar carregamento, erros e ações CRUD e migrar as páginas administrativas de salas, produtos, serviços, bandeiras, formas de pagamento, convênios e vouchers para usar esse novo padrão.",
         "details": "Criar o hook em `src/hooks/use-crud-operations.ts` com `\"use client\"`, expondo `items`, `loading`, `error`, `handleSave`, `handleToggle`, `handleDelete` e `reload`, e aceitar `listFn`, `createFn`, `updateFn`, `toggleFn` e `deleteFn` como callbacks opcionais. Implementar `reload` com `useCallback` e um `useRef` para evitar double-fetch (ignorar chamadas concorrentes e/ou a segunda execução do `useEffect` em Strict Mode), sempre limpando `error`, controlando `loading` e tratando falhas com `normalizeErrorMessage` de `src/lib/utils/api-error.ts`. `handleSave` deve decidir entre `createFn` e `updateFn`, aplicar `try/catch` e disparar `reload` ao final; `handleToggle` e `handleDelete` seguem a mesma abordagem e retornam erro amigável se a operação não estiver configurada. Refatorar as páginas `src/app/(app)/administrativo/salas/page.tsx`, `produtos/page.tsx`, `servicos/page.tsx`, `bandeiras/page.tsx`, `formas-pagamento/page.tsx`, `convenios/page.tsx` e `vouchers/page.tsx` para remover `useEffect`/`load` locais e consumir o hook; manter `modalOpen`/`editing` e mover a lógica de toggle pós-criação/edição para wrappers de `createFn`/`updateFn` quando necessário (ex.: salas/produtos/serviços/forma de pagamento). Para `formas-pagamento` e `convenios`, preservar o gating por `tenantId`/`tenantResolved` usando closures no `listFn` e `handleSave`; em `convenios`, usar `Promise.all` no `listFn` para também atualizar `planos` e retornar a lista de convênios. Para `vouchers`, manter `usageCounts` em estado separado e montar o `listFn` com `Promise.all` para atualizar `usageCounts` e retornar `vouchers`; usar `handleSave` para criação via `NovoVoucherModal` e chamar `reload` após salvar no `EditarVoucherModal`. Em `bandeiras`, substituir o estado de erro local pelo `error` do hook e manter o banner existente; nas demais páginas, decidir se o `error` precisa ser exibido conforme padrão atual, sem alterar a UI sem necessidade.",
         "testStrategy": "Abrir cada página administrativa refatorada e confirmar que a lista carrega apenas uma vez no mount (sem dupla chamada em dev/Strict Mode). Validar criação, edição, toggle e remoção em salas, produtos, serviços, bandeiras, formas de pagamento e convênios, garantindo que `reload` atualiza a tabela após cada ação. Em vouchers, criar e alternar status e verificar se `usageCounts` continua sincronizado; testar abertura/fechamento dos modais e o fluxo de edição com recarregamento. Verificar que erros de API exibem mensagens normalizadas no banner (principalmente em bandeiras) e que botões respeitam estados de `loading`/`tenantResolved` como antes.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "100",
           "101"
@@ -6915,9 +6933,10 @@
             "description": "Implementar o hook base para padronizar carregamento, erros e ações CRUD.",
             "dependencies": [],
             "details": "Adicionar `src/hooks/use-crud-operations.ts` com \"use client\", tipagem genérica `T extends { id: string }`, estados `items`, `loading`, `error`, `reload` com `useCallback` e `useRef` anti double-fetch, e handlers `handleSave`, `handleToggle`, `handleDelete` usando `normalizeErrorMessage` de `src/lib/utils/api-error.ts` e callback opcional de confirmação.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Validar tipagem e ausência de chamadas duplicadas no mount em Strict Mode.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:40:40.474Z"
           },
           {
             "id": 2,
@@ -6927,9 +6946,10 @@
               1
             ],
             "details": "Substituir `useEffect`/`load` locais por `useCrudOperations`, criar wrappers de `createFn`/`updateFn` para aplicar toggle pós-criação/edição quando necessário, manter `modalOpen`/`editing` e usar `handleDelete` com confirmação.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Abrir a página de Salas e validar CRUD completo e carregamento único.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:40:40.492Z"
           },
           {
             "id": 3,
@@ -6939,9 +6959,10 @@
               2
             ],
             "details": "Refatorar `src/app/(app)/administrativo/produtos/page.tsx` e `src/app/(app)/administrativo/servicos/page.tsx` para usar `useCrudOperations`, manter formatação de moeda, wrappers de toggle pós-criação/edição e confirmação de remoção.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Criar/editar/toggle/remover em Produtos e Serviços e verificar lista atualizada.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:40:40.500Z"
           },
           {
             "id": 4,
@@ -6951,9 +6972,10 @@
               3
             ],
             "details": "Em `bandeiras/page.tsx`, remover estado local de erro e usar `error` do hook mantendo o banner; em `formas-pagamento/page.tsx`, aplicar closures no `listFn` e `handleSave` respeitando `tenantId`/`tenantResolved` e preservar o botão desabilitado.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Validar mensagens de erro em Bandeiras e gating por tenant em Formas de Pagamento.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:40:40.505Z"
           },
           {
             "id": 5,
@@ -6963,9 +6985,10 @@
               4
             ],
             "details": "Atualizar `src/app/(app)/administrativo/convenios/page.tsx` para usar `useCrudOperations`, definir `listFn` com `Promise.all` para convênios e planos, atualizar `planos` em estado separado e manter gating por `tenantId`/`tenantResolved`.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Abrir Convênios e validar planos carregados e CRUD funcionando.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:40:40.511Z"
           },
           {
             "id": 6,
@@ -6975,21 +6998,50 @@
               5
             ],
             "details": "Refatorar `src/app/(app)/administrativo/vouchers/page.tsx` para usar `useCrudOperations` com `listFn` via `Promise.all` atualizando `usageCounts`, usar `handleSave` no `NovoVoucherModal`, chamar `reload` após editar no `EditarVoucherModal` e manter toggle via hook.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Criar voucher, editar quando permitido e validar contagens/estado na lista.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T16:40:40.519Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-26T16:40:40.519Z"
+      },
+      {
+        "id": 106,
+        "title": "Unificar regras comerciais de plano/desconto/convênio (dry-run)",
+        "description": "Centralizar o cálculo e a prévia (dry-run) de planos, descontos e convênios para que Nova Venda, Wizard de Cliente e Modal de Matrícula usem o mesmo motor e mantenham consistência de valores e contexto comercial.",
+        "details": "Criar um módulo único de regras em `src/lib/comercial/plano-dry-run.ts` (ou expandir `src/lib/comercial/plano-flow.ts`) que exponha funções puras para: (1) normalizar parcelas de anuidade conforme `plano.parcelasMaxAnuidade`, (2) filtrar convênios aplicáveis ao plano, (3) gerar itens via `buildPlanoVendaItems`, (4) calcular `subtotal`, `descontos` (manual, percentual/cupom e convênio), `descontoTotal`, `total` e (5) compor um objeto `planoContexto` pronto para o `createVendaService` (planoId, dataInicio, descontoPlano, motivoDesconto, renovacaoAutomatica, convenioId). Em `src/app/(app)/vendas/nova/page.tsx`, substituir `conveniosPlano`, `descontoCupom`, `descontoConvenioPlano`, `descontoTotal` e `total` pelo retorno do dry-run; usar a normalização de parcelas e repassar o percentual do cupom para o helper; no submit, consumir `planoContexto` e `descontoTotal` do helper. Em `src/components/shared/novo-cliente-wizard.tsx`, usar o dry-run no Step 3 para o resumo e no submit para alinhar o desconto enviado com o mesmo cálculo (incluindo matrícula/anuidade quando aplicável), mantendo o schema Zod co-localizado. Em `src/components/shared/nova-matricula-modal.tsx`, trocar o cálculo manual por dry-run, reutilizando filtro de convênios e normalização de parcelas, e usar os valores calculados no payload (`descontoTotal`, `total` e `planoContexto`). Garantir que o módulo seja livre de side-effects e não use `Date` no render; toda data usada deve ser recebida por parâmetro para manter hidratação estável.",
+        "testStrategy": "Criar testes unitários para o helper de dry-run cobrindo: plano com matrícula/anuidade, convênio com desconto percentual, desconto manual e percentual combinado, e normalização de parcelas acima do máximo. Validar manualmente: (1) Nova Venda com plano + convênio + cupom atualiza totais e payload corretamente; (2) Wizard de Cliente exibe total coerente e cria matrícula com o desconto esperado; (3) Modal de Matrícula recalcula descontos ao trocar plano/convênio e respeita parcelas máximas; (4) nenhum fluxo quebra a hidratação com datas dinâmicas no render.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 107,
+        "title": "Padronizar seleção visual de planos e integrar validação real de vouchers/cuponagem",
+        "description": "Unificar a experiência de escolha de planos em todas as jornadas (pública e interna) e substituir a lógica simplificada de cupom em `vendas/nova` por uma integração real com o backend, respeitando regras de validade e aplicação.",
+        "details": "Mapear os pontos de seleção de plano em `src/app/(public)/adesao/page.tsx`, `src/app/(public)/adesao/cadastro/page.tsx`, `src/app/(public)/adesao/checkout/page.tsx` e `src/app/(app)/vendas/nova/page.tsx`, criando um componente compartilhado (ex.: `src/components/shared/plano-selector-card.tsx`) que receba `Plano`, estado de seleção, badge de destaque e renderize preço/itens usando o cálculo centralizado (preferir o helper de dry-run da Task 106, mantendo compatibilidade com `getPublicPlanQuote` e `buildPlanoVendaItems`). Substituir o markup duplicado por esse componente, mantendo os fluxos com `react-hook-form` via `Controller` (cadastro/checkout) e o comportamento de clique no fluxo de venda interna. Para vouchers/cuponagem, criar uma chamada de validação real no backend (novo client em `src/lib/api/vendas.ts` ou módulo dedicado com `apiRequest`) e expor um service em `src/lib/comercial/runtime.ts` (ex.: `validarVoucherCodigoService`). Adicionar um tipo de resposta em `src/lib/types.ts` para representar o retorno de validação (percentual/valor de desconto, mensagem, escopo, restrições por plano/cliente, etc.) e atualizar `applyCupom` em `src/app/(app)/vendas/nova/page.tsx` para usar essa resposta, removendo a busca manual em `listVouchersService`/`listVoucherCodigosService` e respeitando regras de `planoIds`, `aplicarEm`, `umaVezPorCliente`, período e escopo conforme `docs/BUSINESS_RULES.md` e o gap descrito em `docs/prd.md`. Ajustar o payload de `createVendaService` para enviar `voucherCodigo` e os totais calculados com base na resposta do backend (incluindo `descontoTotal` e, se necessário, descontos por item), garantindo consistência visual no resumo e no recibo.",
+        "testStrategy": "1) Verificar visualmente nas rotas públicas (`/adesao`, `/adesao/cadastro`, `/adesao/checkout`) e em `/vendas/nova` que os cards de plano possuem o mesmo layout, estado de seleção e informação de preço/itens. 2) Em `vendas/nova`, aplicar um cupom válido e confirmar que o desconto exibido corresponde ao retorno do backend e que mensagens de erro aparecem para cupons inválidos ou fora de escopo. 3) Finalizar uma venda com cupom aplicado e confirmar via inspeção de rede/log que `voucherCodigo` e `descontoTotal` são enviados no `createVendaService`, com recibo refletindo os valores. 4) Testar um cupom restrito por plano/cliente para garantir que a UI respeita o bloqueio retornado pela API.",
+        "status": "pending",
+        "dependencies": [
+          106
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-26T16:12:42.285Z",
+      "lastModified": "2026-03-26T16:56:45.313Z",
       "taskCount": 105,
-      "completedCount": 99,
+      "completedCount": 105,
       "tags": [
         "master"
-      ]
+      ],
+      "created": "2026-03-26T19:32:43.953Z",
+      "description": "Tasks for master context",
+      "updated": "2026-03-26T19:41:32.308Z"
     }
   }
 }
