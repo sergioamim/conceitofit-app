@@ -14,6 +14,7 @@ import { BandeiraCartaoModal } from "@/components/shared/bandeira-cartao-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useCrudOperations } from "@/hooks/use-crud-operations";
+import { PageError } from "@/components/shared/page-error";
 
 export default function BandeirasPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
@@ -74,11 +75,7 @@ export default function BandeirasPage() {
         <Button onClick={() => setModalOpen(true)}>Nova bandeira</Button>
       </div>
 
-      {error ? (
-        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
-      ) : null}
+      <PageError error={error} onRetry={reload} />
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">

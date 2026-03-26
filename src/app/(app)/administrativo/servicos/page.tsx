@@ -16,13 +16,14 @@ import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useCrudOperations } from "@/hooks/use-crud-operations";
+import { PageError } from "@/components/shared/page-error";
 
 export default function ServicosPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Servico | null>(null);
 
-  const { items: servicos, reload } = useCrudOperations<Servico>({
+  const { items: servicos, error, reload } = useCrudOperations<Servico>({
     listFn: () => listServicosApi(false),
     toggleFn: toggleServicoApi,
     deleteFn: deleteServicoApi,
@@ -88,6 +89,8 @@ export default function ServicosPage() {
         </div>
         <Button onClick={() => setModalOpen(true)}>Novo serviço</Button>
       </div>
+
+      <PageError error={error} onRetry={reload} />
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">

@@ -28,6 +28,7 @@ import type {
   NfseRegimeTributario,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { PageError } from "@/components/shared/page-error";
 
 const AMBIENTE_OPTIONS: Array<{ value: NfseAmbiente; label: string }> = [
   { value: "HOMOLOGACAO", label: "Homologação" },
@@ -70,16 +71,17 @@ export default function AdministrativoNfsePage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!tenantId || !access.canAccessElevatedModules) return;
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       setForm(await getNfseConfiguracaoAtualApi({ tenantId }));
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
+    } catch (loadErr) {
+      setLoadError(normalizeErrorMessage(loadErr));
     } finally {
       setLoading(false);
     }
@@ -171,6 +173,8 @@ export default function AdministrativoNfsePage() {
           Apenas usuários com permissão elevada podem alterar configurações fiscais.
         </div>
       ) : null}
+
+      <PageError error={loadError} onRetry={load} />
 
       {(error || success) && (
         <div

@@ -10,6 +10,7 @@ import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { Tenant } from "@/lib/types";
 import { useAuthAccess } from "@/hooks/use-session-context";
+import { PageError } from "@/components/shared/page-error";
 
 const TODOS_TENANTS_VALUE = "__TODOS_TENANTS__";
 
@@ -198,7 +199,7 @@ export default function CatracaStatusPage() {
           </p>
         ) : null}
 
-        {error ? <p className="text-sm text-gym-danger">{error}</p> : null}
+        <PageError error={error} onRetry={load} />
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-border bg-secondary/20 p-3">

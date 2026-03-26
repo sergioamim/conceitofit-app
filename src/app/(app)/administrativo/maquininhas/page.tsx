@@ -11,6 +11,7 @@ import { listContasBancariasApi } from "@/lib/api/contas-bancarias";
 import type { AdquirenteMaquininha, ContaBancaria } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useTenantContext } from "@/hooks/use-session-context";
+import { PageError } from "@/components/shared/page-error";
 
 type MaquininhaForm = {
   nome: string;
@@ -58,6 +59,7 @@ export default function MaquininhasPage() {
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -94,7 +96,7 @@ export default function MaquininhasPage() {
   const load = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const [maqs, contas] = await Promise.all([
         listMaquininhasApi({ tenantId: tenantId || undefined }),
@@ -102,8 +104,8 @@ export default function MaquininhasPage() {
       ]);
       setMaquininhas(maqs);
       setContasBancarias(contas);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
+    } catch (loadErr) {
+      setLoadError(normalizeErrorMessage(loadErr));
     } finally {
       setLoading(false);
       setHasLoadedOnce(true);
@@ -115,7 +117,7 @@ export default function MaquininhasPage() {
   }, [load]);
 
   useEffect(() => {
-    setError(tenantError);
+    setLoadError(tenantError);
   }, [tenantError]);
 
   useEffect(() => {
@@ -219,7 +221,7 @@ export default function MaquininhasPage() {
   const isTenantUnavailable = tenantResolved && !tenantId;
   const emptyStateMessage = isTenantUnavailable
     ? "Não foi possível identificar a unidade ativa."
-    : error
+    : loadError
       ? "Não foi possível carregar as maquininhas."
       : "Nenhuma maquininha cadastrada.";
 
@@ -249,6 +251,8 @@ export default function MaquininhasPage() {
           className="bg-secondary border-border"
         />
       </div>
+
+      <PageError error={loadError} onRetry={load} />
 
       {(error || success) && (
         <div

@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createDefaultBranding, TENANT_THEME_OPTIONS, resolveTenantTheme } from "@/lib/tenant-theme";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { PageError } from "@/components/shared/page-error";
 
 const COLOR_FIELDS: Array<{ key: keyof TenantThemeColors; label: string }> = [
   { key: "accent", label: "Accent (botoes e links)" },
@@ -42,17 +43,18 @@ export default function AcademiaAdminPage() {
   const [saving, setSaving] = useState(false);
   const [unitsCount, setUnitsCount] = useState(0);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   const load = useCallback(async () => {
-    setError("");
+    setLoadError("");
     try {
       const [current, units] = await Promise.all([getAcademiaAtualApi(), listUnidadesApi()]);
       setAcademia({ ...current, branding: { ...createDefaultBranding(), ...(current.branding ?? {}) } });
       setUnitsCount(units.length);
-    } catch (loadError) {
+    } catch (err) {
       setAcademia(null);
       setUnitsCount(0);
-      setError(normalizeErrorMessage(loadError) || "Falha ao carregar academia.");
+      setLoadError(normalizeErrorMessage(err) || "Falha ao carregar academia.");
     }
   }, []);
 
@@ -87,9 +89,12 @@ export default function AcademiaAdminPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight">Academia</h1>
           <p className="mt-1 text-sm text-muted-foreground">Entidade principal da rede.</p>
         </div>
-        <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-          {error || "Carregando academia..."}
-        </div>
+        <PageError error={loadError} onRetry={load} />
+        {!loadError && (
+          <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            Carregando academia...
+          </div>
+        )}
       </div>
     );
   }

@@ -15,6 +15,7 @@ import { EditarVoucherModal } from "@/components/shared/editar-voucher-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { VoucherCodigosModal } from "@/components/shared/voucher-codigos-modal";
 import { useCrudOperations } from "@/hooks/use-crud-operations";
+import { PageError } from "@/components/shared/page-error";
 
 const TIPO_LABEL: Record<string, string> = {
   DESCONTO: "Desconto",
@@ -42,7 +43,7 @@ export default function VouchersPage() {
   const [editVoucher, setEditVoucher] = useState<Voucher | null>(null);
   const [codigosVoucher, setCodigosVoucher] = useState<Voucher | null>(null);
 
-  const { items: vouchers, reload } = useCrudOperations<Voucher>({
+  const { items: vouchers, error, reload } = useCrudOperations<Voucher>({
     listFn: async () => {
       const [data, counts] = await Promise.all([
         listVouchersApi(),
@@ -103,6 +104,8 @@ export default function VouchersPage() {
         </div>
         <Button onClick={() => setModalOpen(true)} disabled={!tenantResolved}>Novo voucher</Button>
       </div>
+
+      <PageError error={error} onRetry={reload} />
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full text-sm">
