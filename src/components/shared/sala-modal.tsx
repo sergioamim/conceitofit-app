@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
 import type { Sala } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
+
+const FIELDS: FormFieldConfig[] = [
+  { name: "nome", label: "Nome *", type: "text", required: true },
+  { name: "descricao", label: "Descricao", type: "text" },
+  { name: "capacidadePadrao", label: "Capacidade padrao", type: "number", min: 1 },
+  { name: "ativo", label: "Ativo", type: "checkbox", checkboxLabel: "Sala ativa" },
+];
 
 type SalaFormValues = {
   nome: string;
@@ -42,19 +45,6 @@ export function SalaModal({
   onSave: (data: Omit<Sala, "id" | "tenantId">, id?: string) => void;
   initial?: Sala | null;
 }) {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<SalaFormValues>({
-    defaultValues: toFormValues(initial),
-  });
-
-  useEffect(() => {
-    reset(toFormValues(initial));
-  }, [initial, open, reset]);
-
   function handleSave(values: SalaFormValues) {
     const nome = values.nome.trim();
     if (!nome) return;
@@ -72,49 +62,16 @@ export function SalaModal({
   }
 
   return (
-    <Dialog
+    <CrudModal<SalaFormValues>
       open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
-      }}
-    >
-      <DialogContent className="border-border bg-card sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
-            {initial ? "Editar sala" : "Nova sala"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(handleSave)}>
-          <div className="grid gap-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-              <Input
-                {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome da sala." })}
-                className="border-border bg-secondary"
-              />
-              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descrição</label>
-              <Input {...register("descricao")} className="border-border bg-secondary" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Capacidade padrão</label>
-              <Input type="number" min={1} {...register("capacidadePadrao")} className="border-border bg-secondary" />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <input type="checkbox" {...register("ativo")} />
-              Sala ativa
-            </label>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="border-border">
-              Cancelar
-            </Button>
-            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      onClose={onClose}
+      onSave={handleSave}
+      initial={toFormValues(initial)}
+      initialId={initial?.id}
+      title="Nova sala"
+      editTitle="Editar sala"
+      fields={FIELDS}
+      contentClassName="border-border bg-card sm:max-w-sm"
+    />
   );
 }

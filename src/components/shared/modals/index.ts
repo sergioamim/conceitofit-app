@@ -1,3 +1,4 @@
+export { CrudModal, type FormFieldConfig, type CrudModalProps } from "@/components/shared/crud-modal";
 export { AtividadeModal } from "@/components/shared/atividade-modal";
 export { PlanoModal } from "@/components/shared/plano-modal";
 export { ConvenioModal } from "@/components/shared/convenio-modal";

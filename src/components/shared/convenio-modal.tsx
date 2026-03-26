@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useFormContext, useWatch } from "react-hook-form";
 import type { Convenio, Plano } from "@/lib/types";
 import { convenioFormSchema } from "@/lib/forms/administrativo-schemas";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
 import { cn } from "@/lib/utils";
+
+const FIELDS: FormFieldConfig[] = [
+  { name: "nome", label: "Nome *", type: "text", required: true },
+  { name: "descontoPercentual", label: "Desconto (%)", type: "number", min: 0, step: "0.01", className: "space-y-1.5" },
+  { name: "ativo", label: "Ativo", type: "checkbox", checkboxLabel: "Disponivel para renovacao" },
+  { name: "observacoes", label: "Observacoes", type: "text" },
+];
 
 type ConvenioFormValues = {
   nome: string;
@@ -37,6 +40,40 @@ function toFormValues(initial?: Convenio | null): ConvenioFormValues {
   };
 }
 
+function PlanoSelector({ planos }: { planos: Plano[] }) {
+  const { control, setValue } = useFormContext<ConvenioFormValues>();
+  const planoIds = useWatch({ control, name: "planoIds" }) ?? [];
+
+  function togglePlano(id: string) {
+    const next = planoIds.includes(id) ? planoIds.filter((item) => item !== id) : [...planoIds, id];
+    setValue("planoIds", next, { shouldDirty: true });
+  }
+
+  return (
+    <div>
+      <p className="text-sm font-semibold text-muted-foreground">Planos elegiveis</p>
+      <p className="text-xs text-muted-foreground">Se nenhum for selecionado, o convenio vale para todos</p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {planos.map((plano) => (
+          <button
+            key={plano.id}
+            type="button"
+            onClick={() => togglePlano(plano.id)}
+            className={cn(
+              "rounded-md border px-2.5 py-2 text-left text-xs transition-colors",
+              planoIds.includes(plano.id)
+                ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+            )}
+          >
+            {plano.nome}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ConvenioModal({
   open,
   onClose,
@@ -50,28 +87,6 @@ export function ConvenioModal({
   planos: Plano[];
   initial?: Convenio | null;
 }) {
-  const {
-    register,
-    control,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm<ConvenioFormValues>({
-    resolver: zodResolver(convenioFormSchema),
-    defaultValues: toFormValues(initial),
-  });
-  const planoIds = useWatch({ control, name: "planoIds" }) ?? [];
-
-  useEffect(() => {
-    reset(toFormValues(initial));
-  }, [initial, open, reset]);
-
-  function togglePlano(id: string) {
-    const nextPlanoIds = planoIds.includes(id) ? planoIds.filter((item) => item !== id) : [...planoIds, id];
-    setValue("planoIds", nextPlanoIds, { shouldDirty: true });
-  }
-
   function handleSave(values: ConvenioFormValues) {
     const nome = values.nome.trim();
     if (!nome) return;
@@ -88,75 +103,17 @@ export function ConvenioModal({
   }
 
   return (
-    <Dialog
+    <CrudModal<ConvenioFormValues>
       open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
-      }}
-    >
-      <DialogContent className="border-border bg-card sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
-            {initial ? "Editar convênio" : "Novo convênio"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(handleSave)}>
-          <div className="grid gap-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-              <Input
-                {...register("nome")}
-                className="border-border bg-secondary"
-              />
-              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Desconto (%)</label>
-                <Input type="number" min={0} step="0.01" {...register("descontoPercentual")} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ativo</label>
-                <div className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" {...register("ativo")} />
-                  <span className="text-muted-foreground">Disponível para renovação</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-muted-foreground">Planos elegíveis</p>
-              <p className="text-xs text-muted-foreground">Se nenhum for selecionado, o convênio vale para todos</p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {planos.map((plano) => (
-                  <button
-                    key={plano.id}
-                    type="button"
-                    onClick={() => togglePlano(plano.id)}
-                    className={cn(
-                      "rounded-md border px-2.5 py-2 text-left text-xs transition-colors",
-                      planoIds.includes(plano.id)
-                        ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                        : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                    )}
-                  >
-                    {plano.nome}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações</label>
-              <Input {...register("observacoes")} className="border-border bg-secondary" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="border-border">
-              Cancelar
-            </Button>
-            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      onClose={onClose}
+      onSave={handleSave}
+      initial={toFormValues(initial)}
+      initialId={initial?.id}
+      title="Novo convenio"
+      editTitle="Editar convenio"
+      fields={FIELDS}
+      schema={convenioFormSchema}
+      renderAfterFields={() => <PlanoSelector planos={planos} />}
+    />
   );
 }
