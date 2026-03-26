@@ -12,8 +12,6 @@ import { getBusinessTodayIso } from "@/lib/business-date";
 import {
   createAlunoComMatriculaService,
   createAlunoService,
-  listFormasPagamentoService,
-  listPlanosService,
   listAlunosService,
 } from "@/lib/comercial/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
@@ -27,15 +25,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
+import { useCommercialFlow } from "@/hooks/use-commercial-flow";
+import { formatBRL } from "@/lib/formatters";
 
 const TIPO_PLANO_LABEL: Record<string, string> = { MENSAL: "Mensal", TRIMESTRAL: "Trimestral", SEMESTRAL: "Semestral", ANUAL: "Anual", AVULSO: "Avulso" };
 
 function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
-function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 // ─── Step indicator ────────────────────────────────────────────────────────
@@ -100,12 +96,10 @@ const clienteWizardSchema = z.object({
 
 type ClienteWizardForm = z.infer<typeof clienteWizardSchema>;
 
-// Helper for Async Unique Fetch
 async function checkUniqueness(tenantId: string, search: string) {
   if (!search) return false;
   try {
     const list = await listAlunosService({ tenantId, size: 5 });
-    // Na API real, usaríamos a property search, porém vamos iterar no array resultante como mock
     const normalizedSearch = search.replace(/\D/g, "");
     return list.some(a => {
       if (normalizedSearch && a.cpf) {
@@ -118,8 +112,6 @@ async function checkUniqueness(tenantId: string, search: string) {
     return false;
   }
 }
-
-// ─── Step 1: Dados pessoais ────────────────────────────────────────────────
 
 function Step1Dados({
   form,
@@ -138,7 +130,6 @@ function Step1Dados({
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
 
-  // Async States
   const [cpfStatus, setCpfStatus] = useState<FieldAsyncFeedbackStatus>("idle");
   const [cpfMsg, setCpfMsg] = useState("");
   const [emailStatus, setEmailStatus] = useState<FieldAsyncFeedbackStatus>("idle");
@@ -167,7 +158,6 @@ function Step1Dados({
       .catch(() => undefined);
   }, [watchedCep, setValue]);
 
-  // Unique Async CPF
   useEffect(() => {
     if (!canCheckCpf || !tenantId || !watchedCpf) {
       if (errors.cpf?.type === "manual") form.clearErrors("cpf");
@@ -192,7 +182,6 @@ function Step1Dados({
     return () => clearTimeout(handler);
   }, [canCheckCpf, watchedCpf, tenantId, form, errors.cpf?.type]);
 
-  // Unique Async Email
   useEffect(() => {
     if (!canCheckEmail || !tenantId || !watchedEmail) {
       if (errors.email?.type === "manual") form.clearErrors("email");
@@ -255,7 +244,6 @@ function Step1Dados({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* NOME */}
         <div className="col-span-2 space-y-1.5">
           <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.nome ? "text-destructive" : "text-muted-foreground")}>
             Nome completo *
@@ -264,7 +252,6 @@ function Step1Dados({
           <FieldAsyncFeedback status={errors.nome ? "error" : "idle"} message={errors.nome?.message} />
         </div>
 
-        {/* EMAIL */}
         <div className="space-y-1.5">
           <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.email ? "text-destructive" : "text-muted-foreground")}>
             E-mail (opcional)
@@ -273,7 +260,6 @@ function Step1Dados({
           <FieldAsyncFeedback status={errors.email?.message ? "error" : emailStatus} message={errors.email?.message || emailMsg} />
         </div>
 
-        {/* TELEFONE */}
         <div className="space-y-1.5">
           <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.telefone ? "text-destructive" : "text-muted-foreground")}>
             Telefone *
@@ -284,7 +270,6 @@ function Step1Dados({
           <FieldAsyncFeedback status={errors.telefone ? "error" : "idle"} message={errors.telefone?.message} />
         </div>
 
-        {/* TEL SEC */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone secundário</label>
           <Controller name="telefoneSec" control={control} render={({ field }) => (
@@ -292,7 +277,6 @@ function Step1Dados({
           )} />
         </div>
 
-        {/* CPF */}
         <div className="space-y-1.5">
           <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.cpf ? "text-destructive" : "text-muted-foreground")}>
             CPF *
@@ -303,13 +287,11 @@ function Step1Dados({
           <FieldAsyncFeedback status={errors.cpf?.message ? "error" : cpfStatus} message={errors.cpf?.message || cpfMsg} />
         </div>
 
-        {/* RG */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">RG</label>
           <Input placeholder="00.000.000-0" {...register("rg")} className="bg-card border-border" />
         </div>
 
-        {/* DATA NASCIMENTO */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Data de nascimento (opcional)
@@ -317,7 +299,6 @@ function Step1Dados({
           <Input type="date" {...register("dataNascimento")} className="bg-card border-border" />
         </div>
 
-        {/* SEXO */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sexo (opcional)</label>
           <Controller name="sexo" control={control} render={({ field }) => (
@@ -438,14 +419,14 @@ function Step1Dados({
   );
 }
 
-// ─── Step 2: Plano ─────────────────────────────────────────────────────────
-
 function Step2Plano({ 
   planos, 
   form,
+  onSelectPlano
 }: { 
   planos: Plano[]; 
   form: ReturnType<typeof useForm<ClienteWizardForm>>;
+  onSelectPlano: (plano: Plano) => void;
 }) {
   const { control, setValue } = form;
   const selected = useWatch({ control, name: "selectedPlano" });
@@ -454,7 +435,10 @@ function Step2Plano({
       <p className="text-sm text-muted-foreground">Escolha o plano administrativo</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {planos.map((p) => (
-          <button key={p.id} type="button" onClick={() => setValue("selectedPlano", p.id)}
+          <button key={p.id} type="button" onClick={() => {
+            setValue("selectedPlano", p.id);
+            onSelectPlano(p);
+          }}
             className={cn("relative rounded-xl border p-4 text-left transition-all",
               selected === p.id ? "border-gym-accent bg-gym-accent/5 shadow-sm" : "border-border bg-secondary/40 hover:border-border/80"
             )}
@@ -479,23 +463,22 @@ function Step2Plano({
   );
 }
 
-// ─── Step 3: Pagamento ─────────────────────────────────────────────────────
-
 function Step3Pagamento({ 
-  plano, fps, form
+  fps, form, commercial
 }: {
-  plano?: Plano; fps: FormaPagamento[];
+  fps: FormaPagamento[];
   form: ReturnType<typeof useForm<ClienteWizardForm>>;
+  commercial: ReturnType<typeof useCommercialFlow>;
 }) {
   const { register, control } = form;
-  const descontoVal = useWatch({ control, name: "pagamento.desconto" });
-  const desconto = parseFloat(descontoVal || "0") || 0;
+  const { dryRun, selectedPlano } = commercial;
+
   return (
     <div className="space-y-5">
-      {plano && (
+      {selectedPlano && (
         <div className="rounded-lg border border-border bg-secondary/40 p-4 text-sm">
-          <p className="text-muted-foreground">Plano: <span className="font-semibold text-foreground">{plano.nome}</span></p>
-          <p className="text-muted-foreground">Valor: <span className="font-bold text-gym-accent">{formatBRL(plano.valor)}</span></p>
+          <p className="text-muted-foreground">Plano: <span className="font-semibold text-foreground">{selectedPlano.nome}</span></p>
+          <p className="text-muted-foreground">Valor: <span className="font-bold text-gym-accent">{formatBRL(selectedPlano.valor)}</span></p>
         </div>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -503,7 +486,15 @@ function Step3Pagamento({
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Data de início *
           </label>
-          <Input type="date" {...register("pagamento.dataInicio")} className="bg-card border-border" />
+          <Input 
+            type="date" 
+            {...register("pagamento.dataInicio")} 
+            onChange={(e) => {
+              register("pagamento.dataInicio").onChange(e);
+              commercial.setDataInicioPlano(e.target.value);
+            }}
+            className="bg-card border-border" 
+          />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Forma de pagamento *</label>
@@ -511,31 +502,47 @@ function Step3Pagamento({
             <Select value={field.value} onValueChange={field.onChange}>
               <SelectTrigger className="w-full bg-card border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent className="bg-card border-border">
-                {fps.map((fp) => <SelectItem key={fp.id} value={fp.tipo}>{fp.nome}</SelectItem>)}
+                {fps.map((fp) => (
+                  <SelectItem 
+                    key={fp.id} 
+                    value={fp.tipo}
+                    disabled={fp.tipo === "RECORRENTE" && !!selectedPlano && !selectedPlano.permiteCobrancaRecorrente}
+                  >
+                    {fp.nome}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )} />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Desconto (R$)</label>
-          <Input type="number" min={0} placeholder="0,00" {...register("pagamento.desconto")} className="bg-card border-border" />
+          <Input 
+            type="number" 
+            min={0} 
+            placeholder="0,00" 
+            {...register("pagamento.desconto")} 
+            onChange={(e) => {
+              register("pagamento.desconto").onChange(e);
+              commercial.setManualDiscount(parseFloat(e.target.value) || 0);
+            }}
+            className="bg-card border-border" 
+          />
         </div>
       </div>
-      {plano && (
+      {dryRun && (
         <div className="rounded-xl border border-border bg-card p-3 space-y-1.5 text-sm">
-          <div className="flex justify-between"><span className="text-muted-foreground">Valor do plano</span><span>{formatBRL(plano.valor)}</span></div>
-          {desconto > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Desconto</span><span className="text-gym-teal">- {formatBRL(desconto)}</span></div>}
+          <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatBRL(dryRun.subtotal)}</span></div>
+          {dryRun.descontoTotal > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Descontos</span><span className="text-gym-teal">- {formatBRL(dryRun.descontoTotal)}</span></div>}
           <div className="flex justify-between border-t border-border pt-1.5 font-semibold">
             <span>Total final</span>
-            <span className="font-display text-base font-bold text-gym-accent">{formatBRL(plano.valor - desconto)}</span>
+            <span className="font-display text-base font-bold text-gym-accent">{formatBRL(dryRun.total)}</span>
           </div>
         </div>
       )}
     </div>
   );
 }
-
-// ─── Success ───────────────────────────────────────────────────────────────
 
 function StepSucesso({ result, plano, onClose }: { result: CriarAlunoComMatriculaResponse; plano?: Plano; onClose: () => void }) {
   return (
@@ -593,8 +600,6 @@ interface CreateOnlyOptions {
   openSale?: boolean;
 }
 
-// ─── Wizard modal ──────────────────────────────────────────────────────────
-
 export function NovoClienteWizard({
   open,
   onClose,
@@ -604,10 +609,13 @@ export function NovoClienteWizard({
   onClose: () => void;
   onDone?: (created?: Aluno, opts?: CreateOnlyOptions) => void | Promise<void>;
 }) {
-  const { tenantId, tenantResolved } = useTenantContext();
+  const { tenantId } = useTenantContext();
   const [step, setStep] = useState(1);
-  const [planos, setPlanos] = useState<Plano[]>([]);
-  const [formas, setFormas] = useState<FormaPagamento[]>([]);
+  const commercial = useCommercialFlow({
+    tenantId,
+  });
+
+  const { planos, formasPagamento: formas, clearCart, dryRun } = commercial;
   const [showComplementary, setShowComplementary] = useState(false);
   
   const [result, setResult] = useState<CriarAlunoComMatriculaResponse | null>(null);
@@ -639,27 +647,12 @@ export function NovoClienteWizard({
 
   const { formState: { isDirty, isValid }, trigger, getValues, reset } = form;
 
-  useEffect(() => {
-    if (!open || !tenantResolved || !tenantId) return;
-    Promise.all([
-      listPlanosService({ tenantId, apenasAtivos: true }),
-      listFormasPagamentoService({ tenantId }),
-    ])
-      .then(([pls, fps]) => {
-        setPlanos(pls);
-        setFormas(fps);
-      })
-      .catch(() => {
-        setPlanos([]);
-        setFormas([]);
-      });
-  }, [open, tenantId, tenantResolved]);
-
   function fullReset() {
     setStep(1);
     setShowComplementary(false);
     reset();
     setResult(null);
+    clearCart();
   }
 
   async function handleNext() {
@@ -670,8 +663,8 @@ export function NovoClienteWizard({
       return;
     }
     if (step === 2) {
-      const p = getValues("selectedPlano");
-      if (!p) return;
+      const pId = getValues("selectedPlano");
+      if (!pId) return;
       setStep(3);
       return;
     }
@@ -682,7 +675,7 @@ export function NovoClienteWizard({
 
       const vals = getValues();
       const plano = planos.find((p) => p.id === vals.selectedPlano);
-      if (!plano || !vals.pagamento.formaPagamento) return;
+      if (!plano || !vals.pagamento.formaPagamento || !dryRun) return;
       
       setLoading(true);
       try {
@@ -713,10 +706,10 @@ export function NovoClienteWizard({
             } : undefined,
             observacoesMedicas: vals.observacoesMedicas,
             foto: vals.foto,
-            planoId: vals.selectedPlano as string,
-            dataInicio: vals.pagamento.dataInicio as string,
+            planoId: dryRun?.planoContexto.planoId || (vals.selectedPlano as string),
+            dataInicio: dryRun?.planoContexto.dataInicio || (vals.pagamento.dataInicio as string),
             formaPagamento: vals.pagamento.formaPagamento as TipoFormaPagamento,
-            desconto: parseFloat(vals.pagamento.desconto || "0") || 0,
+            desconto: dryRun?.descontoTotal ?? (parseFloat(vals.pagamento.desconto || "0") || 0),
           },
         });
         setResult(resp);
@@ -823,8 +816,8 @@ export function NovoClienteWizard({
               onToggleComplementary={() => setShowComplementary((v) => !v)}
             />
           )}
-          {step === 2 && <Step2Plano planos={planos} form={form} />}
-          {step === 3 && <Step3Pagamento plano={planos.find((p) => p.id === form.getValues().selectedPlano)} fps={formas} form={form} />}
+          {step === 2 && <Step2Plano planos={planos} form={form} onSelectPlano={(p) => commercial.addPlanoToCart(p)} />}
+          {step === 3 && <Step3Pagamento fps={formas} form={form} commercial={commercial} />}
           {step === 4 && result && <StepSucesso result={result} plano={planos.find((p) => p.id === form.getValues().selectedPlano)} onClose={() => { onClose(); fullReset(); }} />}
 
           </div>

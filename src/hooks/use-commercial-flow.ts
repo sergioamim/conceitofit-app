@@ -10,7 +10,7 @@ import {
   validarVoucherCodigoService,
 } from "@/lib/comercial/runtime";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { buildPlanoVendaItems } from "@/lib/comercial/plano-flow";
+import { planoDryRun } from "@/lib/comercial/plano-flow";
 import type {
   Aluno,
   Convenio,
@@ -48,7 +48,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
   const [clienteId, setClienteId] = useState(initialClienteId ?? "");
   const [cart, setCart] = useState<CartItem[]>([]);
   
-  // Plano specific state (if a plano is in cart)
+  // Plano specific state
   const [selectedPlanoId, setSelectedPlanoId] = useState("");
   const [parcelasAnuidade, setParcelasAnuidade] = useState("1");
   const [dataInicioPlano, setDataInicioPlano] = useState(() => getBusinessTodayIso());
@@ -62,6 +62,8 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
   const [cupomError, setCupomError] = useState("");
   
   const [acrescimoGeral, setAcrescimoGeral] = useState("0");
+  const [manualDiscount, setManualDiscount] = useState(0);
+  const [motivoDesconto, setMotivoDesconto] = useState("");
   const [saving, setSaving] = useState(false);
 
   const loadAlunos = useCallback(async () => {
@@ -119,20 +121,38 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     [convenioPlanoId, conveniosPlano]
   );
 
-  // Totals calculations
-  const subtotal = useMemo(
-    () => cart.reduce((sum, i) => sum + i.valorUnitario * i.quantidade, 0),
-    [cart]
-  );
+  // Totals calculations via Dry-Run
+  const dryRun = useMemo(() => {
+    if (!selectedPlano) return null;
+    return planoDryRun({
+      plano: selectedPlano,
+      dataInicio: dataInicioPlano,
+      parcelasAnuidade: parseInt(parcelasAnuidade, 10) || 1,
+      manualDiscount,
+      motivoDesconto,
+      couponPercent: cupomPercent,
+      convenio: selectedConvenio ?? undefined,
+      renovacaoAutomatica: renovacaoAutomaticaPlano,
+    });
+  }, [selectedPlano, dataInicioPlano, parcelasAnuidade, manualDiscount, motivoDesconto, cupomPercent, selectedConvenio, renovacaoAutomaticaPlano]);
 
-  const descontoCupom = useMemo(() => (subtotal * cupomPercent) / 100, [subtotal, cupomPercent]);
-  
-  const descontoConvenioPlano = useMemo(() => {
-    if (!selectedPlano || !selectedConvenio) return 0;
-    return (Number(selectedPlano.valor ?? 0) * selectedConvenio.descontoPercentual) / 100;
-  }, [selectedConvenio, selectedPlano]);
+  // Sync cart items with dry-run when it's a plan sale
+  useEffect(() => {
+    if (dryRun && cart.some(i => i.tipo === "PLANO")) {
+      setCart((prev) => {
+        const others = prev.filter(i => i.tipo !== "PLANO");
+        const planoItems = dryRun.items.map(i => ({ ...i, tipo: "PLANO" as TipoVenda }));
+        return [...planoItems, ...others];
+      });
+    }
+  }, [dryRun]);
 
-  const descontoTotal = descontoCupom + descontoConvenioPlano;
+  const subtotal = useMemo(() => {
+    const othersSubtotal = cart.filter(i => i.tipo !== "PLANO").reduce((sum, i) => sum + i.valorUnitario * i.quantidade, 0);
+    return othersSubtotal + (dryRun?.subtotal ?? 0);
+  }, [cart, dryRun]);
+
+  const descontoTotal = useMemo(() => (dryRun?.descontoTotal ?? 0), [dryRun]);
   const acrescimoTotal = parseFloat(acrescimoGeral) || 0;
   const total = Math.max(0, subtotal - descontoTotal + acrescimoTotal);
 
@@ -148,30 +168,30 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
       setRenovacaoAutomaticaPlano(false);
     }
     
+    const initialDryRun = planoDryRun({
+      plano,
+      dataInicio: dataInicioPlano,
+      parcelasAnuidade: safeParcelas,
+      manualDiscount: 0,
+      couponPercent: 0,
+      renovacaoAutomatica: plano.permiteRenovacaoAutomatica ? renovacaoAutomaticaPlano : false,
+    });
+
     setCart((prev) => {
       const semPlano = prev.filter((item) => item.tipo !== "PLANO");
-      const planoItems = buildPlanoVendaItems(plano, safeParcelas).map(item => ({
+      const planoItems = initialDryRun.items.map(item => ({
         ...item,
         tipo: "PLANO" as TipoVenda
       }));
       return [...planoItems, ...semPlano];
     });
-  }, []);
+  }, [dataInicioPlano, renovacaoAutomaticaPlano]);
 
   const refreshPlanoItems = useCallback((parcelas: number) => {
     if (!selectedPlano) return;
     const maxParcelas = Math.max(1, Number(selectedPlano.parcelasMaxAnuidade ?? 1));
     const safeParcelas = Math.min(maxParcelas, Math.max(1, parcelas));
     setParcelasAnuidade(String(safeParcelas));
-    
-    setCart((prev) => {
-      const semPlano = prev.filter((item) => item.tipo !== "PLANO");
-      const planoItems = buildPlanoVendaItems(selectedPlano, safeParcelas).map(item => ({
-        ...item,
-        tipo: "PLANO" as TipoVenda
-      }));
-      return [...planoItems, ...semPlano];
-    });
   }, [selectedPlano]);
 
   const addItemToCart = useCallback((item: CartItem) => {
@@ -203,6 +223,8 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     setCupomPercent(0);
     setCupomError("");
     setAcrescimoGeral("0");
+    setManualDiscount(0);
+    setMotivoDesconto("");
   }, []);
 
   // Cupom Actions
@@ -244,10 +266,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
   }, [tenantId, clienteId, selectedPlanoId]);
 
   // Checkout Action
-  const processSale = useCallback(async (pagamento: PagamentoVenda, extra?: {
-    motivoDesconto?: string;
-    descontoPlanoManual?: number;
-  }) => {
+  const processSale = useCallback(async (pagamento: PagamentoVenda) => {
     if (!tenantId) throw new Error("Tenant ativo não encontrado.");
     if (cart.length === 0) throw new Error("Adicione ao menos um item à venda.");
 
@@ -275,27 +294,16 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
           pagamento: {
             ...pagamento,
           },
-          planoContexto:
-            tipoFinal === "PLANO" && selectedPlano
-              ? {
-                  planoId: selectedPlano.id,
-                  dataInicio: dataInicioPlano,
-                  descontoPlano: cupomPercent || (extra?.descontoPlanoManual ?? 0),
-                  motivoDesconto: extra?.motivoDesconto,
-                  renovacaoAutomatica: renovacaoAutomaticaPlano,
-                  convenioId: selectedConvenio?.id,
-                }
-              : undefined,
+          planoContexto: dryRun?.planoContexto,
         },
       });
       return venda;
     } finally {
       setSaving(false);
     }
-  }, [tenantId, cart, clienteId, descontoTotal, acrescimoGeral, selectedPlano, dataInicioPlano, renovacaoAutomaticaPlano, selectedConvenio?.id, cupomAppliedCode, cupomPercent]);
+  }, [tenantId, cart, clienteId, cupomAppliedCode, descontoTotal, acrescimoGeral, dryRun?.planoContexto]);
 
   return {
-    // Data
     alunos,
     planos,
     convenios,
@@ -303,8 +311,6 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     loadingData,
     loadAlunos,
     alunosLoaded,
-    
-    // Selection state
     clienteId,
     setClienteId,
     selectedPlanoId,
@@ -319,8 +325,6 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     setDataInicioPlano,
     renovacaoAutomaticaPlano,
     setRenovacaoAutomaticaPlano,
-    
-    // Cart
     cart,
     setCart,
     addPlanoToCart,
@@ -328,8 +332,6 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     addItemToCart,
     removeCartItem,
     clearCart,
-    
-    // Cupom & Totals
     cupomCode,
     setCupomCode,
     cupomAppliedCode,
@@ -338,11 +340,14 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     applyCupom,
     acrescimoGeral,
     setAcrescimoGeral,
+    manualDiscount,
+    setManualDiscount,
+    motivoDesconto,
+    setMotivoDesconto,
     subtotal,
     descontoTotal,
     total,
-    
-    // Checkout
+    dryRun,
     saving,
     processSale,
   };

@@ -1,24 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
-import {
-  createVendaService,
-  listAlunosService,
-  listConveniosService,
-  listFormasPagamentoService,
-  listPlanosService,
-} from "@/lib/comercial/runtime";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { buildPlanoVendaItems } from "@/lib/comercial/plano-flow";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
+import { useCommercialFlow } from "@/hooks/use-commercial-flow";
 import { useTenantContext } from "@/hooks/use-session-context";
-import type { Aluno, Plano, TipoFormaPagamento, Convenio } from "@/lib/types";
+import type { TipoFormaPagamento } from "@/lib/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useFormDraft } from "@/hooks/use-form-draft";
-import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
+import { formatBRL } from "@/lib/formatters";
 
 type NovaMatriculaFormValues = {
   alunoId: string;
@@ -33,10 +27,6 @@ type NovaMatriculaFormValues = {
   pagamentoPendente: boolean;
 };
 
-function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
 export function NovaMatriculaModal({
   open,
   onClose,
@@ -48,22 +38,39 @@ export function NovaMatriculaModal({
   onDone: () => void;
   prefillClienteId?: string;
 }) {
-  const { tenantId, tenantResolved } = useTenantContext();
+  const { tenantId } = useTenantContext();
   const CONVENIO_SEM_CONVENIO = "__SEM_CONVENIO__";
 
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [planos, setPlanos] = useState<Plano[]>([]);
-  const [formas, setFormas] = useState<{ id: string; nome: string; tipo: TipoFormaPagamento }[]>([]);
-  const [convenios, setConvenios] = useState<Convenio[]>([]);
-  const [loading, setLoading] = useState(false);
+  const commercial = useCommercialFlow({
+    tenantId,
+    initialClienteId: prefillClienteId,
+  });
+
+  const {
+    alunos,
+    planos,
+    formasPagamento: formas,
+    loadAlunos,
+    setClienteId,
+    selectedPlano,
+    conveniosPlano,
+    setConvenioPlanoId,
+    addPlanoToCart,
+    clearCart,
+    dryRun,
+    total,
+    processSale,
+    saving: loading,
+  } = commercial;
+
   const [error, setError] = useState("");
   const formMethods = useForm<NovaMatriculaFormValues>({
     defaultValues: {
-      alunoId: "",
+      alunoId: prefillClienteId ?? "",
       planoId: "",
       dataInicio: getBusinessTodayIso(),
       formaPagamento: "",
-      desconto: "",
+      desconto: "0",
       motivoDesconto: "",
       renovacao: false,
       convenioId: CONVENIO_SEM_CONVENIO,
@@ -71,65 +78,33 @@ export function NovaMatriculaModal({
       pagamentoPendente: false,
     },
   });
-  const { control, register, handleSubmit, reset, setValue, getValues } = formMethods;
+  const { control, register, handleSubmit, reset, setValue } = formMethods;
 
   const { hasDraft, restoreDraft, discardDraft, clearDraft, lastModified } = useFormDraft({
     key: "nova_matricula",
     form: formMethods,
   });
 
-  const alunoId = useWatch({ control, name: "alunoId" });
-  const planoId = useWatch({ control, name: "planoId" });
-  const selectedPlano = useMemo(() => planos.find((plano) => plano.id === planoId), [planoId, planos]);
-  const conveniosPlano = selectedPlano
-    ? convenios.filter((convenio) => (convenio.planoIds ?? []).includes(selectedPlano.id))
-    : [];
+  useEffect(() => {
+    if (open) {
+      loadAlunos();
+    }
+  }, [open, loadAlunos]);
 
   useEffect(() => {
-    if (!open || !tenantResolved || !tenantId) return;
-    Promise.all([
-      listAlunosService({ tenantId }),
-      listPlanosService({ tenantId, apenasAtivos: true }),
-      listFormasPagamentoService({ tenantId }),
-      listConveniosService(true),
-    ])
-      .then(([als, pls, fps, cvs]) => {
-        setAlunos(als);
-        setPlanos(pls);
-        setFormas(fps);
-        setConvenios(cvs);
-        reset({
-          alunoId: prefillClienteId ?? "",
-          planoId: "",
-          dataInicio: getBusinessTodayIso(),
-          formaPagamento: "",
-          desconto: "",
-          motivoDesconto: "",
-          renovacao: false,
-          convenioId: CONVENIO_SEM_CONVENIO,
-          parcelasAnuidade: "1",
-          pagamentoPendente: false,
-        });
-      })
-      .catch(() => {
-        setAlunos([]);
-        setPlanos([]);
-        setFormas([]);
-        setConvenios([]);
-      });
-  }, [open, prefillClienteId, reset, tenantId, tenantResolved]);
-
-  useEffect(() => {
-    setValue("convenioId", CONVENIO_SEM_CONVENIO);
-  }, [CONVENIO_SEM_CONVENIO, planoId, setValue]);
+    if (prefillClienteId) {
+      setClienteId(prefillClienteId);
+      setValue("alunoId", prefillClienteId);
+    }
+  }, [prefillClienteId, setClienteId, setValue]);
 
   function resetForm() {
     reset({
-      alunoId: "",
+      alunoId: prefillClienteId ?? "",
       planoId: "",
       dataInicio: getBusinessTodayIso(),
       formaPagamento: "",
-      desconto: "",
+      desconto: "0",
       motivoDesconto: "",
       renovacao: false,
       convenioId: CONVENIO_SEM_CONVENIO,
@@ -137,65 +112,30 @@ export function NovaMatriculaModal({
       pagamentoPendente: false,
     });
     setError("");
+    clearCart();
   }
 
   async function onSubmit(values: NovaMatriculaFormValues) {
-    if (!tenantId || !values.alunoId || !values.planoId || !values.dataInicio || !values.formaPagamento) return;
-    const plano = planos.find((item) => item.id === values.planoId);
-    if (!plano) return;
+    if (!tenantId || !values.alunoId || !values.planoId || !values.dataInicio || !values.formaPagamento || !dryRun) return;
+    
     if (values.pagamentoPendente) {
       const ok = confirm("Confirmar venda com pagamento pendente?");
       if (!ok) return;
     }
-    setLoading(true);
     setError("");
     try {
-      const manualDiscount = Math.max(0, Number.parseFloat(values.desconto) || 0);
-      const convenioSelecionado =
-        values.convenioId === CONVENIO_SEM_CONVENIO ? undefined : convenios.find((item) => item.id === values.convenioId);
-      const descontoConvenio = convenioSelecionado ? (Number(plano.valor ?? 0) * convenioSelecionado.descontoPercentual) / 100 : 0;
-      const descontoTotal = manualDiscount + descontoConvenio;
-      const items = buildPlanoVendaItems(plano, Math.max(1, Number.parseInt(values.parcelasAnuidade, 10) || 1));
-      const subtotal = items.reduce((sum, item) => sum + item.valorUnitario * item.quantidade, 0);
-      const total = Math.max(0, subtotal - descontoTotal);
-
-      await createVendaService({
-        tenantId,
-        data: {
-          tipo: "PLANO",
-          clienteId: values.alunoId,
-          itens: items.map((item) => ({
-            tipo: item.tipo,
-            referenciaId: item.referenciaId,
-            descricao: item.descricao,
-            quantidade: item.quantidade,
-            valorUnitario: item.valorUnitario,
-            desconto: item.desconto,
-          })),
-          descontoTotal,
-          pagamento: {
-            formaPagamento: values.formaPagamento as TipoFormaPagamento,
-            valorPago: values.pagamentoPendente ? 0 : total,
-            status: values.pagamentoPendente ? "PENDENTE" : "PAGO",
-          },
-          planoContexto: {
-            planoId: values.planoId,
-            dataInicio: values.dataInicio,
-            descontoPlano: manualDiscount,
-            motivoDesconto: values.motivoDesconto || undefined,
-            renovacaoAutomatica: values.renovacao,
-            convenioId: convenioSelecionado?.id,
-          },
-        },
+      await processSale({
+        formaPagamento: values.formaPagamento as TipoFormaPagamento,
+        valorPago: values.pagamentoPendente ? 0 : total,
+        status: values.pagamentoPendente ? "PENDENTE" : "PAGO",
       });
-      setLoading(false);
+
       clearDraft();
       resetForm();
       onDone();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao registrar contratação.");
-      setLoading(false);
     }
   }
 
@@ -203,15 +143,18 @@ export function NovaMatriculaModal({
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
+        if (!nextOpen) {
+          onClose();
+          resetForm();
+        }
       }}
     >
       <RestoreDraftModal
-        hasDraft={hasDraft}
+        hasDraft={hasDraft && open}
         onRestore={restoreDraft}
         onDiscard={discardDraft}
       />
-      <DialogContent className="border-border bg-card sm:max-w-lg">
+      <DialogContent className="border-border bg-card sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold">Nova contratação de plano</DialogTitle>
@@ -221,20 +164,23 @@ export function NovaMatriculaModal({
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
-              Este atalho usa o mesmo fluxo comercial da venda canônica e já vincula venda, contratação e cobrança.
+              Este atalho utiliza o motor comercial unificado para garantir consistência de regras e valores.
             </p>
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cliente *</label>
               {prefillClienteId ? (
                 <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm">
-                  {alunos.find((aluno) => aluno.id === alunoId)?.nome ?? "Cliente selecionado"}
+                  {alunos.find((aluno) => aluno.id === prefillClienteId)?.nome ?? "Cliente selecionado"}
                 </div>
               ) : (
                 <Controller
                   control={control}
                   name="alunoId"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select value={field.value} onValueChange={(val) => {
+                      field.onChange(val);
+                      setClienteId(val);
+                    }}>
                       <SelectTrigger className="w-full border-border bg-secondary">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
@@ -261,12 +207,10 @@ export function NovaMatriculaModal({
                     onValueChange={(nextPlanoId) => {
                       const nextPlano = planos.find((plano) => plano.id === nextPlanoId);
                       field.onChange(nextPlanoId);
-                      setValue("parcelasAnuidade", "1");
-                      if (!nextPlano?.permiteRenovacaoAutomatica) {
-                        setValue("renovacao", false);
-                      }
-                      if (!nextPlano?.permiteCobrancaRecorrente && getValues("formaPagamento") === "RECORRENTE") {
-                        setValue("formaPagamento", "");
+                      if (nextPlano) {
+                        addPlanoToCart(nextPlano);
+                        setValue("parcelasAnuidade", "1");
+                        setValue("renovacao", nextPlano.permiteRenovacaoAutomatica);
                       }
                     }}
                   >
@@ -287,7 +231,15 @@ export function NovaMatriculaModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data de início *</label>
-                <Input type="date" {...register("dataInicio")} className="border-border bg-secondary" />
+                <Input 
+                  type="date" 
+                  {...register("dataInicio")} 
+                  onChange={(e) => {
+                    register("dataInicio").onChange(e);
+                    commercial.setDataInicioPlano(e.target.value);
+                  }}
+                  className="border-border bg-secondary" 
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Forma de pagamento *</label>
@@ -317,16 +269,43 @@ export function NovaMatriculaModal({
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Desconto (R$)</label>
-                <Input type="number" min={0} step="0.01" {...register("desconto")} className="border-border bg-secondary" />
+                <Input 
+                  type="number" 
+                  min={0} 
+                  step="0.01" 
+                  {...register("desconto")} 
+                  onChange={(e) => {
+                    register("desconto").onChange(e);
+                    commercial.setManualDiscount(parseFloat(e.target.value) || 0);
+                  }}
+                  className="border-border bg-secondary" 
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parcelas da anuidade</label>
-                <Input type="number" min={1} max={12} {...register("parcelasAnuidade")} className="border-border bg-secondary" />
+                <Input 
+                  type="number" 
+                  min={1} 
+                  max={selectedPlano?.parcelasMaxAnuidade || 1} 
+                  {...register("parcelasAnuidade")} 
+                  onChange={(e) => {
+                    register("parcelasAnuidade").onChange(e);
+                    commercial.setParcelasAnuidade(e.target.value);
+                  }}
+                  className="border-border bg-secondary" 
+                />
               </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Motivo do desconto</label>
-              <Input {...register("motivoDesconto")} className="border-border bg-secondary" />
+              <Input 
+                {...register("motivoDesconto")} 
+                onChange={(e) => {
+                  register("motivoDesconto").onChange(e);
+                  commercial.setMotivoDesconto(e.target.value);
+                }}
+                className="border-border bg-secondary" 
+              />
             </div>
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Convênio</label>
@@ -334,7 +313,10 @@ export function NovaMatriculaModal({
                 control={control}
                 name="convenioId"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value} onValueChange={(val) => {
+                    field.onChange(val);
+                    setConvenioPlanoId(val);
+                  }}>
                     <SelectTrigger className="w-full border-border bg-secondary">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
@@ -352,7 +334,15 @@ export function NovaMatriculaModal({
             </div>
             <div className="space-y-2 rounded-lg border border-border bg-secondary/30 p-3 text-sm">
               <label className="flex items-center gap-2">
-                <input type="checkbox" {...register("renovacao")} disabled={!selectedPlano?.permiteRenovacaoAutomatica} />
+                <input 
+                  type="checkbox" 
+                  {...register("renovacao")} 
+                  disabled={!selectedPlano?.permiteRenovacaoAutomatica}
+                  onChange={(e) => {
+                    register("renovacao").onChange(e);
+                    commercial.setRenovacaoAutomaticaPlano(e.target.checked);
+                  }}
+                />
                 Renovação automática
               </label>
               <label className="flex items-center gap-2">
@@ -360,20 +350,25 @@ export function NovaMatriculaModal({
                 Registrar com pagamento pendente
               </label>
             </div>
-            {selectedPlano ? (
-              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
-                Total de referência: <span className="font-medium text-foreground">{formatBRL(buildPlanoVendaItems(selectedPlano, Math.max(1, Number.parseInt(getValues("parcelasAnuidade"), 10) || 1)).reduce((sum, item) => sum + item.valorUnitario * item.quantidade - item.desconto, 0))}</span>
+            {dryRun && (
+              <div className="rounded-xl border border-border bg-card p-3 space-y-1.5 text-xs">
+                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatBRL(dryRun.subtotal)}</span></div>
+                {dryRun.descontoTotal > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Descontos</span><span className="text-gym-teal">- {formatBRL(dryRun.descontoTotal)}</span></div>}
+                <div className="flex justify-between border-t border-border pt-1.5 font-semibold text-sm">
+                  <span>Total final</span>
+                  <span className="text-gym-accent">{formatBRL(dryRun.total)}</span>
+                </div>
               </div>
-            ) : null}
+            )}
             {error ? (
               <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-3 py-2 text-sm text-gym-danger">{error}</div>
             ) : null}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="border-border">
+            <Button type="button" variant="outline" onClick={() => { onClose(); resetForm(); }} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !dryRun}>
               {loading ? "Salvando..." : "Confirmar contratação"}
             </Button>
           </DialogFooter>

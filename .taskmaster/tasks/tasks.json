@@ -7012,10 +7012,62 @@
         "description": "Centralizar o cálculo e a prévia (dry-run) de planos, descontos e convênios para que Nova Venda, Wizard de Cliente e Modal de Matrícula usem o mesmo motor e mantenham consistência de valores e contexto comercial.",
         "details": "Criar um módulo único de regras em `src/lib/comercial/plano-dry-run.ts` (ou expandir `src/lib/comercial/plano-flow.ts`) que exponha funções puras para: (1) normalizar parcelas de anuidade conforme `plano.parcelasMaxAnuidade`, (2) filtrar convênios aplicáveis ao plano, (3) gerar itens via `buildPlanoVendaItems`, (4) calcular `subtotal`, `descontos` (manual, percentual/cupom e convênio), `descontoTotal`, `total` e (5) compor um objeto `planoContexto` pronto para o `createVendaService` (planoId, dataInicio, descontoPlano, motivoDesconto, renovacaoAutomatica, convenioId). Em `src/app/(app)/vendas/nova/page.tsx`, substituir `conveniosPlano`, `descontoCupom`, `descontoConvenioPlano`, `descontoTotal` e `total` pelo retorno do dry-run; usar a normalização de parcelas e repassar o percentual do cupom para o helper; no submit, consumir `planoContexto` e `descontoTotal` do helper. Em `src/components/shared/novo-cliente-wizard.tsx`, usar o dry-run no Step 3 para o resumo e no submit para alinhar o desconto enviado com o mesmo cálculo (incluindo matrícula/anuidade quando aplicável), mantendo o schema Zod co-localizado. Em `src/components/shared/nova-matricula-modal.tsx`, trocar o cálculo manual por dry-run, reutilizando filtro de convênios e normalização de parcelas, e usar os valores calculados no payload (`descontoTotal`, `total` e `planoContexto`). Garantir que o módulo seja livre de side-effects e não use `Date` no render; toda data usada deve ser recebida por parâmetro para manter hidratação estável.",
         "testStrategy": "Criar testes unitários para o helper de dry-run cobrindo: plano com matrícula/anuidade, convênio com desconto percentual, desconto manual e percentual combinado, e normalização de parcelas acima do máximo. Validar manualmente: (1) Nova Venda com plano + convênio + cupom atualiza totais e payload corretamente; (2) Wizard de Cliente exibe total coerente e cria matrícula com o desconto esperado; (3) Modal de Matrícula recalcula descontos ao trocar plano/convênio e respeita parcelas máximas; (4) nenhum fluxo quebra a hidratação com datas dinâmicas no render.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar módulo único de dry-run comercial",
+            "description": "Implementar um helper puro para calcular parcelas, convênios, itens e totais de plano.",
+            "dependencies": [],
+            "details": "Criar `src/lib/comercial/plano-dry-run.ts` (ou estender `src/lib/comercial/plano-flow.ts`) reutilizando `buildPlanoVendaItems` e tipos de `src/lib/types.ts`. Expor funções puras para normalizar parcelas pela `parcelasMaxAnuidade`, filtrar convênios aplicáveis, calcular `subtotal`, descontos (manual, percentual/cupom e convênio), `descontoTotal`, `total` e montar `planoContexto` (planoId, dataInicio, descontoPlano, motivoDesconto, renovacaoAutomatica, convenioId). Receber datas por parâmetro e evitar `Date`/side-effects.",
+            "status": "done",
+            "testStrategy": "Adicionar testes unitários cobrindo matrícula/anuidade, convênio percentual, desconto manual + cupom e normalização de parcelas acima do máximo.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T20:43:00.287Z"
+          },
+          {
+            "id": 2,
+            "title": "Refatorar Nova Venda para consumir dry-run",
+            "description": "Substituir cálculos locais e conveniosPlano por resultados do helper central.",
+            "dependencies": [
+              1
+            ],
+            "details": "Em `src/app/(app)/vendas/nova/page.tsx` (e, se necessário, `src/hooks/use-commercial-flow.ts`), usar o dry-run para gerar `conveniosPlano`, descontos, `descontoTotal` e `total`. Normalizar parcelas via helper e repassar o percentual do cupom para o cálculo. No submit, usar `planoContexto` e `descontoTotal` vindos do dry-run para manter o payload consistente com o novo motor.",
+            "status": "done",
+            "testStrategy": "Validar manualmente em `/vendas/nova` com plano + convênio + cupom, conferindo totais e payload enviado.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T20:43:44.406Z"
+          },
+          {
+            "id": 3,
+            "title": "Refatorar NovoClienteWizard usando o dry-run",
+            "description": "Alinhar resumo e submit do Step 3 ao motor único de descontos.",
+            "dependencies": [
+              1
+            ],
+            "details": "Em `src/components/shared/novo-cliente-wizard.tsx`, aplicar o dry-run no Step 3 para exibir subtotal, descontos e total considerando matrícula/anuidade quando aplicável. No submit, usar `descontoTotal` e `planoContexto` calculados para manter consistência. Manter o schema Zod co-localizado no arquivo e continuar usando `react-hook-form` + `zodResolver`.",
+            "status": "done",
+            "testStrategy": "Validar manualmente o resumo do Step 3 e o payload gerado na criação de matrícula.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T20:45:30.939Z"
+          },
+          {
+            "id": 4,
+            "title": "Refatorar NovaMatriculaModal para usar dry-run",
+            "description": "Trocar o cálculo manual por resultados do helper central no modal de matrícula.",
+            "dependencies": [
+              1
+            ],
+            "details": "Em `src/components/shared/nova-matricula-modal.tsx`, substituir o cálculo de convênio, subtotal, descontoTotal e total pelo dry-run. Reutilizar o filtro de convênios e normalização de parcelas do helper, e atualizar o payload para usar `descontoTotal`, `total` e `planoContexto` calculados. Manter o formulário com `react-hook-form` sem efeitos colaterais.",
+            "status": "done",
+            "testStrategy": "Validar manualmente no modal que totais e payload batem com o motor central.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T20:45:32.712Z"
+          }
+        ],
+        "updatedAt": "2026-03-26T20:45:32.712Z"
       },
       {
         "id": 107,
@@ -7023,25 +7075,339 @@
         "description": "Unificar a experiência de escolha de planos em todas as jornadas (pública e interna) e substituir a lógica simplificada de cupom em `vendas/nova` por uma integração real com o backend, respeitando regras de validade e aplicação.",
         "details": "Mapear os pontos de seleção de plano em `src/app/(public)/adesao/page.tsx`, `src/app/(public)/adesao/cadastro/page.tsx`, `src/app/(public)/adesao/checkout/page.tsx` e `src/app/(app)/vendas/nova/page.tsx`, criando um componente compartilhado (ex.: `src/components/shared/plano-selector-card.tsx`) que receba `Plano`, estado de seleção, badge de destaque e renderize preço/itens usando o cálculo centralizado (preferir o helper de dry-run da Task 106, mantendo compatibilidade com `getPublicPlanQuote` e `buildPlanoVendaItems`). Substituir o markup duplicado por esse componente, mantendo os fluxos com `react-hook-form` via `Controller` (cadastro/checkout) e o comportamento de clique no fluxo de venda interna. Para vouchers/cuponagem, criar uma chamada de validação real no backend (novo client em `src/lib/api/vendas.ts` ou módulo dedicado com `apiRequest`) e expor um service em `src/lib/comercial/runtime.ts` (ex.: `validarVoucherCodigoService`). Adicionar um tipo de resposta em `src/lib/types.ts` para representar o retorno de validação (percentual/valor de desconto, mensagem, escopo, restrições por plano/cliente, etc.) e atualizar `applyCupom` em `src/app/(app)/vendas/nova/page.tsx` para usar essa resposta, removendo a busca manual em `listVouchersService`/`listVoucherCodigosService` e respeitando regras de `planoIds`, `aplicarEm`, `umaVezPorCliente`, período e escopo conforme `docs/BUSINESS_RULES.md` e o gap descrito em `docs/prd.md`. Ajustar o payload de `createVendaService` para enviar `voucherCodigo` e os totais calculados com base na resposta do backend (incluindo `descontoTotal` e, se necessário, descontos por item), garantindo consistência visual no resumo e no recibo.",
         "testStrategy": "1) Verificar visualmente nas rotas públicas (`/adesao`, `/adesao/cadastro`, `/adesao/checkout`) e em `/vendas/nova` que os cards de plano possuem o mesmo layout, estado de seleção e informação de preço/itens. 2) Em `vendas/nova`, aplicar um cupom válido e confirmar que o desconto exibido corresponde ao retorno do backend e que mensagens de erro aparecem para cupons inválidos ou fora de escopo. 3) Finalizar uma venda com cupom aplicado e confirmar via inspeção de rede/log que `voucherCodigo` e `descontoTotal` são enviados no `createVendaService`, com recibo refletindo os valores. 4) Testar um cupom restrito por plano/cliente para garantir que a UI respeita o bloqueio retornado pela API.",
+        "status": "done",
+        "dependencies": [
+          "106"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar componente compartilhado de seleção de plano",
+            "description": "Padronizar o card de plano e substituir marcação duplicada.",
+            "dependencies": [],
+            "details": "Criar `src/components/shared/plano-selector-card.tsx` com props para `plano`, `selected`, `destaque/badge` e `onSelect`, renderizando preço e itens via helper central (usar o dry-run da Task 106 se existir, mantendo compatibilidade com `getPublicPlanQuote` e `buildPlanoVendaItems`). Substituir o markup atual em `src/app/(public)/adesao/page.tsx`, `src/app/(public)/adesao/cadastro/page.tsx`, `src/app/(public)/adesao/checkout/page.tsx` e `src/app/(app)/vendas/nova/page.tsx`, preservando `Controller` do `react-hook-form` e o clique direto do fluxo interno.",
+            "status": "done",
+            "testStrategy": "Validar visualmente as quatro rotas para confirmar layout e seleção consistentes.",
+            "updatedAt": "2026-03-26T20:33:09.403Z",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Integrar validação real de voucher via API",
+            "description": "Trocar a lógica simplificada por validação backend de voucher.",
+            "dependencies": [
+              1
+            ],
+            "details": "Adicionar tipo de resposta em `src/lib/types.ts` (ex.: `VoucherValidacaoResult` com percentual/valor de desconto, mensagem, escopo, planoIds, aplicarEm, umaVezPorCliente e período). Criar client em `src/lib/api/vendas.ts` ou módulo dedicado usando `apiRequest` para validar voucher, expondo `validarVoucherCodigoService` em `src/lib/comercial/runtime.ts`. Atualizar `use-commercial-flow.ts` para usar o service no `applyCupom`, remover `listVouchersService/listVoucherCodigosService`, aplicar regras de plano/cliente/período e ajustar `descontoTotal` e payload de `createVendaService` com `voucherCodigo` e descontos calculados.",
+            "status": "done",
+            "testStrategy": "Aplicar cupom válido e inválido em `/vendas/nova`, verificando mensagens e descontos coerentes com o backend.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T20:33:09.412Z"
+          },
+          {
+            "id": 3,
+            "title": "Padronizar feedback de sucesso e recibo com voucher",
+            "description": "Alinhar o recibo/sucesso aos novos descontos e seleção de plano.",
+            "dependencies": [
+              2
+            ],
+            "details": "Atualizar `src/components/shared/sale-receipt-modal.tsx` para exibir breakdown de desconto/voucher e mensagens padronizadas, garantindo consistência com o resumo da venda. Ajustar o `src/app/(app)/vendas/nova/page.tsx` para repassar dados de voucher e totais retornados do backend, mantendo a UI estável (sem valores dinâmicos no SSR).",
+            "status": "done",
+            "testStrategy": "Concluir uma venda e conferir no recibo que subtotal, desconto e total batem com o resumo.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-26T20:33:09.417Z"
+          }
+        ],
+        "updatedAt": "2026-03-26T20:33:09.417Z"
+      },
+      {
+        "id": 108,
+        "title": "Convergir domínio de contratos entre matrícula e venda",
+        "description": "Alinhar terminologia e fluxo funcional para que vendas de plano sejam tratadas como contratos/assinaturas em toda a camada de API, serviços e UI, eliminando discrepâncias entre Matrícula e Venda.",
+        "details": "- Mapear `Matricula` e `Venda` em `src/lib/types.ts` e criar um tipo/normalizador `Contrato` (novo módulo `src/lib/comercial/contratos.ts` ou alias em `types.ts`) que represente a contratação de plano, incluindo `contratoStatus`, `dataInicioContrato` e vínculo com `origemVendaId`/`matriculaId`.\n- Estender `src/lib/api/matriculas.ts` para aceitar `origemVendaId` (se presente no backend) e criar wrappers `listContratos*`/`createContrato*` em `src/lib/comercial/runtime.ts` que apontem para as APIs de matrícula, mantendo compatibilidade com `listMatriculas*`.\n- Reutilizar e/ou unificar os resolvedores de status de contrato em `src/lib/comercial/plano-flow.ts` e `resolveVendaFluxoStatusFromApi` para que contratos vindos de venda e matrícula tenham a mesma regra de `StatusFluxoComercial`.\n- Padronizar copy e rótulos: ajustar `src/lib/nav-items.ts`, `src/components/shared/cliente-tabs.tsx`, `src/app/(app)/clientes/[id]/page.tsx`, `src/app/(app)/matriculas/page.tsx`, `src/app/(app)/vendas/page.tsx`, `src/app/(app)/vendas/nova/page.tsx`, `src/components/shared/nova-matricula-modal.tsx` e `src/components/shared/sale-receipt-modal.tsx` para usar “Contrato/Assinatura” em vendas de plano e “Venda” para itens avulsos, mantendo badges com `STATUS_CONTRATO_LABEL` e `STATUS_FLUXO_COMERCIAL_LABEL`.\n- Se o modal de contratação for mexido, migrar para `react-hook-form` + `zodResolver` com schema co-localizado e tipos via `z.infer`, evitando validações ad hoc.\n- Ao calcular itens/valores de plano, utilizar o motor unificado do Task 106 (`src/lib/comercial/plano-dry-run.ts` ou `plano-flow.ts`) para que venda e contrato compartilhem a mesma regra de cálculo.\n- Garantir segurança de hidratação (sem `new Date()`/`Math.random()` no render) nos componentes ajustados.",
+        "testStrategy": "- Atualizar testes unitários existentes em `tests/unit/comercial-runtime.spec.ts` e `tests/unit/vendas-api.spec.ts` (ou criar novos) para cobrir os novos helpers de contrato e o mapeamento entre venda/contrato.\n- Rodar smoke manual nas rotas `/matriculas`, `/vendas`, `/vendas/nova` e detalhe de cliente (`/clientes/[id]`), validando rótulos “Contrato/Assinatura”, badges e criação de venda de plano com vínculo de contrato.\n- Se houver E2E, ajustar/rodar `tests/e2e/app-multiunidade-contrato.spec.ts` para garantir que a terminologia de contrato permanece consistente após as mudanças.",
         "status": "pending",
         "dependencies": [
-          106
+          "106"
         ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Modelar Contrato e normalizar Matricula/Venda",
+            "description": "Criar o tipo/normalizador de Contrato e alinhar dados de matrícula e venda.",
+            "dependencies": [],
+            "details": "Atualizar `src/lib/types.ts` para incluir o tipo/alias `Contrato` com `contratoStatus`, `dataInicioContrato`, `origemVendaId` e `matriculaId`. Criar módulo `src/lib/comercial/contratos.ts` com funções de normalização a partir de `Matricula`/`Venda`. Estender `src/lib/api/matriculas.ts` para aceitar/normalizar `origemVendaId` e expor no `normalizeMatriculaApiResponse`, mantendo compatibilidade com os campos atuais.",
+            "status": "pending",
+            "testStrategy": "Atualizar/adiicionar asserts nos testes unitários em `tests/unit/vendas-api.spec.ts` para garantir a normalização dos novos campos.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Unificar serviços e regras de status comercial",
+            "description": "Padronizar wrappers de contrato e regra única de status de fluxo.",
+            "dependencies": [
+              1
+            ],
+            "details": "Adicionar wrappers `listContratos*`/`createContrato*` em `src/lib/comercial/runtime.ts` apontando para as APIs de matrícula, mantendo `listMatriculas*` intacto. Unificar `resolveVendaFluxoStatusFromApi` com `resolveFluxoComercialStatus` em `src/lib/comercial/plano-flow.ts`, garantindo regra única para vendas e matrículas. Alinhar cálculo de itens/valores de plano usando o motor unificado em `plano-flow.ts` (ou módulo novo da task 106) dentro do fluxo de venda/contratação.",
+            "status": "pending",
+            "testStrategy": "Ajustar `tests/unit/comercial-runtime.spec.ts` para validar os novos wrappers e o status unificado.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Padronizar UI e copy para Contrato/Assinatura",
+            "description": "Trocar rótulos e ajustes de UI para refletir contratos de plano.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Atualizar textos e labels em `src/lib/nav-items.ts`, `src/components/shared/cliente-tabs.tsx`, páginas de `clientes/[id]`, `matriculas`, `vendas`, `vendas/nova`, além de `src/components/shared/nova-matricula-modal.tsx` e `src/components/shared/sale-receipt-modal.tsx` para usar “Contrato/Assinatura” para planos e “Venda” para itens avulsos, mantendo badges `STATUS_CONTRATO_LABEL`/`STATUS_FLUXO_COMERCIAL_LABEL`. Verificar segurança de hidratação nos componentes ajustados (evitar `new Date()`/`Math.random()` no render). Se o modal de contratação for alterado, migrar validação para `react-hook-form` + `zodResolver` com schema co-localizado e `z.infer`.",
+            "status": "pending",
+            "testStrategy": "Smoke manual nas rotas `/matriculas`, `/vendas`, `/vendas/nova` e detalhe de cliente, validando labels e badges.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": 109,
+        "title": "Migrar validações e transações comerciais para APIs reais",
+        "description": "Substituir as últimas regras mockadas nos fluxos de venda/matrícula por integrações reais de API e ampliar validações assíncronas de CPF/e-mail em cadastros internos e públicos.",
+        "details": "- Criar um helper de busca/uniqueness em `src/lib/api/alunos.ts` (ex.: `searchAlunosApi` usando o `search` já suportado por `listAlunosApi`) e expor um serviço em `src/lib/comercial/runtime.ts` (ex.: `checkAlunoDuplicidadeService`) que retorne `{ exists, alunoId? }` para CPF/e-mail, usando `page=0`/`size=1` e tratando `ApiRequestError` com mensagens padronizadas.\n- Extrair um hook utilitário de validação assíncrona (ex.: `src/hooks/use-async-field-validation.ts`) que encapsule debounce, cancelamento de requisições antigas via `useRef`, e expose `status`, `message` e `reset`; alinhar o feedback com `FieldAsyncFeedback` (`src/components/shared/field-async-feedback.tsx`).\n- Atualizar `src/components/shared/novo-cliente-wizard.tsx` para remover o mock de busca (`listAlunosService` + filtro local) e usar o novo helper de backend para CPF/e-mail, mantendo `react-hook-form` + `zodResolver` e limpando erros com `form.clearErrors` apenas quando o backend confirmar disponibilidade.\n- Expandir a validação assíncrona para o fluxo público em `src/app/(public)/adesao/cadastro/page.tsx` (e, se necessário, `src/app/(public)/adesao/checkout/page.tsx`), exibindo `FieldAsyncFeedback` abaixo de CPF/e-mail e bloqueando avanço quando a verificação estiver em `loading` ou `error`.\n- Remover o mock de cupom em `src/hooks/use-commercial-flow.ts`: criar uma chamada real de validação (novo método em `src/lib/api/beneficios.ts` ou `src/lib/comercial/runtime.ts`) que retorne percentual/valor e mensagem de elegibilidade; fazer `applyCupom` consumir a resposta real e preencher `voucherCodigo` em `createVendaService`.\n- Alinhar os cálculos transacionais com o dry-run centralizado da Task 106: atualizar `use-commercial-flow.ts` e `src/components/shared/nova-matricula-modal.tsx` para usar o resultado do dry-run (subtotal/descontos/total) em vez de cálculo local; garantir que `createVendaService` envie `planoContexto` e `convenioId` conforme o domínio de contratos da Task 108.\n- Rever `src/lib/public/services.ts` para usar o mesmo fluxo de contrato/status/calculadora (sem lógica mockada), mantendo `resolveContratoStatusFromPlano` apenas como fallback quando o backend não retornar status explícito.",
+        "testStrategy": "- No wizard de cliente (`novo-cliente-wizard`), digitar CPF/e-mail existentes e confirmar feedback “já cadastrado” + bloqueio de submit; digitar novos valores e confirmar status “disponível”.\n- Na jornada pública (`/adesao/cadastro`), repetir o mesmo fluxo de CPF/e-mail e garantir que o botão de avançar só habilita quando a validação assíncrona estiver OK.\n- Em `/vendas/nova`, aplicar cupom válido e confirmar que o percentual/valor vem do backend; testar cupom inválido e verificar mensagem de erro e total sem desconto.\n- Em `/matriculas` (modal de nova matrícula), comparar subtotal/desconto/total com o dry-run e validar que o payload de venda inclui `planoContexto`, `convenioId` e `voucherCodigo` quando aplicável.\n- Smoke manual: concluir uma venda e uma matrícula com contrato pendente e validar que o status refletido segue o novo domínio de contrato.",
+        "status": "pending",
+        "dependencies": [
+          "106",
+          "107",
+          "108"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar helper de busca real e hook de validação assíncrona",
+            "description": "Implementar busca/uniqueness de aluno e padronizar a validação assíncrona de CPF/e-mail.",
+            "dependencies": [],
+            "details": "Adicionar `searchAlunosApi` em `src/lib/api/alunos.ts` usando `listAlunosApi` com `search`, expor `checkAlunoDuplicidadeService` em `src/lib/comercial/runtime.ts` tratando `ApiRequestError`, criar hook `src/hooks/use-async-field-validation.ts` com debounce/cancelamento via `useRef`, e atualizar `src/components/shared/novo-cliente-wizard.tsx` e `src/app/(public)/adesao/cadastro/page.tsx` para usar o hook + `FieldAsyncFeedback`, limpando erros apenas quando o backend confirmar disponibilidade.",
+            "status": "pending",
+            "testStrategy": "Testar CPF/e-mail existentes e novos no wizard e no cadastro público, validando feedback e bloqueio de submit durante loading/erro.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Eliminar mocks de cupom e totalizações no fluxo comercial",
+            "description": "Trocar validações mockadas de cupom e cálculo local por integrações reais e dry-run centralizado.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar validação real de cupom em `src/lib/api/beneficios.ts` ou `src/lib/comercial/runtime.ts` e atualizar `src/hooks/use-commercial-flow.ts` para consumir a resposta real e preencher `voucherCodigo` em `createVendaService`; alinhar `use-commercial-flow.ts` e `src/components/shared/nova-matricula-modal.tsx` ao dry-run da Task 106 para subtotal/descontos/total, garantindo envio de `planoContexto` e `convenioId` conforme o domínio de contratos.",
+            "status": "pending",
+            "testStrategy": "Aplicar cupom válido/ inválido e confirmar desconto; finalizar venda/matrícula verificando totais vindos do dry-run.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Alinhar jornada pública com contratos reais e remover localStorage",
+            "description": "Atualizar a jornada pública para usar status/contratos reais e eliminar dependência de localStorage.",
+            "dependencies": [
+              2
+            ],
+            "details": "Revisar `src/lib/public/services.ts` para usar o fluxo real de contrato/status/calculadora, mantendo `resolveContratoStatusFromPlano` como fallback; ajustar `src/lib/public/storage.ts` e `src/lib/public/use-public-journey.ts` para substituir o uso de `localStorage` por estado em memória ou fonte backend compatível com SSR, garantindo consistência nos passos de cadastro/checkout.",
+            "status": "pending",
+            "testStrategy": "Percorrer cadastro e checkout públicos confirmando que o status do contrato vem do backend e que o fluxo não depende de dados persistidos no `localStorage`.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": 110,
+        "title": "Consolidar páginas experimentais do financeiro no gerencial",
+        "description": "Avaliar as páginas experimentais de contas a receber, contas a pagar e DRE em `src/app/(app)/gerencial/` para decidir se substituem as versões estáveis ou se devem ser removidas, mantendo apenas rotas canônicas no app.",
+        "details": "Mapear e comparar as rotas estáveis (`src/app/(app)/gerencial/contas-a-receber/page.tsx`, `src/app/(app)/gerencial/contas-a-pagar/page.tsx`, `src/app/(app)/gerencial/dre/page.tsx`) com as experimentais (`src/app/(app)/gerencial/contas-a-receber-experimental/page.tsx`, `src/app/(app)/gerencial/contas-a-pagar-experimental/page.tsx`, `src/app/(app)/gerencial/dre-experimental/page.tsx`, além de `.../contas-a-receber-experimental/novo/page.tsx` e `.../contas-a-pagar-experimental/nova/page.tsx`).\nComparar funcionalidades, dados consumidos e UX (ex.: DRE experimental usa cards e projeção unificada com `getDreGerencialApi`/`getDreProjecaoApi`, enquanto o estável separa filtros e projeção) e decidir a versão canônica.\nSe a versão experimental for a escolhida: migrar o conteúdo para as rotas estáveis, removendo as pastas `*-experimental`, consolidando imports/estados no `page.tsx` estável e atualizando o menu em `src/lib/nav-items.ts` (remover “DRE (Protótipo)” e apontar somente para `/gerencial/dre`).\nSe a versão estável permanecer: excluir as páginas experimentais (incluindo páginas de redirect), remover referências no `src/lib/nav-items.ts` e em qualquer link interno encontrado via busca (`rg \"dre-experimental|contas-a-receber-experimental|contas-a-pagar-experimental\" src`).\nGarantir que não sobrem rotas duplicadas ou apontamentos para caminhos removidos (sem links ou itens de navegação para páginas inexistentes).",
+        "testStrategy": "Validar via busca que não existem referências a rotas experimentais após a consolidação: `rg \"dre-experimental|contas-a-receber-experimental|contas-a-pagar-experimental\" src`.\nNavegar em `/gerencial/contas-a-receber`, `/gerencial/contas-a-pagar` e `/gerencial/dre` confirmando carregamento e filtros/ações principais.\nVerificar o menu gerencial em `src/lib/nav-items.ts` para garantir que apenas as rotas canônicas aparecem.\nRodar `npm run lint` para confirmar ausência de erros básicos após remoções/migração.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar páginas estáveis vs experimentais do gerencial",
+            "description": "Mapear as rotas estáveis e experimentais e registrar diferenças funcionais e de UX.",
+            "dependencies": [],
+            "details": "Comparar `src/app/(app)/gerencial/contas-a-receber/page.tsx`, `contas-a-pagar/page.tsx` e `dre/page.tsx` com as versões em `*-experimental`, incluindo redirects em `novo/nova` e o painel avançado do DRE experimental, listando APIs, filtros e componentes usados.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Consolidar a versão canônica nas rotas principais",
+            "description": "Decidir a versão canônica e migrar o conteúdo vencedor para as rotas estáveis.",
+            "dependencies": [
+              1
+            ],
+            "details": "Se a versão experimental for escolhida, portar o conteúdo para `src/app/(app)/gerencial/dre/page.tsx` e demais páginas estáveis, preservando melhorias (cards, horizonte de projeção, cenários) e alinhar imports/estados; se a versão estável ficar, registrar o racional e manter apenas os arquivos estáveis.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 3,
+            "title": "Remover páginas experimentais e limpar navegação",
+            "description": "Excluir rotas experimentais e remover quaisquer referências internas.",
+            "dependencies": [
+              2
+            ],
+            "details": "Remover pastas `contas-a-receber-experimental`, `contas-a-pagar-experimental` e `dre-experimental`, ajustar `src/lib/nav-items.ts` para manter apenas `/gerencial/dre` e limpar links via busca por rotas experimentais.",
+            "status": "pending",
+            "testStrategy": "Rodar `rg \"dre-experimental|contas-a-receber-experimental|contas-a-pagar-experimental\" src` e validar navegação em `/gerencial/contas-a-receber`, `/gerencial/contas-a-pagar` e `/gerencial/dre`."
+          }
+        ]
+      },
+      {
+        "id": 111,
+        "title": "Estabilizar suíte E2E Playwright para fluxos críticos",
+        "description": "Revisar e reativar a suíte E2E do Playwright garantindo execução recente e estabilidade dos fluxos críticos (venda, cadastro público, matrícula, pagamento e CRM de prospects), além de remover specs obsoletas e padronizar o script de execução.",
+        "details": "Mapear a suíte atual em `tests/e2e/` (35 specs) e priorizar os fluxos críticos já cobertos por `tests/e2e/comercial-fluxo.spec.ts`, `tests/e2e/clientes-cadastro.spec.ts`, `tests/e2e/adesao-publica.spec.ts` e `tests/e2e/crm-operacional.spec.ts`. Revisar seletores quebrados pós-refatorações priorizando `getByRole`/`getByLabel` como nos arquivos existentes; quando não houver acessibilidade consistente, introduzir `data-testid` nos componentes afetados e ajustar os specs. Validar e, se necessário, ajustar os mocks do `tests/e2e/support/backend-only-stubs.ts` (ex.: `installPublicJourneyApiMocks`, `seedAuthenticatedSession`) para alinhar endpoints/response usados nos fluxos críticos e evitar 404s durante `npm run dev:mock` configurado em `playwright.config.ts`. Remover specs obsoletas em `tests/e2e/` e atualizar listas de smoke/coverage quando houver alteração de arquivo, incluindo `scripts/playwright-coverage.mjs` (const `SMOKE_E2E_SPECS`) e os artefatos `docs/TEST_COVERAGE_CORE.md`, `docs/TEST_COVERAGE_CORE.json`, `docs/TEST_COVERAGE_BASELINE.json` se os arquivos referenciados mudarem. Adicionar o script `test:e2e` no `package.json` como alias para `playwright test` (ou `npm run e2e`) mantendo compatibilidade com os comandos atuais e o fluxo do `Makefile`.",
+        "testStrategy": "Executar `npm run test:e2e` para validar a suíte completa com o `webServer` definido em `playwright.config.ts`. Rodar isoladamente os fluxos críticos para triagem rápida: `npx playwright test tests/e2e/comercial-fluxo.spec.ts tests/e2e/clientes-cadastro.spec.ts tests/e2e/adesao-publica.spec.ts tests/e2e/crm-operacional.spec.ts`. Conferir o relatório em `playwright-report` e garantir que não há falhas de seletor, erros de mock/rota ou falhas de navegação pós-refatoração.",
+        "status": "pending",
+        "dependencies": [
+          108
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar e classificar as specs E2E existentes",
+            "description": "Mapear as specs em `tests/e2e/` e classificar cada uma como funcional, quebrada ou obsoleta.",
+            "dependencies": [],
+            "details": "Listar as 35 specs, registrar status e notas de falha, validar impacto no smoke/coverage, e preparar a lista de remoções necessárias para ajustar `scripts/playwright-coverage.mjs` (SMOKE_E2E_SPECS) e os artefatos em `docs/TEST_COVERAGE_CORE.md`, `docs/TEST_COVERAGE_CORE.json` e `docs/TEST_COVERAGE_BASELINE.json` quando houver mudança de arquivo.",
+            "status": "pending",
+            "testStrategy": "Usar `npx playwright test --list` para inventário e rodar specs isoladas quando necessário."
+          },
+          {
+            "id": 2,
+            "title": "Corrigir specs dos fluxos comerciais (venda/matrícula/pagamento)",
+            "description": "Estabilizar os fluxos críticos de venda e matrícula com foco em seletores e mocks.",
+            "dependencies": [
+              1
+            ],
+            "details": "Revisar `tests/e2e/comercial-fluxo.spec.ts` e `tests/e2e/clientes-cadastro.spec.ts`, migrar seletores quebrados para `getByRole`/`getByLabel`, adicionar `data-testid` em componentes quando não houver acessibilidade consistente e alinhar mocks no `tests/e2e/support/backend-only-stubs.ts` (ex.: sessão, vendas, matrículas e pagamentos) com os endpoints usados.",
+            "status": "pending",
+            "testStrategy": "Executar `npx playwright test tests/e2e/comercial-fluxo.spec.ts tests/e2e/clientes-cadastro.spec.ts` com `npm run dev:mock`."
+          },
+          {
+            "id": 3,
+            "title": "Corrigir specs de adesão pública e CRM operacional",
+            "description": "Garantir estabilidade dos testes de jornada pública e CRM de prospects.",
+            "dependencies": [
+              1
+            ],
+            "details": "Ajustar `tests/e2e/adesao-publica.spec.ts` e `tests/e2e/crm-operacional.spec.ts` com seletores robustos (`getByRole`/`getByLabel`), incluir `data-testid` quando necessário e revisar mocks do `installPublicJourneyApiMocks` e demais stubs no `tests/e2e/support/backend-only-stubs.ts` para evitar 404s no fluxo público e CRM.",
+            "status": "pending",
+            "testStrategy": "Executar `npx playwright test tests/e2e/adesao-publica.spec.ts tests/e2e/crm-operacional.spec.ts` em modo headless."
+          },
+          {
+            "id": 4,
+            "title": "Padronizar execução E2E e rodar suíte headless no CI",
+            "description": "Uniformizar os scripts de execução e atualizar configurações de CI para rodar E2E headless.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Adicionar `test:e2e` no `package.json` como alias de `playwright test` mantendo compatibilidade com `e2e` e o `Makefile`, revisar `playwright.config.ts` para garantir `dev:mock` estável e criar/ajustar workflow em `.github/workflows/` para executar a suíte headless; atualizar `scripts/playwright-coverage.mjs` e docs de coverage quando arquivos forem removidos/renomeados.",
+            "status": "pending",
+            "testStrategy": "Rodar `npm run test:e2e` e validar o workflow headless localmente com `npx playwright test --list`."
+          }
+        ]
+      },
+      {
+        "id": 112,
+        "title": "Melhorar acessibilidade (a11y) dos componentes shared e modais",
+        "description": "Auditar e corrigir acessibilidade dos 56 componentes shared e modais CRUD. Apenas 9 de 56 componentes usam atributos aria-. Adicionar aria-labels, roles, focus management em modais, navegação por teclado em kanban/grade, e contraste adequado nos status badges.",
+        "details": "Auditar src/components/shared/ para aria-label, aria-describedby, role, tabIndex e focus trap em Dialog/modais. Priorizar: (1) CrudModal e todos os modais CRUD — garantir focus trap, aria-labelledby no título, aria-describedby na descrição, escape para fechar; (2) PaginatedTable — aria-sort, aria-label nas colunas, role=grid; (3) SuggestionInput — aria-expanded, aria-activedescendant, role=combobox; (4) PlanoSelectorCard — role=radio/radiogroup quando usado para seleção; (5) StatusBadge — aria-label descritivo do status; (6) BulkActionBar — aria-live para contagem de seleção. Não alterar visual — apenas adicionar semântica. Testar com axe-core ou Lighthouse accessibility audit.",
+        "testStrategy": "Rodar Lighthouse accessibility audit nas páginas /vendas/nova, /clientes, /administrativo/salas e /adesao. Score mínimo alvo: 90. Verificar navegação por Tab em modais e fechamento com Escape.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Padronizar acessibilidade dos modais CRUD e Dialog wrappers",
+            "description": "Auditar e ajustar os modais CRUD para garantir semântica e foco corretos.",
+            "dependencies": [],
+            "details": "Revisar `src/components/shared/crud-modal.tsx`, `src/components/shared/*-modal.tsx` e `src/components/ui/dialog.tsx` para adicionar `aria-labelledby`/`aria-describedby` vinculados a `DialogTitle`/`DialogDescription`, garantir `role=\"dialog\"`, `aria-modal`, foco inicial e fechamento por Escape; tratar o modal custom `servico-modal.tsx` com foco e semântica equivalentes ao Dialog.",
+            "status": "pending",
+            "testStrategy": "Abrir cada modal CRUD e validar navegação por Tab, foco preso ao modal e fechamento com Escape."
+          },
+          {
+            "id": 2,
+            "title": "Melhorar a11y em componentes de dados e seleção",
+            "description": "Adicionar roles e atributos ARIA nos componentes de tabela, sugestões e seleção.",
+            "dependencies": [
+              1
+            ],
+            "details": "Atualizar `src/components/shared/paginated-table.tsx` (role=grid, aria-sort, labels de colunas), `suggestion-input.tsx` (combobox/listbox/activedescendant/expanded), `status-badge.tsx` (aria-label descritivo), `bulk-action-bar.tsx` (aria-live/role=status) e `plano-selector-card.tsx` (role=radio/aria-checked quando selecionável), além de revisar componentes de grade/kanban no shared para navegação por teclado com `tabIndex` e handlers de teclas.",
+            "status": "pending",
+            "testStrategy": "Testar navegação por teclado em tabelas, input de sugestões e cartões selecionáveis, garantindo leitura correta em leitor de tela."
+          },
+          {
+            "id": 3,
+            "title": "Validar com Lighthouse/axe e corrigir pendências finais",
+            "description": "Executar auditoria de acessibilidade e ajustar issues restantes.",
+            "dependencies": [
+              2
+            ],
+            "details": "Rodar Lighthouse (ou axe-core) nas rotas `/vendas/nova`, `/clientes`, `/administrativo/salas` e `/adesao`, corrigindo qualquer issue remanescente nos componentes shared/modais sem alterar layout visual e respeitando segurança de hidratação SSR.",
+            "status": "pending",
+            "testStrategy": "Lighthouse accessibility >= 90 e verificação manual de tabulação/escape nos modais."
+          }
+        ]
+      },
+      {
+        "id": 113,
+        "title": "Otimizar bundle: avaliar RSC boundaries e code splitting",
+        "description": "77 de 82 páginas usam \"use client\" no topo, forçando todo o código para o bundle do cliente. Avaliar quais páginas podem ter o data fetching movido para Server Components (RSC), reduzindo JS enviado ao browser. Implementar lazy loading para modais pesados e componentes não-críticos.",
+        "details": "Mapear as 77 páginas \"use client\" e classificar: (A) páginas que fazem fetch em useEffect e poderiam buscar dados no servidor (ex: listagens como /alunos, /planos, /matriculas, /pagamentos); (B) páginas com interação pesada que precisam ser client (ex: /vendas/nova, CRM kanban); (C) páginas mistas que podem ter RSC wrapper + client island. Para tipo A, criar versão com async Server Component que passa dados via props. Para modais pesados (>500 linhas), usar next/dynamic com ssr:false. Avaliar impacto no bundle com next build --analyze (ou @next/bundle-analyzer). Meta: reduzir First Load JS em 20%+ nas listagens.",
+        "testStrategy": "Comparar métricas de next build antes e depois: First Load JS shared, por-rota. Rodar Lighthouse Performance nas 5 rotas mais acessadas. Garantir que nenhuma funcionalidade quebrou com smoke manual.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": []
+      },
+      {
+        "id": 114,
+        "title": "Implementar exportação de relatórios (PDF/Excel) no gerencial",
+        "description": "As páginas do módulo gerencial (DRE, contas a pagar/receber, recebimentos, formas de pagamento, BI) exibem dados apenas em tela. Adicionar botões de exportação para PDF e Excel/CSV nos relatórios financeiros, usando geração client-side para não depender de endpoint backend adicional.",
+        "details": "Criar utilitário src/lib/export/table-export.ts com funções exportToCSV(data, columns, filename) e exportToPDF(data, columns, filename, title). Para CSV usar Blob + download link nativo. Para PDF usar biblioteca leve (ex: jspdf + jspdf-autotable, já que não há dependência de PDF no projeto). Adicionar componente ExportMenu em src/components/shared/export-menu.tsx com dropdown (CSV, PDF) que receba os dados da tabela. Integrar nas páginas: /gerencial/dre, /gerencial/contas-a-receber, /gerencial/contas-a-pagar, /gerencial/recebimentos, /gerencial/formas-pagamento, /vendas. Manter formatação BRL nos valores exportados.",
+        "testStrategy": "Exportar CSV e PDF de cada página listada. Validar que os valores batem com o exibido em tela. Abrir CSV no Excel/Google Sheets e confirmar encoding UTF-8 e separador correto. Abrir PDF e confirmar layout legível.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 115,
+        "title": "Padronizar tratamento de erros e estados vazios nas listagens",
+        "description": "Consolidar o padrão de error boundaries, estados vazios (empty state) e retry nas páginas de listagem. Hoje cada página implementa loading/error/empty de forma ad hoc. Criar componentes reutilizáveis e aplicar consistentemente.",
+        "details": "Criar src/components/shared/list-states.tsx com: (1) EmptyState — ícone + mensagem + CTA opcional, variantes por contexto (busca sem resultado vs lista vazia); (2) ErrorState — já existe parcialmente em error-state.tsx, unificar com retry callback; (3) ListLoadingSkeleton — wrapper genérico que aceita número de linhas. Auditar as páginas de listagem (/clientes, /vendas, /matriculas, /pagamentos, /planos, /prospects, CRM pages, admin pages) e substituir implementações ad hoc de empty/error/loading pelos componentes padronizados. Garantir que mensagens de erro incluam ação (retry ou contato suporte). Não alterar a lógica de negócio, apenas a camada de apresentação de estados.",
+        "testStrategy": "Simular erro de rede (desligar backend) e verificar que todas as listagens mostram ErrorState com botão retry. Verificar lista vazia (filtro sem resultados) mostra EmptyState adequado. Confirmar que loading skeletons aparecem durante fetch.",
+        "status": "pending",
+        "dependencies": [],
         "priority": "medium",
         "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-26T16:56:45.313Z",
-      "taskCount": 105,
-      "completedCount": 105,
+      "lastModified": "2026-03-26T20:45:32.712Z",
+      "taskCount": 109,
+      "completedCount": 107,
       "tags": [
         "master"
       ],
-      "created": "2026-03-26T19:32:43.953Z",
+      "created": "2026-03-26T21:26:08.015Z",
       "description": "Tasks for master context",
-      "updated": "2026-03-26T19:41:32.308Z"
+      "updated": "2026-03-26T21:34:05.498Z"
     }
   }
 }

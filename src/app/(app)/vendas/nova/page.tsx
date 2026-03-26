@@ -96,6 +96,7 @@ function NovaVendaPageContent() {
     subtotal,
     descontoTotal,
     total,
+    dryRun,
     saving,
     processSale,
   } = useCommercialFlow({
@@ -734,15 +735,15 @@ function NovaVendaPageContent() {
               {cupomAppliedCode && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gym-teal">Cupom {cupomAppliedCode} aplicado ({cupomPercent}%)</span>
-                  <span className="text-gym-teal">- {formatBRL(descontoCupom)}</span>
+                  <span className="text-gym-teal">- {formatBRL(dryRun?.descontoCupom ?? (subtotal * cupomPercent / 100))}</span>
                 </div>
               )}
-              {selectedConvenio && descontoConvenioPlano > 0 && (
+              {selectedConvenio && (dryRun?.descontoConvenio ?? 0) > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gym-teal">
                     Convênio {selectedConvenio.nome} aplicado ({selectedConvenio.descontoPercentual}%)
                   </span>
-                  <span className="text-gym-teal">- {formatBRL(descontoConvenioPlano)}</span>
+                  <span className="text-gym-teal">- {formatBRL(dryRun?.descontoConvenio ?? 0)}</span>
                 </div>
               )}
               {cupomError && <p className="text-xs text-gym-danger">{cupomError}</p>}
