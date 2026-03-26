@@ -11,8 +11,7 @@ import {
   listProdutosService,
   resolveAlunoTenantService,
   listServicosService,
-  listVoucherCodigosService,
-  listVouchersService,
+  validarVoucherCodigoService,
 } from "@/lib/comercial/runtime";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { buildPlanoVendaItems } from "@/lib/comercial/plano-flow";
@@ -23,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { CheckoutPayment } from "@/components/shared/checkout-payment";
 import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
 import { SaleReceiptModal } from "@/components/shared/sale-receipt-modal";
+import { PlanoSelectorCard } from "@/components/shared/plano-selector-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
@@ -84,6 +84,8 @@ function NovaVendaPageContent() {
   const [receiptCliente, setReceiptCliente] = useState<Aluno | null>(null);
   const [receiptPlano, setReceiptPlano] = useState<Plano | null>(null);
   const [receiptContratoAutoMsg, setReceiptContratoAutoMsg] = useState("");
+  const [receiptVoucherCodigo, setReceiptVoucherCodigo] = useState("");
+  const [receiptVoucherPercent, setReceiptVoucherPercent] = useState(0);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState("");
   const [manualCode, setManualCode] = useState("");
@@ -502,32 +504,33 @@ function NovaVendaPageContent() {
       setCupomError("");
       return;
     }
-    const now = getBusinessTodayIso();
-    const vouchers = (await listVouchersService()).filter((v) => {
-      if (!v.ativo || !v.usarNaVenda) return false;
-      if (v.periodoInicio > now) return false;
-      if (v.prazoDeterminado && v.periodoFim && v.periodoFim < now) return false;
-      return true;
-    });
-    for (const voucher of vouchers) {
-      const codigos = await listVoucherCodigosService(voucher.id);
-      const match = codigos.some((c) => c.codigo.trim().toUpperCase() === code);
-      if (!match) continue;
-      const percent = (voucher.tipo ?? "").toUpperCase().includes("DESCONTO") ? 10 : 0;
-      if (percent <= 0) {
-        setCupomError("Cupom encontrado, mas sem desconto aplicável para essa venda.");
+    try {
+      const result = await validarVoucherCodigoService({
+        codigo: code,
+        tenantId: tenantIdRef.current ?? undefined,
+        clienteId: clienteId || undefined,
+        planoId: selectedPlanoId || undefined,
+      });
+      if (!result.valido) {
+        setCupomError(result.mensagem || "Cupom inválido para esta venda.");
+        setCupomAppliedCode("");
+        setCupomPercent(0);
+        return;
+      }
+      if (result.planoIds?.length && selectedPlanoId && !result.planoIds.includes(selectedPlanoId)) {
+        setCupomError("Este cupom não é válido para o plano selecionado.");
         setCupomAppliedCode("");
         setCupomPercent(0);
         return;
       }
       setCupomAppliedCode(code);
-      setCupomPercent(percent);
+      setCupomPercent(result.descontoPercentual);
       setCupomError("");
-      return;
+    } catch {
+      setCupomError("Não foi possível validar o cupom. Tente novamente.");
+      setCupomAppliedCode("");
+      setCupomPercent(0);
     }
-    setCupomError("Cupom inválido para esta unidade/período.");
-    setCupomAppliedCode("");
-    setCupomPercent(0);
   }
 
   async function handleConfirmPayment(pagamento: PagamentoVenda) {
@@ -555,6 +558,7 @@ function NovaVendaPageContent() {
         data: {
           tipo: tipoFinal,
           clienteId: clienteId || undefined,
+          voucherCodigo: cupomAppliedCode || undefined,
           itens: cart.map((i) => ({
             tipo: i.tipo,
             referenciaId: i.referenciaId,
@@ -574,7 +578,7 @@ function NovaVendaPageContent() {
               ? {
                   planoId: plan.id,
                   dataInicio: dataInicioPlano,
-                  descontoPlano: 0,
+                  descontoPlano: cupomPercent || 0,
                   renovacaoAutomatica: renovacaoAutomaticaPlano,
                   convenioId: selectedConvenio?.id,
                 }
@@ -585,6 +589,8 @@ function NovaVendaPageContent() {
       setReceiptVenda(venda);
       setReceiptCliente(selectedCliente);
       setReceiptPlano(plan);
+      setReceiptVoucherCodigo(cupomAppliedCode);
+      setReceiptVoucherPercent(cupomPercent);
       if (plan?.contratoTemplateHtml && plan.contratoEnviarAutomaticoEmail && selectedCliente?.email) {
         setReceiptContratoAutoMsg(`Contrato enviado automaticamente para ${selectedCliente.email}.`);
       } else {
@@ -619,6 +625,8 @@ function NovaVendaPageContent() {
         tenant={tenant}
         plano={receiptPlano}
         contratoAutoEnvioMensagem={receiptContratoAutoMsg}
+        voucherCodigo={receiptVoucherCodigo || undefined}
+        voucherDescontoPercent={receiptVoucherPercent || undefined}
       />
 
       <div className="flex items-start justify-between gap-4">
@@ -834,29 +842,15 @@ function NovaVendaPageContent() {
                 )}
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  {planos.map((plano) => {
-                    const selected = selectedPlanoId === plano.id;
-                    return (
-                      <button
-                        key={plano.id}
-                        type="button"
-                        onClick={() => addPlanoToCart(plano)}
-                        className={`cursor-pointer rounded-lg border p-3 text-left transition-colors ${
-                          selected ? "border-gym-accent bg-gym-accent/10" : "border-border bg-secondary/30 hover:bg-secondary/50"
-                        }`}
-                      >
-                        <p className="text-sm font-semibold">{plano.nome}</p>
-                        <p className="mt-1 font-display text-lg font-bold text-gym-accent">{formatBRL(Number(plano.valor ?? 0))}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{plano.tipo} · {plano.duracaoDias} dias</p>
-                        <p className="mt-2 text-[11px] text-muted-foreground">Matrícula: {formatBRL(Number(plano.valorMatricula ?? 0))}</p>
-                        {plano.cobraAnuidade && Number(plano.valorAnuidade ?? 0) > 0 && (
-                          <p className="text-[11px] text-muted-foreground">
-                            Anuidade: {formatBRL(Number(plano.valorAnuidade ?? 0))} (até {Math.max(1, Number(plano.parcelasMaxAnuidade ?? 1))}x)
-                          </p>
-                        )}
-                      </button>
-                    );
-                  })}
+                  {planos.map((plano) => (
+                    <PlanoSelectorCard
+                      key={plano.id}
+                      plano={plano}
+                      selected={selectedPlanoId === plano.id}
+                      onSelect={addPlanoToCart}
+                      variant="compact"
+                    />
+                  ))}
                 </div>
               </div>
             )}
