@@ -6223,12 +6223,13 @@
         "description": "Permitir a execução de ações em massa em registros de tabelas para aumentar a produtividade.",
         "details": "Adicionar suporte a rowSelection na PaginatedTable. Criar a coluna de Checkbox na cabeçalho e linhas. Criar o componente BulkActionBar (flutuante) que aparece no rodapé da página quando 1+ itens são selecionados. Definir a interface de BulkAction (label, icon, handler). Implementar as primeiras ações em massa: Exportar Selecionados (CSV) e Alterar Status em Massa.",
         "testStrategy": "Checkboxes funcionam corretamente (Selecionar Tudo/Individual). Floating Action Bar aparece e desaparece no momento certo. Ações são executadas corretamente para todos os IDs selecionados. A barra exibe a contagem de itens selecionados.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "88"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-24T07:48:32.394Z"
       },
       {
         "id": "90",
@@ -6236,12 +6237,13 @@
         "description": "Manter os botões de ação (Salvar/Cancelar) sempre acessíveis, independente da posição de scroll.",
         "details": "Criar o componente StickyActionFooter em src/components/shared/. Implementar comportamento Sticky no rodapé que aparece apenas em telas longas. Adicionar suporte a estados: isDirty (botão de salvar muda de cor ou pulsa quando há mudanças não salvas). Refatorar formulário de Cadastro de Cliente para utilizar o novo footer.",
         "testStrategy": "Barra de ações visível na parte inferior da tela. Botões de Salvar e Cancelar funcionando corretamente. Layout responsivo (em mobile ocupa toda a largura). Visual integrado ao tema escuro da aplicação.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "83"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-24T07:58:40.648Z"
       },
       {
         "id": "91",
@@ -6249,12 +6251,13 @@
         "description": "Fornecer feedback imediato de erros para o usuário, evitando o medo do submit.",
         "details": "Configurar os formulários principais para o modo de validação onBlur ou onChange. Implementar mensagens de erro dinâmicas (Zod) em tempo real. Criar o componente FieldAsyncFeedback que exibe estado de Checando... e depois OK ou Erro. Integrar busca de unicidade (CPF/Email) no backend enquanto o usuário digita.",
         "testStrategy": "Erros de formato (ex: email inválido) aparecem logo após o usuário sair do campo. Feedback de Checking (Spinner discreto) em campos de unicidade. Botão Salvar é desativado se houver erros críticos visíveis.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "90"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-24T08:14:28.670Z"
       },
       {
         "id": "92",
@@ -6262,12 +6265,13 @@
         "description": "Proteger o usuário contra perda acidental de dados em cadastros extensos.",
         "details": "Criar o hook customizado useFormDraft para persistência em localStorage. Implementar política de expiração de rascunhos. Adicionar um pequeno indicador de Salvo no rascunho no topo do formulário. Criar o modal Continuar preenchimento? ao reabrir um formulário inacabado. Implementar em: Cadastro de Cliente, Cadastro de Plano e Matrícula.",
         "testStrategy": "Digitar em um formulário e fechar a aba mantém os dados ao reabrir. O sistema oferece restaurar os dados detectados no localStorage. Limpeza correta após sucesso.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "91"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-24T08:36:11.285Z"
       },
       {
         "id": "93",
@@ -6275,12 +6279,13 @@
         "description": "Garantir que a aplicação seja acessível e tenha uma navegação via teclado clara e vibrante.",
         "details": "Realizar audit de contraste da cor gym-accent (#c8f135). Implementar variante de Contraste Seguro para textos pequenos. Customizar o anel de foco global (focus-visible) no Tailwind para usar a cor da marca com brilho. Testar navegação completa via teclado na Sidebar e Tabelas.",
         "testStrategy": "Todos os elementos interativos têm foco visualmente claro. Contraste de texto respeita as normas de acessibilidade (AA). Navegação fluida sem o uso de mouse.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "83"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-24T08:40:57.943Z"
       },
       {
         "id": "94",
@@ -6288,12 +6293,13 @@
         "description": "Tornar o sistema visualmente mais vivo e polido, adicionando feedbacks táteis de interface.",
         "details": "Instalar framer-motion. Criar animação de Page Transition (Fade-in/Up). Adicionar efeito Scale-down ao clicar em botões principais. Implementar animações de feedback em StatusBadge. Criar micro-animação para o Command Palette.",
         "testStrategy": "Sistema se sente responsivo e premium através de feedbacks táteis. Mudanças de tela não são abruptas. Animações respeitam a configuração de reduzir movimento do sistema.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "93"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-24T08:52:50.160Z"
       },
       {
         "id": "95",
@@ -6301,19 +6307,243 @@
         "description": "Tratar erros críticos sem quebrar a aplicação inteira e oferecer um caminho claro de recuperação.",
         "details": "Criar o componente ErrorState reutilizável. Implementar src/app/error.tsx e src/app/(app)/error.tsx. Adicionar botão de Tentar Novamente (reset()). Capturar erros de ApiRequestError no Boundary para exibir mensagens técnicas úteis.",
         "testStrategy": "Falhas em componentes individuais não causam tela branca total. Usuário vê uma interface clara explicando o erro. O botão de Tentar recarrega apenas a parte quebrada do app.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "83"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-24T09:01:28.456Z"
+      },
+      {
+        "id": "96",
+        "title": "Higienizar base React/SSR e zerar lint crítico da UI",
+        "description": "Remover smells e regressões de base antes de continuar refinando a interface, atacando efeitos problemáticos, artefatos locais e desvios de SSR/hidratação.",
+        "details": "Corrigir os erros atuais de `react-hooks/set-state-in-effect`, limpar imports mortos e arquivos temporários como `template.tsx.bak`, revisar pontos de hidratação/estado client-only introduzidos nas tasks recentes e deixar a base pronta para os próximos ajustes de acessibilidade e motion. Esta tarefa pode rodar em paralelo com 97 e 98.",
+        "testStrategy": "Executar `npm run lint`, validar ausência de artefatos locais acidentais no fluxo principal e revisar manualmente os pontos de SSR/hidratação afetados nas telas operacionais.",
+        "status": "done",
+        "dependencies": [
+          "92",
+          "95"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Corrigir efeitos com setState síncrono e estados derivados instáveis",
+            "description": "Resolver os erros atuais de lint em hooks e componentes de formulário/preferências.",
+            "details": "Revisar `src/components/shared/form-draft-components.tsx`, `src/components/shared/novo-cliente-wizard.tsx`, `src/hooks/use-user-preferences.ts` e quaisquer pontos correlatos para eliminar `setState` síncrono em `useEffect`, privilegiando estado derivado, lazy init ou callbacks adequados.",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 96,
+            "parentId": "undefined",
+            "testStrategy": "Lint focado nos arquivos alterados e regressão manual dos fluxos de rascunho, validação assíncrona e preferências.",
+            "updatedAt": "2026-03-25T12:25:00.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Remover artefatos e imports mortos do shell de navegação",
+            "description": "Limpar sobras de refactor e reduzir ruído estrutural no app shell.",
+            "details": "Eliminar arquivos temporários como `src/app/(app)/template.tsx.bak`, revisar imports não usados em `app-topbar`, `command-palette`, `sidebar` e demais áreas tocadas recentemente, e garantir que o estado atual do shell reflita a intenção real do produto.",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 96,
+            "parentId": "undefined",
+            "testStrategy": "Rodar lint nos componentes de layout e revisar `git status` para confirmar ausência de arquivos temporários indevidos.",
+            "updatedAt": "2026-03-25T12:25:00.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Fechar checklist de SSR/hydration safety nas áreas alteradas",
+            "description": "Garantir que os componentes recentes continuam seguros para renderização hidratável.",
+            "details": "Repassar os guardrails de `AGENTS.md` nos componentes alterados recentemente, verificando `localStorage`, `window`, datas dinâmicas e estrutura consistente de Radix/Next no primeiro render.",
+            "status": "done",
+            "dependencies": [
+              1,
+              2
+            ],
+            "parentTaskId": 96,
+            "parentId": "undefined",
+            "testStrategy": "Checklist manual por arquivo tocado e validação via `npm run lint`/build local se necessário.",
+            "updatedAt": "2026-03-25T12:25:00.000Z"
+          }
+        ],
+        "updatedAt": "2026-03-25T12:25:00.000Z"
+      },
+      {
+        "id": "97",
+        "title": "Estruturar tratamento de erro e observabilidade dos boundaries",
+        "description": "Evoluir os error boundaries para consumirem erros tipados do projeto e entregarem recuperação, contexto técnico e mensagem consistente.",
+        "details": "Aproveitar a infraestrutura criada na task 95 para conectar `ErrorState` ao shape real de `ApiRequestError`, reutilizar formatadores compartilhados, enriquecer diagnósticos úteis para suporte e alinhar os estados de erro global, operacional e `not-found`. Esta tarefa pode rodar em paralelo com 96 e 98.",
+        "testStrategy": "Validar cenários de erro global e do shell operacional, cobrindo `ApiRequestError`, erro genérico e navegação para 404; conferir mensagens, `reset()` e exposição controlada de contexto técnico.",
+        "status": "done",
+        "dependencies": [
+          "95"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar shape real de erros HTTP e mensagens compartilhadas",
+            "description": "Mapear quais dados técnicos já existem e podem ser exibidos ou logados com segurança.",
+            "details": "Revisar `src/lib/api/http.ts`, `src/lib/utils/api-error.ts` e usos existentes de `ApiRequestError` para definir uma política de exibição/log que aproveite `status`, `path`, `contextId`, `fieldErrors` e mensagens normalizadas.",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 97,
+            "parentId": "undefined",
+            "testStrategy": "Checklist de cenários com payloads representativos e validação de compatibilidade com o consumo atual.",
+            "updatedAt": "2026-03-25T13:15:00.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Refatorar ErrorState para usar erros estruturados",
+            "description": "Substituir heurísticas frágeis por leitura tipada e reaproveitamento de helpers compartilhados.",
+            "details": "Atualizar `ErrorState` para identificar corretamente `ApiRequestError`, renderizar mensagem amigável com fallback seguro e expor metadados úteis apenas quando fizer sentido para suporte/diagnóstico.",
+            "status": "done",
+            "dependencies": [
+              1
+            ],
+            "parentTaskId": 97,
+            "parentId": "undefined",
+            "testStrategy": "Testes unitários ou validação manual com diferentes classes de erro, incluindo falha de rede e erro HTTP tipado.",
+            "updatedAt": "2026-03-25T13:15:00.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Alinhar boundaries globais, shell operacional e estado 404",
+            "description": "Garantir consistência de recuperação e linguagem entre as superfícies de erro.",
+            "details": "Revisar `src/app/error.tsx`, `src/app/(app)/error.tsx` e `src/app/not-found.tsx` para manter comportamento consistente de CTA, isolamento visual e contexto técnico, sem expor detalhes indevidos ao usuário final.",
+            "status": "done",
+            "dependencies": [
+              2
+            ],
+            "parentTaskId": 97,
+            "parentId": "undefined",
+            "testStrategy": "Exercitar rotas e falhas simuladas para validar `reset()`, navegação de retorno e consistência visual dos estados.",
+            "updatedAt": "2026-03-25T13:15:00.000Z"
+          }
+        ],
+        "updatedAt": "2026-03-25T13:15:00.000Z"
+      },
+      {
+        "id": "98",
+        "title": "Consolidar política de motion com reduced motion e custo controlado",
+        "description": "Transformar motion em uma camada compartilhada do projeto, com fallback consistente para `prefers-reduced-motion` e sem dependência espalhada sem propósito claro.",
+        "details": "Revisar o que restou da task 94, decidir a política padrão de motion do app, centralizar timings/curvas/opt-out para movimento reduzido e remover efeitos redundantes ou caros que não entregam valor proporcional. Esta tarefa pode rodar em paralelo com 96 e 97.",
+        "testStrategy": "Validar navegação, feedback tátil e overlays com motion habilitado e com `prefers-reduced-motion`; confirmar consistência visual e ausência de regressões de UX ou bundle desnecessário.",
+        "status": "done",
+        "dependencies": [
+          "94"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Inventariar animações atuais e definir a matriz de motion do app",
+            "description": "Separar animações estruturais, táteis e cosméticas para decidir o que permanece.",
+            "details": "Mapear `StatusBadge`, botões, palette, sidebar e quaisquer resquícios de `template.tsx`, classificando cada animação por valor de UX, custo de manutenção e necessidade de fallback para movimento reduzido.",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 98,
+            "parentId": "undefined",
+            "testStrategy": "Checklist de componentes animados e decisão documentada de manter, simplificar ou remover cada classe de efeito.",
+            "updatedAt": "2026-03-25T13:15:00.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Criar camada compartilhada de motion e reduced motion",
+            "description": "Centralizar helpers, variantes ou hooks usados pelas animações permitidas.",
+            "details": "Implementar uma camada reutilizável para motion com tokens de duração/easing e suporte automático a `prefers-reduced-motion`, evitando decisões isoladas dentro de cada componente.",
+            "status": "done",
+            "dependencies": [
+              1
+            ],
+            "parentTaskId": 98,
+            "parentId": "undefined",
+            "testStrategy": "Validar o helper/hook em componentes de exemplo e conferir comportamento com reduced motion ligado/desligado.",
+            "updatedAt": "2026-03-25T13:15:00.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Migrar componentes animados para a política consolidada",
+            "description": "Aplicar a camada shared apenas onde o movimento agrega valor real.",
+            "details": "Refatorar os componentes que hoje animam por CSS solto ou `framer-motion` direto para usar a política shared, removendo código redundante e limpando dependências/arquivos que não sustentem um caso de uso claro.",
+            "status": "done",
+            "dependencies": [
+              2
+            ],
+            "parentTaskId": 98,
+            "parentId": "undefined",
+            "testStrategy": "Validação manual dos componentes migrados, checando consistência visual, responsividade e reduced motion.",
+            "updatedAt": "2026-03-25T13:15:00.000Z"
+          }
+        ],
+        "updatedAt": "2026-03-25T13:15:00.000Z"
+      },
+      {
+        "id": "99",
+        "title": "Refatorar estratégia de foco e acessibilidade por primitives",
+        "description": "Substituir o foco global agressivo por uma política previsível de foco nos primitives e componentes compartilhados do design system.",
+        "details": "Revisar a task 93 para preservar os ganhos de acessibilidade sem depender de `*:focus-visible`, migrando a estratégia para tokens/classes/componentes base, validando navegação por teclado e evitando ring duplicado ou styling conflitante. Esta é a última etapa da proposta e só deve começar após 96, 97 e 98.",
+        "testStrategy": "Navegar por teclado nos principais fluxos operacionais, validar contraste e foco visível em `Button`, `Input`, `Select`, `Tabs`, links e componentes Radix, e confirmar ausência de regressões visuais no shell.",
+        "status": "pending",
+        "dependencies": [
+          "93",
+          "96",
+          "97",
+          "98"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear conflitos entre foco global e primitives existentes",
+            "description": "Identificar onde o foco está duplicado, inconsistente ou difícil de manter.",
+            "details": "Levantar conflitos entre `globals.css` e os primitives/shared components (`Button`, `Input`, `Select`, `Tabs`, links de navegação e afins), priorizando os pontos que hoje recebem ring duplo ou offsets inconsistentes.",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 99,
+            "parentId": "undefined",
+            "testStrategy": "Checklist visual e navegação por teclado nos componentes-base e no app shell.",
+            "updatedAt": "2026-03-25T12:00:00.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Definir tokens e utilitários compartilhados para focus ring",
+            "description": "Criar uma convenção única para foco visível e acessível no design system.",
+            "details": "Extrair a aparência de foco para classes/tokens reutilizáveis, mantendo o mínimo realmente global e delegando estilo específico aos primitives e componentes compartilhados.",
+            "status": "pending",
+            "dependencies": [
+              1
+            ],
+            "parentTaskId": 99,
+            "parentId": "undefined",
+            "testStrategy": "Aplicar a convenção em um conjunto piloto de primitives e validar consistência visual/AA.",
+            "updatedAt": "2026-03-25T12:00:00.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Migrar primitives e remover a regra global agressiva",
+            "description": "Levar a nova política para os componentes-base e simplificar o CSS global.",
+            "details": "Atualizar os primitives prioritários e componentes compartilhados para usar a nova convenção de foco, simplificando `globals.css` e preservando skip links e demais recursos de acessibilidade criados antes.",
+            "status": "pending",
+            "dependencies": [
+              2
+            ],
+            "parentTaskId": 99,
+            "parentId": "undefined",
+            "testStrategy": "Validar navegação completa por teclado, contraste e ausência de regressões visuais em desktop/mobile.",
+            "updatedAt": "2026-03-25T12:00:00.000Z"
+          }
+        ],
+        "updatedAt": "2026-03-25T12:00:00.000Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-24T07:31:47.400Z",
-      "taskCount": 95,
-      "completedCount": 88,
+      "lastModified": "2026-03-25T13:15:00.000Z",
+      "taskCount": 99,
+      "completedCount": 98,
       "tags": [
         "master"
       ]

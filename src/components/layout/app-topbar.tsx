@@ -1,8 +1,7 @@
 "use client";
 
-import { memo, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Menu, Search, Command } from "lucide-react";
+import { memo, useState } from "react";
+import { Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActiveTenantSelector } from "@/components/layout/active-tenant-selector";
 import { useTenantContext } from "@/hooks/use-session-context";

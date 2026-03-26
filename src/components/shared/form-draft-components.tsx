@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CloudOff, History, Save } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+const subscribeHydration = () => () => undefined;
+
+function useHydrated() {
+  return useSyncExternalStore(subscribeHydration, () => true, () => false);
+}
 
 export function FormDraftIndicator({
   lastModified,
@@ -14,16 +20,15 @@ export function FormDraftIndicator({
   lastModified: Date | null;
   className?: string;
 }) {
-  const [mounted, setMounted] = useState(false);
-  const [now, setNow] = useState(new Date());
+  const hydrated = useHydrated();
+  const [, setRefreshTick] = useState(0);
 
   useEffect(() => {
-    setMounted(true);
-    const interval = setInterval(() => setNow(new Date()), 60000);
+    const interval = setInterval(() => setRefreshTick((current) => current + 1), 60000);
     return () => clearInterval(interval);
   }, []);
 
-  if (!mounted || !lastModified) return null;
+  if (!hydrated || !lastModified) return null;
 
   return (
     <div className={`flex items-center gap-1.5 text-xs text-muted-foreground ${className || ""}`}>
@@ -42,13 +47,9 @@ export function RestoreDraftModal({
   onRestore: () => void;
   onDiscard: () => void;
 }) {
-  const [mounted, setMounted] = useState(false);
+  const hydrated = useHydrated();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+  if (!hydrated) return null;
 
   return (
     <Dialog open={hasDraft} onOpenChange={(open) => {

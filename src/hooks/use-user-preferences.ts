@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 const PREFERENCES_KEY = "academia-user-preferences";
 const SYNC_EVENT = "academia-user-preferences-sync";
@@ -22,12 +22,14 @@ let globalHydrated = false;
 
 function loadFromStorage() {
   if (typeof window === "undefined") return;
+  globalPreferences = { ...DEFAULT_PREFERENCES };
   const stored = localStorage.getItem(PREFERENCES_KEY);
   if (stored) {
     try {
       globalPreferences = JSON.parse(stored);
     } catch (e) {
       console.error("Erro ao carregar preferências:", e);
+      globalPreferences = { ...DEFAULT_PREFERENCES };
     }
   }
   globalHydrated = true;
@@ -41,38 +43,58 @@ function saveToStorageAndNotify(newPrefs: UserPreferences) {
   }
 }
 
-export function useUserPreferences() {
-  const [preferences, setPreferences] = useState<UserPreferences>(globalPreferences);
-  const [hydrated, setHydrated] = useState(globalHydrated);
+type UserPreferencesSnapshot = {
+  preferences: UserPreferences;
+  hydrated: boolean;
+};
 
-  useEffect(() => {
-    if (!globalHydrated) {
+function getPreferencesSnapshot(): UserPreferencesSnapshot {
+  if (typeof window !== "undefined" && !globalHydrated) {
+    loadFromStorage();
+  }
+
+  return {
+    preferences: globalPreferences,
+    hydrated: globalHydrated,
+  };
+}
+
+function getServerPreferencesSnapshot(): UserPreferencesSnapshot {
+  return {
+    preferences: DEFAULT_PREFERENCES,
+    hydrated: false,
+  };
+}
+
+function subscribeToPreferences(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => undefined;
+
+  const handleSync = () => {
+    onStoreChange();
+  };
+
+  const handleStorage = (e: StorageEvent) => {
+    if (e.key === PREFERENCES_KEY) {
       loadFromStorage();
-      setPreferences(globalPreferences);
-      setHydrated(globalHydrated);
+      onStoreChange();
     }
+  };
 
-    const handleSync = () => {
-      setPreferences(globalPreferences);
-      setHydrated(globalHydrated);
-    };
+  window.addEventListener(SYNC_EVENT, handleSync);
+  window.addEventListener("storage", handleStorage);
 
-    window.addEventListener(SYNC_EVENT, handleSync);
-    
-    // Suporte para sync cross-tab 
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === PREFERENCES_KEY) {
-        loadFromStorage();
-        setPreferences(globalPreferences);
-      }
-    };
-    window.addEventListener("storage", handleStorage);
+  return () => {
+    window.removeEventListener(SYNC_EVENT, handleSync);
+    window.removeEventListener("storage", handleStorage);
+  };
+}
 
-    return () => {
-      window.removeEventListener(SYNC_EVENT, handleSync);
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
+export function useUserPreferences() {
+  const { preferences, hydrated } = useSyncExternalStore(
+    subscribeToPreferences,
+    getPreferencesSnapshot,
+    getServerPreferencesSnapshot
+  );
 
   const toggleFavorite = useCallback((href: string) => {
     const isFavoriteObj = globalPreferences.favorites.includes(href);

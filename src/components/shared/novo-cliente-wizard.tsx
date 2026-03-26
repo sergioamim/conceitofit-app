@@ -24,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { StickyActionFooter } from "@/components/shared/sticky-action-footer";
 import { cn } from "@/lib/utils";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
@@ -149,6 +148,8 @@ function Step1Dados({
   const watchedEmail = useWatch({ control, name: "email" });
   const watchedCep = useWatch({ control, name: "enderecoCep" });
   const watchedFoto = useWatch({ control, name: "foto" });
+  const canCheckCpf = Boolean(tenantId && watchedCpf && !watchedCpf.includes("_"));
+  const canCheckEmail = Boolean(tenantId && watchedEmail && watchedEmail.includes("@"));
 
   useEffect(() => {
     if (!watchedCep) return;
@@ -168,15 +169,16 @@ function Step1Dados({
 
   // Unique Async CPF
   useEffect(() => {
-    if (!tenantId || !watchedCpf || watchedCpf.includes("_")) {
-      setCpfStatus("idle");
-      setCpfMsg("");
+    if (!canCheckCpf || !tenantId || !watchedCpf) {
+      if (errors.cpf?.type === "manual") form.clearErrors("cpf");
       return;
     }
+
+    const currentCpf = watchedCpf;
     const handler = setTimeout(async () => {
       setCpfStatus("loading");
       setCpfMsg("Checando disponibilidade...");
-      const exists = await checkUniqueness(tenantId, watchedCpf);
+      const exists = await checkUniqueness(tenantId, currentCpf);
       if (exists) {
         setCpfStatus("error");
         setCpfMsg("Este CPF já está cadastrado.");
@@ -188,19 +190,20 @@ function Step1Dados({
       }
     }, 600);
     return () => clearTimeout(handler);
-  }, [watchedCpf, tenantId, form, errors.cpf?.type]);
+  }, [canCheckCpf, watchedCpf, tenantId, form, errors.cpf?.type]);
 
   // Unique Async Email
   useEffect(() => {
-    if (!tenantId || !watchedEmail || !watchedEmail.includes("@")) {
-      setEmailStatus("idle");
-      setEmailMsg("");
+    if (!canCheckEmail || !tenantId || !watchedEmail) {
+      if (errors.email?.type === "manual") form.clearErrors("email");
       return;
     }
+
+    const currentEmail = watchedEmail;
     const handler = setTimeout(async () => {
       setEmailStatus("loading");
       setEmailMsg("Checando disponibilidade...");
-      const exists = await checkUniqueness(tenantId, watchedEmail);
+      const exists = await checkUniqueness(tenantId, currentEmail);
       if (exists) {
         setEmailStatus("error");
         setEmailMsg("E-mail já cadastrado vinculado a outro cliente.");
@@ -212,7 +215,7 @@ function Step1Dados({
       }
     }, 600);
     return () => clearTimeout(handler);
-  }, [watchedEmail, tenantId, form, errors.email?.type]);
+  }, [canCheckEmail, watchedEmail, tenantId, form, errors.email?.type]);
 
   useEffect(() => {
     if (!cameraOpen) return;

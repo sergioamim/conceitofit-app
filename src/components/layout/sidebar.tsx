@@ -10,8 +10,6 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronRight,
-  ClipboardList,
-  Clock,
   LineChart,
   PanelLeftClose,
   PanelLeftOpen,
@@ -22,6 +20,7 @@ import {
 import { clearAuthSession, getNetworkSlugFromSession } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/auth-redirect";
 import { DEFAULT_TENANT_APP_NAME } from "@/lib/tenant-theme";
+import { MOTION_CLASSNAMES } from "@/lib/ui-motion";
 import { cn } from "@/lib/utils";
 import {
   mainNavItems as navItems,
@@ -668,7 +667,8 @@ function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = fals
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex h-full w-[280px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out md:static md:h-screen md:translate-x-0",
+        "fixed inset-y-0 left-0 z-40 flex h-full w-[280px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:static md:h-screen md:translate-x-0",
+        MOTION_CLASSNAMES.sidebar,
         mobileOpen ? "translate-x-0" : "-translate-x-full",
         collapsed ? "md:w-[72px] md:min-w-[72px]" : "md:w-[220px] md:min-w-[220px]"
       )}

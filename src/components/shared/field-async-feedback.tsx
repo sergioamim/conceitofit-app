@@ -2,6 +2,7 @@
 
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MOTION_CLASSNAMES } from "@/lib/ui-motion";
 
 export type FieldAsyncFeedbackStatus = "idle" | "loading" | "success" | "error";
 
@@ -17,7 +18,8 @@ export function FieldAsyncFeedback({ status, message, className }: FieldAsyncFee
   return (
     <div
       className={cn(
-        "mt-1 flex items-center gap-1.5 text-xs animate-in fade-in slide-in-from-top-1",
+        "mt-1 flex items-center gap-1.5 text-xs",
+        MOTION_CLASSNAMES.fieldFeedback,
         status === "loading" && "text-muted-foreground",
         status === "success" && "text-gym-teal",
         status === "error" && "text-destructive",
@@ -25,7 +27,7 @@ export function FieldAsyncFeedback({ status, message, className }: FieldAsyncFee
       )}
       role="status"
     >
-      {status === "loading" && <Loader2 className="size-3.5 animate-spin" />}
+      {status === "loading" && <Loader2 className="size-3.5 motion-safe:animate-spin" />}
       {status === "success" && <CheckCircle2 className="size-3.5" />}
       {status === "error" && <AlertCircle className="size-3.5" />}
       

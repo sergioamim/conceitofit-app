@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   getPublicJourneyContext,
@@ -70,31 +70,31 @@ export function usePublicJourney() {
 
   const isCurrentTenant = state.tenantRef === tenantRef;
 
-  function refreshDraft() {
+  const refreshDraft = useCallback(() => {
     if (!state.context) return;
     setState((current) => ({
       ...current,
       draft: loadPublicJourneyDraft(state.context!.tenant.id),
     }));
-  }
+  }, [state.context]);
 
-  function persistDraft(patch: Partial<PublicJourneyDraft>) {
+  const persistDraft = useCallback((patch: Partial<PublicJourneyDraft>) => {
     if (!state.context) return;
     const next = savePublicJourneyDraft(state.context.tenant.id, patch);
     setState((current) => ({
       ...current,
       draft: next,
     }));
-  }
+  }, [state.context]);
 
-  function resetDraft() {
+  const resetDraft = useCallback(() => {
     if (!state.context) return;
     clearPublicJourneyDraft(state.context.tenant.id);
     setState((current) => ({
       ...current,
       draft: {},
     }));
-  }
+  }, [state.context]);
 
   return {
     context: isCurrentTenant ? state.context : null,

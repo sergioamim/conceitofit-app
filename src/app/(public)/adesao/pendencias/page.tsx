@@ -79,7 +79,7 @@ function PendenciasPublicasPageContent() {
     return () => {
       active = false;
     };
-  }, [checkoutId, context, draft.checkout?.checkoutId, resolvedTenantRef]);
+  }, [checkoutId, context, draft.checkout?.checkoutId, persistDraft, resolvedTenantRef]);
 
   if (loading) {
     return (

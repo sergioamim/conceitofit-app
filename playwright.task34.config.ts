@@ -1,6 +1,6 @@
 import baseConfig from "./playwright.config";
 
-export default {
+const task34Config = {
   ...baseConfig,
   webServer: undefined,
   use: {
@@ -8,3 +8,5 @@ export default {
     baseURL: "http://127.0.0.1:3001",
   },
 };
+
+export default task34Config;

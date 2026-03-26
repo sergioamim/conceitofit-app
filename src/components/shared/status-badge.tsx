@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { useStatusBadgeMotion } from "@/lib/ui-motion";
 import type {
   StatusProspect,
   StatusAluno,
@@ -51,16 +52,14 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const motionProps = useStatusBadgeMotion();
   const config = STATUS_MAP[status] ?? {
     label: status,
     className: "bg-muted text-muted-foreground",
   };
   return (
     <motion.span
-      layout
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      {...motionProps}
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
         config.className,

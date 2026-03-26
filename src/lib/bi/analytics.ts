@@ -515,7 +515,6 @@ export function buildBiOperationalSnapshot(input: BuildBiSnapshotInput): BiOpera
     previousMetrics.valorInadimplente,
     Math.max(1, previousMetrics.valorEmAberto + previousMetrics.receita)
   );
-  const previousRetained = previousMetrics.retidosBaseIds.length;
   const previousRetentionPct = ratioPercent(
     previousPreviousMetrics.retidosBaseIds.filter((id) => previousMetrics.retidosBaseIds.includes(id)).length,
     Math.max(1, previousPreviousMetrics.retidosBaseIds.length)
