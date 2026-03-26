@@ -15,8 +15,10 @@ import { Button } from "@/components/ui/button";
 import { ConvenioModal } from "@/components/shared/convenio-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { cn } from "@/lib/utils";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 export default function ConveniosPage() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const { tenantId, tenantResolved } = useTenantContext();
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -57,14 +59,16 @@ export default function ConveniosPage() {
     await load();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Remover este convênio?") ) return;
-    await deleteConvenioApi(id);
-    await load();
+  function handleDelete(id: string) {
+    confirm("Remover este convênio?", async () => {
+      await deleteConvenioApi(id);
+      await load();
+    });
   }
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       <ConvenioModal
         open={modalOpen}
         onClose={() => {

@@ -13,8 +13,10 @@ import { Button } from "@/components/ui/button";
 import { BandeiraCartaoModal } from "@/components/shared/bandeira-cartao-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 export default function BandeirasPage() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [bandeiras, setBandeiras] = useState<BandeiraCartao[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<BandeiraCartao | null>(null);
@@ -62,19 +64,21 @@ export default function BandeirasPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Remover esta bandeira?")) return;
-    try {
-      setError("");
-      await deleteBandeiraCartaoApi(id);
-      await load();
-    } catch (submitError) {
-      setError(normalizeErrorMessage(submitError));
-    }
+  function handleDelete(id: string) {
+    confirm("Remover esta bandeira?", async () => {
+      try {
+        setError("");
+        await deleteBandeiraCartaoApi(id);
+        await load();
+      } catch (submitError) {
+        setError(normalizeErrorMessage(submitError));
+      }
+    });
   }
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       <BandeiraCartaoModal
         open={modalOpen}
         onClose={() => {

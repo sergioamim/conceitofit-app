@@ -25,17 +25,10 @@ import { DashboardSkeleton } from "@/components/shared/dashboard-skeleton";
 import type { DashboardData, Prospect, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatBRL, formatDate } from "@/lib/formatters";
 
 type DashboardTab = "CLIENTES" | "VENDAS" | "FINANCEIRO";
 const PROSPECTS_PAGE_SIZE = 10;
-
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
-}
 
 function deltaLabel(current: number, prev: number) {
   const diff = current - prev;

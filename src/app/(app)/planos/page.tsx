@@ -13,10 +13,7 @@ import type { Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TIPO_PLANO_LABEL } from "@/lib/planos/form";
-
-function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
+import { formatBRL } from "@/lib/formatters";
 
 export default function PlanosPage() {
   const { tenantId, tenantResolved } = useTenantContext();

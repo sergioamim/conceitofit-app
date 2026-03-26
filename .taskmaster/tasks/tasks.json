@@ -6537,12 +6537,455 @@
           }
         ],
         "updatedAt": "2026-03-26T10:30:00.000Z"
+      },
+      {
+        "id": "100",
+        "title": "Centralizar formatadores de moeda/data/percentual em utilitário compartilhado",
+        "description": "Criar um módulo único de formatação em `src/lib/formatters.ts` e substituir as funções locais nas 10 páginas listadas para reduzir duplicação sem alterar o comportamento atual.",
+        "details": "Criar `src/lib/formatters.ts` exportando `formatBRL`, `formatCurrency`, `formatDate`, `formatDateTime` e `formatPercent`. Basear `formatCurrency` no padrão já usado em `src/lib/public/services.ts` (usar `toLocaleString(\"pt-BR\", { style: \"currency\", currency })` com fallback para valores não finitos), e implementar `formatBRL` como wrapper chamando `formatCurrency` com `BRL`. Para `formatPercent`, seguir o padrão de `src/app/(app)/gerencial/bi/page.tsx` (1 casa decimal via `toLocaleString` + sufixo `%`). Para `formatDate`, manter a lógica de `src/app/(app)/pagamentos/page.tsx`/`src/app/(app)/pagamentos/emitir-em-lote/page.tsx` (parse por split `YYYY-MM-DD` com fallback para string original) para evitar mudança de saída. Para `formatDateTime`, replicar o formato de `src/app/(app)/vendas/page.tsx` (dia/mês/ano + hora/minuto). Em seguida, remover as definições locais e importar os utilitários em: `src/app/(app)/planos/page.tsx`, `src/app/(app)/administrativo/produtos/page.tsx`, `src/app/(app)/administrativo/servicos/page.tsx`, `src/app/(app)/pagamentos/page.tsx`, `src/app/(app)/dashboard/page.tsx`, `src/app/(app)/vendas/page.tsx`, `src/app/(app)/vendas/nova/page.tsx`, `src/app/(app)/administrativo/conciliacao-bancaria/page.tsx`, `src/app/(app)/pagamentos/emitir-em-lote/page.tsx`, `src/app/(app)/prospects/[id]/converter/page.tsx`. Garantir que os pontos que já fazem `?? 0` ou `Number(...)` continuem iguais, preservando o comportamento atual de formatação.",
+        "testStrategy": "Executar `npm run lint` para garantir que imports e tipagens ficaram corretos. Validar manualmente nas 10 páginas que moedas, datas e horários continuam com o mesmo formato (BRL, dd/mm/aaaa e data/hora), comparando exemplos visíveis antes/depois da mudança.",
+        "status": "in-progress",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear formatadores existentes e padrões de saída",
+            "description": "Levantar as funções locais de moeda/data/percentual e os formatos atuais nas páginas alvo.",
+            "dependencies": [],
+            "details": "Revisar as 10 páginas listadas e os padrões em `src/lib/public/services.ts` e `src/app/(app)/gerencial/bi/page.tsx`, registrando regras de fallback e coerções existentes.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar módulo compartilhado `src/lib/formatters.ts`",
+            "description": "Implementar utilitário centralizado com os cinco formatadores exigidos.",
+            "dependencies": [
+              1
+            ],
+            "details": "Adicionar `formatCurrency` com fallback para valores não finitos, `formatBRL` como wrapper para BRL, `formatDate` com split `YYYY-MM-DD`, `formatDateTime` com dia/mês/ano e hora/minuto e `formatPercent` com 1 casa decimal + sufixo `%`.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Refatorar páginas comerciais para usar os formatters",
+            "description": "Substituir formatadores locais em páginas de planos/produtos/serviços/vendas.",
+            "dependencies": [
+              2
+            ],
+            "details": "Remover funções locais e importar de `src/lib/formatters.ts` em `planos/page.tsx`, `administrativo/produtos/page.tsx`, `administrativo/servicos/page.tsx`, `vendas/page.tsx` e `vendas/nova/page.tsx`, preservando `?? 0` e `Number(...)` existentes.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Refatorar páginas financeiras e de conversão",
+            "description": "Atualizar páginas financeiras e de prospects para usar utilitário compartilhado.",
+            "dependencies": [
+              2
+            ],
+            "details": "Aplicar o utilitário em `pagamentos/page.tsx`, `pagamentos/emitir-em-lote/page.tsx`, `dashboard/page.tsx`, `administrativo/conciliacao-bancaria/page.tsx` e `prospects/[id]/converter/page.tsx`, garantindo a mesma formatação atual.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Validar lint e consistência visual dos formatos",
+            "description": "Checar se imports, tipagens e formatos permanecem estáveis após refatoração.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Rodar lint e fazer conferência manual das telas para garantir moedas, datas e percentuais com o mesmo output de antes.",
+            "status": "pending",
+            "testStrategy": "Executar `npm run lint` e revisar manualmente as 10 páginas para confirmar moeda BRL, data e data/hora.",
+            "parentId": "undefined"
+          }
+        ],
+        "updatedAt": "2026-03-26T16:12:42.260Z"
+      },
+      {
+        "id": "101",
+        "title": "Criar useConfirmDialog com AlertDialog e substituir confirm nativo",
+        "description": "Implementar um hook reutilizável de confirmação baseado em AlertDialog do shadcn/ui e eliminar o uso de window.confirm nas páginas administrativas e fluxos indicados.",
+        "details": "- Adicionar `src/components/ui/alert-dialog.tsx` seguindo o padrão de `src/components/ui/dialog.tsx` (data-slot, `cn`, `Button`) e o layout do shadcn/ui, exportando `AlertDialog`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel` e `AlertDialogAction` com import consistente (`radix-ui` vs `@radix-ui/react-alert-dialog`) já usado no projeto.\n- Criar `src/hooks/use-confirm-dialog.tsx` (ou `.ts` se optar por `React.createElement`) com `\"use client\"`, estado controlado e callback em `useRef` para armazenar `onConfirm` sem re-render extra. A API deve expor `{ confirm, ConfirmDialog }`, onde `confirm(message, onConfirm, options?)` aceita opções para `title`, `confirmLabel`, `variant` (incluindo `destructive`) e mantém defaults estáveis no render inicial (sem `Date.now`, `Math.random` ou dependência de `window`).\n- `ConfirmDialog` deve renderizar o `AlertDialog` com título/mensagem configuráveis, botão de cancelar padrão e botão de confirmação usando `Button` com variante customizável; se `onConfirm` for async, tratar estado de loading e fechar apenas após resolução.\n- Substituir os `confirm()` nativos pelos novos handlers usando o hook e renderizar `<ConfirmDialog />` no JSX da página. Páginas identificadas pelo `rg \"confirm\"`:\n  - `src/app/(app)/administrativo/salas/page.tsx`\n  - `src/app/(app)/administrativo/produtos/page.tsx`\n  - `src/app/(app)/administrativo/servicos/page.tsx`\n  - `src/app/(app)/administrativo/bandeiras/page.tsx`\n  - `src/app/(app)/administrativo/convenios/page.tsx`\n  - `src/app/(app)/administrativo/formas-pagamento/page.tsx`\n  - `src/app/(app)/administrativo/atividades-grade/page.tsx`\n  - `src/app/(app)/atividades/page.tsx`\n  - `src/app/(app)/prospects/page.tsx`\n  - `src/app/(app)/clientes/page.tsx`\n  - `src/app/(app)/matriculas/page.tsx`\n- Revisar também `src/app/(app)/alunos/page.tsx` e `src/app/(app)/pagamentos/page.tsx` para garantir que qualquer confirmação futura já use o hook, conforme o escopo solicitado.",
+        "testStrategy": "- Executar `rg \"window\\.confirm|confirm\\(\" src/app` e validar que não há ocorrências após a migração.\n- Navegar nas páginas listadas e acionar ações de remoção/cancelamento: o AlertDialog deve abrir com título/mensagem corretos, cancelar não deve executar a ação e confirmar deve disparar o fluxo atual.\n- Verificar que o botão de confirmação usa a variante `destructive` nos casos de exclusão e que o foco/teclado (Esc/Enter) funciona sem warnings de hidratação.",
+        "status": "in-progress",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Adicionar componente AlertDialog do shadcn/ui",
+            "description": "Criar o wrapper de AlertDialog seguindo o padrão atual de UI.",
+            "dependencies": [],
+            "details": "Implementar `src/components/ui/alert-dialog.tsx` baseado em `src/components/ui/dialog.tsx`, usando `cn`, `Button`, data-slot e imports Radix no padrão do projeto.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implementar hook `useConfirmDialog` reutilizável",
+            "description": "Criar o hook de confirmação com estado controlado e API estável.",
+            "dependencies": [
+              1
+            ],
+            "details": "Adicionar `src/hooks/use-confirm-dialog.tsx` com `\"use client\"`, `confirm(message, onConfirm, options?)`, `ConfirmDialog` renderizando `AlertDialog`, `useRef` para callback e tratamento de async/loading sem valores dinâmicos no render inicial.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Migrar confirmações nas páginas administrativas",
+            "description": "Substituir `confirm()` nas telas administrativas listadas.",
+            "dependencies": [
+              2
+            ],
+            "details": "Atualizar `src/app/(app)/administrativo/{salas,produtos,servicos,bandeiras,convenios,formas-pagamento,atividades-grade}/page.tsx` para usar o hook e renderizar `<ConfirmDialog />` no JSX.",
+            "status": "pending",
+            "testStrategy": "Executar `rg \"window\\.confirm|confirm\\(\" src/app` e validar remoção nas telas administrativas.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Migrar confirmações nas páginas operacionais",
+            "description": "Substituir confirmações nativas nas telas principais indicadas.",
+            "dependencies": [
+              2
+            ],
+            "details": "Atualizar `src/app/(app)/{atividades,prospects,clientes,matriculas}/page.tsx` para usar `confirm` do hook e adicionar `<ConfirmDialog />` no JSX.",
+            "status": "pending",
+            "testStrategy": "Navegar nessas páginas e validar abertura do AlertDialog e execução somente após confirmar.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Revisar alunos/pagamentos e auditar uso de confirm",
+            "description": "Garantir que não existam confirmações nativas remanescentes.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Revisar `src/app/(app)/alunos/page.tsx` e `src/app/(app)/pagamentos/page.tsx` para garantir padrão do hook; rodar busca final por `confirm()`/`window.confirm` e alinhar quaisquer ocorrências.",
+            "status": "pending",
+            "testStrategy": "Rodar `rg \"window\\.confirm|confirm\\(\" src/app` e validar resultado vazio nas rotas alvo.",
+            "parentId": "undefined"
+          }
+        ],
+        "updatedAt": "2026-03-26T16:12:42.285Z"
+      },
+      {
+        "id": "102",
+        "title": "Criar CrudModal genérico e refatorar modais simples de CRUD",
+        "description": "Implementar um componente genérico `CrudModal<T>` para reduzir duplicação de modais de CRUD e migrar os modais simples (sala, bandeira de cartão, forma de pagamento e convênio) para essa nova base, mantendo o comportamento atual e validações essenciais.",
+        "details": "Criar `src/components/shared/crud-modal.tsx` com `\"use client\"` e estrutura base usando `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle` e `DialogFooter` (padrão visto em `src/components/shared/sala-modal.tsx` e `src/components/shared/bandeira-cartao-modal.tsx`). O componente deve receber `open`, `onClose`, `onSave(data, id?)`, `initial`, `title` e `fields: FormFieldConfig[]` (incluir `name`, `label`, `type`, `required`, `options` para select, `placeholder`, `min`/`max` para number) e montar o formulário com `react-hook-form` (`useForm`) e `useEffect` para `reset` quando `initial`/`open` mudarem, replicando o comportamento atual desses modais. Definir `FormFieldConfig` em `src/lib/types.ts` (ou local no `crud-modal.tsx` se preferir escopo local) e exportá-lo para reutilização. Para aderir ao padrão do repositório, incluir validação com `zod`/`zodResolver`: construir um schema mínimo baseado em `fields` (ex.: `requiredTrimmedString` de `src/lib/forms/zod-helpers.ts` para campos obrigatórios) e permitir um override opcional (prop `schema`) para casos que já possuem schema próprio, como `convenioFormSchema` em `src/lib/forms/administrativo-schemas.ts`. Implementar renderização dos tipos: `text`/`number` com `Input` (`src/components/ui/input.tsx`), `textarea` com `Textarea` (`src/components/ui/textarea.tsx`), `select` com `Select`/`SelectItem` (`src/components/ui/select.tsx`) via `Controller`, `checkbox` com `input` simples ou `Checkbox` (`src/components/ui/checkbox.tsx`) mantendo layout semelhante aos modais atuais, e `currency` usando os formatters da task 100 (ex.: util em `src/lib/formatters` quando disponível), garantindo que o valor salvo seja numérico e formatado apenas para exibição. Adicionar suporte opcional a `contentClassName`/`size` para manter diferenças de largura (`sm:max-w-sm` em sala e `sm:max-w-lg` nos demais) e um slot opcional (`children`/`renderAfterFields`) com `FormProvider` para permitir conteúdo adicional; isso é necessário para preservar a nota condicional de `tipo` em `src/components/shared/forma-pagamento-modal.tsx` e o seletor de planos em `src/components/shared/convenio-modal.tsx` usando `useFormContext`/`useWatch`. Refatorar `src/components/shared/sala-modal.tsx`, `src/components/shared/bandeira-cartao-modal.tsx`, `src/components/shared/forma-pagamento-modal.tsx` e `src/components/shared/convenio-modal.tsx` para usarem `CrudModal` e `FormFieldConfig`, mantendo a lógica de transformação de dados (trim, parse de número/currency, campos opcionais) dentro do `onSave` do wrapper e preservando mensagens auxiliares/seleção de planos via slot. Não refatorar `src/components/shared/novo-cliente-wizard.tsx` nem `src/components/planos/plano-form.tsx`. Opcionalmente exportar `CrudModal` em `src/components/shared/modals/index.ts` para uso futuro.",
+        "testStrategy": "Validar manualmente os quatro modais refatorados: abrir cada modal em modo criação e edição e confirmar que `initial` preenche os campos e que `reset` ocorre ao reabrir. Conferir validação de obrigatórios (ex.: nome em sala/bandeira/forma/convênio) e mensagens de erro; checar selects (tipo de pagamento) e checkboxes (ativo, emissão automática) persistindo corretamente. Para `forma-pagamento`, verificar que o aviso de recorrente continua aparecendo quando `tipo` é `RECORRENTE`. Para `convênio`, confirmar seleção de planos e persistência em `planoIds`. Para campos `currency`, validar máscara/formatter e conversão para número no `onSave`. Conferir que o layout e tamanhos do `DialogContent` permanecem consistentes com os modais atuais.",
+        "status": "pending",
+        "dependencies": [
+          "100"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir FormFieldConfig e renderer de campos do CrudModal",
+            "description": "Criar o tipo de configuração de campos e o mapeamento de renderização para os inputs suportados.",
+            "dependencies": [],
+            "details": "Adicionar `FormFieldConfig` em `src/lib/types.ts` (ou no próprio `crud-modal.tsx` se preferir escopo local) com `name`, `label`, `type`, `required`, `options`, `placeholder`, `min`, `max`. Implementar um renderer interno que saiba montar `Input`, `Textarea`, `Select` (com `Controller`), `Checkbox` e `currency`, incluindo labels e mensagens de erro, mantendo o layout usado nos modais atuais.",
+            "status": "pending",
+            "testStrategy": "Revisar manualmente o renderer conferindo labels, placeholders e erros.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implementar o componente CrudModal base com react-hook-form + zod",
+            "description": "Criar `CrudModal<T>` com layout padrão de Dialog e integração com react-hook-form e zodResolver.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar `src/components/shared/crud-modal.tsx` com `\"use client\"`, estrutura `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle`/`DialogFooter`, props `open`, `onClose`, `onSave`, `initial`, `title`, `fields`, `schema`, `contentClassName`/`size`, `children`/`renderAfterFields`. Usar `useForm` + `FormProvider`, `useEffect` para `reset` ao mudar `initial`/`open`, construir schema mínimo via `requiredTrimmedString` quando `schema` não for informado, e ligar `zodResolver`. Integrar o renderer do subtask 1 e opcionalmente exportar em `src/components/shared/modals/index.ts`.",
+            "status": "pending",
+            "testStrategy": "Abrir um modal de teste local e confirmar reset ao reabrir.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Refatorar SalaModal para usar CrudModal",
+            "description": "Migrar `sala-modal.tsx` para `CrudModal` mantendo comportamento de criação/edição e transformações atuais.",
+            "dependencies": [
+              2
+            ],
+            "details": "Substituir `useForm` local por `CrudModal`, montar `fields` com `nome`, `descricao`, `capacidadePadrao` e `ativo`, preservar `sm:max-w-sm` via `size`/`contentClassName`. Manter o `onSave` com trim e parse para número e os defaults/validações obrigatórias equivalentes.",
+            "status": "pending",
+            "testStrategy": "Abrir o modal em criação/edição, validar campo obrigatório e checkbox ativo.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Refatorar BandeiraCartaoModal para usar CrudModal",
+            "description": "Migrar `bandeira-cartao-modal.tsx` para `CrudModal` mantendo taxa/dias/ativo e validações.",
+            "dependencies": [
+              2
+            ],
+            "details": "Montar `fields` com `nome`, `taxaPercentual`, `diasRepasse`, `ativo` e layout similar (grid), usar `sm:max-w-lg`. Preservar `onSave` com trims e parse numérico, além de mensagens de erro de nome.",
+            "status": "pending",
+            "testStrategy": "Abrir o modal em criação/edição e validar campos numéricos e obrigatório.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Refatorar FormaPagamentoModal para usar CrudModal",
+            "description": "Migrar `forma-pagamento-modal.tsx` para `CrudModal` preservando seleção de tipo e texto condicional.",
+            "dependencies": [
+              2
+            ],
+            "details": "Criar `fields` para `nome`, `tipo`, `taxaPercentual`, `parcelasMax`, `emitirAutomaticamente`, `instrucoes`, `ativo` usando `Select` e checkboxes. Usar `children`/`renderAfterFields` com `useWatch` via `useFormContext` para a nota quando `tipo === \"RECORRENTE\"`. Manter `onSave` com trims e parse numérico.",
+            "status": "pending",
+            "testStrategy": "Testar troca de tipo para exibir nota e salvar com valores numéricos.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Refatorar ConvenioModal para usar CrudModal",
+            "description": "Migrar `convenio-modal.tsx` para `CrudModal` preservando schema e seleção de planos.",
+            "dependencies": [
+              2
+            ],
+            "details": "Usar `CrudModal` com `schema={convenioFormSchema}` e `fields` para `nome`, `descontoPercentual`, `ativo`, `observacoes`. Manter seletor de planos dentro do slot usando `useFormContext`/`useWatch` para `planoIds`, preservando `togglePlano`. Garantir `onSave` com trims e parse numérico e `sm:max-w-lg`.",
+            "status": "pending",
+            "testStrategy": "Abrir modal com planos, alternar seleção e validar obrigatórios.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "103",
+        "title": "Consolidar estado das seções colapsáveis no Sidebar",
+        "description": "Refatorar o estado interno do sidebar para substituir os seis pares de `useState`/`useEffect` por um único objeto de estado, mantendo o comportamento atual de abertura automática por rota ativa.",
+        "details": "Basear a mudança em `src/components/layout/sidebar.tsx`, dentro de `SidebarNavigation`, mantendo o layout e comportamento atuais.\n\n- Criar a função `getInitialSectionStates(pathname: string): Record<string, boolean>` próxima de `matchesAnyPath`, reaproveitando as mesmas regras existentes: `atividade` usa `matchesAnyPath(pathname, atividadeItemsSorted)`, e as demais (`crm`, `treinos`, `seguranca`, `administrativo`, `gerencial`) usam `pathname.startsWith(\"/<section>\")`.\n- Substituir os seis `useState` por um único `useState<Record<string, boolean>>(() => getInitialSectionStates(pathname))`. Se necessário, declarar um mapa de chaves (ex.: `const SECTION_KEYS = {...} as const`) para evitar strings soltas.\n- Trocar os seis `useEffect` por um único `useEffect` que reage ao `pathname` e faz `setOpenSections(getInitialSectionStates(pathname))`, preservando o `useEffect` que fecha o menu mobile.\n- Atualizar cada `CollapsibleSection` para ler `open` via `openSections[\"atividade\"]` etc. e `onToggle` via `setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))`, garantindo fallback booleano quando a chave não existir.\n- Não alterar arrays de navegação (`atividadeItemsSorted`, `crmItemsSorted`, etc.) nem a lógica de favoritos/recents; o objetivo é apenas reduzir duplicação e manter o comportamento idêntico.\n- Confirmar que o arquivo mantém as restrições de hidratação: sem novos valores dinâmicos no render e sem mudança de árvore condicional dos itens Radix.\n\nResultado esperado: redução de duplicação (~600 linhas) sem mudança visual ou funcional.",
+        "testStrategy": "- Navegar para cada rota principal e verificar se a seção correspondente abre automaticamente: `/atividades`, `/treinos`, `/crm`, `/seguranca`, `/administrativo`, `/gerencial`.\n- Alternar manualmente cada seção e confirmar que o estado é preservado até a próxima navegação (como hoje).\n- Validar que o menu mobile continua fechando ao mudar de rota.\n- Fazer smoke test visual do sidebar colapsado/expandido para garantir que itens e labels não mudaram.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear estado atual do SidebarNavigation e padrões locais",
+            "description": "Revisar o arquivo do sidebar e identificar como os estados e efeitos atuais são usados nas seções colapsáveis.",
+            "dependencies": [],
+            "details": "Inspecionar `src/components/layout/sidebar.tsx` para listar os seis `useState`/`useEffect` e como cada `CollapsibleSection` consome `open`/`onToggle`, mantendo as regras de rota e filtros já existentes.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar helper de estado inicial e chaves de seção",
+            "description": "Definir função utilitária para calcular o estado inicial das seções com base no pathname.",
+            "dependencies": [
+              1
+            ],
+            "details": "Adicionar `getInitialSectionStates(pathname: string)` próximo de `matchesAnyPath` com a lógica atual (atividade via `matchesAnyPath`, demais via `startsWith`), e opcionalmente declarar um mapa/constante de chaves para evitar strings soltas.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Consolidar estado e efeitos em um único objeto",
+            "description": "Substituir os seis estados locais por um único `Record<string, boolean>` e unificar a atualização por rota.",
+            "dependencies": [
+              2
+            ],
+            "details": "Trocar os `useState` por `useState<Record<string, boolean>>(() => getInitialSectionStates(pathname))` e consolidar os seis `useEffect` em um único `useEffect` que faz `setOpenSections(getInitialSectionStates(pathname))`, mantendo o `useEffect` de fechamento do menu mobile.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Atualizar CollapsibleSection e validar comportamento",
+            "description": "Ajustar o consumo do estado consolidado e conferir se o comportamento visual e de hidratação permanece idêntico.",
+            "dependencies": [
+              3
+            ],
+            "details": "Atualizar cada `CollapsibleSection` para ler `open` via `openSections[\"<chave>\"]` e `onToggle` via `setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))`, garantindo fallback booleano; revisar checklist de hidratação e confirmar que a árvore Radix e dados client-only não mudaram.",
+            "status": "pending",
+            "testStrategy": "Navegar para `/atividades`, `/treinos`, `/crm`, `/seguranca`, `/administrativo` e `/gerencial` e verificar abertura automática; alternar manualmente cada seção e validar persistência até a próxima navegação.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "104",
+        "title": "Padronizar tratamento de erro de carregamento nas páginas administrativas de CRUD",
+        "description": "Uniformizar o handling de erro de carregamento nas páginas administrativas de CRUD, criando um componente compartilhado de erro com retry e aplicando-o em todas as páginas que fazem fetch de dados.",
+        "details": "Criar o componente `src/components/shared/page-error.tsx` inspirado em `src/components/shared/error-state.tsx`, usando `AlertTriangle`, `Button` e `MOTION_CLASSNAMES.fadeInSubtle` para manter o visual consistente; o componente deve aceitar `error` (string ou unknown normalizado via `normalizeErrorMessage`) e `onRetry` opcional, renderizar mensagem amigável e botão “Tentar novamente”, e retornar `null` quando não houver erro. Atualizar páginas administrativas que fazem fetch e hoje têm erro inline ou nenhum tratamento para usar o novo componente: começar por `src/app/(app)/administrativo/bandeiras/page.tsx`, `src/app/(app)/administrativo/salas/page.tsx` e `src/app/(app)/administrativo/convenios/page.tsx` (adicionando `try/catch` no `load`, estado `loadError`, e renderização de `<PageError error={loadError} onRetry={load} />`), além das páginas com `setError` de carregamento já identificadas (ex.: `src/app/(app)/administrativo/academia/page.tsx`, `contas-bancarias/page.tsx`, `conciliacao-bancaria/page.tsx`, `integracoes/page.tsx`, `atividades-grade/page.tsx`, `catraca-status/page.tsx`, `nfse/page.tsx`, `unidades/page.tsx`, `maquininhas/page.tsx`). Para páginas que usam o hook `useCrudOperations` (task 102), substituir o UI de erro de carregamento manual pelo `PageError` consumindo o erro/reload expostos pelo hook. Separar erro de carregamento de erro de ação quando necessário (ex.: manter mensagens de falha de salvar/ativar em banners específicos), removendo `setError()` de string usado apenas para load e garantindo que o estado de erro seja limpo antes de novo carregamento.",
+        "testStrategy": "1) Forçar erro de carregamento (ex.: mockar resposta de API ou lançar erro no `load`) em cada página administrativa e validar que o `PageError` aparece com mensagem consistente e botão de retry. 2) Clicar em “Tentar novamente” e confirmar que o `load` é reexecutado e o erro some após sucesso. 3) Verificar que erros de ações (salvar/ativar/remover) continuam sendo exibidos nos locais existentes sem interferir no estado de load. 4) Conferir páginas que usam `useCrudOperations` exibindo o `PageError` usando o erro do hook.",
+        "status": "pending",
+        "dependencies": [
+          "102"
+        ],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar páginas administrativas e mapear padrões de erro",
+            "description": "Levantar todas as páginas CRUD administrativas com fetch e identificar como cada uma trata erro de carregamento hoje.",
+            "dependencies": [],
+            "details": "Usar glob em `src/app/(app)/administrativo/**/page.tsx`, grep por `setError`, `load` e `Promise.all`, e registrar quais páginas usam erro inline, não tratam erro ou misturam erro de load com erro de ação.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar componente compartilhado PageError",
+            "description": "Implementar o componente `PageError` para exibir erro de carregamento com botão de retry.",
+            "dependencies": [
+              1
+            ],
+            "details": "Adicionar `src/components/shared/page-error.tsx` inspirado em `error-state.tsx`, usando `AlertTriangle`, `Button` e `MOTION_CLASSNAMES.fadeInSubtle`; aceitar `error` (string ou unknown normalizado via `normalizeErrorMessage`) e `onRetry` opcional, renderizar mensagem amigável e botão “Tentar novamente”, e retornar `null` quando não houver erro.",
+            "status": "pending",
+            "testStrategy": "Renderizar o componente com e sem erro e confirmar que o botão de retry chama o handler.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Padronizar bandeiras, salas e convênios com PageError",
+            "description": "Adicionar tratamento consistente de erro de carregamento nessas páginas iniciais.",
+            "dependencies": [
+              2
+            ],
+            "details": "Em `src/app/(app)/administrativo/bandeiras/page.tsx`, `salas/page.tsx` e `convenios/page.tsx`, criar estado `loadError`, envolver `load` em `try/catch`, limpar erro antes de carregar, separar erro de ação quando existir e renderizar `<PageError error={loadError} onRetry={load} />` próximo ao topo.",
+            "status": "pending",
+            "testStrategy": "Forçar erro no `load` (ex.: throw manual) e validar que o `PageError` aparece e o retry refaz o fetch.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Aplicar PageError nas demais páginas administrativas listadas",
+            "description": "Uniformizar páginas com `setError` de load ou sem tratamento para usar o novo componente.",
+            "dependencies": [
+              2
+            ],
+            "details": "Atualizar `academia/page.tsx`, `contas-bancarias/page.tsx`, `conciliacao-bancaria/page.tsx`, `integracoes/page.tsx`, `atividades-grade/page.tsx`, `catraca-status/page.tsx`, `nfse/page.tsx`, `unidades/page.tsx`, `maquininhas/page.tsx`; separar `loadError` de erros de ação, limpar estado antes de novo carregamento, ajustar mensagens de empty state para usar `loadError` e incluir `<PageError error={loadError} onRetry={load} />`.",
+            "status": "pending",
+            "testStrategy": "Simular falha de API em cada página e verificar exibição do `PageError` sem afetar mensagens de sucesso/ação.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Revisar páginas que usam useCrudOperations",
+            "description": "Trocar UI manual de erro de carregamento pelo `PageError` nas telas baseadas no hook.",
+            "dependencies": [
+              2
+            ],
+            "details": "Localizar páginas que usam `useCrudOperations` (task 102) e substituir o erro de load manual por `<PageError error={loadErrorFromHook} onRetry={reloadFromHook} />`, garantindo que erros de ação continuem em banners específicos e que `loadError` seja limpo antes de recarregar.",
+            "status": "pending",
+            "testStrategy": "Forçar erro no hook, validar `PageError` e confirmar que o retry usa o método de reload do hook.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "105",
+        "title": "Criar hook de operações CRUD e refatorar páginas administrativas",
+        "description": "Implementar o hook `useCrudOperations` para padronizar carregamento, erros e ações CRUD e migrar as páginas administrativas de salas, produtos, serviços, bandeiras, formas de pagamento, convênios e vouchers para usar esse novo padrão.",
+        "details": "Criar o hook em `src/hooks/use-crud-operations.ts` com `\"use client\"`, expondo `items`, `loading`, `error`, `handleSave`, `handleToggle`, `handleDelete` e `reload`, e aceitar `listFn`, `createFn`, `updateFn`, `toggleFn` e `deleteFn` como callbacks opcionais. Implementar `reload` com `useCallback` e um `useRef` para evitar double-fetch (ignorar chamadas concorrentes e/ou a segunda execução do `useEffect` em Strict Mode), sempre limpando `error`, controlando `loading` e tratando falhas com `normalizeErrorMessage` de `src/lib/utils/api-error.ts`. `handleSave` deve decidir entre `createFn` e `updateFn`, aplicar `try/catch` e disparar `reload` ao final; `handleToggle` e `handleDelete` seguem a mesma abordagem e retornam erro amigável se a operação não estiver configurada. Refatorar as páginas `src/app/(app)/administrativo/salas/page.tsx`, `produtos/page.tsx`, `servicos/page.tsx`, `bandeiras/page.tsx`, `formas-pagamento/page.tsx`, `convenios/page.tsx` e `vouchers/page.tsx` para remover `useEffect`/`load` locais e consumir o hook; manter `modalOpen`/`editing` e mover a lógica de toggle pós-criação/edição para wrappers de `createFn`/`updateFn` quando necessário (ex.: salas/produtos/serviços/forma de pagamento). Para `formas-pagamento` e `convenios`, preservar o gating por `tenantId`/`tenantResolved` usando closures no `listFn` e `handleSave`; em `convenios`, usar `Promise.all` no `listFn` para também atualizar `planos` e retornar a lista de convênios. Para `vouchers`, manter `usageCounts` em estado separado e montar o `listFn` com `Promise.all` para atualizar `usageCounts` e retornar `vouchers`; usar `handleSave` para criação via `NovoVoucherModal` e chamar `reload` após salvar no `EditarVoucherModal`. Em `bandeiras`, substituir o estado de erro local pelo `error` do hook e manter o banner existente; nas demais páginas, decidir se o `error` precisa ser exibido conforme padrão atual, sem alterar a UI sem necessidade.",
+        "testStrategy": "Abrir cada página administrativa refatorada e confirmar que a lista carrega apenas uma vez no mount (sem dupla chamada em dev/Strict Mode). Validar criação, edição, toggle e remoção em salas, produtos, serviços, bandeiras, formas de pagamento e convênios, garantindo que `reload` atualiza a tabela após cada ação. Em vouchers, criar e alternar status e verificar se `usageCounts` continua sincronizado; testar abertura/fechamento dos modais e o fluxo de edição com recarregamento. Verificar que erros de API exibem mensagens normalizadas no banner (principalmente em bandeiras) e que botões respeitam estados de `loading`/`tenantResolved` como antes.",
+        "status": "pending",
+        "dependencies": [
+          "100",
+          "101"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar hook genérico useCrudOperations com controle de estado",
+            "description": "Implementar o hook base para padronizar carregamento, erros e ações CRUD.",
+            "dependencies": [],
+            "details": "Adicionar `src/hooks/use-crud-operations.ts` com \"use client\", tipagem genérica `T extends { id: string }`, estados `items`, `loading`, `error`, `reload` com `useCallback` e `useRef` anti double-fetch, e handlers `handleSave`, `handleToggle`, `handleDelete` usando `normalizeErrorMessage` de `src/lib/utils/api-error.ts` e callback opcional de confirmação.",
+            "status": "pending",
+            "testStrategy": "Validar tipagem e ausência de chamadas duplicadas no mount em Strict Mode.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Refatorar página de salas como piloto do hook",
+            "description": "Migrar `salas/page.tsx` para consumir o hook e validar o padrão.",
+            "dependencies": [
+              1
+            ],
+            "details": "Substituir `useEffect`/`load` locais por `useCrudOperations`, criar wrappers de `createFn`/`updateFn` para aplicar toggle pós-criação/edição quando necessário, manter `modalOpen`/`editing` e usar `handleDelete` com confirmação.",
+            "status": "pending",
+            "testStrategy": "Abrir a página de Salas e validar CRUD completo e carregamento único.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Migrar páginas de produtos e serviços para o hook",
+            "description": "Aplicar o hook nas telas de produtos e serviços mantendo o comportamento atual.",
+            "dependencies": [
+              2
+            ],
+            "details": "Refatorar `src/app/(app)/administrativo/produtos/page.tsx` e `src/app/(app)/administrativo/servicos/page.tsx` para usar `useCrudOperations`, manter formatação de moeda, wrappers de toggle pós-criação/edição e confirmação de remoção.",
+            "status": "pending",
+            "testStrategy": "Criar/editar/toggle/remover em Produtos e Serviços e verificar lista atualizada.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Atualizar bandeiras e formas de pagamento com o hook",
+            "description": "Padronizar as telas de bandeiras e formas de pagamento com o novo hook.",
+            "dependencies": [
+              3
+            ],
+            "details": "Em `bandeiras/page.tsx`, remover estado local de erro e usar `error` do hook mantendo o banner; em `formas-pagamento/page.tsx`, aplicar closures no `listFn` e `handleSave` respeitando `tenantId`/`tenantResolved` e preservar o botão desabilitado.",
+            "status": "pending",
+            "testStrategy": "Validar mensagens de erro em Bandeiras e gating por tenant em Formas de Pagamento.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Refatorar convênios com carga de planos via hook",
+            "description": "Migrar convênios para o hook mantendo dependência de planos e tenant.",
+            "dependencies": [
+              4
+            ],
+            "details": "Atualizar `src/app/(app)/administrativo/convenios/page.tsx` para usar `useCrudOperations`, definir `listFn` com `Promise.all` para convênios e planos, atualizar `planos` em estado separado e manter gating por `tenantId`/`tenantResolved`.",
+            "status": "pending",
+            "testStrategy": "Abrir Convênios e validar planos carregados e CRUD funcionando.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Migrar vouchers e revisar fluxo de uso/edição",
+            "description": "Aplicar o hook em vouchers mantendo contagens e modais.",
+            "dependencies": [
+              5
+            ],
+            "details": "Refatorar `src/app/(app)/administrativo/vouchers/page.tsx` para usar `useCrudOperations` com `listFn` via `Promise.all` atualizando `usageCounts`, usar `handleSave` no `NovoVoucherModal`, chamar `reload` após editar no `EditarVoucherModal` e manter toggle via hook.",
+            "status": "pending",
+            "testStrategy": "Criar voucher, editar quando permitido e validar contagens/estado na lista.",
+            "parentId": "undefined"
+          }
+        ]
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-26T10:30:00.000Z",
-      "taskCount": 99,
+      "lastModified": "2026-03-26T16:12:42.285Z",
+      "taskCount": 105,
       "completedCount": 99,
       "tags": [
         "master"

@@ -13,15 +13,11 @@ import { Button } from "@/components/ui/button";
 import { ServicoModal } from "@/components/shared/servico-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { cn } from "@/lib/utils";
-
-function formatBRL(value: number) {
-  return (value ?? 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
+import { formatBRL } from "@/lib/formatters";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 export default function ServicosPage() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Servico | null>(null);
@@ -62,14 +58,16 @@ export default function ServicosPage() {
     await load();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Remover este serviço?")) return;
-    await deleteServicoApi(id);
-    await load();
+  function handleDelete(id: string) {
+    confirm("Remover este serviço?", async () => {
+      await deleteServicoApi(id);
+      await load();
+    });
   }
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       {modalOpen ? (
         <ServicoModal
           open={modalOpen}

@@ -182,10 +182,10 @@
 
 :where(.focus-ring-brand):focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(200, 241, 53, 0.55), 0 0 0 5px var(--background), 0 0 16px rgba(200, 241, 53, 0.35);
+  @apply ring-2 ring-gym-accent/60 ring-offset-2 ring-offset-background;
 }
 
 :where(.focus-ring-destructive):focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 92, 92, 0.45), 0 0 0 5px var(--background), 0 0 14px rgba(255, 92, 92, 0.22);
+  @apply ring-2 ring-destructive/60 ring-offset-2 ring-offset-background;
 }

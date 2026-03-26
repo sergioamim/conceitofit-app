@@ -39,6 +39,7 @@ import type {
   Funcionario,
 } from "@/lib/types";
 import { maskPhone } from "@/lib/utils";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 const STATUS_OPTIONS: { value: StatusProspect | "TODOS"; label: string }[] = [
   { value: "TODOS", label: "Todos" },
@@ -165,6 +166,7 @@ const ProspectTableRow = memo(function ProspectTableRow({
 });
 
 export default function ProspectsPage() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const tenantContext = useTenantContext();
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
@@ -379,16 +381,14 @@ export default function ProspectsPage() {
   );
 
   const handleDelete = useCallback(
-    async (id: string) => {
+    (id: string) => {
       if (!tenantId) return;
-      if (!confirm("Remover este prospect?")) return;
-      await deleteProspectApi({
-        tenantId,
-        id,
+      confirm("Remover este prospect?", async () => {
+        await deleteProspectApi({ tenantId, id });
+        await load();
       });
-      await load();
     },
-    [load, tenantId]
+    [confirm, load, tenantId]
   );
 
   const handlePreviousPage = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
@@ -396,6 +396,7 @@ export default function ProspectsPage() {
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       <ProspectModal open={modalOpen} onClose={handleCloseNew} onSave={handleSave} funcionarios={funcionarios} />
       <ProspectModal
         open={!!editing}

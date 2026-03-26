@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { AtividadeModal, type AtividadeForm } from "@/components/shared/atividade-modal";
 import { ActivityIconChip } from "@/components/shared/activity-icon-chip";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 const CATEGORIA_LABEL: Record<CategoriaAtividade, string> = {
   MUSCULACAO: "Musculação",
@@ -46,6 +47,7 @@ const CATEGORIA_OPTIONS: { value: CategoriaAtividade | "TODAS"; label: string }[
   ];
 
 export default function AtividadesPage() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const tenantContext = useTenantContext();
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [categoria, setCategoria] =
@@ -123,18 +125,17 @@ export default function AtividadesPage() {
     await load();
   }
 
-  async function handleDelete(id: string) {
+  function handleDelete(id: string) {
     if (!tenantId) return;
-    if (!confirm("Remover esta atividade?")) return;
-    await deleteAtividadeApi({
-      tenantId,
-      id,
+    confirm("Remover esta atividade?", async () => {
+      await deleteAtividadeApi({ tenantId, id });
+      await load();
     });
-    await load();
   }
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       <AtividadeModal
         open={modalOpen}
         onClose={() => {

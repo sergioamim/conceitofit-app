@@ -32,6 +32,7 @@ import type {
   TipoFormaPagamento,
   ConverterProspectResponse,
 } from "@/lib/types";
+import { formatBRL, formatDate } from "@/lib/formatters";
 
 const TIPO_PLANO_LABEL: Record<string, string> = {
   MENSAL: "Mensal",
@@ -41,13 +42,6 @@ const TIPO_PLANO_LABEL: Record<string, string> = {
   AVULSO: "Avulso",
 };
 
-function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
-}
 
 // ─── Steps indicator ────────────────────────────────────────────────────────
 

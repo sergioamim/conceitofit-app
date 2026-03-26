@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { SalaModal } from "@/components/shared/sala-modal";
 import { cn } from "@/lib/utils";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 export default function SalasPage() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [salas, setSalas] = useState<Sala[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Sala | null>(null);
@@ -46,14 +48,16 @@ export default function SalasPage() {
     await load();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Remover esta sala?")) return;
-    await deleteSalaApi(id);
-    await load();
+  function handleDelete(id: string) {
+    confirm("Remover esta sala?", async () => {
+      await deleteSalaApi(id);
+      await load();
+    });
   }
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       <SalaModal
         open={modalOpen}
         onClose={() => {

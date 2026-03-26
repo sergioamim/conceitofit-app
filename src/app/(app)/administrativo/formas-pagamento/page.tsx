@@ -13,6 +13,7 @@ import type { FormaPagamento, TipoFormaPagamento } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { FormaPagamentoModal } from "@/components/shared/forma-pagamento-modal";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 const TIPO_LABEL: Record<TipoFormaPagamento, string> = {
   DINHEIRO: "Dinheiro",
@@ -24,6 +25,7 @@ const TIPO_LABEL: Record<TipoFormaPagamento, string> = {
 };
 
 export default function FormasPagamentoPage() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const { tenantId, tenantResolved } = useTenantContext();
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -70,15 +72,17 @@ export default function FormasPagamentoPage() {
     await load();
   }
 
-  async function handleDelete(id: string) {
+  function handleDelete(id: string) {
     if (!tenantId) return;
-    if (!confirm("Remover esta forma de pagamento?")) return;
-    await deleteFormaPagamentoApi({ tenantId, id });
-    await load();
+    confirm("Remover esta forma de pagamento?", async () => {
+      await deleteFormaPagamentoApi({ tenantId, id });
+      await load();
+    });
   }
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       <FormaPagamentoModal
         open={modalOpen}
         onClose={() => {

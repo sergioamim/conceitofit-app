@@ -22,6 +22,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { maskCPF, maskPhone } from "@/lib/utils";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatDate } from "@/lib/formatters";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import type { Aluno, StatusAluno } from "@/lib/types";
 
 const STATUS_FILTERS: { value: StatusAluno | "TODOS"; label: string }[] = [
@@ -34,11 +36,8 @@ const STATUS_FILTERS: { value: StatusAluno | "TODOS"; label: string }[] = [
 
 const SEXO_LABEL: Record<string, string> = { M: "Masculino", F: "Feminino", OUTRO: "Outro" };
 
-function formatDate(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
 function ClientesPageContent() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const router = useRouter();
   const { tenantId, tenantResolved, setTenant } = useTenantContext();
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -227,6 +226,7 @@ function ClientesPageContent() {
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       <NovoClienteWizard
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
@@ -493,32 +493,30 @@ function ClientesPageContent() {
                 type="button"
                 variant="outline"
                 className="border-border text-gym-accent"
-                onClick={async () => {
+                onClick={() => {
                   if (!clienteResumo || liberandoSuspensao) return;
-                  const confirmar = window.confirm(
-                    `Confirmar liberação da suspensão de ${clienteResumo.nome}?`
-                  );
-                  if (!confirmar) return;
-                  try {
-                    setLiberandoSuspensao(true);
-                    await updateAlunoService({
-                      tenantId: clienteResumo.tenantId,
-                      id: clienteResumo.id,
-                      data: {
-                        status: "ATIVO",
-                        suspensao: undefined,
-                      },
-                    });
-                    setClienteResumo((prev) =>
-                      prev ? { ...prev, status: "ATIVO", suspensao: undefined } : prev
-                    );
-                    await load();
-                  } catch (error) {
-                    console.error("[clientes] Falha ao liberar suspensão", error);
-                    window.alert("Não foi possível liberar a suspensão no momento.");
-                  } finally {
-                    setLiberandoSuspensao(false);
-                  }
+                  confirm(`Confirmar liberação da suspensão de ${clienteResumo.nome}?`, async () => {
+                    try {
+                      setLiberandoSuspensao(true);
+                      await updateAlunoService({
+                        tenantId: clienteResumo.tenantId,
+                        id: clienteResumo.id,
+                        data: {
+                          status: "ATIVO",
+                          suspensao: undefined,
+                        },
+                      });
+                      setClienteResumo((prev) =>
+                        prev ? { ...prev, status: "ATIVO", suspensao: undefined } : prev
+                      );
+                      await load();
+                    } catch (error) {
+                      console.error("[clientes] Falha ao liberar suspensão", error);
+                      window.alert("Não foi possível liberar a suspensão no momento.");
+                    } finally {
+                      setLiberandoSuspensao(false);
+                    }
+                  });
                 }}
                 disabled={liberandoSuspensao}
               >

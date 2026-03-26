@@ -20,20 +20,7 @@ import {
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { TableCell } from "@/components/ui/table";
 
-function formatBRL(value: number) {
-  const safe = Number.isFinite(value) ? value : 0;
-  return safe.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { formatBRL, formatDateTime } from "@/lib/formatters";
 
 const TIPO_LABEL: Record<Venda["tipo"], string> = {
   PLANO: "Plano",

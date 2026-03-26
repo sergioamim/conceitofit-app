@@ -13,15 +13,11 @@ import { Button } from "@/components/ui/button";
 import { ProdutoModal } from "@/components/shared/produto-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { cn } from "@/lib/utils";
-
-function formatBRL(value: number) {
-  return (value ?? 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
+import { formatBRL } from "@/lib/formatters";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 export default function ProdutosPage() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Produto | null>(null);
@@ -59,14 +55,16 @@ export default function ProdutosPage() {
     await load();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Remover este produto?")) return;
-    await deleteProdutoApi(id);
-    await load();
+  function handleDelete(id: string) {
+    confirm("Remover este produto?", async () => {
+      await deleteProdutoApi(id);
+      await load();
+    });
   }
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       {modalOpen ? (
         <ProdutoModal
           open={modalOpen}

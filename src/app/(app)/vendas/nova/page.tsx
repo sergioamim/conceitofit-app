@@ -25,6 +25,7 @@ import { SuggestionInput, type SuggestionOption } from "@/components/shared/sugg
 import { SaleReceiptModal } from "@/components/shared/sale-receipt-modal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatBRL } from "@/lib/formatters";
 
 interface CartItem {
   tipo: TipoVenda;
@@ -40,10 +41,6 @@ interface DetectResult {
   rawValue: string;
 }
 
-function formatBRL(value: number) {
-  const safe = Number.isFinite(value) ? value : 0;
-  return safe.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 function inferSaleTypeFromCart(items: CartItem[]): TipoVenda {
   if (items.some((item) => item.tipo === "PLANO")) return "PLANO";

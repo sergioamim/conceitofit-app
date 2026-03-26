@@ -25,6 +25,7 @@ import {
   AtividadeOcorrenciaModal,
   type AtividadeOcorrenciaForm,
 } from "@/components/shared/atividade-ocorrencia-modal";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 const DIA_LABEL: Record<DiaSemana, string> = {
   SEG: "Segunda",
@@ -37,6 +38,7 @@ const DIA_LABEL: Record<DiaSemana, string> = {
 };
 
 export default function AtividadesGradePage() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const tenantContext = useTenantContext();
   const [grades, setGrades] = useState<AtividadeGrade[]>([]);
   const [atividades, setAtividades] = useState<Atividade[]>([]);
@@ -150,10 +152,11 @@ export default function AtividadesGradePage() {
     await load();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Remover este item da grade?")) return;
-    await deleteAtividadeGradeApi(id);
-    await load();
+  function handleDelete(id: string) {
+    confirm("Remover este item da grade?", async () => {
+      await deleteAtividadeGradeApi(id);
+      await load();
+    });
   }
 
   async function handleCreateOccurrence(data: AtividadeOcorrenciaForm) {
@@ -200,6 +203,7 @@ export default function AtividadesGradePage() {
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       <AtividadeGradeModal
         open={modalOpen}
         onClose={() => {

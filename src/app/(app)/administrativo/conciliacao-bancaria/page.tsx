@@ -28,6 +28,7 @@ import { listPagamentosApi } from "@/lib/api/pagamentos";
 import { listContasPagarApi } from "@/lib/api/financeiro-gerencial";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useTenantContext } from "@/hooks/use-session-context";
+import { formatBRL } from "@/lib/formatters";
 
 const ORIGEM_LABEL: Record<OrigemConciliacao, string> = {
   MANUAL: "Manual",
@@ -52,12 +53,6 @@ function normalizeDateISO(): { start: string; end: string } {
   return getBusinessMonthRange();
 }
 
-function formatBRL(value: number) {
-  return (Number(value) || 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
 
 function mapStatusClass(status: StatusConciliacao) {
   if (status === "CONCILIADA") return "bg-gym-teal/15 text-gym-teal";

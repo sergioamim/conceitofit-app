@@ -14,15 +14,7 @@ import type { NfseConfiguracao } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(value: string) {
-  const [year, month, day] = value.split("-");
-  if (!year || !month || !day) return value;
-  return `${day}/${month}/${year}`;
-}
+import { formatBRL, formatDate } from "@/lib/formatters";
 
 export default function EmitirNfseEmLotePage() {
   const { tenantId } = useTenantContext();

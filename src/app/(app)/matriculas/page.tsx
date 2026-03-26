@@ -22,6 +22,8 @@ import {
 } from "@/lib/comercial/plano-flow";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatBRL } from "@/lib/formatters";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -33,11 +35,6 @@ const PIE_COLORS = [
   "var(--color-chart-4)",
   "var(--color-chart-5)",
 ];
-
-function formatBRL(value: number) {
-  const safe = Number.isFinite(value) ? value : 0;
-  return safe.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 function formatPercentage(value: number) {
   return `${value.toFixed(0)}%`;
@@ -81,6 +78,7 @@ function buildPieGradient(groups: MatriculaDashboardMensalPlano[]) {
 }
 
 export default function MatriculasPage() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const { tenantId, tenantResolved, setTenant } = useTenantContext();
   const [dashboard, setDashboard] = useState<MatriculaDashboardMensalResult | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -164,6 +162,7 @@ export default function MatriculasPage() {
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Contratos e assinaturas</h1>
@@ -419,18 +418,18 @@ export default function MatriculasPage() {
                             size="sm"
                             variant="outline"
                             disabled={loading || actionId === row.id}
-                            onClick={async () => {
+                            onClick={() => {
                               if (!tenantId) return;
-                              const confirmed = window.confirm("Cancelar esta contratação?");
-                              if (!confirmed) return;
-                              setActionId(row.id);
-                              try {
-                                await cancelarMatriculaService({ tenantId, id: row.id });
-                                setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} cancelado.`);
-                                await load();
-                              } finally {
-                                setActionId(null);
-                              }
+                              confirm("Cancelar esta contratação?", async () => {
+                                setActionId(row.id);
+                                try {
+                                  await cancelarMatriculaService({ tenantId, id: row.id });
+                                  setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} cancelado.`);
+                                  await load();
+                                } finally {
+                                  setActionId(null);
+                                }
+                              });
                             }}
                           >
                             <XCircle className="mr-1 size-4" />

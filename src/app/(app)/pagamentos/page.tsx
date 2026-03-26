@@ -39,6 +39,7 @@ import type {
   NfseConfiguracao,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatBRL, formatDate } from "@/lib/formatters";
 
 type ParsedImportCsvRow = {
   clienteNome: string;
@@ -420,16 +421,6 @@ function parseImportPayload(raw: string): PagamentoImportItem[] {
       observacoes: normalizeSeparator(pick("observacoes")) || undefined,
     };
   });
-}
-
-function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(d: string) {
-  const [year, month, day] = d.split("-");
-  if (!year || !month || !day) return d;
-  return `${day}/${month}/${year}`;
 }
 
 
