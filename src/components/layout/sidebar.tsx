@@ -89,6 +89,28 @@ function matchesAnyPath(pathname: string, items: NavItem[]): boolean {
   return items.some((item) => isActiveNavItem(pathname, item));
 }
 
+const SECTION_KEYS = {
+  atividade: "atividade",
+  treinos: "treinos",
+  crm: "crm",
+  seguranca: "seguranca",
+  administrativo: "administrativo",
+  gerencial: "gerencial",
+} as const;
+
+type SectionKey = (typeof SECTION_KEYS)[keyof typeof SECTION_KEYS];
+
+function getInitialSectionStates(pathname: string): Record<SectionKey, boolean> {
+  return {
+    atividade: matchesAnyPath(pathname, atividadeItemsSorted),
+    treinos: pathname.startsWith("/treinos"),
+    crm: pathname.startsWith("/crm"),
+    seguranca: pathname.startsWith("/seguranca"),
+    administrativo: pathname.startsWith("/administrativo"),
+    gerencial: pathname.startsWith("/gerencial"),
+  };
+}
+
 function getInitials(name: string): string {
   const words = name
     .trim()
@@ -295,12 +317,7 @@ function SidebarNavigation({
   const pathname = usePathname();
   const access = useAuthAccess();
   const { favorites, recent } = useUserPreferences();
-  const [atividadeOpen, setAtividadeOpen] = useState(() => matchesAnyPath(pathname, atividadeItemsSorted));
-  const [crmOpen, setCrmOpen] = useState(() => pathname.startsWith("/crm"));
-  const [treinosOpen, setTreinosOpen] = useState(() => pathname.startsWith("/treinos"));
-  const [segurancaOpen, setSegurancaOpen] = useState(() => pathname.startsWith("/seguranca"));
-  const [administrativoOpen, setAdministrativoOpen] = useState(() => pathname.startsWith("/administrativo"));
-  const [gerencialOpen, setGerencialOpen] = useState(() => pathname.startsWith("/gerencial"));
+  const [openSections, setOpenSections] = useState(() => getInitialSectionStates(pathname));
   const elevatedModulesReady = shellReady && !access.loading && access.canAccessElevatedModules;
   const visibleSegurancaItems = elevatedModulesReady ? segurancaItemsSorted : [];
   const visibleGerencialItems = elevatedModulesReady
@@ -342,27 +359,7 @@ function SidebarNavigation({
   }, [pathname]);
 
   useEffect(() => {
-    setAtividadeOpen(matchesAnyPath(pathname, atividadeItemsSorted));
-  }, [pathname]);
-
-  useEffect(() => {
-    setTreinosOpen(pathname.startsWith("/treinos"));
-  }, [pathname]);
-
-  useEffect(() => {
-    setSegurancaOpen(pathname.startsWith("/seguranca"));
-  }, [pathname]);
-
-  useEffect(() => {
-    setCrmOpen(pathname.startsWith("/crm"));
-  }, [pathname]);
-
-  useEffect(() => {
-    setAdministrativoOpen(pathname.startsWith("/administrativo"));
-  }, [pathname]);
-
-  useEffect(() => {
-    setGerencialOpen(pathname.startsWith("/gerencial"));
+    setOpenSections(getInitialSectionStates(pathname));
   }, [pathname]);
 
   return (
@@ -428,8 +425,8 @@ function SidebarNavigation({
           title="Atividade"
           icon={Activity}
           collapsed={collapsed}
-          open={atividadeOpen}
-          onToggle={() => setAtividadeOpen((v) => !v)}
+          open={openSections.atividade ?? false}
+          onToggle={() => setOpenSections((prev) => ({ ...prev, atividade: !prev.atividade }))}
           items={filteredAtividadeItems}
           pathname={pathname}
           onNavigate={onMobileClose}
@@ -441,8 +438,8 @@ function SidebarNavigation({
           title="Treinos"
           icon={CalendarDays}
           collapsed={collapsed}
-          open={treinosOpen}
-          onToggle={() => setTreinosOpen((v) => !v)}
+          open={openSections.treinos ?? false}
+          onToggle={() => setOpenSections((prev) => ({ ...prev, treinos: !prev.treinos }))}
           items={filteredTreinoItems}
           pathname={pathname}
           onNavigate={onMobileClose}
@@ -454,8 +451,8 @@ function SidebarNavigation({
           title="CRM"
           icon={BriefcaseBusiness}
           collapsed={collapsed}
-          open={crmOpen}
-          onToggle={() => setCrmOpen((v) => !v)}
+          open={openSections.crm ?? false}
+          onToggle={() => setOpenSections((prev) => ({ ...prev, crm: !prev.crm }))}
           items={filteredCrmItems}
           pathname={pathname}
           onNavigate={onMobileClose}
@@ -467,8 +464,8 @@ function SidebarNavigation({
           title="Segurança"
           icon={ShieldCheck}
           collapsed={collapsed}
-          open={segurancaOpen}
-          onToggle={() => setSegurancaOpen((v) => !v)}
+          open={openSections.seguranca ?? false}
+          onToggle={() => setOpenSections((prev) => ({ ...prev, seguranca: !prev.seguranca }))}
           items={filteredSegurancaItems}
           pathname={pathname}
           onNavigate={onMobileClose}
@@ -480,8 +477,8 @@ function SidebarNavigation({
           title="Gerencial"
           icon={LineChart}
           collapsed={collapsed}
-          open={gerencialOpen}
-          onToggle={() => setGerencialOpen((v) => !v)}
+          open={openSections.gerencial ?? false}
+          onToggle={() => setOpenSections((prev) => ({ ...prev, gerencial: !prev.gerencial }))}
           items={filteredGerencialItems}
           pathname={pathname}
           onNavigate={onMobileClose}
@@ -493,8 +490,8 @@ function SidebarNavigation({
           title="Administrativo"
           icon={Settings}
           collapsed={collapsed}
-          open={administrativoOpen}
-          onToggle={() => setAdministrativoOpen((v) => !v)}
+          open={openSections.administrativo ?? false}
+          onToggle={() => setOpenSections((prev) => ({ ...prev, administrativo: !prev.administrativo }))}
           items={filteredAdministrativoItems}
           pathname={pathname}
           onNavigate={onMobileClose}
