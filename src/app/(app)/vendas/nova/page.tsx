@@ -11,7 +11,6 @@ import {
   listProdutosService,
   resolveAlunoTenantService,
   listServicosService,
-  validarVoucherCodigoService,
 } from "@/lib/comercial/runtime";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { buildPlanoVendaItems } from "@/lib/comercial/plano-flow";
@@ -42,6 +41,8 @@ interface DetectResult {
 }
 
 
+import { useCommercialFlow } from "@/hooks/use-commercial-flow";
+
 function inferSaleTypeFromCart(items: CartItem[]): TipoVenda {
   if (items.some((item) => item.tipo === "PLANO")) return "PLANO";
   if (items.some((item) => item.tipo === "SERVICO")) return "SERVICO";
@@ -54,31 +55,60 @@ function NovaVendaPageContent() {
   const tenantIdRef = useRef(tenantId);
   const [tenant, setTenant] = useState<Tenant | null>(tenantContext.tenant ?? null);
   const [tipoVenda, setTipoVenda] = useState<TipoVenda>("PLANO");
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [planos, setPlanos] = useState<Plano[]>([]);
-  const [convenios, setConvenios] = useState<Convenio[]>([]);
+
+  const {
+    alunos,
+    planos,
+    convenios,
+    formasPagamento,
+    loadingData,
+    loadAlunos,
+    alunosLoaded,
+    clienteId,
+    setClienteId,
+    selectedPlanoId,
+    selectedPlano,
+    conveniosPlano,
+    selectedConvenio,
+    convenioPlanoId,
+    setConvenioPlanoId,
+    parcelasAnuidade,
+    setParcelasAnuidade,
+    dataInicioPlano,
+    setDataInicioPlano,
+    renovacaoAutomaticaPlano,
+    setRenovacaoAutomaticaPlano,
+    cart,
+    setCart,
+    addPlanoToCart,
+    refreshPlanoItems,
+    addItemToCart,
+    removeCartItem,
+    clearCart,
+    cupomCode,
+    setCupomCode,
+    cupomAppliedCode,
+    cupomPercent,
+    cupomError,
+    applyCupom,
+    acrescimoGeral,
+    setAcrescimoGeral,
+    subtotal,
+    descontoTotal,
+    total,
+    saving,
+    processSale,
+  } = useCommercialFlow({
+    tenantId,
+  });
+
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [planosLoaded, setPlanosLoaded] = useState(false);
-  const [planosLoadedTenantId, setPlanosLoadedTenantId] = useState("");
-
-  const [clienteId, setClienteId] = useState("");
   const [clienteQuery, setClienteQuery] = useState("");
   const [selectedItemId, setSelectedItemId] = useState("");
   const [itemQuery, setItemQuery] = useState("");
   const [qtd, setQtd] = useState("1");
-  const [selectedPlanoId, setSelectedPlanoId] = useState("");
-  const [parcelasAnuidade, setParcelasAnuidade] = useState("1");
-  const [dataInicioPlano, setDataInicioPlano] = useState(() => getBusinessTodayIso());
-  const [renovacaoAutomaticaPlano, setRenovacaoAutomaticaPlano] = useState(false);
-  const [convenioPlanoId, setConvenioPlanoId] = useState("__SEM_CONVENIO__");
-  const [cupomCode, setCupomCode] = useState("");
-  const [cupomAppliedCode, setCupomAppliedCode] = useState("");
-  const [cupomPercent, setCupomPercent] = useState(0);
-  const [cupomError, setCupomError] = useState("");
-  const [acrescimoGeral, setAcrescimoGeral] = useState("0");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [saving, setSaving] = useState(false);
+
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptVenda, setReceiptVenda] = useState<Venda | null>(null);
   const [receiptCliente, setReceiptCliente] = useState<Aluno | null>(null);
@@ -95,30 +125,8 @@ function NovaVendaPageContent() {
   const searchParams = useSearchParams();
   const prefillClienteId = searchParams.get("clienteId") ?? "";
   const prefillHandledRef = useRef(false);
-  const [alunosLoaded, setAlunosLoaded] = useState(false);
   const [servicosLoaded, setServicosLoaded] = useState(false);
   const [produtosLoaded, setProdutosLoaded] = useState(false);
-  const [conveniosLoaded, setConveniosLoaded] = useState(false);
-
-  const loadAlunos = useCallback(async () => {
-    if (!tenantIdRef.current || alunosLoaded) return;
-    const loaded = await listAlunosService({ tenantId: tenantIdRef.current });
-    setAlunos(loaded);
-    setAlunosLoaded(true);
-  }, [alunosLoaded]);
-
-  const loadPlanos = useCallback(async () => {
-    const targetTenantId = tenantIdRef.current;
-    if (planosLoaded && planosLoadedTenantId === targetTenantId) return;
-    if (!targetTenantId) return;
-    const planosResponse = await listPlanosService({
-      tenantId: targetTenantId,
-      apenasAtivos: true,
-    });
-    setPlanos(planosResponse.filter((plano) => plano.ativo));
-    setPlanosLoaded(true);
-    setPlanosLoadedTenantId(targetTenantId);
-  }, [planosLoaded, planosLoadedTenantId]);
 
   const loadServicos = useCallback(async () => {
     if (servicosLoaded) return;
@@ -134,13 +142,6 @@ function NovaVendaPageContent() {
     setProdutosLoaded(true);
   }, [produtosLoaded]);
 
-  const loadConvenios = useCallback(async () => {
-    if (conveniosLoaded) return;
-    const conveniosResponse = await listConveniosService(true);
-    setConvenios(conveniosResponse);
-    setConveniosLoaded(true);
-  }, [conveniosLoaded]);
-
   const syncTenantFromContext = useCallback(() => {
     const nextTenantId = tenantContext.tenantId || tenantIdRef.current;
     if (!nextTenantId) return;
@@ -152,19 +153,13 @@ function NovaVendaPageContent() {
     tenantIdRef.current = nextTenantId;
     setTenantId(nextTenantId);
     setTenant(tenantContext.tenant ?? null);
-    setAlunos([]);
-    setPlanos([]);
-    setPlanosLoaded(false);
-    setPlanosLoadedTenantId("");
     setServicos([]);
     setProdutos([]);
-    setConvenios([]);
-    setAlunosLoaded(false);
     setServicosLoaded(false);
     setProdutosLoaded(false);
-    setConveniosLoaded(false);
     prefillHandledRef.current = false;
-  }, [tenantContext.tenant, tenantContext.tenantId]);
+    clearCart();
+  }, [tenantContext.tenant, tenantContext.tenantId, clearCart]);
 
   useEffect(() => {
     tenantIdRef.current = tenantId;
@@ -175,16 +170,10 @@ function NovaVendaPageContent() {
   }, [syncTenantFromContext]);
 
   useEffect(() => {
-    async function load() {
-      if (!tenantId) return;
-      await loadPlanos();
-      await loadConvenios();
-      if (prefillClienteId && !alunosLoaded) {
-        await loadAlunos();
-      }
+    if (prefillClienteId && !alunosLoaded && tenantId) {
+      loadAlunos();
     }
-    load();
-  }, [alunosLoaded, loadAlunos, loadConvenios, loadPlanos, prefillClienteId, tenantId]);
+  }, [alunosLoaded, loadAlunos, prefillClienteId, tenantId]);
 
   useEffect(() => {
     if (tipoVenda === "SERVICO") void loadServicos();
@@ -196,13 +185,10 @@ function NovaVendaPageContent() {
     setItemQuery("");
     setQtd("1");
     if (tipoVenda !== "PLANO") {
-      setSelectedPlanoId("");
-      setParcelasAnuidade("1");
-      setConvenioPlanoId("__SEM_CONVENIO__");
-      setRenovacaoAutomaticaPlano(false);
+      clearCart();
       setDataInicioPlano(getBusinessTodayIso());
     }
-  }, [tipoVenda]);
+  }, [tipoVenda, clearCart, setDataInicioPlano]);
 
   useEffect(() => {
     if (!prefillClienteId || prefillHandledRef.current || !tenantIdRef.current) return;
@@ -238,11 +224,6 @@ function NovaVendaPageContent() {
         return;
       }
 
-      setAlunos((current) =>
-        current.some((aluno) => aluno.id === resolved.aluno.id)
-          ? current
-          : [resolved.aluno, ...current]
-      );
       setClienteId(resolved.aluno.id);
       setClienteQuery(`${resolved.aluno.nome} · CPF ${resolved.aluno.cpf}`);
       prefillHandledRef.current = true;
@@ -252,7 +233,7 @@ function NovaVendaPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [alunos, alunosLoaded, loadAlunos, prefillClienteId, tenantContext]);
+  }, [alunos, alunosLoaded, loadAlunos, prefillClienteId, setClienteId, tenantContext]);
 
   const options = useMemo(() => {
     if (tipoVenda === "PLANO") {
@@ -303,48 +284,16 @@ function NovaVendaPageContent() {
     if (selected) setItemQuery(selected.label);
   }, [selectedItemId, itemOptions]);
 
-  const selectedPlano = useMemo(
-    () => planos.find((plano) => plano.id === selectedPlanoId),
-    [planos, selectedPlanoId]
-  );
-  const conveniosPlano = useMemo(
-    () =>
-      selectedPlano
-        ? convenios.filter((convenio) => (convenio.planoIds ?? []).includes(selectedPlano.id))
-        : [],
-    [convenios, selectedPlano]
-  );
-  const selectedConvenio = useMemo(
-    () =>
-      convenioPlanoId !== "__SEM_CONVENIO__"
-        ? conveniosPlano.find((convenio) => convenio.id === convenioPlanoId) ?? null
-        : null,
-    [convenioPlanoId, conveniosPlano]
-  );
-
   useEffect(() => {
     if (convenioPlanoId === "__SEM_CONVENIO__") return;
     if (conveniosPlano.some((convenio) => convenio.id === convenioPlanoId)) return;
     setConvenioPlanoId("__SEM_CONVENIO__");
-  }, [convenioPlanoId, conveniosPlano]);
+  }, [convenioPlanoId, conveniosPlano, setConvenioPlanoId]);
 
   const requireCliente = useMemo(
     () => cart.some((item) => item.tipo === "PLANO" || item.tipo === "SERVICO"),
     [cart]
   );
-
-  const subtotal = useMemo(
-    () => cart.reduce((sum, i) => sum + i.valorUnitario * i.quantidade, 0),
-    [cart]
-  );
-  const descontoCupom = useMemo(() => (subtotal * cupomPercent) / 100, [subtotal, cupomPercent]);
-  const descontoConvenioPlano = useMemo(() => {
-    if (!selectedPlano || !selectedConvenio) return 0;
-    return (Number(selectedPlano.valor ?? 0) * selectedConvenio.descontoPercentual) / 100;
-  }, [selectedConvenio, selectedPlano]);
-  const descontoTotal = descontoCupom + descontoConvenioPlano;
-  const acrescimoTotal = parseFloat(acrescimoGeral) || 0;
-  const total = Math.max(0, subtotal - descontoTotal + acrescimoTotal);
 
   function addItem() {
     const selected = options.find((o) => o.id === selectedItemId);
@@ -359,44 +308,13 @@ function NovaVendaPageContent() {
       desconto: 0,
     };
 
-    setCart((prev) => [...prev, item]);
+    addItemToCart(item);
   }
 
-  function addPlanoToCart(plano: Plano) {
+  function handleAddPlano(plano: Plano) {
     const maxParcelas = Math.max(1, Number(plano.parcelasMaxAnuidade ?? 1));
     const parcelas = Math.min(maxParcelas, Math.max(1, parseInt(parcelasAnuidade, 10) || 1));
-    setParcelasAnuidade(String(parcelas));
-    setSelectedPlanoId(plano.id);
-    setConvenioPlanoId("__SEM_CONVENIO__");
-    if (!plano.permiteRenovacaoAutomatica) {
-      setRenovacaoAutomaticaPlano(false);
-    }
-    setCart((prev) => {
-      const semPlano = prev.filter((item) => item.tipo !== "PLANO");
-      return [...buildPlanoVendaItems(plano, parcelas), ...semPlano];
-    });
-  }
-
-  function refreshPlanoItems(parcelas: number) {
-    if (!selectedPlano) return;
-    setCart((prev) => {
-      const semPlano = prev.filter((item) => item.tipo !== "PLANO");
-      return [...buildPlanoVendaItems(selectedPlano, parcelas), ...semPlano];
-    });
-  }
-
-  function removeCartItem(index: number) {
-    const target = cart[index];
-    if (!target) return;
-    if (target.tipo === "PLANO") {
-      setCart((prev) => prev.filter((item) => item.tipo !== "PLANO"));
-      setSelectedPlanoId("");
-      setParcelasAnuidade("1");
-       setConvenioPlanoId("__SEM_CONVENIO__");
-       setRenovacaoAutomaticaPlano(false);
-      return;
-    }
-    setCart((prev) => prev.filter((_, idx) => idx !== index));
+    addPlanoToCart(plano, parcelas);
   }
 
   function clearScannerResources() {
@@ -496,122 +414,36 @@ function NovaVendaPageContent() {
     };
   }, [applyCodeToProduct, scannerOpen]);
 
-  async function applyCupom() {
-    const code = cupomCode.trim().toUpperCase();
-    if (!code) {
-      setCupomPercent(0);
-      setCupomAppliedCode("");
-      setCupomError("");
-      return;
-    }
-    try {
-      const result = await validarVoucherCodigoService({
-        codigo: code,
-        tenantId: tenantIdRef.current ?? undefined,
-        clienteId: clienteId || undefined,
-        planoId: selectedPlanoId || undefined,
-      });
-      if (!result.valido) {
-        setCupomError(result.mensagem || "Cupom inválido para esta venda.");
-        setCupomAppliedCode("");
-        setCupomPercent(0);
-        return;
-      }
-      if (result.planoIds?.length && selectedPlanoId && !result.planoIds.includes(selectedPlanoId)) {
-        setCupomError("Este cupom não é válido para o plano selecionado.");
-        setCupomAppliedCode("");
-        setCupomPercent(0);
-        return;
-      }
-      setCupomAppliedCode(code);
-      setCupomPercent(result.descontoPercentual);
-      setCupomError("");
-    } catch {
-      setCupomError("Não foi possível validar o cupom. Tente novamente.");
-      setCupomAppliedCode("");
-      setCupomPercent(0);
-    }
-  }
-
   async function handleConfirmPayment(pagamento: PagamentoVenda) {
-    if (!tenantIdRef.current) {
-      alert("Tenant ativo não encontrado.");
-      return;
-    }
     if (requireCliente && !clienteId) {
       alert("Cliente é obrigatório para venda de plano/serviço.");
       return;
     }
-    if (cart.length === 0) {
-      alert("Adicione ao menos um item à venda.");
-      return;
-    }
 
-    setSaving(true);
     try {
-      const planRef = cart.find((item) => item.tipo === "PLANO")?.referenciaId;
-      const planId = planRef?.split(":")[0];
-      const plan = planId ? planos.find((p) => p.id === planId) ?? null : null;
-      const tipoFinal = inferSaleTypeFromCart(cart);
-      const venda = await createVendaService({
-        tenantId: tenantIdRef.current,
-        data: {
-          tipo: tipoFinal,
-          clienteId: clienteId || undefined,
-          voucherCodigo: cupomAppliedCode || undefined,
-          itens: cart.map((i) => ({
-            tipo: i.tipo,
-            referenciaId: i.referenciaId,
-            descricao: i.descricao,
-            quantidade: i.quantidade,
-            valorUnitario: i.valorUnitario,
-            desconto: i.desconto,
-          })),
-          descontoTotal,
-          acrescimoTotal: parseFloat(acrescimoGeral) || 0,
-          pagamento: {
-            ...pagamento,
-            status: "PAGO",
-          },
-          planoContexto:
-            tipoFinal === "PLANO" && plan
-              ? {
-                  planoId: plan.id,
-                  dataInicio: dataInicioPlano,
-                  descontoPlano: cupomPercent || 0,
-                  renovacaoAutomatica: renovacaoAutomaticaPlano,
-                  convenioId: selectedConvenio?.id,
-                }
-              : undefined,
-        },
+      const venda = await processSale({
+        ...pagamento,
+        status: "PAGO",
       });
+
       const selectedCliente = alunos.find((a) => a.id === venda.clienteId) ?? null;
       setReceiptVenda(venda);
       setReceiptCliente(selectedCliente);
-      setReceiptPlano(plan);
+      setReceiptPlano(selectedPlano ?? null);
       setReceiptVoucherCodigo(cupomAppliedCode);
       setReceiptVoucherPercent(cupomPercent);
-      if (plan?.contratoTemplateHtml && plan.contratoEnviarAutomaticoEmail && selectedCliente?.email) {
+      if (selectedPlano?.contratoTemplateHtml && selectedPlano.contratoEnviarAutomaticoEmail && selectedCliente?.email) {
         setReceiptContratoAutoMsg(`Contrato enviado automaticamente para ${selectedCliente.email}.`);
       } else {
         setReceiptContratoAutoMsg("");
       }
       setReceiptOpen(true);
-      setCart([]);
+      clearCart();
       setSelectedItemId("");
       setItemQuery("");
       setQtd("1");
-      setSelectedPlanoId("");
-      setParcelasAnuidade("1");
-      setCupomCode("");
-      setCupomAppliedCode("");
-      setCupomPercent(0);
-      setCupomError("");
-      setAcrescimoGeral("0");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erro ao registrar venda");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -761,7 +593,6 @@ function NovaVendaPageContent() {
                       <Select
                         value={parcelasAnuidade}
                         onValueChange={(value) => {
-                          setParcelasAnuidade(value);
                           refreshPlanoItems(Math.max(1, parseInt(value, 10) || 1));
                         }}
                       >
@@ -847,7 +678,7 @@ function NovaVendaPageContent() {
                       key={plano.id}
                       plano={plano}
                       selected={selectedPlanoId === plano.id}
-                      onSelect={addPlanoToCart}
+                      onSelect={handleAddPlano}
                       variant="compact"
                     />
                   ))}
@@ -895,7 +726,7 @@ function NovaVendaPageContent() {
                     placeholder="Código"
                     className="h-8 w-32 bg-secondary border-border"
                   />
-                  <Button type="button" variant="outline" size="sm" className="border-border" onClick={applyCupom}>
+                  <Button type="button" variant="outline" size="sm" className="border-border" onClick={() => applyCupom(cupomCode)}>
                     Aplicar
                   </Button>
                 </div>
