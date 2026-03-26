@@ -243,7 +243,7 @@ function ClientesPageContent() {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Clientes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {statusTotals.TODOS} clientes cadastrados · pré-cadastro pode ser criado sem matrícula e completo depois
+            {statusTotals.TODOS} clientes cadastrados
           </p>
         </div>
         <Button onClick={() => setWizardOpen(true)}>

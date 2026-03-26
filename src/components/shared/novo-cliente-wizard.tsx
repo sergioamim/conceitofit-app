@@ -254,9 +254,6 @@ function Step1Dados({
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Cadastro rápido (pré-cadastro) usa apenas dados principais. O restante pode ser completado depois.
-      </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* NOME */}
         <div className="col-span-2 space-y-1.5">
