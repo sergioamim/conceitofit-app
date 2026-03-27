@@ -7491,7 +7491,7 @@
         "description": "Consolidar o padrão de error boundaries, estados vazios (empty state) e retry nas páginas de listagem. Hoje cada página implementa loading/error/empty de forma ad hoc. Criar componentes reutilizáveis e aplicar consistentemente.",
         "details": "Criar src/components/shared/list-states.tsx com: (1) EmptyState — ícone + mensagem + CTA opcional, variantes por contexto (busca sem resultado vs lista vazia); (2) ErrorState — já existe parcialmente em error-state.tsx, unificar com retry callback; (3) ListLoadingSkeleton — wrapper genérico que aceita número de linhas. Auditar as páginas de listagem (/clientes, /vendas, /matriculas, /pagamentos, /planos, /prospects, CRM pages, admin pages) e substituir implementações ad hoc de empty/error/loading pelos componentes padronizados. Garantir que mensagens de erro incluam ação (retry ou contato suporte). Não alterar a lógica de negócio, apenas a camada de apresentação de estados.",
         "testStrategy": "Simular erro de rede (desligar backend) e verificar que todas as listagens mostram ErrorState com botão retry. Verificar lista vazia (filtro sem resultados) mostra EmptyState adequado. Confirmar que loading skeletons aparecem durante fetch.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [
@@ -7501,9 +7501,10 @@
             "description": "Implementar os componentes padronizados de empty, erro e loading para listas.",
             "dependencies": [],
             "details": "Criar `src/components/shared/list-states.tsx` com `EmptyState` (ícone, mensagem, CTA opcional e variantes para busca sem resultado vs lista vazia), `ErrorState` unificando o visual de `error-state.tsx`/`page-error.tsx` com callback de retry e mensagem com ação, e `ListLoadingSkeleton` como wrapper genérico que aceita número de linhas (usando `Skeleton`). Garantir consistência visual com `MOTION_CLASSNAMES` e textos estáveis no render SSR.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Validar manualmente que os três componentes renderizam corretamente, com CTA opcional e estilos consistentes.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:52:36.081Z"
           },
           {
             "id": 2,
@@ -7513,9 +7514,10 @@
               1
             ],
             "details": "Auditar e atualizar `src/app/(app)/clientes/page.tsx`, `src/app/(app)/vendas/page.tsx`, `src/app/(app)/matriculas/page.tsx`, `src/app/(app)/pagamentos/page.tsx`, `src/app/(app)/planos/page.tsx` e `src/app/(app)/prospects/page.tsx` para usar `EmptyState`, `ErrorState` e `ListLoadingSkeleton`. Trocar banners e linhas vazias de tabela por componentes padronizados, ligar `onRetry` às funções `load` existentes e manter a lógica de negócio intacta.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Simular erro de rede e ausência de resultados para verificar ErrorState com retry e EmptyState adequado; confirmar skeleton durante carregamento.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:52:36.093Z"
           },
           {
             "id": 3,
@@ -7526,18 +7528,20 @@
               2
             ],
             "details": "Revisar páginas em `src/app/(app)/administrativo/**`, `src/app/(app)/gerencial/**`, `src/app/(app)/crm/**` e `src/app/(backoffice)/admin/**` que hoje usam `PageError`, mensagens inline ou loaders próprios. Substituir por `EmptyState`, `ErrorState` e `ListLoadingSkeleton`, garantindo mensagens com ação (retry ou contato suporte) e mantendo a estrutura SSR estável.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Forçar falha de carregamento em algumas páginas administrativas e validar o retry; verificar estados vazios e skeletons em fluxos de listagem.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:52:36.100Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T04:52:36.100Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-27T04:45:39.888Z",
+      "lastModified": "2026-03-27T04:52:36.100Z",
       "taskCount": 115,
-      "completedCount": 114,
+      "completedCount": 115,
       "tags": [
         "master"
       ]
