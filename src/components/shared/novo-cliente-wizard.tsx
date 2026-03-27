@@ -10,9 +10,9 @@ import { FieldAsyncFeedback, type FieldAsyncFeedbackStatus } from "@/components/
 
 import { getBusinessTodayIso } from "@/lib/business-date";
 import {
+  checkAlunoDuplicidadeService,
   createAlunoComMatriculaService,
   createAlunoService,
-  listAlunosService,
 } from "@/lib/comercial/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { Aluno, FormaPagamento, Plano, Sexo, TipoFormaPagamento } from "@/lib/types";
@@ -99,15 +99,8 @@ type ClienteWizardForm = z.infer<typeof clienteWizardSchema>;
 async function checkUniqueness(tenantId: string, search: string) {
   if (!search) return false;
   try {
-    const list = await listAlunosService({ tenantId, size: 5 });
-    const normalizedSearch = search.replace(/\D/g, "");
-    return list.some(a => {
-      if (normalizedSearch && a.cpf) {
-        if (a.cpf.replace(/\D/g, "") === normalizedSearch) return true;
-      }
-      if (search && a.email && a.email.toLowerCase() === search.toLowerCase()) return true;
-      return false;
-    });
+    const result = await checkAlunoDuplicidadeService({ tenantId, search });
+    return result.exists;
   } catch {
     return false;
   }

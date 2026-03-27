@@ -280,6 +280,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
         data: {
           tipo: tipoFinal as TipoVenda,
           clienteId: clienteId || undefined,
+          convenioId: selectedConvenio?.id || undefined,
           voucherCodigo: cupomAppliedCode || undefined,
           itens: cart.map((i) => ({
             tipo: i.tipo,
@@ -301,7 +302,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     } finally {
       setSaving(false);
     }
-  }, [tenantId, cart, clienteId, cupomAppliedCode, descontoTotal, acrescimoGeral, dryRun?.planoContexto]);
+  }, [tenantId, cart, clienteId, selectedConvenio?.id, cupomAppliedCode, descontoTotal, acrescimoGeral, dryRun?.planoContexto]);
 
   return {
     alunos,

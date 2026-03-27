@@ -10,6 +10,7 @@ import {
   getClienteOperationalContextApi,
   getAlunoApi,
   listAlunosApi,
+  searchAlunosApi,
   migrarClienteParaUnidadeApi,
   updateAlunoApi,
 } from "@/lib/api/alunos";
@@ -136,6 +137,41 @@ export async function listAlunosService(input: {
     size: input.size ?? 500,
   });
   return extractAlunosFromListResponse(response);
+}
+
+export type AlunoDuplicidadeResult = {
+  exists: boolean;
+  alunoId?: string;
+  alunoNome?: string;
+};
+
+export async function checkAlunoDuplicidadeService(input: {
+  tenantId: string;
+  search: string;
+}): Promise<AlunoDuplicidadeResult> {
+  const trimmed = input.search.trim();
+  if (!trimmed) return { exists: false };
+  try {
+    const results = await searchAlunosApi({
+      tenantId: input.tenantId,
+      search: trimmed,
+      page: 0,
+      size: 1,
+    });
+    if (results.length > 0) {
+      return {
+        exists: true,
+        alunoId: results[0].id,
+        alunoNome: results[0].nome,
+      };
+    }
+    return { exists: false };
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      throw new Error(`Erro ao verificar duplicidade: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 export async function createAlunoService(input: {

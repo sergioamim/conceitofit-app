@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PublicJourneyShell } from "@/components/public/public-journey-shell";
+import { FieldAsyncFeedback } from "@/components/shared/field-async-feedback";
+import { useAsyncFieldValidation } from "@/hooks/use-async-field-validation";
+import { checkAlunoDuplicidadeService } from "@/lib/comercial/runtime";
 import {
   buildPublicJourneyHref,
   getPublicPlanQuote,
@@ -139,6 +142,60 @@ function CadastroPublicoForm({
   const selectedPlan = context.planos.find((item) => item.id === selectedPlanId) ?? context.planos[0];
   const quote = selectedPlan ? getPublicPlanQuote(selectedPlan) : null;
 
+  const watchedCpf = useWatch({ control, name: "cpf" });
+  const watchedEmail = useWatch({ control, name: "email" });
+
+  const validateCpf = useCallback(
+    async (value: string) => {
+      const digits = value.replace(/\D/g, "");
+      if (digits.length < 11) return { valid: true };
+      const result = await checkAlunoDuplicidadeService({
+        tenantId: context.tenant.id,
+        search: digits,
+      });
+      return result.exists
+        ? { valid: false, message: "Este CPF já está cadastrado." }
+        : { valid: true, message: "CPF disponível" };
+    },
+    [context.tenant.id]
+  );
+
+  const validateEmail = useCallback(
+    async (value: string) => {
+      if (!value.includes("@")) return { valid: true };
+      const result = await checkAlunoDuplicidadeService({
+        tenantId: context.tenant.id,
+        search: value,
+      });
+      return result.exists
+        ? { valid: false, message: "E-mail já cadastrado." }
+        : { valid: true, message: "E-mail disponível" };
+    },
+    [context.tenant.id]
+  );
+
+  const cpfValidation = useAsyncFieldValidation({ validate: validateCpf });
+  const emailValidation = useAsyncFieldValidation({ validate: validateEmail });
+
+  useEffect(() => {
+    if (watchedCpf && watchedCpf.replace(/\D/g, "").length >= 11) {
+      cpfValidation.trigger(watchedCpf);
+    } else {
+      cpfValidation.reset();
+    }
+  }, [watchedCpf]);
+
+  useEffect(() => {
+    if (watchedEmail && watchedEmail.includes("@")) {
+      emailValidation.trigger(watchedEmail);
+    } else {
+      emailValidation.reset();
+    }
+  }, [watchedEmail]);
+
+  const asyncBlocking = cpfValidation.status === "loading" || cpfValidation.status === "error"
+    || emailValidation.status === "loading" || emailValidation.status === "error";
+
   useEffect(() => {
     reset({
       ...initialForm,
@@ -228,6 +285,7 @@ function CadastroPublicoForm({
                   className="border-border bg-secondary"
                 />
                 {errors.email ? <p className="text-xs text-rose-300">{errors.email.message}</p> : null}
+                <FieldAsyncFeedback status={emailValidation.status} message={emailValidation.message} />
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="signup-telefone" className="text-sm font-medium">
@@ -250,6 +308,7 @@ function CadastroPublicoForm({
                   className="border-border bg-secondary"
                 />
                 {errors.cpf ? <p className="text-xs text-rose-300">{errors.cpf.message}</p> : null}
+                <FieldAsyncFeedback status={cpfValidation.status} message={cpfValidation.message} />
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="signup-data" className="text-sm font-medium">
@@ -308,8 +367,8 @@ function CadastroPublicoForm({
               />
             </div>
 
-            <Button type="submit" className="w-full">
-              Ir para checkout
+            <Button type="submit" className="w-full" disabled={asyncBlocking}>
+              {asyncBlocking ? "Verificando dados..." : "Ir para checkout"}
             </Button>
           </form>
         </CardContent>
