@@ -1,0 +1,92 @@
+name: lighthouse-ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Lighthouse CI
+        run: npx @lhci/cli autorun
+        env:
+          LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
+
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+          retention-days: 14
+
+      - name: Bundle size check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Extract First Load JS sizes from build output
+          echo "## Bundle Size Report" > bundle-report.md
+          echo "" >> bundle-report.md
+
+          # Get total First Load JS from .next/build-manifest.json
+          if [ -f ".next/routes-manifest.json" ]; then
+            total_pages=$(find .next/server/app -name "*.html" 2>/dev/null | wc -l | xargs)
+            echo "Total pages built: ${total_pages}" >> bundle-report.md
+          fi
+
+          # Check shared JS bundle size
+          shared_size=$(du -sh .next/static/chunks/ 2>/dev/null | cut -f1 || echo "unknown")
+          echo "Shared chunks: ${shared_size}" >> bundle-report.md
+
+          # Save baseline for future comparison
+          du -sb .next/static/ 2>/dev/null | cut -f1 > .next/bundle-size-bytes.txt || echo "0" > .next/bundle-size-bytes.txt
+          current_bytes=$(cat .next/bundle-size-bytes.txt)
+          echo "Total static size: ${current_bytes} bytes" >> bundle-report.md
+
+          # Compare with baseline if available
+          if [ -f "bundle-size-baseline.txt" ]; then
+            baseline_bytes=$(cat bundle-size-baseline.txt)
+            if [ "$baseline_bytes" -gt 0 ] 2>/dev/null; then
+              growth=$(( (current_bytes - baseline_bytes) * 100 / baseline_bytes ))
+              echo "Growth vs baseline: ${growth}%" >> bundle-report.md
+              if [ "$growth" -gt 10 ]; then
+                echo "::warning::Bundle size grew ${growth}% (threshold: 10%)"
+              fi
+            fi
+          else
+            echo "No baseline found — saving current as baseline." >> bundle-report.md
+            echo "${current_bytes}" > bundle-size-baseline.txt
+          fi
+
+          cat bundle-report.md
+
+      - name: Upload bundle report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-report
+          path: |
+            bundle-report.md
+            bundle-size-baseline.txt
+          retention-days: 14
