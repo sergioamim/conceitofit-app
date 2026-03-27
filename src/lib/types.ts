@@ -402,6 +402,55 @@ export interface Cobranca {
   observacoes?: string;
 }
 
+export type DashboardFinanceiroPeriodo = "3M" | "6M" | "12M";
+export type DashboardFinanceiroAgingFaixa = "0_15" | "16_30" | "31_60" | "60_PLUS";
+
+export interface DashboardFinanceiroMrrSerie {
+  referencia: string;
+  label: string;
+  mrr: number;
+}
+
+export interface DashboardFinanceiroAgingItem {
+  faixa: DashboardFinanceiroAgingFaixa;
+  label: string;
+  quantidade: number;
+  valor: number;
+}
+
+export interface DashboardFinanceiroInadimplente {
+  academiaId?: UUID;
+  academiaNome: string;
+  contratoId?: UUID;
+  cobrancaId?: UUID;
+  planoNome?: string;
+  valorEmAberto: number;
+  diasEmAtraso: number;
+  ultimaCobrancaVencida?: LocalDate;
+}
+
+export interface DashboardFinanceiroPlanoComparativo {
+  planoId?: UUID;
+  planoNome: string;
+  academiasAtivas: number;
+  mrr: number;
+  participacaoPct: number;
+}
+
+export interface DashboardFinanceiroAdmin {
+  mrrAtual: number;
+  mrrProjetado: number;
+  totalAcademiasAtivas: number;
+  totalInadimplentes: number;
+  churnRateMensal: number;
+  previsaoReceita: number;
+  evolucaoMrr: DashboardFinanceiroMrrSerie[];
+  aging: DashboardFinanceiroAgingItem[];
+  inadimplentes: DashboardFinanceiroInadimplente[];
+  comparativoPlanos: DashboardFinanceiroPlanoComparativo[];
+  generatedAt?: LocalDateTime;
+}
+
 export interface Matricula {
   id: UUID;
   tenantId: UUID;
