@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, IBM_Plex_Sans, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 import Script from "next/script";
 import "./globals.css";
 
@@ -49,21 +50,28 @@ export default function RootLayout({
     process.env.NEXT_PUBLIC_REACT_SCAN === "true";
 
   return (
-    <html lang="pt-BR" className="dark">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#16181c" />
       </head>
       <body
         className={`${display.variable} ${body.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        {isReactScanEnabled && (
-          <Script
-            src="https://unpkg.com/react-scan/dist/auto.global.js"
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-          />
-        )}
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          storageKey="academia-theme"
+        >
+          {isReactScanEnabled && (
+            <Script
+              src="https://unpkg.com/react-scan/dist/auto.global.js"
+              strategy="afterInteractive"
+              crossOrigin="anonymous"
+            />
+          )}
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
