@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/operacional/saude", label: "Saúde Operacional" },
+  { href: "/admin/operacional/alertas", label: "Alertas Operacionais" },
   { href: "/admin/compliance", label: "Compliance LGPD" },
   { href: "/admin/academias", label: "Academias" },
   { href: "/admin/unidades", label: "Unidades" },

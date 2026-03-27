@@ -1633,6 +1633,59 @@ export interface AcademiasHealthMap {
   generatedAt?: LocalDateTime;
 }
 
+export type AlertaOperacionalSeveridade = "INFO" | "WARNING" | "CRITICAL";
+export type AlertaOperacionalTipo =
+  | "SEM_LOGIN_ADMIN"
+  | "SEM_MATRICULAS_ATIVAS"
+  | "PICO_CANCELAMENTOS"
+  | "CONTRATO_VENCENDO"
+  | "INADIMPLENCIA_ALTA"
+  | "OUTRO";
+
+export interface AlertaOperacional {
+  id?: UUID;
+  academiaId?: UUID;
+  academiaNome: string;
+  unidadeNome?: string;
+  tipo: AlertaOperacionalTipo;
+  severidade: AlertaOperacionalSeveridade;
+  titulo: string;
+  descricao: string;
+  acaoSugerida: string;
+  data: LocalDateTime;
+  valorReferencia?: number;
+}
+
+export interface AlertasOperacionaisResult {
+  items: AlertaOperacional[];
+  generatedAt?: LocalDateTime;
+}
+
+export type FeatureUsageStatus = "INATIVA" | "ATIVA_SEM_USO" | "EM_USO";
+export type FeatureUsageKey = "treinos" | "crm" | "catraca" | "vendasOnline" | "bi";
+
+export interface FeatureUsageIndicator {
+  ativa: boolean;
+  emUso: boolean;
+  status: FeatureUsageStatus;
+  ultimoUsoEm?: LocalDateTime;
+}
+
+export interface FeatureUsageAcademia {
+  academiaId?: UUID;
+  academiaNome: string;
+  treinos: FeatureUsageIndicator;
+  crm: FeatureUsageIndicator;
+  catraca: FeatureUsageIndicator;
+  vendasOnline: FeatureUsageIndicator;
+  bi: FeatureUsageIndicator;
+}
+
+export interface FeatureUsageByAcademiaResult {
+  items: FeatureUsageAcademia[];
+  generatedAt?: LocalDateTime;
+}
+
 export type ComplianceTermsStatus = "ACEITO" | "PARCIAL" | "PENDENTE";
 export type SolicitacaoExclusaoStatus = "PENDENTE" | "EM_PROCESSAMENTO" | "EXECUTADA" | "REJEITADA";
 
