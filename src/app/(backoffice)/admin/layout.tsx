@@ -17,6 +17,7 @@ const navItems = [
   { href: "/admin/unidades", label: "Unidades" },
   { href: "/admin/financeiro/planos", label: "Planos da Plataforma" },
   { href: "/admin/financeiro/contratos", label: "Contratos da Plataforma" },
+  { href: "/admin/financeiro/cobrancas", label: "Cobranças da Plataforma" },
   { href: "/admin/busca", label: "Busca Global" },
   { href: "/admin/seguranca", label: "Segurança" },
   { href: "/admin/configuracoes", label: "Configurações" },

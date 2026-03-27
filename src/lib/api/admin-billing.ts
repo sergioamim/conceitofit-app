@@ -1,8 +1,11 @@
 import type {
+  Cobranca,
+  CobrancaStatus,
   CicloPlanoPlataforma,
   ContratoPlataforma,
   PlanoPlataforma,
   StatusContratoPlataforma,
+  TipoFormaPagamento,
 } from "@/lib/types";
 import { apiRequest } from "./http";
 
@@ -37,6 +40,23 @@ type ContratoPlataformaApiResponse = Partial<ContratoPlataforma> & {
 };
 
 type ContratoPlataformaPayload = Omit<ContratoPlataforma, "id" | "planoNome" | "academiaNome">;
+
+type CobrancaApiResponse = Partial<Cobranca> & {
+  id?: string | null;
+  contratoId?: string | null;
+  academiaId?: string | null;
+  academiaNome?: string | null;
+  valor?: unknown;
+  dataVencimento?: string | null;
+  dataPagamento?: string | null;
+  status?: CobrancaStatus | null;
+  formaPagamento?: TipoFormaPagamento | null;
+  multa?: unknown;
+  juros?: unknown;
+  observacoes?: string | null;
+};
+
+type CobrancaPayload = Omit<Cobranca, "id" | "academiaNome">;
 
 type AnyListResponse<T> =
   | T[]
@@ -166,6 +186,38 @@ function buildContratoPayload(data: ContratoPlataformaPayload): Record<string, u
   };
 }
 
+function normalizeCobranca(input: CobrancaApiResponse, fallback?: Partial<CobrancaPayload> & { id?: string }): Cobranca {
+  return {
+    id: cleanString(input.id) ?? fallback?.id ?? "",
+    contratoId: cleanString(input.contratoId) ?? fallback?.contratoId ?? "",
+    academiaId: cleanString(input.academiaId) ?? fallback?.academiaId ?? "",
+    academiaNome: cleanString(input.academiaNome) ?? "",
+    valor: toNumber(input.valor, fallback?.valor ?? 0),
+    dataVencimento: cleanString(input.dataVencimento) ?? fallback?.dataVencimento ?? "",
+    dataPagamento: cleanString(input.dataPagamento) ?? fallback?.dataPagamento,
+    status: input.status ?? fallback?.status ?? "PENDENTE",
+    formaPagamento: input.formaPagamento ?? fallback?.formaPagamento,
+    multa: toOptionalNumber(input.multa) ?? fallback?.multa,
+    juros: toOptionalNumber(input.juros) ?? fallback?.juros,
+    observacoes: cleanString(input.observacoes) ?? fallback?.observacoes,
+  };
+}
+
+function buildCobrancaPayload(data: CobrancaPayload): Record<string, unknown> {
+  return {
+    contratoId: data.contratoId,
+    academiaId: data.academiaId,
+    valor: data.valor,
+    dataVencimento: data.dataVencimento,
+    dataPagamento: data.dataPagamento,
+    status: data.status,
+    formaPagamento: data.formaPagamento,
+    multa: data.multa,
+    juros: data.juros,
+    observacoes: cleanString(data.observacoes),
+  };
+}
+
 export async function listAdminPlanos(): Promise<PlanoPlataforma[]> {
   const response = await apiRequest<AnyListResponse<PlanoPlataformaApiResponse>>({
     path: "/api/v1/admin/financeiro/planos",
@@ -241,4 +293,44 @@ export async function reativarAdminContrato(id: string): Promise<ContratoPlatafo
     method: "PATCH",
   });
   return normalizeContratoPlataforma(response, { id, status: "ATIVO" });
+}
+
+export async function listAdminCobrancas(): Promise<Cobranca[]> {
+  const response = await apiRequest<AnyListResponse<CobrancaApiResponse>>({
+    path: "/api/v1/admin/financeiro/cobrancas",
+  });
+  return extractItems(response).map((item) => normalizeCobranca(item));
+}
+
+export async function createAdminCobranca(data: CobrancaPayload): Promise<Cobranca> {
+  const response = await apiRequest<CobrancaApiResponse>({
+    path: "/api/v1/admin/financeiro/cobrancas",
+    method: "POST",
+    body: buildCobrancaPayload(data),
+  });
+  return normalizeCobranca(response, data);
+}
+
+export async function baixarAdminCobranca(
+  id: string,
+  data: Pick<CobrancaPayload, "dataPagamento" | "formaPagamento" | "observacoes">
+): Promise<Cobranca> {
+  const response = await apiRequest<CobrancaApiResponse>({
+    path: `/api/v1/admin/financeiro/cobrancas/${id}/baixar`,
+    method: "PATCH",
+    body: {
+      dataPagamento: data.dataPagamento,
+      formaPagamento: data.formaPagamento,
+      observacoes: cleanString(data.observacoes),
+    },
+  });
+  return normalizeCobranca(response, { id, status: "PAGO", ...data });
+}
+
+export async function cancelarAdminCobranca(id: string): Promise<Cobranca> {
+  const response = await apiRequest<CobrancaApiResponse>({
+    path: `/api/v1/admin/financeiro/cobrancas/${id}/cancelar`,
+    method: "PATCH",
+  });
+  return normalizeCobranca(response, { id, status: "CANCELADO" });
 }

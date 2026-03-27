@@ -385,6 +385,23 @@ export interface ContratoPlataforma {
   historicoPlanosIds: UUID[];
 }
 
+export type CobrancaStatus = "PENDENTE" | "PAGO" | "VENCIDO" | "CANCELADO";
+
+export interface Cobranca {
+  id: UUID;
+  contratoId: UUID;
+  academiaId: UUID;
+  academiaNome: string;
+  valor: number;
+  dataVencimento: LocalDate;
+  dataPagamento?: LocalDate;
+  status: CobrancaStatus;
+  formaPagamento?: TipoFormaPagamento;
+  multa?: number;
+  juros?: number;
+  observacoes?: string;
+}
+
 export interface Matricula {
   id: UUID;
   tenantId: UUID;
