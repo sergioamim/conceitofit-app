@@ -13,6 +13,7 @@ import {
   LineChart,
   PanelLeftClose,
   PanelLeftOpen,
+  Search,
   Settings,
   ShieldCheck,
   Star,
@@ -679,6 +680,31 @@ function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = fals
         defaultLogoUrl={defaultLogoUrl}
         onToggleCollapsed={() => setCollapsed((v) => !v)}
       />
+
+      <div className="px-3 py-2">
+        <button
+          type="button"
+          onClick={() => {
+            document.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "k", metaKey: true }),
+            );
+          }}
+          className={cn(
+            "flex w-full items-center gap-2 rounded-md border border-border bg-secondary/40 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+            collapsed && "justify-center px-2",
+          )}
+        >
+          <Search className="size-4 shrink-0" />
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-left">Buscar...</span>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium">
+                ⌘K
+              </kbd>
+            </>
+          )}
+        </button>
+      </div>
 
       <SidebarNavigation
         collapsed={collapsed}
