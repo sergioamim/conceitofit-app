@@ -20,6 +20,7 @@ const navItems = [
   { href: "/admin/seguranca", label: "Segurança" },
   { href: "/admin/importacao-evo", label: "Importação EVO" },
   { href: "/admin/audit-log", label: "Audit Log" },
+  { href: "/admin/compliance", label: "Compliance LGPD" },
 ];
 
 function AdminShellFrame({

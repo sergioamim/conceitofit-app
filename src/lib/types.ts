@@ -2194,3 +2194,42 @@ export interface AuditLogEntry {
   detalhes?: string;
   ip?: string;
 }
+
+/* ── Compliance LGPD ──────────────────────────── */
+
+export type SolicitacaoExclusaoStatus = "PENDENTE" | "EXECUTADA" | "REJEITADA";
+
+export interface SolicitacaoExclusao {
+  id: UUID;
+  solicitanteNome: string;
+  solicitanteEmail: string;
+  solicitanteCpf?: string;
+  academiaId: UUID;
+  academiaNome: string;
+  dataSolicitacao: LocalDateTime;
+  dataResposta?: LocalDateTime;
+  status: SolicitacaoExclusaoStatus;
+  motivo?: string;
+  responsavelNome?: string;
+}
+
+export interface ComplianceAcademiaResumo {
+  academiaId: UUID;
+  academiaNome: string;
+  totalAlunos: number;
+  alunosComCpf: number;
+  alunosComEmail: number;
+  alunosComTelefone: number;
+  termosAceitos: number;
+  termosPendentes: number;
+  ultimaSolicitacaoExclusao?: LocalDateTime;
+}
+
+export interface ComplianceDashboard {
+  totalDadosPessoais: number;
+  solicitacoesExclusaoPendentes: number;
+  termosAceitos: number;
+  termosPendentes: number;
+  academias: ComplianceAcademiaResumo[];
+  solicitacoes: SolicitacaoExclusao[];
+}
