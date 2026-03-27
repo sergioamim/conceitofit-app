@@ -11,13 +11,16 @@ import {
   ChevronDown,
   ChevronRight,
   LineChart,
+  Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
   Settings,
   ShieldCheck,
   Star,
+  Sun,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { clearAuthSession, getNetworkSlugFromSession } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/auth-redirect";
 import { DEFAULT_TENANT_APP_NAME } from "@/lib/tenant-theme";
@@ -504,6 +507,7 @@ function SidebarNavigation({
 
 const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed: boolean }) {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -566,13 +570,23 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
                   {item.label}
                 </Link>
               ))}
+              <div className="my-1 h-px bg-sidebar-border" />
+              <button
+                type="button"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] text-[color:color-mix(in_srgb,var(--sidebar-foreground)_68%,transparent)] hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+                {theme === "dark" ? "Tema claro" : "Tema escuro"}
+              </button>
+              <div className="my-1 h-px bg-sidebar-border" />
               <button
                 type="button"
                 onClick={() => {
                   setUserMenuOpen(false);
                   setLogoutOpen(true);
                 }}
-                className="mt-1 block w-full cursor-pointer rounded-md px-2 py-2 text-left text-[13px] text-gym-danger hover:bg-sidebar-accent"
+                className="block w-full cursor-pointer rounded-md px-2 py-2 text-left text-[13px] text-gym-danger hover:bg-sidebar-accent"
               >
                 Sair
               </button>

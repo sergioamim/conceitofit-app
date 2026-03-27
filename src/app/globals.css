@@ -52,9 +52,50 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* Dark theme – always on */
+/* Light theme */
 :root {
   --radius: 0.625rem;
+  --background: #f8f9fb;
+  --foreground: #16181c;
+  --card: #ffffff;
+  --card-foreground: #16181c;
+  --popover: #ffffff;
+  --popover-foreground: #16181c;
+  --primary: #6b8c1a;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f1f4;
+  --secondary-foreground: #16181c;
+  --muted: #f0f1f4;
+  --muted-foreground: #64697a;
+  --accent: #f0f1f4;
+  --accent-foreground: #16181c;
+  --destructive: #dc3545;
+  --border: #dfe1e6;
+  --input: #f0f1f4;
+  --ring: #6b8c1a;
+  --chart-1: #6b8c1a;
+  --chart-2: #1ea06a;
+  --chart-3: #e09020;
+  --chart-4: #dc3545;
+  --chart-5: #7c5cbf;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #16181c;
+  --sidebar-primary: #6b8c1a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0f1f4;
+  --sidebar-accent-foreground: #16181c;
+  --sidebar-border: #dfe1e6;
+  --sidebar-ring: #6b8c1a;
+  --gym-accent: #6b8c1a;
+  --gym-teal: #1ea06a;
+  --gym-danger: #dc3545;
+  --gym-warning: #e09020;
+  --surface: #ffffff;
+  --surface-2: #f0f1f4;
+}
+
+/* Dark theme */
+.dark {
   --background: #0e0f11;
   --foreground: #eef0f4;
   --card: #16181c;
@@ -78,41 +119,6 @@
   --chart-3: #ffb347;
   --chart-4: #ff5c5c;
   --chart-5: #a78bfa;
-  --sidebar: #16181c;
-  --sidebar-foreground: #eef0f4;
-  --sidebar-primary: #c8f135;
-  --sidebar-primary-foreground: #0e0f11;
-  --sidebar-accent: #1e2026;
-  --sidebar-accent-foreground: #eef0f4;
-  --sidebar-border: #2a2d35;
-  --sidebar-ring: #c8f135;
-  --gym-accent: #c8f135;
-  --gym-teal: #3de8a0;
-  --gym-danger: #ff5c5c;
-  --gym-warning: #ffb347;
-  --surface: #16181c;
-  --surface-2: #1e2026;
-}
-
-.dark {
-  --background: #0e0f11;
-  --foreground: #eef0f4;
-  --card: #16181c;
-  --card-foreground: #eef0f4;
-  --popover: #16181c;
-  --popover-foreground: #eef0f4;
-  --primary: #c8f135;
-  --primary-foreground: #0e0f11;
-  --secondary: #1e2026;
-  --secondary-foreground: #eef0f4;
-  --muted: #1e2026;
-  --muted-foreground: #8a8f9e;
-  --accent: #1e2026;
-  --accent-foreground: #eef0f4;
-  --destructive: #ff5c5c;
-  --border: #2a2d35;
-  --input: #1e2026;
-  --ring: #c8f135;
   --sidebar: #16181c;
   --sidebar-foreground: #eef0f4;
   --sidebar-primary: #c8f135;
@@ -153,7 +159,7 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #2a2d35;
+    background: var(--border);
     border-radius: 3px;
   }
   button:not(:disabled),
