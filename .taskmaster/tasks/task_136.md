@@ -2,7 +2,7 @@
 
 **Title:** Backoffice: compliance LGPD e dashboard de dados pessoais
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,21 +22,21 @@ Verificar que dados pessoais são contados corretamente por academia. Processar 
 
 ### 136.1. Criar tipos e endpoint de compliance
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 ComplianceDashboard, SolicitacaoExclusao em types.ts. Endpoint em admin-compliance.ts
 
 ### 136.2. Criar dashboard de compliance com KPIs e tabela
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 136.1  
 
 Cards de dados pessoais, solicitações pendentes, termos. Tabela por academia.
 
 ### 136.3. Criar lista de solicitações de exclusão com ações
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 136.2  
 
 Listagem com filtros e botões executar/rejeitar com confirmação

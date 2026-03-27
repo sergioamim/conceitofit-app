@@ -2,9 +2,9 @@
 
 **Title:** Backoffice: ranking e mapa de saúde das academias
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 128
+**Dependencies:** 128 ✓
 
 **Priority:** medium
 
@@ -22,14 +22,14 @@ Verificar que academias com poucos alunos aparecem em vermelho. Filtrar por stat
 
 ### 129.1. Criar tipos e endpoint de saúde das academias
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Tipo AcademiaHealthStatus com métricas e classificação. Endpoint em admin-metrics.ts
 
 ### 129.2. Criar página com grid de semáforos e tabela detalhada
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 129.1  
 
 Cards por academia com badge de saúde, tabela com métricas e filtros

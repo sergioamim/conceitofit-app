@@ -27,9 +27,17 @@ Ativar feature para uma academia e verificar que propaga para suas unidades. Des
 
 FeatureFlagMatrix em types.ts e endpoints em admin-config.ts
 
+**Details:**
+
+Implementar o contrato tipado da matriz de feature flags por academia e os clients administrativos para leitura e toggle global/por academia.
+
 ### 134.2. Criar página/matriz de feature flags por academia
 
 **Status:** done  
 **Dependencies:** 134.1  
 
 Tabela com toggles por academia, override global e indicador de propagação
+
+**Details:**
+
+Evoluir a página de funcionalidades com a matriz de academias, override global, ajuste individual e indicador visual de propagação para as unidades.

@@ -2,9 +2,9 @@
 
 **Title:** Backoffice: alertas operacionais e uso de features
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 128
+**Dependencies:** 128 ✓
 
 **Priority:** medium
 
@@ -22,21 +22,21 @@ Verificar que alertas são exibidos com severidade correta. Confirmar tabela de 
 
 ### 130.1. Criar tipos e endpoints para alertas e usage
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Tipos AlertaOperacional e FeatureUsage. Endpoints em admin-metrics.ts
 
 ### 130.2. Criar página de alertas com lista e severidades
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 130.1  
 
 Lista de alertas com badges, data, academia e ação sugerida
 
 ### 130.3. Criar painel de uso de features por academia
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 130.1  
 
 Tabela academia x features com indicadores de ativação e uso real

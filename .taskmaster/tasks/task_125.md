@@ -2,9 +2,9 @@
 
 **Title:** Backoffice: contratos de academia vinculados a planos
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 124
+**Dependencies:** 124 ✓
 
 **Priority:** high
 
@@ -22,21 +22,21 @@ Criar contrato para uma academia, suspender e reativar. Verificar filtros por st
 
 ### 125.1. Criar tipos e API client para contratos
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Adicionar ContratoPlataforma em types.ts e endpoints de CRUD em admin-billing.ts
 
 ### 125.2. Criar página de listagem de contratos com filtros
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 125.1  
 
 Criar /admin/financeiro/contratos com tabela, filtros por status/academia/plano e badges
 
 ### 125.3. Criar modal de novo contrato e ações de suspensão/reativação
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 125.2  
 
 Modal com seletor de academia + plano + configuração de ciclo/valor. Botões de suspender/reativar com confirmação.

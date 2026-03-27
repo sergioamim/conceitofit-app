@@ -2,9 +2,9 @@
 
 **Title:** Backoffice: dashboard financeiro B2B (MRR, churn, inadimplência)
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 126
+**Dependencies:** 126 ✓
 
 **Priority:** high
 
@@ -22,21 +22,21 @@ Verificar que cards mostram valores em BRL. Conferir que o aging agrupa corretam
 
 ### 127.1. Criar tipos e endpoint do dashboard financeiro
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Adicionar DashboardFinanceiroAdmin em types.ts e getDashboardFinanceiroAdmin em admin-billing.ts
 
 ### 127.2. Criar página do dashboard com cards KPI e gráfico MRR
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 127.1  
 
 Cards: MRR, academias ativas, inadimplentes, churn rate. Barras de evolução MRR.
 
 ### 127.3. Adicionar tabela de aging e lista de inadimplentes
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 127.2  
 
 Aging por faixa de atraso, lista de academias com ação rápida, comparativo por plano

@@ -2,7 +2,7 @@
 
 **Title:** Backoffice: CRUD de planos de assinatura da plataforma
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,21 +22,21 @@ Criar, editar e desativar um plano. Verificar listagem com paginação. Confirma
 
 ### 124.1. Criar tipos e API client para planos da plataforma
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Adicionar PlanoPlataforma em types.ts e criar src/lib/api/admin-billing.ts com CRUD de planos
 
 ### 124.2. Criar página de listagem e CRUD de planos
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 124.1  
 
 Criar /admin/financeiro/planos com PaginatedTable + CrudModal para criar/editar planos
 
 ### 124.3. Adicionar navegação e integrar no layout do backoffice
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 124.2  
 
 Adicionar seção Financeiro no nav do backoffice com link para planos

@@ -2,7 +2,7 @@
 
 **Title:** Backoffice: audit log global de ações administrativas
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,14 +22,14 @@ Verificar que ações de CRUD no backoffice aparecem no log. Filtrar por academi
 
 ### 132.1. Criar tipos e API client para audit log
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 AuditLogEntry em types.ts e listAuditLogs em admin-audit.ts
 
 ### 132.2. Criar página com tabela paginada e filtros
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 132.1  
 
 Tabela com timestamp, usuário, ação, entidade, academia. Filtros por período/tipo/academia/usuário.

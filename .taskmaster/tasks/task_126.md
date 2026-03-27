@@ -2,9 +2,9 @@
 
 **Title:** Backoffice: geração e gestão de boletos/cobranças
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 125
+**Dependencies:** 125 ✓
 
 **Priority:** high
 
@@ -22,21 +22,21 @@ Gerar cobrança para um contrato ativo. Marcar como paga. Verificar filtros e ca
 
 ### 126.1. Criar tipos e API client para cobranças
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Adicionar Cobranca/CobrancaStatus em types.ts e endpoints CRUD em admin-billing.ts
 
 ### 126.2. Criar página de listagem com cards de resumo e filtros
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 126.1  
 
 Listagem com status badges, filtros por academia/status/período, cards KPI no topo
 
 ### 126.3. Criar modais de geração de cobrança e baixa manual
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 126.2  
 
 Modal de nova cobrança (selecionar contrato), modal de baixa manual (data + forma + observação), ação de cancelar

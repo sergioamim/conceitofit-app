@@ -2,7 +2,7 @@
 
 **Title:** Backoffice: dashboard operacional global (métricas cross-tenant)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,21 +22,21 @@ Verificar que os totais batem com a soma individual de cada academia (spot-check
 
 ### 128.1. Criar tipos e API client para métricas operacionais
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Adicionar MetricasOperacionaisGlobal em types.ts e criar admin-metrics.ts
 
 ### 128.2. Criar dashboard com cards KPI e evolução mensal
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 128.1  
 
 Cards de alunos, matrículas, vendas, ticket médio. Barras de tendência.
 
 ### 128.3. Adicionar tabela de distribuição por academia
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 128.2  
 
 Ranking com academia, unidades, alunos, matrículas, vendas — ordenável

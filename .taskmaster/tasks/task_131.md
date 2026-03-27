@@ -2,7 +2,7 @@
 
 **Title:** Backoffice: busca global cross-tenant de pessoas
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,14 +22,14 @@ Buscar por CPF de aluno e confirmar que aparece com academia/unidade corretos. B
 
 ### 131.1. Criar tipo e API client para busca global
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 GlobalSearchResult em types.ts e searchGlobalPessoas em admin-search.ts
 
 ### 131.2. Criar página de busca com resultados agrupados
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 131.1  
 
 Input central, resultados por tipo e academia, links para detalhe no contexto correto
