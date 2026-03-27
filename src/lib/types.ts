@@ -2130,6 +2130,53 @@ export interface FeatureFlagMatrix {
   updatedAt?: LocalDateTime;
 }
 
+export type IntegrationHealthStatus = "ONLINE" | "DEGRADED" | "OFFLINE" | "MAINTENANCE";
+export type IntegrationHealthKey = "PAYMENTS" | "NFSE" | "CATRACA" | "EVO_IMPORT";
+
+export interface IntegrationStatus {
+  integrationKey: IntegrationHealthKey;
+  integrationName: string;
+  providerLabel: string;
+  status: IntegrationHealthStatus;
+  uptimePercent: number;
+  avgLatencyMs: number;
+  pendingCount: number;
+  lastCheckAt?: LocalDateTime;
+  lastSuccessAt?: LocalDateTime;
+  lastErrorMessage?: string;
+  lastErrorAt?: LocalDateTime;
+  docsHref?: string;
+}
+
+export interface GlobalConfigEmailTemplate {
+  id: string;
+  slug: string;
+  nome: string;
+  assunto: string;
+  canal: "EMAIL" | "WHATSAPP" | "SMS";
+  ativo: boolean;
+  bodyHtml: string;
+  variables: string[];
+  updatedAt?: LocalDateTime;
+}
+
+export interface GlobalConfigApiLimits {
+  requestsPerMinute: number;
+  burstLimit: number;
+  webhookRequestsPerMinute: number;
+  adminRequestsPerMinute: number;
+}
+
+export interface GlobalConfig {
+  emailTemplates: GlobalConfigEmailTemplate[];
+  termsOfUseHtml: string;
+  termsVersion: string;
+  termsUpdatedAt?: LocalDateTime;
+  apiLimits: GlobalConfigApiLimits;
+  updatedAt?: LocalDateTime;
+  updatedBy?: string;
+}
+
 /* ---------- Global Search (Backoffice) ---------- */
 
 export type GlobalSearchPersonType = "ALUNO" | "FUNCIONARIO" | "ADMIN";

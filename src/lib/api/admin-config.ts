@@ -4,6 +4,10 @@ import type {
   FeatureFlagMatrixCell,
   FeatureFlagMatrixRow,
   FeatureFlagPropagationStatus,
+  GlobalConfig,
+  GlobalConfigEmailTemplate,
+  IntegrationHealthStatus,
+  IntegrationStatus,
 } from "@/lib/types";
 import { apiRequest } from "./http";
 
@@ -57,6 +61,84 @@ type RawFeature = {
   globalSource?: unknown;
   academias?: unknown;
   cells?: unknown;
+};
+
+type RawIntegrationStatus = {
+  integrationKey?: unknown;
+  key?: unknown;
+  integrationName?: unknown;
+  name?: unknown;
+  providerLabel?: unknown;
+  provider?: unknown;
+  status?: unknown;
+  uptimePercent?: unknown;
+  uptime?: unknown;
+  avgLatencyMs?: unknown;
+  latencyMs?: unknown;
+  pendingCount?: unknown;
+  filaPendente?: unknown;
+  lastCheckAt?: unknown;
+  ultimaVerificacaoEm?: unknown;
+  lastSuccessAt?: unknown;
+  ultimaSucessoEm?: unknown;
+  lastErrorMessage?: unknown;
+  ultimoErro?: unknown;
+  lastErrorAt?: unknown;
+  ultimoErroEm?: unknown;
+  docsHref?: unknown;
+  documentationUrl?: unknown;
+};
+
+type RawGlobalConfigEmailTemplate = {
+  id?: unknown;
+  slug?: unknown;
+  key?: unknown;
+  nome?: unknown;
+  name?: unknown;
+  assunto?: unknown;
+  subject?: unknown;
+  canal?: unknown;
+  channel?: unknown;
+  ativo?: unknown;
+  enabled?: unknown;
+  bodyHtml?: unknown;
+  html?: unknown;
+  variables?: unknown;
+  variaveis?: unknown;
+  updatedAt?: unknown;
+};
+
+type RawGlobalConfigResponse = {
+  emailTemplates?: unknown;
+  templates?: unknown;
+  termsOfUseHtml?: unknown;
+  termosUsoHtml?: unknown;
+  termsVersion?: unknown;
+  versaoTermos?: unknown;
+  termsUpdatedAt?: unknown;
+  termosAtualizadosEm?: unknown;
+  apiLimits?: {
+    requestsPerMinute?: unknown;
+    rpm?: unknown;
+    burstLimit?: unknown;
+    burst?: unknown;
+    webhookRequestsPerMinute?: unknown;
+    webhookRpm?: unknown;
+    adminRequestsPerMinute?: unknown;
+    adminRpm?: unknown;
+  } | null;
+  limitesApi?: {
+    requestsPerMinute?: unknown;
+    rpm?: unknown;
+    burstLimit?: unknown;
+    burst?: unknown;
+    webhookRequestsPerMinute?: unknown;
+    webhookRpm?: unknown;
+    adminRequestsPerMinute?: unknown;
+    adminRpm?: unknown;
+  } | null;
+  updatedAt?: unknown;
+  updatedBy?: unknown;
 };
 
 function cleanString(value: unknown): string | undefined {
@@ -192,6 +274,82 @@ function normalizeMatrix(response: RawMatrixResponse): FeatureFlagMatrix {
   };
 }
 
+function normalizeIntegrationHealthStatus(value: unknown): IntegrationHealthStatus {
+  const normalized = cleanString(value)?.toUpperCase();
+  if (normalized === "ONLINE" || normalized === "DEGRADED" || normalized === "OFFLINE" || normalized === "MAINTENANCE") {
+    return normalized;
+  }
+  return "DEGRADED";
+}
+
+function normalizeIntegrationStatus(input: RawIntegrationStatus): IntegrationStatus | null {
+  const integrationKey = cleanString(input.integrationKey) ?? cleanString(input.key);
+  const integrationName = cleanString(input.integrationName) ?? cleanString(input.name);
+  if (!integrationKey || !integrationName) return null;
+
+  return {
+    integrationKey: integrationKey as IntegrationStatus["integrationKey"],
+    integrationName,
+    providerLabel: cleanString(input.providerLabel) ?? cleanString(input.provider) ?? "Não informado",
+    status: normalizeIntegrationHealthStatus(input.status),
+    uptimePercent: toNumber(input.uptimePercent ?? input.uptime, 0),
+    avgLatencyMs: toNumber(input.avgLatencyMs ?? input.latencyMs, 0),
+    pendingCount: Math.max(0, toNumber(input.pendingCount ?? input.filaPendente, 0)),
+    lastCheckAt: cleanString(input.lastCheckAt) ?? cleanString(input.ultimaVerificacaoEm),
+    lastSuccessAt: cleanString(input.lastSuccessAt) ?? cleanString(input.ultimaSucessoEm),
+    lastErrorMessage: cleanString(input.lastErrorMessage) ?? cleanString(input.ultimoErro),
+    lastErrorAt: cleanString(input.lastErrorAt) ?? cleanString(input.ultimoErroEm),
+    docsHref: cleanString(input.docsHref) ?? cleanString(input.documentationUrl),
+  };
+}
+
+function normalizeEmailTemplate(input: RawGlobalConfigEmailTemplate, index: number): GlobalConfigEmailTemplate | null {
+  const slug = cleanString(input.slug) ?? cleanString(input.key);
+  const nome = cleanString(input.nome) ?? cleanString(input.name);
+  if (!slug || !nome) return null;
+
+  const variables = toArray<unknown>(input.variables ?? input.variaveis)
+    .map((item) => cleanString(item))
+    .filter((item): item is string => Boolean(item));
+
+  return {
+    id: cleanString(input.id) ?? `${slug}-${index + 1}`,
+    slug,
+    nome,
+    assunto: cleanString(input.assunto) ?? cleanString(input.subject) ?? "",
+    canal:
+      cleanString(input.canal ?? input.channel)?.toUpperCase() === "SMS"
+        ? "SMS"
+        : cleanString(input.canal ?? input.channel)?.toUpperCase() === "WHATSAPP"
+          ? "WHATSAPP"
+          : "EMAIL",
+    ativo: toBoolean(input.ativo ?? input.enabled, true),
+    bodyHtml: cleanString(input.bodyHtml) ?? cleanString(input.html) ?? "<p></p>",
+    variables,
+    updatedAt: cleanString(input.updatedAt),
+  };
+}
+
+function normalizeGlobalConfig(response: RawGlobalConfigResponse): GlobalConfig {
+  const rawApiLimits = response.apiLimits ?? response.limitesApi;
+  return {
+    emailTemplates: toArray<RawGlobalConfigEmailTemplate>(response.emailTemplates ?? response.templates)
+      .map(normalizeEmailTemplate)
+      .filter((item): item is GlobalConfigEmailTemplate => item !== null),
+    termsOfUseHtml: cleanString(response.termsOfUseHtml) ?? cleanString(response.termosUsoHtml) ?? "<p></p>",
+    termsVersion: cleanString(response.termsVersion) ?? cleanString(response.versaoTermos) ?? "v1.0",
+    termsUpdatedAt: cleanString(response.termsUpdatedAt) ?? cleanString(response.termosAtualizadosEm),
+    apiLimits: {
+      requestsPerMinute: Math.max(1, toNumber(rawApiLimits?.requestsPerMinute ?? rawApiLimits?.rpm, 120)),
+      burstLimit: Math.max(1, toNumber(rawApiLimits?.burstLimit ?? rawApiLimits?.burst, 240)),
+      webhookRequestsPerMinute: Math.max(1, toNumber(rawApiLimits?.webhookRequestsPerMinute ?? rawApiLimits?.webhookRpm, 90)),
+      adminRequestsPerMinute: Math.max(1, toNumber(rawApiLimits?.adminRequestsPerMinute ?? rawApiLimits?.adminRpm, 60)),
+    },
+    updatedAt: cleanString(response.updatedAt),
+    updatedBy: cleanString(response.updatedBy),
+  };
+}
+
 export async function getFeatureFlagsMatrixApi(): Promise<FeatureFlagMatrix> {
   const response = await apiRequest<RawMatrixResponse>({
     path: "/api/v1/admin/configuracoes/feature-flags/matrix",
@@ -217,4 +375,50 @@ export async function toggleFeatureForAcademiaApi(input: {
     },
   });
   return normalizeMatrix(response);
+}
+
+export async function getIntegrationStatusApi(): Promise<IntegrationStatus[]> {
+  const response = await apiRequest<RawIntegrationStatus[] | { items?: RawIntegrationStatus[]; integrations?: RawIntegrationStatus[] }>({
+    path: "/api/v1/admin/configuracoes/integracoes/status",
+  });
+
+  const items = Array.isArray(response) ? response : response.items ?? response.integrations ?? [];
+  return items
+    .map(normalizeIntegrationStatus)
+    .filter((item): item is IntegrationStatus => item !== null);
+}
+
+export async function getGlobalConfigApi(): Promise<GlobalConfig> {
+  const response = await apiRequest<RawGlobalConfigResponse>({
+    path: "/api/v1/admin/configuracoes/global",
+  });
+  return normalizeGlobalConfig(response);
+}
+
+export async function updateGlobalConfigApi(input: GlobalConfig): Promise<GlobalConfig> {
+  const response = await apiRequest<RawGlobalConfigResponse>({
+    path: "/api/v1/admin/configuracoes/global",
+    method: "PUT",
+    body: {
+      emailTemplates: input.emailTemplates.map((template) => ({
+        id: template.id,
+        slug: template.slug,
+        nome: template.nome,
+        assunto: template.assunto,
+        canal: template.canal,
+        ativo: template.ativo,
+        bodyHtml: template.bodyHtml,
+        variables: template.variables,
+      })),
+      termsOfUseHtml: input.termsOfUseHtml,
+      termsVersion: input.termsVersion,
+      apiLimits: {
+        requestsPerMinute: input.apiLimits.requestsPerMinute,
+        burstLimit: input.apiLimits.burstLimit,
+        webhookRequestsPerMinute: input.apiLimits.webhookRequestsPerMinute,
+        adminRequestsPerMinute: input.apiLimits.adminRequestsPerMinute,
+      },
+    },
+  });
+  return normalizeGlobalConfig(response);
 }
