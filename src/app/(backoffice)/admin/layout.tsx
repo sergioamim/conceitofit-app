@@ -26,6 +26,7 @@ const navItems = [
   { href: "/admin/configuracoes", label: "Configurações" },
   { href: "/admin/importacao-evo", label: "Importação EVO" },
   { href: "/admin/audit-log", label: "Audit Log" },
+  { href: "/admin/compliance", label: "Compliance LGPD" },
 ];
 
 function AdminShellFrame({

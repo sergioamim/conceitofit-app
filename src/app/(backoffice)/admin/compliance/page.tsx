@@ -1,25 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  AlertTriangle,
+  CheckCircle2,
   Database,
   FileWarning,
-  FileX2,
+  type LucideIcon,
   ShieldCheck,
   Trash2,
+  XCircle,
 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -28,362 +28,428 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
 import {
-  formatComplianceDateTime,
-  resolveComplianceFieldLabel,
-} from "@/lib/admin-compliance";
-import {
-  executarSolicitacaoExclusao,
-  getComplianceDashboard,
-  rejeitarSolicitacaoExclusao,
+  getComplianceDashboardApi,
+  executarSolicitacaoExclusaoApi,
+  rejeitarSolicitacaoExclusaoApi,
 } from "@/lib/api/admin-compliance";
 import type {
   ComplianceAcademiaResumo,
   ComplianceDashboard,
   SolicitacaoExclusao,
+  SolicitacaoExclusaoStatus,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
-type ComplianceActionMode = "executar" | "rejeitar";
+/* ── Helpers ──────────────────────────────────── */
 
-const numberFormatter = new Intl.NumberFormat("pt-BR");
-
-function formatCount(value: number): string {
-  return numberFormatter.format(value);
+function formatDate(ts: string | undefined): string {
+  if (!ts) return "—";
+  try {
+    return new Date(ts).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return ts;
+  }
 }
 
-function termsBadgeClassName(status: ComplianceAcademiaResumo["statusTermos"]): string {
-  if (status === "ACEITO") return "border-gym-teal/30 bg-gym-teal/10 text-gym-teal";
-  if (status === "PARCIAL") return "border-gym-warning/30 bg-gym-warning/10 text-gym-warning";
-  return "border-gym-danger/30 bg-gym-danger/10 text-gym-danger";
+function formatNumber(n: number): string {
+  return n.toLocaleString("pt-BR");
 }
 
-function actionCopy(mode: ComplianceActionMode) {
-  if (mode === "executar") {
-    return {
-      title: "Executar solicitação de exclusão",
-      description: "A solicitação sairá da fila pendente e o dashboard será atualizado após a execução.",
-      confirm: "Executar exclusão",
-    };
+const STATUS_LABELS: Record<SolicitacaoExclusaoStatus, string> = {
+  PENDENTE: "Pendente",
+  EXECUTADA: "Executada",
+  REJEITADA: "Rejeitada",
+};
+
+const STATUS_COLORS: Record<SolicitacaoExclusaoStatus, string> = {
+  PENDENTE: "bg-gym-warning/15 text-gym-warning border-gym-warning/30",
+  EXECUTADA: "bg-gym-teal/15 text-gym-teal border-gym-teal/30",
+  REJEITADA: "bg-gym-danger/15 text-gym-danger border-gym-danger/30",
+};
+
+/* ── KPI Card ─────────────────────────────────── */
+
+function KpiCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  tone = "neutral",
+}: {
+  title: string;
+  value: string;
+  description: string;
+  icon: LucideIcon;
+  tone?: "neutral" | "success" | "warning" | "danger";
+}) {
+  const toneClasses: Record<string, string> = {
+    neutral: "text-muted-foreground",
+    success: "text-gym-teal",
+    warning: "text-gym-warning",
+    danger: "text-gym-danger",
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card/60 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="mt-3 font-display text-3xl font-bold leading-none text-foreground">
+            {value}
+          </p>
+        </div>
+        <div
+          className={`rounded-full border border-border bg-secondary p-2 ${toneClasses[tone]}`}
+        >
+          <Icon className="size-4" />
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+/* ── Academias Table ──────────────────────────── */
+
+function AcademiasTable({
+  academias,
+}: {
+  academias: ComplianceAcademiaResumo[];
+}) {
+  return (
+    <div className="rounded-lg border border-border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Academia</TableHead>
+            <TableHead className="text-right">Alunos</TableHead>
+            <TableHead className="text-right">CPF</TableHead>
+            <TableHead className="text-right">Email</TableHead>
+            <TableHead className="text-right">Telefone</TableHead>
+            <TableHead className="text-right">Termos aceitos</TableHead>
+            <TableHead className="text-right">Termos pendentes</TableHead>
+            <TableHead>Última exclusão</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {academias.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={8}
+                className="py-8 text-center text-muted-foreground"
+              >
+                Nenhuma academia encontrada
+              </TableCell>
+            </TableRow>
+          ) : (
+            academias.map((a) => (
+              <TableRow key={a.academiaId}>
+                <TableCell className="font-medium">{a.academiaNome}</TableCell>
+                <TableCell className="text-right">
+                  {formatNumber(a.totalAlunos)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatNumber(a.alunosComCpf)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatNumber(a.alunosComEmail)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatNumber(a.alunosComTelefone)}
+                </TableCell>
+                <TableCell className="text-right">
+                  <span className="text-gym-teal">
+                    {formatNumber(a.termosAceitos)}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <span
+                    className={
+                      a.termosPendentes > 0
+                        ? "text-gym-warning"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    {formatNumber(a.termosPendentes)}
+                  </span>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {formatDate(a.ultimaSolicitacaoExclusao)}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+/* ── Solicitações de Exclusão ─────────────────── */
+
+function SolicitacoesExclusao({
+  solicitacoes: initialSolicitacoes,
+  onActionCompleted,
+}: {
+  solicitacoes: SolicitacaoExclusao[];
+  onActionCompleted: () => void;
+}) {
+  const [filter, setFilter] = useState<string>("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const filtered = filter
+    ? initialSolicitacoes.filter((s) => s.status === filter)
+    : initialSolicitacoes;
+
+  async function handleExecutar(id: string) {
+    if (!confirm("Confirma a execução desta solicitação de exclusão de dados?"))
+      return;
+    setActionLoading(id);
+    setActionError(null);
+    try {
+      await executarSolicitacaoExclusaoApi(id);
+      onActionCompleted();
+    } catch (err) {
+      setActionError(normalizeErrorMessage(err));
+    } finally {
+      setActionLoading(null);
+    }
   }
 
-  return {
-    title: "Rejeitar solicitação de exclusão",
-    description: "A solicitação será removida da fila pendente e ficará fora do backlog de compliance.",
-    confirm: "Rejeitar solicitação",
-  };
+  async function handleRejeitar(id: string) {
+    const motivo = prompt("Motivo da rejeição:");
+    if (!motivo) return;
+    setActionLoading(id);
+    setActionError(null);
+    try {
+      await rejeitarSolicitacaoExclusaoApi(id, motivo);
+      onActionCompleted();
+    } catch (err) {
+      setActionError(normalizeErrorMessage(err));
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold font-display">
+          Solicitações de Exclusão
+        </h2>
+        <div className="w-44">
+          <Select
+            value={filter}
+            onValueChange={(v) => setFilter(v === "__all__" ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Todos os status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todos</SelectItem>
+              {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                <SelectItem key={key} value={key}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {actionError && (
+        <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {actionError}
+        </div>
+      )}
+
+      <div className="rounded-lg border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Solicitante</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Academia</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Motivo</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="py-8 text-center text-muted-foreground"
+                >
+                  Nenhuma solicitação encontrada
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium">
+                    {s.solicitanteNome}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {s.solicitanteEmail}
+                  </TableCell>
+                  <TableCell className="text-sm">{s.academiaNome}</TableCell>
+                  <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                    {formatDate(s.dataSolicitacao)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={STATUS_COLORS[s.status] ?? ""}
+                    >
+                      {STATUS_LABELS[s.status] ?? s.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                    {s.motivo ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {s.status === "PENDENTE" && (
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={actionLoading === s.id}
+                          onClick={() => handleExecutar(s.id)}
+                          className="text-gym-teal hover:text-gym-teal"
+                        >
+                          <CheckCircle2 className="mr-1 size-3.5" />
+                          Executar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={actionLoading === s.id}
+                          onClick={() => handleRejeitar(s.id)}
+                          className="text-gym-danger hover:text-gym-danger"
+                        >
+                          <XCircle className="mr-1 size-3.5" />
+                          Rejeitar
+                        </Button>
+                      </div>
+                    )}
+                    {s.status !== "PENDENTE" && (
+                      <span className="text-xs text-muted-foreground">
+                        {s.responsavelNome ?? "—"}
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
 }
 
-export default function AdminCompliancePage() {
-  const { toast } = useToast();
+/* ── Page ─────────────────────────────────────── */
+
+export default function CompliancePage() {
   const [dashboard, setDashboard] = useState<ComplianceDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-  const [actionState, setActionState] = useState<{
-    mode: ComplianceActionMode;
-    request: SolicitacaoExclusao;
-  } | null>(null);
 
-  const loadDashboard = useCallback(async () => {
+  function loadDashboard() {
     setLoading(true);
-    try {
-      setError(null);
-      const nextDashboard = await getComplianceDashboard();
-      setDashboard(nextDashboard);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
-
-  const academias = dashboard?.academias ?? [];
-  const solicitacoesPendentes = dashboard?.solicitacoesPendentes ?? [];
-  const exposicaoCampos = dashboard?.exposicaoCamposSensiveis ?? [];
-
-  const termosCobertura = useMemo(() => {
-    const total = (dashboard?.termosAceitos ?? 0) + (dashboard?.termosPendentes ?? 0);
-    if (total <= 0) return 0;
-    return Math.round(((dashboard?.termosAceitos ?? 0) / total) * 100);
-  }, [dashboard?.termosAceitos, dashboard?.termosPendentes]);
-
-  const academiasComPendencia = useMemo(
-    () => (dashboard?.academias ?? []).filter((item) => item.statusTermos !== "ACEITO").length,
-    [dashboard?.academias]
-  );
-
-  async function handleConfirmAction() {
-    if (!actionState) return;
-
-    setActionLoadingId(actionState.request.id);
-    try {
-      if (actionState.mode === "executar") {
-        await executarSolicitacaoExclusao(actionState.request.id);
-      } else {
-        await rejeitarSolicitacaoExclusao(actionState.request.id);
-      }
-
-      toast({
-        title: actionState.mode === "executar" ? "Solicitação executada" : "Solicitação rejeitada",
-        description: `${actionState.request.alunoNome} (${actionState.request.academiaNome})`,
-      });
-      setActionState(null);
-      await loadDashboard();
-    } catch (actionError) {
-      toast({
-        title: "Não foi possível processar a solicitação",
-        description: normalizeErrorMessage(actionError),
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoadingId(null);
-    }
+    setError(null);
+    getComplianceDashboardApi()
+      .then(setDashboard)
+      .catch((err) => setError(normalizeErrorMessage(err)))
+      .finally(() => setLoading(false));
   }
 
-  const currentDialogCopy = actionState ? actionCopy(actionState.mode) : null;
+  useEffect(() => {
+    loadDashboard();
+  }, []);
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="space-y-2">
-        <p className="text-sm font-medium text-gym-accent">Compliance</p>
-        <h1 className="text-3xl font-display font-bold leading-tight">LGPD e dados pessoais</h1>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          Consolida exposição de dados sensíveis por academia, adesão aos termos e fila operacional de exclusões.
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold font-display">Compliance LGPD</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Visão geral de dados pessoais, termos de consentimento e solicitações
+          de exclusão.
         </p>
-      </header>
+      </div>
 
-      {error ? (
-        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+      {error && (
+        <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
           {error}
         </div>
-      ) : null}
+      )}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Dados pessoais</CardTitle>
-            <Database className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-display font-bold">{loading ? "…" : formatCount(dashboard?.totalDadosPessoaisArmazenados ?? 0)}</p>
-            <p className="text-sm text-muted-foreground">Estimativa combinada de CPF, e-mail e telefone armazenados.</p>
-          </CardContent>
-        </Card>
+      {loading && !dashboard && (
+        <div className="rounded-lg border border-border bg-card/60 px-4 py-8 text-center text-sm text-muted-foreground">
+          Carregando dados de compliance...
+        </div>
+      )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Exclusões pendentes</CardTitle>
-            <FileX2 className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-display font-bold">{loading ? "…" : formatCount(dashboard?.solicitacoesExclusaoPendentes ?? 0)}</p>
-            <p className="text-sm text-muted-foreground">Backlog global de pedidos aguardando decisão operacional.</p>
-          </CardContent>
-        </Card>
+      {dashboard && (
+        <>
+          {/* KPI Cards */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard
+              title="Dados Pessoais"
+              value={formatNumber(dashboard.totalDadosPessoais)}
+              description="Total estimado de registros com dados pessoais"
+              icon={Database}
+            />
+            <KpiCard
+              title="Exclusões Pendentes"
+              value={formatNumber(dashboard.solicitacoesExclusaoPendentes)}
+              description="Solicitações aguardando processamento"
+              icon={dashboard.solicitacoesExclusaoPendentes > 0 ? AlertTriangle : Trash2}
+              tone={dashboard.solicitacoesExclusaoPendentes > 0 ? "warning" : "neutral"}
+            />
+            <KpiCard
+              title="Termos Aceitos"
+              value={formatNumber(dashboard.termosAceitos)}
+              description="Consentimentos registrados"
+              icon={ShieldCheck}
+              tone="success"
+            />
+            <KpiCard
+              title="Termos Pendentes"
+              value={formatNumber(dashboard.termosPendentes)}
+              description="Aguardando aceite do titular"
+              icon={FileWarning}
+              tone={dashboard.termosPendentes > 0 ? "danger" : "neutral"}
+            />
+          </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Termos aceitos</CardTitle>
-            <ShieldCheck className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-display font-bold">{loading ? "…" : formatCount(dashboard?.termosAceitos ?? 0)}</p>
-            <p className="text-sm text-muted-foreground">
-              {loading ? "…" : `${termosCobertura}% de cobertura no recorte agregado da rede.`}
+          {/* Exposição por Academia */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-bold font-display">
+              Exposição de Dados por Academia
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Campos sensíveis coletados e status de termos por academia.
             </p>
-          </CardContent>
-        </Card>
+            <AcademiasTable academias={dashboard.academias} />
+          </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Academias com pendência</CardTitle>
-            <FileWarning className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-display font-bold">{loading ? "…" : formatCount(academiasComPendencia)}</p>
-            <p className="text-sm text-muted-foreground">Redes com aceite parcial ou pendente de termos.</p>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Visão por academia</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <p className="text-sm text-muted-foreground">Carregando consolidado de compliance...</p>
-            ) : academias.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma academia retornada pelo endpoint de compliance.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Academia</TableHead>
-                    <TableHead className="text-right">Alunos</TableHead>
-                    <TableHead className="text-right">CPF</TableHead>
-                    <TableHead className="text-right">E-mail</TableHead>
-                    <TableHead className="text-right">Telefone</TableHead>
-                    <TableHead>Última exclusão</TableHead>
-                    <TableHead>Termos</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {academias.map((academia) => (
-                    <TableRow key={academia.academiaId ?? academia.academiaNome}>
-                      <TableCell className="font-medium">{academia.academiaNome}</TableCell>
-                      <TableCell className="text-right">{formatCount(academia.totalAlunos)}</TableCell>
-                      <TableCell className="text-right">{formatCount(academia.alunosComCpf)}</TableCell>
-                      <TableCell className="text-right">{formatCount(academia.alunosComEmail)}</TableCell>
-                      <TableCell className="text-right">{formatCount(academia.alunosComTelefone)}</TableCell>
-                      <TableCell>{formatComplianceDateTime(academia.ultimaSolicitacaoExclusao)}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${termsBadgeClassName(academia.statusTermos)}`}>
-                            {academia.statusTermos === "ACEITO"
-                              ? "Aceito"
-                              : academia.statusTermos === "PARCIAL"
-                                ? "Parcial"
-                                : "Pendente"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatCount(academia.termosAceitos)} aceitos / {formatCount(academia.termosPendentes)} pendentes
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Relatório de exposição</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <p className="text-sm text-muted-foreground">Mapeando campos sensíveis coletados...</p>
-            ) : exposicaoCampos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sem campos sensíveis catalogados no momento.</p>
-            ) : (
-              exposicaoCampos.map((campo) => (
-                <div key={campo.key} className="rounded-xl border border-border/70 bg-card/60 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-medium text-foreground">{resolveComplianceFieldLabel(campo.label)}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Coletado por {formatCount(campo.totalAcademias)} academia(s).
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-border/70 px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
-                      {formatCount(campo.totalAcademias)}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {campo.academias.map((academiaNome) => (
-                      <span
-                        key={`${campo.key}-${academiaNome}`}
-                        className="rounded-full border border-border/70 bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
-                      >
-                        {academiaNome}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Solicitações pendentes de exclusão</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Carregando fila de exclusões...</p>
-          ) : solicitacoesPendentes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Não há solicitações pendentes para ação imediata.</p>
-          ) : (
-            solicitacoesPendentes.map((solicitacao) => (
-              <div
-                key={solicitacao.id}
-                className="flex flex-col gap-4 rounded-xl border border-border/70 bg-card/60 p-4 lg:flex-row lg:items-center lg:justify-between"
-              >
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-foreground">{solicitacao.alunoNome}</p>
-                    <span className="rounded-full border border-gym-warning/30 bg-gym-warning/10 px-2.5 py-0.5 text-[11px] font-semibold text-gym-warning">
-                      {solicitacao.status === "EM_PROCESSAMENTO" ? "Em processamento" : "Pendente"}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{solicitacao.academiaNome}</p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span>Solicitado em {formatComplianceDateTime(solicitacao.solicitadoEm)}</span>
-                    {solicitacao.solicitadoPor ? <span>Responsável: {solicitacao.solicitadoPor}</span> : null}
-                    {solicitacao.email ? <span>E-mail: {solicitacao.email}</span> : null}
-                    {solicitacao.cpf ? <span>CPF: {solicitacao.cpf}</span> : null}
-                  </div>
-                  {solicitacao.motivo ? (
-                    <p className="text-sm text-muted-foreground">{solicitacao.motivo}</p>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => setActionState({ mode: "executar", request: solicitacao })}
-                    disabled={actionLoadingId === solicitacao.id}
-                  >
-                    <Trash2 className="size-4" />
-                    Executar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setActionState({ mode: "rejeitar", request: solicitacao })}
-                    disabled={actionLoadingId === solicitacao.id}
-                  >
-                    Rejeitar
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      <AlertDialog open={Boolean(actionState)} onOpenChange={(open) => (!open ? setActionState(null) : null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{currentDialogCopy?.title}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {currentDialogCopy?.description}
-              {actionState ? ` Aluno: ${actionState.request.alunoNome}.` : ""}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={Boolean(actionLoadingId)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmAction}
-              disabled={Boolean(actionLoadingId)}
-            >
-              {actionLoadingId ? "Processando..." : currentDialogCopy?.confirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          {/* Solicitações de Exclusão */}
+          <SolicitacoesExclusao
+            solicitacoes={dashboard.solicitacoes}
+            onActionCompleted={loadDashboard}
+          />
+        </>
+      )}
     </div>
   );
 }
