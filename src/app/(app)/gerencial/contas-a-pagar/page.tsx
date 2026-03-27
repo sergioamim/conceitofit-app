@@ -18,25 +18,15 @@ import type {
   CategoriaContaPagar,
   ContaPagar,
   FormaPagamento,
-  GrupoDre,
   RegraRecorrenciaContaPagar,
   StatusContaPagar,
   TipoContaPagar,
-  TipoFormaPagamento,
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -45,6 +35,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ListErrorState } from "@/components/shared/list-states";
+import { NovaContaPagarModal, type NovaContaPagarSubmitData } from "@/components/shared/nova-conta-pagar-modal";
+import { EditarContaPagarModal, buildEdicaoFormFromConta, type EdicaoContaFormState } from "@/components/shared/editar-conta-pagar-modal";
+import { PagarContaModal, type PagamentoFormState } from "@/components/shared/pagar-conta-modal";
 
 type StatusFiltro = "TODOS" | "EM_ABERTO" | StatusContaPagar;
 type CategoriaFiltro = "TODAS" | CategoriaContaPagar;
@@ -60,22 +53,6 @@ const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   MANUTENCAO: "Manutenção",
   FORNECEDORES: "Fornecedores",
   OUTROS: "Outros",
-};
-
-const GRUPO_DRE_LABEL: Record<GrupoDre, string> = {
-  CUSTO_VARIAVEL: "Custo variável",
-  DESPESA_OPERACIONAL: "Despesa operacional",
-  DESPESA_FINANCEIRA: "Despesa financeira",
-  IMPOSTOS: "Impostos",
-};
-
-const FORMA_PAGAMENTO_LABEL: Record<TipoFormaPagamento, string> = {
-  DINHEIRO: "Dinheiro",
-  PIX: "PIX",
-  CARTAO_CREDITO: "Cartão de crédito",
-  CARTAO_DEBITO: "Cartão de débito",
-  BOLETO: "Boleto",
-  RECORRENTE: "Recorrente",
 };
 
 function formatBRL(value: number) {
@@ -105,39 +82,6 @@ function contaTotal(conta: ContaPagar) {
   );
 }
 
-const NOVA_CONTA_DEFAULT = {
-  tipoContaId: "",
-  fornecedor: "",
-  documentoFornecedor: "",
-  descricao: "",
-  categoria: "OUTROS" as CategoriaContaPagar,
-  grupoDre: "DESPESA_OPERACIONAL" as GrupoDre,
-  centroCusto: "",
-  regime: "AVULSA" as ContaPagar["regime"],
-  competencia: "",
-  dataEmissao: "",
-  dataVencimento: "",
-  valorOriginal: "",
-  desconto: "0",
-  jurosMulta: "0",
-  observacoes: "",
-  recorrente: false,
-  recorrenciaTipo: "MENSAL" as "MENSAL" | "INTERVALO_DIAS",
-  recorrenciaIntervaloDias: "30",
-  recorrenciaDiaDoMes: "",
-  recorrenciaDataInicial: "",
-  recorrenciaTermino: "SEM_FIM" as "SEM_FIM" | "EM_DATA" | "APOS_OCORRENCIAS",
-  recorrenciaDataFim: "",
-  recorrenciaNumeroOcorrencias: "12",
-  criarLancamentoInicialAgora: true,
-};
-
-const NOVO_PAGAMENTO_CONTA_DEFAULT = {
-  dataPagamento: todayISO(),
-  formaPagamento: "PIX" as TipoFormaPagamento,
-  valorPago: "",
-  observacoes: "",
-};
 
 export default function ContasPagarPage() {
   const tenantContext = useTenantContext();
@@ -162,72 +106,11 @@ export default function ContasPagarPage() {
   const [openPagarConta, setOpenPagarConta] = useState(false);
   const [selectedConta, setSelectedConta] = useState<ContaPagar | null>(null);
   const [contaEditandoId, setContaEditandoId] = useState<string | null>(null);
-
-  const [novaConta, setNovaConta] = useState({
-    ...NOVA_CONTA_DEFAULT,
-    competencia: range.start,
-    dataVencimento: range.end,
-    recorrenciaDataInicial: range.end,
-  });
-  const [pagamento, setPagamento] = useState({
-    dataPagamento: todayISO(),
-    formaPagamento: "PIX" as TipoFormaPagamento,
-    valorPago: "",
-    observacoes: "",
-  });
-  const [registrarComoPagaNoCadastro, setRegistrarComoPagaNoCadastro] = useState(false);
-  const [pagamentoNoCadastro, setPagamentoNoCadastro] = useState(NOVO_PAGAMENTO_CONTA_DEFAULT);
-  const [edicaoConta, setEdicaoConta] = useState({
-    tipoContaId: "",
-    fornecedor: "",
-    documentoFornecedor: "",
-    descricao: "",
-    categoria: "OUTROS" as CategoriaContaPagar,
-    grupoDre: "DESPESA_OPERACIONAL" as GrupoDre,
-    centroCusto: "",
-    regime: "AVULSA" as ContaPagar["regime"],
-    competencia: "",
-    dataEmissao: "",
-    dataVencimento: "",
-    valorOriginal: "",
-    desconto: "0",
-    jurosMulta: "0",
-    observacoes: "",
-    recorrente: false,
-    recorrenciaTipo: "MENSAL" as "MENSAL" | "INTERVALO_DIAS",
-    recorrenciaIntervaloDias: "30",
-    recorrenciaDiaDoMes: "",
-    recorrenciaDataInicial: "",
-    recorrenciaTermino: "SEM_FIM" as "SEM_FIM" | "EM_DATA" | "APOS_OCORRENCIAS",
-    recorrenciaDataFim: "",
-    recorrenciaNumeroOcorrencias: "12",
-    criarLancamentoInicialAgora: false,
-  });
+  const [edicaoContaForm, setEdicaoContaForm] = useState<EdicaoContaFormState | null>(null);
 
   const tipoContaMap = useMemo(() => {
     return new Map(tiposConta.map((item) => [item.id, item]));
   }, [tiposConta]);
-
-  function resetNovaConta() {
-    setNovaConta({
-      ...NOVA_CONTA_DEFAULT,
-      competencia: range.start,
-      dataVencimento: range.end,
-      recorrenciaDataInicial: range.end,
-    });
-    setRegistrarComoPagaNoCadastro(false);
-    setPagamentoNoCadastro(NOVO_PAGAMENTO_CONTA_DEFAULT);
-  }
-
-  function abrirNovaContaModal() {
-    resetNovaConta();
-    setOpenNovaConta(true);
-  }
-
-  function fecharNovaContaModal() {
-    resetNovaConta();
-    setOpenNovaConta(false);
-  }
 
   const load = useCallback(async () => {
     if (!tenantContext.tenantId) return;
@@ -325,64 +208,15 @@ export default function ContasPagarPage() {
     };
   }, [regrasRecorrencia]);
 
-  function applyTipoConta(tipoId: string) {
-    const tipo = tiposConta.find((item) => item.id === tipoId);
-    setNovaConta((prev) => ({
-      ...prev,
-      tipoContaId: tipoId,
-      categoria: tipo?.categoriaOperacional ?? prev.categoria,
-      grupoDre: tipo?.grupoDre ?? prev.grupoDre,
-      centroCusto: prev.centroCusto || tipo?.centroCustoPadrao || "",
-    }));
-  }
-
   function abrirModalEdicao(conta: ContaPagar) {
     setContaEditandoId(conta.id);
-    const regra = conta.regraRecorrenciaId
-      ? regrasRecorrencia.find((r) => r.id === conta.regraRecorrenciaId)
-      : undefined;
-    setEdicaoConta({
-      tipoContaId: conta.tipoContaId ?? "",
-      fornecedor: conta.fornecedor,
-      documentoFornecedor: conta.documentoFornecedor ?? "",
-      descricao: conta.descricao,
-      categoria: conta.categoria,
-      grupoDre: conta.grupoDre ?? "DESPESA_OPERACIONAL",
-      centroCusto: conta.centroCusto ?? "",
-      regime: conta.regime,
-      competencia: conta.competencia,
-      dataEmissao: conta.dataEmissao ?? "",
-      dataVencimento: conta.dataVencimento,
-      valorOriginal: String(conta.valorOriginal ?? 0),
-      desconto: String(conta.desconto ?? 0),
-      jurosMulta: String(conta.jurosMulta ?? 0),
-      observacoes: conta.observacoes ?? "",
-      recorrente: !!regra,
-      recorrenciaTipo: regra?.recorrencia ?? "MENSAL",
-      recorrenciaIntervaloDias: String(regra?.intervaloDias ?? 30),
-      recorrenciaDiaDoMes: String(regra?.diaDoMes ?? conta.dataVencimento.split("-")[2] ?? ""),
-      recorrenciaDataInicial: regra?.dataInicial ?? conta.dataVencimento,
-      recorrenciaTermino: regra?.termino ?? "SEM_FIM",
-      recorrenciaDataFim: regra?.dataFim ?? "",
-      recorrenciaNumeroOcorrencias: String(regra?.numeroOcorrencias ?? 12),
-      criarLancamentoInicialAgora: false,
-    });
+    setEdicaoContaForm(buildEdicaoFormFromConta(conta, regrasRecorrencia));
     setOpenEditarConta(true);
   }
 
-  function applyTipoContaEdicao(tipoId: string) {
-    const tipo = tiposConta.find((item) => item.id === tipoId);
-    setEdicaoConta((prev) => ({
-      ...prev,
-      tipoContaId: tipoId,
-      categoria: tipo?.categoriaOperacional ?? prev.categoria,
-      grupoDre: tipo?.grupoDre ?? prev.grupoDre,
-      centroCusto: prev.centroCusto || tipo?.centroCustoPadrao || "",
-    }));
-  }
-
-  async function handleCriarConta() {
+  async function handleCriarConta(data: NovaContaPagarSubmitData) {
     if (!tenantContext.tenantId) return;
+    const { form: novaConta, registrarComoPaga, pagamento: pagamentoNoCadastro } = data;
     if (
       !novaConta.tipoContaId ||
       !novaConta.fornecedor.trim() ||
@@ -418,6 +252,10 @@ export default function ContasPagarPage() {
     }
 
     const diaPadraoVencimento = Number(novaConta.dataVencimento.split("-")[2] || 1);
+    const valorContaLiquida = Math.max(
+      0,
+      Number(novaConta.valorOriginal || 0) - Number(novaConta.desconto || 0) + Number(novaConta.jurosMulta || 0)
+    );
     try {
       setError(null);
       const criada = await createContaPagarApi({
@@ -465,7 +303,7 @@ export default function ContasPagarPage() {
         },
       });
 
-      if (registrarComoPagaNoCadastro) {
+      if (registrarComoPaga) {
         if (!criada) {
           throw new Error("Não foi possível marcar como paga porque o lançamento inicial não foi criado.");
         }
@@ -488,17 +326,17 @@ export default function ContasPagarPage() {
       return;
     }
 
-    fecharNovaContaModal();
+    setOpenNovaConta(false);
     await load();
   }
 
-  async function handlePagarConta() {
-    if (!tenantContext.tenantId || !selectedConta || !pagamento.dataPagamento) return;
+  async function handlePagarConta(contaId: string, pagamento: PagamentoFormState) {
+    if (!tenantContext.tenantId || !pagamento.dataPagamento) return;
     try {
       setError(null);
       await pagarContaPagarApi({
         tenantId: tenantContext.tenantId,
-        id: selectedConta.id,
+        id: contaId,
         data: {
           dataPagamento: pagamento.dataPagamento,
           formaPagamento: pagamento.formaPagamento,
@@ -514,10 +352,9 @@ export default function ContasPagarPage() {
     }
   }
 
-  async function handleSalvarEdicaoConta() {
+  async function handleSalvarEdicaoConta(id: string, edicaoConta: EdicaoContaFormState) {
     if (!tenantContext.tenantId) return;
     if (
-      !contaEditandoId ||
       !edicaoConta.tipoContaId ||
       !edicaoConta.fornecedor.trim() ||
       !edicaoConta.descricao.trim() ||
@@ -550,14 +387,14 @@ export default function ContasPagarPage() {
       }
     }
 
-    const contaEditando = contas.find((c) => c.id === contaEditandoId);
+    const contaEditando = contas.find((c) => c.id === id);
     const jaTemRegra = !!contaEditando?.regraRecorrenciaId;
 
     try {
       setError(null);
       await updateContaPagarApi({
         tenantId: tenantContext.tenantId,
-        id: contaEditandoId,
+        id,
         data: {
           tipoContaId: edicaoConta.tipoContaId,
           fornecedor: edicaoConta.fornecedor.trim(),
@@ -655,13 +492,6 @@ export default function ContasPagarPage() {
       return true;
     });
   }, [formasPagamento]);
-  const diaVencimentoSugestao = Number(novaConta.dataVencimento.split("-")[2] || 1);
-  const valorContaLiquida = useMemo(() => {
-    return Math.max(
-      0,
-      Number(novaConta.valorOriginal || 0) - Number(novaConta.desconto || 0) + Number(novaConta.jurosMulta || 0)
-    );
-  }, [novaConta.desconto, novaConta.jurosMulta, novaConta.valorOriginal]);
 
   return (
     <div className="space-y-6">
@@ -669,967 +499,37 @@ export default function ContasPagarPage() {
         <ListErrorState error={error} onRetry={() => void load()} />
       ) : null}
 
-      <Dialog
+      <NovaContaPagarModal
         open={openNovaConta}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) {
-            fecharNovaContaModal();
-            return;
-          }
-          setOpenNovaConta(true);
-        }}
-      >
-        <DialogContent className="max-h-[85vh] overflow-y-auto bg-card border-border sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">Nova conta a pagar</DialogTitle>
-            <DialogDescription>
-              Cadastre compromissos financeiros da unidade com classificação obrigatória para DRE.
-            </DialogDescription>
-          </DialogHeader>
+        onOpenChange={setOpenNovaConta}
+        tiposAtivos={tiposAtivos}
+        tiposConta={tiposConta}
+        formasPagamentoUnicas={formasPagamentoUnicas}
+        defaultCompetencia={range.start}
+        defaultDataVencimento={range.end}
+        todayISO={todayISO()}
+        onSubmit={handleCriarConta}
+      />
+      <PagarContaModal
+        open={openPagarConta}
+        onOpenChange={setOpenPagarConta}
+        conta={selectedConta}
+        formasPagamento={formasPagamento}
+        todayISO={todayISO()}
+        onSubmit={handlePagarConta}
+      />
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Tipo de conta
-              </label>
-              <Select value={novaConta.tipoContaId} onValueChange={applyTipoConta}>
-                <SelectTrigger className="w-full bg-secondary border-border">
-                  <SelectValue placeholder="Selecione o tipo *" />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  {tiposAtivos.map((tipo) => (
-                    <SelectItem key={tipo.id} value={tipo.id}>
-                      {tipo.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Fornecedor
-              </label>
-              <Input
-                value={novaConta.fornecedor}
-                onChange={(e) => setNovaConta((v) => ({ ...v, fornecedor: e.target.value }))}
-                placeholder="Nome do fornecedor *"
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Documento do fornecedor
-              </label>
-              <Input
-                value={novaConta.documentoFornecedor}
-                onChange={(e) =>
-                  setNovaConta((v) => ({ ...v, documentoFornecedor: e.target.value }))
-                }
-                placeholder="CPF/CNPJ"
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Descrição
-              </label>
-              <Input
-                value={novaConta.descricao}
-                onChange={(e) => setNovaConta((v) => ({ ...v, descricao: e.target.value }))}
-                placeholder="Descrição da conta *"
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Categoria operacional (herdada do tipo)
-              </label>
-              <Input
-                readOnly
-                value={CATEGORIA_LABEL[novaConta.categoria]}
-                className="bg-secondary border-border text-muted-foreground"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Grupo DRE (somente leitura)
-              </label>
-              <Input
-                readOnly
-                value={GRUPO_DRE_LABEL[novaConta.grupoDre]}
-                className="bg-secondary border-border text-muted-foreground"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Centro de custo
-              </label>
-              <Input
-                value={novaConta.centroCusto}
-                onChange={(e) => setNovaConta((v) => ({ ...v, centroCusto: e.target.value }))}
-                placeholder="Opcional"
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Regime
-              </label>
-              <Select
-                value={novaConta.regime}
-                onValueChange={(value) =>
-                  setNovaConta((f) => ({ ...f, regime: value as ContaPagar["regime"] }))
-                }
-              >
-                <SelectTrigger className="w-full bg-secondary border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  <SelectItem value="AVULSA">Avulsa</SelectItem>
-                  <SelectItem value="FIXA">Fixa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Competência
-              </label>
-              <Input
-                type="date"
-                value={novaConta.competencia}
-                onChange={(e) => setNovaConta((v) => ({ ...v, competencia: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Data de emissão
-              </label>
-              <Input
-                type="date"
-                value={novaConta.dataEmissao}
-                onChange={(e) => setNovaConta((v) => ({ ...v, dataEmissao: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Data de vencimento
-              </label>
-              <Input
-                type="date"
-                value={novaConta.dataVencimento}
-                onChange={(e) =>
-                  setNovaConta((v) => ({
-                    ...v,
-                    dataVencimento: e.target.value,
-                    recorrenciaDiaDoMes: v.recorrenciaDiaDoMes || e.target.value.split("-")[2] || "",
-                  }))
-                }
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Valor original
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={novaConta.valorOriginal}
-                onChange={(e) => setNovaConta((v) => ({ ...v, valorOriginal: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Desconto
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={novaConta.desconto}
-                onChange={(e) => setNovaConta((v) => ({ ...v, desconto: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Juros / Multa
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={novaConta.jurosMulta}
-                onChange={(e) => setNovaConta((v) => ({ ...v, jurosMulta: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Observações
-              </label>
-              <textarea
-                value={novaConta.observacoes}
-                onChange={(e) => setNovaConta((v) => ({ ...v, observacoes: e.target.value }))}
-                className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-border bg-secondary/30 p-4">
-            <label className="inline-flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={novaConta.recorrente}
-                onChange={(e) =>
-                  setNovaConta((v) => ({
-                    ...v,
-                    recorrente: e.target.checked,
-                    regime: e.target.checked ? "FIXA" : v.regime,
-                    recorrenciaDiaDoMes:
-                      v.recorrenciaDiaDoMes || String(diaVencimentoSugestao),
-                    recorrenciaDataInicial: v.recorrenciaDataInicial || v.dataVencimento,
-                  }))
-                }
-              />
-              Conta recorrente
-            </label>
-
-            {novaConta.recorrente && (
-              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Tipo de recorrência
-                  </label>
-                  <Select
-                    value={novaConta.recorrenciaTipo}
-                    onValueChange={(value) =>
-                      setNovaConta((v) => ({
-                        ...v,
-                        recorrenciaTipo: value as "MENSAL" | "INTERVALO_DIAS",
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-full bg-secondary border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      <SelectItem value="MENSAL">Mensal</SelectItem>
-                      <SelectItem value="INTERVALO_DIAS">A cada X dias</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {novaConta.recorrenciaTipo === "INTERVALO_DIAS" && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      A cada X dias
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={novaConta.recorrenciaIntervaloDias}
-                      onChange={(e) =>
-                        setNovaConta((v) => ({
-                          ...v,
-                          recorrenciaIntervaloDias: e.target.value,
-                        }))
-                      }
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                )}
-
-                {novaConta.recorrenciaTipo === "MENSAL" && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Dia do mês
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={31}
-                      value={novaConta.recorrenciaDiaDoMes || String(diaVencimentoSugestao)}
-                      onChange={(e) =>
-                        setNovaConta((v) => ({
-                          ...v,
-                          recorrenciaDiaDoMes: e.target.value,
-                        }))
-                      }
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Data inicial (âncora)
-                  </label>
-                  <Input
-                    type="date"
-                    value={novaConta.recorrenciaDataInicial}
-                    onChange={(e) =>
-                      setNovaConta((v) => ({
-                        ...v,
-                        recorrenciaDataInicial: e.target.value,
-                      }))
-                    }
-                    className="bg-secondary border-border"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Término da recorrência
-                  </label>
-                  <Select
-                    value={novaConta.recorrenciaTermino}
-                    onValueChange={(value) =>
-                      setNovaConta((v) => ({
-                        ...v,
-                        recorrenciaTermino: value as "SEM_FIM" | "EM_DATA" | "APOS_OCORRENCIAS",
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-full bg-secondary border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      <SelectItem value="SEM_FIM">Sem fim</SelectItem>
-                      <SelectItem value="EM_DATA">Em data</SelectItem>
-                      <SelectItem value="APOS_OCORRENCIAS">Após N ocorrências</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {novaConta.recorrenciaTermino === "EM_DATA" && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Data fim
-                    </label>
-                    <Input
-                      type="date"
-                      value={novaConta.recorrenciaDataFim}
-                      onChange={(e) =>
-                        setNovaConta((v) => ({
-                          ...v,
-                          recorrenciaDataFim: e.target.value,
-                        }))
-                      }
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                )}
-
-                {novaConta.recorrenciaTermino === "APOS_OCORRENCIAS" && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Qtd. ocorrências
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={novaConta.recorrenciaNumeroOcorrencias}
-                      onChange={(e) =>
-                        setNovaConta((v) => ({
-                          ...v,
-                          recorrenciaNumeroOcorrencias: e.target.value,
-                        }))
-                      }
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                )}
-
-                <label className="inline-flex items-center gap-2 text-sm md:col-span-2">
-                  <input
-                    type="checkbox"
-                    checked={novaConta.criarLancamentoInicialAgora}
-                    onChange={(e) =>
-                      setNovaConta((v) => ({
-                        ...v,
-                        criarLancamentoInicialAgora: e.target.checked,
-                      }))
-                    }
-                  />
-                  Criar lançamento inicial agora
-                </label>
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-lg border border-border bg-secondary/30 p-4">
-            <label className="inline-flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={registrarComoPagaNoCadastro}
-                onChange={(e) =>
-                  setRegistrarComoPagaNoCadastro(e.target.checked)
-                }
-              />
-              Registrar como paga no cadastro
-            </label>
-
-            {registrarComoPagaNoCadastro && (
-              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Data de pagamento
-                  </label>
-                  <Input
-                    type="date"
-                    value={pagamentoNoCadastro.dataPagamento}
-                    onChange={(e) =>
-                      setPagamentoNoCadastro((p) => ({
-                        ...p,
-                        dataPagamento: e.target.value,
-                      }))
-                    }
-                    className="bg-secondary border-border"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Forma de pagamento
-                  </label>
-                  <Select
-                    value={pagamentoNoCadastro.formaPagamento}
-                    onValueChange={(value) =>
-                      setPagamentoNoCadastro((p) => ({ ...p, formaPagamento: value as TipoFormaPagamento }))
-                    }
-                  >
-                    <SelectTrigger className="w-full bg-secondary border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      {formasPagamentoUnicas.map((forma) => (
-                        <SelectItem key={forma.id} value={forma.tipo}>
-                          {FORMA_PAGAMENTO_LABEL[forma.tipo] ?? forma.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Valor pago
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder={`Padrão: ${formatBRL(valorContaLiquida)}`}
-                    value={pagamentoNoCadastro.valorPago}
-                    onChange={(e) =>
-                      setPagamentoNoCadastro((p) => ({ ...p, valorPago: e.target.value }))
-                    }
-                    className="bg-secondary border-border"
-                  />
-                </div>
-
-                <div className="space-y-1 md:col-span-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Observações
-                  </label>
-                  <textarea
-                    value={pagamentoNoCadastro.observacoes}
-                    onChange={(e) =>
-                      setPagamentoNoCadastro((p) => ({ ...p, observacoes: e.target.value }))
-                    }
-                    className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="border-border"
-              onClick={fecharNovaContaModal}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleCriarConta}>Salvar conta</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={openPagarConta} onOpenChange={setOpenPagarConta}>
-        <DialogContent className="bg-card border-border sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">Baixar conta</DialogTitle>
-            <DialogDescription>
-              Registrar pagamento para {selectedConta?.fornecedor ?? "fornecedor"}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Data de pagamento
-              </label>
-              <Input
-                type="date"
-                value={pagamento.dataPagamento}
-                onChange={(e) =>
-                  setPagamento((v) => ({ ...v, dataPagamento: e.target.value }))
-                }
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Forma de pagamento
-              </label>
-              <Select
-                value={pagamento.formaPagamento}
-                onValueChange={(value) =>
-                  setPagamento((f) => ({ ...f, formaPagamento: value as TipoFormaPagamento }))
-                }
-              >
-                <SelectTrigger className="w-full bg-secondary border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  {formasPagamento.map((forma) => (
-                    <SelectItem key={forma.id} value={forma.tipo}>
-                      {forma.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Valor pago
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                placeholder={`Padrão: ${formatBRL(selectedConta ? contaTotal(selectedConta) : 0)}`}
-                value={pagamento.valorPago}
-                onChange={(e) => setPagamento((v) => ({ ...v, valorPago: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Observações
-              </label>
-              <textarea
-                value={pagamento.observacoes}
-                onChange={(e) =>
-                  setPagamento((v) => ({ ...v, observacoes: e.target.value }))
-                }
-                className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" className="border-border" onClick={() => setOpenPagarConta(false)}>
-              Fechar
-            </Button>
-            <Button onClick={handlePagarConta}>Confirmar pagamento</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={openEditarConta} onOpenChange={setOpenEditarConta}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto bg-card border-border sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">Editar conta a pagar</DialogTitle>
-            <DialogDescription>
-              Atualize os dados da conta selecionada.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Tipo de conta
-              </label>
-              <Select value={edicaoConta.tipoContaId} onValueChange={applyTipoContaEdicao}>
-                <SelectTrigger className="w-full bg-secondary border-border">
-                  <SelectValue placeholder="Selecione o tipo *" />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  {tiposAtivos.map((tipo) => (
-                    <SelectItem key={tipo.id} value={tipo.id}>
-                      {tipo.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Fornecedor
-              </label>
-              <Input
-                value={edicaoConta.fornecedor}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, fornecedor: e.target.value }))}
-                placeholder="Nome do fornecedor *"
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Documento do fornecedor
-              </label>
-              <Input
-                value={edicaoConta.documentoFornecedor}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, documentoFornecedor: e.target.value }))}
-                placeholder="CPF/CNPJ"
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Descrição
-              </label>
-              <Input
-                value={edicaoConta.descricao}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, descricao: e.target.value }))}
-                placeholder="Descrição da conta *"
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Categoria
-              </label>
-              <Input value={CATEGORIA_LABEL[edicaoConta.categoria]} readOnly className="bg-secondary border-border" />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Grupo DRE
-              </label>
-              <Input value={GRUPO_DRE_LABEL[edicaoConta.grupoDre]} readOnly className="bg-secondary border-border" />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Centro de custo
-              </label>
-              <Input
-                value={edicaoConta.centroCusto}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, centroCusto: e.target.value }))}
-                placeholder="Opcional"
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Regime
-              </label>
-              <Select value={edicaoConta.regime} onValueChange={(value) => setEdicaoConta((v) => ({ ...v, regime: value as ContaPagar["regime"] }))}>
-                <SelectTrigger className="w-full bg-secondary border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  <SelectItem value="FIXA">Fixa</SelectItem>
-                  <SelectItem value="AVULSA">Avulsa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Competência
-              </label>
-              <Input
-                type="date"
-                value={edicaoConta.competencia}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, competencia: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Data de emissão
-              </label>
-              <Input
-                type="date"
-                value={edicaoConta.dataEmissao}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, dataEmissao: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Data de vencimento
-              </label>
-              <Input
-                type="date"
-                value={edicaoConta.dataVencimento}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, dataVencimento: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Valor original
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={edicaoConta.valorOriginal}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, valorOriginal: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Desconto
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={edicaoConta.desconto}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, desconto: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Juros/Multa
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={edicaoConta.jurosMulta}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, jurosMulta: e.target.value }))}
-                className="bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Observações
-              </label>
-              <textarea
-                value={edicaoConta.observacoes}
-                onChange={(e) => setEdicaoConta((v) => ({ ...v, observacoes: e.target.value }))}
-                className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-border bg-secondary/30 p-4">
-            <label className="inline-flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={edicaoConta.recorrente}
-                onChange={(e) =>
-                  setEdicaoConta((v) => ({
-                    ...v,
-                    recorrente: e.target.checked,
-                    regime: e.target.checked ? "FIXA" : v.regime,
-                    recorrenciaDiaDoMes:
-                      v.recorrenciaDiaDoMes || (v.dataVencimento.split("-")[2] ?? ""),
-                    recorrenciaDataInicial: v.recorrenciaDataInicial || v.dataVencimento,
-                  }))
-                }
-              />
-              Conta recorrente
-            </label>
-
-            {edicaoConta.recorrente && (
-              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Tipo de recorrência
-                  </label>
-                  <Select
-                    value={edicaoConta.recorrenciaTipo}
-                    onValueChange={(value) =>
-                      setEdicaoConta((v) => ({
-                        ...v,
-                        recorrenciaTipo: value as "MENSAL" | "INTERVALO_DIAS",
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-full bg-secondary border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      <SelectItem value="MENSAL">Mensal</SelectItem>
-                      <SelectItem value="INTERVALO_DIAS">A cada X dias</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {edicaoConta.recorrenciaTipo === "INTERVALO_DIAS" && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      A cada X dias
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={edicaoConta.recorrenciaIntervaloDias}
-                      onChange={(e) =>
-                        setEdicaoConta((v) => ({
-                          ...v,
-                          recorrenciaIntervaloDias: e.target.value,
-                        }))
-                      }
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                )}
-
-                {edicaoConta.recorrenciaTipo === "MENSAL" && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Dia do mês
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={31}
-                      value={edicaoConta.recorrenciaDiaDoMes || (edicaoConta.dataVencimento.split("-")[2] ?? "")}
-                      onChange={(e) =>
-                        setEdicaoConta((v) => ({
-                          ...v,
-                          recorrenciaDiaDoMes: e.target.value,
-                        }))
-                      }
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Data inicial (âncora)
-                  </label>
-                  <Input
-                    type="date"
-                    value={edicaoConta.recorrenciaDataInicial}
-                    onChange={(e) =>
-                      setEdicaoConta((v) => ({
-                        ...v,
-                        recorrenciaDataInicial: e.target.value,
-                      }))
-                    }
-                    className="bg-secondary border-border"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Término da recorrência
-                  </label>
-                  <Select
-                    value={edicaoConta.recorrenciaTermino}
-                    onValueChange={(value) =>
-                      setEdicaoConta((v) => ({
-                        ...v,
-                        recorrenciaTermino: value as "SEM_FIM" | "EM_DATA" | "APOS_OCORRENCIAS",
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-full bg-secondary border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      <SelectItem value="SEM_FIM">Sem fim</SelectItem>
-                      <SelectItem value="EM_DATA">Em data</SelectItem>
-                      <SelectItem value="APOS_OCORRENCIAS">Após N ocorrências</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {edicaoConta.recorrenciaTermino === "EM_DATA" && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Data fim
-                    </label>
-                    <Input
-                      type="date"
-                      value={edicaoConta.recorrenciaDataFim}
-                      onChange={(e) =>
-                        setEdicaoConta((v) => ({
-                          ...v,
-                          recorrenciaDataFim: e.target.value,
-                        }))
-                      }
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                )}
-
-                {edicaoConta.recorrenciaTermino === "APOS_OCORRENCIAS" && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Qtd. ocorrências
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={edicaoConta.recorrenciaNumeroOcorrencias}
-                      onChange={(e) =>
-                        setEdicaoConta((v) => ({
-                          ...v,
-                          recorrenciaNumeroOcorrencias: e.target.value,
-                        }))
-                      }
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" className="border-border" onClick={() => setOpenEditarConta(false)}>
-              Fechar
-            </Button>
-            <Button onClick={handleSalvarEdicaoConta}>Salvar alterações</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {edicaoContaForm && (
+        <EditarContaPagarModal
+          open={openEditarConta}
+          onOpenChange={setOpenEditarConta}
+          tiposAtivos={tiposAtivos}
+          tiposConta={tiposConta}
+          contaEditandoId={contaEditandoId}
+          initialForm={edicaoContaForm}
+          onSubmit={handleSalvarEdicaoConta}
+        />
+      )}
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -1652,7 +552,7 @@ export default function ContasPagarPage() {
             filename="contas-a-pagar"
             title="Contas a Pagar"
           />
-          <Button onClick={abrirNovaContaModal}>
+          <Button onClick={() => setOpenNovaConta(true)}>
             <Plus className="size-4" />
             Nova conta
           </Button>
@@ -1888,12 +788,6 @@ export default function ContasPagarPage() {
                             className="h-8"
                             onClick={() => {
                               setSelectedConta(conta);
-                              setPagamento((p) => ({
-                                ...p,
-                                valorPago: "",
-                                dataPagamento: todayISO(),
-                                observacoes: "",
-                              }));
                               setOpenPagarConta(true);
                             }}
                           >
