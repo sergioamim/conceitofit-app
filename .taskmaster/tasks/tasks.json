@@ -8013,7 +8013,7 @@
         "description": "Criar página /admin/financeiro/cobrancas para gerar, listar e gerenciar cobranças (boletos) de mensalidade das academias. Suportar geração manual e futura automática, com status de pagamento, vencimento, multa/juros e ações de baixa manual.",
         "details": "Criar src/app/(backoffice)/admin/financeiro/cobrancas/page.tsx com listagem de cobranças (filtros: status, academia, período de vencimento). Cada cobrança exibe: academia, valor, vencimento, status (pendente/pago/vencido/cancelado), forma de pagamento. Modal de nova cobrança: selecionar contrato → gerar cobrança com vencimento e valor do contrato. Ação de baixa manual (marcar como pago com data e observação). Adicionar tipos Cobranca em types.ts (id, contratoId, academiaId, academiaNome, valor, dataVencimento, dataPagamento, status, formaPagamento, multa, juros, observacoes). Criar endpoints: listAdminCobrancas, createAdminCobranca, baixarAdminCobranca, cancelarAdminCobranca. Resumo cards no topo: total pendente, total vencido, total recebido no mês, inadimplência.",
         "testStrategy": "Gerar cobrança para um contrato ativo. Marcar como paga. Verificar filtros e cards de resumo. Cancelar uma cobrança.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "125"
         ],
@@ -8024,8 +8024,9 @@
             "title": "Criar tipos e API client para cobranças",
             "description": "Adicionar Cobranca/CobrancaStatus em types.ts e endpoints CRUD em admin-billing.ts",
             "dependencies": [],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T18:10:00.000Z"
           },
           {
             "id": 2,
@@ -8034,8 +8035,9 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T18:10:00.000Z"
           },
           {
             "id": 3,
@@ -8044,10 +8046,12 @@
             "dependencies": [
               2
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T18:10:00.000Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T18:10:00.000Z"
       },
       {
         "id": "127",
