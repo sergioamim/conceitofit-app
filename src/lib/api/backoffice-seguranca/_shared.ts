@@ -1,5 +1,4 @@
 import type {
-  GlobalAdminUserCreatePayload,
   GlobalAdminAccessException,
   GlobalAdminMembership,
   GlobalAdminMembershipOrigin,
@@ -7,11 +6,9 @@ import type {
   GlobalAdminNewUnitsPolicy,
   GlobalAdminNewUnitsPolicyScope,
   GlobalAdminRecentChange,
-  GlobalAdminReviewBoard,
   GlobalAdminReviewBoardItem,
   GlobalAdminReviewStatus,
   GlobalAdminRiskLevel,
-  GlobalAdminSecurityOverview,
   GlobalAdminScopeType,
   GlobalAdminUserDetail,
   GlobalAdminUserStatus,
@@ -19,9 +16,8 @@ import type {
   RbacPaginatedResult,
   RbacPerfil,
 } from "@/lib/types";
-import { apiRequest } from "./http";
 
-type AnyListResponse<T> =
+export type AnyListResponse<T> =
   | T[]
   | {
       items?: T[];
@@ -35,13 +31,13 @@ type AnyListResponse<T> =
       hasNext?: boolean;
     };
 
-type RawRef = {
+export type RawRef = {
   id?: string | null;
   nome?: string | null;
   name?: string | null;
 };
 
-type RawPerfil = {
+export type RawPerfil = {
   id?: string | number | null;
   tenantId?: string | null;
   roleName?: string | null;
@@ -53,7 +49,7 @@ type RawPerfil = {
   updatedAt?: string | null;
 };
 
-type RawMembershipProfile = {
+export type RawMembershipProfile = {
   perfilId?: string | number | null;
   id?: string | number | null;
   roleName?: string | null;
@@ -63,7 +59,7 @@ type RawMembershipProfile = {
   inherited?: unknown;
 };
 
-type RawMembership = {
+export type RawMembership = {
   id?: string | null;
   membershipId?: string | null;
   userId?: string | null;
@@ -107,7 +103,7 @@ type RawMembership = {
   updatedAt?: string | null;
 };
 
-type RawPolicy = {
+export type RawPolicy = {
   enabled?: unknown;
   autoAssignToNewUnits?: unknown;
   elegivel?: unknown;
@@ -122,7 +118,7 @@ type RawPolicy = {
   updatedAt?: string | null;
 };
 
-type RawException = {
+export type RawException = {
   id?: string | null;
   title?: string | null;
   titulo?: string | null;
@@ -140,7 +136,7 @@ type RawException = {
   ativo?: unknown;
 };
 
-type RawRecentChange = {
+export type RawRecentChange = {
   id?: string | null;
   title?: string | null;
   titulo?: string | null;
@@ -154,7 +150,7 @@ type RawRecentChange = {
   criticidade?: string | null;
 };
 
-type RawReviewItem = {
+export type RawReviewItem = {
   id?: string | null;
   userId?: string | null;
   usuarioId?: string | null;
@@ -172,7 +168,7 @@ type RawReviewItem = {
   categoria?: string | null;
 };
 
-type RawLoginIdentifier = {
+export type RawLoginIdentifier = {
   label?: string | null;
   rotulo?: string | null;
   type?: string | null;
@@ -183,7 +179,7 @@ type RawLoginIdentifier = {
   valorMascarado?: string | null;
 };
 
-type RawUserSummary = {
+export type RawUserSummary = {
   id?: string | null;
   userId?: string | null;
   name?: string | null;
@@ -239,7 +235,7 @@ type RawUserSummary = {
   proximaRevisaoEm?: string | null;
 };
 
-type RawUserDetail = RawUserSummary & {
+export type RawUserDetail = RawUserSummary & {
   createdAt?: string | null;
   lastLoginAt?: string | null;
   memberships?: RawMembership[] | null;
@@ -250,7 +246,7 @@ type RawUserDetail = RawUserSummary & {
   mudancasRecentes?: RawRecentChange[] | null;
 };
 
-type RawReviewBoard = {
+export type RawReviewBoard = {
   pendingReviews?: RawReviewItem[] | null;
   revisoesPendentes?: RawReviewItem[] | null;
   expiringExceptions?: RawReviewItem[] | null;
@@ -263,13 +259,13 @@ type RawReviewBoard = {
   perfisSemDono?: RawReviewItem[] | null;
 };
 
-function cleanString(value: unknown): string | undefined {
+export function cleanString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim();
   return normalized || undefined;
 }
 
-function normalizeBoolean(value: unknown, fallback = false): boolean {
+export function normalizeBoolean(value: unknown, fallback = false): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value === 1;
   if (typeof value === "string") {
@@ -280,12 +276,12 @@ function normalizeBoolean(value: unknown, fallback = false): boolean {
   return fallback;
 }
 
-function normalizeArray<T>(response: AnyListResponse<T>): T[] {
+export function normalizeArray<T>(response: AnyListResponse<T>): T[] {
   if (Array.isArray(response)) return response;
   return response.items ?? response.content ?? response.data ?? response.rows ?? response.result ?? [];
 }
 
-function normalizePagination<TInput, TOutput>(
+export function normalizePagination<TInput, TOutput>(
   response: AnyListResponse<TInput>,
   items: TOutput[]
 ): RbacPaginatedResult<TOutput> {
@@ -308,7 +304,7 @@ function normalizePagination<TInput, TOutput>(
   };
 }
 
-function normalizeStatus(input?: string | null, active?: unknown): GlobalAdminUserStatus {
+export function normalizeStatus(input?: string | null, active?: unknown): GlobalAdminUserStatus {
   const normalized = cleanString(input)?.toUpperCase();
   if (normalized === "ATIVO" || normalized === "INATIVO" || normalized === "PENDENTE") {
     return normalized;
@@ -316,7 +312,7 @@ function normalizeStatus(input?: string | null, active?: unknown): GlobalAdminUs
   return normalizeBoolean(active, true) ? "ATIVO" : "INATIVO";
 }
 
-function normalizeUnitRefs(input?: RawRef[] | null): GlobalAdminUserSummary["academias"] {
+export function normalizeUnitRefs(input?: RawRef[] | null): GlobalAdminUserSummary["academias"] {
   if (!Array.isArray(input)) return [];
   return input
     .map((item) => {
@@ -327,7 +323,7 @@ function normalizeUnitRefs(input?: RawRef[] | null): GlobalAdminUserSummary["aca
     .filter((item): item is GlobalAdminUserSummary["academias"][number] => item !== null);
 }
 
-function normalizePerfil(raw: RawPerfil): RbacPerfil {
+export function normalizePerfil(raw: RawPerfil): RbacPerfil {
   return {
     id: String(raw.id ?? ""),
     tenantId: cleanString(raw.tenantId) ?? "",
@@ -340,7 +336,7 @@ function normalizePerfil(raw: RawPerfil): RbacPerfil {
   };
 }
 
-function normalizeMembershipProfile(raw: RawMembershipProfile): GlobalAdminMembershipProfile {
+export function normalizeMembershipProfile(raw: RawMembershipProfile): GlobalAdminMembershipProfile {
   return {
     perfilId: String(raw.perfilId ?? raw.id ?? ""),
     roleName: cleanString(raw.roleName) ?? cleanString(raw.name) ?? "",
@@ -350,7 +346,7 @@ function normalizeMembershipProfile(raw: RawMembershipProfile): GlobalAdminMembe
   };
 }
 
-function normalizeMembershipOrigin(value?: string | null): GlobalAdminMembershipOrigin {
+export function normalizeMembershipOrigin(value?: string | null): GlobalAdminMembershipOrigin {
   const normalized = cleanString(value)?.toUpperCase();
   switch (normalized) {
     case "MANUAL":
@@ -369,12 +365,12 @@ function normalizeMembershipOrigin(value?: string | null): GlobalAdminMembership
   }
 }
 
-function normalizePolicyScope(value?: string | null): GlobalAdminNewUnitsPolicyScope {
+export function normalizePolicyScope(value?: string | null): GlobalAdminNewUnitsPolicyScope {
   const normalized = cleanString(value)?.toUpperCase();
   return normalized === "REDE" ? "REDE" : "ACADEMIA_ATUAL";
 }
 
-function normalizeRiskLevel(value?: string | null): GlobalAdminRiskLevel | undefined {
+export function normalizeRiskLevel(value?: string | null): GlobalAdminRiskLevel | undefined {
   const normalized = cleanString(value)?.toUpperCase();
   if (normalized === "BAIXO" || normalized === "MEDIO" || normalized === "ALTO" || normalized === "CRITICO") {
     return normalized;
@@ -382,7 +378,7 @@ function normalizeRiskLevel(value?: string | null): GlobalAdminRiskLevel | undef
   return undefined;
 }
 
-function normalizeReviewStatus(value?: string | null): GlobalAdminReviewStatus | undefined {
+export function normalizeReviewStatus(value?: string | null): GlobalAdminReviewStatus | undefined {
   const normalized = cleanString(value)?.toUpperCase();
   if (normalized === "EM_DIA" || normalized === "PENDENTE" || normalized === "VENCIDA") {
     return normalized;
@@ -390,7 +386,7 @@ function normalizeReviewStatus(value?: string | null): GlobalAdminReviewStatus |
   return undefined;
 }
 
-function normalizeScopeType(value?: string | null): GlobalAdminScopeType | undefined {
+export function normalizeScopeType(value?: string | null): GlobalAdminScopeType | undefined {
   const normalized = cleanString(value)?.toUpperCase();
   if (normalized === "UNIDADE" || normalized === "REDE" || normalized === "GLOBAL") {
     return normalized;
@@ -398,7 +394,7 @@ function normalizeScopeType(value?: string | null): GlobalAdminScopeType | undef
   return undefined;
 }
 
-function normalizeLoginIdentifiers(input: RawLoginIdentifier[] | null | undefined) {
+export function normalizeLoginIdentifiers(input: RawLoginIdentifier[] | null | undefined) {
   if (!Array.isArray(input)) return [];
   return input
     .map((item) => {
@@ -418,12 +414,12 @@ function normalizeLoginIdentifiers(input: RawLoginIdentifier[] | null | undefine
     .filter((item): item is NonNullable<GlobalAdminUserSummary["loginIdentifiers"]>[number] => item !== null);
 }
 
-function normalizeDomainLinksSummary(input?: string[] | null): string[] {
+export function normalizeDomainLinksSummary(input?: string[] | null): string[] {
   if (!Array.isArray(input)) return [];
   return input.map((item) => item.trim()).filter(Boolean);
 }
 
-function normalizeAccessException(raw: RawException): GlobalAdminAccessException {
+export function normalizeAccessException(raw: RawException): GlobalAdminAccessException {
   return {
     id: cleanString(raw.id) ?? "",
     title: cleanString(raw.title) ?? cleanString(raw.titulo) ?? "Exceção sem título",
@@ -436,7 +432,7 @@ function normalizeAccessException(raw: RawException): GlobalAdminAccessException
   };
 }
 
-function normalizeRecentChange(raw: RawRecentChange): GlobalAdminRecentChange {
+export function normalizeRecentChange(raw: RawRecentChange): GlobalAdminRecentChange {
   return {
     id: cleanString(raw.id) ?? "",
     title: cleanString(raw.title) ?? cleanString(raw.titulo) ?? "Mudança",
@@ -447,7 +443,7 @@ function normalizeRecentChange(raw: RawRecentChange): GlobalAdminRecentChange {
   };
 }
 
-function normalizeReviewCategory(value?: string | null): GlobalAdminReviewBoardItem["category"] {
+export function normalizeReviewCategory(value?: string | null): GlobalAdminReviewBoardItem["category"] {
   const normalized = cleanString(value)?.toUpperCase();
   switch (normalized) {
     case "REVISAO_PENDENTE":
@@ -461,7 +457,7 @@ function normalizeReviewCategory(value?: string | null): GlobalAdminReviewBoardI
   }
 }
 
-function normalizeReviewItem(raw: RawReviewItem): GlobalAdminReviewBoardItem {
+export function normalizeReviewItem(raw: RawReviewItem): GlobalAdminReviewBoardItem {
   return {
     id: cleanString(raw.id) ?? "",
     userId: cleanString(raw.userId) ?? cleanString(raw.usuarioId),
@@ -474,7 +470,7 @@ function normalizeReviewItem(raw: RawReviewItem): GlobalAdminReviewBoardItem {
   };
 }
 
-function normalizeUserSummary(raw: RawUserSummary): GlobalAdminUserSummary {
+export function normalizeUserSummary(raw: RawUserSummary): GlobalAdminUserSummary {
   const perfis = [...(raw.perfis ?? []), ...(raw.profiles ?? [])]
     .map((item) =>
       typeof item === "string"
@@ -524,7 +520,7 @@ function normalizeUserSummary(raw: RawUserSummary): GlobalAdminUserSummary {
   };
 }
 
-function normalizeMembership(raw: RawMembership, userId: string): GlobalAdminMembership {
+export function normalizeMembership(raw: RawMembership, userId: string): GlobalAdminMembership {
   const profiles = [...(raw.profiles ?? []), ...(raw.perfis ?? [])].map(normalizeMembershipProfile);
   return {
     id: cleanString(raw.id) ?? cleanString(raw.membershipId) ?? "",
@@ -566,7 +562,7 @@ function normalizeMembership(raw: RawMembership, userId: string): GlobalAdminMem
   };
 }
 
-function normalizePolicy(raw?: RawPolicy | null): GlobalAdminNewUnitsPolicy {
+export function normalizePolicy(raw?: RawPolicy | null): GlobalAdminNewUnitsPolicy {
   return {
     enabled: normalizeBoolean(raw?.enabled ?? raw?.autoAssignToNewUnits ?? raw?.elegivel, false),
     scope: normalizePolicyScope(raw?.scope ?? raw?.escopo),
@@ -578,246 +574,11 @@ function normalizePolicy(raw?: RawPolicy | null): GlobalAdminNewUnitsPolicy {
   };
 }
 
-function hasUserDetailPayload(value: unknown): value is RawUserDetail {
+export function hasUserDetailPayload(value: unknown): value is RawUserDetail {
   return typeof value === "object" && value !== null;
 }
 
-async function resolveUserDetailAfterMutation(
-  userId: string,
-  response?: RawUserDetail | null
-): Promise<GlobalAdminUserDetail> {
-  if (hasUserDetailPayload(response)) {
-    return getGlobalAdminUserDetailFromRaw(response);
-  }
-  return getGlobalAdminUserDetailApi(userId);
-}
-
-export async function getGlobalAdminSecurityOverviewApi(): Promise<GlobalAdminSecurityOverview> {
-  const response = await apiRequest<Partial<GlobalAdminSecurityOverview>>({
-    path: "/api/v1/admin/seguranca/overview",
-  });
-  return {
-    totalUsers: Number(response.totalUsers ?? 0),
-    activeMemberships: Number(response.activeMemberships ?? 0),
-    defaultUnitsConfigured: Number(response.defaultUnitsConfigured ?? 0),
-    eligibleForNewUnits: Number(response.eligibleForNewUnits ?? 0),
-    broadAccessUsers: Number(response.broadAccessUsers ?? 0),
-    expiringExceptions: Number(response.expiringExceptions ?? 0),
-    pendingReviews: Number(response.pendingReviews ?? 0),
-    rolloutPercentage: Number(response.rolloutPercentage ?? 0),
-    compatibilityModeUsers: Number(response.compatibilityModeUsers ?? 0),
-  };
-}
-
-export async function listGlobalAdminUsersApi(input: {
-  query?: string;
-  tenantId?: string;
-  academiaId?: string;
-  status?: string;
-  profile?: string;
-  scopeType?: string;
-  eligibleForNewUnits?: boolean;
-  page?: number;
-  size?: number;
-}): Promise<RbacPaginatedResult<GlobalAdminUserSummary>> {
-  const response = await apiRequest<AnyListResponse<RawUserSummary>>({
-    path: "/api/v1/admin/seguranca/usuarios",
-    query: {
-      query: cleanString(input.query),
-      tenantId: cleanString(input.tenantId),
-      academiaId: cleanString(input.academiaId),
-      status: cleanString(input.status),
-      profile: cleanString(input.profile),
-      scopeType: cleanString(input.scopeType),
-      eligibleForNewUnits: input.eligibleForNewUnits,
-      page: input.page,
-      size: input.size,
-    },
-  });
-  const items = normalizeArray(response).map(normalizeUserSummary);
-  return normalizePagination(response, items);
-}
-
-export async function getGlobalAdminUserDetailApi(userId: string): Promise<GlobalAdminUserDetail> {
-  const response = await apiRequest<RawUserDetail>({
-    path: `/api/v1/admin/seguranca/usuarios/${userId}`,
-  });
-  const summary = normalizeUserSummary(response);
-  return {
-    ...summary,
-    createdAt: cleanString(response.createdAt),
-    lastLoginAt: cleanString(response.lastLoginAt),
-    memberships: (response.memberships ?? []).map((item) => normalizeMembership(item, summary.id)),
-    policy: normalizePolicy(response.policy),
-    exceptions: [...(response.exceptions ?? []), ...(response.excecoes ?? [])].map(normalizeAccessException),
-    recentChanges: [...(response.recentChanges ?? []), ...(response.mudancasRecentes ?? [])].map(normalizeRecentChange),
-  };
-}
-
-export async function createGlobalAdminUserApi(
-  input: GlobalAdminUserCreatePayload
-): Promise<GlobalAdminUserDetail> {
-  const response = await apiRequest<RawUserDetail>({
-    path: "/api/v1/admin/seguranca/usuarios",
-    method: "POST",
-    body: {
-      name: cleanString(input.name),
-      fullName: cleanString(input.fullName),
-      email: cleanString(input.email),
-      userKind: cleanString(input.userKind),
-      scopeType: cleanString(input.scopeType),
-      academiaId: cleanString(input.academiaId),
-      tenantIds: input.tenantIds?.map((item) => item.trim()).filter(Boolean),
-      defaultTenantId: cleanString(input.defaultTenantId),
-      broadAccess: input.broadAccess ?? false,
-      eligibleForNewUnits: input.eligibleForNewUnits ?? false,
-      policyScope: cleanString(input.policyScope),
-      loginIdentifiers: input.loginIdentifiers
-        ?.map((item) => ({
-          label: cleanString(item.label),
-          value: cleanString(item.value),
-        }))
-        .filter((item): item is { label: string; value: string } => Boolean(item.label && item.value)),
-    },
-  });
-  return getGlobalAdminUserDetailFromRaw(response);
-}
-
-export async function createGlobalAdminAccessExceptionApi(input: {
-  userId: string;
-  membershipId?: string;
-  title: string;
-  scopeLabel?: string;
-  justification: string;
-  expiresAt?: string;
-}): Promise<GlobalAdminUserDetail> {
-  const response = await apiRequest<RawUserDetail | null>({
-    path: `/api/v1/admin/seguranca/usuarios/${input.userId}/exceptions`,
-    method: "POST",
-    body: {
-      membershipId: input.membershipId,
-      title: cleanString(input.title),
-      scopeLabel: cleanString(input.scopeLabel),
-      justification: cleanString(input.justification),
-      expiresAt: cleanString(input.expiresAt),
-    },
-  });
-  return resolveUserDetailAfterMutation(input.userId, response);
-}
-
-export async function deleteGlobalAdminAccessExceptionApi(input: {
-  userId: string;
-  exceptionId: string;
-}): Promise<GlobalAdminUserDetail> {
-  const response = await apiRequest<RawUserDetail | null>({
-    path: `/api/v1/admin/seguranca/usuarios/${input.userId}/exceptions/${input.exceptionId}`,
-    method: "DELETE",
-  });
-  return resolveUserDetailAfterMutation(input.userId, response);
-}
-
-export async function getGlobalAdminReviewBoardApi(): Promise<GlobalAdminReviewBoard> {
-  const response = await apiRequest<RawReviewBoard>({
-    path: "/api/v1/admin/seguranca/reviews",
-  });
-  return {
-    pendingReviews: [...(response.pendingReviews ?? []), ...(response.revisoesPendentes ?? [])].map(normalizeReviewItem),
-    expiringExceptions: [...(response.expiringExceptions ?? []), ...(response.excecoesExpirando ?? [])].map(normalizeReviewItem),
-    recentChanges: [...(response.recentChanges ?? []), ...(response.mudancasRecentes ?? [])].map(normalizeReviewItem),
-    broadAccess: [...(response.broadAccess ?? []), ...(response.acessosAmplos ?? [])].map(normalizeReviewItem),
-    orphanProfiles: [...(response.orphanProfiles ?? []), ...(response.perfisSemDono ?? [])].map(normalizeReviewItem),
-  };
-}
-
-export async function createGlobalAdminMembershipApi(input: {
-  userId: string;
-  tenantId: string;
-  defaultTenant?: boolean;
-}): Promise<GlobalAdminUserDetail> {
-  const response = await apiRequest<RawUserDetail | null>({
-    path: `/api/v1/admin/seguranca/usuarios/${input.userId}/memberships`,
-    method: "POST",
-    body: {
-      tenantId: input.tenantId,
-      defaultTenant: input.defaultTenant ?? false,
-    },
-  });
-  return resolveUserDetailAfterMutation(input.userId, response);
-}
-
-export async function updateGlobalAdminMembershipApi(input: {
-  userId: string;
-  membershipId: string;
-  active?: boolean;
-  defaultTenant?: boolean;
-}): Promise<GlobalAdminUserDetail> {
-  const response = await apiRequest<RawUserDetail | null>({
-    path: `/api/v1/admin/seguranca/usuarios/${input.userId}/memberships/${input.membershipId}`,
-    method: "PATCH",
-    body: {
-      active: input.active,
-      defaultTenant: input.defaultTenant,
-    },
-  });
-  return resolveUserDetailAfterMutation(input.userId, response);
-}
-
-export async function deleteGlobalAdminMembershipApi(input: {
-  userId: string;
-  membershipId: string;
-}): Promise<GlobalAdminUserDetail> {
-  const response = await apiRequest<RawUserDetail | null>({
-    path: `/api/v1/admin/seguranca/usuarios/${input.userId}/memberships/${input.membershipId}`,
-    method: "DELETE",
-  });
-  return resolveUserDetailAfterMutation(input.userId, response);
-}
-
-export async function assignGlobalAdminMembershipProfileApi(input: {
-  userId: string;
-  membershipId: string;
-  perfilId: string;
-}): Promise<GlobalAdminUserDetail> {
-  const response = await apiRequest<RawUserDetail | null>({
-    path: `/api/v1/admin/seguranca/usuarios/${input.userId}/memberships/${input.membershipId}/perfis/${input.perfilId}`,
-    method: "PUT",
-  });
-  return resolveUserDetailAfterMutation(input.userId, response);
-}
-
-export async function removeGlobalAdminMembershipProfileApi(input: {
-  userId: string;
-  membershipId: string;
-  perfilId: string;
-}): Promise<GlobalAdminUserDetail> {
-  const response = await apiRequest<RawUserDetail | null>({
-    path: `/api/v1/admin/seguranca/usuarios/${input.userId}/memberships/${input.membershipId}/perfis/${input.perfilId}`,
-    method: "DELETE",
-  });
-  return resolveUserDetailAfterMutation(input.userId, response);
-}
-
-export async function updateGlobalAdminNewUnitsPolicyApi(input: {
-  userId: string;
-  enabled: boolean;
-  scope: GlobalAdminNewUnitsPolicyScope;
-  academiaIds?: string[];
-  rationale?: string;
-}): Promise<GlobalAdminUserDetail> {
-  const response = await apiRequest<RawUserDetail | null>({
-    path: `/api/v1/admin/seguranca/usuarios/${input.userId}/policy/new-units`,
-    method: "PUT",
-    body: {
-      enabled: input.enabled,
-      scope: input.scope,
-      academiaIds: input.academiaIds,
-      rationale: cleanString(input.rationale),
-    },
-  });
-  return resolveUserDetailAfterMutation(input.userId, response);
-}
-
-function getGlobalAdminUserDetailFromRaw(response: RawUserDetail): GlobalAdminUserDetail {
+export function getGlobalAdminUserDetailFromRaw(response: RawUserDetail): GlobalAdminUserDetail {
   const summary = normalizeUserSummary(response);
   return {
     ...summary,
