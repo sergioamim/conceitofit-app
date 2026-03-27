@@ -7,6 +7,7 @@ import { AppTopbar } from "@/components/layout/app-topbar";
 import { AppContentShell } from "@/components/layout/app-content-shell";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
+import { ImpersonationBanner } from "@/components/backoffice/impersonation-banner";
 import { Button } from "@/components/ui/button";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { TenantContextProvider, useTenantContext } from "@/hooks/use-session-context";
@@ -135,6 +136,7 @@ function AppShellFrame({
       ) : null}
       <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={onCloseMenu} shellReady={shellReady} />
       <main className="flex flex-1 flex-col overflow-hidden relative">
+        <ImpersonationBanner />
         <AppTopbar onOpenMenu={onOpenMenu} shellReady={shellReady} />
         <AppContentShell>{children}</AppContentShell>
       </main>

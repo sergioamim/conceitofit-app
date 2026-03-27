@@ -24,6 +24,17 @@ export interface AuthSession {
   broadAccess?: boolean;
 }
 
+export interface ImpersonationSessionState {
+  targetUserId: string;
+  targetUserName: string;
+  actorDisplayName?: string;
+  justification: string;
+  startedAt: string;
+  auditContextId?: string;
+  returnPath?: string;
+  originalSession: AuthSession;
+}
+
 const ACCESS_TOKEN_KEY = "academia-auth-token";
 const REFRESH_TOKEN_KEY = "academia-auth-refresh-token";
 const TOKEN_TYPE_KEY = "academia-auth-token-type";
@@ -41,9 +52,11 @@ const AVAILABLE_TENANTS_KEY = "academia-auth-available-tenants";
 const AVAILABLE_SCOPES_KEY = "academia-auth-available-scopes";
 const BROAD_ACCESS_KEY = "academia-auth-broad-access";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
+const IMPERSONATION_SESSION_KEY = "academia-impersonation-session";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
 export const AUTH_SESSION_CLEARED_EVENT = "academia-session-cleared";
+export const IMPERSONATION_SESSION_UPDATED_EVENT = "academia-impersonation-updated";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -59,6 +72,12 @@ function notifyAuthSessionCleared(): void {
   if (!isBrowser()) return;
   if (typeof window.dispatchEvent !== "function") return;
   window.dispatchEvent(new Event(AUTH_SESSION_CLEARED_EVENT));
+}
+
+function notifyImpersonationSessionUpdated(): void {
+  if (!isBrowser()) return;
+  if (typeof window.dispatchEvent !== "function") return;
+  window.dispatchEvent(new Event(IMPERSONATION_SESSION_UPDATED_EVENT));
 }
 
 function clearAuthStorageKeys(keys: string[]): void {
@@ -172,6 +191,104 @@ export function getAvailableTenantsFromSession(): TenantAccess[] {
   } catch {
     return [];
   }
+}
+
+export function getAuthSessionSnapshot(): AuthSession | null {
+  if (!isBrowser()) return null;
+  const token = getAccessToken();
+  const refreshToken = getRefreshToken();
+  if (!token || !refreshToken) return null;
+
+  const rawExpiresIn = window.localStorage.getItem(EXPIRES_IN_KEY);
+  const expiresIn = rawExpiresIn ? Number(rawExpiresIn) : undefined;
+
+  return {
+    token,
+    refreshToken,
+    type: getAccessTokenType(),
+    expiresIn: Number.isFinite(expiresIn) ? expiresIn : undefined,
+    userId: getUserIdFromSession(),
+    userKind: getUserKindFromSession(),
+    displayName: getDisplayNameFromSession(),
+    networkId: getNetworkIdFromSession(),
+    networkSubdomain: getNetworkSubdomainFromSession(),
+    networkSlug: getNetworkSlugFromSession(),
+    networkName: getNetworkNameFromSession(),
+    activeTenantId: getActiveTenantIdFromSession(),
+    baseTenantId: getBaseTenantIdFromSession(),
+    availableTenants: getAvailableTenantsFromSession(),
+    availableScopes: getAvailableScopesFromSession(),
+    broadAccess: getBroadAccessFromSession(),
+  };
+}
+
+export function getImpersonationSession(): ImpersonationSessionState | null {
+  if (!isBrowser()) return null;
+  const raw = window.sessionStorage.getItem(IMPERSONATION_SESSION_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<ImpersonationSessionState>;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (!parsed.targetUserId || !parsed.targetUserName || !parsed.originalSession) return null;
+    return {
+      targetUserId: parsed.targetUserId,
+      targetUserName: parsed.targetUserName,
+      actorDisplayName: parsed.actorDisplayName,
+      justification: parsed.justification ?? "",
+      startedAt: parsed.startedAt ?? "",
+      auditContextId: parsed.auditContextId,
+      returnPath: parsed.returnPath,
+      originalSession: parsed.originalSession,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function isImpersonating(): boolean {
+  return Boolean(getImpersonationSession());
+}
+
+export function startImpersonationSession(input: {
+  originalSession: AuthSession;
+  impersonatedSession: AuthSession;
+  targetUserId: string;
+  targetUserName: string;
+  justification: string;
+  auditContextId?: string;
+  returnPath?: string;
+  actorDisplayName?: string;
+}): void {
+  if (!isBrowser()) return;
+  window.sessionStorage.setItem(
+    IMPERSONATION_SESSION_KEY,
+    JSON.stringify({
+      targetUserId: input.targetUserId,
+      targetUserName: input.targetUserName,
+      actorDisplayName: input.actorDisplayName,
+      justification: input.justification,
+      startedAt: new Date().toISOString(),
+      auditContextId: input.auditContextId,
+      returnPath: input.returnPath,
+      originalSession: input.originalSession,
+    } satisfies ImpersonationSessionState)
+  );
+  saveAuthSession(input.impersonatedSession);
+  notifyImpersonationSessionUpdated();
+}
+
+export function restoreOriginalSessionFromImpersonation(): ImpersonationSessionState | null {
+  const snapshot = getImpersonationSession();
+  if (!snapshot) return null;
+  saveAuthSession(snapshot.originalSession);
+  notifyImpersonationSessionUpdated();
+  return snapshot;
+}
+
+export function clearImpersonationSession(): void {
+  if (!isBrowser()) return;
+  window.sessionStorage.removeItem(IMPERSONATION_SESSION_KEY);
+  notifyImpersonationSessionUpdated();
 }
 
 export function saveAuthSession(session: AuthSession): void {

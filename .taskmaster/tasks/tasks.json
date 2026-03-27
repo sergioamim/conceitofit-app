@@ -8296,7 +8296,7 @@
         "description": "Adicionar funcionalidade de impersonation no detalhe de usuário (/admin/seguranca/usuarios/[id]) que permite ao admin do backoffice acessar o sistema com a visão de qualquer usuário para suporte e diagnóstico, com registro completo no audit log.",
         "details": "Adicionar botão \"Entrar como este usuário\" na página de detalhe do usuário (/admin/seguranca/usuarios/[id]/page.tsx). Ao clicar: (1) Confirmar via dialog com justificativa obrigatória; (2) Chamar endpoint impersonateUser em admin-audit.ts que retorna token temporário; (3) Salvar sessão original em sessionStorage; (4) Iniciar nova sessão com token do usuário impersonado; (5) Exibir banner fixo no topo (\"Você está operando como [nome] — Encerrar\"); (6) Ao encerrar, restaurar sessão original. Registrar início e fim da impersonation no audit log. Criar componente ImpersonationBanner em src/components/backoffice/.",
         "testStrategy": "Impersonar um usuário, navegar pelo sistema e verificar que os dados são do contexto dele. Encerrar e confirmar retorno ao backoffice. Verificar audit log registra início e fim.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "132"
         ],
@@ -8307,8 +8307,9 @@
             "title": "Criar endpoint e lógica de impersonation",
             "description": "Endpoint impersonateUser/endImpersonation em admin-audit.ts. Lógica de troca de sessão.",
             "dependencies": [],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T19:05:00.000Z"
           },
           {
             "id": 2,
@@ -8317,8 +8318,9 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T19:05:00.000Z"
           },
           {
             "id": 3,
@@ -8327,10 +8329,12 @@
             "dependencies": [
               2
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T19:05:00.000Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T19:05:00.000Z"
       },
       {
         "id": "134",

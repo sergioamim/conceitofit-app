@@ -2396,7 +2396,9 @@ export type AuditLogAction =
   | "SUSPENDEU"
   | "ATIVOU"
   | "CANCELOU"
-  | "IMPORTOU";
+  | "IMPORTOU"
+  | "IMPERSONOU"
+  | "ENCERROU_IMPERSONACAO";
 
 export type AuditLogEntityType =
   | "ACADEMIA"
