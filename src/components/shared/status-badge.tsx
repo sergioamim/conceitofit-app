@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useStatusBadgeMotion } from "@/lib/ui-motion";
 import type {
+  AcademiaHealthLevel,
   StatusProspect,
   StatusAluno,
   StatusMatricula,
@@ -16,7 +17,8 @@ type AnyStatus =
   | StatusAluno
   | StatusMatricula
   | StatusPagamento
-  | StatusContaPagar;
+  | StatusContaPagar
+  | AcademiaHealthLevel;
 
 const STATUS_MAP: Record<
   AnyStatus,
@@ -44,6 +46,10 @@ const STATUS_MAP: Record<
   PAGO: { label: "Pago", className: "bg-gym-teal/15 text-gym-teal" },
   PAGA: { label: "Paga", className: "bg-gym-teal/15 text-gym-teal" },
   VENCIDO: { label: "Vencido", className: "bg-gym-danger/15 text-gym-danger" },
+  // Saúde operacional
+  SAUDAVEL: { label: "Saudável", className: "bg-gym-teal/15 text-gym-teal" },
+  RISCO: { label: "Risco", className: "bg-gym-warning/15 text-gym-warning" },
+  CRITICO: { label: "Crítico", className: "bg-gym-danger/15 text-gym-danger" },
 };
 
 interface StatusBadgeProps {

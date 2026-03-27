@@ -1,8 +1,13 @@
 import type {
+  AcademiaContractStatus,
+  AcademiaHealthLevel,
+  AcademiaHealthStatus,
+  AcademiasHealthMap,
   MetricasOperacionaisGlobal,
   MetricasOperacionaisGlobalAcademia,
   MetricasOperacionaisGlobalSerie,
 } from "@/lib/types";
+import { normalizeAcademiaHealthStatus } from "@/lib/admin-health";
 import { apiRequest } from "./http";
 
 type Envelope<T> =
@@ -74,6 +79,38 @@ type MetricasOperacionaisGlobalApiResponse = Partial<MetricasOperacionaisGlobal>
   generatedAt?: unknown;
 };
 
+type AcademiaHealthStatusApiResponse = Partial<AcademiaHealthStatus> & {
+  academiaId?: unknown;
+  academiaNome?: unknown;
+  nome?: unknown;
+  unidades?: unknown;
+  totalUnidades?: unknown;
+  alunosAtivos?: unknown;
+  totalAlunosAtivos?: unknown;
+  churnMensal?: unknown;
+  churn?: unknown;
+  inadimplenciaPercentual?: unknown;
+  inadimplenciaPct?: unknown;
+  ultimoLoginAdmin?: unknown;
+  ultimoLoginAdministrador?: unknown;
+  statusContrato?: unknown;
+  contratoStatus?: unknown;
+  planoContratado?: unknown;
+  plano?: unknown;
+  alertasRisco?: unknown;
+  alertas?: unknown;
+  healthLevel?: unknown;
+  saude?: unknown;
+  diasSemLoginAdmin?: unknown;
+};
+
+type AcademiasHealthMapApiResponse = Partial<AcademiasHealthMap> & {
+  items?: unknown;
+  academias?: unknown;
+  rows?: unknown;
+  generatedAt?: unknown;
+};
+
 function cleanString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim();
@@ -83,6 +120,11 @@ function cleanString(value: unknown): string | undefined {
 function toNumber(value: unknown, fallback = 0): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toOptionalNumber(value: unknown): number | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function computeGrowthPercent(current: number, previous: number): number {
@@ -199,10 +241,69 @@ function normalizeMetricasOperacionaisGlobal(
   };
 }
 
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => cleanString(item))
+    .filter((item): item is string => Boolean(item));
+}
+
+function normalizeHealthLevel(value: unknown): AcademiaHealthLevel | undefined {
+  if (typeof value !== "string") return undefined;
+  if (value === "SAUDAVEL" || value === "RISCO" || value === "CRITICO") return value;
+  return undefined;
+}
+
+function normalizeContractStatus(value: unknown): AcademiaContractStatus {
+  if (value === "ATIVO" || value === "EM_RISCO" || value === "SUSPENSO" || value === "CANCELADO") {
+    return value;
+  }
+  return "ATIVO";
+}
+
+function normalizeAcademiaHealthStatusResponse(
+  input: AcademiaHealthStatusApiResponse
+): AcademiaHealthStatus {
+  return normalizeAcademiaHealthStatus({
+    academiaId: cleanString(input.academiaId),
+    academiaNome: cleanString(input.academiaNome) ?? cleanString(input.nome) ?? "Academia sem nome",
+    unidades: Math.max(0, toNumber(input.unidades ?? input.totalUnidades, 0)),
+    alunosAtivos: Math.max(0, toNumber(input.alunosAtivos ?? input.totalAlunosAtivos, 0)),
+    churnMensal: Math.max(0, toNumber(input.churnMensal ?? input.churn, 0)),
+    inadimplenciaPercentual: Math.max(0, toNumber(input.inadimplenciaPercentual ?? input.inadimplenciaPct, 0)),
+    ultimoLoginAdmin: cleanString(input.ultimoLoginAdmin) ?? cleanString(input.ultimoLoginAdministrador),
+    statusContrato: normalizeContractStatus(input.statusContrato ?? input.contratoStatus),
+    planoContratado: cleanString(input.planoContratado) ?? cleanString(input.plano),
+    alertasRisco: normalizeStringArray(input.alertasRisco ?? input.alertas),
+    healthLevel: normalizeHealthLevel(input.healthLevel ?? input.saude) ?? "SAUDAVEL",
+    diasSemLoginAdmin: toOptionalNumber(input.diasSemLoginAdmin),
+  });
+}
+
+function normalizeAcademiasHealthMap(
+  response: Envelope<AcademiasHealthMapApiResponse>
+): AcademiasHealthMap {
+  const payload = extractPayload(response);
+  const items = payload.items ?? payload.academias ?? payload.rows;
+
+  return {
+    items: Array.isArray(items) ? (items as AcademiaHealthStatusApiResponse[]).map(normalizeAcademiaHealthStatusResponse) : [],
+    generatedAt: cleanString(payload.generatedAt),
+  };
+}
+
 export async function getMetricasOperacionaisGlobal(): Promise<MetricasOperacionaisGlobal> {
   const response = await apiRequest<Envelope<MetricasOperacionaisGlobalApiResponse>>({
     path: "/api/v1/admin/metricas/operacionais/global",
   });
 
   return normalizeMetricasOperacionaisGlobal(response);
+}
+
+export async function getAcademiasHealthMap(): Promise<AcademiasHealthMap> {
+  const response = await apiRequest<Envelope<AcademiasHealthMapApiResponse>>({
+    path: "/api/v1/admin/metricas/operacionais/saude",
+  });
+
+  return normalizeAcademiasHealthMap(response);
 }

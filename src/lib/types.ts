@@ -1562,6 +1562,29 @@ export interface MetricasOperacionaisGlobal {
   generatedAt?: LocalDateTime;
 }
 
+export type AcademiaHealthLevel = "SAUDAVEL" | "RISCO" | "CRITICO";
+export type AcademiaContractStatus = "ATIVO" | "EM_RISCO" | "SUSPENSO" | "CANCELADO";
+
+export interface AcademiaHealthStatus {
+  academiaId?: UUID;
+  academiaNome: string;
+  unidades: number;
+  alunosAtivos: number;
+  churnMensal: number;
+  inadimplenciaPercentual: number;
+  ultimoLoginAdmin?: LocalDateTime;
+  statusContrato: AcademiaContractStatus;
+  planoContratado?: string;
+  alertasRisco: string[];
+  healthLevel: AcademiaHealthLevel;
+  diasSemLoginAdmin?: number;
+}
+
+export interface AcademiasHealthMap {
+  items: AcademiaHealthStatus[];
+  generatedAt?: LocalDateTime;
+}
+
 export type BiEscopo = "UNIDADE" | "ACADEMIA";
 export type BiSegmento = OrigemProspect | "TODOS";
 export type BiKpiKey =
