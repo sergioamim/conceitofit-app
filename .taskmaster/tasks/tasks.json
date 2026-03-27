@@ -7933,7 +7933,8 @@
             "description": "Adicionar PlanoPlataforma em types.ts e criar src/lib/api/admin-billing.ts com CRUD de planos",
             "dependencies": [],
             "status": "done",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:14:18.078Z"
           },
           {
             "id": 2,
@@ -7943,7 +7944,8 @@
               1
             ],
             "status": "done",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:14:19.932Z"
           },
           {
             "id": 3,
@@ -7953,9 +7955,11 @@
               2
             ],
             "status": "done",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:14:21.734Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T17:14:21.734Z"
       },
       {
         "id": "125",
@@ -7963,7 +7967,7 @@
         "description": "Criar página /admin/financeiro/contratos para vincular cada academia a um plano da plataforma, com data início/fim, ciclo de cobrança, valor negociado (override), status (ativo/suspenso/cancelado/trial) e histórico de mudanças de plano.",
         "details": "Criar src/app/(backoffice)/admin/financeiro/contratos/page.tsx com listagem de contratos por academia (filtros por status, academia, plano). Modal de novo contrato: selecionar academia + plano + data início + ciclo + valor override opcional. Adicionar tipos ContratoPlataforma em types.ts (id, academiaId, planoId, planoNome, academiaNome, dataInicio, dataFim, ciclo, valorMensal, status, motivoSuspensao, historicoPlanosIds). Criar endpoints em admin-billing.ts: listAdminContratos, createAdminContrato, updateAdminContrato, suspenderAdminContrato, reativarAdminContrato. Exibir badge de status e alerta visual para contratos vencidos ou suspensos.",
         "testStrategy": "Criar contrato para uma academia, suspender e reativar. Verificar filtros por status e por academia. Confirmar badges de status.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "124"
         ],
@@ -7974,8 +7978,9 @@
             "title": "Criar tipos e API client para contratos",
             "description": "Adicionar ContratoPlataforma em types.ts e endpoints de CRUD em admin-billing.ts",
             "dependencies": [],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T18:10:00.000Z"
           },
           {
             "id": 2,
@@ -7984,8 +7989,9 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T18:10:00.000Z"
           },
           {
             "id": 3,
@@ -7994,10 +8000,12 @@
             "dependencies": [
               2
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T18:10:00.000Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T18:10:00.000Z"
       },
       {
         "id": "126",
@@ -8133,7 +8141,7 @@
         "description": "Criar página /admin/operacional/saude para visão comparativa de todas as academias com indicadores de saúde operacional: semáforo (verde/amarelo/vermelho), métricas-chave por academia e alertas de risco.",
         "details": "Criar src/app/(backoffice)/admin/operacional/saude/page.tsx com: (1) Grid de cards por academia com semáforo (verde = saudável, amarelo = risco, vermelho = crítico) baseado em regras: verde = alunos ativos > 50 e inadimplência < 10%, amarelo = alunos entre 10-50 ou inadimplência entre 10-20%, vermelho = alunos < 10 ou inadimplência > 20% ou sem login há 30d; (2) Tabela detalhada: academia, unidades, alunos ativos, churn mensal, inadimplência %, último login de admin, status do contrato; (3) Filtros por status de saúde e por plano contratado. Criar endpoint getAcademiasHealthMap em admin-metrics.ts. Usar StatusBadge existente para semáforos.",
         "testStrategy": "Verificar que academias com poucos alunos aparecem em vermelho. Filtrar por status e confirmar contagem.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "128"
         ],
@@ -8144,8 +8152,9 @@
             "title": "Criar tipos e endpoint de saúde das academias",
             "description": "Tipo AcademiaHealthStatus com métricas e classificação. Endpoint em admin-metrics.ts",
             "dependencies": [],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:03:23.414Z"
           },
           {
             "id": 2,
@@ -8154,10 +8163,12 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:03:25.094Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T17:03:25.094Z"
       },
       {
         "id": "130",
@@ -8240,7 +8251,7 @@
         "description": "Criar página /admin/audit-log com timeline de todas as ações administrativas realizadas no backoffice e nas academias: quem fez o quê, quando, em qual academia/unidade, com filtros por tipo de ação, período e usuário.",
         "details": "Criar src/app/(backoffice)/admin/audit-log/page.tsx com tabela paginada: timestamp, usuário, ação (criou/editou/excluiu/suspendeu), entidade (academia/unidade/usuário/contrato), detalhe, academia/unidade afetada. Filtros: período (date range), tipo de ação, academia, usuário. Criar endpoint listAuditLogs em src/lib/api/admin-audit.ts. Adicionar tipo AuditLogEntry em types.ts (id, timestamp, userId, userName, action, entityType, entityId, entityName, academiaId, academiaNome, tenantId, tenantNome, detalhes, ip). Usar formato de timeline visual similar ao ProspectTimeline.",
         "testStrategy": "Verificar que ações de CRUD no backoffice aparecem no log. Filtrar por academia e confirmar resultados. Filtrar por período.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [
@@ -8249,8 +8260,9 @@
             "title": "Criar tipos e API client para audit log",
             "description": "AuditLogEntry em types.ts e listAuditLogs em admin-audit.ts",
             "dependencies": [],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T16:49:31.152Z"
           },
           {
             "id": 2,
@@ -8259,10 +8271,12 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T16:49:31.169Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T16:49:31.169Z"
       },
       {
         "id": "133",
@@ -8428,7 +8442,7 @@
       "version": "1.0.0",
       "lastModified": "2026-03-27T18:10:00.000Z",
       "taskCount": 136,
-      "completedCount": 127,
+      "completedCount": 130,
       "tags": [
         "master"
       ]
