@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 export type PaginatedTableColumn = {
   label: string;
   className?: string;
+  ariaLabel?: string;
+  sort?: "ascending" | "descending" | "none" | "other";
 };
 
 type PaginatedTableProps<T> = {
@@ -32,6 +34,7 @@ type PaginatedTableProps<T> = {
   disableNext?: boolean;
   showPagination?: boolean;
   itemLabel?: string;
+  tableAriaLabel?: string;
   isLoading?: boolean;
   selectable?: boolean;
   selectedIds?: string[];
@@ -58,6 +61,7 @@ export function PaginatedTable<T>({
   disableNext,
   showPagination = true,
   itemLabel = "registros",
+  tableAriaLabel,
   isLoading = false,
   selectable = false,
   selectedIds = [],
@@ -116,14 +120,22 @@ export function PaginatedTable<T>({
     );
   }
 
+  const resolvedTableAriaLabel = tableAriaLabel ?? `Tabela paginada de ${itemLabel}`;
+
   return (
     <div className="space-y-2">
       <div className="overflow-hidden rounded-xl border border-border">
-        <Table>
+        <Table
+          role="grid"
+          aria-label={resolvedTableAriaLabel}
+          aria-rowcount={items.length}
+          aria-colcount={columns.length + (selectable ? 1 : 0)}
+          aria-multiselectable={selectable || undefined}
+        >
           <TableHeader>
             <TableRow className="border-b border-border bg-secondary">
               {selectable && (
-                <TableHead className="w-[50px] px-4 py-3">
+                <TableHead className="w-[50px] px-4 py-3" scope="col" aria-label="Selecionar linhas">
                   <Checkbox 
                     checked={allSelectedOnPage}
                     indeterminate={someSelectedOnPage}
@@ -133,7 +145,13 @@ export function PaginatedTable<T>({
                 </TableHead>
               )}
               {columns.map((column) => (
-                <TableHead key={column.label} className={`px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ${column.className ?? ""}`}>
+                <TableHead
+                  key={column.label}
+                  scope="col"
+                  aria-label={column.ariaLabel ?? column.label}
+                  aria-sort={column.sort ?? "none"}
+                  className={`px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ${column.className ?? ""}`}
+                >
                   {column.label}
                 </TableHead>
               ))}
@@ -142,7 +160,7 @@ export function PaginatedTable<T>({
           <TableBody>
             {items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={columns.length} className="py-10 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={columns.length + (selectable ? 1 : 0)} className="py-10 text-center text-sm text-muted-foreground">
                   {emptyText}
                 </TableCell>
               </TableRow>
@@ -155,6 +173,18 @@ export function PaginatedTable<T>({
                   key={key}
                   className={cn(rowClassName(item), isSelected && "bg-muted/50")}
                   onClick={onRowClick ? () => onRowClick(item) : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onRowClick(item);
+                          }
+                        }
+                      : undefined
+                  }
+                  tabIndex={onRowClick ? 0 : undefined}
+                  aria-selected={selectable ? isSelected : undefined}
                 >
                   {selectable && (
                     <TableCell className="w-[50px] px-4 py-3">
@@ -195,6 +225,7 @@ export function PaginatedTable<T>({
               className="border-border"
               disabled={previousDisabled}
               onClick={onPrevious}
+              aria-label={`Ir para a página anterior. Página atual ${page + 1}.`}
             >
               Anterior
             </Button>
@@ -204,6 +235,7 @@ export function PaginatedTable<T>({
               className="border-border"
               disabled={nextDisabled}
               onClick={onNext}
+              aria-label={`Ir para a próxima página. Página atual ${page + 1}.`}
             >
               Próxima
             </Button>

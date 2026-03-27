@@ -32,7 +32,12 @@ export function BulkActionBar({
     <div className={cn(
       "fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 overflow-hidden rounded-full border border-border bg-card/95 p-1.5 px-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/75",
       MOTION_CLASSNAMES.slideUpEnter
-    )}>
+    )}
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label={`${selectedCount} item${selectedCount === 1 ? "" : "s"} selecionado${selectedCount === 1 ? "" : "s"}`}
+    >
       <div className="flex items-center gap-2 pl-2 pr-4 border-r border-border">
         <div className="flex size-5 items-center justify-center rounded-full bg-gym-accent font-display text-[10px] font-bold text-white">
           {selectedCount}

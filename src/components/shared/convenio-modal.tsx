@@ -111,6 +111,8 @@ export function ConvenioModal({
       initialId={initial?.id}
       title="Novo convenio"
       editTitle="Editar convenio"
+      description="Cadastre o convênio, desconto e escopo de planos elegíveis."
+      editDescription="Atualize o convênio, desconto e escopo de planos elegíveis."
       fields={FIELDS}
       schema={convenioFormSchema}
       renderAfterFields={() => <PlanoSelector planos={planos} />}

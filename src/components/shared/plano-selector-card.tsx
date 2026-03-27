@@ -29,12 +29,29 @@ export function PlanoSelectorCard({
   className,
 }: PlanoSelectorCardProps) {
   const quote = externalQuote ?? getPublicPlanQuote(plano, parcelasAnuidade);
+  const isSelectable = Boolean(onSelect);
+
+  const handleKeySelect = (key: string) => {
+    if (onSelect && (key === "Enter" || key === " ")) {
+      onSelect(plano);
+    }
+  };
 
   if (variant === "compact") {
     return (
-      <button
-        type="button"
+      <div
+        role={isSelectable ? "radio" : undefined}
+        aria-checked={isSelectable ? selected : undefined}
+        tabIndex={isSelectable ? 0 : undefined}
         onClick={() => onSelect?.(plano)}
+        onKeyDown={(event) => {
+          if (!isSelectable) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleKeySelect(event.key);
+          }
+        }}
+        aria-label={`${plano.nome}. ${selected ? "Selecionado." : "Selecionar plano."}`}
         className={cn(
           "cursor-pointer rounded-lg border p-3 text-left transition-colors",
           selected
@@ -59,27 +76,29 @@ export function PlanoSelectorCard({
             {Math.max(1, Number(plano.parcelasMaxAnuidade ?? 1))}x)
           </p>
         )}
-      </button>
+      </div>
     );
   }
 
   // variant === "grid" — full card for public landing
   return (
     <div
-      role={onSelect ? "button" : undefined}
-      tabIndex={onSelect ? 0 : undefined}
+      role={isSelectable ? "radio" : undefined}
+      aria-checked={isSelectable ? selected : undefined}
+      aria-label={isSelectable ? `${plano.nome}. ${selected ? "Selecionado." : "Selecionar plano."}` : undefined}
+      tabIndex={isSelectable ? 0 : undefined}
       onClick={() => onSelect?.(plano)}
       onKeyDown={(e) => {
-        if (onSelect && (e.key === "Enter" || e.key === " ")) {
+        if (isSelectable && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
-          onSelect(plano);
+          handleKeySelect(e.key);
         }
       }}
       className={cn(
         "rounded-2xl border border-border/70 bg-card/70 px-6 py-6 backdrop-blur transition-colors",
         selected && "ring-1 ring-gym-accent/40",
         plano.destaque && !selected && "ring-1 ring-gym-accent/40",
-        onSelect && "cursor-pointer",
+        isSelectable && "cursor-pointer",
         className,
       )}
     >

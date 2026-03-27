@@ -112,6 +112,8 @@ export function FormaPagamentoModal({
       initialId={initial?.id}
       title="Nova forma de pagamento"
       editTitle="Editar forma de pagamento"
+      description="Cadastre a forma de pagamento, tipo, instruções e automações fiscais."
+      editDescription="Atualize a forma de pagamento, instruções e automações fiscais."
       fields={FIELDS}
       renderAfterFields={() => <RecorrenteNote />}
     />
