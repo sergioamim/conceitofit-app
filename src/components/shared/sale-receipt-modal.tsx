@@ -257,7 +257,7 @@ export function SaleReceiptModal({
       <body>
         <div class="doc">
           <div class="head">
-            <h1>Contrato do plano</h1>
+            <h1>Contrato / Assinatura</h1>
             <div class="meta">${escapeHtml(tenant?.nome ?? "Unidade")} · ${escapeHtml(plano.nome)}</div>
           </div>
           <div class="content">${contratoHtml}</div>
@@ -368,10 +368,10 @@ export function SaleReceiptModal({
           {plano?.contratoTemplateHtml?.trim() ? (
             <div className="space-y-2 rounded-lg border border-border p-3">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Contrato do plano
+                Contrato / Assinatura
               </p>
               <p className="text-xs text-muted-foreground">
-                Plano: {plano.nome} · assinatura {plano.contratoAssinatura.toLowerCase()}
+                Plano: {plano.nome} · modo de assinatura: {plano.contratoAssinatura.toLowerCase()}
               </p>
               {venda.contratoStatus ? (
                 <p className="text-xs text-muted-foreground">

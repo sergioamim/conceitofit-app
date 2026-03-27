@@ -26,7 +26,7 @@ export function ClienteTabs({
 }) {
   const base: ClienteTabItem[] = [
     { key: "resumo", label: "Dashboard" },
-    { key: "matriculas", label: "Planos" },
+    { key: "matriculas", label: "Contratos" },
     { key: "financeiro", label: "Financeiro" },
     { key: "nfse", label: "NFS-e", icon: FileText },
     { key: "cartoes", label: "Cartões", icon: CreditCard },

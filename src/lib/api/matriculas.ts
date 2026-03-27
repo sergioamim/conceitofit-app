@@ -20,6 +20,7 @@ export type MatriculaResponse = {
   dataCriacao?: string;
   dataAtualizacao?: string | null;
   convenioId?: string | null;
+  origemVendaId?: string | null;
   contratoStatus?: Matricula["contratoStatus"] | null;
   contratoAdesaoStatus?: Matricula["contratoStatus"] | null;
   contratoModoAssinatura?: Plano["contratoAssinatura"] | null;
@@ -253,6 +254,7 @@ export function normalizeMatriculaApiResponse(input: MatriculaResponse): Matricu
     pagamento,
     dataCriacao: typeof input.dataCriacao === "string" ? input.dataCriacao : new Date().toISOString(),
     dataAtualizacao: typeof input.dataAtualizacao === "string" ? input.dataAtualizacao : undefined,
+    origemVendaId: typeof input.origemVendaId === "string" ? input.origemVendaId : undefined,
     convenioId: typeof input.convenioId === "string" ? input.convenioId : undefined,
   };
 }
