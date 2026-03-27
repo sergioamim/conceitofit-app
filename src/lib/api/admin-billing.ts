@@ -1,4 +1,9 @@
-import type { CicloPlanoPlataforma, PlanoPlataforma } from "@/lib/types";
+import type {
+  CicloPlanoPlataforma,
+  ContratoPlataforma,
+  PlanoPlataforma,
+  StatusContratoPlataforma,
+} from "@/lib/types";
 import { apiRequest } from "./http";
 
 type PlanoPlataformaApiResponse = Partial<PlanoPlataforma> & {
@@ -15,6 +20,23 @@ type PlanoPlataformaApiResponse = Partial<PlanoPlataforma> & {
 };
 
 type PlanoPlataformaPayload = Omit<PlanoPlataforma, "id">;
+
+type ContratoPlataformaApiResponse = Partial<ContratoPlataforma> & {
+  id?: string | null;
+  academiaId?: string | null;
+  planoId?: string | null;
+  planoNome?: string | null;
+  academiaNome?: string | null;
+  dataInicio?: string | null;
+  dataFim?: string | null;
+  ciclo?: CicloPlanoPlataforma | null;
+  valorMensal?: unknown;
+  status?: StatusContratoPlataforma | null;
+  motivoSuspensao?: string | null;
+  historicoPlanosIds?: unknown;
+};
+
+type ContratoPlataformaPayload = Omit<ContratoPlataforma, "id" | "planoNome" | "academiaNome">;
 
 type AnyListResponse<T> =
   | T[]
@@ -67,6 +89,13 @@ function normalizeFeatures(value: unknown): string[] {
     .filter((item): item is string => Boolean(item));
 }
 
+function normalizeIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => cleanString(item))
+    .filter((item): item is string => Boolean(item));
+}
+
 function normalizePlanoPlataforma(
   input: PlanoPlataformaApiResponse,
   fallback?: Partial<PlanoPlataformaPayload> & { id?: string }
@@ -101,6 +130,42 @@ function buildPlanoPayload(data: PlanoPlataformaPayload): Record<string, unknown
   };
 }
 
+function normalizeContratoPlataforma(
+  input: ContratoPlataformaApiResponse,
+  fallback?: Partial<ContratoPlataformaPayload> & { id?: string }
+): ContratoPlataforma {
+  return {
+    id: cleanString(input.id) ?? fallback?.id ?? "",
+    academiaId: cleanString(input.academiaId) ?? fallback?.academiaId ?? "",
+    planoId: cleanString(input.planoId) ?? fallback?.planoId ?? "",
+    planoNome: cleanString(input.planoNome) ?? "",
+    academiaNome: cleanString(input.academiaNome) ?? "",
+    dataInicio: cleanString(input.dataInicio) ?? fallback?.dataInicio ?? "",
+    dataFim: cleanString(input.dataFim) ?? fallback?.dataFim,
+    ciclo: input.ciclo ?? fallback?.ciclo ?? "MENSAL",
+    valorMensal: toNumber(input.valorMensal, fallback?.valorMensal ?? 0),
+    status: input.status ?? fallback?.status ?? "ATIVO",
+    motivoSuspensao: cleanString(input.motivoSuspensao) ?? fallback?.motivoSuspensao,
+    historicoPlanosIds: normalizeIds(input.historicoPlanosIds).length
+      ? normalizeIds(input.historicoPlanosIds)
+      : fallback?.historicoPlanosIds ?? [],
+  };
+}
+
+function buildContratoPayload(data: ContratoPlataformaPayload): Record<string, unknown> {
+  return {
+    academiaId: data.academiaId,
+    planoId: data.planoId,
+    dataInicio: data.dataInicio,
+    dataFim: data.dataFim,
+    ciclo: data.ciclo,
+    valorMensal: data.valorMensal,
+    status: data.status,
+    motivoSuspensao: cleanString(data.motivoSuspensao),
+    historicoPlanosIds: data.historicoPlanosIds,
+  };
+}
+
 export async function listAdminPlanos(): Promise<PlanoPlataforma[]> {
   const response = await apiRequest<AnyListResponse<PlanoPlataformaApiResponse>>({
     path: "/api/v1/admin/financeiro/planos",
@@ -132,4 +197,48 @@ export async function toggleAdminPlano(id: string): Promise<PlanoPlataforma> {
     method: "PATCH",
   });
   return normalizePlanoPlataforma(response, { id });
+}
+
+export async function listAdminContratos(): Promise<ContratoPlataforma[]> {
+  const response = await apiRequest<AnyListResponse<ContratoPlataformaApiResponse>>({
+    path: "/api/v1/admin/financeiro/contratos",
+  });
+  return extractItems(response).map((item) => normalizeContratoPlataforma(item));
+}
+
+export async function createAdminContrato(data: ContratoPlataformaPayload): Promise<ContratoPlataforma> {
+  const response = await apiRequest<ContratoPlataformaApiResponse>({
+    path: "/api/v1/admin/financeiro/contratos",
+    method: "POST",
+    body: buildContratoPayload(data),
+  });
+  return normalizeContratoPlataforma(response, data);
+}
+
+export async function updateAdminContrato(id: string, data: ContratoPlataformaPayload): Promise<ContratoPlataforma> {
+  const response = await apiRequest<ContratoPlataformaApiResponse>({
+    path: `/api/v1/admin/financeiro/contratos/${id}`,
+    method: "PUT",
+    body: buildContratoPayload(data),
+  });
+  return normalizeContratoPlataforma(response, { ...data, id });
+}
+
+export async function suspenderAdminContrato(id: string, motivoSuspensao?: string): Promise<ContratoPlataforma> {
+  const response = await apiRequest<ContratoPlataformaApiResponse>({
+    path: `/api/v1/admin/financeiro/contratos/${id}/suspender`,
+    method: "PATCH",
+    body: {
+      motivoSuspensao: cleanString(motivoSuspensao),
+    },
+  });
+  return normalizeContratoPlataforma(response, { id, status: "SUSPENSO", motivoSuspensao });
+}
+
+export async function reativarAdminContrato(id: string): Promise<ContratoPlataforma> {
+  const response = await apiRequest<ContratoPlataformaApiResponse>({
+    path: `/api/v1/admin/financeiro/contratos/${id}/reativar`,
+    method: "PATCH",
+  });
+  return normalizeContratoPlataforma(response, { id, status: "ATIVO" });
 }

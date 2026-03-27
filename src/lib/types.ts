@@ -355,6 +355,7 @@ export interface Plano {
 }
 
 export type CicloPlanoPlataforma = "MENSAL" | "ANUAL";
+export type StatusContratoPlataforma = "ATIVO" | "SUSPENSO" | "CANCELADO" | "TRIAL";
 
 export interface PlanoPlataforma {
   id: UUID;
@@ -367,6 +368,21 @@ export interface PlanoPlataforma {
   maxAlunos?: number;
   featuresIncluidas: string[];
   ativo: boolean;
+}
+
+export interface ContratoPlataforma {
+  id: UUID;
+  academiaId: UUID;
+  planoId: UUID;
+  planoNome: string;
+  academiaNome: string;
+  dataInicio: LocalDate;
+  dataFim?: LocalDate;
+  ciclo: CicloPlanoPlataforma;
+  valorMensal: number;
+  status: StatusContratoPlataforma;
+  motivoSuspensao?: string;
+  historicoPlanosIds: UUID[];
 }
 
 export interface Matricula {
