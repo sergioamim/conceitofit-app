@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+const withBundleAnalyzer =
+  process.env.ANALYZE === "true"
+    ? require("@next/bundle-analyzer")({ enabled: true })
+    : (config: NextConfig) => config;
+
 const backendProxyTarget = process.env.BACKEND_PROXY_TARGET ?? "http://localhost:8080";
 const backendProxyMaxBodySize = Number.parseInt(process.env.BACKEND_PROXY_MAX_BODY_SIZE ?? "150", 10) || 150;
 
@@ -36,4 +41,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);
