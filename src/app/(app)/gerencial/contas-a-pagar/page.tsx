@@ -27,6 +27,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import {
   Dialog,
@@ -1638,10 +1639,25 @@ export default function ContasPagarPage() {
             Gestão de despesas da unidade com classificação DRE e recorrência.
           </p>
         </div>
-        <Button onClick={abrirNovaContaModal}>
-          <Plus className="size-4" />
-          Nova conta
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportMenu
+            data={filtered}
+            columns={[
+              { label: "Vencimento", accessor: (r) => formatDate(r.dataVencimento) },
+              { label: "Fornecedor", accessor: (r) => r.fornecedor ?? "" },
+              { label: "Descrição", accessor: (r) => r.descricao ?? "" },
+              { label: "Categoria", accessor: (r) => r.categoria ?? "" },
+              { label: "Valor", accessor: (r) => formatBRL(contaTotal(r)) },
+              { label: "Status", accessor: "status" },
+            ] satisfies ExportColumn<(typeof filtered)[number]>[]}
+            filename="contas-a-pagar"
+            title="Contas a Pagar"
+          />
+          <Button onClick={abrirNovaContaModal}>
+            <Plus className="size-4" />
+            Nova conta
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
