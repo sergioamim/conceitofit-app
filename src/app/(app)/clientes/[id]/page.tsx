@@ -1309,11 +1309,11 @@ export default function ClienteDetalhePage() {
 
       {tab === "matriculas" && (
         <div className="rounded-xl border border-border bg-card p-5">
-          <h2 className="font-display text-base font-bold">Histórico de planos</h2>
+          <h2 className="font-display text-base font-bold">Histórico de contratos</h2>
           <div className="mt-3 divide-y divide-border">
             {matriculas.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                Nenhum plano encontrado
+                Nenhum contrato encontrado
               </p>
             )}
             {matriculas.map((m) => (

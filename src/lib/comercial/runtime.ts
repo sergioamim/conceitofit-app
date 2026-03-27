@@ -31,6 +31,7 @@ import {
   listMatriculasPageApi,
   renovarMatriculaApi,
 } from "@/lib/api/matriculas";
+import { type Contrato, contratoFromMatricula } from "./contratos";
 import { emitirNfsePagamentoApi, listPagamentosApi, receberPagamentoApi } from "@/lib/api/pagamentos";
 import { listPresencasByAlunoApi } from "@/lib/api/presencas";
 import { createVendaApi, listVendasApi, type ListVendasApiEnvelopeResult } from "@/lib/api/vendas";
@@ -396,6 +397,26 @@ export async function renovarMatriculaService(input: {
   return renovarMatriculaApi(input);
 }
 
+export async function listContratosService(input: {
+  tenantId: string;
+  status?: string;
+  page?: number;
+  size?: number;
+}): Promise<Contrato[]> {
+  const matriculas = await listMatriculasApi(input);
+  return matriculas.map(contratoFromMatricula);
+}
+
+export async function listContratosByAlunoService(input: {
+  tenantId: string;
+  alunoId: string;
+  page?: number;
+  size?: number;
+}): Promise<Contrato[]> {
+  const matriculas = await listMatriculasByAlunoApi(input);
+  return matriculas.map(contratoFromMatricula);
+}
+
 export async function listVendasPageService(input: {
   tenantId: string;
   page?: number;
@@ -559,14 +580,18 @@ export async function liberarAcessoCatracaService(input: {
   return response.requestId;
 }
 
+/**
+ * Resolve o status de fluxo comercial de uma venda.
+ * Unificado com a mesma lógica de resolveFluxoComercialStatus (plano-flow.ts)
+ * para que vendas de plano e matrículas sigam a mesma regra de StatusFluxoComercial.
+ */
 export function resolveVendaFluxoStatusFromApi(venda: Venda): StatusFluxoComercial | undefined {
   if (venda.status === "CANCELADA") return "CANCELADO";
-  if (venda.pagamento.status === "PENDENTE" || Number(venda.pagamento.valorPago ?? 0) <= 0) {
-    return "AGUARDANDO_PAGAMENTO";
-  }
-  if (venda.contratoStatus === "PENDENTE_ASSINATURA") {
-    return "AGUARDANDO_ASSINATURA";
-  }
+  const pagamentoPendente =
+    venda.pagamento.status === "PENDENTE" || Number(venda.pagamento.valorPago ?? 0) <= 0;
+  if (pagamentoPendente) return "AGUARDANDO_PAGAMENTO";
+  const contratoStatus = venda.contratoStatus ?? "SEM_CONTRATO";
+  if (contratoStatus === "PENDENTE_ASSINATURA") return "AGUARDANDO_ASSINATURA";
   if (venda.tipo === "PLANO") return "ATIVO";
   return undefined;
 }

@@ -23,7 +23,7 @@ import { TableCell } from "@/components/ui/table";
 import { formatBRL, formatDateTime } from "@/lib/formatters";
 
 const TIPO_LABEL: Record<Venda["tipo"], string> = {
-  PLANO: "Plano",
+  PLANO: "Contrato",
   SERVICO: "Serviço",
   PRODUTO: "Produto",
 };
@@ -265,7 +265,7 @@ export default function VendasPage() {
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
                 <SelectItem value="TODOS">Todos</SelectItem>
-                <SelectItem value="PLANO">Plano</SelectItem>
+                <SelectItem value="PLANO">Contrato</SelectItem>
                 <SelectItem value="SERVICO">Serviço</SelectItem>
                 <SelectItem value="PRODUTO">Produto</SelectItem>
               </SelectContent>
@@ -353,7 +353,9 @@ export default function VendasPage() {
                     {fluxoStatus ? STATUS_FLUXO_COMERCIAL_LABEL[fluxoStatus] : venda.status}
                   </span>
                   {fluxoStatus ? (
-                    <p className="text-[11px] text-muted-foreground">Venda {venda.status.toLowerCase()}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {venda.tipo === "PLANO" ? "Contrato" : "Venda"} {venda.status.toLowerCase()}
+                    </p>
                   ) : null}
                 </div>
               </TableCell>
