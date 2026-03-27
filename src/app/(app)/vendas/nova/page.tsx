@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { ScanLine } from "lucide-react";
 import {
   createVendaService,
@@ -20,7 +21,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckoutPayment } from "@/components/shared/checkout-payment";
 import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
-import { SaleReceiptModal } from "@/components/shared/sale-receipt-modal";
+const SaleReceiptModal = dynamic(
+  () => import("@/components/shared/sale-receipt-modal").then((mod) => mod.SaleReceiptModal),
+  { ssr: false }
+);
 import { PlanoSelectorCard } from "@/components/shared/plano-selector-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

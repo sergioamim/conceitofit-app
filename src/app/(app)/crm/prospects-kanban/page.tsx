@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   listCrmTasksApi,
   listProspectsApi,
@@ -15,7 +16,10 @@ import { buildDefaultCrmPipelineStages } from "@/lib/crm/workspace";
 import { enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/crm/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { ProspectDetailModal } from "@/components/shared/prospect-detail-modal";
+const ProspectDetailModal = dynamic(
+  () => import("@/components/shared/prospect-detail-modal").then((mod) => mod.ProspectDetailModal),
+  { ssr: false }
+);
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 

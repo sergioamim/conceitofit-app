@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Search, Plus, X, Download } from "lucide-react";
 import { useTableSearchParams } from "@/hooks/use-table-search-params";
 import { getBusinessTodayIso } from "@/lib/business-date";
@@ -12,7 +13,11 @@ import {
 import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { HoverPopover } from "@/components/shared/hover-popover";
-import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
+
+const NovoClienteWizard = dynamic(
+  () => import("@/components/shared/novo-cliente-wizard").then((mod) => mod.NovoClienteWizard),
+  { ssr: false }
+);
 import { ClienteThumbnail } from "@/components/shared/cliente-thumbnail";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { TableSkeleton } from "@/components/shared/table-skeleton";

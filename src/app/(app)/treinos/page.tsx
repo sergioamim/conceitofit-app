@@ -11,7 +11,13 @@ import {
   SquareArrowOutUpRight,
   UserPlus,
 } from "lucide-react";
-import { TreinoModal, type TreinoForm } from "@/components/shared/treino-modal";
+import type { TreinoForm } from "@/components/shared/treino-modal";
+import dynamic from "next/dynamic";
+
+const TreinoModal = dynamic(
+  () => import("@/components/shared/treino-modal").then((mod) => mod.TreinoModal),
+  { ssr: false }
+);
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
