@@ -1,18 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
+  Check,
   CheckCircle2,
   Database,
   FileWarning,
   type LucideIcon,
+  Minus,
   ShieldCheck,
   Trash2,
   XCircle,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -71,6 +84,12 @@ const STATUS_COLORS: Record<SolicitacaoExclusaoStatus, string> = {
   EXECUTADA: "bg-gym-teal/15 text-gym-teal border-gym-teal/30",
   REJEITADA: "bg-gym-danger/15 text-gym-danger border-gym-danger/30",
 };
+
+const SENSITIVE_FIELDS = [
+  { key: "cpf" as const, label: "CPF" },
+  { key: "email" as const, label: "E-mail" },
+  { key: "telefone" as const, label: "Telefone" },
+];
 
 /* ── KPI Card ─────────────────────────────────── */
 
@@ -190,7 +209,108 @@ function AcademiasTable({
   );
 }
 
+/* ── Exposure Report ──────────────────────────── */
+
+function FieldIndicator({ collected }: { collected: boolean }) {
+  return collected ? (
+    <span className="inline-flex items-center gap-1 text-xs text-gym-teal">
+      <Check className="size-3.5" />
+      Coleta
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/50">
+      <Minus className="size-3.5" />
+      Não coleta
+    </span>
+  );
+}
+
+function ExposureReport({
+  academias,
+}: {
+  academias: ComplianceAcademiaResumo[];
+}) {
+  return (
+    <div className="space-y-3">
+      <h2 className="text-lg font-bold font-display">
+        Relatório de Exposição
+      </h2>
+      <p className="text-xs text-muted-foreground">
+        Quais campos sensíveis cada academia coleta de seus titulares.
+      </p>
+      <div className="rounded-lg border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Academia</TableHead>
+              {SENSITIVE_FIELDS.map((f) => (
+                <TableHead key={f.key} className="text-center">
+                  {f.label}
+                </TableHead>
+              ))}
+              <TableHead className="text-center">Campos coletados</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {academias.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={SENSITIVE_FIELDS.length + 2}
+                  className="py-8 text-center text-muted-foreground"
+                >
+                  Nenhuma academia encontrada
+                </TableCell>
+              </TableRow>
+            ) : (
+              academias.map((a) => {
+                const fields = {
+                  cpf: a.alunosComCpf > 0,
+                  email: a.alunosComEmail > 0,
+                  telefone: a.alunosComTelefone > 0,
+                };
+                const collectedCount = Object.values(fields).filter(Boolean).length;
+
+                return (
+                  <TableRow key={a.academiaId}>
+                    <TableCell className="font-medium">
+                      {a.academiaNome}
+                    </TableCell>
+                    {SENSITIVE_FIELDS.map((f) => (
+                      <TableCell key={f.key} className="text-center">
+                        <FieldIndicator collected={fields[f.key]} />
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-center">
+                      <Badge
+                        variant="outline"
+                        className={
+                          collectedCount === SENSITIVE_FIELDS.length
+                            ? "bg-gym-warning/15 text-gym-warning border-gym-warning/30"
+                            : collectedCount > 0
+                              ? "bg-blue-500/15 text-blue-400 border-blue-500/30"
+                              : "bg-muted text-muted-foreground"
+                        }
+                      >
+                        {collectedCount}/{SENSITIVE_FIELDS.length}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
 /* ── Solicitações de Exclusão ─────────────────── */
+
+type ActionState =
+  | { type: "executar"; id: string; nome: string }
+  | { type: "rejeitar"; id: string; nome: string }
+  | null;
 
 function SolicitacoesExclusao({
   solicitacoes: initialSolicitacoes,
@@ -200,41 +320,52 @@ function SolicitacoesExclusao({
   onActionCompleted: () => void;
 }) {
   const [filter, setFilter] = useState<string>("");
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionState, setActionState] = useState<ActionState>(null);
+  const [rejectMotivo, setRejectMotivo] = useState("");
 
   const filtered = filter
     ? initialSolicitacoes.filter((s) => s.status === filter)
     : initialSolicitacoes;
 
-  async function handleExecutar(id: string) {
-    if (!confirm("Confirma a execução desta solicitação de exclusão de dados?"))
-      return;
-    setActionLoading(id);
+  async function handleConfirmExecutar() {
+    if (!actionState || actionState.type !== "executar") return;
+    setActionLoading(true);
     setActionError(null);
     try {
-      await executarSolicitacaoExclusaoApi(id);
+      await executarSolicitacaoExclusaoApi(actionState.id);
+      setActionState(null);
       onActionCompleted();
     } catch (err) {
       setActionError(normalizeErrorMessage(err));
+      setActionState(null);
     } finally {
-      setActionLoading(null);
+      setActionLoading(false);
     }
   }
 
-  async function handleRejeitar(id: string) {
-    const motivo = prompt("Motivo da rejeição:");
-    if (!motivo) return;
-    setActionLoading(id);
+  async function handleConfirmRejeitar() {
+    if (!actionState || actionState.type !== "rejeitar" || !rejectMotivo.trim()) return;
+    setActionLoading(true);
     setActionError(null);
     try {
-      await rejeitarSolicitacaoExclusaoApi(id, motivo);
+      await rejeitarSolicitacaoExclusaoApi(actionState.id, rejectMotivo.trim());
+      setActionState(null);
+      setRejectMotivo("");
       onActionCompleted();
     } catch (err) {
       setActionError(normalizeErrorMessage(err));
+      setActionState(null);
     } finally {
-      setActionLoading(null);
+      setActionLoading(false);
     }
+  }
+
+  function handleCloseDialog() {
+    if (actionLoading) return;
+    setActionState(null);
+    setRejectMotivo("");
   }
 
   return (
@@ -322,8 +453,14 @@ function SolicitacoesExclusao({
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={actionLoading === s.id}
-                          onClick={() => handleExecutar(s.id)}
+                          disabled={actionLoading}
+                          onClick={() =>
+                            setActionState({
+                              type: "executar",
+                              id: s.id,
+                              nome: s.solicitanteNome,
+                            })
+                          }
                           className="text-gym-teal hover:text-gym-teal"
                         >
                           <CheckCircle2 className="mr-1 size-3.5" />
@@ -332,8 +469,15 @@ function SolicitacoesExclusao({
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={actionLoading === s.id}
-                          onClick={() => handleRejeitar(s.id)}
+                          disabled={actionLoading}
+                          onClick={() => {
+                            setRejectMotivo("");
+                            setActionState({
+                              type: "rejeitar",
+                              id: s.id,
+                              nome: s.solicitanteNome,
+                            });
+                          }}
                           className="text-gym-danger hover:text-gym-danger"
                         >
                           <XCircle className="mr-1 size-3.5" />
@@ -353,6 +497,69 @@ function SolicitacoesExclusao({
           </TableBody>
         </Table>
       </div>
+
+      {/* Dialog: Executar exclusão */}
+      <AlertDialog
+        open={actionState?.type === "executar"}
+        onOpenChange={(open) => !open && handleCloseDialog()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão de dados</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja executar a exclusão dos dados pessoais de{" "}
+              <strong>{actionState?.nome}</strong>? Esta ação é irreversível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={actionLoading}
+              onClick={handleConfirmExecutar}
+            >
+              {actionLoading ? "Processando..." : "Executar exclusão"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog: Rejeitar exclusão */}
+      <AlertDialog
+        open={actionState?.type === "rejeitar"}
+        onOpenChange={(open) => !open && handleCloseDialog()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rejeitar solicitação de exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Informe o motivo da rejeição da solicitação de{" "}
+              <strong>{actionState?.nome}</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Input
+              placeholder="Motivo da rejeição..."
+              value={rejectMotivo}
+              onChange={(e) => setRejectMotivo(e.target.value)}
+              disabled={actionLoading}
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={actionLoading || !rejectMotivo.trim()}
+              onClick={handleConfirmRejeitar}
+            >
+              {actionLoading ? "Processando..." : "Rejeitar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -364,18 +571,18 @@ export default function CompliancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  function loadDashboard() {
+  const loadDashboard = useCallback(() => {
     setLoading(true);
     setError(null);
     getComplianceDashboardApi()
       .then(setDashboard)
       .catch((err) => setError(normalizeErrorMessage(err)))
       .finally(() => setLoading(false));
-  }
+  }, []);
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [loadDashboard]);
 
   return (
     <div className="space-y-8">
@@ -432,16 +639,19 @@ export default function CompliancePage() {
             />
           </div>
 
-          {/* Exposição por Academia */}
+          {/* Dados por Academia */}
           <div className="space-y-3">
             <h2 className="text-lg font-bold font-display">
-              Exposição de Dados por Academia
+              Dados Pessoais por Academia
             </h2>
             <p className="text-xs text-muted-foreground">
-              Campos sensíveis coletados e status de termos por academia.
+              Volume de dados pessoais armazenados e status de termos por academia.
             </p>
             <AcademiasTable academias={dashboard.academias} />
           </div>
+
+          {/* Relatório de Exposição (seção distinta) */}
+          <ExposureReport academias={dashboard.academias} />
 
           {/* Solicitações de Exclusão */}
           <SolicitacoesExclusao
