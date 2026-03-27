@@ -16,6 +16,7 @@ const navItems = [
   { href: "/admin/unidades", label: "Unidades" },
   { href: "/admin/seguranca", label: "Segurança" },
   { href: "/admin/importacao-evo", label: "Importação EVO" },
+  { href: "/admin/audit-log", label: "Audit Log" },
 ];
 
 function AdminShellFrame({

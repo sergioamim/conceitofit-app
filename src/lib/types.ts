@@ -2024,3 +2024,42 @@ export interface SecurityStandardizedProfile {
   impact: SecurityProfileImpactSummary;
   matrix: SecurityProfileMatrixItem[];
 }
+
+/* ── Audit Log ─────────────────────────────────── */
+
+export type AuditLogAction =
+  | "CRIOU"
+  | "EDITOU"
+  | "EXCLUIU"
+  | "SUSPENDEU"
+  | "ATIVOU"
+  | "CANCELOU"
+  | "IMPORTOU";
+
+export type AuditLogEntityType =
+  | "ACADEMIA"
+  | "UNIDADE"
+  | "USUARIO"
+  | "CONTRATO"
+  | "ALUNO"
+  | "MATRICULA"
+  | "PAGAMENTO"
+  | "PERFIL"
+  | "PLANO";
+
+export interface AuditLogEntry {
+  id: UUID;
+  timestamp: LocalDateTime;
+  userId: UUID;
+  userName: string;
+  action: AuditLogAction;
+  entityType: AuditLogEntityType;
+  entityId: UUID;
+  entityName: string;
+  academiaId?: UUID;
+  academiaNome?: string;
+  tenantId?: UUID;
+  tenantNome?: string;
+  detalhes?: string;
+  ip?: string;
+}
