@@ -7127,7 +7127,7 @@
         "description": "Alinhar terminologia e fluxo funcional para que vendas de plano sejam tratadas como contratos/assinaturas em toda a camada de API, serviços e UI, eliminando discrepâncias entre Matrícula e Venda.",
         "details": "- Mapear `Matricula` e `Venda` em `src/lib/types.ts` e criar um tipo/normalizador `Contrato` (novo módulo `src/lib/comercial/contratos.ts` ou alias em `types.ts`) que represente a contratação de plano, incluindo `contratoStatus`, `dataInicioContrato` e vínculo com `origemVendaId`/`matriculaId`.\n- Estender `src/lib/api/matriculas.ts` para aceitar `origemVendaId` (se presente no backend) e criar wrappers `listContratos*`/`createContrato*` em `src/lib/comercial/runtime.ts` que apontem para as APIs de matrícula, mantendo compatibilidade com `listMatriculas*`.\n- Reutilizar e/ou unificar os resolvedores de status de contrato em `src/lib/comercial/plano-flow.ts` e `resolveVendaFluxoStatusFromApi` para que contratos vindos de venda e matrícula tenham a mesma regra de `StatusFluxoComercial`.\n- Padronizar copy e rótulos: ajustar `src/lib/nav-items.ts`, `src/components/shared/cliente-tabs.tsx`, `src/app/(app)/clientes/[id]/page.tsx`, `src/app/(app)/matriculas/page.tsx`, `src/app/(app)/vendas/page.tsx`, `src/app/(app)/vendas/nova/page.tsx`, `src/components/shared/nova-matricula-modal.tsx` e `src/components/shared/sale-receipt-modal.tsx` para usar “Contrato/Assinatura” em vendas de plano e “Venda” para itens avulsos, mantendo badges com `STATUS_CONTRATO_LABEL` e `STATUS_FLUXO_COMERCIAL_LABEL`.\n- Se o modal de contratação for mexido, migrar para `react-hook-form` + `zodResolver` com schema co-localizado e tipos via `z.infer`, evitando validações ad hoc.\n- Ao calcular itens/valores de plano, utilizar o motor unificado do Task 106 (`src/lib/comercial/plano-dry-run.ts` ou `plano-flow.ts`) para que venda e contrato compartilhem a mesma regra de cálculo.\n- Garantir segurança de hidratação (sem `new Date()`/`Math.random()` no render) nos componentes ajustados.",
         "testStrategy": "- Atualizar testes unitários existentes em `tests/unit/comercial-runtime.spec.ts` e `tests/unit/vendas-api.spec.ts` (ou criar novos) para cobrir os novos helpers de contrato e o mapeamento entre venda/contrato.\n- Rodar smoke manual nas rotas `/matriculas`, `/vendas`, `/vendas/nova` e detalhe de cliente (`/clientes/[id]`), validando rótulos “Contrato/Assinatura”, badges e criação de venda de plano com vínculo de contrato.\n- Se houver E2E, ajustar/rodar `tests/e2e/app-multiunidade-contrato.spec.ts` para garantir que a terminologia de contrato permanece consistente após as mudanças.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "106"
         ],
@@ -7168,7 +7168,8 @@
             "testStrategy": "Smoke manual nas rotas `/matriculas`, `/vendas`, `/vendas/nova` e detalhe de cliente, validando labels e badges.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T04:21:34.384Z"
       },
       {
         "id": "109",
@@ -7176,7 +7177,7 @@
         "description": "Substituir as últimas regras mockadas nos fluxos de venda/matrícula por integrações reais de API e ampliar validações assíncronas de CPF/e-mail em cadastros internos e públicos.",
         "details": "- Criar um helper de busca/uniqueness em `src/lib/api/alunos.ts` (ex.: `searchAlunosApi` usando o `search` já suportado por `listAlunosApi`) e expor um serviço em `src/lib/comercial/runtime.ts` (ex.: `checkAlunoDuplicidadeService`) que retorne `{ exists, alunoId? }` para CPF/e-mail, usando `page=0`/`size=1` e tratando `ApiRequestError` com mensagens padronizadas.\n- Extrair um hook utilitário de validação assíncrona (ex.: `src/hooks/use-async-field-validation.ts`) que encapsule debounce, cancelamento de requisições antigas via `useRef`, e expose `status`, `message` e `reset`; alinhar o feedback com `FieldAsyncFeedback` (`src/components/shared/field-async-feedback.tsx`).\n- Atualizar `src/components/shared/novo-cliente-wizard.tsx` para remover o mock de busca (`listAlunosService` + filtro local) e usar o novo helper de backend para CPF/e-mail, mantendo `react-hook-form` + `zodResolver` e limpando erros com `form.clearErrors` apenas quando o backend confirmar disponibilidade.\n- Expandir a validação assíncrona para o fluxo público em `src/app/(public)/adesao/cadastro/page.tsx` (e, se necessário, `src/app/(public)/adesao/checkout/page.tsx`), exibindo `FieldAsyncFeedback` abaixo de CPF/e-mail e bloqueando avanço quando a verificação estiver em `loading` ou `error`.\n- Remover o mock de cupom em `src/hooks/use-commercial-flow.ts`: criar uma chamada real de validação (novo método em `src/lib/api/beneficios.ts` ou `src/lib/comercial/runtime.ts`) que retorne percentual/valor e mensagem de elegibilidade; fazer `applyCupom` consumir a resposta real e preencher `voucherCodigo` em `createVendaService`.\n- Alinhar os cálculos transacionais com o dry-run centralizado da Task 106: atualizar `use-commercial-flow.ts` e `src/components/shared/nova-matricula-modal.tsx` para usar o resultado do dry-run (subtotal/descontos/total) em vez de cálculo local; garantir que `createVendaService` envie `planoContexto` e `convenioId` conforme o domínio de contratos da Task 108.\n- Rever `src/lib/public/services.ts` para usar o mesmo fluxo de contrato/status/calculadora (sem lógica mockada), mantendo `resolveContratoStatusFromPlano` apenas como fallback quando o backend não retornar status explícito.",
         "testStrategy": "- No wizard de cliente (`novo-cliente-wizard`), digitar CPF/e-mail existentes e confirmar feedback “já cadastrado” + bloqueio de submit; digitar novos valores e confirmar status “disponível”.\n- Na jornada pública (`/adesao/cadastro`), repetir o mesmo fluxo de CPF/e-mail e garantir que o botão de avançar só habilita quando a validação assíncrona estiver OK.\n- Em `/vendas/nova`, aplicar cupom válido e confirmar que o percentual/valor vem do backend; testar cupom inválido e verificar mensagem de erro e total sem desconto.\n- Em `/matriculas` (modal de nova matrícula), comparar subtotal/desconto/total com o dry-run e validar que o payload de venda inclui `planoContexto`, `convenioId` e `voucherCodigo` quando aplicável.\n- Smoke manual: concluir uma venda e uma matrícula com contrato pendente e validar que o status refletido segue o novo domínio de contrato.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "106",
           "107",
@@ -7218,7 +7219,8 @@
             "testStrategy": "Percorrer cadastro e checkout públicos confirmando que o status do contrato vem do backend e que o fluxo não depende de dados persistidos no `localStorage`.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T04:21:42.722Z"
       },
       {
         "id": "110",
@@ -7226,7 +7228,7 @@
         "description": "Avaliar as páginas experimentais de contas a receber, contas a pagar e DRE em `src/app/(app)/gerencial/` para decidir se substituem as versões estáveis ou se devem ser removidas, mantendo apenas rotas canônicas no app.",
         "details": "Mapear e comparar as rotas estáveis (`src/app/(app)/gerencial/contas-a-receber/page.tsx`, `src/app/(app)/gerencial/contas-a-pagar/page.tsx`, `src/app/(app)/gerencial/dre/page.tsx`) com as experimentais (`src/app/(app)/gerencial/contas-a-receber-experimental/page.tsx`, `src/app/(app)/gerencial/contas-a-pagar-experimental/page.tsx`, `src/app/(app)/gerencial/dre-experimental/page.tsx`, além de `.../contas-a-receber-experimental/novo/page.tsx` e `.../contas-a-pagar-experimental/nova/page.tsx`).\nComparar funcionalidades, dados consumidos e UX (ex.: DRE experimental usa cards e projeção unificada com `getDreGerencialApi`/`getDreProjecaoApi`, enquanto o estável separa filtros e projeção) e decidir a versão canônica.\nSe a versão experimental for a escolhida: migrar o conteúdo para as rotas estáveis, removendo as pastas `*-experimental`, consolidando imports/estados no `page.tsx` estável e atualizando o menu em `src/lib/nav-items.ts` (remover “DRE (Protótipo)” e apontar somente para `/gerencial/dre`).\nSe a versão estável permanecer: excluir as páginas experimentais (incluindo páginas de redirect), remover referências no `src/lib/nav-items.ts` e em qualquer link interno encontrado via busca (`rg \"dre-experimental|contas-a-receber-experimental|contas-a-pagar-experimental\" src`).\nGarantir que não sobrem rotas duplicadas ou apontamentos para caminhos removidos (sem links ou itens de navegação para páginas inexistentes).",
         "testStrategy": "Validar via busca que não existem referências a rotas experimentais após a consolidação: `rg \"dre-experimental|contas-a-receber-experimental|contas-a-pagar-experimental\" src`.\nNavegar em `/gerencial/contas-a-receber`, `/gerencial/contas-a-pagar` e `/gerencial/dre` confirmando carregamento e filtros/ações principais.\nVerificar o menu gerencial em `src/lib/nav-items.ts` para garantir que apenas as rotas canônicas aparecem.\nRodar `npm run lint` para confirmar ausência de erros básicos após remoções/migração.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [
@@ -7236,9 +7238,10 @@
             "description": "Mapear as rotas estáveis e experimentais e registrar diferenças funcionais e de UX.",
             "dependencies": [],
             "details": "Comparar `src/app/(app)/gerencial/contas-a-receber/page.tsx`, `contas-a-pagar/page.tsx` e `dre/page.tsx` com as versões em `*-experimental`, incluindo redirects em `novo/nova` e o painel avançado do DRE experimental, listando APIs, filtros e componentes usados.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:22:03.999Z"
           },
           {
             "id": 2,
@@ -7248,9 +7251,10 @@
               1
             ],
             "details": "Se a versão experimental for escolhida, portar o conteúdo para `src/app/(app)/gerencial/dre/page.tsx` e demais páginas estáveis, preservando melhorias (cards, horizonte de projeção, cenários) e alinhar imports/estados; se a versão estável ficar, registrar o racional e manter apenas os arquivos estáveis.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:22:11.578Z"
           },
           {
             "id": 3,
@@ -7260,11 +7264,13 @@
               2
             ],
             "details": "Remover pastas `contas-a-receber-experimental`, `contas-a-pagar-experimental` e `dre-experimental`, ajustar `src/lib/nav-items.ts` para manter apenas `/gerencial/dre` e limpar links via busca por rotas experimentais.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Rodar `rg \"dre-experimental|contas-a-receber-experimental|contas-a-pagar-experimental\" src` e validar navegação em `/gerencial/contas-a-receber`, `/gerencial/contas-a-pagar` e `/gerencial/dre`.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:22:22.395Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T04:22:22.395Z"
       },
       {
         "id": "111",
@@ -7519,9 +7525,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-27T04:18:33.123Z",
+      "lastModified": "2026-03-27T04:22:22.396Z",
       "taskCount": 115,
-      "completedCount": 108,
+      "completedCount": 111,
       "tags": [
         "master"
       ]
