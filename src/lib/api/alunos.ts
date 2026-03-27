@@ -290,6 +290,23 @@ export async function listAlunosApi(input: {
   });
 }
 
+export async function searchAlunosApi(input: {
+  tenantId: string;
+  search: string;
+  page?: number;
+  size?: number;
+}): Promise<Aluno[]> {
+  const trimmed = input.search.trim();
+  if (!trimmed) return [];
+  const response = await listAlunosApi({
+    tenantId: input.tenantId,
+    search: trimmed,
+    page: input.page ?? 0,
+    size: input.size ?? 1,
+  });
+  return extractAlunosFromListResponse(response);
+}
+
 export async function getAlunoApi(input: {
   tenantId: string;
   id: string;

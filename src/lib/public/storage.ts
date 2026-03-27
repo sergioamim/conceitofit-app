@@ -11,37 +11,67 @@ export type PublicJourneyDraft = {
 
 const STORAGE_PREFIX = "academia-public-journey";
 
+/**
+ * Cache em memória — funciona em SSR (sem acesso a window) e no cliente.
+ * Dados vivem apenas durante a sessão da tab (sessionStorage) e são
+ * espelhados no cache em memória para acesso síncrono sem hidratação.
+ */
+const memoryCache = new Map<string, PublicJourneyDraft>();
+
 function getStorageKey(tenantId: string): string {
   return `${STORAGE_PREFIX}:${tenantId}`;
 }
 
-export function loadPublicJourneyDraft(tenantId: string): PublicJourneyDraft {
-  if (typeof window === "undefined") return {};
+function readFromSession(key: string): PublicJourneyDraft | null {
+  if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(getStorageKey(tenantId));
-    if (!raw) return {};
+    const raw = window.sessionStorage.getItem(key);
+    if (!raw) return null;
     return JSON.parse(raw) as PublicJourneyDraft;
   } catch {
-    return {};
+    return null;
   }
+}
+
+function writeToSession(key: string, draft: PublicJourneyDraft): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(draft));
+  } catch {
+    // sessionStorage cheio ou indisponível — cache em memória continua funcionando
+  }
+}
+
+export function loadPublicJourneyDraft(tenantId: string): PublicJourneyDraft {
+  const key = getStorageKey(tenantId);
+  const cached = memoryCache.get(key);
+  if (cached) return cached;
+
+  const fromSession = readFromSession(key);
+  if (fromSession) {
+    memoryCache.set(key, fromSession);
+    return fromSession;
+  }
+
+  return {};
 }
 
 export function savePublicJourneyDraft(
   tenantId: string,
   patch: Partial<PublicJourneyDraft>
 ): PublicJourneyDraft {
+  const key = getStorageKey(tenantId);
   const current = loadPublicJourneyDraft(tenantId);
-  const next = {
-    ...current,
-    ...patch,
-  };
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(getStorageKey(tenantId), JSON.stringify(next));
-  }
+  const next = { ...current, ...patch };
+  memoryCache.set(key, next);
+  writeToSession(key, next);
   return next;
 }
 
 export function clearPublicJourneyDraft(tenantId: string): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(getStorageKey(tenantId));
+  const key = getStorageKey(tenantId);
+  memoryCache.delete(key);
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem(key);
+  }
 }

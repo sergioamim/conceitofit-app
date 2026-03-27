@@ -1,5 +1,6 @@
 import {
   buildPlanoVendaItems,
+  planoDryRun,
   resolveContratoStatusFromPlano,
   resolvePagamentoVendaStatus,
 } from "@/lib/comercial/plano-flow";
@@ -197,7 +198,14 @@ export function resolvePublicNextAction(params: {
 }
 
 export function getPublicPlanQuote(plano: Plano, parcelasAnuidade = 1): PublicPlanQuote {
-  const items = buildPlanoVendaItems(plano, parcelasAnuidade).map((item) => ({
+  const result = planoDryRun({
+    plano,
+    dataInicio: today(),
+    parcelasAnuidade,
+    manualDiscount: 0,
+    renovacaoAutomatica: plano.permiteRenovacaoAutomatica,
+  });
+  const items = result.items.map((item) => ({
     id: item.referenciaId,
     descricao: item.descricao,
     detalhes: item.detalhes,
@@ -205,7 +213,7 @@ export function getPublicPlanQuote(plano: Plano, parcelasAnuidade = 1): PublicPl
   }));
   return {
     items,
-    total: items.reduce((sum, item) => sum + item.valor, 0),
+    total: result.total,
   };
 }
 
@@ -550,7 +558,13 @@ export async function startPublicCheckout(input: PublicCheckoutInput): Promise<P
     throw new Error(Object.values(signupErrors)[0]);
   }
 
-  const quote = getPublicPlanQuote(plano);
+  const dryRunResult = planoDryRun({
+    plano,
+    dataInicio: today(),
+    parcelasAnuidade: 1,
+    manualDiscount: 0,
+    renovacaoAutomatica: input.renovacaoAutomatica && plano.permiteRenovacaoAutomatica,
+  });
   const paymentStatus = resolvePublicPaymentStatus(input.pagamento.formaPagamento);
 
   const aluno = await createAlunoApi({
@@ -576,21 +590,17 @@ export async function startPublicCheckout(input: PublicCheckoutInput): Promise<P
     data: {
       tipo: "PLANO",
       clienteId: aluno.id,
-      itens: buildPlanoVendaItems(plano, 1),
-      descontoTotal: 0,
+      itens: dryRunResult.items,
+      descontoTotal: dryRunResult.descontoTotal,
       acrescimoTotal: 0,
       pagamento: {
         formaPagamento: input.pagamento.formaPagamento,
         parcelas: input.pagamento.parcelas,
-        valorPago: paymentStatus === "PAGO" ? quote.total : 0,
+        valorPago: paymentStatus === "PAGO" ? dryRunResult.total : 0,
         status: paymentStatus,
         observacoes: input.pagamento.observacoes,
       },
-      planoContexto: {
-        planoId: plano.id,
-        dataInicio: today(),
-        renovacaoAutomatica: input.renovacaoAutomatica && plano.permiteRenovacaoAutomatica,
-      },
+      planoContexto: dryRunResult.planoContexto,
     },
   });
 
