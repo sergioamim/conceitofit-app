@@ -3,6 +3,14 @@ import type {
   AcademiaHealthLevel,
   AcademiaHealthStatus,
   AcademiasHealthMap,
+  AlertaOperacional,
+  AlertaOperacionalSeveridade,
+  AlertaOperacionalTipo,
+  AlertasOperacionaisResult,
+  FeatureUsageAcademia,
+  FeatureUsageByAcademiaResult,
+  FeatureUsageIndicator,
+  FeatureUsageStatus,
   MetricasOperacionaisGlobal,
   MetricasOperacionaisGlobalAcademia,
   MetricasOperacionaisGlobalSerie,
@@ -105,6 +113,66 @@ type AcademiaHealthStatusApiResponse = Partial<AcademiaHealthStatus> & {
 };
 
 type AcademiasHealthMapApiResponse = Partial<AcademiasHealthMap> & {
+  items?: unknown;
+  academias?: unknown;
+  rows?: unknown;
+  generatedAt?: unknown;
+};
+
+type AlertaOperacionalApiResponse = Partial<AlertaOperacional> & {
+  academiaId?: unknown;
+  academiaNome?: unknown;
+  nomeAcademia?: unknown;
+  unidadeNome?: unknown;
+  tipo?: unknown;
+  severidade?: unknown;
+  severity?: unknown;
+  titulo?: unknown;
+  title?: unknown;
+  descricao?: unknown;
+  description?: unknown;
+  acaoSugerida?: unknown;
+  suggestedAction?: unknown;
+  data?: unknown;
+  createdAt?: unknown;
+  detectedAt?: unknown;
+  valorReferencia?: unknown;
+  thresholdValue?: unknown;
+};
+
+type AlertasOperacionaisApiResponse = Partial<AlertasOperacionaisResult> & {
+  items?: unknown;
+  alertas?: unknown;
+  rows?: unknown;
+  generatedAt?: unknown;
+};
+
+type FeatureUsageIndicatorApiResponse = Partial<FeatureUsageIndicator> & {
+  ativa?: unknown;
+  enabled?: unknown;
+  habilitada?: unknown;
+  emUso?: unknown;
+  used?: unknown;
+  uso?: unknown;
+  status?: unknown;
+  ultimoUsoEm?: unknown;
+  lastUsedAt?: unknown;
+};
+
+type FeatureUsageAcademiaApiResponse = Partial<FeatureUsageAcademia> & {
+  academiaId?: unknown;
+  academiaNome?: unknown;
+  nome?: unknown;
+  treinos?: unknown;
+  crm?: unknown;
+  catraca?: unknown;
+  vendasOnline?: unknown;
+  vendas_online?: unknown;
+  bi?: unknown;
+  features?: unknown;
+};
+
+type FeatureUsageByAcademiaApiResponse = Partial<FeatureUsageByAcademiaResult> & {
   items?: unknown;
   academias?: unknown;
   rows?: unknown;
@@ -254,6 +322,53 @@ function normalizeHealthLevel(value: unknown): AcademiaHealthLevel | undefined {
   return undefined;
 }
 
+function normalizeAlertSeverity(value: unknown): AlertaOperacionalSeveridade {
+  if (value === "INFO" || value === "WARNING" || value === "CRITICAL") return value;
+  if (typeof value !== "string") return "INFO";
+
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "WARN" || normalized === "ATENCAO") return "WARNING";
+  if (normalized === "CRITICO" || normalized === "CRITICAL") return "CRITICAL";
+  return "INFO";
+}
+
+function normalizeAlertType(value: unknown): AlertaOperacionalTipo {
+  if (
+    value === "SEM_LOGIN_ADMIN" ||
+    value === "SEM_MATRICULAS_ATIVAS" ||
+    value === "PICO_CANCELAMENTOS" ||
+    value === "CONTRATO_VENCENDO" ||
+    value === "INADIMPLENCIA_ALTA" ||
+    value === "OUTRO"
+  ) {
+    return value;
+  }
+  return "OUTRO";
+}
+
+function deriveFeatureUsageStatus(ativa: boolean, emUso: boolean): FeatureUsageStatus {
+  if (!ativa) return "INATIVA";
+  if (emUso) return "EM_USO";
+  return "ATIVA_SEM_USO";
+}
+
+function normalizeFeatureUsageIndicator(input: unknown): FeatureUsageIndicator {
+  const payload = input && typeof input === "object" ? (input as FeatureUsageIndicatorApiResponse) : {};
+  const ativa = Boolean(payload.ativa ?? payload.enabled ?? payload.habilitada);
+  const emUso = Boolean(payload.emUso ?? payload.used ?? payload.uso);
+  const statusValue = payload.status;
+
+  return {
+    ativa,
+    emUso,
+    status:
+      statusValue === "INATIVA" || statusValue === "ATIVA_SEM_USO" || statusValue === "EM_USO"
+        ? statusValue
+        : deriveFeatureUsageStatus(ativa, emUso),
+    ultimoUsoEm: cleanString(payload.ultimoUsoEm) ?? cleanString(payload.lastUsedAt),
+  };
+}
+
 function normalizeContractStatus(value: unknown): AcademiaContractStatus {
   if (value === "ATIVO" || value === "EM_RISCO" || value === "SUSPENSO" || value === "CANCELADO") {
     return value;
@@ -292,6 +407,69 @@ function normalizeAcademiasHealthMap(
   };
 }
 
+function normalizeAlertaOperacional(input: AlertaOperacionalApiResponse, index: number): AlertaOperacional {
+  return {
+    id: cleanString(input.id) ?? `alerta-${index + 1}`,
+    academiaId: cleanString(input.academiaId),
+    academiaNome: cleanString(input.academiaNome) ?? cleanString(input.nomeAcademia) ?? "Academia sem nome",
+    unidadeNome: cleanString(input.unidadeNome),
+    tipo: normalizeAlertType(input.tipo),
+    severidade: normalizeAlertSeverity(input.severidade ?? input.severity),
+    titulo: cleanString(input.titulo) ?? cleanString(input.title) ?? "Alerta operacional",
+    descricao: cleanString(input.descricao) ?? cleanString(input.description) ?? "Sem descrição detalhada.",
+    acaoSugerida:
+      cleanString(input.acaoSugerida) ??
+      cleanString(input.suggestedAction) ??
+      "Avaliar operação da academia e acionar o time responsável.",
+    data:
+      cleanString(input.data) ??
+      cleanString(input.createdAt) ??
+      cleanString(input.detectedAt) ??
+      new Date(0).toISOString(),
+    valorReferencia: toOptionalNumber(input.valorReferencia ?? input.thresholdValue),
+  };
+}
+
+function normalizeAlertasOperacionais(
+  response: Envelope<AlertasOperacionaisApiResponse>
+): AlertasOperacionaisResult {
+  const payload = extractPayload(response);
+  const items = payload.items ?? payload.alertas ?? payload.rows;
+
+  return {
+    items: Array.isArray(items)
+      ? (items as AlertaOperacionalApiResponse[]).map((item, index) => normalizeAlertaOperacional(item, index))
+      : [],
+    generatedAt: cleanString(payload.generatedAt),
+  };
+}
+
+function normalizeFeatureUsageAcademia(input: FeatureUsageAcademiaApiResponse): FeatureUsageAcademia {
+  const featureMap = input.features && typeof input.features === "object" ? (input.features as Record<string, unknown>) : {};
+
+  return {
+    academiaId: cleanString(input.academiaId),
+    academiaNome: cleanString(input.academiaNome) ?? cleanString(input.nome) ?? "Academia sem nome",
+    treinos: normalizeFeatureUsageIndicator(input.treinos ?? featureMap.treinos),
+    crm: normalizeFeatureUsageIndicator(input.crm ?? featureMap.crm),
+    catraca: normalizeFeatureUsageIndicator(input.catraca ?? featureMap.catraca),
+    vendasOnline: normalizeFeatureUsageIndicator(input.vendasOnline ?? input.vendas_online ?? featureMap.vendasOnline),
+    bi: normalizeFeatureUsageIndicator(input.bi ?? featureMap.bi),
+  };
+}
+
+function normalizeFeatureUsageByAcademia(
+  response: Envelope<FeatureUsageByAcademiaApiResponse>
+): FeatureUsageByAcademiaResult {
+  const payload = extractPayload(response);
+  const items = payload.items ?? payload.academias ?? payload.rows;
+
+  return {
+    items: Array.isArray(items) ? (items as FeatureUsageAcademiaApiResponse[]).map(normalizeFeatureUsageAcademia) : [],
+    generatedAt: cleanString(payload.generatedAt),
+  };
+}
+
 export async function getMetricasOperacionaisGlobal(): Promise<MetricasOperacionaisGlobal> {
   const response = await apiRequest<Envelope<MetricasOperacionaisGlobalApiResponse>>({
     path: "/api/v1/admin/metricas/operacionais/global",
@@ -306,4 +484,20 @@ export async function getAcademiasHealthMap(): Promise<AcademiasHealthMap> {
   });
 
   return normalizeAcademiasHealthMap(response);
+}
+
+export async function getAlertasOperacionais(): Promise<AlertasOperacionaisResult> {
+  const response = await apiRequest<Envelope<AlertasOperacionaisApiResponse>>({
+    path: "/api/v1/admin/metricas/operacionais/alertas",
+  });
+
+  return normalizeAlertasOperacionais(response);
+}
+
+export async function getFeatureUsageByAcademia(): Promise<FeatureUsageByAcademiaResult> {
+  const response = await apiRequest<Envelope<FeatureUsageByAcademiaApiResponse>>({
+    path: "/api/v1/admin/metricas/operacionais/features",
+  });
+
+  return normalizeFeatureUsageByAcademia(response);
 }
