@@ -354,6 +354,21 @@ export interface Plano {
   ordem?: number;
 }
 
+export type CicloPlanoPlataforma = "MENSAL" | "ANUAL";
+
+export interface PlanoPlataforma {
+  id: UUID;
+  nome: string;
+  descricao?: string;
+  precoMensal: number;
+  precoAnual?: number;
+  ciclo: CicloPlanoPlataforma;
+  maxUnidades?: number;
+  maxAlunos?: number;
+  featuresIncluidas: string[];
+  ativo: boolean;
+}
+
 export interface Matricula {
   id: UUID;
   tenantId: UUID;
