@@ -438,6 +438,14 @@ export async function installPublicJourneyApiMocks(page: Page) {
       "tenant-mananciais-s1",
       [
         {
+          id: "fp-dinheiro",
+          tenantId: "tenant-mananciais-s1",
+          nome: "Dinheiro",
+          tipo: "DINHEIRO",
+          ativo: true,
+          parcelasMax: 1,
+        },
+        {
           id: "fp-boleto",
           tenantId: "tenant-mananciais-s1",
           nome: "Boleto",
@@ -497,6 +505,19 @@ export async function installPublicJourneyApiMocks(page: Page) {
     const url = new URL(request.url());
     const path = normalizeApiPath(url.pathname);
     const method = request.method();
+
+    if (path === "/api/v1/auth/me" && method === "GET") {
+      const tenantAtual = tenants.find((item) => item.id === currentTenantId) ?? tenants[0];
+      await fulfillJson(route, {
+        id: "user-public-e2e",
+        nome: "Operador E2E",
+        email: "admin@academia.local",
+        roles: ["OWNER", "ADMIN"],
+        activeTenantId: currentTenantId,
+        availableTenants: [{ tenantId: tenantAtual.id, defaultTenant: true }],
+      });
+      return;
+    }
 
     if (path === "/api/v1/unidades" && method === "GET") {
       await fulfillJson(route, tenants);
@@ -607,6 +628,35 @@ export async function installPublicJourneyApiMocks(page: Page) {
       return;
     }
 
+    if (path === "/api/v1/comercial/alunos" && method === "GET") {
+      const tenant = getTenantFromRequest(url);
+      const search = url.searchParams.get("search")?.trim().toLowerCase();
+      const rows = alunos
+        .filter((item) => item.tenantId === tenant.id)
+        .filter((item) => {
+          if (!search) return true;
+          const haystack = [item.nome, item.email, item.telefone, item.cpf]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(search);
+        });
+      await fulfillJson(route, {
+        items: rows,
+        page: Number(url.searchParams.get("page") ?? 0),
+        size: Number(url.searchParams.get("size") ?? Math.max(rows.length, 1)),
+        hasNext: false,
+        totaisStatus: {
+          total: rows.length,
+          totalAtivo: rows.filter((item) => item.status === "ATIVO").length,
+          totalSuspenso: rows.filter((item) => item.status === "SUSPENSO").length,
+          totalInativo: rows.filter((item) => item.status === "INATIVO").length,
+          totalCancelado: rows.filter((item) => item.status === "CANCELADO").length,
+        },
+      });
+      return;
+    }
+
     if (/^\/api\/v1\/comercial\/alunos\/[^/]+$/.test(path) && method === "GET") {
       const alunoId = path.split("/").at(-1) ?? "";
       const aluno = alunos.find((item) => item.id === alunoId);
@@ -614,9 +664,84 @@ export async function installPublicJourneyApiMocks(page: Page) {
       return;
     }
 
+    if (path === "/api/v1/comercial/alunos-com-matricula" && method === "POST") {
+      const tenant = getTenantFromRequest(url);
+      const payload = parseBody<Partial<AlunoSeed> & {
+        planoId?: string;
+        dataInicio?: string;
+        formaPagamento?: FormaPagamentoSeed["tipo"];
+        desconto?: number;
+      }>(request);
+      const plano = findPlan(plansByTenant.get(tenant.id) ?? [], payload.planoId ?? "");
+      const createdAt = nowIso();
+      const dataInicio = payload.dataInicio?.trim() || todayIso();
+      const dataFim = addDays(dataInicio, plano.duracaoDias);
+      const contractStatus = plano.contratoTemplateHtml?.trim()
+        ? "PENDENTE_ASSINATURA"
+        : "SEM_CONTRATO";
+      const aluno: AlunoSeed = {
+        id: `aluno-publico-${alunoCounter++}`,
+        tenantId: tenant.id,
+        nome: payload.nome?.trim() || "Aluno público",
+        email: payload.email?.trim() || "",
+        telefone: payload.telefone?.trim() || "",
+        cpf: payload.cpf?.trim() || "",
+        dataNascimento: payload.dataNascimento?.trim() || todayIso(),
+        sexo: payload.sexo ?? "OUTRO",
+        status: "ATIVO",
+        dataCadastro: createdAt,
+        endereco: payload.endereco,
+        observacoesMedicas: payload.observacoesMedicas,
+      };
+      const matricula: MatriculaSeed = {
+        id: `matricula-publica-${matriculaCounter++}`,
+        tenantId: tenant.id,
+        alunoId: aluno.id,
+        planoId: plano.id,
+        dataInicio,
+        dataFim,
+        valorPago: Math.max(0, plano.valor - Number(payload.desconto ?? 0)),
+        valorMatricula: plano.valorMatricula,
+        desconto: Number(payload.desconto ?? 0),
+        formaPagamento: payload.formaPagamento ?? "DINHEIRO",
+        status: "ATIVA",
+        renovacaoAutomatica: Boolean(plano.permiteRenovacaoAutomatica),
+        contratoStatus: contractStatus,
+        contratoModoAssinatura: plano.contratoAssinatura ?? "DIGITAL",
+        dataCriacao: createdAt,
+      };
+      const pagamento: PagamentoSeed = {
+        id: `pagamento-publico-${pagamentoCounter++}`,
+        tenantId: tenant.id,
+        alunoId: aluno.id,
+        matriculaId: matricula.id,
+        tipo: "MENSALIDADE",
+        descricao: plano.nome,
+        valor: plano.valor,
+        desconto: Number(payload.desconto ?? 0),
+        valorFinal: Math.max(0, plano.valor - Number(payload.desconto ?? 0)),
+        dataVencimento: dataInicio,
+        dataPagamento: dataInicio,
+        formaPagamento: payload.formaPagamento ?? "DINHEIRO",
+        status: "PAGO",
+        nfseEmitida: false,
+        dataCriacao: createdAt,
+      };
+      alunos = [aluno, ...alunos];
+      matriculas = [matricula, ...matriculas];
+      pagamentos = [pagamento, ...pagamentos];
+      await fulfillJson(route, { aluno, matricula, pagamento }, 201);
+      return;
+    }
+
     if (/^\/api\/v1\/comercial\/alunos\/[^/]+\/(?:matriculas|adesoes)$/.test(path) && method === "GET") {
       const alunoId = path.split("/").at(-2) ?? "";
       await fulfillJson(route, matriculas.filter((item) => item.alunoId === alunoId));
+      return;
+    }
+
+    if (/^\/api\/v1\/comercial\/alunos\/[^/]+\/presencas$/.test(path) && method === "GET") {
+      await fulfillJson(route, []);
       return;
     }
 
@@ -782,6 +907,11 @@ export async function installPublicJourneyApiMocks(page: Page) {
       return;
     }
 
+    if (path === "/api/v1/administrativo/convenios" && method === "GET") {
+      await fulfillJson(route, []);
+      return;
+    }
+
     if (/^\/api\/v1\/comercial\/pagamentos\/[^/]+\/receber$/.test(path) && method === "POST") {
       const pagamentoId = path.split("/").at(-2) ?? "";
       const payload = parseBody<{ dataPagamento?: string; formaPagamento?: FormaPagamentoSeed["tipo"]; observacoes?: string }>(request);
@@ -812,6 +942,191 @@ export async function installPublicJourneyApiMocks(page: Page) {
           : item,
       );
       await fulfillJson(route, updated ?? { message: "Pagamento não encontrado" }, updated ? 200 : 404);
+      return;
+    }
+
+    await fulfillJson(route, { message: `Unhandled ${method} ${path}` }, 404);
+  });
+}
+
+export async function installOperationalCrmApiMocks(page: Page) {
+  const tenant: TenantSeed = {
+    id: "tenant-crm-operacional",
+    academiaId: "academia-sergio-amim",
+    groupId: "academia-sergio-amim",
+    nome: "MANANCIAIS - S1",
+    razaoSocial: "Academia Sergio Amim - Mananciais",
+    documento: "12.345.678/0001-90",
+    subdomain: "mananciais-s1",
+    email: "mananciais@academia.local",
+    telefone: "(11) 3000-1001",
+    ativo: true,
+    branding: {
+      appName: "Conceito.Fit Mananciais",
+    },
+  };
+  const academia = buildAcademiaFromTenant(tenant);
+  let currentTenantId = tenant.id;
+
+  const funcionarios = [
+    {
+      id: "func-crm-1",
+      tenantId: tenant.id,
+      nome: "Camila Consultora",
+      cargo: "Consultora comercial",
+      ativo: true,
+      emailProfissional: "camila.consultora@academia.local",
+      celular: "(11) 98888-1111",
+      podeMinistrarAulas: false,
+      possuiAcessoSistema: true,
+    },
+  ];
+
+  const prospects = [
+    {
+      id: "prospect-crm-1",
+      tenantId: tenant.id,
+      responsavelId: "func-crm-1",
+      nome: "Larissa Moreira",
+      telefone: "(11) 97777-1111",
+      email: "larissa.moreira@crm.local",
+      origem: "WHATSAPP",
+      status: "QUALIFICADO",
+      observacoes: "Interessada em musculação e aulas coletivas.",
+      dataCriacao: "2026-03-12T09:00:00",
+      dataUltimoContato: "2026-03-12T10:00:00",
+    },
+  ];
+
+  const tasks = [
+    {
+      id: "crm-task-1",
+      tenantId: tenant.id,
+      prospectId: "prospect-crm-1",
+      prospectNome: "Larissa Moreira",
+      stageStatus: "QUALIFICADO",
+      titulo: "Retornar proposta premium",
+      descricao: "Confirmar condições e agendar visita guiada.",
+      tipo: "LIGACAO",
+      prioridade: "ALTA",
+      status: "PENDENTE",
+      responsavelId: "func-crm-1",
+      responsavelNome: "Camila Consultora",
+      origem: "MANUAL",
+      vencimentoEm: "2026-03-13T10:00:00",
+      dataCriacao: "2026-03-12T10:05:00",
+    },
+  ];
+
+  const playbooks = [
+    {
+      id: "crm-playbook-1",
+      tenantId: tenant.id,
+      nome: "Qualificação expressa",
+      objetivo: "Padronizar o primeiro contato com leads inbound.",
+      stageStatus: "NOVO",
+      ativo: true,
+      passos: [
+        {
+          id: "crm-playbook-1-step-1",
+          titulo: "Confirmar objetivo",
+          descricao: "Entender modalidade, horário e objeções iniciais.",
+          acao: "CHECKLIST",
+          prazoHoras: 4,
+          obrigatoria: true,
+        },
+      ],
+      dataCriacao: "2026-03-11T09:00:00",
+      dataAtualizacao: "2026-03-12T09:30:00",
+    },
+  ];
+
+  const automacoes = [
+    {
+      id: "crm-automation-1",
+      tenantId: tenant.id,
+      nome: "Lembrete de proposta",
+      descricao: "Reabre follow-up de prospects sem retorno após 24h.",
+      gatilho: "PROSPECT_PARADO",
+      acao: "CRIAR_TAREFA",
+      stageStatus: "QUALIFICADO",
+      ativo: true,
+      execucoes: 14,
+      ultimaExecucao: "2026-03-12T08:30:00",
+      dataCriacao: "2026-03-01T08:00:00",
+      dataAtualizacao: "2026-03-12T08:30:00",
+    },
+  ];
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = normalizeApiPath(url.pathname);
+    const method = request.method();
+
+    if (path === "/api/v1/auth/me" && method === "GET") {
+      await fulfillJson(route, {
+        id: "user-crm-e2e",
+        nome: "Operador CRM",
+        email: "admin@academia.local",
+        roles: ["OWNER", "ADMIN"],
+        activeTenantId: currentTenantId,
+        availableTenants: [{ tenantId: currentTenantId, defaultTenant: true }],
+      });
+      return;
+    }
+
+    if (path === "/api/v1/context/unidade-ativa" && method === "GET") {
+      await fulfillJson(route, {
+        currentTenantId,
+        tenantAtual: tenant,
+        unidadesDisponiveis: [tenant],
+      });
+      return;
+    }
+
+    if (/^\/api\/v1\/context\/unidade-ativa\/[^/]+$/.test(path) && method === "PUT") {
+      currentTenantId = path.split("/").at(-1) ?? currentTenantId;
+      await fulfillJson(route, {
+        currentTenantId,
+        tenantAtual: tenant,
+        unidadesDisponiveis: [tenant],
+      });
+      return;
+    }
+
+    if (path === "/api/v1/academia" && method === "GET") {
+      await fulfillJson(route, academia);
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/funcionarios" && method === "GET") {
+      await fulfillJson(route, funcionarios);
+      return;
+    }
+
+    if (path === "/api/v1/academia/prospects" && method === "GET") {
+      await fulfillJson(route, prospects);
+      return;
+    }
+
+    if (path === "/api/v1/crm/tarefas" && method === "GET") {
+      await fulfillJson(route, tasks);
+      return;
+    }
+
+    if (path === "/api/v1/crm/playbooks" && method === "GET") {
+      await fulfillJson(route, playbooks);
+      return;
+    }
+
+    if (path === "/api/v1/crm/cadencias" && method === "GET") {
+      await fulfillJson(route, { message: "Cadências indisponíveis neste ambiente" }, 404);
+      return;
+    }
+
+    if (path === "/api/v1/crm/automacoes" && method === "GET") {
+      await fulfillJson(route, automacoes);
       return;
     }
 

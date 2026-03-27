@@ -238,58 +238,115 @@ function Step1Dados({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="col-span-2 space-y-1.5">
-          <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.nome ? "text-destructive" : "text-muted-foreground")}>
+          <label
+            htmlFor="novo-cliente-nome"
+            className={cn("text-xs font-semibold uppercase tracking-wide", errors.nome ? "text-destructive" : "text-muted-foreground")}
+          >
             Nome completo *
           </label>
-          <Input placeholder="João da Silva" {...register("nome")} className={cn("bg-card", errors.nome ? "border-destructive focus-ring-destructive" : "border-border")} />
+          <Input
+            id="novo-cliente-nome"
+            data-testid="novo-cliente-nome"
+            placeholder="João da Silva"
+            {...register("nome")}
+            className={cn("bg-card", errors.nome ? "border-destructive focus-ring-destructive" : "border-border")}
+          />
           <FieldAsyncFeedback status={errors.nome ? "error" : "idle"} message={errors.nome?.message} />
         </div>
 
         <div className="space-y-1.5">
-          <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.email ? "text-destructive" : "text-muted-foreground")}>
+          <label
+            htmlFor="novo-cliente-email"
+            className={cn("text-xs font-semibold uppercase tracking-wide", errors.email ? "text-destructive" : "text-muted-foreground")}
+          >
             E-mail (opcional)
           </label>
-          <Input type="email" placeholder="joao@email.com" {...register("email")} className={cn("bg-card", errors.email ? "border-destructive focus-ring-destructive" : "border-border")} />
+          <Input
+            id="novo-cliente-email"
+            data-testid="novo-cliente-email"
+            type="email"
+            placeholder="joao@email.com"
+            {...register("email")}
+            className={cn("bg-card", errors.email ? "border-destructive focus-ring-destructive" : "border-border")}
+          />
           <FieldAsyncFeedback status={errors.email?.message ? "error" : emailStatus} message={errors.email?.message || emailMsg} />
         </div>
 
         <div className="space-y-1.5">
-          <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.telefone ? "text-destructive" : "text-muted-foreground")}>
+          <label
+            htmlFor="novo-cliente-telefone"
+            className={cn("text-xs font-semibold uppercase tracking-wide", errors.telefone ? "text-destructive" : "text-muted-foreground")}
+          >
             Telefone *
           </label>
           <Controller name="telefone" control={control} render={({ field }) => (
-            <PhoneInput placeholder="(11) 99999-0000" {...field} className={cn("bg-card", errors.telefone ? "border-destructive focus-ring-destructive" : "border-border")} />
+            <PhoneInput
+              id="novo-cliente-telefone"
+              data-testid="novo-cliente-telefone"
+              placeholder="(11) 99999-0000"
+              {...field}
+              className={cn("bg-card", errors.telefone ? "border-destructive focus-ring-destructive" : "border-border")}
+            />
           )} />
           <FieldAsyncFeedback status={errors.telefone ? "error" : "idle"} message={errors.telefone?.message} />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone secundário</label>
+          <label htmlFor="novo-cliente-telefone-sec" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone secundário</label>
           <Controller name="telefoneSec" control={control} render={({ field }) => (
-            <PhoneInput placeholder="(11) 90000-0000" {...field} value={field.value || ""} className="bg-card border-border" />
+            <PhoneInput
+              id="novo-cliente-telefone-sec"
+              data-testid="novo-cliente-telefone-sec"
+              placeholder="(11) 90000-0000"
+              {...field}
+              value={field.value || ""}
+              className="bg-card border-border"
+            />
           )} />
         </div>
 
         <div className="space-y-1.5">
-          <label className={cn("text-xs font-semibold uppercase tracking-wide", errors.cpf ? "text-destructive" : "text-muted-foreground")}>
+          <label
+            htmlFor="novo-cliente-cpf"
+            className={cn("text-xs font-semibold uppercase tracking-wide", errors.cpf ? "text-destructive" : "text-muted-foreground")}
+          >
             CPF *
           </label>
           <Controller name="cpf" control={control} render={({ field }) => (
-            <MaskedInput mask="cpf" placeholder="000.000.000-00" {...field} className={cn("bg-card", errors.cpf ? "border-destructive focus-ring-destructive" : "border-border")} />
+            <MaskedInput
+              id="novo-cliente-cpf"
+              data-testid="novo-cliente-cpf"
+              mask="cpf"
+              placeholder="000.000.000-00"
+              {...field}
+              className={cn("bg-card", errors.cpf ? "border-destructive focus-ring-destructive" : "border-border")}
+            />
           )} />
           <FieldAsyncFeedback status={errors.cpf?.message ? "error" : cpfStatus} message={errors.cpf?.message || cpfMsg} />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">RG</label>
-          <Input placeholder="00.000.000-0" {...register("rg")} className="bg-card border-border" />
+          <label htmlFor="novo-cliente-rg" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">RG</label>
+          <Input
+            id="novo-cliente-rg"
+            data-testid="novo-cliente-rg"
+            placeholder="00.000.000-0"
+            {...register("rg")}
+            className="bg-card border-border"
+          />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <label htmlFor="novo-cliente-data-nascimento" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Data de nascimento (opcional)
           </label>
-          <Input type="date" {...register("dataNascimento")} className="bg-card border-border" />
+          <Input
+            id="novo-cliente-data-nascimento"
+            data-testid="novo-cliente-data-nascimento"
+            type="date"
+            {...register("dataNascimento")}
+            className="bg-card border-border"
+          />
         </div>
 
         <div className="space-y-1.5">

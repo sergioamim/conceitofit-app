@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installPublicJourneyApiMocks, seedAuthenticatedSession } from "./support/backend-only-stubs";
 
 function gerarDigitos(seed: number, length: number): string {
   return String(seed).replace(/\D/g, "").padStart(length, "0").slice(-length);
@@ -22,31 +23,26 @@ type CreateAlunoComMatriculaResponse = {
   };
 };
 
-async function abrirComSessaoApiE2e(page: Page) {
-  await page.goto("/clientes");
-  await page.waitForLoadState("networkidle");
-  if (/\/login/.test(page.url())) {
-    await page.getByLabel("Usuário").fill("admin@academia.local");
-    await page.getByLabel("Senha").fill("12345678");
-    await page.getByRole("button", { name: "Entrar" }).click();
-
-    await expect
-      .poll(() =>
-        page.evaluate(() => Boolean(window.localStorage.getItem("academia-auth-token")))
-      )
-      .toBe(true);
-
-    const stepTenant = page.getByRole("heading", { name: "Unidade prioritária" });
-    if (await stepTenant.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await page.getByRole("combobox").click();
-      await page.getByRole("option").first().click();
-      await page.getByRole("button", { name: "Salvar e continuar" }).click();
+async function abrirRota(page: Page, url: string, matcher: RegExp) {
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("ERR_ABORTED")) {
+      throw error;
     }
-    if (/\/login/.test(page.url())) {
-      await page.goto("/clientes");
-    }
-    await page.waitForLoadState("networkidle");
   }
+  await page.waitForURL(matcher, { timeout: 30_000 });
+}
+
+async function abrirComSessaoApiE2e(page: Page) {
+  await installPublicJourneyApiMocks(page);
+  await seedAuthenticatedSession(page, {
+    tenantId: "tenant-mananciais-s1",
+    tenantName: "MANANCIAIS - S1",
+    availableTenants: [{ tenantId: "tenant-mananciais-s1", defaultTenant: true }],
+  });
+  await abrirRota(page, "/clientes", /\/clientes(?:\?|$)/);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
 }
 
@@ -77,10 +73,10 @@ test.describe("Cadastro de clientes (Playwright)", () => {
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Novo cliente" })).toBeVisible();
 
     await preencherDadosPessoais(page, payload);
-    await page.getByRole("button", { name: /Completar cadastro agora/i }).click();
+    await page.getByRole("button", { name: /Completar cadastro/i }).click();
 
     await expect(page.getByText("Escolha o plano")).toBeVisible();
-    await page.getByRole("button", { name: /Mensal B[aá]sico/i }).click();
+    await page.getByRole("button", { name: /Plano Premium/i }).click();
     await page.getByRole("button", { name: "Próximo" }).click();
 
     await expect(page.getByText("Data de início *")).toBeVisible();
@@ -97,7 +93,7 @@ test.describe("Cadastro de clientes (Playwright)", () => {
     await expect(page.getByText("Cadastro realizado!")).toBeVisible();
     await page.getByRole("button", { name: "Fechar" }).click();
 
-    await page.goto(`/clientes/${created.aluno.id}`);
+    await abrirRota(page, `/clientes/${created.aluno.id}`, new RegExp(`/clientes/${created.aluno.id}$`));
     await expect(page.getByRole("heading", { name: payload.nome })).toBeVisible();
     await expect(page.getByText(payload.email)).toBeVisible();
   });
@@ -112,7 +108,7 @@ test.describe("Cadastro de clientes (Playwright)", () => {
     await expect(page.getByRole("dialog").locator("#novo-cliente-nome")).toBeVisible();
     await expect(page.getByRole("dialog").getByRole("button", { name: /Pré-cadastro$/i })).toBeDisabled();
     await expect(page.getByRole("dialog").getByRole("button", { name: /Pré-cadastro \+ venda/i })).toBeDisabled();
-    await expect(page.getByRole("dialog").getByRole("button", { name: /Completar cadastro agora/i })).toBeDisabled();
+    await expect(page.getByRole("dialog").getByRole("button", { name: /Completar cadastro/i })).toBeDisabled();
   });
 
   test("Cenário 3: cria cliente sem matrícula (cadastro direto)", async ({ page }) => {
@@ -139,7 +135,7 @@ test.describe("Cadastro de clientes (Playwright)", () => {
     const created = (await createResponse.json()) as CreateAlunoResponse;
 
     await expect(page.getByRole("dialog")).toBeHidden();
-    await page.goto(`/clientes/${created.id}`);
+    await abrirRota(page, `/clientes/${created.id}`, new RegExp(`/clientes/${created.id}$`));
     await expect(page.getByRole("heading", { name: payload.nome })).toBeVisible();
     await expect(page.getByText(payload.email)).toBeVisible();
   });
