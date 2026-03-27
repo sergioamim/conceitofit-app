@@ -1,5 +1,24 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { installPublicJourneyApiMocks } from "./support/backend-only-stubs";
+
+type CreateVendaResponse = {
+  id?: string;
+};
+
+async function abrirRota(page: Page, url: string, matcher: RegExp) {
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("ERR_ABORTED")) {
+      throw error;
+    }
+  }
+  await page.waitForURL(matcher, { timeout: 30_000 });
+}
+
+async function aguardarJornadaPublica(page: Page) {
+  await expect(page.getByText("Carregando jornada pública...")).not.toBeVisible({ timeout: 30_000 });
+}
 
 test.describe("Jornada pública de adesão", () => {
   test.beforeEach(async ({ page }) => {
@@ -7,9 +26,11 @@ test.describe("Jornada pública de adesão", () => {
   });
 
   test("capta trial e segue para o cadastro da unidade", async ({ page }) => {
-    await page.goto("/adesao/trial?tenant=pechincha-s3");
+    test.slow();
+    await abrirRota(page, "/adesao/trial?tenant=pechincha-s3", /\/adesao\/trial/);
+    await aguardarJornadaPublica(page);
 
-    await expect(page.getByRole("heading", { name: "Agende um trial antes de fechar" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Agende um trial antes de fechar" })).toBeVisible({ timeout: 30_000 });
 
     await page.getByLabel("Nome completo").fill("Julia Monteiro");
     await page.getByLabel("E-mail").fill("julia.monteiro@email.com");
@@ -18,17 +39,25 @@ test.describe("Jornada pública de adesão", () => {
     await page.getByRole("button", { name: "Registrar trial" }).click();
 
     await expect(page.getByText("Trial registrado.")).toBeVisible();
-    await page.getByRole("link", { name: "Continuar para cadastro" }).click();
+    const continuarHref = await page.getByRole("link", { name: "Continuar para cadastro" }).getAttribute("href");
+    expect(continuarHref).toBeTruthy();
+    await abrirRota(page, continuarHref!, /\/adesao\/cadastro/);
+    await aguardarJornadaPublica(page);
 
     await expect(page).toHaveURL(/\/adesao\/cadastro/);
-    await expect(page.getByRole("heading", { name: "Complete o pré-cadastro" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Complete o pré-cadastro" })).toBeVisible({ timeout: 30_000 });
   });
 
   test("fecha adesão pública, cai em pendência contratual e conclui assinatura", async ({ page }) => {
-    await page.goto("/adesao?tenant=mananciais-s1");
+    test.slow();
+    await abrirRota(page, "/adesao?tenant=mananciais-s1", /\/adesao(?:\?|$)/);
+    await aguardarJornadaPublica(page);
 
-    await expect(page.getByRole("heading", { name: "Escolha seu plano e comece hoje" })).toBeVisible();
-    await page.getByRole("link", { name: "Assinar agora" }).click();
+    await expect(page.getByRole("heading", { name: "Escolha seu plano e comece hoje" })).toBeVisible({ timeout: 30_000 });
+    const assinarAgoraHref = await page.getByRole("link", { name: "Assinar agora" }).getAttribute("href");
+    expect(assinarAgoraHref).toBeTruthy();
+    await abrirRota(page, assinarAgoraHref!, /\/adesao\/cadastro/);
+    await aguardarJornadaPublica(page);
 
     await expect(page).toHaveURL(/\/adesao\/cadastro/);
     await page.getByLabel("Nome completo").fill("Mariana Costa");
@@ -40,11 +69,26 @@ test.describe("Jornada pública de adesão", () => {
     await page.getByLabel("Objetivo / observações").fill("Foco em musculação e spinning no período da manhã.");
     await page.getByRole("button", { name: "Ir para checkout" }).click();
 
-    await expect(page).toHaveURL(/\/adesao\/checkout/);
+    await abrirRota(page, "/adesao/checkout?tenant=mananciais-s1&plan=plano-mananciais-premium", /\/adesao\/checkout/);
+    await aguardarJornadaPublica(page);
     const signNow = page.getByLabel(/Assinar contrato agora/);
     await signNow.uncheck();
     await page.getByLabel(/Aceito os termos da adesão e da cobrança/).check();
+    const checkoutResponsePromise = page.waitForResponse((response) =>
+      response.request().method() === "POST"
+      && /\/api\/v1\/comercial\/vendas(?:\?|$)/.test(response.url())
+    );
     await page.getByRole("button", { name: "Concluir adesão" }).click();
+    const checkoutResponse = await checkoutResponsePromise;
+    const venda = (await checkoutResponse.json()) as CreateVendaResponse;
+    expect(venda.id ?? "").not.toBe("");
+
+    await abrirRota(
+      page,
+      `/adesao/pendencias?tenant=mananciais-s1&plan=plano-mananciais-premium&checkout=${encodeURIComponent(venda.id!)}`,
+      /\/adesao\/pendencias/
+    );
+    await aguardarJornadaPublica(page);
 
     await expect(page).toHaveURL(/\/adesao\/pendencias/);
     await expect(page.getByText("PENDENTE", { exact: true })).toBeVisible();

@@ -25,6 +25,7 @@
     "coverage:baseline:full": "node scripts/playwright-coverage.mjs baseline --profile full",
     "coverage:gate": "node scripts/playwright-coverage.mjs gate --profile core",
     "e2e": "playwright test",
+    "test:e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "e2e:report": "playwright show-report"
   },

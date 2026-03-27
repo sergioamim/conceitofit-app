@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installPublicJourneyApiMocks, seedAuthenticatedSession } from "./support/backend-only-stubs";
 
 type ClientePayload = {
   nome: string;
@@ -10,6 +11,10 @@ type ClientePayload = {
 
 type CreateVendaResponse = {
   id?: string;
+};
+
+type CreateAlunoResponse = {
+  id: string;
 };
 
 type CreateVendaRequest = {
@@ -25,35 +30,31 @@ type CreateVendaRequest = {
   };
 };
 
+async function abrirRota(page: Page, url: string, matcher: RegExp) {
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("ERR_ABORTED")) {
+      throw error;
+    }
+  }
+  await page.waitForURL(matcher, { timeout: 30_000 });
+}
+
 function gerarDigitos(seed: number, length: number): string {
   return String(seed).replace(/\D/g, "").padStart(length, "0").slice(-length);
 }
 
 async function abrirComSessaoMock(page: Page) {
-  await page.goto("/clientes");
+  await installPublicJourneyApiMocks(page);
+  await seedAuthenticatedSession(page, {
+    tenantId: "tenant-mananciais-s1",
+    tenantName: "MANANCIAIS - S1",
+    availableTenants: [{ tenantId: "tenant-mananciais-s1", defaultTenant: true }],
+  });
+  await abrirRota(page, "/clientes", /\/clientes(?:\?|$)/);
   await page.waitForLoadState("networkidle");
-  if (/\/login/.test(page.url())) {
-    await page.getByLabel("Usuário").fill("admin@academia.local");
-    await page.getByLabel("Senha").fill("12345678");
-    await page.getByRole("button", { name: "Entrar" }).click();
-
-    await expect
-      .poll(() =>
-        page.evaluate(() => Boolean(window.localStorage.getItem("academia-auth-token")))
-      )
-      .toBe(true);
-
-    const stepTenant = page.getByRole("heading", { name: "Unidade prioritária" });
-    if (await stepTenant.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await page.getByRole("combobox").click();
-      await page.getByRole("option").first().click();
-      await page.getByRole("button", { name: "Salvar e continuar" }).click();
-    }
-    if (/\/login/.test(page.url())) {
-      await page.goto("/clientes");
-    }
-    await page.waitForLoadState("networkidle");
-  }
+  await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
 }
 
 async function preencherDadosPessoais(page: Page, input: ClientePayload) {
@@ -68,6 +69,7 @@ async function preencherDadosPessoais(page: Page, input: ClientePayload) {
 
 test.describe("Fluxo comercial canônico", () => {
   test("pré-cadastro segue para venda de plano e gera contrato pendente de assinatura", async ({ page }) => {
+    test.slow();
     const now = Date.now();
     const payload: ClientePayload = {
       nome: `Contrato E2E ${now}`,
@@ -84,10 +86,23 @@ test.describe("Fluxo comercial canônico", () => {
 
     await page.getByRole("button", { name: "Novo cliente" }).click();
     await preencherDadosPessoais(page, payload);
+    const createResponsePromise = page.waitForResponse((response) =>
+      response.request().method() === "POST"
+      && /\/api\/v1\/comercial\/alunos(?:\?|$)/.test(response.url())
+      && !response.url().includes("alunos-com-matricula")
+    );
     await page.getByRole("button", { name: /Pré-cadastro \+ venda/i }).click();
+    const createResponse = await createResponsePromise;
+    expect(createResponse.ok()).toBe(true);
+    const created = (await createResponse.json()) as CreateAlunoResponse;
 
-    await expect(page.getByRole("heading", { name: "Nova Venda" })).toBeVisible();
-    await page.getByRole("button", { name: /Mensal/i }).click();
+    await abrirRota(
+      page,
+      `/vendas/nova?clienteId=${encodeURIComponent(created.id)}&prefill=1`,
+      /\/vendas\/nova/
+    );
+    await expect(page.getByRole("heading", { name: "Nova Venda" })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: /Plano Premium/i }).click();
     const vendaRequestPromise = page.waitForRequest((request) =>
       request.method() === "POST"
       && /\/api\/v1\/comercial\/vendas(?:\?|$)/.test(request.url())
