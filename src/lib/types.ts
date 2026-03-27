@@ -2056,6 +2056,42 @@ export interface SecurityStandardizedProfile {
   matrix: SecurityProfileMatrixItem[];
 }
 
+export type FeatureFlagPropagationStatus = "TOTAL" | "PARCIAL" | "PENDENTE";
+
+export interface FeatureFlagMatrixAcademia {
+  academiaId: UUID;
+  academiaNome: string;
+  totalUnits: number;
+  activeUnits: number;
+}
+
+export interface FeatureFlagMatrixCell {
+  academiaId: UUID;
+  academiaNome?: string;
+  enabled: boolean;
+  effectiveEnabled: boolean;
+  inheritedFromGlobal: boolean;
+  propagationStatus: FeatureFlagPropagationStatus;
+  propagatedUnits: number;
+  totalUnits: number;
+}
+
+export interface FeatureFlagMatrixRow {
+  featureKey: string;
+  featureLabel: string;
+  moduleLabel: string;
+  description?: string;
+  globalEnabled: boolean;
+  globalSource?: "GLOBAL" | "ACADEMIA";
+  academias: FeatureFlagMatrixCell[];
+}
+
+export interface FeatureFlagMatrix {
+  academias: FeatureFlagMatrixAcademia[];
+  features: FeatureFlagMatrixRow[];
+  updatedAt?: LocalDateTime;
+}
+
 /* ---------- Global Search (Backoffice) ---------- */
 
 export type GlobalSearchPersonType = "ALUNO" | "FUNCIONARIO" | "ADMIN";

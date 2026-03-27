@@ -8312,7 +8312,7 @@
         "description": "Expandir o catálogo de funcionalidades existente (/admin/seguranca/funcionalidades) com toggles operacionais por academia: ativar/desativar features específicas para cada academia, com override global e propagação para unidades.",
         "details": "Atualizar src/app/(backoffice)/admin/seguranca/funcionalidades/page.tsx ou criar sub-página /admin/configuracoes/feature-flags/page.tsx com: (1) Tabela matriz: features (linhas) x academias (colunas) com toggles; (2) Override global: ativar/desativar feature para todas as academias; (3) Override por academia: toggle individual; (4) Indicador visual de propagação (academia → unidades). Criar endpoints toggleFeatureForAcademia, getFeatureFlagsMatrix em src/lib/api/admin-config.ts. Adicionar tipo FeatureFlagMatrix em types.ts.",
         "testStrategy": "Ativar feature para uma academia e verificar que propaga para suas unidades. Desativar globalmente e confirmar que todas desligam.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "subtasks": [
@@ -8321,8 +8321,11 @@
             "title": "Criar tipos e API client para feature flags",
             "description": "FeatureFlagMatrix em types.ts e endpoints em admin-config.ts",
             "dependencies": [],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T16:52:25.025Z",
+            "details": "Implementar o contrato tipado da matriz de feature flags por academia e os clients administrativos para leitura e toggle global/por academia.",
+            "testStrategy": "Validar normalização do payload e montagem das chamadas HTTP para a matriz e seus toggles."
           },
           {
             "id": 2,
@@ -8331,10 +8334,14 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T16:52:25.025Z",
+            "details": "Evoluir a página de funcionalidades com a matriz de academias, override global, ajuste individual e indicador visual de propagação para as unidades.",
+            "testStrategy": "Cobrir no e2e a edição do catálogo e os toggles global/por academia com retorno de propagação."
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T16:52:25.025Z"
       },
       {
         "id": "135",
@@ -8419,9 +8426,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-27T16:45:30.711Z",
+      "lastModified": "2026-03-27T16:52:25.025Z",
       "taskCount": 136,
-      "completedCount": 125,
+      "completedCount": 126,
       "tags": [
         "master"
       ]

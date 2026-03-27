@@ -31,11 +31,33 @@ type AuditSeed = {
   detalhes?: string;
 };
 
+type AcademiaSeed = {
+  id: string;
+  nome: string;
+  ativo: boolean;
+};
+
+type UnidadeSeed = {
+  id: string;
+  academiaId: string;
+  nome: string;
+  ativo: boolean;
+};
+
+type FeatureFlagMatrixSeed = {
+  featureKey: string;
+  globalEnabled: boolean;
+  academias: Record<string, boolean>;
+};
+
 type State = {
   perfis: RbacPerfilSeed[];
   features: RbacFeatureSeed[];
   grants: RbacGrantSeed[];
   auditoria: AuditSeed[];
+  academias: AcademiaSeed[];
+  unidades: UnidadeSeed[];
+  matrix: FeatureFlagMatrixSeed[];
 };
 
 function seedSession(page: Page) {
@@ -103,6 +125,73 @@ function buildState(): State {
         detalhes: "Administrador revisado para o tenant Centro.",
       },
     ],
+    academias: [
+      { id: "academia-norte", nome: "Rede Norte", ativo: true },
+      { id: "academia-sul", nome: "Rede Sul", ativo: true },
+    ],
+    unidades: [
+      { id: "tenant-centro", academiaId: "academia-norte", nome: "Unidade Centro", ativo: true },
+      { id: "tenant-maracana", academiaId: "academia-norte", nome: "Maracanã - S6", ativo: true },
+      { id: "tenant-barra", academiaId: "academia-sul", nome: "Barra - S2", ativo: false },
+    ],
+    matrix: [
+      {
+        featureKey: "feature.treinos",
+        globalEnabled: true,
+        academias: {
+          "academia-norte": true,
+          "academia-sul": true,
+        },
+      },
+      {
+        featureKey: "feature.financeiro",
+        globalEnabled: true,
+        academias: {
+          "academia-norte": true,
+          "academia-sul": false,
+        },
+      },
+    ],
+  };
+}
+
+function buildFeatureFlagsMatrixPayload(state: State) {
+  return {
+    academias: state.academias.map((academia) => {
+      const unidades = state.unidades.filter((item) => item.academiaId === academia.id);
+      return {
+        academiaId: academia.id,
+        academiaNome: academia.nome,
+        totalUnits: unidades.length,
+        activeUnits: unidades.filter((item) => item.ativo).length,
+      };
+    }),
+    features: state.matrix.map((item) => ({
+      featureKey: item.featureKey,
+      featureLabel: item.featureKey === "feature.financeiro" ? "Gestão financeira" : "Gestão de treinos",
+      moduleLabel: item.featureKey === "feature.financeiro" ? "Financeiro" : "Treinos",
+      description:
+        item.featureKey === "feature.financeiro"
+          ? "Capacidade financeira propagada por academia."
+          : "Capacidade operacional de treinos propagada por academia.",
+      globalEnabled: item.globalEnabled,
+      globalSource: "GLOBAL",
+      academias: state.academias.map((academia) => {
+        const enabled = item.academias[academia.id] ?? item.globalEnabled;
+        const unidades = state.unidades.filter((tenant) => tenant.academiaId === academia.id);
+        const propagatedUnits = enabled ? unidades.length : 0;
+        return {
+          academiaId: academia.id,
+          academiaNome: academia.nome,
+          enabled,
+          effectiveEnabled: enabled,
+          inheritedFromGlobal: enabled === item.globalEnabled,
+          propagationStatus: unidades.length === 0 ? "PENDENTE" : propagatedUnits === unidades.length ? "TOTAL" : "PARCIAL",
+          propagatedUnits,
+          totalUnits: unidades.length,
+        };
+      }),
+    })),
   };
 }
 
@@ -150,6 +239,22 @@ async function setupMocks(page: Page, state: State) {
             },
           ],
         },
+      });
+      return;
+    }
+
+    if (path === "/api/v1/admin/academias" && method === "GET") {
+      await route.fulfill({
+        status: 200,
+        json: state.academias,
+      });
+      return;
+    }
+
+    if (path === "/api/v1/admin/unidades" && method === "GET") {
+      await route.fulfill({
+        status: 200,
+        json: state.unidades,
       });
       return;
     }
@@ -295,6 +400,35 @@ async function setupMocks(page: Page, state: State) {
       return;
     }
 
+    if (path === "/api/v1/admin/configuracoes/feature-flags/matrix" && method === "GET") {
+      await route.fulfill({ status: 200, json: buildFeatureFlagsMatrixPayload(state) });
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/configuracoes\/feature-flags\/[^/]+\/global$/.test(path) && method === "PATCH") {
+      const featureKey = decodeURIComponent(path.split("/")[6] ?? "");
+      const payload = parseBody<{ enabled?: boolean }>(request.postData());
+      const current = state.matrix.find((item) => item.featureKey === featureKey);
+      if (current) {
+        current.globalEnabled = payload.enabled ?? current.globalEnabled;
+      }
+      await route.fulfill({ status: 200, json: buildFeatureFlagsMatrixPayload(state) });
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/configuracoes\/feature-flags\/[^/]+\/academias\/[^/]+$/.test(path) && method === "PATCH") {
+      const segments = path.split("/");
+      const featureKey = decodeURIComponent(segments[6] ?? "");
+      const academiaId = segments[8] ?? "";
+      const payload = parseBody<{ enabled?: boolean }>(request.postData());
+      const current = state.matrix.find((item) => item.featureKey === featureKey);
+      if (current) {
+        current.academias[academiaId] = payload.enabled ?? current.academias[academiaId] ?? current.globalEnabled;
+      }
+      await route.fulfill({ status: 200, json: buildFeatureFlagsMatrixPayload(state) });
+      return;
+    }
+
     await route.fulfill({ status: 404, json: { message: `Sem stub para ${method} ${path}` } });
   });
 }
@@ -322,9 +456,23 @@ test.describe("Backoffice segurança governança", () => {
     await expect(page.getByRole("heading", { name: "Funcionalidades" })).toBeVisible();
 
     await page.getByLabel("Buscar").fill("Financeiro");
-    await page.getByRole("button", { name: /Gestão financeira/ }).click();
+    await page.locator("button.w-full").filter({ hasText: "Gestão financeira" }).first().click();
     await page.getByLabel("Rollout (%)").fill("35");
     await page.getByRole("button", { name: "Salvar governança" }).click();
     await expect(page.getByText("35%")).toBeVisible();
+
+    const globalFinanceiro = page.getByRole("button", { name: "Override global Gestão financeira" });
+    await expect(globalFinanceiro).toContainText("Ligada");
+    await globalFinanceiro.click();
+    await expect(globalFinanceiro).toContainText("Desligada");
+
+    const norteFinanceiro = page.getByRole("button", { name: "Rede Norte Gestão financeira" });
+    await expect(norteFinanceiro).toContainText("Ligada");
+
+    const sulFinanceiro = page.getByRole("button", { name: "Rede Sul Gestão financeira" });
+    await expect(sulFinanceiro).toContainText("Desligada");
+    await sulFinanceiro.click();
+    await expect(sulFinanceiro).toContainText("Ligada");
+    await expect(page.getByText("Parcial 0/1")).toHaveCount(0);
   });
 });

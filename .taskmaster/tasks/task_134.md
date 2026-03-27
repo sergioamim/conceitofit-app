@@ -2,7 +2,7 @@
 
 **Title:** Backoffice: feature flags operacional por academia
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,14 +22,14 @@ Ativar feature para uma academia e verificar que propaga para suas unidades. Des
 
 ### 134.1. Criar tipos e API client para feature flags
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 FeatureFlagMatrix em types.ts e endpoints em admin-config.ts
 
 ### 134.2. Criar página/matriz de feature flags por academia
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 134.1  
 
 Tabela com toggles por academia, override global e indicador de propagação
