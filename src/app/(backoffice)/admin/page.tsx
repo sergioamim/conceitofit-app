@@ -511,6 +511,21 @@ export default function AdminHomePage() {
             </Link>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Compliance LGPD</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <p className="text-3xl font-display font-bold">LGPD</p>
+              <p className="text-sm text-muted-foreground">Controlar dados pessoais, termos e exclusões</p>
+            </div>
+            <Link href="/admin/compliance">
+              <Button variant="outline" size="sm">Abrir</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
 
       <Separator />
@@ -523,6 +538,7 @@ export default function AdminHomePage() {
           <Link href="/admin/academias"><Button size="sm">Cadastrar academia</Button></Link>
           <Link href="/admin/unidades"><Button size="sm" variant="secondary">Cadastrar unidade</Button></Link>
           <Link href="/admin/operacional/saude"><Button size="sm" variant="secondary">Saúde operacional</Button></Link>
+          <Link href="/admin/compliance"><Button size="sm" variant="secondary">Compliance LGPD</Button></Link>
           <Link href="/admin/seguranca"><Button size="sm" variant="outline">Segurança global</Button></Link>
           <Link href="/admin/importacao-evo"><Button size="sm" variant="outline">Importação EVO</Button></Link>
         </CardContent>

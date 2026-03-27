@@ -1600,6 +1600,55 @@ export interface AcademiasHealthMap {
   generatedAt?: LocalDateTime;
 }
 
+export type ComplianceTermsStatus = "ACEITO" | "PARCIAL" | "PENDENTE";
+export type SolicitacaoExclusaoStatus = "PENDENTE" | "EM_PROCESSAMENTO" | "EXECUTADA" | "REJEITADA";
+
+export interface ComplianceAcademiaResumo {
+  academiaId?: UUID;
+  academiaNome: string;
+  totalAlunos: number;
+  alunosComCpf: number;
+  alunosComEmail: number;
+  alunosComTelefone: number;
+  ultimaSolicitacaoExclusao?: LocalDateTime;
+  termosAceitos: number;
+  termosPendentes: number;
+  statusTermos: ComplianceTermsStatus;
+  camposSensiveis: string[];
+}
+
+export interface SolicitacaoExclusao {
+  id: UUID;
+  academiaId?: UUID;
+  academiaNome: string;
+  alunoId?: UUID;
+  alunoNome: string;
+  email?: string;
+  cpf?: string;
+  solicitadoEm?: LocalDateTime;
+  solicitadoPor?: string;
+  motivo?: string;
+  status: SolicitacaoExclusaoStatus;
+}
+
+export interface ComplianceExposicaoCampo {
+  key: string;
+  label: string;
+  totalAcademias: number;
+  academias: string[];
+}
+
+export interface ComplianceDashboard {
+  totalDadosPessoaisArmazenados: number;
+  solicitacoesExclusaoPendentes: number;
+  termosAceitos: number;
+  termosPendentes: number;
+  academias: ComplianceAcademiaResumo[];
+  solicitacoesPendentes: SolicitacaoExclusao[];
+  exposicaoCamposSensiveis: ComplianceExposicaoCampo[];
+  generatedAt?: LocalDateTime;
+}
+
 export type BiEscopo = "UNIDADE" | "ACADEMIA";
 export type BiSegmento = OrigemProspect | "TODOS";
 export type BiKpiKey =
