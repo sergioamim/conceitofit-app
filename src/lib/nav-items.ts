@@ -94,7 +94,6 @@ export const gerencialItems: NavItem[] = [
   { href: "/gerencial/contas-a-pagar", label: "Contas a Pagar", icon: DollarSign },
   { href: "/gerencial/catraca-acessos", label: "Acessos Catraca", icon: ClipboardList },
   { href: "/gerencial/dre", label: "DRE", icon: LineChart },
-  { href: "/gerencial/dre-experimental", label: "DRE (Protótipo)", icon: LineChart },
   { href: "/gerencial/recebimentos", label: "Recebimentos", icon: HandCoins },
 ];
 
