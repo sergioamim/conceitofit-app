@@ -1,8 +1,63 @@
-/* Placeholder service worker file to avoid 404 in environments that probe /sw.js */
-self.addEventListener("install", () => {
-  self.skipWaiting();
+/**
+ * Service Worker — cache do app shell (imagens, ícones, fontes).
+ * NÃO cacheia dados de API para garantir dados sempre atualizados.
+ */
+
+const CACHE_NAME = "conceito-fit-shell-v1";
+
+const SHELL_ASSETS = ["/icon.svg", "/pwa-icon-192.png", "/pwa-icon-512.png"];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(SHELL_ASSETS))
+      .then(() => self.skipWaiting())
+  );
 });
 
-self.addEventListener("activate", () => {
-  self.clients.claim();
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key))
+        )
+      )
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+
+  // Never cache API requests or non-GET
+  if (
+    request.method !== "GET" ||
+    request.url.includes("/api/") ||
+    request.url.includes("/_next/data/")
+  ) {
+    return;
+  }
+
+  // Cache-first for static assets (images, fonts, icons)
+  if (
+    request.destination === "image" ||
+    request.destination === "font" ||
+    request.url.endsWith(".svg") ||
+    request.url.endsWith(".png")
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => cached || fetch(request))
+    );
+    return;
+  }
+
+  // Network-first for everything else (HTML, JS, CSS)
+  event.respondWith(
+    fetch(request).catch(() => caches.match(request))
+  );
 });
