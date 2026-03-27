@@ -355,6 +355,8 @@ function ClientesPageContent() {
       {/* Table */}
       <PaginatedTable<Aluno>
         isLoading={loading}
+        itemLabel="clientes"
+        tableAriaLabel="Tabela de clientes"
         selectable
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
@@ -434,7 +436,6 @@ function ClientesPageContent() {
         page={metaPage}
         pageSize={metaSize}
         total={totalClientes}
-        itemLabel="clientes"
         hasNext={isSearchFiltered ? false : hasNextPage}
         onPrevious={() => setParams({ page: Math.max(0, page - 1) })}
         onNext={() => setParams({ page: page + 1 })}

@@ -1,33 +1,46 @@
 "use client";
 
 import { useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
 import type { Servico } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HoverPopover } from "@/components/shared/hover-popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 
-type ServicoFormValues = {
-  nome: string;
-  sku: string;
-  categoria: string;
-  descricao: string;
-  sessoes: string;
-  valor: string;
-  custo: string;
-  duracaoMinutos: string;
-  validadeDias: string;
-  comissaoPercentual: string;
-  aliquotaImpostoPercentual: string;
-  permiteDesconto: boolean;
-  tipoCobranca: "UNICO" | "RECORRENTE";
-  recorrenciaDias: string;
-  agendavel: boolean;
-  permiteAcessoCatraca: boolean;
-  permiteVoucher: boolean;
-  ativo: boolean;
-};
+const servicoFormSchema = z.object({
+  nome: requiredTrimmedString("Informe o nome do serviço."),
+  sku: z.string(),
+  categoria: z.string(),
+  descricao: z.string(),
+  sessoes: z.string(),
+  valor: z.string(),
+  custo: z.string(),
+  duracaoMinutos: z.string(),
+  validadeDias: z.string(),
+  comissaoPercentual: z.string(),
+  aliquotaImpostoPercentual: z.string(),
+  permiteDesconto: z.boolean(),
+  tipoCobranca: z.enum(["UNICO", "RECORRENTE"]),
+  recorrenciaDias: z.string(),
+  agendavel: z.boolean(),
+  permiteAcessoCatraca: z.boolean(),
+  permiteVoucher: z.boolean(),
+  ativo: z.boolean(),
+});
+
+type ServicoFormValues = z.infer<typeof servicoFormSchema>;
 
 const DEFAULT_VALUES: ServicoFormValues = {
   nome: "",
@@ -93,6 +106,7 @@ export function ServicoModal({
     setValue,
     formState: { errors },
   } = useForm<ServicoFormValues>({
+    resolver: zodResolver(servicoFormSchema),
     defaultValues: toFormValues(initial),
   });
   const tipoCobranca = useWatch({ control, name: "tipoCobranca" });
@@ -134,65 +148,79 @@ export function ServicoModal({
     );
   }
 
-  if (!open) {
-    return null;
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="servico-modal-title">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-lg">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 id="servico-modal-title" className="font-display text-lg font-bold">
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-display text-lg font-bold">
             {initial ? "Editar serviço" : "Novo serviço"}
-          </h2>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            Fechar
-          </Button>
-        </div>
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            Configure dados comerciais, cobrança e disponibilidade operacional do serviço.
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit(handleSave)}>
           <div className="grid gap-4 py-2">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+              <label
+                htmlFor="servico-nome"
+                className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+              >
+                Nome *
+              </label>
               <Input
+                id="servico-nome"
+                autoFocus
                 {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome do serviço." })}
+                aria-invalid={errors.nome ? "true" : "false"}
+                aria-describedby={errors.nome ? "servico-nome-error" : undefined}
                 className="border-border bg-secondary"
               />
-              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
+              {errors.nome ? (
+                <p id="servico-nome-error" className="text-xs text-gym-danger">
+                  {errors.nome.message}
+                </p>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">SKU / Código interno</label>
-                <Input {...register("sku")} className="border-border bg-secondary" />
+                <label htmlFor="servico-sku" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">SKU / Código interno</label>
+                <Input id="servico-sku" {...register("sku")} className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Categoria</label>
-                <Input {...register("categoria")} className="border-border bg-secondary" />
+                <label htmlFor="servico-categoria" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Categoria</label>
+                <Input id="servico-categoria" {...register("categoria")} className="border-border bg-secondary" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descrição</label>
-              <Input {...register("descricao")} className="border-border bg-secondary" />
+              <label htmlFor="servico-descricao" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descrição</label>
+              <Input id="servico-descricao" {...register("descricao")} className="border-border bg-secondary" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sessões</label>
-                <Input type="number" min={1} step="1" {...register("sessoes")} className="border-border bg-secondary" />
+                <label htmlFor="servico-sessoes" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sessões</label>
+                <Input id="servico-sessoes" type="number" min={1} step="1" {...register("sessoes")} className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ativo</label>
+                <label htmlFor="servico-ativo" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ativo</label>
                 <div className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" {...register("ativo")} />
-                  <span className="text-muted-foreground">Disponível</span>
+                  <input id="servico-ativo" type="checkbox" {...register("ativo")} />
+                  <label htmlFor="servico-ativo" className="cursor-pointer text-muted-foreground">Disponível</label>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Duração por sessão (min)</label>
-                <Input type="number" min={1} {...register("duracaoMinutos")} className="border-border bg-secondary" />
+                <label htmlFor="servico-duracao" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Duração por sessão (min)</label>
+                <Input id="servico-duracao" type="number" min={1} {...register("duracaoMinutos")} className="border-border bg-secondary" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo de cobrança</label>
+                <label htmlFor="servico-tipo-cobranca" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo de cobrança</label>
                 <Controller
                   control={control}
                   name="tipoCobranca"
@@ -207,7 +235,7 @@ export function ServicoModal({
                         }
                       }}
                     >
-                      <SelectTrigger className="w-full border-border bg-secondary">
+                      <SelectTrigger id="servico-tipo-cobranca" className="w-full border-border bg-secondary">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="border-border bg-card">
@@ -219,62 +247,62 @@ export function ServicoModal({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Recorrência (dias)</label>
-                <Input type="number" min={1} {...register("recorrenciaDias")} className="border-border bg-secondary" disabled={tipoCobranca !== "RECORRENTE"} />
+                <label htmlFor="servico-recorrencia" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Recorrência (dias)</label>
+                <Input id="servico-recorrencia" type="number" min={1} {...register("recorrenciaDias")} className="border-border bg-secondary" disabled={tipoCobranca !== "RECORRENTE"} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Valor (R$)</label>
-                <Input type="number" min={0} step="0.01" {...register("valor")} className="border-border bg-secondary" />
+                <label htmlFor="servico-valor" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Valor (R$)</label>
+                <Input id="servico-valor" type="number" min={0} step="0.01" {...register("valor")} className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Custo (R$)</label>
-                <Input type="number" min={0} step="0.01" {...register("custo")} className="border-border bg-secondary" />
+                <label htmlFor="servico-custo" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Custo (R$)</label>
+                <Input id="servico-custo" type="number" min={0} step="0.01" {...register("custo")} className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Comissão (%)</label>
-                <Input type="number" min={0} step="0.01" {...register("comissaoPercentual")} className="border-border bg-secondary" />
+                <label htmlFor="servico-comissao" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Comissão (%)</label>
+                <Input id="servico-comissao" type="number" min={0} step="0.01" {...register("comissaoPercentual")} className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Imposto (%)</label>
-                <Input type="number" min={0} step="0.01" {...register("aliquotaImpostoPercentual")} className="border-border bg-secondary" />
+                <label htmlFor="servico-imposto" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Imposto (%)</label>
+                <Input id="servico-imposto" type="number" min={0} step="0.01" {...register("aliquotaImpostoPercentual")} className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <label htmlFor="servico-validade" className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Validade (dias)
                   <HoverPopover content="Use para serviços com expiração após a venda ou consumo." />
                 </label>
-                <Input type="number" min={1} {...register("validadeDias")} className="border-border bg-secondary" />
+                <Input id="servico-validade" type="number" min={1} {...register("validadeDias")} className="border-border bg-secondary" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <input type="checkbox" {...register("permiteDesconto")} />
+              <label htmlFor="servico-permite-desconto" className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input id="servico-permite-desconto" type="checkbox" {...register("permiteDesconto")} />
                 Permite desconto
               </label>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <input type="checkbox" {...register("agendavel")} />
+              <label htmlFor="servico-agendavel" className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input id="servico-agendavel" type="checkbox" {...register("agendavel")} />
                 Serviço agendável
               </label>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <input type="checkbox" {...register("permiteAcessoCatraca")} />
+              <label htmlFor="servico-catraca" className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input id="servico-catraca" type="checkbox" {...register("permiteAcessoCatraca")} />
                 Libera acesso na catraca
               </label>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <input type="checkbox" {...register("permiteVoucher")} />
+              <label htmlFor="servico-voucher" className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input id="servico-voucher" type="checkbox" {...register("permiteVoucher")} />
                 Aceita voucher
               </label>
             </div>
           </div>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
             <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

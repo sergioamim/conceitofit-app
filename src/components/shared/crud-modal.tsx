@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 import {
   useForm,
   Controller,
@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -60,6 +61,8 @@ export type CrudModalProps<T extends FieldValues> = {
   initialId?: string;
   title: string;
   editTitle?: string;
+  description?: string;
+  editDescription?: string;
   fields: FormFieldConfig[];
   /** Override the auto-built zod schema */
   schema?: ZodTypeAny;
@@ -96,34 +99,64 @@ function renderField<T extends FieldValues>(
   field: FormFieldConfig,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: ReturnType<typeof useForm<any>>,
+  fieldId: string,
+  isAutoFocus = false,
 ) {
   const { register, control, formState: { errors } } = form;
   const fieldPath = field.name as Path<T>;
   const error = errors[field.name];
+  const errorId = `${fieldId}-error`;
+  const helperTextId = `${fieldId}-helper`;
+  const describedByIds = [
+    error ? errorId : null,
+    field.helperText ? helperTextId : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   if (field.type === "checkbox") {
     return (
       <div key={field.name} className={field.className}>
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <label
+          htmlFor={fieldId}
+          className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+        >
           {field.label}
         </label>
         <div className="flex items-center gap-2 text-sm">
-          <input type="checkbox" {...register(fieldPath)} />
+          <input
+            id={fieldId}
+            type="checkbox"
+            autoFocus={isAutoFocus}
+            aria-invalid={error ? "true" : "false"}
+            aria-describedby={describedByIds || undefined}
+            {...register(fieldPath)}
+          />
           {field.checkboxLabel ? (
-            <span className="text-muted-foreground">{field.checkboxLabel}</span>
+            <label htmlFor={fieldId} className="cursor-pointer text-muted-foreground">
+              {field.checkboxLabel}
+            </label>
           ) : null}
         </div>
         {field.helperText ? (
-          <p className="text-[11px] text-muted-foreground">{field.helperText}</p>
+          <p id={helperTextId} className="text-[11px] text-muted-foreground">
+            {field.helperText}
+          </p>
         ) : null}
+        {error ? <p id={errorId} className="text-xs text-gym-danger">{String(error.message)}</p> : null}
       </div>
     );
   }
 
   if (field.type === "select" && field.options) {
+    const labelId = `${fieldId}-label`;
     return (
       <div key={field.name} className={field.className ?? "space-y-1.5"}>
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <label
+          id={labelId}
+          htmlFor={fieldId}
+          className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+        >
           {field.label}
         </label>
         <Controller
@@ -134,7 +167,14 @@ function renderField<T extends FieldValues>(
               value={controllerField.value as string}
               onValueChange={(value) => controllerField.onChange(value)}
             >
-              <SelectTrigger className="w-full border-border bg-secondary">
+              <SelectTrigger
+                id={fieldId}
+                autoFocus={isAutoFocus}
+                aria-labelledby={labelId}
+                aria-describedby={describedByIds || undefined}
+                aria-invalid={error ? "true" : "false"}
+                className="w-full border-border bg-secondary"
+              >
                 <SelectValue placeholder={field.placeholder ?? "Selecione"} />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
@@ -147,7 +187,12 @@ function renderField<T extends FieldValues>(
             </Select>
           )}
         />
-        {error ? <p className="text-xs text-gym-danger">{String(error.message)}</p> : null}
+        {field.helperText ? (
+          <p id={helperTextId} className="text-[11px] text-muted-foreground">
+            {field.helperText}
+          </p>
+        ) : null}
+        {error ? <p id={errorId} className="text-xs text-gym-danger">{String(error.message)}</p> : null}
       </div>
     );
   }
@@ -155,15 +200,27 @@ function renderField<T extends FieldValues>(
   if (field.type === "textarea") {
     return (
       <div key={field.name} className={field.className ?? "space-y-1.5"}>
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <label
+          htmlFor={fieldId}
+          className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+        >
           {field.label}
         </label>
         <Textarea
+          id={fieldId}
+          autoFocus={isAutoFocus}
+          aria-invalid={error ? "true" : "false"}
+          aria-describedby={describedByIds || undefined}
           {...register(fieldPath)}
           placeholder={field.placeholder}
           className="border-border bg-secondary"
         />
-        {error ? <p className="text-xs text-gym-danger">{String(error.message)}</p> : null}
+        {field.helperText ? (
+          <p id={helperTextId} className="text-[11px] text-muted-foreground">
+            {field.helperText}
+          </p>
+        ) : null}
+        {error ? <p id={errorId} className="text-xs text-gym-danger">{String(error.message)}</p> : null}
       </div>
     );
   }
@@ -171,19 +228,31 @@ function renderField<T extends FieldValues>(
   // text | number
   return (
     <div key={field.name} className={field.className ?? "space-y-1.5"}>
-      <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <label
+        htmlFor={fieldId}
+        className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+      >
         {field.label}
       </label>
       <Input
+        id={fieldId}
+        autoFocus={isAutoFocus}
         type={field.type === "number" ? "number" : "text"}
         min={field.min}
         max={field.max}
         step={field.step}
         placeholder={field.placeholder}
         {...register(fieldPath)}
+        aria-invalid={error ? "true" : "false"}
+        aria-describedby={describedByIds || undefined}
         className="border-border bg-secondary"
       />
-      {error ? <p className="text-xs text-gym-danger">{String(error.message)}</p> : null}
+      {field.helperText ? (
+        <p id={helperTextId} className="text-[11px] text-muted-foreground">
+          {field.helperText}
+        </p>
+      ) : null}
+      {error ? <p id={errorId} className="text-xs text-gym-danger">{String(error.message)}</p> : null}
     </div>
   );
 }
@@ -198,6 +267,8 @@ export function CrudModal<T extends FieldValues>({
   initialId,
   title,
   editTitle,
+  description,
+  editDescription,
   fields,
   schema,
   fieldsClassName,
@@ -208,6 +279,10 @@ export function CrudModal<T extends FieldValues>({
 }: CrudModalProps<T>) {
   const isEditing = !!initial;
   const resolvedSchema = schema ?? buildSchemaFromFields(fields);
+  const modalId = useId();
+  const titleId = `${modalId}-title`;
+  const descriptionId = `${modalId}-description`;
+  const resolvedDescription = isEditing ? (editDescription ?? description) : description;
 
   const form = useForm<T>({
     resolver: zodResolver(resolvedSchema),
@@ -231,16 +306,24 @@ export function CrudModal<T extends FieldValues>({
         if (!nextOpen) onClose();
       }}
     >
-      <DialogContent className={contentClassName ?? "border-border bg-card sm:max-w-lg"}>
+      <DialogContent
+        className={contentClassName ?? "border-border bg-card sm:max-w-lg"}
+        aria-describedby={resolvedDescription ? descriptionId : undefined}
+      >
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle id={titleId} className="font-display text-lg font-bold">
             {isEditing ? (editTitle ?? title) : title}
           </DialogTitle>
+          {resolvedDescription ? (
+            <DialogDescription id={descriptionId} className="sr-only">
+              {resolvedDescription}
+            </DialogDescription>
+          ) : null}
         </DialogHeader>
         <FormProvider {...form}>
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className={fieldsClassName ?? "grid gap-4 py-2"}>
-              {fields.map((field) => renderField<T>(field, form))}
+              {fields.map((field, index) => renderField<T>(field, form, `${modalId}-${field.name}`, index === 0))}
               {renderAfterFields?.()}
             </div>
             <DialogFooter>

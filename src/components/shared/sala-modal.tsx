@@ -70,6 +70,8 @@ export function SalaModal({
       initialId={initial?.id}
       title="Nova sala"
       editTitle="Editar sala"
+      description="Cadastre uma sala com nome, capacidade padrão e status de disponibilidade."
+      editDescription="Atualize os dados da sala, incluindo capacidade e disponibilidade."
       fields={FIELDS}
       contentClassName="border-border bg-card sm:max-w-sm"
     />

@@ -500,10 +500,11 @@ function NovaVendaPageContent() {
           <div className="rounded-xl border border-border bg-card p-4">
             <div className={tipoVenda === "PLANO" ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 gap-3 md:grid-cols-2"}>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <label htmlFor="venda-cliente-suggestion" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Cliente {requireCliente ? "*" : "(opcional)"}
                 </label>
                 <SuggestionInput
+                  inputId="venda-cliente-suggestion"
                   value={clienteQuery}
                   onValueChange={(value) => {
                     setClienteQuery(value);
@@ -535,9 +536,10 @@ function NovaVendaPageContent() {
 
               {tipoVenda !== "PLANO" && (
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Item</label>
+                  <label htmlFor="venda-item-suggestion" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Item</label>
                   <div className="flex items-center gap-2">
                     <SuggestionInput
+                      inputId="venda-item-suggestion"
                       className="flex-1"
                       value={itemQuery}
                       onValueChange={(value) => {
@@ -560,6 +562,7 @@ function NovaVendaPageContent() {
                         className="shrink-0 border-border"
                         onClick={() => setScannerOpen(true)}
                         title="Leitor de código de barras"
+                        aria-label="Abrir leitor de código de barras"
                       >
                         <ScanLine className="size-4" />
                       </Button>
@@ -676,7 +679,11 @@ function NovaVendaPageContent() {
                   </div>
                 )}
 
-                <div className="grid gap-3 md:grid-cols-2">
+                <div
+                  role="radiogroup"
+                  aria-label="Planos disponíveis para a venda"
+                  className="grid gap-3 md:grid-cols-2"
+                >
                   {planos.map((plano) => (
                     <PlanoSelectorCard
                       key={plano.id}

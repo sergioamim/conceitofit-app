@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +37,9 @@ export function SuggestionInput({
   minCharsToSearch?: number;
   preloadOnFocus?: boolean;
 }) {
+  const generatedId = useId();
+  const resolvedInputId = inputId ?? `suggestion-input-${generatedId}`;
+  const listboxId = `${resolvedInputId}-listbox`;
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -65,24 +68,41 @@ export function SuggestionInput({
     setActiveIndex(-1);
   }
 
+  const activeOptionId =
+    normalizedActiveIndex >= 0 && filtered[normalizedActiveIndex]
+      ? `${resolvedInputId}-option-${filtered[normalizedActiveIndex].id}`
+      : undefined;
+
   return (
     <div className={cn("relative", className)}>
       <Input
-        id={inputId}
+        id={resolvedInputId}
         aria-label={inputAriaLabel}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-activedescendant={open ? activeOptionId : undefined}
+        aria-haspopup="listbox"
+        autoComplete="off"
         value={value}
         onFocus={() => {
           const shouldOpen = value.trim().length >= minCharsToSearch;
           if (shouldOpen && preloadOnFocus && onFocusOpen) onFocusOpen();
           setOpen(shouldOpen);
+          setActiveIndex(shouldOpen && filtered.length > 0 ? 0 : -1);
         }}
-        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        onBlur={() => window.setTimeout(() => {
+          setOpen(false);
+          setActiveIndex(-1);
+        }, 120)}
         onChange={(e) => {
           const nextValue = e.target.value;
           onValueChange(nextValue);
           const shouldOpen = nextValue.trim().length >= minCharsToSearch;
           if (shouldOpen && onFocusOpen) onFocusOpen();
           setOpen(shouldOpen);
+          setActiveIndex(shouldOpen ? 0 : -1);
         }}
         onKeyDown={(e) => {
           if (
@@ -90,7 +110,10 @@ export function SuggestionInput({
             (e.key === "ArrowDown" || e.key === "ArrowUp") &&
             value.trim().length >= minCharsToSearch
           ) {
+            e.preventDefault();
             setOpen(true);
+            setActiveIndex(0);
+            return;
           }
           if (!open || filtered.length === 0) return;
 
@@ -113,6 +136,13 @@ export function SuggestionInput({
             return;
           }
 
+          if (e.key === "Escape") {
+            e.preventDefault();
+            setOpen(false);
+            setActiveIndex(-1);
+            return;
+          }
+
           if (e.key === "Tab") {
             const option = filtered[normalizedActiveIndex] ?? filtered[0];
             if (option) selectOption(option);
@@ -123,14 +153,22 @@ export function SuggestionInput({
       />
 
       {open && (
-        <div className="absolute z-40 mt-1 max-h-64 w-full overflow-auto rounded-md border border-border bg-card shadow-lg">
+        <div
+          id={listboxId}
+          role="listbox"
+          aria-label="Sugestões"
+          className="absolute z-40 mt-1 max-h-64 w-full overflow-auto rounded-md border border-border bg-card shadow-lg"
+        >
           {filtered.length === 0 && (
             <p className="px-3 py-2 text-xs text-muted-foreground">{emptyText}</p>
           )}
           {filtered.map((option) => (
             <button
+              id={`${resolvedInputId}-option-${option.id}`}
               key={option.id}
               type="button"
+              role="option"
+              aria-selected={normalizedActiveIndex >= 0 && filtered[normalizedActiveIndex]?.id === option.id}
               onMouseDown={(e) => e.preventDefault()}
               onMouseEnter={() => setActiveIndex(filtered.findIndex((f) => f.id === option.id))}
               onClick={() => selectOption(option)}

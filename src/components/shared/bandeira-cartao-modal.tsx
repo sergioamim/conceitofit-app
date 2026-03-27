@@ -68,6 +68,8 @@ export function BandeiraCartaoModal({
       initialId={initial?.id}
       title="Nova bandeira"
       editTitle="Editar bandeira"
+      description="Cadastre a bandeira do cartão com taxa de processamento e prazo de repasse."
+      editDescription="Atualize a bandeira do cartão, taxa de processamento e prazo de repasse."
       fields={FIELDS}
       fieldsClassName="grid gap-4 py-2"
     />
