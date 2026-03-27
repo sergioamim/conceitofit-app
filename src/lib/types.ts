@@ -1531,6 +1531,37 @@ export interface DashboardData {
   aReceber: number;
 }
 
+export interface MetricasOperacionaisGlobalSerie {
+  referencia: string;
+  label: string;
+  total: number;
+}
+
+export interface MetricasOperacionaisGlobalAcademia {
+  academiaId?: UUID;
+  academiaNome: string;
+  unidades: number;
+  alunosAtivos: number;
+  matriculasAtivas: number;
+  vendasMesQuantidade: number;
+  vendasMesValor: number;
+  ticketMedio: number;
+}
+
+export interface MetricasOperacionaisGlobal {
+  totalAlunosAtivos: number;
+  totalMatriculasAtivas: number;
+  vendasMesQuantidade: number;
+  vendasMesValor: number;
+  ticketMedioGlobal: number;
+  novosAlunosMes: number;
+  novosAlunosMesAnterior: number;
+  tendenciaCrescimentoPercentual: number;
+  evolucaoNovosAlunos: MetricasOperacionaisGlobalSerie[];
+  distribuicaoAcademias: MetricasOperacionaisGlobalAcademia[];
+  generatedAt?: LocalDateTime;
+}
+
 export type BiEscopo = "UNIDADE" | "ACADEMIA";
 export type BiSegmento = OrigemProspect | "TODOS";
 export type BiKpiKey =
