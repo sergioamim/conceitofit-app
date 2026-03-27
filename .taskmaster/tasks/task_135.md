@@ -2,7 +2,7 @@
 
 **Title:** Backoffice: monitoramento de integrações e configurações globais
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,21 +22,21 @@ Verificar que integrações mostram status correto. Editar template de email e c
 
 ### 135.1. Criar tipos e endpoints de integrações e config
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 IntegrationStatus, GlobalConfig em types.ts. Endpoints em admin-config.ts
 
 ### 135.2. Criar página de status de integrações
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 135.1  
 
 Cards de uptime, último erro, latência por integração
 
 ### 135.3. Criar seção de configurações globais editáveis
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 135.1  
 
 Templates de email, termos de uso (rich text), limites de API

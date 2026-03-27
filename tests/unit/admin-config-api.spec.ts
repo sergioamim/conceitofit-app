@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 import {
   getFeatureFlagsMatrixApi,
+  getGlobalConfigApi,
+  getIntegrationStatusApi,
   toggleFeatureForAcademiaApi,
+  updateGlobalConfigApi,
 } from "../../src/lib/api/admin-config";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
@@ -282,6 +285,207 @@ test.describe("admin config api contracts", () => {
       expect(calls[0].url).toContain("/api/v1/admin/configuracoes/feature-flags/feature.financeiro/global");
       expect(JSON.parse(calls[0].body ?? "{}")).toEqual({ enabled: false });
       expect(matrix.features[0]?.globalEnabled).toBeFalsy();
+    } finally {
+      restore();
+    }
+  });
+
+  test("getIntegrationStatusApi normaliza a saúde das integrações globais", async () => {
+    const { calls, restore } = mockFetchSequence([
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              key: "PAYMENTS",
+              name: "Gateway PIX/Boleto",
+              provider: "Pagar.me",
+              status: "ONLINE",
+              uptime: 99.82,
+              latencyMs: 128,
+              filaPendente: 2,
+              ultimaVerificacaoEm: "2026-03-27T12:30:00",
+              ultimaSucessoEm: "2026-03-27T12:29:30",
+              ultimoErro: "",
+              documentationUrl: "https://docs.qa.local/payments",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ),
+    ]);
+
+    try {
+      const integrations = await getIntegrationStatusApi();
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toContain("/api/v1/admin/configuracoes/integracoes/status");
+      expect(integrations).toEqual([
+        {
+          integrationKey: "PAYMENTS",
+          integrationName: "Gateway PIX/Boleto",
+          providerLabel: "Pagar.me",
+          status: "ONLINE",
+          uptimePercent: 99.82,
+          avgLatencyMs: 128,
+          pendingCount: 2,
+          lastCheckAt: "2026-03-27T12:30:00",
+          lastSuccessAt: "2026-03-27T12:29:30",
+          lastErrorMessage: undefined,
+          lastErrorAt: undefined,
+          docsHref: "https://docs.qa.local/payments",
+        },
+      ]);
+    } finally {
+      restore();
+    }
+  });
+
+  test("getGlobalConfigApi normaliza templates, termos e limites", async () => {
+    const { calls, restore } = mockFetchSequence([
+      new Response(
+        JSON.stringify({
+          templates: [
+            {
+              key: "boas-vindas",
+              name: "Boas-vindas",
+              subject: "Bem-vindo",
+              channel: "EMAIL",
+              enabled: true,
+              html: "<p>Olá {{NOME}}</p>",
+              variaveis: ["{{NOME}}"],
+            },
+          ],
+          termosUsoHtml: "<p>Termos atualizados</p>",
+          versaoTermos: "v2026.03",
+          limitesApi: {
+            rpm: 180,
+            burst: 260,
+            webhookRpm: 120,
+            adminRpm: 80,
+          },
+          updatedAt: "2026-03-27T12:00:00",
+          updatedBy: "Root Admin",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ),
+    ]);
+
+    try {
+      const config = await getGlobalConfigApi();
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toContain("/api/v1/admin/configuracoes/global");
+      expect(config).toEqual({
+        emailTemplates: [
+          {
+            id: "boas-vindas-1",
+            slug: "boas-vindas",
+            nome: "Boas-vindas",
+            assunto: "Bem-vindo",
+            canal: "EMAIL",
+            ativo: true,
+            bodyHtml: "<p>Olá {{NOME}}</p>",
+            variables: ["{{NOME}}"],
+            updatedAt: undefined,
+          },
+        ],
+        termsOfUseHtml: "<p>Termos atualizados</p>",
+        termsVersion: "v2026.03",
+        termsUpdatedAt: undefined,
+        apiLimits: {
+          requestsPerMinute: 180,
+          burstLimit: 260,
+          webhookRequestsPerMinute: 120,
+          adminRequestsPerMinute: 80,
+        },
+        updatedAt: "2026-03-27T12:00:00",
+        updatedBy: "Root Admin",
+      });
+    } finally {
+      restore();
+    }
+  });
+
+  test("updateGlobalConfigApi envia put com payload consolidado", async () => {
+    const { calls, restore } = mockFetchSequence([
+      new Response(
+        JSON.stringify({
+          emailTemplates: [
+            {
+              id: "template-1",
+              slug: "boas-vindas",
+              nome: "Boas-vindas",
+              assunto: "Assunto atualizado",
+              canal: "EMAIL",
+              ativo: true,
+              bodyHtml: "<p>Olá {{NOME}}</p>",
+              variables: ["{{NOME}}"],
+            },
+          ],
+          termsOfUseHtml: "<p>Termos atualizados</p>",
+          termsVersion: "v2026.03",
+          apiLimits: {
+            requestsPerMinute: 200,
+            burstLimit: 300,
+            webhookRequestsPerMinute: 140,
+            adminRequestsPerMinute: 90,
+          },
+          updatedAt: "2026-03-27T13:00:00",
+          updatedBy: "Root Admin",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      ),
+    ]);
+
+    try {
+      const config = await updateGlobalConfigApi({
+        emailTemplates: [
+          {
+            id: "template-1",
+            slug: "boas-vindas",
+            nome: "Boas-vindas",
+            assunto: "Assunto atualizado",
+            canal: "EMAIL",
+            ativo: true,
+            bodyHtml: "<p>Olá {{NOME}}</p>",
+            variables: ["{{NOME}}"],
+          },
+        ],
+        termsOfUseHtml: "<p>Termos atualizados</p>",
+        termsVersion: "v2026.03",
+        apiLimits: {
+          requestsPerMinute: 200,
+          burstLimit: 300,
+          webhookRequestsPerMinute: 140,
+          adminRequestsPerMinute: 90,
+        },
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].method).toBe("PUT");
+      expect(calls[0].url).toContain("/api/v1/admin/configuracoes/global");
+      expect(JSON.parse(calls[0].body ?? "{}")).toEqual({
+        emailTemplates: [
+          {
+            id: "template-1",
+            slug: "boas-vindas",
+            nome: "Boas-vindas",
+            assunto: "Assunto atualizado",
+            canal: "EMAIL",
+            ativo: true,
+            bodyHtml: "<p>Olá {{NOME}}</p>",
+            variables: ["{{NOME}}"],
+          },
+        ],
+        termsOfUseHtml: "<p>Termos atualizados</p>",
+        termsVersion: "v2026.03",
+        apiLimits: {
+          requestsPerMinute: 200,
+          burstLimit: 300,
+          webhookRequestsPerMinute: 140,
+          adminRequestsPerMinute: 90,
+        },
+      });
+      expect(config.updatedBy).toBe("Root Admin");
+      expect(config.apiLimits.adminRequestsPerMinute).toBe(90);
     } finally {
       restore();
     }

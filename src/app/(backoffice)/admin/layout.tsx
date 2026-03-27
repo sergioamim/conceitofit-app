@@ -17,6 +17,7 @@ const navItems = [
   { href: "/admin/unidades", label: "Unidades" },
   { href: "/admin/busca", label: "Busca Global" },
   { href: "/admin/seguranca", label: "Segurança" },
+  { href: "/admin/configuracoes", label: "Configurações" },
   { href: "/admin/importacao-evo", label: "Importação EVO" },
   { href: "/admin/audit-log", label: "Audit Log" },
 ];
