@@ -12,6 +12,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import { DialogTitle } from "@/components/ui/dialog";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { searchAlunosApi } from "@/lib/api/alunos";
 import { listProspectsApi } from "@/lib/api/crm";
@@ -180,6 +181,7 @@ export function CommandPalette() {
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => setOpen(false)}
       />
+      <DialogTitle className="sr-only">Paleta global de comandos</DialogTitle>
       <div
         className={cn(
           "relative w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-card shadow-2xl",

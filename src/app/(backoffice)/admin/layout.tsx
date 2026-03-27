@@ -15,6 +15,7 @@ const navItems = [
   { href: "/admin/operacional/saude", label: "Saúde Operacional" },
   { href: "/admin/academias", label: "Academias" },
   { href: "/admin/unidades", label: "Unidades" },
+  { href: "/admin/financeiro/planos", label: "Planos da Plataforma" },
   { href: "/admin/busca", label: "Busca Global" },
   { href: "/admin/seguranca", label: "Segurança" },
   { href: "/admin/importacao-evo", label: "Importação EVO" },
