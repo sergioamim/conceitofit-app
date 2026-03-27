@@ -24,6 +24,7 @@ import { useTenantContext } from "@/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { ListErrorState } from "@/components/shared/list-states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -201,11 +202,7 @@ export default function MatriculasPage() {
         </div>
       ) : null}
 
-      {error ? (
-        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
-      ) : null}
+      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-4">

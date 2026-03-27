@@ -22,6 +22,7 @@ import { TableCell } from "@/components/ui/table";
 
 import { formatBRL, formatDateTime } from "@/lib/formatters";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
+import { ListErrorState } from "@/components/shared/list-states";
 
 const TIPO_LABEL: Record<Venda["tipo"], string> = {
   PLANO: "Contrato",
@@ -327,11 +328,7 @@ export default function VendasPage() {
         ))}
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
-      )}
+      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
 
       <PaginatedTable<Venda>
         columns={[

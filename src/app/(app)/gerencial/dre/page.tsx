@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
+import { ListErrorState } from "@/components/shared/list-states";
 
 const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   FOLHA: "Folha",
@@ -228,9 +229,7 @@ export default function DrePage() {
       </div>
 
       {error ? (
-        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
+        <ListErrorState error={error} onRetry={() => void load()} />
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">

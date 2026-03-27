@@ -23,6 +23,7 @@ import {
 } from "@/lib/treinos/workspace";
 import type { Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { ListErrorState } from "@/components/shared/list-states";
 
 const PAGE_SIZE = 12;
 
@@ -265,9 +266,7 @@ export default function TreinosAtribuidosPage() {
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
+        <ListErrorState error={error} onRetry={() => void loadData()} />
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-4 xl:grid-cols-5">

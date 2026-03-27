@@ -26,6 +26,7 @@ import { academiaUserCreateBaseFormSchema } from "@/lib/forms/security-user-crea
 import type { RbacPerfil, RbacUser, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { ListErrorState } from "@/components/shared/list-states";
 
 function isCustomerRole(roleName: string | undefined): boolean {
   return (roleName ?? "").trim().toUpperCase() === "CUSTOMER";

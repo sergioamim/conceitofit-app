@@ -31,6 +31,7 @@ import {
   useRbacTenant,
   useUserPerfilManager,
 } from "@/lib/rbac/hooks";
+import { ListErrorState } from "@/components/shared/list-states";
 
 type RbacTab = "perfis" | "usuarios" | "grants" | "auditoria";
 
