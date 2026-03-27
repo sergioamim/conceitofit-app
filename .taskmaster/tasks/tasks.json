@@ -8059,7 +8059,7 @@
         "description": "Criar página /admin/financeiro com dashboard de métricas financeiras da plataforma: MRR (receita recorrente mensal), churn de academias, inadimplência, aging de boletos, previsão de receita e comparativo mensal.",
         "details": "Criar src/app/(backoffice)/admin/financeiro/page.tsx como hub financeiro com: (1) Cards KPI: MRR atual, MRR projetado, total academias ativas, total inadimplentes, churn rate mensal; (2) Gráfico de evolução MRR (últimos 12 meses — pode ser barras simples com divs estilizadas como na DRE); (3) Tabela de aging: cobranças por faixa de atraso (0-15d, 16-30d, 31-60d, 60+d) com valor e quantidade; (4) Lista de academias inadimplentes com ação rápida de contato/suspensão; (5) Comparativo MRR por plano. Criar endpoint getDashboardFinanceiroAdmin em admin-billing.ts que retorne as métricas agregadas. Adicionar tipo DashboardFinanceiroAdmin em types.ts.",
         "testStrategy": "Verificar que cards mostram valores em BRL. Conferir que o aging agrupa corretamente por faixa. Testar filtro por período.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "126"
         ],
@@ -8070,8 +8070,9 @@
             "title": "Criar tipos e endpoint do dashboard financeiro",
             "description": "Adicionar DashboardFinanceiroAdmin em types.ts e getDashboardFinanceiroAdmin em admin-billing.ts",
             "dependencies": [],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:42:53.945Z"
           },
           {
             "id": 2,
@@ -8080,8 +8081,9 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:42:55.634Z"
           },
           {
             "id": 3,
@@ -8090,10 +8092,12 @@
             "dependencies": [
               2
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:42:57.318Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T17:42:57.318Z"
       },
       {
         "id": "128",
@@ -8454,9 +8458,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-27T17:36:02.873Z",
+      "lastModified": "2026-03-27T17:42:57.318Z",
       "taskCount": 136,
-      "completedCount": 134,
+      "completedCount": 135,
       "tags": [
         "master"
       ]
