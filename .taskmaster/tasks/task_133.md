@@ -2,7 +2,7 @@
 
 **Title:** Backoffice: impersonation (entrar como usuário) com audit trail
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 132
 
@@ -22,21 +22,21 @@ Impersonar um usuário, navegar pelo sistema e verificar que os dados são do co
 
 ### 133.1. Criar endpoint e lógica de impersonation
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Endpoint impersonateUser/endImpersonation em admin-audit.ts. Lógica de troca de sessão.
 
 ### 133.2. Criar ImpersonationBanner e integrar no layout
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 133.1  
 
 Banner fixo com nome do usuário impersonado e botão encerrar. Integrar no app layout.
 
 ### 133.3. Adicionar botão e dialog no detalhe de usuário
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 133.2  
 
 Botão "Entrar como" com dialog de confirmação + justificativa obrigatória no /admin/seguranca/usuarios/[id]

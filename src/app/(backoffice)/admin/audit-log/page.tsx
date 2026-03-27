@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,8 @@ const ACTION_LABELS: Record<AuditLogAction, string> = {
   ATIVOU: "Ativou",
   CANCELOU: "Cancelou",
   IMPORTOU: "Importou",
+  IMPERSONOU: "Impersonou",
+  ENCERROU_IMPERSONACAO: "Encerrou impersonação",
 };
 
 const ACTION_COLORS: Record<AuditLogAction, string> = {
@@ -41,6 +43,8 @@ const ACTION_COLORS: Record<AuditLogAction, string> = {
   ATIVOU: "bg-gym-teal/15 text-gym-teal border-gym-teal/30",
   CANCELOU: "bg-gym-danger/15 text-gym-danger border-gym-danger/30",
   IMPORTOU: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  IMPERSONOU: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+  ENCERROU_IMPERSONACAO: "bg-indigo-500/15 text-indigo-300 border-indigo-500/30",
 };
 
 const ENTITY_LABELS: Record<AuditLogEntityType, string> = {
@@ -87,8 +91,10 @@ export default function AuditLogPage() {
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
-    setError(null);
+    startTransition(() => {
+      setLoading(true);
+      setError(null);
+    });
 
     listAuditLogsApi({
       page,

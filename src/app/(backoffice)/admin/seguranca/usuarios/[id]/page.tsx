@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import {
   GlobalSecurityShell,
   formatSecurityDateTime,
@@ -24,12 +26,15 @@ import {
 } from "@/components/security/security-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { impersonateUserApi } from "@/lib/api/admin-audit";
+import { getAuthSessionSnapshot, startImpersonationSession } from "@/lib/api/session";
 import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
 import {
   addUserMembership,
@@ -42,6 +47,7 @@ import {
   updateUserMembership,
   updateUserNewUnitsPolicy,
 } from "@/lib/backoffice/seguranca";
+import { impersonationDialogSchema, type ImpersonationDialogValues } from "@/lib/forms/admin-audit-schemas";
 import { listPerfisService } from "@/lib/rbac/services";
 import type {
   Academia,
@@ -114,6 +120,15 @@ export default function AdminSegurancaUsuarioDetalhePage() {
   const [exceptionScopeLabel, setExceptionScopeLabel] = useState("");
   const [exceptionJustification, setExceptionJustification] = useState("");
   const [exceptionExpiresAt, setExceptionExpiresAt] = useState("");
+  const [impersonationDialogOpen, setImpersonationDialogOpen] = useState(false);
+  const [impersonating, setImpersonating] = useState(false);
+
+  const impersonationForm = useForm<ImpersonationDialogValues>({
+    resolver: zodResolver(impersonationDialogSchema),
+    defaultValues: {
+      justification: "",
+    },
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -271,6 +286,13 @@ export default function AdminSegurancaUsuarioDetalhePage() {
     setExceptionExpiresAt("");
   }
 
+  function resetImpersonationDialog() {
+    impersonationForm.reset({
+      justification: "",
+    });
+    setImpersonationDialogOpen(false);
+  }
+
   async function handleCreateMembership() {
     if (!newTenantId) {
       toast({ title: "Selecione uma unidade", variant: "destructive" });
@@ -374,6 +396,50 @@ export default function AdminSegurancaUsuarioDetalhePage() {
     );
   }
 
+  async function handleStartImpersonation(values: ImpersonationDialogValues) {
+    if (!detail) return;
+
+    setImpersonating(true);
+    try {
+      const currentSession = getAuthSessionSnapshot();
+      if (!currentSession) {
+        toast({
+          title: "Sessão administrativa indisponível",
+          description: "Não foi possível capturar a sessão original antes da impersonação.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await impersonateUserApi({
+        userId,
+        justification: values.justification,
+      });
+
+      startImpersonationSession({
+        originalSession: currentSession,
+        impersonatedSession: response.session,
+        targetUserId: detail.id,
+        targetUserName: detail.fullName || detail.name,
+        actorDisplayName: currentSession.displayName,
+        justification: values.justification,
+        auditContextId: response.auditContextId,
+        returnPath: `/admin/seguranca/usuarios/${detail.id}`,
+      });
+
+      resetImpersonationDialog();
+      window.location.assign(response.redirectTo || "/dashboard");
+    } catch (error) {
+      toast({
+        title: "Não foi possível iniciar a impersonação",
+        description: normalizeErrorMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setImpersonating(false);
+    }
+  }
+
   function availableProfilesForMembership(membership: GlobalAdminMembership) {
     const assigned = new Set(membership.profiles.map((profile) => profile.perfilId));
     return (membership.availableProfiles ?? []).filter((profile) => !assigned.has(profile.id) && profile.active);
@@ -384,9 +450,18 @@ export default function AdminSegurancaUsuarioDetalhePage() {
       title={detail ? detail.fullName || detail.name : "Governança de acesso"}
       description="Separe operação cotidiana, exceções e política ampla de novas unidades para reduzir ambiguidade na gestão de acesso."
       actions={
-        <Button asChild variant="outline" className="border-border">
-          <Link href="/admin/seguranca/usuarios">Voltar à lista</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            onClick={() => setImpersonationDialogOpen(true)}
+            disabled={loading || saving || !detail?.active}
+          >
+            Entrar como este usuário
+          </Button>
+          <Button asChild variant="outline" className="border-border">
+            <Link href="/admin/seguranca/usuarios">Voltar à lista</Link>
+          </Button>
+        </div>
       }
       highlight={
         detail ? (
@@ -399,6 +474,50 @@ export default function AdminSegurancaUsuarioDetalhePage() {
         ) : null
       }
     >
+      <Dialog open={impersonationDialogOpen} onOpenChange={(open) => {
+        if (!open && !impersonating) {
+          resetImpersonationDialog();
+          return;
+        }
+        setImpersonationDialogOpen(open);
+      }}>
+        <DialogContent className="border-border bg-card">
+          <DialogHeader>
+            <DialogTitle>Entrar como este usuário</DialogTitle>
+            <DialogDescription>
+              A impersonação troca temporariamente a sua sessão administrativa pela visão operacional de {detail?.fullName || detail?.name || "este usuário"}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-border bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
+              Use apenas para suporte, diagnóstico e reprodução de contexto. O início e o encerramento serão registrados no audit log.
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="impersonation-justification">Justificativa obrigatória</Label>
+              <Textarea
+                id="impersonation-justification"
+                {...impersonationForm.register("justification")}
+                placeholder="Explique por que você precisa operar temporariamente com a visão desta pessoa."
+                className="min-h-28"
+              />
+              {impersonationForm.formState.errors.justification?.message ? (
+                <p className="text-xs text-gym-danger">{impersonationForm.formState.errors.justification.message}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" className="border-border" onClick={resetImpersonationDialog} disabled={impersonating}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={impersonationForm.handleSubmit(handleStartImpersonation)} disabled={impersonating}>
+              {impersonating ? "Entrando..." : "Confirmar e entrar como usuário"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <SecuritySectionFeedback loading={loading} error={error} />
 
       {detail ? (
