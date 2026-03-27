@@ -8411,7 +8411,7 @@
         "description": "Criar página /admin/compliance com visão de compliance LGPD: volume de dados pessoais por academia, solicitações de exclusão pendentes, termos aceitos e relatório de exposição.",
         "details": "Criar src/app/(backoffice)/admin/compliance/page.tsx com: (1) Cards KPI: total dados pessoais armazenados (estimativa por academia), solicitações de exclusão pendentes, termos aceitos vs pendentes; (2) Tabela por academia: quantidade de alunos com CPF, email, telefone armazenados, última solicitação de exclusão, status de termos; (3) Lista de solicitações de exclusão pendentes com ação de executar/rejeitar; (4) Relatório de exposição: quais campos sensíveis cada academia coleta. Criar endpoint getComplianceDashboard em src/lib/api/admin-compliance.ts.",
         "testStrategy": "Verificar que dados pessoais são contados corretamente por academia. Processar uma solicitação de exclusão.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "low",
         "subtasks": [
@@ -8430,8 +8430,9 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:24:10.127Z"
           },
           {
             "id": 3,
@@ -8443,14 +8444,15 @@
             "status": "pending",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T17:24:10.127Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-27T18:10:00.000Z",
+      "lastModified": "2026-03-27T17:24:10.128Z",
       "taskCount": 136,
-      "completedCount": 130,
+      "completedCount": 132,
       "tags": [
         "master"
       ]
