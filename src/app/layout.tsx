@@ -26,7 +26,16 @@ export const metadata: Metadata = {
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
-    apple: "/icon.svg",
+    apple: "/pwa-icon-192.png",
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Conceito Fit",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 
@@ -41,6 +50,9 @@ export default function RootLayout({
 
   return (
     <html lang="pt-BR" className="dark">
+      <head>
+        <meta name="theme-color" content="#16181c" />
+      </head>
       <body
         className={`${display.variable} ${body.variable} ${geistMono.variable} font-sans antialiased`}
       >

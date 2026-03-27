@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="conceito.fit">
+  <rect width="512" height="512" rx="96" fill="#16181c"/>
+  <g transform="translate(128,128) scale(1)">
+    <circle cx="128" cy="128" r="92"
+            fill="none"
+            stroke="#c8f135"
+            stroke-width="18"
+            stroke-linecap="round"
+            stroke-dasharray="430 148"
+            transform="rotate(-12 128 128)"/>
+    <line x1="88" y1="128" x2="168" y2="128"
+          stroke="#c8f135"
+          stroke-width="14"
+          stroke-linecap="round"/>
+    <line x1="64" y1="102" x2="64" y2="154"
+          stroke="#c8f135" stroke-width="14" stroke-linecap="round"/>
+    <line x1="48" y1="96"  x2="48" y2="160"
+          stroke="#c8f135" stroke-width="14" stroke-linecap="round"/>
+    <line x1="192" y1="102" x2="192" y2="154"
+          stroke="#c8f135" stroke-width="14" stroke-linecap="round"/>
+    <line x1="208" y1="96"  x2="208" y2="160"
+          stroke="#c8f135" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="214" cy="128" r="9" fill="#3de8a0"/>
+  </g>
+</svg>
