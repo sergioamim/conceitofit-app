@@ -2,7 +2,7 @@
 
 **Title:** Consolidar páginas experimentais do financeiro no gerencial
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -29,7 +29,7 @@ Rodar `npm run lint` para confirmar ausência de erros básicos após remoções
 
 ### 110.1. Auditar páginas estáveis vs experimentais do gerencial
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Mapear as rotas estáveis e experimentais e registrar diferenças funcionais e de UX.
@@ -40,7 +40,7 @@ Comparar `src/app/(app)/gerencial/contas-a-receber/page.tsx`, `contas-a-pagar/pa
 
 ### 110.2. Consolidar a versão canônica nas rotas principais
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 110.1  
 
 Decidir a versão canônica e migrar o conteúdo vencedor para as rotas estáveis.
@@ -51,7 +51,7 @@ Se a versão experimental for escolhida, portar o conteúdo para `src/app/(app)/
 
 ### 110.3. Remover páginas experimentais e limpar navegação
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 110.2  
 
 Excluir rotas experimentais e remover quaisquer referências internas.

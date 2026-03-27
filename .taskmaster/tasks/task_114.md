@@ -2,7 +2,7 @@
 
 **Title:** Implementar exportação de relatórios (PDF/Excel) no gerencial
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,7 +22,7 @@ Exportar CSV e PDF de cada página listada. Validar que os valores batem com o e
 
 ### 114.1. Criar utilitário de exportação CSV/PDF
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Adicionar utilitário client-side para exportar tabelas em CSV e PDF.
@@ -33,7 +33,7 @@ Criar `src/lib/export/table-export.ts` com tipos de coluna (label, accessor/form
 
 ### 114.2. Implementar componente compartilhado ExportMenu
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 114.1  
 
 Criar dropdown reutilizável para exportar os dados visíveis.
@@ -44,7 +44,7 @@ Adicionar `src/components/shared/export-menu.tsx` como componente client-side, u
 
 ### 114.3. Integrar ExportMenu nas páginas gerenciais
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 114.2  
 
 Adicionar botões de exportação nos relatórios financeiros e vendas.

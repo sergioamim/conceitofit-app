@@ -2,7 +2,7 @@
 
 **Title:** Otimizar bundle: avaliar RSC boundaries e code splitting
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

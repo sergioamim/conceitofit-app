@@ -2,7 +2,7 @@
 
 **Title:** Convergir domínio de contratos entre matrícula e venda
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 106 ✓
 

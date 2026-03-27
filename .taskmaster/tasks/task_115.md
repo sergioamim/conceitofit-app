@@ -2,7 +2,7 @@
 
 **Title:** Padronizar tratamento de erros e estados vazios nas listagens
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,7 +22,7 @@ Simular erro de rede (desligar backend) e verificar que todas as listagens mostr
 
 ### 115.1. Criar componentes compartilhados de estados de lista
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Implementar os componentes padronizados de empty, erro e loading para listas.
@@ -33,7 +33,7 @@ Criar `src/components/shared/list-states.tsx` com `EmptyState` (ícone, mensagem
 
 ### 115.2. Padronizar estados nas listagens principais
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 115.1  
 
 Substituir implementações ad hoc de loading/erro/empty nas páginas principais de listagem.
@@ -44,7 +44,7 @@ Auditar e atualizar `src/app/(app)/clientes/page.tsx`, `src/app/(app)/vendas/pag
 
 ### 115.3. Aplicar padrão nas listagens administrativas e gerenciais restantes
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 115.1, 115.2  
 
 Uniformizar os estados de lista em módulos administrativos, CRM e gerenciais.

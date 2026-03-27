@@ -7535,13 +7535,893 @@
           }
         ],
         "updatedAt": "2026-03-27T04:52:36.100Z"
+      },
+      {
+        "id": "116",
+        "title": "Componentizar importacao-evo-p0/page.tsx (4.776 linhas)",
+        "description": "Refatorar o maior arquivo do projeto (src/app/(backoffice)/admin/importacao-evo-p0/page.tsx com 4.776 linhas) em componentes menores e bem delimitados. Separar em módulos lógicos: upload de arquivo, mapeamento de colunas, validação de dados, preview de importação e execução/resultado.",
+        "details": "O arquivo concentra todo o fluxo de importação de dados do sistema EVO legado em uma única page.tsx. Identificar os blocos funcionais (upload CSV/Excel, mapeamento de campos fonte→destino, validação com feedback por linha, preview dos dados prontos para importar, execução com progresso e resumo de resultado) e extrair cada um para um componente dedicado em src/components/backoffice/importacao-evo/. Manter o estado compartilhado via props ou context local. Preservar o comportamento atual sem alterar lógica de negócio. Meta: nenhum componente resultante com mais de 500 linhas.",
+        "testStrategy": "Percorrer o fluxo completo de importação EVO: upload de arquivo, mapeamento, validação, preview e execução. Conferir que o comportamento é idêntico ao anterior. Verificar que nenhum arquivo resultante excede 500 linhas.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Extrair componente de upload de arquivo CSV/Excel",
+            "description": "Mover lógica de seleção, parsing e preview inicial do arquivo para src/components/backoffice/importacao-evo/upload-step.tsx",
+            "dependencies": [],
+            "status": "done",
+            "updatedAt": "2026-03-27T05:25:44.172Z",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Extrair componente de mapeamento de colunas",
+            "description": "Separar UI de mapeamento fonte→destino com drag/select para src/components/backoffice/importacao-evo/mapping-step.tsx",
+            "dependencies": [
+              1
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:25:44.177Z"
+          },
+          {
+            "id": 3,
+            "title": "Extrair componente de validação com feedback por linha",
+            "description": "Mover validação de dados e exibição de erros/warnings por linha para src/components/backoffice/importacao-evo/validation-step.tsx",
+            "dependencies": [
+              2
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:25:44.182Z"
+          },
+          {
+            "id": 4,
+            "title": "Extrair componente de preview dos dados mapeados",
+            "description": "Separar tabela de preview com dados prontos para importação para src/components/backoffice/importacao-evo/preview-step.tsx",
+            "dependencies": [
+              3
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:25:44.189Z"
+          },
+          {
+            "id": 5,
+            "title": "Extrair componente de execução e resumo de resultado",
+            "description": "Mover barra de progresso, execução da importação e resumo final para src/components/backoffice/importacao-evo/execution-step.tsx. Orquestrar steps na page.tsx reduzida.",
+            "dependencies": [
+              4
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:25:44.193Z"
+          }
+        ],
+        "updatedAt": "2026-03-27T05:25:44.193Z"
+      },
+      {
+        "id": "117",
+        "title": "Modularizar backoffice-seguranca.ts (31KB) por domínio",
+        "description": "Dividir src/lib/api/backoffice-seguranca.ts (31KB, maior API client do projeto) em módulos menores por domínio: gestão de usuários, perfis de acesso, capabilities/permissões e roles.",
+        "details": "O arquivo concentra endpoints de usuários (CRUD, busca, bloqueio), perfis de acesso (CRUD, atribuição), capabilities (listagem, toggle), roles (CRUD, membership) e audit log. Separar em: backoffice-users.ts, backoffice-profiles.ts, backoffice-capabilities.ts e backoffice-roles.ts (ou similar). Criar barrel export em backoffice-seguranca/index.ts para manter compatibilidade de imports existentes. Atualizar consumers que importam diretamente do arquivo monolítico.",
+        "testStrategy": "Rodar grep para confirmar que nenhum import aponta para o arquivo antigo. Verificar que as páginas /seguranca/rbac e /seguranca/acesso-unidade continuam funcionando. Build sem erros de tipo.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Extrair endpoints de usuários para backoffice-users.ts",
+            "description": "Mover CRUD de usuários, busca, bloqueio e audit de usuários de backoffice-seguranca.ts para src/lib/api/backoffice-users.ts",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:29:00.882Z"
+          },
+          {
+            "id": 2,
+            "title": "Extrair endpoints de perfis para backoffice-profiles.ts",
+            "description": "Mover CRUD de perfis de acesso e atribuição para src/lib/api/backoffice-profiles.ts",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:29:00.893Z"
+          },
+          {
+            "id": 3,
+            "title": "Extrair endpoints de capabilities e roles para backoffice-roles.ts",
+            "description": "Mover listagem de capabilities, toggle, CRUD de roles e membership para src/lib/api/backoffice-roles.ts",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:29:00.898Z"
+          },
+          {
+            "id": 4,
+            "title": "Criar barrel export e atualizar consumers",
+            "description": "Criar src/lib/api/backoffice-seguranca/index.ts com re-exports dos 3 módulos. Atualizar todos os imports nas pages e services que apontam para o arquivo antigo.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:29:00.903Z"
+          }
+        ],
+        "updatedAt": "2026-03-27T05:29:00.903Z"
+      },
+      {
+        "id": "118",
+        "title": "Refatorar treino-v2-editor.tsx (2.190 linhas)",
+        "description": "Extrair o editor de treinos V2 (src/components/treinos/treino-v2-editor.tsx, 2.190 linhas) em componentes menores: formulário principal, seletor de exercícios, preview do treino, gerenciador de séries e validação.",
+        "details": "O componente concentra formulário de treino, busca e seleção de exercícios, configuração de séries/repetições/carga, reordenação drag-and-drop, preview formatado e validação. Separar em componentes dedicados em src/components/treinos/editor/ (ex: treino-form.tsx, exercicio-selector.tsx, serie-config.tsx, treino-preview.tsx). Manter estado compartilhado via props drilling ou context local do editor. Meta: nenhum componente resultante com mais de 400 linhas.",
+        "testStrategy": "Criar e editar um treino completo com múltiplos exercícios e séries. Verificar reordenação, validação e preview. Confirmar comportamento idêntico ao anterior.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Extrair formulário principal do treino",
+            "description": "Mover campos de nome, tipo, descrição e configurações gerais para src/components/treinos/editor/treino-form.tsx",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:34:57.758Z"
+          },
+          {
+            "id": 2,
+            "title": "Extrair seletor/busca de exercícios",
+            "description": "Separar busca, filtragem e adição de exercícios ao treino para src/components/treinos/editor/exercicio-selector.tsx",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:34:57.768Z"
+          },
+          {
+            "id": 3,
+            "title": "Extrair configuração de séries por exercício",
+            "description": "Mover UI de séries/repetições/carga/descanso para src/components/treinos/editor/serie-config.tsx",
+            "dependencies": [
+              2
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:34:57.775Z"
+          },
+          {
+            "id": 4,
+            "title": "Extrair preview e validação final",
+            "description": "Separar preview formatado do treino e validação para src/components/treinos/editor/treino-preview.tsx. Orquestrar no editor principal reduzido.",
+            "dependencies": [
+              1,
+              3
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:34:57.781Z"
+          }
+        ],
+        "updatedAt": "2026-03-27T05:34:57.781Z"
+      },
+      {
+        "id": "119",
+        "title": "Extrair modais inline de contas-a-pagar/page.tsx (1.933 linhas)",
+        "description": "Mover os 3+ modais embutidos diretamente em src/app/(app)/gerencial/contas-a-pagar/page.tsx para componentes shared dedicados, reduzindo o arquivo de 1.933 linhas para algo manejável.",
+        "details": "O page.tsx de contas a pagar contém modais de criação de conta, edição de conta, pagamento de conta e possivelmente cancelamento, todos inline com useForm e Dialog. Extrair cada modal para src/components/shared/ (ex: nova-conta-pagar-modal.tsx, editar-conta-pagar-modal.tsx, pagar-conta-modal.tsx) seguindo o padrão CrudModal ou wrappers com react-hook-form + zodResolver. Manter as callbacks onSave/onClose na page e passar como props. Preservar validações e transformações de dados existentes.",
+        "testStrategy": "Criar, editar, pagar e cancelar uma conta a pagar. Verificar validações de campos obrigatórios, formatação BRL e atualização da lista após cada ação.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Extrair modal de criação de conta a pagar",
+            "description": "Mover o Dialog de nova conta com form/validação para src/components/shared/nova-conta-pagar-modal.tsx",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:48:05.110Z"
+          },
+          {
+            "id": 2,
+            "title": "Extrair modal de edição de conta a pagar",
+            "description": "Mover o Dialog de edição para src/components/shared/editar-conta-pagar-modal.tsx, reutilizando CrudModal se possível",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:48:05.115Z"
+          },
+          {
+            "id": 3,
+            "title": "Extrair modal de pagamento e limpar page.tsx",
+            "description": "Mover Dialog de pagar conta para src/components/shared/pagar-conta-modal.tsx. Remover código morto e consolidar a page.tsx final.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:48:05.122Z"
+          }
+        ],
+        "updatedAt": "2026-03-27T05:48:05.122Z"
+      },
+      {
+        "id": "120",
+        "title": "Implementar Global Search com Command Palette (cmdk)",
+        "description": "Criar um command palette global (Cmd+K / Ctrl+K) usando a dependência cmdk já instalada, permitindo busca rápida por clientes, prospects, vendas, planos e navegação por páginas do sistema.",
+        "details": "Criar src/components/shared/command-palette.tsx usando cmdk (Command, CommandInput, CommandList, CommandGroup, CommandItem). Registrar listener Cmd+K/Ctrl+K no layout principal. Implementar busca em paralelo nas APIs existentes (listAlunosService por nome/CPF, listProspectsApi, listVendasPageService, listPlanosService) com debounce de 300ms e limite de 5 resultados por grupo. Incluir busca estática nas rotas de nav-items.ts como fallback sempre disponível. Ao selecionar um item, navegar via router.push(). Adicionar botão de busca na sidebar/header com hint \"Cmd+K\". Integrar no src/app/(app)/layout.tsx para disponibilidade em todas as páginas.",
+        "testStrategy": "Pressionar Cmd+K em qualquer página e verificar que o modal abre. Digitar nome de cliente existente e confirmar resultados agrupados. Selecionar resultado e confirmar navegação. Testar busca por nome de página (ex: \"planos\") e confirmar que aparece nos resultados estáticos. Verificar fechamento com Escape.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar componente CommandPalette com cmdk",
+            "description": "Criar src/components/shared/command-palette.tsx usando cmdk (Command, CommandInput, CommandList, CommandGroup, CommandItem). Registrar listener Cmd+K/Ctrl+K. Escape para fechar.",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:41:58.727Z"
+          },
+          {
+            "id": 2,
+            "title": "Implementar busca por entidades via API",
+            "description": "Adicionar busca em paralelo nas APIs (alunos, prospects, vendas, planos) com debounce 300ms e limite 5 por grupo. Incluir busca estática nas rotas de nav-items.ts como fallback.",
+            "dependencies": [
+              1
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:41:58.735Z"
+          },
+          {
+            "id": 3,
+            "title": "Integrar no layout e adicionar trigger na sidebar",
+            "description": "Montar CommandPalette no src/app/(app)/layout.tsx. Adicionar botão com hint Cmd+K na sidebar. Navegar via router.push() ao selecionar.",
+            "dependencies": [
+              2
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:41:58.743Z"
+          }
+        ],
+        "updatedAt": "2026-03-27T05:41:58.743Z"
+      },
+      {
+        "id": "121",
+        "title": "Adicionar PWA manifest e meta tags",
+        "description": "Configurar o app como Progressive Web App com manifest.json, ícones, meta tags de tema e service worker básico para cache do shell, permitindo instalação na tela inicial de dispositivos móveis.",
+        "details": "Criar public/manifest.json com nome, short_name, ícones (192x192 e 512x512), start_url, display standalone, theme_color e background_color alinhados ao design system (dark theme, gym-accent). Adicionar meta tags no root layout (theme-color, apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style). Gerar ícones PNG a partir do logo existente. Opcionalmente configurar next-pwa ou service worker manual para cache do app shell (HTML/CSS/JS estáticos). Não cachear dados de API.",
+        "testStrategy": "Abrir o app no Chrome mobile e verificar que o banner \"Adicionar à tela inicial\" aparece. Instalar e abrir como standalone. Verificar ícone e splash screen. No desktop, verificar ícone de instalação na barra de endereço do Chrome.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar manifest.json e gerar ícones PWA",
+            "description": "Criar public/manifest.json com nome, ícones 192/512, start_url, display standalone, theme_color alinhado ao gym-accent. Gerar PNGs.",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:40:41.724Z"
+          },
+          {
+            "id": 2,
+            "title": "Adicionar meta tags e service worker básico",
+            "description": "Adicionar meta tags PWA no root layout (theme-color, apple-mobile-web-app). Configurar service worker para cache do app shell (sem cachear APIs).",
+            "dependencies": [
+              1
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:40:41.737Z"
+          }
+        ],
+        "updatedAt": "2026-03-27T05:40:41.737Z"
+      },
+      {
+        "id": "122",
+        "title": "Integrar Lighthouse CI e bundle size gates",
+        "description": "Adicionar Lighthouse CI ao pipeline de CI/CD para monitorar Performance, Acessibilidade e bundle size a cada PR, com thresholds mínimos que bloqueiam merge se não atingidos.",
+        "details": "Instalar @lhci/cli como devDependency. Criar lighthouserc.js com configuração de collect (URLs: /, /dashboard, /vendas, /clientes, /adesao) e assert (Performance >= 60, Accessibility >= 85, Best Practices >= 80). Criar/atualizar workflow GitHub Actions (.github/workflows/lighthouse.yml) que roda após o build, coletando métricas e falhando se abaixo dos thresholds. Para bundle size, adicionar step que compara output de next build com baseline salvo e alerta se First Load JS crescer mais que 10%. Salvar relatórios como artefatos do CI.",
+        "testStrategy": "Abrir PR de teste e verificar que o workflow roda, gera relatório e passa/falha conforme thresholds. Introduzir regressão intencional (ex: import pesado) e confirmar que o CI falha.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configurar Lighthouse CI com thresholds",
+            "description": "Instalar @lhci/cli, criar lighthouserc.js com URLs críticas e thresholds (Performance>=60, A11y>=85, BP>=80).",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:47:03.321Z"
+          },
+          {
+            "id": 2,
+            "title": "Criar workflow GitHub Actions para Lighthouse",
+            "description": "Criar .github/workflows/lighthouse.yml que roda após build, coleta métricas e falha se abaixo dos thresholds.",
+            "dependencies": [
+              1
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:47:03.328Z"
+          },
+          {
+            "id": 3,
+            "title": "Adicionar bundle size gate no CI",
+            "description": "Comparar output de next build com baseline salvo, alertar se First Load JS crescer >10%. Salvar relatórios como artefatos.",
+            "dependencies": [
+              1
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:47:03.334Z"
+          }
+        ],
+        "updatedAt": "2026-03-27T05:47:03.334Z"
+      },
+      {
+        "id": "123",
+        "title": "Implementar theme toggle (dark/light mode)",
+        "description": "Adicionar suporte a tema claro além do dark atual, com toggle na sidebar e persistência da preferência do usuário. Instalar next-themes e adaptar as CSS variables do globals.css para suportar ambos os temas.",
+        "details": "Instalar next-themes. Configurar ThemeProvider no root layout com attribute=\"class\", defaultTheme=\"dark\" e storageKey para persistência. Criar CSS variables para light mode em globals.css (inverter surfaces, borders, text colors mantendo o gym-accent como identidade). Adicionar botão de toggle (Sun/Moon icons) na sidebar, próximo ao perfil do usuário. Revisar componentes que usam classes hardcoded de cor (ex: bg-card, text-foreground) para garantir que respondem ao tema. Não alterar o dark theme atual — apenas adicionar a alternativa light.",
+        "testStrategy": "Alternar entre dark e light em várias páginas (dashboard, vendas, clientes, administrativo). Verificar que cores, contraste e legibilidade estão adequados em ambos. Recarregar a página e confirmar que a preferência persiste. Testar em mobile.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Instalar next-themes e configurar ThemeProvider",
+            "description": "Instalar next-themes, adicionar ThemeProvider no root layout com attribute=class, defaultTheme=dark e storageKey.",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:47:44.308Z"
+          },
+          {
+            "id": 2,
+            "title": "Criar CSS variables para light mode",
+            "description": "Adicionar variantes light em globals.css invertendo surfaces, borders e text colors. Manter gym-accent como identidade em ambos os temas.",
+            "dependencies": [
+              1
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:47:44.315Z"
+          },
+          {
+            "id": 3,
+            "title": "Adicionar toggle na sidebar e validar componentes",
+            "description": "Criar botão Sun/Moon na sidebar. Revisar componentes com cores hardcoded para garantir resposta ao tema. Testar ambos os modos.",
+            "dependencies": [
+              2
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T05:47:44.321Z"
+          }
+        ],
+        "updatedAt": "2026-03-27T05:47:44.321Z"
+      },
+      {
+        "id": "124",
+        "title": "Backoffice: CRUD de planos de assinatura da plataforma",
+        "description": "Criar página /admin/financeiro/planos para gerenciar os planos que as academias contratam (Básico, Pro, Enterprise). CRUD completo com nome, preço mensal, ciclo (mensal/anual), limites (unidades, alunos, features incluídas) e status ativo/inativo.",
+        "details": "Criar src/app/(backoffice)/admin/financeiro/planos/page.tsx com listagem em tabela (PaginatedTable), modal de criação/edição usando CrudModal, e toggles de ativo/inativo. Criar src/lib/api/admin-billing.ts com endpoints: listAdminPlanos, createAdminPlano, updateAdminPlano, toggleAdminPlano. Adicionar tipos PlanoPlataforma em src/lib/types.ts (id, nome, descricao, precoMensal, precoAnual, ciclo, maxUnidades, maxAlunos, featuresIncluidas[], ativo). Adicionar rota no nav do backoffice layout. Usar formatBRL para preços.",
+        "testStrategy": "Criar, editar e desativar um plano. Verificar listagem com paginação. Confirmar que valores são exibidos em BRL.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e API client para planos da plataforma",
+            "description": "Adicionar PlanoPlataforma em types.ts e criar src/lib/api/admin-billing.ts com CRUD de planos",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar página de listagem e CRUD de planos",
+            "description": "Criar /admin/financeiro/planos com PaginatedTable + CrudModal para criar/editar planos",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Adicionar navegação e integrar no layout do backoffice",
+            "description": "Adicionar seção Financeiro no nav do backoffice com link para planos",
+            "dependencies": [
+              2
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "125",
+        "title": "Backoffice: contratos de academia vinculados a planos",
+        "description": "Criar página /admin/financeiro/contratos para vincular cada academia a um plano da plataforma, com data início/fim, ciclo de cobrança, valor negociado (override), status (ativo/suspenso/cancelado/trial) e histórico de mudanças de plano.",
+        "details": "Criar src/app/(backoffice)/admin/financeiro/contratos/page.tsx com listagem de contratos por academia (filtros por status, academia, plano). Modal de novo contrato: selecionar academia + plano + data início + ciclo + valor override opcional. Adicionar tipos ContratoPlataforma em types.ts (id, academiaId, planoId, planoNome, academiaNome, dataInicio, dataFim, ciclo, valorMensal, status, motivoSuspensao, historicoPlanosIds). Criar endpoints em admin-billing.ts: listAdminContratos, createAdminContrato, updateAdminContrato, suspenderAdminContrato, reativarAdminContrato. Exibir badge de status e alerta visual para contratos vencidos ou suspensos.",
+        "testStrategy": "Criar contrato para uma academia, suspender e reativar. Verificar filtros por status e por academia. Confirmar badges de status.",
+        "status": "pending",
+        "dependencies": [
+          "124"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e API client para contratos",
+            "description": "Adicionar ContratoPlataforma em types.ts e endpoints de CRUD em admin-billing.ts",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar página de listagem de contratos com filtros",
+            "description": "Criar /admin/financeiro/contratos com tabela, filtros por status/academia/plano e badges",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Criar modal de novo contrato e ações de suspensão/reativação",
+            "description": "Modal com seletor de academia + plano + configuração de ciclo/valor. Botões de suspender/reativar com confirmação.",
+            "dependencies": [
+              2
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "126",
+        "title": "Backoffice: geração e gestão de boletos/cobranças",
+        "description": "Criar página /admin/financeiro/cobrancas para gerar, listar e gerenciar cobranças (boletos) de mensalidade das academias. Suportar geração manual e futura automática, com status de pagamento, vencimento, multa/juros e ações de baixa manual.",
+        "details": "Criar src/app/(backoffice)/admin/financeiro/cobrancas/page.tsx com listagem de cobranças (filtros: status, academia, período de vencimento). Cada cobrança exibe: academia, valor, vencimento, status (pendente/pago/vencido/cancelado), forma de pagamento. Modal de nova cobrança: selecionar contrato → gerar cobrança com vencimento e valor do contrato. Ação de baixa manual (marcar como pago com data e observação). Adicionar tipos Cobranca em types.ts (id, contratoId, academiaId, academiaNome, valor, dataVencimento, dataPagamento, status, formaPagamento, multa, juros, observacoes). Criar endpoints: listAdminCobrancas, createAdminCobranca, baixarAdminCobranca, cancelarAdminCobranca. Resumo cards no topo: total pendente, total vencido, total recebido no mês, inadimplência.",
+        "testStrategy": "Gerar cobrança para um contrato ativo. Marcar como paga. Verificar filtros e cards de resumo. Cancelar uma cobrança.",
+        "status": "pending",
+        "dependencies": [
+          "125"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e API client para cobranças",
+            "description": "Adicionar Cobranca/CobrancaStatus em types.ts e endpoints CRUD em admin-billing.ts",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar página de listagem com cards de resumo e filtros",
+            "description": "Listagem com status badges, filtros por academia/status/período, cards KPI no topo",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Criar modais de geração de cobrança e baixa manual",
+            "description": "Modal de nova cobrança (selecionar contrato), modal de baixa manual (data + forma + observação), ação de cancelar",
+            "dependencies": [
+              2
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "127",
+        "title": "Backoffice: dashboard financeiro B2B (MRR, churn, inadimplência)",
+        "description": "Criar página /admin/financeiro com dashboard de métricas financeiras da plataforma: MRR (receita recorrente mensal), churn de academias, inadimplência, aging de boletos, previsão de receita e comparativo mensal.",
+        "details": "Criar src/app/(backoffice)/admin/financeiro/page.tsx como hub financeiro com: (1) Cards KPI: MRR atual, MRR projetado, total academias ativas, total inadimplentes, churn rate mensal; (2) Gráfico de evolução MRR (últimos 12 meses — pode ser barras simples com divs estilizadas como na DRE); (3) Tabela de aging: cobranças por faixa de atraso (0-15d, 16-30d, 31-60d, 60+d) com valor e quantidade; (4) Lista de academias inadimplentes com ação rápida de contato/suspensão; (5) Comparativo MRR por plano. Criar endpoint getDashboardFinanceiroAdmin em admin-billing.ts que retorne as métricas agregadas. Adicionar tipo DashboardFinanceiroAdmin em types.ts.",
+        "testStrategy": "Verificar que cards mostram valores em BRL. Conferir que o aging agrupa corretamente por faixa. Testar filtro por período.",
+        "status": "pending",
+        "dependencies": [
+          "126"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e endpoint do dashboard financeiro",
+            "description": "Adicionar DashboardFinanceiroAdmin em types.ts e getDashboardFinanceiroAdmin em admin-billing.ts",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar página do dashboard com cards KPI e gráfico MRR",
+            "description": "Cards: MRR, academias ativas, inadimplentes, churn rate. Barras de evolução MRR.",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Adicionar tabela de aging e lista de inadimplentes",
+            "description": "Aging por faixa de atraso, lista de academias com ação rápida, comparativo por plano",
+            "dependencies": [
+              2
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "128",
+        "title": "Backoffice: dashboard operacional global (métricas cross-tenant)",
+        "description": "Expandir o dashboard /admin com métricas operacionais agregadas de todos os tenants: total de alunos ativos, matrículas ativas, vendas do mês, ticket médio global, novos alunos/mês e tendência de crescimento.",
+        "details": "Atualizar src/app/(backoffice)/admin/page.tsx (ou criar /admin/operacional/page.tsx) com: (1) Cards KPI: total alunos ativos (soma de todos tenants), total matrículas ativas, vendas do mês (quantidade + valor), ticket médio global, novas matrículas no mês; (2) Evolução mensal: barras de novos alunos por mês (últimos 6 meses); (3) Distribuição por academia: tabela com academia, unidades, alunos, matrículas, vendas — ordenável por qualquer coluna. Criar endpoint getMetricasOperacionaisGlobal em src/lib/api/admin-metrics.ts. Adicionar tipo MetricasOperacionaisGlobal em types.ts.",
+        "testStrategy": "Verificar que os totais batem com a soma individual de cada academia (spot-check manual). Verificar ordenação da tabela.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e API client para métricas operacionais",
+            "description": "Adicionar MetricasOperacionaisGlobal em types.ts e criar admin-metrics.ts",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T16:45:27.147Z"
+          },
+          {
+            "id": 2,
+            "title": "Criar dashboard com cards KPI e evolução mensal",
+            "description": "Cards de alunos, matrículas, vendas, ticket médio. Barras de tendência.",
+            "dependencies": [
+              1
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T16:45:28.931Z"
+          },
+          {
+            "id": 3,
+            "title": "Adicionar tabela de distribuição por academia",
+            "description": "Ranking com academia, unidades, alunos, matrículas, vendas — ordenável",
+            "dependencies": [
+              2
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T16:45:30.710Z"
+          }
+        ],
+        "updatedAt": "2026-03-27T16:45:30.710Z"
+      },
+      {
+        "id": "129",
+        "title": "Backoffice: ranking e mapa de saúde das academias",
+        "description": "Criar página /admin/operacional/saude para visão comparativa de todas as academias com indicadores de saúde operacional: semáforo (verde/amarelo/vermelho), métricas-chave por academia e alertas de risco.",
+        "details": "Criar src/app/(backoffice)/admin/operacional/saude/page.tsx com: (1) Grid de cards por academia com semáforo (verde = saudável, amarelo = risco, vermelho = crítico) baseado em regras: verde = alunos ativos > 50 e inadimplência < 10%, amarelo = alunos entre 10-50 ou inadimplência entre 10-20%, vermelho = alunos < 10 ou inadimplência > 20% ou sem login há 30d; (2) Tabela detalhada: academia, unidades, alunos ativos, churn mensal, inadimplência %, último login de admin, status do contrato; (3) Filtros por status de saúde e por plano contratado. Criar endpoint getAcademiasHealthMap em admin-metrics.ts. Usar StatusBadge existente para semáforos.",
+        "testStrategy": "Verificar que academias com poucos alunos aparecem em vermelho. Filtrar por status e confirmar contagem.",
+        "status": "pending",
+        "dependencies": [
+          "128"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e endpoint de saúde das academias",
+            "description": "Tipo AcademiaHealthStatus com métricas e classificação. Endpoint em admin-metrics.ts",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar página com grid de semáforos e tabela detalhada",
+            "description": "Cards por academia com badge de saúde, tabela com métricas e filtros",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "130",
+        "title": "Backoffice: alertas operacionais e uso de features",
+        "description": "Criar seção de alertas automáticos e painel de uso de features por academia em /admin/operacional/alertas.",
+        "details": "Criar src/app/(backoffice)/admin/operacional/alertas/page.tsx com: (1) Lista de alertas gerados automaticamente: academia sem login admin há 7+ dias, unidade com 0 matrículas ativas, pico de cancelamentos (>20% no mês), contrato vencendo em 30 dias, inadimplência acima do threshold; (2) Cada alerta com badge de severidade (info/warning/critical), data, academia, ação sugerida; (3) Painel de uso de features: tabela com academia vs features (treinos, CRM, catraca, vendas online, BI) mostrando quais estão ativas e sendo usadas — insight para upsell e onboarding. Criar endpoint getAlertasOperacionais e getFeatureUsageByAcademia em admin-metrics.ts.",
+        "testStrategy": "Verificar que alertas são exibidos com severidade correta. Confirmar tabela de features mostra dados por academia.",
+        "status": "pending",
+        "dependencies": [
+          "128"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e endpoints para alertas e usage",
+            "description": "Tipos AlertaOperacional e FeatureUsage. Endpoints em admin-metrics.ts",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar página de alertas com lista e severidades",
+            "description": "Lista de alertas com badges, data, academia e ação sugerida",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Criar painel de uso de features por academia",
+            "description": "Tabela academia x features com indicadores de ativação e uso real",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "131",
+        "title": "Backoffice: busca global cross-tenant de pessoas",
+        "description": "Criar busca global em /admin/busca que permita encontrar qualquer pessoa (aluno, funcionário, admin) em qualquer academia/unidade por nome, CPF ou email, com link direto para o detalhe no contexto correto.",
+        "details": "Criar src/app/(backoffice)/admin/busca/page.tsx com input de busca central (debounce 300ms), resultados agrupados por tipo (Alunos, Funcionários, Admins) e por academia/unidade. Cada resultado mostra: nome, CPF/email, academia, unidade, status. Ao clicar, navega para /clientes/[id] ou /admin/seguranca/usuarios/[id] com o tenant correto. Criar endpoint searchGlobalPessoas em src/lib/api/admin-search.ts que aceita query + tipo + page. Adicionar tipo GlobalSearchResult em types.ts. Reutilizar SuggestionInput ou criar variante dedicada para busca full-page.",
+        "testStrategy": "Buscar por CPF de aluno e confirmar que aparece com academia/unidade corretos. Buscar por nome parcial e verificar agrupamento.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipo e API client para busca global",
+            "description": "GlobalSearchResult em types.ts e searchGlobalPessoas em admin-search.ts",
+            "dependencies": [],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T16:44:48.525Z"
+          },
+          {
+            "id": 2,
+            "title": "Criar página de busca com resultados agrupados",
+            "description": "Input central, resultados por tipo e academia, links para detalhe no contexto correto",
+            "dependencies": [
+              1
+            ],
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T16:44:48.533Z"
+          }
+        ],
+        "updatedAt": "2026-03-27T16:44:48.533Z"
+      },
+      {
+        "id": "132",
+        "title": "Backoffice: audit log global de ações administrativas",
+        "description": "Criar página /admin/audit-log com timeline de todas as ações administrativas realizadas no backoffice e nas academias: quem fez o quê, quando, em qual academia/unidade, com filtros por tipo de ação, período e usuário.",
+        "details": "Criar src/app/(backoffice)/admin/audit-log/page.tsx com tabela paginada: timestamp, usuário, ação (criou/editou/excluiu/suspendeu), entidade (academia/unidade/usuário/contrato), detalhe, academia/unidade afetada. Filtros: período (date range), tipo de ação, academia, usuário. Criar endpoint listAuditLogs em src/lib/api/admin-audit.ts. Adicionar tipo AuditLogEntry em types.ts (id, timestamp, userId, userName, action, entityType, entityId, entityName, academiaId, academiaNome, tenantId, tenantNome, detalhes, ip). Usar formato de timeline visual similar ao ProspectTimeline.",
+        "testStrategy": "Verificar que ações de CRUD no backoffice aparecem no log. Filtrar por academia e confirmar resultados. Filtrar por período.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e API client para audit log",
+            "description": "AuditLogEntry em types.ts e listAuditLogs em admin-audit.ts",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar página com tabela paginada e filtros",
+            "description": "Tabela com timestamp, usuário, ação, entidade, academia. Filtros por período/tipo/academia/usuário.",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "133",
+        "title": "Backoffice: impersonation (entrar como usuário) com audit trail",
+        "description": "Adicionar funcionalidade de impersonation no detalhe de usuário (/admin/seguranca/usuarios/[id]) que permite ao admin do backoffice acessar o sistema com a visão de qualquer usuário para suporte e diagnóstico, com registro completo no audit log.",
+        "details": "Adicionar botão \"Entrar como este usuário\" na página de detalhe do usuário (/admin/seguranca/usuarios/[id]/page.tsx). Ao clicar: (1) Confirmar via dialog com justificativa obrigatória; (2) Chamar endpoint impersonateUser em admin-audit.ts que retorna token temporário; (3) Salvar sessão original em sessionStorage; (4) Iniciar nova sessão com token do usuário impersonado; (5) Exibir banner fixo no topo (\"Você está operando como [nome] — Encerrar\"); (6) Ao encerrar, restaurar sessão original. Registrar início e fim da impersonation no audit log. Criar componente ImpersonationBanner em src/components/backoffice/.",
+        "testStrategy": "Impersonar um usuário, navegar pelo sistema e verificar que os dados são do contexto dele. Encerrar e confirmar retorno ao backoffice. Verificar audit log registra início e fim.",
+        "status": "pending",
+        "dependencies": [
+          "132"
+        ],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar endpoint e lógica de impersonation",
+            "description": "Endpoint impersonateUser/endImpersonation em admin-audit.ts. Lógica de troca de sessão.",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar ImpersonationBanner e integrar no layout",
+            "description": "Banner fixo com nome do usuário impersonado e botão encerrar. Integrar no app layout.",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Adicionar botão e dialog no detalhe de usuário",
+            "description": "Botão \"Entrar como\" com dialog de confirmação + justificativa obrigatória no /admin/seguranca/usuarios/[id]",
+            "dependencies": [
+              2
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "134",
+        "title": "Backoffice: feature flags operacional por academia",
+        "description": "Expandir o catálogo de funcionalidades existente (/admin/seguranca/funcionalidades) com toggles operacionais por academia: ativar/desativar features específicas para cada academia, com override global e propagação para unidades.",
+        "details": "Atualizar src/app/(backoffice)/admin/seguranca/funcionalidades/page.tsx ou criar sub-página /admin/configuracoes/feature-flags/page.tsx com: (1) Tabela matriz: features (linhas) x academias (colunas) com toggles; (2) Override global: ativar/desativar feature para todas as academias; (3) Override por academia: toggle individual; (4) Indicador visual de propagação (academia → unidades). Criar endpoints toggleFeatureForAcademia, getFeatureFlagsMatrix em src/lib/api/admin-config.ts. Adicionar tipo FeatureFlagMatrix em types.ts.",
+        "testStrategy": "Ativar feature para uma academia e verificar que propaga para suas unidades. Desativar globalmente e confirmar que todas desligam.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e API client para feature flags",
+            "description": "FeatureFlagMatrix em types.ts e endpoints em admin-config.ts",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar página/matriz de feature flags por academia",
+            "description": "Tabela com toggles por academia, override global e indicador de propagação",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "135",
+        "title": "Backoffice: monitoramento de integrações e configurações globais",
+        "description": "Criar página /admin/configuracoes com status de integrações externas (gateway de pagamento, NFSe, catraca) e configurações globais do sistema (templates de email, termos de uso, limites).",
+        "details": "Criar src/app/(backoffice)/admin/configuracoes/page.tsx com: (1) Status de integrações: cards mostrando uptime, último erro, latência média de cada integração (gateway PIX/boleto, NFSe, catraca WS, EVO import); (2) Configurações globais: templates de email (lista de templates editáveis), termos de uso (editor rich text), limites de API (rate limiting). Criar endpoint getIntegrationStatus e getGlobalConfig em src/lib/api/admin-config.ts. Adicionar tipos IntegrationStatus e GlobalConfig.",
+        "testStrategy": "Verificar que integrações mostram status correto. Editar template de email e confirmar persistência.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e endpoints de integrações e config",
+            "description": "IntegrationStatus, GlobalConfig em types.ts. Endpoints em admin-config.ts",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar página de status de integrações",
+            "description": "Cards de uptime, último erro, latência por integração",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Criar seção de configurações globais editáveis",
+            "description": "Templates de email, termos de uso (rich text), limites de API",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "136",
+        "title": "Backoffice: compliance LGPD e dashboard de dados pessoais",
+        "description": "Criar página /admin/compliance com visão de compliance LGPD: volume de dados pessoais por academia, solicitações de exclusão pendentes, termos aceitos e relatório de exposição.",
+        "details": "Criar src/app/(backoffice)/admin/compliance/page.tsx com: (1) Cards KPI: total dados pessoais armazenados (estimativa por academia), solicitações de exclusão pendentes, termos aceitos vs pendentes; (2) Tabela por academia: quantidade de alunos com CPF, email, telefone armazenados, última solicitação de exclusão, status de termos; (3) Lista de solicitações de exclusão pendentes com ação de executar/rejeitar; (4) Relatório de exposição: quais campos sensíveis cada academia coleta. Criar endpoint getComplianceDashboard em src/lib/api/admin-compliance.ts.",
+        "testStrategy": "Verificar que dados pessoais são contados corretamente por academia. Processar uma solicitação de exclusão.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar tipos e endpoint de compliance",
+            "description": "ComplianceDashboard, SolicitacaoExclusao em types.ts. Endpoint em admin-compliance.ts",
+            "dependencies": [],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar dashboard de compliance com KPIs e tabela",
+            "description": "Cards de dados pessoais, solicitações pendentes, termos. Tabela por academia.",
+            "dependencies": [
+              1
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Criar lista de solicitações de exclusão com ações",
+            "description": "Listagem com filtros e botões executar/rejeitar com confirmação",
+            "dependencies": [
+              2
+            ],
+            "status": "pending",
+            "parentId": "undefined"
+          }
+        ]
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-27T04:52:36.100Z",
-      "taskCount": 115,
-      "completedCount": 115,
+      "lastModified": "2026-03-27T16:45:30.711Z",
+      "taskCount": 136,
+      "completedCount": 125,
       "tags": [
         "master"
       ]

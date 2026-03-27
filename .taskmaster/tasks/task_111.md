@@ -2,9 +2,9 @@
 
 **Title:** Estabilizar suíte E2E Playwright para fluxos críticos
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 108
+**Dependencies:** 108 ✓
 
 **Priority:** medium
 
@@ -22,7 +22,7 @@ Executar `npm run test:e2e` para validar a suíte completa com o `webServer` def
 
 ### 111.1. Auditar e classificar as specs E2E existentes
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Mapear as specs em `tests/e2e/` e classificar cada uma como funcional, quebrada ou obsoleta.
@@ -33,7 +33,7 @@ Listar as 35 specs, registrar status e notas de falha, validar impacto no smoke/
 
 ### 111.2. Corrigir specs dos fluxos comerciais (venda/matrícula/pagamento)
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 111.1  
 
 Estabilizar os fluxos críticos de venda e matrícula com foco em seletores e mocks.
@@ -44,7 +44,7 @@ Revisar `tests/e2e/comercial-fluxo.spec.ts` e `tests/e2e/clientes-cadastro.spec.
 
 ### 111.3. Corrigir specs de adesão pública e CRM operacional
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 111.1  
 
 Garantir estabilidade dos testes de jornada pública e CRM de prospects.
@@ -55,7 +55,7 @@ Ajustar `tests/e2e/adesao-publica.spec.ts` e `tests/e2e/crm-operacional.spec.ts`
 
 ### 111.4. Padronizar execução E2E e rodar suíte headless no CI
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 111.2, 111.3  
 
 Uniformizar os scripts de execução e atualizar configurações de CI para rodar E2E headless.

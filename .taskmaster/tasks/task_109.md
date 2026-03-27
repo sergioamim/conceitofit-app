@@ -2,9 +2,9 @@
 
 **Title:** Migrar validações e transações comerciais para APIs reais
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 106 ✓, 107 ✓, 108
+**Dependencies:** 106 ✓, 107 ✓, 108 ✓
 
 **Priority:** high
 

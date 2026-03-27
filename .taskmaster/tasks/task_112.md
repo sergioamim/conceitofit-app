@@ -2,7 +2,7 @@
 
 **Title:** Melhorar acessibilidade (a11y) dos componentes shared e modais
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -22,7 +22,7 @@ Rodar Lighthouse accessibility audit nas páginas /vendas/nova, /clientes, /admi
 
 ### 112.1. Padronizar acessibilidade dos modais CRUD e Dialog wrappers
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Auditar e ajustar os modais CRUD para garantir semântica e foco corretos.
@@ -33,7 +33,7 @@ Revisar `src/components/shared/crud-modal.tsx`, `src/components/shared/*-modal.t
 
 ### 112.2. Melhorar a11y em componentes de dados e seleção
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 112.1  
 
 Adicionar roles e atributos ARIA nos componentes de tabela, sugestões e seleção.
@@ -44,7 +44,7 @@ Atualizar `src/components/shared/paginated-table.tsx` (role=grid, aria-sort, lab
 
 ### 112.3. Validar com Lighthouse/axe e corrigir pendências finais
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 112.2  
 
 Executar auditoria de acessibilidade e ajustar issues restantes.
