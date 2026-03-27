@@ -7278,7 +7278,7 @@
         "description": "Revisar e reativar a suíte E2E do Playwright garantindo execução recente e estabilidade dos fluxos críticos (venda, cadastro público, matrícula, pagamento e CRM de prospects), além de remover specs obsoletas e padronizar o script de execução.",
         "details": "Mapear a suíte atual em `tests/e2e/` (35 specs) e priorizar os fluxos críticos já cobertos por `tests/e2e/comercial-fluxo.spec.ts`, `tests/e2e/clientes-cadastro.spec.ts`, `tests/e2e/adesao-publica.spec.ts` e `tests/e2e/crm-operacional.spec.ts`. Revisar seletores quebrados pós-refatorações priorizando `getByRole`/`getByLabel` como nos arquivos existentes; quando não houver acessibilidade consistente, introduzir `data-testid` nos componentes afetados e ajustar os specs. Validar e, se necessário, ajustar os mocks do `tests/e2e/support/backend-only-stubs.ts` (ex.: `installPublicJourneyApiMocks`, `seedAuthenticatedSession`) para alinhar endpoints/response usados nos fluxos críticos e evitar 404s durante `npm run dev:mock` configurado em `playwright.config.ts`. Remover specs obsoletas em `tests/e2e/` e atualizar listas de smoke/coverage quando houver alteração de arquivo, incluindo `scripts/playwright-coverage.mjs` (const `SMOKE_E2E_SPECS`) e os artefatos `docs/TEST_COVERAGE_CORE.md`, `docs/TEST_COVERAGE_CORE.json`, `docs/TEST_COVERAGE_BASELINE.json` se os arquivos referenciados mudarem. Adicionar o script `test:e2e` no `package.json` como alias para `playwright test` (ou `npm run e2e`) mantendo compatibilidade com os comandos atuais e o fluxo do `Makefile`.",
         "testStrategy": "Executar `npm run test:e2e` para validar a suíte completa com o `webServer` definido em `playwright.config.ts`. Rodar isoladamente os fluxos críticos para triagem rápida: `npx playwright test tests/e2e/comercial-fluxo.spec.ts tests/e2e/clientes-cadastro.spec.ts tests/e2e/adesao-publica.spec.ts tests/e2e/crm-operacional.spec.ts`. Conferir o relatório em `playwright-report` e garantir que não há falhas de seletor, erros de mock/rota ou falhas de navegação pós-refatoração.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "108"
         ],
@@ -7290,9 +7290,10 @@
             "description": "Mapear as specs em `tests/e2e/` e classificar cada uma como funcional, quebrada ou obsoleta.",
             "dependencies": [],
             "details": "Listar as 35 specs, registrar status e notas de falha, validar impacto no smoke/coverage, e preparar a lista de remoções necessárias para ajustar `scripts/playwright-coverage.mjs` (SMOKE_E2E_SPECS) e os artefatos em `docs/TEST_COVERAGE_CORE.md`, `docs/TEST_COVERAGE_CORE.json` e `docs/TEST_COVERAGE_BASELINE.json` quando houver mudança de arquivo.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Usar `npx playwright test --list` para inventário e rodar specs isoladas quando necessário.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:45:32.785Z"
           },
           {
             "id": 2,
@@ -7302,9 +7303,10 @@
               1
             ],
             "details": "Revisar `tests/e2e/comercial-fluxo.spec.ts` e `tests/e2e/clientes-cadastro.spec.ts`, migrar seletores quebrados para `getByRole`/`getByLabel`, adicionar `data-testid` em componentes quando não houver acessibilidade consistente e alinhar mocks no `tests/e2e/support/backend-only-stubs.ts` (ex.: sessão, vendas, matrículas e pagamentos) com os endpoints usados.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Executar `npx playwright test tests/e2e/comercial-fluxo.spec.ts tests/e2e/clientes-cadastro.spec.ts` com `npm run dev:mock`.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:45:34.863Z"
           },
           {
             "id": 3,
@@ -7314,9 +7316,10 @@
               1
             ],
             "details": "Ajustar `tests/e2e/adesao-publica.spec.ts` e `tests/e2e/crm-operacional.spec.ts` com seletores robustos (`getByRole`/`getByLabel`), incluir `data-testid` quando necessário e revisar mocks do `installPublicJourneyApiMocks` e demais stubs no `tests/e2e/support/backend-only-stubs.ts` para evitar 404s no fluxo público e CRM.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Executar `npx playwright test tests/e2e/adesao-publica.spec.ts tests/e2e/crm-operacional.spec.ts` em modo headless.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:45:37.461Z"
           },
           {
             "id": 4,
@@ -7327,11 +7330,13 @@
               3
             ],
             "details": "Adicionar `test:e2e` no `package.json` como alias de `playwright test` mantendo compatibilidade com `e2e` e o `Makefile`, revisar `playwright.config.ts` para garantir `dev:mock` estável e criar/ajustar workflow em `.github/workflows/` para executar a suíte headless; atualizar `scripts/playwright-coverage.mjs` e docs de coverage quando arquivos forem removidos/renomeados.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Rodar `npm run test:e2e` e validar o workflow headless localmente com `npx playwright test --list`.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:45:39.887Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T04:45:39.887Z"
       },
       {
         "id": "112",
@@ -7389,7 +7394,7 @@
         "description": "77 de 82 páginas usam \"use client\" no topo, forçando todo o código para o bundle do cliente. Avaliar quais páginas podem ter o data fetching movido para Server Components (RSC), reduzindo JS enviado ao browser. Implementar lazy loading para modais pesados e componentes não-críticos.",
         "details": "Mapear as 77 páginas \"use client\" e classificar: (A) páginas que fazem fetch em useEffect e poderiam buscar dados no servidor (ex: listagens como /alunos, /planos, /matriculas, /pagamentos); (B) páginas com interação pesada que precisam ser client (ex: /vendas/nova, CRM kanban); (C) páginas mistas que podem ter RSC wrapper + client island. Para tipo A, criar versão com async Server Component que passa dados via props. Para modais pesados (>500 linhas), usar next/dynamic com ssr:false. Avaliar impacto no bundle com next build --analyze (ou @next/bundle-analyzer). Meta: reduzir First Load JS em 20%+ nas listagens.",
         "testStrategy": "Comparar métricas de next build antes e depois: First Load JS shared, por-rota. Rodar Lighthouse Performance nas 5 rotas mais acessadas. Garantir que nenhuma funcionalidade quebrou com smoke manual.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "subtasks": [
@@ -7427,7 +7432,8 @@
             "testStrategy": "Rodar `ANALYZE=true npm run build` e comparar o report por rota; validar abertura dos modais carregados dinamicamente.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T04:29:50.902Z"
       },
       {
         "id": "114",
@@ -7435,7 +7441,7 @@
         "description": "As páginas do módulo gerencial (DRE, contas a pagar/receber, recebimentos, formas de pagamento, BI) exibem dados apenas em tela. Adicionar botões de exportação para PDF e Excel/CSV nos relatórios financeiros, usando geração client-side para não depender de endpoint backend adicional.",
         "details": "Criar utilitário src/lib/export/table-export.ts com funções exportToCSV(data, columns, filename) e exportToPDF(data, columns, filename, title). Para CSV usar Blob + download link nativo. Para PDF usar biblioteca leve (ex: jspdf + jspdf-autotable, já que não há dependência de PDF no projeto). Adicionar componente ExportMenu em src/components/shared/export-menu.tsx com dropdown (CSV, PDF) que receba os dados da tabela. Integrar nas páginas: /gerencial/dre, /gerencial/contas-a-receber, /gerencial/contas-a-pagar, /gerencial/recebimentos, /gerencial/formas-pagamento, /vendas. Manter formatação BRL nos valores exportados.",
         "testStrategy": "Exportar CSV e PDF de cada página listada. Validar que os valores batem com o exibido em tela. Abrir CSV no Excel/Google Sheets e confirmar encoding UTF-8 e separador correto. Abrir PDF e confirmar layout legível.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [
@@ -7445,9 +7451,10 @@
             "description": "Adicionar utilitário client-side para exportar tabelas em CSV e PDF.",
             "dependencies": [],
             "details": "Criar `src/lib/export/table-export.ts` com tipos de coluna (label, accessor/formatter) e funções `exportToCSV` e `exportToPDF`. Para CSV, gerar conteúdo UTF-8 (com BOM opcional) e disparar download via Blob/URL; para PDF, adicionar `jspdf` + `jspdf-autotable` no `package.json` e montar tabela com título, cabeçalhos e dados formatados (incluindo valores em BRL via `formatBRL`).",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testar exportação CSV/PDF em um conjunto simples de dados e validar arquivos gerados.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:34:29.665Z"
           },
           {
             "id": 2,
@@ -7457,9 +7464,10 @@
               1
             ],
             "details": "Adicionar `src/components/shared/export-menu.tsx` como componente client-side, usando `Button` + `Select` (ou UI equivalente existente) para opções CSV e PDF. Receber props `data`, `columns`, `filename`, `title`, `disabled` e acionar `exportToCSV/exportToPDF` do utilitário. Manter texto estável no SSR e evitar valores dinâmicos no render inicial.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Validar manualmente que o menu dispara a exportação correta para CSV e PDF.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:34:29.701Z"
           },
           {
             "id": 3,
@@ -7469,11 +7477,13 @@
               2
             ],
             "details": "Incluir `ExportMenu` nas páginas `src/app/(app)/gerencial/dre/page.tsx`, `src/app/(app)/gerencial/contas-a-receber/page.tsx`, `src/app/(app)/gerencial/contas-a-pagar/page.tsx`, `src/app/(app)/gerencial/recebimentos/page.tsx` e `src/app/(app)/vendas/page.tsx`. Para `formas-pagamento`, integrar no `src/app/(app)/administrativo/formas-pagamento/page.tsx` (já que `/gerencial/formas-pagamento` redireciona). Mapear colunas com rótulos iguais aos cabeçalhos das tabelas, exportar somente dados filtrados e excluir colunas de ação, mantendo formatação BRL e datas já exibidas na UI.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Exportar CSV/PDF em cada página, abrir no Excel/Sheets e PDF viewer e conferir valores e formatação.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T04:34:29.709Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T04:34:29.709Z"
       },
       {
         "id": "115",
@@ -7525,9 +7535,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-27T04:22:22.396Z",
+      "lastModified": "2026-03-27T04:45:39.888Z",
       "taskCount": 115,
-      "completedCount": 111,
+      "completedCount": 114,
       "tags": [
         "master"
       ]
