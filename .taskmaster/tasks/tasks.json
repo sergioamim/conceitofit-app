@@ -8367,7 +8367,7 @@
         "description": "Criar página /admin/configuracoes com status de integrações externas (gateway de pagamento, NFSe, catraca) e configurações globais do sistema (templates de email, termos de uso, limites).",
         "details": "Criar src/app/(backoffice)/admin/configuracoes/page.tsx com: (1) Status de integrações: cards mostrando uptime, último erro, latência média de cada integração (gateway PIX/boleto, NFSe, catraca WS, EVO import); (2) Configurações globais: templates de email (lista de templates editáveis), termos de uso (editor rich text), limites de API (rate limiting). Criar endpoint getIntegrationStatus e getGlobalConfig em src/lib/api/admin-config.ts. Adicionar tipos IntegrationStatus e GlobalConfig.",
         "testStrategy": "Verificar que integrações mostram status correto. Editar template de email e confirmar persistência.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "subtasks": [
@@ -8376,8 +8376,9 @@
             "title": "Criar tipos e endpoints de integrações e config",
             "description": "IntegrationStatus, GlobalConfig em types.ts. Endpoints em admin-config.ts",
             "dependencies": [],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T18:10:00.000Z"
           },
           {
             "id": 2,
@@ -8386,8 +8387,9 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T18:10:00.000Z"
           },
           {
             "id": 3,
@@ -8396,10 +8398,12 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T18:10:00.000Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T18:10:00.000Z"
       },
       {
         "id": "136",
