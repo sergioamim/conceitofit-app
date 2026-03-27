@@ -2024,3 +2024,29 @@ export interface SecurityStandardizedProfile {
   impact: SecurityProfileImpactSummary;
   matrix: SecurityProfileMatrixItem[];
 }
+
+/* ---------- Global Search (Backoffice) ---------- */
+
+export type GlobalSearchPersonType = "ALUNO" | "FUNCIONARIO" | "ADMIN";
+
+export interface GlobalSearchResult {
+  id: UUID;
+  tipo: GlobalSearchPersonType;
+  nome: string;
+  cpf?: string;
+  email?: string;
+  telefone?: string;
+  academiaId?: UUID;
+  academiaNome?: string;
+  tenantId?: UUID;
+  unidadeNome?: string;
+  status?: string;
+  /** URL relativa para navegar ao detalhe */
+  href?: string;
+}
+
+export interface GlobalSearchResponse {
+  items: GlobalSearchResult[];
+  total: number;
+  query: string;
+}
