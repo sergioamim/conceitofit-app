@@ -21,6 +21,7 @@ import { PaginatedTable } from "@/components/shared/paginated-table";
 import { TableCell } from "@/components/ui/table";
 
 import { formatBRL, formatDateTime } from "@/lib/formatters";
+import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 
 const TIPO_LABEL: Record<Venda["tipo"], string> = {
   PLANO: "Contrato",
@@ -207,12 +208,27 @@ export default function VendasPage() {
             Vendas da unidade ativa com filtros por período, tipo e forma de pagamento
           </p>
         </div>
-        <Link href="/vendas/nova">
-          <Button>
-            <Plus className="size-4" />
-            Nova venda
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportMenu
+            data={vendas}
+            columns={[
+              { label: "Data", accessor: (v) => formatDateTime(v.dataCriacao) },
+              { label: "Cliente", accessor: (v) => v.clienteNome ?? "Consumidor não identificado" },
+              { label: "Tipo", accessor: (v) => TIPO_LABEL[v.tipo] },
+              { label: "Pagamento", accessor: (v) => { const f = resolveFormaPagamento(v); return f ? FORMA_LABEL[f] : "Não informado"; } },
+              { label: "Total", accessor: (v) => formatBRL(v.total) },
+              { label: "Status", accessor: (v) => { const s = resolveVendaFluxoStatusFromApi(v); return s ? STATUS_FLUXO_COMERCIAL_LABEL[s] : v.status; } },
+            ] satisfies ExportColumn<Venda>[]}
+            filename="vendas"
+            title="Vendas"
+          />
+          <Link href="/vendas/nova">
+            <Button>
+              <Plus className="size-4" />
+              Nova venda
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">

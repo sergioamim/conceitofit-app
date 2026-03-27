@@ -10,6 +10,7 @@ import { MonthYearPicker } from "@/components/shared/month-year-picker";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 
 const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   FOLHA: "Folha",
@@ -142,6 +143,25 @@ export default function DrePage() {
     };
   }, [dre]);
 
+  const dreExportData = useMemo(() => {
+    if (!dre) return [];
+    return [
+      { etapa: "Receita bruta", valor: formatBRL(dre.receitaBruta) },
+      { etapa: "(-) Deduções da receita", valor: formatBRL(dre.deducoesReceita) },
+      { etapa: "= Receita líquida", valor: formatBRL(dre.receitaLiquida) },
+      { etapa: "(-) Custos variáveis", valor: formatBRL(dre.custosVariaveis) },
+      { etapa: "= Margem de contribuição", valor: formatBRL(dre.margemContribuicao) },
+      { etapa: "(-) Despesas operacionais", valor: formatBRL(dre.despesasOperacionais) },
+      { etapa: "= EBITDA", valor: formatBRL(dre.ebitda) },
+      { etapa: "= Resultado líquido", valor: formatBRL(dre.resultadoLiquido) },
+    ];
+  }, [dre]);
+
+  const dreExportColumns: ExportColumn<(typeof dreExportData)[number]>[] = [
+    { label: "Etapa", accessor: "etapa" },
+    { label: "Valor", accessor: "valor" },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -152,6 +172,7 @@ export default function DrePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <ExportMenu data={dreExportData} columns={dreExportColumns} filename="dre-gerencial" title="DRE Gerencial" disabled={!dre} />
           <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <input
               type="checkbox"

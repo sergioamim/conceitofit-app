@@ -18,6 +18,7 @@ import {
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { AgregadorTransacao, NfseConfiguracao, Pagamento, TipoFormaPagamento } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 type StatusFiltro = "TODOS" | Pagamento["status"];
@@ -209,10 +210,23 @@ export default function RecebimentosPage() {
             <span className="font-medium text-foreground">{tenantResolved ? tenantName : "Carregando..."}</span>
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Novo recebimento
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportMenu
+            data={filtered}
+            columns={[
+              { label: "Cliente", accessor: (r) => r.aluno?.nome ?? "—" },
+              { label: "Valor", accessor: (r) => formatBRL(Number(r.valor ?? 0)) },
+              { label: "Vencimento", accessor: (r) => formatDate(r.dataVencimento) },
+              { label: "Status", accessor: "status" },
+            ] satisfies ExportColumn<(typeof filtered)[number]>[]}
+            filename="recebimentos"
+            title="Recebimentos"
+          />
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Novo recebimento
+          </Button>
+        </div>
       </div>
 
       {(error || success) && (

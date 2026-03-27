@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 
 type PagamentoWithAluno = PagamentoComAluno & { aluno?: Aluno };
 type StatusFiltro = "TODOS" | "PENDENTE" | "VENCIDO" | "PAGO" | "CANCELADO" | "EM_ABERTO";
@@ -93,11 +94,26 @@ export default function ContasReceberPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Contas a Receber</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Projeção e acompanhamento dos valores planejados para recebimento no período.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Contas a Receber</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Projeção e acompanhamento dos valores planejados para recebimento no período.
+          </p>
+        </div>
+        <ExportMenu
+          data={filtered}
+          columns={[
+            { label: "Vencimento", accessor: (r) => formatDate(r.dataVencimento ?? "") },
+            { label: "Cliente", accessor: (r) => r.aluno?.nome ?? "—" },
+            { label: "Descrição", accessor: (r) => r.descricao ?? "" },
+            { label: "Tipo", accessor: (r) => r.tipo ?? "" },
+            { label: "Valor", accessor: (r) => formatBRL(Number(r.valor ?? 0)) },
+            { label: "Status", accessor: "status" },
+          ] satisfies ExportColumn<(typeof filtered)[number]>[]}
+          filename="contas-a-receber"
+          title="Contas a Receber"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
