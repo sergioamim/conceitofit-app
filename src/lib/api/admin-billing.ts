@@ -3,6 +3,13 @@ import type {
   CobrancaStatus,
   CicloPlanoPlataforma,
   ContratoPlataforma,
+  DashboardFinanceiroAdmin,
+  DashboardFinanceiroAgingFaixa,
+  DashboardFinanceiroAgingItem,
+  DashboardFinanceiroInadimplente,
+  DashboardFinanceiroMrrSerie,
+  DashboardFinanceiroPlanoComparativo,
+  DashboardFinanceiroPeriodo,
   PlanoPlataforma,
   StatusContratoPlataforma,
   TipoFormaPagamento,
@@ -57,6 +64,76 @@ type CobrancaApiResponse = Partial<Cobranca> & {
 };
 
 type CobrancaPayload = Omit<Cobranca, "id" | "academiaNome">;
+
+type DashboardFinanceiroMrrSerieApiResponse = Partial<DashboardFinanceiroMrrSerie> & {
+  referencia?: unknown;
+  mes?: unknown;
+  label?: unknown;
+  descricao?: unknown;
+  mrr?: unknown;
+  valor?: unknown;
+  total?: unknown;
+};
+
+type DashboardFinanceiroAgingItemApiResponse = Partial<DashboardFinanceiroAgingItem> & {
+  faixa?: unknown;
+  label?: unknown;
+  descricao?: unknown;
+  quantidade?: unknown;
+  total?: unknown;
+  valor?: unknown;
+};
+
+type DashboardFinanceiroInadimplenteApiResponse = Partial<DashboardFinanceiroInadimplente> & {
+  academiaId?: unknown;
+  academiaNome?: unknown;
+  nomeAcademia?: unknown;
+  contratoId?: unknown;
+  cobrancaId?: unknown;
+  planoNome?: unknown;
+  nomePlano?: unknown;
+  valorEmAberto?: unknown;
+  valorAberto?: unknown;
+  valor?: unknown;
+  diasEmAtraso?: unknown;
+  atrasoDias?: unknown;
+  ultimaCobrancaVencida?: unknown;
+  ultimaDataVencimento?: unknown;
+};
+
+type DashboardFinanceiroPlanoComparativoApiResponse = Partial<DashboardFinanceiroPlanoComparativo> & {
+  planoId?: unknown;
+  planoNome?: unknown;
+  nomePlano?: unknown;
+  academiasAtivas?: unknown;
+  quantidadeAcademias?: unknown;
+  mrr?: unknown;
+  valor?: unknown;
+  participacaoPct?: unknown;
+  participacao?: unknown;
+};
+
+type DashboardFinanceiroAdminApiResponse = Partial<DashboardFinanceiroAdmin> & {
+  mrrAtual?: unknown;
+  mrrProjetado?: unknown;
+  totalAcademiasAtivas?: unknown;
+  academiasAtivas?: unknown;
+  totalInadimplentes?: unknown;
+  academiasInadimplentes?: unknown;
+  churnRateMensal?: unknown;
+  churnMensal?: unknown;
+  previsaoReceita?: unknown;
+  receitaPrevista?: unknown;
+  evolucaoMrr?: unknown;
+  serieMrr?: unknown;
+  aging?: unknown;
+  agingCobrancas?: unknown;
+  inadimplentes?: unknown;
+  academiasInadimplentesLista?: unknown;
+  comparativoPlanos?: unknown;
+  mrrPorPlano?: unknown;
+  generatedAt?: unknown;
+ };
 
 type AnyListResponse<T> =
   | T[]
@@ -114,6 +191,18 @@ function normalizeIds(value: unknown): string[] {
   return value
     .map((item) => cleanString(item))
     .filter((item): item is string => Boolean(item));
+}
+
+function normalizeAgingFaixa(value: unknown): DashboardFinanceiroAgingFaixa {
+  if (value === "0_15" || value === "16_30" || value === "31_60" || value === "60_PLUS") {
+    return value;
+  }
+  if (typeof value !== "string") return "0_15";
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "0-15" || normalized === "0A15") return "0_15";
+  if (normalized === "16-30" || normalized === "16A30") return "16_30";
+  if (normalized === "31-60" || normalized === "31A60") return "31_60";
+  return "60_PLUS";
 }
 
 function normalizePlanoPlataforma(
@@ -215,6 +304,100 @@ function buildCobrancaPayload(data: CobrancaPayload): Record<string, unknown> {
     multa: data.multa,
     juros: data.juros,
     observacoes: cleanString(data.observacoes),
+  };
+}
+
+function normalizeDashboardMrrSerie(
+  input: DashboardFinanceiroMrrSerieApiResponse,
+  index: number
+): DashboardFinanceiroMrrSerie {
+  return {
+    referencia: cleanString(input.referencia) ?? cleanString(input.mes) ?? `serie-${index + 1}`,
+    label: cleanString(input.label) ?? cleanString(input.descricao) ?? cleanString(input.mes) ?? `Período ${index + 1}`,
+    mrr: toNumber(input.mrr ?? input.valor ?? input.total, 0),
+  };
+}
+
+function normalizeDashboardAgingItem(input: DashboardFinanceiroAgingItemApiResponse): DashboardFinanceiroAgingItem {
+  const faixa = normalizeAgingFaixa(input.faixa);
+  const labels: Record<DashboardFinanceiroAgingFaixa, string> = {
+    "0_15": "0 a 15 dias",
+    "16_30": "16 a 30 dias",
+    "31_60": "31 a 60 dias",
+    "60_PLUS": "60+ dias",
+  };
+
+  return {
+    faixa,
+    label: cleanString(input.label) ?? cleanString(input.descricao) ?? labels[faixa],
+    quantidade: Math.max(0, toNumber(input.quantidade ?? input.total, 0)),
+    valor: Math.max(0, toNumber(input.valor, 0)),
+  };
+}
+
+function normalizeDashboardInadimplente(
+  input: DashboardFinanceiroInadimplenteApiResponse
+): DashboardFinanceiroInadimplente {
+  return {
+    academiaId: cleanString(input.academiaId),
+    academiaNome: cleanString(input.academiaNome) ?? cleanString(input.nomeAcademia) ?? "Academia sem nome",
+    contratoId: cleanString(input.contratoId),
+    cobrancaId: cleanString(input.cobrancaId),
+    planoNome: cleanString(input.planoNome) ?? cleanString(input.nomePlano),
+    valorEmAberto: Math.max(0, toNumber(input.valorEmAberto ?? input.valorAberto ?? input.valor, 0)),
+    diasEmAtraso: Math.max(0, toNumber(input.diasEmAtraso ?? input.atrasoDias, 0)),
+    ultimaCobrancaVencida: cleanString(input.ultimaCobrancaVencida) ?? cleanString(input.ultimaDataVencimento),
+  };
+}
+
+function normalizeDashboardPlanoComparativo(
+  input: DashboardFinanceiroPlanoComparativoApiResponse
+): DashboardFinanceiroPlanoComparativo {
+  return {
+    planoId: cleanString(input.planoId),
+    planoNome: cleanString(input.planoNome) ?? cleanString(input.nomePlano) ?? "Plano não identificado",
+    academiasAtivas: Math.max(0, toNumber(input.academiasAtivas ?? input.quantidadeAcademias, 0)),
+    mrr: Math.max(0, toNumber(input.mrr ?? input.valor, 0)),
+    participacaoPct: Math.max(0, toNumber(input.participacaoPct ?? input.participacao, 0)),
+  };
+}
+
+function normalizeDashboardFinanceiroAdmin(
+  response: DashboardFinanceiroAdminApiResponse
+): DashboardFinanceiroAdmin {
+  const evolucao = Array.isArray(response.evolucaoMrr ?? response.serieMrr)
+    ? ((response.evolucaoMrr ?? response.serieMrr) as DashboardFinanceiroMrrSerieApiResponse[]).map((item, index) =>
+        normalizeDashboardMrrSerie(item, index)
+      )
+    : [];
+  const aging = Array.isArray(response.aging ?? response.agingCobrancas)
+    ? ((response.aging ?? response.agingCobrancas) as DashboardFinanceiroAgingItemApiResponse[]).map(
+        normalizeDashboardAgingItem
+      )
+    : [];
+  const inadimplentes = Array.isArray(response.inadimplentes ?? response.academiasInadimplentesLista)
+    ? ((response.inadimplentes ?? response.academiasInadimplentesLista) as DashboardFinanceiroInadimplenteApiResponse[]).map(
+        normalizeDashboardInadimplente
+      )
+    : [];
+  const comparativoPlanos = Array.isArray(response.comparativoPlanos ?? response.mrrPorPlano)
+    ? ((response.comparativoPlanos ?? response.mrrPorPlano) as DashboardFinanceiroPlanoComparativoApiResponse[]).map(
+        normalizeDashboardPlanoComparativo
+      )
+    : [];
+
+  return {
+    mrrAtual: Math.max(0, toNumber(response.mrrAtual, 0)),
+    mrrProjetado: Math.max(0, toNumber(response.mrrProjetado, 0)),
+    totalAcademiasAtivas: Math.max(0, toNumber(response.totalAcademiasAtivas ?? response.academiasAtivas, 0)),
+    totalInadimplentes: Math.max(0, toNumber(response.totalInadimplentes ?? response.academiasInadimplentes, 0)),
+    churnRateMensal: Math.max(0, toNumber(response.churnRateMensal ?? response.churnMensal, 0)),
+    previsaoReceita: Math.max(0, toNumber(response.previsaoReceita ?? response.receitaPrevista, 0)),
+    evolucaoMrr: evolucao,
+    aging,
+    inadimplentes,
+    comparativoPlanos,
+    generatedAt: cleanString(response.generatedAt),
   };
 }
 
@@ -333,4 +516,12 @@ export async function cancelarAdminCobranca(id: string): Promise<Cobranca> {
     method: "PATCH",
   });
   return normalizeCobranca(response, { id, status: "CANCELADO" });
+}
+
+export async function getDashboardFinanceiroAdmin(periodo: DashboardFinanceiroPeriodo = "12M"): Promise<DashboardFinanceiroAdmin> {
+  const query = new URLSearchParams({ periodo }).toString();
+  const response = await apiRequest<DashboardFinanceiroAdminApiResponse>({
+    path: `/api/v1/admin/financeiro/dashboard${query ? `?${query}` : ""}`,
+  });
+  return normalizeDashboardFinanceiroAdmin(response);
 }

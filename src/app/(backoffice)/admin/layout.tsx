@@ -17,6 +17,7 @@ const navItems = [
   { href: "/admin/compliance", label: "Compliance LGPD" },
   { href: "/admin/academias", label: "Academias" },
   { href: "/admin/unidades", label: "Unidades" },
+  { href: "/admin/financeiro", label: "Financeiro B2B" },
   { href: "/admin/financeiro/planos", label: "Planos da Plataforma" },
   { href: "/admin/financeiro/contratos", label: "Contratos da Plataforma" },
   { href: "/admin/financeiro/cobrancas", label: "Cobranças da Plataforma" },
