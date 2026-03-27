@@ -12,6 +12,7 @@ import { listTreinoExercicios, getTreinoWorkspace } from "@/lib/treinos/workspac
 import type { Aluno, Exercicio, Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { TreinoV2Editor } from "@/components/treinos/treino-v2-editor";
+import { ListErrorState } from "@/components/shared/list-states";
 
 function resolveRole(access: ReturnType<typeof useAuthAccess>) {
   if (access.canAccessElevatedModules) return "ADMINISTRADOR" as const;
@@ -112,9 +113,7 @@ export default function TreinoDetalhePage() {
       />
 
       {error ? (
-        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
+        <ListErrorState error={error} onRetry={() => void loadData()} />
       ) : null}
 
       <TreinoV2Editor

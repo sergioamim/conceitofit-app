@@ -49,6 +49,7 @@ import {
 } from "@/lib/treinos/workspace";
 import type { Aluno, Exercicio, Treino, TreinoItem } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { ListErrorState } from "@/components/shared/list-states";
 
 const PAGE_SIZE = 12;
 

@@ -26,6 +26,7 @@ import type { DashboardData, Prospect, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL, formatDate } from "@/lib/formatters";
+import { ListErrorState } from "@/components/shared/list-states";
 
 type DashboardTab = "CLIENTES" | "VENDAS" | "FINANCEIRO";
 const PROSPECTS_PAGE_SIZE = 10;
@@ -287,9 +288,7 @@ export default function DashboardPage() {
       </div>
 
       {error ? (
-        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
+        <ListErrorState error={error} onRetry={() => void load(selectedDate)} />
       ) : null}
 
       {tab === "CLIENTES" && (

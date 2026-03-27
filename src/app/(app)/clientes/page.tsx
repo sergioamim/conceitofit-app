@@ -30,6 +30,7 @@ import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatDate } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import type { Aluno, StatusAluno } from "@/lib/types";
+import { ListErrorState } from "@/components/shared/list-states";
 
 const STATUS_FILTERS: { value: StatusAluno | "TODOS"; label: string }[] = [
   { value: "TODOS", label: "Todos" },

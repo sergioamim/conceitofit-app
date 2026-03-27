@@ -33,6 +33,7 @@ import type {
   ConverterProspectResponse,
 } from "@/lib/types";
 import { formatBRL, formatDate } from "@/lib/formatters";
+import { ListErrorState } from "@/components/shared/list-states";
 
 const TIPO_PLANO_LABEL: Record<string, string> = {
   MENSAL: "Mensal",

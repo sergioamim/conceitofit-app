@@ -40,6 +40,7 @@ import type {
 } from "@/lib/types";
 import { maskPhone } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { ListErrorState } from "@/components/shared/list-states";
 
 const STATUS_OPTIONS: { value: StatusProspect | "TODOS"; label: string }[] = [
   { value: "TODOS", label: "Todos" },
@@ -418,11 +419,7 @@ export default function ProspectsPage() {
         </Button>
       </div>
 
-      {error ? (
-        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          {error}
-        </div>
-      ) : null}
+      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
 
       <div className="grid grid-cols-6 gap-3">
         {STATUS_LABELS.map((s) => (

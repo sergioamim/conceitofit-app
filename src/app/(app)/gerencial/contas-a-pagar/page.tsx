@@ -44,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ListErrorState } from "@/components/shared/list-states";
 
 type StatusFiltro = "TODOS" | "EM_ABERTO" | StatusContaPagar;
 type CategoriaFiltro = "TODAS" | CategoriaContaPagar;
@@ -665,9 +666,7 @@ export default function ContasPagarPage() {
   return (
     <div className="space-y-6">
       {error ? (
-        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
+        <ListErrorState error={error} onRetry={() => void load()} />
       ) : null}
 
       <Dialog

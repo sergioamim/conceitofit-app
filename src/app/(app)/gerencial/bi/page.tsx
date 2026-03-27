@@ -15,6 +15,7 @@ import type { Academia, BiEscopo, BiOperationalSnapshot, BiSegmento, Tenant } fr
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { ListErrorState } from "@/components/shared/list-states";
 
 const SEGMENTO_OPTIONS: Array<{ value: BiSegmento; label: string }> = [
   { value: "TODOS", label: "Todos os segmentos" },
@@ -300,9 +301,7 @@ export default function BiOperacionalPage() {
       </div>
 
       {error ? (
-        <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
+        <ListErrorState error={error} onRetry={() => void loadFilters()} />
       ) : null}
 
       {loading || !snapshot ? (

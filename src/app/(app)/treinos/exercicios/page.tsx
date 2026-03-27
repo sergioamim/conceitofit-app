@@ -19,6 +19,7 @@ import {
 } from "@/lib/treinos/workspace";
 import type { Exercicio, GrupoMuscular } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { ListErrorState } from "@/components/shared/list-states";
 
 export default function ExerciciosPage() {
   const { tenantId, tenantResolved } = useTenantContext();
@@ -126,9 +127,7 @@ export default function ExerciciosPage() {
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
+        <ListErrorState error={error} onRetry={() => void load()} />
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">

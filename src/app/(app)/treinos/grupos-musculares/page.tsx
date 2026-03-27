@@ -20,6 +20,7 @@ import {
 } from "@/lib/treinos/workspace";
 import type { Exercicio, GrupoMuscular } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { ListErrorState } from "@/components/shared/list-states";
 
 type FormState = {
   nome: string;
@@ -161,9 +162,7 @@ export default function GruposMuscularesPage() {
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
+        <ListErrorState error={error} onRetry={() => void load()} />
       ) : null}
 
       <Card className="border-border bg-card">
