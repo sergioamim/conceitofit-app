@@ -8180,7 +8180,7 @@
         "description": "Criar seção de alertas automáticos e painel de uso de features por academia em /admin/operacional/alertas.",
         "details": "Criar src/app/(backoffice)/admin/operacional/alertas/page.tsx com: (1) Lista de alertas gerados automaticamente: academia sem login admin há 7+ dias, unidade com 0 matrículas ativas, pico de cancelamentos (>20% no mês), contrato vencendo em 30 dias, inadimplência acima do threshold; (2) Cada alerta com badge de severidade (info/warning/critical), data, academia, ação sugerida; (3) Painel de uso de features: tabela com academia vs features (treinos, CRM, catraca, vendas online, BI) mostrando quais estão ativas e sendo usadas — insight para upsell e onboarding. Criar endpoint getAlertasOperacionais e getFeatureUsageByAcademia em admin-metrics.ts.",
         "testStrategy": "Verificar que alertas são exibidos com severidade correta. Confirmar tabela de features mostra dados por academia.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "128"
         ],
@@ -8191,8 +8191,9 @@
             "title": "Criar tipos e endpoints para alertas e usage",
             "description": "Tipos AlertaOperacional e FeatureUsage. Endpoints em admin-metrics.ts",
             "dependencies": [],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:35:59.523Z"
           },
           {
             "id": 2,
@@ -8201,8 +8202,9 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:36:01.197Z"
           },
           {
             "id": 3,
@@ -8211,10 +8213,12 @@
             "dependencies": [
               1
             ],
-            "status": "pending",
-            "parentId": "undefined"
+            "status": "done",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-27T17:36:02.873Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-27T17:36:02.873Z"
       },
       {
         "id": "131",
@@ -8450,9 +8454,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-27T17:25:58.730Z",
+      "lastModified": "2026-03-27T17:36:02.873Z",
       "taskCount": 136,
-      "completedCount": 133,
+      "completedCount": 134,
       "tags": [
         "master"
       ]
