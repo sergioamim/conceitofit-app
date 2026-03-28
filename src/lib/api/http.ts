@@ -701,12 +701,18 @@ async function tryAutoLogin(): Promise<{ token: string; type: string } | undefin
   if (autoLoginInFlight) {
     return autoLoginInFlight;
   }
+  if (process.env.NODE_ENV !== "development") {
+    return undefined;
+  }
   if (process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN === "false") {
     return undefined;
   }
+  const email = process.env.NEXT_PUBLIC_DEV_AUTH_EMAIL;
+  const password = process.env.NEXT_PUBLIC_DEV_AUTH_PASSWORD;
+  if (!email || !password) {
+    return undefined;
+  }
   autoLoginInFlight = (async () => {
-    const email = process.env.NEXT_PUBLIC_DEV_AUTH_EMAIL ?? "admin@academia.local";
-    const password = process.env.NEXT_PUBLIC_DEV_AUTH_PASSWORD ?? "12345678";
     const response = await fetch(resolveRequestUrl(AUTH_LOGIN_PATH), {
       method: "POST",
       headers: {

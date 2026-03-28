@@ -32,8 +32,8 @@ export function LegacyLoginFlow({
   const loginForm = useForm<LegacyLoginFormValues>({
     resolver: zodResolver(legacyLoginFormSchema),
     defaultValues: {
-      username: "admin@academia.local",
-      password: "12345678",
+      username: process.env.NEXT_PUBLIC_DEV_AUTH_EMAIL ?? "",
+      password: process.env.NEXT_PUBLIC_DEV_AUTH_PASSWORD ?? "",
     },
   });
   const tenantForm = useForm<LegacyTenantFormValues>({
@@ -52,8 +52,8 @@ export function LegacyLoginFlow({
   useEffect(() => {
     if (step === "LOGIN") {
       loginForm.reset({
-        username: "admin@academia.local",
-        password: "12345678",
+        username: process.env.NEXT_PUBLIC_DEV_AUTH_EMAIL ?? "",
+        password: process.env.NEXT_PUBLIC_DEV_AUTH_PASSWORD ?? "",
       });
       tenantForm.reset({ tenantId: "" });
     }
