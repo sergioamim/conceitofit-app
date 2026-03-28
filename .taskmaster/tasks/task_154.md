@@ -2,7 +2,7 @@
 
 **Title:** Implementar middleware de subdomínio para storefront
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 150
 
