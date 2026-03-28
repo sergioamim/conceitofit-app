@@ -9,7 +9,6 @@ import {
   updateUnidadeApi,
 } from "@/lib/api/contexto-unidades";
 import type { Tenant } from "@/lib/types";
-import { ApiRequestError } from "@/lib/api/http";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,8 +23,9 @@ import { Copy, Check, KeyRound } from "lucide-react";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { gerarCatracaCredencialApi, type CatracaCredentialResponse } from "@/lib/api/catraca";
+import type { CatracaCredentialResponse } from "@/lib/api/catraca";
 import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { gerarCatracaCredencialAction, hasServerAdminToken } from "./actions";
 import { PageError } from "@/components/shared/page-error";
 
 type UnitForm = {
@@ -103,10 +103,7 @@ export default function UnidadesPage() {
   const [credentialSuccess, setCredentialSuccess] = useState("");
   const [manualCatracaAdminToken, setManualCatracaAdminToken] = useState("");
   const [loading, setLoading] = useState(true);
-  const hasConfiguredCatracaTokenFromEnv =
-    !!process.env.NEXT_PUBLIC_CATRACA_ADMIN_TOKEN?.trim() ||
-    !!process.env.NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN?.trim() ||
-    !!process.env.NEXT_PUBLIC_ADMIN_TOKEN?.trim();
+  const [hasConfiguredCatracaTokenFromEnv, setHasConfiguredCatracaTokenFromEnv] = useState(false);
 
   const tenantSelecionado = rows.find((tenant) => tenant.id === currentTenantId);
   const tenantDisplay = tenantSelecionado?.nome || tenantSelecionado?.id || "Nenhuma unidade selecionada";
@@ -133,6 +130,10 @@ export default function UnidadesPage() {
     setCurrentTenantId(tenantContext.tenantId);
   }, [tenantContext.tenantId]);
 
+  useEffect(() => {
+    void hasServerAdminToken().then(setHasConfiguredCatracaTokenFromEnv);
+  }, []);
+
   function closeCatracaModal() {
     setConfirmCredencialOpen(false);
   }
@@ -145,36 +146,20 @@ export default function UnidadesPage() {
     setCredentialLoading(true);
     setCredentialError("");
     setCredentialSuccess("");
-    const adminTokenFromEnv = (
-      process.env.NEXT_PUBLIC_CATRACA_ADMIN_TOKEN ??
-      process.env.NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN ??
-      process.env.NEXT_PUBLIC_ADMIN_TOKEN ??
-      ""
-    ).trim();
-    const adminToken = manualCatracaAdminToken.trim() || adminTokenFromEnv;
-    if (!adminToken) {
-      setCredentialError(
-        "Token de admin não configurado. Defina NEXT_PUBLIC_CATRACA_ADMIN_TOKEN (ou NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN / NEXT_PUBLIC_ADMIN_TOKEN) ou informe abaixo."
-      );
-      setCredentialLoading(false);
-      return;
-    }
     try {
-      const generated = await gerarCatracaCredencialApi({
+      const result = await gerarCatracaCredencialAction({
         tenantId: currentTenantId,
-        adminToken,
+        manualToken: manualCatracaAdminToken.trim() || undefined,
       });
-      setCredentialSuccess(credentialResult ? "Credencial regenerada, atualize o Tray." : "Credencial gerada. Atualize o Tray.");
-      setCredentialResult(generated);
-      setConfirmCredencialOpen(false);
-    } catch (error) {
-      if (error instanceof ApiRequestError && (error.status === 401 || error.status === 403)) {
-        setCredentialError("Token de admin inválido ou ausente.");
-      } else if (error instanceof ApiRequestError && error.status === 503) {
-        setCredentialError("Backend sem integração configurada. Verifique se INTEGRATION_ADMIN_TOKEN (lado servidor) está definido.");
-      } else {
-        setCredentialError(normalizeErrorMessage(error));
+      if (result.error) {
+        setCredentialError(result.error);
+      } else if (result.data) {
+        setCredentialSuccess(credentialResult ? "Credencial regenerada, atualize o Tray." : "Credencial gerada. Atualize o Tray.");
+        setCredentialResult(result.data);
+        setConfirmCredencialOpen(false);
       }
+    } catch (err) {
+      setCredentialError(normalizeErrorMessage(err));
     } finally {
       setCredentialLoading(false);
     }
@@ -459,9 +444,7 @@ export default function UnidadesPage() {
           </Button>
         </div>
 
-        {!process.env.NEXT_PUBLIC_CATRACA_ADMIN_TOKEN &&
-        !process.env.NEXT_PUBLIC_ADMIN_TOKEN &&
-        !process.env.NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN ? (
+        {!hasConfiguredCatracaTokenFromEnv ? (
           <div className="space-y-1">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               X-Admin-Token (temporário nesta sessão)
