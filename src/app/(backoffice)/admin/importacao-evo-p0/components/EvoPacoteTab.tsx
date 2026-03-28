@@ -1,0 +1,832 @@
+"use client";
+
+import Link from "next/link";
+import { AlertCircle } from "lucide-react";
+import { SuggestionInput } from "@/components/shared/suggestion-input";
+import { MapeamentoAcademiaUnidadeSelector } from "@/components/admin/importacao-academia-unidade-selector";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { formatCnpj, isValidCnpj } from "@/lib/utils/cnpj";
+import { normalizeSubdomain } from "@/lib/utils/subdomain";
+import { formatDateTime } from "../date-time-format";
+import { formatResumoCount, resolveArquivoHistoricoBadge } from "../shared";
+import type { EvoImportPageState } from "../hooks/useEvoImportPage";
+
+export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
+  const {
+    pacoteMapeamento, setPacoteMapeamento,
+    pacoteArquivo, escolherArquivoPacote,
+    pacoteDryRun, setPacoteDryRun,
+    pacoteMaxRejeicoes, setPacoteMaxRejeicoes,
+    pacoteJobAlias, setPacoteJobAlias, aliasSugestaoPacote,
+    pacoteEvoUnidadeId, setPacoteEvoUnidadeId,
+    pacoteAnalisando, pacoteCriandoJob,
+    pacoteAnalise, pacoteEvoUnidadeResolvida,
+    pacoteFilialResolvida, pacoteFiliaisEncontradas,
+    pacoteFilialReferencia, pacoteNomeFilialReferencia,
+    pacoteUnidadesSugeridas, pacoteSelecaoFilialPendente,
+    pacotePrecisaVincularTenant, pacotePrecisaReanaliseManual,
+    pacoteArquivosDisponiveis, pacoteColaboradoresBlocos,
+    pacoteArquivosSelecionados, setPacoteArquivosSelecionados,
+    pacoteArquivosSelecionadosSet,
+    arquivosSelecionadosDaAnalise,
+    eligibleAdminsPreview, pacoteResumoAcessoAutomatico, tenantFocoAcademiaId,
+    academiaOptions, getUnidadesOptions, loadingMapeamento,
+    analisarArquivoPacote, atualizarAnalisePacote,
+    criarJobPacote, tentarSomenteErrosDoArquivo,
+    togglePacoteArquivo,
+    aplicarDestinoPacotePorTenantId,
+    abrirNovaUnidadePacote, abrirRejeicoesDoHistoricoArquivo,
+    handlePacoteAcademiaNomeChange, handlePacoteUnidadeNomeChange,
+    handlePacoteSelecionarAcademia, handlePacoteSelecionarUnidade,
+    formatBytes, carregarMapeamentoData,
+    novaUnidadePacoteAberta, setNovaUnidadePacoteAberta,
+    novaUnidadePacoteSalvando,
+    novaUnidadePacoteErro, setNovaUnidadePacoteErro,
+    novaUnidadePacoteForm, setNovaUnidadePacoteForm,
+    salvarNovaUnidadePacote,
+  } = state;
+
+  return (
+    <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Importação por pacote</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-1">
+                <Label className="font-semibold">1. Analisar pacote</Label>
+                <p className="text-sm text-muted-foreground">
+                  Se quiser, já selecione a academia para contextualizar as sugestões. A EVO Unidade fica para depois da leitura do ZIP.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Academia</Label>
+                  <SuggestionInput
+                    value={pacoteMapeamento.academiaNome}
+                    onValueChange={handlePacoteAcademiaNomeChange}
+                    onSelect={handlePacoteSelecionarAcademia}
+                    options={academiaOptions}
+                    minCharsToSearch={0}
+                    placeholder="Pesquise por nome da academia"
+                    emptyText={loadingMapeamento ? "Carregando academias..." : "Nenhuma academia encontrada"}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Opcional nesta etapa. Ajuda a filtrar sugestões e a abertura do cadastro de nova unidade.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pacoteArquivo">Arquivo</Label>
+                  <Input
+                    id="pacoteArquivo"
+                    type="file"
+                    accept=".zip,.csv,application/zip,text/csv"
+                    onChange={escolherArquivoPacote}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Arquivo .zip contendo exportação EVO ou CSV unitário.
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex flex-wrap items-center gap-4">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={pacoteDryRun}
+                    onChange={(e) => setPacoteDryRun(e.target.checked)}
+                    className="accent-gym-accent"
+                  />
+                  Dry-run (não gravar)
+                </Label>
+                <div className="w-56 space-y-2">
+                  <Label htmlFor="pacoteMaxRejeicoes">Max rejeições retorno</Label>
+                  <Input
+                    id="pacoteMaxRejeicoes"
+                    type="number"
+                    min={0}
+                    max={10000}
+                    value={pacoteMaxRejeicoes}
+                    onChange={(e) => setPacoteMaxRejeicoes(Number(e.target.value))}
+                  />
+                </div>
+                <div className="min-w-72 flex-1 space-y-2">
+                  <Label htmlFor="pacoteJobAlias">Alias do job</Label>
+                  <Input
+                    id="pacoteJobAlias"
+                    value={pacoteJobAlias}
+                    onChange={(e) => setPacoteJobAlias(e.target.value)}
+                    placeholder={aliasSugestaoPacote}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Opcional. Use um nome curto para reencontrar este job sem depender do ID.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={analisarArquivoPacote} disabled={pacoteAnalisando || !pacoteArquivo}>
+                  {pacoteAnalisando ? "Analisando pacote..." : "Analisar pacote"}
+                </Button>
+              </div>
+
+              {pacoteArquivo && (
+                <p className="text-xs text-muted-foreground">
+                  Arquivo selecionado: {pacoteArquivo.name} ({formatBytes(pacoteArquivo.size)})
+                </p>
+              )}
+
+              {pacoteAnalise && (
+                <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    <p>
+                      <span className="font-medium">Upload ID:</span> {pacoteAnalise.uploadId}
+                    </p>
+                    <p>
+                      <span className="font-medium">EVO Unidade:</span> {pacoteEvoUnidadeResolvida ?? "pendente"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Expira em:</span> {formatDateTime(pacoteAnalise.expiraEm)}
+                    </p>
+                    <p>
+                      <span className="font-medium">Disponíveis:</span> {arquivosSelecionadosDaAnalise.length} / {pacoteAnalise.arquivos.length}
+                    </p>
+                  </div>
+
+                  {pacoteFilialResolvida && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3 rounded-md border border-border bg-background p-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold">Filial detectada no pacote</p>
+                          {pacoteEvoUnidadeResolvida ? (
+                            <Badge variant="secondary">EVO Unidade {pacoteEvoUnidadeResolvida}</Badge>
+                          ) : (
+                            <Badge variant="outline">Sem EVO Unidade resolvida</Badge>
+                          )}
+                        </div>
+                        <div className="grid gap-2 text-sm md:grid-cols-2">
+                          <p>
+                            <span className="font-medium">Nome no pacote:</span> {pacoteNomeFilialReferencia.nomeOriginal || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Unidade/filial:</span> {pacoteNomeFilialReferencia.unidadeNome || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Documento:</span> {pacoteFilialResolvida.documento?.trim() || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Abreviação:</span> {pacoteFilialResolvida.abreviacao?.trim() || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Local:</span>{" "}
+                            {[pacoteFilialResolvida.bairro, pacoteFilialResolvida.cidade]
+                              .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+                              .join(" · ") || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Email:</span> {pacoteFilialResolvida.email?.trim() || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">Telefone:</span> {pacoteFilialResolvida.telefone?.trim() || "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">EVO Filial ID:</span>{" "}
+                            {typeof pacoteFilialResolvida.evoFilialId === "number" ? pacoteFilialResolvida.evoFilialId : "—"}
+                          </p>
+                          <p>
+                            <span className="font-medium">EVO Academia ID:</span>{" "}
+                            {typeof pacoteFilialResolvida.evoAcademiaId === "number" ? pacoteFilialResolvida.evoAcademiaId : "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {pacoteFiliaisEncontradas.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">Filiais encontradas no pacote</p>
+                        <div className="grid gap-2">
+                          {pacoteFiliaisEncontradas.map((filial, index) => {
+                            const nome = filial.nome?.trim() || filial.abreviacao?.trim() || `Filial ${index + 1}`;
+                            const detalhes = [
+                              filial.documento?.trim(),
+                              filial.bairro?.trim(),
+                              filial.cidade?.trim(),
+                              filial.email?.trim(),
+                              filial.telefone?.trim(),
+                            ].filter((value): value is string => Boolean(value));
+                            const filialResolvida = pacoteEvoUnidadeResolvida && filial.evoFilialId === pacoteEvoUnidadeResolvida;
+                            return (
+                              <div key={`${filial.evoFilialId ?? filial.documento ?? nome}-${index}`} className="rounded-md border border-border bg-background px-3 py-2 text-sm">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-medium">{nome}</p>
+                                  {filialResolvida ? <Badge variant="secondary">Resolvida</Badge> : null}
+                                  {typeof filial.evoFilialId === "number" ? (
+                                    <Badge variant="outline">EVO {filial.evoFilialId}</Badge>
+                                  ) : null}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {detalhes.length > 0 ? detalhes.join(" · ") : "Sem detalhes adicionais."}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {!pacoteEvoUnidadeResolvida && (
+                    <>
+                      <Separator />
+                      <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                        <AlertCircle className="mt-0.5 size-4" />
+                        <div>
+                          <p className="font-semibold">
+                            {pacoteSelecaoFilialPendente ? "Seleção de filial pendente" : "EVO Unidade ainda não resolvida"}
+                          </p>
+                          <p>
+                            {pacoteSelecaoFilialPendente
+                              ? "O pacote contém múltiplas filiais. Informe manualmente a EVO Unidade correta e rode a análise novamente antes de criar o job."
+                              : "A análise ainda não retornou uma EVO Unidade válida. Se necessário, preencha o campo manualmente e reanalise o pacote antes de criar o job."}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold">2. Confirmar EVO Unidade e unidade destino</p>
+                      <p className="text-xs text-muted-foreground">
+                        Com os metadados do pacote, informe a EVO Unidade se necessário e então escolha uma unidade existente ou crie uma nova.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="pacoteEvoUnidadeId">EVO Unidade</Label>
+                        <Input
+                          id="pacoteEvoUnidadeId"
+                          type="number"
+                          min={1}
+                          placeholder="Ex.: 1"
+                          value={pacoteEvoUnidadeId}
+                          onChange={(e) => {
+                            setPacoteEvoUnidadeId(e.target.value);
+                            setPacoteMapeamento((current) => ({ ...current, idFilialEvo: e.target.value }));
+                          }}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Se você informar manualmente uma EVO Unidade depois da análise, use{" "}
+                          {pacotePrecisaReanaliseManual ? '"Atualizar análise"' : '"Analisar pacote"'} para reprocessar o ZIP com esse valor.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Academia selecionada</Label>
+                        <div className="rounded-md border border-border bg-background px-3 py-2 text-sm">
+                          <p className="font-medium">{pacoteMapeamento.academiaNome || "Nenhuma academia selecionada"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {pacoteMapeamento.academiaId
+                              ? "Você pode ajustar a academia e a unidade logo abaixo, se necessário."
+                              : "Selecione uma academia no passo 1 ou ajuste abaixo antes de criar o job."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {pacoteUnidadesSugeridas.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">Sugestões de unidades existentes</p>
+                        <div className="grid gap-2">
+                          {pacoteUnidadesSugeridas.map(({ unidade, academiaNome }) => {
+                            const selecionada = unidade.id === pacoteMapeamento.tenantId;
+                            return (
+                              <div
+                                key={unidade.id}
+                                className="flex flex-col gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm md:flex-row md:items-center md:justify-between"
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="font-medium">{unidade.nome}</p>
+                                    {selecionada ? <Badge variant="secondary">Selecionada</Badge> : null}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {academiaNome}
+                                    {unidade.documento ? ` · ${unidade.documento}` : ""}
+                                    {unidade.endereco?.cidade ? ` · ${unidade.endereco.cidade}` : ""}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant={selecionada ? "secondary" : "outline"}
+                                  onClick={() => aplicarDestinoPacotePorTenantId(unidade.id)}
+                                >
+                                  {selecionada ? "Destino atual" : "Usar esta unidade"}
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Nenhuma unidade existente corresponde automaticamente aos metadados detectados.
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={abrirNovaUnidadePacote}
+                        disabled={!pacoteFilialReferencia || !pacoteMapeamento.academiaId}
+                      >
+                        Criar nova unidade
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void carregarMapeamentoData()}
+                        disabled={loadingMapeamento}
+                      >
+                        {loadingMapeamento ? "Atualizando unidades..." : "Atualizar unidades"}
+                      </Button>
+                    </div>
+
+                    <MapeamentoAcademiaUnidadeSelector
+                      academiaNome={pacoteMapeamento.academiaNome}
+                      unidadeNome={pacoteMapeamento.unidadeNome}
+                      academiaId={pacoteMapeamento.academiaId}
+                      academiaOptions={academiaOptions}
+                      unidadesOptions={getUnidadesOptions(pacoteMapeamento.academiaId)}
+                      loadingAcademias={loadingMapeamento}
+                      onAcademiaNomeChange={handlePacoteAcademiaNomeChange}
+                      onUnidadeNomeChange={handlePacoteUnidadeNomeChange}
+                      onAcademiaSelect={handlePacoteSelecionarAcademia}
+                      onUnidadeSelect={handlePacoteSelecionarUnidade}
+                    />
+
+                    {pacoteMapeamento.academiaId && pacoteMapeamento.tenantId ? (
+                      <div className="rounded-md border border-border bg-background px-3 py-2 text-sm">
+                        <p className="font-medium">Destino selecionado</p>
+                        <p className="text-muted-foreground">
+                          {pacoteMapeamento.academiaNome || "Academia não informada"} · {pacoteMapeamento.unidadeNome || "Unidade não informada"}
+                        </p>
+                        {pacotePrecisaVincularTenant ? (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            O pacote atual ainda será vinculado a essa unidade antes da criação do job.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                        <AlertCircle className="mt-0.5 size-4" />
+                        <div>
+                          <p className="font-semibold">Destino ainda não selecionado</p>
+                          <p>Escolha uma unidade existente ou crie uma nova unidade antes de criar o job.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Arquivos reconhecidos</p>
+                    <p className="text-xs text-muted-foreground">
+                      A malha de colaboradores abaixo evidencia o que o backend reconheceu no pacote, para deixar explícitos blocos completos, parciais e não reconhecidos.
+                    </p>
+                  </div>
+                  {pacoteArquivosDisponiveis.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum arquivo reconhecido neste pacote.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="space-y-3 rounded-lg border border-border bg-background p-4">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold">Malha de colaboradores</p>
+                          <p className="text-xs text-muted-foreground">
+                            Se um arquivo existir no ZIP, mas não estiver nesta malha, ele não foi reconhecido pelo backend durante a análise do pacote.
+                          </p>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {pacoteColaboradoresBlocos.map((bloco) => {
+                            const badgeLabel =
+                              bloco.status === "completo"
+                                ? "Completo"
+                                : bloco.status === "parcial"
+                                  ? "Parcial"
+                                  : bloco.status === "naoEnviado"
+                                    ? "Não enviado"
+                                    : "Não reconhecido";
+                            const badgeClassName =
+                              bloco.status === "completo"
+                                ? "bg-emerald-500/15 text-emerald-200 border-emerald-400/40"
+                                : bloco.status === "parcial"
+                                  ? "bg-amber-500/15 text-amber-200 border-amber-400/40"
+                                  : bloco.status === "naoEnviado"
+                                    ? "bg-slate-500/15 text-slate-200 border-slate-400/40"
+                                    : "bg-destructive/10 text-destructive border-destructive/40";
+                            return (
+                              <div key={bloco.key} className="rounded-md border border-border bg-muted/20 p-3">
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                  <div>
+                                    <p className="font-medium">{bloco.label}</p>
+                                    <p className="text-xs text-muted-foreground">{bloco.descricao}</p>
+                                  </div>
+                                  <Badge variant="outline" className={badgeClassName}>
+                                    {badgeLabel}
+                                  </Badge>
+                                </div>
+                                <div className="mt-3 space-y-2">
+                                  {bloco.arquivos.map((arquivo) => (
+                                    <div
+                                      key={arquivo.chave}
+                                      className="flex items-start justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
+                                    >
+                                      <div className="space-y-1">
+                                        <p className="text-sm font-medium">{arquivo.arquivoEsperado}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {arquivo.descricao ?? "Arquivo auxiliar de colaboradores."}
+                                        </p>
+                                      </div>
+                                      <Badge variant={arquivo.disponivel ? "secondary" : "outline"}>
+                                        {arquivo.disponivel
+                                          ? "Disponível"
+                                          : arquivo.catalogadoPeloBackend
+                                            ? "Não enviado"
+                                            : "Não reconhecido"}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                                {bloco.status !== "completo" ? (
+                                  <p className="mt-3 text-xs text-muted-foreground">{bloco.impactoAusencia}</p>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          Selecionados: {arquivosSelecionadosDaAnalise.length} de {pacoteArquivosDisponiveis.filter((arquivo) => arquivo.disponivel).length} disponíveis
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setPacoteArquivosSelecionados(
+                                pacoteArquivosDisponiveis.filter((arquivo) => arquivo.disponivel).map((arquivo) => arquivo.chave)
+                              )
+                            }
+                          >
+                            Selecionar disponíveis
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setPacoteArquivosSelecionados([])}
+                          >
+                            Desmarcar todos
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        {pacoteArquivosDisponiveis.map((arquivo) => {
+                          const selecionado = pacoteArquivosSelecionadosSet.has(arquivo.chave);
+                          const badgeHistorico = resolveArquivoHistoricoBadge(arquivo.historico);
+                          const podeAbrirRejeicoes = Boolean(arquivo.blocoFiltro || arquivo.entidadeFiltro)
+                            && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial");
+                          const podeRetrySomenteErros = arquivo.historico.retrySomenteErrosSuportado
+                            && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial")
+                            && (arquivo.historico.status as string) !== "processando";
+                          const labelRetrySomenteErros = arquivo.historico.retrySomenteErrosSuportado
+                            ? "Tentar somente erros"
+                            : "Tentar somente erros (aguardando backend)";
+                          return (
+                            <label
+                              key={arquivo.chave}
+                              className={cn(
+                                "grid grid-cols-[1fr_auto] gap-2 rounded-md border border-border px-3 py-2 text-sm",
+                                arquivo.disponivel ? "bg-background" : "bg-muted/40"
+                              )}
+                            >
+                              <div className="space-y-1">
+                                <p className="font-medium">{arquivo.rotulo || arquivo.chave}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {arquivo.arquivoEsperado} | enviado: {arquivo.nomeArquivoEnviado ?? "—"} | {formatBytes(arquivo.tamanhoBytes)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">Chave: {arquivo.chave}</p>
+                                <div className="rounded-md border border-border bg-secondary/20 px-2.5 py-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="outline" className={cn("text-[11px]", badgeHistorico.className)}>
+                                      {badgeHistorico.label}
+                                    </Badge>
+                                    <span className="text-[11px] text-muted-foreground">
+                                      {arquivo.historico.aliasResolvido || arquivo.historico.jobIdExibicao || "Sem job anterior"}
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 grid gap-1 text-[11px] text-muted-foreground md:grid-cols-2">
+                                    <p>
+                                      <span className="font-medium text-foreground">Job:</span> {arquivo.historico.jobIdExibicao ?? "—"}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium text-foreground">Processado em:</span>{" "}
+                                      {arquivo.historico.processadoEmExibicao ? formatDateTime(arquivo.historico.processadoEmExibicao) : "—"}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium text-foreground">Processadas:</span>{" "}
+                                      {formatResumoCount(arquivo.historico.resumo?.processadas ?? null)}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium text-foreground">Criadas:</span>{" "}
+                                      {formatResumoCount(arquivo.historico.resumo?.criadas ?? null)}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium text-foreground">Atualizadas:</span>{" "}
+                                      {formatResumoCount(arquivo.historico.resumo?.atualizadas ?? null)}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium text-foreground">Rejeitadas:</span>{" "}
+                                      {formatResumoCount(arquivo.historico.resumo?.rejeitadas ?? null)}
+                                    </p>
+                                  </div>
+                                  {arquivo.historico.mensagemParcial ? (
+                                    <p className="mt-2 text-[11px] text-muted-foreground">{arquivo.historico.mensagemParcial}</p>
+                                  ) : null}
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {podeAbrirRejeicoes ? (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7"
+                                        onClick={(event) => {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          abrirRejeicoesDoHistoricoArquivo(arquivo);
+                                        }}
+                                      >
+                                        Ver rejeições
+                                      </Button>
+                                    ) : null}
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7"
+                                      disabled={!podeRetrySomenteErros || pacoteCriandoJob}
+                                      onClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        void tentarSomenteErrosDoArquivo(arquivo);
+                                      }}
+                                    >
+                                      {labelRetrySomenteErros}
+                                    </Button>
+                                  </div>
+                                </div>
+                                {selecionado && (arquivo.chave === "clientes" || arquivo.chave === "funcionarios") ? (
+                                  <div className="rounded-md border border-border bg-secondary/20 px-2.5 py-2 text-xs text-muted-foreground">
+                                    <p className="font-medium text-foreground">
+                                      {eligibleAdminsPreview.loading
+                                        ? "Consultando propagação automática de acessos..."
+                                        : pacoteResumoAcessoAutomatico ?? "Nenhum usuário administrativo está elegível para propagação automática nesta academia."}
+                                    </p>
+                                    {tenantFocoAcademiaId ? (
+                                      <Link
+                                        href={`/admin/seguranca/usuarios?academiaId=${tenantFocoAcademiaId}&eligible=1`}
+                                        className="mt-2 inline-flex text-xs font-medium text-gym-accent hover:underline"
+                                      >
+                                        Abrir segurança
+                                      </Link>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                                {arquivo.descricao ? (
+                                  <p className="text-xs text-muted-foreground">{arquivo.descricao}</p>
+                                ) : null}
+                                {!arquivo.disponivel && arquivo.impactoAusencia ? (
+                                  <p className="text-xs text-muted-foreground">{arquivo.impactoAusencia}</p>
+                                ) : null}
+                              </div>
+                              <div className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  disabled={!arquivo.disponivel}
+                                  checked={selecionado}
+                                  onChange={(e) => togglePacoteArquivo(arquivo.chave, e.target.checked)}
+                                />
+                                {!arquivo.disponivel && (
+                                  <span className="ml-2 text-xs text-destructive">
+                                    {arquivo.catalogadoPeloBackend ? "Não enviado" : "Não reconhecido"}
+                                  </span>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={criarJobPacote}
+                      disabled={pacoteCriandoJob || arquivosSelecionadosDaAnalise.length === 0}
+                    >
+                      {pacoteCriandoJob ? "Criando job..." : "Criar Job"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={atualizarAnalisePacote}
+                      disabled={pacoteAnalisando}
+                      className="ml-2"
+                    >
+                      {pacotePrecisaReanaliseManual ? "Reanalisar com EVO Unidade" : "Atualizar análise"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+      <Dialog
+        open={novaUnidadePacoteAberta}
+        onOpenChange={(open) => {
+          setNovaUnidadePacoteAberta(open);
+          if (!open) {
+            setNovaUnidadePacoteErro(null);
+          }
+        }}
+      >
+        <DialogContent className="border-border bg-card sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Criar nova unidade a partir do ZIP</DialogTitle>
+            <DialogDescription>
+              Os dados detectados no pacote foram pre-carregados e podem ser ajustados antes da criacao da unidade.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">
+              <p className="font-medium">{pacoteMapeamento.academiaNome || "Academia nao informada"}</p>
+              <p className="text-xs text-muted-foreground">A nova unidade sera criada dentro desta academia.</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="nova-unidade-pacote-nome-original">Nome detectado no pacote</Label>
+                <Input
+                  id="nova-unidade-pacote-nome-original"
+                  value={novaUnidadePacoteForm.nomeOriginal}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, nomeOriginal: event.target.value }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Exemplo deste pacote: academia + unidade/filial, como `Academia Sergio Amim - S6`.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-nome">Nome da unidade</Label>
+                <Input
+                  id="nova-unidade-pacote-nome"
+                  value={novaUnidadePacoteForm.nome}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, nome: event.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-subdomain">Subdominio</Label>
+                <Input
+                  id="nova-unidade-pacote-subdomain"
+                  placeholder="academia-sergio-amim-s6"
+                  value={novaUnidadePacoteForm.subdomain}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({
+                      ...current,
+                      subdomain: normalizeSubdomain(event.target.value),
+                    }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Obrigatorio. O valor e normalizado para letras minusculas, numeros e hifens.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-documento">CNPJ</Label>
+                <Input
+                  id="nova-unidade-pacote-documento"
+                  inputMode="numeric"
+                  placeholder="00.000.000/0000-00"
+                  value={novaUnidadePacoteForm.documento}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({
+                      ...current,
+                      documento: formatCnpj(event.target.value),
+                    }))
+                  }
+                />
+                {novaUnidadePacoteForm.documento && !isValidCnpj(novaUnidadePacoteForm.documento) ? (
+                  <p className="text-xs text-destructive">Informe um CNPJ valido no padrao 00.000.000/0000-00.</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">O CNPJ e padronizado e validado antes de salvar.</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-email">Email</Label>
+                <Input
+                  id="nova-unidade-pacote-email"
+                  type="email"
+                  value={novaUnidadePacoteForm.email}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, email: event.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-telefone">Telefone</Label>
+                <Input
+                  id="nova-unidade-pacote-telefone"
+                  value={novaUnidadePacoteForm.telefone}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, telefone: event.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-bairro">Bairro</Label>
+                <Input
+                  id="nova-unidade-pacote-bairro"
+                  value={novaUnidadePacoteForm.bairro}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, bairro: event.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-unidade-pacote-cidade">Cidade</Label>
+                <Input
+                  id="nova-unidade-pacote-cidade"
+                  value={novaUnidadePacoteForm.cidade}
+                  onChange={(event) =>
+                    setNovaUnidadePacoteForm((current) => ({ ...current, cidade: event.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            {novaUnidadePacoteErro ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {novaUnidadePacoteErro}
+              </div>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setNovaUnidadePacoteAberta(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={salvarNovaUnidadePacote} disabled={novaUnidadePacoteSalvando}>
+              {novaUnidadePacoteSalvando ? "Criando unidade..." : "Criar e usar unidade"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
