@@ -1,385 +1,45 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { meApi, type AuthUser } from "@/lib/api/auth";
-import {
-  getAcademiaAtualApi,
-  getSessionBootstrapApi,
-  getTenantContextApi,
-  isSessionBootstrapEndpointEnabled,
-  isSessionBootstrapFallbackEnabled,
-  isSessionBootstrapMissingRouteError,
-  setTenantContextApi,
-} from "@/lib/api/contexto-unidades";
+import { hasElevatedAccess } from "@/lib/access-control";
+import type { Academia } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { setTenantContextApi } from "@/lib/api/contexto-unidades";
 import {
   getActiveTenantIdFromSession,
   getAvailableTenantsFromSession,
   AUTH_SESSION_CLEARED_EVENT,
   AUTH_SESSION_UPDATED_EVENT,
   getAccessToken,
-  type AuthSessionScope,
 } from "@/lib/api/session";
-import { hasClientDeleteCapability, hasElevatedAccess, normalizeRoles } from "@/lib/access-control";
-import { isClientOperationalEligibilityEnabled } from "@/lib/feature-flags";
-import { Academia, Tenant, TenantBranding, TenantOperationalEligibility } from "@/lib/types";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import {
   getOptimisticTenantContextSnapshot,
   getTenantContextSnapshotFromStore,
-  resolveTenantContextSnapshot,
   resetTenantContextMemory,
-  syncTenantContextInStore,
-  tenantContextNeedsRepair,
   TENANT_CONTEXT_UPDATED_EVENT,
-  type TenantContextSnapshot,
 } from "@/lib/tenant/tenant-context";
 
-export const DEFAULT_ACTIVE_TENANT_LABEL = "Unidade ativa";
-export const DEFAULT_ACADEMIA_LABEL = "Academia";
-export const DEFAULT_BASE_TENANT_LABEL = "Unidade base";
+import {
+  buildTenantContextState,
+  EMPTY_TENANT_CONTEXT_SNAPSHOT,
+  finalizeSessionBrandingSnapshot,
+  hasSameTenantSnapshot,
+  resolveBrandingSnapshot,
+  type TenantContextState,
+  type TenantContextValue,
+} from "./tenant-state-builder";
+import { loadSessionBootstrapState } from "./session-bootstrap";
 
-type BootstrapStatus = "idle" | "loading" | "ready" | "stale" | "error";
-
-type TenantContextState = TenantContextSnapshot & {
-  loading: boolean;
-  status: BootstrapStatus;
-  error: string | null;
-  authUser: AuthUser | null;
-  roles: string[];
-  canAccessElevatedModules: boolean;
-  canDeleteClient: boolean;
-  activeTenantId: string;
-  activeTenant: Tenant | null;
-  baseTenantId: string;
-  baseTenant: Tenant | null;
-  baseTenantName: string;
-  availableTenants: Tenant[];
-  eligibleTenants: Tenant[];
-  blockedTenants: TenantOperationalEligibility[];
-  operationalAccessBlocked: boolean;
-  operationalAccessMessage: string | null;
-  canSwitchEligibleTenant: boolean;
-  networkId?: string;
-  networkSubdomain?: string;
-  networkSlug?: string;
-  networkName?: string;
-  userId?: string;
-  displayName?: string;
-  userKind?: string;
-  availableScopes: AuthSessionScope[];
-  broadAccess: boolean;
-  academia: Academia | null;
-  brandingSnapshot: TenantBranding | undefined;
-  lastBootstrapAt?: number;
-  lastTenantSyncAt?: number;
-};
-
-type TenantContextValue = TenantContextState & {
-  refresh: () => Promise<void>;
-  setTenant: (tenantId: string) => Promise<void>;
-  switchActiveTenant: (tenantId: string) => Promise<void>;
-  syncAcademiaBranding: (academia: Academia) => void;
-};
-
-type SessionBootstrapLoadResult = {
-  snapshot: TenantContextSnapshot;
-  authUser?: AuthUser;
-  roles?: string[];
-  canAccessElevatedModules?: boolean;
-  canDeleteClient?: boolean;
-  academia?: Academia;
-  brandingSnapshotOverride?: TenantBranding;
-  error: string | null;
-};
-
-const EMPTY_TENANT_CONTEXT_SNAPSHOT: TenantContextSnapshot = {
-  tenant: null,
-  tenantId: "",
-  tenantName: DEFAULT_ACTIVE_TENANT_LABEL,
-  tenants: [],
-  tenantResolved: false,
-};
-
-function resolveBrandingSnapshot(
-  tenant?: Tenant | null,
-  academia?: Academia | null
-): TenantBranding | undefined {
-  return academia?.branding ?? tenant?.branding;
-}
-
-function resolveBaseTenant(
-  snapshot: TenantContextSnapshot,
-  authUser?: AuthUser | null,
-  fallbackBaseTenant?: Tenant | null
-): Tenant | null {
-  const candidateId =
-    authUser?.baseTenantId?.trim()
-    || authUser?.availableTenants.find((item) => item.defaultTenant)?.tenantId?.trim()
-    || fallbackBaseTenant?.id?.trim()
-    || "";
-
-  if (!candidateId) {
-    return fallbackBaseTenant ?? null;
-  }
-
-  const operationalBaseTenant = [
-    ...(authUser?.operationalAccess?.eligibleTenants ?? []),
-    ...(authUser?.operationalAccess?.blockedTenants ?? []),
-  ].find((tenant) => tenant.tenantId === candidateId);
-
-  return (
-    snapshot.tenants.find((tenant) => tenant.id === candidateId)
-    ?? (snapshot.tenant?.id === candidateId ? snapshot.tenant : null)
-    ?? (
-      operationalBaseTenant
-        ? {
-            id: operationalBaseTenant.tenantId,
-            nome: operationalBaseTenant.tenantName ?? DEFAULT_BASE_TENANT_LABEL,
-            ativo: operationalBaseTenant.eligible,
-          }
-        : null
-    )
-    ?? fallbackBaseTenant
-    ?? null
-  );
-}
-
-function resolveEligibleTenants(
-  snapshot: TenantContextSnapshot,
-  authUser?: AuthUser | null,
-): Tenant[] {
-  if (!isClientOperationalEligibilityEnabled()) {
-    return snapshot.tenants;
-  }
-
-  if (authUser?.operationalAccess) {
-    const eligibleIds = authUser.operationalAccess.eligibleTenants
-      .map((item) => item.tenantId.trim())
-      .filter(Boolean);
-    if (eligibleIds.length === 0) {
-      return [];
-    }
-
-    const byId = new Map(snapshot.tenants.map((tenant) => [tenant.id, tenant] as const));
-    return eligibleIds
-      .map((tenantId) => byId.get(tenantId))
-      .filter((tenant): tenant is Tenant => tenant != null);
-  }
-  return snapshot.tenants;
-}
-
-function resolveBlockedTenants(authUser?: AuthUser | null): TenantOperationalEligibility[] {
-  if (!isClientOperationalEligibilityEnabled()) {
-    return [];
-  }
-  return authUser?.operationalAccess?.blockedTenants ?? [];
-}
-
-function buildTenantContextState(
-  snapshot: TenantContextSnapshot = EMPTY_TENANT_CONTEXT_SNAPSHOT,
-  input: Partial<Omit<TenantContextState, keyof TenantContextSnapshot>> = {}
-): TenantContextState {
-  const roles = input.roles ?? [];
-  const currentAcademia = input.academia ?? null;
-  const authUser = input.authUser ?? null;
-  const baseTenant =
-    input.baseTenant
-    ?? resolveBaseTenant(snapshot, authUser, input.activeTenant ?? snapshot.tenant ?? null);
-  const eligibleTenants = input.eligibleTenants ?? resolveEligibleTenants(snapshot, authUser);
-  const blockedTenants = input.blockedTenants ?? resolveBlockedTenants(authUser);
-  const operationalAccessBlocked =
-    input.operationalAccessBlocked
-    ?? (isClientOperationalEligibilityEnabled()
-      ? (
-          authUser?.operationalAccess?.blocked
-          ?? (eligibleTenants.length === 0 && blockedTenants.length > 0)
-        )
-      : false);
-  const operationalAccessMessage =
-    input.operationalAccessMessage
-    ?? (
-      isClientOperationalEligibilityEnabled()
-        ? authUser?.operationalAccess?.message ?? null
-        : null
-    );
-
-  return {
-    ...snapshot,
-    loading: input.loading ?? false,
-    status: input.status ?? "idle",
-    error: input.error ?? null,
-    authUser,
-    roles,
-    canAccessElevatedModules:
-      input.canAccessElevatedModules ?? hasElevatedAccess(roles),
-    canDeleteClient: input.canDeleteClient ?? hasClientDeleteCapability(roles),
-    activeTenantId: input.activeTenantId ?? snapshot.tenantId,
-    activeTenant: input.activeTenant ?? snapshot.tenant ?? null,
-    baseTenantId: input.baseTenantId ?? baseTenant?.id ?? "",
-    baseTenant,
-    baseTenantName: input.baseTenantName ?? baseTenant?.nome ?? DEFAULT_BASE_TENANT_LABEL,
-    availableTenants: input.availableTenants ?? eligibleTenants,
-    eligibleTenants,
-    blockedTenants,
-    operationalAccessBlocked,
-    operationalAccessMessage,
-    canSwitchEligibleTenant: eligibleTenants.length > 1,
-    networkId: input.networkId ?? authUser?.networkId,
-    networkSubdomain: input.networkSubdomain ?? authUser?.networkSubdomain ?? authUser?.networkSlug,
-    networkSlug: input.networkSlug ?? authUser?.networkSlug,
-    networkName: input.networkName ?? authUser?.networkName,
-    userId: input.userId ?? authUser?.userId ?? authUser?.id,
-    displayName: input.displayName ?? authUser?.displayName ?? authUser?.nome,
-    userKind: input.userKind ?? authUser?.userKind,
-    availableScopes: input.availableScopes ?? authUser?.availableScopes ?? [],
-    broadAccess: input.broadAccess ?? authUser?.broadAccess ?? false,
-    academia: currentAcademia,
-    brandingSnapshot: input.brandingSnapshot ?? resolveBrandingSnapshot(snapshot.tenant, currentAcademia),
-    lastBootstrapAt: input.lastBootstrapAt,
-    lastTenantSyncAt: input.lastTenantSyncAt,
-  };
-}
-
-function hasSameTenantSnapshot(current: TenantContextState, next: TenantContextSnapshot): boolean {
-  return (
-    current.tenantId === next.tenantId
-    && current.tenantName === next.tenantName
-    && current.tenant?.id === next.tenant?.id
-    && current.tenants.length === next.tenants.length
-    && current.tenants.every((tenant, index) => tenant.id === next.tenants[index]?.id)
-  );
-}
-
-async function loadTenantContextSnapshot(): Promise<TenantContextSnapshot> {
-  const context = await getTenantContextApi();
-  const snapshot = resolveTenantContextSnapshot({
-    currentTenantId: context.currentTenantId,
-    tenantAtual: context.tenantAtual,
-    tenants: context.unidadesDisponiveis,
-  });
-  if (
-    tenantContextNeedsRepair({
-      currentTenantId: context.currentTenantId,
-      tenantAtual: context.tenantAtual,
-      tenants: context.unidadesDisponiveis,
-    })
-    && snapshot.tenantId
-  ) {
-    const repaired = await setTenantContextApi(snapshot.tenantId);
-    return syncTenantContextInStore({
-      currentTenantId: repaired.currentTenantId,
-      tenantAtual: repaired.tenantAtual,
-      tenants: repaired.unidadesDisponiveis,
-    });
-  }
-
-  return syncTenantContextInStore({
-    currentTenantId: context.currentTenantId,
-    tenantAtual: context.tenantAtual,
-    tenants: context.unidadesDisponiveis,
-  });
-}
-
-async function loadSessionBootstrapFromLegacy(): Promise<SessionBootstrapLoadResult> {
-  const context = await loadTenantContextSnapshot();
-  const derived = await loadAuthAndAcademiaState();
-  return {
-    snapshot: context,
-    authUser: derived.authUser,
-    roles: derived.roles,
-    canAccessElevatedModules: derived.canAccessElevatedModules,
-    canDeleteClient: derived.canDeleteClient,
-    academia: derived.academia,
-    brandingSnapshotOverride: undefined,
-    error: derived.error,
-  };
-}
-
-async function loadAuthAndAcademiaState(): Promise<{
-  authUser?: AuthUser;
-  roles?: string[];
-  canAccessElevatedModules?: boolean;
-  canDeleteClient?: boolean;
-  academia?: Academia;
-  error: string | null;
-}> {
-  const [meResult, academiaResult] = await Promise.allSettled([
-    meApi(),
-    getAcademiaAtualApi(),
-  ]);
-
-  let authUser: AuthUser | undefined;
-  let roles: string[] | undefined;
-  let canAccessElevatedModules: boolean | undefined;
-  let canDeleteClient: boolean | undefined;
-  let academia: Academia | undefined;
-  let error: string | null = null;
-
-  if (meResult.status === "fulfilled") {
-    roles = normalizeRoles(meResult.value.roles);
-    canAccessElevatedModules = hasElevatedAccess(roles);
-    canDeleteClient = hasClientDeleteCapability(roles);
-    authUser = meResult.value;
-  } else {
-    error = normalizeErrorMessage(meResult.reason);
-  }
-
-  if (academiaResult.status === "fulfilled") {
-    academia = academiaResult.value;
-  } else if (!error) {
-    error = normalizeErrorMessage(academiaResult.reason);
-  }
-
-  return {
-    authUser,
-    roles,
-    canAccessElevatedModules,
-    canDeleteClient,
-    academia,
-    error,
-  };
-}
-
-async function loadSessionBootstrapState(): Promise<SessionBootstrapLoadResult> {
-  if (!isSessionBootstrapEndpointEnabled()) {
-    return loadSessionBootstrapFromLegacy();
-  }
-
-  try {
-    const bootstrap = await getSessionBootstrapApi();
-    const roles = normalizeRoles(bootstrap.user.roles);
-    return {
-      snapshot: syncTenantContextInStore({
-        currentTenantId: bootstrap.tenantContext.currentTenantId,
-        tenantAtual: bootstrap.tenantContext.tenantAtual,
-        tenants: bootstrap.tenantContext.unidadesDisponiveis,
-      }),
-      authUser: bootstrap.user,
-      roles,
-      canAccessElevatedModules:
-        bootstrap.capabilities?.canAccessElevatedModules ?? hasElevatedAccess(roles),
-      canDeleteClient:
-        bootstrap.capabilities?.canDeleteClient ?? hasClientDeleteCapability(roles),
-      academia: bootstrap.academia,
-      brandingSnapshotOverride: bootstrap.branding,
-      error: null,
-    };
-  } catch (error) {
-    if (isSessionBootstrapFallbackEnabled() && isSessionBootstrapMissingRouteError(error)) {
-      return loadSessionBootstrapFromLegacy();
-    }
-
-    throw error;
-  }
-}
-
-function finalizeSessionBrandingSnapshot(
-  tenant: Tenant | null,
-  academia: Academia | null | undefined,
-  override?: TenantBranding,
-): TenantBranding | undefined {
-  return override ?? resolveBrandingSnapshot(tenant, academia);
-}
+// Re-export public API so consumers don't need to change imports
+export {
+  DEFAULT_ACTIVE_TENANT_LABEL,
+  DEFAULT_ACADEMIA_LABEL,
+  DEFAULT_BASE_TENANT_LABEL,
+  type TenantContextState,
+  type TenantContextValue,
+  type BootstrapStatus,
+} from "./tenant-state-builder";
+export type { TenantContextSnapshot } from "@/lib/tenant/tenant-context";
 
 const TenantContextReact = createContext<TenantContextValue | null>(null);
 
