@@ -64,15 +64,14 @@ export default function AcessoUnidadePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const createUserForm = useForm<CreateUserFormValues>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(
+    resolver: zodResolver<CreateUserFormValues>(
       academiaUserCreateBaseFormSchema.pick({
         name: true,
         email: true,
         cpf: true,
         initialPerfilIds: true,
       })
-    ) as any,
+    ),
     defaultValues: {
       name: "",
       email: "",

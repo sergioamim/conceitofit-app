@@ -167,8 +167,7 @@ export default function AdminConfiguracoesPage() {
   const [statusFilter, setStatusFilter] = useState<"TODAS" | IntegrationHealthStatus>("TODAS");
 
   const form = useForm<GlobalConfigFormValues>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(globalConfigFormSchema) as any,
+    resolver: zodResolver<GlobalConfigFormValues>(globalConfigFormSchema),
     defaultValues: globalConfigToForm(EMPTY_GLOBAL_CONFIG),
   });
 
