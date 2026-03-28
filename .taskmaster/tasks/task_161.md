@@ -2,7 +2,7 @@
 
 **Title:** Criar landing page B2B (RSC)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 150 ✓
 

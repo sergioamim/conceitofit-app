@@ -2,7 +2,7 @@
 
 **Title:** Implementar StorefrontTheme e CRUD no painel
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 154 ✓
 

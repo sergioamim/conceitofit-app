@@ -2,9 +2,9 @@
 
 **Title:** Implementar CTAs e captura de leads B2B
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 161
+**Dependencies:** 161 ✓
 
 **Priority:** medium
 

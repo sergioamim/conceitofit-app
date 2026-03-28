@@ -2,9 +2,9 @@
 
 **Title:** Construir Home da storefront (RSC)
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 155
+**Dependencies:** 155 ✓
 
 **Priority:** high
 

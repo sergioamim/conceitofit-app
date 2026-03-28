@@ -2,9 +2,9 @@
 
 **Title:** Construir página de unidade (RSC)
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 156
+**Dependencies:** 156 ✓
 
 **Priority:** medium
 

@@ -8635,7 +8635,7 @@
         "id": "148",
         "title": "Implementar BackofficeContextProvider",
         "description": "Criar contexto próprio do backoffice com modos plataforma/inspeção.",
-        "status": "in-progress",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "144"
@@ -8644,7 +8644,7 @@
         "subtasks": [],
         "details": "Contexto com estado mode: 'platform' | 'tenant', dados do tenant inspecionado, sinalização de impersonation. Expor hook useBackofficeContext. Manter isolado do TenantContextProvider.",
         "testStrategy": "Testar em /admin alternando modos e validar renderização condicional.",
-        "updatedAt": "2026-03-28T05:00:42.563Z"
+        "updatedAt": "2026-03-28T05:17:19.187Z"
       },
       {
         "id": "149",
@@ -8739,7 +8739,7 @@
         "id": "155",
         "title": "Implementar StorefrontTheme e CRUD no painel",
         "description": "Criar modelo de tema white-label e UI para edição no painel da academia.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "154"
@@ -8747,13 +8747,14 @@
         "complexity": 6,
         "subtasks": [],
         "details": "Tipo StorefrontTheme em types.ts. Formulário react-hook-form + zod para campos (logo, cores, hero, favicon). Inject CSS variables no layout da storefront. Consome API backend #203/#204.",
-        "testStrategy": "Salvar tema, recarregar storefront e verificar cores/logos."
+        "testStrategy": "Salvar tema, recarregar storefront e verificar cores/logos.",
+        "updatedAt": "2026-03-28T05:19:26.391Z"
       },
       {
         "id": "156",
         "title": "Construir Home da storefront (RSC)",
         "description": "Página inicial pública da academia com conteúdo e branding personalizados.",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "155"
@@ -8761,13 +8762,14 @@
         "complexity": 8,
         "subtasks": [],
         "details": "Rota RSC com header, hero, bio, galeria, modalidades, footer e grid de unidades. Se 1 unidade, mostra detalhes+planos. Se múltiplas, renderiza cards. Consome API backend #206.",
-        "testStrategy": "Renderização SSR e variação entre uma e múltiplas unidades."
+        "testStrategy": "Renderização SSR e variação entre uma e múltiplas unidades.",
+        "updatedAt": "2026-03-28T05:15:57.734Z"
       },
       {
         "id": "157",
         "title": "Construir página de unidade (RSC)",
         "description": "Página da unidade com detalhes, mapa e planos.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "156"
@@ -8825,7 +8827,7 @@
         "id": "161",
         "title": "Criar landing page B2B (RSC)",
         "description": "Landing de vendas do conceito.fit com identidade própria.",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "150"
@@ -8833,13 +8835,14 @@
         "complexity": 7,
         "subtasks": [],
         "details": "Página RSC em src/app/(public)/b2b com hero, dores, benefícios, screenshots, depoimentos, planos/FAQ, footer. Zero JS desnecessário.",
-        "testStrategy": "Validar renderização SSR e responsividade mobile-first."
+        "testStrategy": "Validar renderização SSR e responsividade mobile-first.",
+        "updatedAt": "2026-03-28T05:21:32.536Z"
       },
       {
         "id": "162",
         "title": "Implementar CTAs e captura de leads B2B",
         "description": "Formulário de demonstração e integração com API de leads.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "161"
@@ -8866,9 +8869,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T05:01:56.751Z",
+      "lastModified": "2026-03-28T05:21:32.536Z",
       "taskCount": 163,
-      "completedCount": 152,
+      "completedCount": 158,
       "tags": [
         "master"
       ]
