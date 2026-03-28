@@ -9228,11 +9228,12 @@
         "description": "3 console.error restantes em useEvoImportPage.ts devem usar o logger estruturado criado na task 171.",
         "details": "Substituir os 3 console.error em src/app/(backoffice)/admin/importacao-evo-p0/hooks/useEvoImportPage.ts por logger.error() de @/lib/shared/logger. Passar contexto do módulo ('evo-import'). Verificar se há outros console.* remanescentes no codebase.",
         "testStrategy": "grep 'console.error' src/ retorna zero (exceto logger.ts). grep 'console.warn' src/ retorna zero.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "low",
         "complexity": 1,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T23:52:31.348Z"
       },
       {
         "id": "191",
@@ -9258,29 +9259,34 @@
         "complexity": 5,
         "subtasks": [
           {
-            "id": "192-1",
+            "id": null,
             "title": "Migrar administrativo/salas para RSC",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
-            "id": "192-2",
+            "id": null,
             "title": "Migrar administrativo/atividades para RSC",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
-            "id": "192-3",
+            "id": null,
             "title": "Migrar administrativo/formas-pagamento para RSC",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
-            "id": "192-4",
+            "id": null,
             "title": "Migrar administrativo/tipos-conta para RSC",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
-            "id": "192-5",
+            "id": null,
             "title": "Migrar administrativo/bandeiras para RSC",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           }
         ]
       },
@@ -9290,7 +9296,7 @@
         "description": "knip está instalado mas nunca foi executado. Rodar e limpar exports não utilizados e arquivos órfãos.",
         "details": "Rodar npm run dead-code. Analisar relatório. Remover exports não importados por nenhum arquivo. Remover arquivos órfãos (se houver). Documentar exceções legítimas no knip.json (ignoreExportsUsedInFile, etc). Fazer commit com resultado.",
         "testStrategy": "npm run dead-code retorna zero ou apenas exceções documentadas. Build OK. Testes passam.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "low",
         "complexity": 3,
@@ -9302,7 +9308,7 @@
         "description": "104 arquivos de teste existem mas cobertura de componentes React ainda é baixa. Ampliar para componentes críticos.",
         "details": "Criar testes para: 1) ClienteHeader — renderiza dados, ações, status suspenso. 2) ClienteTabs — navegação entre tabs, indicadores. 3) Sidebar — itens de navegação, collapse, mobile. 4) AppTopbar — branding, tenant selector. 5) CommandPalette — busca, navegação. 6) PaginatedTable — paginação, empty state. 7) CrudModal — open/close, form submit. Cada componente 3-5 cenários. Meta: cobertura > 50%.",
         "testStrategy": "npx vitest run passa. Coverage report mostra > 50% de componentes cobertos.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "low",
         "complexity": 7,
@@ -9311,9 +9317,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T21:22:52.594Z",
-      "taskCount": 187,
-      "completedCount": 187,
+      "lastModified": "2026-03-28T23:52:31.348Z",
+      "taskCount": 194,
+      "completedCount": 190,
       "tags": [
         "master"
       ]
