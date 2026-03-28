@@ -9228,12 +9228,12 @@
         "description": "3 console.error restantes em useEvoImportPage.ts devem usar o logger estruturado criado na task 171.",
         "details": "Substituir os 3 console.error em src/app/(backoffice)/admin/importacao-evo-p0/hooks/useEvoImportPage.ts por logger.error() de @/lib/shared/logger. Passar contexto do módulo ('evo-import'). Verificar se há outros console.* remanescentes no codebase.",
         "testStrategy": "grep 'console.error' src/ retorna zero (exceto logger.ts). grep 'console.warn' src/ retorna zero.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 1,
         "subtasks": [],
-        "updatedAt": "2026-03-28T23:52:31.348Z"
+        "updatedAt": "2026-03-28T23:55:10.164Z"
       },
       {
         "id": "191",
@@ -9259,31 +9259,31 @@
         "complexity": 5,
         "subtasks": [
           {
-            "id": null,
+            "id": 0,
             "title": "Migrar administrativo/salas para RSC",
             "status": "done",
             "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Migrar administrativo/atividades para RSC",
             "status": "done",
             "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Migrar administrativo/formas-pagamento para RSC",
             "status": "done",
             "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Migrar administrativo/tipos-conta para RSC",
             "status": "done",
             "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Migrar administrativo/bandeiras para RSC",
             "status": "done",
             "parentId": "undefined"
@@ -9317,9 +9317,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T23:52:31.348Z",
+      "lastModified": "2026-03-28T23:55:10.165Z",
       "taskCount": 194,
-      "completedCount": 190,
+      "completedCount": 191,
       "tags": [
         "master"
       ]
