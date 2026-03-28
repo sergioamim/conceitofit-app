@@ -49,8 +49,9 @@ export function ExperimentalForm({ tenantId }: { tenantId: string }) {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<ExperimentalFormValues>({
-    resolver: zodResolver(experimentalSchema) as ReturnType<typeof zodResolver>,
+    resolver: zodResolver(experimentalSchema) as any,
     defaultValues: {
       nome: "",
       telefone: "",
