@@ -17,7 +17,7 @@ import {
   NFSE_INDICADOR_OPERACAO_LABEL,
   NFSE_STATUS_LABEL,
   validateNfseConfiguracaoDraft,
-} from "@/lib/admin-financeiro";
+} from "@/lib/backoffice/admin-financeiro";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
 import type {
   NfseAmbiente,

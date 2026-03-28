@@ -21,7 +21,7 @@ import {
   listUsersApi,
   unlinkUserPerfilApi,
 } from "@/lib/api/rbac";
-import { validateAcademiaUserCreateDraft } from "@/lib/security-user-create";
+import { validateAcademiaUserCreateDraft } from "@/lib/backoffice/security-user-create";
 import { academiaUserCreateBaseFormSchema } from "@/lib/forms/security-user-create-schemas";
 import type { RbacPerfil, RbacUser, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";

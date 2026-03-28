@@ -27,7 +27,7 @@ import {
   toggleSortState,
   type OperacionalSortKey,
   type OperacionalSortState,
-} from "@/lib/admin-metrics";
+} from "@/lib/backoffice/admin-metrics";
 import type { Academia, MetricasOperacionaisGlobal, Tenant } from "@/lib/types";
 import Link from "next/link";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";

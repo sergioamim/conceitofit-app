@@ -20,7 +20,7 @@ import { DataTableRowActions } from "@/components/shared/data-table-row-actions"
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { SecurityActiveBadge } from "@/components/security/security-badges";
 import { SecurityEmptyState, SecuritySectionFeedback } from "@/components/security/security-feedback";
-import { validateAcademiaUserCreateDraft } from "@/lib/security-user-create";
+import { validateAcademiaUserCreateDraft } from "@/lib/backoffice/security-user-create";
 import { academiaUserCreateBaseFormSchema } from "@/lib/forms/security-user-create-schemas";
 import type { RbacPermission } from "@/lib/types";
 import {
