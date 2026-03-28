@@ -117,10 +117,10 @@ async function resolveTenant(
 }
 
 // ---------------------------------------------------------------------------
-// Middleware
+// Proxy (Next.js 16 — substitui middleware)
 // ---------------------------------------------------------------------------
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
   const subdomain = extractSubdomain(host);
 

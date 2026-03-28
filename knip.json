@@ -12,6 +12,6 @@
     "eslint-config-next"
   ],
   "next": {
-    "entry": ["next.config.ts", "src/middleware.ts"]
+    "entry": ["next.config.ts", "src/proxy.ts"]
   }
 }
