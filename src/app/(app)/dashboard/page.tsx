@@ -1,6 +1,7 @@
 import { serverFetch } from "@/lib/shared/server-fetch";
 import { DashboardContent } from "./dashboard-content";
 import { DashboardSkeleton } from "@/components/shared/dashboard-skeleton";
+import { DemoBanner } from "@/components/shared/demo-banner";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import type { DashboardData } from "@/lib/types";
@@ -36,8 +37,13 @@ async function DashboardLoader() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<DashboardSkeleton />}>
-      <DashboardLoader />
-    </Suspense>
+    <>
+      <Suspense>
+        <DemoBanner />
+      </Suspense>
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardLoader />
+      </Suspense>
+    </>
   );
 }
