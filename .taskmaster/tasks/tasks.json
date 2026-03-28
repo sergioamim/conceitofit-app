@@ -9121,11 +9121,12 @@
         "description": "use-session-context.tsx faz bootstrap, event listening, eligibility, switching e branding — tudo em 739 linhas.",
         "details": "Separar em: 1) SessionBootstrapProvider — auth token, refresh, /bootstrap call, event listeners de sessão. 2) TenantAccessProvider — tenant list, eligibility filtering, switching, operational access. 3) BrandingProvider — academia, theme, appName. Manter API pública compatível (useTenantContext retorna mesmo shape). Usar composição: SessionBootstrap > TenantAccess > Branding.",
         "testStrategy": "Login, troca de tenant, impersonação e tema continuam funcionando. Nenhum componente quebra por mudança de API. Testes e2e existentes passam.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 7,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:48:30.095Z"
       },
       {
         "id": "183",
@@ -9193,9 +9194,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:46:27.189Z",
+      "lastModified": "2026-03-28T06:48:30.095Z",
       "taskCount": 187,
-      "completedCount": 180,
+      "completedCount": 181,
       "tags": [
         "master"
       ]
