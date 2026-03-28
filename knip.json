@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": ["src/app/**/page.tsx", "src/app/**/layout.tsx", "src/app/**/route.ts"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": [
+    "src/lib/mock/**",
+    "src/**/*.test.{ts,tsx}",
+    "src/**/*.spec.{ts,tsx}"
+  ],
+  "ignoreDependencies": [
+    "@next/bundle-analyzer",
+    "eslint-config-next"
+  ],
+  "next": {
+    "entry": ["next.config.ts", "src/middleware.ts"]
+  }
+}

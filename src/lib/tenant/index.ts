@@ -22,7 +22,6 @@ export * from "./crm/runtime";
 export * from "./crm/workspace";
 
 // Treinos
-export * from "./treinos/v2-backlog";
 export * from "./treinos/v2-domain";
 export * from "./treinos/v2-runtime";
 export * from "./treinos/workspace";

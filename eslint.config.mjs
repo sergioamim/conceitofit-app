@@ -96,6 +96,12 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    files: ["src/app/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}"],
+    rules: {
+      "max-lines": ["warn", { max: 500, skipBlankLines: true, skipComments: true }],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
