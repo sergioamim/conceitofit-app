@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
@@ -72,7 +73,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
             <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
               <div>
                 {ctx.theme?.logoUrl ? (
-                  <img src={ctx.theme.logoUrl} alt="" className="mb-3 h-8 w-auto object-contain" />
+                  <Image src={ctx.theme.logoUrl} alt={ctx.tenantSlug || "Logo"} width={120} height={32} unoptimized className="mb-3 h-8 w-auto object-contain" />
                 ) : (
                   <p className="mb-3 font-display text-lg font-bold text-gym-accent">
                     {ctx.tenantSlug || "Academia"}

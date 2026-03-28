@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import React from "react";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2 } from "lucide-react";
@@ -457,8 +458,7 @@ function Step1Dados({
                   </div>
                 )}
                 {watchedFoto && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={watchedFoto} alt="Foto do cliente" className="mt-2 h-16 w-16 rounded-md object-cover" />
+                  <Image src={watchedFoto} alt="Foto do cliente" width={64} height={64} unoptimized className="mt-2 rounded-md object-cover" />
                 )}
               </div>
             </div>

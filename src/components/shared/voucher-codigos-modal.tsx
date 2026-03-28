@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -61,8 +62,7 @@ function AlunoCell({ aluno, onClick }: { aluno: Aluno; onClick: () => void }) {
     >
       <div className="relative size-7 shrink-0 overflow-hidden rounded-full bg-secondary border border-border">
         {aluno.foto ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={aluno.foto} alt={aluno.nome} className="size-full object-cover" />
+          <Image src={aluno.foto} alt={aluno.nome} fill unoptimized className="object-cover" />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-muted-foreground">
             {initials}
