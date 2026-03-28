@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActiveTenantSelector } from "@/components/layout/active-tenant-selector";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 
 type AppTopbarProps = {
   onOpenMenu?: () => void;

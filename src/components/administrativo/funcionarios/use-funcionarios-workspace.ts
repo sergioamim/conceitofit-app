@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listCargosApi, listFuncionariosApi } from "@/lib/api/administrativo";
 import { listPerfisApi } from "@/lib/api/rbac";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { Cargo, Funcionario, RbacPerfil } from "@/lib/types";
 import { FALLBACK_PERFIS } from "./shared";

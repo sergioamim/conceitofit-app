@@ -17,7 +17,7 @@ import {
   CRM_AUTOMATION_ACTION_LABEL,
   CRM_AUTOMATION_TRIGGER_LABEL,
 } from "@/lib/tenant/crm/workspace";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,

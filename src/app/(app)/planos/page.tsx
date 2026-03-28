@@ -8,7 +8,7 @@ import {
   togglePlanoAtivoService,
   togglePlanoDestaqueService,
 } from "@/lib/tenant/comercial/runtime";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

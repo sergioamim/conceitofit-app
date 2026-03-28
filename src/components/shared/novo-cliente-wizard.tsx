@@ -14,7 +14,7 @@ import {
   createAlunoComMatriculaService,
   createAlunoService,
 } from "@/lib/tenant/comercial/runtime";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Aluno, FormaPagamento, Plano, Sexo, TipoFormaPagamento } from "@/lib/types";
 import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
-import { useCommercialFlow } from "@/hooks/use-commercial-flow";
+import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
 import { formatBRL } from "@/lib/formatters";
 
 const TIPO_PLANO_LABEL: Record<string, string> = { MENSAL: "Mensal", TRIMESTRAL: "Trimestral", SEMESTRAL: "Semestral", ANUAL: "Anual", AVULSO: "Avulso" };

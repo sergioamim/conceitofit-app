@@ -27,7 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { ApiRequestError } from "@/lib/api/http";
 import { searchAlunosApi } from "@/lib/api/alunos";
 import { migrarClienteParaUnidadeService } from "@/lib/tenant/comercial/runtime";

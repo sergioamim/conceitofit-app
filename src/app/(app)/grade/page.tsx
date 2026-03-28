@@ -12,7 +12,7 @@ import { getBusinessTodayDate, getBusinessTodayIso } from "@/lib/business-date";
 import { listHorariosApi } from "@/lib/api/contexto-unidades";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type { Atividade, AtividadeGrade, DiaSemana, Funcionario, HorarioFuncionamento, Sala } from "@/lib/types";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

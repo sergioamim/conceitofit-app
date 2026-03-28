@@ -29,7 +29,7 @@ import type {
   Prospect,
   StatusProspect,
 } from "@/lib/types";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,

@@ -14,7 +14,7 @@ import { canTransitionProspectStatus } from "@/lib/tenant/crm/prospect-status";
 import type { CrmPipelineStage, Funcionario, Prospect, StatusProspect } from "@/lib/types";
 import { buildDefaultCrmPipelineStages } from "@/lib/tenant/crm/workspace";
 import { enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/tenant/crm/runtime";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 const ProspectDetailModal = dynamic(
   () => import("@/components/shared/prospect-detail-modal").then((mod) => mod.ProspectDetailModal),

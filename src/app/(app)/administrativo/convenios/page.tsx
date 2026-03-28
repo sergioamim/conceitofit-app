@@ -9,7 +9,7 @@ import {
   updateConvenioApi,
 } from "@/lib/api/beneficios";
 import { listPlanosApi } from "@/lib/api/comercial-catalogo";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Convenio, Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ConvenioModal } from "@/components/shared/convenio-modal";

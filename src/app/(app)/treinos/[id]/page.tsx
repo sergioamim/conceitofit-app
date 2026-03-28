@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { listTreinoExercicios, getTreinoWorkspace } from "@/lib/tenant/treinos/workspace";
 import type { Aluno, Exercicio, Treino } from "@/lib/types";

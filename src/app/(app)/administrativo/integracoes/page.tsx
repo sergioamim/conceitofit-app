@@ -11,7 +11,7 @@ import {
   reprocessarIntegracaoOperacionalApi,
 } from "@/lib/api/admin-financeiro";
 import { INTEGRACAO_STATUS_LABEL, summarizeIntegracoesOperacionais } from "@/lib/backoffice/admin-financeiro";
-import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { IntegracaoOperacional, IntegracaoOperacionalStatus } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { PageError } from "@/components/shared/page-error";

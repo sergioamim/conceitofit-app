@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Separator } from "@/components/ui/separator";
 import { getBotPromptApi, getBotPromptTemplateApi } from "@/lib/api/bot";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function AdministrativoIaPage() {

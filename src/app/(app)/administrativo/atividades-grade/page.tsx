@@ -15,7 +15,7 @@ import {
 } from "@/lib/api/administrativo";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type { Atividade, AtividadeGrade, DiaSemana, Funcionario, Sala } from "@/lib/types";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";

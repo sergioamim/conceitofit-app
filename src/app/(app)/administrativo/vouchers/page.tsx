@@ -8,7 +8,7 @@ import {
   listVouchersApi,
   toggleVoucherApi,
 } from "@/lib/api/beneficios";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Voucher } from "@/lib/types";
 import { NovoVoucherModal, NovoVoucherPayload } from "@/components/shared/novo-voucher-modal";
 import { EditarVoucherModal } from "@/components/shared/editar-voucher-modal";

@@ -9,7 +9,7 @@ import { DataTableRowActions } from "@/components/shared/data-table-row-actions"
 import { createContaBancariaApi, listContasBancariasApi, toggleContaBancariaApi, updateContaBancariaApi } from "@/lib/api/contas-bancarias";
 import type { ContaBancaria, PixTipo, TipoContaBancaria } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { PageError } from "@/components/shared/page-error";
 
 const TIPO_CONTA_LABEL: Record<TipoContaBancaria, string> = {
