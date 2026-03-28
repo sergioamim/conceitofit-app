@@ -8,26 +8,8 @@ import { TenantContextProvider } from "@/hooks/use-session-context";
 import { useAuthAccess } from "@/hooks/use-session-context";
 import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/auth-redirect";
+import { backofficeNavGroups } from "@/lib/backoffice/nav-items";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/operacional/saude", label: "Saúde Operacional" },
-  { href: "/admin/operacional/alertas", label: "Alertas Operacionais" },
-  { href: "/admin/compliance", label: "Compliance LGPD" },
-  { href: "/admin/academias", label: "Academias" },
-  { href: "/admin/unidades", label: "Unidades" },
-  { href: "/admin/financeiro", label: "Financeiro B2B" },
-  { href: "/admin/financeiro/planos", label: "Planos da Plataforma" },
-  { href: "/admin/financeiro/contratos", label: "Contratos da Plataforma" },
-  { href: "/admin/financeiro/cobrancas", label: "Cobranças da Plataforma" },
-  { href: "/admin/busca", label: "Busca Global" },
-  { href: "/admin/seguranca", label: "Segurança" },
-  { href: "/admin/configuracoes", label: "Configurações" },
-  { href: "/admin/importacao-evo", label: "Importação EVO" },
-  { href: "/admin/audit-log", label: "Audit Log" },
-  { href: "/admin/compliance", label: "Compliance LGPD" },
-];
 
 function AdminShellFrame({
   children,
@@ -44,24 +26,33 @@ function AdminShellFrame({
             <p className="text-[10px] font-semibold uppercase tracking-wide text-gym-accent">Conceito Fit</p>
             <p className="text-sm font-bold">Backoffice</p>
           </div>
-          <nav className="flex flex-col gap-1 text-sm">
-            {navItems.map((item) => {
-              const active = pathname != null && (pathname === item.href || pathname.startsWith(item.href + "/"));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "rounded-md px-3 py-2 transition-colors",
-                    active
-                      ? "bg-gym-accent/10 text-foreground border border-gym-accent/30"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+          <nav className="flex flex-col gap-3 text-sm">
+            {backofficeNavGroups.map((group) => (
+              <div key={group.title}>
+                <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
+                  {group.title}
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {group.items.map((item) => {
+                    const active = pathname != null && (pathname === item.href || pathname.startsWith(item.href + "/"));
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          "rounded-md px-3 py-2 transition-colors",
+                          active
+                            ? "bg-gym-accent/10 text-foreground border border-gym-accent/30"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </aside>
         <main className="flex-1">{children}</main>
