@@ -10,3 +10,17 @@ export * from "../ui-motion";
 export * from "../business-date";
 export * from "../feature-flags";
 export * from "../network-subdomain";
+
+// Utils especializados
+export * from "../utils/api-error";
+export * from "../utils/cnpj";
+export * from "../utils/subdomain";
+
+// Helpers de formulário compartilhados
+export * from "../forms/zod-helpers";
+
+// Exportação de dados
+export * from "../export/table-export";
+
+// Ícones compartilhados
+export * from "../icons/activity-icons";
