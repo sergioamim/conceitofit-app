@@ -184,7 +184,7 @@ export function ProspectDetailModal({
 
   async function handleAdvance() {
     if (!prospect || !tenantId) return;
-    const next = getNextStatus(prospect);
+    const next = getNextProspectStatus(prospect.status);
     if (!next) return;
     await updateProspectStatusApi({
       tenantId,

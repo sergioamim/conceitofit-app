@@ -73,7 +73,7 @@ export function FuncionarioFormPage({ mode, funcionarioId }: FuncionarioFormPage
     defaultValues: createFuncionarioFormDefaults(tenantContext.tenantId),
   });
 
-  const values = useWatch({ control: form.control }) ?? createFuncionarioFormDefaults(tenantContext.tenantId);
+  const values = (useWatch({ control: form.control }) ?? createFuncionarioFormDefaults(tenantContext.tenantId)) as FuncionarioFormValues;
 
   useEffect(() => {
     setHasMounted(true);

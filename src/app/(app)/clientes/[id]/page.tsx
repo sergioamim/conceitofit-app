@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
 import {
@@ -44,16 +44,16 @@ import type {
   NfseConfiguracao,
 } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
-const NovaMatriculaModal = dynamic(
+const NovaMatriculaModal = nextDynamic(
   () => import("@/components/shared/nova-matricula-modal").then((mod) => mod.NovaMatriculaModal),
   { ssr: false }
 );
-const ReceberPagamentoModal = dynamic(
+const ReceberPagamentoModal = nextDynamic(
   () => import("@/components/shared/receber-pagamento-modal").then((mod) => mod.ReceberPagamentoModal),
   { ssr: false }
 );
 import { Button } from "@/components/ui/button";
-const SuspenderClienteModal = dynamic(
+const SuspenderClienteModal = nextDynamic(
   () => import("@/components/shared/suspender-cliente-modal").then((mod) => mod.SuspenderClienteModal),
   { ssr: false }
 );

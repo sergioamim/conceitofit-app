@@ -405,8 +405,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
         return current;
       }
 
-      return buildTenantContextState(snapshot, {
-        tenantResolved: snapshot.tenantResolved || current.tenantResolved,
+      return buildTenantContextState({ ...snapshot, tenantResolved: snapshot.tenantResolved || current.tenantResolved }, {
         authUser: current.authUser,
         roles: current.roles,
         canAccessElevatedModules: current.canAccessElevatedModules,
@@ -488,7 +487,6 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
         const nextCanAccess =
           bootstrapState.canAccessElevatedModules ?? hasElevatedAccess(nextRoles);
         return buildTenantContextState(bootstrapState.snapshot, {
-          tenantResolved: bootstrapState.snapshot.tenantResolved,
           loading: false,
           status: bootstrapState.error ? "error" : "ready",
           error: bootstrapState.error,
@@ -567,7 +565,6 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
         const nextCanAccess =
           bootstrapState.canAccessElevatedModules ?? hasElevatedAccess(nextRoles);
         return buildTenantContextState(bootstrapState.snapshot, {
-          tenantResolved: bootstrapState.snapshot.tenantResolved,
           loading: false,
           status: bootstrapState.error ? "error" : "ready",
           error: bootstrapState.error,

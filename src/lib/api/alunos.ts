@@ -7,6 +7,7 @@ import type {
   ClienteOperationalContext,
   Matricula,
   Pagamento,
+  Sexo,
   StatusAluno,
   TenantOperationalEligibility,
   TenantOperationalEligibilityReason,
@@ -20,7 +21,7 @@ type CreateAlunoInput = {
   telefoneSec?: string;
   cpf: string;
   dataNascimento: string;
-  sexo: "M" | "F" | "OUTRO";
+  sexo: Sexo;
   rg?: string;
   endereco?: {
     cep?: string;
