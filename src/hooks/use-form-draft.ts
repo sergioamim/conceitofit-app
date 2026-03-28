@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { logger } from "@/lib/shared/logger";
 import type { UseFormReturn, FieldValues } from "react-hook-form";
 
 export interface FormDraftOptions<T extends FieldValues> {
@@ -51,7 +52,7 @@ export function useFormDraft<T extends FieldValues>({ key, form, expirationHours
         localStorage.setItem(`form_draft_${key}`, JSON.stringify(payload));
         setLastModified(new Date());
       } catch (e) {
-        console.warn("Could not save form draft", e);
+        logger.warn("Could not save form draft", { module: "form-draft", error: e });
       }
     });
     

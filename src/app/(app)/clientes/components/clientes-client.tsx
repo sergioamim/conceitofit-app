@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Search, Plus, X, Download } from "lucide-react";
+import { logger } from "@/lib/shared/logger";
 import { useTableSearchParams } from "@/hooks/use-table-search-params";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import {
@@ -518,7 +519,7 @@ function ClientesPageContent() {
                       );
                       await load();
                     } catch (error) {
-                      console.error("[clientes] Falha ao liberar suspensão", error);
+                      logger.error("Falha ao liberar suspensão", { module: "clientes", error });
                       window.alert("Não foi possível liberar a suspensão no momento.");
                     } finally {
                       setLiberandoSuspensao(false);

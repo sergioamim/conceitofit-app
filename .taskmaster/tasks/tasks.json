@@ -8970,11 +8970,12 @@
         "description": "9 instancias de console.warn/error espalhadas. Produção precisa de logger com niveis e contexto.",
         "details": "Criar src/lib/shared/logger.ts com logger.warn(), logger.error(), logger.info() encapsulando console.* com metadata (timestamp, modulo). Substituir os 9 console.* existentes em: tenant/hooks, importacao-evo-p0, error-state.tsx, commercial-flow. Preparar para integracao com Sentry/Datadog.",
         "testStrategy": "Nenhum console.warn ou console.error direto no codigo (exceto no logger). Logger funciona em dev e build.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T05:52:47.646Z"
       },
       {
         "id": "172",
@@ -8982,11 +8983,12 @@
         "description": "Acessibilidade em 7/10. Faltam aria-describedby, aria-live, skip-nav e focus trap em modais.",
         "details": "Adicionar aria-describedby nos campos de formularios com erro. Adicionar aria-live='polite' em status badges e loading states. Implementar skip-to-content link no layout (app). Auditar com Lighthouse Accessibility. Garantir score >= 90.",
         "testStrategy": "Lighthouse Accessibility score >= 90 nas paginas principais. axe-core sem violacoes criticas.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T05:52:03.430Z"
       },
       {
         "id": "173",
@@ -9019,9 +9021,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T05:51:00.715Z",
+      "lastModified": "2026-03-28T05:52:47.646Z",
       "taskCount": 174,
-      "completedCount": 165,
+      "completedCount": 166,
       "tags": [
         "master"
       ]

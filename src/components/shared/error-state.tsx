@@ -5,6 +5,7 @@ import { AlertTriangle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MOTION_CLASSNAMES } from "@/lib/ui-motion";
 import { describeErrorForUi } from "@/lib/utils/api-error";
+import { logger } from "@/lib/shared/logger";
 
 interface ErrorStateProps {
   error: Error & { digest?: string };
@@ -16,7 +17,8 @@ interface ErrorStateProps {
 export function ErrorState({ error, reset, title = "Ocorreu um erro inesperado", className }: ErrorStateProps) {
   useEffect(() => {
     const presentation = describeErrorForUi(error, { fallbackTitle: title, digest: error.digest });
-    console.error("[error-boundary]", {
+    logger.error("Erro capturado pelo error boundary", {
+      module: "error-boundary",
       name: error.name,
       message: error.message,
       details: presentation.details,

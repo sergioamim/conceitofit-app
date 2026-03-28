@@ -63,6 +63,7 @@ import { formatCnpj, isValidCnpj } from "@/lib/utils/cnpj";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { normalizeSubdomain } from "@/lib/utils/subdomain";
 import { formatDateTime, formatJobAliasDate } from "./date-time-format";
+import { logger } from "@/lib/shared/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -1550,7 +1551,7 @@ function ImportacaoEvoP0PageContent() {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ApiRequestError) {
-        console.error("Erro ao analisar pacote EVO", JSON.stringify(formatApiErrorForLog(error), null, 2));
+        logger.error("Erro ao analisar pacote EVO", { module: "importacao-evo", ...formatApiErrorForLog(error) });
         toast({
           title: "Erro ao analisar pacote",
           description: extractErrorMessage(error),
@@ -1730,7 +1731,7 @@ function ImportacaoEvoP0PageContent() {
       });
     } catch (error: unknown) {
       if (error instanceof ApiRequestError) {
-        console.error("Erro ao criar job do pacote EVO", JSON.stringify(formatApiErrorForLog(error), null, 2));
+        logger.error("Erro ao criar job do pacote EVO", { module: "importacao-evo", ...formatApiErrorForLog(error) });
         toast({
           title: "Erro ao criar job",
           description: extractErrorMessage(error),
@@ -1963,7 +1964,8 @@ function ImportacaoEvoP0PageContent() {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ApiRequestError) {
         const trimmedBody = formatErrorBody(error.responseBody);
-        console.error("Erro na importação EVO", {
+        logger.error("Erro na importação EVO", {
+          module: "importacao-evo",
           status: error.status,
           path: error.path,
           body: trimmedBody,

@@ -1,4 +1,5 @@
 import type { RbacActionFilter, RbacFeature, RbacPaginatedResult, RbacPerfil as PerfilTipo, RbacPerfilCreatePayload, RbacPerfilUpdatePayload, RbacResourceTypeFilter, RbacUser, RbacUserCreatePayload } from "@/lib/types";
+import { logger } from "@/lib/shared/logger";
 import {
   createUserApi,
   createPerfilApi,
@@ -90,7 +91,7 @@ async function withTenantFallback<T>(
         throw error;
       }
 
-      console.warn(`[rbac] Tenant ${tenantId} sem acesso para RBAC. Tentando próximo tenant.`, error);
+      logger.warn(`Tenant ${tenantId} sem acesso para RBAC. Tentando próximo tenant.`, { module: "rbac", error });
       lastAccessDeniedError = error;
     }
   }
