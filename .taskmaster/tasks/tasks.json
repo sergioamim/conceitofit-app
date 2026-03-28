@@ -9031,11 +9031,12 @@
         "description": "Variáveis NEXT_PUBLIC_CATRACA_ADMIN_TOKEN, NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN e NEXT_PUBLIC_ADMIN_TOKEN são incluídas no bundle JS do browser, permitindo extração por qualquer usuário.",
         "details": "Arquivos afetados: src/app/(app)/administrativo/unidades/page.tsx. Mover validações que usam esses tokens para Server Components ou Server Actions. Substituir por chamadas server-side que verificam permissões no backend. Remover as variáveis NEXT_PUBLIC_* do .env e substituir por variáveis server-only (sem prefixo NEXT_PUBLIC). Auditar todo o codebase com grep 'NEXT_PUBLIC.*TOKEN' para garantir que nenhum token sensível está exposto.",
         "testStrategy": "grep -r 'NEXT_PUBLIC.*TOKEN' src/ retorna zero resultados. Build OK. Funcionalidade de catraca e integrações continua operando via server-side.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:41:20.188Z"
       },
       {
         "id": "176",
@@ -9069,11 +9070,12 @@
         "description": "4 arquivos usam dangerouslySetInnerHTML. 1 confirmado seguro (JSON-LD). 3 precisam verificação: pendencias/page.tsx, checkout/page.tsx e b2b/layout.tsx.",
         "details": "Verificar se os dados passados para dangerouslySetInnerHTML em adesao/pendencias/page.tsx e adesao/checkout/page.tsx vêm de input do usuário ou do backend. Se vêm do backend (contratoHtml), avaliar sanitização com DOMPurify ou similar. Documentar cada uso com comentário explicando por que é seguro. O uso em b2b/layout.tsx é JSON.stringify — já seguro.",
         "testStrategy": "Cada uso de dangerouslySetInnerHTML tem comentário de segurança ou sanitização. Teste manual com payload XSS em campos de contrato.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:40:07.278Z"
       },
       {
         "id": "179",
@@ -9189,9 +9191,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:38:22.312Z",
+      "lastModified": "2026-03-28T06:41:20.188Z",
       "taskCount": 187,
-      "completedCount": 176,
+      "completedCount": 178,
       "tags": [
         "master"
       ]
