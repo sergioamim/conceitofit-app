@@ -2,7 +2,7 @@
 
 **Title:** Redirecionar para /dashboard ao trocar de unidade ativa
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
@@ -20,16 +20,16 @@ Navegar até /clientes/[id] com um perfil aberto, trocar de unidade via selector
 
 ## Subtasks
 
-### 137.1. Adicionar router.push('/dashboard') após troca de tenant bem-sucedida
+### 137.137.1. Adicionar router.push('/dashboard') após troca de tenant bem-sucedida
 
-**Status:** pending
-**Dependencies:** None
+**Status:** done  
+**Dependencies:** None  
 
 Em app-topbar.tsx, importar useRouter e após await setTenant(nextId) redirecionar para /dashboard
 
-### 137.2. Garantir que redirect só ocorre em caso de sucesso
+### 137.137.2. Garantir que redirect só ocorre em caso de sucesso
 
-**Status:** pending
-**Dependencies:** 137.1
+**Status:** done  
+**Dependencies:** 137.1  
 
 Verificar que se setTenant falhar (throw), o redirect não acontece e o usuário permanece na página atual com feedback de erro
