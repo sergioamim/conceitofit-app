@@ -9147,11 +9147,12 @@
         "description": "44 páginas marcadas 'use client' fazem fetch no useEffect. Páginas de listagem simples podem ser RSC.",
         "details": "Identificar páginas read-only ou com interatividade mínima: planos, atividades, salas, formas-pagamento, tipos-conta. Converter para async Server Components usando serverFetch. Extrair filtros/interações para client islands. Seguir padrão já estabelecido em dashboard/page.tsx e adesao/page.tsx. Meta: converter pelo menos 5 páginas.",
         "testStrategy": "Páginas migradas renderizam dados corretamente. Filtros e interações funcionam. LCP melhor ou igual.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T14:56:46.802Z"
       },
       {
         "id": "185",
@@ -9197,9 +9198,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T14:56:05.397Z",
+      "lastModified": "2026-03-28T14:56:46.802Z",
       "taskCount": 187,
-      "completedCount": 184,
+      "completedCount": 185,
       "tags": [
         "master"
       ]
