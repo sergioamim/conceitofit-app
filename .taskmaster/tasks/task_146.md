@@ -2,7 +2,7 @@
 
 **Title:** Reorganizar hooks por domínio
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 142 ✓, 143, 144 ✓, 145 ✓
 

@@ -8601,7 +8601,7 @@
         "id": "146",
         "title": "Reorganizar hooks por domínio",
         "description": "Mover hooks específicos de tenant/backoffice para suas áreas.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "142",
@@ -8675,7 +8675,7 @@
         "id": "151",
         "title": "Migrar listagens do tenant para Server Components",
         "description": "Converter /clientes, /planos, /matriculas, /pagamentos, /prospects para RSC.",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "150"
@@ -8683,7 +8683,8 @@
         "complexity": 8,
         "subtasks": [],
         "details": "Remover 'use client' das pages. Cada page.tsx faz fetch server-side e passa dados para ClientTable. Manter filtros/search no client.",
-        "testStrategy": "Abrir cada rota e validar SSR com dados iniciais + filtros client-side."
+        "testStrategy": "Abrir cada rota e validar SSR com dados iniciais + filtros client-side.",
+        "updatedAt": "2026-03-28T04:37:59.822Z"
       },
       {
         "id": "152",
@@ -8717,7 +8718,7 @@
         "id": "154",
         "title": "Implementar middleware de subdomínio para storefront",
         "description": "Detectar subdomínio, resolver tenant e rotear para storefront.",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "150"
@@ -8725,7 +8726,8 @@
         "complexity": 8,
         "subtasks": [],
         "details": "Middleware Next.js que extrai subdomínio do host, consulta API de resolução /api/v1/publico/storefront/resolve com cache. Se inválido, rewrite para 404 pública. Headers x-tenant-id/x-tenant-slug para SSR.",
-        "testStrategy": "Testar com hosts simulados e validar rewrite/404."
+        "testStrategy": "Testar com hosts simulados e validar rewrite/404.",
+        "updatedAt": "2026-03-28T04:38:26.161Z"
       },
       {
         "id": "155",
@@ -8858,9 +8860,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T04:15:34.597Z",
+      "lastModified": "2026-03-28T04:38:26.162Z",
       "taskCount": 163,
-      "completedCount": 143,
+      "completedCount": 146,
       "tags": [
         "master"
       ]

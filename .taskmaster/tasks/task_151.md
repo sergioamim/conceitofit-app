@@ -2,7 +2,7 @@
 
 **Title:** Migrar listagens do tenant para Server Components
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 150
 
