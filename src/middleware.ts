@@ -144,15 +144,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // Subdomínio válido: injetar headers para SSR e continuar
+  // Subdomínio válido: injetar headers e rewrite para rota /storefront
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-tenant-id", tenant.tenantId);
   requestHeaders.set("x-tenant-slug", tenant.tenantSlug);
   requestHeaders.set("x-storefront-subdomain", subdomain);
 
-  return NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  const { pathname } = request.nextUrl;
+
+  // Rotas já internas (/storefront, /storefront-not-found) não precisam de rewrite
+  if (pathname.startsWith("/storefront")) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // Rewrite qualquer rota pública do subdomain para /storefront
+  const url = request.nextUrl.clone();
+  url.pathname = `/storefront${pathname === "/" ? "" : pathname}`;
+  return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
 }
 
 // ---------------------------------------------------------------------------
