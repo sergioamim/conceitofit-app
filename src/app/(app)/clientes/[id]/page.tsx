@@ -23,7 +23,7 @@ import {
   receberPagamentoService,
   setCartaoPadraoService,
   updateAlunoService,
-} from "@/lib/comercial/runtime";
+} from "@/lib/tenant/comercial/runtime";
 import { ApiRequestError } from "@/lib/api/http";
 import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
 import { isClientMigrationEnabled } from "@/lib/feature-flags";

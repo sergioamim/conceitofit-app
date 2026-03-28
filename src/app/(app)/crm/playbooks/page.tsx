@@ -25,7 +25,7 @@ import {
   CRM_CADENCIA_ACTION_LABEL,
   CRM_CADENCIA_TRIGGER_LABEL,
   CRM_PLAYBOOK_ACTION_LABEL,
-} from "@/lib/crm/workspace";
+} from "@/lib/tenant/crm/workspace";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import {

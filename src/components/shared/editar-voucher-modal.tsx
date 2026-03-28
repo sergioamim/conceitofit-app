@@ -23,7 +23,7 @@ import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { updateVoucherApi } from "@/lib/api/beneficios";
 import { listPlanosApi } from "@/lib/api/comercial-catalogo";
-import { editarVoucherFormSchema } from "@/lib/forms/administrativo-schemas";
+import { editarVoucherFormSchema } from "@/lib/tenant/forms/administrativo-schemas";
 import type { Plano, Voucher, VoucherAplicarEm, VoucherEscopo } from "@/lib/types";
 
 const VOUCHER_TYPES = [

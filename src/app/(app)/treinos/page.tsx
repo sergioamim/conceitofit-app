@@ -37,7 +37,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_ACTIVE_TENANT_LABEL, useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { addDaysToIsoDate, getBusinessTodayIso } from "@/lib/business-date";
-import { resolveTreinoV2Permissions } from "@/lib/treinos/v2-domain";
+import { resolveTreinoV2Permissions } from "@/lib/tenant/treinos/v2-domain";
 import {
   assignTreinoTemplate,
   getTreinoWorkspace,
@@ -46,7 +46,7 @@ import {
   saveTreinoWorkspace,
   type TreinoTemplateResumo,
   type TreinoTemplateTotais,
-} from "@/lib/treinos/workspace";
+} from "@/lib/tenant/treinos/workspace";
 import type { Aluno, Exercicio, Treino, TreinoItem } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";

@@ -7,7 +7,7 @@ import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { TenantContextProvider } from "@/hooks/use-session-context";
 import { useAuthAccess } from "@/hooks/use-session-context";
 import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
-import { buildLoginHref } from "@/lib/auth-redirect";
+import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { backofficeNavGroups } from "@/lib/backoffice/nav-items";
 import { cn } from "@/lib/utils";
 

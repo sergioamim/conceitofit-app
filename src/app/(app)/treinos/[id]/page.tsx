@@ -8,7 +8,7 @@ import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
-import { listTreinoExercicios, getTreinoWorkspace } from "@/lib/treinos/workspace";
+import { listTreinoExercicios, getTreinoWorkspace } from "@/lib/tenant/treinos/workspace";
 import type { Aluno, Exercicio, Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { TreinoV2Editor } from "@/components/treinos/treino-v2-editor";

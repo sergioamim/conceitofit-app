@@ -1,4 +1,4 @@
-import { formatDiaSemana, listDatesBetween } from "@/lib/aulas/reservas";
+import { formatDiaSemana, listDatesBetween } from "@/lib/tenant/aulas/reservas";
 import type {
   Academia,
   Aluno,

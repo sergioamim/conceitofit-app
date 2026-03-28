@@ -12,7 +12,7 @@ import {
   type PlanoFormValues,
   TIPO_PLANO_LABEL,
   getDefaultPlanoFormValues,
-} from "@/lib/planos/form";
+} from "@/lib/tenant/planos/form";
 
 type PlanoModalFormState = Omit<PlanoFormValues, "beneficios"> & {
   beneficioInput: string;

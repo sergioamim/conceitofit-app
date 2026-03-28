@@ -9,7 +9,7 @@ import { getBusinessTodayIso } from "@/lib/business-date";
 import {
   listAlunosPageService,
   updateAlunoService,
-} from "@/lib/comercial/runtime";
+} from "@/lib/tenant/comercial/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { HoverPopover } from "@/components/shared/hover-popover";

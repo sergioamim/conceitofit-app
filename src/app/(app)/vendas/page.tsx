@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { listVendasPageService, resolveVendaFluxoStatusFromApi } from "@/lib/comercial/runtime";
+import { listVendasPageService, resolveVendaFluxoStatusFromApi } from "@/lib/tenant/comercial/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { TipoFormaPagamento, Venda } from "@/lib/types";
-import { STATUS_FLUXO_COMERCIAL_LABEL } from "@/lib/comercial/plano-flow";
+import { STATUS_FLUXO_COMERCIAL_LABEL } from "@/lib/tenant/comercial/plano-flow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

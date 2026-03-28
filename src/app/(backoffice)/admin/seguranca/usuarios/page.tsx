@@ -24,8 +24,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TableCell } from "@/components/ui/table";
 import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
 import { createGlobalSecurityUser, listGlobalSecurityUsers } from "@/lib/backoffice/seguranca";
-import { globalUserCreateFormSchema } from "@/lib/forms/security-user-create-schemas";
-import { validateGlobalUserCreateDraft } from "@/lib/backoffice/security-user-create";
+import { globalUserCreateFormSchema } from "@/lib/tenant/forms/security-user-create-schemas";
+import { validateGlobalUserCreateDraft } from "@/lib/tenant/security-user-create";
 import type { Academia, GlobalAdminNewUnitsPolicyScope, GlobalAdminReviewStatus, GlobalAdminUserSummary, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 

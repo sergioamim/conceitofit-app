@@ -14,7 +14,7 @@ import {
   type TreinoV2Template,
   type TreinoV2TemplateSnapshot,
   type TreinoV2TemplateStatus,
-} from "@/lib/treinos/v2-domain";
+} from "@/lib/tenant/treinos/v2-domain";
 import type { Exercicio, Treino, TreinoItem } from "@/lib/types";
 
 const TREINO_META_MARKER = "[[TREINO_V2_META]]";

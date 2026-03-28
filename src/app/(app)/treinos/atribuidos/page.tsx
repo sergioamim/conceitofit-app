@@ -15,12 +15,12 @@ import {
   buildTreinoV2EditorSeed,
   buildTreinoV2SaveInput,
   summarizeTreinoV2AssignedGovernance,
-} from "@/lib/treinos/v2-runtime";
+} from "@/lib/tenant/treinos/v2-runtime";
 import {
   encerrarTreinoWorkspace,
   listTreinosWorkspace,
   saveTreinoWorkspace,
-} from "@/lib/treinos/workspace";
+} from "@/lib/tenant/treinos/workspace";
 import type { Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";

@@ -21,8 +21,8 @@ import {
   listUsersApi,
   unlinkUserPerfilApi,
 } from "@/lib/api/rbac";
-import { validateAcademiaUserCreateDraft } from "@/lib/backoffice/security-user-create";
-import { academiaUserCreateBaseFormSchema } from "@/lib/forms/security-user-create-schemas";
+import { validateAcademiaUserCreateDraft } from "@/lib/tenant/security-user-create";
+import { academiaUserCreateBaseFormSchema } from "@/lib/tenant/forms/security-user-create-schemas";
 import type { RbacPerfil, RbacUser, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
@@ -64,6 +64,7 @@ export default function AcessoUnidadePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const createUserForm = useForm<CreateUserFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(
       academiaUserCreateBaseFormSchema.pick({
         name: true,
@@ -71,7 +72,7 @@ export default function AcessoUnidadePage() {
         cpf: true,
         initialPerfilIds: true,
       })
-    ),
+    ) as any,
     defaultValues: {
       name: "",
       email: "",

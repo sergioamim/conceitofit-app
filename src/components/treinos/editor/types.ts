@@ -5,8 +5,8 @@ import type {
   TreinoV2DefaultObjective,
   TreinoV2ExerciseType,
   TreinoV2TechniqueType,
-} from "@/lib/treinos/v2-domain";
-import type { TreinoV2EditorSeed } from "@/lib/treinos/v2-runtime";
+} from "@/lib/tenant/treinos/v2-domain";
+import type { TreinoV2EditorSeed } from "@/lib/tenant/treinos/v2-runtime";
 import type { Aluno, Exercicio, Treino } from "@/lib/types";
 
 export const OBJECTIVE_OPTIONS: TreinoV2DefaultObjective[] = [

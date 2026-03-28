@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import type { Academia } from "@/lib/types";
-import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant-theme";
+import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant/tenant-theme";
 import { useTenantContext } from "@/hooks/use-session-context";
 
 function applyThemeVars(academia?: Academia) {

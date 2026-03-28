@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
 import { getBiOperacionalSnapshotApi } from "@/lib/api/bi";
 import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
-import { buildBiExportCsv } from "@/lib/bi/analytics";
+import { buildBiExportCsv } from "@/lib/tenant/bi/analytics";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import type { Academia, BiEscopo, BiOperationalSnapshot, BiSegmento, Tenant } from "@/lib/types";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";

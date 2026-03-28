@@ -15,8 +15,8 @@ import {
 import { listFuncionariosApi } from "@/lib/api/administrativo";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { getBusinessCurrentMonthYear } from "@/lib/business-date";
-import { canAdvanceProspect, getNextProspectStatus } from "@/lib/crm/prospect-status";
-import { normalizeProspectRuntime } from "@/lib/crm/runtime";
+import { canAdvanceProspect, getNextProspectStatus } from "@/lib/tenant/crm/prospect-status";
+import { normalizeProspectRuntime } from "@/lib/tenant/crm/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";

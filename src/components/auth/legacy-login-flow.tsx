@@ -12,8 +12,8 @@ import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-uni
 import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/lib/api/session";
 import type { Tenant } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { resolvePostLoginPath } from "@/lib/auth-redirect";
-import { legacyLoginFormSchema, legacyTenantStepFormSchema } from "@/lib/forms/auth-schemas";
+import { resolvePostLoginPath } from "@/lib/tenant/auth-redirect";
+import { legacyLoginFormSchema, legacyTenantStepFormSchema } from "@/lib/tenant/forms/auth-schemas";
 
 type LegacyLoginFormValues = import("zod").input<typeof legacyLoginFormSchema>;
 type LegacyTenantFormValues = import("zod").input<typeof legacyTenantStepFormSchema>;

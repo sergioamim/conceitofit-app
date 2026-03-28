@@ -1,4 +1,4 @@
-import { createSessaoAulaId, sortReservasAula, sortSessoesAula } from "@/lib/aulas/reservas";
+import { createSessaoAulaId, sortReservasAula, sortSessoesAula } from "@/lib/tenant/aulas/reservas";
 import type {
   AulaOcupacao,
   AulaSessao,

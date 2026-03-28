@@ -22,7 +22,7 @@ import {
   getOptimisticTenantContextSnapshot,
   TENANT_CONTEXT_UPDATED_EVENT,
   type TenantContextSnapshot,
-} from "@/lib/tenant-context";
+} from "@/lib/tenant/tenant-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { cn } from "@/lib/utils";
 import { isDevSessionDebugEnabled } from "./config";

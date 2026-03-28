@@ -44,6 +44,13 @@ type CategoriaFiltro = "TODAS" | CategoriaContaPagar;
 type TipoFiltro = "TODOS" | string;
 type OrigemFiltro = "TODAS" | "MANUAL" | "RECORRENTE";
 
+const GRUPO_DRE_LABEL: Record<string, string> = {
+  CUSTO_VARIAVEL: "Custo variável",
+  DESPESA_OPERACIONAL: "Despesa operacional",
+  DESPESA_FINANCEIRA: "Despesa financeira",
+  IMPOSTOS: "Impostos",
+};
+
 const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   FOLHA: "Folha",
   ALUGUEL: "Aluguel",

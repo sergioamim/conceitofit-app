@@ -8,7 +8,7 @@ import type {
 import {
   academiaUserCreateFormSchema,
   globalUserCreateFormSchema,
-} from "@/lib/forms/security-user-create-schemas";
+} from "@/lib/tenant/forms/security-user-create-schemas";
 
 function cleanString(value?: string | null): string | undefined {
   const normalized = typeof value === "string" ? value.trim() : "";

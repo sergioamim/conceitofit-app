@@ -2,7 +2,7 @@ import type { Academia, HorarioFuncionamento, Tenant } from "@/lib/types";
 import { ApiRequestError, apiRequest } from "./http";
 import type { AuthUser } from "./auth";
 import { getActiveTenantIdFromSession, getAvailableTenantsFromSession, getPreferredTenantId } from "./session";
-import { buildTenantAccessFromEligibility, normalizeOperationalAccess } from "@/lib/tenant-operational-access";
+import { buildTenantAccessFromEligibility, normalizeOperationalAccess } from "@/lib/tenant/tenant-operational-access";
 
 const BOOTSTRAP_ENDPOINT_ENABLED = new Set(["1", "true", "yes", "on"]).has(
   (process.env.NEXT_PUBLIC_APP_BOOTSTRAP_ENABLED ?? "").trim().toLowerCase(),

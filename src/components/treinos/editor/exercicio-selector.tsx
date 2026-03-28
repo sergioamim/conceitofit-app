@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
-import type { TreinoV2DefaultObjective, TreinoV2ExerciseType } from "@/lib/treinos/v2-domain";
+import type { TreinoV2DefaultObjective, TreinoV2ExerciseType } from "@/lib/tenant/treinos/v2-domain";
 import { SelectField } from "./shared";
 import {
   type ExerciseDrawerState,

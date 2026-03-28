@@ -15,7 +15,7 @@ import {
   getDefaultPlanoFormValues,
   planoToFormValues,
   type PlanoFormValues,
-} from "@/lib/planos/form";
+} from "@/lib/tenant/planos/form";
 
 export default function EditarPlanoPage() {
   const params = useParams<{ id: string }>();

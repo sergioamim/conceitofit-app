@@ -21,7 +21,7 @@ import {
   type ImportarPagamentosResultado,
   type PagamentoComAluno,
   type PagamentoImportItem,
-} from "@/lib/financeiro/recebimentos";
+} from "@/lib/tenant/financeiro/recebimentos";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
 import { StatusBadge } from "@/components/shared/status-badge";

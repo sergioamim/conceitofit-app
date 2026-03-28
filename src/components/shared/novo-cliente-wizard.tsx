@@ -13,7 +13,7 @@ import {
   checkAlunoDuplicidadeService,
   createAlunoComMatriculaService,
   createAlunoService,
-} from "@/lib/comercial/runtime";
+} from "@/lib/tenant/comercial/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { Aluno, FormaPagamento, Plano, Sexo, TipoFormaPagamento } from "@/lib/types";
 import { MaskedInput } from "@/components/shared/masked-input";

@@ -17,8 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { TreinoV2AssignmentConflictPolicy } from "@/lib/treinos/v2-domain";
-import type { TreinoV2EditorSeed } from "@/lib/treinos/v2-runtime";
+import type { TreinoV2AssignmentConflictPolicy } from "@/lib/tenant/treinos/v2-domain";
+import type { TreinoV2EditorSeed } from "@/lib/tenant/treinos/v2-runtime";
 import type { Aluno } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { SelectField, StatLabel } from "./shared";

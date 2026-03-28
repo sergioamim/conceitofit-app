@@ -75,12 +75,14 @@ function formatNumber(n: number): string {
 
 const STATUS_LABELS: Record<SolicitacaoExclusaoStatus, string> = {
   PENDENTE: "Pendente",
+  EM_PROCESSAMENTO: "Em processamento",
   EXECUTADA: "Executada",
   REJEITADA: "Rejeitada",
 };
 
 const STATUS_COLORS: Record<SolicitacaoExclusaoStatus, string> = {
   PENDENTE: "bg-gym-warning/15 text-gym-warning border-gym-warning/30",
+  EM_PROCESSAMENTO: "bg-blue-500/15 text-blue-400 border-blue-500/30",
   EXECUTADA: "bg-gym-teal/15 text-gym-teal border-gym-teal/30",
   REJEITADA: "bg-gym-danger/15 text-gym-danger border-gym-danger/30",
 };

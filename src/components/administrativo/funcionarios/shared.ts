@@ -13,7 +13,7 @@ import type {
   ColaboradorFlagFiltro,
   ColaboradorListFilters,
   ColaboradorQuickCreateDraft,
-} from "@/lib/administrativo-colaboradores";
+} from "@/lib/tenant/administrativo-colaboradores";
 
 export const STATUS_OPERACIONAL_OPTIONS: Array<{ value: FuncionarioStatusOperacional | "TODOS"; label: string }> = [
   { value: "TODOS", label: "Todos os status" },

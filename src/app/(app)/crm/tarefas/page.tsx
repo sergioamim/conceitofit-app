@@ -17,8 +17,8 @@ import {
   CRM_TASK_PRIORITY_LABEL,
   CRM_TASK_STATUS_LABEL,
   CRM_TASK_TYPE_LABEL,
-} from "@/lib/crm/workspace";
-import { enrichCrmTasksRuntime, normalizeProspectRuntime, sortCrmTasksRuntime } from "@/lib/crm/runtime";
+} from "@/lib/tenant/crm/workspace";
+import { enrichCrmTasksRuntime, normalizeProspectRuntime, sortCrmTasksRuntime } from "@/lib/tenant/crm/runtime";
 import type {
   CrmPipelineStage,
   CrmTask,

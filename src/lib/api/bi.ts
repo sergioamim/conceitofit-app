@@ -1,6 +1,6 @@
-import { buildBiOperationalSnapshot } from "@/lib/bi/analytics";
+import { buildBiOperationalSnapshot } from "@/lib/tenant/bi/analytics";
 import { getBusinessMonthRange } from "@/lib/business-date";
-import { listContasReceberOperacionais } from "@/lib/financeiro/recebimentos";
+import { listContasReceberOperacionais } from "@/lib/tenant/financeiro/recebimentos";
 import type {
   Academia,
   AtividadeGrade,
