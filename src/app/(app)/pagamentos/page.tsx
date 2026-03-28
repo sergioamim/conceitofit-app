@@ -23,7 +23,7 @@ import {
   type PagamentoImportItem,
 } from "@/lib/financeiro/recebimentos";
 import { useTenantContext } from "@/hooks/use-session-context";
-import { getNfseBloqueioMensagem } from "@/lib/admin-financeiro";
+import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";

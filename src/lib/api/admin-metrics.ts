@@ -15,7 +15,7 @@ import type {
   MetricasOperacionaisGlobalAcademia,
   MetricasOperacionaisGlobalSerie,
 } from "@/lib/types";
-import { normalizeAcademiaHealthStatus } from "@/lib/admin-health";
+import { normalizeAcademiaHealthStatus } from "@/lib/backoffice/admin-health";
 import { apiRequest } from "./http";
 
 type Envelope<T> =

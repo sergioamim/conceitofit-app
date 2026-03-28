@@ -18,7 +18,7 @@ import {
   formatPercent,
   resolveContractBadgeClass,
   type HealthFilter,
-} from "@/lib/admin-health";
+} from "@/lib/backoffice/admin-health";
 import type { AcademiaHealthLevel, AcademiaHealthStatus } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 

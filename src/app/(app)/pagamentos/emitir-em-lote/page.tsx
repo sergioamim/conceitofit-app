@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
 import { emitirNfseEmLoteApi } from "@/lib/api/pagamentos";
-import { getNfseBloqueioMensagem } from "@/lib/admin-financeiro";
+import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
 import { listContasReceberOperacionais, type PagamentoComAluno } from "@/lib/financeiro/recebimentos";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { NfseConfiguracao } from "@/lib/types";

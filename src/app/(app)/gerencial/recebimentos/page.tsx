@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getNfseConfiguracaoAtualApi, listAgregadorTransacoesApi } from "@/lib/api/admin-financeiro";
 import { emitirNfsePagamentoApi } from "@/lib/api/pagamentos";
-import { AGREGADOR_REPASSE_LABEL, getNfseBloqueioMensagem, summarizeRecebimentosOperacionais } from "@/lib/admin-financeiro";
+import { AGREGADOR_REPASSE_LABEL, getNfseBloqueioMensagem, summarizeRecebimentosOperacionais } from "@/lib/backoffice/admin-financeiro";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import {
   createRecebimentoAvulsoService,

@@ -25,7 +25,7 @@ import {
   updateAlunoService,
 } from "@/lib/comercial/runtime";
 import { ApiRequestError } from "@/lib/api/http";
-import { getNfseBloqueioMensagem } from "@/lib/admin-financeiro";
+import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
 import { isClientMigrationEnabled } from "@/lib/feature-flags";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type {

@@ -9,11 +9,11 @@ export * from "./seguranca-navigation";
 export * from "./security-governance";
 export * from "./onboarding";
 export * from "./importacao-evo";
-export * from "../admin-compliance";
-export * from "../admin-financeiro";
-export * from "../admin-health";
-export * from "../admin-metrics";
-export * from "../security-user-create";
+export * from "./admin-compliance";
+export * from "./admin-financeiro";
+export * from "./admin-health";
+export * from "./admin-metrics";
+export * from "./security-user-create";
 
 // Schemas de formulário do backoffice
 export * from "../forms/admin-audit-schemas";
