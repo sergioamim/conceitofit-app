@@ -20,13 +20,6 @@ export function formatCompactNumber(value: number) {
   return value.toLocaleString("pt-BR");
 }
 
-export function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
 export function formatSignedPercent(value: number) {
   const normalized = Number.isFinite(value) ? value : 0;
   return `${normalized >= 0 ? "+" : ""}${normalized.toLocaleString("pt-BR", {

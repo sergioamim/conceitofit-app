@@ -17,7 +17,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
   formatCompactNumber,
-  formatCurrency,
   formatSignedPercent,
   resolveTrendTone,
   sortDistribuicaoAcademias,
@@ -25,6 +24,7 @@ import {
   type OperacionalSortKey,
   type OperacionalSortState,
 } from "@/lib/backoffice/admin-metrics";
+import { formatCurrency } from "@/lib/formatters";
 import type { MetricasOperacionaisGlobal } from "@/lib/types";
 import Link from "next/link";
 import {
