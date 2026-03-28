@@ -9185,18 +9185,19 @@
         "description": "Fluxos de login, troca de tenant e controle de acesso não têm cobertura e2e dedicada.",
         "details": "Criar testes e2e: 1) Login com credenciais válidas → redirect para dashboard, 2) Login com credenciais inválidas → mensagem de erro, 3) Troca de tenant → dados atualizam, 4) Acesso a rota admin sem permissão → bloqueio, 5) Sessão expirada → redirect para login. Usar mocks de API quando necessário.",
         "testStrategy": "npx playwright test security-flows.spec.ts passa. Cobertura de fluxos críticos de auth.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T14:53:24.996Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:48:30.095Z",
+      "lastModified": "2026-03-28T14:53:24.996Z",
       "taskCount": 187,
-      "completedCount": 181,
+      "completedCount": 182,
       "tags": [
         "master"
       ]
