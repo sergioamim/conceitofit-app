@@ -110,9 +110,11 @@ export function PlanoForm({
         onDiscard={discardDraft}
       />
       <form className="space-y-6" onSubmit={handleSubmit(submitForm)}>
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2">
+      <div role="tablist" aria-label="Seções do plano" className="flex items-center gap-2 rounded-xl border border-border bg-card p-2">
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "CONFIG"}
           onClick={() => setActiveTab("CONFIG")}
           className={cn(
             "cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -123,6 +125,8 @@ export function PlanoForm({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "CONTRATO"}
           onClick={() => setActiveTab("CONTRATO")}
           className={cn(
             "cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -133,6 +137,8 @@ export function PlanoForm({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "BENEFICIOS"}
           onClick={() => setActiveTab("BENEFICIOS")}
           className={cn(
             "cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -147,7 +153,7 @@ export function PlanoForm({
       </div>
 
       {activeTab === "CONFIG" ? (
-        <>
+        <div role="tabpanel" aria-label="Configurações">
           <div className="rounded-xl border border-border bg-card p-4 md:p-5">
             <h2 className="font-display text-base font-semibold text-foreground">Dados do plano</h2>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -265,10 +271,11 @@ export function PlanoForm({
               </div>
             </div>
           </div>
-        </>
+        </div>
       ) : null}
 
       {activeTab === "CONTRATO" ? (
+        <div role="tabpanel" aria-label="Contrato">
         <div className="rounded-xl border border-border bg-card p-4 md:p-5">
           <h2 className="font-display text-base font-semibold text-foreground">Contrato do plano</h2>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -317,9 +324,11 @@ export function PlanoForm({
             )}
           </div>
         </div>
+        </div>
       ) : null}
 
       {activeTab === "BENEFICIOS" ? (
+        <div role="tabpanel" aria-label="Atividades e benefícios">
         <div className="rounded-xl border border-border bg-card p-4 md:p-5">
           <h2 className="font-display text-base font-semibold text-foreground">Atividades e benefícios</h2>
           <div className="mt-4 space-y-4">
@@ -364,6 +373,7 @@ export function PlanoForm({
               </div>
             </div>
           </div>
+        </div>
         </div>
       ) : null}
 

@@ -10,7 +10,8 @@ export type TableSkeletonProps = {
 
 export function TableSkeleton({ columns, rowCount = 5, showPagination = true, selectable = false }: TableSkeletonProps) {
   return (
-    <div className="space-y-2">
+    <div role="status" aria-live="polite" className="space-y-2">
+      <span className="sr-only">Carregando tabela…</span>
       <div className="overflow-hidden rounded-xl border border-border">
         <Table>
           <TableHeader>
