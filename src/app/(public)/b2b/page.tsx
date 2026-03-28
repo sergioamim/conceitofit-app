@@ -20,6 +20,15 @@ export const metadata: Metadata = {
   title: "Conceito Fit - Sistema de Gestao para Academias",
   description:
     "Plataforma completa para gestao de academias: financeiro, matrículas, CRM, treinos, controle de acesso e muito mais. Agende uma demonstracao.",
+  keywords: [
+    "sistema academia",
+    "gestao academia",
+    "software academia",
+    "controle financeiro academia",
+    "CRM academia",
+    "controle acesso academia",
+    "matricula online",
+  ],
   openGraph: {
     title: "Conceito Fit - Sistema de Gestao para Academias",
     description:
@@ -34,6 +43,8 @@ export const metadata: Metadata = {
     description:
       "Plataforma completa para gestao de academias. Agende uma demonstracao.",
   },
+  robots: { index: true, follow: true },
+  alternates: { canonical: "/b2b" },
 };
 
 // ---------------------------------------------------------------------------
