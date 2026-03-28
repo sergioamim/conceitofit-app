@@ -9134,11 +9134,12 @@
         "description": "5 arquivos usam <img> nativo sem otimização automática (WebP, lazy loading, responsive).",
         "details": "Arquivos: storefront/layout.tsx, novo-cliente-wizard.tsx, voucher-codigos-modal.tsx, cliente-header.tsx, cliente-thumbnail.tsx. Substituir <img> por <Image> de next/image. Configurar width/height ou fill. Para imagens dinâmicas (foto de aluno), usar loader customizado ou unoptimized se vierem de API externa. Adicionar alt text acessível.",
         "testStrategy": "grep '<img ' src/ retorna zero resultados. Imagens renderizam corretamente. Lighthouse Images audit sem warnings.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T14:55:44.652Z"
       },
       {
         "id": "184",
@@ -9195,9 +9196,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T14:53:24.996Z",
+      "lastModified": "2026-03-28T14:55:44.652Z",
       "taskCount": 187,
-      "completedCount": 182,
+      "completedCount": 183,
       "tags": [
         "master"
       ]
