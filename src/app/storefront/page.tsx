@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { serverFetch, ServerFetchRequestError } from "@/lib/shared/server-fetch";
 import type { Plano, StorefrontTheme, Tenant } from "@/lib/types";
 import { StorefrontHero } from "@/components/storefront/storefront-hero";
+import { StorefrontJsonLd } from "@/components/storefront/storefront-jsonld";
 import { StorefrontPlanos } from "@/components/storefront/storefront-planos";
 import { StorefrontUnidades } from "@/components/storefront/storefront-unidades";
 import type { Metadata } from "next";
@@ -58,9 +59,43 @@ async function fetchStorefrontData(): Promise<StorefrontData> {
 export async function generateMetadata(): Promise<Metadata> {
   const hdrs = await headers();
   const tenantSlug = hdrs.get("x-tenant-slug") ?? "Academia";
+  const subdomain = hdrs.get("x-storefront-subdomain") ?? "";
+  const tenantId = hdrs.get("x-tenant-id") ?? "";
+
+  let ogImage: string | undefined;
+  if (tenantId) {
+    try {
+      const theme = await serverFetch<StorefrontTheme>("/api/v1/publico/storefront/theme", {
+        query: { tenantId },
+        next: { revalidate: 300 },
+      });
+      ogImage = theme?.heroImageUrl ?? theme?.logoUrl ?? undefined;
+    } catch {
+      // fallback
+    }
+  }
+
+  const title = `${tenantSlug} — Conheça nossos planos`;
+  const description = `Confira os planos e unidades disponíveis em ${tenantSlug}. Escolha o plano ideal e comece sua jornada fitness.`;
+
   return {
-    title: `${tenantSlug} — Conheça nossos planos`,
-    description: `Confira os planos e unidades disponíveis em ${tenantSlug}.`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      siteName: tenantSlug,
+      type: "website",
+      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630, alt: tenantSlug }] } : {}),
+    },
+    twitter: {
+      card: ogImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
+    robots: { index: true, follow: true },
+    ...(subdomain ? { alternates: { canonical: "/" } } : {}),
   };
 }
 
@@ -79,6 +114,13 @@ export default async function StorefrontHomePage() {
 
   return (
     <main>
+      <StorefrontJsonLd
+        tenantSlug={data.tenantSlug}
+        theme={data.theme}
+        unidades={data.unidades}
+        planos={data.planos}
+      />
+
       {/* Hero */}
       <StorefrontHero theme={data.theme} tenantSlug={data.tenantSlug} />
 

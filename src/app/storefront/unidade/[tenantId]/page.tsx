@@ -69,9 +69,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // fallback
   }
 
+  const title = `${unidadeNome} — ${tenantSlug}`;
+  const description = `Conheça os planos e horários da unidade ${unidadeNome}. Matricule-se agora em ${tenantSlug}.`;
+
   return {
-    title: `${unidadeNome} — ${tenantSlug}`,
-    description: `Conheca os planos e horarios da unidade ${unidadeNome}.`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      siteName: tenantSlug,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+    robots: { index: true, follow: true },
   };
 }
 
