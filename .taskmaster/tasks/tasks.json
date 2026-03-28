@@ -8960,14 +8960,14 @@
         "description": "Fork vendored em src/vendor/hookform-resolvers/zod pode estar causando type mismatches com zodResolver.",
         "details": "Verificar se @hookform/resolvers@3.10.0 oficial resolve os problemas de tipo com Zod 4. Se sim, remover src/vendor/hookform-resolvers/ e usar pacote oficial. Se nao, documentar motivo do fork e atualizar tipos.",
         "testStrategy": "Formularios de adesao, B2B e backoffice funcionam sem erros de tipo. Build OK.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "166"
         ],
         "priority": "medium",
         "complexity": 3,
         "subtasks": [],
-        "updatedAt": "2026-03-28T06:16:18.495Z"
+        "updatedAt": "2026-03-28T06:18:50.684Z"
       },
       {
         "id": "171",
@@ -9027,9 +9027,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:17:34.730Z",
+      "lastModified": "2026-03-28T06:18:50.684Z",
       "taskCount": 174,
-      "completedCount": 172,
+      "completedCount": 173,
       "tags": [
         "master"
       ]
