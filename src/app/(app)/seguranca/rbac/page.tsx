@@ -211,8 +211,7 @@ export default function RbacPage() {
     },
   });
   const tenantUserForm = useForm<CreateTenantUserFormState>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(
+    resolver: zodResolver<CreateTenantUserFormState>(
       academiaUserCreateBaseFormSchema.pick({
         name: true,
         email: true,
@@ -222,7 +221,7 @@ export default function RbacPage() {
         defaultTenantId: true,
         initialPerfilIds: true,
       })
-    ) as any,
+    ),
     defaultValues: TENANT_USER_DEFAULT,
   });
   const perfilFormValues = useWatch({ control: perfilForm.control }) ?? PERFIL_DEFAULT;
