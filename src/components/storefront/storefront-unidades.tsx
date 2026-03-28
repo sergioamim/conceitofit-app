@@ -1,31 +1,39 @@
+import Link from "next/link";
+import { MapPin, ChevronRight } from "lucide-react";
 import type { Tenant } from "@/lib/types";
 
 export function StorefrontUnidades({ unidades }: { unidades: Tenant[] }) {
   return (
     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
       {unidades.map((unidade) => (
-        <div
+        <Link
           key={unidade.id}
-          className="rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-lg"
+          href={`/storefront/unidade/${unidade.id}`}
+          className="group rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-lg hover:border-gym-accent/40"
         >
-          <h3 className="font-display text-lg font-bold">{unidade.nome}</h3>
+          <h3 className="font-display text-lg font-bold group-hover:text-gym-accent transition-colors">
+            {unidade.nome}
+          </h3>
 
           {unidade.endereco && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {[
-                unidade.endereco.logradouro,
-                unidade.endereco.numero ? `nº ${unidade.endereco.numero}` : null,
-                unidade.endereco.bairro,
-              ]
-                .filter(Boolean)
-                .join(", ")}
-              {unidade.endereco.cidade && (
-                <>
-                  <br />
-                  {unidade.endereco.cidade}
-                  {unidade.endereco.estado ? ` – ${unidade.endereco.estado}` : ""}
-                </>
-              )}
+            <p className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gym-accent" />
+              <span>
+                {[
+                  unidade.endereco.logradouro,
+                  unidade.endereco.numero ? `n ${unidade.endereco.numero}` : null,
+                  unidade.endereco.bairro,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+                {unidade.endereco.cidade && (
+                  <>
+                    <br />
+                    {unidade.endereco.cidade}
+                    {unidade.endereco.estado ? ` - ${unidade.endereco.estado}` : ""}
+                  </>
+                )}
+              </span>
             </p>
           )}
 
@@ -33,15 +41,11 @@ export function StorefrontUnidades({ unidades }: { unidades: Tenant[] }) {
             <p className="mt-2 text-sm text-muted-foreground">{unidade.telefone}</p>
           )}
 
-          <div className="mt-4">
-            <a
-              href={`/adesao/cadastro?tenantId=${unidade.id}`}
-              className="inline-flex rounded-lg bg-gym-accent px-4 py-2 text-sm font-semibold text-background transition-colors hover:bg-gym-accent/90"
-            >
-              Matricular-se
-            </a>
+          <div className="mt-4 flex items-center gap-1 text-sm font-semibold text-gym-accent">
+            Ver planos e detalhes
+            <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );
