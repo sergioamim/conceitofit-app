@@ -8959,13 +8959,14 @@
         "description": "Fork vendored em src/vendor/hookform-resolvers/zod pode estar causando type mismatches com zodResolver.",
         "details": "Verificar se @hookform/resolvers@3.10.0 oficial resolve os problemas de tipo com Zod 4. Se sim, remover src/vendor/hookform-resolvers/ e usar pacote oficial. Se nao, documentar motivo do fork e atualizar tipos.",
         "testStrategy": "Formularios de adesao, B2B e backoffice funcionam sem erros de tipo. Build OK.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "166"
         ],
         "priority": "medium",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:16:18.495Z"
       },
       {
         "id": "171",
@@ -8999,13 +9000,14 @@
         "description": "testing-library/react instalada mas subutilizada. Apenas 3 testes unitarios de utilitarios, zero de componentes React.",
         "details": "Criar testes de componentes: StatusBadge (cada status), PlanoSelectorCard (valores, destaque, selecao), DemoBanner (aparece com ?demo=1, dismiss), LeadB2bForm (validacao, sucesso), DemoForm (validacao, toggle senha), PublicJourneyShell (steps, tenant switcher), Formatters (formatBRL, formatDate, formatPercent). Cada componente com 3-5 cenarios.",
         "testStrategy": "npx vitest run passa com todos os novos testes. Cobertura de componentes > 30%.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "164"
         ],
         "priority": "low",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:17:07.693Z"
       },
       {
         "id": "174",
@@ -9024,9 +9026,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:14:40.583Z",
+      "lastModified": "2026-03-28T06:17:07.693Z",
       "taskCount": 174,
-      "completedCount": 170,
+      "completedCount": 171,
       "tags": [
         "master"
       ]
