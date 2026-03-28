@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { updateAlunoService } from "@/lib/tenant/comercial/runtime";
+import { fetchCep } from "@/lib/shared/cep-lookup";
 import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,21 +74,16 @@ export function ClienteEditForm({
   }, [aluno]);
 
   useEffect(() => {
-    const cep = form.enderecoCep.replace(/\D/g, "");
-    if (cep.length !== 8) return;
-    fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.erro) return;
-        setForm((prev) => ({
-          ...prev,
-          enderecoLogradouro: data.logradouro ?? prev.enderecoLogradouro,
-          enderecoBairro: data.bairro ?? prev.enderecoBairro,
-          enderecoCidade: data.localidade ?? prev.enderecoCidade,
-          enderecoEstado: data.uf ?? prev.enderecoEstado,
-        }));
-      })
-      .catch(() => undefined);
+    fetchCep(form.enderecoCep).then((data) => {
+      if (!data) return;
+      setForm((prev) => ({
+        ...prev,
+        enderecoLogradouro: data.logradouro || prev.enderecoLogradouro,
+        enderecoBairro: data.bairro || prev.enderecoBairro,
+        enderecoCidade: data.localidade || prev.enderecoCidade,
+        enderecoEstado: data.uf || prev.enderecoEstado,
+      }));
+    });
   }, [form.enderecoCep]);
 
   const handleSave = async () => {

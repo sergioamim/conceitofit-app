@@ -6,6 +6,7 @@ import React from "react";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2 } from "lucide-react";
 import { z } from "zod";
 import { useForm, Controller, useWatch } from "react-hook-form";
+import { fetchCep } from "@/lib/shared/cep-lookup";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FieldAsyncFeedback, type FieldAsyncFeedbackStatus } from "@/components/shared/field-async-feedback";
 
@@ -138,18 +139,13 @@ function Step1Dados({
 
   useEffect(() => {
     if (!watchedCep) return;
-    const cep = watchedCep.replace(/\D/g, "");
-    if (cep.length !== 8) return;
-    fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.erro) return;
-        if (res.logradouro) setValue("enderecoLogradouro", res.logradouro);
-        if (res.bairro) setValue("enderecoBairro", res.bairro);
-        if (res.localidade) setValue("enderecoCidade", res.localidade);
-        if (res.uf) setValue("enderecoEstado", res.uf);
-      })
-      .catch(() => undefined);
+    fetchCep(watchedCep).then((res) => {
+      if (!res) return;
+      if (res.logradouro) setValue("enderecoLogradouro", res.logradouro);
+      if (res.bairro) setValue("enderecoBairro", res.bairro);
+      if (res.localidade) setValue("enderecoCidade", res.localidade);
+      if (res.uf) setValue("enderecoEstado", res.uf);
+    });
   }, [watchedCep, setValue]);
 
   useEffect(() => {
