@@ -8930,11 +8930,12 @@
         "description": "formatCurrency definida em 3 lugares: formatters.ts (canonico), services.ts e adesao-landing-content.tsx.",
         "details": "Remover definicoes duplicadas de formatCurrency em src/lib/public/services.ts e src/app/(public)/adesao/adesao-landing-content.tsx. Importar de @/lib/formatters ou @/lib/shared/formatters. Verificar se ha outros formatters duplicados no codebase com grep.",
         "testStrategy": "Build OK. grep 'function formatCurrency' src/ retorna apenas 1 resultado em formatters.ts.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 1,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T05:51:00.714Z"
       },
       {
         "id": "169",
@@ -9018,9 +9019,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T05:49:40.397Z",
+      "lastModified": "2026-03-28T05:51:00.715Z",
       "taskCount": 174,
-      "completedCount": 164,
+      "completedCount": 165,
       "tags": [
         "master"
       ]
