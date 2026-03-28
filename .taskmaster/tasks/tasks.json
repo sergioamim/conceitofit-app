@@ -9135,11 +9135,12 @@
         "description": "5 arquivos usam <img> nativo sem otimização automática (WebP, lazy loading, responsive).",
         "details": "Arquivos: storefront/layout.tsx, novo-cliente-wizard.tsx, voucher-codigos-modal.tsx, cliente-header.tsx, cliente-thumbnail.tsx. Substituir <img> por <Image> de next/image. Configurar width/height ou fill. Para imagens dinâmicas (foto de aluno), usar loader customizado ou unoptimized se vierem de API externa. Adicionar alt text acessível.",
         "testStrategy": "grep '<img ' src/ retorna zero resultados. Imagens renderizam corretamente. Lighthouse Images audit sem warnings.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T15:29:30.025Z"
       },
       {
         "id": "184",
@@ -9147,11 +9148,12 @@
         "description": "44 páginas marcadas 'use client' fazem fetch no useEffect. Páginas de listagem simples podem ser RSC.",
         "details": "Identificar páginas read-only ou com interatividade mínima: planos, atividades, salas, formas-pagamento, tipos-conta. Converter para async Server Components usando serverFetch. Extrair filtros/interações para client islands. Seguir padrão já estabelecido em dashboard/page.tsx e adesao/page.tsx. Meta: converter pelo menos 5 páginas.",
         "testStrategy": "Páginas migradas renderizam dados corretamente. Filtros e interações funcionam. LCP melhor ou igual.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T15:29:33.605Z"
       },
       {
         "id": "185",
@@ -9159,14 +9161,15 @@
         "description": "14 páginas excedem 1000 linhas misturando lógica de negócio e apresentação.",
         "details": "Páginas alvo (após importacao-evo-p0 que tem task própria): clientes/[id] (1476 linhas), seguranca/usuarios/[id] (1208), seguranca/rbac (1113), treinos (1042), admin/unidades (950), admin/seguranca/usuarios (942). Para cada: extrair hooks de workspace, separar modais em arquivo próprio, criar componentes de seção. Meta: nenhuma page.tsx > 400 linhas.",
         "testStrategy": "Funcionalidades existentes continuam operando. Navegação e interação sem regressão. Cada page.tsx < 400 linhas.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "179",
           "180"
         ],
         "priority": "low",
         "complexity": 8,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T15:29:33.618Z"
       },
       {
         "id": "186",
@@ -9174,11 +9177,12 @@
         "description": "Sem limitação de tamanho de arquivo, pages crescem descontroladamente. Sem detecção de exports não utilizados.",
         "details": "Adicionar ao eslint.config.mjs: regra max-lines com limit 500 (warn) para arquivos em src/app/ e src/components/. Instalar knip como devDependency e configurar knip.json. Adicionar script npm 'dead-code': 'knip --reporter compact'. Rodar uma vez e resolver os achados mais críticos (exports não usados, arquivos órfãos).",
         "testStrategy": "npm run lint não falha (warnings OK). npm run dead-code gera relatório. Código morto identificado é removido ou justificado.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T15:29:33.631Z"
       },
       {
         "id": "187",
@@ -9186,18 +9190,19 @@
         "description": "Fluxos de login, troca de tenant e controle de acesso não têm cobertura e2e dedicada.",
         "details": "Criar testes e2e: 1) Login com credenciais válidas → redirect para dashboard, 2) Login com credenciais inválidas → mensagem de erro, 3) Troca de tenant → dados atualizam, 4) Acesso a rota admin sem permissão → bloqueio, 5) Sessão expirada → redirect para login. Usar mocks de API quando necessário.",
         "testStrategy": "npx playwright test security-flows.spec.ts passa. Cobertura de fluxos críticos de auth.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T15:29:33.653Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T15:25:40.953Z",
+      "lastModified": "2026-03-28T15:29:33.654Z",
       "taskCount": 187,
-      "completedCount": 182,
+      "completedCount": 187,
       "tags": [
         "master"
       ]
