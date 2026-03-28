@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LeadB2bForm } from "./lead-form";
 import {
   BarChart3,
   CalendarCheck,
@@ -366,32 +367,30 @@ export default function B2BLandingPage() {
         </div>
       </section>
 
-      {/* ── CTA / Contato ── */}
+      {/* ── CTA / Contato com Formulário ── */}
       <section
         id="contato"
         className="border-t border-border/40 bg-secondary/30 py-20"
       >
-        <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
-          <h2 className="font-display text-3xl font-bold sm:text-4xl">
-            Pronto para transformar sua academia?
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            Agende uma demonstracao gratuita com nosso time. Sem compromisso, sem
-            pressao.
-          </p>
-          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <a
-              href="#contato-form"
-              className="inline-flex h-12 items-center gap-2 rounded-xl bg-gym-accent px-8 text-base font-bold text-background transition-opacity hover:opacity-90"
-            >
-              Agendar uma demonstracao
-              <ChevronRight className="h-4 w-4" />
-            </a>
+        <div className="mx-auto max-w-2xl px-4 sm:px-6">
+          <div className="mb-10 text-center">
+            <h2 className="font-display text-3xl font-bold sm:text-4xl">
+              Pronto para transformar sua academia?
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Agende uma demonstracao gratuita com nosso time. Sem compromisso, sem
+              pressao.
+            </p>
+          </div>
+          <div id="contato-form">
+            <LeadB2bForm />
+          </div>
+          <div className="mt-6 text-center">
             <Link
               href="/b2b/demo"
-              className="inline-flex h-12 items-center gap-2 rounded-xl border border-border px-8 text-base font-medium text-foreground transition-colors hover:bg-secondary"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              Experimentar gratis
+              Ou experimente gratis com uma conta demo &rarr;
             </Link>
           </div>
         </div>
