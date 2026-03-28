@@ -9108,11 +9108,12 @@
         "description": "196 ocorrências de status === 'PENDENTE' e similares espalhadas em 55 arquivos. Frágil e propenso a erros.",
         "details": "Criar src/lib/domain/status-helpers.ts com funções: isPagamentoPendente(p), isPagamentoPago(p), isAlunoAtivo(a), isMatriculaAtiva(m), isProspectConvertido(p), etc. Cada helper recebe o objeto ou status string e retorna boolean. Substituir as comparações diretas mais comuns (PENDENTE, PAGO, ATIVO, VENCIDO) — começar pelos 25 usos de PENDENTE. Exportar também conjuntos: STATUS_PENDENTES = ['PENDENTE', 'VENCIDO'].",
         "testStrategy": "Testes unitários para cada helper. grep direto por status strings mais comuns mostra redução significativa.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:46:27.189Z"
       },
       {
         "id": "182",
@@ -9192,9 +9193,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:46:05.665Z",
+      "lastModified": "2026-03-28T06:46:27.189Z",
       "taskCount": 187,
-      "completedCount": 179,
+      "completedCount": 180,
       "tags": [
         "master"
       ]
