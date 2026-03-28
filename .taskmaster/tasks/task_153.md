@@ -2,9 +2,9 @@
 
 **Title:** Migrar landing pública /adesao para RSC
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 150
+**Dependencies:** 150 ✓
 
 **Priority:** medium
 

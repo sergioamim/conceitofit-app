@@ -2,7 +2,7 @@
 
 **Title:** Configurar regras de import boundaries
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 146 ✓
 

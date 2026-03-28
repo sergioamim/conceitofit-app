@@ -2,7 +2,7 @@
 
 **Title:** Migrar módulos do tenant para src/lib/tenant
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 141 ✓
 

@@ -8517,13 +8517,14 @@
         "id": "140",
         "title": "Configurar Vitest e testes unitários básicos",
         "description": "Adicionar Vitest + Testing Library e criar testes iniciais para utilitários críticos.",
-        "status": "pending",
+        "status": "done",
         "priority": "low",
         "dependencies": [],
         "complexity": 3,
         "subtasks": [],
         "details": "Adicionar vitest, @testing-library/react, @testing-library/jest-dom em devDependencies. Criar vitest.config.ts e tests/setup.ts. Testes de exemplo para access-control, api/session e tenant-context.",
-        "testStrategy": "Rodar npx vitest run e validar que os testes passam."
+        "testStrategy": "Rodar npx vitest run e validar que os testes passam.",
+        "updatedAt": "2026-03-28T05:00:41.065Z"
       },
       {
         "id": "141",
@@ -8557,7 +8558,7 @@
         "id": "143",
         "title": "Migrar módulos do tenant para src/lib/tenant",
         "description": "Realocar APIs e lógica da app do gestor para o domínio tenant.",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "141"
@@ -8565,7 +8566,8 @@
         "complexity": 7,
         "subtasks": [],
         "details": "Mover ~25 módulos: alunos, matriculas, pagamentos, planos, crm, treinos, comercial, financeiro, administrativo-*, tenant-context.ts, tenant-operational-access.ts, tenant-theme.ts para src/lib/tenant. Atualizar imports em ~60 páginas.",
-        "testStrategy": "Abrir páginas do tenant (/clientes, /planos) e validar carregamento."
+        "testStrategy": "Abrir páginas do tenant (/clientes, /planos) e validar carregamento.",
+        "updatedAt": "2026-03-28T04:54:07.657Z"
       },
       {
         "id": "144",
@@ -8618,7 +8620,7 @@
         "id": "147",
         "title": "Configurar regras de import boundaries",
         "description": "Adicionar eslint-plugin-boundaries para garantir separação entre domínios.",
-        "status": "pending",
+        "status": "done",
         "priority": "low",
         "dependencies": [
           "146"
@@ -8626,13 +8628,14 @@
         "complexity": 3,
         "subtasks": [],
         "details": "Instalar eslint-plugin-boundaries. Configurar eslint.config.mjs: tenant não importa backoffice e vice-versa; public só importa public/shared.",
-        "testStrategy": "npm run lint e verificar erros ao tentar import inválido."
+        "testStrategy": "npm run lint e verificar erros ao tentar import inválido.",
+        "updatedAt": "2026-03-28T04:59:12.163Z"
       },
       {
         "id": "148",
         "title": "Implementar BackofficeContextProvider",
         "description": "Criar contexto próprio do backoffice com modos plataforma/inspeção.",
-        "status": "pending",
+        "status": "in-progress",
         "priority": "medium",
         "dependencies": [
           "144"
@@ -8640,7 +8643,8 @@
         "complexity": 6,
         "subtasks": [],
         "details": "Contexto com estado mode: 'platform' | 'tenant', dados do tenant inspecionado, sinalização de impersonation. Expor hook useBackofficeContext. Manter isolado do TenantContextProvider.",
-        "testStrategy": "Testar em /admin alternando modos e validar renderização condicional."
+        "testStrategy": "Testar em /admin alternando modos e validar renderização condicional.",
+        "updatedAt": "2026-03-28T05:00:42.563Z"
       },
       {
         "id": "149",
@@ -8661,7 +8665,7 @@
         "id": "150",
         "title": "Definir padrão RSC e helper de data fetching",
         "description": "Documentar padrão Server Component + Client Component e criar helper de fetch server-side.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "142"
@@ -8690,7 +8694,7 @@
         "id": "152",
         "title": "Migrar dashboards para Server Components",
         "description": "Converter /dashboard (tenant) e /admin (backoffice) para RSC.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "150"
@@ -8698,13 +8702,14 @@
         "complexity": 5,
         "subtasks": [],
         "details": "Buscar métricas via APIs usando helper server-side. Enviar dados para componentes client (gráficos) apenas quando necessário.",
-        "testStrategy": "Verificar KPIs e gráficos sem flashes de hidratação."
+        "testStrategy": "Verificar KPIs e gráficos sem flashes de hidratação.",
+        "updatedAt": "2026-03-28T05:01:56.751Z"
       },
       {
         "id": "153",
         "title": "Migrar landing pública /adesao para RSC",
         "description": "Transformar página de adesão em Server Component para SEO.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "150"
@@ -8712,7 +8717,8 @@
         "complexity": 4,
         "subtasks": [],
         "details": "Converter src/app/(public)/adesao/page.tsx para Server Component. Mover busca de planos/tenant para o servidor.",
-        "testStrategy": "Validar HTML gerado no server, SEO básico e fluxo existente."
+        "testStrategy": "Validar HTML gerado no server, SEO básico e fluxo existente.",
+        "updatedAt": "2026-03-28T05:01:31.076Z"
       },
       {
         "id": "154",
@@ -8860,9 +8866,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T04:38:26.162Z",
+      "lastModified": "2026-03-28T05:01:56.751Z",
       "taskCount": 163,
-      "completedCount": 146,
+      "completedCount": 152,
       "tags": [
         "master"
       ]
