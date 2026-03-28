@@ -29,6 +29,7 @@ import { maskCPF, maskPhone } from "@/lib/utils";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatDate } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { useDialogState } from "@/hooks/use-dialog-state";
 import type { Aluno, StatusAluno } from "@/lib/types";
 import { ListErrorState } from "@/components/shared/list-states";
 
@@ -50,7 +51,7 @@ function ClientesPageContent() {
   const { q, status: filtro, page, size: pageSize, setParams, clearParams, hasActiveFilters } = useTableSearchParams();
   const [buscaInput, setBuscaInput] = useState(q);
   const busca = q; // alias para manter a funcionalidade preexistente da view
-  const [wizardOpen, setWizardOpen] = useState(false);
+  const wizard = useDialogState();
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalClientes, setTotalClientes] = useState(0);
   const [metaPage, setMetaPage] = useState(0);
@@ -62,7 +63,7 @@ function ClientesPageContent() {
     INATIVO: 0,
     CANCELADO: 0,
   });
-  const [resumoOpen, setResumoOpen] = useState(false);
+  const resumoDialog = useDialogState();
   const [clienteResumo, setClienteResumo] = useState<Aluno | null>(null);
   const [liberandoSuspensao, setLiberandoSuspensao] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -234,12 +235,12 @@ function ClientesPageContent() {
     <div className="space-y-6">
       {ConfirmDialog}
       <NovoClienteWizard
-        open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
+        open={wizard.isOpen}
+        onClose={wizard.close}
         onDone={async (created, opts) => {
           await load();
           if (created && opts?.openSale) {
-            setWizardOpen(false);
+            wizard.close();
             router.push(`/vendas/nova?clienteId=${encodeURIComponent(created.id)}&prefill=1`);
           }
         }}
@@ -252,7 +253,7 @@ function ClientesPageContent() {
             {statusTotals.TODOS} clientes cadastrados
           </p>
         </div>
-        <Button onClick={() => setWizardOpen(true)}>
+        <Button onClick={wizard.open}>
           <Plus className="size-4" />
           Novo cliente
         </Button>
@@ -395,7 +396,7 @@ function ClientesPageContent() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setClienteResumo(aluno);
-                        setResumoOpen(true);
+                        resumoDialog.open();
                       }}
                     >
                       {aluno.nome}
@@ -447,7 +448,7 @@ function ClientesPageContent() {
         onNext={() => setParams({ page: page + 1 })}
       />
 
-      <Dialog open={resumoOpen} onOpenChange={setResumoOpen}>
+      <Dialog open={resumoDialog.isOpen} onOpenChange={resumoDialog.onOpenChange}>
         <DialogContent className="border-border bg-card sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Resumo do Cliente</DialogTitle>
@@ -492,7 +493,7 @@ function ClientesPageContent() {
             </div>
           ) : null}
           <DialogFooter>
-            <Button type="button" variant="outline" className="border-border" onClick={() => setResumoOpen(false)}>
+            <Button type="button" variant="outline" className="border-border" onClick={resumoDialog.close}>
               Fechar
             </Button>
             {clienteResumo?.status === "SUSPENSO" ? (
@@ -534,7 +535,7 @@ function ClientesPageContent() {
               type="button"
               onClick={() => {
                 if (!clienteResumoBaseHref) return;
-                setResumoOpen(false);
+                resumoDialog.close();
                 router.push(clienteResumoBaseHref);
               }}
             >

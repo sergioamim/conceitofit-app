@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, Power } from "lucide-react";
+import { useDialogState } from "@/hooks/use-dialog-state";
 import {
   createAtividadeApi,
   deleteAtividadeApi,
@@ -53,7 +54,7 @@ export default function AtividadesPage() {
   const [categoria, setCategoria] =
     useState<CategoriaAtividade | "TODAS">("TODAS");
   const [apenasAtivas, setApenasAtivas] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
+  const modal = useDialogState();
   const [editing, setEditing] = useState<Atividade | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -111,7 +112,7 @@ export default function AtividadesPage() {
         data,
       });
     }
-    setModalOpen(false);
+    modal.close();
     setEditing(undefined);
     await load();
   }
@@ -137,9 +138,9 @@ export default function AtividadesPage() {
     <div className="space-y-6">
       {ConfirmDialog}
       <AtividadeModal
-        open={modalOpen}
+        open={modal.isOpen}
         onClose={() => {
-          setModalOpen(false);
+          modal.close();
           setEditing(undefined);
         }}
         onSave={handleSave}
@@ -155,7 +156,7 @@ export default function AtividadesPage() {
             Modalidades disponíveis na academia
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)} disabled={!ready}>
+        <Button onClick={modal.open} disabled={!ready}>
           <Plus className="size-4" />
           Nova Atividade
         </Button>
@@ -234,7 +235,7 @@ export default function AtividadesPage() {
               <button
                 onClick={() => {
                   setEditing(a);
-                  setModalOpen(true);
+                  modal.open();
                 }}
                 aria-label={`Editar atividade ${a.nome || "sem nome"}`}
                 title={`Editar atividade ${a.nome || "sem nome"}`}

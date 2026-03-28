@@ -40,6 +40,7 @@ import type {
 } from "@/lib/types";
 import { maskPhone } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { useDialogState } from "@/hooks/use-dialog-state";
 import { ListErrorState } from "@/components/shared/list-states";
 
 const STATUS_OPTIONS: { value: StatusProspect | "TODOS"; label: string }[] = [
@@ -174,7 +175,7 @@ export default function ProspectsPage() {
   const [filtroStatus, setFiltroStatus] = useState<StatusProspect | "TODOS">("TODOS");
   const [filtroOrigem, setFiltroOrigem] = useState<OrigemProspect | "TODAS">("TODAS");
   const [busca, setBusca] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
+  const modal = useDialogState();
   const [editing, setEditing] = useState<Prospect | null>(null);
   const [timeline, setTimeline] = useState<Prospect | null>(null);
   const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
@@ -275,8 +276,8 @@ export default function ProspectsPage() {
     setPage(1);
   }, []);
 
-  const handleOpenNew = useCallback(() => setModalOpen(true), []);
-  const handleCloseNew = useCallback(() => setModalOpen(false), []);
+  const handleOpenNew = modal.open;
+  const handleCloseNew = modal.close;
   const handleOpenEdit = useCallback((prospect: Prospect) => setEditing(prospect), []);
   const handleCloseEditing = useCallback(() => setEditing(null), []);
   const handleOpenTimeline = useCallback((prospect: Prospect) => setTimeline(prospect), []);
@@ -398,7 +399,7 @@ export default function ProspectsPage() {
   return (
     <div className="space-y-6">
       {ConfirmDialog}
-      <ProspectModal open={modalOpen} onClose={handleCloseNew} onSave={handleSave} funcionarios={funcionarios} />
+      <ProspectModal open={modal.isOpen} onClose={handleCloseNew} onSave={handleSave} funcionarios={funcionarios} />
       <ProspectModal
         open={!!editing}
         onClose={handleCloseEditing}
