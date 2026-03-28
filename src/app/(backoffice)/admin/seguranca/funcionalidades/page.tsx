@@ -15,13 +15,13 @@ import { getFeatureFlagsMatrixApi, toggleFeatureForAcademiaApi } from "@/lib/api
 import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/lib/api/backoffice";
 import { ApiRequestError } from "@/lib/api/http";
 import { buildSecurityFeatureCatalog } from "@/lib/backoffice/security-governance";
-import { useAuthAccess, useRbacTenant } from "@/lib/rbac/hooks";
+import { useAuthAccess, useRbacTenant } from "@/lib/tenant/rbac/hooks";
 import {
   listFeaturesService,
   listGrantsService,
   listPerfisService,
   updateFeatureService,
-} from "@/lib/rbac/services";
+} from "@/lib/tenant/rbac/services";
 import type {
   Academia,
   FeatureFlagMatrix,

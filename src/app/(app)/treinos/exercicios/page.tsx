@@ -16,7 +16,7 @@ import {
   listTreinoGruposMusculares,
   saveTreinoExercicio,
   toggleTreinoExercicio,
-} from "@/lib/treinos/workspace";
+} from "@/lib/tenant/treinos/workspace";
 import type { Exercicio, GrupoMuscular } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";

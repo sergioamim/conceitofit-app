@@ -2,7 +2,7 @@
 
 import { useFormContext, useWatch } from "react-hook-form";
 import type { Convenio, Plano } from "@/lib/types";
-import { convenioFormSchema } from "@/lib/forms/administrativo-schemas";
+import { convenioFormSchema } from "@/lib/tenant/forms/administrativo-schemas";
 import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
 import { cn } from "@/lib/utils";
 

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
-import { BI_KPI_CATALOG, buildBiExportCsv, resolveBiScopeAccess } from "@/lib/bi/analytics";
+import { BI_KPI_CATALOG, buildBiExportCsv, resolveBiScopeAccess } from "@/lib/tenant/bi/analytics";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import { getBiOperacionalSnapshotApi } from "@/lib/api/bi";
 import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";

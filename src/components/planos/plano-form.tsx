@@ -14,7 +14,7 @@ import {
   filterAtividadesSelecionadas,
   getDefaultPlanoFormValues,
   isPlanoFormValid,
-} from "@/lib/planos/form";
+} from "@/lib/tenant/planos/form";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
 

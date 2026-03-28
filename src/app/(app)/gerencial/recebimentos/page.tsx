@@ -14,7 +14,7 @@ import {
   createRecebimentoAvulsoService,
   listContasReceberOperacionais,
   type PagamentoComAluno,
-} from "@/lib/financeiro/recebimentos";
+} from "@/lib/tenant/financeiro/recebimentos";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { AgregadorTransacao, NfseConfiguracao, Pagamento, TipoFormaPagamento } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";

@@ -13,7 +13,7 @@ import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { TenantContextProvider, useTenantContext } from "@/hooks/use-session-context";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
-import { buildLoginHref } from "@/lib/auth-redirect";
+import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { isClientOperationalEligibilityEnabled } from "@/lib/feature-flags";
 
 function isClientScopedUser(userKind?: string): boolean {

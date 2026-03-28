@@ -22,8 +22,8 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { clearAuthSession, getNetworkSlugFromSession } from "@/lib/api/session";
-import { buildLoginHref } from "@/lib/auth-redirect";
-import { DEFAULT_TENANT_APP_NAME } from "@/lib/tenant-theme";
+import { buildLoginHref } from "@/lib/tenant/auth-redirect";
+import { DEFAULT_TENANT_APP_NAME } from "@/lib/tenant/tenant-theme";
 import { MOTION_CLASSNAMES } from "@/lib/ui-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -36,7 +36,7 @@ import {
   gerencialItems,
   allNavItems,
   NavItem,
-  } from "@/lib/nav-items";
+  } from "@/lib/tenant/nav-items";
   import { useUserPreferences } from "@/hooks/use-user-preferences";
   import {
   DEFAULT_ACADEMIA_LABEL,

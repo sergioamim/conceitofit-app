@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { buildSecurityFeatureCatalog, buildStandardizedProfiles } from "@/lib/backoffice/security-governance";
 import { listGlobalSecurityUsers } from "@/lib/backoffice/seguranca";
-import { useAuthAccess, useRbacTenant } from "@/lib/rbac/hooks";
+import { useAuthAccess, useRbacTenant } from "@/lib/tenant/rbac/hooks";
 import {
   createPerfilService,
   listAuditoriaService,
@@ -26,7 +26,7 @@ import {
   listPerfisService,
   saveGrantService,
   updatePerfilService,
-} from "@/lib/rbac/services";
+} from "@/lib/tenant/rbac/services";
 import type {
   GlobalAdminUserSummary,
   RbacAuditoriaItem,

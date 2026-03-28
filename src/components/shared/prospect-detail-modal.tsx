@@ -15,7 +15,7 @@ import {
   canTransitionProspectStatus,
   getNextProspectStatus,
   getSelectableProspectStatuses,
-} from "@/lib/crm/prospect-status";
+} from "@/lib/tenant/crm/prospect-status";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type {
   Prospect,

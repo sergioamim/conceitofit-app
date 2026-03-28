@@ -8,9 +8,9 @@ import {
   listFormasPagamentoService,
   listPlanosService,
   validarVoucherCodigoService,
-} from "@/lib/comercial/runtime";
+} from "@/lib/tenant/comercial/runtime";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { planoDryRun } from "@/lib/comercial/plano-flow";
+import { planoDryRun } from "@/lib/tenant/comercial/plano-flow";
 import type {
   Aluno,
   Convenio,

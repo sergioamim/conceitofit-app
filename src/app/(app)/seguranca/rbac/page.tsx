@@ -20,8 +20,8 @@ import { DataTableRowActions } from "@/components/shared/data-table-row-actions"
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { SecurityActiveBadge } from "@/components/security/security-badges";
 import { SecurityEmptyState, SecuritySectionFeedback } from "@/components/security/security-feedback";
-import { validateAcademiaUserCreateDraft } from "@/lib/security-user-create";
-import { academiaUserCreateBaseFormSchema } from "@/lib/forms/security-user-create-schemas";
+import { validateAcademiaUserCreateDraft } from "@/lib/tenant/security-user-create";
+import { academiaUserCreateBaseFormSchema } from "@/lib/tenant/forms/security-user-create-schemas";
 import type { RbacPermission } from "@/lib/types";
 import {
   useAuditoriaManager,
@@ -30,7 +30,7 @@ import {
   usePerfisManager,
   useRbacTenant,
   useUserPerfilManager,
-} from "@/lib/rbac/hooks";
+} from "@/lib/tenant/rbac/hooks";
 import { ListErrorState } from "@/components/shared/list-states";
 
 type RbacTab = "perfis" | "usuarios" | "grants" | "auditoria";
@@ -211,6 +211,7 @@ export default function RbacPage() {
     },
   });
   const tenantUserForm = useForm<CreateTenantUserFormState>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(
       academiaUserCreateBaseFormSchema.pick({
         name: true,
@@ -221,7 +222,7 @@ export default function RbacPage() {
         defaultTenantId: true,
         initialPerfilIds: true,
       })
-    ),
+    ) as any,
     defaultValues: TENANT_USER_DEFAULT,
   });
   const perfilFormValues = useWatch({ control: perfilForm.control }) ?? PERFIL_DEFAULT;
@@ -231,7 +232,7 @@ export default function RbacPage() {
     permission: "VIEW" as RbacPermission,
     allowed: true,
   };
-  const tenantUserFormValues = useWatch({ control: tenantUserForm.control }) ?? TENANT_USER_DEFAULT;
+  const tenantUserFormValues = (useWatch({ control: tenantUserForm.control }) ?? TENANT_USER_DEFAULT) as CreateTenantUserFormState;
   const perfilToAssign = useWatch({ control: assignPerfilForm.control, name: "perfilId" }) ?? "";
 
   useEffect(() => {

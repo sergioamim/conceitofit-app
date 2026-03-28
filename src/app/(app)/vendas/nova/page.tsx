@@ -12,9 +12,9 @@ import {
   listProdutosService,
   resolveAlunoTenantService,
   listServicosService,
-} from "@/lib/comercial/runtime";
+} from "@/lib/tenant/comercial/runtime";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { buildPlanoVendaItems } from "@/lib/comercial/plano-flow";
+import { buildPlanoVendaItems } from "@/lib/tenant/comercial/plano-flow";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { Aluno, Convenio, PagamentoVenda, Plano, Produto, Servico, Tenant, TipoVenda, Venda } from "@/lib/types";
 import { Button } from "@/components/ui/button";

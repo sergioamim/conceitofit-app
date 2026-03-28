@@ -10,10 +10,10 @@ import {
 } from "@/lib/api/crm";
 import { listFuncionariosApi } from "@/lib/api/administrativo";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
-import { canTransitionProspectStatus } from "@/lib/crm/prospect-status";
+import { canTransitionProspectStatus } from "@/lib/tenant/crm/prospect-status";
 import type { CrmPipelineStage, Funcionario, Prospect, StatusProspect } from "@/lib/types";
-import { buildDefaultCrmPipelineStages } from "@/lib/crm/workspace";
-import { enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/crm/runtime";
+import { buildDefaultCrmPipelineStages } from "@/lib/tenant/crm/workspace";
+import { enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/tenant/crm/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 const ProspectDetailModal = dynamic(

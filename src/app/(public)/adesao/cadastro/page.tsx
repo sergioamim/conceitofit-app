@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PublicJourneyShell } from "@/components/public/public-journey-shell";
 import { FieldAsyncFeedback } from "@/components/shared/field-async-feedback";
 import { useAsyncFieldValidation } from "@/hooks/use-async-field-validation";
-import { checkAlunoDuplicidadeService } from "@/lib/comercial/runtime";
+import { checkAlunoDuplicidadeService } from "@/lib/tenant/comercial/runtime";
 import {
   buildPublicJourneyHref,
   getPublicPlanQuote,

@@ -114,6 +114,8 @@ export default function AdminFinanceiroDashboardPage() {
     [dashboard?.evolucaoMrr]
   );
 
+  const mrrSeries = dashboard?.evolucaoMrr ?? [];
+
   const comparativoOrdenado = useMemo(() => {
     return [...(dashboard?.comparativoPlanos ?? [])].sort((left, right) => right.mrr - left.mrr);
   }, [dashboard?.comparativoPlanos]);

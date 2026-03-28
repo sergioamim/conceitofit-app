@@ -11,12 +11,12 @@ import {
 import { listFuncionariosApi } from "@/lib/api/administrativo";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type { CrmAutomation, CrmWorkspaceSnapshot } from "@/lib/types";
-import { buildCrmWorkspaceSnapshotRuntime, enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/crm/runtime";
+import { buildCrmWorkspaceSnapshotRuntime, enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/tenant/crm/runtime";
 import {
   CRM_ACTIVITY_LABEL,
   CRM_AUTOMATION_ACTION_LABEL,
   CRM_AUTOMATION_TRIGGER_LABEL,
-} from "@/lib/crm/workspace";
+} from "@/lib/tenant/crm/workspace";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import {

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { clearAuthSession, getNetworkSlugFromSession } from "@/lib/api/session";
-import { buildLoginHref } from "@/lib/auth-redirect";
+import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 
 export default function SairPage() {
   const router = useRouter();

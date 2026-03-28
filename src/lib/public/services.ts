@@ -3,7 +3,7 @@ import {
   planoDryRun,
   resolveContratoStatusFromPlano,
   resolvePagamentoVendaStatus,
-} from "@/lib/comercial/plano-flow";
+} from "@/lib/tenant/comercial/plano-flow";
 import {
   validateSignupDraftWithSchema,
   validateTrialInputWithSchema,
@@ -24,7 +24,7 @@ import {
 } from "@/lib/api/matriculas";
 import { listPagamentosApi, receberPagamentoApi } from "@/lib/api/pagamentos";
 import { getVendaApi, createVendaApi } from "@/lib/api/vendas";
-import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant-theme";
+import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant/tenant-theme";
 import type {
   Academia,
   Aluno,

@@ -7,19 +7,19 @@ import {
   cancelarMatriculaService,
   getMatriculasDashboardMensalService,
   renovarMatriculaService,
-} from "@/lib/comercial/runtime";
+} from "@/lib/tenant/comercial/runtime";
 import {
   buildMonthKeyFromDate,
   formatDateLabel,
   formatMonthLabel,
-} from "@/lib/comercial/matriculas-insights";
+} from "@/lib/tenant/comercial/matriculas-insights";
 import type { MatriculaDashboardMensalPlano, MatriculaDashboardMensalResult } from "@/lib/api/matriculas";
 import {
   resolveContratoStatusFromPlano,
   resolveFluxoComercialStatus,
   STATUS_CONTRATO_LABEL,
   STATUS_FLUXO_COMERCIAL_LABEL,
-} from "@/lib/comercial/plano-flow";
+} from "@/lib/tenant/comercial/plano-flow";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL } from "@/lib/formatters";

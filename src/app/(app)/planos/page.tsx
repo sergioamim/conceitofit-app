@@ -7,12 +7,12 @@ import {
   listPlanosService,
   togglePlanoAtivoService,
   togglePlanoDestaqueService,
-} from "@/lib/comercial/runtime";
+} from "@/lib/tenant/comercial/runtime";
 import { useTenantContext } from "@/hooks/use-session-context";
 import type { Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { TIPO_PLANO_LABEL } from "@/lib/planos/form";
+import { TIPO_PLANO_LABEL } from "@/lib/tenant/planos/form";
 import { formatBRL } from "@/lib/formatters";
 
 export default function PlanosPage() {

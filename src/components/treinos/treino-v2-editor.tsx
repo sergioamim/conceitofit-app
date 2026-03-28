@@ -33,7 +33,7 @@ import {
   appendTreinoV2AssignmentHistory,
   type TreinoV2EditorSeed,
   type TreinoV2ExerciseCatalogMetadata,
-} from "@/lib/treinos/v2-runtime";
+} from "@/lib/tenant/treinos/v2-runtime";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
 import {
   evaluateTreinoV2TemplateTransition,
@@ -44,14 +44,14 @@ import {
   type TreinoV2DefaultObjective,
   type TreinoV2ExerciseType,
   type TreinoV2TechniqueType,
-} from "@/lib/treinos/v2-domain";
+} from "@/lib/tenant/treinos/v2-domain";
 import {
   assignTreinoTemplate,
   encerrarTreinoWorkspace,
   listTreinosWorkspace,
   saveTreinoExercicio,
   saveTreinoWorkspace,
-} from "@/lib/treinos/workspace";
+} from "@/lib/tenant/treinos/workspace";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { TreinoForm } from "./editor/treino-form";
 import { ExercicioSelector, ExerciseDrawerDialog } from "./editor/exercicio-selector";

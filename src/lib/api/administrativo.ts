@@ -8,7 +8,7 @@ import type {
   Sala,
 } from "@/lib/types";
 import { apiRequest } from "./http";
-import { normalizeFuncionarioRecord, serializeFuncionarioNotificacoes } from "@/lib/administrativo-colaboradores";
+import { normalizeFuncionarioRecord, serializeFuncionarioNotificacoes } from "@/lib/tenant/administrativo-colaboradores";
 
 type AtividadeApiResponse = {
   id?: string;

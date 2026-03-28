@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { updateAlunoService } from "@/lib/comercial/runtime";
+import { updateAlunoService } from "@/lib/tenant/comercial/runtime";
 import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

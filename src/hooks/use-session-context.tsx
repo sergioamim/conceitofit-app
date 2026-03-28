@@ -32,7 +32,7 @@ import {
   tenantContextNeedsRepair,
   TENANT_CONTEXT_UPDATED_EVENT,
   type TenantContextSnapshot,
-} from "@/lib/tenant-context";
+} from "@/lib/tenant/tenant-context";
 
 export const DEFAULT_ACTIVE_TENANT_LABEL = "Unidade ativa";
 export const DEFAULT_ACADEMIA_LABEL = "Academia";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dedupeTenants } from "@/lib/tenant-context";
+import { dedupeTenants } from "@/lib/tenant/tenant-context";
 import type { Tenant } from "@/lib/types";
 
 function makeTenant(id: string, nome: string): Tenant {

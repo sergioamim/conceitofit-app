@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createDefaultBranding, TENANT_THEME_OPTIONS, resolveTenantTheme } from "@/lib/tenant-theme";
+import { createDefaultBranding, TENANT_THEME_OPTIONS, resolveTenantTheme } from "@/lib/tenant/tenant-theme";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { PageError } from "@/components/shared/page-error";

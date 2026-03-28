@@ -18,8 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
-import type { TreinoV2TechniqueType } from "@/lib/treinos/v2-domain";
-import type { TreinoV2EditorSeed } from "@/lib/treinos/v2-runtime";
+import type { TreinoV2TechniqueType } from "@/lib/tenant/treinos/v2-domain";
+import type { TreinoV2EditorSeed } from "@/lib/tenant/treinos/v2-runtime";
 import { MetricCell } from "./shared";
 import { TECHNIQUE_OPTIONS } from "./types";
 

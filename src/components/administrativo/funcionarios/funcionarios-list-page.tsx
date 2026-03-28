@@ -13,7 +13,7 @@ import { CargoModal } from "@/components/shared/cargo-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { useAuthAccess } from "@/hooks/use-session-context";
 import { createCargoApi, deleteCargoApi, deleteFuncionarioApi, toggleCargoApi, toggleFuncionarioApi, updateCargoApi } from "@/lib/api/administrativo";
-import { filterColaboradores, type ColaboradorFlagFiltro } from "@/lib/administrativo-colaboradores";
+import { filterColaboradores, type ColaboradorFlagFiltro } from "@/lib/tenant/administrativo-colaboradores";
 import { cn } from "@/lib/utils";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { Cargo } from "@/lib/types";

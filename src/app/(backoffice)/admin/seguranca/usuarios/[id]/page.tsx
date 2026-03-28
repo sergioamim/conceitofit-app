@@ -48,7 +48,7 @@ import {
   updateUserNewUnitsPolicy,
 } from "@/lib/backoffice/seguranca";
 import { impersonationDialogSchema, type ImpersonationDialogValues } from "@/lib/forms/admin-audit-schemas";
-import { listPerfisService } from "@/lib/rbac/services";
+import { listPerfisService } from "@/lib/tenant/rbac/services";
 import type {
   Academia,
   GlobalAdminAccessException,

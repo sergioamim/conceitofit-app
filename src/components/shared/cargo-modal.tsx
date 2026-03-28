@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Cargo } from "@/lib/types";
-import { cargoFormSchema } from "@/lib/forms/administrativo-schemas";
+import { cargoFormSchema } from "@/lib/tenant/forms/administrativo-schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";

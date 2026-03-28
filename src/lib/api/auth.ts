@@ -4,7 +4,7 @@ import {
   buildTenantAccessFromEligibility,
   normalizeOperationalAccess,
   type OperationalAccessState,
-} from "@/lib/tenant-operational-access";
+} from "@/lib/tenant/tenant-operational-access";
 import {
   getAvailableScopesFromSession,
   getAccessTokenType,
