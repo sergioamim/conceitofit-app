@@ -9196,6 +9196,90 @@
         "complexity": 5,
         "subtasks": [],
         "updatedAt": "2026-03-28T15:29:33.653Z"
+      },
+      {
+        "id": "188",
+        "title": "Decompor páginas entre 800-950 linhas (admin/unidades, vendas/nova, contas-a-pagar)",
+        "description": "3 páginas ainda excedem 800 linhas: admin/unidades (950), vendas/nova (837), contas-a-pagar (835). Aplicar padrão workspace+tabs da task 185.",
+        "details": "Para cada página: 1) Extrair hook useXxxWorkspace com todo estado e handlers. 2) Extrair modais inline para componentes dedicados. 3) Extrair seções/tabs para componentes menores. Meta: cada page.tsx < 400 linhas. Começar por admin/unidades (maior). Seguir padrão já validado em clientes/[id] e rbac.",
+        "testStrategy": "wc -l nas 3 pages < 400. Funcionalidades preservadas. TypeScript sem erros novos.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 7,
+        "subtasks": []
+      },
+      {
+        "id": "189",
+        "title": "Centralizar chamadas ViaCEP em helper fetchCep()",
+        "description": "2 arquivos fazem fetch() direto ao viacep.com.br: novo-cliente-wizard.tsx e cliente-edit-form.tsx. Devem usar helper centralizado.",
+        "details": "Criar src/lib/shared/cep-lookup.ts com função fetchCep(cep: string): Promise<CepResult>. Tratar erros (CEP inválido, timeout, API fora). Substituir os 2 fetch() diretos pelos imports do helper. Reutilizável para futuros formulários com CEP.",
+        "testStrategy": "grep 'viacep.com.br' src/ retorna apenas cep-lookup.ts. Teste unitário para fetchCep com mock. Busca de CEP funciona nos 2 formulários.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 2,
+        "subtasks": []
+      },
+      {
+        "id": "190",
+        "title": "Substituir console.error por logger.error em useEvoImportPage",
+        "description": "3 console.error restantes em useEvoImportPage.ts devem usar o logger estruturado criado na task 171.",
+        "details": "Substituir os 3 console.error em src/app/(backoffice)/admin/importacao-evo-p0/hooks/useEvoImportPage.ts por logger.error() de @/lib/shared/logger. Passar contexto do módulo ('evo-import'). Verificar se há outros console.* remanescentes no codebase.",
+        "testStrategy": "grep 'console.error' src/ retorna zero (exceto logger.ts). grep 'console.warn' src/ retorna zero.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 1,
+        "subtasks": []
+      },
+      {
+        "id": "191",
+        "title": "Dividir types.ts (2450 linhas) em módulos por domínio",
+        "description": "src/lib/shared/types.ts é mega-arquivo com todos os tipos do projeto. Dividir por domínio para melhor navegação.",
+        "details": "Criar: types/aluno.ts, types/plano.ts, types/pagamento.ts, types/matricula.ts, types/prospect.ts, types/tenant.ts, types/venda.ts, types/comum.ts (enums e tipos base). Manter types.ts como barrel re-exportando tudo (backward compatible). Mover cada grupo de tipos para seu arquivo. Não quebrar nenhum import existente.",
+        "testStrategy": "Build OK. Nenhum import quebrado. types.ts < 100 linhas (apenas re-exports). Cada arquivo de domínio < 400 linhas.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "192",
+        "title": "Migrar mais 5 páginas read-only para React Server Components",
+        "description": "106 páginas são 'use client'. Páginas de listagem simples podem ser RSC para melhor SEO e menor bundle JS.",
+        "details": "Candidatas: administrativo/salas, administrativo/atividades, administrativo/formas-pagamento, administrativo/tipos-conta, administrativo/bandeiras. Para cada: remover 'use client', usar serverFetch para dados, extrair filtros interativos para client island. Seguir padrão de dashboard/page.tsx.",
+        "testStrategy": "Páginas renderizam corretamente como RSC. Filtros funcionam. Bundle JS reduzido (verificar com bundle-analyzer).",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "193",
+        "title": "Rodar knip e resolver dead code identificado",
+        "description": "knip está instalado mas nunca foi executado. Rodar e limpar exports não utilizados e arquivos órfãos.",
+        "details": "Rodar npm run dead-code. Analisar relatório. Remover exports não importados por nenhum arquivo. Remover arquivos órfãos (se houver). Documentar exceções legítimas no knip.json (ignoreExportsUsedInFile, etc). Fazer commit com resultado.",
+        "testStrategy": "npm run dead-code retorna zero ou apenas exceções documentadas. Build OK. Testes passam.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "194",
+        "title": "Expandir testes unitários de componentes (meta: 50% cobertura)",
+        "description": "104 arquivos de teste existem mas cobertura de componentes React ainda é baixa. Ampliar para componentes críticos.",
+        "details": "Criar testes para: 1) ClienteHeader — renderiza dados, ações, status suspenso. 2) ClienteTabs — navegação entre tabs, indicadores. 3) Sidebar — itens de navegação, collapse, mobile. 4) AppTopbar — branding, tenant selector. 5) CommandPalette — busca, navegação. 6) PaginatedTable — paginação, empty state. 7) CrudModal — open/close, form submit. Cada componente 3-5 cenários. Meta: cobertura > 50%.",
+        "testStrategy": "npx vitest run passa. Coverage report mostra > 50% de componentes cobertos.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 7,
+        "subtasks": []
       }
     ],
     "metadata": {
