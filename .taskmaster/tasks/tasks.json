@@ -9043,11 +9043,12 @@
         "description": "Auto-login dev usa fallback hardcoded (admin@academia.local / 12345678) que seria ativado se NEXT_PUBLIC_DEV_AUTO_LOGIN estiver ligado em produção.",
         "details": "Em src/lib/api/http.ts linhas 708-709, remover os valores default '12345678' e 'admin@academia.local'. Exigir que as variáveis NEXT_PUBLIC_DEV_AUTH_EMAIL e NEXT_PUBLIC_DEV_AUTH_PASSWORD estejam definidas para o auto-login funcionar — se ausentes, desabilitar auto-login silenciosamente. Adicionar guard que só permite auto-login quando NODE_ENV === 'development'.",
         "testStrategy": "grep '12345678' src/ retorna zero. grep 'admin@academia.local' src/ retorna zero. Auto-login funciona em dev com .env configurado. Em production build, auto-login é inerte.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:37:45.256Z"
       },
       {
         "id": "177",
@@ -9187,9 +9188,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:22:48.859Z",
-      "taskCount": 174,
-      "completedCount": 174,
+      "lastModified": "2026-03-28T06:37:45.256Z",
+      "taskCount": 187,
+      "completedCount": 175,
       "tags": [
         "master"
       ]
