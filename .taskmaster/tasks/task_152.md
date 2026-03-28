@@ -2,9 +2,9 @@
 
 **Title:** Migrar dashboards para Server Components
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 150
+**Dependencies:** 150 ✓
 
 **Priority:** medium
 

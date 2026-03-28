@@ -2,7 +2,7 @@
 
 **Title:** Definir padrão RSC e helper de data fetching
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 142 ✓
 

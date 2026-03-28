@@ -2,7 +2,7 @@
 
 **Title:** Configurar Vitest e testes unitários básicos
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
