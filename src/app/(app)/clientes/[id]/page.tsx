@@ -44,6 +44,7 @@ import type {
   NfseConfiguracao,
 } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
 const NovaMatriculaModal = nextDynamic(
   () => import("@/components/shared/nova-matricula-modal").then((mod) => mod.NovaMatriculaModal),
   { ssr: false }
@@ -414,7 +415,7 @@ export default function ClienteDetalhePage() {
       .filter((p) => p.status === "PAGO")
       .reduce((s, p) => s + p.valorFinal, 0);
     const aberto = pagamentos
-      .filter((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
+      .filter((p) => isPagamentoEmAberto(p.status))
       .reduce((s, p) => s + p.valorFinal, 0);
     return pago - aberto;
   }, [pagamentos]);
@@ -452,7 +453,7 @@ export default function ClienteDetalhePage() {
   }, [matriculas, planos]);
 
   const pendenteFinanceiro = useMemo(
-    () => pagamentos.some((p) => p.status === "PENDENTE" || p.status === "VENCIDO"),
+    () => pagamentos.some((p) => isPagamentoEmAberto(p.status)),
     [pagamentos]
   );
 
@@ -1397,7 +1398,7 @@ export default function ClienteDetalhePage() {
                     {formatBRL(p.valorFinal)}
                   </p>
                   <StatusBadge status={p.status} />
-                  {(p.status === "PENDENTE" || p.status === "VENCIDO") && (
+                  {isPagamentoEmAberto(p.status) && (
                     <div className="mt-2">
                       <Button
                         variant="outline"

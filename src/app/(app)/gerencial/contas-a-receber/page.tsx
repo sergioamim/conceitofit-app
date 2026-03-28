@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
+import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
 
 type PagamentoWithAluno = PagamentoComAluno & { aluno?: Aluno };
 type StatusFiltro = "TODOS" | "PENDENTE" | "VENCIDO" | "PAGO" | "CANCELADO" | "EM_ABERTO";
@@ -66,7 +67,7 @@ export default function ContasReceberPage() {
       if (!inRange) return false;
 
       if (status === "EM_ABERTO") {
-        if (!(p.status === "PENDENTE" || p.status === "VENCIDO")) return false;
+        if (!isPagamentoEmAberto(p.status)) return false;
       } else if (status !== "TODOS" && p.status !== status) {
         return false;
       }
@@ -87,7 +88,7 @@ export default function ContasReceberPage() {
     const planejado = filtered.reduce((sum, p) => sum + p.valorFinal, 0);
     const recebido = filtered.filter((p) => p.status === "PAGO").reduce((sum, p) => sum + p.valorFinal, 0);
     const aberto = filtered
-      .filter((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
+      .filter((p) => isPagamentoEmAberto(p.status))
       .reduce((sum, p) => sum + p.valorFinal, 0);
     return { planejado, recebido, aberto };
   }, [filtered]);

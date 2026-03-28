@@ -40,6 +40,7 @@ import type {
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL, formatDate } from "@/lib/formatters";
+import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
 
 type ParsedImportCsvRow = {
   clienteNome: string;
@@ -491,7 +492,7 @@ function PagamentosPageContent() {
     .reduce((s, p) => s + p.valorFinal, 0);
 
   const totalPendente = filtered
-    .filter((p) => p.status === "PENDENTE" || p.status === "VENCIDO")
+    .filter((p) => isPagamentoEmAberto(p.status))
     .reduce((s, p) => s + p.valorFinal, 0);
   const nfseBloqueio = getNfseBloqueioMensagem(nfseConfiguracao);
 
@@ -1021,7 +1022,7 @@ function PagamentosPageContent() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    {(p.status === "PENDENTE" || p.status === "VENCIDO") && (
+                    {isPagamentoEmAberto(p.status) && (
                       <Button
                         size="sm"
                         onClick={() => setRecebendo(p)}
