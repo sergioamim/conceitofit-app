@@ -8876,11 +8876,12 @@
         "description": "O arquivo src/lib/tenant/auth-redirect.ts exporta de ./shared/auth-redirect que nao existe, quebrando o build do Next.js.",
         "details": "Investigar se o modulo shared/auth-redirect foi deletado ou nunca existiu. Criar o modulo faltante com buildLoginHref e resolvePostLoginPath, ou corrigir imports em layout.tsx, conta/sair, sidebar, legacy-login-flow e network-access-flow. Validar com npx next build.",
         "testStrategy": "Build deve completar sem erros relacionados a auth-redirect. Navegar pelas rotas afetadas sem erros.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:12:15.556Z"
       },
       {
         "id": "165",
@@ -9021,9 +9022,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T05:56:13.916Z",
+      "lastModified": "2026-03-28T06:12:15.557Z",
       "taskCount": 174,
-      "completedCount": 167,
+      "completedCount": 168,
       "tags": [
         "master"
       ]
