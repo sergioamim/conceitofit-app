@@ -1,4 +1,5 @@
 import { formatDiaSemana, listDatesBetween } from "@/lib/tenant/aulas/reservas";
+import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
 import type {
   Academia,
   Aluno,
@@ -298,7 +299,7 @@ function computePeriodMetrics(input: {
   const valorEmAberto = pagamentos
     .filter(
       (item) =>
-        (item.status === "PENDENTE" || item.status === "VENCIDO") &&
+        isPagamentoEmAberto(item.status) &&
         inDateRange(item.dataVencimento, startDate, endDate) &&
         matchesAlunoSegment(alunoMap.get(item.alunoId))
     )

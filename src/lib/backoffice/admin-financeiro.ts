@@ -9,6 +9,7 @@ import type {
   NfseIndicadorOperacao,
   Pagamento,
 } from "@/lib/types";
+import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
 
 export const NFSE_STATUS_LABEL: Record<NfseConfiguracaoStatus, string> = {
   PENDENTE: "Pendente",
@@ -174,7 +175,7 @@ export function summarizeRecebimentosOperacionais(
     (acc, pagamento) => {
       const valor = Number(pagamento.valorFinal ?? pagamento.valor ?? 0);
       if (pagamento.status === "PAGO") acc.recebido += valor;
-      if (pagamento.status === "PENDENTE" || pagamento.status === "VENCIDO") acc.emAberto += valor;
+      if (isPagamentoEmAberto(pagamento.status)) acc.emAberto += valor;
       if (pagamento.status === "VENCIDO") acc.inadimplencia += valor;
       if (pagamento.status === "PAGO" && !pagamento.nfseEmitida) acc.nfsePendente += 1;
 

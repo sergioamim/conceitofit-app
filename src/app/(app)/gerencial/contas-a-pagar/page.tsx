@@ -38,6 +38,7 @@ import { ListErrorState } from "@/components/shared/list-states";
 import { NovaContaPagarModal, type NovaContaPagarSubmitData } from "@/components/shared/nova-conta-pagar-modal";
 import { EditarContaPagarModal, buildEdicaoFormFromConta, type EdicaoContaFormState } from "@/components/shared/editar-conta-pagar-modal";
 import { PagarContaModal, type PagamentoFormState } from "@/components/shared/pagar-conta-modal";
+import { isContaPagarEmAberto, isContaPagarPendente } from "@/lib/domain/status-helpers";
 
 type StatusFiltro = "TODOS" | "EM_ABERTO" | StatusContaPagar;
 type CategoriaFiltro = "TODAS" | CategoriaContaPagar;
@@ -154,7 +155,7 @@ export default function ContasPagarPage() {
       if (!inRange) return false;
 
       if (status === "EM_ABERTO") {
-        if (!(conta.status === "PENDENTE" || conta.status === "VENCIDA")) return false;
+        if (!isContaPagarEmAberto(conta.status)) return false;
       } else if (status !== "TODOS" && conta.status !== status) {
         return false;
       }
@@ -195,7 +196,7 @@ export default function ContasPagarPage() {
       .filter((conta) => conta.status === "PAGA")
       .reduce((sum, conta) => sum + Number(conta.valorPago ?? contaTotal(conta)), 0);
     const emAberto = filtered
-      .filter((conta) => conta.status === "PENDENTE" || conta.status === "VENCIDA")
+      .filter((conta) => isContaPagarEmAberto(conta.status))
       .reduce((sum, conta) => sum + contaTotal(conta), 0);
     const vencidas = filtered
       .filter((conta) => conta.status === "VENCIDA")
@@ -789,7 +790,7 @@ export default function ContasPagarPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        {(conta.status === "PENDENTE" || conta.status === "VENCIDA") && (
+                        {isContaPagarEmAberto(conta.status) && (
                           <Button
                             size="sm"
                             className="h-8"
@@ -811,7 +812,7 @@ export default function ContasPagarPage() {
                             Editar
                           </Button>
                         )}
-                        {conta.status === "PENDENTE" && (
+                        {isContaPagarPendente(conta.status) && (
                           <Button
                             size="sm"
                             variant="outline"

@@ -42,6 +42,7 @@ import { formatBRL, formatDate } from "@/lib/formatters";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import type { Cobranca, CobrancaStatus, ContratoPlataforma, TipoFormaPagamento } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { isCobrancaEmAberto, isCobrancaPendente } from "@/lib/domain/status-helpers";
 
 type PageSize = 10 | 20 | 50;
 type StatusFilter = "TODOS" | CobrancaStatus;
@@ -143,7 +144,7 @@ function getStatusBadgeClass(status: CobrancaStatus) {
 }
 
 function toCobrancaStatus(cobranca: Cobranca, todayDate = ""): CobrancaStatus {
-  if (cobranca.status === "PENDENTE" && todayDate && cobranca.dataVencimento < todayDate) {
+  if (isCobrancaPendente(cobranca.status) && todayDate && cobranca.dataVencimento < todayDate) {
     return "VENCIDO";
   }
   return cobranca.status;
@@ -276,7 +277,7 @@ export default function AdminCobrancasPage() {
 
     cobrancas.forEach((cobranca) => {
       const effectiveStatus = toCobrancaStatus(cobranca, todayDate);
-      if (effectiveStatus === "PENDENTE") pendente += cobranca.valor;
+      if (isCobrancaPendente(effectiveStatus)) pendente += cobranca.valor;
       if (effectiveStatus === "VENCIDO") vencido += cobranca.valor;
       if (effectiveStatus === "PAGO" && cobranca.dataPagamento?.startsWith(currentMonthKey)) {
         recebidoMes += cobranca.valor;
@@ -589,7 +590,7 @@ export default function AdminCobrancasPage() {
                     <div className="flex justify-end">
                       <DataTableRowActions
                         actions={[
-                          ...(effectiveStatus === "PENDENTE" || effectiveStatus === "VENCIDO"
+                          ...(isCobrancaEmAberto(effectiveStatus)
                             ? [
                                 {
                                   kind: "edit" as const,
