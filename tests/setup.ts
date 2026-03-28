@@ -1,4 +1,11 @@
 import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach } from "vitest";
+
+// Cleanup DOM between tests (happy-dom does not auto-cleanup)
+afterEach(() => {
+  cleanup();
+});
 
 // Node 22+ ships a native `localStorage` that is a limited Proxy.
 // happy-dom/jsdom provide their own, but the native one can shadow it.
