@@ -8650,7 +8650,7 @@
         "id": "149",
         "title": "Refatorar layout do backoffice",
         "description": "Sidebar agrupada, ícones, breadcrumbs, header com modo e command palette.",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "148",
@@ -8659,7 +8659,8 @@
         "complexity": 7,
         "subtasks": [],
         "details": "Refatorar src/app/(backoffice)/admin/layout.tsx para usar BackofficeContextProvider e nav-items. Sidebar com agrupamento (Operacional, Comercial, Segurança, Configuração). Breadcrumbs, command palette dedicada (cmdk).",
-        "testStrategy": "Navegar por /admin/* e validar sidebar, breadcrumbs e indicador de modo."
+        "testStrategy": "Navegar por /admin/* e validar sidebar, breadcrumbs e indicador de modo.",
+        "updatedAt": "2026-03-28T05:26:22.659Z"
       },
       {
         "id": "150",
@@ -8783,7 +8784,7 @@
         "id": "158",
         "title": "Integrar jornada de adesão na storefront",
         "description": "Reaproveitar fluxo /adesao para a storefront com URLs diretas por plano.",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "153",
@@ -8798,7 +8799,7 @@
         "id": "159",
         "title": "Implementar fluxo de aula experimental",
         "description": "Landing/form simplificado para trial e criação de prospect no CRM.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "158"
@@ -8806,13 +8807,14 @@
         "complexity": 5,
         "subtasks": [],
         "details": "Rota /experimental na storefront. Formulário nome, telefone, e-mail, modalidade. Consome API backend #211/#212.",
-        "testStrategy": "Submeter formulário e verificar criação do lead."
+        "testStrategy": "Submeter formulário e verificar criação do lead.",
+        "updatedAt": "2026-03-28T05:35:24.831Z"
       },
       {
         "id": "160",
         "title": "SEO e performance da storefront",
         "description": "Metadata dinâmica, JSON-LD, sitemap e otimizações.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "156",
@@ -8821,7 +8823,8 @@
         "complexity": 5,
         "subtasks": [],
         "details": "generateMetadata com title/description/og:image por academia. JSON-LD LocalBusiness, sitemap dinâmico. Consome API backend #214. LCP < 2.5s.",
-        "testStrategy": "Rodar Lighthouse e conferir metatags."
+        "testStrategy": "Rodar Lighthouse e conferir metatags.",
+        "updatedAt": "2026-03-28T05:26:50.571Z"
       },
       {
         "id": "161",
@@ -8856,7 +8859,7 @@
         "id": "163",
         "title": "Fluxo de conta demo e SEO/performance da landing B2B",
         "description": "Onboarding demo e otimizações SEO da landing.",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "162"
@@ -8864,14 +8867,159 @@
         "complexity": 8,
         "subtasks": [],
         "details": "Formulário demo (nome, e-mail, senha). Consome API backend #218. Redireciona para dashboard com banner 'Conta Demonstração'. generateMetadata, JSON-LD SoftwareApplication. LCP < 1.5s.",
-        "testStrategy": "Criar conta demo, validar redirecionamento e metatags."
+        "testStrategy": "Criar conta demo, validar redirecionamento e metatags.",
+        "updatedAt": "2026-03-28T05:30:40.363Z"
+      },
+      {
+        "id": "164",
+        "title": "Corrigir build quebrado por auth-redirect.ts",
+        "description": "O arquivo src/lib/tenant/auth-redirect.ts exporta de ./shared/auth-redirect que nao existe, quebrando o build do Next.js.",
+        "details": "Investigar se o modulo shared/auth-redirect foi deletado ou nunca existiu. Criar o modulo faltante com buildLoginHref e resolvePostLoginPath, ou corrigir imports em layout.tsx, conta/sair, sidebar, legacy-login-flow e network-access-flow. Validar com npx next build.",
+        "testStrategy": "Build deve completar sem erros relacionados a auth-redirect. Navegar pelas rotas afetadas sem erros.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 2,
+        "subtasks": []
+      },
+      {
+        "id": "165",
+        "title": "Corrigir type errors em importacao-evo-p0",
+        "description": "O arquivo importacao-evo-p0/page.tsx tem 15+ erros de tipo: FILE_UPLOAD_GROUPS indefinido, PacoteArquivoDisponivel incompleto, any implicitos, formatJobAliasDate nao encontrado.",
+        "details": "Corrigir todos os type errors no arquivo src/app/(backoffice)/admin/importacao-evo-p0/page.tsx e shared.ts. Definir FILE_UPLOAD_GROUPS, adicionar campos faltantes em PacoteArquivoDisponivel (historico, entidadeFiltro, blocoFiltro), importar formatJobAliasDate, tipar parametros implicitos.",
+        "testStrategy": "tsc --noEmit sem erros neste arquivo. Navegar para /admin/importacao-evo-p0 funciona.",
+        "status": "pending",
+        "dependencies": [
+          "164"
+        ],
+        "priority": "high",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "166",
+        "title": "Corrigir type errors nos formularios de adesao publica e B2B",
+        "description": "Type errors em cadastro/page.tsx (Sexo), checkout/page.tsx (zodResolver/SubmitHandler) e lead-form.tsx (zodResolver).",
+        "details": "Ajustar tipos do zodResolver nos formularios de adesao e B2B. Corrigir tipo Sexo em cadastro. Resolver incompatibilidade do Resolver<CheckoutFormValues> e SubmitHandler no checkout. Corrigir cast do resolver no lead-form. Verificar se o vendor hookform-resolvers/zod precisa de ajuste.",
+        "testStrategy": "tsc --noEmit sem erros nos arquivos de adesao e b2b.",
+        "status": "pending",
+        "dependencies": [
+          "164"
+        ],
+        "priority": "high",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "167",
+        "title": "Eliminar usos de as any no codebase",
+        "description": "4 instancias de as any comprometem type safety: configuracoes, acesso-unidade, rbac e crud-modal.",
+        "details": "Substituir as any por tipos genericos corretos em: configuracoes/page.tsx:171, acesso-unidade/page.tsx:75, rbac/page.tsx:225, crud-modal.tsx:101. Se causado pelo zodResolver, resolver junto com task 166. Para crud-modal, usar generic type parameter.",
+        "testStrategy": "grep -r 'as any' src/ retorna zero resultados. Build sem regressoes.",
+        "status": "pending",
+        "dependencies": [
+          "166"
+        ],
+        "priority": "medium",
+        "complexity": 2,
+        "subtasks": []
+      },
+      {
+        "id": "168",
+        "title": "Remover formatters duplicados",
+        "description": "formatCurrency definida em 3 lugares: formatters.ts (canonico), services.ts e adesao-landing-content.tsx.",
+        "details": "Remover definicoes duplicadas de formatCurrency em src/lib/public/services.ts e src/app/(public)/adesao/adesao-landing-content.tsx. Importar de @/lib/formatters ou @/lib/shared/formatters. Verificar se ha outros formatters duplicados no codebase com grep.",
+        "testStrategy": "Build OK. grep 'function formatCurrency' src/ retorna apenas 1 resultado em formatters.ts.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 1,
+        "subtasks": []
+      },
+      {
+        "id": "169",
+        "title": "Persistir tasks.json nos commits de tasks",
+        "description": "Mudancas de status no Task Master nao sao commitadas automaticamente, revertendo entre sessoes.",
+        "details": "Documentar no CLAUDE.md que ao finalizar tasks deve-se incluir .taskmaster/tasks/tasks.json no commit. Avaliar criar script npm que faca auto-stage do tasks.json.",
+        "testStrategy": "Apos fechar task e commitar, status persiste em nova sessao.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 2,
+        "subtasks": []
+      },
+      {
+        "id": "170",
+        "title": "Avaliar e atualizar vendor hookform-resolvers",
+        "description": "Fork vendored em src/vendor/hookform-resolvers/zod pode estar causando type mismatches com zodResolver.",
+        "details": "Verificar se @hookform/resolvers@3.10.0 oficial resolve os problemas de tipo com Zod 4. Se sim, remover src/vendor/hookform-resolvers/ e usar pacote oficial. Se nao, documentar motivo do fork e atualizar tipos.",
+        "testStrategy": "Formularios de adesao, B2B e backoffice funcionam sem erros de tipo. Build OK.",
+        "status": "pending",
+        "dependencies": [
+          "166"
+        ],
+        "priority": "medium",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "171",
+        "title": "Implementar logger estruturado para producao",
+        "description": "9 instancias de console.warn/error espalhadas. Produção precisa de logger com niveis e contexto.",
+        "details": "Criar src/lib/shared/logger.ts com logger.warn(), logger.error(), logger.info() encapsulando console.* com metadata (timestamp, modulo). Substituir os 9 console.* existentes em: tenant/hooks, importacao-evo-p0, error-state.tsx, commercial-flow. Preparar para integracao com Sentry/Datadog.",
+        "testStrategy": "Nenhum console.warn ou console.error direto no codigo (exceto no logger). Logger funciona em dev e build.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "172",
+        "title": "Melhorar acessibilidade (a11y) dos formularios e modais",
+        "description": "Acessibilidade em 7/10. Faltam aria-describedby, aria-live, skip-nav e focus trap em modais.",
+        "details": "Adicionar aria-describedby nos campos de formularios com erro. Adicionar aria-live='polite' em status badges e loading states. Implementar skip-to-content link no layout (app). Auditar com Lighthouse Accessibility. Garantir score >= 90.",
+        "testStrategy": "Lighthouse Accessibility score >= 90 nas paginas principais. axe-core sem violacoes criticas.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "173",
+        "title": "Ampliar cobertura de testes unitarios com Testing Library",
+        "description": "testing-library/react instalada mas subutilizada. Apenas 3 testes unitarios de utilitarios, zero de componentes React.",
+        "details": "Criar testes de componentes: StatusBadge (cada status), PlanoSelectorCard (valores, destaque, selecao), DemoBanner (aparece com ?demo=1, dismiss), LeadB2bForm (validacao, sucesso), DemoForm (validacao, toggle senha), PublicJourneyShell (steps, tenant switcher), Formatters (formatBRL, formatDate, formatPercent). Cada componente com 3-5 cenarios.",
+        "testStrategy": "npx vitest run passa com todos os novos testes. Cobertura de componentes > 30%.",
+        "status": "pending",
+        "dependencies": [
+          "164"
+        ],
+        "priority": "low",
+        "complexity": 6,
+        "subtasks": []
+      },
+      {
+        "id": "174",
+        "title": "Adicionar testes e2e para fluxo de conta demo",
+        "description": "Fluxo de conta demo (/b2b/demo) implementado sem teste e2e.",
+        "details": "Criar tests/e2e/demo-account.spec.ts: acessar /b2b/demo e verificar formulario, validacao de campos (nome vazio, email invalido, senha curta), submissao com dados validos (mock API), redirecionamento para /dashboard?demo=1, banner Conta Demonstracao visivel, dismiss do banner persiste na sessao.",
+        "testStrategy": "npx playwright test demo-account.spec.ts passa.",
+        "status": "pending",
+        "dependencies": [
+          "173"
+        ],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T05:21:32.536Z",
+      "lastModified": "2026-03-28T05:35:24.831Z",
       "taskCount": 163,
-      "completedCount": 158,
+      "completedCount": 163,
       "tags": [
         "master"
       ]
