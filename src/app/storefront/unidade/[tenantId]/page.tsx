@@ -302,13 +302,13 @@ export default async function UnidadePage({ params }: PageProps) {
 
                 <div className="mt-6 flex flex-col gap-2">
                   <a
-                    href={`/adesao/cadastro?tenantId=${tenantId}&planoId=${plano.id}`}
+                    href={`/storefront/adesao/cadastro?tenant=${tenantId}&plan=${plano.id}`}
                     className="block rounded-lg bg-gym-accent px-4 py-2.5 text-center text-sm font-semibold text-background transition-colors hover:bg-gym-accent/90"
                   >
                     Assinar agora
                   </a>
                   <a
-                    href={`/adesao/trial?tenantId=${tenantId}&planoId=${plano.id}`}
+                    href={`/storefront/experimental`}
                     className="block rounded-lg border border-border px-4 py-2.5 text-center text-sm font-medium transition-colors hover:bg-secondary"
                   >
                     Aula experimental

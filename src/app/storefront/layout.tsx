@@ -48,11 +48,14 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               )}
             </div>
             <nav className="flex items-center gap-4 text-sm">
-              <a href="#planos" className="text-muted-foreground transition-colors hover:text-foreground">
+              <a href="/storefront#planos" className="text-muted-foreground transition-colors hover:text-foreground">
                 Planos
               </a>
-              <a href="#unidades" className="text-muted-foreground transition-colors hover:text-foreground">
+              <a href="/storefront#unidades" className="text-muted-foreground transition-colors hover:text-foreground">
                 Unidades
+              </a>
+              <a href="/storefront/experimental" className="text-muted-foreground transition-colors hover:text-foreground">
+                Aula experimental
               </a>
               <a href="#contato" className="text-muted-foreground transition-colors hover:text-foreground">
                 Contato

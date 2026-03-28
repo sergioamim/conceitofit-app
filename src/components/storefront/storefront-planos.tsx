@@ -74,7 +74,7 @@ export function StorefrontPlanos({
           <div className="mt-6">
             {singleUnit ? (
               <a
-                href={`/adesao/cadastro?tenantId=${singleUnit.id}&planoId=${plano.id}`}
+                href={`/storefront/adesao/cadastro?tenant=${singleUnit.id}&plan=${plano.id}`}
                 className="block rounded-lg bg-gym-accent px-4 py-2.5 text-center text-sm font-semibold text-background transition-colors hover:bg-gym-accent/90"
               >
                 Assinar agora
