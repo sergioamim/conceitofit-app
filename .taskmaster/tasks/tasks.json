@@ -8889,13 +8889,14 @@
         "description": "O arquivo importacao-evo-p0/page.tsx tem 15+ erros de tipo: FILE_UPLOAD_GROUPS indefinido, PacoteArquivoDisponivel incompleto, any implicitos, formatJobAliasDate nao encontrado.",
         "details": "Corrigir todos os type errors no arquivo src/app/(backoffice)/admin/importacao-evo-p0/page.tsx e shared.ts. Definir FILE_UPLOAD_GROUPS, adicionar campos faltantes em PacoteArquivoDisponivel (historico, entidadeFiltro, blocoFiltro), importar formatJobAliasDate, tipar parametros implicitos.",
         "testStrategy": "tsc --noEmit sem erros neste arquivo. Navegar para /admin/importacao-evo-p0 funciona.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "164"
         ],
         "priority": "high",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:13:21.841Z"
       },
       {
         "id": "166",
@@ -9022,9 +9023,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:12:15.557Z",
+      "lastModified": "2026-03-28T06:13:21.841Z",
       "taskCount": 174,
-      "completedCount": 168,
+      "completedCount": 169,
       "tags": [
         "master"
       ]
