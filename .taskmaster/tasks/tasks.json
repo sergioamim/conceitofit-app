@@ -8660,7 +8660,7 @@
         "subtasks": [],
         "details": "Refatorar src/app/(backoffice)/admin/layout.tsx para usar BackofficeContextProvider e nav-items. Sidebar com agrupamento (Operacional, Comercial, Segurança, Configuração). Breadcrumbs, command palette dedicada (cmdk).",
         "testStrategy": "Navegar por /admin/* e validar sidebar, breadcrumbs e indicador de modo.",
-        "updatedAt": "2026-03-28T05:24:05.193Z"
+        "updatedAt": "2026-03-28T05:26:22.659Z"
       },
       {
         "id": "150",
@@ -8784,7 +8784,7 @@
         "id": "158",
         "title": "Integrar jornada de adesão na storefront",
         "description": "Reaproveitar fluxo /adesao para a storefront com URLs diretas por plano.",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "153",
@@ -8799,7 +8799,7 @@
         "id": "159",
         "title": "Implementar fluxo de aula experimental",
         "description": "Landing/form simplificado para trial e criação de prospect no CRM.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "158"
@@ -8807,13 +8807,14 @@
         "complexity": 5,
         "subtasks": [],
         "details": "Rota /experimental na storefront. Formulário nome, telefone, e-mail, modalidade. Consome API backend #211/#212.",
-        "testStrategy": "Submeter formulário e verificar criação do lead."
+        "testStrategy": "Submeter formulário e verificar criação do lead.",
+        "updatedAt": "2026-03-28T05:35:24.831Z"
       },
       {
         "id": "160",
         "title": "SEO e performance da storefront",
         "description": "Metadata dinâmica, JSON-LD, sitemap e otimizações.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "156",
@@ -8822,7 +8823,8 @@
         "complexity": 5,
         "subtasks": [],
         "details": "generateMetadata com title/description/og:image por academia. JSON-LD LocalBusiness, sitemap dinâmico. Consome API backend #214. LCP < 2.5s.",
-        "testStrategy": "Rodar Lighthouse e conferir metatags."
+        "testStrategy": "Rodar Lighthouse e conferir metatags.",
+        "updatedAt": "2026-03-28T05:26:50.571Z"
       },
       {
         "id": "161",
@@ -8857,7 +8859,7 @@
         "id": "163",
         "title": "Fluxo de conta demo e SEO/performance da landing B2B",
         "description": "Onboarding demo e otimizações SEO da landing.",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "dependencies": [
           "162"
@@ -8865,14 +8867,337 @@
         "complexity": 8,
         "subtasks": [],
         "details": "Formulário demo (nome, e-mail, senha). Consome API backend #218. Redireciona para dashboard com banner 'Conta Demonstração'. generateMetadata, JSON-LD SoftwareApplication. LCP < 1.5s.",
-        "testStrategy": "Criar conta demo, validar redirecionamento e metatags."
+        "testStrategy": "Criar conta demo, validar redirecionamento e metatags.",
+        "updatedAt": "2026-03-28T05:30:40.363Z"
+      },
+      {
+        "id": "164",
+        "title": "Corrigir build quebrado por auth-redirect.ts",
+        "description": "O arquivo src/lib/tenant/auth-redirect.ts exporta de ./shared/auth-redirect que nao existe, quebrando o build do Next.js.",
+        "details": "Investigar se o modulo shared/auth-redirect foi deletado ou nunca existiu. Criar o modulo faltante com buildLoginHref e resolvePostLoginPath, ou corrigir imports em layout.tsx, conta/sair, sidebar, legacy-login-flow e network-access-flow. Validar com npx next build.",
+        "testStrategy": "Build deve completar sem erros relacionados a auth-redirect. Navegar pelas rotas afetadas sem erros.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 2,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:12:15.556Z"
+      },
+      {
+        "id": "165",
+        "title": "Corrigir type errors em importacao-evo-p0",
+        "description": "O arquivo importacao-evo-p0/page.tsx tem 15+ erros de tipo: FILE_UPLOAD_GROUPS indefinido, PacoteArquivoDisponivel incompleto, any implicitos, formatJobAliasDate nao encontrado.",
+        "details": "Corrigir todos os type errors no arquivo src/app/(backoffice)/admin/importacao-evo-p0/page.tsx e shared.ts. Definir FILE_UPLOAD_GROUPS, adicionar campos faltantes em PacoteArquivoDisponivel (historico, entidadeFiltro, blocoFiltro), importar formatJobAliasDate, tipar parametros implicitos.",
+        "testStrategy": "tsc --noEmit sem erros neste arquivo. Navegar para /admin/importacao-evo-p0 funciona.",
+        "status": "done",
+        "dependencies": [
+          "164"
+        ],
+        "priority": "high",
+        "complexity": 4,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:13:21.841Z"
+      },
+      {
+        "id": "166",
+        "title": "Corrigir type errors nos formularios de adesao publica e B2B",
+        "description": "Type errors em cadastro/page.tsx (Sexo), checkout/page.tsx (zodResolver/SubmitHandler) e lead-form.tsx (zodResolver).",
+        "details": "Ajustar tipos do zodResolver nos formularios de adesao e B2B. Corrigir tipo Sexo em cadastro. Resolver incompatibilidade do Resolver<CheckoutFormValues> e SubmitHandler no checkout. Corrigir cast do resolver no lead-form. Verificar se o vendor hookform-resolvers/zod precisa de ajuste.",
+        "testStrategy": "tsc --noEmit sem erros nos arquivos de adesao e b2b.",
+        "status": "done",
+        "dependencies": [
+          "164"
+        ],
+        "priority": "high",
+        "complexity": 3,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:14:40.583Z"
+      },
+      {
+        "id": "167",
+        "title": "Eliminar usos de as any no codebase",
+        "description": "4 instancias de as any comprometem type safety: configuracoes, acesso-unidade, rbac e crud-modal.",
+        "details": "Substituir as any por tipos genericos corretos em: configuracoes/page.tsx:171, acesso-unidade/page.tsx:75, rbac/page.tsx:225, crud-modal.tsx:101. Se causado pelo zodResolver, resolver junto com task 166. Para crud-modal, usar generic type parameter.",
+        "testStrategy": "grep -r 'as any' src/ retorna zero resultados. Build sem regressoes.",
+        "status": "done",
+        "dependencies": [
+          "166"
+        ],
+        "priority": "medium",
+        "complexity": 2,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:17:34.730Z"
+      },
+      {
+        "id": "168",
+        "title": "Remover formatters duplicados",
+        "description": "formatCurrency definida em 3 lugares: formatters.ts (canonico), services.ts e adesao-landing-content.tsx.",
+        "details": "Remover definicoes duplicadas de formatCurrency em src/lib/public/services.ts e src/app/(public)/adesao/adesao-landing-content.tsx. Importar de @/lib/formatters ou @/lib/shared/formatters. Verificar se ha outros formatters duplicados no codebase com grep.",
+        "testStrategy": "Build OK. grep 'function formatCurrency' src/ retorna apenas 1 resultado em formatters.ts.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 1,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T05:51:00.714Z"
+      },
+      {
+        "id": "169",
+        "title": "Persistir tasks.json nos commits de tasks",
+        "description": "Mudancas de status no Task Master nao sao commitadas automaticamente, revertendo entre sessoes.",
+        "details": "Documentar no CLAUDE.md que ao finalizar tasks deve-se incluir .taskmaster/tasks/tasks.json no commit. Avaliar criar script npm que faca auto-stage do tasks.json.",
+        "testStrategy": "Apos fechar task e commitar, status persiste em nova sessao.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 2,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T05:49:40.397Z"
+      },
+      {
+        "id": "170",
+        "title": "Avaliar e atualizar vendor hookform-resolvers",
+        "description": "Fork vendored em src/vendor/hookform-resolvers/zod pode estar causando type mismatches com zodResolver.",
+        "details": "Verificar se @hookform/resolvers@3.10.0 oficial resolve os problemas de tipo com Zod 4. Se sim, remover src/vendor/hookform-resolvers/ e usar pacote oficial. Se nao, documentar motivo do fork e atualizar tipos.",
+        "testStrategy": "Formularios de adesao, B2B e backoffice funcionam sem erros de tipo. Build OK.",
+        "status": "done",
+        "dependencies": [
+          "166"
+        ],
+        "priority": "medium",
+        "complexity": 3,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:18:50.684Z"
+      },
+      {
+        "id": "171",
+        "title": "Implementar logger estruturado para producao",
+        "description": "9 instancias de console.warn/error espalhadas. Produção precisa de logger com niveis e contexto.",
+        "details": "Criar src/lib/shared/logger.ts com logger.warn(), logger.error(), logger.info() encapsulando console.* com metadata (timestamp, modulo). Substituir os 9 console.* existentes em: tenant/hooks, importacao-evo-p0, error-state.tsx, commercial-flow. Preparar para integracao com Sentry/Datadog.",
+        "testStrategy": "Nenhum console.warn ou console.error direto no codigo (exceto no logger). Logger funciona em dev e build.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 3,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T05:52:47.646Z"
+      },
+      {
+        "id": "172",
+        "title": "Melhorar acessibilidade (a11y) dos formularios e modais",
+        "description": "Acessibilidade em 7/10. Faltam aria-describedby, aria-live, skip-nav e focus trap em modais.",
+        "details": "Adicionar aria-describedby nos campos de formularios com erro. Adicionar aria-live='polite' em status badges e loading states. Implementar skip-to-content link no layout (app). Auditar com Lighthouse Accessibility. Garantir score >= 90.",
+        "testStrategy": "Lighthouse Accessibility score >= 90 nas paginas principais. axe-core sem violacoes criticas.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T05:56:13.916Z"
+      },
+      {
+        "id": "173",
+        "title": "Ampliar cobertura de testes unitarios com Testing Library",
+        "description": "testing-library/react instalada mas subutilizada. Apenas 3 testes unitarios de utilitarios, zero de componentes React.",
+        "details": "Criar testes de componentes: StatusBadge (cada status), PlanoSelectorCard (valores, destaque, selecao), DemoBanner (aparece com ?demo=1, dismiss), LeadB2bForm (validacao, sucesso), DemoForm (validacao, toggle senha), PublicJourneyShell (steps, tenant switcher), Formatters (formatBRL, formatDate, formatPercent). Cada componente com 3-5 cenarios.",
+        "testStrategy": "npx vitest run passa com todos os novos testes. Cobertura de componentes > 30%.",
+        "status": "done",
+        "dependencies": [
+          "164"
+        ],
+        "priority": "low",
+        "complexity": 6,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:17:07.693Z"
+      },
+      {
+        "id": "174",
+        "title": "Adicionar testes e2e para fluxo de conta demo",
+        "description": "Fluxo de conta demo (/b2b/demo) implementado sem teste e2e.",
+        "details": "Criar tests/e2e/demo-account.spec.ts: acessar /b2b/demo e verificar formulario, validacao de campos (nome vazio, email invalido, senha curta), submissao com dados validos (mock API), redirecionamento para /dashboard?demo=1, banner Conta Demonstracao visivel, dismiss do banner persiste na sessao.",
+        "testStrategy": "npx playwright test demo-account.spec.ts passa.",
+        "status": "done",
+        "dependencies": [
+          "173"
+        ],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:22:48.858Z"
+      },
+      {
+        "id": "175",
+        "title": "Remover tokens admin expostos como NEXT_PUBLIC no client",
+        "description": "Variáveis NEXT_PUBLIC_CATRACA_ADMIN_TOKEN, NEXT_PUBLIC_INTEGRATION_ADMIN_TOKEN e NEXT_PUBLIC_ADMIN_TOKEN são incluídas no bundle JS do browser, permitindo extração por qualquer usuário.",
+        "details": "Arquivos afetados: src/app/(app)/administrativo/unidades/page.tsx. Mover validações que usam esses tokens para Server Components ou Server Actions. Substituir por chamadas server-side que verificam permissões no backend. Remover as variáveis NEXT_PUBLIC_* do .env e substituir por variáveis server-only (sem prefixo NEXT_PUBLIC). Auditar todo o codebase com grep 'NEXT_PUBLIC.*TOKEN' para garantir que nenhum token sensível está exposto.",
+        "testStrategy": "grep -r 'NEXT_PUBLIC.*TOKEN' src/ retorna zero resultados. Build OK. Funcionalidade de catraca e integrações continua operando via server-side.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 3,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:41:20.188Z"
+      },
+      {
+        "id": "176",
+        "title": "Remover credenciais default hardcoded do http.ts",
+        "description": "Auto-login dev usa fallback hardcoded (admin@academia.local / 12345678) que seria ativado se NEXT_PUBLIC_DEV_AUTO_LOGIN estiver ligado em produção.",
+        "details": "Em src/lib/api/http.ts linhas 708-709, remover os valores default '12345678' e 'admin@academia.local'. Exigir que as variáveis NEXT_PUBLIC_DEV_AUTH_EMAIL e NEXT_PUBLIC_DEV_AUTH_PASSWORD estejam definidas para o auto-login funcionar — se ausentes, desabilitar auto-login silenciosamente. Adicionar guard que só permite auto-login quando NODE_ENV === 'development'.",
+        "testStrategy": "grep '12345678' src/ retorna zero. grep 'admin@academia.local' src/ retorna zero. Auto-login funciona em dev com .env configurado. Em production build, auto-login é inerte.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 2,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:37:45.256Z"
+      },
+      {
+        "id": "177",
+        "title": "Adicionar headers de segurança (CSP, HSTS, X-Frame-Options)",
+        "description": "Nenhum header de segurança HTTP está configurado. Faltam Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options e X-Frame-Options.",
+        "details": "Adicionar headers em next.config.ts via campo 'headers' ou no middleware.ts. Headers mínimos: Content-Security-Policy (script-src 'self', style-src 'self' 'unsafe-inline'), X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Strict-Transport-Security: max-age=31536000. Testar que JSON-LD scripts e inline styles do tema continuam funcionando com a CSP.",
+        "testStrategy": "curl -I da landing retorna os headers de segurança. Páginas públicas e app continuam renderizando normalmente.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 3,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:38:22.311Z"
+      },
+      {
+        "id": "178",
+        "title": "Auditar e sanitizar usos de dangerouslySetInnerHTML",
+        "description": "4 arquivos usam dangerouslySetInnerHTML. 1 confirmado seguro (JSON-LD). 3 precisam verificação: pendencias/page.tsx, checkout/page.tsx e b2b/layout.tsx.",
+        "details": "Verificar se os dados passados para dangerouslySetInnerHTML em adesao/pendencias/page.tsx e adesao/checkout/page.tsx vêm de input do usuário ou do backend. Se vêm do backend (contratoHtml), avaliar sanitização com DOMPurify ou similar. Documentar cada uso com comentário explicando por que é seguro. O uso em b2b/layout.tsx é JSON.stringify — já seguro.",
+        "testStrategy": "Cada uso de dangerouslySetInnerHTML tem comentário de segurança ou sanitização. Teste manual com payload XSS em campos de contrato.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 2,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:40:07.278Z"
+      },
+      {
+        "id": "179",
+        "title": "Quebrar importacao-evo-p0/page.tsx (4096 linhas) em módulos",
+        "description": "Maior arquivo do projeto com 4096 linhas e 45 useState. Mistura upload, parsing, polling, validação, tabs, forms e localStorage.",
+        "details": "Extrair em: 1) hooks/useEvoImportJob.ts (estado de jobs, polling, retry), 2) hooks/useEvoFileUpload.ts (upload, parsing, validação de CSV/ZIP), 3) components/EvoUploadTab.tsx (tab de nova importação), 4) components/EvoPacoteTab.tsx (tab de pacote), 5) components/EvoAcompanhamentoTab.tsx (tab de acompanhamento), 6) services/evo-file-parser.ts (lógica de parsing pura). Page.tsx final deve ter <200 linhas.",
+        "testStrategy": "Navegar para /admin/importacao-evo-p0, todas as tabs funcionam. Upload de arquivo funciona. Polling de jobs funciona. Page.tsx < 200 linhas.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 8,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T15:25:40.953Z"
+      },
+      {
+        "id": "180",
+        "title": "Criar hooks useAsyncData e useDialogState reutilizáveis",
+        "description": "O padrão loading/error/data com useState é repetido 300+ vezes. Modal open/close com estado fragmentado aparece em 20+ páginas.",
+        "details": "Criar src/hooks/use-async-data.ts: hook genérico useAsyncData<T>(fetcher) que retorna { data, loading, error, refetch, run }. Criar src/hooks/use-dialog-state.ts: hook useDialogState() que retorna { isOpen, open, close, toggle }. Refatorar 3-5 páginas como prova de conceito (dashboard, alunos, pagamentos). Documentar padrão de uso.",
+        "testStrategy": "Testes unitários para useAsyncData e useDialogState. Páginas refatoradas funcionam sem regressão.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 4,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:46:05.663Z"
+      },
+      {
+        "id": "181",
+        "title": "Extrair status helpers para lib/domain eliminando magic strings",
+        "description": "196 ocorrências de status === 'PENDENTE' e similares espalhadas em 55 arquivos. Frágil e propenso a erros.",
+        "details": "Criar src/lib/domain/status-helpers.ts com funções: isPagamentoPendente(p), isPagamentoPago(p), isAlunoAtivo(a), isMatriculaAtiva(m), isProspectConvertido(p), etc. Cada helper recebe o objeto ou status string e retorna boolean. Substituir as comparações diretas mais comuns (PENDENTE, PAGO, ATIVO, VENCIDO) — começar pelos 25 usos de PENDENTE. Exportar também conjuntos: STATUS_PENDENTES = ['PENDENTE', 'VENCIDO'].",
+        "testStrategy": "Testes unitários para cada helper. grep direto por status strings mais comuns mostra redução significativa.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 3,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:46:27.189Z"
+      },
+      {
+        "id": "182",
+        "title": "Decompor TenantContextProvider (739 linhas) em providers menores",
+        "description": "use-session-context.tsx faz bootstrap, event listening, eligibility, switching e branding — tudo em 739 linhas.",
+        "details": "Separar em: 1) SessionBootstrapProvider — auth token, refresh, /bootstrap call, event listeners de sessão. 2) TenantAccessProvider — tenant list, eligibility filtering, switching, operational access. 3) BrandingProvider — academia, theme, appName. Manter API pública compatível (useTenantContext retorna mesmo shape). Usar composição: SessionBootstrap > TenantAccess > Branding.",
+        "testStrategy": "Login, troca de tenant, impersonação e tema continuam funcionando. Nenhum componente quebra por mudança de API. Testes e2e existentes passam.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 7,
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:48:30.095Z"
+      },
+      {
+        "id": "183",
+        "title": "Migrar tags img nativas para next/image",
+        "description": "5 arquivos usam <img> nativo sem otimização automática (WebP, lazy loading, responsive).",
+        "details": "Arquivos: storefront/layout.tsx, novo-cliente-wizard.tsx, voucher-codigos-modal.tsx, cliente-header.tsx, cliente-thumbnail.tsx. Substituir <img> por <Image> de next/image. Configurar width/height ou fill. Para imagens dinâmicas (foto de aluno), usar loader customizado ou unoptimized se vierem de API externa. Adicionar alt text acessível.",
+        "testStrategy": "grep '<img ' src/ retorna zero resultados. Imagens renderizam corretamente. Lighthouse Images audit sem warnings.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 2,
+        "subtasks": []
+      },
+      {
+        "id": "184",
+        "title": "Migrar páginas read-only para React Server Components",
+        "description": "44 páginas marcadas 'use client' fazem fetch no useEffect. Páginas de listagem simples podem ser RSC.",
+        "details": "Identificar páginas read-only ou com interatividade mínima: planos, atividades, salas, formas-pagamento, tipos-conta. Converter para async Server Components usando serverFetch. Extrair filtros/interações para client islands. Seguir padrão já estabelecido em dashboard/page.tsx e adesao/page.tsx. Meta: converter pelo menos 5 páginas.",
+        "testStrategy": "Páginas migradas renderizam dados corretamente. Filtros e interações funcionam. LCP melhor ou igual.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "185",
+        "title": "Quebrar páginas com mais de 1000 linhas em componentes menores",
+        "description": "14 páginas excedem 1000 linhas misturando lógica de negócio e apresentação.",
+        "details": "Páginas alvo (após importacao-evo-p0 que tem task própria): clientes/[id] (1476 linhas), seguranca/usuarios/[id] (1208), seguranca/rbac (1113), treinos (1042), admin/unidades (950), admin/seguranca/usuarios (942). Para cada: extrair hooks de workspace, separar modais em arquivo próprio, criar componentes de seção. Meta: nenhuma page.tsx > 400 linhas.",
+        "testStrategy": "Funcionalidades existentes continuam operando. Navegação e interação sem regressão. Cada page.tsx < 400 linhas.",
+        "status": "pending",
+        "dependencies": [
+          "179",
+          "180"
+        ],
+        "priority": "low",
+        "complexity": 8,
+        "subtasks": []
+      },
+      {
+        "id": "186",
+        "title": "Adicionar regra ESLint max-lines e detecção de código morto",
+        "description": "Sem limitação de tamanho de arquivo, pages crescem descontroladamente. Sem detecção de exports não utilizados.",
+        "details": "Adicionar ao eslint.config.mjs: regra max-lines com limit 500 (warn) para arquivos em src/app/ e src/components/. Instalar knip como devDependency e configurar knip.json. Adicionar script npm 'dead-code': 'knip --reporter compact'. Rodar uma vez e resolver os achados mais críticos (exports não usados, arquivos órfãos).",
+        "testStrategy": "npm run lint não falha (warnings OK). npm run dead-code gera relatório. Código morto identificado é removido ou justificado.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "187",
+        "title": "Testes e2e para fluxos críticos de segurança e tenant",
+        "description": "Fluxos de login, troca de tenant e controle de acesso não têm cobertura e2e dedicada.",
+        "details": "Criar testes e2e: 1) Login com credenciais válidas → redirect para dashboard, 2) Login com credenciais inválidas → mensagem de erro, 3) Troca de tenant → dados atualizam, 4) Acesso a rota admin sem permissão → bloqueio, 5) Sessão expirada → redirect para login. Usar mocks de API quando necessário.",
+        "testStrategy": "npx playwright test security-flows.spec.ts passa. Cobertura de fluxos críticos de auth.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 5,
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T05:24:05.193Z",
-      "taskCount": 163,
-      "completedCount": 159,
+      "lastModified": "2026-03-28T15:25:40.953Z",
+      "taskCount": 187,
+      "completedCount": 182,
       "tags": [
         "master"
       ]
