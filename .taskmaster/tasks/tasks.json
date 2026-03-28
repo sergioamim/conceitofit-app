@@ -9016,20 +9016,21 @@
         "description": "Fluxo de conta demo (/b2b/demo) implementado sem teste e2e.",
         "details": "Criar tests/e2e/demo-account.spec.ts: acessar /b2b/demo e verificar formulario, validacao de campos (nome vazio, email invalido, senha curta), submissao com dados validos (mock API), redirecionamento para /dashboard?demo=1, banner Conta Demonstracao visivel, dismiss do banner persiste na sessao.",
         "testStrategy": "npx playwright test demo-account.spec.ts passa.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "173"
         ],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:22:48.858Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:18:50.684Z",
+      "lastModified": "2026-03-28T06:22:48.859Z",
       "taskCount": 174,
-      "completedCount": 173,
+      "completedCount": 174,
       "tags": [
         "master"
       ]
