@@ -8919,13 +8919,14 @@
         "description": "4 instancias de as any comprometem type safety: configuracoes, acesso-unidade, rbac e crud-modal.",
         "details": "Substituir as any por tipos genericos corretos em: configuracoes/page.tsx:171, acesso-unidade/page.tsx:75, rbac/page.tsx:225, crud-modal.tsx:101. Se causado pelo zodResolver, resolver junto com task 166. Para crud-modal, usar generic type parameter.",
         "testStrategy": "grep -r 'as any' src/ retorna zero resultados. Build sem regressoes.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "166"
         ],
         "priority": "medium",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:17:34.730Z"
       },
       {
         "id": "168",
@@ -9026,9 +9027,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:17:07.693Z",
+      "lastModified": "2026-03-28T06:17:34.730Z",
       "taskCount": 174,
-      "completedCount": 171,
+      "completedCount": 172,
       "tags": [
         "master"
       ]
