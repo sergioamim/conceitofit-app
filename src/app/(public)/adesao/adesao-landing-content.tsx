@@ -9,11 +9,8 @@ import { PlanoSelectorCard } from "@/components/shared/plano-selector-card";
 import { PublicJourneyShell } from "@/components/public/public-journey-shell";
 import { buildPublicJourneyHref } from "@/lib/public/services";
 import type { PublicTenantContext } from "@/lib/public/services";
+import { formatCurrency } from "@/lib/shared/formatters";
 import type { Tenant } from "@/lib/types";
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 interface AdesaoLandingContentProps {
   context: PublicTenantContext;

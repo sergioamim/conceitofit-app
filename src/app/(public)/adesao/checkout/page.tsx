@@ -19,6 +19,7 @@ import {
 } from "@/lib/public/services";
 import { publicCheckoutFormSchema } from "@/lib/forms/public-journey-schemas";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
+import { formatCurrency } from "@/lib/shared/formatters";
 import type { Tenant, TipoFormaPagamento } from "@/lib/types";
 
 type CheckoutFormValues = {
@@ -30,10 +31,6 @@ type CheckoutFormValues = {
   aceitarContratoAgora: boolean;
   aceitarTermos: boolean;
 };
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 function PublicJourneyFallback() {
   return (

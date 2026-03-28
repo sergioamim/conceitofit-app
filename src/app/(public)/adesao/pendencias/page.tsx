@@ -14,11 +14,8 @@ import {
   type PublicCheckoutSummary,
 } from "@/lib/public/services";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
+import { formatCurrency } from "@/lib/shared/formatters";
 import type { Tenant } from "@/lib/types";
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 function PublicJourneyFallback() {
   return (

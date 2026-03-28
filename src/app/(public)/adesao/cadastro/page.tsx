@@ -21,6 +21,7 @@ import {
 } from "@/lib/public/services";
 import { publicSignupFormSchema } from "@/lib/forms/public-journey-schemas";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
+import { formatCurrency } from "@/lib/shared/formatters";
 import type { Sexo, Tenant } from "@/lib/types";
 
 const DEFAULT_SIGNUP: PublicSignupDraft = {
@@ -33,10 +34,6 @@ const DEFAULT_SIGNUP: PublicSignupDraft = {
   cidade: "",
   objetivo: "",
 };
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 function PublicJourneyFallback() {
   return (

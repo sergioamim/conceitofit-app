@@ -1,3 +1,4 @@
+import { formatCurrency } from "@/lib/shared/formatters";
 import {
   buildPlanoVendaItems,
   planoDryRun,
@@ -141,10 +142,6 @@ function normalizeSlug(value?: string | null): string {
 
 function toCpfDigits(value: string): string {
   return value.replace(/\D/g, "").slice(0, 11);
-}
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function withAlpha(hex: string, alpha: number): string {
