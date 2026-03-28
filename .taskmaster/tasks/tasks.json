@@ -8983,12 +8983,12 @@
         "description": "Acessibilidade em 7/10. Faltam aria-describedby, aria-live, skip-nav e focus trap em modais.",
         "details": "Adicionar aria-describedby nos campos de formularios com erro. Adicionar aria-live='polite' em status badges e loading states. Implementar skip-to-content link no layout (app). Auditar com Lighthouse Accessibility. Garantir score >= 90.",
         "testStrategy": "Lighthouse Accessibility score >= 90 nas paginas principais. axe-core sem violacoes criticas.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 4,
         "subtasks": [],
-        "updatedAt": "2026-03-28T05:52:03.430Z"
+        "updatedAt": "2026-03-28T05:56:13.916Z"
       },
       {
         "id": "173",
@@ -9021,9 +9021,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T05:52:47.646Z",
+      "lastModified": "2026-03-28T05:56:13.916Z",
       "taskCount": 174,
-      "completedCount": 166,
+      "completedCount": 167,
       "tags": [
         "master"
       ]
