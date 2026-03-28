@@ -15,7 +15,8 @@ export function MetricCardSkeleton() {
 
 export function DashboardSkeleton({ hideTabs = false }: { hideTabs?: boolean }) {
   return (
-    <div className="space-y-6">
+    <div role="status" aria-live="polite" className="space-y-6">
+      <span className="sr-only">Carregando dashboard…</span>
       <div className="flex items-start justify-between gap-4">
         <div>
           <Skeleton className="h-8 w-40" />
