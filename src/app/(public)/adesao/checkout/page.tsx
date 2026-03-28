@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,7 @@ import {
 } from "@/lib/public/services";
 import { publicCheckoutFormSchema } from "@/lib/forms/public-journey-schemas";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { formatCurrency } from "@/lib/shared/formatters";
 import type { Tenant, TipoFormaPagamento } from "@/lib/types";
 
@@ -82,7 +83,7 @@ function CheckoutPublicoPageContent() {
   const formaPagamento = useWatch({ control, name: "formaPagamento" });
   const selectedPlan = context?.planos.find((plan) => plan.id === selectedPlanId) ?? context?.planos[0] ?? null;
   const quote = selectedPlan ? getPublicPlanQuote(selectedPlan) : null;
-  const contractPreview =
+  const contractPreviewRaw =
     context && selectedPlan && draft.signup
       ? buildPublicContractPreview({
           plano: selectedPlan,
@@ -91,6 +92,11 @@ function CheckoutPublicoPageContent() {
           academia: context.academia,
         })
       : undefined;
+  // Sanitiza HTML do contrato — template vem do backend mas valores substituídos podem conter input de usuário
+  const contractPreview = useMemo(
+    () => (contractPreviewRaw ? sanitizeHtml(contractPreviewRaw) : undefined),
+    [contractPreviewRaw],
+  );
 
   if (loading) {
     return (
