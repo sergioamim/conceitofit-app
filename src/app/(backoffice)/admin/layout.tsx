@@ -6,6 +6,7 @@ import { ReactNode, Suspense, useEffect, useState } from "react";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { TenantContextProvider } from "@/lib/tenant/hooks/use-session-context";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
+import { BackofficeContextProvider } from "@/lib/backoffice/backoffice-context";
 import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { backofficeNavGroups } from "@/lib/backoffice/nav-items";
@@ -161,9 +162,11 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <TenantContextProvider>
-      <Suspense fallback={<AdminLayoutFallback>{children}</AdminLayoutFallback>}>
-        <AdminLayoutContent>{children}</AdminLayoutContent>
-      </Suspense>
+      <BackofficeContextProvider>
+        <Suspense fallback={<AdminLayoutFallback>{children}</AdminLayoutFallback>}>
+          <AdminLayoutContent>{children}</AdminLayoutContent>
+        </Suspense>
+      </BackofficeContextProvider>
     </TenantContextProvider>
   );
 }

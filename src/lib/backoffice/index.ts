@@ -3,6 +3,7 @@
  * Módulos de administração global e segurança.
  */
 export * from "./admin";
+export * from "./backoffice-context";
 export * from "./nav-items";
 export * from "./seguranca";
 export * from "./seguranca-navigation";
