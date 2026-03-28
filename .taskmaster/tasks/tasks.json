@@ -8904,13 +8904,14 @@
         "description": "Type errors em cadastro/page.tsx (Sexo), checkout/page.tsx (zodResolver/SubmitHandler) e lead-form.tsx (zodResolver).",
         "details": "Ajustar tipos do zodResolver nos formularios de adesao e B2B. Corrigir tipo Sexo em cadastro. Resolver incompatibilidade do Resolver<CheckoutFormValues> e SubmitHandler no checkout. Corrigir cast do resolver no lead-form. Verificar se o vendor hookform-resolvers/zod precisa de ajuste.",
         "testStrategy": "tsc --noEmit sem erros nos arquivos de adesao e b2b.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "164"
         ],
         "priority": "high",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:14:40.583Z"
       },
       {
         "id": "167",
@@ -9023,9 +9024,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:13:21.841Z",
+      "lastModified": "2026-03-28T06:14:40.583Z",
       "taskCount": 174,
-      "completedCount": 169,
+      "completedCount": 170,
       "tags": [
         "master"
       ]
