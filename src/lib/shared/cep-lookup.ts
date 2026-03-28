@@ -1,3 +1,5 @@
+import { logger } from "@/lib/shared/logger";
+
 
 export interface CepResult {
   cep: string;
@@ -42,7 +44,7 @@ export async function fetchCep(cep: string): Promise<CepResult | null> {
 
     return data as CepResult;
   } catch (error) {
-    console.error("Erro ao buscar CEP:", error);
+    logger.error("Erro ao buscar CEP:", { module: "cep-lookup", error });
     return null;
   }
 }
