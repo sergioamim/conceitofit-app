@@ -8470,20 +8470,22 @@
         "testStrategy": "Navegar até /clientes/[id] com um perfil aberto, trocar de unidade via selector no topbar, verificar que o redirect vai para /dashboard com dados do novo tenant. Testar também em outras páginas contextuais (/matriculas, /pagamentos) para garantir o comportamento consistente. Testar cenário de erro: simular falha na troca e verificar que o usuário permanece na página atual.",
         "subtasks": [
           {
-            "id": "137.1",
+            "id": 137.1,
             "title": "Adicionar router.push('/dashboard') após troca de tenant bem-sucedida",
             "description": "Em app-topbar.tsx, importar useRouter e após await setTenant(nextId) redirecionar para /dashboard",
             "status": "done",
-            "dependencies": []
+            "dependencies": [],
+            "parentId": "undefined"
           },
           {
-            "id": "137.2",
+            "id": 137.2,
             "title": "Garantir que redirect só ocorre em caso de sucesso",
             "description": "Verificar que se setTenant falhar (throw), o redirect não acontece e o usuário permanece na página atual com feedback de erro",
             "status": "done",
             "dependencies": [
               "137.1"
-            ]
+            ],
+            "parentId": "undefined"
           }
         ]
       },
@@ -8497,13 +8499,364 @@
         "details": "Criados src/lib/shared/index.ts, src/lib/tenant/index.ts, src/lib/backoffice/index.ts e src/lib/public/index.ts com re-exports dos módulos existentes organizados por domínio. shared: access-control, formatters, types, utils, ui-motion, business-date, feature-flags, network-subdomain. tenant: tenant-context, tenant-operational-access, tenant-theme, nav-items, administrativo-colaboradores, auth-redirect. backoffice: admin módulos + security. public: services, storage, use-public-journey.",
         "testStrategy": "Build do Next.js passa sem erros novos. Imports existentes continuam funcionando.",
         "subtasks": []
+      },
+      {
+        "id": "139",
+        "title": "Extrair nav-items do backoffice e corrigir duplicidade",
+        "description": "Mover navegação do backoffice para arquivo dedicado e remover item duplicado de Compliance LGPD.",
+        "status": "done",
+        "priority": "low",
+        "dependencies": [],
+        "complexity": 2,
+        "subtasks": [],
+        "details": "Criar src/lib/backoffice/nav-items.ts com estrutura semelhante a src/lib/nav-items.ts (incluindo ícones Lucide e agrupamento por seção). Substituir array hardcoded em src/app/(backoffice)/admin/layout.tsx por import do novo arquivo. Remover duplicidade do item 'Compliance LGPD'.",
+        "testStrategy": "Abrir /admin e validar que sidebar renderiza todos os itens sem duplicações.",
+        "updatedAt": "2026-03-28T04:01:21.421Z"
+      },
+      {
+        "id": "140",
+        "title": "Configurar Vitest e testes unitários básicos",
+        "description": "Adicionar Vitest + Testing Library e criar testes iniciais para utilitários críticos.",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [],
+        "complexity": 3,
+        "subtasks": [],
+        "details": "Adicionar vitest, @testing-library/react, @testing-library/jest-dom em devDependencies. Criar vitest.config.ts e tests/setup.ts. Testes de exemplo para access-control, api/session e tenant-context.",
+        "testStrategy": "Rodar npx vitest run e validar que os testes passam."
+      },
+      {
+        "id": "141",
+        "title": "Criar estrutura de diretórios por domínio em src/lib",
+        "description": "Criar pastas shared/tenant/backoffice/public com barrels iniciais.",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [],
+        "complexity": 2,
+        "subtasks": [],
+        "details": "Criar src/lib/shared, src/lib/tenant, src/lib/backoffice, src/lib/public com index.ts de barrel. Mapear módulos existentes e adicionar re-exports temporários.",
+        "testStrategy": "Executar npm run lint e navegar pelas rotas principais."
+      },
+      {
+        "id": "142",
+        "title": "Migrar utilitários e tipos para shared",
+        "description": "Mover utilitários, tipos e helpers genéricos para src/lib/shared e atualizar imports.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "141"
+        ],
+        "complexity": 6,
+        "subtasks": [],
+        "details": "Mover access-control.ts, feature-flags.ts, types.ts, utils.ts, utils/*, formatters.ts, business-date.ts, ui-motion.ts, auth-redirect.ts, api/http.ts para src/lib/shared. Atualizar imports e manter re-exports temporários.",
+        "testStrategy": "npm run lint e next build para checar resolução de tipos."
+      },
+      {
+        "id": "143",
+        "title": "Migrar módulos do tenant para src/lib/tenant",
+        "description": "Realocar APIs e lógica da app do gestor para o domínio tenant.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "141"
+        ],
+        "complexity": 7,
+        "subtasks": [],
+        "details": "Mover ~25 módulos: alunos, matriculas, pagamentos, planos, crm, treinos, comercial, financeiro, administrativo-*, tenant-context.ts, tenant-operational-access.ts, tenant-theme.ts para src/lib/tenant. Atualizar imports em ~60 páginas.",
+        "testStrategy": "Abrir páginas do tenant (/clientes, /planos) e validar carregamento."
+      },
+      {
+        "id": "144",
+        "title": "Migrar módulos do backoffice para src/lib/backoffice",
+        "description": "Realocar APIs e lógica do backoffice para o domínio backoffice.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "141"
+        ],
+        "complexity": 4,
+        "subtasks": [],
+        "details": "Mover admin-*, backoffice/*, backoffice.ts, security-*, importacao-evo.ts para src/lib/backoffice. Atualizar imports em ~15 páginas.",
+        "testStrategy": "Acessar /admin e subrotas após a migração."
+      },
+      {
+        "id": "145",
+        "title": "Migrar módulos públicos para src/lib/public",
+        "description": "Consolidar a jornada pública no domínio public.",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "141"
+        ],
+        "complexity": 2,
+        "subtasks": [],
+        "details": "Mover src/lib/public/* (services.ts, storage.ts, use-public-journey.ts) e helpers adicionais. Atualizar imports em src/app/(public)/adesao/*.",
+        "testStrategy": "Abrir /adesao e validar jornada pública."
+      },
+      {
+        "id": "146",
+        "title": "Reorganizar hooks por domínio",
+        "description": "Mover hooks específicos de tenant/backoffice para suas áreas.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "142",
+          "143",
+          "144",
+          "145"
+        ],
+        "complexity": 5,
+        "subtasks": [],
+        "details": "Mover use-commercial-flow para src/lib/tenant/hooks. Manter hooks genéricos em src/hooks (use-confirm-dialog, use-crud-operations, etc.). Atualizar imports em componentes.",
+        "testStrategy": "npm run lint e validar páginas que usam hooks migrados."
+      },
+      {
+        "id": "147",
+        "title": "Configurar regras de import boundaries",
+        "description": "Adicionar eslint-plugin-boundaries para garantir separação entre domínios.",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "146"
+        ],
+        "complexity": 3,
+        "subtasks": [],
+        "details": "Instalar eslint-plugin-boundaries. Configurar eslint.config.mjs: tenant não importa backoffice e vice-versa; public só importa public/shared.",
+        "testStrategy": "npm run lint e verificar erros ao tentar import inválido."
+      },
+      {
+        "id": "148",
+        "title": "Implementar BackofficeContextProvider",
+        "description": "Criar contexto próprio do backoffice com modos plataforma/inspeção.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "144"
+        ],
+        "complexity": 6,
+        "subtasks": [],
+        "details": "Contexto com estado mode: 'platform' | 'tenant', dados do tenant inspecionado, sinalização de impersonation. Expor hook useBackofficeContext. Manter isolado do TenantContextProvider.",
+        "testStrategy": "Testar em /admin alternando modos e validar renderização condicional."
+      },
+      {
+        "id": "149",
+        "title": "Refatorar layout do backoffice",
+        "description": "Sidebar agrupada, ícones, breadcrumbs, header com modo e command palette.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "148",
+          "139"
+        ],
+        "complexity": 7,
+        "subtasks": [],
+        "details": "Refatorar src/app/(backoffice)/admin/layout.tsx para usar BackofficeContextProvider e nav-items. Sidebar com agrupamento (Operacional, Comercial, Segurança, Configuração). Breadcrumbs, command palette dedicada (cmdk).",
+        "testStrategy": "Navegar por /admin/* e validar sidebar, breadcrumbs e indicador de modo."
+      },
+      {
+        "id": "150",
+        "title": "Definir padrão RSC e helper de data fetching",
+        "description": "Documentar padrão Server Component + Client Component e criar helper de fetch server-side.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "142"
+        ],
+        "complexity": 5,
+        "subtasks": [],
+        "details": "Criar docs/rsc-pattern.md com exemplo. Adicionar src/lib/shared/server-fetch.ts que usa fetch com cookies() do Next.js e avalia proxy vs BACKEND_PROXY_TARGET.",
+        "testStrategy": "Validar exemplo renderizando dados no server sem use client."
+      },
+      {
+        "id": "151",
+        "title": "Migrar listagens do tenant para Server Components",
+        "description": "Converter /clientes, /planos, /matriculas, /pagamentos, /prospects para RSC.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "150"
+        ],
+        "complexity": 8,
+        "subtasks": [],
+        "details": "Remover 'use client' das pages. Cada page.tsx faz fetch server-side e passa dados para ClientTable. Manter filtros/search no client.",
+        "testStrategy": "Abrir cada rota e validar SSR com dados iniciais + filtros client-side."
+      },
+      {
+        "id": "152",
+        "title": "Migrar dashboards para Server Components",
+        "description": "Converter /dashboard (tenant) e /admin (backoffice) para RSC.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "150"
+        ],
+        "complexity": 5,
+        "subtasks": [],
+        "details": "Buscar métricas via APIs usando helper server-side. Enviar dados para componentes client (gráficos) apenas quando necessário.",
+        "testStrategy": "Verificar KPIs e gráficos sem flashes de hidratação."
+      },
+      {
+        "id": "153",
+        "title": "Migrar landing pública /adesao para RSC",
+        "description": "Transformar página de adesão em Server Component para SEO.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "150"
+        ],
+        "complexity": 4,
+        "subtasks": [],
+        "details": "Converter src/app/(public)/adesao/page.tsx para Server Component. Mover busca de planos/tenant para o servidor.",
+        "testStrategy": "Validar HTML gerado no server, SEO básico e fluxo existente."
+      },
+      {
+        "id": "154",
+        "title": "Implementar middleware de subdomínio para storefront",
+        "description": "Detectar subdomínio, resolver tenant e rotear para storefront.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "150"
+        ],
+        "complexity": 8,
+        "subtasks": [],
+        "details": "Middleware Next.js que extrai subdomínio do host, consulta API de resolução /api/v1/publico/storefront/resolve com cache. Se inválido, rewrite para 404 pública. Headers x-tenant-id/x-tenant-slug para SSR.",
+        "testStrategy": "Testar com hosts simulados e validar rewrite/404."
+      },
+      {
+        "id": "155",
+        "title": "Implementar StorefrontTheme e CRUD no painel",
+        "description": "Criar modelo de tema white-label e UI para edição no painel da academia.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "154"
+        ],
+        "complexity": 6,
+        "subtasks": [],
+        "details": "Tipo StorefrontTheme em types.ts. Formulário react-hook-form + zod para campos (logo, cores, hero, favicon). Inject CSS variables no layout da storefront. Consome API backend #203/#204.",
+        "testStrategy": "Salvar tema, recarregar storefront e verificar cores/logos."
+      },
+      {
+        "id": "156",
+        "title": "Construir Home da storefront (RSC)",
+        "description": "Página inicial pública da academia com conteúdo e branding personalizados.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "155"
+        ],
+        "complexity": 8,
+        "subtasks": [],
+        "details": "Rota RSC com header, hero, bio, galeria, modalidades, footer e grid de unidades. Se 1 unidade, mostra detalhes+planos. Se múltiplas, renderiza cards. Consome API backend #206.",
+        "testStrategy": "Renderização SSR e variação entre uma e múltiplas unidades."
+      },
+      {
+        "id": "157",
+        "title": "Construir página de unidade (RSC)",
+        "description": "Página da unidade com detalhes, mapa e planos.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "156"
+        ],
+        "complexity": 6,
+        "subtasks": [],
+        "details": "Rota RSC: informações, mapa embed, lista de planos, CTAs adesão/trial. Consome API backend #207.",
+        "testStrategy": "Acessar unidade via URL e validar CTAs e dados."
+      },
+      {
+        "id": "158",
+        "title": "Integrar jornada de adesão na storefront",
+        "description": "Reaproveitar fluxo /adesao para a storefront com URLs diretas por plano.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "153",
+          "157"
+        ],
+        "complexity": 7,
+        "subtasks": [],
+        "details": "Rotas amigáveis /plano/[slug], /checkout. URL direta para campanhas. Consome API backend #210.",
+        "testStrategy": "Fluxo completo de adesão a partir de academia-xpto.conceito.fit/plano/slug."
+      },
+      {
+        "id": "159",
+        "title": "Implementar fluxo de aula experimental",
+        "description": "Landing/form simplificado para trial e criação de prospect no CRM.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "158"
+        ],
+        "complexity": 5,
+        "subtasks": [],
+        "details": "Rota /experimental na storefront. Formulário nome, telefone, e-mail, modalidade. Consome API backend #211/#212.",
+        "testStrategy": "Submeter formulário e verificar criação do lead."
+      },
+      {
+        "id": "160",
+        "title": "SEO e performance da storefront",
+        "description": "Metadata dinâmica, JSON-LD, sitemap e otimizações.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "156",
+          "157"
+        ],
+        "complexity": 5,
+        "subtasks": [],
+        "details": "generateMetadata com title/description/og:image por academia. JSON-LD LocalBusiness, sitemap dinâmico. Consome API backend #214. LCP < 2.5s.",
+        "testStrategy": "Rodar Lighthouse e conferir metatags."
+      },
+      {
+        "id": "161",
+        "title": "Criar landing page B2B (RSC)",
+        "description": "Landing de vendas do conceito.fit com identidade própria.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "150"
+        ],
+        "complexity": 7,
+        "subtasks": [],
+        "details": "Página RSC em src/app/(public)/b2b com hero, dores, benefícios, screenshots, depoimentos, planos/FAQ, footer. Zero JS desnecessário.",
+        "testStrategy": "Validar renderização SSR e responsividade mobile-first."
+      },
+      {
+        "id": "162",
+        "title": "Implementar CTAs e captura de leads B2B",
+        "description": "Formulário de demonstração e integração com API de leads.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "161"
+        ],
+        "complexity": 4,
+        "subtasks": [],
+        "details": "Formulário react-hook-form + zod (nome, e-mail, telefone, nome academia, qtd alunos). Consome API backend #216. Estado de sucesso/erro.",
+        "testStrategy": "Submeter formulário e validar criação de lead."
+      },
+      {
+        "id": "163",
+        "title": "Fluxo de conta demo e SEO/performance da landing B2B",
+        "description": "Onboarding demo e otimizações SEO da landing.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "162"
+        ],
+        "complexity": 8,
+        "subtasks": [],
+        "details": "Formulário demo (nome, e-mail, senha). Consome API backend #218. Redireciona para dashboard com banner 'Conta Demonstração'. generateMetadata, JSON-LD SoftwareApplication. LCP < 1.5s.",
+        "testStrategy": "Criar conta demo, validar redirecionamento e metatags."
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T12:00:00.000Z",
-      "taskCount": 137,
-      "completedCount": 136,
+      "lastModified": "2026-03-28T04:01:21.421Z",
+      "taskCount": 163,
+      "completedCount": 139,
       "tags": [
         "master"
       ]
