@@ -9174,11 +9174,12 @@
         "description": "Sem limitação de tamanho de arquivo, pages crescem descontroladamente. Sem detecção de exports não utilizados.",
         "details": "Adicionar ao eslint.config.mjs: regra max-lines com limit 500 (warn) para arquivos em src/app/ e src/components/. Instalar knip como devDependency e configurar knip.json. Adicionar script npm 'dead-code': 'knip --reporter compact'. Rodar uma vez e resolver os achados mais críticos (exports não usados, arquivos órfãos).",
         "testStrategy": "npm run lint não falha (warnings OK). npm run dead-code gera relatório. Código morto identificado é removido ou justificado.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T14:56:05.397Z"
       },
       {
         "id": "187",
@@ -9196,9 +9197,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T14:55:44.652Z",
+      "lastModified": "2026-03-28T14:56:05.397Z",
       "taskCount": 187,
-      "completedCount": 183,
+      "completedCount": 184,
       "tags": [
         "master"
       ]
