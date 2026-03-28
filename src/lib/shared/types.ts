@@ -1297,6 +1297,26 @@ export interface TenantBranding {
   colors?: Partial<TenantThemeColors>;
 }
 
+export interface StorefrontTheme {
+  id?: string;
+  tenantId: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  heroImageUrl?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  themePreset?: TenantThemePreset;
+  useCustomColors?: boolean;
+  colors?: Partial<TenantThemeColors>;
+  footerText?: string;
+  socialLinks?: {
+    instagram?: string;
+    facebook?: string;
+    whatsapp?: string;
+  };
+  updatedAt?: string;
+}
+
 export type CupomPrintMode = "58MM" | "80MM" | "CUSTOM";
 
 export interface TenantConfiguracoes {
