@@ -9095,11 +9095,12 @@
         "description": "O padrão loading/error/data com useState é repetido 300+ vezes. Modal open/close com estado fragmentado aparece em 20+ páginas.",
         "details": "Criar src/hooks/use-async-data.ts: hook genérico useAsyncData<T>(fetcher) que retorna { data, loading, error, refetch, run }. Criar src/hooks/use-dialog-state.ts: hook useDialogState() que retorna { isOpen, open, close, toggle }. Refatorar 3-5 páginas como prova de conceito (dashboard, alunos, pagamentos). Documentar padrão de uso.",
         "testStrategy": "Testes unitários para useAsyncData e useDialogState. Páginas refatoradas funcionam sem regressão.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:46:05.663Z"
       },
       {
         "id": "181",
@@ -9191,9 +9192,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:41:20.188Z",
+      "lastModified": "2026-03-28T06:46:05.665Z",
       "taskCount": 187,
-      "completedCount": 178,
+      "completedCount": 179,
       "tags": [
         "master"
       ]
