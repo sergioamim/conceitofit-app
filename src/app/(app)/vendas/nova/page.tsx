@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import { ScanLine } from "lucide-react";
 import {
   createVendaService,
@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckoutPayment } from "@/components/shared/checkout-payment";
 import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
-const SaleReceiptModal = dynamic(
+const SaleReceiptModal = nextDynamic(
   () => import("@/components/shared/sale-receipt-modal").then((mod) => mod.SaleReceiptModal),
   { ssr: false }
 );

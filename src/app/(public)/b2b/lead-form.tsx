@@ -29,7 +29,7 @@ export function LeadB2bForm() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LeadB2bFormValues>({
-    resolver: zodResolver(leadB2bFormSchema) as ReturnType<typeof zodResolver>,
+    resolver: zodResolver<LeadB2bFormValues>(leadB2bFormSchema),
     defaultValues: {
       nome: "",
       email: "",

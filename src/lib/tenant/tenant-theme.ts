@@ -1,4 +1,4 @@
-import type { Academia, TenantBranding, TenantThemeColors, TenantThemePreset } from "./types";
+import type { Academia, TenantBranding, TenantThemeColors, TenantThemePreset } from "../shared/types";
 
 export const TENANT_THEME_PRESETS: Record<TenantThemePreset, TenantThemeColors> = {
   CONCEITO_DARK: {

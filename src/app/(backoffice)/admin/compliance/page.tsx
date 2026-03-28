@@ -429,14 +429,14 @@ function SolicitacoesExclusao({
               filtered.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">
-                    {s.solicitanteNome}
+                    {s.alunoNome}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {s.solicitanteEmail}
+                    {s.email ?? "—"}
                   </TableCell>
                   <TableCell className="text-sm">{s.academiaNome}</TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                    {formatDate(s.dataSolicitacao)}
+                    {formatDate(s.solicitadoEm)}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -460,7 +460,7 @@ function SolicitacoesExclusao({
                             setActionState({
                               type: "executar",
                               id: s.id,
-                              nome: s.solicitanteNome,
+                              nome: s.alunoNome,
                             })
                           }
                           className="text-gym-teal hover:text-gym-teal"
@@ -477,7 +477,7 @@ function SolicitacoesExclusao({
                             setActionState({
                               type: "rejeitar",
                               id: s.id,
-                              nome: s.solicitanteNome,
+                              nome: s.alunoNome,
                             });
                           }}
                           className="text-gym-danger hover:text-gym-danger"
@@ -489,7 +489,7 @@ function SolicitacoesExclusao({
                     )}
                     {s.status !== "PENDENTE" && (
                       <span className="text-xs text-muted-foreground">
-                        {s.responsavelNome ?? "—"}
+                        {s.solicitadoPor ?? "—"}
                       </span>
                     )}
                   </TableCell>
@@ -614,7 +614,7 @@ export default function CompliancePage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               title="Dados Pessoais"
-              value={formatNumber(dashboard.totalDadosPessoais)}
+              value={formatNumber(dashboard.totalDadosPessoaisArmazenados)}
               description="Total estimado de registros com dados pessoais"
               icon={Database}
             />
@@ -657,7 +657,7 @@ export default function CompliancePage() {
 
           {/* Solicitações de Exclusão */}
           <SolicitacoesExclusao
-            solicitacoes={dashboard.solicitacoes}
+            solicitacoes={dashboard.solicitacoesPendentes}
             onActionCompleted={loadDashboard}
           />
         </>

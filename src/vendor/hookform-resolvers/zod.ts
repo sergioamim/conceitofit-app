@@ -1,5 +1,5 @@
 import type { FieldErrors, FieldValues, Resolver, ResolverResult } from "react-hook-form";
-import { z, type ZodIssue, type ZodType } from "zod";
+import { type ZodIssue, type ZodType } from "zod";
 
 function setNestedError(target: Record<string, unknown>, path: string[], issue: ZodIssue) {
   const [head, ...tail] = path;
@@ -33,22 +33,23 @@ function toFieldErrors<TFieldValues extends FieldValues>(issues: ZodIssue[]): Fi
   return errors as FieldErrors<TFieldValues>;
 }
 
-export function zodResolver<TSchema extends ZodType>(
-  schema: TSchema,
-): Resolver<z.input<TSchema>, unknown, z.output<TSchema>> {
-  return async (values): Promise<ResolverResult<z.input<TSchema>, z.output<TSchema>>> => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function zodResolver<TFieldValues extends FieldValues = any>(
+  schema: ZodType,
+): Resolver<TFieldValues> {
+  return async (values): Promise<ResolverResult<TFieldValues>> => {
     const result = await schema.safeParseAsync(values);
 
     if (result.success) {
       return {
-        values: result.data,
+        values: result.data as TFieldValues,
         errors: {},
       };
     }
 
     return {
-      values: {} as z.output<TSchema>,
-      errors: toFieldErrors<z.input<TSchema>>(result.error.issues),
+      values: {} as Record<string, never>,
+      errors: toFieldErrors<TFieldValues>(result.error.issues),
     };
   };
 }

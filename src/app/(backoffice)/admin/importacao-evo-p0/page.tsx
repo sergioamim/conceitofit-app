@@ -90,6 +90,7 @@ import {
   colaboradorArquivoAliasIndex,
   colaboradorBlocoMetaIndex,
   FILE_FIELDS,
+  FILE_UPLOAD_GROUPS,
   isOnboardingCollectionRouteError,
   normalizeTenantId,
   parsePositiveInteger,
@@ -711,7 +712,7 @@ function ImportacaoEvoP0PageContent() {
         impactoAusencia: meta.impactoAusencia,
       });
     });
-    const deduplicado = new Map<string, PacoteArquivoDisponivel>();
+    const deduplicado = new Map<string, (typeof enriched)[number]>();
     enriched.forEach((arquivo) => {
       const dedupeKey = arquivo.chaveCanonica ?? arquivo.chaveOriginal;
       const existente = deduplicado.get(dedupeKey);
@@ -3145,8 +3146,7 @@ function ImportacaoEvoP0PageContent() {
                           const podeAbrirRejeicoes = Boolean(arquivo.blocoFiltro || arquivo.entidadeFiltro)
                             && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial");
                           const podeRetrySomenteErros = arquivo.historico.retrySomenteErrosSuportado
-                            && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial")
-                            && arquivo.historico.status !== "processando";
+                            && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial");
                           const labelRetrySomenteErros = arquivo.historico.retrySomenteErrosSuportado
                             ? "Tentar somente erros"
                             : "Tentar somente erros (aguardando backend)";

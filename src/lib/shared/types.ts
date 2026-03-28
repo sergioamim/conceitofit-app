@@ -76,7 +76,7 @@ export interface AlunoTotaisStatus {
   cancelados?: number;
 }
 
-export type Sexo = "M" | "F" | "OUTRO";
+export type Sexo = "M" | "F" | "OUTRO" | "NAO_INFORMADO";
 
 export type CategoriaAtividade =
   | "MUSCULACAO"
@@ -2448,41 +2448,3 @@ export interface AuditLogEntry {
   ip?: string;
 }
 
-/* ── Compliance LGPD ──────────────────────────── */
-
-export type SolicitacaoExclusaoStatus = "PENDENTE" | "EXECUTADA" | "REJEITADA";
-
-export interface SolicitacaoExclusao {
-  id: UUID;
-  solicitanteNome: string;
-  solicitanteEmail: string;
-  solicitanteCpf?: string;
-  academiaId: UUID;
-  academiaNome: string;
-  dataSolicitacao: LocalDateTime;
-  dataResposta?: LocalDateTime;
-  status: SolicitacaoExclusaoStatus;
-  motivo?: string;
-  responsavelNome?: string;
-}
-
-export interface ComplianceAcademiaResumo {
-  academiaId: UUID;
-  academiaNome: string;
-  totalAlunos: number;
-  alunosComCpf: number;
-  alunosComEmail: number;
-  alunosComTelefone: number;
-  termosAceitos: number;
-  termosPendentes: number;
-  ultimaSolicitacaoExclusao?: LocalDateTime;
-}
-
-export interface ComplianceDashboard {
-  totalDadosPessoais: number;
-  solicitacoesExclusaoPendentes: number;
-  termosAceitos: number;
-  termosPendentes: number;
-  academias: ComplianceAcademiaResumo[];
-  solicitacoes: SolicitacaoExclusao[];
-}

@@ -165,7 +165,7 @@ export default function AdminSegurancaUsuariosPage() {
     resolver: zodResolver(globalUserCreateFormSchema),
     defaultValues: CREATE_USER_DEFAULT,
   });
-  const createForm = useWatch({ control: createUserForm.control }) ?? CREATE_USER_DEFAULT;
+  const createForm = (useWatch({ control: createUserForm.control }) ?? CREATE_USER_DEFAULT) as CreateGlobalUserForm;
 
   const unidadesFiltradas = useMemo(() => {
     if (!filters.academiaId) return unidades;
@@ -300,13 +300,14 @@ export default function AdminSegurancaUsuariosPage() {
   }
 
   function toggleCreateTenant(tenantId: string) {
-    const tenantIds = createForm.tenantIds.includes(tenantId)
-      ? createForm.tenantIds.filter((item) => item !== tenantId)
-      : [...createForm.tenantIds, tenantId];
+    const current = createForm.tenantIds ?? [];
+    const tenantIds = current.includes(tenantId)
+      ? current.filter((item) => item !== tenantId)
+      : [...current, tenantId];
     createUserForm.setValue("tenantIds", tenantIds, { shouldDirty: true });
     createUserForm.setValue(
       "defaultTenantId",
-      tenantIds.includes(createForm.defaultTenantId) ? createForm.defaultTenantId : tenantIds[0] ?? "",
+      (createForm.defaultTenantId && tenantIds.includes(createForm.defaultTenantId)) ? createForm.defaultTenantId : tenantIds[0] ?? "",
       { shouldDirty: true }
     );
   }

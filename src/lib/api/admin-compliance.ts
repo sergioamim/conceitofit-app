@@ -1,6 +1,7 @@
 import type {
   ComplianceAcademiaResumo,
   ComplianceDashboard,
+  ComplianceTermsStatus,
   SolicitacaoExclusao,
   SolicitacaoExclusaoStatus,
 } from "@/lib/types";
@@ -10,11 +11,13 @@ import { apiRequest } from "./http";
 
 type ComplianceDashboardApiResponse = Partial<ComplianceDashboard> & {
   totalDadosPessoais?: unknown;
+  totalDadosPessoaisArmazenados?: unknown;
   solicitacoesExclusaoPendentes?: unknown;
   termosAceitos?: unknown;
   termosPendentes?: unknown;
   academias?: Partial<ComplianceAcademiaResumo>[];
   solicitacoes?: Partial<SolicitacaoExclusao>[];
+  solicitacoesPendentes?: Partial<SolicitacaoExclusao>[];
 };
 
 /* ── Helpers ──────────────────────────────────── */
@@ -31,12 +34,14 @@ function toNumber(value: unknown, fallback = 0): number {
 }
 
 const VALID_EXCLUSION_STATUSES = new Set<SolicitacaoExclusaoStatus>([
-  "PENDENTE", "EXECUTADA", "REJEITADA",
+  "PENDENTE", "EM_PROCESSAMENTO", "EXECUTADA", "REJEITADA",
 ]);
+
+const VALID_TERMS_STATUSES = new Set<ComplianceTermsStatus>(["ACEITO", "PARCIAL", "PENDENTE"]);
 
 function normalizeAcademiaResumo(raw: Partial<ComplianceAcademiaResumo>): ComplianceAcademiaResumo {
   return {
-    academiaId: cleanString(raw.academiaId) ?? "",
+    academiaId: cleanString(raw.academiaId),
     academiaNome: cleanString(raw.academiaNome) ?? "—",
     totalAlunos: toNumber(raw.totalAlunos),
     alunosComCpf: toNumber(raw.alunosComCpf),
@@ -45,35 +50,40 @@ function normalizeAcademiaResumo(raw: Partial<ComplianceAcademiaResumo>): Compli
     termosAceitos: toNumber(raw.termosAceitos),
     termosPendentes: toNumber(raw.termosPendentes),
     ultimaSolicitacaoExclusao: cleanString(raw.ultimaSolicitacaoExclusao),
+    statusTermos: VALID_TERMS_STATUSES.has(raw.statusTermos as ComplianceTermsStatus)
+      ? (raw.statusTermos as ComplianceTermsStatus)
+      : "PENDENTE",
+    camposSensiveis: Array.isArray(raw.camposSensiveis) ? raw.camposSensiveis : [],
   };
 }
 
 function normalizeSolicitacao(raw: Partial<SolicitacaoExclusao>): SolicitacaoExclusao {
   return {
     id: cleanString(raw.id) ?? "",
-    solicitanteNome: cleanString(raw.solicitanteNome) ?? "—",
-    solicitanteEmail: cleanString(raw.solicitanteEmail) ?? "—",
-    solicitanteCpf: cleanString(raw.solicitanteCpf),
-    academiaId: cleanString(raw.academiaId) ?? "",
+    academiaId: cleanString(raw.academiaId),
     academiaNome: cleanString(raw.academiaNome) ?? "—",
-    dataSolicitacao: cleanString(raw.dataSolicitacao) ?? "",
-    dataResposta: cleanString(raw.dataResposta),
+    alunoId: cleanString(raw.alunoId),
+    alunoNome: cleanString(raw.alunoNome) ?? "—",
+    email: cleanString(raw.email),
+    cpf: cleanString(raw.cpf),
+    solicitadoEm: cleanString(raw.solicitadoEm),
+    solicitadoPor: cleanString(raw.solicitadoPor),
     status: VALID_EXCLUSION_STATUSES.has(raw.status as SolicitacaoExclusaoStatus)
       ? (raw.status as SolicitacaoExclusaoStatus)
       : "PENDENTE",
     motivo: cleanString(raw.motivo),
-    responsavelNome: cleanString(raw.responsavelNome),
   };
 }
 
 function normalizeDashboard(raw: ComplianceDashboardApiResponse): ComplianceDashboard {
   return {
-    totalDadosPessoais: toNumber(raw.totalDadosPessoais),
+    totalDadosPessoaisArmazenados: toNumber(raw.totalDadosPessoaisArmazenados ?? raw.totalDadosPessoais),
     solicitacoesExclusaoPendentes: toNumber(raw.solicitacoesExclusaoPendentes),
     termosAceitos: toNumber(raw.termosAceitos),
     termosPendentes: toNumber(raw.termosPendentes),
     academias: (raw.academias ?? []).map(normalizeAcademiaResumo),
-    solicitacoes: (raw.solicitacoes ?? []).map(normalizeSolicitacao),
+    solicitacoesPendentes: (raw.solicitacoesPendentes ?? raw.solicitacoes ?? []).map(normalizeSolicitacao),
+    exposicaoCamposSensiveis: Array.isArray(raw.exposicaoCamposSensiveis) ? raw.exposicaoCamposSensiveis : [],
   };
 }
 
