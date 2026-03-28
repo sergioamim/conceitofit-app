@@ -8529,19 +8529,20 @@
         "id": "141",
         "title": "Criar estrutura de diretórios por domínio em src/lib",
         "description": "Criar pastas shared/tenant/backoffice/public com barrels iniciais.",
-        "status": "pending",
+        "status": "done",
         "priority": "low",
         "dependencies": [],
         "complexity": 2,
         "subtasks": [],
         "details": "Criar src/lib/shared, src/lib/tenant, src/lib/backoffice, src/lib/public com index.ts de barrel. Mapear módulos existentes e adicionar re-exports temporários.",
-        "testStrategy": "Executar npm run lint e navegar pelas rotas principais."
+        "testStrategy": "Executar npm run lint e navegar pelas rotas principais.",
+        "updatedAt": "2026-03-28T04:11:48.618Z"
       },
       {
         "id": "142",
         "title": "Migrar utilitários e tipos para shared",
         "description": "Mover utilitários, tipos e helpers genéricos para src/lib/shared e atualizar imports.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "141"
@@ -8549,7 +8550,8 @@
         "complexity": 6,
         "subtasks": [],
         "details": "Mover access-control.ts, feature-flags.ts, types.ts, utils.ts, utils/*, formatters.ts, business-date.ts, ui-motion.ts, auth-redirect.ts, api/http.ts para src/lib/shared. Atualizar imports e manter re-exports temporários.",
-        "testStrategy": "npm run lint e next build para checar resolução de tipos."
+        "testStrategy": "npm run lint e next build para checar resolução de tipos.",
+        "updatedAt": "2026-03-28T04:13:48.105Z"
       },
       {
         "id": "143",
@@ -8569,7 +8571,7 @@
         "id": "144",
         "title": "Migrar módulos do backoffice para src/lib/backoffice",
         "description": "Realocar APIs e lógica do backoffice para o domínio backoffice.",
-        "status": "pending",
+        "status": "done",
         "priority": "medium",
         "dependencies": [
           "141"
@@ -8577,13 +8579,14 @@
         "complexity": 4,
         "subtasks": [],
         "details": "Mover admin-*, backoffice/*, backoffice.ts, security-*, importacao-evo.ts para src/lib/backoffice. Atualizar imports em ~15 páginas.",
-        "testStrategy": "Acessar /admin e subrotas após a migração."
+        "testStrategy": "Acessar /admin e subrotas após a migração.",
+        "updatedAt": "2026-03-28T04:15:34.596Z"
       },
       {
         "id": "145",
         "title": "Migrar módulos públicos para src/lib/public",
         "description": "Consolidar a jornada pública no domínio public.",
-        "status": "pending",
+        "status": "done",
         "priority": "low",
         "dependencies": [
           "141"
@@ -8591,7 +8594,8 @@
         "complexity": 2,
         "subtasks": [],
         "details": "Mover src/lib/public/* (services.ts, storage.ts, use-public-journey.ts) e helpers adicionais. Atualizar imports em src/app/(public)/adesao/*.",
-        "testStrategy": "Abrir /adesao e validar jornada pública."
+        "testStrategy": "Abrir /adesao e validar jornada pública.",
+        "updatedAt": "2026-03-28T04:12:45.058Z"
       },
       {
         "id": "146",
@@ -8854,9 +8858,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T04:01:21.421Z",
+      "lastModified": "2026-03-28T04:15:34.597Z",
       "taskCount": 163,
-      "completedCount": 139,
+      "completedCount": 143,
       "tags": [
         "master"
       ]
