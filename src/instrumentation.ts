@@ -1,3 +1,5 @@
+import { logger } from "@/lib/shared/logger";
+
 function createExtendPolyfill() {
   return function extend(target: object, source: unknown) {
     const value = source as Record<string, unknown> | null;
@@ -37,6 +39,6 @@ export async function register() {
       value: createExtendPolyfill(),
     });
   } catch (error) {
-    console.warn("[instrumentation] Falha ao aplicar compatibilidade util._extend:", error);
+    logger.warn("Falha ao aplicar compatibilidade util._extend", { module: "instrumentation", error });
   }
 }

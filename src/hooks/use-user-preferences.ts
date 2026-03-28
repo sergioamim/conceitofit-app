@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { logger } from "@/lib/shared/logger";
 
 const PREFERENCES_KEY = "academia-user-preferences";
 const SYNC_EVENT = "academia-user-preferences-sync";
@@ -42,7 +43,7 @@ function loadFromStorage() {
     try {
       globalPreferences = JSON.parse(stored);
     } catch (e) {
-      console.error("Erro ao carregar preferências:", e);
+      logger.error("Erro ao carregar preferências", { module: "user-preferences", error: e });
       globalPreferences = { ...DEFAULT_PREFERENCES };
     }
   }

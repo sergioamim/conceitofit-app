@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { logger } from "@/lib/shared/logger";
 import {
   createVendaService,
   listAlunosService,
@@ -73,7 +74,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
       setAlunos(loaded);
       setAlunosLoaded(true);
     } catch (err) {
-      console.error("Failed to load alunos", err);
+      logger.error("Failed to load alunos", { module: "commercial-flow", error: err });
     }
   }, [alunosLoaded, tenantId]);
 
@@ -90,7 +91,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
       setConvenios(cvs);
       setFormasPagamento(fps);
     } catch (err) {
-      console.error("Failed to load commercial data", err);
+      logger.error("Failed to load commercial data", { module: "commercial-flow", error: err });
     } finally {
       setLoadingData(false);
     }
