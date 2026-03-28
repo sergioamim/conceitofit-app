@@ -8486,13 +8486,24 @@
             ]
           }
         ]
+      },
+      {
+        "id": "138",
+        "title": "Criar estrutura de domínios em src/lib",
+        "description": "Introduzir pastas por domínio (shared/tenant/backoffice/public) e barrels iniciais para preparar a migração de código.",
+        "status": "done",
+        "priority": "low",
+        "dependencies": [],
+        "details": "Criados src/lib/shared/index.ts, src/lib/tenant/index.ts, src/lib/backoffice/index.ts e src/lib/public/index.ts com re-exports dos módulos existentes organizados por domínio. shared: access-control, formatters, types, utils, ui-motion, business-date, feature-flags, network-subdomain. tenant: tenant-context, tenant-operational-access, tenant-theme, nav-items, administrativo-colaboradores, auth-redirect. backoffice: admin módulos + security. public: services, storage, use-public-journey.",
+        "testStrategy": "Build do Next.js passa sem erros novos. Imports existentes continuam funcionando.",
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-27T17:42:57.318Z",
-      "taskCount": 136,
-      "completedCount": 135,
+      "lastModified": "2026-03-28T12:00:00.000Z",
+      "taskCount": 137,
+      "completedCount": 136,
       "tags": [
         "master"
       ]
