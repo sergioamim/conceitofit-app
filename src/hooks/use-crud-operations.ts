@@ -9,6 +9,7 @@ type CrudOptions<T> = {
   updateFn?: (id: string, data: never) => Promise<unknown>;
   toggleFn?: (id: string) => Promise<unknown>;
   deleteFn?: (id: string) => Promise<unknown>;
+  initialData?: T[];
 };
 
 type CrudResult<T> = {
@@ -24,10 +25,12 @@ type CrudResult<T> = {
 export function useCrudOperations<T extends { id: string }>(
   options: CrudOptions<T>
 ): CrudResult<T> {
-  const [items, setItems] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hasInitialData = options.initialData != null && options.initialData.length > 0;
+  const [items, setItems] = useState<T[]>(options.initialData ?? []);
+  const [loading, setLoading] = useState(!hasInitialData);
   const [error, setError] = useState("");
   const loadingRef = useRef(false);
+  const didSkipInitialRef = useRef(false);
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
@@ -49,8 +52,12 @@ export function useCrudOperations<T extends { id: string }>(
   }, []);
 
   useEffect(() => {
+    if (hasInitialData && !didSkipInitialRef.current) {
+      didSkipInitialRef.current = true;
+      return;
+    }
     void reload();
-  }, [reload]);
+  }, [reload, hasInitialData]);
 
   const handleSave = useCallback(
     async (data: never, id?: string) => {
