@@ -12,7 +12,7 @@ import { listVouchersApi } from "@/lib/api/beneficios";
 import { normalizeCapabilityError } from "@/lib/api/backend-capability";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type {
   CampanhaCRM,
   CampanhaCanal,

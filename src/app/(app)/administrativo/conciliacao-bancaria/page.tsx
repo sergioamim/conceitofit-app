@@ -27,7 +27,7 @@ import { listContasBancariasApi } from "@/lib/api/contas-bancarias";
 import { listPagamentosApi } from "@/lib/api/pagamentos";
 import { listContasPagarApi } from "@/lib/api/financeiro-gerencial";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { formatBRL } from "@/lib/formatters";
 import { PageError } from "@/components/shared/page-error";
 

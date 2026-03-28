@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { getDreGerencialApi, getDreProjecaoApi } from "@/lib/api/financeiro-gerencial";
 import { getBusinessCurrentMonthYear, getBusinessMonthRange } from "@/lib/business-date";
 import type { CategoriaContaPagar, DREProjecao, DREGerencial, DreProjectionScenario, GrupoDre } from "@/lib/types";

@@ -25,7 +25,7 @@ import { PhoneInput } from "@/components/shared/phone-input";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { gerarCatracaCredencialApi, type CatracaCredentialResponse } from "@/lib/api/catraca";
-import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { PageError } from "@/components/shared/page-error";
 
 type UnitForm = {

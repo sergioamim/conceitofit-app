@@ -7,7 +7,7 @@ import {
   toggleTipoContaPagarApi,
   updateTipoContaPagarApi,
 } from "@/lib/api/tipos-conta";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { CategoriaContaPagar, GrupoDre, TipoContaPagar } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";

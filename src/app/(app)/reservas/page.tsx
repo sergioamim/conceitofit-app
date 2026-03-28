@@ -26,7 +26,7 @@ import type {
   ReservaAula,
 } from "@/lib/types";
 import { RESERVA_AULA_STATUS_LABEL } from "@/lib/tenant/aulas/reservas";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,

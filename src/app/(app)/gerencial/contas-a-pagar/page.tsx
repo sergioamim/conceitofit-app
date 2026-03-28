@@ -12,7 +12,7 @@ import {
 } from "@/lib/api/financeiro-gerencial";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
 import { listTiposContaPagarApi } from "@/lib/api/tipos-conta";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { getBusinessMonthRange, getBusinessTodayIso } from "@/lib/business-date";
 import type {
   CategoriaContaPagar,

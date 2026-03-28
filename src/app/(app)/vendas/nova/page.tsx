@@ -15,7 +15,7 @@ import {
 } from "@/lib/tenant/comercial/runtime";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { buildPlanoVendaItems } from "@/lib/tenant/comercial/plano-flow";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Aluno, Convenio, PagamentoVenda, Plano, Produto, Servico, Tenant, TipoVenda, Venda } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,7 @@ interface DetectResult {
 }
 
 
-import { useCommercialFlow } from "@/hooks/use-commercial-flow";
+import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
 
 function inferSaleTypeFromCart(items: CartItem[]): TipoVenda {
   if (items.some((item) => item.tipo === "PLANO")) return "PLANO";

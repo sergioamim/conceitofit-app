@@ -6,7 +6,7 @@ import { ChevronLeft } from "lucide-react";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { PlanoForm } from "@/components/planos/plano-form";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { getPlanoApi, updatePlanoApi } from "@/lib/api/comercial-catalogo";
 import { listAtividadesApi } from "@/lib/api/administrativo";
 import type { Atividade, Plano } from "@/lib/types";

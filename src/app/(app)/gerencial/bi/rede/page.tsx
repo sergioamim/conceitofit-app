@@ -5,7 +5,7 @@ import { Download, Printer, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { getBiOperacionalSnapshotApi } from "@/lib/api/bi";
 import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { buildBiExportCsv } from "@/lib/tenant/bi/analytics";

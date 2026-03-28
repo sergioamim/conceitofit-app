@@ -11,7 +11,7 @@ import {
   reprocessarAgregadorTransacaoApi,
 } from "@/lib/api/admin-financeiro";
 import { AGREGADOR_REPASSE_LABEL, summarizeAgregadorTransacoes } from "@/lib/backoffice/admin-financeiro";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { AgregadorRepasseStatus, AgregadorTransacao } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 

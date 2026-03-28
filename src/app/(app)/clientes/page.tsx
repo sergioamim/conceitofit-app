@@ -10,7 +10,7 @@ import {
   listAlunosPageService,
   updateAlunoService,
 } from "@/lib/tenant/comercial/runtime";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { HoverPopover } from "@/components/shared/hover-popover";
 

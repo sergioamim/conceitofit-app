@@ -10,7 +10,7 @@ import { createMaquininhaApi, listMaquininhasApi, toggleMaquininhaApi, updateMaq
 import { listContasBancariasApi } from "@/lib/api/contas-bancarias";
 import type { AdquirenteMaquininha, ContaBancaria } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { PageError } from "@/components/shared/page-error";
 
 type MaquininhaForm = {

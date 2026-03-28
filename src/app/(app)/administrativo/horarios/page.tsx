@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { listHorariosApi, updateHorariosApi } from "@/lib/api/contexto-unidades";
 import type { HorarioFuncionamento } from "@/lib/types";
 import { Button } from "@/components/ui/button";

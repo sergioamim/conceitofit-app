@@ -34,7 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { DEFAULT_ACTIVE_TENANT_LABEL, useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { DEFAULT_ACTIVE_TENANT_LABEL, useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { addDaysToIsoDate, getBusinessTodayIso } from "@/lib/business-date";
 import { resolveTreinoV2Permissions } from "@/lib/tenant/treinos/v2-domain";

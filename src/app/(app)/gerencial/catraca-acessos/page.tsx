@@ -11,7 +11,7 @@ import type {
 import { listarAcessosCatracaDashboardApi } from "@/lib/api/catraca";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { ClienteThumbnail } from "@/components/shared/cliente-thumbnail";

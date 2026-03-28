@@ -15,7 +15,7 @@ import {
   listContasReceberOperacionais,
   type PagamentoComAluno,
 } from "@/lib/tenant/financeiro/recebimentos";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { AgregadorTransacao, NfseConfiguracao, Pagamento, TipoFormaPagamento } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";

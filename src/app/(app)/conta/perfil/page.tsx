@@ -16,7 +16,7 @@ import {
   getPreferredTenantId,
   setPreferredTenantId,
 } from "@/lib/api/session";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 
 export default function PerfilPage() {
   const [nome, setNome] = useState("Sergio");

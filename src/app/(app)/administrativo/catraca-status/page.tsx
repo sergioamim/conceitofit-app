@@ -9,7 +9,7 @@ import { listarCatracaWsStatusApi } from "@/lib/api/catraca";
 import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { Tenant } from "@/lib/types";
-import { useAuthAccess } from "@/hooks/use-session-context";
+import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import { PageError } from "@/components/shared/page-error";
 
 const TODOS_TENANTS_VALUE = "__TODOS_TENANTS__";

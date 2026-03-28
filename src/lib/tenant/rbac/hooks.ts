@@ -25,7 +25,7 @@ import type {
   RbacUser,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 
 export function useRbacTenant() {
   const tenantContext = useTenantContext();

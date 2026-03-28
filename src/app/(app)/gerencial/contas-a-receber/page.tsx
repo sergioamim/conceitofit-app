@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import { listContasReceberOperacionais, type PagamentoComAluno } from "@/lib/tenant/financeiro/recebimentos";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

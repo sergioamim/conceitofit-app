@@ -16,7 +16,7 @@ import {
   getNextProspectStatus,
   getSelectableProspectStatuses,
 } from "@/lib/tenant/crm/prospect-status";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type {
   Prospect,
   StatusProspect,

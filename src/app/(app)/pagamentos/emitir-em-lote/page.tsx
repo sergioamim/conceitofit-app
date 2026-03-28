@@ -9,7 +9,7 @@ import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
 import { emitirNfseEmLoteApi } from "@/lib/api/pagamentos";
 import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
 import { listContasReceberOperacionais, type PagamentoComAluno } from "@/lib/tenant/financeiro/recebimentos";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { NfseConfiguracao } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";

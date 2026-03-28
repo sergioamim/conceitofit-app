@@ -37,14 +37,14 @@ import {
   allNavItems,
   NavItem,
   } from "@/lib/tenant/nav-items";
-  import { useUserPreferences } from "@/hooks/use-user-preferences";
+  import { useUserPreferences } from "@/lib/tenant/hooks/use-user-preferences";
   import {
   DEFAULT_ACADEMIA_LABEL,
 
   DEFAULT_ACTIVE_TENANT_LABEL,
   useAuthAccess,
   useTenantContext,
-} from "@/hooks/use-session-context";
+} from "@/lib/tenant/hooks/use-session-context";
 import {
   Dialog,
   DialogContent,

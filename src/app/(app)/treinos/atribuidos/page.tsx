@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { DEFAULT_ACTIVE_TENANT_LABEL, useTenantContext } from "@/hooks/use-session-context";
+import { DEFAULT_ACTIVE_TENANT_LABEL, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import {
   buildTreinoV2EditorSeed,
   buildTreinoV2SaveInput,

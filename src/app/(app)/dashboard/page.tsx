@@ -18,7 +18,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { getDashboardApi } from "@/lib/api/dashboard";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { DashboardSkeleton } from "@/components/shared/dashboard-skeleton";

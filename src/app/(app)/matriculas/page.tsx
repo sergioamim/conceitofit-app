@@ -20,7 +20,7 @@ import {
   STATUS_CONTRATO_LABEL,
   STATUS_FLUXO_COMERCIAL_LABEL,
 } from "@/lib/tenant/comercial/plano-flow";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";

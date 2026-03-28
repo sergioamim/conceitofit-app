@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { listVendasPageService, resolveVendaFluxoStatusFromApi } from "@/lib/tenant/comercial/runtime";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { TipoFormaPagamento, Venda } from "@/lib/types";
 import { STATUS_FLUXO_COMERCIAL_LABEL } from "@/lib/tenant/comercial/plano-flow";
 import { Button } from "@/components/ui/button";

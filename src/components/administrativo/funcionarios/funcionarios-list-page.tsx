@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CargoModal } from "@/components/shared/cargo-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
-import { useAuthAccess } from "@/hooks/use-session-context";
+import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import { createCargoApi, deleteCargoApi, deleteFuncionarioApi, toggleCargoApi, toggleFuncionarioApi, updateCargoApi } from "@/lib/api/administrativo";
 import { filterColaboradores, type ColaboradorFlagFiltro } from "@/lib/tenant/administrativo-colaboradores";
 import { cn } from "@/lib/utils";

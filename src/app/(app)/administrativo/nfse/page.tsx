@@ -18,7 +18,7 @@ import {
   NFSE_STATUS_LABEL,
   validateNfseConfiguracaoDraft,
 } from "@/lib/backoffice/admin-financeiro";
-import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type {
   NfseAmbiente,
   NfseClassificacaoTributaria,
