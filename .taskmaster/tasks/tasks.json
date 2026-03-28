@@ -9056,11 +9056,12 @@
         "description": "Nenhum header de segurança HTTP está configurado. Faltam Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options e X-Frame-Options.",
         "details": "Adicionar headers em next.config.ts via campo 'headers' ou no middleware.ts. Headers mínimos: Content-Security-Policy (script-src 'self', style-src 'self' 'unsafe-inline'), X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Strict-Transport-Security: max-age=31536000. Testar que JSON-LD scripts e inline styles do tema continuam funcionando com a CSP.",
         "testStrategy": "curl -I da landing retorna os headers de segurança. Páginas públicas e app continuam renderizando normalmente.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-28T06:38:22.311Z"
       },
       {
         "id": "178",
@@ -9188,9 +9189,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T06:37:45.256Z",
+      "lastModified": "2026-03-28T06:38:22.312Z",
       "taskCount": 187,
-      "completedCount": 175,
+      "completedCount": 176,
       "tags": [
         "master"
       ]
