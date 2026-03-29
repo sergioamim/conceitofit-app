@@ -143,6 +143,10 @@ function buildSupportDetails(error: ApiRequestError, digest?: string): ErrorSupp
     details.push({ label: "Contexto", value: error.contextId });
   }
 
+  if (error.requestId) {
+    details.push({ label: "Request-Id", value: error.requestId });
+  }
+
   if (digest) {
     details.push({ label: "Trace", value: digest });
   }

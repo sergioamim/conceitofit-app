@@ -19,6 +19,7 @@ export interface ApiErrorPayload {
   fieldErrors?: Record<string, string> | null;
   responseBody?: string;
   contextId?: string;
+  requestId?: string;
 }
 
 export interface ApiResponseWithMeta<T> {
@@ -33,6 +34,7 @@ export class ApiRequestError extends Error {
   public readonly fieldErrors?: Record<string, string> | null;
   public readonly responseBody?: string;
   public readonly contextId?: string;
+  public readonly requestId?: string;
 
   constructor(payload: ApiErrorPayload & { statusCode?: number }) {
     const status = payload.status ?? payload.statusCode ?? 500;
@@ -46,6 +48,7 @@ export class ApiRequestError extends Error {
     this.fieldErrors = payload.fieldErrors;
     this.responseBody = payload.responseBody;
     this.contextId = payload.contextId;
+    this.requestId = payload.requestId;
   }
 }
 
@@ -121,6 +124,16 @@ function getContextId(): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Gera um UUID único por request para correlação frontend↔backend. */
+function generateRequestId(): string | undefined {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch { /* fallback */ }
+  return undefined;
 }
 
 export function buildApiUrl(path: string, query?: Record<string, string | number | boolean | undefined>): string {
@@ -527,6 +540,10 @@ async function performApiRequest<T>(input: {
   if (contextId) {
     headers["X-Context-Id"] = contextId;
   }
+  const requestId = generateRequestId();
+  if (requestId) {
+    headers["X-Request-Id"] = requestId;
+  }
   const token = getAccessToken();
   if (token) {
     headers["Authorization"] = `${getAccessTokenType() ?? "Bearer"} ${token}`;
@@ -628,6 +645,7 @@ async function performApiRequest<T>(input: {
       responseBody: rawBody ?? payload?.responseBody,
       fieldErrors: payload?.fieldErrors,
       contextId: response.headers.get("X-Context-Id") ?? headers["X-Context-Id"],
+      requestId: response.headers.get("X-Request-Id") ?? headers["X-Request-Id"],
     };
     throw new ApiRequestError(details);
   }

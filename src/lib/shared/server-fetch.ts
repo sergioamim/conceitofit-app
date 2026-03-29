@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 
 // ---------------------------------------------------------------------------
@@ -116,6 +117,8 @@ export async function serverFetch<T>(
   if (token) {
     reqHeaders.Authorization = `Bearer ${token}`;
   }
+
+  reqHeaders["X-Request-Id"] = randomUUID();
 
   const res = await fetch(url, {
     method,
