@@ -9432,12 +9432,12 @@
         "description": "O backend tem 9 endpoints de segurança avançada (catálogo de funcionalidades, perfis-padrão com versionamento, revisões, exceções) não integrados.",
         "details": "Expandir a página de RBAC (/seguranca/rbac) ou criar sub-páginas: 1) Tab/página de catálogo de funcionalidades (GET/POST/PUT /admin/seguranca/catalogo-funcionalidades). 2) Tab de perfis-padrão com versionamento (GET /perfis-padrao, GET /{key}/versoes, POST). 3) Tab de revisões de segurança (GET /admin/seguranca/revisoes). 4) Gestão de exceções (POST /excecoes, PUT /excecoes/{id}/revisao). Atualizar src/lib/api/rbac.ts ou criar admin-seguranca-avancada.ts.",
         "testStrategy": "Catálogo lista funcionalidades. Perfis-padrão com versões visíveis. Exceções criáveis/revisáveis.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 6,
         "subtasks": [],
-        "updatedAt": "2026-03-29T03:49:16.811Z"
+        "updatedAt": "2026-03-29T03:55:42.111Z"
       },
       {
         "id": "202",
@@ -9497,11 +9497,12 @@
         "description": "O mesmo padrão Loader (getActiveTenantId + serverFetch + catch silencioso + Suspense) é repetido em 50+ páginas administrativas. Extrair para utility reutilizável.",
         "details": "Padrão duplicado: async function getActiveTenantId() { cookies()... } + async function Loader() { const tenantId = ...; let data = []; try { data = await serverFetch(...) } catch {} return <Content initialData={data} /> }. Criar src/lib/shared/create-tenant-loader.tsx com: function createTenantLoader<T>(url: string, queryParams?: Record<string,string>): React.FC que encapsula todo o boilerplate. Migrar pelo menos 10 páginas como prova de conceito. Manter logging nos catch blocks.",
         "testStrategy": "Páginas migradas funcionam igual ao original. Loader genérico lida com erro e loading corretamente.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T03:55:49.960Z"
       },
       {
         "id": "207",
@@ -9629,9 +9630,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T03:55:07.154Z",
+      "lastModified": "2026-03-29T03:55:49.960Z",
       "taskCount": 216,
-      "completedCount": 203,
+      "completedCount": 205,
       "tags": [
         "master"
       ]
