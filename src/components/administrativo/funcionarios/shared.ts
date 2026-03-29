@@ -80,7 +80,7 @@ const DEFAULT_QUICK_CREATE: ColaboradorQuickCreateDraft = {
   observacoes: "",
 };
 
-const FALLBACK_PERFIS: RbacPerfil[] = [
+export const FALLBACK_PERFIS: RbacPerfil[] = [
   { id: "perfil-admin-fallback", tenantId: "fallback", roleName: "ADMIN", displayName: "Administrador", active: true },
   { id: "perfil-gerente-fallback", tenantId: "fallback", roleName: "GERENTE", displayName: "Gerente", active: true },
   { id: "perfil-atendente-fallback", tenantId: "fallback", roleName: "ATENDENTE", displayName: "Atendente", active: true },

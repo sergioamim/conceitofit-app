@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import {
-  executarSolicitacaoExclusao,
-  getComplianceDashboard,
-  rejeitarSolicitacaoExclusao,
+  executarSolicitacaoExclusaoApi,
+  getComplianceDashboardApi,
+  rejeitarSolicitacaoExclusaoApi,
 } from "../../src/lib/api/admin-compliance";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
@@ -187,7 +187,7 @@ test.describe("admin compliance api", () => {
     ]);
 
     try {
-      const dashboard = await getComplianceDashboard();
+      const dashboard = await getComplianceDashboardApi();
 
       expect(calls).toHaveLength(1);
       expect(calls[0]?.url).toContain("/api/v1/admin/compliance/dashboard");
@@ -232,8 +232,8 @@ test.describe("admin compliance api", () => {
     ]);
 
     try {
-      await executarSolicitacaoExclusao("req-10");
-      await rejeitarSolicitacaoExclusao("req-11");
+      await executarSolicitacaoExclusaoApi("req-10");
+      await rejeitarSolicitacaoExclusaoApi("req-11");
 
       expect(calls).toHaveLength(2);
       expect(calls[0]).toEqual(

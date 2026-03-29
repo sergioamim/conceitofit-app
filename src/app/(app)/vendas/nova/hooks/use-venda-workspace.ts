@@ -11,7 +11,7 @@ import {
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
-import type { Aluno, Plano, Produto, Servico, Tenant, TipoVenda, Venda } from "@/lib/types";
+import type { Aluno, PagamentoVenda, Plano, Produto, Servico, Tenant, TipoVenda, Venda } from "@/lib/types";
 import { formatBRL } from "@/lib/formatters";
 import { SuggestionOption } from "@/components/shared/suggestion-input";
 

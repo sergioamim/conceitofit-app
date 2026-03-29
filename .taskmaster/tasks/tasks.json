@@ -9232,7 +9232,18 @@
         "dependencies": [],
         "priority": "low",
         "complexity": 1,
-        "subtasks": [],
+        "subtasks": [
+          {
+            "id": null,
+            "title": "Substituir console.error em useEvoImportPage.ts",
+            "status": "done"
+          },
+          {
+            "id": null,
+            "title": "Verificar outros console.error no codebase",
+            "status": "done"
+          }
+        ],
         "updatedAt": "2026-03-28T23:55:10.164Z"
       },
       {
@@ -9245,7 +9256,23 @@
         "dependencies": [],
         "priority": "low",
         "complexity": 4,
-        "subtasks": [],
+        "subtasks": [
+          {
+            "id": null,
+            "title": "Criar estrutura de pastas para tipos",
+            "status": "done"
+          },
+          {
+            "id": null,
+            "title": "Mover tipos por domínio para novos arquivos",
+            "status": "done"
+          },
+          {
+            "id": null,
+            "title": "Atualizar types.ts para re-exportar tudo",
+            "status": "done"
+          }
+        ],
         "updatedAt": "2026-03-29T00:00:33.234Z"
       },
       {

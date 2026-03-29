@@ -59,7 +59,7 @@ const EMPTY_FORM: UnitForm = {
   evoFilialId: "",
 };
 
-function resolveAcademiaId(unit?: Tenant | null) {
+export function resolveAcademiaId(unit?: Tenant | null) {
   return unit?.academiaId ?? unit?.groupId ?? "";
 }
 
@@ -503,5 +503,6 @@ export function useUnidadesWorkspace() {
     handleEdit,
     handleSubmit,
     handleToggle,
+    resolveAcademiaId,
   };
 }
