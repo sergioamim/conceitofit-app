@@ -9953,13 +9953,14 @@
         "description": "Listar treinos atribuídos ao aluno logado. Exibir divisão, exercícios, séries, carga, aderência. Marcar execução.",
         "details": "Usar API existente: GET /api/v1/treinos?alunoId=. Exibir cards por divisão (A, B, C). Cada card com exercícios, séries, reps, carga sugerida. Botão \"Concluir treino\" chama POST execução. Exibir aderência % e status do ciclo.",
         "testStrategy": "Aluno vê treinos atribuídos. Registra execução. Aderência atualiza.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "239"
         ],
         "priority": "medium",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T12:03:22.423Z"
       },
       {
         "id": "241",
@@ -10025,13 +10026,14 @@
         "description": "Em /administrativo/integracoes ou nova rota. Configurar gateway ativo, chave API, webhook URL. Testar conexão.",
         "details": "Formulário com: select de gateway (Pagar.me, Asaas, Stripe), chave API (mascarada), webhook URL (auto-gerada), botão \"Testar conexão\". Salvar config via API. Exibir status da conexão (online/offline).",
         "testStrategy": "Academia configura gateway. Teste de conexão funciona. Chave mascarada na UI.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "244"
         ],
         "priority": "medium",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T12:04:53.531Z"
       },
       {
         "id": "246",
@@ -10077,9 +10079,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:55:40.829Z",
+      "lastModified": "2026-03-29T12:04:53.531Z",
       "taskCount": 248,
-      "completedCount": 243,
+      "completedCount": 244,
       "tags": [
         "master"
       ]
