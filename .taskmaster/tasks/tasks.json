@@ -9967,14 +9967,14 @@
         "description": "Listar aulas disponíveis na grade semanal. Reservar vaga, ver status, cancelar reserva.",
         "details": "Usar API existente: GET /api/v1/agenda/aulas/sessoes, POST /api/v1/agenda/reservas. Grid semanal com slots disponíveis. Indicar: vagas livres, lotado, lista de espera. Reservar com um tap. Cancelar reserva. Exibir status (confirmada, espera).",
         "testStrategy": "Aluno reserva aula. Vaga atualiza. Cancelamento funciona.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "239"
         ],
         "priority": "medium",
         "complexity": 6,
         "subtasks": [],
-        "updatedAt": "2026-03-29T11:51:23.437Z"
+        "updatedAt": "2026-03-29T11:55:34.170Z"
       },
       {
         "id": "242",
@@ -10012,12 +10012,12 @@
         "description": "Criar src/lib/api/billing.ts com: criar assinatura, cancelar, listar, status. Types para Assinatura, CobrancaRecorrente.",
         "details": "API client tipado para gateway escolhido (Pagar.me ou Asaas). Endpoints: POST criar assinatura, DELETE cancelar, GET listar, GET status. Types: Assinatura (id, alunoId, planoId, status, valor, ciclo, proximaCobranca), CobrancaRecorrente (id, assinaturaId, valor, status, dataPagamento). Normalização de response no padrão do projeto.",
         "testStrategy": "Client tipado. Testes unitários com mock de responses.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 5,
         "subtasks": [],
-        "updatedAt": "2026-03-29T11:53:34.912Z"
+        "updatedAt": "2026-03-29T11:55:40.829Z"
       },
       {
         "id": "245",
@@ -10077,9 +10077,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:53:55.800Z",
+      "lastModified": "2026-03-29T11:55:40.829Z",
       "taskCount": 248,
-      "completedCount": 241,
+      "completedCount": 243,
       "tags": [
         "master"
       ]
