@@ -8470,7 +8470,7 @@
         "testStrategy": "Navegar até /clientes/[id] com um perfil aberto, trocar de unidade via selector no topbar, verificar que o redirect vai para /dashboard com dados do novo tenant. Testar também em outras páginas contextuais (/matriculas, /pagamentos) para garantir o comportamento consistente. Testar cenário de erro: simular falha na troca e verificar que o usuário permanece na página atual.",
         "subtasks": [
           {
-            "id": 137.1,
+            "id": 137,
             "title": "Adicionar router.push('/dashboard') após troca de tenant bem-sucedida",
             "description": "Em app-topbar.tsx, importar useRouter e após await setTenant(nextId) redirecionar para /dashboard",
             "status": "done",
@@ -8478,7 +8478,7 @@
             "parentId": "undefined"
           },
           {
-            "id": 137.2,
+            "id": 137,
             "title": "Garantir que redirect só ocorre em caso de sucesso",
             "description": "Verificar que se setTenant falhar (throw), o redirect não acontece e o usuário permanece na página atual com feedback de erro",
             "status": "done",
@@ -9560,11 +9560,12 @@
         "description": "clientes-client.tsx faz message.toLowerCase().includes(\"x-context-id sem unidade ativa\") para decidir retry. Padrão frágil que quebra com mudanças no backend.",
         "details": "Arquivo principal: src/app/(app)/clientes/components/clientes-client.tsx linhas 106-150. Criar src/lib/shared/utils/error-codes.ts com enum de error codes conhecidos. Atualizar normalizeErrorMessage em api-error.ts para extrair error codes do response body (se o backend enviar). Criar isRetryableError(error): boolean que centraliza a lógica de retry. Aplicar em clientes-client e outros locais que façam string matching de erros.",
         "testStrategy": "Retry funciona com error codes. Sem string matching de mensagens de erro no código.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T04:02:53.441Z"
       },
       {
         "id": "212",
@@ -9572,11 +9573,12 @@
         "description": "O projeto faz fetching manual com useState+useEffect+useCallback em todas as páginas client. Sem cache, deduplicação, revalidação automática ou prefetching.",
         "details": "Avaliar TanStack Query (React Query) vs SWR para o projeto. Critérios: compatibilidade com Next.js 16, suporte a mutations, devtools, tamanho do bundle. Implementar em 2-3 páginas piloto (dashboard, clientes, pagamentos) para validar o padrão. Criar custom hooks por domínio: useClientes(), usePagamentos(), useDashboard(). Manter service layer existente como fetcher functions. Benefícios esperados: cache automático, loading states grátis, retry automático, deduplicação de requests.",
         "testStrategy": "Páginas piloto funcionam com React Query. Cache funciona (navegar e voltar não refetch). Loading/error states funcionam.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "medium",
         "complexity": 7,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T04:02:21.559Z"
       },
       {
         "id": "213",
@@ -9584,13 +9586,14 @@
         "description": "119 arquivos têm \"use client\" desnecessário. Muitas páginas administrativas simples poderiam ser Server Components, reduzindo bundle JS.",
         "details": "Auditar as 119 páginas \"use client\" e classificar: 1) Podem ser 100% server (listagens read-only sem interação) 2) Podem ser hybrid (server com client islands) 3) Precisam ser client (formulários, estado complexo). Migrar categoria 1 primeiro (estimativa: 15-20 páginas). Para categoria 2, usar pattern de Server Component pai + Client Component filho. Priorizar páginas administrativas simples como salas, bandeiras, tipos-conta.",
         "testStrategy": "Páginas migradas renderizam corretamente. Bundle size reduzido (verificar com ANALYZE=true npm run build). SSR funciona sem erros.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "206"
         ],
         "priority": "low",
         "complexity": 8,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T04:02:21.841Z"
       },
       {
         "id": "214",
@@ -9631,9 +9634,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T04:00:27.253Z",
+      "lastModified": "2026-03-29T04:02:53.441Z",
       "taskCount": 216,
-      "completedCount": 207,
+      "completedCount": 208,
       "tags": [
         "master"
       ]
