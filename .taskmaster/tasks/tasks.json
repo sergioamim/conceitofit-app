@@ -10173,13 +10173,14 @@
         "description": "Workspace hook de contas a pagar concentra estado, fetching, filtros, modais e handlers em 534 linhas.",
         "details": "Extrair em hooks menores: useContasPagarData (fetching), useContasPagarFilters (filtros), useContasPagarModals (estado de modais), useContasPagarActions (handlers de criar/pagar/editar/cancelar). O workspace hook passa a compor os hooks extraídos.",
         "testStrategy": "Página funciona identicamente. Cada hook extraído é testável isoladamente.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "252"
         ],
         "priority": "medium",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T23:09:41.027Z"
       },
       {
         "id": "256",
@@ -10187,13 +10188,14 @@
         "description": "Workspace do perfil de cliente (/clientes/[id]) concentra 777 LOC com estado, fetching, handlers de exclusão, migração, suspensão, cartões, etc.",
         "details": "Extrair hooks por responsabilidade: useClienteData, useClienteExclusao, useClienteMigracao, useClienteSuspensao, useClienteCartoes. O workspace compõe os hooks extraídos.",
         "testStrategy": "Perfil do cliente funciona identicamente. Hooks extraídos testáveis.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "251"
         ],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T23:09:30.764Z"
       },
       {
         "id": "257",
@@ -10201,13 +10203,14 @@
         "description": "Workspace de vendas concentra carrinho, plano, cupom, convênio, pagamento e checkout em um hook monolítico.",
         "details": "Já existe useCommercialFlow separado. Avaliar o que resta no workspace de vendas e extrair hooks menores se aplicável.",
         "testStrategy": "Fluxo de vendas funciona identicamente.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "252"
         ],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T23:09:31.969Z"
       },
       {
         "id": "258",
@@ -10519,9 +10522,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T23:07:20.405Z",
+      "lastModified": "2026-03-29T23:09:41.027Z",
       "taskCount": 267,
-      "completedCount": 258,
+      "completedCount": 260,
       "tags": [
         "master"
       ]
