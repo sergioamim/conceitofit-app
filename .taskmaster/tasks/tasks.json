@@ -9510,12 +9510,12 @@
         "description": "Mais de 50 arquivos têm catch {} vazio ou catch { /* fallback */ } que engole erros silenciosamente, dificultando debugging em produção.",
         "details": "Buscar por catch blocks vazios em src/app/ e src/components/. Usar o logger existente em src/lib/shared/logger.ts para registrar erros. Padrão: catch (error) { logger.warn(\"[NomePagina] SSR fetch failed, falling back to client\", { error }); }. Não alterar lógica de fallback, apenas adicionar visibilidade.",
         "testStrategy": "Erros de SSR aparecem nos logs. Comportamento de fallback inalterado.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 3,
         "subtasks": [],
-        "updatedAt": "2026-03-29T03:52:50.416Z"
+        "updatedAt": "2026-03-29T04:00:18.653Z"
       },
       {
         "id": "208",
@@ -9547,11 +9547,12 @@
         "description": "Vários componentes excedem 500+ LOC: novo-cliente-wizard (924), usuarios page (942), nova-conta-pagar-modal (704), prospect-detail-modal (581), clientes-client (578).",
         "details": "Componentes a splitar: 1) novo-cliente-wizard.tsx (924 LOC) → WizardStepPessoal, WizardStepEndereco, WizardStepPlano + useClienteWizardState hook. 2) admin/seguranca/usuarios/page.tsx (942 LOC) → UsuariosFilters, UsuariosTable, UsuarioFormModal. 3) clientes-client.tsx (578 LOC, 12 useState) → useClientesWorkspace hook + ClientesTable + ClientesFilters. 4) nova-conta-pagar-modal.tsx (704 LOC) → ContaPagarForm + ContaPagarPreview. 5) prospect-detail-modal.tsx (581 LOC) → ProspectInfo + ProspectTimeline + ProspectActions.",
         "testStrategy": "Funcionalidade inalterada após split. Testes existentes continuam passando. Nenhum componente excede 300 LOC.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "medium",
         "complexity": 7,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T04:00:13.519Z"
       },
       {
         "id": "211",
@@ -9630,9 +9631,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T03:55:49.960Z",
+      "lastModified": "2026-03-29T04:00:18.653Z",
       "taskCount": 216,
-      "completedCount": 205,
+      "completedCount": 206,
       "tags": [
         "master"
       ]
