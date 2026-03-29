@@ -18,6 +18,10 @@ export const queryKeys = {
       ["matriculas", "dashboard", tenantId, monthKey, page] as const,
   },
 
+  prospects: {
+    all: (tenantId: string) => ["prospects", tenantId] as const,
+  },
+
   aulas: {
     sessoes: (tenantId: string, dateFrom: string, dateTo: string) =>
       ["aulas", "sessoes", tenantId, dateFrom, dateTo] as const,
