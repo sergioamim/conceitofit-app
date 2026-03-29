@@ -626,6 +626,101 @@ export interface SecurityStandardizedProfile {
   matrix: SecurityProfileMatrixItem[];
 }
 
+/* --- Catálogo de Funcionalidades (Admin) --- */
+
+export interface CatalogoFuncionalidade {
+  id: string;
+  featureKey: string;
+  moduleKey: string;
+  moduleLabel: string;
+  capabilityLabel: string;
+  businessLabel: string;
+  description: string;
+  riskLevel: GlobalAdminRiskLevel;
+  scopes: SecurityBusinessScope[];
+  requiresAudit: boolean;
+  requiresApproval: boolean;
+  requiresMfa: boolean;
+  active: boolean;
+  createdAt?: LocalDateTime;
+  updatedAt?: LocalDateTime;
+}
+
+export interface CatalogoFuncionalidadePayload {
+  featureKey: string;
+  moduleKey: string;
+  moduleLabel: string;
+  capabilityLabel: string;
+  businessLabel: string;
+  description: string;
+  riskLevel: GlobalAdminRiskLevel;
+  scopes: SecurityBusinessScope[];
+  requiresAudit: boolean;
+  requiresApproval: boolean;
+  requiresMfa: boolean;
+  active: boolean;
+}
+
+/* --- Perfis Padrão com Versionamento --- */
+
+export interface PerfilPadraoVersao {
+  versao: number;
+  descricao: string;
+  grants: RbacGrantPayload[];
+  criadoEm: LocalDateTime;
+  criadoPor?: string;
+}
+
+export interface PerfilPadrao {
+  key: string;
+  displayName: string;
+  description?: string;
+  objective: string;
+  recommendedScope: SecurityBusinessScope;
+  riskLevel: GlobalAdminRiskLevel;
+  active: boolean;
+  versaoAtual: number;
+  versoes?: PerfilPadraoVersao[];
+  createdAt?: LocalDateTime;
+  updatedAt?: LocalDateTime;
+}
+
+export interface PerfilPadraoCreatePayload {
+  key: string;
+  displayName: string;
+  description?: string;
+  objective: string;
+  recommendedScope: SecurityBusinessScope;
+  riskLevel: GlobalAdminRiskLevel;
+  grants: RbacGrantPayload[];
+}
+
+/* --- Exceções de Segurança --- */
+
+export type ExcecaoRevisaoDecisao = "APROVADA" | "REJEITADA" | "RENOVADA";
+
+export interface ExcecaoCreatePayload {
+  userId: string;
+  title: string;
+  justification: string;
+  expiresAt?: string;
+}
+
+export interface ExcecaoRevisaoPayload {
+  decisao: ExcecaoRevisaoDecisao;
+  comentario: string;
+  novaExpiracao?: string;
+}
+
+export interface ExcecaoRevisaoResult {
+  id: string;
+  excecaoId: string;
+  decisao: ExcecaoRevisaoDecisao;
+  comentario: string;
+  revisadoPor?: string;
+  revisadoEm?: LocalDateTime;
+}
+
 export type FeatureFlagPropagationStatus = "TOTAL" | "PARCIAL" | "PENDENTE";
 
 export interface FeatureFlagMatrixAcademia {

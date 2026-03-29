@@ -30,6 +30,11 @@ export const GLOBAL_SECURITY_SECTIONS: GlobalSecuritySection[] = [
     label: "Revisões e auditoria",
     description: "Filas de revisão, exceções vencendo e trilha recente de mudanças.",
   },
+  {
+    href: "/admin/seguranca/catalogo",
+    label: "Segurança avançada",
+    description: "Catálogo de funcionalidades, perfis-padrão versionados e gestão de exceções.",
+  },
 ];
 
 export const GLOBAL_SECURITY_LEGACY_LINKS = [
