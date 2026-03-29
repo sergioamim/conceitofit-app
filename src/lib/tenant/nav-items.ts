@@ -1,5 +1,6 @@
 import {
   Activity,
+  BookOpen,
   BriefcaseBusiness,
   CalendarDays,
   ClipboardList,
@@ -97,6 +98,7 @@ export const gerencialItems: NavItem[] = [
   { href: "/gerencial/catraca-acessos", label: "Acessos Catraca", icon: ClipboardList },
   { href: "/gerencial/dre", label: "DRE", icon: LineChart },
   { href: "/gerencial/recebimentos", label: "Recebimentos", icon: HandCoins },
+  { href: "/gerencial/contabilidade", label: "Contabilidade", icon: BookOpen },
 ];
 
 export const allNavItems: NavItem[] = [
