@@ -9548,12 +9548,12 @@
         "description": "Vários componentes excedem 500+ LOC: novo-cliente-wizard (924), usuarios page (942), nova-conta-pagar-modal (704), prospect-detail-modal (581), clientes-client (578).",
         "details": "Componentes a splitar: 1) novo-cliente-wizard.tsx (924 LOC) → WizardStepPessoal, WizardStepEndereco, WizardStepPlano + useClienteWizardState hook. 2) admin/seguranca/usuarios/page.tsx (942 LOC) → UsuariosFilters, UsuariosTable, UsuarioFormModal. 3) clientes-client.tsx (578 LOC, 12 useState) → useClientesWorkspace hook + ClientesTable + ClientesFilters. 4) nova-conta-pagar-modal.tsx (704 LOC) → ContaPagarForm + ContaPagarPreview. 5) prospect-detail-modal.tsx (581 LOC) → ProspectInfo + ProspectTimeline + ProspectActions.",
         "testStrategy": "Funcionalidade inalterada após split. Testes existentes continuam passando. Nenhum componente excede 300 LOC.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 7,
         "subtasks": [],
-        "updatedAt": "2026-03-29T04:00:13.519Z"
+        "updatedAt": "2026-03-29T04:11:07.982Z"
       },
       {
         "id": "211",
@@ -9636,9 +9636,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T04:08:48.824Z",
+      "lastModified": "2026-03-29T04:11:07.982Z",
       "taskCount": 216,
-      "completedCount": 210,
+      "completedCount": 211,
       "tags": [
         "master"
       ]
