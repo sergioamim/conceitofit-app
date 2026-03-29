@@ -2,7 +2,7 @@
 
 **Title:** Rodar knip e resolver dead code identificado
 
-**Status:** in-progress
+**Status:** done
 
 **Dependencies:** []
 
@@ -16,10 +16,10 @@ Rodar npm run dead-code. Analisar relatório. Remover exports não importados po
 
 **Subtasks:**
 
-- [ ] Rodar knip e analisar relatório
-- [ ] Resolver exports não utilizados
-- [ ] Resolver arquivos órfãos
-- [ ] Documentar exceções no knip.json
+- [x] Rodar knip e analisar relatório
+- [x] Resolver exports não utilizados
+- [x] Resolver arquivos órfãos
+- [x] Documentar exceções no knip.json
 
 **Test Strategy:**
 

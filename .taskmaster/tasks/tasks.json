@@ -9297,7 +9297,7 @@
         "description": "knip está instalado mas nunca foi executado. Rodar e limpar exports não utilizados e arquivos órfãos.",
         "details": "Rodar npm run dead-code. Analisar relatório. Remover exports não importados por nenhum arquivo. Remover arquivos órfãos (se houver). Documentar exceções legítimas no knip.json (ignoreExportsUsedInFile, etc). Fazer commit com resultado.",
         "testStrategy": "npm run dead-code retorna zero ou apenas exceções documentadas. Build OK. Testes passam.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 3,
