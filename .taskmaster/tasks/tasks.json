@@ -9228,12 +9228,12 @@
         "description": "3 console.error restantes em useEvoImportPage.ts devem usar o logger estruturado criado na task 171.",
         "details": "Substituir os 3 console.error em src/app/(backoffice)/admin/importacao-evo-p0/hooks/useEvoImportPage.ts por logger.error() de @/lib/shared/logger. Passar contexto do módulo ('evo-import'). Verificar se há outros console.* remanescentes no codebase.",
         "testStrategy": "grep 'console.error' src/ retorna zero (exceto logger.ts). grep 'console.warn' src/ retorna zero.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 1,
         "subtasks": [],
-        "updatedAt": "2026-03-28T23:52:31.348Z"
+        "updatedAt": "2026-03-28T23:55:10.164Z"
       },
       {
         "id": "191",
@@ -9241,11 +9241,12 @@
         "description": "src/lib/shared/types.ts é mega-arquivo com todos os tipos do projeto. Dividir por domínio para melhor navegação.",
         "details": "Criar: types/aluno.ts, types/plano.ts, types/pagamento.ts, types/matricula.ts, types/prospect.ts, types/tenant.ts, types/venda.ts, types/comum.ts (enums e tipos base). Manter types.ts como barrel re-exportando tudo (backward compatible). Mover cada grupo de tipos para seu arquivo. Não quebrar nenhum import existente.",
         "testStrategy": "Build OK. Nenhum import quebrado. types.ts < 100 linhas (apenas re-exports). Cada arquivo de domínio < 400 linhas.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T00:00:33.234Z"
       },
       {
         "id": "192",
@@ -9296,7 +9297,7 @@
         "description": "knip está instalado mas nunca foi executado. Rodar e limpar exports não utilizados e arquivos órfãos.",
         "details": "Rodar npm run dead-code. Analisar relatório. Remover exports não importados por nenhum arquivo. Remover arquivos órfãos (se houver). Documentar exceções legítimas no knip.json (ignoreExportsUsedInFile, etc). Fazer commit com resultado.",
         "testStrategy": "npm run dead-code retorna zero ou apenas exceções documentadas. Build OK. Testes passam.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 3,
@@ -9308,8 +9309,8 @@
         "description": "104 arquivos de teste existem mas cobertura de componentes React ainda é baixa. Ampliar para componentes críticos.",
         "details": "Criar testes para: 1) ClienteHeader — renderiza dados, ações, status suspenso. 2) ClienteTabs — navegação entre tabs, indicadores. 3) Sidebar — itens de navegação, collapse, mobile. 4) AppTopbar — branding, tenant selector. 5) CommandPalette — busca, navegação. 6) PaginatedTable — paginação, empty state. 7) CrudModal — open/close, form submit. Cada componente 3-5 cenários. Meta: cobertura > 50%.",
         "testStrategy": "npx vitest run passa. Coverage report mostra > 50% de componentes cobertos.",
-        "status": "done",
-        "updatedAt": "2026-03-28T21:05:00.000Z",
+        "status": "in-progress",
+        "updatedAt": "2026-03-29T00:05:00.000Z",
         "dependencies": [],
         "priority": "low",
         "complexity": 7,
@@ -9318,9 +9319,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-28T23:52:31.348Z",
+      "lastModified": "2026-03-29T00:05:00.000Z",
       "taskCount": 194,
-      "completedCount": 190,
+      "completedCount": 193,
       "tags": [
         "master"
       ]

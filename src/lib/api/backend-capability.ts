@@ -1,7 +1,7 @@
 import { ApiRequestError } from "./http";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
-export function isApiCapabilityUnavailable(error: unknown): boolean {
+function isApiCapabilityUnavailable(error: unknown): boolean {
   return error instanceof ApiRequestError && [404, 405, 501].includes(error.status);
 }
 

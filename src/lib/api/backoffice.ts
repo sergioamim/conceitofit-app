@@ -244,7 +244,7 @@ export async function listBackofficeUnidadesApi(): Promise<Tenant[]> {
   return extractItems(response).map((item) => normalizeBackofficeUnidade(item));
 }
 
-export async function getBackofficeUnidadeApi(id: string): Promise<Tenant> {
+async function getBackofficeUnidadeApi(id: string): Promise<Tenant> {
   const response = await apiRequest<BackofficeUnidadeApiResponse>({
     path: `/api/v1/admin/unidades/${id}`,
   });

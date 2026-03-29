@@ -1,0 +1,147 @@
+
+> academia-app@0.1.0 dead-code
+> knip --reporter compact
+
+Unused files (7)
+src/app/storefront/robots.ts: src/app/storefront/robots.ts
+src/components/shared/modals/index.ts: src/components/shared/modals/index.ts
+src/hooks/use-async-data.ts: src/hooks/use-async-data.ts
+src/lib/backoffice/index.ts: src/lib/backoffice/index.ts
+src/lib/public/index.ts: src/lib/public/index.ts
+src/lib/shared/index.ts: src/lib/shared/index.ts
+src/lib/tenant/index.ts: src/lib/tenant/index.ts
+Unused dependencies (1)
+package.json: @tiptap/pm, react-dom, shadcn, tailwindcss, tw-animate-css
+Unused devDependencies (1)
+package.json: @types/react-dom, jsdom, react-scan
+Unlisted dependencies (2)
+postcss.config.mjs: postcss
+src/components/ui/select.tsx: @radix-ui/react-select
+Unlisted binaries (2)
+.github/workflows/e2e-headless.yml: playwright
+package.json: next, vitest, eslint, playwright, lhci, knip
+Unresolved imports (1)
+tests/e2e/treinos-atribuidos.spec.ts: ../../src/lib/treinos/v2-runtime
+Unused exports (60)
+src/app/(app)/clientes/[id]/use-cliente-workspace.ts: resolveClienteTab
+src/app/(backoffice)/admin/seguranca/usuarios/[id]/user-detail-tabs.tsx: SummaryBlock
+src/app/(backoffice)/admin/unidades/hooks/use-unidades-workspace.ts: EMPTY_FORM, resolveAcademiaId, buildEmptyForm, buildForm, isUnitFormDirty, isOnboardingCollectionRouteError, isOnboardingEndpointUnavailable
+src/components/administrativo/funcionarios/shared.ts: DEFAULT_QUICK_CREATE, DIAS_SEMANA, buildDefaultHorarios
+src/components/security/security-badges.tsx: getSecurityAccessOriginLabel, getSecurityPolicyScopeLabel, getSecurityRiskLabel, getSecurityReviewLabel
+src/components/shared/dashboard-skeleton.tsx: MetricCardSkeleton
+src/components/shared/prospect-modal.tsx: ProspectInputField, ProspectSelectField
+src/components/treinos/editor/types.ts: addDays
+src/components/ui/alert-dialog.tsx: AlertDialogOverlay, AlertDialogPortal, AlertDialogTrigger
+src/components/ui/badge.tsx: badgeVariants
+src/components/ui/card.tsx: CardAction
+src/components/ui/dialog.tsx: DialogClose, DialogOverlay, DialogPortal, DialogTrigger
+src/components/ui/select.tsx: SelectGroup, SelectLabel, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator
+src/components/ui/table.tsx: TableFooter, TableCaption
+src/debug/config.ts: DEV_SESSION_DEBUG_ENV_VAR
+src/lib/api/admin-metrics.ts: getMetricasOperacionaisGlobal
+src/lib/api/administrativo.ts: buildAtividadeUpsertApiRequest, normalizeAtividadeApiResponse
+src/lib/api/alunos.ts: updateAlunoStatusApi
+src/lib/api/auth.ts: refreshTokenApi, switchTenantApi
+src/lib/api/backend-capability.ts: isApiCapabilityUnavailable
+src/lib/api/backoffice-seguranca/_shared.ts: normalizeBoolean, normalizeStatus, normalizeUnitRefs, normalizePerfil, normalizeMembershipProfile, normalizeMembershipOrigin, normalizePolicyScope, normalizeRiskLevel, normalizeReviewStatus, normalizeScopeType, normalizeLoginIdentifiers, normalizeDomainLinksSummary, normalizeAccessException, normalizeRecentChange, normalizeReviewCategory, normalizeMembership, normalizePolicy
+src/lib/api/backoffice.ts: normalizeBackofficeAcademia, normalizeBackofficeUnidade, buildBackofficeAcademiaPayload, buildBackofficeUnidadePayload, getBackofficeUnidadeApi
+src/lib/api/catraca.ts: listarAcessosCatracaApi
+src/lib/api/comercial-catalogo.ts: buildPlanoUpsertApiRequest, normalizePlanoApiResponse, deletePlanoApi
+src/lib/api/contexto-unidades.ts: getTenantAtualApi, updateTenantAtualApi
+src/lib/api/crm.ts: buildProspectUpsertApiRequest, normalizeProspectApiResponse, listCrmPipelineStagesApi, listCrmActivitiesApi
+src/lib/api/financeiro-gerencial.ts: pauseRegraRecorrenciaApi, resumeRegraRecorrenciaApi, cancelRegraRecorrenciaApi, triggerGeracaoContasRecorrentesApi
+src/lib/api/formas-pagamento.ts: getFormasPagamentoLabelsApi
+src/lib/api/http.ts: buildApiUrl
+src/lib/api/matriculas.ts: normalizeMatriculaApiResponse
+src/lib/api/session.ts: CONTEXT_STORAGE_KEY, clearAvailableTenants
+src/lib/api/treinos-v2.ts: TREINOS_V2_ENDPOINTS
+src/lib/api/treinos.ts: deleteExercicioApi
+src/lib/backoffice/admin-financeiro.ts: createEmptyNfseConfiguracao, getNfseConfiguracaoStatus
+src/lib/backoffice/admin-health.ts: calculateDaysSinceLogin, classifyAcademiaHealth, buildHealthAlerts
+src/lib/backoffice/admin.ts: deleteGlobalUnidade
+src/lib/backoffice/security-governance.ts: estimateProfileImpact
+src/lib/domain/status-helpers.ts: isPagamentoPendente, isPagamentoPago, isPagamentoVencido, isPagamentoCancelado, STATUS_PAGAMENTO_EM_ABERTO, STATUS_CONTA_PAGAR_EM_ABERTO, isAlunoAtivo, isAlunoCancelado, isMatriculaAtiva, isMatriculaVencida, isMatriculaCancelada, isProspectConvertido, isProspectPerdido, isVendaFechada, isVendaCancelada
+src/lib/forms/admin-config-schemas.ts: globalConfigEmailTemplateSchema
+src/lib/forms/public-journey-schemas.ts: publicSignupSchema
+src/lib/public/services.ts: validateTrialInput, validateSignupDraft, resolvePublicNextAction
+src/lib/shared/business-date.ts: getBusinessDateParts, toIsoDate, parseIsoDateAtNoon
+src/lib/shared/network-subdomain.ts: getNetworkSubdomainFromHost
+src/lib/shared/utils/api-error.ts: isRecord
+src/lib/shared/utils/cnpj.ts: normalizeCnpjDigits
+src/lib/tenant/aulas/reservas.ts: toIsoDate, parseIsoDate, addDays, getNextOccurrenceForDiasSemana, buildAulaSessao
+src/lib/tenant/comercial/contratos.ts: contratoFromVenda, isVendaContrato
+src/lib/tenant/comercial/matriculas-insights.ts: sortMatriculasByRecency, extractMonthKey, listAvailableMonthKeys, buildMatriculasMonthlySnapshot
+src/lib/tenant/comercial/plano-flow.ts: resolvePlanoIdFromVendaItems
+src/lib/tenant/comercial/runtime.ts: emitirNfsePagamentoService, listMatriculasService, listMatriculasPageService, createMatriculaService, listContratosService, listContratosByAlunoService, listVouchersService, listVoucherCodigosService
+src/lib/tenant/crm/workspace.ts: isCrmTaskOverdue
+src/lib/tenant/forms/administrativo-schemas.ts: funcionarioFormSchema, quickCreateColaboradorFormSchema
+src/lib/tenant/forms/security-user-create-schemas.ts: globalUserCreateBaseFormSchema
+src/lib/tenant/hooks/tenant-state-builder.ts: resolveBaseTenant, resolveEligibleTenants, resolveBlockedTenants
+src/lib/tenant/security-user-create.ts: buildSecurityLoginIdentifiers
+src/lib/tenant/tenant-context.ts: getSessionTenantIds, getSessionDefaultTenantId
+src/lib/tenant/tenant-theme.ts: DEFAULT_THEME_PRESET
+src/lib/tenant/treinos/v2-domain.ts: TREINOS_V2_FINE_PERMISSION_LABELS, TREINOS_V2_TEMPLATE_STATUS_TRANSITIONS, TREINOS_V2_DECISIONS, isTreinoV2TemplatePublishable, isTreinoV2AssignmentJobTerminal
+src/lib/tenant/treinos/v2-runtime.ts: parseTreinoV2Metadata, parseExercicioV2Metadata, buildTreinoV2Observacoes, buildTreinoV2PersistedTemplateMetadata, buildTreinoV2PersistedAssignedMetadata, summarizeTreinoV2TemplateGovernance
+src/lib/tenant/treinos/workspace.ts: resetTreinosWorkspace, duplicateTreinoTemplate, revisarTreinoWorkspace, renovarTreinoWorkspace, registrarExecucaoTreinoWorkspace
+Unused exported types (61)
+src/app/(app)/clientes/[id]/use-cliente-workspace.ts: MigrationAuditSummary, TabLoadStatus, NfseTabState, CartoesTabState
+src/app/(app)/gerencial/contas-a-pagar/hooks/use-contas-pagar-workspace.ts: TipoFiltro
+src/app/(app)/seguranca/rbac/use-rbac-page-state.ts: RbacTab
+src/app/(app)/treinos/use-treinos-workspace.ts: LatestAssignedState
+src/app/(app)/vendas/nova/hooks/use-venda-workspace.ts: CartItem, DetectResult
+src/app/(backoffice)/admin/seguranca/usuarios/[id]/use-user-detail-workspace.ts: UserDetailWorkspace
+src/components/shared/bulk-action-bar.tsx: BulkActionBarProps
+src/components/shared/crud-modal.tsx: CrudModalProps
+src/components/shared/data-table-row-actions.tsx: DataTableRowActionKind, DataTableRowAction
+src/components/shared/export-menu.tsx: ExportMenuProps
+src/components/shared/field-async-feedback.tsx: FieldAsyncFeedbackProps
+src/components/shared/list-states.tsx: EmptyStateProps, ListErrorStateProps, ListLoadingSkeletonProps
+src/components/shared/paginated-table.tsx: PaginatedTableColumn
+src/components/shared/plano-selector-card.tsx: PlanoSelectorCardVariant, PlanoSelectorCardProps
+src/components/shared/table-skeleton.tsx: TableSkeletonProps
+src/components/treinos/treino-v2-editor.tsx: EditorProps
+src/components/ui/use-toast.ts: ToastOptions, ToastReturn
+src/hooks/use-async-field-validation.ts: AsyncFieldValidationResult, UseAsyncFieldValidationOptions
+src/hooks/use-confirm-dialog.tsx: ConfirmOptions
+src/hooks/use-form-draft.ts: FormDraftOptions
+src/lib/api/admin-audit.ts: ListAuditLogsInput, StartImpersonationInput, StartImpersonationResult, EndImpersonationInput
+src/lib/api/administrativo.ts: AtividadeUpsertApiRequest
+src/lib/api/alunos.ts: ListAlunosApiResponse
+src/lib/api/bot.ts: BotPromptResponse
+src/lib/api/catraca.ts: CatracaAgentConexao, CatracaTenantConexao, CatracaWsStatusResponse, GenerateCatracaCredentialInput, LiberarAcessoCatracaInput, LiberarAcessoCatracaResponse, ListarAcessosCatracaInput, CatracaAcessosResponse, CatracaAcessosDashboardResponse
+src/lib/api/comercial-catalogo.ts: PlanoUpsertApiRequest
+src/lib/api/contas-bancarias.ts: CreateContaBancariaApiInput, UpdateContaBancariaApiInput
+src/lib/api/contas-receber.ts: CreateContaReceberApiInput, UpdateContaReceberApiInput, ReceberContaReceberApiInput
+src/lib/api/crm.ts: ProspectUpsertApiRequest
+src/lib/api/dashboard.ts: DashboardScope
+src/lib/api/formas-pagamento.ts: CreateFormaPagamentoApiInput, UpdateFormaPagamentoApiInput
+src/lib/api/http.ts: ApiResponseWithMeta
+src/lib/api/importacao-evo.ts: PacoteJobAceitoResponse, EvoCsvJobResponse
+src/lib/api/maquininhas.ts: Maquininha, CreateMaquininhaApiInput, UpdateMaquininhaApiInput
+src/lib/api/matriculas.ts: MatriculaResponse, CreateMatriculaApiInput, MatriculaPageResult
+src/lib/api/tipos-conta.ts: CreateTipoContaPagarApiInput, UpdateTipoContaPagarApiInput
+src/lib/api/treinos-v2.ts: TreinoV2TemplateListSort, TreinoV2TemplateListQuery, TreinoV2TemplateListItem, TreinoV2TemplateListResponse, UpsertTreinoV2TemplateRequest, TreinoV2EditorResponse, TreinoV2CatalogExerciseListQuery, UpsertTreinoV2CatalogExerciseRequest, TreinoV2AssignmentRequest, TreinoV2AssignmentResponse, TreinoV2TemplateAssignmentHistoryItem, TreinoV2AssignedWorkoutListQuery, TreinoV2AssignedWorkoutListItem, TreinoV2AssignedWorkoutListResponse, PublishTreinoV2TemplateRequest, TreinoV2TemplatePublishResponse, TreinoV2PermissionContextResponse
+src/lib/api/treinos.ts: TemplateListTotalsApiResponse, ListTreinosApiInput, ListTreinosApiResult, ListTreinoTemplatesApiInput, ListTreinoTemplatesApiResult, UpdateTreinoApiInput
+src/lib/api/vendas.ts: ListVendasApiInput
+src/lib/backoffice/backoffice-context.tsx: BackofficeMode, InspectedTenant, BackofficeContextValue
+src/lib/backoffice/importacao-evo.ts: EvoColaboradorDiagnosticoStatus, EvoColaboradorDiagnosticoNormalizado, BackofficeEvoJobAceitoResponse, EvoImportColaboradoresBlocoResumo, EvoImportJobResumo, EvoImportRejeicao, EvoImportRejeicoesResponse, UploadAnaliseArquivoUltimoProcessamento, UploadAnaliseResponse
+src/lib/backoffice/nav-items.ts: BackofficeNavGroup
+src/lib/backoffice/seguranca-navigation.ts: GlobalSecuritySection
+src/lib/icons/activity-icons.ts: ActivityIconOption
+src/lib/public/demo-account-api.ts: DemoAccountResponse
+src/lib/public/lead-b2b-api.ts: LeadB2bResponse
+src/lib/shared/cep-lookup.ts: CepResult
+src/lib/shared/server-fetch.ts: ServerFetchError, ServerFetchOptions
+src/lib/shared/types.ts: PaginatedAlunosResult, Maquininha
+src/lib/shared/utils/api-error.ts: ErrorSupportDetail, ErrorPresentation
+src/lib/tenant/comercial/matriculas-insights.ts: MatriculaInsightRow, MatriculaActiveGroup, MatriculaMonthlySnapshot
+src/lib/tenant/comercial/plano-flow.ts: PlanoVendaItemDraft, PlanoDryRunResult, PlanoDryRunParams
+src/lib/tenant/comercial/runtime.ts: ListAlunosPageServiceResult, AlunoDuplicidadeResult
+src/lib/tenant/financeiro/recebimentos.ts: AjustarPagamentoInput
+src/lib/tenant/hooks/session-bootstrap.ts: SessionBootstrapLoadResult
+src/lib/tenant/hooks/use-commercial-flow.ts: CartItem, UseCommercialFlowProps
+src/lib/tenant/hooks/use-session-context.tsx: TenantContextState, TenantContextValue, BootstrapStatus, TenantContextSnapshot
+src/lib/tenant/rbac/services.ts: RbacPerfil, RbacFeature
+src/lib/tenant/treinos/v2-domain.ts: TreinoV2Role, TreinoV2AssignedWorkout, TreinoV2TemplateTransitionGuard
+src/lib/tenant/treinos/v2-runtime.ts: TreinoV2PersistedAssignedMetadata, TreinoV2PersistedTemplateMetadata, TreinoV2PersistedMetadata, TreinoV2TemplateGovernanceSummary, TreinoV2AssignedGovernanceSummary
+src/lib/tenant/treinos/workspace.ts: TreinoTemplateListResult

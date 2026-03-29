@@ -1,0 +1,46 @@
+
+> academia-app@0.1.0 dead-code
+> knip --reporter compact
+
+Unused exports (34)
+src/components/ui/alert-dialog.tsx: AlertDialogTrigger
+src/components/ui/card.tsx: CardAction
+src/components/ui/dialog.tsx: DialogClose, DialogTrigger
+src/components/ui/select.tsx: SelectGroup, SelectLabel, SelectSeparator
+src/components/ui/table.tsx: TableFooter, TableCaption
+src/debug/config.ts: DEV_SESSION_DEBUG_ENV_VAR
+src/lib/api/admin-metrics.ts: getMetricasOperacionaisGlobal
+src/lib/api/alunos.ts: updateAlunoStatusApi
+src/lib/api/auth.ts: refreshTokenApi, switchTenantApi
+src/lib/api/backend-capability.ts: isApiCapabilityUnavailable
+src/lib/api/backoffice.ts: getBackofficeUnidadeApi
+src/lib/api/catraca.ts: listarAcessosCatracaApi
+src/lib/api/comercial-catalogo.ts: deletePlanoApi
+src/lib/api/contexto-unidades.ts: getTenantAtualApi, updateTenantAtualApi
+src/lib/api/crm.ts: listCrmPipelineStagesApi, listCrmActivitiesApi
+src/lib/api/financeiro-gerencial.ts: pauseRegraRecorrenciaApi, resumeRegraRecorrenciaApi, cancelRegraRecorrenciaApi, triggerGeracaoContasRecorrentesApi
+src/lib/api/formas-pagamento.ts: getFormasPagamentoLabelsApi
+src/lib/api/http.ts: buildApiUrl
+src/lib/api/session.ts: clearAvailableTenants
+src/lib/api/treinos-v2.ts: TREINOS_V2_ENDPOINTS
+src/lib/api/treinos.ts: deleteExercicioApi
+src/lib/backoffice/admin-financeiro.ts: createEmptyNfseConfiguracao, getNfseConfiguracaoStatus
+src/lib/backoffice/admin.ts: deleteGlobalUnidade
+src/lib/domain/status-helpers.ts: isPagamentoPendente, isPagamentoPago, isPagamentoVencido, isPagamentoCancelado, STATUS_PAGAMENTO_EM_ABERTO, STATUS_CONTA_PAGAR_EM_ABERTO, isAlunoAtivo, isAlunoCancelado, isMatriculaAtiva, isMatriculaVencida, isMatriculaCancelada, isProspectConvertido, isProspectPerdido, isVendaFechada, isVendaCancelada
+src/lib/shared/utils/api-error.ts: isRecord
+src/lib/tenant/aulas/reservas.ts: getNextOccurrenceForDiasSemana, buildAulaSessao
+src/lib/tenant/comercial/contratos.ts: contratoFromVenda, isVendaContrato
+src/lib/tenant/comercial/matriculas-insights.ts: listAvailableMonthKeys, buildMatriculasMonthlySnapshot
+src/lib/tenant/comercial/plano-flow.ts: resolvePlanoIdFromVendaItems
+src/lib/tenant/comercial/runtime.ts: emitirNfsePagamentoService, listMatriculasService, listMatriculasPageService, createMatriculaService, listContratosService, listContratosByAlunoService, listVouchersService, listVoucherCodigosService
+src/lib/tenant/forms/administrativo-schemas.ts: funcionarioFormSchema, quickCreateColaboradorFormSchema
+src/lib/tenant/treinos/v2-domain.ts: TREINOS_V2_FINE_PERMISSION_LABELS, TREINOS_V2_DECISIONS, isTreinoV2TemplatePublishable, isTreinoV2AssignmentJobTerminal
+src/lib/tenant/treinos/v2-runtime.ts: summarizeTreinoV2TemplateGovernance
+src/lib/tenant/treinos/workspace.ts: resetTreinosWorkspace, duplicateTreinoTemplate, revisarTreinoWorkspace, renovarTreinoWorkspace, registrarExecucaoTreinoWorkspace
+Unused exported types (6)
+src/app/(app)/vendas/nova/hooks/use-venda-workspace.ts: DetectResult
+src/app/(backoffice)/admin/seguranca/usuarios/[id]/use-user-detail-workspace.ts: UserDetailWorkspace
+src/lib/api/alunos.ts: ListAlunosApiResponse
+src/lib/api/treinos-v2.ts: TreinoV2TemplateListQuery, TreinoV2TemplateListResponse, UpsertTreinoV2TemplateRequest, TreinoV2EditorResponse, TreinoV2CatalogExerciseListQuery, UpsertTreinoV2CatalogExerciseRequest, TreinoV2AssignmentRequest, TreinoV2AssignmentResponse, TreinoV2TemplateAssignmentHistoryItem, TreinoV2AssignedWorkoutListQuery, TreinoV2AssignedWorkoutListResponse, PublishTreinoV2TemplateRequest, TreinoV2TemplatePublishResponse, TreinoV2PermissionContextResponse
+src/lib/shared/types.ts: PaginatedAlunosResult, Maquininha
+src/lib/tenant/treinos/v2-domain.ts: TreinoV2AssignedWorkout

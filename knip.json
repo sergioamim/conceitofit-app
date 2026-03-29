@@ -5,13 +5,19 @@
   "ignore": [
     "src/lib/mock/**",
     "src/**/*.test.{ts,tsx}",
-    "src/**/*.spec.{ts,tsx}"
+    "src/**/*.spec.{ts,tsx}",
+    "src/components/ui/**"
   ],
   "ignoreDependencies": [
     "@next/bundle-analyzer",
-    "eslint-config-next"
+    "eslint-config-next",
+    "shadcn",
+    "tw-animate-css",
+    "react-dom",
+    "@types/react-dom",
+    "tailwindcss",
+    "postcss"
   ],
-  "next": {
-    "entry": ["next.config.ts", "src/proxy.ts"]
-  }
+  "ignoreExportsUsedInFile": true,
+  "ignoreBinaries": ["playwright"]
 }
