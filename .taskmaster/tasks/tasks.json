@@ -9967,13 +9967,14 @@
         "description": "Listar aulas disponíveis na grade semanal. Reservar vaga, ver status, cancelar reserva.",
         "details": "Usar API existente: GET /api/v1/agenda/aulas/sessoes, POST /api/v1/agenda/reservas. Grid semanal com slots disponíveis. Indicar: vagas livres, lotado, lista de espera. Reservar com um tap. Cancelar reserva. Exibir status (confirmada, espera).",
         "testStrategy": "Aluno reserva aula. Vaga atualiza. Cancelamento funciona.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "239"
         ],
         "priority": "medium",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:51:23.437Z"
       },
       {
         "id": "242",
@@ -9981,13 +9982,14 @@
         "description": "QR Code gerado para o aluno. Histórico de presenças.",
         "details": "Gerar QR code com identificador do aluno (usar lib qrcode ou similar). Exibir QR para leitura na recepção. Histórico de presenças via API GET /api/v1/presencas?alunoId=. Exibir data, hora, tipo (CHECKIN, AULA, ACESSO).",
         "testStrategy": "QR code renderiza. Histórico lista presenças.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "239"
         ],
         "priority": "medium",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:53:53.085Z"
       },
       {
         "id": "243",
@@ -9995,13 +9997,14 @@
         "description": "Criar manifest.json, service worker para cache offline básico, prompt de instalação.",
         "details": "Criar public/manifest.json com name, short_name, icons (192/512), theme_color, background_color, display: standalone. Configurar next-pwa ou serwist para service worker. Cache: shell + assets estáticos. Prompt \"Adicionar à tela inicial\" em mobile. Ícone da academia via tenant theme.",
         "testStrategy": "App instalável no mobile. Funciona offline com shell cacheado. Lighthouse PWA score > 80.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "239"
         ],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:53:55.800Z"
       },
       {
         "id": "244",
@@ -10009,11 +10012,12 @@
         "description": "Criar src/lib/api/billing.ts com: criar assinatura, cancelar, listar, status. Types para Assinatura, CobrancaRecorrente.",
         "details": "API client tipado para gateway escolhido (Pagar.me ou Asaas). Endpoints: POST criar assinatura, DELETE cancelar, GET listar, GET status. Types: Assinatura (id, alunoId, planoId, status, valor, ciclo, proximaCobranca), CobrancaRecorrente (id, assinaturaId, valor, status, dataPagamento). Normalização de response no padrão do projeto.",
         "testStrategy": "Client tipado. Testes unitários com mock de responses.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:53:34.912Z"
       },
       {
         "id": "245",
@@ -10073,9 +10077,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:50:36.203Z",
+      "lastModified": "2026-03-29T11:53:55.800Z",
       "taskCount": 248,
-      "completedCount": 239,
+      "completedCount": 241,
       "tags": [
         "master"
       ]
