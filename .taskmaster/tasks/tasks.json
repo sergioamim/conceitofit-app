@@ -10100,11 +10100,12 @@
         "description": "12 arquivos duplicam formatBRL, formatDate, formatDateTime localmente em vez de importar de lib/shared/formatters.ts.",
         "details": "Auditar todos os arquivos com formatBRL/formatDate/formatDateTime/formatPhone duplicados. Remover implementações locais e importar do barrel centralizado. Garantir que as assinaturas são compatíveis. Adicionar lint rule (eslint-plugin-boundaries ou import/no-restricted-paths) para prevenir novas duplicações. Arquivos conhecidos: use-contas-pagar-workspace.ts, use-contas-contabeis-workspace.ts, wizard-types.tsx, prospect-shared.ts, bi/page.tsx, bi/rede/page.tsx, contabilidade/*/page.tsx.",
         "testStrategy": "Grep por function formatBRL e function formatDate fora de lib/shared/formatters.ts retorna zero resultados. Todas as páginas renderizam valores monetários e datas corretamente.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T22:28:58.315Z"
       },
       {
         "id": "251",
@@ -10112,13 +10113,14 @@
         "description": "Dashboard usa useState+useEffect para fetching. Migrar para useQuery com cache, staleTime e invalidação automática.",
         "details": "Criar hook useDashboard() com useQuery. Query key: [\"dashboard\", tenantId, referenceDate]. Remover useState de dados, loading, error. Manter filtros como estado local. O hook useDashboard já existe em lib/query/use-dashboard.ts mas pode não estar sendo usado na página.",
         "testStrategy": "Dashboard carrega com cache. Navegar para outra página e voltar não refaz fetch. Refresh manual funciona.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
-          225
+          "225"
         ],
         "priority": "high",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T22:29:52.320Z"
       },
       {
         "id": "252",
@@ -10128,7 +10130,7 @@
         "testStrategy": "Listagem funciona com cache. Receber pagamento invalida cache. Navegar e voltar não refetch.",
         "status": "pending",
         "dependencies": [
-          225
+          "225"
         ],
         "priority": "high",
         "complexity": 5,
@@ -10142,7 +10144,7 @@
         "testStrategy": "Listagem com cache. Criar prospect invalida lista. Mudar status invalida corretamente.",
         "status": "pending",
         "dependencies": [
-          225
+          "225"
         ],
         "priority": "high",
         "complexity": 5,
@@ -10156,7 +10158,7 @@
         "testStrategy": "Listagem com cache. Cancelar matrícula invalida cache automaticamente.",
         "status": "pending",
         "dependencies": [
-          225
+          "225"
         ],
         "priority": "medium",
         "complexity": 4,
@@ -10170,7 +10172,7 @@
         "testStrategy": "Página funciona identicamente. Cada hook extraído é testável isoladamente.",
         "status": "pending",
         "dependencies": [
-          252
+          "252"
         ],
         "priority": "medium",
         "complexity": 4,
@@ -10184,7 +10186,7 @@
         "testStrategy": "Perfil do cliente funciona identicamente. Hooks extraídos testáveis.",
         "status": "pending",
         "dependencies": [
-          251
+          "251"
         ],
         "priority": "medium",
         "complexity": 5,
@@ -10198,7 +10200,7 @@
         "testStrategy": "Fluxo de vendas funciona identicamente.",
         "status": "pending",
         "dependencies": [
-          252
+          "252"
         ],
         "priority": "low",
         "complexity": 4,
@@ -10212,7 +10214,7 @@
         "testStrategy": "Formulários validam corretamente com dados válidos e inválidos. Zero regressão nos fluxos existentes.",
         "status": "pending",
         "dependencies": [
-          250
+          "250"
         ],
         "priority": "medium",
         "complexity": 6,
@@ -10238,7 +10240,7 @@
         "testStrategy": "Template de mensagem configurável na admin. Envio de welcome ao cadastrar aluno. Log de mensagens enviadas visível.",
         "status": "pending",
         "dependencies": [
-          259
+          "259"
         ],
         "priority": "high",
         "complexity": 8,
@@ -10252,7 +10254,7 @@
         "testStrategy": "Prospect novo gera tarefas automáticas conforme playbook. Tarefa vencida escalona.",
         "status": "pending",
         "dependencies": [
-          260
+          "260"
         ],
         "priority": "medium",
         "complexity": 7,
@@ -10266,7 +10268,7 @@
         "testStrategy": "Cobertura de componentes sobe de 14% para 30%. CI não regride.",
         "status": "pending",
         "dependencies": [
-          258
+          "258"
         ],
         "priority": "medium",
         "complexity": 5,
@@ -10280,7 +10282,7 @@
         "testStrategy": "Login funciona. Refresh funciona. Tokens não acessíveis via document.cookie ou localStorage. Testes E2E adaptados.",
         "status": "pending",
         "dependencies": [
-          259
+          "259"
         ],
         "priority": "medium",
         "complexity": 7,
@@ -10294,8 +10296,8 @@
         "testStrategy": "Eventos de negócio registrados. Dashboard mostra dados reais de uso.",
         "status": "pending",
         "dependencies": [
-          251,
-          252
+          "251",
+          "252"
         ],
         "priority": "low",
         "complexity": 5,
@@ -10309,7 +10311,7 @@
         "testStrategy": "axe-core roda em CI sem critical violations. Lighthouse accessibility > 90.",
         "status": "pending",
         "dependencies": [
-          262
+          "262"
         ],
         "priority": "low",
         "complexity": 3,
@@ -10342,9 +10344,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T22:03:56.311Z",
-      "taskCount": 249,
-      "completedCount": 249,
+      "lastModified": "2026-03-29T22:29:52.320Z",
+      "taskCount": 267,
+      "completedCount": 250,
       "tags": [
         "master"
       ]
