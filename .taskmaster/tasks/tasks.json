@@ -10142,14 +10142,14 @@
         "description": "Prospects usa useState para listagem e mutations manuais. Migrar para useQuery/useMutation.",
         "details": "Criar useProspects() e useUpdateProspect()/useCreateProspect() hooks com TanStack Query. Query key: [\"prospects\", tenantId, filters]. Invalidar cache em create/update/status change.",
         "testStrategy": "Listagem com cache. Criar prospect invalida lista. Mudar status invalida corretamente.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "225"
         ],
         "priority": "high",
         "complexity": 5,
         "subtasks": [],
-        "updatedAt": "2026-03-29T22:31:50.201Z"
+        "updatedAt": "2026-03-29T22:34:32.798Z"
       },
       {
         "id": "254",
@@ -10228,11 +10228,64 @@
         "description": "Deploys vão direto para produção sem ambiente de staging. Risco de bugs em prod.",
         "details": "Criar ambiente staging no Cloud Run (ou similar). GitHub Actions: push para main deploya em staging automaticamente. Deploy para prod via manual approval ou tag. Variáveis de ambiente separadas por ambiente.",
         "testStrategy": "Push para main deploya em staging. Staging acessível via URL dedicada. Prod só atualiza com approval.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configurar projeto Vercel para ambiente de staging",
+            "description": "Conectar o repositório GitHub à Vercel e configurar a branch principal (main) para gerar deployments de 'Preview' que servirão como ambiente de staging, permitindo um fluxo de trabalho onde a main é revisada antes de ir para produção.",
+            "dependencies": [],
+            "details": "Criar um novo projeto na Vercel, vinculando-o ao repositório GitHub (academia-app). Nas configurações do projeto Vercel, certificar-se de que a branch 'main' não está configurada como 'Production Branch' diretamente, para que os pushes na 'main' gerem 'Preview Deployments'. Isso pode exigir o uso de uma branch 'production' separada para o deploy de produção final.",
+            "status": "done",
+            "testStrategy": "Acessar o dashboard da Vercel e verificar que o projeto está configurado corretamente. Realizar um push para a branch 'main' e confirmar que um deployment de preview é gerado e acessível via URL de preview.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-29T22:33:42.859Z"
+          },
+          {
+            "id": 2,
+            "title": "Gerenciar variáveis de ambiente específicas por ambiente na Vercel",
+            "description": "Configurar variáveis de ambiente na Vercel para que valores distintos (ex: URLs de API, chaves de serviço) sejam aplicados automaticamente em ambientes de staging (preview) e produção, garantindo isolamento e segurança.",
+            "dependencies": [
+              1
+            ],
+            "details": "No dashboard da Vercel, navegar até as 'Environment Variables' do projeto. Adicionar as variáveis necessárias (ex: 'NEXT_PUBLIC_API_URL', 'DATABASE_URL') e atribuir seus respectivos valores para os escopos 'Preview' (staging) e 'Production'. Definir o valor do 'NEXT_PUBLIC_API_URL' para apontar para um backend de staging no ambiente 'Preview'.",
+            "status": "done",
+            "testStrategy": "Acessar um deployment de preview e verificar se as variáveis de ambiente de staging foram carregadas corretamente. Após o deploy de produção (manual), verificar se as variáveis de produção estão ativas.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-29T22:33:42.870Z"
+          },
+          {
+            "id": 3,
+            "title": "Criar GitHub Action para deploy automático da main em staging",
+            "description": "Desenvolver um workflow no GitHub Actions que, a cada push para a branch 'main', construa e implante a aplicação em um ambiente de preview na Vercel, atuando como o ambiente de staging para testes e validação.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Criar o arquivo '.github/workflows/staging-deploy.yml'. Este workflow deve ser acionado em 'push' para a branch 'main'. Ele utilizará o Vercel CLI (necessário instalar e autenticar com um 'VERCEL_TOKEN' como secret no GitHub) para realizar um deploy do projeto na Vercel como um Preview Deployment, garantindo que a URL de staging seja sempre atualizada.",
+            "status": "done",
+            "testStrategy": "Realizar um push para a branch 'main'. Acessar a aba 'Actions' no GitHub para verificar o sucesso do workflow e o Vercel Dashboard para confirmar o novo deploy de preview com a URL de staging atualizada.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-29T22:33:42.880Z"
+          },
+          {
+            "id": 4,
+            "title": "Implementar GitHub Action para deploy em produção com aprovação manual",
+            "description": "Desenvolver um workflow no GitHub Actions que permita o deploy para o ambiente de produção na Vercel. Este deploy será acionado manualmente ou por tag, e exigirá aprovação explícita de um revisor antes de ser publicado, garantindo controle de qualidade e mitigação de riscos.",
+            "dependencies": [
+              3
+            ],
+            "details": "Criar o arquivo '.github/workflows/production-deploy.yml'. Este workflow deve ser acionado 'on: workflow_dispatch' (para acionamento manual) ou 'on: push: tags'. Ele utilizará o Vercel CLI para promover um deployment de Preview existente para Produção, ou criar um novo deployment de Produção. Incluirá um passo com 'environment: production' e 'reviewers' no GitHub Actions para exigir aprovação manual antes da execução.",
+            "status": "done",
+            "testStrategy": "Acionar o workflow de deploy para produção manualmente. Verificar que a aprovação manual é solicitada na aba 'Actions'. Após aprovação, verificar que o Vercel Dashboard reflete o novo deploy em produção e a aplicação está acessível na URL de produção.",
+            "parentId": "undefined",
+            "updatedAt": "2026-03-29T22:33:42.889Z"
+          }
+        ],
+        "updatedAt": "2026-03-29T22:33:42.889Z"
       },
       {
         "id": "260",
@@ -10346,9 +10399,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T22:31:57.599Z",
+      "lastModified": "2026-03-29T22:34:32.798Z",
       "taskCount": 267,
-      "completedCount": 251,
+      "completedCount": 253,
       "tags": [
         "master"
       ]
