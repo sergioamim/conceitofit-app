@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** []
+**Dependencies:** None
 
 **Priority:** low
 
@@ -12,26 +12,7 @@
 
 **Details:**
 
-Criar testes para:
-1) ClienteHeader — renderiza dados, ações, status suspenso.
-2) ClienteTabs — navegação entre tabs, indicadores.
-3) Sidebar — itens de navegação, collapse, mobile.
-4) AppTopbar — branding, tenant selector.
-5) CommandPalette — busca, navegação.
-6) PaginatedTable — paginação, empty state.
-7) CrudModal — open/close, form submit.
-
-Cada componente 3-5 cenários. Meta: cobertura > 50%.
-
-**Subtasks:**
-
-- [x] Criar testes para ClienteHeader
-- [x] Criar testes para ClienteTabs
-- [x] Criar testes para Sidebar
-- [x] Criar testes para AppTopbar
-- [x] Criar testes para CommandPalette
-- [x] Criar testes para PaginatedTable
-- [x] Criar testes para CrudModal
+Criar testes para: 1) ClienteHeader — renderiza dados, ações, status suspenso. 2) ClienteTabs — navegação entre tabs, indicadores. 3) Sidebar — itens de navegação, collapse, mobile. 4) AppTopbar — branding, tenant selector. 5) CommandPalette — busca, navegação. 6) PaginatedTable — paginação, empty state. 7) CrudModal — open/close, form submit. Cada componente 3-5 cenários. Meta: cobertura > 50%.
 
 **Test Strategy:**
 

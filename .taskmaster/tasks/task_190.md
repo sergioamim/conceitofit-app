@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** []
+**Dependencies:** None
 
 **Priority:** low
 
@@ -14,11 +14,19 @@
 
 Substituir os 3 console.error em src/app/(backoffice)/admin/importacao-evo-p0/hooks/useEvoImportPage.ts por logger.error() de @/lib/shared/logger. Passar contexto do módulo ('evo-import'). Verificar se há outros console.* remanescentes no codebase.
 
-**Subtasks:**
-
-- [x] Substituir console.error em useEvoImportPage.ts
-- [x] Verificar outros console.error no codebase
-
 **Test Strategy:**
 
 grep 'console.error' src/ retorna zero (exceto logger.ts). grep 'console.warn' src/ retorna zero.
+
+## Subtasks
+
+### 190.null. Substituir console.error em useEvoImportPage.ts
+
+**Status:** done  
+**Dependencies:** None  
+
+### 190.null. Verificar outros console.error no codebase
+
+**Status:** done  
+**Dependencies:** None  
+

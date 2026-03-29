@@ -2,9 +2,9 @@
 
 **Title:** Implementar fluxo de aula experimental
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 158
+**Dependencies:** 158 ✓
 
 **Priority:** medium
 

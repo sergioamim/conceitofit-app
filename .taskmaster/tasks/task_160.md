@@ -2,7 +2,7 @@
 
 **Title:** SEO e performance da storefront
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 156 ✓, 157 ✓
 

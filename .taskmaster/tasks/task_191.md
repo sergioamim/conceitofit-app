@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** []
+**Dependencies:** None
 
 **Priority:** low
 
@@ -14,12 +14,24 @@
 
 Criar: types/aluno.ts, types/plano.ts, types/pagamento.ts, types/matricula.ts, types/prospect.ts, types/tenant.ts, types/venda.ts, types/comum.ts (enums e tipos base). Manter types.ts como barrel re-exportando tudo (backward compatible). Mover cada grupo de tipos para seu arquivo. Não quebrar nenhum import existente.
 
-**Subtasks:**
-
-- [x] Criar estrutura de pastas para tipos
-- [x] Mover tipos por domínio para novos arquivos
-- [x] Atualizar types.ts para re-exportar tudo
-
 **Test Strategy:**
 
 Build OK. Nenhum import quebrado. types.ts < 100 linhas (apenas re-exports). Cada arquivo de domínio < 400 linhas.
+
+## Subtasks
+
+### 191.null. Criar estrutura de pastas para tipos
+
+**Status:** done  
+**Dependencies:** None  
+
+### 191.null. Mover tipos por domínio para novos arquivos
+
+**Status:** done  
+**Dependencies:** None  
+
+### 191.null. Atualizar types.ts para re-exportar tudo
+
+**Status:** done  
+**Dependencies:** None  
+

@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** []
+**Dependencies:** None
 
 **Priority:** low
 
@@ -12,23 +12,36 @@
 
 **Details:**
 
-Candidatas:
-- administrativo/salas
-- administrativo/atividades
-- administrativo/formas-pagamento
-- administrativo/tipos-conta
-- administrativo/bandeiras
-
-Para cada: remover 'use client', usar serverFetch para dados, extrair filtros interativos para client island. Seguir padrão de dashboard/page.tsx.
-
-**Subtasks:**
-
-- [x] Migrar administrativo/salas para RSC
-- [x] Migrar administrativo/atividades para RSC
-- [x] Migrar administrativo/formas-pagamento para RSC
-- [x] Migrar administrativo/tipos-conta para RSC
-- [x] Migrar administrativo/bandeiras para RSC
+Candidatas: administrativo/salas, administrativo/atividades, administrativo/formas-pagamento, administrativo/tipos-conta, administrativo/bandeiras. Para cada: remover 'use client', usar serverFetch para dados, extrair filtros interativos para client island. Seguir padrão de dashboard/page.tsx.
 
 **Test Strategy:**
 
 Páginas renderizam corretamente como RSC. Filtros funcionam. Bundle JS reduzido (verificar com bundle-analyzer).
+
+## Subtasks
+
+### 192.null. Migrar administrativo/salas para RSC
+
+**Status:** done  
+**Dependencies:** None  
+
+### 192.null. Migrar administrativo/atividades para RSC
+
+**Status:** done  
+**Dependencies:** None  
+
+### 192.null. Migrar administrativo/formas-pagamento para RSC
+
+**Status:** done  
+**Dependencies:** None  
+
+### 192.null. Migrar administrativo/tipos-conta para RSC
+
+**Status:** done  
+**Dependencies:** None  
+
+### 192.null. Migrar administrativo/bandeiras para RSC
+
+**Status:** done  
+**Dependencies:** None  
+

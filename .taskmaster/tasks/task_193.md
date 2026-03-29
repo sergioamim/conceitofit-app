@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** []
+**Dependencies:** None
 
 **Priority:** low
 
@@ -13,13 +13,6 @@
 **Details:**
 
 Rodar npm run dead-code. Analisar relatório. Remover exports não importados por nenhum arquivo. Remover arquivos órfãos (se houver). Documentar exceções legítimas no knip.json (ignoreExportsUsedInFile, etc). Fazer commit com resultado.
-
-**Subtasks:**
-
-- [x] Rodar knip e analisar relatório
-- [x] Resolver exports não utilizados
-- [x] Resolver arquivos órfãos
-- [x] Documentar exceções no knip.json
 
 **Test Strategy:**
 

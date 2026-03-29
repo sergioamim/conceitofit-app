@@ -2,7 +2,7 @@
 
 **Title:** Integrar jornada de adesão na storefront
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 153 ✓, 157 ✓
 

@@ -2,7 +2,7 @@
 
 **Title:** Fluxo de conta demo e SEO/performance da landing B2B
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 162 ✓
 

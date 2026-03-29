@@ -2,7 +2,7 @@
 
 **Title:** Refatorar layout do backoffice
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 148 ✓, 139 ✓
 
