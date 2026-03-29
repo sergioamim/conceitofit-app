@@ -417,13 +417,13 @@ export default function BiOperacionalPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
-                    <th className="px-3 py-2 text-left font-semibold">Unidade</th>
-                    <th className="px-3 py-2 text-right font-semibold">Receita</th>
-                    <th className="px-3 py-2 text-right font-semibold">Ativos</th>
-                    <th className="px-3 py-2 text-right font-semibold">Conversão</th>
-                    <th className="px-3 py-2 text-right font-semibold">Ocupação</th>
-                    <th className="px-3 py-2 text-right font-semibold">Inadimplência</th>
-                    <th className="px-3 py-2 text-right font-semibold">Retenção</th>
+                    <th scope="col" className="px-3 py-2 text-left font-semibold">Unidade</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Receita</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Ativos</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Conversão</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Ocupação</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Inadimplência</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Retenção</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">

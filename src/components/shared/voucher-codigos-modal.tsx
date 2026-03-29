@@ -255,15 +255,15 @@ export function VoucherCodigosModal({
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 z-10">
                     <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
-                      <th className="px-4 py-2.5 text-left font-semibold">
+                      <th scope="col" className="px-4 py-2.5 text-left font-semibold">
                         Cliente
                       </th>
                       {voucher.codigoTipo === "ALEATORIO" && (
-                        <th className="px-4 py-2.5 text-left font-semibold">
+                        <th scope="col" className="px-4 py-2.5 text-left font-semibold">
                           Código utilizado
                         </th>
                       )}
-                      <th className="px-4 py-2.5 text-left font-semibold">
+                      <th scope="col" className="px-4 py-2.5 text-left font-semibold">
                         Data de uso
                       </th>
                     </tr>

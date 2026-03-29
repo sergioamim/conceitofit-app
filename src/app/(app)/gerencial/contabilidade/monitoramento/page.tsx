@@ -186,11 +186,11 @@ export default function MonitoramentoPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
-                      <th className="px-3 py-2 text-left font-semibold">Conta</th>
-                      <th className="px-3 py-2 text-right font-semibold">Transacoes</th>
-                      <th className="px-3 py-2 text-right font-semibold">Valor Total</th>
-                      <th className="px-3 py-2 text-left font-semibold">Periodo</th>
-                      <th className="px-3 py-2 text-center font-semibold">Severidade</th>
+                      <th scope="col" className="px-3 py-2 text-left font-semibold">Conta</th>
+                      <th scope="col" className="px-3 py-2 text-right font-semibold">Transacoes</th>
+                      <th scope="col" className="px-3 py-2 text-right font-semibold">Valor Total</th>
+                      <th scope="col" className="px-3 py-2 text-left font-semibold">Periodo</th>
+                      <th scope="col" className="px-3 py-2 text-center font-semibold">Severidade</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">

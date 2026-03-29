@@ -78,7 +78,7 @@ export function SalasContent({ initialData }: { initialData: Sala[] }) {
       <PageError error={error} onRetry={reload} />
 
       <div className="overflow-hidden rounded-xl border border-border">
-        <table className="w-full" role="grid" aria-label="Tabela de salas cadastradas">
+        <table className="w-full" aria-label="Tabela de salas cadastradas">
           <thead>
             <tr className="border-b border-border bg-secondary">
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome</th>

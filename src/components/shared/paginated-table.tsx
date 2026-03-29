@@ -126,7 +126,6 @@ export function PaginatedTable<T>({
     <div className="space-y-2">
       <div className="overflow-hidden rounded-xl border border-border">
         <Table
-          role="grid"
           aria-label={resolvedTableAriaLabel}
           aria-rowcount={items.length}
           aria-colcount={columns.length + (selectable ? 1 : 0)}

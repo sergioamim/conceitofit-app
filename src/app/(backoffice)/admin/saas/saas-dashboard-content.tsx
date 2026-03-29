@@ -214,13 +214,13 @@ export function SaasDashboardContent({
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <th className="px-4 py-3">Academia</th>
-                  <th className="px-4 py-3">Subdominio</th>
-                  <th className="px-4 py-3 text-right">Alunos</th>
-                  <th className="px-4 py-3 text-right">Unidades</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Criacao</th>
-                  <th className="px-4 py-3">Onboarding</th>
+                  <th scope="col" className="px-4 py-3">Academia</th>
+                  <th scope="col" className="px-4 py-3">Subdominio</th>
+                  <th scope="col" className="px-4 py-3 text-right">Alunos</th>
+                  <th scope="col" className="px-4 py-3 text-right">Unidades</th>
+                  <th scope="col" className="px-4 py-3">Status</th>
+                  <th scope="col" className="px-4 py-3">Criacao</th>
+                  <th scope="col" className="px-4 py-3">Onboarding</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

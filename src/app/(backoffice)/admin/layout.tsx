@@ -215,7 +215,7 @@ function AdminShellFrame({
             </kbd>
           </button>
 
-          <nav className="flex flex-col gap-3 text-sm">
+          <nav aria-label="Menu backoffice" className="flex flex-col gap-3 text-sm">
             {backofficeNavGroups.map((group) => (
               <div key={group.title}>
                 <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
@@ -232,6 +232,7 @@ function AdminShellFrame({
                       <Link
                         key={item.href}
                         href={item.href}
+                        aria-current={active ? "page" : undefined}
                         className={cn(
                           "flex items-center gap-2 rounded-md px-3 py-2 transition-colors",
                           active

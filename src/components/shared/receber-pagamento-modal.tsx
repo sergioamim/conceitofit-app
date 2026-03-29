@@ -80,13 +80,13 @@ export function ReceberPagamentoModal({
               ) : null}
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="receber-data-pagamento" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Data do pagamento *
               </label>
-              <Input type="date" {...register("dataPagamento", { required: true })} className="border-border bg-secondary" />
+              <Input id="receber-data-pagamento" type="date" aria-required {...register("dataPagamento", { required: true })} className="border-border bg-secondary" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <label id="receber-forma-label" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Forma de pagamento *
               </label>
               <Controller
@@ -95,7 +95,7 @@ export function ReceberPagamentoModal({
                 rules={{ required: true }}
                 render={({ field }) => (
                   <Select value={field.value || "__none__"} onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}>
-                    <SelectTrigger className="w-full border-border bg-secondary">
+                    <SelectTrigger aria-labelledby="receber-forma-label" aria-required className="w-full border-border bg-secondary">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="border-border bg-card">
@@ -111,8 +111,8 @@ export function ReceberPagamentoModal({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações</label>
-              <Input {...register("observacoes")} className="border-border bg-secondary" />
+              <label htmlFor="receber-observacoes" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações</label>
+              <Input id="receber-observacoes" {...register("observacoes")} className="border-border bg-secondary" />
             </div>
           </div>
           <DialogFooter>

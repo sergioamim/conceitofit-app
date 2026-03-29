@@ -239,12 +239,12 @@ export default function TransacoesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
-                <th className="px-3 py-2 text-left font-semibold">Data</th>
-                <th className="px-3 py-2 text-left font-semibold">Tipo</th>
-                <th className="px-3 py-2 text-left font-semibold">Descricao</th>
-                <th className="px-3 py-2 text-right font-semibold">Valor</th>
-                <th className="px-3 py-2 text-center font-semibold">Status</th>
-                <th className="px-3 py-2 text-right font-semibold">Acoes</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">Data</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">Tipo</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">Descricao</th>
+                <th scope="col" className="px-3 py-2 text-right font-semibold">Valor</th>
+                <th scope="col" className="px-3 py-2 text-center font-semibold">Status</th>
+                <th scope="col" className="px-3 py-2 text-right font-semibold">Acoes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

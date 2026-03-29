@@ -207,18 +207,18 @@ function ExerciseGrid({
           <table className="min-w-[1120px] divide-y divide-border text-sm">
             <thead className="bg-secondary/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 text-left">Ordem</th>
-                <th className="px-3 py-2 text-left">Exercício</th>
-                <th className="px-3 py-2 text-left">Séries</th>
-                <th className="px-3 py-2 text-left">Repetições</th>
-                <th className="px-3 py-2 text-left">Objetivo</th>
-                <th className="px-3 py-2 text-left">Carga</th>
-                <th className="px-3 py-2 text-left">Unid.</th>
-                <th className="px-3 py-2 text-left">Intervalo</th>
-                <th className="px-3 py-2 text-left">Regulagem</th>
-                <th className="px-3 py-2 text-left">Observações</th>
-                <th className="px-3 py-2 text-left">Técnicas</th>
-                <th className="px-3 py-2 text-left">Ações</th>
+                <th scope="col" className="px-3 py-2 text-left">Ordem</th>
+                <th scope="col" className="px-3 py-2 text-left">Exercício</th>
+                <th scope="col" className="px-3 py-2 text-left">Séries</th>
+                <th scope="col" className="px-3 py-2 text-left">Repetições</th>
+                <th scope="col" className="px-3 py-2 text-left">Objetivo</th>
+                <th scope="col" className="px-3 py-2 text-left">Carga</th>
+                <th scope="col" className="px-3 py-2 text-left">Unid.</th>
+                <th scope="col" className="px-3 py-2 text-left">Intervalo</th>
+                <th scope="col" className="px-3 py-2 text-left">Regulagem</th>
+                <th scope="col" className="px-3 py-2 text-left">Observações</th>
+                <th scope="col" className="px-3 py-2 text-left">Técnicas</th>
+                <th scope="col" className="px-3 py-2 text-left">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-card">

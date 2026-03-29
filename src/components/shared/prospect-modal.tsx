@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
 import type { CreateProspectInput, Funcionario, Prospect, OrigemProspect } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,6 +117,7 @@ function ProspectModalComponent({
               value={form.nome}
               placeholder="Nome completo"
               onValueChange={fieldHandlers.nome}
+              required
             />
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
@@ -125,6 +126,8 @@ function ProspectModalComponent({
                 value={form.telefone}
                 onChange={fieldHandlers.telefone}
                 className="bg-secondary border-border"
+                aria-label="Telefone"
+                aria-required
               />
             </div>
           </div>
@@ -137,6 +140,7 @@ function ProspectModalComponent({
                 value={form.cpf ?? ""}
                 onChange={fieldHandlers.cpf}
                 className="bg-secondary border-border"
+                aria-label="CPF"
               />
             </div>
             <ProspectInputField
@@ -207,6 +211,7 @@ const ProspectInputField = memo(
     type = "text",
     onValueChange,
     className = "bg-secondary border-border",
+    required = false,
   }: {
     label: string;
     value: string;
@@ -214,15 +219,17 @@ const ProspectInputField = memo(
     type?: string;
     className?: string;
     onValueChange: (value: string) => void;
+    required?: boolean;
   }) => {
+    const id = useId();
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
       onValueChange(event.target.value);
     };
 
     return (
       <div className="space-y-1.5">
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
-        <Input type={type} value={value} onChange={handleChange} placeholder={placeholder} className={className} />
+        <label htmlFor={id} className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+        <Input id={id} type={type} value={value} onChange={handleChange} placeholder={placeholder} className={className} aria-required={required || undefined} />
       </div>
     );
   }
@@ -251,16 +258,18 @@ const ProspectSelectField = memo(
   }) => {
     const blankValue = "__SEM_SELECAO__";
 
+    const id = useId();
+
     return (
       <div className="space-y-1.5">
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+        <label id={`${id}-label`} className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
         <Select
           value={withBlankOption && !value ? blankValue : value}
           onValueChange={(selectedValue) =>
             onValueChange(withBlankOption && selectedValue === blankValue ? "" : selectedValue)
           }
         >
-          <SelectTrigger className={`w-full ${selectClassName}`}>
+          <SelectTrigger aria-labelledby={`${id}-label`} className={`w-full ${selectClassName}`}>
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">

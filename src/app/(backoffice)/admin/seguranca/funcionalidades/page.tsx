@@ -571,8 +571,8 @@ export default function AdminSegurancaFuncionalidadesPage() {
                 <table className="min-w-[960px] w-full border-collapse text-sm">
                   <thead className="bg-secondary/40">
                     <tr>
-                      <th className="min-w-[280px] px-4 py-3 text-left font-semibold">Feature</th>
-                      <th className="min-w-[180px] px-4 py-3 text-left font-semibold">Override global</th>
+                      <th scope="col" className="min-w-[280px] px-4 py-3 text-left font-semibold">Feature</th>
+                      <th scope="col" className="min-w-[180px] px-4 py-3 text-left font-semibold">Override global</th>
                       {(featureFlagsMatrix?.academias ?? []).map((academia) => (
                         <th key={academia.academiaId} className="min-w-[220px] px-4 py-3 text-left font-semibold">
                           <div className="space-y-1">
