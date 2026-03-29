@@ -9469,11 +9469,12 @@
         "description": "O layout do backoffice (src/app/(backoffice)/layout.tsx) usa <Suspense>{children}</Suspense> sem fallback prop.",
         "details": "Arquivo: src/app/(backoffice)/layout.tsx, linha 4. O Suspense sem fallback causa tela branca durante loading. Adicionar fallback com skeleton ou loading indicator adequado para o contexto admin.",
         "testStrategy": "Navegar para rotas /admin/* não mostra tela branca durante carregamento.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 1,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T03:51:27.932Z"
       },
       {
         "id": "205",
@@ -9624,9 +9625,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T03:50:10.623Z",
+      "lastModified": "2026-03-29T03:51:27.933Z",
       "taskCount": 216,
-      "completedCount": 200,
+      "completedCount": 201,
       "tags": [
         "master"
       ]
