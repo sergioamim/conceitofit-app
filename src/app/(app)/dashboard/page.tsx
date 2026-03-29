@@ -1,4 +1,5 @@
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { logger } from "@/lib/shared/logger";
 import { DashboardContent } from "./dashboard-content";
 import { DashboardSkeleton } from "@/components/shared/dashboard-skeleton";
 import { DemoBanner } from "@/components/shared/demo-banner";
@@ -18,7 +19,8 @@ async function fetchDashboard(tenantId: string, referenceDate: string): Promise<
       query: { tenantId, referenceDate, scope: "FULL" },
       next: { revalidate: 60 },
     });
-  } catch {
+  } catch (error) {
+    logger.warn("[Dashboard] SSR fetch failed, falling back to client", { error });
     return null;
   }
 }
