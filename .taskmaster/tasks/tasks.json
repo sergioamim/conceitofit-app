@@ -9914,11 +9914,12 @@
         "description": "Testar seleção de forma de pagamento, data, validação, submit.",
         "details": "Criar tests/components/receber-pagamento-modal.test.tsx. Testar: modal abre, formas de pagamento listadas, validação de data, submit chama onConfirm.",
         "testStrategy": "Modal abre, valida, submete corretamente.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:46:42.211Z"
       },
       {
         "id": "238",
@@ -10071,9 +10072,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:46:32.137Z",
+      "lastModified": "2026-03-29T11:46:42.211Z",
       "taskCount": 248,
-      "completedCount": 236,
+      "completedCount": 237,
       "tags": [
         "master"
       ]
