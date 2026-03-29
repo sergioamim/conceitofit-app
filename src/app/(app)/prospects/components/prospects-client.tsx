@@ -3,21 +3,20 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, Plus, ChevronDown } from "lucide-react";
-import {
-  checkProspectDuplicateApi,
-  createProspectApi,
-  deleteProspectApi,
-  listProspectsApi,
-  marcarProspectPerdidoApi,
-  updateProspectApi,
-  updateProspectStatusApi,
-} from "@/lib/api/crm";
+import { checkProspectDuplicateApi } from "@/lib/api/crm";
 import { listFuncionariosApi } from "@/lib/api/administrativo";
-import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { getBusinessCurrentMonthYear } from "@/lib/business-date";
 import { canAdvanceProspect, getNextProspectStatus } from "@/lib/tenant/crm/prospect-status";
-import { normalizeProspectRuntime } from "@/lib/tenant/crm/runtime";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import {
+  useProspects,
+  useCreateProspect,
+  useUpdateProspect,
+  useUpdateProspectStatus,
+  useMarkProspectLost,
+  useDeleteProspect,
+} from "@/lib/query/use-prospects";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";
 import { Button } from "@/components/ui/button";
@@ -171,8 +170,28 @@ const ProspectTableRow = memo(function ProspectTableRow({
 export function ProspectsClient() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const tenantContext = useTenantContext();
-  const [prospects, setProspects] = useState<Prospect[]>([]);
+  const tenantId = tenantContext.tenantId ?? "";
+
+  // Data via TanStack Query
+  const { data: prospects = [], isLoading: loading, error: queryError, refetch } = useProspects({
+    tenantId: tenantId || undefined,
+    tenantResolved: tenantContext.tenantResolved,
+  });
+
+  // Funcionarios still loaded separately (different domain)
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  useEffect(() => {
+    void listFuncionariosApi(true).then(setFuncionarios).catch(() => {});
+  }, []);
+
+  // Mutations
+  const createMutation = useCreateProspect(tenantId || undefined);
+  const updateMutation = useUpdateProspect(tenantId || undefined);
+  const statusMutation = useUpdateProspectStatus(tenantId || undefined);
+  const lostMutation = useMarkProspectLost(tenantId || undefined);
+  const deleteMutation = useDeleteProspect(tenantId || undefined);
+
+  // UI state (filters, modals, pagination — stays local)
   const [filtroStatus, setFiltroStatus] = useState<WithFilterAll<StatusProspect>>(FILTER_ALL);
   const [filtroOrigem, setFiltroOrigem] = useState<OrigemProspect | "TODAS">("TODAS");
   const [busca, setBusca] = useState("");
@@ -183,34 +202,8 @@ export function ProspectsClient() {
   const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [prospectRows, funcs] = await Promise.all([
-        listProspectsApi({ tenantId }),
-        listFuncionariosApi(true),
-      ]);
-      setProspects(
-        prospectRows
-          .map((prospect) => normalizeProspectRuntime(prospect))
-          .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao))
-      );
-      setFuncionarios(funcs);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Falha ao carregar prospects.");
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const error = queryError ? normalizeErrorMessage(queryError) : "";
 
   const prospectsByMonth = useMemo(() => {
     return prospects.filter((p) => {
@@ -320,43 +313,29 @@ export function ProspectsClient() {
         alert("Já existe prospect com este telefone, CPF ou e-mail.");
         return;
       }
-      await createProspectApi({
-        tenantId,
-        data,
-      });
-      await load();
+      await createMutation.mutateAsync(data);
     },
-    [load, tenantId]
+    [createMutation, tenantId]
   );
 
   const handleEditSave = useCallback(
     async (data: CreateProspectInput) => {
       if (!editing || !tenantId) return;
-      await updateProspectApi({
-        tenantId,
+      await updateMutation.mutateAsync({
         id: editing.id,
-        data: {
-          ...data,
-          responsavelId: data.responsavelId || undefined,
-        },
+        data: { ...data, responsavelId: data.responsavelId || undefined },
       });
       setEditing(null);
-      await load();
     },
-    [editing, load, tenantId]
+    [editing, tenantId, updateMutation]
   );
 
   const handleStatus = useCallback(
     async (id: string, status: StatusProspect) => {
       if (!tenantId) return;
-      await updateProspectStatusApi({
-        tenantId,
-        id,
-        status,
-      });
-      await load();
+      await statusMutation.mutateAsync({ id, status });
     },
-    [load, tenantId]
+    [tenantId, statusMutation]
   );
 
   const handleAdvance = useCallback(
@@ -373,25 +352,19 @@ export function ProspectsClient() {
     async (id: string) => {
       if (!tenantId) return;
       const motivo = prompt("Motivo da perda (opcional):");
-      await marcarProspectPerdidoApi({
-        tenantId,
-        id,
-        motivo: motivo ?? undefined,
-      });
-      await load();
+      await lostMutation.mutateAsync({ id, motivo: motivo ?? undefined });
     },
-    [load, tenantId]
+    [tenantId, lostMutation]
   );
 
   const handleDelete = useCallback(
     (id: string) => {
       if (!tenantId) return;
       confirm("Remover este prospect?", async () => {
-        await deleteProspectApi({ tenantId, id });
-        await load();
+        await deleteMutation.mutateAsync(id);
       });
     },
-    [confirm, load, tenantId]
+    [confirm, tenantId, deleteMutation]
   );
 
   const handlePreviousPage = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
@@ -421,7 +394,7 @@ export function ProspectsClient() {
         </Button>
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 
       <div className="grid grid-cols-6 gap-3">
         {STATUS_LABELS.map((s) => (
