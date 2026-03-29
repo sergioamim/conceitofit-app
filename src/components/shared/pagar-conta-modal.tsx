@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import type {
   ContaPagar,
   FormaPagamento,
-  TipoFormaPagamento,
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { pagarContaSchema, type PagarContaFormValues } from "./pagar-conta-schema";
 
 function formatBRL(value: number) {
   return Number(value ?? 0).toLocaleString("pt-BR", {
@@ -38,12 +40,7 @@ function contaTotal(conta: ContaPagar) {
   );
 }
 
-export type PagamentoFormState = {
-  dataPagamento: string;
-  formaPagamento: TipoFormaPagamento;
-  valorPago: string;
-  observacoes: string;
-};
+export type PagamentoFormState = PagarContaFormValues;
 
 type PagarContaModalProps = {
   open: boolean;
@@ -62,28 +59,28 @@ export function PagarContaModal({
   todayISO,
   onSubmit,
 }: PagarContaModalProps) {
-  const [form, setForm] = useState<PagamentoFormState>({
-    dataPagamento: todayISO,
-    formaPagamento: "PIX",
-    valorPago: "",
-    observacoes: "",
+  const { register, control, handleSubmit, reset } = useForm<PagarContaFormValues>({
+    resolver: zodResolver(pagarContaSchema),
+    defaultValues: {
+      dataPagamento: todayISO,
+      formaPagamento: "PIX",
+      valorPago: "",
+      observacoes: "",
+    },
   });
 
-  // Reset form when a new conta is selected
-  const [prevConta, setPrevConta] = useState<ContaPagar | null>(conta);
-  if (conta !== prevConta) {
-    setPrevConta(conta);
-    setForm({
+  useEffect(() => {
+    reset({
       dataPagamento: todayISO,
       formaPagamento: "PIX",
       valorPago: "",
       observacoes: "",
     });
-  }
+  }, [conta, todayISO, reset]);
 
-  async function handleSubmit() {
+  async function onFormSubmit(values: PagarContaFormValues) {
     if (!conta) return;
-    await onSubmit(conta.id, form);
+    await onSubmit(conta.id, values);
   }
 
   return (
@@ -95,78 +92,74 @@ export function PagarContaModal({
             Registrar pagamento para {conta?.fornecedor ?? "fornecedor"}.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Data de pagamento
-            </label>
-            <Input
-              type="date"
-              value={form.dataPagamento}
-              onChange={(e) =>
-                setForm((v) => ({ ...v, dataPagamento: e.target.value }))
-              }
-              className="bg-secondary border-border"
-            />
-          </div>
+        <form onSubmit={handleSubmit(onFormSubmit)}>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Data de pagamento
+              </label>
+              <Input
+                type="date"
+                {...register("dataPagamento")}
+                className="bg-secondary border-border"
+              />
+            </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Forma de pagamento
-            </label>
-            <Select
-              value={form.formaPagamento}
-              onValueChange={(value) =>
-                setForm((f) => ({ ...f, formaPagamento: value as TipoFormaPagamento }))
-              }
-            >
-              <SelectTrigger className="w-full bg-secondary border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {formasPagamento.map((forma) => (
-                  <SelectItem key={forma.id} value={forma.tipo}>
-                    {forma.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Forma de pagamento
+              </label>
+              <Controller
+                control={control}
+                name="formaPagamento"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full bg-secondary border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {formasPagamento.map((forma) => (
+                        <SelectItem key={forma.id} value={forma.tipo}>
+                          {forma.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Valor pago
-            </label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder={`Padrão: ${formatBRL(conta ? contaTotal(conta) : 0)}`}
-              value={form.valorPago}
-              onChange={(e) => setForm((v) => ({ ...v, valorPago: e.target.value }))}
-              className="bg-secondary border-border"
-            />
-          </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Valor pago
+              </label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder={`Padrão: ${formatBRL(conta ? contaTotal(conta) : 0)}`}
+                {...register("valorPago")}
+                className="bg-secondary border-border"
+              />
+            </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Observações
-            </label>
-            <textarea
-              value={form.observacoes}
-              onChange={(e) =>
-                setForm((v) => ({ ...v, observacoes: e.target.value }))
-              }
-              className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
-            />
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Observações
+              </label>
+              <textarea
+                {...register("observacoes")}
+                className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+              />
+            </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" className="border-border" onClick={() => onOpenChange(false)}>
-            Fechar
-          </Button>
-          <Button onClick={handleSubmit}>Confirmar pagamento</Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="border-border" onClick={() => onOpenChange(false)}>
+              Fechar
+            </Button>
+            <Button type="submit">Confirmar pagamento</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

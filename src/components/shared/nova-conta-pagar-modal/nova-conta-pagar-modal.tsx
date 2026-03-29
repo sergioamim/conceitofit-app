@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,13 +13,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type {
-  NovaContaFormState,
   NovaContaPagarModalProps,
   PagamentoNoCadastroState,
 } from "./conta-pagar-types";
 import { ContaPagarFormFields } from "./conta-pagar-form-fields";
 import { ContaPagarRecorrencia } from "./conta-pagar-recorrencia";
 import { ContaPagarPagamentoInline } from "./conta-pagar-pagamento-inline";
+import { contaPagarFormSchema, type ContaPagarFormValues } from "./conta-pagar-schema";
 
 export function NovaContaPagarModal({
   open,
@@ -30,7 +32,7 @@ export function NovaContaPagarModal({
   todayISO,
   onSubmit,
 }: NovaContaPagarModalProps) {
-  const makeDefault = (): NovaContaFormState => ({
+  const makeDefault = (): ContaPagarFormValues => ({
     tipoContaId: "",
     fornecedor: "",
     documentoFornecedor: "",
@@ -64,43 +66,49 @@ export function NovaContaPagarModal({
     observacoes: "",
   });
 
-  const [form, setForm] = useState(makeDefault);
+  const formMethods = useForm<ContaPagarFormValues>({
+    resolver: zodResolver(contaPagarFormSchema),
+    defaultValues: makeDefault(),
+  });
+
+  const { handleSubmit, reset, setValue, control } = formMethods;
+  const formValues = useWatch({ control }) as ContaPagarFormValues;
+
   const [registrarComoPaga, setRegistrarComoPaga] = useState(false);
   const [pagamento, setPagamento] = useState(makePagamentoDefault);
 
-  function reset() {
-    setForm(makeDefault());
+  function resetAll() {
+    reset(makeDefault());
     setRegistrarComoPaga(false);
     setPagamento(makePagamentoDefault());
   }
 
   function applyTipoConta(tipoId: string) {
     const tipo = tiposConta.find((item) => item.id === tipoId);
-    setForm((prev) => ({
-      ...prev,
-      tipoContaId: tipoId,
-      categoria: tipo?.categoriaOperacional ?? prev.categoria,
-      grupoDre: tipo?.grupoDre ?? prev.grupoDre,
-      centroCusto: prev.centroCusto || tipo?.centroCustoPadrao || "",
-    }));
+    setValue("tipoContaId", tipoId);
+    if (tipo?.categoriaOperacional) setValue("categoria", tipo.categoriaOperacional);
+    if (tipo?.grupoDre) setValue("grupoDre", tipo.grupoDre);
+    if (!formValues.centroCusto && tipo?.centroCustoPadrao) {
+      setValue("centroCusto", tipo.centroCustoPadrao);
+    }
   }
 
-  const diaVencimentoSugestao = Number(form.dataVencimento.split("-")[2] || 1);
+  const diaVencimentoSugestao = Number((formValues.dataVencimento ?? "").split("-")[2] || 1);
   const valorContaLiquida = useMemo(() => {
     return Math.max(
       0,
-      Number(form.valorOriginal || 0) - Number(form.desconto || 0) + Number(form.jurosMulta || 0)
+      Number(formValues.valorOriginal || 0) - Number(formValues.desconto || 0) + Number(formValues.jurosMulta || 0)
     );
-  }, [form.desconto, form.jurosMulta, form.valorOriginal]);
+  }, [formValues.desconto, formValues.jurosMulta, formValues.valorOriginal]);
 
   function handleClose() {
-    reset();
+    resetAll();
     onOpenChange(false);
   }
 
-  async function handleSubmit() {
-    await onSubmit({ form, registrarComoPaga, pagamento });
-    reset();
+  async function onFormSubmit(values: ContaPagarFormValues) {
+    await onSubmit({ form: values, registrarComoPaga, pagamento });
+    resetAll();
   }
 
   return (
@@ -122,39 +130,40 @@ export function NovaContaPagarModal({
           </DialogDescription>
         </DialogHeader>
 
-        <ContaPagarFormFields
-          form={form}
-          setForm={setForm}
-          tiposAtivos={tiposAtivos}
-          tiposConta={tiposConta}
-          applyTipoConta={applyTipoConta}
-        />
+        <FormProvider {...formMethods}>
+          <form onSubmit={handleSubmit(onFormSubmit)}>
+            <ContaPagarFormFields
+              tiposAtivos={tiposAtivos}
+              tiposConta={tiposConta}
+              applyTipoConta={applyTipoConta}
+            />
 
-        <ContaPagarRecorrencia
-          form={form}
-          setForm={setForm}
-          diaVencimentoSugestao={diaVencimentoSugestao}
-        />
+            <ContaPagarRecorrencia
+              diaVencimentoSugestao={diaVencimentoSugestao}
+            />
 
-        <ContaPagarPagamentoInline
-          registrarComoPaga={registrarComoPaga}
-          setRegistrarComoPaga={setRegistrarComoPaga}
-          pagamento={pagamento}
-          setPagamento={setPagamento}
-          formasPagamentoUnicas={formasPagamentoUnicas}
-          valorContaLiquida={valorContaLiquida}
-        />
+            <ContaPagarPagamentoInline
+              registrarComoPaga={registrarComoPaga}
+              setRegistrarComoPaga={setRegistrarComoPaga}
+              pagamento={pagamento}
+              setPagamento={setPagamento}
+              formasPagamentoUnicas={formasPagamentoUnicas}
+              valorContaLiquida={valorContaLiquida}
+            />
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            className="border-border"
-            onClick={handleClose}
-          >
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit}>Salvar conta</Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-border"
+                onClick={handleClose}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar conta</Button>
+            </DialogFooter>
+          </form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   );
