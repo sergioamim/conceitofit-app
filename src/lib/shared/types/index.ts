@@ -9,3 +9,4 @@ export * from './tenant';
 export * from './lead-b2b';
 export * from './financial';
 export * from './billing';
+export * from './whatsapp';
