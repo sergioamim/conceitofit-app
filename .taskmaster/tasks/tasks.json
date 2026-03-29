@@ -9342,6 +9342,102 @@
         "priority": "low",
         "complexity": 7,
         "subtasks": []
+      },
+      {
+        "id": "195",
+        "title": "Migrar jornada pública de adesão para endpoints reais do backend",
+        "description": "O frontend usa services.ts com lógica interna para trial, checkout e pendências. O backend tem 11 endpoints em /api/v1/publico/adesao/* prontos para uso.",
+        "details": "O backend oferece: GET /publico/adesao/catalogo, POST /publico/adesao/cadastros, POST /publico/adesao/trials, POST /publico/adesao/{id}/checkout, GET /publico/adesao/{id}, GET /publico/adesao/{id}/pendencias, PATCH /publico/adesao/{id}/pendencias/{codigo}, PUT /publico/adesao/{id}/cadastro, POST /publico/adesao/{id}/contrato/assinaturas, POST /publico/adesao/{id}/contrato/otp, POST /publico/adesao/{id}/pagamento/confirmacao. Criar src/lib/public/adesao-api.ts com clients para cada endpoint. Refatorar src/lib/public/services.ts para chamar esses endpoints em vez de orquestrar APIs internas (alunos, vendas, matrículas). Manter interface pública do services.ts compatível.",
+        "testStrategy": "Jornada pública funciona end-to-end: trial, cadastro, checkout, pendências. Sem chamadas diretas a APIs internas de aluno/venda/matrícula no fluxo público.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 7,
+        "subtasks": []
+      },
+      {
+        "id": "196",
+        "title": "Migrar storefront para endpoints com academiaSlug no path",
+        "description": "O backend tem 9 endpoints em /publico/storefront/{academiaSlug}/* que o frontend não usa. Frontend usa paths sem slug.",
+        "details": "Backend oferece: GET /publico/storefront/{slug} (dados gerais), GET /{slug}/atividades, /{slug}/planos, /{slug}/seo, /{slug}/sitemap, /{slug}/theme, /{slug}/unidades/{id}, /{slug}/unidades/{id}/horarios-disponiveis, POST /{slug}/experimental. Atualizar src/lib/public/server-services.ts e o middleware (proxy.ts) para usar esses endpoints com o slug resolvido. Atualizar src/app/storefront/ pages para consumir. Pode eliminar necessidade de X-Context-Id header nos requests públicos.",
+        "testStrategy": "Storefront renderiza com dados do backend. Planos, unidades, horários e tema carregam via slug.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "197",
+        "title": "Criar página admin de gestão de leads B2B",
+        "description": "O backend tem 5 endpoints de leads admin (GET /admin/leads, GET stats, GET {id}, PATCH notas, PATCH status) mas o frontend não tem UI para gerenciar leads capturados.",
+        "details": "Criar src/lib/api/admin-leads.ts com clients para os 5 endpoints. Criar src/app/(backoffice)/admin/leads/page.tsx com: tabela paginada de leads, filtro por status, detalhe com notas, ações (mudar status, adicionar nota). Conectar com o formulário de captura B2B (/b2b lead-form) para ciclo completo: lead entra → admin visualiza → qualifica → converte.",
+        "testStrategy": "Página /admin/leads lista leads. Filtro funciona. Detalhes e notas editáveis.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "198",
+        "title": "Criar página admin de BI executivo por academia",
+        "description": "O backend tem 4 endpoints de BI (resumo, comparativo, série, resumo geral) que não estão conectados no frontend.",
+        "details": "Criar src/lib/api/admin-bi.ts com clients para: GET /admin/bi/academias/{id}/executivo/resumo, /comparativo, /serie, e /admin/bi/academias/{id}/resumo. Criar src/app/(backoffice)/admin/bi/page.tsx ou expandir dashboard admin existente com seção BI. Exibir: KPIs por academia, comparativo entre períodos, gráfico de série temporal. Usar componentes BiMetricCard e BiTrendBars já existentes.",
+        "testStrategy": "Dashboard BI renderiza com dados reais. Seleção de academia filtra. Gráficos exibem série temporal.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "199",
+        "title": "Criar página admin de gestão de gateways de pagamento",
+        "description": "O backend tem 5 endpoints de gateways (GET, POST, PUT, PATCH ativar, PATCH desativar) sem UI no frontend.",
+        "details": "Criar src/lib/api/admin-gateways.ts com clients. Criar src/app/(backoffice)/admin/configuracoes/gateways/page.tsx ou adicionar tab em configuracoes. Listar gateways configurados, criar novo, editar, ativar/desativar. Campos típicos: nome, provider (pagarme, stripe, etc), credenciais (mascaradas), status.",
+        "testStrategy": "Listar gateways. Criar gateway de teste. Ativar/desativar funciona.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "200",
+        "title": "Criar dashboard de métricas SaaS e onboarding",
+        "description": "O backend tem endpoints de métricas SaaS (GET /admin/metrics/saas, /saas/series, /saas/onboarding) e onboarding (GET /admin/unidades/onboarding) sem UI.",
+        "details": "Criar src/lib/api/admin-saas-metrics.ts com clients para: GET /admin/metrics/saas, /saas/series, /saas/onboarding, GET /admin/unidades/onboarding, GET /admin/unidades/{id}/onboarding. Criar página ou seção no dashboard admin com: métricas SaaS (MRR, churn, LTV), pipeline de onboarding de unidades, status de ativação por unidade.",
+        "testStrategy": "Métricas SaaS renderizam. Onboarding lista unidades em processo.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "201",
+        "title": "Integrar catálogo de funcionalidades e perfis-padrão no RBAC",
+        "description": "O backend tem 9 endpoints de segurança avançada (catálogo de funcionalidades, perfis-padrão com versionamento, revisões, exceções) não integrados.",
+        "details": "Expandir a página de RBAC (/seguranca/rbac) ou criar sub-páginas: 1) Tab/página de catálogo de funcionalidades (GET/POST/PUT /admin/seguranca/catalogo-funcionalidades). 2) Tab de perfis-padrão com versionamento (GET /perfis-padrao, GET /{key}/versoes, POST). 3) Tab de revisões de segurança (GET /admin/seguranca/revisoes). 4) Gestão de exceções (POST /excecoes, PUT /excecoes/{id}/revisao). Atualizar src/lib/api/rbac.ts ou criar admin-seguranca-avancada.ts.",
+        "testStrategy": "Catálogo lista funcionalidades. Perfis-padrão com versões visíveis. Exceções criáveis/revisáveis.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 6,
+        "subtasks": []
+      },
+      {
+        "id": "202",
+        "title": "Criar módulo financeiro contábil (ledgers, contas, transações)",
+        "description": "O backend tem 38 endpoints em /api/v1/financial/* (accounts, ledgers, ledger-entries, transactions, reports, monitoring) sem nenhuma UI.",
+        "details": "Módulo completo de contabilidade: contas contábeis, livros razão, lançamentos, transações com reversão, relatórios (balanço, fluxo de caixa, DRE, ROI, extrato), exportação Excel/PDF, e monitoramento (transações suspeitas, padrões incomuns, alta frequência). Criar: src/lib/api/financial.ts, páginas em /gerencial/contabilidade/*. NOTA: Este é um módulo grande — avaliar se será implementado agora ou em fase futura.",
+        "testStrategy": "CRUD de contas e transações funciona. Relatórios renderizam. Exportação gera arquivo.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 9,
+        "subtasks": []
       }
     ],
     "metadata": {
