@@ -10128,13 +10128,14 @@
         "description": "Página de pagamentos usa useState para server state. Migrar para useQuery/useMutation com cache e invalidação.",
         "details": "Criar/atualizar usePagamentos() hook. Substituir useState de dados por useQuery. Mutations (receber pagamento) via useMutation com invalidação de cache. O hook usePagamentos já existe em lib/query/use-pagamentos.ts.",
         "testStrategy": "Listagem funciona com cache. Receber pagamento invalida cache. Navegar e voltar não refetch.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
         "priority": "high",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T22:36:16.817Z"
       },
       {
         "id": "253",
@@ -10378,11 +10379,12 @@
         "description": "Apenas 3 arquivos usam dynamic(). Componentes pesados como TipTap editor, modais complexos e gráficos poderiam ser lazy loaded.",
         "details": "Candidatos: RichTextEditor (TipTap), NovaContaPagarModal (704 LOC), wizard steps, gráficos do BI, Kanban do CRM. Usar next/dynamic com ssr: false para componentes client-only pesados.",
         "testStrategy": "Bundle size reduz. Lighthouse performance score melhora. Funcionalidades continuam funcionando.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T22:36:20.276Z"
       },
       {
         "id": "267",
@@ -10399,9 +10401,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T22:34:32.798Z",
+      "lastModified": "2026-03-29T22:36:20.277Z",
       "taskCount": 267,
-      "completedCount": 253,
+      "completedCount": 255,
       "tags": [
         "master"
       ]
