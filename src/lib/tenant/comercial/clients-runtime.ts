@@ -141,14 +141,23 @@ export async function createAlunoService(input: {
   tenantId: string;
   data: Parameters<typeof createAlunoApi>[0]["data"];
 }): Promise<Aluno> {
-  return createAlunoApi(input);
+  const result = await createAlunoApi(input);
+  const { trackAlunoCreated } = await import("@/lib/shared/analytics");
+  trackAlunoCreated(input.tenantId, result.id);
+  return result;
 }
 
 export async function createAlunoComMatriculaService(input: {
   tenantId: string;
   data: Parameters<typeof createAlunoComMatriculaApi>[0]["data"];
 }) {
-  return createAlunoComMatriculaApi(input);
+  const result = await createAlunoComMatriculaApi(input);
+  const { trackAlunoCreated, trackMatriculaCreated } = await import("@/lib/shared/analytics");
+  trackAlunoCreated(input.tenantId, result.aluno.id);
+  if (result.matricula?.id) {
+    trackMatriculaCreated(input.tenantId, result.matricula.id, input.data.planoId);
+  }
+  return result;
 }
 
 export async function updateAlunoService(input: {

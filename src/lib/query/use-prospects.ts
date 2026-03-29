@@ -33,10 +33,13 @@ export function useCreateProspect(tenantId: string | undefined) {
   return useMutation({
     mutationFn: (data: CreateProspectInput) =>
       createProspectApi({ tenantId: tenantId!, data }),
-    onSuccess: () => {
+    onSuccess: (_data, _variables, _context) => {
       if (tenantId) {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.prospects.all(tenantId),
+        });
+        import("@/lib/shared/analytics").then(({ trackProspectCreated }) => {
+          trackProspectCreated(tenantId, _data.id);
         });
       }
     },

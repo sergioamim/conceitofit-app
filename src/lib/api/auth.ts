@@ -269,6 +269,9 @@ export async function loginApi(input: {
     fallbackNetworkSlug: input.redeIdentifier?.trim() || undefined,
   });
   saveAuthSession(session);
+  import("@/lib/shared/analytics").then(({ trackLogin }) => {
+    trackLogin(session.activeTenantId, session.userId);
+  });
   return session;
 }
 

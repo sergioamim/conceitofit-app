@@ -64,14 +64,20 @@ export async function receberPagamentoService(input: {
   id: string;
   data: Parameters<typeof receberPagamentoApi>[0]["data"];
 }): Promise<Pagamento> {
-  return receberPagamentoApi(input);
+  const result = await receberPagamentoApi(input);
+  const { trackPagamentoReceived } = await import("@/lib/shared/analytics");
+  trackPagamentoReceived(input.tenantId, result.id, result.valorFinal);
+  return result;
 }
 
 export async function emitirNfsePagamentoService(input: {
   tenantId: string;
   id: string;
 }): Promise<Pagamento> {
-  return emitirNfsePagamentoApi(input);
+  const result = await emitirNfsePagamentoApi(input);
+  const { trackNfseEmitted } = await import("@/lib/shared/analytics");
+  trackNfseEmitted(input.tenantId, result.id);
+  return result;
 }
 
 export async function listVendasPageService(input: {
