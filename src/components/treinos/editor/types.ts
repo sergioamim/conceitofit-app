@@ -1,4 +1,6 @@
 import { formatDateTime } from "@/lib/formatters";
+
+export { formatDateTime };
 import type { Dispatch, SetStateAction } from "react";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
 import type {
