@@ -9419,11 +9419,12 @@
         "description": "O backend tem endpoints de métricas SaaS (GET /admin/metrics/saas, /saas/series, /saas/onboarding) e onboarding (GET /admin/unidades/onboarding) sem UI.",
         "details": "Criar src/lib/api/admin-saas-metrics.ts com clients para: GET /admin/metrics/saas, /saas/series, /saas/onboarding, GET /admin/unidades/onboarding, GET /admin/unidades/{id}/onboarding. Criar página ou seção no dashboard admin com: métricas SaaS (MRR, churn, LTV), pipeline de onboarding de unidades, status de ativação por unidade.",
         "testStrategy": "Métricas SaaS renderizam. Onboarding lista unidades em processo.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T03:55:07.154Z"
       },
       {
         "id": "201",
@@ -9628,9 +9629,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T03:53:10.160Z",
+      "lastModified": "2026-03-29T03:55:07.154Z",
       "taskCount": 216,
-      "completedCount": 202,
+      "completedCount": 203,
       "tags": [
         "master"
       ]
