@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   listContasReceberOperacionais,
   type PagamentoComAluno,
-} from "@/lib/financeiro/recebimentos";
+} from "@/lib/tenant/financeiro/recebimentos";
 import type { StatusPagamento } from "@/lib/types";
 import { queryKeys } from "./keys";
 

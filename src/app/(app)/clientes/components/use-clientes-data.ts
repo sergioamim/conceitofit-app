@@ -1,12 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import {
-  listAlunosPageService,
-} from "@/lib/tenant/comercial/runtime";
+import { useMemo } from "react";
+import { useClientes } from "@/lib/query/use-clientes";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { isTenantContextErrorMessage } from "@/lib/shared/utils/error-codes";
-import type { Aluno, StatusAluno } from "@/lib/types";
+import type { StatusAluno } from "@/lib/types";
 
 interface UseClientesDataInput {
   tenantId: string | undefined;
@@ -20,98 +17,43 @@ interface UseClientesDataInput {
 export function useClientesData({
   tenantId,
   tenantResolved,
-  setTenant,
   filtro,
   page,
   pageSize,
 }: UseClientesDataInput) {
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [totalClientes, setTotalClientes] = useState(0);
-  const [metaPage, setMetaPage] = useState(0);
-  const [metaSize, setMetaSize] = useState(20);
-  const [statusTotals, setStatusTotals] = useState({
-    TODOS: 0,
-    ATIVO: 0,
-    SUSPENSO: 0,
-    INATIVO: 0,
-    CANCELADO: 0,
+  const statusFilter = filtro === "TODOS" ? undefined : filtro;
+
+  const { data: queryData, isLoading: loading, error: queryError, refetch } = useClientes({
+    tenantId,
+    tenantResolved,
+    status: statusFilter,
+    page,
+    size: pageSize,
   });
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  const applyLoadedData = useCallback((paged: Awaited<ReturnType<typeof listAlunosPageService>>) => {
-    setAlunos(paged.items);
-    setHasNextPage(paged.hasNext);
-    setTotalClientes(paged.total ?? paged.items.length);
-    setMetaPage(paged.page);
-    setMetaSize(paged.size);
+  const loadError = queryError ? normalizeErrorMessage(queryError) : null;
 
-    const totais = paged.totaisStatus;
-    const todos = totais?.total ?? paged.total ?? paged.items.length;
-    const ativos = totais?.totalAtivo ?? 0;
-    const suspensos = totais?.totalSuspenso ?? 0;
-    const inativos = totais?.totalInativo ?? 0;
-    const cancelados = totais?.totalCancelado ?? totais?.cancelados ?? 0;
+  const alunos = queryData?.items ?? [];
+  const hasNextPage = queryData?.hasNext ?? false;
+  const totalClientes = queryData?.total ?? alunos.length;
+  const metaPage = queryData?.page ?? 0;
+  const metaSize = queryData?.size ?? 20;
 
-    setStatusTotals({
+  const statusTotals = useMemo(() => {
+    const totais = queryData?.totaisStatus;
+    const todos = totais?.total ?? queryData?.total ?? alunos.length;
+    return {
       TODOS: todos,
-      ATIVO: ativos,
-      SUSPENSO: suspensos,
-      INATIVO: inativos,
-      CANCELADO: cancelados,
-    });
-  }, []);
+      ATIVO: totais?.totalAtivo ?? 0,
+      SUSPENSO: totais?.totalSuspenso ?? 0,
+      INATIVO: totais?.totalInativo ?? 0,
+      CANCELADO: totais?.totalCancelado ?? (totais as Record<string, number> | undefined)?.cancelados ?? 0,
+    };
+  }, [queryData, alunos.length]);
 
-  const loadSnapshot = useCallback(async (currentTenantId: string) => {
-    return listAlunosPageService({
-      tenantId: currentTenantId,
-      status: filtro === "TODOS" ? undefined : filtro,
-      page,
-      size: pageSize,
-    });
-  }, [filtro, page, pageSize]);
-
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setLoadError(null);
-
-    try {
-      const snapshot = await loadSnapshot(tenantId);
-      applyLoadedData(snapshot);
-    } catch (error) {
-      const message = normalizeErrorMessage(error);
-
-      if (!isTenantContextErrorMessage(message)) {
-        setLoadError(message);
-        return;
-      }
-
-      try {
-        await setTenant(tenantId);
-        const snapshot = await loadSnapshot(tenantId);
-        applyLoadedData(snapshot);
-      } catch (retryError) {
-        setLoadError(normalizeErrorMessage(retryError));
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [applyLoadedData, loadSnapshot, setTenant, tenantId]);
-
-  useEffect(() => {
-    // page reseta sozinho com a exclusão da chave na URL, porém não alteramos o custom hook diretamente
-    setAlunos([]);
-    setHasNextPage(false);
-    setTotalClientes(0);
-    setLoadError(null);
-  }, [tenantId]);
-
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void load();
-  }, [load, tenantId, tenantResolved]);
+  const load = async () => {
+    await refetch();
+  };
 
   return {
     alunos,

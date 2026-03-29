@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -19,7 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { getDashboardApi } from "@/lib/api/dashboard";
+import { useDashboard } from "@/lib/query/use-dashboard";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { DashboardData, Prospect, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -88,7 +88,6 @@ export function DashboardContent({
   initialDate: string;
 }) {
   const tenantContext = useTenantContext();
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(initialData);
   const [showAllProspects, setShowAllProspects] = useState(false);
   const [prospectsPage, setProspectsPage] = useState<Prospect[]>([]);
   const [prospectsPageNumber, setProspectsPageNumber] = useState(1);
@@ -96,17 +95,15 @@ export function DashboardContent({
   const [prospectsPageLoading, setProspectsPageLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
-  const [loading, setLoading] = useState(!initialData);
-  const [error, setError] = useState<string | null>(null);
-  const dashboardDataCacheRef = useRef<Record<string, DashboardData>>({});
-  const activeRequestKeyRef = useRef<string | null>(null);
 
-  // Seed cache with server-fetched data
-  useEffect(() => {
-    if (initialData && tenantContext.tenantId) {
-      dashboardDataCacheRef.current[`${tenantContext.tenantId}-${initialDate}`] = initialData;
-    }
-  }, [initialData, initialDate, tenantContext.tenantId]);
+  const { data: dashboardData, isLoading: loading, error: queryError, refetch } = useDashboard({
+    tenantId: tenantContext.tenantId,
+    referenceDate: selectedDate,
+    scope: "FULL",
+    initialData: initialData ?? undefined,
+  });
+
+  const error = queryError ? normalizeErrorMessage(queryError) : null;
 
   const openProspects = useMemo(() => {
     if (!dashboardData?.prospectsRecentes) return [] as Prospect[];
@@ -122,14 +119,6 @@ export function DashboardContent({
     setProspectsPageHasNext(false);
   }, []);
 
-  const dashboardCacheKey = useCallback(
-    (referenceDate: string) => {
-      if (!tenantContext.tenantId) return referenceDate;
-      return `${tenantContext.tenantId}-${referenceDate}`;
-    },
-    [tenantContext.tenantId]
-  );
-
   const loadProspectsPageData = useCallback((page: number) => {
     setProspectsPageLoading(true);
     const startIndex = Math.max(0, (page - 1) * PROSPECTS_PAGE_SIZE);
@@ -140,61 +129,9 @@ export function DashboardContent({
     setProspectsPageLoading(false);
   }, [openProspects]);
 
-  const load = useCallback(async (referenceDate: string) => {
-    if (!referenceDate || !tenantContext.tenantId) return;
-
-    const cacheKey = dashboardCacheKey(referenceDate);
-    activeRequestKeyRef.current = cacheKey;
-    const cachedData = dashboardDataCacheRef.current[cacheKey];
-    resetProspectsPagination();
-
-    if (cachedData) {
-      setDashboardData(cachedData);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
-      const nextDashboardData = await getDashboardApi({
-        tenantId: tenantContext.tenantId,
-        referenceDate,
-        scope: "FULL",
-      });
-      dashboardDataCacheRef.current[cacheKey] = nextDashboardData;
-      if (activeRequestKeyRef.current !== cacheKey) return;
-      setDashboardData(nextDashboardData);
-    } catch (loadError) {
-      if (activeRequestKeyRef.current !== cacheKey) return;
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      if (activeRequestKeyRef.current === cacheKey) setLoading(false);
-    }
-  }, [tenantContext.tenantId, dashboardCacheKey, resetProspectsPagination]);
-
   useEffect(() => {
     resetProspectsPagination();
   }, [resetProspectsPagination, selectedDate]);
-
-  // Only fetch client-side when date changes from initial
-  useEffect(() => {
-    if (!selectedDate || selectedDate === initialDate) return;
-    if (tenantContext.tenantResolved) {
-      void load(selectedDate);
-    }
-  }, [load, selectedDate, tenantContext.tenantResolved, initialDate]);
-
-  // Re-fetch if tenant changes after hydration
-  useEffect(() => {
-    if (tenantContext.tenantResolved && tenantContext.tenantId) {
-      const cacheKey = dashboardCacheKey(selectedDate);
-      if (!dashboardDataCacheRef.current[cacheKey]) {
-        void load(selectedDate);
-      }
-    }
-  }, [tenantContext.tenantResolved, tenantContext.tenantId, dashboardCacheKey, selectedDate, load]);
 
   useEffect(() => {
     if (showAllProspects) {
@@ -272,7 +209,7 @@ export function DashboardContent({
         ))}
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load(selectedDate)} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 
       {tab === "CLIENTES" && (
         <>

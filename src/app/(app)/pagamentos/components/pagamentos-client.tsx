@@ -17,11 +17,11 @@ import { getBusinessCurrentMonthYear } from "@/lib/business-date";
 import {
   ajustarPagamentoService,
   importarPagamentosEmLoteService,
-  listContasReceberOperacionais,
   type ImportarPagamentosResultado,
   type PagamentoComAluno,
   type PagamentoImportItem,
 } from "@/lib/tenant/financeiro/recebimentos";
+import { usePagamentos } from "@/lib/query/use-pagamentos";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -428,7 +428,6 @@ function parseImportPayload(raw: string): PagamentoImportItem[] {
 function PagamentosPageContent() {
   const searchParams = useSearchParams();
   const { tenantId } = useTenantContext();
-  const [pagamentos, setPagamentos] = useState<PagamentoComAluno[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [clientes, setClientes] = useState<Aluno[]>([]);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
@@ -452,17 +451,21 @@ function PagamentosPageContent() {
   const [importErro, setImportErro] = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async () => {
+  const { data: pagamentosData, refetch: refetchPagamentos } = usePagamentos({
+    tenantId,
+    tenantResolved: Boolean(tenantId),
+  });
+  const pagamentos = pagamentosData ?? [];
+
+  const loadAuxData = useCallback(async () => {
     if (!tenantId) return;
-    const [pags, fps, cls, mats, cvs, nfseConfig] = await Promise.all([
-      listContasReceberOperacionais({ tenantId }),
+    const [fps, cls, mats, cvs, nfseConfig] = await Promise.all([
       listFormasPagamentoApi({ tenantId, apenasAtivas: false }),
       listAlunosApi({ tenantId, page: 0, size: 500 }),
       listMatriculasApi({ tenantId, page: 0, size: 500 }),
       listConveniosApi(),
       getNfseConfiguracaoAtualApi({ tenantId }).catch(() => null),
     ]);
-    setPagamentos(pags);
     setFormasPagamento(fps);
     setClientes(extractAlunosFromListResponse(cls));
     setMatriculas(mats);
@@ -471,8 +474,13 @@ function PagamentosPageContent() {
   }, [tenantId]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadAuxData();
+  }, [loadAuxData]);
+
+  const load = useCallback(async () => {
+    await refetchPagamentos();
+    await loadAuxData();
+  }, [refetchPagamentos, loadAuxData]);
 
   const alunoId = searchParams.get("clienteId") ?? searchParams.get("alunoId");
   const filteredBase =

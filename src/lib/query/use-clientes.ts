@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { listAlunosPageService, type ListAlunosPageServiceResult } from "@/lib/comercial/runtime";
+import { listAlunosPageService, type ListAlunosPageServiceResult } from "@/lib/tenant/comercial/runtime";
 import type { StatusAluno } from "@/lib/types";
 import { queryKeys } from "./keys";
 
