@@ -10070,21 +10070,21 @@
         "description": "Usar createTenantLoader() onde aplicável. Priorizar páginas read-only. Verificar bundle size antes/depois.",
         "details": "Selecionar 10 páginas da lista classificada (task 247). Migrar removendo \"use client\" e usando RSC patterns. Usar createTenantLoader para data fetching. Medir bundle com ANALYZE=true npm run build antes e depois.",
         "testStrategy": "Páginas migradas renderizam corretamente. Bundle size reduzido. Testes E2E passam.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "247"
         ],
         "priority": "low",
         "complexity": 6,
         "subtasks": [],
-        "updatedAt": "2026-03-29T13:04:00.878Z"
+        "updatedAt": "2026-03-29T13:09:38.548Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T13:09:07.863Z",
+      "lastModified": "2026-03-29T13:09:38.548Z",
       "taskCount": 248,
-      "completedCount": 247,
+      "completedCount": 248,
       "tags": [
         "master"
       ]
