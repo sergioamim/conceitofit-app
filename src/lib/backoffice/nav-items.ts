@@ -9,6 +9,7 @@ import {
   Shield,
   ShieldCheck,
   Upload,
+  Users,
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -30,6 +31,12 @@ export const backofficeNavGroups: BackofficeNavGroup[] = [
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
       { href: "/admin/busca", label: "Busca Global", icon: Search },
+    ],
+  },
+  {
+    title: "Comercial",
+    items: [
+      { href: "/admin/leads", label: "Leads B2B", icon: Users },
     ],
   },
   {
