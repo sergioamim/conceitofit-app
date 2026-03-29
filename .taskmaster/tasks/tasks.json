@@ -9234,14 +9234,16 @@
         "complexity": 1,
         "subtasks": [
           {
-            "id": null,
+            "id": 0,
             "title": "Substituir console.error em useEvoImportPage.ts",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Verificar outros console.error no codebase",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           }
         ],
         "updatedAt": "2026-03-28T23:55:10.164Z"
@@ -9258,19 +9260,22 @@
         "complexity": 4,
         "subtasks": [
           {
-            "id": null,
+            "id": 0,
             "title": "Criar estrutura de pastas para tipos",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Mover tipos por domínio para novos arquivos",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Atualizar types.ts para re-exportar tudo",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           }
         ],
         "updatedAt": "2026-03-29T00:00:33.234Z"
@@ -9287,31 +9292,31 @@
         "complexity": 5,
         "subtasks": [
           {
-            "id": null,
+            "id": 0,
             "title": "Migrar administrativo/salas para RSC",
             "status": "done",
             "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Migrar administrativo/atividades para RSC",
             "status": "done",
             "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Migrar administrativo/formas-pagamento para RSC",
             "status": "done",
             "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Migrar administrativo/tipos-conta para RSC",
             "status": "done",
             "parentId": "undefined"
           },
           {
-            "id": null,
+            "id": 0,
             "title": "Migrar administrativo/bandeiras para RSC",
             "status": "done",
             "parentId": "undefined"
@@ -9349,11 +9354,12 @@
         "description": "O frontend usa services.ts com lógica interna para trial, checkout e pendências. O backend tem 11 endpoints em /api/v1/publico/adesao/* prontos para uso.",
         "details": "O backend oferece: GET /publico/adesao/catalogo, POST /publico/adesao/cadastros, POST /publico/adesao/trials, POST /publico/adesao/{id}/checkout, GET /publico/adesao/{id}, GET /publico/adesao/{id}/pendencias, PATCH /publico/adesao/{id}/pendencias/{codigo}, PUT /publico/adesao/{id}/cadastro, POST /publico/adesao/{id}/contrato/assinaturas, POST /publico/adesao/{id}/contrato/otp, POST /publico/adesao/{id}/pagamento/confirmacao. Criar src/lib/public/adesao-api.ts com clients para cada endpoint. Refatorar src/lib/public/services.ts para chamar esses endpoints em vez de orquestrar APIs internas (alunos, vendas, matrículas). Manter interface pública do services.ts compatível.",
         "testStrategy": "Jornada pública funciona end-to-end: trial, cadastro, checkout, pendências. Sem chamadas diretas a APIs internas de aluno/venda/matrícula no fluxo público.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 7,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T01:13:51.946Z"
       },
       {
         "id": "196",
@@ -9438,13 +9444,183 @@
         "priority": "low",
         "complexity": 9,
         "subtasks": []
+      },
+      {
+        "id": "203",
+        "title": "Fix: Corrigir hydration mismatch e Suspense sem fallback no dashboard",
+        "description": "O dashboard usa new Date() em Server Component (linhas 9-11), causando hydration mismatch. Também há um Suspense sem fallback (linha 40-43). Ambos causam bugs em runtime.",
+        "details": "Arquivo: src/app/(app)/dashboard/page.tsx. Problema 1: todayIso() usa new Date() que gera valores diferentes no server e client. Substituir por getBusinessTodayIso() de src/lib/shared/business-date.ts. Problema 2: <Suspense> na linha 40-43 envolve DemoBanner sem fallback prop. Adicionar fallback={null} ou um skeleton adequado.",
+        "testStrategy": "Build sem warnings de hydration. Dashboard renderiza corretamente. Suspense mostra fallback durante loading.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 2,
+        "subtasks": []
+      },
+      {
+        "id": "204",
+        "title": "Fix: Corrigir Suspense sem fallback no layout do backoffice",
+        "description": "O layout do backoffice (src/app/(backoffice)/layout.tsx) usa <Suspense>{children}</Suspense> sem fallback prop.",
+        "details": "Arquivo: src/app/(backoffice)/layout.tsx, linha 4. O Suspense sem fallback causa tela branca durante loading. Adicionar fallback com skeleton ou loading indicator adequado para o contexto admin.",
+        "testStrategy": "Navegar para rotas /admin/* não mostra tela branca durante carregamento.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 1,
+        "subtasks": []
+      },
+      {
+        "id": "205",
+        "title": "Fix: Atualizar params para Promise syntax (Next.js 16)",
+        "description": "Arquivo src/app/(app)/alunos/[id]/page.tsx usa params: { id: string } (sintaxe antiga). Next.js 16 espera params: Promise<{ id: string }>. Inconsistente com outras páginas.",
+        "details": "Auditar todas as dynamic routes do projeto e garantir que usam a nova sintaxe params: Promise<{...}> do Next.js 16. Arquivos conhecidos: alunos/[id]/page.tsx. Verificar também: clientes/[id], funcionarios/[id], planos/[id], treinos/[id], prospects/[id], storefront routes.",
+        "testStrategy": "Build sem deprecation warnings. Todas as rotas dinâmicas funcionam corretamente.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "206",
+        "title": "Refactor: Extrair createTenantLoader utility para eliminar duplicação em 50+ páginas",
+        "description": "O mesmo padrão Loader (getActiveTenantId + serverFetch + catch silencioso + Suspense) é repetido em 50+ páginas administrativas. Extrair para utility reutilizável.",
+        "details": "Padrão duplicado: async function getActiveTenantId() { cookies()... } + async function Loader() { const tenantId = ...; let data = []; try { data = await serverFetch(...) } catch {} return <Content initialData={data} /> }. Criar src/lib/shared/create-tenant-loader.tsx com: function createTenantLoader<T>(url: string, queryParams?: Record<string,string>): React.FC que encapsula todo o boilerplate. Migrar pelo menos 10 páginas como prova de conceito. Manter logging nos catch blocks.",
+        "testStrategy": "Páginas migradas funcionam igual ao original. Loader genérico lida com erro e loading corretamente.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "207",
+        "title": "Refactor: Adicionar logging nos catch blocks silenciosos (50+ arquivos)",
+        "description": "Mais de 50 arquivos têm catch {} vazio ou catch { /* fallback */ } que engole erros silenciosamente, dificultando debugging em produção.",
+        "details": "Buscar por catch blocks vazios em src/app/ e src/components/. Usar o logger existente em src/lib/shared/logger.ts para registrar erros. Padrão: catch (error) { logger.warn(\"[NomePagina] SSR fetch failed, falling back to client\", { error }); }. Não alterar lógica de fallback, apenas adicionar visibilidade.",
+        "testStrategy": "Erros de SSR aparecem nos logs. Comportamento de fallback inalterado.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "208",
+        "title": "Refactor: Centralizar constantes de filtro e status (TODOS, ATIVO, INATIVO)",
+        "description": "Strings como \"TODOS\", \"ATIVO\", \"INATIVO\" estão hardcoded em 200+ locais. Criar constantes centralizadas.",
+        "details": "Criar src/lib/shared/constants/filters.ts com: export const FILTER_ALL = \"TODOS\" as const; export const STATUS_VALUES = { ATIVO: \"ATIVO\", INATIVO: \"INATIVO\", ... } as const; Substituir gradualmente as strings hardcoded pelos imports. Começar pelos arquivos mais usados: use-table-search-params.ts, páginas de listagem, modais de filtro.",
+        "testStrategy": "Filtros funcionam identicamente. Sem strings \"TODOS\" hardcoded nos arquivos migrados.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "209",
+        "title": "Refactor: Criar componente SuspenseFallback reutilizável",
+        "description": "O mesmo fallback inline de Suspense é repetido em 80+ locais com div flex min-h-[60vh] \"Carregando...\". Extrair para componente.",
+        "details": "Criar src/components/shared/suspense-fallback.tsx com props: height (default 60vh), message (default \"Carregando...\"), variant (\"page\" | \"section\" | \"inline\"). Substituir os fallbacks inline mais comuns. Manter consistência visual.",
+        "testStrategy": "Componente renderiza corretamente em cada variante. Páginas migradas mantêm mesmo visual.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 2,
+        "subtasks": []
+      },
+      {
+        "id": "210",
+        "title": "Refactor: Splitar componentes com mais de 500 LOC",
+        "description": "Vários componentes excedem 500+ LOC: novo-cliente-wizard (924), usuarios page (942), nova-conta-pagar-modal (704), prospect-detail-modal (581), clientes-client (578).",
+        "details": "Componentes a splitar: 1) novo-cliente-wizard.tsx (924 LOC) → WizardStepPessoal, WizardStepEndereco, WizardStepPlano + useClienteWizardState hook. 2) admin/seguranca/usuarios/page.tsx (942 LOC) → UsuariosFilters, UsuariosTable, UsuarioFormModal. 3) clientes-client.tsx (578 LOC, 12 useState) → useClientesWorkspace hook + ClientesTable + ClientesFilters. 4) nova-conta-pagar-modal.tsx (704 LOC) → ContaPagarForm + ContaPagarPreview. 5) prospect-detail-modal.tsx (581 LOC) → ProspectInfo + ProspectTimeline + ProspectActions.",
+        "testStrategy": "Funcionalidade inalterada após split. Testes existentes continuam passando. Nenhum componente excede 300 LOC.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 7,
+        "subtasks": []
+      },
+      {
+        "id": "211",
+        "title": "Refactor: Substituir string matching de erros por error codes estruturados",
+        "description": "clientes-client.tsx faz message.toLowerCase().includes(\"x-context-id sem unidade ativa\") para decidir retry. Padrão frágil que quebra com mudanças no backend.",
+        "details": "Arquivo principal: src/app/(app)/clientes/components/clientes-client.tsx linhas 106-150. Criar src/lib/shared/utils/error-codes.ts com enum de error codes conhecidos. Atualizar normalizeErrorMessage em api-error.ts para extrair error codes do response body (se o backend enviar). Criar isRetryableError(error): boolean que centraliza a lógica de retry. Aplicar em clientes-client e outros locais que façam string matching de erros.",
+        "testStrategy": "Retry funciona com error codes. Sem string matching de mensagens de erro no código.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "212",
+        "title": "Avaliar e implementar TanStack Query para data fetching",
+        "description": "O projeto faz fetching manual com useState+useEffect+useCallback em todas as páginas client. Sem cache, deduplicação, revalidação automática ou prefetching.",
+        "details": "Avaliar TanStack Query (React Query) vs SWR para o projeto. Critérios: compatibilidade com Next.js 16, suporte a mutations, devtools, tamanho do bundle. Implementar em 2-3 páginas piloto (dashboard, clientes, pagamentos) para validar o padrão. Criar custom hooks por domínio: useClientes(), usePagamentos(), useDashboard(). Manter service layer existente como fetcher functions. Benefícios esperados: cache automático, loading states grátis, retry automático, deduplicação de requests.",
+        "testStrategy": "Páginas piloto funcionam com React Query. Cache funciona (navegar e voltar não refetch). Loading/error states funcionam.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 7,
+        "subtasks": []
+      },
+      {
+        "id": "213",
+        "title": "Migrar páginas administrativas simples para Server Components",
+        "description": "119 arquivos têm \"use client\" desnecessário. Muitas páginas administrativas simples poderiam ser Server Components, reduzindo bundle JS.",
+        "details": "Auditar as 119 páginas \"use client\" e classificar: 1) Podem ser 100% server (listagens read-only sem interação) 2) Podem ser hybrid (server com client islands) 3) Precisam ser client (formulários, estado complexo). Migrar categoria 1 primeiro (estimativa: 15-20 páginas). Para categoria 2, usar pattern de Server Component pai + Client Component filho. Priorizar páginas administrativas simples como salas, bandeiras, tipos-conta.",
+        "testStrategy": "Páginas migradas renderizam corretamente. Bundle size reduzido (verificar com ANALYZE=true npm run build). SSR funciona sem erros.",
+        "status": "pending",
+        "dependencies": [
+          "206"
+        ],
+        "priority": "low",
+        "complexity": 8,
+        "subtasks": []
+      },
+      {
+        "id": "214",
+        "title": "Melhorar acessibilidade: aria labels, keyboard navigation e semântica",
+        "description": "Apenas ~44 atributos aria em 200+ componentes (~22% cobertura). Forms sem aria-label, tabelas sem headers semânticos, modais sem keyboard trap.",
+        "details": "Fases: 1) Formulários: adicionar aria-label ou aria-labelledby em todos os inputs, selects e textareas. aria-describedby para mensagens de erro. aria-required para campos obrigatórios. 2) Tabelas: role=\"grid\" onde aplicável, scope=\"col\" em th, aria-sort em colunas ordenáveis. 3) Modais: verificar que shadcn Dialog já tem role=\"dialog\" + aria-modal. Adicionar aria-labelledby apontando para título. Focus trap já deve existir via Radix. 4) Navegação: aria-current=\"page\" no link ativo do sidebar. Skip-to-content link. 5) Status: aria-live=\"polite\" em notificações e feedbacks.",
+        "testStrategy": "Lighthouse accessibility score > 90. axe-core sem critical violations. Tab navigation funciona em todos os modais.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 6,
+        "subtasks": []
+      },
+      {
+        "id": "215",
+        "title": "Expandir cobertura de testes de componentes",
+        "description": "Apenas 11 testes de componentes existem. Componentes críticos como novo-cliente-wizard, clientes-client, plano-form, treino-form não têm cobertura.",
+        "details": "Componentes prioritários para testes: 1) novo-cliente-wizard.tsx - testar fluxo multi-step, validação, draft persistence. 2) clientes-client.tsx - testar filtros, paginação, bulk actions. 3) plano-form.tsx - testar validação de campos, preview. 4) treino-form.tsx - testar adição de exercícios, configuração de séries. 5) receber-pagamento-modal.tsx - testar fluxo de recebimento. 6) nova-matricula-modal.tsx - testar seleção de plano e confirmação. Usar @testing-library/react com happy-dom (já configurado). Criar mocks de API calls com vi.mock().",
+        "testStrategy": "Todos os testes passam. Cobertura de componentes > 60%. Componentes críticos têm testes de happy path e error path.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 6,
+        "subtasks": []
+      },
+      {
+        "id": "216",
+        "title": "Refactor: Splitar runtime.ts monolítico por domínio",
+        "description": "src/lib/tenant/comercial/runtime.ts tem 1500+ LOC com todas as operações de clientes, matrículas e pagamentos num só arquivo.",
+        "details": "Splitar runtime.ts em arquivos por domínio: 1) src/lib/tenant/comercial/clients-runtime.ts - operações de listagem, busca, suspensão de clientes. 2) src/lib/tenant/comercial/enrollments-runtime.ts - operações de matrícula. 3) src/lib/tenant/comercial/payments-runtime.ts - operações de pagamento e recebimento. 4) src/lib/tenant/comercial/runtime.ts - re-exportar tudo para manter compatibilidade. Manter mesma interface pública (exports) para não quebrar consumers.",
+        "testStrategy": "Testes existentes continuam passando. Imports existentes continuam funcionando via re-export. Nenhum arquivo excede 500 LOC.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T00:10:00.000Z",
-      "taskCount": 194,
-      "completedCount": 194,
+      "lastModified": "2026-03-29T01:13:51.946Z",
+      "taskCount": 216,
+      "completedCount": 195,
       "tags": [
         "master"
       ]
