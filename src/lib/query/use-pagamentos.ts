@@ -5,6 +5,7 @@ import {
   importarPagamentosEmLoteService,
   listContasReceberOperacionais,
   type AjustarPagamentoInput,
+  type ImportarPagamentosResultado,
   type PagamentoComAluno,
   type PagamentoImportItem,
   type RecebimentoAvulsoInput,
@@ -12,6 +13,12 @@ import {
 import { emitirNfsePagamentoApi } from "@/lib/api/pagamentos";
 import type { StatusPagamento } from "@/lib/types";
 import { queryKeys } from "./keys";
+
+function useInvalidatePagamentos() {
+  const queryClient = useQueryClient();
+  return () =>
+    queryClient.invalidateQueries({ queryKey: ["pagamentos"] });
+}
 
 export function usePagamentos(input: {
   tenantId: string | undefined;
@@ -37,11 +44,6 @@ export function usePagamentos(input: {
       }),
     enabled: Boolean(input.tenantId) && input.tenantResolved,
   });
-}
-
-function useInvalidatePagamentos() {
-  const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: ["pagamentos"] });
 }
 
 export function useReceberPagamento() {
@@ -70,11 +72,12 @@ export function useEmitirNfse() {
 export function useImportarPagamentos() {
   const invalidate = useInvalidatePagamentos();
 
-  return useMutation({
-    mutationFn: (input: {
-      tenantId: string;
-      items: PagamentoImportItem[];
-    }) => importarPagamentosEmLoteService(input),
+  return useMutation<
+    ImportarPagamentosResultado,
+    Error,
+    { tenantId: string; items: PagamentoImportItem[] }
+  >({
+    mutationFn: (input) => importarPagamentosEmLoteService(input),
     onSuccess: () => invalidate(),
   });
 }

@@ -484,10 +484,6 @@ function PagamentosPageContent() {
     void loadAuxData();
   }, [loadAuxData]);
 
-  const load = useCallback(async () => {
-    await loadAuxData();
-  }, [loadAuxData]);
-
   const alunoId = searchParams.get("clienteId") ?? searchParams.get("alunoId");
   const filteredBase =
     filtro === FILTER_ALL
