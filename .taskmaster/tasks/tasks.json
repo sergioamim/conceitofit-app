@@ -9431,11 +9431,12 @@
         "description": "O backend tem 9 endpoints de segurança avançada (catálogo de funcionalidades, perfis-padrão com versionamento, revisões, exceções) não integrados.",
         "details": "Expandir a página de RBAC (/seguranca/rbac) ou criar sub-páginas: 1) Tab/página de catálogo de funcionalidades (GET/POST/PUT /admin/seguranca/catalogo-funcionalidades). 2) Tab de perfis-padrão com versionamento (GET /perfis-padrao, GET /{key}/versoes, POST). 3) Tab de revisões de segurança (GET /admin/seguranca/revisoes). 4) Gestão de exceções (POST /excecoes, PUT /excecoes/{id}/revisao). Atualizar src/lib/api/rbac.ts ou criar admin-seguranca-avancada.ts.",
         "testStrategy": "Catálogo lista funcionalidades. Perfis-padrão com versões visíveis. Exceções criáveis/revisáveis.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "low",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T03:49:16.811Z"
       },
       {
         "id": "202",
@@ -9455,11 +9456,12 @@
         "description": "O dashboard usa new Date() em Server Component (linhas 9-11), causando hydration mismatch. Também há um Suspense sem fallback (linha 40-43). Ambos causam bugs em runtime.",
         "details": "Arquivo: src/app/(app)/dashboard/page.tsx. Problema 1: todayIso() usa new Date() que gera valores diferentes no server e client. Substituir por getBusinessTodayIso() de src/lib/shared/business-date.ts. Problema 2: <Suspense> na linha 40-43 envolve DemoBanner sem fallback prop. Adicionar fallback={null} ou um skeleton adequado.",
         "testStrategy": "Build sem warnings de hydration. Dashboard renderiza corretamente. Suspense mostra fallback durante loading.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T03:50:10.623Z"
       },
       {
         "id": "204",
@@ -9622,9 +9624,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T01:28:46.955Z",
+      "lastModified": "2026-03-29T03:50:10.623Z",
       "taskCount": 216,
-      "completedCount": 199,
+      "completedCount": 200,
       "tags": [
         "master"
       ]
