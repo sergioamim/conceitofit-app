@@ -9817,11 +9817,12 @@
         "description": "Extrair WizardStepDadosPessoais, WizardStepEndereco, WizardStepPlano e useClienteWizardState hook.",
         "details": "Manter NovoClienteWizard como orquestrador. Cada step < 200 LOC. Hook gerencia: currentStep, formData, validation state, draft persistence. Usar react-hook-form com schema por step.",
         "testStrategy": "Funcionalidade inalterada. Testes existentes passam. Cada sub-componente < 200 LOC.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:37:22.855Z"
       },
       {
         "id": "231",
@@ -10061,9 +10062,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:36:57.014Z",
+      "lastModified": "2026-03-29T11:37:22.855Z",
       "taskCount": 248,
-      "completedCount": 225,
+      "completedCount": 226,
       "tags": [
         "master"
       ]
