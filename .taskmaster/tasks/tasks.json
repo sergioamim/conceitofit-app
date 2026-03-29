@@ -9642,11 +9642,12 @@
         "description": "Instalar @sentry/nextjs, configurar client/server configs, adicionar captureException nos pontos de erro (http.ts, api-error.ts, create-tenant-loader.tsx), configurar source maps e tags de contexto (tenantId, userId, route).",
         "details": "Instalar @sentry/nextjs. Criar sentry.client.config.ts e sentry.server.config.ts. Configurar instrumentation.ts para inicializar Sentry no server. Adicionar Sentry.captureException em: http.ts (API errors), api-error.ts (normalized errors), create-tenant-loader.tsx (SSR errors). Upload de source maps no build. Tags: tenantId, userId, networkId, route. Variáveis: NEXT_PUBLIC_SENTRY_DSN, SENTRY_AUTH_TOKEN. Configurar alertas por email para erros novos.",
         "testStrategy": "Erros de API e rendering aparecem no dashboard Sentry com contexto de tenant. Verificar em dev que erros são capturados.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "high",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T06:07:02.003Z"
       },
       {
         "id": "218",
@@ -9654,13 +9655,14 @@
         "description": "Gerar UUID por request no http.ts, passar X-Request-Id header em todas as chamadas API, incluir request-id nos logs do Sentry e do logger.ts.",
         "details": "http.ts já usa crypto.randomUUID() para context-id. Criar X-Request-Id separado por chamada API. Passar no header de cada apiRequest(). Incluir no Sentry breadcrumb e no logger.warn/error. Permitir correlação frontend↔backend pelo mesmo request-id.",
         "testStrategy": "Requests ao backend incluem X-Request-Id header. Erros no Sentry mostram request-id. Logger inclui request-id.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "217"
         ],
         "priority": "medium",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T06:07:17.184Z"
       },
       {
         "id": "219",
@@ -9680,11 +9682,12 @@
         "description": "CSP atual inclui unsafe-eval no script-src. Investigar quais dependências exigem (TipTap? Next.js dev?) e remover em produção.",
         "details": "Arquivo: next.config.ts, seção headers. Investigar se TipTap exige eval. Se apenas dev, condicionar por NODE_ENV. Se necessário, avaliar nonce-based CSP. Manter unsafe-inline (Tailwind/Shadcn precisam). Testar que todas as páginas funcionam sem unsafe-eval em build de produção.",
         "testStrategy": "Produção não tem unsafe-eval no CSP. Dev funciona normalmente. TipTap editor funciona. Lighthouse não reporta CSP violations.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:23:42.041Z"
       },
       {
         "id": "221",
@@ -10050,9 +10053,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T06:04:23.355Z",
-      "taskCount": 216,
-      "completedCount": 216,
+      "lastModified": "2026-03-29T11:23:42.041Z",
+      "taskCount": 248,
+      "completedCount": 217,
       "tags": [
         "master"
       ]
