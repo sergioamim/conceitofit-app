@@ -44,7 +44,7 @@ export type UnitForm = {
   evoFilialId: string;
 };
 
-export const EMPTY_FORM: UnitForm = {
+const EMPTY_FORM: UnitForm = {
   nome: "",
   academiaId: "",
   razaoSocial: "",
@@ -59,11 +59,11 @@ export const EMPTY_FORM: UnitForm = {
   evoFilialId: "",
 };
 
-export function resolveAcademiaId(unit?: Tenant | null) {
+function resolveAcademiaId(unit?: Tenant | null) {
   return unit?.academiaId ?? unit?.groupId ?? "";
 }
 
-export function buildEmptyForm(academiaId = ""): UnitForm {
+function buildEmptyForm(academiaId = ""): UnitForm {
   return {
     ...EMPTY_FORM,
     academiaId,
@@ -71,7 +71,7 @@ export function buildEmptyForm(academiaId = ""): UnitForm {
   };
 }
 
-export function buildForm(unit?: Tenant | null, onboarding?: UnidadeOnboardingState | null): UnitForm {
+function buildForm(unit?: Tenant | null, onboarding?: UnidadeOnboardingState | null): UnitForm {
   const academiaId = resolveAcademiaId(unit);
   return {
     nome: unit?.nome ?? "",
@@ -89,7 +89,7 @@ export function buildForm(unit?: Tenant | null, onboarding?: UnidadeOnboardingSt
   };
 }
 
-export function isUnitFormDirty(form: UnitForm) {
+function isUnitFormDirty(form: UnitForm) {
   return [
     form.nome,
     form.razaoSocial,
@@ -101,12 +101,12 @@ export function isUnitFormDirty(form: UnitForm) {
   ].some((value) => value.trim().length > 0);
 }
 
-export function isOnboardingCollectionRouteError(message: string) {
+function isOnboardingCollectionRouteError(message: string) {
   const normalized = message.toLowerCase();
   return normalized.includes("invalid uuid string: onboarding") || normalized.includes("/admin/unidades/onboarding");
 }
 
-export function isOnboardingEndpointUnavailable(message: string) {
+function isOnboardingEndpointUnavailable(message: string) {
   const normalized = message.toLowerCase();
   return isOnboardingCollectionRouteError(message) || normalized.includes("not found");
 }

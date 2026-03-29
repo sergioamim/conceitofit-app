@@ -100,7 +100,7 @@ function createIdleCartoesTabState(tenantId: string | null = null): CartoesTabSt
   };
 }
 
-export function resolveClienteTab(input: string | null): ClienteTabKey | null {
+function resolveClienteTab(input: string | null): ClienteTabKey | null {
   if (input === "matriculas" || input === "financeiro" || input === "nfse" || input === "editar" || input === "cartoes") {
     return input;
   }

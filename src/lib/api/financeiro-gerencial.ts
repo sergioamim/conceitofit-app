@@ -340,7 +340,7 @@ export async function listRegrasRecorrenciaContaPagarApi(input: {
   return response.map(normalizeRegraRecorrencia);
 }
 
-export async function pauseRegraRecorrenciaApi(input: {
+async function pauseRegraRecorrenciaApi(input: {
   tenantId: string;
   id: string;
 }): Promise<RegraRecorrenciaContaPagar> {
@@ -352,7 +352,7 @@ export async function pauseRegraRecorrenciaApi(input: {
   return normalizeRegraRecorrencia(response);
 }
 
-export async function resumeRegraRecorrenciaApi(input: {
+async function resumeRegraRecorrenciaApi(input: {
   tenantId: string;
   id: string;
 }): Promise<RegraRecorrenciaContaPagar> {
@@ -364,7 +364,7 @@ export async function resumeRegraRecorrenciaApi(input: {
   return normalizeRegraRecorrencia(response);
 }
 
-export async function cancelRegraRecorrenciaApi(input: {
+async function cancelRegraRecorrenciaApi(input: {
   tenantId: string;
   id: string;
 }): Promise<RegraRecorrenciaContaPagar> {
@@ -376,7 +376,7 @@ export async function cancelRegraRecorrenciaApi(input: {
   return normalizeRegraRecorrencia(response);
 }
 
-export async function triggerGeracaoContasRecorrentesApi(input: {
+async function triggerGeracaoContasRecorrentesApi(input: {
   tenantId: string;
   untilDate?: string;
 }): Promise<number> {

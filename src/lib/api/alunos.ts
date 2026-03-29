@@ -354,7 +354,7 @@ export async function updateAlunoApi(input: {
   return normalizeAluno(response);
 }
 
-export async function updateAlunoStatusApi(input: {
+async function updateAlunoStatusApi(input: {
   tenantId: string;
   id: string;
   status: StatusAluno;
