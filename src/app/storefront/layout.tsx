@@ -1,23 +1,39 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { headers } from "next/headers";
-import { serverFetch } from "@/lib/shared/server-fetch";
 import { StorefrontThemeProvider } from "@/components/storefront/storefront-theme-provider";
+import { getStorefrontThemeBySlug } from "@/lib/public/storefront-api";
 import type { StorefrontTheme } from "@/lib/types";
 
 async function resolveStorefrontContext() {
   const hdrs = await headers();
   const tenantId = hdrs.get("x-tenant-id") ?? "";
   const tenantSlug = hdrs.get("x-tenant-slug") ?? "";
+  const academiaSlug = hdrs.get("x-academia-slug") ?? tenantSlug;
   const subdomain = hdrs.get("x-storefront-subdomain") ?? "";
 
   let theme: StorefrontTheme | null = null;
-  if (tenantId) {
+  if (academiaSlug) {
     try {
-      theme = await serverFetch<StorefrontTheme>(
-        "/api/v1/publico/storefront/theme",
-        { query: { tenantId }, next: { revalidate: 300 } },
-      );
+      // Endpoint com slug: GET /api/v1/publico/storefront/{academiaSlug}/theme
+      const raw = await getStorefrontThemeBySlug(academiaSlug);
+      theme = {
+        id: raw.id,
+        tenantId: tenantId,
+        logoUrl: raw.logoUrl ?? undefined,
+        faviconUrl: raw.faviconUrl ?? undefined,
+        heroImageUrl: raw.bannerUrl ?? undefined,
+        heroTitle: raw.titulo ?? undefined,
+        heroSubtitle: raw.subtitulo ?? undefined,
+        socialLinks: raw.redesSociais
+          ? {
+              instagram: raw.redesSociais.instagram,
+              facebook: raw.redesSociais.facebook,
+              whatsapp: raw.redesSociais.whatsapp,
+            }
+          : undefined,
+        updatedAt: raw.dataAtualizacao,
+      };
     } catch {
       // Theme not configured — will use defaults
     }

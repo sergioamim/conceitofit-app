@@ -1,44 +1,35 @@
 import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
-import { serverFetch } from "@/lib/shared/server-fetch";
-import type { Tenant } from "@/lib/types";
+import { getStorefrontSitemap } from "@/lib/public/storefront-api";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const hdrs = await headers();
-  const tenantId = hdrs.get("x-tenant-id") ?? "";
+  const tenantSlug = hdrs.get("x-tenant-slug") ?? "";
+  const academiaSlug = hdrs.get("x-academia-slug") ?? tenantSlug;
   const subdomain = hdrs.get("x-storefront-subdomain") ?? "";
 
-  if (!tenantId || !subdomain) return [];
-
-  const baseUrl = `https://${subdomain}.conceitofit.com.br`;
-  const entries: MetadataRoute.Sitemap = [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-  ];
+  if (!academiaSlug || !subdomain) return [];
 
   try {
-    const unidades = await serverFetch<Tenant[]>(
-      "/api/v1/publico/storefront/unidades",
-      { query: { tenantId }, next: { revalidate: 3600 } },
-    );
+    // Endpoint com slug: GET /api/v1/publico/storefront/{academiaSlug}/sitemap
+    const entries = await getStorefrontSitemap(academiaSlug);
 
-    if (Array.isArray(unidades)) {
-      for (const u of unidades) {
-        entries.push({
-          url: `${baseUrl}/unidade/${u.id}`,
-          lastModified: new Date(),
-          changeFrequency: "weekly",
-          priority: 0.8,
-        });
-      }
-    }
+    return entries.map((entry) => ({
+      url: entry.url,
+      lastModified: entry.lastModified ? new Date(entry.lastModified) : new Date(),
+      changeFrequency: (entry.changeFrequency as MetadataRoute.Sitemap[number]["changeFrequency"]) ?? "weekly",
+      priority: entry.priority ? parseFloat(entry.priority) : 0.7,
+    }));
   } catch {
-    // Can't fetch units — return home-only sitemap
+    // Fallback: return home-only sitemap
+    const baseUrl = `https://${subdomain}.conceitofit.com.br`;
+    return [
+      {
+        url: baseUrl,
+        lastModified: new Date(),
+        changeFrequency: "weekly",
+        priority: 1,
+      },
+    ];
   }
-
-  return entries;
 }
