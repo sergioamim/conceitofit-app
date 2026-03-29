@@ -254,8 +254,8 @@ export default function AdminFinanceiroDashboardPage() {
                 {(dashboard?.aging ?? []).length === 0 ? (
                   <EmptyState message="Nenhuma cobrança em aging para o recorte atual." />
                 ) : (
-                  (dashboard?.aging ?? []).map((item) => (
-                    <div key={item.faixa} className="rounded-xl border border-border/80 bg-secondary/20 p-4">
+                  (dashboard?.aging ?? []).map((item, idx) => (
+                    <div key={`${item.faixa}-${idx}`} className="rounded-xl border border-border/80 bg-secondary/20 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <AgingBadge item={item} />
                         <span className="text-sm text-muted-foreground">{item.quantidade} cobrança(s)</span>

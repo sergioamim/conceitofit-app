@@ -10100,12 +10100,12 @@
         "description": "12 arquivos duplicam formatBRL, formatDate, formatDateTime localmente em vez de importar de lib/shared/formatters.ts.",
         "details": "Auditar todos os arquivos com formatBRL/formatDate/formatDateTime/formatPhone duplicados. Remover implementações locais e importar do barrel centralizado. Garantir que as assinaturas são compatíveis. Adicionar lint rule (eslint-plugin-boundaries ou import/no-restricted-paths) para prevenir novas duplicações. Arquivos conhecidos: use-contas-pagar-workspace.ts, use-contas-contabeis-workspace.ts, wizard-types.tsx, prospect-shared.ts, bi/page.tsx, bi/rede/page.tsx, contabilidade/*/page.tsx.",
         "testStrategy": "Grep por function formatBRL e function formatDate fora de lib/shared/formatters.ts retorna zero resultados. Todas as páginas renderizam valores monetários e datas corretamente.",
-        "status": "done",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
         "subtasks": [],
-        "updatedAt": "2026-03-29T22:46:39.464Z"
+        "updatedAt": "2026-03-29T22:28:58.315Z"
       },
       {
         "id": "251",
@@ -10173,14 +10173,13 @@
         "description": "Workspace hook de contas a pagar concentra estado, fetching, filtros, modais e handlers em 534 linhas.",
         "details": "Extrair em hooks menores: useContasPagarData (fetching), useContasPagarFilters (filtros), useContasPagarModals (estado de modais), useContasPagarActions (handlers de criar/pagar/editar/cancelar). O workspace hook passa a compor os hooks extraídos.",
         "testStrategy": "Página funciona identicamente. Cada hook extraído é testável isoladamente.",
-        "status": "done",
+        "status": "pending",
         "dependencies": [
           "252"
         ],
         "priority": "medium",
         "complexity": 4,
-        "subtasks": [],
-        "updatedAt": "2026-03-29T22:54:25.889Z"
+        "subtasks": []
       },
       {
         "id": "256",
@@ -10188,14 +10187,13 @@
         "description": "Workspace do perfil de cliente (/clientes/[id]) concentra 777 LOC com estado, fetching, handlers de exclusão, migração, suspensão, cartões, etc.",
         "details": "Extrair hooks por responsabilidade: useClienteData, useClienteExclusao, useClienteMigracao, useClienteSuspensao, useClienteCartoes. O workspace compõe os hooks extraídos.",
         "testStrategy": "Perfil do cliente funciona identicamente. Hooks extraídos testáveis.",
-        "status": "done",
+        "status": "pending",
         "dependencies": [
           "251"
         ],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": [],
-        "updatedAt": "2026-03-29T22:44:04.470Z"
+        "subtasks": []
       },
       {
         "id": "257",
@@ -10203,14 +10201,13 @@
         "description": "Workspace de vendas concentra carrinho, plano, cupom, convênio, pagamento e checkout em um hook monolítico.",
         "details": "Já existe useCommercialFlow separado. Avaliar o que resta no workspace de vendas e extrair hooks menores se aplicável.",
         "testStrategy": "Fluxo de vendas funciona identicamente.",
-        "status": "done",
+        "status": "pending",
         "dependencies": [
           "252"
         ],
         "priority": "low",
         "complexity": 4,
-        "subtasks": [],
-        "updatedAt": "2026-03-29T22:42:40.368Z"
+        "subtasks": []
       },
       {
         "id": "258",
@@ -10218,14 +10215,13 @@
         "description": "Apenas 23 de 130+ formulários usam zodResolver. Padronizar os 10 mais usados.",
         "details": "Priorizar: prospect-modal, nova-matricula-modal, nova-conta-pagar-modal, editar-conta-pagar-modal, pagar-conta-modal, receber-pagamento-modal, plano-form (já usa RHF mas sem zod), cliente-edit-form. Criar schemas zod co-localizados. Inferir tipos via z.infer.",
         "testStrategy": "Formulários validam corretamente com dados válidos e inválidos. Zero regressão nos fluxos existentes.",
-        "status": "done",
+        "status": "pending",
         "dependencies": [
           "250"
         ],
         "priority": "medium",
         "complexity": 6,
-        "subtasks": [],
-        "updatedAt": "2026-03-29T22:51:19.882Z"
+        "subtasks": []
       },
       {
         "id": "259",
@@ -10298,14 +10294,76 @@
         "description": "Sistema não tem canal de comunicação. WhatsApp é canal primário para academias (cobrança, follow-up, welcome).",
         "details": "Avaliar integração com API oficial WhatsApp Business ou Evolution API. Criar serviço de notificação com templates: welcome, vencimento de matrícula, cobrança pendente, follow-up de prospect. Backend precisa de endpoints para envio. Frontend precisa de configuração na admin e logs de envio.",
         "testStrategy": "Template de mensagem configurável na admin. Envio de welcome ao cadastrar aluno. Log de mensagens enviadas visível.",
-        "status": "done",
+        "status": "in-progress",
         "dependencies": [
           "259"
         ],
         "priority": "high",
         "complexity": 8,
-        "subtasks": [],
-        "updatedAt": "2026-03-29T22:43:02.484Z"
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir Tipos e Dados Mock para WhatsApp",
+            "description": "Criar e estender tipos TypeScript e a camada de dados mock para incluir configurações de WhatsApp, modelos de mensagens e logs de envio, alinhando com a estrutura existente em src/lib/types.ts e src/lib/mock/store.ts.",
+            "dependencies": [],
+            "details": "Adicionar interfaces `IWhatsAppConfig`, `IWhatsAppTemplate` e `IWhatsAppMessageLog` em `src/lib/types.ts`. Estender `src/lib/mock/store.ts` com arrays mock para `whatsappTemplates` (ex: welcome, vencimento, cobrança) e `whatsappMessageLogs` para simular o armazenamento de dados. O `store.ts` deve conter dados mock iniciais para templates.",
+            "status": "pending",
+            "testStrategy": "Verificar a existência dos novos tipos em `src/lib/types.ts` e a estrutura dos dados mock em `src/lib/mock/store.ts` por meio de console.log ou inspeção manual em um ambiente de desenvolvimento.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Desenvolver Serviço Mock de Envio de WhatsApp",
+            "description": "Implementar um serviço que simula o envio de mensagens WhatsApp, incluindo a renderização de templates com dados mock e o registro dos envios na camada de dados mock, replicando a abordagem de serviços em src/lib/mock/services.ts.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar um novo arquivo `src/lib/mock/whatsapp-service.ts`. Este serviço deve conter funções como `getWhatsAppTemplates()`, `saveWhatsAppTemplate(template: IWhatsAppTemplate)`, `sendWhatsappMessage(templateId: string, recipient: string, data: Record<string, string>)`. A função de envio deve renderizar o template com os dados fornecidos e registrar a mensagem 'enviada' em `whatsappMessageLogs` no `store.ts`.",
+            "status": "pending",
+            "testStrategy": "Criar um teste unitário simples ou um script de teste para `whatsapp-service.ts` que simule o envio de uma mensagem. Verificar se o log da mensagem é armazenado corretamente no array `whatsappMessageLogs` do `store.ts`.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Criar Página Admin de Configuração de Templates WhatsApp",
+            "description": "Desenvolver uma página na área administrativa do frontend para que administradores possam visualizar, criar e editar templates de mensagens WhatsApp, utilizando os componentes Shadcn/ui e seguindo o design dark-only.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Criar uma nova rota em `/admin/configuracoes/whatsapp/templates`. Esta página deve ser 'use client'. Implementar uma interface com componentes Shadcn/ui (ex: `DataTable` para listar, `Dialog` para editar/criar) para interagir com as funções `getWhatsAppTemplates` e `saveWhatsAppTemplate` do `whatsapp-service.ts`.",
+            "status": "pending",
+            "testStrategy": "Acessar a página `/admin/configuracoes/whatsapp/templates`. Testar a criação de um novo template, a edição de um template existente e a exclusão. Verificar se as alterações são persistidas na camada de dados mock e refletidas na UI.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implementar Página Admin de Logs de Mensagens WhatsApp",
+            "description": "Desenvolver uma página na área administrativa para exibir o histórico de mensagens WhatsApp 'enviadas' pelo sistema, utilizando os dados mock e o padrão de componentes Shadcn/ui e design dark-only.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Criar uma nova rota em `/admin/configuracoes/whatsapp/logs`. Esta página deve ser 'use client'. Utilizar uma tabela Shadcn/ui (`DataTable`) para exibir os `whatsappMessageLogs` recuperados do `whatsapp-service.ts`, mostrando detalhes como destinatário, template usado, conteúdo da mensagem e timestamp do 'envio'.",
+            "status": "pending",
+            "testStrategy": "Acessar a página `/admin/configuracoes/whatsapp/logs`. Enviar algumas mensagens de teste via console ou através de alguma funcionalidade mock. Verificar se essas mensagens aparecem corretamente na tabela de logs com os detalhes esperados.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Integrar Envio Automático de Notificações WhatsApp em Fluxos Chave",
+            "description": "Modificar a lógica de fluxos existentes, como o cadastro de alunos, para acionar o serviço mock de envio de WhatsApp com templates específicos, simulando notificações automáticas.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Identificar o ponto no código mock onde um novo aluno é 'cadastrado' (ex: em `src/lib/mock/services.ts` ou um arquivo similar que lide com criação de usuários/alunos). Adicionar uma chamada a `whatsappService.sendWhatsappMessage` com um template de 'boas-vindas' (ex: 'welcome_student') e os dados do aluno recém-criado. Adicionalmente, identificar um ponto para simular um lembrete de 'cobrança pendente' ou 'vencimento de matrícula' e integrar uma chamada similar.",
+            "status": "pending",
+            "testStrategy": "Realizar o fluxo de cadastro de um novo aluno (seja via UI mock ou diretamente pelo serviço mock). Após o cadastro, verificar a página de logs de mensagens WhatsApp (`/admin/configuracoes/whatsapp/logs`) para confirmar que a mensagem de boas-vindas foi 'enviada' e registrada.",
+            "parentId": "undefined"
+          }
+        ],
+        "updatedAt": "2026-03-29T22:39:00.859Z"
       },
       {
         "id": "261",
@@ -10313,77 +10371,13 @@
         "description": "Pipeline, tarefas e playbooks existem como UI mas sem execução automática de cadências.",
         "details": "Implementar engine de cadências: ao prospect entrar em estágio X, criar tarefas automáticas com prazos. Ao task vencer sem ação, escalar ou mover prospect. Cadências definidas nos playbooks existentes. Backend precisa de scheduler/cron para verificar prazos.",
         "testStrategy": "Prospect novo gera tarefas automáticas conforme playbook. Tarefa vencida escalona.",
-        "status": "done",
+        "status": "pending",
         "dependencies": [
           "260"
         ],
         "priority": "medium",
         "complexity": 7,
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Definir e Implementar Tipos para o Engine de Cadências",
-            "description": "Criar ou estender tipos TypeScript para representar regras de cadências, estados de execução, lógica de escalação e automações relacionadas a prospects no CRM. Isso inclui regras de gatilho, ações e políticas de prazo.",
-            "dependencies": [],
-            "details": "Analisar os tipos existentes em src/lib/shared/types/prospect.ts para integrar ou criar novos tipos como CrmCadenceRule, CrmCadenceExecution, CrmEscalationPolicy. Garantir compatibilidade e extensibilidade com CrmCadencia, CrmTask, CrmPlaybook, CrmAutomation já existentes no sistema.",
-            "status": "pending",
-            "testStrategy": "Revisão de código para garantir a conformidade com o design de tipos proposto e a correta integração com os tipos de dados existentes. Verificar a consistência dos novos tipos com o esquema de dados do banco de dados.",
-            "parentId": "undefined"
-          },
-          {
-            "id": 2,
-            "title": "Desenvolver Endpoints da API e Lógica de Backend para Cadências",
-            "description": "Implementar endpoints da API para configurar playbooks de cadência, iniciar execuções e gerenciar tarefas geradas. Desenvolver a lógica de backend do scheduler/cron para verificar prazos de tarefas e disparar ações automáticas.",
-            "dependencies": [
-              1
-            ],
-            "details": "Estender src/lib/api/crm.ts com endpoints como /api/crm/cadences/configure, /api/crm/cadences/trigger, /api/crm/cadences/status. Implementar serviços de backend para processamento de cadências, verificando o status das tarefas e aplicando regras de escalação/movimentação. O scheduler deve ser configurado para rodar periodicamente, talvez usando um cron job ou um worker dedicado para o Next.js.",
-            "status": "pending",
-            "testStrategy": "Testes unitários para a lógica de backend que processa cadências e tarefas. Testes de integração para os novos endpoints da API, verificando a criação, o status e o ciclo de vida das cadências e tarefas geradas.",
-            "parentId": "undefined"
-          },
-          {
-            "id": 3,
-            "title": "Criar Interface de Administração para Configuração de Cadências",
-            "description": "Desenvolver uma página no painel administrativo que permita aos usuários definir, editar e gerenciar as regras dos playbooks de cadência, incluindo seus gatilhos, tarefas automáticas e ações de escalação.",
-            "dependencies": [
-              1,
-              2
-            ],
-            "details": "Criar uma nova rota e página Next.js em src/app/(backoffice)/admin/crm/cadences/config/page.tsx. Reutilizar componentes de UI existentes do backoffice para formulários e tabelas. A página deve permitir criar, editar e visualizar as regras de cadência e as ações automáticas (criação de tarefas, movimentação de prospect, escalação) através dos endpoints da API desenvolvidos.",
-            "status": "pending",
-            "testStrategy": "Testes de UI/UX para garantir que a configuração das cadências é intuitiva, funcional e responsiva. Validar que as configurações são salvas corretamente via API e que as alterações são refletidas no backend.",
-            "parentId": "undefined"
-          },
-          {
-            "id": 4,
-            "title": "Implementar Disparo Automático de Cadências por Mudança de Status de Prospect",
-            "description": "Desenvolver um mecanismo que automaticamente dispara uma cadência definida em um playbook quando o status de um prospect é alterado para um estágio específico, de acordo com as regras configuradas.",
-            "dependencies": [
-              1,
-              2
-            ],
-            "details": "Modificar a lógica de atualização de status do prospect (provavelmente em um serviço de CRM existente) para que, após a persistência da mudança de status, ele consulte os playbooks de cadência configurados (via API desenvolvida na subtask 2) e, se houver uma cadência associada àquele novo status, inicie a execução da mesma, criando tarefas automáticas para o prospect.",
-            "status": "pending",
-            "testStrategy": "Criar um prospect, configurar uma cadência para um determinado status e alterar o status do prospect. Verificar se as tarefas automáticas são geradas corretamente, com os prazos e descrições esperados, e associadas ao prospect.",
-            "parentId": "undefined"
-          },
-          {
-            "id": 5,
-            "title": "Desenvolver Página de Monitoramento de Execuções de Cadências",
-            "description": "Criar uma interface no backoffice para que os administradores possam visualizar o status atual e o histórico detalhado das execuções das cadências, incluindo tarefas criadas, prazos e ações de escalação.",
-            "dependencies": [
-              1,
-              2,
-              4
-            ],
-            "details": "Criar uma nova rota e página Next.js em src/app/(backoffice)/admin/crm/cadences/monitor/page.tsx. Esta página deve exibir uma lista de cadências em execução ou concluídas, seus prospects associados, as tarefas geradas, seus prazos, status e histórico de ações (como escalações). Deve consumir os dados fornecidos pela API de cadências e apresentar uma visualização clara e filtrável.",
-            "status": "pending",
-            "testStrategy": "Iniciar algumas cadências com diferentes regras e cenários (tarefas vencidas, escalações) e verificar se o painel de monitoramento exibe corretamente o progresso, as tarefas, os status e as ações tomadas de forma precisa e em tempo real.",
-            "parentId": "undefined"
-          }
-        ],
-        "updatedAt": "2026-03-29T22:55:48.997Z"
+        "subtasks": []
       },
       {
         "id": "262",
@@ -10405,14 +10399,13 @@
         "description": "JWT tokens armazenados em localStorage são vulneráveis a XSS. httpOnly cookies são mais seguros.",
         "details": "Requer mudança no backend para setar cookies httpOnly no login/refresh. Frontend remove leitura/escrita de localStorage para tokens. Manter localStorage apenas para preferências de UI (tema, tenant preferido). Atualizar seedAuthenticatedSession nos testes E2E.",
         "testStrategy": "Login funciona. Refresh funciona. Tokens não acessíveis via document.cookie ou localStorage. Testes E2E adaptados.",
-        "status": "done",
+        "status": "pending",
         "dependencies": [
           "259"
         ],
         "priority": "medium",
         "complexity": 7,
-        "subtasks": [],
-        "updatedAt": "2026-03-29T22:53:10.312Z"
+        "subtasks": []
       },
       {
         "id": "264",
@@ -10462,19 +10455,18 @@
         "description": "Sem documentação de como responder a incidentes, fazer rollback, verificar saúde do sistema.",
         "details": "Criar docs/RUNBOOK.md com: como verificar se o sistema está saudável, como fazer rollback de deploy, como investigar erros no Sentry, como resetar estado de um tenant, como escalar problemas de infraestrutura, contatos de emergência.",
         "testStrategy": "Documento existe e cobre os cenários principais. Qualquer dev consegue seguir o runbook sem contexto prévio.",
-        "status": "in-progress",
+        "status": "pending",
         "dependencies": [],
         "priority": "medium",
         "complexity": 2,
-        "subtasks": [],
-        "updatedAt": "2026-03-29T22:56:11.699Z"
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T22:56:11.699Z",
+      "lastModified": "2026-03-29T22:39:00.859Z",
       "taskCount": 267,
-      "completedCount": 263,
+      "completedCount": 255,
       "tags": [
         "master"
       ]

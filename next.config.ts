@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
 
 const withBundleAnalyzer =
   process.env.ANALYZE === "true"
@@ -92,8 +91,11 @@ const nextConfig: NextConfig = {
 
 const finalConfig = withBundleAnalyzer(nextConfig);
 
-export default process.env.NEXT_PUBLIC_SENTRY_DSN
-  ? withSentryConfig(finalConfig, {
+function applySentry(config: NextConfig): NextConfig {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { withSentryConfig } = require("@sentry/nextjs");
+    return withSentryConfig(config, {
       org: process.env.SENTRY_ORG,
       project: process.env.SENTRY_PROJECT,
       authToken: process.env.SENTRY_AUTH_TOKEN,
@@ -105,5 +107,13 @@ export default process.env.NEXT_PUBLIC_SENTRY_DSN
       sourcemaps: {
         disable: !process.env.SENTRY_AUTH_TOKEN,
       },
-    })
+    });
+  } catch {
+    // @sentry/nextjs não instalado — prosseguir sem Sentry
+    return config;
+  }
+}
+
+export default process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? applySentry(finalConfig)
   : finalConfig;
