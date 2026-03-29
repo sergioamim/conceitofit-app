@@ -9748,12 +9748,12 @@
         "description": "Criar QueryClient com defaults, adicionar provider no layout (app), devtools em dev.",
         "details": "Criar src/lib/query/query-client.ts com: staleTime 5min, retry 2, refetchOnWindowFocus false. Adicionar QueryClientProvider no src/app/(app)/layout.tsx. Adicionar ReactQueryDevtools condicional (process.env.NODE_ENV === \"development\"). TanStack Query já está instalado (5.95.2).",
         "testStrategy": "Provider funciona sem erros. Devtools visível em dev. Páginas existentes não quebram.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
         "subtasks": [],
-        "updatedAt": "2026-03-29T11:34:32.440Z"
+        "updatedAt": "2026-03-29T11:37:47.619Z"
       },
       {
         "id": "226",
@@ -10062,9 +10062,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:37:36.049Z",
+      "lastModified": "2026-03-29T11:37:47.620Z",
       "taskCount": 248,
-      "completedCount": 227,
+      "completedCount": 228,
       "tags": [
         "master"
       ]
