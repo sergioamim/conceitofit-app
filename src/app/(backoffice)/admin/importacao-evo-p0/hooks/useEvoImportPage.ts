@@ -1,3 +1,5 @@
+"use client";
+
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { SuggestionOption } from "@/components/shared/suggestion-input";
@@ -1528,13 +1530,19 @@ export function useEvoImportPage() {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ApiRequestError) {
-        logger.error("Erro ao analisar pacote EVO", { module: "evo-import", error: formatApiErrorForLog(error) });
+        logger.error(`Erro ao analisar pacote EVO — HTTP ${error.status}: ${error.message}`, {
+          module: "evo-import",
+          status: error.status,
+          path: error.path,
+          responseBody: error.responseBody?.slice(0, 500),
+        });
         toast({
           title: "Erro ao analisar pacote",
           description: extractErrorMessage(error),
           variant: "destructive",
         });
       } else {
+        logger.error(`Erro ao analisar pacote EVO — ${message}`, { module: "evo-import" });
         toast({
           title: "Erro ao analisar pacote",
           description: message,
