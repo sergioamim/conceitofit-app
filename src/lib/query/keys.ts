@@ -17,4 +17,11 @@ export const queryKeys = {
     dashboard: (tenantId: string, monthKey: string, page: number) =>
       ["matriculas", "dashboard", tenantId, monthKey, page] as const,
   },
+
+  aulas: {
+    sessoes: (tenantId: string, dateFrom: string, dateTo: string) =>
+      ["aulas", "sessoes", tenantId, dateFrom, dateTo] as const,
+    minhasReservas: (tenantId: string, alunoId: string) =>
+      ["aulas", "reservas", tenantId, alunoId] as const,
+  },
 } as const;
