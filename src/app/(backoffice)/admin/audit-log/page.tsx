@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { TableCell } from "@/components/ui/table";
 import { PaginatedTable } from "@/components/shared/paginated-table";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { listAuditLogsApi } from "@/lib/api/admin-audit";
 import type {
   AuditLogAction,
@@ -76,6 +77,7 @@ function formatTimestamp(ts: string): string {
 }
 
 export default function AuditLogPage() {
+  const { tenantId } = useTenantContext();
   const [items, setItems] = useState<AuditLogEntry[]>([]);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState<number | undefined>();
@@ -97,6 +99,7 @@ export default function AuditLogPage() {
     });
 
     listAuditLogsApi({
+      tenantId: tenantId || undefined,
       page,
       size: PAGE_SIZE,
       action: filterAction || undefined,
@@ -122,7 +125,7 @@ export default function AuditLogPage() {
     return () => {
       mounted = false;
     };
-  }, [page, filterAction, filterEntityType, filterStartDate, filterEndDate, filterQuery]);
+  }, [tenantId, page, filterAction, filterEntityType, filterStartDate, filterEndDate, filterQuery]);
 
   function handleClearFilters() {
     setFilterAction("");
