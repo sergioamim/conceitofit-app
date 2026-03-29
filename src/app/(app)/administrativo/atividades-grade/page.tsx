@@ -19,6 +19,7 @@ import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 import { AtividadeGradeModal, type AtividadeGradeForm } from "@/components/shared/atividade-grade-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import {
@@ -50,7 +51,7 @@ export default function AtividadesGradePage() {
   const [editing, setEditing] = useState<AtividadeGrade | null>(null);
   const [occurrenceGrade, setOccurrenceGrade] = useState<AtividadeGrade | null>(null);
   const [filtroAtividade, setFiltroAtividade] = useState<string>("TODAS");
-  const [filtroDia, setFiltroDia] = useState<DiaSemana | "TODOS">("TODOS");
+  const [filtroDia, setFiltroDia] = useState<WithFilterAll<DiaSemana>>(FILTER_ALL);
   const [apenasAtivas, setApenasAtivas] = useState(true);
   const [savingOccurrence, setSavingOccurrence] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -105,7 +106,7 @@ export default function AtividadesGradePage() {
   const funcionarioMap = useMemo(() => new Map(funcionarios.map((f) => [f.id, f])), [funcionarios]);
 
   const filtered = grades.filter((g) => {
-    const matchDia = filtroDia === "TODOS" || g.diasSemana.includes(filtroDia);
+    const matchDia = filtroDia === FILTER_ALL || g.diasSemana.includes(filtroDia as DiaSemana);
     return matchDia;
   });
 
@@ -294,12 +295,12 @@ export default function AtividadesGradePage() {
             </Select>
           </div>
           <div className="w-44">
-            <Select value={filtroDia} onValueChange={(v) => setFiltroDia(v as DiaSemana | "TODOS")}>
+            <Select value={filtroDia} onValueChange={(v) => setFiltroDia(v as WithFilterAll<DiaSemana>)}>
               <SelectTrigger className="w-full bg-secondary border-border text-sm">
                 <SelectValue placeholder="Dia" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                <SelectItem value="TODOS">Todos os dias</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos os dias</SelectItem>
                 {Object.entries(DIA_LABEL).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}

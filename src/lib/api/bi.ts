@@ -1,5 +1,6 @@
 import { buildBiOperationalSnapshot } from "@/lib/tenant/bi/analytics";
 import { getBusinessMonthRange } from "@/lib/business-date";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { listContasReceberOperacionais } from "@/lib/tenant/financeiro/recebimentos";
 import type {
   Academia,
@@ -232,7 +233,7 @@ export async function getBiOperacionalSnapshotApi(
     academiaId,
     startDate: input.startDate ?? start,
     endDate: input.endDate ?? end,
-    segmento: input.segmento ?? "TODOS",
+    segmento: input.segmento ?? FILTER_ALL,
     canViewNetwork: input.canViewNetwork ?? false,
     nowIso: new Date().toISOString(),
   });

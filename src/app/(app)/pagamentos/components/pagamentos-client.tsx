@@ -41,6 +41,7 @@ import type {
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 type ParsedImportCsvRow = {
   clienteNome: string;
@@ -56,8 +57,8 @@ type ParsedImportCsvRow = {
   observacoes: string;
 };
 
-const STATUS_FILTERS: { value: StatusPagamento | "TODOS"; label: string }[] = [
-  { value: "TODOS", label: "Todos" },
+const STATUS_FILTERS: { value: WithFilterAll<StatusPagamento>; label: string }[] = [
+  { value: FILTER_ALL, label: "Todos" },
   { value: "PENDENTE", label: "Pendentes" },
   { value: "VENCIDO", label: "Vencidos" },
   { value: "PAGO", label: "Pagos" },
@@ -433,7 +434,7 @@ function PagamentosPageContent() {
   const [clientes, setClientes] = useState<Aluno[]>([]);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
   const [convenios, setConvenios] = useState<Convenio[]>([]);
-  const [filtro, setFiltro] = useState<StatusPagamento | "TODOS">("TODOS");
+  const [filtro, setFiltro] = useState<WithFilterAll<StatusPagamento>>(FILTER_ALL);
   const [recebendo, setRecebendo] = useState<PagamentoComAluno | null>(null);
   const [emitindo, setEmitindo] = useState<PagamentoComAluno | null>(null);
   const [visualizandoNfse, setVisualizandoNfse] = useState<PagamentoComAluno | null>(null);
@@ -445,7 +446,7 @@ function PagamentosPageContent() {
   const [nfseFeedback, setNfseFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
   const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
-  const [clienteFiltro, setClienteFiltro] = useState<string>("TODOS");
+  const [clienteFiltro, setClienteFiltro] = useState<string>(FILTER_ALL);
   const [importPayload, setImportPayload] = useState(IMPORTAR_PAGAMENTOS_EXEMPLO);
   const [importandoPagamentos, setImportandoPagamentos] = useState(false);
   const [importResultado, setImportResultado] = useState<ImportarPagamentosResultado | null>(null);
@@ -476,13 +477,13 @@ function PagamentosPageContent() {
 
   const alunoId = searchParams.get("clienteId") ?? searchParams.get("alunoId");
   const filteredBase =
-    filtro === "TODOS"
+    filtro === FILTER_ALL
       ? pagamentos
       : pagamentos.filter((p) => p.status === filtro);
 
   const filtered = filteredBase.filter((p) => {
     if (alunoId && p.alunoId !== alunoId) return false;
-    if (clienteFiltro !== "TODOS" && p.alunoId !== clienteFiltro) return false;
+    if (clienteFiltro !== FILTER_ALL && p.alunoId !== clienteFiltro) return false;
     const d = new Date(p.dataVencimento + "T00:00:00");
     return d.getMonth() === mes && d.getFullYear() === ano;
   });
@@ -894,7 +895,7 @@ function PagamentosPageContent() {
               <SelectValue placeholder="Cliente" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
-              <SelectItem value="TODOS">Todos clientes</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos clientes</SelectItem>
               {clientes.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.nome}

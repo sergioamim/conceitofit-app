@@ -36,6 +36,7 @@ import type {
   PerfilPadraoVersao,
   SecurityBusinessScope,
 } from "@/lib/types";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 // ---------------------------------------------------------------------------
@@ -81,7 +82,7 @@ function CatalogoTab() {
   const [items, setItems] = useState<CatalogoFuncionalidade[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
-  const [riskFilter, setRiskFilter] = useState<GlobalAdminRiskLevel | "TODOS">("TODOS");
+  const [riskFilter, setRiskFilter] = useState<GlobalAdminRiskLevel | typeof FILTER_ALL>(FILTER_ALL);
   const [page, setPage] = useState(0);
   const [pageSize] = useState<PageSize>(20);
   const [saving, setSaving] = useState(false);
@@ -119,7 +120,7 @@ function CatalogoTab() {
 
   const filtered = useMemo(() => {
     let result = items;
-    if (riskFilter !== "TODOS") {
+    if (riskFilter !== FILTER_ALL) {
       result = result.filter((i) => i.riskLevel === riskFilter);
     }
     const term = busca.trim().toLowerCase();
@@ -347,13 +348,13 @@ function CatalogoTab() {
             />
             <Select
               value={riskFilter}
-              onValueChange={(v) => { setRiskFilter(v as GlobalAdminRiskLevel | "TODOS"); setPage(0); }}
+              onValueChange={(v) => { setRiskFilter(v as GlobalAdminRiskLevel | typeof FILTER_ALL); setPage(0); }}
             >
               <SelectTrigger className="w-36 bg-secondary border-border text-xs">
                 <SelectValue placeholder="Risco" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                 {RISK_OPTIONS.map((o) => (
                   <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                 ))}

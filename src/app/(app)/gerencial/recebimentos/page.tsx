@@ -20,8 +20,9 @@ import type { AgregadorTransacao, NfseConfiguracao, Pagamento, TipoFormaPagament
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
-type StatusFiltro = "TODOS" | Pagamento["status"];
+type StatusFiltro = WithFilterAll<Pagamento["status"]>;
 
 type RecebimentoForm = {
   clienteNome: string;
@@ -70,7 +71,7 @@ export default function RecebimentosPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFiltro>("TODOS");
+  const [status, setStatus] = useState<StatusFiltro>(FILTER_ALL);
   const [startDate, setStartDate] = useState(initialRange.start);
   const [endDate, setEndDate] = useState(initialRange.end);
   const [modalOpen, setModalOpen] = useState(false);
@@ -117,7 +118,7 @@ export default function RecebimentosPage() {
     const term = search.trim().toLowerCase();
     return pagamentos.filter((item) => {
       if (item.dataVencimento < startDate || item.dataVencimento > endDate) return false;
-      if (status !== "TODOS" && item.status !== status) return false;
+      if (status !== FILTER_ALL && item.status !== status) return false;
       if (!term) return true;
       return [
         item.aluno?.nome ?? "",
@@ -289,7 +290,7 @@ export default function RecebimentosPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="border-border bg-card">
-              <SelectItem value="TODOS">Todos</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos</SelectItem>
               <SelectItem value="PENDENTE">Pendente</SelectItem>
               <SelectItem value="VENCIDO">Vencido</SelectItem>
               <SelectItem value="PAGO">Pago</SelectItem>

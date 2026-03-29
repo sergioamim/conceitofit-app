@@ -24,10 +24,11 @@ import {
 import type { Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 const PAGE_SIZE = 12;
 
-type VigenciaFilter = "TODOS" | "VIGENTE" | "VENCENDO" | "VENCIDO";
+type VigenciaFilter = WithFilterAll<"VIGENTE" | "VENCENDO" | "VENCIDO">;
 
 function formatDate(value?: string): string {
   if (!value) return "-";
@@ -46,7 +47,7 @@ function resolveVigenciaLabel(treino: Treino): VigenciaFilter {
   if (treino.statusValidade === "VENCIDO") return "VENCIDO";
   if (treino.statusValidade === "VENCENDO") return "VENCENDO";
   if (treino.statusValidade === "ATIVO") return "VIGENTE";
-  return "TODOS";
+  return FILTER_ALL;
 }
 
 export default function TreinosAtribuidosPage() {
@@ -57,10 +58,10 @@ export default function TreinosAtribuidosPage() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("TODOS");
-  const [origemFilter, setOrigemFilter] = useState<string>("TODOS");
-  const [professorFilter, setProfessorFilter] = useState<string>("TODOS");
-  const [vigenciaFilter, setVigenciaFilter] = useState<VigenciaFilter>("TODOS");
+  const [statusFilter, setStatusFilter] = useState<string>(FILTER_ALL);
+  const [origemFilter, setOrigemFilter] = useState<string>(FILTER_ALL);
+  const [professorFilter, setProfessorFilter] = useState<string>(FILTER_ALL);
+  const [vigenciaFilter, setVigenciaFilter] = useState<VigenciaFilter>(FILTER_ALL);
   const [page, setPage] = useState(0);
 
   const loadData = useCallback(async () => {
@@ -125,10 +126,10 @@ export default function TreinosAtribuidosPage() {
           .join(" ")
           .toLowerCase()
           .includes(query);
-      const matchesStatus = statusFilter === "TODOS" || governance.status === statusFilter;
-      const matchesOrigem = origemFilter === "TODOS" || governance.origem === origemFilter;
-      const matchesProfessor = professorFilter === "TODOS" || workout.funcionarioNome === professorFilter;
-      const matchesVigencia = vigenciaFilter === "TODOS" || resolveVigenciaLabel(workout) === vigenciaFilter;
+      const matchesStatus = statusFilter === FILTER_ALL || governance.status === statusFilter;
+      const matchesOrigem = origemFilter === FILTER_ALL || governance.origem === origemFilter;
+      const matchesProfessor = professorFilter === FILTER_ALL || workout.funcionarioNome === professorFilter;
+      const matchesVigencia = vigenciaFilter === FILTER_ALL || resolveVigenciaLabel(workout) === vigenciaFilter;
       return matchesSearch && matchesStatus && matchesOrigem && matchesProfessor && matchesVigencia;
     });
   }, [governanceItems, origemFilter, professorFilter, search, statusFilter, vigenciaFilter]);
@@ -298,7 +299,7 @@ export default function TreinosAtribuidosPage() {
             value={statusFilter}
             onChange={setStatusFilter}
             options={[
-              { value: "TODOS", label: "Todos" },
+              { value: FILTER_ALL, label: "Todos" },
               { value: "RASCUNHO", label: "Rascunho" },
               { value: "AGENDADO", label: "Agendado" },
               { value: "ATIVO", label: "Ativo" },
@@ -312,7 +313,7 @@ export default function TreinosAtribuidosPage() {
             value={origemFilter}
             onChange={setOrigemFilter}
             options={[
-              { value: "TODOS", label: "Todas" },
+              { value: FILTER_ALL, label: "Todas" },
               { value: "TEMPLATE", label: "Template" },
               { value: "MASSA", label: "Lote" },
               { value: "MANUAL", label: "Manual" },
@@ -324,7 +325,7 @@ export default function TreinosAtribuidosPage() {
             label="Professor"
             value={professorFilter}
             onChange={setProfessorFilter}
-            options={[{ value: "TODOS", label: "Todos" }, ...professorOptions.map((item) => ({ value: item, label: item }))]}
+            options={[{ value: FILTER_ALL, label: "Todos" }, ...professorOptions.map((item) => ({ value: item, label: item }))]}
           />
 
           <FilterSelect
@@ -332,7 +333,7 @@ export default function TreinosAtribuidosPage() {
             value={vigenciaFilter}
             onChange={(value) => setVigenciaFilter(value as VigenciaFilter)}
             options={[
-              { value: "TODOS", label: "Todas" },
+              { value: FILTER_ALL, label: "Todas" },
               { value: "VIGENTE", label: "Vigente" },
               { value: "VENCENDO", label: "Vencendo" },
               { value: "VENCIDO", label: "Vencido" },

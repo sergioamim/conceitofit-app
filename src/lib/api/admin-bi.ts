@@ -4,6 +4,7 @@ import type {
   BiDeltaOperacional,
   BiSeriePonto,
 } from "@/lib/types";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { apiRequest } from "./http";
 
 // ---------------------------------------------------------------------------
@@ -167,7 +168,7 @@ export async function getAdminBiResumoGeralApi(academiaId: string): Promise<BiOp
     endDate: str(payload.endDate),
     academiaId: str(payload.academiaId) || academiaId,
     academiaNome: str(payload.academiaNome),
-    segmento: "TODOS",
+    segmento: FILTER_ALL,
     kpis: normalizeKpis(payload.kpis),
     deltas: normalizeDeltas(payload.deltas),
     series: normalizeSerie(payload.series),

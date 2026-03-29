@@ -28,6 +28,7 @@ import { globalUserCreateFormSchema } from "@/lib/tenant/forms/security-user-cre
 import { validateGlobalUserCreateDraft } from "@/lib/tenant/security-user-create";
 import type { Academia, GlobalAdminNewUnitsPolicyScope, GlobalAdminReviewStatus, GlobalAdminUserSummary, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 type Filters = {
   query: string;
@@ -129,7 +130,7 @@ async function loadUsersSnapshot(filters: Filters) {
       query: filters.query,
       academiaId: filters.academiaId || undefined,
       tenantId: filters.tenantId || undefined,
-      status: filters.status === "TODOS" ? undefined : filters.status,
+      status: filters.status === FILTER_ALL ? undefined : filters.status,
       profile: filters.profile || undefined,
       scopeType: filters.scopeType || undefined,
       eligibleForNewUnits: filters.eligibleOnly || undefined,
@@ -687,7 +688,7 @@ export default function AdminSegurancaUsuariosPage() {
                 <SelectItem value="ATIVO">Ativos</SelectItem>
                 <SelectItem value="INATIVO">Inativos</SelectItem>
                 <SelectItem value="PENDENTE">Pendentes</SelectItem>
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -728,14 +729,14 @@ export default function AdminSegurancaUsuariosPage() {
           <div className="space-y-2">
             <Label>Novas unidades</Label>
             <Select
-              value={filters.eligibleOnly ? "SIM" : "TODOS"}
+              value={filters.eligibleOnly ? "SIM" : FILTER_ALL}
               onValueChange={(value) => setFilters((current) => ({ ...current, eligibleOnly: value === "SIM" }))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                 <SelectItem value="SIM">Só com propagação</SelectItem>
               </SelectContent>
             </Select>
@@ -767,14 +768,14 @@ export default function AdminSegurancaUsuariosPage() {
           <div className="space-y-2">
             <Label>Acesso amplo</Label>
             <Select
-              value={filters.broadAccessOnly ? "SIM" : "TODOS"}
+              value={filters.broadAccessOnly ? "SIM" : FILTER_ALL}
               onValueChange={(value) => setFilters((current) => ({ ...current, broadAccessOnly: value === "SIM" }))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                 <SelectItem value="SIM">Só amplos</SelectItem>
               </SelectContent>
             </Select>
@@ -783,14 +784,14 @@ export default function AdminSegurancaUsuariosPage() {
           <div className="space-y-2">
             <Label>Exceções</Label>
             <Select
-              value={filters.exceptionsOnly ? "SIM" : "TODOS"}
+              value={filters.exceptionsOnly ? "SIM" : FILTER_ALL}
               onValueChange={(value) => setFilters((current) => ({ ...current, exceptionsOnly: value === "SIM" }))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                 <SelectItem value="SIM">Só com exceção</SelectItem>
               </SelectContent>
             </Select>

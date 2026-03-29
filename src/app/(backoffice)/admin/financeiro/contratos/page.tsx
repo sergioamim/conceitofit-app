@@ -49,9 +49,10 @@ import type {
   StatusContratoPlataforma,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 type PageSize = 10 | 20 | 50;
-type StatusFilter = "TODOS" | StatusContratoPlataforma;
+type StatusFilter = WithFilterAll<StatusContratoPlataforma>;
 
 type ContratoFormValues = {
   academiaId: string;
@@ -163,9 +164,9 @@ export default function AdminContratosPage() {
   const [contratos, setContratos] = useState<ContratoPlataforma[]>([]);
   const [academias, setAcademias] = useState<Academia[]>([]);
   const [planos, setPlanos] = useState<PlanoPlataforma[]>([]);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("TODOS");
-  const [academiaFilter, setAcademiaFilter] = useState("TODOS");
-  const [planoFilter, setPlanoFilter] = useState("TODOS");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(FILTER_ALL);
+  const [academiaFilter, setAcademiaFilter] = useState(FILTER_ALL);
+  const [planoFilter, setPlanoFilter] = useState(FILTER_ALL);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [todayDate, setTodayDate] = useState("");
@@ -236,9 +237,9 @@ export default function AdminContratosPage() {
 
   const filteredContratos = useMemo(() => {
     return contratos.filter((contrato) => {
-      if (statusFilter !== "TODOS" && contrato.status !== statusFilter) return false;
-      if (academiaFilter !== "TODOS" && contrato.academiaId !== academiaFilter) return false;
-      if (planoFilter !== "TODOS" && contrato.planoId !== planoFilter) return false;
+      if (statusFilter !== FILTER_ALL && contrato.status !== statusFilter) return false;
+      if (academiaFilter !== FILTER_ALL && contrato.academiaId !== academiaFilter) return false;
+      if (planoFilter !== FILTER_ALL && contrato.planoId !== planoFilter) return false;
       return true;
     });
   }, [academiaFilter, contratos, planoFilter, statusFilter]);
@@ -259,9 +260,9 @@ export default function AdminContratosPage() {
   );
 
   function resetFilters() {
-    setStatusFilter("TODOS");
-    setAcademiaFilter("TODOS");
-    setPlanoFilter("TODOS");
+    setStatusFilter(FILTER_ALL);
+    setAcademiaFilter(FILTER_ALL);
+    setPlanoFilter(FILTER_ALL);
     setPage(0);
   }
 
@@ -412,7 +413,7 @@ export default function AdminContratosPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todos os status</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos os status</SelectItem>
                 {STATUS_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -432,7 +433,7 @@ export default function AdminContratosPage() {
                 <SelectValue placeholder="Academia" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todas as academias</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todas as academias</SelectItem>
                 {academias.map((academia) => (
                   <SelectItem key={academia.id} value={academia.id}>
                     {academia.nome}
@@ -452,7 +453,7 @@ export default function AdminContratosPage() {
                 <SelectValue placeholder="Plano" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todos os planos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos os planos</SelectItem>
                 {planos.map((plano) => (
                   <SelectItem key={plano.id} value={plano.id}>
                     {plano.nome}

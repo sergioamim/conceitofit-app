@@ -23,13 +23,14 @@ import type {
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { isContaPagarEmAberto, isContaPagarPendente } from "@/lib/domain/status-helpers";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 import { buildEdicaoFormFromConta, type EdicaoContaFormState } from "@/components/shared/editar-conta-pagar-modal";
 import { NovaContaPagarSubmitData } from "@/components/shared/nova-conta-pagar-modal";
 import { PagamentoFormState } from "@/components/shared/pagar-conta-modal";
 
-export type StatusFiltro = "TODOS" | "EM_ABERTO" | StatusContaPagar;
+export type StatusFiltro = WithFilterAll<"EM_ABERTO" | StatusContaPagar>;
 export type CategoriaFiltro = "TODAS" | CategoriaContaPagar;
-export type TipoFiltro = "TODOS" | string;
+export type TipoFiltro = WithFilterAll<string>;
 export type OrigemFiltro = "TODAS" | "MANUAL" | "RECORRENTE";
 
 export const GRUPO_DRE_LABEL: Record<string, string> = {
@@ -84,7 +85,7 @@ export function useContasPagarWorkspace() {
 
   const [status, setStatus] = useState<StatusFiltro>("EM_ABERTO");
   const [categoria, setCategoria] = useState<CategoriaFiltro>("TODAS");
-  const [tipoContaFiltro, setTipoContaFiltro] = useState<TipoFiltro>("TODOS");
+  const [tipoContaFiltro, setTipoContaFiltro] = useState<TipoFiltro>(FILTER_ALL);
   const [origemFiltro, setOrigemFiltro] = useState<OrigemFiltro>("TODAS");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState(range.start);
@@ -137,12 +138,12 @@ export function useContasPagarWorkspace() {
 
       if (status === "EM_ABERTO") {
         if (!isContaPagarEmAberto(conta.status)) return false;
-      } else if (status !== "TODOS" && conta.status !== status) {
+      } else if (status !== FILTER_ALL && conta.status !== status) {
         return false;
       }
 
       if (categoria !== "TODAS" && conta.categoria !== categoria) return false;
-      if (tipoContaFiltro !== "TODOS" && conta.tipoContaId !== tipoContaFiltro) return false;
+      if (tipoContaFiltro !== FILTER_ALL && conta.tipoContaId !== tipoContaFiltro) return false;
       if (origemFiltro !== "TODAS" && (conta.origemLancamento ?? "MANUAL") !== origemFiltro) {
         return false;
       }

@@ -23,6 +23,7 @@ import { TableCell } from "@/components/ui/table";
 import { formatBRL, formatDateTime } from "@/lib/formatters";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { ListErrorState } from "@/components/shared/list-states";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 const TIPO_LABEL: Record<Venda["tipo"], string> = {
   PLANO: "Contrato",
@@ -72,8 +73,8 @@ function getFluxoBadgeClass(value: string | undefined) {
   return "bg-gym-teal/15 text-gym-teal";
 }
 
-type TipoFiltro = "TODOS" | Venda["tipo"];
-type FormaPagamentoFiltro = "TODOS" | TipoFormaPagamento;
+type TipoFiltro = WithFilterAll<Venda["tipo"]>;
+type FormaPagamentoFiltro = WithFilterAll<TipoFormaPagamento>;
 const MIN_FILTER_YEAR = 2000;
 
 function todayIso() {
@@ -103,8 +104,8 @@ export default function VendasPage() {
   const [error, setError] = useState<string | null>(null);
   const [periodoInicio, setPeriodoInicio] = useState(today);
   const [periodoFim, setPeriodoFim] = useState(today);
-  const [filtroTipo, setFiltroTipo] = useState<TipoFiltro>("TODOS");
-  const [filtroFormaPagamento, setFiltroFormaPagamento] = useState<FormaPagamentoFiltro>("TODOS");
+  const [filtroTipo, setFiltroTipo] = useState<TipoFiltro>(FILTER_ALL);
+  const [filtroFormaPagamento, setFiltroFormaPagamento] = useState<FormaPagamentoFiltro>(FILTER_ALL);
 
   const [inicioNormalizado, fimNormalizado] = useMemo(() => {
     if (!periodoInicio || !periodoFim) return ["", ""];
@@ -135,8 +136,8 @@ export default function VendasPage() {
         size: 20,
         dataInicio: inicioNormalizado || undefined,
         dataFim: fimNormalizado || undefined,
-        tipoVenda: filtroTipo === "TODOS" ? undefined : filtroTipo,
-        formaPagamento: filtroFormaPagamento === "TODOS" ? undefined : filtroFormaPagamento,
+        tipoVenda: filtroTipo === FILTER_ALL ? undefined : filtroTipo,
+        formaPagamento: filtroFormaPagamento === FILTER_ALL ? undefined : filtroFormaPagamento,
       });
       setVendas(response.items);
       setHasNext(response.hasNext);
@@ -281,7 +282,7 @@ export default function VendasPage() {
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                 <SelectItem value="PLANO">Contrato</SelectItem>
                 <SelectItem value="SERVICO">Serviço</SelectItem>
                 <SelectItem value="PRODUTO">Produto</SelectItem>
@@ -301,7 +302,7 @@ export default function VendasPage() {
                 <SelectValue placeholder="Selecione a forma de pagamento" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                 {Object.keys(FORMA_LABEL).map((forma) => (
                   <SelectItem key={forma} value={forma}>
                     {FORMA_LABEL[forma as TipoFormaPagamento]}

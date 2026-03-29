@@ -3,8 +3,9 @@ import type {
   AcademiaHealthLevel,
   AcademiaHealthStatus,
 } from "@/lib/types";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
-export type HealthFilter = "TODOS" | AcademiaHealthLevel;
+export type HealthFilter = WithFilterAll<AcademiaHealthLevel>;
 
 export function formatPercent(value: number) {
   return `${value.toLocaleString("pt-BR", {
@@ -134,7 +135,7 @@ export function filterAcademiasHealthMap(
   }
 ) {
   return items.filter((item) => {
-    if (filters.healthLevel !== "TODOS" && item.healthLevel !== filters.healthLevel) {
+    if (filters.healthLevel !== FILTER_ALL && item.healthLevel !== filters.healthLevel) {
       return false;
     }
     if (filters.planoContratado && item.planoContratado !== filters.planoContratado) {

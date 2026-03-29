@@ -20,10 +20,11 @@ import {
   type HealthFilter,
 } from "@/lib/backoffice/admin-health";
 import type { AcademiaHealthLevel, AcademiaHealthStatus } from "@/lib/types";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const HEALTH_FILTER_OPTIONS: Array<{ value: HealthFilter; label: string }> = [
-  { value: "TODOS", label: "Todos os níveis" },
+  { value: FILTER_ALL, label: "Todos os níveis" },
   { value: "SAUDAVEL", label: "Saudável" },
   { value: "RISCO", label: "Risco" },
   { value: "CRITICO", label: "Crítico" },
@@ -117,7 +118,7 @@ export default function AdminOperationalHealthPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<AcademiaHealthStatus[]>([]);
-  const [healthFilter, setHealthFilter] = useState<HealthFilter>("TODOS");
+  const [healthFilter, setHealthFilter] = useState<HealthFilter>(FILTER_ALL);
   const [planoFilter, setPlanoFilter] = useState("");
 
   const load = useCallback(async () => {
@@ -253,7 +254,7 @@ export default function AdminOperationalHealthPage() {
               message="Nenhuma academia corresponde aos filtros aplicados."
               action={
                 <Button type="button" variant="outline" className="border-border" onClick={() => {
-                  setHealthFilter("TODOS");
+                  setHealthFilter(FILTER_ALL);
                   setPlanoFilter("");
                 }}>
                   Limpar filtros

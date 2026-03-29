@@ -42,9 +42,10 @@ import { maskPhone } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useDialogState } from "@/hooks/use-dialog-state";
 import { ListErrorState } from "@/components/shared/list-states";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
-const STATUS_OPTIONS: { value: StatusProspect | "TODOS"; label: string }[] = [
-  { value: "TODOS", label: "Todos" },
+const STATUS_OPTIONS: { value: WithFilterAll<StatusProspect>; label: string }[] = [
+  { value: FILTER_ALL, label: "Todos" },
   { value: "NOVO", label: "Novo" },
   { value: "EM_CONTATO", label: "Em contato" },
   { value: "AGENDOU_VISITA", label: "Agendou visita" },
@@ -172,7 +173,7 @@ export function ProspectsClient() {
   const tenantContext = useTenantContext();
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
-  const [filtroStatus, setFiltroStatus] = useState<StatusProspect | "TODOS">("TODOS");
+  const [filtroStatus, setFiltroStatus] = useState<WithFilterAll<StatusProspect>>(FILTER_ALL);
   const [filtroOrigem, setFiltroOrigem] = useState<OrigemProspect | "TODAS">("TODAS");
   const [busca, setBusca] = useState("");
   const modal = useDialogState();
@@ -223,7 +224,7 @@ export function ProspectsClient() {
     const buscaTermo = busca.toLowerCase();
 
     return prospectsByMonth.filter((p) => {
-      const matchStatus = filtroStatus === "TODOS" || p.status === filtroStatus;
+      const matchStatus = filtroStatus === FILTER_ALL || p.status === filtroStatus;
       const matchOrigem = filtroOrigem === "TODAS" || p.origem === filtroOrigem;
       const matchBusca =
         !busca ||
@@ -260,7 +261,7 @@ export function ProspectsClient() {
       STATUS_OPTIONS.map((s) => ({
         ...s,
         isActive: filtroStatus === s.value,
-        isAllButton: s.value === "TODOS",
+        isAllButton: s.value === FILTER_ALL,
       })),
     [filtroStatus]
   );
@@ -283,7 +284,7 @@ export function ProspectsClient() {
   const handleOpenTimeline = useCallback((prospect: Prospect) => setTimeline(prospect), []);
   const handleCloseTimeline = useCallback(() => setTimeline(null), []);
 
-  const handleFiltroStatus = useCallback((next: StatusProspect | "TODOS") => {
+  const handleFiltroStatus = useCallback((next: WithFilterAll<StatusProspect>) => {
     setFiltroStatus(next);
     setPage(1);
   }, []);

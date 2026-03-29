@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 type PagamentoWithAluno = PagamentoComAluno & { aluno?: Aluno };
-type StatusFiltro = "TODOS" | "PENDENTE" | "VENCIDO" | "PAGO" | "CANCELADO" | "EM_ABERTO";
+type StatusFiltro = WithFilterAll<"PENDENTE" | "VENCIDO" | "PAGO" | "CANCELADO" | "EM_ABERTO">;
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -68,7 +69,7 @@ export default function ContasReceberPage() {
 
       if (status === "EM_ABERTO") {
         if (!isPagamentoEmAberto(p.status)) return false;
-      } else if (status !== "TODOS" && p.status !== status) {
+      } else if (status !== FILTER_ALL && p.status !== status) {
         return false;
       }
 
@@ -158,7 +159,7 @@ export default function ContasReceberPage() {
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
               <SelectItem value="EM_ABERTO">Em aberto</SelectItem>
-              <SelectItem value="TODOS">Todos</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos</SelectItem>
               <SelectItem value="PENDENTE">Pendente</SelectItem>
               <SelectItem value="VENCIDO">Vencido</SelectItem>
               <SelectItem value="PAGO">Pago</SelectItem>
