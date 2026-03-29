@@ -14,9 +14,7 @@ function CheckoutRedirect() {
   }
 
   return (
-    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
-      Redirecionando para pagamento...
-    </div>
+    <SuspenseFallback variant="page" message="Redirecionando para pagamento..." />
   );
 }
 
@@ -24,9 +22,7 @@ export default function StorefrontCheckoutPage() {
   return (
     <Suspense
       fallback={
-        <SuspenseFallback variant="page" message="Carregando jornada pública..." />
-          Carregando...
-        </div>
+        <SuspenseFallback variant="page" message="Carregando..." />
       }
     >
       <CheckoutRedirect />

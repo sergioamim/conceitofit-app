@@ -14,9 +14,7 @@ function TrialRedirect() {
   }
 
   return (
-    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
-      Redirecionando para aula experimental...
-    </div>
+    <SuspenseFallback variant="page" message="Redirecionando para aula experimental..." />
   );
 }
 
@@ -24,9 +22,7 @@ export default function StorefrontTrialPage() {
   return (
     <Suspense
       fallback={
-        <SuspenseFallback variant="page" message="Carregando jornada pública..." />
-          Carregando...
-        </div>
+        <SuspenseFallback variant="page" message="Carregando..." />
       }
     >
       <TrialRedirect />
