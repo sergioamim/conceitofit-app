@@ -1,5 +1,3 @@
-"use client";
-
 import { useContasPagarWorkspace } from "./hooks/use-contas-pagar-workspace";
 import { ContasPagarHeader } from "./components/contas-pagar-header";
 import { ContasPagarStats } from "./components/contas-pagar-stats";
