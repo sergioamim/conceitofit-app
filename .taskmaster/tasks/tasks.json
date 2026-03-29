@@ -10513,18 +10513,19 @@
         "description": "Sem documentação de como responder a incidentes, fazer rollback, verificar saúde do sistema.",
         "details": "Criar docs/RUNBOOK.md com: como verificar se o sistema está saudável, como fazer rollback de deploy, como investigar erros no Sentry, como resetar estado de um tenant, como escalar problemas de infraestrutura, contatos de emergência.",
         "testStrategy": "Documento existe e cobre os cenários principais. Qualquer dev consegue seguir o runbook sem contexto prévio.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T23:12:37.447Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T23:10:18.880Z",
+      "lastModified": "2026-03-29T23:12:37.447Z",
       "taskCount": 267,
-      "completedCount": 261,
+      "completedCount": 262,
       "tags": [
         "master"
       ]
