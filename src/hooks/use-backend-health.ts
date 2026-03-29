@@ -62,21 +62,19 @@ export function useBackendHealth(): {
     };
   }, [check, status]);
 
-  // Listen for fetch failures globally as a hint to re-check
+  // Only listen for browser-level connectivity changes, not individual fetch failures.
+  // The "offline" event means the browser lost network entirely — re-check backend.
+  // Failures from third-party services (e.g. image CDN) should NOT trigger offline state.
   useEffect(() => {
-    function handleOffline() {
-      setStatus("offline");
-      void check();
-    }
-    function handleOnline() {
+    function handleConnectivityChange() {
       void check();
     }
 
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleConnectivityChange);
+    window.addEventListener("online", handleConnectivityChange);
     return () => {
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleConnectivityChange);
+      window.removeEventListener("online", handleConnectivityChange);
     };
   }, [check]);
 
