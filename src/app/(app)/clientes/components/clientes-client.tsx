@@ -25,19 +25,21 @@ function ClientesPageContent() {
   return (
     <div className="space-y-6">
       {ws.ConfirmDialog}
-      <NovoClienteWizard
-        open={ws.wizard.isOpen}
-        onClose={ws.wizard.close}
-        onDone={async (created, opts) => {
-          await ws.load();
-          if (created && opts?.openSale) {
-            ws.wizard.close();
-            ws.router.push(
-              `/vendas/nova?clienteId=${encodeURIComponent(created.id)}&prefill=1`,
-            );
-          }
-        }}
-      />
+      {ws.wizard.isOpen ? (
+        <NovoClienteWizard
+          open
+          onClose={ws.wizard.close}
+          onDone={async (created, opts) => {
+            await ws.load();
+            if (created && opts?.openSale) {
+              ws.wizard.close();
+              ws.router.push(
+                `/vendas/nova?clienteId=${encodeURIComponent(created.id)}&prefill=1`,
+              );
+            }
+          }}
+        />
+      ) : null}
 
       <div className="flex items-center justify-between">
         <div>
