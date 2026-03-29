@@ -8,3 +8,4 @@ export * from './venda';
 export * from './tenant';
 export * from './lead-b2b';
 export * from './financial';
+export * from './whatsapp';

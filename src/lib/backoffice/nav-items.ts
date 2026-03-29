@@ -7,6 +7,7 @@ import {
   Globe,
   LayoutDashboard,
   LineChart,
+  MessageSquare,
   Search,
   Settings,
   Shield,
@@ -69,6 +70,12 @@ export const backofficeNavGroups: BackofficeNavGroup[] = [
       { href: "/admin/seguranca", label: "Segurança", icon: ShieldCheck },
       { href: "/admin/compliance", label: "Compliance LGPD", icon: Shield },
       { href: "/admin/audit-log", label: "Audit Log", icon: FileText },
+    ],
+  },
+  {
+    title: "Comunicação",
+    items: [
+      { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageSquare },
     ],
   },
   {
