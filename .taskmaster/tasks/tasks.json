@@ -9445,12 +9445,12 @@
         "description": "O backend tem 38 endpoints em /api/v1/financial/* (accounts, ledgers, ledger-entries, transactions, reports, monitoring) sem nenhuma UI.",
         "details": "Módulo completo de contabilidade: contas contábeis, livros razão, lançamentos, transações com reversão, relatórios (balanço, fluxo de caixa, DRE, ROI, extrato), exportação Excel/PDF, e monitoramento (transações suspeitas, padrões incomuns, alta frequência). Criar: src/lib/api/financial.ts, páginas em /gerencial/contabilidade/*. NOTA: Este é um módulo grande — avaliar se será implementado agora ou em fase futura.",
         "testStrategy": "CRUD de contas e transações funciona. Relatórios renderizam. Exportação gera arquivo.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 9,
         "subtasks": [],
-        "updatedAt": "2026-03-29T03:51:39.727Z"
+        "updatedAt": "2026-03-29T04:00:27.253Z"
       },
       {
         "id": "203",
@@ -9631,9 +9631,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T04:00:18.653Z",
+      "lastModified": "2026-03-29T04:00:27.253Z",
       "taskCount": 216,
-      "completedCount": 206,
+      "completedCount": 207,
       "tags": [
         "master"
       ]
