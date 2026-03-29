@@ -1,5 +1,6 @@
 import type { Academia, HorarioFuncionamento, Tenant } from "@/lib/types";
 import { ApiRequestError, apiRequest } from "./http";
+import { isTenantContextError } from "@/lib/shared/utils/error-codes";
 import type { AuthUser } from "./auth";
 import { getActiveTenantIdFromSession, getAvailableTenantsFromSession, getPreferredTenantId } from "./session";
 import { buildTenantAccessFromEligibility, normalizeOperationalAccess } from "@/lib/tenant/tenant-operational-access";
@@ -249,20 +250,7 @@ function resolveTenantContextFallbackId(): string | undefined {
 }
 
 function isMissingTenantContextError(error: unknown): boolean {
-  if (!(error instanceof ApiRequestError) || error.status !== 400) {
-    return false;
-  }
-
-  const message = [
-    error.message,
-    error.error,
-    error.responseBody,
-  ]
-    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
-    .join(" ")
-    .toLowerCase();
-
-  return message.includes("x-context-id sem unidade ativa");
+  return isTenantContextError(error);
 }
 
 async function withTenantContextRetry<T>(loader: () => Promise<T>): Promise<T> {

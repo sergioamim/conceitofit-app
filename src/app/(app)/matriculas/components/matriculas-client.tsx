@@ -22,6 +22,7 @@ import {
 } from "@/lib/tenant/comercial/plano-flow";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { isTenantContextErrorMessage } from "@/lib/shared/utils/error-codes";
 import { formatBRL } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { ListErrorState } from "@/components/shared/list-states";
@@ -114,12 +115,7 @@ export function MatriculasClient() {
       setDashboard(snapshot);
     } catch (loadError) {
       const message = normalizeErrorMessage(loadError);
-      const normalizedMessage = message.toLowerCase();
-      const shouldRetryWithTenantSync =
-        normalizedMessage.includes("x-context-id sem unidade ativa") ||
-        normalizedMessage.includes("tenantid diverge da unidade ativa do contexto informado");
-
-      if (!shouldRetryWithTenantSync) {
+      if (!isTenantContextErrorMessage(message)) {
         setDashboard(null);
         setError(message || "Não foi possível carregar os contratos da unidade ativa.");
         setLoading(false);
