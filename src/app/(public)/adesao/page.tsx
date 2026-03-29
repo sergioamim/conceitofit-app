@@ -5,6 +5,7 @@ import {
   listPublicTenantsServer,
 } from "@/lib/public/server-services";
 import { AdesaoLandingContent } from "./adesao-landing-content";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = {
@@ -12,14 +13,6 @@ export const metadata: Metadata = {
   description:
     "Assine um plano da academia com checkout digital, contrato e branding da unidade.",
 };
-
-function AdesaoFallback() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-      Carregando jornada pública...
-    </div>
-  );
-}
 
 function AdesaoError({ message }: { message: string }) {
   return (
@@ -64,7 +57,7 @@ export default async function AdesaoLandingPage({
     typeof params.tenant === "string" ? params.tenant : undefined;
 
   return (
-    <Suspense fallback={<AdesaoFallback />}>
+    <Suspense fallback={<SuspenseFallback variant="page" message="Carregando jornada pública..." />}>
       <AdesaoLandingServer tenantRef={tenantRef} />
     </Suspense>
   );

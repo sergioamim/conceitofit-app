@@ -18,12 +18,11 @@ import { usePublicJourney } from "@/lib/public/use-public-journey";
 import { listPublicTenants } from "@/lib/public/services";
 import { publicTrialFormSchema } from "@/lib/forms/public-journey-schemas";
 import type { Tenant } from "@/lib/types";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 function PublicJourneyFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-      Carregando jornada pública...
-    </div>
+    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
   );
 }
 
@@ -65,9 +64,7 @@ function TrialPageContent() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Carregando jornada pública...
-      </div>
+      <SuspenseFallback variant="page" message="Carregando jornada pública..." />
     );
   }
 

@@ -17,12 +17,11 @@ import { usePublicJourney } from "@/lib/public/use-public-journey";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatCurrency } from "@/lib/shared/formatters";
 import type { Tenant } from "@/lib/types";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 function PublicJourneyFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-      Carregando jornada pública...
-    </div>
+    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
   );
 }
 
@@ -86,9 +85,7 @@ function PendenciasPublicasPageContent() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Carregando jornada pública...
-      </div>
+      <SuspenseFallback variant="page" message="Carregando jornada pública..." />
     );
   }
 

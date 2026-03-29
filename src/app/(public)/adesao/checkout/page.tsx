@@ -22,6 +22,7 @@ import { usePublicJourney } from "@/lib/public/use-public-journey";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatCurrency } from "@/lib/shared/formatters";
 import type { Tenant, TipoFormaPagamento } from "@/lib/types";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 type CheckoutFormValues = {
   planId: string;
@@ -35,9 +36,7 @@ type CheckoutFormValues = {
 
 function PublicJourneyFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-      Carregando jornada pública...
-    </div>
+    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
   );
 }
 
@@ -100,9 +99,7 @@ function CheckoutPublicoPageContent() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Carregando jornada pública...
-      </div>
+      <SuspenseFallback variant="page" message="Carregando jornada pública..." />
     );
   }
 

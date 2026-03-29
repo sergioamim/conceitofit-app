@@ -4,6 +4,7 @@ import { serverFetch } from "@/lib/shared/server-fetch";
 import { logger } from "@/lib/shared/logger";
 import type { ContaBancaria } from "@/lib/types";
 import { ContasBancariasContent } from "./contas-bancarias-content";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 async function getTenantData(): Promise<{ id: string; name: string }> {
   const jar = await cookies();
@@ -41,9 +42,7 @@ export default function ContasBancariasPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
-          Carregando contas bancárias...
-        </div>
+        <SuspenseFallback variant="section" />
       }
     >
       <Loader />
