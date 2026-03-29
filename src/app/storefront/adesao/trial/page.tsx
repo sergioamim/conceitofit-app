@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 function TrialRedirect() {
   const searchParams = useSearchParams();
@@ -13,7 +14,7 @@ function TrialRedirect() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
       Redirecionando para aula experimental...
     </div>
   );
@@ -23,7 +24,7 @@ export default function StorefrontTrialPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+        <SuspenseFallback variant="page" message="Carregando jornada pública..." />
           Carregando...
         </div>
       }

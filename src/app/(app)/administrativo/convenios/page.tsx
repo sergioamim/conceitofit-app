@@ -4,6 +4,7 @@ import { serverFetch } from "@/lib/shared/server-fetch";
 import { logger } from "@/lib/shared/logger";
 import type { Convenio, Plano } from "@/lib/types";
 import { ConveniosContent } from "./convenios-content";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 async function getActiveTenantId(): Promise<string | undefined> {
   const jar = await cookies();
@@ -50,9 +51,7 @@ export default function ConveniosPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
-          Carregando convênios...
-        </div>
+        <SuspenseFallback variant="section" />
       }
     >
       <Loader />

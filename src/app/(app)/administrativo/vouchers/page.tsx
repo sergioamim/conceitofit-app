@@ -4,6 +4,7 @@ import { serverFetch } from "@/lib/shared/server-fetch";
 import { logger } from "@/lib/shared/logger";
 import type { Voucher } from "@/lib/types";
 import { VouchersContent } from "./vouchers-content";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 async function getActiveTenantId(): Promise<string | undefined> {
   const jar = await cookies();
@@ -53,9 +54,7 @@ export default function VouchersPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
-          Carregando vouchers...
-        </div>
+        <SuspenseFallback variant="section" />
       }
     >
       <Loader />

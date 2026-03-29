@@ -23,6 +23,7 @@ import { publicSignupFormSchema } from "@/lib/forms/public-journey-schemas";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
 import { formatCurrency } from "@/lib/shared/formatters";
 import type { Sexo, Tenant } from "@/lib/types";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 const DEFAULT_SIGNUP: PublicSignupDraft = {
   nome: "",
@@ -37,9 +38,7 @@ const DEFAULT_SIGNUP: PublicSignupDraft = {
 
 function PublicJourneyFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-      Carregando jornada pública...
-    </div>
+    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
   );
 }
 
@@ -53,9 +52,7 @@ function CadastroPublicoPageContent() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Carregando jornada pública...
-      </div>
+      <SuspenseFallback variant="page" message="Carregando jornada pública..." />
     );
   }
 

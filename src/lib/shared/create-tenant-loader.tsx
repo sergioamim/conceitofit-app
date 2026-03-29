@@ -1,6 +1,7 @@
 import { Suspense, type ComponentType } from "react";
 import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { logger } from "@/lib/shared/logger";
 
 async function getActiveTenantId(): Promise<string | undefined> {
@@ -8,11 +9,7 @@ async function getActiveTenantId(): Promise<string | undefined> {
   return jar.get("academia-active-tenant-id")?.value;
 }
 
-const DEFAULT_FALLBACK = (
-  <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
-    Carregando...
-  </div>
-);
+const DEFAULT_FALLBACK = <SuspenseFallback variant="section" />;
 
 type TenantLoaderOptions<T> = {
   url: string;
@@ -62,11 +59,7 @@ export function createTenantLoader<T>(
   } = options;
 
   const fallbackNode = fallbackMessage
-    ? (
-        <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
-          {fallbackMessage}
-        </div>
-      )
+    ? <SuspenseFallback variant="section" message={fallbackMessage} />
     : DEFAULT_FALLBACK;
 
   const empty = emptyValue ?? ([] as unknown as T);
