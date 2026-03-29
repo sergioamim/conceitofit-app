@@ -9670,11 +9670,12 @@
         "description": "zodResolver tem type mismatch com CreateUserFormValues. Build falha com TS2786. Investigar incompatibilidade Zod 4 + @hookform/resolvers e corrigir.",
         "details": "Arquivo: src/app/(app)/seguranca/acesso-unidade/page.tsx:67. Erro: Type CreateUserFormValues does not satisfy constraint ZodType. Provável incompatibilidade entre Zod 4.3.6 e @hookform/resolvers/zod. Corrigir tipagem ou atualizar resolver. npm run build deve completar sem type errors.",
         "testStrategy": "npm run build completa com sucesso. Página /seguranca/acesso-unidade funciona normalmente.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:28:35.929Z"
       },
       {
         "id": "220",
@@ -10053,9 +10054,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:28:05.021Z",
+      "lastModified": "2026-03-29T11:28:35.929Z",
       "taskCount": 248,
-      "completedCount": 219,
+      "completedCount": 220,
       "tags": [
         "master"
       ]
