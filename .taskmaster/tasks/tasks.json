@@ -9873,12 +9873,12 @@
         "description": "Criar clients-runtime.ts, enrollments-runtime.ts, payments-runtime.ts. Manter runtime.ts como barrel re-export.",
         "details": "Arquivo: src/lib/tenant/comercial/runtime.ts. Separar por responsabilidade: operações de clientes, matrículas e pagamentos. Re-exportar tudo de runtime.ts para manter imports existentes funcionando.",
         "testStrategy": "Testes existentes passam. Imports existentes funcionam via re-export. Nenhum arquivo > 500 LOC.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 4,
         "subtasks": [],
-        "updatedAt": "2026-03-29T11:43:06.920Z"
+        "updatedAt": "2026-03-29T11:43:23.389Z"
       },
       {
         "id": "235",
@@ -9886,13 +9886,14 @@
         "description": "Testar navegação entre steps, validação por step, draft persistence, submit final.",
         "details": "Criar tests/components/novo-cliente-wizard.test.tsx. Testar happy path (dados válidos em todos os steps → submit). Testar error path (validação falha em cada step). Testar draft persistence (recarregar mantém dados).",
         "testStrategy": "Happy path + error path cobertos. Draft persistence testado.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "230"
         ],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:43:15.927Z"
       },
       {
         "id": "236",
@@ -10068,9 +10069,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:43:06.922Z",
+      "lastModified": "2026-03-29T11:43:23.389Z",
       "taskCount": 248,
-      "completedCount": 233,
+      "completedCount": 234,
       "tags": [
         "master"
       ]
