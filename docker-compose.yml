@@ -3,28 +3,30 @@ version: "3.8"
 # ============================================================================
 # Conceito Fit — Stack Completa
 # ============================================================================
-# Execução única: docker compose up --build
 #
-# Serviços:
-#   - db:         PostgreSQL 16
-#   - minio:      MinIO (Object Storage S3-compatible)
-#   - backend:    Java 21 (Spring Boot) na porta 8080
-#   - frontend:   Next.js 16 na porta 3000
-#   - prometheus:  Métricas (porta 9090)
-#   - grafana:     Dashboards (porta 3000 → mapeada para 3001)
+# USO:
+#   docker compose up --build           → Stack completa (DB + Backend + Frontend + MinIO + Monitoring)
+#   docker compose up frontend          → Só frontend (se backend já roda fora do compose)
+#   docker compose --profile monitoring up  → Inclui Prometheus + Grafana
+#
+# Se o docker-compose do backend (academia-java) já estiver rodando com o DB
+# na porta 5432, pare-o primeiro OU use o profile "no-db":
+#   docker compose --profile no-db up --build
 #
 # Portas expostas:
 #   3000  → Frontend (Next.js)
 #   8080  → Backend (Spring Boot API)
 #   5432  → PostgreSQL
 #   9000  → MinIO API (S3-compatible)
-#   9001  → MinIO Console (UI admin)
-#   9090  → Prometheus
-#   3001  → Grafana
+#   9001  → MinIO Console (conceito-admin / conceito-secret-2024)
+#   9090  → Prometheus  (profile: monitoring)
+#   3001  → Grafana     (profile: monitoring, admin/admin)
 # ============================================================================
 
 services:
   # ── PostgreSQL ──
+  # Compartilha o mesmo volume "conceito_pg_data" que o backend standalone.
+  # Se já houver um container rodando na 5432, pare-o ou use profile no-db.
   db:
     image: postgres:16-alpine
     container_name: conceito-db
@@ -35,7 +37,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - conceito_pg_data:/var/lib/postgresql/data
       - ../academia-java/infra/seed-dev.sql:/docker-entrypoint-initdb.d/99-seed-dev.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user_academia -d academia_db"]
@@ -148,10 +150,11 @@ services:
       SENTRY_AUTH_TOKEN: ""
     restart: unless-stopped
 
-  # ── Prometheus ──
+  # ── Prometheus (profile: monitoring) ──
   prometheus:
     image: prom/prometheus:v2.51.0
     container_name: conceito-prometheus
+    profiles: ["monitoring"]
     depends_on:
       - backend
     ports:
@@ -164,10 +167,11 @@ services:
       - "--storage.tsdb.retention.time=7d"
     restart: unless-stopped
 
-  # ── Grafana ──
+  # ── Grafana (profile: monitoring) ──
   grafana:
     image: grafana/grafana:10.4.1
     container_name: conceito-grafana
+    profiles: ["monitoring"]
     depends_on:
       - prometheus
     ports:
@@ -183,7 +187,11 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  conceito_pg_data:
+    # Volume nomeado para compartilhar entre compose files.
+    # Se o backend standalone já criou dados, este compose reutiliza
+    # ao apontar para o mesmo volume.
+    name: conceito_pg_data
   minio_data:
   prometheus_data:
   grafana_data:
