@@ -1,5 +1,3 @@
-"use client";
-
 import { Dumbbell } from "lucide-react";
 
 export default function MeusTreinosPage() {

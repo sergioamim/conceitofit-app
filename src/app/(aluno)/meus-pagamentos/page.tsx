@@ -1,5 +1,3 @@
-"use client";
-
 import { Wallet } from "lucide-react";
 
 export default function MeusPagamentosPage() {

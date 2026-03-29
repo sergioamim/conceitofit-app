@@ -1,5 +1,3 @@
-"use client";
-
 import { CalendarDays } from "lucide-react";
 
 export default function MinhasAulasPage() {
