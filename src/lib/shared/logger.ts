@@ -4,14 +4,19 @@ type LogLevel = "info" | "warn" | "error";
 
 interface LogMeta {
   module?: string;
+  requestId?: string;
   [key: string]: unknown;
 }
 
 function formatEntry(level: LogLevel, message: string, meta?: LogMeta) {
   const timestamp = new Date().toISOString();
   const module = meta?.module;
-  const prefix = module ? `[${module}]` : "";
-  const { module: _, ...rest } = meta ?? {};
+  const requestId = meta?.requestId;
+  const prefix = [
+    module ? `[${module}]` : "",
+    requestId ? `[req:${requestId}]` : "",
+  ].filter(Boolean).join(" ");
+  const { module: _, requestId: __, ...rest } = meta ?? {};
   const hasExtra = Object.keys(rest).length > 0;
 
   return { timestamp, level, prefix, message, extra: hasExtra ? rest : undefined };
