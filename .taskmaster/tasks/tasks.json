@@ -10405,13 +10405,14 @@
         "description": "JWT tokens armazenados em localStorage são vulneráveis a XSS. httpOnly cookies são mais seguros.",
         "details": "Requer mudança no backend para setar cookies httpOnly no login/refresh. Frontend remove leitura/escrita de localStorage para tokens. Manter localStorage apenas para preferências de UI (tema, tenant preferido). Atualizar seedAuthenticatedSession nos testes E2E.",
         "testStrategy": "Login funciona. Refresh funciona. Tokens não acessíveis via document.cookie ou localStorage. Testes E2E adaptados.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "259"
         ],
         "priority": "medium",
         "complexity": 7,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T22:53:10.312Z"
       },
       {
         "id": "264",
@@ -10470,9 +10471,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T22:51:19.882Z",
+      "lastModified": "2026-03-29T22:53:10.313Z",
       "taskCount": 267,
-      "completedCount": 260,
+      "completedCount": 261,
       "tags": [
         "master"
       ]
