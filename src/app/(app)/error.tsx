@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { ErrorState } from "@/components/shared/error-state";
 
 export default function AppBoundaryError({
@@ -9,6 +11,10 @@ export default function AppBoundaryError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
   return (
     <div className="flex h-full w-full items-center justify-center p-4">
       <div className="w-full max-w-2xl rounded-3xl border border-dashed border-destructive/20 bg-destructive/5 shadow-sm">

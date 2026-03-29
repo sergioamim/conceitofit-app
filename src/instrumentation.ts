@@ -20,6 +20,13 @@ function createExtendPolyfill() {
 export async function register() {
   if (typeof window !== "undefined") return;
 
+  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    const mod = process.env.NEXT_RUNTIME === "edge"
+      ? await import("../sentry.edge.config")
+      : await import("../sentry.server.config");
+    void mod; // trigger side-effects
+  }
+
   try {
     const utilModule = (await import("util")) as {
       _extend?: unknown;
@@ -42,3 +49,5 @@ export async function register() {
     logger.warn("Falha ao aplicar compatibilidade util._extend", { module: "instrumentation", error });
   }
 }
+
+export { captureRequestError as onRequestError } from "@sentry/nextjs";

@@ -7,6 +7,7 @@ import { AppTopbar } from "@/components/layout/app-topbar";
 import { AppContentShell } from "@/components/layout/app-content-shell";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
+import { SentryContextSync } from "@/components/layout/sentry-context-sync";
 import { ImpersonationBanner } from "@/components/backoffice/impersonation-banner";
 import { BackendStatusBanner } from "@/components/layout/backend-status-banner";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,7 @@ function AppShellFrame({
         Saltar para o conteúdo
       </a>
       <TenantThemeSync />
+      <SentryContextSync />
       {mobileMenuOpen ? (
         <button
           type="button"

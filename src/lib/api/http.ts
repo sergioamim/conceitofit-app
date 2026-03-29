@@ -9,6 +9,7 @@ import {
   saveAuthSession,
   setActiveTenantId,
 } from "./session";
+import { captureApiError } from "@/lib/shared/sentry";
 
 export interface ApiErrorPayload {
   timestamp?: string;
@@ -629,7 +630,17 @@ async function performApiRequest<T>(input: {
       fieldErrors: payload?.fieldErrors,
       contextId: response.headers.get("X-Context-Id") ?? headers["X-Context-Id"],
     };
-    throw new ApiRequestError(details);
+    const apiError = new ApiRequestError(details);
+
+    if (response.status >= 500) {
+      captureApiError(apiError, {
+        httpStatus: response.status,
+        path: input.path,
+        method,
+      });
+    }
+
+    throw apiError;
   }
 
   const { parsedBody } = await readResponseBody(response);
