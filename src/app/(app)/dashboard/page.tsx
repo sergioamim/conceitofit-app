@@ -5,11 +5,7 @@ import { DemoBanner } from "@/components/shared/demo-banner";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import type { DashboardData } from "@/lib/types";
-
-function todayIso() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
+import { getBusinessTodayIso } from "@/lib/shared/business-date";
 
 async function getActiveTenantId(): Promise<string | undefined> {
   const jar = await cookies();
@@ -28,7 +24,7 @@ async function fetchDashboard(tenantId: string, referenceDate: string): Promise<
 }
 
 async function DashboardLoader() {
-  const date = todayIso();
+  const date = getBusinessTodayIso();
   const tenantId = await getActiveTenantId();
   const data = tenantId ? await fetchDashboard(tenantId, date) : null;
 
@@ -38,7 +34,7 @@ async function DashboardLoader() {
 export default function DashboardPage() {
   return (
     <>
-      <Suspense>
+      <Suspense fallback={null}>
         <DemoBanner />
       </Suspense>
       <Suspense fallback={<DashboardSkeleton />}>
