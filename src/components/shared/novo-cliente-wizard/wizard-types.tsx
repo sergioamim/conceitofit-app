@@ -75,6 +75,13 @@ export const clienteWizardSchema = z.object({
     dataInicio: z.string().optional(),
     formaPagamento: z.string().optional(),
     desconto: z.string().optional(),
+    diaCobranca: z.string().optional(),
+    cupomCodigo: z.string().optional(),
+    convenioId: z.string().optional(),
+    cartaoNumero: z.string().optional(),
+    cartaoValidade: z.string().optional(),
+    cartaoCvv: z.string().optional(),
+    cartaoCpfTitular: z.string().optional(),
   }),
 });
 

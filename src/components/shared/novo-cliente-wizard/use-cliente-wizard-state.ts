@@ -8,8 +8,10 @@ import {
   createAlunoComMatriculaService,
   createAlunoService,
 } from "@/lib/tenant/comercial/runtime";
+import { createCartaoClienteApi } from "@/lib/api/cartoes";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Aluno, Sexo, TipoFormaPagamento } from "@/lib/types";
+import { logger } from "@/lib/shared/logger";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
 
@@ -36,6 +38,13 @@ const DEFAULT_VALUES: ClienteWizardForm = {
     dataInicio: getBusinessTodayIso(),
     formaPagamento: "",
     desconto: "",
+    diaCobranca: "",
+    cupomCodigo: "",
+    convenioId: "",
+    cartaoNumero: "",
+    cartaoValidade: "",
+    cartaoCvv: "",
+    cartaoCpfTitular: "",
   },
 };
 
@@ -129,9 +138,34 @@ export function useClienteWizardState(callbacks: {
             planoId: dryRun?.planoContexto.planoId || (vals.selectedPlano as string),
             dataInicio: dryRun?.planoContexto.dataInicio || (vals.pagamento.dataInicio as string),
             formaPagamento: vals.pagamento.formaPagamento as TipoFormaPagamento,
-            desconto: dryRun?.descontoTotal ?? (parseFloat(vals.pagamento.desconto || "0") || 0),
+            desconto: dryRun?.descontoTotal ?? 0,
           },
         });
+
+        // Salvar cartão de crédito se recorrente e dados preenchidos
+        if (
+          vals.pagamento.formaPagamento === "RECORRENTE" &&
+          vals.pagamento.cartaoNumero?.trim() &&
+          resp.aluno?.id
+        ) {
+          try {
+            await createCartaoClienteApi({
+              tenantId,
+              alunoId: resp.aluno.id,
+              data: {
+                bandeiraId: "",
+                titular: vals.nome,
+                cpfTitular: vals.pagamento.cartaoCpfTitular || vals.cpf || undefined,
+                numeroCartao: vals.pagamento.cartaoNumero,
+                cvv: vals.pagamento.cartaoCvv || undefined,
+                validade: vals.pagamento.cartaoValidade || undefined,
+              },
+            });
+          } catch (cardError) {
+            logger.error("Falha ao salvar cartao do cliente", { module: "wizard", error: cardError });
+          }
+        }
+
         setResult(resp);
         setStep(4);
         draft.clearDraft();
