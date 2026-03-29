@@ -9628,19 +9628,19 @@
         "description": "src/lib/tenant/comercial/runtime.ts tem 1500+ LOC com todas as operações de clientes, matrículas e pagamentos num só arquivo.",
         "details": "Splitar runtime.ts em arquivos por domínio: 1) src/lib/tenant/comercial/clients-runtime.ts - operações de listagem, busca, suspensão de clientes. 2) src/lib/tenant/comercial/enrollments-runtime.ts - operações de matrícula. 3) src/lib/tenant/comercial/payments-runtime.ts - operações de pagamento e recebimento. 4) src/lib/tenant/comercial/runtime.ts - re-exportar tudo para manter compatibilidade. Manter mesma interface pública (exports) para não quebrar consumers.",
         "testStrategy": "Testes existentes continuam passando. Imports existentes continuam funcionando via re-export. Nenhum arquivo excede 500 LOC.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 4,
         "subtasks": [],
-        "updatedAt": "2026-03-29T04:20:37.817Z"
+        "updatedAt": "2026-03-29T04:25:18.925Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T04:24:27.960Z",
+      "lastModified": "2026-03-29T04:25:18.925Z",
       "taskCount": 216,
-      "completedCount": 214,
+      "completedCount": 215,
       "tags": [
         "master"
       ]
