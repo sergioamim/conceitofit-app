@@ -10413,14 +10413,15 @@
         "description": "Sentry captura erros mas não há métricas de uso: páginas mais acessadas, features mais usadas, tempo de resposta percebido, churn de sessão.",
         "details": "Opções: Sentry performance monitoring, PostHog, ou Plausible analytics. Implementar tracking de eventos core: login, criar prospect, criar matrícula, receber pagamento, concluir venda. Dashboard interno (admin) com métricas de adoção por academia.",
         "testStrategy": "Eventos de negócio registrados. Dashboard mostra dados reais de uso.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "251",
           "252"
         ],
         "priority": "low",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T22:57:48.882Z"
       },
       {
         "id": "265",
@@ -10464,9 +10465,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T22:39:00.859Z",
+      "lastModified": "2026-03-29T22:57:48.882Z",
       "taskCount": 267,
-      "completedCount": 255,
+      "completedCount": 256,
       "tags": [
         "master"
       ]
