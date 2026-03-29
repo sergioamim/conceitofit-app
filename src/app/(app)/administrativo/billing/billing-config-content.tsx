@@ -37,7 +37,7 @@ const AMBIENTE_OPTIONS: { value: "SANDBOX" | "PRODUCAO"; label: string }[] = [
 
 const billingFormSchema = z.object({
   provedorAtivo: z.enum(["PAGARME", "STRIPE", "MERCADO_PAGO", "CIELO_ECOMMERCE", "ASAAS", "OUTRO"], {
-    required_error: "Selecione o provedor.",
+    message: "Selecione o provedor.",
   }),
   chaveApi: requiredTrimmedString("Informe a chave da API."),
   ambiente: z.enum(["SANDBOX", "PRODUCAO"]).default("SANDBOX"),
