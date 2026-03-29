@@ -10203,14 +10203,14 @@
         "description": "Workspace de vendas concentra carrinho, plano, cupom, convênio, pagamento e checkout em um hook monolítico.",
         "details": "Já existe useCommercialFlow separado. Avaliar o que resta no workspace de vendas e extrair hooks menores se aplicável.",
         "testStrategy": "Fluxo de vendas funciona identicamente.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "252"
         ],
         "priority": "low",
         "complexity": 4,
         "subtasks": [],
-        "updatedAt": "2026-03-29T23:09:31.969Z"
+        "updatedAt": "2026-03-29T23:10:18.880Z"
       },
       {
         "id": "258",
@@ -10522,9 +10522,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T23:09:41.027Z",
+      "lastModified": "2026-03-29T23:10:18.880Z",
       "taskCount": 267,
-      "completedCount": 260,
+      "completedCount": 261,
       "tags": [
         "master"
       ]
