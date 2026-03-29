@@ -43,7 +43,8 @@ export function useFormDraft<T extends FieldValues>({ key, form, expirationHours
   useEffect(() => {
     const subscription = form.watch(() => {
       if (restoringRef.current) return;
-      
+      if (!form.formState.isDirty) return;
+
       try {
         const payload = {
           data: form.getValues(),
@@ -55,7 +56,7 @@ export function useFormDraft<T extends FieldValues>({ key, form, expirationHours
         logger.warn("Could not save form draft", { module: "form-draft", error: e });
       }
     });
-    
+
     return () => subscription.unsubscribe();
   }, [form, key]);
 

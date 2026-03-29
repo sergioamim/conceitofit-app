@@ -105,6 +105,7 @@ export function useClienteWizardState(callbacks: {
     reset();
     setResult(null);
     clearCart();
+    draft.clearDraft();
   }
 
   async function handleNext() {
