@@ -65,6 +65,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
   const [acrescimoGeral, setAcrescimoGeral] = useState("0");
   const [manualDiscount, setManualDiscount] = useState(0);
   const [motivoDesconto, setMotivoDesconto] = useState("");
+  const [isentarMatricula, setIsentarMatricula] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const loadAlunos = useCallback(async () => {
@@ -134,8 +135,9 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
       couponPercent: cupomPercent,
       convenio: selectedConvenio ?? undefined,
       renovacaoAutomatica: renovacaoAutomaticaPlano,
+      isentarMatricula,
     });
-  }, [selectedPlano, dataInicioPlano, parcelasAnuidade, manualDiscount, motivoDesconto, cupomPercent, selectedConvenio, renovacaoAutomaticaPlano]);
+  }, [selectedPlano, dataInicioPlano, parcelasAnuidade, manualDiscount, motivoDesconto, cupomPercent, selectedConvenio, renovacaoAutomaticaPlano, isentarMatricula]);
 
   // Sync cart items with dry-run when it's a plan sale
   useEffect(() => {
@@ -219,6 +221,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     setParcelasAnuidade("1");
     setConvenioPlanoId("__SEM_CONVENIO__");
     setRenovacaoAutomaticaPlano(false);
+    setIsentarMatricula(false);
     setCupomCode("");
     setCupomAppliedCode("");
     setCupomPercent(0);
@@ -346,6 +349,8 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     setManualDiscount,
     motivoDesconto,
     setMotivoDesconto,
+    isentarMatricula,
+    setIsentarMatricula,
     subtotal,
     descontoTotal,
     total,

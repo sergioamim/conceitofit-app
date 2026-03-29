@@ -76,6 +76,16 @@ export function Step3Pagamento({
           />
         </div>
       </div>
+      {selectedPlano && Number(selectedPlano.valorMatricula ?? 0) > 0 && (
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={commercial.isentarMatricula}
+            onChange={(e) => commercial.setIsentarMatricula(e.target.checked)}
+          />
+          Isentar cobrança de matrícula ({formatBRL(Number(selectedPlano.valorMatricula ?? 0))})
+        </label>
+      )}
       {dryRun && (
         <div className="rounded-xl border border-border bg-card p-3 space-y-1.5 text-sm">
           <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatBRL(dryRun.subtotal)}</span></div>

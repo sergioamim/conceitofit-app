@@ -162,6 +162,8 @@ export function useClienteWizardState(callbacks: {
       }
       callbacks.onClose();
       fullReset();
+    } catch {
+      window.alert("Não foi possível criar o pré-cadastro. Verifique os dados e tente novamente.");
     } finally {
       setLoading(false);
     }

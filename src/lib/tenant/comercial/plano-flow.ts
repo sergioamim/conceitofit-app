@@ -46,6 +46,7 @@ export interface PlanoDryRunParams {
   couponPercent?: number;
   convenio?: Convenio;
   renovacaoAutomatica: boolean;
+  isentarMatricula?: boolean;
 }
 
 export const STATUS_CONTRATO_LABEL: Record<StatusContratoPlano, string> = {
@@ -67,7 +68,7 @@ function formatBRL(value: number) {
   return safe.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export function buildPlanoVendaItems(plano: Plano, parcelasAnuidade: number): PlanoVendaItemDraft[] {
+export function buildPlanoVendaItems(plano: Plano, parcelasAnuidade: number, options?: { isentarMatricula?: boolean }): PlanoVendaItemDraft[] {
   const items: PlanoVendaItemDraft[] = [
     {
       tipo: "PLANO",
@@ -79,7 +80,7 @@ export function buildPlanoVendaItems(plano: Plano, parcelasAnuidade: number): Pl
     },
   ];
 
-  if (Number(plano.valorMatricula ?? 0) > 0) {
+  if (Number(plano.valorMatricula ?? 0) > 0 && !options?.isentarMatricula) {
     items.push({
       tipo: "PLANO",
       referenciaId: `${plano.id}:matricula`,
@@ -123,10 +124,11 @@ export function planoDryRun(params: PlanoDryRunParams): PlanoDryRunResult {
     couponPercent = 0,
     convenio,
     renovacaoAutomatica,
+    isentarMatricula = false,
   } = params;
 
   // 1. Gerar itens base (Plano + Matrícula + Anuidade)
-  const items = buildPlanoVendaItems(plano, parcelasAnuidade);
+  const items = buildPlanoVendaItems(plano, parcelasAnuidade, { isentarMatricula });
   const subtotal = items.reduce((sum, item) => sum + item.valorUnitario * item.quantidade, 0);
 
   // 2. Calcular descontos
