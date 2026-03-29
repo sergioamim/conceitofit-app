@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { logger } from "@/lib/shared/logger";
 import { useTableSearchParams } from "@/hooks/use-table-search-params";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { updateAlunoService } from "@/lib/tenant/comercial/runtime";
+import { useUpdateCliente } from "@/lib/query/use-clientes";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useDialogState } from "@/hooks/use-dialog-state";
@@ -29,8 +29,8 @@ export function useClientesWorkspace() {
   const wizard = useDialogState();
   const resumoDialog = useDialogState();
   const [clienteResumo, setClienteResumo] = useState<Aluno | null>(null);
-  const [liberandoSuspensao, setLiberandoSuspensao] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const updateMutation = useUpdateCliente(tenantId);
 
   const data = useClientesData({
     tenantId,
@@ -126,11 +126,10 @@ export function useClientesWorkspace() {
 
   // Actions
   const handleLiberarSuspensao = useCallback(() => {
-    if (!clienteResumo || liberandoSuspensao) return;
+    if (!clienteResumo || updateMutation.isPending) return;
     confirm(`Confirmar liberação da suspensão de ${clienteResumo.nome}?`, async () => {
       try {
-        setLiberandoSuspensao(true);
-        await updateAlunoService({
+        await updateMutation.mutateAsync({
           tenantId: clienteResumo.tenantId,
           id: clienteResumo.id,
           data: { status: "ATIVO", suspensao: undefined },
@@ -138,15 +137,12 @@ export function useClientesWorkspace() {
         setClienteResumo((prev) =>
           prev ? { ...prev, status: "ATIVO", suspensao: undefined } : prev,
         );
-        await data.load();
       } catch (error) {
         logger.error("Falha ao liberar suspensão", { module: "clientes", error });
         window.alert("Não foi possível liberar a suspensão no momento.");
-      } finally {
-        setLiberandoSuspensao(false);
       }
     });
-  }, [clienteResumo, confirm, data, liberandoSuspensao]);
+  }, [clienteResumo, confirm, updateMutation]);
 
   const handleVerPerfil = useCallback(() => {
     if (!clienteResumoBaseHref) return;
@@ -183,7 +179,7 @@ export function useClientesWorkspace() {
     setClienteResumo,
     clienteResumoPlano,
     clienteResumoBaseHref,
-    liberandoSuspensao,
+    liberandoSuspensao: updateMutation.isPending,
     ConfirmDialog,
 
     // Actions
