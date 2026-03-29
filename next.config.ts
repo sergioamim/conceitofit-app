@@ -7,13 +7,18 @@ const withBundleAnalyzer =
 
 const backendProxyTarget = process.env.BACKEND_PROXY_TARGET ?? "http://localhost:8080";
 const backendProxyMaxBodySize = Number.parseInt(process.env.BACKEND_PROXY_MAX_BODY_SIZE ?? "150", 10) || 150;
+const isDev = process.env.NODE_ENV === "development";
+
+const scriptSrc = isDev
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'";
 
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      scriptSrc,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
