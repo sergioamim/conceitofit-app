@@ -9444,11 +9444,12 @@
         "description": "O backend tem 38 endpoints em /api/v1/financial/* (accounts, ledgers, ledger-entries, transactions, reports, monitoring) sem nenhuma UI.",
         "details": "Módulo completo de contabilidade: contas contábeis, livros razão, lançamentos, transações com reversão, relatórios (balanço, fluxo de caixa, DRE, ROI, extrato), exportação Excel/PDF, e monitoramento (transações suspeitas, padrões incomuns, alta frequência). Criar: src/lib/api/financial.ts, páginas em /gerencial/contabilidade/*. NOTA: Este é um módulo grande — avaliar se será implementado agora ou em fase futura.",
         "testStrategy": "CRUD de contas e transações funciona. Relatórios renderizam. Exportação gera arquivo.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "low",
         "complexity": 9,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T03:51:39.727Z"
       },
       {
         "id": "203",
@@ -9482,11 +9483,12 @@
         "description": "Arquivo src/app/(app)/alunos/[id]/page.tsx usa params: { id: string } (sintaxe antiga). Next.js 16 espera params: Promise<{ id: string }>. Inconsistente com outras páginas.",
         "details": "Auditar todas as dynamic routes do projeto e garantir que usam a nova sintaxe params: Promise<{...}> do Next.js 16. Arquivos conhecidos: alunos/[id]/page.tsx. Verificar também: clientes/[id], funcionarios/[id], planos/[id], treinos/[id], prospects/[id], storefront routes.",
         "testStrategy": "Build sem deprecation warnings. Todas as rotas dinâmicas funcionam corretamente.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T03:53:10.159Z"
       },
       {
         "id": "206",
@@ -9506,11 +9508,12 @@
         "description": "Mais de 50 arquivos têm catch {} vazio ou catch { /* fallback */ } que engole erros silenciosamente, dificultando debugging em produção.",
         "details": "Buscar por catch blocks vazios em src/app/ e src/components/. Usar o logger existente em src/lib/shared/logger.ts para registrar erros. Padrão: catch (error) { logger.warn(\"[NomePagina] SSR fetch failed, falling back to client\", { error }); }. Não alterar lógica de fallback, apenas adicionar visibilidade.",
         "testStrategy": "Erros de SSR aparecem nos logs. Comportamento de fallback inalterado.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "medium",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T03:52:50.416Z"
       },
       {
         "id": "208",
@@ -9625,9 +9628,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T03:51:27.933Z",
+      "lastModified": "2026-03-29T03:53:10.160Z",
       "taskCount": 216,
-      "completedCount": 201,
+      "completedCount": 202,
       "tags": [
         "master"
       ]
