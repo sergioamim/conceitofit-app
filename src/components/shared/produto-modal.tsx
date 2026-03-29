@@ -1,32 +1,37 @@
 "use client";
 
 import { useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
 import type { Produto } from "@/lib/types";
+import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type ProdutoFormValues = {
-  nome: string;
-  sku: string;
-  codigoBarras: string;
-  categoria: string;
-  marca: string;
-  unidadeMedida: Produto["unidadeMedida"];
-  descricao: string;
-  valorVenda: string;
-  custo: string;
-  comissaoPercentual: string;
-  aliquotaImpostoPercentual: string;
-  controlaEstoque: boolean;
-  estoqueAtual: string;
-  estoqueMinimo: string;
-  permiteDesconto: boolean;
-  permiteVoucher: boolean;
-  ativo: boolean;
-};
+const produtoFormSchema = z.object({
+  nome: requiredTrimmedString("Informe o nome do produto."),
+  sku: z.string(),
+  codigoBarras: z.string(),
+  categoria: z.string(),
+  marca: z.string(),
+  unidadeMedida: z.enum(["UN", "KG", "G", "L", "ML", "CX"]),
+  descricao: z.string(),
+  valorVenda: z.string(),
+  custo: z.string(),
+  comissaoPercentual: z.string(),
+  aliquotaImpostoPercentual: z.string(),
+  controlaEstoque: z.boolean(),
+  estoqueAtual: z.string(),
+  estoqueMinimo: z.string(),
+  permiteDesconto: z.boolean(),
+  permiteVoucher: z.boolean(),
+  ativo: z.boolean(),
+});
+
+type ProdutoFormValues = z.infer<typeof produtoFormSchema>;
 
 const DEFAULT_VALUES: ProdutoFormValues = {
   nome: "",
@@ -90,6 +95,7 @@ export function ProdutoModal({
     setValue,
     formState: { errors },
   } = useForm<ProdutoFormValues>({
+    resolver: zodResolver(produtoFormSchema),
     defaultValues: toFormValues(initial),
   });
   const controlaEstoque = useWatch({ control, name: "controlaEstoque" });
@@ -154,7 +160,7 @@ export function ProdutoModal({
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
                 <Input
-                  {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome do produto." })}
+                  {...register("nome")}
                   className="border-border bg-secondary"
                 />
                 {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
@@ -162,7 +168,7 @@ export function ProdutoModal({
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">SKU *</label>
                 <Input
-                  {...register("sku", { validate: (value) => value.trim().length > 0 || "Informe o SKU do produto." })}
+                  {...register("sku")}
                   className="border-border bg-secondary"
                 />
                 {errors.sku ? <p className="text-xs text-gym-danger">{errors.sku.message}</p> : null}

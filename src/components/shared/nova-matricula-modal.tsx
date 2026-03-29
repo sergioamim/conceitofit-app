@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
 import { getBusinessTodayIso } from "@/lib/business-date";
+import { requiredTrimmedString, optionalTrimmedString } from "@/lib/forms/zod-helpers";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
 import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
@@ -14,7 +16,23 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
-import { novaMatriculaSchema, type NovaMatriculaFormValues } from "./nova-matricula-schema";
+
+const novaMatriculaSchema = z.object({
+  alunoId: requiredTrimmedString("Selecione o cliente."),
+  planoId: requiredTrimmedString("Selecione o plano."),
+  dataInicio: requiredTrimmedString("Informe a data de início."),
+  formaPagamento: z.enum(["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "BOLETO", "RECORRENTE"], {
+    errorMap: () => ({ message: "Selecione a forma de pagamento." }),
+  }).or(z.literal("")),
+  desconto: z.string(),
+  motivoDesconto: optionalTrimmedString().default(""),
+  renovacao: z.boolean(),
+  convenioId: z.string(),
+  parcelasAnuidade: z.string(),
+  pagamentoPendente: z.boolean(),
+});
+
+type NovaMatriculaFormValues = z.infer<typeof novaMatriculaSchema>;
 
 export function NovaMatriculaModal({
   open,
@@ -59,7 +77,7 @@ export function NovaMatriculaModal({
       alunoId: prefillClienteId ?? "",
       planoId: "",
       dataInicio: getBusinessTodayIso(),
-      formaPagamento: undefined,
+      formaPagamento: "",
       desconto: "0",
       motivoDesconto: "",
       renovacao: false,
@@ -93,7 +111,7 @@ export function NovaMatriculaModal({
       alunoId: prefillClienteId ?? "",
       planoId: "",
       dataInicio: getBusinessTodayIso(),
-      formaPagamento: undefined,
+      formaPagamento: "",
       desconto: "0",
       motivoDesconto: "",
       renovacao: false,
@@ -106,7 +124,7 @@ export function NovaMatriculaModal({
   }
 
   async function onSubmit(values: NovaMatriculaFormValues) {
-    if (!tenantId || !dryRun) return;
+    if (!tenantId || !values.alunoId || !values.planoId || !values.dataInicio || !values.formaPagamento || !dryRun) return;
     
     if (values.pagamentoPendente) {
       const ok = confirm("Confirmar venda com pagamento pendente?");

@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 import type {
   ContaPagar,
   FormaPagamento,
+  TipoFormaPagamento,
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
-import { pagarContaSchema, type PagarContaFormValues } from "./pagar-conta-schema";
+import { requiredTrimmedString, optionalTrimmedString } from "@/lib/forms/zod-helpers";
 
 function contaTotal(conta: ContaPagar) {
   return Math.max(
@@ -34,7 +36,21 @@ function contaTotal(conta: ContaPagar) {
   );
 }
 
-export type PagamentoFormState = PagarContaFormValues;
+const pagamentoFormSchema = z.object({
+  dataPagamento: requiredTrimmedString("Informe a data de pagamento."),
+  formaPagamento: requiredTrimmedString("Selecione a forma de pagamento."),
+  valorPago: z.string(),
+  observacoes: optionalTrimmedString(),
+});
+
+type PagamentoFormValues = z.infer<typeof pagamentoFormSchema>;
+
+export type PagamentoFormState = {
+  dataPagamento: string;
+  formaPagamento: TipoFormaPagamento;
+  valorPago: string;
+  observacoes: string;
+};
 
 type PagarContaModalProps = {
   open: boolean;
@@ -45,6 +61,15 @@ type PagarContaModalProps = {
   onSubmit: (contaId: string, form: PagamentoFormState) => Promise<void>;
 };
 
+function defaultValues(todayISO: string): PagamentoFormValues {
+  return {
+    dataPagamento: todayISO,
+    formaPagamento: "PIX",
+    valorPago: "",
+    observacoes: "",
+  };
+}
+
 export function PagarContaModal({
   open,
   onOpenChange,
@@ -53,28 +78,30 @@ export function PagarContaModal({
   todayISO,
   onSubmit,
 }: PagarContaModalProps) {
-  const { register, control, handleSubmit, reset } = useForm<PagarContaFormValues>({
-    resolver: zodResolver(pagarContaSchema),
-    defaultValues: {
-      dataPagamento: todayISO,
-      formaPagamento: "PIX",
-      valorPago: "",
-      observacoes: "",
-    },
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<PagamentoFormValues>({
+    resolver: zodResolver(pagamentoFormSchema),
+    defaultValues: defaultValues(todayISO),
   });
 
+  // Reset form when a new conta is selected
   useEffect(() => {
-    reset({
-      dataPagamento: todayISO,
-      formaPagamento: "PIX",
-      valorPago: "",
-      observacoes: "",
-    });
-  }, [conta, todayISO, reset]);
+    reset(defaultValues(todayISO));
+  }, [conta, reset, todayISO]);
 
-  async function onFormSubmit(values: PagarContaFormValues) {
+  function onFormSubmit(values: PagamentoFormValues) {
     if (!conta) return;
-    await onSubmit(conta.id, values);
+    onSubmit(conta.id, {
+      dataPagamento: values.dataPagamento,
+      formaPagamento: values.formaPagamento as TipoFormaPagamento,
+      valorPago: values.valorPago,
+      observacoes: values.observacoes ?? "",
+    });
   }
 
   return (
@@ -97,6 +124,9 @@ export function PagarContaModal({
                 {...register("dataPagamento")}
                 className="bg-secondary border-border"
               />
+              {errors.dataPagamento ? (
+                <p className="text-xs text-gym-danger">{errors.dataPagamento.message}</p>
+              ) : null}
             </div>
 
             <div className="space-y-1">
@@ -107,7 +137,10 @@ export function PagarContaModal({
                 control={control}
                 name="formaPagamento"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
                     <SelectTrigger className="w-full bg-secondary border-border">
                       <SelectValue />
                     </SelectTrigger>
@@ -121,6 +154,9 @@ export function PagarContaModal({
                   </Select>
                 )}
               />
+              {errors.formaPagamento ? (
+                <p className="text-xs text-gym-danger">{errors.formaPagamento.message}</p>
+              ) : null}
             </div>
 
             <div className="space-y-1">
@@ -148,7 +184,7 @@ export function PagarContaModal({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" className="border-border" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" className="border-border" onClick={() => onOpenChange(false)}>
               Fechar
             </Button>
             <Button type="submit">Confirmar pagamento</Button>

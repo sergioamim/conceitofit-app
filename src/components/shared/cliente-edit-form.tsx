@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 import { updateAlunoService } from "@/lib/tenant/comercial/runtime";
 import { fetchCep } from "@/lib/shared/cep-lookup";
 import type { Aluno } from "@/lib/types";
@@ -11,9 +12,33 @@ import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { clienteEditSchema, type ClienteEditFormValues } from "./cliente-edit-schema";
+import { requiredTrimmedString, optionalTrimmedString } from "@/lib/forms/zod-helpers";
 
-function buildDefaults(aluno: Aluno): ClienteEditFormValues {
+const clienteFormSchema = z.object({
+  nome: requiredTrimmedString("Informe o nome."),
+  email: requiredTrimmedString("Informe o e-mail.").email("E-mail inválido."),
+  telefone: requiredTrimmedString("Informe o telefone."),
+  telefoneSec: optionalTrimmedString(),
+  cpf: requiredTrimmedString("Informe o CPF."),
+  rg: optionalTrimmedString(),
+  dataNascimento: requiredTrimmedString("Informe a data de nascimento."),
+  sexo: requiredTrimmedString("Selecione o sexo."),
+  enderecoCep: optionalTrimmedString(),
+  enderecoLogradouro: optionalTrimmedString(),
+  enderecoNumero: optionalTrimmedString(),
+  enderecoComplemento: optionalTrimmedString(),
+  enderecoBairro: optionalTrimmedString(),
+  enderecoCidade: optionalTrimmedString(),
+  enderecoEstado: optionalTrimmedString(),
+  emergenciaNome: optionalTrimmedString(),
+  emergenciaTelefone: optionalTrimmedString(),
+  emergenciaParentesco: optionalTrimmedString(),
+  observacoesMedicas: optionalTrimmedString(),
+});
+
+type ClienteFormValues = z.infer<typeof clienteFormSchema>;
+
+function buildForm(aluno: Aluno): ClienteFormValues {
   return {
     nome: aluno.nome,
     email: aluno.email,
@@ -22,7 +47,7 @@ function buildDefaults(aluno: Aluno): ClienteEditFormValues {
     cpf: aluno.cpf,
     rg: aluno.rg ?? "",
     dataNascimento: aluno.dataNascimento,
-    sexo: aluno.sexo ?? "",
+    sexo: aluno.sexo || "",
     enderecoCep: aluno.endereco?.cep ?? "",
     enderecoLogradouro: aluno.endereco?.logradouro ?? "",
     enderecoNumero: aluno.endereco?.numero ?? "",
@@ -46,32 +71,40 @@ export function ClienteEditForm({
   onCancel: () => void;
   onSaved?: () => Promise<void> | void;
 }) {
-  const { register, control, handleSubmit, reset, watch, setValue } = useForm<ClienteEditFormValues>({
-    resolver: zodResolver(clienteEditSchema),
-    defaultValues: buildDefaults(aluno),
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<ClienteFormValues>({
+    resolver: zodResolver(clienteFormSchema),
+    defaultValues: buildForm(aluno),
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    reset(buildDefaults(aluno));
+    reset(buildForm(aluno));
     setError("");
   }, [aluno, reset]);
 
-  const cepValue = watch("enderecoCep");
+  const enderecoCep = watch("enderecoCep");
 
   useEffect(() => {
-    fetchCep(cepValue).then((data) => {
+    fetchCep(enderecoCep ?? "").then((data) => {
       if (!data) return;
       if (data.logradouro) setValue("enderecoLogradouro", data.logradouro);
       if (data.bairro) setValue("enderecoBairro", data.bairro);
       if (data.localidade) setValue("enderecoCidade", data.localidade);
       if (data.uf) setValue("enderecoEstado", data.uf);
     });
-  }, [cepValue, setValue]);
+  }, [enderecoCep, setValue]);
 
-  async function onSubmit(form: ClienteEditFormValues) {
+  const onFormSubmit = async (form: ClienteFormValues) => {
     setLoading(true);
     setError("");
     try {
@@ -86,7 +119,7 @@ export function ClienteEditForm({
           cpf: form.cpf,
           rg: form.rg || undefined,
           dataNascimento: form.dataNascimento,
-          sexo: form.sexo || undefined,
+          sexo: (form.sexo as Aluno["sexo"]) || undefined,
           endereco: {
             cep: form.enderecoCep || undefined,
             logradouro: form.enderecoLogradouro || undefined,
@@ -114,10 +147,10 @@ export function ClienteEditForm({
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <h2 className="font-display text-lg font-bold">Editar cliente</h2>
       <div className="rounded-xl border border-border bg-card p-6">
         <h3 className="text-sm font-semibold text-muted-foreground">Dados pessoais</h3>
@@ -126,10 +159,12 @@ export function ClienteEditForm({
             <div className="space-y-1.5">
               <label htmlFor="edit-nome" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
               <Input id="edit-nome" {...register("nome")} className="bg-secondary border-border" />
+              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
             </div>
             <div className="space-y-1.5">
               <label htmlFor="edit-email" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
               <Input id="edit-email" type="email" {...register("email")} className="bg-secondary border-border" />
+              {errors.email ? <p className="text-xs text-gym-danger">{errors.email.message}</p> : null}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -142,6 +177,7 @@ export function ClienteEditForm({
                   <PhoneInput id="edit-telefone" value={field.value} onChange={field.onChange} className="bg-secondary border-border" />
                 )}
               />
+              {errors.telefone ? <p className="text-xs text-gym-danger">{errors.telefone.message}</p> : null}
             </div>
             <div className="space-y-1.5">
               <label htmlFor="edit-telefoneSec" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone secundário</label>
@@ -164,6 +200,7 @@ export function ClienteEditForm({
                   <MaskedInput id="edit-cpf" mask="cpf" value={field.value} onChange={field.onChange} className="bg-secondary border-border" />
                 )}
               />
+              {errors.cpf ? <p className="text-xs text-gym-danger">{errors.cpf.message}</p> : null}
             </div>
             <div className="space-y-1.5">
               <label htmlFor="edit-rg" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">RG</label>
@@ -172,6 +209,7 @@ export function ClienteEditForm({
             <div className="space-y-1.5">
               <label htmlFor="edit-dataNascimento" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data de nascimento</label>
               <Input id="edit-dataNascimento" type="date" {...register("dataNascimento")} className="bg-secondary border-border" />
+              {errors.dataNascimento ? <p className="text-xs text-gym-danger">{errors.dataNascimento.message}</p> : null}
             </div>
           </div>
           <div className="space-y-1.5">
@@ -186,6 +224,7 @@ export function ClienteEditForm({
               <option value="F">Feminino</option>
               <option value="OUTRO">Outro</option>
             </select>
+            {errors.sexo ? <p className="text-xs text-gym-danger">{errors.sexo.message}</p> : null}
           </div>
         </div>
       </div>
