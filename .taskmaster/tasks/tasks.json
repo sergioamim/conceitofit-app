@@ -9901,12 +9901,12 @@
         "description": "Testar validação de campos, preview de plano, atividades associadas.",
         "details": "Criar tests/components/plano-form.test.tsx. Testar: campos obrigatórios, valores numéricos, atividades checkbox, preview renderiza corretamente.",
         "testStrategy": "Formulário testado com dados válidos e inválidos.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 3,
         "subtasks": [],
-        "updatedAt": "2026-03-29T11:43:55.152Z"
+        "updatedAt": "2026-03-29T11:46:32.137Z"
       },
       {
         "id": "237",
@@ -10071,9 +10071,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:45:42.062Z",
+      "lastModified": "2026-03-29T11:46:32.137Z",
       "taskCount": 248,
-      "completedCount": 235,
+      "completedCount": 236,
       "tags": [
         "master"
       ]
