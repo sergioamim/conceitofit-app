@@ -10,18 +10,20 @@ import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { listConveniosApi } from "@/lib/api/beneficios";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
 import { listMatriculasApi } from "@/lib/api/matriculas";
-import { emitirNfsePagamentoApi } from "@/lib/api/pagamentos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getBusinessCurrentMonthYear } from "@/lib/business-date";
 import {
-  ajustarPagamentoService,
-  importarPagamentosEmLoteService,
   type ImportarPagamentosResultado,
   type PagamentoComAluno,
   type PagamentoImportItem,
 } from "@/lib/tenant/financeiro/recebimentos";
-import { usePagamentos } from "@/lib/query/use-pagamentos";
+import {
+  usePagamentos,
+  useReceberPagamento,
+  useEmitirNfse,
+  useImportarPagamentos,
+} from "@/lib/query/use-pagamentos";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -452,11 +454,15 @@ function PagamentosPageContent() {
   const [importErro, setImportErro] = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
-  const { data: pagamentosData, refetch: refetchPagamentos } = usePagamentos({
+  const { data: pagamentosData } = usePagamentos({
     tenantId,
     tenantResolved: Boolean(tenantId),
   });
   const pagamentos = pagamentosData ?? [];
+
+  const receberMutation = useReceberPagamento();
+  const emitirNfseMutation = useEmitirNfse();
+  const importarMutation = useImportarPagamentos();
 
   const loadAuxData = useCallback(async () => {
     if (!tenantId) return;
@@ -479,9 +485,8 @@ function PagamentosPageContent() {
   }, [loadAuxData]);
 
   const load = useCallback(async () => {
-    await refetchPagamentos();
     await loadAuxData();
-  }, [refetchPagamentos, loadAuxData]);
+  }, [loadAuxData]);
 
   const alunoId = searchParams.get("clienteId") ?? searchParams.get("alunoId");
   const filteredBase =
@@ -511,7 +516,7 @@ function PagamentosPageContent() {
     observacoes?: string;
   }) {
     if (!recebendo || !tenantId) return;
-    await ajustarPagamentoService({
+    await receberMutation.mutateAsync({
       tenantId,
       id: recebendo.id,
       data: {
@@ -522,20 +527,18 @@ function PagamentosPageContent() {
       },
     });
     setRecebendo(null);
-    await load();
   }
 
   async function handleConfirmEmissao() {
     if (!emitindo || !tenantId) return;
     try {
       setNfseFeedback(null);
-      await emitirNfsePagamentoApi({
+      await emitirNfseMutation.mutateAsync({
         tenantId,
         id: emitindo.id,
       });
       setNfseFeedback({ type: "success", message: "NFSe emitida com sucesso." });
       setEmitindo(null);
-      await load();
     } catch (error) {
       setNfseFeedback({ type: "error", message: normalizeErrorMessage(error) });
       setEmitindo(null);
@@ -554,12 +557,11 @@ function PagamentosPageContent() {
         throw new Error("Payload vazio.");
       }
 
-      const resultado = await importarPagamentosEmLoteService({
+      const resultado = await importarMutation.mutateAsync({
         tenantId,
         items: parsed,
       });
       setImportResultado(resultado);
-      await load();
     } catch (error) {
       setImportErro(error instanceof Error ? error.message : "Falha ao importar pagamentos.");
     } finally {
@@ -593,12 +595,11 @@ function PagamentosPageContent() {
     if (!visualizandoNfse || !tenantId) return;
     setSolicitandoSegundaVia(true);
     try {
-      await emitirNfsePagamentoApi({
+      await emitirNfseMutation.mutateAsync({
         tenantId,
         id: visualizandoNfse.id,
       });
       setEmailResultado("Solicitação de segunda via concluída.");
-      await load();
     } catch (error) {
       setEmailResultado(normalizeErrorMessage(error));
     } finally {
