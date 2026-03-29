@@ -384,3 +384,22 @@ export interface ReceberPagamentoInput {
   formaPagamento: TipoFormaPagamento;
   observacoes?: string;
 }
+
+export type ProvedorGateway =
+  | "PAGARME"
+  | "STRIPE"
+  | "MERCADO_PAGO"
+  | "CIELO_ECOMMERCE"
+  | "ASAAS"
+  | "OUTRO";
+
+export interface GatewayPagamento {
+  id: UUID;
+  nome: string;
+  provedor: ProvedorGateway;
+  chaveApi: string;
+  ambiente: "SANDBOX" | "PRODUCAO";
+  ativo: boolean;
+  criadoEm?: LocalDateTime;
+  atualizadoEm?: LocalDateTime;
+}
