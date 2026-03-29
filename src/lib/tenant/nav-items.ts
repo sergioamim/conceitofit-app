@@ -58,6 +58,7 @@ export const crmItems: NavItem[] = [
   { href: "/crm/prospects-kanban", label: "Funil de Vendas", icon: Kanban },
   { href: "/crm/tarefas", label: "Tarefas Comerciais", icon: ClipboardList },
   { href: "/crm/playbooks", label: "Playbooks e Cadências", icon: ListTree },
+  { href: "/crm/cadencias", label: "Motor de Cadências", icon: Activity },
   { href: "/crm/campanhas", label: "Campanhas", icon: Megaphone },
 ];
 
