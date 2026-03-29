@@ -12,3 +12,4 @@ export * from './types/pagamento';
 export * from './types/matricula';
 export * from './types/venda';
 export * from './types/tenant';
+export * from './types/financial';
