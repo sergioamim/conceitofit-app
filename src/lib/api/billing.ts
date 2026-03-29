@@ -1,222 +1,221 @@
 import type {
   Assinatura,
-  CancelAssinaturaInput,
+  BillingConfig,
   CicloAssinatura,
-  CobrancaRecorrente,
-  CreateAssinaturaInput,
+  ProvedorGateway,
   StatusAssinatura,
-  StatusCobrancaRecorrente,
 } from "@/lib/types";
 import { apiRequest } from "./http";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+// ─── Raw API response types ──────────────────────────────────────────────
 
-const toNumber = (value: unknown, fallback = 0): number => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-};
-
-const cleanString = (value: unknown): string | undefined => {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-};
-
-// ---------------------------------------------------------------------------
-// API response types (match backend shape, nullable fields)
-// ---------------------------------------------------------------------------
-
-type AssinaturaApiResponse = {
+type AssinaturaApiResponse = Partial<Assinatura> & {
   id?: string | null;
-  tenantId?: string | null;
-  alunoId?: string | null;
-  alunoNome?: string | null;
-  planoId?: string | null;
-  planoNome?: string | null;
-  gatewayId?: string | null;
-  gatewayAssinaturaId?: string | null;
-  status?: string | null;
+  status?: unknown;
   valor?: unknown;
-  ciclo?: string | null;
-  diaCobranca?: unknown;
-  dataInicio?: string | null;
-  dataFim?: string | null;
+  ciclo?: unknown;
   proximaCobranca?: string | null;
-  ultimaCobranca?: string | null;
-  tentativasCobrancaFalha?: unknown;
-  canceladaEm?: string | null;
-  motivoCancelamento?: string | null;
-  dataCriacao?: string | null;
-  dataAtualizacao?: string | null;
 };
 
-type CobrancaRecorrenteApiResponse = {
+type BillingConfigApiResponse = Partial<BillingConfig> & {
   id?: string | null;
-  tenantId?: string | null;
-  assinaturaId?: string | null;
-  alunoId?: string | null;
-  alunoNome?: string | null;
-  valor?: unknown;
-  status?: string | null;
-  dataVencimento?: string | null;
-  dataPagamento?: string | null;
-  gatewayCobrancaId?: string | null;
-  formaPagamento?: string | null;
-  tentativas?: unknown;
-  ultimaTentativaEm?: string | null;
-  motivoFalha?: string | null;
-  dataCriacao?: string | null;
+  provedorAtivo?: unknown;
+  chaveApi?: string | null;
+  ambiente?: unknown;
+  statusConexao?: unknown;
+  ativo?: unknown;
 };
 
-// ---------------------------------------------------------------------------
-// Normalizers
-// ---------------------------------------------------------------------------
+type AnyListResponse<T> =
+  | T[]
+  | { items?: T[]; content?: T[]; data?: T[]; rows?: T[] };
 
-const VALID_STATUS_ASSINATURA: StatusAssinatura[] = [
-  "ATIVA", "CANCELADA", "SUSPENSA", "VENCIDA", "INADIMPLENTE", "TRIAL",
-];
+// ─── Helpers ─────────────────────────────────────────────────────────────
 
-const VALID_CICLO: CicloAssinatura[] = [
-  "MENSAL", "TRIMESTRAL", "SEMESTRAL", "ANUAL",
-];
+function cleanString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized || undefined;
+}
 
-const VALID_STATUS_COBRANCA: StatusCobrancaRecorrente[] = [
-  "PENDENTE", "PAGO", "VENCIDO", "CANCELADO", "FALHA", "ESTORNADO",
-];
+function toNumber(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
 
-function normalizeStatusAssinatura(value: unknown): StatusAssinatura {
-  const upper = typeof value === "string" ? value.trim().toUpperCase() : "";
-  return VALID_STATUS_ASSINATURA.includes(upper as StatusAssinatura)
-    ? (upper as StatusAssinatura)
-    : "ATIVA";
+function toBoolean(value: unknown, fallback = true): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const n = value.trim().toLowerCase();
+    if (n === "true" || n === "1") return true;
+    if (n === "false" || n === "0") return false;
+  }
+  return fallback;
+}
+
+function extractItems<T>(response: AnyListResponse<T>): T[] {
+  if (Array.isArray(response)) return response;
+  return response.items ?? response.content ?? response.data ?? response.rows ?? [];
+}
+
+const STATUS_VALIDOS: StatusAssinatura[] = ["ATIVA", "PENDENTE", "CANCELADA", "SUSPENSA", "VENCIDA"];
+const CICLOS_VALIDOS: CicloAssinatura[] = ["MENSAL", "TRIMESTRAL", "SEMESTRAL", "ANUAL"];
+const PROVEDORES_VALIDOS: ProvedorGateway[] = ["PAGARME", "STRIPE", "MERCADO_PAGO", "CIELO_ECOMMERCE", "ASAAS", "OUTRO"];
+
+function normalizeStatus(value: unknown): StatusAssinatura {
+  const str = cleanString(value)?.toUpperCase();
+  if (str && STATUS_VALIDOS.includes(str as StatusAssinatura)) return str as StatusAssinatura;
+  return "PENDENTE";
 }
 
 function normalizeCiclo(value: unknown): CicloAssinatura {
-  const upper = typeof value === "string" ? value.trim().toUpperCase() : "";
-  return VALID_CICLO.includes(upper as CicloAssinatura)
-    ? (upper as CicloAssinatura)
-    : "MENSAL";
+  const str = cleanString(value)?.toUpperCase();
+  if (str && CICLOS_VALIDOS.includes(str as CicloAssinatura)) return str as CicloAssinatura;
+  return "MENSAL";
 }
 
-function normalizeStatusCobranca(value: unknown): StatusCobrancaRecorrente {
-  const upper = typeof value === "string" ? value.trim().toUpperCase() : "";
-  return VALID_STATUS_COBRANCA.includes(upper as StatusCobrancaRecorrente)
-    ? (upper as StatusCobrancaRecorrente)
-    : "PENDENTE";
+function normalizeProvedor(value: unknown): ProvedorGateway {
+  const str = cleanString(value)?.toUpperCase();
+  if (str && PROVEDORES_VALIDOS.includes(str as ProvedorGateway)) return str as ProvedorGateway;
+  return "OUTRO";
 }
+
+function normalizeConexaoStatus(value: unknown): BillingConfig["statusConexao"] {
+  const str = cleanString(value)?.toUpperCase();
+  if (str === "ONLINE" || str === "OFFLINE") return str;
+  return "NAO_CONFIGURADO";
+}
+
+// ─── Normalizers ─────────────────────────────────────────────────────────
 
 function normalizeAssinatura(input: AssinaturaApiResponse): Assinatura {
   return {
-    id: input.id ?? "",
-    tenantId: input.tenantId ?? "",
-    alunoId: input.alunoId ?? "",
-    alunoNome: cleanString(input.alunoNome),
-    planoId: input.planoId ?? "",
+    id: cleanString(input.id) ?? "",
+    tenantId: cleanString(input.tenantId) ?? "",
+    alunoId: cleanString(input.alunoId) ?? "",
+    planoId: cleanString(input.planoId) ?? "",
+    clienteNome: cleanString(input.clienteNome),
     planoNome: cleanString(input.planoNome),
-    gatewayId: cleanString(input.gatewayId),
-    gatewayAssinaturaId: cleanString(input.gatewayAssinaturaId),
-    status: normalizeStatusAssinatura(input.status),
+    status: normalizeStatus(input.status),
     valor: toNumber(input.valor),
     ciclo: normalizeCiclo(input.ciclo),
-    diaCobranca: toNumber(input.diaCobranca, 1),
-    dataInicio: input.dataInicio ?? "",
-    dataFim: cleanString(input.dataFim),
+    dataInicio: cleanString(input.dataInicio) ?? "",
     proximaCobranca: cleanString(input.proximaCobranca),
-    ultimaCobranca: cleanString(input.ultimaCobranca),
-    tentativasCobrancaFalha: toNumber(input.tentativasCobrancaFalha, 0),
-    canceladaEm: cleanString(input.canceladaEm),
-    motivoCancelamento: cleanString(input.motivoCancelamento),
-    dataCriacao: input.dataCriacao ?? "",
-    dataAtualizacao: cleanString(input.dataAtualizacao),
+    dataFim: cleanString(input.dataFim),
+    gatewayId: cleanString(input.gatewayId),
+    gatewayAssinaturaId: cleanString(input.gatewayAssinaturaId),
+    criadoEm: cleanString(input.criadoEm),
+    atualizadoEm: cleanString(input.atualizadoEm),
   };
 }
 
-function normalizeCobrancaRecorrente(input: CobrancaRecorrenteApiResponse): CobrancaRecorrente {
+function normalizeBillingConfig(input: BillingConfigApiResponse): BillingConfig {
   return {
-    id: input.id ?? "",
-    tenantId: input.tenantId ?? "",
-    assinaturaId: input.assinaturaId ?? "",
-    alunoId: input.alunoId ?? "",
-    alunoNome: cleanString(input.alunoNome),
-    valor: toNumber(input.valor),
-    status: normalizeStatusCobranca(input.status),
-    dataVencimento: input.dataVencimento ?? "",
-    dataPagamento: cleanString(input.dataPagamento),
-    gatewayCobrancaId: cleanString(input.gatewayCobrancaId),
-    formaPagamento: cleanString(input.formaPagamento),
-    tentativas: toNumber(input.tentativas, 0),
-    ultimaTentativaEm: cleanString(input.ultimaTentativaEm),
-    motivoFalha: cleanString(input.motivoFalha),
-    dataCriacao: input.dataCriacao ?? "",
+    id: cleanString(input.id) ?? "",
+    tenantId: cleanString(input.tenantId) ?? "",
+    provedorAtivo: normalizeProvedor(input.provedorAtivo),
+    chaveApi: cleanString(input.chaveApi) ?? "",
+    webhookUrl: cleanString(input.webhookUrl),
+    webhookSecret: cleanString(input.webhookSecret),
+    ambiente: cleanString(input.ambiente)?.toUpperCase() === "PRODUCAO" ? "PRODUCAO" : "SANDBOX",
+    statusConexao: normalizeConexaoStatus(input.statusConexao),
+    ultimoTesteEm: cleanString(input.ultimoTesteEm),
+    ativo: toBoolean(input.ativo, false),
   };
 }
 
-// ---------------------------------------------------------------------------
-// Envelope helpers
-// ---------------------------------------------------------------------------
+// ─── Billing Config API ──────────────────────────────────────────────────
 
-type ListEnvelope<T> = T[] | {
-  items?: T[];
-  content?: T[];
-  data?: T[];
-  result?: T[];
-};
-
-function extractFromEnvelope<T>(response: ListEnvelope<T>): T[] {
-  if (Array.isArray(response)) return response;
-  const candidates = [response.items, response.content, response.data, response.result];
-  return candidates.find(Array.isArray) ?? [];
+export async function getBillingConfigApi(input: {
+  tenantId: string;
+}): Promise<BillingConfig | null> {
+  try {
+    const response = await apiRequest<BillingConfigApiResponse>({
+      path: "/api/v1/billing/config",
+      query: { tenantId: input.tenantId },
+    });
+    return normalizeBillingConfig(response);
+  } catch {
+    return null;
+  }
 }
 
-// ---------------------------------------------------------------------------
-// In-flight deduplication
-// ---------------------------------------------------------------------------
-
-const listAssinaturasInFlight = new Map<string, Promise<Assinatura[]>>();
-
-// ---------------------------------------------------------------------------
-// Public API — Assinaturas
-// ---------------------------------------------------------------------------
-
-export interface ListAssinaturasApiInput {
+export async function saveBillingConfigApi(input: {
   tenantId: string;
-  alunoId?: string;
-  planoId?: string;
+  data: {
+    provedorAtivo: ProvedorGateway;
+    chaveApi: string;
+    ambiente: "SANDBOX" | "PRODUCAO";
+    ativo: boolean;
+  };
+}): Promise<BillingConfig> {
+  const response = await apiRequest<BillingConfigApiResponse>({
+    path: "/api/v1/billing/config",
+    method: "PUT",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+  return normalizeBillingConfig(response);
+}
+
+export async function testBillingConnectionApi(input: {
+  tenantId: string;
+}): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>({
+    path: "/api/v1/billing/config/test",
+    method: "POST",
+    query: { tenantId: input.tenantId },
+  });
+}
+
+// ─── Assinaturas API ─────────────────────────────────────────────────────
+
+export async function listAssinaturasApi(input: {
+  tenantId: string;
   status?: StatusAssinatura;
   page?: number;
   size?: number;
+}): Promise<Assinatura[]> {
+  const response = await apiRequest<AnyListResponse<AssinaturaApiResponse>>({
+    path: "/api/v1/billing/assinaturas",
+    query: {
+      tenantId: input.tenantId,
+      status: input.status,
+      page: input.page,
+      size: input.size,
+    },
+  });
+  return extractItems(response).map(normalizeAssinatura);
 }
 
-export async function listAssinaturasApi(
-  input: ListAssinaturasApiInput,
-): Promise<Assinatura[]> {
-  const cacheKey = JSON.stringify(input);
-  const inFlight = listAssinaturasInFlight.get(cacheKey);
-  if (inFlight) return inFlight;
+export async function createAssinaturaApi(input: {
+  tenantId: string;
+  data: {
+    alunoId: string;
+    planoId: string;
+    dataInicio: string;
+    ciclo?: CicloAssinatura;
+  };
+}): Promise<Assinatura> {
+  const response = await apiRequest<AssinaturaApiResponse>({
+    path: "/api/v1/billing/assinaturas",
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+  return normalizeAssinatura(response);
+}
 
-  const request = (async () => {
-    const response = await apiRequest<ListEnvelope<AssinaturaApiResponse>>({
-      path: "/api/v1/billing/assinaturas",
-      query: {
-        tenantId: input.tenantId,
-        alunoId: input.alunoId,
-        planoId: input.planoId,
-        status: input.status,
-        page: input.page,
-        size: input.size,
-      },
-    });
-    return extractFromEnvelope(response).map(normalizeAssinatura);
-  })();
-
-  listAssinaturasInFlight.set(cacheKey, request);
-  try {
-    return await request;
-  } finally {
-    listAssinaturasInFlight.delete(cacheKey);
-  }
+export async function cancelarAssinaturaApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<Assinatura> {
+  const response = await apiRequest<AssinaturaApiResponse>({
+    path: `/api/v1/billing/assinaturas/${input.id}/cancelar`,
+    method: "PATCH",
+    query: { tenantId: input.tenantId },
+  });
+  return normalizeAssinatura(response);
 }
 
 export async function getAssinaturaApi(input: {
@@ -228,96 +227,4 @@ export async function getAssinaturaApi(input: {
     query: { tenantId: input.tenantId },
   });
   return normalizeAssinatura(response);
-}
-
-export async function createAssinaturaApi(input: {
-  tenantId: string;
-  data: CreateAssinaturaInput;
-}): Promise<Assinatura> {
-  const response = await apiRequest<AssinaturaApiResponse>({
-    path: "/api/v1/billing/assinaturas",
-    method: "POST",
-    query: { tenantId: input.tenantId },
-    body: input.data,
-  });
-  return normalizeAssinatura(response);
-}
-
-export async function cancelAssinaturaApi(input: {
-  tenantId: string;
-  id: string;
-  data?: CancelAssinaturaInput;
-}): Promise<Assinatura> {
-  const response = await apiRequest<AssinaturaApiResponse>({
-    path: `/api/v1/billing/assinaturas/${input.id}/cancelar`,
-    method: "POST",
-    query: { tenantId: input.tenantId },
-    body: input.data,
-  });
-  return normalizeAssinatura(response);
-}
-
-export async function suspendAssinaturaApi(input: {
-  tenantId: string;
-  id: string;
-}): Promise<Assinatura> {
-  const response = await apiRequest<AssinaturaApiResponse>({
-    path: `/api/v1/billing/assinaturas/${input.id}/suspender`,
-    method: "POST",
-    query: { tenantId: input.tenantId },
-  });
-  return normalizeAssinatura(response);
-}
-
-export async function reactivateAssinaturaApi(input: {
-  tenantId: string;
-  id: string;
-}): Promise<Assinatura> {
-  const response = await apiRequest<AssinaturaApiResponse>({
-    path: `/api/v1/billing/assinaturas/${input.id}/reativar`,
-    method: "POST",
-    query: { tenantId: input.tenantId },
-  });
-  return normalizeAssinatura(response);
-}
-
-// ---------------------------------------------------------------------------
-// Public API — Cobranças Recorrentes
-// ---------------------------------------------------------------------------
-
-export interface ListCobrancasRecorrentesApiInput {
-  tenantId: string;
-  assinaturaId?: string;
-  alunoId?: string;
-  status?: StatusCobrancaRecorrente;
-  page?: number;
-  size?: number;
-}
-
-export async function listCobrancasRecorrentesApi(
-  input: ListCobrancasRecorrentesApiInput,
-): Promise<CobrancaRecorrente[]> {
-  const response = await apiRequest<ListEnvelope<CobrancaRecorrenteApiResponse>>({
-    path: "/api/v1/billing/cobrancas",
-    query: {
-      tenantId: input.tenantId,
-      assinaturaId: input.assinaturaId,
-      alunoId: input.alunoId,
-      status: input.status,
-      page: input.page,
-      size: input.size,
-    },
-  });
-  return extractFromEnvelope(response).map(normalizeCobrancaRecorrente);
-}
-
-export async function getCobrancaRecorrenteApi(input: {
-  tenantId: string;
-  id: string;
-}): Promise<CobrancaRecorrente> {
-  const response = await apiRequest<CobrancaRecorrenteApiResponse>({
-    path: `/api/v1/billing/cobrancas/${input.id}`,
-    query: { tenantId: input.tenantId },
-  });
-  return normalizeCobrancaRecorrente(response);
 }
