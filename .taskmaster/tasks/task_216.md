@@ -2,7 +2,7 @@
 
 **Title:** Refactor: Splitar runtime.ts monolítico por domínio
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

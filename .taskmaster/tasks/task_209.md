@@ -2,7 +2,7 @@
 
 **Title:** Refactor: Criar componente SuspenseFallback reutilizável
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

@@ -2,9 +2,9 @@
 
 **Title:** Migrar páginas administrativas simples para Server Components
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 206
+**Dependencies:** 206 ✓
 
 **Priority:** low
 

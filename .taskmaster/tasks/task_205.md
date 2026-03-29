@@ -2,7 +2,7 @@
 
 **Title:** Fix: Atualizar params para Promise syntax (Next.js 16)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

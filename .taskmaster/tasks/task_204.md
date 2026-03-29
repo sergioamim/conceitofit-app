@@ -2,7 +2,7 @@
 
 **Title:** Fix: Corrigir Suspense sem fallback no layout do backoffice
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

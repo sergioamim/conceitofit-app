@@ -2,7 +2,7 @@
 
 **Title:** Fix: Corrigir hydration mismatch e Suspense sem fallback no dashboard
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

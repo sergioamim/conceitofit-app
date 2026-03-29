@@ -2,7 +2,7 @@
 
 **Title:** Criar módulo financeiro contábil (ledgers, contas, transações)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

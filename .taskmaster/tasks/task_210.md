@@ -2,7 +2,7 @@
 
 **Title:** Refactor: Splitar componentes com mais de 500 LOC
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

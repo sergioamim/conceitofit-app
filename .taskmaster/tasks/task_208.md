@@ -2,7 +2,7 @@
 
 **Title:** Refactor: Centralizar constantes de filtro e status (TODOS, ATIVO, INATIVO)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

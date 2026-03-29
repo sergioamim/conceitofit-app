@@ -2,7 +2,7 @@
 
 **Title:** Criar dashboard de métricas SaaS e onboarding
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

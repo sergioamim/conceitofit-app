@@ -2,7 +2,7 @@
 
 **Title:** Melhorar acessibilidade: aria labels, keyboard navigation e semântica
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

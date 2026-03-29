@@ -2,7 +2,7 @@
 
 **Title:** Avaliar e implementar TanStack Query para data fetching
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

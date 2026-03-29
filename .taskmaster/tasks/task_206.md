@@ -2,7 +2,7 @@
 
 **Title:** Refactor: Extrair createTenantLoader utility para eliminar duplicação em 50+ páginas
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

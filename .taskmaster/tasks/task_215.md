@@ -2,7 +2,7 @@
 
 **Title:** Expandir cobertura de testes de componentes
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

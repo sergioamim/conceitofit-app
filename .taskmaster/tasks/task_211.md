@@ -2,7 +2,7 @@
 
 **Title:** Refactor: Substituir string matching de erros por error codes estruturados
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

@@ -2,7 +2,7 @@
 
 **Title:** Integrar catálogo de funcionalidades e perfis-padrão no RBAC
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

@@ -2,7 +2,7 @@
 
 **Title:** Refactor: Adicionar logging nos catch blocks silenciosos (50+ arquivos)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
