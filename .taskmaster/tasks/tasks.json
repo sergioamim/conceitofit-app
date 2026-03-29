@@ -9393,12 +9393,12 @@
         "description": "O backend tem 4 endpoints de BI (resumo, comparativo, série, resumo geral) que não estão conectados no frontend.",
         "details": "Criar src/lib/api/admin-bi.ts com clients para: GET /admin/bi/academias/{id}/executivo/resumo, /comparativo, /serie, e /admin/bi/academias/{id}/resumo. Criar src/app/(backoffice)/admin/bi/page.tsx ou expandir dashboard admin existente com seção BI. Exibir: KPIs por academia, comparativo entre períodos, gráfico de série temporal. Usar componentes BiMetricCard e BiTrendBars já existentes.",
         "testStrategy": "Dashboard BI renderiza com dados reais. Seleção de academia filtra. Gráficos exibem série temporal.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 5,
         "subtasks": [],
-        "updatedAt": "2026-03-29T01:22:15.530Z"
+        "updatedAt": "2026-03-29T01:25:46.772Z"
       },
       {
         "id": "199",
@@ -9621,9 +9621,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T01:24:25.204Z",
+      "lastModified": "2026-03-29T01:25:46.772Z",
       "taskCount": 216,
-      "completedCount": 196,
+      "completedCount": 197,
       "tags": [
         "master"
       ]
