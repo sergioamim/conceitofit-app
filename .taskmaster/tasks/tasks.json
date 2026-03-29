@@ -9953,14 +9953,14 @@
         "description": "Listar treinos atribuídos ao aluno logado. Exibir divisão, exercícios, séries, carga, aderência. Marcar execução.",
         "details": "Usar API existente: GET /api/v1/treinos?alunoId=. Exibir cards por divisão (A, B, C). Cada card com exercícios, séries, reps, carga sugerida. Botão \"Concluir treino\" chama POST execução. Exibir aderência % e status do ciclo.",
         "testStrategy": "Aluno vê treinos atribuídos. Registra execução. Aderência atualiza.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "239"
         ],
         "priority": "medium",
         "complexity": 6,
         "subtasks": [],
-        "updatedAt": "2026-03-29T12:03:22.423Z"
+        "updatedAt": "2026-03-29T12:06:15.905Z"
       },
       {
         "id": "241",
@@ -10079,9 +10079,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T12:04:53.531Z",
+      "lastModified": "2026-03-29T12:06:15.905Z",
       "taskCount": 248,
-      "completedCount": 244,
+      "completedCount": 245,
       "tags": [
         "master"
       ]
