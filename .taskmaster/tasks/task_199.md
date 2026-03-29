@@ -2,7 +2,7 @@
 
 **Title:** Criar página admin de gestão de gateways de pagamento
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

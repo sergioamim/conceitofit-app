@@ -2,7 +2,7 @@
 
 **Title:** Migrar jornada pública de adesão para endpoints reais do backend
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

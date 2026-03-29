@@ -20,14 +20,14 @@ Navegar até /clientes/[id] com um perfil aberto, trocar de unidade via selector
 
 ## Subtasks
 
-### 137.137.1. Adicionar router.push('/dashboard') após troca de tenant bem-sucedida
+### 137.137. Adicionar router.push('/dashboard') após troca de tenant bem-sucedida
 
 **Status:** done  
 **Dependencies:** None  
 
 Em app-topbar.tsx, importar useRouter e após await setTenant(nextId) redirecionar para /dashboard
 
-### 137.137.2. Garantir que redirect só ocorre em caso de sucesso
+### 137.137. Garantir que redirect só ocorre em caso de sucesso
 
 **Status:** done  
 **Dependencies:** 137.1  

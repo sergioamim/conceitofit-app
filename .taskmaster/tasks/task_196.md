@@ -2,7 +2,7 @@
 
 **Title:** Migrar storefront para endpoints com academiaSlug no path
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

@@ -20,12 +20,12 @@ grep 'console.error' src/ retorna zero (exceto logger.ts). grep 'console.warn' s
 
 ## Subtasks
 
-### 190.null. Substituir console.error em useEvoImportPage.ts
+### 190.0. Substituir console.error em useEvoImportPage.ts
 
 **Status:** done  
 **Dependencies:** None  
 
-### 190.null. Verificar outros console.error no codebase
+### 190.0. Verificar outros console.error no codebase
 
 **Status:** done  
 **Dependencies:** None  

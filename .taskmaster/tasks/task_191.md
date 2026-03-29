@@ -20,17 +20,17 @@ Build OK. Nenhum import quebrado. types.ts < 100 linhas (apenas re-exports). Cad
 
 ## Subtasks
 
-### 191.null. Criar estrutura de pastas para tipos
+### 191.0. Criar estrutura de pastas para tipos
 
 **Status:** done  
 **Dependencies:** None  
 
-### 191.null. Mover tipos por domínio para novos arquivos
+### 191.0. Mover tipos por domínio para novos arquivos
 
 **Status:** done  
 **Dependencies:** None  
 
-### 191.null. Atualizar types.ts para re-exportar tudo
+### 191.0. Atualizar types.ts para re-exportar tudo
 
 **Status:** done  
 **Dependencies:** None  

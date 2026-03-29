@@ -2,7 +2,7 @@
 
 **Title:** Criar página admin de gestão de leads B2B
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

@@ -9761,14 +9761,14 @@
         "description": "Substituir os 12 useState em clientes-client.tsx por useQuery/useMutation. Criar useClientes() hook.",
         "details": "Criar src/lib/tenant/hooks/use-clientes-query.ts com useQuery para listagem e useMutation para operações. Manter service layer (listAlunosPageService, updateAlunoService) como fetcher functions. Invalidar cache em mutations. Query key: [\"clientes\", tenantId, filtro, page, pageSize].",
         "testStrategy": "Listagem funciona com cache. Navegar e voltar não refetch. Mutations invalidam corretamente.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "225"
         ],
         "priority": "medium",
         "complexity": 5,
         "subtasks": [],
-        "updatedAt": "2026-03-29T11:40:15.522Z"
+        "updatedAt": "2026-03-29T11:42:23.945Z"
       },
       {
         "id": "227",
@@ -9859,11 +9859,12 @@
         "description": "Extrair ContaPagarForm e ContaPagarRecorrenciaConfig.",
         "details": "Form principal < 350 LOC. Config de recorrência como componente separado. Manter modal como shell.",
         "testStrategy": "Funcionalidade inalterada. Cada arquivo < 350 LOC.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:42:22.793Z"
       },
       {
         "id": "234",
@@ -10065,9 +10066,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:40:25.072Z",
+      "lastModified": "2026-03-29T11:42:23.945Z",
       "taskCount": 248,
-      "completedCount": 229,
+      "completedCount": 231,
       "tags": [
         "master"
       ]

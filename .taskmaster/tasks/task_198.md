@@ -2,7 +2,7 @@
 
 **Title:** Criar página admin de BI executivo por academia
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

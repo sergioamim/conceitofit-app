@@ -20,27 +20,27 @@ Páginas renderizam corretamente como RSC. Filtros funcionam. Bundle JS reduzido
 
 ## Subtasks
 
-### 192.null. Migrar administrativo/salas para RSC
+### 192.0. Migrar administrativo/salas para RSC
 
 **Status:** done  
 **Dependencies:** None  
 
-### 192.null. Migrar administrativo/atividades para RSC
+### 192.0. Migrar administrativo/atividades para RSC
 
 **Status:** done  
 **Dependencies:** None  
 
-### 192.null. Migrar administrativo/formas-pagamento para RSC
+### 192.0. Migrar administrativo/formas-pagamento para RSC
 
 **Status:** done  
 **Dependencies:** None  
 
-### 192.null. Migrar administrativo/tipos-conta para RSC
+### 192.0. Migrar administrativo/tipos-conta para RSC
 
 **Status:** done  
 **Dependencies:** None  
 
-### 192.null. Migrar administrativo/bandeiras para RSC
+### 192.0. Migrar administrativo/bandeiras para RSC
 
 **Status:** done  
 **Dependencies:** None  
