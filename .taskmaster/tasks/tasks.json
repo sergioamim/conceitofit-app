@@ -10057,11 +10057,12 @@
         "description": "Classificar em: (A) 100% server, (B) hybrid, (C) precisa client. Listar 15-20 candidatas para migração.",
         "details": "Grep todas as páginas com \"use client\". Para cada uma, verificar: usa hooks? usa useState/useEffect? usa event handlers? Se não, é candidata a RSC. Se usa apenas 1 hook simples, pode ser hybrid. Produzir lista classificada em docs/RSC_MIGRATION_CANDIDATES.md.",
         "testStrategy": "Lista classificada com justificativa. Sem falsos positivos.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T13:09:07.863Z"
       },
       {
         "id": "248",
@@ -10069,20 +10070,21 @@
         "description": "Usar createTenantLoader() onde aplicável. Priorizar páginas read-only. Verificar bundle size antes/depois.",
         "details": "Selecionar 10 páginas da lista classificada (task 247). Migrar removendo \"use client\" e usando RSC patterns. Usar createTenantLoader para data fetching. Medir bundle com ANALYZE=true npm run build antes e depois.",
         "testStrategy": "Páginas migradas renderizam corretamente. Bundle size reduzido. Testes E2E passam.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "247"
         ],
         "priority": "low",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T13:04:00.878Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T12:18:49.767Z",
+      "lastModified": "2026-03-29T13:09:07.863Z",
       "taskCount": 248,
-      "completedCount": 246,
+      "completedCount": 247,
       "tags": [
         "master"
       ]
