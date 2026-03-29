@@ -22,6 +22,7 @@ const ProspectDetailModal = dynamic(
 );
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 const ORIGEM_LABEL: Record<string, string> = {
   VISITA_PRESENCIAL: "Presencial",
@@ -47,8 +48,8 @@ export default function ProspectsKanbanPage() {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [stages, setStages] = useState<CrmPipelineStage[]>([]);
   const [openTasksByStage, setOpenTasksByStage] = useState<Record<string, number>>({});
-  const [filtroStatus, setFiltroStatus] = useState<StatusProspect | "TODOS">("TODOS");
-  const [filtroResponsavel, setFiltroResponsavel] = useState<string>("TODOS");
+  const [filtroStatus, setFiltroStatus] = useState<StatusProspect | typeof FILTER_ALL>(FILTER_ALL);
+  const [filtroResponsavel, setFiltroResponsavel] = useState<string>(FILTER_ALL);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,9 +112,9 @@ export default function ProspectsKanbanPage() {
   const filtered = useMemo(
     () =>
       prospects.filter((p) => {
-        const matchStatus = filtroStatus === "TODOS" || p.status === filtroStatus;
+        const matchStatus = filtroStatus === FILTER_ALL || p.status === filtroStatus;
         const matchResp =
-          filtroResponsavel === "TODOS" ||
+          filtroResponsavel === FILTER_ALL ||
           (filtroResponsavel === "SEM_RESP" && !p.responsavelId) ||
           p.responsavelId === filtroResponsavel;
         return matchStatus && matchResp;
@@ -236,13 +237,13 @@ export default function ProspectsKanbanPage() {
         <div className="w-44">
           <Select
             value={filtroStatus}
-            onValueChange={(v) => setFiltroStatus(v as StatusProspect | "TODOS")}
+            onValueChange={(v) => setFiltroStatus(v as StatusProspect | typeof FILTER_ALL)}
           >
             <SelectTrigger className="w-full bg-secondary border-border text-xs">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
-              <SelectItem value="TODOS">Todos status</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos status</SelectItem>
               {stages.map((stage) => (
                 <SelectItem key={stage.id} value={stage.status}>{stage.nome}</SelectItem>
               ))}
@@ -258,7 +259,7 @@ export default function ProspectsKanbanPage() {
               <SelectValue placeholder="Responsável" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
-              <SelectItem value="TODOS">Todos responsáveis</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos responsáveis</SelectItem>
               <SelectItem value="SEM_RESP">Sem responsável</SelectItem>
               {funcionarios.map((f) => (
                 <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>

@@ -14,8 +14,9 @@ import { AGREGADOR_REPASSE_LABEL, summarizeAgregadorTransacoes } from "@/lib/bac
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { AgregadorRepasseStatus, AgregadorTransacao } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
-type RepasseFiltro = AgregadorRepasseStatus | "TODOS";
+type RepasseFiltro = WithFilterAll<AgregadorRepasseStatus>;
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", {
@@ -41,7 +42,7 @@ export default function AgregadoresPage() {
   const [loading, setLoading] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [repasse, setRepasse] = useState<RepasseFiltro>("TODOS");
+  const [repasse, setRepasse] = useState<RepasseFiltro>(FILTER_ALL);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -67,7 +68,7 @@ export default function AgregadoresPage() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return rows.filter((item) => {
-      if (repasse !== "TODOS" && item.statusRepasse !== repasse) return false;
+      if (repasse !== FILTER_ALL && item.statusRepasse !== repasse) return false;
       if (!term) return true;
       return [
         item.clienteNome,
@@ -169,7 +170,7 @@ export default function AgregadoresPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="border-border bg-card">
-              <SelectItem value="TODOS">Todos os repasses</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos os repasses</SelectItem>
               <SelectItem value="PREVISTO">Previsto</SelectItem>
               <SelectItem value="EM_TRANSITO">Em trânsito</SelectItem>
               <SelectItem value="LIQUIDADO">Liquidado</SelectItem>

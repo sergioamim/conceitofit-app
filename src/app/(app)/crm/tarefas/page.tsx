@@ -30,6 +30,7 @@ import type {
   StatusProspect,
 } from "@/lib/types";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -100,7 +101,7 @@ export default function CrmTarefasPage() {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [editing, setEditing] = useState<CrmTask | null>(null);
   const [filterStatus, setFilterStatus] = useState<CrmTaskStatus | "TODAS">("TODAS");
-  const [filterResponsavel, setFilterResponsavel] = useState<string>("TODOS");
+  const [filterResponsavel, setFilterResponsavel] = useState<string>(FILTER_ALL);
   const [filterPrioridade, setFilterPrioridade] = useState<CrmTaskPrioridade | "TODAS">("TODAS");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -152,7 +153,7 @@ export default function CrmTarefasPage() {
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
       if (filterStatus !== "TODAS" && row.status !== filterStatus) return false;
-      if (filterResponsavel !== "TODOS" && row.responsavelId !== filterResponsavel) return false;
+      if (filterResponsavel !== FILTER_ALL && row.responsavelId !== filterResponsavel) return false;
       if (filterPrioridade !== "TODAS" && row.prioridade !== filterPrioridade) return false;
       return true;
     });
@@ -333,7 +334,7 @@ export default function CrmTarefasPage() {
                   onChange={(event) => setFilterResponsavel(event.target.value)}
                   className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                 >
-                  <option value="TODOS">Todos</option>
+                  <option value={FILTER_ALL}>Todos</option>
                   {funcionarios.map((funcionario) => (
                     <option key={funcionario.id} value={funcionario.id}>
                       {funcionario.nome}

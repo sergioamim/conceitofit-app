@@ -15,10 +15,11 @@ import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 const ALL_TENANTS = "__ALL__";
 const SEGMENTO_OPTIONS: Array<{ value: BiSegmento; label: string }> = [
-  { value: "TODOS", label: "Todos os segmentos" },
+  { value: FILTER_ALL, label: "Todos os segmentos" },
   { value: "VISITA_PRESENCIAL", label: "Visita presencial" },
   { value: "WHATSAPP", label: "WhatsApp" },
   { value: "INSTAGRAM", label: "Instagram" },
@@ -63,7 +64,7 @@ export default function BiRedePage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState(ALL_TENANTS);
-  const [segmento, setSegmento] = useState<BiSegmento>("TODOS");
+  const [segmento, setSegmento] = useState<BiSegmento>(FILTER_ALL);
   const [startDate, setStartDate] = useState(start);
   const [endDate, setEndDate] = useState(end);
   const [snapshot, setSnapshot] = useState<BiOperationalSnapshot | null>(null);

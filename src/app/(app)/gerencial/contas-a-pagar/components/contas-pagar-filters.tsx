@@ -3,6 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ContasPagarWorkspace, CATEGORIA_LABEL, StatusFiltro, CategoriaFiltro, OrigemFiltro } from "../hooks/use-contas-pagar-workspace";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 interface ContasPagarFiltersProps {
   workspace: ContasPagarWorkspace;
@@ -71,7 +72,7 @@ export function ContasPagarFilters({ workspace }: ContasPagarFiltersProps) {
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
               <SelectItem value="EM_ABERTO">Em aberto</SelectItem>
-              <SelectItem value="TODOS">Todos</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos</SelectItem>
               <SelectItem value="PENDENTE">Pendente</SelectItem>
               <SelectItem value="VENCIDA">Vencida</SelectItem>
               <SelectItem value="PAGA">Paga</SelectItem>
@@ -108,7 +109,7 @@ export function ContasPagarFilters({ workspace }: ContasPagarFiltersProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
-              <SelectItem value="TODOS">Todos</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos</SelectItem>
               {tiposConta.map((tipo) => (
                 <SelectItem key={tipo.id} value={tipo.id}>
                   {tipo.nome}

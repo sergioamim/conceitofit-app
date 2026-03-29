@@ -14,11 +14,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TIPO_PLANO_LABEL } from "@/lib/tenant/planos/form";
 import { formatBRL } from "@/lib/formatters";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 export function PlanosClient() {
   const { tenantId, tenantResolved } = useTenantContext();
   const [planos, setPlanos] = useState<Plano[]>([]);
-  const [filtroAtivo, setFiltroAtivo] = useState<"ATIVOS" | "TODOS">("ATIVOS");
+  const [filtroAtivo, setFiltroAtivo] = useState<"ATIVOS" | typeof FILTER_ALL>("ATIVOS");
   const loadingRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
 
@@ -80,11 +81,11 @@ export function PlanosClient() {
         <div className="flex items-center gap-2">
           <select
             value={filtroAtivo}
-            onChange={(e) => setFiltroAtivo(e.target.value as "ATIVOS" | "TODOS")}
+            onChange={(e) => setFiltroAtivo(e.target.value as "ATIVOS" | typeof FILTER_ALL)}
             className="h-9 rounded-md border border-border bg-secondary px-3 text-sm text-foreground"
           >
             <option value="ATIVOS">Mostrar ativos</option>
-            <option value="TODOS">Mostrar todos</option>
+            <option value={FILTER_ALL}>Mostrar todos</option>
           </select>
           <Button asChild>
             <Link href="/planos/novo">

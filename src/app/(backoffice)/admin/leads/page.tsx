@@ -19,6 +19,7 @@ import {
   updateAdminLeadStatus,
 } from "@/lib/api/admin-leads";
 import type { LeadB2b, LeadB2bStats, StatusLeadB2b } from "@/lib/shared/types/lead-b2b";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const STATUS_OPTIONS: { value: StatusLeadB2b; label: string }[] = [
@@ -47,7 +48,7 @@ export default function AdminLeadsPage() {
   const [leads, setLeads] = useState<LeadB2b[]>([]);
   const [stats, setStats] = useState<LeadB2bStats | null>(null);
   const [busca, setBusca] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState<StatusLeadB2b | "TODOS">("TODOS");
+  const [filtroStatus, setFiltroStatus] = useState<StatusLeadB2b | typeof FILTER_ALL>(FILTER_ALL);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(20);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +99,7 @@ export default function AdminLeadsPage() {
   const leadsFiltrados = useMemo(() => {
     let filtered = leads;
 
-    if (filtroStatus !== "TODOS") {
+    if (filtroStatus !== FILTER_ALL) {
       filtered = filtered.filter((l) => l.status === filtroStatus);
     }
 
@@ -270,7 +271,7 @@ export default function AdminLeadsPage() {
                   <Select
                     value={filtroStatus}
                     onValueChange={(v) => {
-                      setFiltroStatus(v as StatusLeadB2b | "TODOS");
+                      setFiltroStatus(v as StatusLeadB2b | typeof FILTER_ALL);
                       setPage(0);
                     }}
                   >
@@ -278,7 +279,7 @@ export default function AdminLeadsPage() {
                       <SelectValue placeholder="Filtrar status" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
-                      <SelectItem value="TODOS">Todos os status</SelectItem>
+                      <SelectItem value={FILTER_ALL}>Todos os status</SelectItem>
                       {STATUS_OPTIONS.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           {opt.label}

@@ -43,9 +43,10 @@ import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import type { Cobranca, CobrancaStatus, ContratoPlataforma, TipoFormaPagamento } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { isCobrancaEmAberto, isCobrancaPendente } from "@/lib/domain/status-helpers";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 type PageSize = 10 | 20 | 50;
-type StatusFilter = "TODOS" | CobrancaStatus;
+type StatusFilter = WithFilterAll<CobrancaStatus>;
 
 type CobrancaFormValues = {
   contratoId: string;
@@ -181,9 +182,9 @@ export default function AdminCobrancasPage() {
   const [error, setError] = useState<string | null>(null);
   const [cobrancas, setCobrancas] = useState<Cobranca[]>([]);
   const [contratos, setContratos] = useState<ContratoPlataforma[]>([]);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("TODOS");
-  const [academiaFilter, setAcademiaFilter] = useState("TODOS");
-  const [periodoFilter, setPeriodoFilter] = useState<"TODOS" | "VENCIDAS" | "MES_ATUAL">("TODOS");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(FILTER_ALL);
+  const [academiaFilter, setAcademiaFilter] = useState(FILTER_ALL);
+  const [periodoFilter, setPeriodoFilter] = useState<typeof FILTER_ALL | "VENCIDAS" | "MES_ATUAL">(FILTER_ALL);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [todayDate, setTodayDate] = useState("");
@@ -255,8 +256,8 @@ export default function AdminCobrancasPage() {
   const filteredCobrancas = useMemo(() => {
     return cobrancas.filter((cobranca) => {
       const effectiveStatus = toCobrancaStatus(cobranca, todayDate);
-      if (statusFilter !== "TODOS" && effectiveStatus !== statusFilter) return false;
-      if (academiaFilter !== "TODOS" && cobranca.academiaId !== academiaFilter) return false;
+      if (statusFilter !== FILTER_ALL && effectiveStatus !== statusFilter) return false;
+      if (academiaFilter !== FILTER_ALL && cobranca.academiaId !== academiaFilter) return false;
       if (periodoFilter === "VENCIDAS" && effectiveStatus !== "VENCIDO") return false;
       if (periodoFilter === "MES_ATUAL" && !cobranca.dataVencimento.startsWith(currentMonthKey)) return false;
       return true;
@@ -300,9 +301,9 @@ export default function AdminCobrancasPage() {
   }, [cobrancas, contratos]);
 
   function resetFilters() {
-    setStatusFilter("TODOS");
-    setAcademiaFilter("TODOS");
-    setPeriodoFilter("TODOS");
+    setStatusFilter(FILTER_ALL);
+    setAcademiaFilter(FILTER_ALL);
+    setPeriodoFilter(FILTER_ALL);
     setPage(0);
   }
 
@@ -460,7 +461,7 @@ export default function AdminCobrancasPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todos os status</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos os status</SelectItem>
                 {STATUS_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -480,7 +481,7 @@ export default function AdminCobrancasPage() {
                 <SelectValue placeholder="Academia" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todas as academias</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todas as academias</SelectItem>
                 {academias.map((academia) => (
                   <SelectItem key={academia.id} value={academia.id}>
                     {academia.nome}
@@ -492,7 +493,7 @@ export default function AdminCobrancasPage() {
             <Select
               value={periodoFilter}
               onValueChange={(value) => {
-                setPeriodoFilter(value as "TODOS" | "VENCIDAS" | "MES_ATUAL");
+                setPeriodoFilter(value as typeof FILTER_ALL | "VENCIDAS" | "MES_ATUAL");
                 setPage(0);
               }}
             >
@@ -500,7 +501,7 @@ export default function AdminCobrancasPage() {
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todo o período</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todo o período</SelectItem>
                 <SelectItem value="VENCIDAS">Somente vencidas</SelectItem>
                 <SelectItem value="MES_ATUAL">Vencimento no mês atual</SelectItem>
               </SelectContent>

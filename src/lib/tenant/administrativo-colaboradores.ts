@@ -10,6 +10,7 @@ import type {
   RbacPerfil,
   Tenant,
 } from "@/lib/types";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 type FuncionarioNotificacaoApiEvento =
   | "ESCALA_ALTERADA"
@@ -24,18 +25,18 @@ type FuncionarioNotificacaoApiRequest = {
   inApp: boolean;
 };
 
-export type ColaboradorFlagFiltro =
-  | "TODOS"
+export type ColaboradorFlagFiltro = WithFilterAll<
   | "AULAS"
   | "CATRACA"
   | "FORA_HORARIO"
   | "TECLADO"
-  | "COORDENADOR";
+  | "COORDENADOR"
+>;
 
 export type ColaboradorListFilters = {
   query: string;
-  statusOperacional: FuncionarioStatusOperacional | "TODOS";
-  statusAcesso: FuncionarioStatusAcesso | "TODOS";
+  statusOperacional: WithFilterAll<FuncionarioStatusOperacional>;
+  statusAcesso: WithFilterAll<FuncionarioStatusAcesso>;
   cargoId: string;
   unidadeId: string;
   flag: ColaboradorFlagFiltro;
@@ -402,10 +403,10 @@ export function filterColaboradores(items: Funcionario[], filters: ColaboradorLi
   const query = filters.query.trim().toLowerCase();
 
   return items.filter((item) => {
-    if (filters.statusOperacional !== "TODOS" && item.statusOperacional !== filters.statusOperacional) {
+    if (filters.statusOperacional !== FILTER_ALL && item.statusOperacional !== filters.statusOperacional) {
       return false;
     }
-    if (filters.statusAcesso !== "TODOS" && item.statusAcesso !== filters.statusAcesso) {
+    if (filters.statusAcesso !== FILTER_ALL && item.statusAcesso !== filters.statusAcesso) {
       return false;
     }
     if (filters.cargoId && item.cargoId !== filters.cargoId) {

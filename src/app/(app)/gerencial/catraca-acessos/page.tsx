@@ -20,9 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TableCell } from "@/components/ui/table";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
-type TipoLiberacaoFiltro = "TODOS" | "MANUAL" | "AUTOMATICA";
-type StatusFiltro = "TODOS" | "LIBERADO" | "BLOQUEADO";
+type TipoLiberacaoFiltro = WithFilterAll<"MANUAL" | "AUTOMATICA">;
+type StatusFiltro = WithFilterAll<"LIBERADO" | "BLOQUEADO">;
 type TipoLiberacaoNormalizado = "MANUAL" | "AUTOMATICA" | "INDEFINIDA";
 
 function getTodayDate(): string {
@@ -229,8 +230,8 @@ export default function CatracaAcessosPage() {
   const [loadingClienteOptions, setLoadingClienteOptions] = useState(false);
   const [erroClienteOptions, setErroClienteOptions] = useState("");
 
-  const [tipoLiberacaoFiltro, setTipoLiberacaoFiltro] = useState<TipoLiberacaoFiltro>("TODOS");
-  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("TODOS");
+  const [tipoLiberacaoFiltro, setTipoLiberacaoFiltro] = useState<TipoLiberacaoFiltro>(FILTER_ALL);
+  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>(FILTER_ALL);
 
   const load = useCallback(async () => {
     if (!tenantId) return;
@@ -358,14 +359,14 @@ export default function CatracaAcessosPage() {
   const globallyFilteredItems = useMemo(() => {
     let scoped = items;
 
-    if (statusFiltro !== "TODOS") {
+    if (statusFiltro !== FILTER_ALL) {
       scoped = scoped.filter((item) => {
         const blocked = isBlockedStatus(item.status);
         return statusFiltro === "BLOQUEADO" ? blocked : !blocked;
       });
     }
 
-    if (tipoLiberacaoFiltro !== "TODOS") {
+    if (tipoLiberacaoFiltro !== FILTER_ALL) {
       scoped = scoped.filter((item) => resolveTipoLiberacao(item.releaseType, item.issuedBy) === tipoLiberacaoFiltro);
     }
 
@@ -501,7 +502,7 @@ export default function CatracaAcessosPage() {
               <SelectValue placeholder="Tipo de liberação" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="TODOS">Todos os tipos</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos os tipos</SelectItem>
               <SelectItem value="AUTOMATICA">Automática</SelectItem>
               <SelectItem value="MANUAL">Manual</SelectItem>
             </SelectContent>
@@ -518,7 +519,7 @@ export default function CatracaAcessosPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="TODOS">Todos os status</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos os status</SelectItem>
               <SelectItem value="LIBERADO">Liberados</SelectItem>
               <SelectItem value="BLOQUEADO">Bloqueados</SelectItem>
             </SelectContent>

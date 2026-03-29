@@ -1,5 +1,6 @@
 import { formatDiaSemana, listDatesBetween } from "@/lib/tenant/aulas/reservas";
 import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import type {
   Academia,
   Aluno,
@@ -193,7 +194,7 @@ function resolveTenantIds(input: {
 }
 
 function prospectMatchesSegment(prospect: Prospect | undefined, segmento: BiSegmento) {
-  if (segmento === "TODOS") return true;
+  if (segmento === FILTER_ALL) return true;
   return prospect?.origem === segmento;
 }
 
@@ -201,7 +202,7 @@ function buildAlunoSegmentMatcher(prospects: Prospect[], segmento: BiSegmento) {
   const prospectMap = new Map(prospects.map((item) => [item.id, item] as const));
   return (aluno: Aluno | undefined) => {
     if (!aluno) return false;
-    if (segmento === "TODOS") return true;
+    if (segmento === FILTER_ALL) return true;
     return prospectMatchesSegment(aluno.prospectId ? prospectMap.get(aluno.prospectId) : undefined, segmento);
   };
 }
