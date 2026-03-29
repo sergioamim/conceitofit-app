@@ -1,5 +1,6 @@
 import { UUID, LocalDate, LocalDateTime, ModoAssinaturaContrato } from './comum';
 import type { StatusContratoPlano } from './comum';
+import type { StatusAssinatura } from './billing';
 import { Aluno } from './aluno';
 import { Plano } from './plano';
 import { PagamentoResumo, TipoFormaPagamento } from './pagamento';
@@ -39,4 +40,6 @@ export interface Matricula {
   dataCriacao: LocalDateTime;
   dataAtualizacao?: LocalDateTime;
   convenioId?: UUID;
+  assinaturaId?: UUID;
+  assinaturaStatus?: StatusAssinatura;
 }
