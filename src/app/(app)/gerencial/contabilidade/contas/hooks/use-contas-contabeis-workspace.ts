@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 import {
   listFinancialAccountsApi,
   createFinancialAccountApi,
@@ -10,8 +11,8 @@ import {
 } from "@/lib/api/financial";
 import type { FinancialAccount, FinancialAccountType, FinancialAccountStatus } from "@/lib/types";
 
-export type TipoFiltro = "TODOS" | FinancialAccountType;
-export type StatusFiltro = "TODOS" | FinancialAccountStatus;
+export type TipoFiltro = WithFilterAll<FinancialAccountType>;
+export type StatusFiltro = WithFilterAll<FinancialAccountStatus>;
 
 export const TIPO_LABEL: Record<FinancialAccountType, string> = {
   ATIVO: "Ativo",
@@ -41,8 +42,8 @@ export function useContasContabeisWorkspace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [contas, setContas] = useState<FinancialAccount[]>([]);
-  const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>("TODOS");
-  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("TODOS");
+  const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>(FILTER_ALL);
+  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>(FILTER_ALL);
   const [search, setSearch] = useState("");
   const [openNovaConta, setOpenNovaConta] = useState(false);
 
@@ -69,8 +70,8 @@ export function useContasContabeisWorkspace() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return contas.filter((conta) => {
-      if (tipoFiltro !== "TODOS" && conta.tipo !== tipoFiltro) return false;
-      if (statusFiltro !== "TODOS" && conta.status !== statusFiltro) return false;
+      if (tipoFiltro !== FILTER_ALL && conta.tipo !== tipoFiltro) return false;
+      if (statusFiltro !== FILTER_ALL && conta.status !== statusFiltro) return false;
       if (!term) return true;
       return (
         conta.codigo.toLowerCase().includes(term) ||

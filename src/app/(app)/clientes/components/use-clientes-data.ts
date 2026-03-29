@@ -4,12 +4,13 @@ import { useMemo } from "react";
 import { useClientes } from "@/lib/query/use-clientes";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { StatusAluno } from "@/lib/types";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 interface UseClientesDataInput {
   tenantId: string | undefined;
   tenantResolved: boolean;
   setTenant: (tenantId: string) => Promise<void>;
-  filtro: StatusAluno | "TODOS";
+  filtro: WithFilterAll<StatusAluno>;
   page: number;
   pageSize: number;
 }
@@ -21,7 +22,7 @@ export function useClientesData({
   page,
   pageSize,
 }: UseClientesDataInput) {
-  const statusFilter = filtro === "TODOS" ? undefined : filtro;
+  const statusFilter = filtro === FILTER_ALL ? undefined : filtro;
 
   const { data: queryData, isLoading: loading, error: queryError, refetch } = useClientes({
     tenantId,

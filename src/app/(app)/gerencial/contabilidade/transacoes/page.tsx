@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ListErrorState } from "@/components/shared/list-states";
 import { ExportMenu } from "@/components/shared/export-menu";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { getBusinessMonthRange } from "@/lib/business-date";
@@ -67,8 +68,8 @@ export default function TransacoesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [transacoes, setTransacoes] = useState<FinancialTransaction[]>([]);
-  const [statusFiltro, setStatusFiltro] = useState("TODOS");
-  const [tipoFiltro, setTipoFiltro] = useState("TODOS");
+  const [statusFiltro, setStatusFiltro] = useState(FILTER_ALL);
+  const [tipoFiltro, setTipoFiltro] = useState(FILTER_ALL);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState(range.start);
   const [endDate, setEndDate] = useState(range.end);
@@ -101,8 +102,8 @@ export default function TransacoesPage() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return transacoes.filter((t) => {
-      if (statusFiltro !== "TODOS" && t.status !== statusFiltro) return false;
-      if (tipoFiltro !== "TODOS" && t.tipo !== tipoFiltro) return false;
+      if (statusFiltro !== FILTER_ALL && t.status !== statusFiltro) return false;
+      if (tipoFiltro !== FILTER_ALL && t.tipo !== tipoFiltro) return false;
       if (!term) return true;
       return (
         t.descricao.toLowerCase().includes(term) ||
@@ -214,14 +215,14 @@ export default function TransacoesPage() {
           <Select value={tipoFiltro} onValueChange={setTipoFiltro}>
             <SelectTrigger className="border-border bg-secondary"><SelectValue /></SelectTrigger>
             <SelectContent className="border-border bg-card">
-              <SelectItem value="TODOS">Todos os tipos</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos os tipos</SelectItem>
               {Object.entries(TIPO_LABEL).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={statusFiltro} onValueChange={setStatusFiltro}>
             <SelectTrigger className="border-border bg-secondary"><SelectValue /></SelectTrigger>
             <SelectContent className="border-border bg-card">
-              <SelectItem value="TODOS">Todos os status</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos os status</SelectItem>
               {Object.entries(STATUS_BADGE).map(([v, { label }]) => <SelectItem key={v} value={v}>{label}</SelectItem>)}
             </SelectContent>
           </Select>

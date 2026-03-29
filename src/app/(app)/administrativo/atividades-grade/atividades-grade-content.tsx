@@ -27,6 +27,7 @@ import {
 } from "@/components/shared/atividade-ocorrencia-modal";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { PageError } from "@/components/shared/page-error";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 const DIA_LABEL: Record<DiaSemana, string> = {
   SEG: "Segunda",
@@ -50,7 +51,7 @@ export function AtividadesGradeContent() {
   const [editing, setEditing] = useState<AtividadeGrade | null>(null);
   const [occurrenceGrade, setOccurrenceGrade] = useState<AtividadeGrade | null>(null);
   const [filtroAtividade, setFiltroAtividade] = useState<string>("TODAS");
-  const [filtroDia, setFiltroDia] = useState<DiaSemana | "TODOS">("TODOS");
+  const [filtroDia, setFiltroDia] = useState<DiaSemana | typeof FILTER_ALL>(FILTER_ALL);
   const [apenasAtivas, setApenasAtivas] = useState(true);
   const [savingOccurrence, setSavingOccurrence] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -105,7 +106,7 @@ export function AtividadesGradeContent() {
   const funcionarioMap = useMemo(() => new Map(funcionarios.map((f) => [f.id, f])), [funcionarios]);
 
   const filtered = grades.filter((g) => {
-    const matchDia = filtroDia === "TODOS" || g.diasSemana.includes(filtroDia);
+    const matchDia = filtroDia === FILTER_ALL || g.diasSemana.includes(filtroDia);
     return matchDia;
   });
 
@@ -294,12 +295,12 @@ export function AtividadesGradeContent() {
             </Select>
           </div>
           <div className="w-44">
-            <Select value={filtroDia} onValueChange={(v) => setFiltroDia(v as DiaSemana | "TODOS")}>
+            <Select value={filtroDia} onValueChange={(v) => setFiltroDia(v as DiaSemana | typeof FILTER_ALL)}>
               <SelectTrigger className="w-full bg-secondary border-border text-sm">
                 <SelectValue placeholder="Dia" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                <SelectItem value="TODOS">Todos os dias</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos os dias</SelectItem>
                 {Object.entries(DIA_LABEL).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}

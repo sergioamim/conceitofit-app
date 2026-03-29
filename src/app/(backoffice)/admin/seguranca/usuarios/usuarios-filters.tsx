@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Academia, GlobalAdminReviewStatus, Tenant } from "@/lib/types";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import type { Filters } from "./usuarios-types";
 
 type UsuariosFiltersProps = {
@@ -108,7 +109,7 @@ export function UsuariosFilters({
                 <SelectItem value="ATIVO">Ativos</SelectItem>
                 <SelectItem value="INATIVO">Inativos</SelectItem>
                 <SelectItem value="PENDENTE">Pendentes</SelectItem>
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -149,14 +150,14 @@ export function UsuariosFilters({
           <div className="space-y-2">
             <Label>Novas unidades</Label>
             <Select
-              value={filters.eligibleOnly ? "SIM" : "TODOS"}
+              value={filters.eligibleOnly ? "SIM" : FILTER_ALL}
               onValueChange={(value) => setFilters((current) => ({ ...current, eligibleOnly: value === "SIM" }))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                 <SelectItem value="SIM">Só com propagação</SelectItem>
               </SelectContent>
             </Select>
@@ -188,14 +189,14 @@ export function UsuariosFilters({
           <div className="space-y-2">
             <Label>Acesso amplo</Label>
             <Select
-              value={filters.broadAccessOnly ? "SIM" : "TODOS"}
+              value={filters.broadAccessOnly ? "SIM" : FILTER_ALL}
               onValueChange={(value) => setFilters((current) => ({ ...current, broadAccessOnly: value === "SIM" }))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                 <SelectItem value="SIM">Só amplos</SelectItem>
               </SelectContent>
             </Select>
@@ -204,14 +205,14 @@ export function UsuariosFilters({
           <div className="space-y-2">
             <Label>Exceções</Label>
             <Select
-              value={filters.exceptionsOnly ? "SIM" : "TODOS"}
+              value={filters.exceptionsOnly ? "SIM" : FILTER_ALL}
               onValueChange={(value) => setFilters((current) => ({ ...current, exceptionsOnly: value === "SIM" }))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                 <SelectItem value="SIM">Só com exceção</SelectItem>
               </SelectContent>
             </Select>

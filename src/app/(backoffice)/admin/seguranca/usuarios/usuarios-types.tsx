@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listGlobalSecurityUsers } from "@/lib/backoffice/seguranca";
 import type { GlobalAdminReviewStatus, GlobalAdminUserSummary } from "@/lib/types";
 import type { GlobalAdminNewUnitsPolicyScope } from "@/lib/types";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 export type Filters = {
   query: string;
@@ -103,7 +104,7 @@ export async function loadUsersSnapshot(filters: Filters) {
       query: filters.query,
       academiaId: filters.academiaId || undefined,
       tenantId: filters.tenantId || undefined,
-      status: filters.status === "TODOS" ? undefined : filters.status,
+      status: filters.status === FILTER_ALL ? undefined : filters.status,
       profile: filters.profile || undefined,
       scopeType: filters.scopeType || undefined,
       eligibleForNewUnits: filters.eligibleOnly || undefined,

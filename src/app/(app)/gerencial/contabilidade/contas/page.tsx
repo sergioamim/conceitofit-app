@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ListErrorState } from "@/components/shared/list-states";
 import { ExportMenu } from "@/components/shared/export-menu";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import type { FinancialAccountType } from "@/lib/types";
 import {
   useContasContabeisWorkspace,
@@ -25,12 +26,12 @@ const INITIAL_FORM: NovaContaForm = {
 };
 
 const TIPO_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "TODOS", label: "Todos os tipos" },
+  { value: FILTER_ALL, label: "Todos os tipos" },
   ...Object.entries(TIPO_LABEL).map(([value, label]) => ({ value, label })),
 ];
 
 const STATUS_OPTIONS = [
-  { value: "TODOS", label: "Todos" },
+  { value: FILTER_ALL, label: "Todos" },
   { value: "ATIVA", label: "Ativa" },
   { value: "INATIVA", label: "Inativa" },
 ];

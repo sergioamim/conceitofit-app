@@ -29,12 +29,13 @@ import { formatDate } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useDialogState } from "@/hooks/use-dialog-state";
 import type { Aluno, StatusAluno } from "@/lib/types";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 import { ClienteResumoDialog } from "./cliente-resumo-dialog";
 import { useClientesData } from "./use-clientes-data";
 
-const STATUS_FILTERS: { value: StatusAluno | "TODOS"; label: string }[] = [
-  { value: "TODOS", label: "Todos" },
+const STATUS_FILTERS: { value: WithFilterAll<StatusAluno>; label: string }[] = [
+  { value: FILTER_ALL, label: "Todos" },
   { value: "ATIVO", label: "Ativos" },
   { value: "SUSPENSO", label: "Suspensos" },
   { value: "INATIVO", label: "Inativos" },
@@ -95,7 +96,7 @@ function ClientesPageContent() {
   const buscaDigits = busca.replace(/\D/g, "");
 
   const filtered = alunos.filter((a) => {
-    const matchStatus = filtro === "TODOS" || a.status === filtro;
+    const matchStatus = filtro === FILTER_ALL || a.status === filtro;
     const matchBusca = !busca
       || a.nome.toLowerCase().includes(busca.toLowerCase())
       || a.email.toLowerCase().includes(busca.toLowerCase())
@@ -253,7 +254,7 @@ function ClientesPageContent() {
         <div className="flex gap-1.5">
             {STATUS_FILTERS.map((s) => (
             <button key={s.value} onClick={() => {
-              setParams({ status: s.value === "TODOS" ? null : s.value });
+              setParams({ status: s.value === FILTER_ALL ? null : s.value });
             }}
               className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 filtro === s.value
@@ -263,7 +264,7 @@ function ClientesPageContent() {
             >
               {s.label}
               {(
-                s.value === "TODOS" ||
+                s.value === FILTER_ALL ||
                 s.value === "ATIVO" ||
                 s.value === "SUSPENSO" ||
                 s.value === "INATIVO"
