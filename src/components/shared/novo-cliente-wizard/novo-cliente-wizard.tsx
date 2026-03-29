@@ -94,13 +94,10 @@ export function NovoClienteWizard({
                   {w.step === 1 && (
                     <>
                       <Button type="button" variant="secondary" onClick={() => w.handleCreateOnly()} disabled={w.loading || !w.isValid}>
-                        Pré-cadastro
+                        Apenas pre-cadastro
                       </Button>
-                      <Button type="button" variant="default" onClick={() => w.handleCreateOnly({ openSale: true })} disabled={w.loading || !w.isValid}>
-                        Pré-cadastro + venda <ArrowRight className="size-3.5" />
-                      </Button>
-                      <Button type="button" variant="outline" onClick={w.handleNext} disabled={w.loading || !w.isValid}>
-                        Completar cadastro <ArrowRight className="size-3.5" />
+                      <Button type="button" onClick={w.handleNext} disabled={w.loading || !w.isValid}>
+                        Continuar com plano <ArrowRight className="size-3.5" />
                       </Button>
                     </>
                   )}

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Controller } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
-import { CreditCard, Loader2, Tag } from "lucide-react";
-import type { Convenio, FormaPagamento } from "@/lib/types";
+import { ChevronDown, ChevronUp, CreditCard, Loader2, Plus, Tag, Trash2 } from "lucide-react";
+import type { FormaPagamento } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -212,6 +212,9 @@ export function Step3Pagamento({
         </label>
       )}
 
+      {/* Itens avulsos (serviço/produto) */}
+      <ItensAvulsosSection commercial={commercial} />
+
       {/* Resumo financeiro */}
       {dryRun && (
         <div className="rounded-xl border border-border bg-card p-3 space-y-1.5 text-sm">
@@ -229,6 +232,89 @@ export function Step3Pagamento({
             <span>Total final</span>
             <span className="font-display text-base font-bold text-gym-accent">{formatBRL(dryRun.total)}</span>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ItensAvulsosSection({ commercial }: { commercial: ReturnType<typeof useCommercialFlow> }) {
+  const [open, setOpen] = useState(false);
+  const [tipo, setTipo] = useState<"SERVICO" | "PRODUTO">("SERVICO");
+  const [descricao, setDescricao] = useState("");
+  const [valor, setValor] = useState("");
+
+  const avulsos = commercial.cart.filter((i) => i.tipo === "SERVICO" || i.tipo === "PRODUTO");
+
+  function handleAdd() {
+    if (!descricao.trim() || !valor) return;
+    commercial.addItemToCart({
+      tipo,
+      referenciaId: `avulso-${Date.now()}`,
+      descricao: descricao.trim(),
+      quantidade: 1,
+      valorUnitario: parseFloat(valor) || 0,
+      desconto: 0,
+    });
+    setDescricao("");
+    setValor("");
+  }
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+      >
+        <Plus className="size-3" />
+        Adicionar servico ou produto
+        {open ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+      </button>
+
+      {open && (
+        <div className="rounded-lg border border-border bg-secondary/20 p-3 space-y-3">
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-end">
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Descricao</label>
+              <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex: Avaliacao fisica" className="bg-card border-border text-sm" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tipo</label>
+              <Select value={tipo} onValueChange={(v) => setTipo(v as "SERVICO" | "PRODUTO")}>
+                <SelectTrigger className="w-28 bg-card border-border text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="SERVICO">Servico</SelectItem>
+                  <SelectItem value="PRODUTO">Produto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Valor</label>
+              <Input type="number" min={0} step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" className="w-24 bg-card border-border text-sm" />
+            </div>
+            <Button type="button" size="sm" onClick={handleAdd} disabled={!descricao.trim() || !valor} className="shrink-0">
+              <Plus className="size-3.5" />
+            </Button>
+          </div>
+
+          {avulsos.length > 0 && (
+            <div className="space-y-1">
+              {avulsos.map((item, idx) => {
+                const cartIdx = commercial.cart.indexOf(item);
+                return (
+                  <div key={`${item.referenciaId}-${idx}`} className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs">
+                    <span className="flex-1">{item.descricao}</span>
+                    <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{item.tipo === "SERVICO" ? "Servico" : "Produto"}</span>
+                    <span className="font-semibold">{formatBRL(item.valorUnitario)}</span>
+                    <button type="button" onClick={() => commercial.removeCartItem(cartIdx)} className="text-muted-foreground hover:text-gym-danger">
+                      <Trash2 className="size-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
