@@ -4,6 +4,9 @@ import type {
   CrmAutomationGatilho,
   CrmCadenciaAcao,
   CrmCadenciaGatilho,
+  CrmCadenceExecutionStatus,
+  CrmCadenceStepExecutionStatus,
+  CrmEscalationAction,
   CrmPipelineStage,
   CrmPlaybookAcao,
   CrmTask,
@@ -146,6 +149,27 @@ export const CRM_ACTIVITY_LABEL: Record<CrmActivityTipo, string> = {
   PLAYBOOK_ATUALIZADO: "Playbook atualizado",
   CADENCIA_ATIVADA: "Cadência ativada",
   AUTOMACAO_ALTERADA: "Automação alterada",
+};
+
+export const CRM_CADENCE_EXECUTION_STATUS_LABEL: Record<CrmCadenceExecutionStatus, string> = {
+  EM_ANDAMENTO: "Em andamento",
+  CONCLUIDA: "Concluída",
+  CANCELADA: "Cancelada",
+  ESCALADA: "Escalada",
+};
+
+export const CRM_CADENCE_STEP_STATUS_LABEL: Record<CrmCadenceStepExecutionStatus, string> = {
+  PENDENTE: "Pendente",
+  EXECUTADO: "Executado",
+  PULADO: "Pulado",
+  FALHA: "Falha",
+};
+
+export const CRM_ESCALATION_ACTION_LABEL: Record<CrmEscalationAction, string> = {
+  MOVER_ETAPA: "Mover etapa",
+  CRIAR_TAREFA_URGENTE: "Criar tarefa urgente",
+  NOTIFICAR_GESTOR: "Notificar gestor",
+  MARCAR_PERDIDO: "Marcar como perdido",
 };
 
 export function buildDefaultCrmPipelineStages(tenantId: string): CrmPipelineStage[] {

@@ -276,6 +276,66 @@ export interface CrmActivity {
   dataCriacao: LocalDateTime;
 }
 
+/* --- Cadence Execution Engine --- */
+
+export type CrmCadenceExecutionStatus =
+  | "EM_ANDAMENTO"
+  | "CONCLUIDA"
+  | "CANCELADA"
+  | "ESCALADA";
+
+export type CrmCadenceStepExecutionStatus =
+  | "PENDENTE"
+  | "EXECUTADO"
+  | "PULADO"
+  | "FALHA";
+
+export type CrmEscalationAction =
+  | "MOVER_ETAPA"
+  | "CRIAR_TAREFA_URGENTE"
+  | "NOTIFICAR_GESTOR"
+  | "MARCAR_PERDIDO";
+
+export interface CrmCadenceStepExecution {
+  id: UUID;
+  stepId: UUID;
+  stepTitulo: string;
+  acao: CrmCadenciaAcao;
+  status: CrmCadenceStepExecutionStatus;
+  agendadoPara: LocalDateTime;
+  executadoEm?: LocalDateTime;
+  erro?: string;
+}
+
+export interface CrmCadenceExecution {
+  id: UUID;
+  tenantId: UUID;
+  cadenciaId: UUID;
+  cadenciaNome: string;
+  prospectId: UUID;
+  prospectNome: string;
+  status: CrmCadenceExecutionStatus;
+  gatilho: CrmCadenciaGatilho;
+  stageStatus: StatusProspect;
+  passos: CrmCadenceStepExecution[];
+  iniciadoEm: LocalDateTime;
+  concluidoEm?: LocalDateTime;
+  escaladoEm?: LocalDateTime;
+  escalacaoAcao?: CrmEscalationAction;
+  escalacaoMotivo?: string;
+}
+
+export interface CrmEscalationRule {
+  id: UUID;
+  tenantId: UUID;
+  cadenciaId: UUID;
+  nome: string;
+  condicao: "TAREFA_VENCIDA" | "SEM_RESPOSTA_APOS_CADENCIA" | "SLA_EXCEDIDO";
+  acao: CrmEscalationAction;
+  parametros?: Record<string, string>;
+  ativo: boolean;
+}
+
 export interface CrmWorkspaceStageSummary {
   stageStatus: StatusProspect;
   stageNome: string;
