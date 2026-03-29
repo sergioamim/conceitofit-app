@@ -9615,11 +9615,12 @@
         "description": "Apenas 11 testes de componentes existem. Componentes críticos como novo-cliente-wizard, clientes-client, plano-form, treino-form não têm cobertura.",
         "details": "Componentes prioritários para testes: 1) novo-cliente-wizard.tsx - testar fluxo multi-step, validação, draft persistence. 2) clientes-client.tsx - testar filtros, paginação, bulk actions. 3) plano-form.tsx - testar validação de campos, preview. 4) treino-form.tsx - testar adição de exercícios, configuração de séries. 5) receber-pagamento-modal.tsx - testar fluxo de recebimento. 6) nova-matricula-modal.tsx - testar seleção de plano e confirmação. Usar @testing-library/react com happy-dom (já configurado). Criar mocks de API calls com vi.mock().",
         "testStrategy": "Todos os testes passam. Cobertura de componentes > 60%. Componentes críticos têm testes de happy path e error path.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T04:24:27.960Z"
       },
       {
         "id": "216",
@@ -9627,18 +9628,19 @@
         "description": "src/lib/tenant/comercial/runtime.ts tem 1500+ LOC com todas as operações de clientes, matrículas e pagamentos num só arquivo.",
         "details": "Splitar runtime.ts em arquivos por domínio: 1) src/lib/tenant/comercial/clients-runtime.ts - operações de listagem, busca, suspensão de clientes. 2) src/lib/tenant/comercial/enrollments-runtime.ts - operações de matrícula. 3) src/lib/tenant/comercial/payments-runtime.ts - operações de pagamento e recebimento. 4) src/lib/tenant/comercial/runtime.ts - re-exportar tudo para manter compatibilidade. Manter mesma interface pública (exports) para não quebrar consumers.",
         "testStrategy": "Testes existentes continuam passando. Imports existentes continuam funcionando via re-export. Nenhum arquivo excede 500 LOC.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T04:20:37.817Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T04:14:09.325Z",
+      "lastModified": "2026-03-29T04:24:27.960Z",
       "taskCount": 216,
-      "completedCount": 213,
+      "completedCount": 214,
       "tags": [
         "master"
       ]
