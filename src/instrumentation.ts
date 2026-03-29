@@ -20,9 +20,12 @@ function createExtendPolyfill() {
 export async function register() {
   if (typeof window !== "undefined") return;
 
-  // Inicializar Sentry no server
   if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    await import("../sentry.server.config");
+    if (process.env.NEXT_RUNTIME === "edge") {
+      await import("../sentry.edge.config");
+    } else {
+      await import("../sentry.server.config");
+    }
   }
 
   try {

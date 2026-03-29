@@ -23,7 +23,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.ingest.sentry.io",
+      "connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
       "frame-ancestors 'none'",
     ].join("; "),
   },
@@ -102,5 +102,8 @@ export default process.env.NEXT_PUBLIC_SENTRY_DSN
       disableLogger: true,
       tunnelRoute: "/monitoring",
       widenClientFileUpload: true,
+      sourcemaps: {
+        disable: !process.env.SENTRY_AUTH_TOKEN,
+      },
     })
   : finalConfig;

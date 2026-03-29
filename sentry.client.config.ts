@@ -6,14 +6,22 @@ if (dsn) {
   Sentry.init({
     dsn,
     environment: process.env.NODE_ENV,
-    tracesSampleRate: process.env.NODE_ENV === "production" ? 0.2 : 1.0,
+    tracesSampleRate: 0.2,
     replaysSessionSampleRate: 0,
-    replaysOnErrorSampleRate: process.env.NODE_ENV === "production" ? 1.0 : 0,
-    debug: false,
+    replaysOnErrorSampleRate: 0.5,
     beforeSend(event) {
-      // Não enviar erros em desenvolvimento local sem DSN
+      // Não enviar erros de dev sem DSN configurado
       if (!dsn) return null;
       return event;
     },
+    ignoreErrors: [
+      // Erros de rede comuns que não são acionáveis
+      "Failed to fetch",
+      "Load failed",
+      "NetworkError",
+      "AbortError",
+      // Erros de extensões de browser
+      "ResizeObserver loop",
+    ],
   });
 }
