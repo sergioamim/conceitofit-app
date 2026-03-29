@@ -9748,11 +9748,12 @@
         "description": "Criar QueryClient com defaults, adicionar provider no layout (app), devtools em dev.",
         "details": "Criar src/lib/query/query-client.ts com: staleTime 5min, retry 2, refetchOnWindowFocus false. Adicionar QueryClientProvider no src/app/(app)/layout.tsx. Adicionar ReactQueryDevtools condicional (process.env.NODE_ENV === \"development\"). TanStack Query já está instalado (5.95.2).",
         "testStrategy": "Provider funciona sem erros. Devtools visível em dev. Páginas existentes não quebram.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:34:32.440Z"
       },
       {
         "id": "226",
@@ -9828,11 +9829,12 @@
         "description": "Extrair useClientesWorkspace() hook, ClientesFilterBar e ClientesTable.",
         "details": "Hook consolida os 12 useState em estado único. ClientesFilterBar gerencia busca, filtro de status, page size. ClientesTable renderiza listagem com bulk actions. Cada arquivo < 250 LOC.",
         "testStrategy": "Funcionalidade inalterada. Testes existentes passam.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:36:57.014Z"
       },
       {
         "id": "232",
@@ -9840,11 +9842,12 @@
         "description": "Extrair UsuariosFilters, UsuariosTable, UsuarioFormModal.",
         "details": "Cada sub-componente < 300 LOC. Manter page.tsx como orquestrador simples.",
         "testStrategy": "Funcionalidade inalterada. Cada arquivo < 300 LOC.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:34:42.708Z"
       },
       {
         "id": "233",
@@ -10058,9 +10061,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:34:08.488Z",
+      "lastModified": "2026-03-29T11:36:57.014Z",
       "taskCount": 248,
-      "completedCount": 224,
+      "completedCount": 225,
       "tags": [
         "master"
       ]
