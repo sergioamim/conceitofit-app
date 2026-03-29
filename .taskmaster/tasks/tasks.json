@@ -9776,13 +9776,14 @@
         "description": "Criar usePagamentos() hook com useQuery. Substituir loading/error manual por query states.",
         "details": "Criar hook em src/lib/tenant/hooks/. Query key: [\"pagamentos\", tenantId, mes, status]. Refetch on mutation (receber pagamento). Usar select para transformações.",
         "testStrategy": "Mesma funcionalidade com cache e retry automático. Receber pagamento atualiza lista.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
         "priority": "medium",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:43:04.375Z"
       },
       {
         "id": "228",
@@ -9872,11 +9873,12 @@
         "description": "Criar clients-runtime.ts, enrollments-runtime.ts, payments-runtime.ts. Manter runtime.ts como barrel re-export.",
         "details": "Arquivo: src/lib/tenant/comercial/runtime.ts. Separar por responsabilidade: operações de clientes, matrículas e pagamentos. Re-exportar tudo de runtime.ts para manter imports existentes funcionando.",
         "testStrategy": "Testes existentes passam. Imports existentes funcionam via re-export. Nenhum arquivo > 500 LOC.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:43:06.920Z"
       },
       {
         "id": "235",
@@ -10066,9 +10068,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:42:38.674Z",
+      "lastModified": "2026-03-29T11:43:06.922Z",
       "taskCount": 248,
-      "completedCount": 232,
+      "completedCount": 233,
       "tags": [
         "master"
       ]
