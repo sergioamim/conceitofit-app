@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { logger } from "@/lib/shared/logger";
 import type { Voucher } from "@/lib/types";
 import { VouchersContent } from "./vouchers-content";
 
@@ -26,14 +27,17 @@ async function Loader() {
           {
             query: { tenantId },
             next: { revalidate: 0 },
-          }
+          },
         ),
       ]);
       vouchers = vouchersData;
       usageCounts = countsData;
     }
-  } catch {
-    /* fallback to client-side fetch */
+  } catch (error) {
+    logger.warn("[VouchersPage] SSR fetch failed, falling back to client", {
+      module: "VouchersPage",
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   return (
