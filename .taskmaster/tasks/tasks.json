@@ -9380,12 +9380,12 @@
         "description": "O backend tem 5 endpoints de leads admin (GET /admin/leads, GET stats, GET {id}, PATCH notas, PATCH status) mas o frontend não tem UI para gerenciar leads capturados.",
         "details": "Criar src/lib/api/admin-leads.ts com clients para os 5 endpoints. Criar src/app/(backoffice)/admin/leads/page.tsx com: tabela paginada de leads, filtro por status, detalhe com notas, ações (mudar status, adicionar nota). Conectar com o formulário de captura B2B (/b2b lead-form) para ciclo completo: lead entra → admin visualiza → qualifica → converte.",
         "testStrategy": "Página /admin/leads lista leads. Filtro funciona. Detalhes e notas editáveis.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 5,
         "subtasks": [],
-        "updatedAt": "2026-03-29T01:21:58.270Z"
+        "updatedAt": "2026-03-29T01:28:46.955Z"
       },
       {
         "id": "198",
@@ -9622,9 +9622,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T01:27:53.059Z",
+      "lastModified": "2026-03-29T01:28:46.955Z",
       "taskCount": 216,
-      "completedCount": 198,
+      "completedCount": 199,
       "tags": [
         "master"
       ]
