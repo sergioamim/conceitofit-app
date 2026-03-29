@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { logger } from "@/lib/shared/logger";
 import type { FormaPagamento } from "@/lib/types";
 import { FormasPagamentoContent } from "./formas-pagamento-content";
 
@@ -22,7 +23,7 @@ async function Loader() {
         }
       );
     }
-  } catch { /* fallback to client-side fetch */ }
+  } catch (error) { logger.warn("[FormasPagamento] SSR fetch failed, falling back to client", { error }); }
   return <FormasPagamentoContent initialData={data} />;
 }
 

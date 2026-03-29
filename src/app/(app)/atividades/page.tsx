@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { logger } from "@/lib/shared/logger";
 import type { Atividade } from "@/lib/types";
 import { AtividadesContent } from "./atividades-content";
 
@@ -19,8 +20,8 @@ async function Loader() {
         next: { revalidate: 0 },
       });
     }
-  } catch {
-    /* fallback to client-side fetch handles it */
+  } catch (error) {
+    logger.warn("[Atividades] SSR fetch failed, falling back to client", { error });
   }
   return <AtividadesContent initialData={data} tenantId={tenantId || ""} />;
 }

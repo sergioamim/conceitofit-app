@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { logger } from "@/lib/shared/logger";
 import type { TipoContaPagar } from "@/lib/types";
 import { TiposContaContent } from "./tipos-conta-content";
 
@@ -22,7 +23,7 @@ async function Loader() {
         }
       );
     }
-  } catch { /* fallback to client-side fetch */ }
+  } catch (error) { logger.warn("[TiposConta] SSR fetch failed, falling back to client", { error }); }
   return <TiposContaContent initialData={data} />;
 }
 

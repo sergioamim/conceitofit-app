@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { logger } from "@/lib/shared/logger";
 import type { Servico } from "@/lib/types";
 import { ServicosContent } from "./servicos-content";
 
@@ -19,7 +20,7 @@ async function Loader() {
         next: { revalidate: 0 },
       });
     }
-  } catch { /* fallback to client-side fetch */ }
+  } catch (error) { logger.warn("[Servicos] SSR fetch failed, falling back to client", { error }); }
   return <ServicosContent initialData={data} />;
 }
 

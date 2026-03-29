@@ -1,6 +1,7 @@
 "use client";
 
 import { addDaysToIsoDate, getBusinessTodayIso } from "@/lib/business-date";
+import { logger } from "@/lib/shared/logger";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
 import {
   createTreinoV2MetricField,
@@ -123,7 +124,8 @@ function parseEmbeddedJson<T>(value: string | undefined, marker: string): ParseE
       text,
       payload: JSON.parse(encoded) as T,
     };
-  } catch {
+  } catch (error) {
+    logger.warn("[TreinoV2Runtime] Failed to parse embedded JSON", { error });
     return {
       text: raw.trim(),
       payload: null,

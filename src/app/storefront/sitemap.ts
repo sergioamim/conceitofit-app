@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
 import { getStorefrontSitemap } from "@/lib/public/storefront-api";
+import { logger } from "@/lib/shared/logger";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const hdrs = await headers();
@@ -20,8 +21,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: (entry.changeFrequency as MetadataRoute.Sitemap[number]["changeFrequency"]) ?? "weekly",
       priority: entry.priority ? parseFloat(entry.priority) : 0.7,
     }));
-  } catch {
-    // Fallback: return home-only sitemap
+  } catch (error) {
+    logger.warn("[Storefront/Sitemap] Failed to fetch sitemap, using fallback", { error });
     const baseUrl = `https://${subdomain}.conceitofit.com.br`;
     return [
       {

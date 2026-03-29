@@ -9,6 +9,7 @@ import {
   getStorefrontSeo,
   type StorefrontOverviewResponse,
 } from "@/lib/public/storefront-api";
+import { logger } from "@/lib/shared/logger";
 import type { Metadata } from "next";
 
 interface StorefrontData {
@@ -73,7 +74,8 @@ async function fetchStorefrontData(): Promise<StorefrontData> {
     // Se o overview não traz planos, eles virão via componente separado
 
     return { tenantId, tenantSlug, academiaSlug, theme, unidades, planos };
-  } catch {
+  } catch (error) {
+    logger.warn("[Storefront/Page] Overview fetch failed, falling back to empty data", { error });
     return { tenantId, tenantSlug, academiaSlug, theme: null, unidades: [], planos: [] };
   }
 }
@@ -94,8 +96,8 @@ export async function generateMetadata(): Promise<Metadata> {
       if (seo.title) title = seo.title;
       if (seo.description) description = seo.description;
       if (seo.ogImage) ogImage = seo.ogImage;
-    } catch {
-      // fallback to defaults
+    } catch (error) {
+      logger.warn("[Storefront/Page] SEO fetch failed, using defaults", { error });
     }
   }
 

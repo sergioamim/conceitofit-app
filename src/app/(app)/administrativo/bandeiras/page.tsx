@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { logger } from "@/lib/shared/logger";
 import type { BandeiraCartao } from "@/lib/types";
 import { BandeirasContent } from "./bandeiras-content";
 
@@ -19,8 +20,8 @@ async function Loader() {
         next: { revalidate: 0 },
       });
     }
-  } catch {
-    /* fallback to client-side fetch handles it via initialData=[] */
+  } catch (error) {
+    logger.warn("[Bandeiras] SSR fetch failed, falling back to client", { error });
   }
   return <BandeirasContent initialData={data} />;
 }

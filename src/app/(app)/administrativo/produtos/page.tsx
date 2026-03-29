@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { logger } from "@/lib/shared/logger";
 import type { Produto } from "@/lib/types";
 import { ProdutosContent } from "./produtos-content";
 
@@ -19,7 +20,7 @@ async function Loader() {
         next: { revalidate: 0 },
       });
     }
-  } catch { /* fallback to client-side fetch */ }
+  } catch (error) { logger.warn("[Produtos] SSR fetch failed, falling back to client", { error }); }
   return <ProdutosContent initialData={data} />;
 }
 

@@ -1,4 +1,5 @@
 import { formatCurrency } from "@/lib/shared/formatters";
+import { logger } from "@/lib/shared/logger";
 import {
   buildPlanoVendaItems,
   planoDryRun,
@@ -275,11 +276,13 @@ async function ensurePublicTenantContext(tenant: Tenant): Promise<{ tenant: Tena
     } else {
       resolvedTenant = currentContext.tenantAtual;
     }
-  } catch {
+  } catch (error) {
+    logger.warn("[PublicServices] Tenant context check failed, retrying switch", { error });
     try {
       const switched = await setTenantContextApi(tenant.id);
       resolvedTenant = switched.tenantAtual;
-    } catch {
+    } catch (retryError) {
+      logger.warn("[PublicServices] Tenant context switch retry failed", { error: retryError });
       resolvedTenant = tenant;
     }
   }
@@ -289,7 +292,8 @@ async function ensurePublicTenantContext(tenant: Tenant): Promise<{ tenant: Tena
       tenant: resolvedTenant,
       academia: await getAcademiaAtualApi(resolvedTenant.id),
     };
-  } catch {
+  } catch (error) {
+    logger.warn("[PublicServices] Failed to fetch academia, using fallback", { error });
     return {
       tenant: resolvedTenant,
       academia: buildAcademiaFromTenant(resolvedTenant),
@@ -622,8 +626,8 @@ export async function startPublicCheckout(input: PublicCheckoutInput): Promise<P
         otp: "auto-sign",
         evidenciasJson: JSON.stringify({ aceiteDigital: true, timestamp: now() }),
       });
-    } catch {
-      // Assinatura automática falhou — não bloqueia o checkout
+    } catch (error) {
+      logger.warn("[PublicServices/Checkout] Auto-signature failed, continuing checkout", { error });
     }
   }
 

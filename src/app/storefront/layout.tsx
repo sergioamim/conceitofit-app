@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import { StorefrontThemeProvider } from "@/components/storefront/storefront-theme-provider";
 import { getStorefrontThemeBySlug } from "@/lib/public/storefront-api";
+import { logger } from "@/lib/shared/logger";
 import type { StorefrontTheme } from "@/lib/types";
 
 async function resolveStorefrontContext() {
@@ -34,8 +35,8 @@ async function resolveStorefrontContext() {
           : undefined,
         updatedAt: raw.dataAtualizacao,
       };
-    } catch {
-      // Theme not configured — will use defaults
+    } catch (error) {
+      logger.warn("[Storefront/Layout] Theme fetch failed, using defaults", { error });
     }
   }
 
