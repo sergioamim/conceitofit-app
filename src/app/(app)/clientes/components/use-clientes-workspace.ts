@@ -30,6 +30,7 @@ export function useClientesWorkspace() {
   const resumoDialog = useDialogState();
   const [clienteResumo, setClienteResumo] = useState<Aluno | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<"cadastro" | "nome">("cadastro");
   const updateMutation = useUpdateCliente(tenantId);
 
   const data = useClientesData({
@@ -55,17 +56,23 @@ export function useClientesWorkspace() {
     return () => clearTimeout(timer);
   }, [buscaInput, q, setParams]);
 
-  // Client-side search filter
+  // Client-side search filter + sort
   const buscaDigits = busca.replace(/\D/g, "");
-  const filtered = data.alunos.filter((a) => {
-    const matchStatus = filtro === FILTER_ALL || a.status === filtro;
-    const matchBusca = !busca
-      || a.nome.toLowerCase().includes(busca.toLowerCase())
-      || a.email.toLowerCase().includes(busca.toLowerCase())
-      || (buscaDigits && a.cpf.replace(/\D/g, "").includes(buscaDigits))
-      || (buscaDigits && a.telefone.replace(/\D/g, "").includes(buscaDigits));
-    return matchStatus && matchBusca;
-  });
+  const filtered = useMemo(() => {
+    const result = data.alunos.filter((a) => {
+      const matchStatus = filtro === FILTER_ALL || a.status === filtro;
+      const matchBusca = !busca
+        || a.nome.toLowerCase().includes(busca.toLowerCase())
+        || a.email.toLowerCase().includes(busca.toLowerCase())
+        || (buscaDigits && a.cpf.replace(/\D/g, "").includes(buscaDigits))
+        || (buscaDigits && a.telefone.replace(/\D/g, "").includes(buscaDigits));
+      return matchStatus && matchBusca;
+    });
+    if (sortBy === "nome") {
+      return [...result].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }));
+    }
+    return [...result].sort((a, b) => (b.dataCadastro ?? "").localeCompare(a.dataCadastro ?? ""));
+  }, [data.alunos, filtro, busca, buscaDigits, sortBy]);
   const isSearchFiltered = busca.trim().length > 0;
 
   // Metrics
@@ -157,10 +164,12 @@ export function useClientesWorkspace() {
     isSearchFiltered,
     metrics,
 
-    // Filter / search
+    // Filter / search / sort
     filtro,
     buscaInput,
     setBuscaInput,
+    sortBy,
+    setSortBy,
     pageSize,
     page,
     setParams,

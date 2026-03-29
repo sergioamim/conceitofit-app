@@ -28,6 +28,8 @@ interface ClientesFilterBarProps {
   buscaInput: string;
   onBuscaChange: (value: string) => void;
   pageSize: number;
+  sortBy: "cadastro" | "nome";
+  onSortChange: (sort: "cadastro" | "nome") => void;
   onFilterChange: (params: Record<string, string | number | null>) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
@@ -39,6 +41,8 @@ export function ClientesFilterBar({
   buscaInput,
   onBuscaChange,
   pageSize,
+  sortBy,
+  onSortChange,
   onFilterChange,
   onClear,
   hasActiveFilters,
@@ -105,7 +109,19 @@ export function ClientesFilterBar({
         />
       </div>
 
-      <div className="w-44">
+      <div className="w-40">
+        <Select value={sortBy} onValueChange={(v) => onSortChange(v as "cadastro" | "nome")}>
+          <SelectTrigger className="w-full border-border bg-secondary text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="border-border bg-card">
+            <SelectItem value="cadastro">Mais recentes</SelectItem>
+            <SelectItem value="nome">Nome A-Z</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="w-36">
         <Select
           value={String(pageSize)}
           onValueChange={(v) => onFilterChange({ size: v })}
@@ -114,10 +130,10 @@ export function ClientesFilterBar({
             <SelectValue placeholder="Itens por página" />
           </SelectTrigger>
           <SelectContent className="border-border bg-card">
-            <SelectItem value="20">20 por página</SelectItem>
-            <SelectItem value="50">50 por página</SelectItem>
-            <SelectItem value="100">100 por página</SelectItem>
-            <SelectItem value="200">200 por página</SelectItem>
+            <SelectItem value="20">20 por pag.</SelectItem>
+            <SelectItem value="50">50 por pag.</SelectItem>
+            <SelectItem value="100">100 por pag.</SelectItem>
+            <SelectItem value="200">200 por pag.</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -52,7 +52,7 @@ export const clienteWizardSchema = z.object({
   email: z.string().email("E-mail inválido").or(z.literal("")),
   telefone: z.string().min(10, "Informe um telefone válido com DDD"),
   telefoneSec: z.string().optional(),
-  cpf: z.string().min(11, "CPF inválido").regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato CPF inválido"),
+  cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato CPF inválido").or(z.literal("")),
   rg: z.string().optional(),
   dataNascimento: z.string().optional(),
   sexo: z.string().optional(),

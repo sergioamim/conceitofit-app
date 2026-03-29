@@ -1,5 +1,6 @@
 "use client";
 
+import { Cake } from "lucide-react";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { HoverPopover } from "@/components/shared/hover-popover";
@@ -13,6 +14,26 @@ const SEXO_LABEL: Record<string, string> = {
   F: "Feminino",
   OUTRO: "Outro",
 };
+
+function formatCpf(cpf: string): string {
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length !== 11) return cpf;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function formatPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return phone;
+}
+
+function isBirthdayToday(dataNascimento?: string): boolean {
+  if (!dataNascimento) return false;
+  const today = new Date();
+  const mmdd = `-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  return dataNascimento.endsWith(mmdd);
+}
 
 const COLUMNS = [
   { label: "Cliente" },
@@ -69,35 +90,47 @@ export function ClientesTable({
       getRowKey={(aluno) => aluno.id}
       onRowClick={(aluno) => router.push(`/clientes/${aluno.id}`)}
       rowClassName={() => "cursor-pointer transition-colors hover:bg-secondary/40"}
-      renderCells={(aluno) => (
+      renderCells={(aluno) => {
+        const birthday = isBirthdayToday(aluno.dataNascimento);
+        return (
         <>
           <td className="px-4 py-3">
             <div className="flex items-center gap-3">
               <ClienteThumbnail nome={aluno.nome} foto={aluno.foto} size="sm" />
               <div>
-                <button
-                  type="button"
-                  className="cursor-pointer text-left text-sm font-medium hover:underline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onClienteClick(aluno);
-                  }}
-                >
-                  {aluno.nome}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    className="cursor-pointer text-left text-sm font-medium hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClienteClick(aluno);
+                    }}
+                  >
+                    {aluno.nome}
+                  </button>
+                  {birthday ? (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-gym-accent/15 px-1.5 py-0.5 text-[10px] font-semibold text-gym-accent" title="Aniversariante do dia!">
+                      <Cake className="size-3" />
+                    </span>
+                  ) : null}
+                </div>
                 {aluno.pendenteComplementacao ? (
                   <p className="text-xs uppercase tracking-wider text-amber-400">
-                    Pré-cadastro
+                    Pre-cadastro
                   </p>
                 ) : null}
                 <p className="text-xs text-muted-foreground">{aluno.email}</p>
               </div>
             </div>
           </td>
-          <td className="px-4 py-3 text-sm text-muted-foreground">{aluno.cpf}</td>
-          <td className="px-4 py-3 text-sm text-muted-foreground">{aluno.telefone}</td>
+          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{formatCpf(aluno.cpf)}</td>
+          <td className="px-4 py-3 text-sm text-muted-foreground">{formatPhone(aluno.telefone)}</td>
           <td className="px-4 py-3 text-sm text-muted-foreground">
-            {formatDate(aluno.dataNascimento)}
+            <span className="flex items-center gap-1">
+              {formatDate(aluno.dataNascimento)}
+              {birthday ? <Cake className="size-3.5 text-gym-accent" /> : null}
+            </span>
           </td>
           <td className="px-4 py-3 text-sm text-muted-foreground">
             {SEXO_LABEL[aluno.sexo] ?? aluno.sexo}
@@ -128,7 +161,8 @@ export function ClientesTable({
             )}
           </td>
         </>
-      )}
+        );
+      }}
       page={page}
       pageSize={pageSize}
       total={total}

@@ -102,6 +102,8 @@ function ClientesPageContent() {
         buscaInput={ws.buscaInput}
         onBuscaChange={ws.setBuscaInput}
         pageSize={ws.pageSize}
+        sortBy={ws.sortBy}
+        onSortChange={ws.setSortBy}
         onFilterChange={ws.setParams}
         onClear={ws.clearParams}
         hasActiveFilters={ws.hasActiveFilters}
