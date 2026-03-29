@@ -6,3 +6,4 @@ export * from './pagamento';
 export * from './matricula';
 export * from './venda';
 export * from './tenant';
+export * from './lead-b2b';
