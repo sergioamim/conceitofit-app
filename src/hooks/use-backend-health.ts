@@ -6,7 +6,7 @@ type BackendStatus = "online" | "offline" | "checking";
 
 // Qualquer rota do proxy serve — se responde (mesmo 401/404), o backend está up.
 // Network error / timeout = backend down.
-const HEALTH_PATH = "/backend/actuator/health";
+const HEALTH_PATH = "/backend/actuator/health/liveness";
 const CHECK_INTERVAL_MS = 30_000;
 const OFFLINE_CHECK_INTERVAL_MS = 5_000;
 const TIMEOUT_MS = 5_000;
