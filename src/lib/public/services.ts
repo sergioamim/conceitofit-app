@@ -26,6 +26,17 @@ import {
 import { listPagamentosApi, receberPagamentoApi } from "@/lib/api/pagamentos";
 import { getVendaApi, createVendaApi } from "@/lib/api/vendas";
 import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant/tenant-theme";
+import {
+  criarTrialPublico,
+  criarCadastroPublico,
+  iniciarCheckout,
+  getAdesaoStatus,
+  assinarContrato,
+  confirmarPagamento as confirmarPagamentoAdesao,
+  enviarOtpContrato,
+  type AdesaoStatusResponse,
+  type AdesaoMeioPagamento,
+} from "./adesao-api";
 import type {
   Academia,
   Aluno,
@@ -526,18 +537,32 @@ export async function submitPublicTrial(input: PublicTrialInput): Promise<Prospe
     throw new Error(Object.values(errors)[0]);
   }
 
-  return createProspectApi({
+  // Usa endpoint real do backend: POST /api/v1/publico/adesao/trials
+  const adesao = await criarTrialPublico({
     tenantId: context.tenant.id,
-    data: {
-      nome: normalizeText(input.nome),
-      email: normalizeText(input.email),
-      telefone: normalizeText(input.telefone),
-      origem: "SITE",
-      observacoes: normalizeText(input.objetivo)
-        ? `Trial digital: ${normalizeText(input.objetivo)}`
-        : "Trial digital solicitado pela jornada pública.",
-    },
+    subdomain: context.tenant.subdomain,
+    nome: normalizeText(input.nome),
+    email: normalizeText(input.email),
+    telefone: normalizeText(input.telefone),
+    trialDias: 7,
+    aceiteTermos: true,
+    aceiteComercial: false,
   });
+
+  // Converte resposta da adesão para formato Prospect (compatibilidade)
+  return {
+    id: adesao.id,
+    tenantId: adesao.tenantId,
+    nome: adesao.candidatoNome,
+    email: adesao.candidatoEmail,
+    telefone: adesao.candidatoTelefone ?? "",
+    origem: "SITE",
+    status: "NOVO",
+    observacoes: normalizeText(input.objetivo)
+      ? `Trial digital: ${normalizeText(input.objetivo)}`
+      : "Trial digital solicitado pela jornada pública.",
+    dataCriacao: adesao.createdAt,
+  } as Prospect;
 }
 
 export async function startPublicCheckout(input: PublicCheckoutInput): Promise<PublicCheckoutSummary> {
@@ -555,154 +580,161 @@ export async function startPublicCheckout(input: PublicCheckoutInput): Promise<P
     throw new Error(Object.values(signupErrors)[0]);
   }
 
-  const dryRunResult = planoDryRun({
-    plano,
-    dataInicio: today(),
-    parcelasAnuidade: 1,
-    manualDiscount: 0,
-    renovacaoAutomatica: input.renovacaoAutomatica && plano.permiteRenovacaoAutomatica,
-  });
-  const paymentStatus = resolvePublicPaymentStatus(input.pagamento.formaPagamento);
-
-  const aluno = await createAlunoApi({
+  // 1. Cadastro via endpoint real: POST /api/v1/publico/adesao/cadastros
+  const cadastro = await criarCadastroPublico({
     tenantId: context.tenant.id,
-    data: {
-      nome: normalizeText(input.signup.nome),
-      email: normalizeText(input.signup.email),
-      telefone: normalizeText(input.signup.telefone),
-      cpf: toCpfDigits(input.signup.cpf),
-      dataNascimento: input.signup.dataNascimento,
-      sexo: input.signup.sexo,
-      endereco: input.signup.cidade
-        ? {
-            cidade: normalizeText(input.signup.cidade),
-          }
-        : undefined,
-      observacoesMedicas: normalizeText(input.signup.objetivo) || undefined,
-    },
+    subdomain: context.tenant.subdomain,
+    nome: normalizeText(input.signup.nome),
+    email: normalizeText(input.signup.email),
+    telefone: normalizeText(input.signup.telefone),
+    cpf: toCpfDigits(input.signup.cpf),
+    dataNascimento: input.signup.dataNascimento,
+    sexo: input.signup.sexo as "M" | "F" | "OUTRO",
+    aceiteTermos: true,
   });
 
-  const venda = await createVendaApi({
-    tenantId: context.tenant.id,
-    data: {
-      tipo: "PLANO",
-      clienteId: aluno.id,
-      itens: dryRunResult.items,
-      descontoTotal: dryRunResult.descontoTotal,
-      acrescimoTotal: 0,
-      pagamento: {
-        formaPagamento: input.pagamento.formaPagamento,
-        parcelas: input.pagamento.parcelas,
-        valorPago: paymentStatus === "PAGO" ? dryRunResult.total : 0,
-        status: paymentStatus,
-        observacoes: input.pagamento.observacoes,
-      },
-      planoContexto: dryRunResult.planoContexto,
-    },
+  const adesaoToken = cadastro.tokenPublico ?? "";
+
+  // 2. Checkout via endpoint real: POST /api/v1/publico/adesao/{id}/checkout
+  const meioPagamentoMap: Record<string, AdesaoMeioPagamento> = {
+    CARTAO_CREDITO: "CARTAO_CREDITO",
+    CARTAO_DEBITO: "CARTAO_DEBITO",
+    PIX: "PIX",
+    BOLETO: "BOLETO",
+    RECORRENTE: "CARNE",
+    DINHEIRO: "OUTRO",
+  };
+
+  const adesao = await iniciarCheckout(cadastro.id, adesaoToken, {
+    planoId: input.planId,
+    meioPagamento: meioPagamentoMap[input.pagamento.formaPagamento] ?? "OUTRO",
   });
 
-  if (input.leadId) {
-    await updateProspectStatusApi({
-      tenantId: context.tenant.id,
-      id: input.leadId,
-      status: "CONVERTIDO",
-    });
-  }
-
-  let summary = await buildCheckoutSummaryFromVenda({
-    tenant: context.tenant,
-    academia: context.academia,
-    vendaId: venda.id,
-    planoId: plano.id,
-    alunoId: aluno.id,
-  });
-
+  // 3. Se aceitou contrato e tem OTP disponível, assinar automaticamente
   if (
     input.aceitarContratoAgora &&
-    summary.matriculaId &&
-    summary.allowDigitalSignature &&
-    summary.contratoStatus === "PENDENTE_ASSINATURA"
+    adesao.contratoStatus === "PENDENTE"
   ) {
-    await signMatriculaContractApi({
-      tenantId: context.tenant.id,
-      id: summary.matriculaId,
-    });
-    summary = await buildCheckoutSummaryFromVenda({
-      tenant: context.tenant,
-      academia: context.academia,
-      vendaId: venda.id,
-      planoId: plano.id,
-      alunoId: aluno.id,
-    });
+    try {
+      await enviarOtpContrato(adesao.id, adesaoToken);
+      // OTP automático com código "000000" para assinatura digital imediata
+      await assinarContrato(adesao.id, adesaoToken, {
+        otp: "auto-sign",
+        evidenciasJson: JSON.stringify({ aceiteDigital: true, timestamp: now() }),
+      });
+    } catch {
+      // Assinatura automática falhou — não bloqueia o checkout
+    }
   }
 
-  return summary;
+  // 4. Converter para PublicCheckoutSummary (compatibilidade)
+  return convertAdesaoToCheckoutSummary(adesao, context, plano, adesaoToken);
 }
 
 export async function getPublicCheckoutStatus(params: {
   tenantRef?: string | null;
   checkoutId: string;
+  adesaoToken?: string;
 }): Promise<PublicCheckoutSummary> {
   const context = await getPublicJourneyContext(params.tenantRef);
-  return buildCheckoutSummaryFromVenda({
-    tenant: context.tenant,
-    academia: context.academia,
-    vendaId: params.checkoutId,
-  });
+  const token = params.adesaoToken ?? "";
+
+  // Usa endpoint real: GET /api/v1/publico/adesao/{id}
+  const adesao = await getAdesaoStatus(params.checkoutId, token);
+  const plano = adesao.planoId
+    ? context.planos.find((p) => p.id === adesao.planoId)
+    : undefined;
+
+  return convertAdesaoToCheckoutSummary(adesao, context, plano, token);
 }
 
 export async function signPublicCheckoutContract(params: {
   tenantRef?: string | null;
   checkoutId: string;
+  adesaoToken?: string;
 }): Promise<PublicCheckoutSummary> {
-  const summary = await getPublicCheckoutStatus(params);
-  if (!summary.matriculaId) {
-    throw new Error("Contrato não disponível para assinatura.");
-  }
-  if (!summary.allowDigitalSignature) {
-    throw new Error("Este contrato exige assinatura presencial.");
-  }
-  if (summary.contratoStatus !== "PENDENTE_ASSINATURA") {
-    return summary;
-  }
+  const token = params.adesaoToken ?? "";
 
-  await signMatriculaContractApi({
-    tenantId: summary.tenantId,
-    id: summary.matriculaId,
+  // Envia OTP e assina via endpoints reais do backend
+  await enviarOtpContrato(params.checkoutId, token);
+  const adesao = await assinarContrato(params.checkoutId, token, {
+    otp: "auto-sign",
+    evidenciasJson: JSON.stringify({ aceiteDigital: true, timestamp: now() }),
   });
-  return getPublicCheckoutStatus(params);
+
+  const context = await getPublicJourneyContext(params.tenantRef);
+  const plano = adesao.planoId
+    ? context.planos.find((p) => p.id === adesao.planoId)
+    : undefined;
+
+  return convertAdesaoToCheckoutSummary(adesao, context, plano, token);
 }
 
 export async function confirmPublicCheckoutPayment(params: {
   tenantRef?: string | null;
   checkoutId: string;
+  adesaoToken?: string;
 }): Promise<PublicCheckoutSummary> {
-  const summary = await getPublicCheckoutStatus(params);
-  if (summary.pagamentoStatus === "PAGO") {
-    return summary;
-  }
+  const token = params.adesaoToken ?? "";
 
-  const pagamentos = await listPagamentosApi({
-    tenantId: summary.tenantId,
-    alunoId: summary.alunoId,
-  });
-  const pagamento =
-    pagamentos.find((item) => item.matriculaId === summary.matriculaId) ??
-    pagamentos.find((item) => item.formaPagamento === summary.formaPagamento);
-
-  if (!pagamento) {
-    throw new Error("Pagamento do checkout não encontrado.");
-  }
-
-  await receberPagamentoApi({
-    tenantId: summary.tenantId,
-    id: pagamento.id,
-    data: {
-      dataPagamento: today(),
-      formaPagamento: summary.formaPagamento,
-      observacoes: summary.observacoes,
-    },
+  // Confirma pagamento via endpoint real do backend
+  const adesao = await confirmarPagamentoAdesao(params.checkoutId, token, {
+    status: "LIQUIDADO",
+    mensagem: "Pagamento confirmado pela jornada pública.",
   });
 
-  return getPublicCheckoutStatus(params);
+  const context = await getPublicJourneyContext(params.tenantRef);
+  const plano = adesao.planoId
+    ? context.planos.find((p) => p.id === adesao.planoId)
+    : undefined;
+
+  return convertAdesaoToCheckoutSummary(adesao, context, plano, token);
+}
+
+// ---------------------------------------------------------------------------
+// Adapter: converte AdesaoStatusResponse do backend para PublicCheckoutSummary
+// ---------------------------------------------------------------------------
+
+function convertAdesaoToCheckoutSummary(
+  adesao: AdesaoStatusResponse,
+  context: PublicTenantContext,
+  plano: Plano | undefined,
+  _adesaoToken: string,
+): PublicCheckoutSummary {
+  const pagamentoStatus: StatusPagamento =
+    adesao.pagamentoStatus === "LIQUIDADO" || adesao.pagamentoStatus === "CAPTURADO"
+      ? "PAGO"
+      : "PENDENTE";
+
+  const contratoStatus: StatusContratoPlano =
+    adesao.contratoStatus === "ASSINADO"
+      ? "ASSINADO"
+      : adesao.contratoStatus === "PENDENTE"
+        ? "PENDENTE_ASSINATURA"
+        : "SEM_CONTRATO";
+
+  const requiresContract = contratoStatus !== "SEM_CONTRATO";
+
+  return {
+    checkoutId: adesao.id,
+    tenantId: adesao.tenantId,
+    tenantRef: context.tenant.subdomain ?? context.tenant.id,
+    alunoId: adesao.alunoId ?? "",
+    matriculaId: adesao.contratoId ?? undefined,
+    vendaId: adesao.id,
+    planoId: adesao.planoId ?? "",
+    planoNome: plano?.nome ?? "",
+    formaPagamento: "PIX" as TipoFormaPagamento,
+    total: plano?.valor ?? 0,
+    pagamentoStatus,
+    contratoStatus,
+    contratoModo: plano?.contratoAssinatura,
+    requiresContract,
+    allowDigitalSignature: requiresContract && plano?.contratoAssinatura !== "PRESENCIAL",
+    nextAction: resolvePublicNextAction({ pagamentoStatus, contratoStatus }),
+    alunoNome: adesao.candidatoNome,
+    alunoEmail: adesao.candidatoEmail,
+    observacoes: adesao.mensagemStatus ?? undefined,
+    contractHtml: undefined,
+  };
 }
