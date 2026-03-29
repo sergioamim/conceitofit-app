@@ -10173,14 +10173,14 @@
         "description": "Workspace hook de contas a pagar concentra estado, fetching, filtros, modais e handlers em 534 linhas.",
         "details": "Extrair em hooks menores: useContasPagarData (fetching), useContasPagarFilters (filtros), useContasPagarModals (estado de modais), useContasPagarActions (handlers de criar/pagar/editar/cancelar). O workspace hook passa a compor os hooks extraídos.",
         "testStrategy": "Página funciona identicamente. Cada hook extraído é testável isoladamente.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "252"
         ],
         "priority": "medium",
         "complexity": 4,
         "subtasks": [],
-        "updatedAt": "2026-03-29T22:50:03.253Z"
+        "updatedAt": "2026-03-29T22:54:25.889Z"
       },
       {
         "id": "256",
@@ -10471,9 +10471,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T22:53:10.313Z",
+      "lastModified": "2026-03-29T22:54:25.889Z",
       "taskCount": 267,
-      "completedCount": 261,
+      "completedCount": 262,
       "tags": [
         "master"
       ]
