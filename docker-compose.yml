@@ -1,0 +1,135 @@
+version: "3.8"
+
+# ============================================================================
+# Conceito Fit — Stack Completa
+# ============================================================================
+# Execução única: docker compose up --build
+#
+# Serviços:
+#   - db:         PostgreSQL 16
+#   - backend:    Java 21 (Spring Boot) na porta 8080
+#   - frontend:   Next.js 16 na porta 3000
+#   - prometheus:  Métricas (porta 9090)
+#   - grafana:     Dashboards (porta 3000 → mapeada para 3001)
+#
+# Portas expostas:
+#   3000  → Frontend (Next.js)
+#   8080  → Backend (Spring Boot API)
+#   5432  → PostgreSQL
+#   9090  → Prometheus
+#   3001  → Grafana
+# ============================================================================
+
+services:
+  # ── PostgreSQL ──
+  db:
+    image: postgres:16-alpine
+    container_name: conceito-db
+    environment:
+      POSTGRES_DB: academia_db
+      POSTGRES_USER: user_academia
+      POSTGRES_PASSWORD: password_academia
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../academia-java/infra/seed-dev.sql:/docker-entrypoint-initdb.d/99-seed-dev.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_academia -d academia_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Backend Java ──
+  backend:
+    build:
+      context: ../academia-java
+      dockerfile: Dockerfile
+    container_name: conceito-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/academia_db
+      SPRING_DATASOURCE_USERNAME: user_academia
+      SPRING_DATASOURCE_PASSWORD: password_academia
+      SPRING_FLYWAY_URL: jdbc:postgresql://db:5432/academia_db
+      SPRING_FLYWAY_USER: user_academia
+      SPRING_FLYWAY_PASSWORD: password_academia
+      APP_ENCRYPTION_KEY: "dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcyE="
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Frontend Next.js ──
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=http://backend:8080
+    container_name: conceito-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:8080"
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      HOSTNAME: "0.0.0.0"
+      BACKEND_PROXY_TARGET: http://backend:8080
+      NEXT_PUBLIC_API_BASE_URL: http://backend:8080
+      # Sentry (opcional — deixar vazio para desabilitar)
+      NEXT_PUBLIC_SENTRY_DSN: ""
+      SENTRY_AUTH_TOKEN: ""
+    restart: unless-stopped
+
+  # ── Prometheus ──
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: conceito-prometheus
+    depends_on:
+      - backend
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../academia-java/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    restart: unless-stopped
+
+  # ── Grafana ──
+  grafana:
+    image: grafana/grafana:10.4.1
+    container_name: conceito-grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../academia-java/infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../academia-java/infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
