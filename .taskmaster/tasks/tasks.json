@@ -9523,11 +9523,12 @@
         "description": "Strings como \"TODOS\", \"ATIVO\", \"INATIVO\" estão hardcoded em 200+ locais. Criar constantes centralizadas.",
         "details": "Criar src/lib/shared/constants/filters.ts com: export const FILTER_ALL = \"TODOS\" as const; export const STATUS_VALUES = { ATIVO: \"ATIVO\", INATIVO: \"INATIVO\", ... } as const; Substituir gradualmente as strings hardcoded pelos imports. Começar pelos arquivos mais usados: use-table-search-params.ts, páginas de listagem, modais de filtro.",
         "testStrategy": "Filtros funcionam identicamente. Sem strings \"TODOS\" hardcoded nos arquivos migrados.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T04:27:08.517Z"
       },
       {
         "id": "209",
@@ -9638,9 +9639,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T04:25:18.925Z",
+      "lastModified": "2026-03-29T04:27:08.517Z",
       "taskCount": 216,
-      "completedCount": 215,
+      "completedCount": 216,
       "tags": [
         "master"
       ]
