@@ -165,7 +165,9 @@ export function DashboardContent({
   }, [dashboardData]);
 
   if (!metrics) {
-    if (loading) {
+    // Usar mesma mensagem no server e client para evitar hydration mismatch.
+    // O loading state real é gerenciado pelo Suspense boundary no page.tsx.
+    if (loading && initialData !== null) {
       return <div className="py-12 text-center text-sm text-muted-foreground">Carregando dashboard...</div>;
     }
     return <div className="text-sm text-muted-foreground">Sem dados para o dashboard.</div>;
