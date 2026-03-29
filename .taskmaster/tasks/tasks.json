@@ -10215,13 +10215,14 @@
         "description": "Apenas 23 de 130+ formulários usam zodResolver. Padronizar os 10 mais usados.",
         "details": "Priorizar: prospect-modal, nova-matricula-modal, nova-conta-pagar-modal, editar-conta-pagar-modal, pagar-conta-modal, receber-pagamento-modal, plano-form (já usa RHF mas sem zod), cliente-edit-form. Criar schemas zod co-localizados. Inferir tipos via z.infer.",
         "testStrategy": "Formulários validam corretamente com dados válidos e inválidos. Zero regressão nos fluxos existentes.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "250"
         ],
         "priority": "medium",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T23:07:11.217Z"
       },
       {
         "id": "259",
@@ -10385,13 +10386,65 @@
         "description": "Apenas 19 testes para 133 componentes (14%). Priorizar formulários e modais críticos.",
         "details": "Criar testes para: prospect-modal, receber-pagamento-modal, nova-matricula-modal, cliente-resumo-dialog, clientes-filter-bar, clientes-table, pagamentos-client, matriculas-client, status-badge, export-menu. Usar padrão existente: vi.mock para Dialog/Select, render + fireEvent + expect.",
         "testStrategy": "Cobertura de componentes sobe de 14% para 30%. CI não regride.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "258"
         ],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar testes para StatusBadge e ExportMenu",
+            "description": "Desenvolver testes de unidade e integração para os componentes StatusBadge e ExportMenu, garantindo a cobertura de renderização e interações básicas. Estes são componentes menores e independentes.",
+            "dependencies": [],
+            "details": "Criar arquivos de teste `StatusBadge.test.tsx` e `ExportMenu.test.tsx` na pasta `__tests__` ou `tests/` co-localizada. Utilizar `render` do `@testing-library/react`, simular eventos com `fireEvent` e validar o comportamento com `expect`. Para componentes que usam Radix, aplicar `vi.mock` conforme o padrão existente.",
+            "status": "pending",
+            "testStrategy": "Executar `vitest --run StatusBadge.test.tsx ExportMenu.test.tsx` e verificar que todos os testes passam. A cobertura de teste para estes componentes deve ser alta.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar testes para ClientesFilterBar e ClientesTable",
+            "description": "Desenvolver testes para os componentes ClientesFilterBar e ClientesTable, cobrindo filtragem, renderização de dados, paginação e interações com a tabela de clientes.",
+            "dependencies": [],
+            "details": "Criar `ClientesFilterBar.test.tsx` e `ClientesTable.test.tsx`. Focar em testar a funcionalidade de busca e filtragem na barra, e a renderização correta dos clientes na tabela, incluindo paginação se aplicável. Utilizar `vi.mock` para dependências como `Dialog` ou `Select` do Radix, conforme o padrão existente.",
+            "status": "pending",
+            "testStrategy": "Executar `vitest --run ClientesFilterBar.test.tsx ClientesTable.test.tsx` para validar o comportamento dos filtros e da tabela, garantindo que as interações funcionem corretamente.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Criar testes para ProspectModal",
+            "description": "Desenvolver testes abrangentes para o modal de prospecção (ProspectModal), cobrindo sua abertura, preenchimento, submissão do formulário, e validação de dados de entrada e mensagens de erro.",
+            "dependencies": [],
+            "details": "Criar `ProspectModal.test.tsx`. Simular a abertura do modal, preenchimento de campos do formulário, interações com botões (salvar, cancelar) e validação de mensagens de erro. Utilizar `vi.mock` para quaisquer componentes Radix (ex: `Dialog`) ou hooks externos que o modal possa depender, seguindo o padrão já estabelecido.",
+            "status": "pending",
+            "testStrategy": "Executar `vitest --run ProspectModal.test.tsx` e verificar se o fluxo completo do modal (abertura, preenchimento, submissão/cancelamento) funciona conforme o esperado, com cenários de sucesso e falha.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Criar testes para ReceberPagamentoModal e NovaMatriculaModal",
+            "description": "Desenvolver testes para os modais críticos de ReceberPagamentoModal e NovaMatriculaModal, garantindo a funcionalidade de recebimento de pagamentos e criação de novas matrículas, incluindo validações e interações.",
+            "dependencies": [],
+            "details": "Criar `ReceberPagamentoModal.test.tsx` e `NovaMatriculaModal.test.tsx`. Focar na simulação do fluxo de preenchimento dos formulários de pagamento e matrícula, validações e interações com APIs (mockadas). Usar `vi.mock` para dependências Radix, mantendo a consistência do codebase.",
+            "status": "pending",
+            "testStrategy": "Executar testes para ambos os modais, garantindo que a entrada de dados, validações e a lógica de submissão funcionem corretamente para diferentes cenários.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Criar testes para ClienteResumoDialog, PagamentosClient e MatriculasClient",
+            "description": "Desenvolver testes para o dialog de resumo do cliente (ClienteResumoDialog) e para as funções de cliente relacionadas a pagamentos e matrículas, cobrindo a exibição de informações e a integração com a camada de dados.",
+            "dependencies": [],
+            "details": "Criar `ClienteResumoDialog.test.tsx`, `PagamentosClient.test.ts` e `MatriculasClient.test.ts`. Para o dialog, focar na renderização correta das informações do cliente. Para `*Client`, focar em testar as chamadas de API e o tratamento de dados (mockando as respostas da API). Usar `vi.mock` para o dialog Radix e para chamadas de API conforme o padrão.",
+            "status": "pending",
+            "testStrategy": "Executar os testes para garantir que o resumo do cliente exibe dados corretamente e que os clientes de API interagem adequadamente com os endpoints (mockados), cobrindo cenários de sucesso e erro.",
+            "parentId": "undefined"
+          }
+        ],
+        "updatedAt": "2026-03-29T23:07:17.407Z"
       },
       {
         "id": "263",
@@ -10399,13 +10452,14 @@
         "description": "JWT tokens armazenados em localStorage são vulneráveis a XSS. httpOnly cookies são mais seguros.",
         "details": "Requer mudança no backend para setar cookies httpOnly no login/refresh. Frontend remove leitura/escrita de localStorage para tokens. Manter localStorage apenas para preferências de UI (tema, tenant preferido). Atualizar seedAuthenticatedSession nos testes E2E.",
         "testStrategy": "Login funciona. Refresh funciona. Tokens não acessíveis via document.cookie ou localStorage. Testes E2E adaptados.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "259"
         ],
         "priority": "medium",
         "complexity": 7,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T23:07:20.405Z"
       },
       {
         "id": "264",
@@ -10465,9 +10519,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T22:57:48.882Z",
+      "lastModified": "2026-03-29T23:07:20.405Z",
       "taskCount": 267,
-      "completedCount": 256,
+      "completedCount": 258,
       "tags": [
         "master"
       ]
