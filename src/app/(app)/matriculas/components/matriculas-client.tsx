@@ -52,6 +52,24 @@ function getBadgeClass(kind: "contrato" | "fluxo", value: string | undefined) {
   return "bg-muted text-muted-foreground";
 }
 
+const ASSINATURA_STATUS_LABEL: Record<string, string> = {
+  ATIVA: "Recorrente",
+  PENDENTE: "Pendente",
+  CANCELADA: "Cancelada",
+  SUSPENSA: "Suspensa",
+  VENCIDA: "Vencida",
+  INADIMPLENTE: "Inadimplente",
+  TRIAL: "Trial",
+};
+
+function getAssinaturaBadgeClass(status: string): string {
+  if (status === "ATIVA") return "bg-gym-teal/15 text-gym-teal";
+  if (status === "PENDENTE" || status === "TRIAL") return "bg-gym-warning/15 text-gym-warning";
+  if (status === "CANCELADA" || status === "INADIMPLENTE") return "bg-gym-danger/15 text-gym-danger";
+  if (status === "SUSPENSA" || status === "VENCIDA") return "bg-muted text-muted-foreground";
+  return "bg-muted text-muted-foreground";
+}
+
 function buildPieGradient(groups: MatriculaDashboardMensalPlano[]) {
   if (groups.length === 0) {
     return "conic-gradient(var(--muted) 0deg 360deg)";
@@ -284,6 +302,9 @@ export function MatriculasClient() {
                 <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Fluxo
                 </th>
+                <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Assinatura
+                </th>
                 <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Ações
                 </th>
@@ -339,6 +360,15 @@ export function MatriculasClient() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
+                      {row.assinaturaStatus ? (
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getAssinaturaBadgeClass(row.assinaturaStatus)}`}>
+                          {ASSINATURA_STATUS_LABEL[row.assinaturaStatus] ?? row.assinaturaStatus}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         {canRenew ? (
                           <Button
@@ -370,7 +400,11 @@ export function MatriculasClient() {
                               confirm("Cancelar esta contratação?", async () => {
                                 setActionId(row.id);
                                 try {
-                                  await cancelarMutation.mutateAsync({ tenantId, id: row.id });
+                                  await cancelarMutation.mutateAsync({
+                                    tenantId,
+                                    id: row.id,
+                                    assinaturaId: row.assinaturaId,
+                                  });
                                   setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} cancelado.`);
                                 } finally {
                                   setActionId(null);

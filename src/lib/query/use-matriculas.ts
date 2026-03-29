@@ -64,7 +64,7 @@ export function useCancelarMatricula() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: { tenantId: string; id: string }) =>
+    mutationFn: (input: { tenantId: string; id: string; assinaturaId?: string }) =>
       cancelarMatriculaService(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["matriculas"] });
