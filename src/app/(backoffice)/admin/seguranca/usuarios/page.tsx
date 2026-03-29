@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GlobalSecurityShell } from "@/components/security/global-security-shell";
@@ -17,133 +17,26 @@ import {
 import { SecuritySectionFeedback } from "@/components/security/security-feedback";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import { TableCell } from "@/components/ui/table";
 import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
-import { createGlobalSecurityUser, listGlobalSecurityUsers } from "@/lib/backoffice/seguranca";
+import { createGlobalSecurityUser } from "@/lib/backoffice/seguranca";
 import { globalUserCreateFormSchema } from "@/lib/tenant/forms/security-user-create-schemas";
 import { validateGlobalUserCreateDraft } from "@/lib/tenant/security-user-create";
-import type { Academia, GlobalAdminNewUnitsPolicyScope, GlobalAdminReviewStatus, GlobalAdminUserSummary, Tenant } from "@/lib/types";
+import type { Academia, GlobalAdminUserSummary, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-
-type Filters = {
-  query: string;
-  academiaId: string;
-  tenantId: string;
-  status: string;
-  profile: string;
-  scopeType: "" | "UNIDADE" | "REDE" | "GLOBAL";
-  eligibleOnly: boolean;
-  reviewStatus: "" | GlobalAdminReviewStatus;
-  broadAccessOnly: boolean;
-  exceptionsOnly: boolean;
-};
-
-const PAGE_SIZE = 20;
-const SNAPSHOT_PAGE_SIZE = 100;
-const SNAPSHOT_MAX_PAGES = 10;
-
-type CreateGlobalUserForm = {
-  name: string;
-  email: string;
-  cpf: string;
-  userKind: string;
-  scopeType: "UNIDADE" | "REDE" | "GLOBAL";
-  academiaId: string;
-  tenantIds: string[];
-  defaultTenantId: string;
-  broadAccess: boolean;
-  eligibleForNewUnits: boolean;
-  policyScope: GlobalAdminNewUnitsPolicyScope;
-};
-
-const CREATE_USER_DEFAULT: CreateGlobalUserForm = {
-  name: "",
-  email: "",
-  cpf: "",
-  userKind: "COLABORADOR",
-  scopeType: "REDE",
-  academiaId: "",
-  tenantIds: [],
-  defaultTenantId: "",
-  broadAccess: false,
-  eligibleForNewUnits: false,
-  policyScope: "ACADEMIA_ATUAL",
-};
-
-function buildInitialFilters(searchParams: URLSearchParams): Filters {
-  const reviewStatusRaw = searchParams.get("reviewStatus")?.trim() ?? "";
-  const reviewStatus =
-    reviewStatusRaw === "EM_DIA" || reviewStatusRaw === "PENDENTE" || reviewStatusRaw === "VENCIDA"
-      ? reviewStatusRaw
-      : "";
-  const scopeTypeRaw = searchParams.get("scopeType")?.trim() ?? "";
-  const scopeType =
-    scopeTypeRaw === "UNIDADE" || scopeTypeRaw === "REDE" || scopeTypeRaw === "GLOBAL"
-      ? scopeTypeRaw
-      : "";
-
-  return {
-    query: searchParams.get("query")?.trim() ?? "",
-    academiaId: searchParams.get("academiaId")?.trim() ?? "",
-    tenantId: searchParams.get("tenantId")?.trim() ?? "",
-    status: searchParams.get("status")?.trim() ?? "ATIVO",
-    profile: searchParams.get("profile")?.trim() ?? "",
-    scopeType,
-    eligibleOnly: searchParams.get("eligible") === "1",
-    reviewStatus,
-    broadAccessOnly: searchParams.get("broadAccess") === "1",
-    exceptionsOnly: searchParams.get("exceptions") === "1",
-  };
-}
-
-function matchesUserFilters(item: GlobalAdminUserSummary, filters: Filters) {
-  if (filters.scopeType && item.scopeType !== filters.scopeType) return false;
-  if (filters.reviewStatus && item.reviewStatus !== filters.reviewStatus) return false;
-  if (filters.broadAccessOnly && !item.broadAccess) return false;
-  if (filters.exceptionsOnly && (item.exceptionsCount ?? 0) <= 0) return false;
-  return true;
-}
-
-function getScopeLabel(scopeType?: GlobalAdminUserSummary["scopeType"]) {
-  switch (scopeType) {
-    case "GLOBAL":
-      return "Global";
-    case "REDE":
-      return "Rede";
-    case "UNIDADE":
-      return "Unidade";
-    default:
-      return "Não informado";
-  }
-}
-
-async function loadUsersSnapshot(filters: Filters) {
-  const items: GlobalAdminUserSummary[] = [];
-
-  for (let currentPage = 0; currentPage < SNAPSHOT_MAX_PAGES; currentPage += 1) {
-    const response = await listGlobalSecurityUsers({
-      query: filters.query,
-      academiaId: filters.academiaId || undefined,
-      tenantId: filters.tenantId || undefined,
-      status: filters.status === "TODOS" ? undefined : filters.status,
-      profile: filters.profile || undefined,
-      scopeType: filters.scopeType || undefined,
-      eligibleForNewUnits: filters.eligibleOnly || undefined,
-      page: currentPage,
-      size: SNAPSHOT_PAGE_SIZE,
-    });
-    items.push(...response.items);
-    if (!response.hasNext || response.items.length === 0) {
-      break;
-    }
-  }
-
-  return items.filter((item) => matchesUserFilters(item, filters));
-}
+import { UsuariosCreateForm } from "./usuarios-create-form";
+import { UsuariosFilters } from "./usuarios-filters";
+import {
+  type Filters,
+  type CreateGlobalUserForm,
+  PAGE_SIZE,
+  CREATE_USER_DEFAULT,
+  StatCard,
+  buildInitialFilters,
+  getScopeLabel,
+  loadUsersSnapshot,
+} from "./usuarios-types";
 
 export default function AdminSegurancaUsuariosPage() {
   const router = useRouter();
@@ -348,254 +241,24 @@ export default function AdminSegurancaUsuariosPage() {
       }
     >
       {showCreateForm ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Criar usuário na segurança global</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Esta superfície pode criar acesso global, por rede ou multiunidade. Fora daqui, a criação deve ficar restrita à rede corrente da academia.
-            </p>
-
-            <form className="grid gap-4 lg:grid-cols-2" onSubmit={createUserForm.handleSubmit(handleCreateUser)}>
-              <div className="space-y-2">
-                <Label htmlFor="global-user-name">Nome completo</Label>
-                <Input
-                  id="global-user-name"
-                  {...createUserForm.register("name")}
-                  placeholder="Ana Operações"
-                />
-                {createUserForm.formState.errors.name ? (
-                  <p className="text-xs text-gym-danger">{createUserForm.formState.errors.name.message}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="global-user-email">E-mail principal</Label>
-                <Input
-                  id="global-user-email"
-                  type="email"
-                  {...createUserForm.register("email")}
-                  placeholder="ana@qa.local"
-                />
-                {createUserForm.formState.errors.email ? (
-                  <p className="text-xs text-gym-danger">{createUserForm.formState.errors.email.message}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="global-user-cpf">CPF</Label>
-                <Input
-                  id="global-user-cpf"
-                  {...createUserForm.register("cpf")}
-                  placeholder="111.222.333-44"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tipo de usuário</Label>
-                <Controller
-                  control={createUserForm.control}
-                  name="userKind"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger aria-label="Tipo de usuário global">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="COLABORADOR">Colaborador</SelectItem>
-                        <SelectItem value="SUPORTE">Suporte</SelectItem>
-                        <SelectItem value="PRESTADOR">Prestador</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Escopo inicial</Label>
-                <Controller
-                  control={createUserForm.control}
-                  name="scopeType"
-                  render={({ field }) => (
-                    <Select
-                      value={field.value}
-                      onValueChange={(value) => {
-                        const nextScope = value as CreateGlobalUserForm["scopeType"];
-                        field.onChange(nextScope);
-                        createUserForm.setValue("broadAccess", nextScope === "GLOBAL" ? createForm.broadAccess : false, { shouldDirty: true });
-                        createUserForm.setValue("eligibleForNewUnits", nextScope === "REDE" ? createForm.eligibleForNewUnits : false, { shouldDirty: true });
-                        createUserForm.setValue("academiaId", nextScope === "GLOBAL" ? "" : createForm.academiaId, { shouldDirty: true });
-                        createUserForm.setValue("tenantIds", nextScope === "GLOBAL" ? [] : createForm.tenantIds, { shouldDirty: true });
-                        createUserForm.setValue("defaultTenantId", nextScope === "GLOBAL" ? "" : createForm.defaultTenantId, { shouldDirty: true });
-                      }}
-                    >
-                      <SelectTrigger aria-label="Escopo inicial global">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="UNIDADE">Unidade</SelectItem>
-                        <SelectItem value="REDE">Rede</SelectItem>
-                        <SelectItem value="GLOBAL">Global</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Academia de referência</Label>
-                <Controller
-                  control={createUserForm.control}
-                  name="academiaId"
-                  render={({ field }) => (
-                    <Select
-                      value={field.value || "__none__"}
-                      onValueChange={(value) => {
-                        field.onChange(value === "__none__" ? "" : value);
-                        createUserForm.setValue("tenantIds", [], { shouldDirty: true });
-                        createUserForm.setValue("defaultTenantId", "", { shouldDirty: true });
-                      }}
-                      disabled={createForm.scopeType === "GLOBAL"}
-                    >
-                      <SelectTrigger aria-label="Academia de referência global">
-                        <SelectValue placeholder="Selecione a academia" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Selecione</SelectItem>
-                        {academias.map((academia) => (
-                          <SelectItem key={academia.id} value={academia.id}>
-                            {academia.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-
-              {createForm.scopeType !== "GLOBAL" ? (
-                <div className="space-y-2 lg:col-span-2">
-                  <Label>Unidades iniciais</Label>
-                  <div className="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-2">
-                    {createAcademiaUnits.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Selecione uma academia para liberar as unidades.</p>
-                    ) : (
-                      createAcademiaUnits.map((tenant) => (
-                        <label key={tenant.id} className="flex items-start gap-2 rounded-md border border-border/60 px-3 py-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={createForm.tenantIds.includes(tenant.id)}
-                            onChange={() => toggleCreateTenant(tenant.id)}
-                          />
-                          <span>
-                            <span className="block font-medium text-foreground">{tenant.nome}</span>
-                            <span className="block text-xs text-muted-foreground">
-                              {academias.find((academia) => academia.id === (tenant.academiaId ?? tenant.groupId))?.nome ?? "Academia"}
-                            </span>
-                          </span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : null}
-
-              {createForm.scopeType !== "GLOBAL" ? (
-                <div className="space-y-2">
-                  <Label>Unidade base</Label>
-                  <Select
-                    value={createForm.defaultTenantId || "__none__"}
-                    onValueChange={(value) => createUserForm.setValue("defaultTenantId", value === "__none__" ? "" : value, { shouldDirty: true })}
-                  >
-                    <SelectTrigger aria-label="Unidade base global">
-                      <SelectValue placeholder="Selecione a unidade base" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Selecione</SelectItem>
-                      {createAcademiaUnits
-                        .filter((tenant) => createForm.tenantIds.includes(tenant.id))
-                        .map((tenant) => (
-                          <SelectItem key={tenant.id} value={tenant.id}>
-                            {tenant.nome}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
-
-              {createForm.scopeType === "GLOBAL" ? (
-                <label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={createForm.broadAccess}
-                    onChange={(event) => createUserForm.setValue("broadAccess", event.target.checked, { shouldDirty: true })}
-                  />
-                  <span>
-                    <span className="block font-medium text-foreground">Marcar como acesso amplo</span>
-                    <span className="block text-xs text-muted-foreground">Sinaliza alçada alta já na criação global.</span>
-                  </span>
-                </label>
-              ) : null}
-
-              {createForm.scopeType === "REDE" ? (
-                <>
-                  <label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={createForm.eligibleForNewUnits}
-                      onChange={(event) => createUserForm.setValue("eligibleForNewUnits", event.target.checked, { shouldDirty: true })}
-                    />
-                    <span>
-                      <span className="block font-medium text-foreground">Propagar para novas unidades</span>
-                      <span className="block text-xs text-muted-foreground">Disponível apenas para criação em escopo de rede.</span>
-                    </span>
-                  </label>
-
-                  {createForm.eligibleForNewUnits ? (
-                    <div className="space-y-2">
-                      <Label>Política inicial</Label>
-                      <Select
-                        value={createForm.policyScope}
-                        onValueChange={(value) => createUserForm.setValue("policyScope", value as GlobalAdminNewUnitsPolicyScope, { shouldDirty: true })}
-                      >
-                        <SelectTrigger aria-label="Política inicial global">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ACADEMIA_ATUAL">Mesma academia</SelectItem>
-                          <SelectItem value="REDE">Rede inteira</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : null}
-                </>
-              ) : null}
-
-              {createError ? <p className="text-sm text-gym-danger lg:col-span-2">{createError}</p> : null}
-              {createFeedback ? <p className="text-sm text-gym-teal lg:col-span-2">{createFeedback}</p> : null}
-
-              <div className="flex gap-2 lg:col-span-2">
-                <Button type="submit" disabled={creatingUser || loadingCatalog}>
-                  {creatingUser ? "Criando..." : "Criar usuário"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-border"
-                  onClick={() => {
-                    createUserForm.reset(CREATE_USER_DEFAULT);
-                    setCreateError(null);
-                    setCreateFeedback(null);
-                  }}
-                >
-                  Limpar formulário
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <UsuariosCreateForm
+          createUserForm={createUserForm}
+          academias={academias}
+          unidades={unidades}
+          createAcademiaUnits={createAcademiaUnits}
+          creatingUser={creatingUser}
+          createFeedback={createFeedback}
+          createError={createError}
+          onSubmit={handleCreateUser}
+          toggleCreateTenant={toggleCreateTenant}
+          loadingCatalog={loadingCatalog}
+          createForm={createForm}
+          onResetForm={() => {
+            createUserForm.reset(CREATE_USER_DEFAULT);
+            setCreateError(null);
+            setCreateFeedback(null);
+          }}
+        />
       ) : null}
 
       {createFeedback && !showCreateForm ? (
@@ -611,210 +274,16 @@ export default function AdminSegurancaUsuariosPage() {
         <StatCard title="Exceções visíveis" value={loading ? "…" : String(summary.exceptions)} subtitle="Somatório de exceções no recorte" />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Filtros de operação</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3 xl:grid-cols-9">
-          <div className="space-y-2 xl:col-span-2">
-            <Label htmlFor="security-user-query">Pessoa, e-mail ou CPF</Label>
-            <Input
-              id="security-user-query"
-              placeholder="Buscar por nome, e-mail ou CPF"
-              value={filters.query}
-              onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Academia</Label>
-            <Select
-              value={filters.academiaId || "__all__"}
-              onValueChange={(value) =>
-                setFilters((current) => ({
-                  ...current,
-                  academiaId: value === "__all__" ? "" : value,
-                  tenantId: value === "__all__" ? current.tenantId : "",
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todas</SelectItem>
-                {academias.map((academia) => (
-                  <SelectItem key={academia.id} value={academia.id}>
-                    {academia.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Unidade</Label>
-            <Select
-              value={filters.tenantId || "__all__"}
-              onValueChange={(value) =>
-                setFilters((current) => ({ ...current, tenantId: value === "__all__" ? "" : value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todas</SelectItem>
-                {unidadesFiltradas.map((tenant) => (
-                  <SelectItem key={tenant.id} value={tenant.id}>
-                    {tenant.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select
-              value={filters.status || "ATIVO"}
-              onValueChange={(value) => setFilters((current) => ({ ...current, status: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ATIVO">Ativos</SelectItem>
-                <SelectItem value="INATIVO">Inativos</SelectItem>
-                <SelectItem value="PENDENTE">Pendentes</SelectItem>
-                <SelectItem value="TODOS">Todos</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="security-user-profile">Papel em uso</Label>
-            <Input
-              id="security-user-profile"
-              placeholder="Administrador"
-              value={filters.profile}
-              onChange={(event) => setFilters((current) => ({ ...current, profile: event.target.value }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Escopo</Label>
-            <Select
-              value={filters.scopeType || "__all__"}
-              onValueChange={(value) =>
-                setFilters((current) => ({
-                  ...current,
-                  scopeType: value === "__all__" ? "" : (value as Filters["scopeType"]),
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todos</SelectItem>
-                <SelectItem value="UNIDADE">Unidade</SelectItem>
-                <SelectItem value="REDE">Rede</SelectItem>
-                <SelectItem value="GLOBAL">Global</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Novas unidades</Label>
-            <Select
-              value={filters.eligibleOnly ? "SIM" : "TODOS"}
-              onValueChange={(value) => setFilters((current) => ({ ...current, eligibleOnly: value === "SIM" }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TODOS">Todos</SelectItem>
-                <SelectItem value="SIM">Só com propagação</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Revisão</Label>
-            <Select
-              value={filters.reviewStatus || "__all__"}
-              onValueChange={(value) =>
-                setFilters((current) => ({
-                  ...current,
-                  reviewStatus: value === "__all__" ? "" : (value as GlobalAdminReviewStatus),
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todas</SelectItem>
-                <SelectItem value="EM_DIA">Em dia</SelectItem>
-                <SelectItem value="PENDENTE">Pendente</SelectItem>
-                <SelectItem value="VENCIDA">Vencida</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Acesso amplo</Label>
-            <Select
-              value={filters.broadAccessOnly ? "SIM" : "TODOS"}
-              onValueChange={(value) => setFilters((current) => ({ ...current, broadAccessOnly: value === "SIM" }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TODOS">Todos</SelectItem>
-                <SelectItem value="SIM">Só amplos</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Exceções</Label>
-            <Select
-              value={filters.exceptionsOnly ? "SIM" : "TODOS"}
-              onValueChange={(value) => setFilters((current) => ({ ...current, exceptionsOnly: value === "SIM" }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TODOS">Todos</SelectItem>
-                <SelectItem value="SIM">Só com exceção</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex gap-2 md:col-span-3 xl:col-span-8">
-            <Button onClick={applyFilters} disabled={loading || loadingCatalog}>
-              Aplicar filtros
-            </Button>
-            <Button variant="outline" className="border-border" onClick={clearFilters}>
-              Limpar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {contextualNetworkNames.length > 0 ? (
-        <Card>
-          <CardContent className="flex flex-wrap items-center gap-2 px-6 py-4 text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">Redes no recorte:</span>
-            <span>{contextualNetworkNames.join(" · ")}</span>
-          </CardContent>
-        </Card>
-      ) : null}
+      <UsuariosFilters
+        filters={filters}
+        setFilters={setFilters}
+        academias={academias}
+        unidadesFiltradas={unidadesFiltradas}
+        contextualNetworkNames={contextualNetworkNames}
+        onApply={applyFilters}
+        onClear={clearFilters}
+        loading={loading || loadingCatalog}
+      />
 
       <SecuritySectionFeedback loading={loadingCatalog || loading} error={error} />
 
@@ -916,27 +385,5 @@ export default function AdminSegurancaUsuariosPage() {
         )}
       />
     </GlobalSecurityShell>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  subtitle,
-}: {
-  title: string;
-  value: string;
-  subtitle: string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1">
-        <p className="text-3xl font-display font-bold">{value}</p>
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
-      </CardContent>
-    </Card>
   );
 }

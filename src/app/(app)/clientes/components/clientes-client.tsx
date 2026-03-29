@@ -8,7 +8,6 @@ import { logger } from "@/lib/shared/logger";
 import { useTableSearchParams } from "@/hooks/use-table-search-params";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import {
-  listAlunosPageService,
   updateAlunoService,
 } from "@/lib/tenant/comercial/runtime";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
@@ -24,16 +23,15 @@ import { PaginatedTable } from "@/components/shared/paginated-table";
 import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { maskCPF, maskPhone } from "@/lib/utils";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { isTenantContextErrorMessage } from "@/lib/shared/utils/error-codes";
 import { formatDate } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useDialogState } from "@/hooks/use-dialog-state";
 import type { Aluno, StatusAluno } from "@/lib/types";
-import { ListErrorState } from "@/components/shared/list-states";
+
+import { ClienteResumoDialog } from "./cliente-resumo-dialog";
+import { useClientesData } from "./use-clientes-data";
 
 const STATUS_FILTERS: { value: StatusAluno | "TODOS"; label: string }[] = [
   { value: "TODOS", label: "Todos" },
@@ -49,101 +47,38 @@ function ClientesPageContent() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const router = useRouter();
   const { tenantId, tenantResolved, setTenant } = useTenantContext();
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
   const { q, status: filtro, page, size: pageSize, setParams, clearParams, hasActiveFilters } = useTableSearchParams();
   const [buscaInput, setBuscaInput] = useState(q);
   const busca = q; // alias para manter a funcionalidade preexistente da view
   const wizard = useDialogState();
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [totalClientes, setTotalClientes] = useState(0);
-  const [metaPage, setMetaPage] = useState(0);
-  const [metaSize, setMetaSize] = useState(20);
-  const [statusTotals, setStatusTotals] = useState({
-    TODOS: 0,
-    ATIVO: 0,
-    SUSPENSO: 0,
-    INATIVO: 0,
-    CANCELADO: 0,
-  });
   const resumoDialog = useDialogState();
   const [clienteResumo, setClienteResumo] = useState<Aluno | null>(null);
   const [liberandoSuspensao, setLiberandoSuspensao] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const applyLoadedData = useCallback((paged: Awaited<ReturnType<typeof listAlunosPageService>>) => {
-    setAlunos(paged.items);
-    setHasNextPage(paged.hasNext);
-    setTotalClientes(paged.total ?? paged.items.length);
-    setMetaPage(paged.page);
-    setMetaSize(paged.size);
-
-    const totais = paged.totaisStatus;
-    const todos = totais?.total ?? paged.total ?? paged.items.length;
-    const ativos = totais?.totalAtivo ?? 0;
-    const suspensos = totais?.totalSuspenso ?? 0;
-    const inativos = totais?.totalInativo ?? 0;
-    const cancelados = totais?.totalCancelado ?? totais?.cancelados ?? 0;
-
-    setStatusTotals({
-      TODOS: todos,
-      ATIVO: ativos,
-      SUSPENSO: suspensos,
-      INATIVO: inativos,
-      CANCELADO: cancelados,
-    });
-  }, []);
-
-  const loadSnapshot = useCallback(async (currentTenantId: string) => {
-    return listAlunosPageService({
-      tenantId: currentTenantId,
-      status: filtro === "TODOS" ? undefined : filtro,
-      page,
-      size: pageSize,
-    });
-  }, [filtro, page, pageSize]);
-
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setLoadError(null);
-
-    try {
-      const snapshot = await loadSnapshot(tenantId);
-      applyLoadedData(snapshot);
-    } catch (error) {
-      const message = normalizeErrorMessage(error);
-      if (!isTenantContextErrorMessage(message)) {
-        setLoadError(message);
-        return;
-      }
-
-      try {
-        await setTenant(tenantId);
-        const snapshot = await loadSnapshot(tenantId);
-        applyLoadedData(snapshot);
-      } catch (retryError) {
-        setLoadError(normalizeErrorMessage(retryError));
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [applyLoadedData, loadSnapshot, setTenant, tenantId]);
+  const {
+    alunos,
+    hasNextPage,
+    totalClientes,
+    metaPage,
+    metaSize,
+    statusTotals,
+    loadError,
+    loading,
+    load,
+  } = useClientesData({
+    tenantId,
+    tenantResolved,
+    setTenant,
+    filtro,
+    page,
+    pageSize,
+  });
 
   useEffect(() => {
-    // page reseta sozinho com a exclusão da chave na URL, porém não alteramos o custom hook diretamente
-    setAlunos([]);
-    setHasNextPage(false);
-    setTotalClientes(0);
-    setLoadError(null);
     setSelectedIds([]);
   }, [tenantId]);
 
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void load();
-  }, [load, tenantId, tenantResolved]);
   useEffect(() => {
     setBuscaInput(q);
   }, [q]);
@@ -227,6 +162,38 @@ function ClientesPageContent() {
       onClick: exportCsv,
     }
   ], [exportCsv]);
+
+  const handleLiberarSuspensao = useCallback(() => {
+    if (!clienteResumo || liberandoSuspensao) return;
+    confirm(`Confirmar liberação da suspensão de ${clienteResumo.nome}?`, async () => {
+      try {
+        setLiberandoSuspensao(true);
+        await updateAlunoService({
+          tenantId: clienteResumo.tenantId,
+          id: clienteResumo.id,
+          data: {
+            status: "ATIVO",
+            suspensao: undefined,
+          },
+        });
+        setClienteResumo((prev) =>
+          prev ? { ...prev, status: "ATIVO", suspensao: undefined } : prev
+        );
+        await load();
+      } catch (error) {
+        logger.error("Falha ao liberar suspensão", { module: "clientes", error });
+        window.alert("Não foi possível liberar a suspensão no momento.");
+      } finally {
+        setLiberandoSuspensao(false);
+      }
+    });
+  }, [clienteResumo, confirm, liberandoSuspensao, load]);
+
+  const handleVerPerfil = useCallback(() => {
+    if (!clienteResumoBaseHref) return;
+    resumoDialog.close();
+    router.push(clienteResumoBaseHref);
+  }, [clienteResumoBaseHref, resumoDialog, router]);
 
   return (
     <div className="space-y-6">
@@ -445,102 +412,17 @@ function ClientesPageContent() {
         onNext={() => setParams({ page: page + 1 })}
       />
 
-      <Dialog open={resumoDialog.isOpen} onOpenChange={resumoDialog.onOpenChange}>
-        <DialogContent className="border-border bg-card sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Resumo do Cliente</DialogTitle>
-            <DialogDescription>
-              Visão rápida para validar situação e plano antes de abrir o perfil completo.
-            </DialogDescription>
-          </DialogHeader>
-          {clienteResumo ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <ClienteThumbnail nome={clienteResumo.nome} foto={clienteResumo.foto} size="md" />
-                <div>
-                  <p className="text-base font-semibold text-foreground">{clienteResumo.nome}</p>
-                  <p className="text-xs text-muted-foreground">{clienteResumo.email}</p>
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Situação</p>
-                  <div className="mt-2">
-                    <StatusBadge status={clienteResumo.status} />
-                  </div>
-                </div>
-                <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Plano</p>
-                  <p className="mt-2 text-sm font-medium text-foreground">
-                    {clienteResumoPlano?.nome ?? "Sem plano ativo"}
-                  </p>
-                  {clienteResumoPlano?.dataFim ? (
-                    <p className="mt-1 text-xs text-muted-foreground">Válido até {formatDate(clienteResumoPlano.dataFim)}</p>
-                  ) : null}
-                </div>
-                <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</p>
-                  <p className="mt-2 text-sm text-foreground">{clienteResumo.cpf}</p>
-                </div>
-                <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</p>
-                  <p className="mt-2 text-sm text-foreground">{clienteResumo.telefone}</p>
-                </div>
-              </div>
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button type="button" variant="outline" className="border-border" onClick={resumoDialog.close}>
-              Fechar
-            </Button>
-            {clienteResumo?.status === "SUSPENSO" ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="border-border text-gym-accent"
-                onClick={() => {
-                  if (!clienteResumo || liberandoSuspensao) return;
-                  confirm(`Confirmar liberação da suspensão de ${clienteResumo.nome}?`, async () => {
-                    try {
-                      setLiberandoSuspensao(true);
-                      await updateAlunoService({
-                        tenantId: clienteResumo.tenantId,
-                        id: clienteResumo.id,
-                        data: {
-                          status: "ATIVO",
-                          suspensao: undefined,
-                        },
-                      });
-                      setClienteResumo((prev) =>
-                        prev ? { ...prev, status: "ATIVO", suspensao: undefined } : prev
-                      );
-                      await load();
-                    } catch (error) {
-                      logger.error("Falha ao liberar suspensão", { module: "clientes", error });
-                      window.alert("Não foi possível liberar a suspensão no momento.");
-                    } finally {
-                      setLiberandoSuspensao(false);
-                    }
-                  });
-                }}
-                disabled={liberandoSuspensao}
-              >
-                {liberandoSuspensao ? "Liberando..." : "Liberar suspensão"}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              onClick={() => {
-                if (!clienteResumoBaseHref) return;
-                resumoDialog.close();
-                router.push(clienteResumoBaseHref);
-              }}
-            >
-              Ver perfil completo
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ClienteResumoDialog
+        isOpen={resumoDialog.isOpen}
+        onOpenChange={resumoDialog.onOpenChange}
+        clienteResumo={clienteResumo}
+        clienteResumoPlano={clienteResumoPlano}
+        clienteResumoBaseHref={clienteResumoBaseHref}
+        liberandoSuspensao={liberandoSuspensao}
+        onLiberarSuspensao={handleLiberarSuspensao}
+        onVerPerfil={handleVerPerfil}
+        onClose={resumoDialog.close}
+      />
     </div>
   );
 }
@@ -562,9 +444,9 @@ export function ClientesClient() {
           <div className="h-24 animate-pulse rounded-xl bg-primary/10" />
           <div className="h-24 animate-pulse rounded-xl bg-primary/10" />
         </div>
-        <TableSkeleton 
-          columns={[{ label: "Cliente" }, { label: "CPF" }, { label: "Telefone" }, { label: "Nascimento" }, { label: "Sexo" }, { label: "Status" }]} 
-          rowCount={10} 
+        <TableSkeleton
+          columns={[{ label: "Cliente" }, { label: "CPF" }, { label: "Telefone" }, { label: "Nascimento" }, { label: "Sexo" }, { label: "Status" }]}
+          rowCount={10}
         />
       </div>
     }>
