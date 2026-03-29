@@ -9696,11 +9696,12 @@
         "description": "sanitize.ts (19 LOC) não tem nenhum teste. Módulo security-critical que usa DOMPurify. Adicionar cobertura completa.",
         "details": "Criar tests/unit/sanitize.test.ts. Testar: tags permitidas (p, b, strong, h1-h6, ul, ol, li, table) renderizam corretamente. Tags proibidas (script, iframe, object, embed) são removidas. Atributos maliciosos (onerror, onload, onclick, javascript:) são removidos. Edge cases: string vazia, HTML malformado, entidades HTML.",
         "testStrategy": "100% coverage no sanitize.ts. Testes passam no CI.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:31:34.498Z"
       },
       {
         "id": "222",
@@ -9720,11 +9721,12 @@
         "description": "Automatizar deploy: push na main → build Docker → push Artifact Registry → deploy Cloud Run. Sem deploy manual.",
         "details": "Trigger: push na branch main (após merge). Steps: checkout → build Docker image → push para Artifact Registry → deploy Cloud Run com gcloud. Usar Workload Identity Federation (sem service account keys). Variáveis via Cloud Run secrets. Health check antes de rotear tráfego. Rollback se health check falhar.",
         "testStrategy": "Merge na main deploya automaticamente em < 10min. Rollback funciona se health check falhar.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "high",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:31:23.699Z"
       },
       {
         "id": "224",
@@ -9732,11 +9734,12 @@
         "description": "Criar rota /api/health que retorna 200 com timestamp e versão. Adicionar HEALTHCHECK no Dockerfile.",
         "details": "Criar src/app/api/health/route.ts como Route Handler que retorna { status: \"ok\", timestamp, version: process.env.npm_package_version }. Adicionar HEALTHCHECK --interval=30s --timeout=5s CMD curl -f http://localhost:8080/api/health || exit 1 no Dockerfile. Configurar Cloud Run startup probe.",
         "testStrategy": "GET /api/health retorna 200. Cloud Run só roteia tráfego após health check.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T11:32:04.609Z"
       },
       {
         "id": "225",
@@ -10054,9 +10057,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:28:35.929Z",
+      "lastModified": "2026-03-29T11:32:04.609Z",
       "taskCount": 248,
-      "completedCount": 220,
+      "completedCount": 221,
       "tags": [
         "master"
       ]
