@@ -3,6 +3,7 @@ export const queryKeys = {
     ["dashboard", tenantId, referenceDate] as const,
 
   clientes: {
+    all: (tenantId: string) => ["clientes", tenantId] as const,
     list: (tenantId: string, filters: Record<string, unknown>) =>
       ["clientes", "list", tenantId, filters] as const,
   },
