@@ -10041,14 +10041,15 @@
         "description": "No fluxo de criação de matrícula, se plano recorrente → criar assinatura no gateway. Cancelamento propaga.",
         "details": "Alterar fluxo de criação de matrícula: se plano.cobrancaRecorrente === true, após criar matrícula, criar assinatura via billing API. Exibir status da assinatura na tela de matrículas (badge). Cancelamento de matrícula dispara cancelamento de assinatura.",
         "testStrategy": "Matrícula recorrente cria assinatura. Cancelamento propaga. Status visível.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "244",
           "245"
         ],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T12:18:49.767Z"
       },
       {
         "id": "247",
@@ -10079,9 +10080,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T12:06:15.905Z",
+      "lastModified": "2026-03-29T12:18:49.767Z",
       "taskCount": 248,
-      "completedCount": 245,
+      "completedCount": 246,
       "tags": [
         "master"
       ]
