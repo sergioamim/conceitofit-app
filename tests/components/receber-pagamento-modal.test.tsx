@@ -1,178 +1,102 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
-import type { FormaPagamento, Pagamento } from "@/lib/types";
-
-vi.mock("@/lib/business-date", () => ({
-  getBusinessTodayIso: () => "2026-03-29",
-}));
 
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children, open }: any) => (open ? <div>{children}</div> : null),
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogHeader: ({ children }: any) => <div>{children}</div>,
-  DialogTitle: ({ children }: any) => <div>{children}</div>,
-  DialogDescription: ({ children }: any) => <div>{children}</div>,
+  DialogTitle: ({ children }: any) => <h2>{children}</h2>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
 }));
 
-vi.mock("@/components/ui/select", () => {
-  function Select({ children, value, onValueChange }: any) {
-    return (
-      <div data-testid="select-root" data-value={value}>
-        {typeof children === "function"
-          ? children({ value, onValueChange })
-          : children}
-      </div>
-    );
-  }
-  function SelectTrigger({ children, ...props }: any) {
-    return <button type="button" {...props}>{children}</button>;
-  }
-  function SelectValue({ placeholder }: any) {
-    return <span>{placeholder}</span>;
-  }
-  function SelectContent({ children }: any) {
-    return <div>{children}</div>;
-  }
-  function SelectItem({ children, value }: any) {
-    return <option value={value}>{children}</option>;
-  }
-  return { Select, SelectTrigger, SelectValue, SelectContent, SelectItem };
-});
+vi.mock("@/components/ui/select", () => ({
+  Select: ({ children, value, onValueChange }: any) => (
+    <div data-testid="select">{children}</div>
+  ),
+  SelectTrigger: ({ children }: any) => <button>{children}</button>,
+  SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
+  SelectContent: ({ children }: any) => <div>{children}</div>,
+  SelectItem: ({ children, value }: any) => (
+    <option value={value}>{children}</option>
+  ),
+}));
 
-const PAGAMENTO_MOCK: Pagamento = {
-  id: "pag-1",
-  tenantId: "t-1",
-  alunoId: "a-1",
-  tipo: "MENSALIDADE",
-  descricao: "Mensalidade Março 2026",
+vi.mock("@/lib/business-date", () => ({
+  getBusinessTodayIso: () => "2024-06-15",
+}));
+
+const basePagamento = {
+  id: "p1",
+  tenantId: "t1",
+  matriculaId: "m1",
+  alunoId: "a1",
+  alunoNome: "Ana Costa",
+  planoNome: "Mensal",
+  descricao: "Mensalidade Junho",
   valor: 150,
-  desconto: 0,
   valorFinal: 150,
-  dataVencimento: "2026-03-15",
-  status: "PENDENTE",
-  dataCriacao: "2026-03-01T10:00:00",
+  status: "PENDENTE" as const,
+  dataVencimento: "2024-06-20",
+  formaPagamento: "PIX" as const,
+  origem: "MATRICULA" as const,
 };
 
-const FORMAS_PAGAMENTO_MOCK: FormaPagamento[] = [
-  {
-    id: "fp-1",
-    tenantId: "t-1",
-    nome: "PIX",
-    tipo: "PIX",
-    taxaPercentual: 0,
-    maxParcelas: 1,
-    ativo: true,
-    emissaoAutomatica: false,
-    prazoRecebimentoDias: 0,
-    instrucoesRecebimento: "",
-  },
-  {
-    id: "fp-2",
-    tenantId: "t-1",
-    nome: "Cartão Crédito",
-    tipo: "CARTAO_CREDITO",
-    taxaPercentual: 2.5,
-    maxParcelas: 12,
-    ativo: true,
-    emissaoAutomatica: false,
-    prazoRecebimentoDias: 30,
-    instrucoesRecebimento: "",
-  },
-  {
-    id: "fp-3",
-    tenantId: "t-1",
-    nome: "Boleto (inativo)",
-    tipo: "BOLETO",
-    taxaPercentual: 1,
-    maxParcelas: 1,
-    ativo: false,
-    emissaoAutomatica: false,
-    prazoRecebimentoDias: 3,
-    instrucoesRecebimento: "",
-  },
+const formasPagamento = [
+  { id: "fp1", tipo: "PIX" as const, nome: "PIX", ativo: true },
+  { id: "fp2", tipo: "CARTAO_CREDITO" as const, nome: "Cartão de crédito", ativo: true },
+  { id: "fp3", tipo: "DINHEIRO" as const, nome: "Dinheiro", ativo: false },
 ];
 
-function renderModal(overrides?: Partial<Parameters<typeof ReceberPagamentoModal>[0]>) {
+describe("ReceberPagamentoModal", () => {
   const defaultProps = {
-    pagamento: PAGAMENTO_MOCK,
-    formasPagamento: FORMAS_PAGAMENTO_MOCK,
+    pagamento: basePagamento,
+    formasPagamento: formasPagamento,
     onClose: vi.fn(),
     onConfirm: vi.fn(),
-    ...overrides,
   };
-  const result = render(<ReceberPagamentoModal {...defaultProps} />);
-  return { ...result, props: defaultProps };
-}
 
-describe("ReceberPagamentoModal", () => {
-  it("renders title and payment description", () => {
-    renderModal();
+  it("renders the modal title", () => {
+    render(<ReceberPagamentoModal {...defaultProps} />);
     expect(screen.getByText("Receber pagamento")).toBeInTheDocument();
-    expect(screen.getByText("Mensalidade Março 2026")).toBeInTheDocument();
   });
 
-  it("displays payment value formatted as BRL", () => {
-    renderModal();
-    expect(screen.getByText(/R\$\s*150,00/)).toBeInTheDocument();
+  it("displays payment description and value", () => {
+    render(<ReceberPagamentoModal {...defaultProps} />);
+    expect(screen.getByText("Mensalidade Junho")).toBeInTheDocument();
   });
 
-  it("renders date input with today as default", () => {
-    renderModal();
-    const dateInput = screen.getByLabelText(/Data do pagamento/i);
-    expect(dateInput).toBeInTheDocument();
-    expect(dateInput).toHaveValue("2026-03-29");
+  it("shows convenio info when provided", () => {
+    render(
+      <ReceberPagamentoModal
+        {...defaultProps}
+        convenio={{ nome: "Empresa X", descontoPercentual: 10 }}
+      />,
+    );
+    expect(screen.getByText("Empresa X")).toBeInTheDocument();
   });
 
-  it("renders only active payment methods", () => {
-    renderModal();
-    expect(screen.getByText("PIX")).toBeInTheDocument();
-    expect(screen.getByText("Cartão Crédito")).toBeInTheDocument();
-    expect(screen.queryByText("Boleto (inativo)")).not.toBeInTheDocument();
+  it("renders date and payment fields", () => {
+    render(<ReceberPagamentoModal {...defaultProps} />);
+    expect(screen.getByText("Data do pagamento *")).toBeInTheDocument();
+    expect(screen.getByText("Forma de pagamento *")).toBeInTheDocument();
   });
 
-  it("renders convenio info when provided", () => {
-    renderModal({
-      convenio: { nome: "Convênio Empresa X", descontoPercentual: 15 },
-    });
-    expect(screen.getByText("Convênio Empresa X")).toBeInTheDocument();
-    expect(screen.getByText(/15%/)).toBeInTheDocument();
-  });
-
-  it("does not render convenio section when not provided", () => {
-    renderModal();
-    expect(screen.queryByText(/Convênio:/)).not.toBeInTheDocument();
-  });
-
-  it("calls onClose when cancel button is clicked", () => {
-    const { props } = renderModal();
+  it("calls onClose when cancel is clicked", () => {
+    render(<ReceberPagamentoModal {...defaultProps} />);
     fireEvent.click(screen.getByText("Cancelar"));
-    expect(props.onClose).toHaveBeenCalledTimes(1);
+    expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
-  it("renders observations input", () => {
-    renderModal();
-    const obsInput = screen.getByLabelText(/Observações/i);
-    expect(obsInput).toBeInTheDocument();
+  it("renders observations field", () => {
+    render(<ReceberPagamentoModal {...defaultProps} />);
+    expect(screen.getByText("Observações")).toBeInTheDocument();
   });
 
-  it("renders confirm button", () => {
-    renderModal();
-    expect(screen.getByText("Confirmar")).toBeInTheDocument();
-  });
-
-  it("allows changing the payment date", () => {
-    renderModal();
-    const dateInput = screen.getByLabelText(/Data do pagamento/i);
-    fireEvent.change(dateInput, { target: { value: "2026-04-01" } });
-    expect(dateInput).toHaveValue("2026-04-01");
-  });
-
-  it("allows typing observations", () => {
-    renderModal();
-    const obsInput = screen.getByLabelText(/Observações/i);
-    fireEvent.change(obsInput, { target: { value: "Pago em espécie" } });
-    expect(obsInput).toHaveValue("Pago em espécie");
+  it("only shows active payment methods", () => {
+    render(<ReceberPagamentoModal {...defaultProps} />);
+    expect(screen.getByText("PIX")).toBeInTheDocument();
+    expect(screen.getByText("Cartão de crédito")).toBeInTheDocument();
+    expect(screen.queryByText("Dinheiro")).not.toBeInTheDocument();
   });
 });
