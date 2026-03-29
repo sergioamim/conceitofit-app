@@ -1,5 +1,6 @@
 import {
   Activity,
+  BarChart3,
   Building2,
   FileText,
   Globe,
@@ -30,6 +31,7 @@ export const backofficeNavGroups: BackofficeNavGroup[] = [
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
       { href: "/admin/busca", label: "Busca Global", icon: Search },
+      { href: "/admin/bi", label: "BI Executivo", icon: BarChart3 },
     ],
   },
   {
