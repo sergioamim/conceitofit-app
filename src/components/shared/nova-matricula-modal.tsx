@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
 import { getBusinessTodayIso } from "@/lib/business-date";
+import { requiredTrimmedString, optionalTrimmedString } from "@/lib/forms/zod-helpers";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
 import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
@@ -14,18 +17,22 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
 
-type NovaMatriculaFormValues = {
-  alunoId: string;
-  planoId: string;
-  dataInicio: string;
-  formaPagamento: TipoFormaPagamento | "";
-  desconto: string;
-  motivoDesconto: string;
-  renovacao: boolean;
-  convenioId: string;
-  parcelasAnuidade: string;
-  pagamentoPendente: boolean;
-};
+const novaMatriculaSchema = z.object({
+  alunoId: requiredTrimmedString("Selecione o cliente."),
+  planoId: requiredTrimmedString("Selecione o plano."),
+  dataInicio: requiredTrimmedString("Informe a data de início."),
+  formaPagamento: z.enum(["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "BOLETO", "RECORRENTE"], {
+    errorMap: () => ({ message: "Selecione a forma de pagamento." }),
+  }).or(z.literal("")),
+  desconto: z.string(),
+  motivoDesconto: optionalTrimmedString().default(""),
+  renovacao: z.boolean(),
+  convenioId: z.string(),
+  parcelasAnuidade: z.string(),
+  pagamentoPendente: z.boolean(),
+});
+
+type NovaMatriculaFormValues = z.infer<typeof novaMatriculaSchema>;
 
 export function NovaMatriculaModal({
   open,
@@ -65,6 +72,7 @@ export function NovaMatriculaModal({
 
   const [error, setError] = useState("");
   const formMethods = useForm<NovaMatriculaFormValues>({
+    resolver: zodResolver(novaMatriculaSchema),
     defaultValues: {
       alunoId: prefillClienteId ?? "",
       planoId: "",

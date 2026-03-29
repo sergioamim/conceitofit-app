@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 import type {
   ContaPagar,
   FormaPagamento,
@@ -24,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
+import { requiredTrimmedString, optionalTrimmedString } from "@/lib/forms/zod-helpers";
 
 function contaTotal(conta: ContaPagar) {
   return Math.max(
@@ -31,6 +35,15 @@ function contaTotal(conta: ContaPagar) {
     Number(conta.valorOriginal ?? 0) - Number(conta.desconto ?? 0) + Number(conta.jurosMulta ?? 0)
   );
 }
+
+const pagamentoFormSchema = z.object({
+  dataPagamento: requiredTrimmedString("Informe a data de pagamento."),
+  formaPagamento: requiredTrimmedString("Selecione a forma de pagamento."),
+  valorPago: z.string(),
+  observacoes: optionalTrimmedString(),
+});
+
+type PagamentoFormValues = z.infer<typeof pagamentoFormSchema>;
 
 export type PagamentoFormState = {
   dataPagamento: string;
@@ -48,6 +61,15 @@ type PagarContaModalProps = {
   onSubmit: (contaId: string, form: PagamentoFormState) => Promise<void>;
 };
 
+function defaultValues(todayISO: string): PagamentoFormValues {
+  return {
+    dataPagamento: todayISO,
+    formaPagamento: "PIX",
+    valorPago: "",
+    observacoes: "",
+  };
+}
+
 export function PagarContaModal({
   open,
   onOpenChange,
@@ -56,28 +78,30 @@ export function PagarContaModal({
   todayISO,
   onSubmit,
 }: PagarContaModalProps) {
-  const [form, setForm] = useState<PagamentoFormState>({
-    dataPagamento: todayISO,
-    formaPagamento: "PIX",
-    valorPago: "",
-    observacoes: "",
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<PagamentoFormValues>({
+    resolver: zodResolver(pagamentoFormSchema),
+    defaultValues: defaultValues(todayISO),
   });
 
   // Reset form when a new conta is selected
-  const [prevConta, setPrevConta] = useState<ContaPagar | null>(conta);
-  if (conta !== prevConta) {
-    setPrevConta(conta);
-    setForm({
-      dataPagamento: todayISO,
-      formaPagamento: "PIX",
-      valorPago: "",
-      observacoes: "",
-    });
-  }
+  useEffect(() => {
+    reset(defaultValues(todayISO));
+  }, [conta, reset, todayISO]);
 
-  async function handleSubmit() {
+  function onFormSubmit(values: PagamentoFormValues) {
     if (!conta) return;
-    await onSubmit(conta.id, form);
+    onSubmit(conta.id, {
+      dataPagamento: values.dataPagamento,
+      formaPagamento: values.formaPagamento as TipoFormaPagamento,
+      valorPago: values.valorPago,
+      observacoes: values.observacoes ?? "",
+    });
   }
 
   return (
@@ -89,78 +113,83 @@ export function PagarContaModal({
             Registrar pagamento para {conta?.fornecedor ?? "fornecedor"}.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Data de pagamento
-            </label>
-            <Input
-              type="date"
-              value={form.dataPagamento}
-              onChange={(e) =>
-                setForm((v) => ({ ...v, dataPagamento: e.target.value }))
-              }
-              className="bg-secondary border-border"
-            />
-          </div>
+        <form onSubmit={handleSubmit(onFormSubmit)}>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Data de pagamento
+              </label>
+              <Input
+                type="date"
+                {...register("dataPagamento")}
+                className="bg-secondary border-border"
+              />
+              {errors.dataPagamento ? (
+                <p className="text-xs text-gym-danger">{errors.dataPagamento.message}</p>
+              ) : null}
+            </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Forma de pagamento
-            </label>
-            <Select
-              value={form.formaPagamento}
-              onValueChange={(value) =>
-                setForm((f) => ({ ...f, formaPagamento: value as TipoFormaPagamento }))
-              }
-            >
-              <SelectTrigger className="w-full bg-secondary border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {formasPagamento.map((forma) => (
-                  <SelectItem key={forma.id} value={forma.tipo}>
-                    {forma.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Forma de pagamento
+              </label>
+              <Controller
+                control={control}
+                name="formaPagamento"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger className="w-full bg-secondary border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {formasPagamento.map((forma) => (
+                        <SelectItem key={forma.id} value={forma.tipo}>
+                          {forma.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.formaPagamento ? (
+                <p className="text-xs text-gym-danger">{errors.formaPagamento.message}</p>
+              ) : null}
+            </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Valor pago
-            </label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder={`Padrão: ${formatBRL(conta ? contaTotal(conta) : 0)}`}
-              value={form.valorPago}
-              onChange={(e) => setForm((v) => ({ ...v, valorPago: e.target.value }))}
-              className="bg-secondary border-border"
-            />
-          </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Valor pago
+              </label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder={`Padrão: ${formatBRL(conta ? contaTotal(conta) : 0)}`}
+                {...register("valorPago")}
+                className="bg-secondary border-border"
+              />
+            </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Observações
-            </label>
-            <textarea
-              value={form.observacoes}
-              onChange={(e) =>
-                setForm((v) => ({ ...v, observacoes: e.target.value }))
-              }
-              className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
-            />
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Observações
+              </label>
+              <textarea
+                {...register("observacoes")}
+                className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+              />
+            </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" className="border-border" onClick={() => onOpenChange(false)}>
-            Fechar
-          </Button>
-          <Button onClick={handleSubmit}>Confirmar pagamento</Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" className="border-border" onClick={() => onOpenChange(false)}>
+              Fechar
+            </Button>
+            <Button type="submit">Confirmar pagamento</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
