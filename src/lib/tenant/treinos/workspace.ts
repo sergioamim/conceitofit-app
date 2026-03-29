@@ -1,4 +1,5 @@
 import { addDaysToIsoDate, getBusinessTodayIso } from "@/lib/business-date";
+import { logger } from "@/lib/shared/logger";
 import {
   assignTreinoTemplateApi,
   createExercicioApi,
@@ -440,8 +441,8 @@ async function findTemplateByIdentity(input: {
     try {
       const found = await getTreinoApi({ tenantId: input.tenantId, id: normalizedId });
       return mapTreinoApiToDomain(found);
-    } catch {
-      // fallback by name below
+    } catch (error) {
+      logger.warn("[TreinoWorkspace] Template lookup by ID failed, falling back to name", { error });
     }
   }
 

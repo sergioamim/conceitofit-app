@@ -34,7 +34,7 @@ async function submitExperimental(tenantId: string, data: ExperimentalFormValues
     try {
       const body = await res.json();
       if (body.message) message = body.message;
-    } catch { /* ignore */ }
+    } catch { /* ignore JSON parse error — already have fallback message */ }
     throw new Error(message);
   }
 

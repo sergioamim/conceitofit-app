@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { listarCatracaWsStatusApi } from "@/lib/api/catraca";
 import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { logger } from "@/lib/shared/logger";
 import type { Tenant } from "@/lib/types";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import { PageError } from "@/components/shared/page-error";
@@ -71,7 +72,8 @@ export default function CatracaStatusPage() {
       try {
         const tenantsResponse = await listUnidadesApi();
         setTenants(tenantsResponse);
-      } catch {
+      } catch (error) {
+        logger.warn("[CatracaStatus] Failed to load tenants", { error });
         setTenants([]);
       }
     })();

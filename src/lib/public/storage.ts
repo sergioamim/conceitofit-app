@@ -1,4 +1,5 @@
 import type { PublicCheckoutSummary, PublicSignupDraft } from "@/lib/public/services";
+import { logger } from "@/lib/shared/logger";
 
 export type PublicJourneyDraft = {
   tenantRef?: string;
@@ -28,7 +29,8 @@ function readFromSession(key: string): PublicJourneyDraft | null {
     const raw = window.sessionStorage.getItem(key);
     if (!raw) return null;
     return JSON.parse(raw) as PublicJourneyDraft;
-  } catch {
+  } catch (error) {
+    logger.warn("[PublicJourneyStorage] Failed to read from sessionStorage", { error });
     return null;
   }
 }
@@ -37,8 +39,8 @@ function writeToSession(key: string, draft: PublicJourneyDraft): void {
   if (typeof window === "undefined") return;
   try {
     window.sessionStorage.setItem(key, JSON.stringify(draft));
-  } catch {
-    // sessionStorage cheio ou indisponível — cache em memória continua funcionando
+  } catch (error) {
+    logger.warn("[PublicJourneyStorage] sessionStorage write failed (full or unavailable)", { error });
   }
 }
 

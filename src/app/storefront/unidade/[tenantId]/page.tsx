@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Phone, Clock, ChevronLeft, Dumbbell } from "lucide-react";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { logger } from "@/lib/shared/logger";
 import type { Plano, Tenant } from "@/lib/types";
 import type { Metadata } from "next";
 
@@ -65,8 +66,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       { query: { tenantId: storefrontTenantId }, next: { revalidate: 300 } },
     );
     if (u?.nome) unidadeNome = u.nome;
-  } catch {
-    // fallback
+  } catch (error) {
+    logger.warn("[Storefront/Unidade] Metadata fetch failed", { error });
   }
 
   const title = `${unidadeNome} — ${tenantSlug}`;

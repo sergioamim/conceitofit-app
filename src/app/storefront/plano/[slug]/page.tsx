@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { logger } from "@/lib/shared/logger";
 import type { Plano } from "@/lib/types";
 import type { Metadata } from "next";
 
@@ -14,7 +15,8 @@ async function resolvePlano(slug: string, tenantId: string): Promise<Plano | nul
       `/api/v1/publico/adesao/plano/${encodeURIComponent(slug)}`,
       { query: { tenantId }, next: { revalidate: 60 } },
     );
-  } catch {
+  } catch (error) {
+    logger.warn("[Storefront/Plano] Failed to resolve plano", { error });
     return null;
   }
 }
