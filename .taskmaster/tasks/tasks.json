@@ -9367,11 +9367,12 @@
         "description": "O backend tem 9 endpoints em /publico/storefront/{academiaSlug}/* que o frontend não usa. Frontend usa paths sem slug.",
         "details": "Backend oferece: GET /publico/storefront/{slug} (dados gerais), GET /{slug}/atividades, /{slug}/planos, /{slug}/seo, /{slug}/sitemap, /{slug}/theme, /{slug}/unidades/{id}, /{slug}/unidades/{id}/horarios-disponiveis, POST /{slug}/experimental. Atualizar src/lib/public/server-services.ts e o middleware (proxy.ts) para usar esses endpoints com o slug resolvido. Atualizar src/app/storefront/ pages para consumir. Pode eliminar necessidade de X-Context-Id header nos requests públicos.",
         "testStrategy": "Storefront renderiza com dados do backend. Planos, unidades, horários e tema carregam via slug.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T01:24:25.204Z"
       },
       {
         "id": "197",
@@ -9379,11 +9380,12 @@
         "description": "O backend tem 5 endpoints de leads admin (GET /admin/leads, GET stats, GET {id}, PATCH notas, PATCH status) mas o frontend não tem UI para gerenciar leads capturados.",
         "details": "Criar src/lib/api/admin-leads.ts com clients para os 5 endpoints. Criar src/app/(backoffice)/admin/leads/page.tsx com: tabela paginada de leads, filtro por status, detalhe com notas, ações (mudar status, adicionar nota). Conectar com o formulário de captura B2B (/b2b lead-form) para ciclo completo: lead entra → admin visualiza → qualifica → converte.",
         "testStrategy": "Página /admin/leads lista leads. Filtro funciona. Detalhes e notas editáveis.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T01:21:58.270Z"
       },
       {
         "id": "198",
@@ -9391,11 +9393,12 @@
         "description": "O backend tem 4 endpoints de BI (resumo, comparativo, série, resumo geral) que não estão conectados no frontend.",
         "details": "Criar src/lib/api/admin-bi.ts com clients para: GET /admin/bi/academias/{id}/executivo/resumo, /comparativo, /serie, e /admin/bi/academias/{id}/resumo. Criar src/app/(backoffice)/admin/bi/page.tsx ou expandir dashboard admin existente com seção BI. Exibir: KPIs por academia, comparativo entre períodos, gráfico de série temporal. Usar componentes BiMetricCard e BiTrendBars já existentes.",
         "testStrategy": "Dashboard BI renderiza com dados reais. Seleção de academia filtra. Gráficos exibem série temporal.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T01:22:15.530Z"
       },
       {
         "id": "199",
@@ -9618,9 +9621,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T01:13:51.946Z",
+      "lastModified": "2026-03-29T01:24:25.204Z",
       "taskCount": 216,
-      "completedCount": 195,
+      "completedCount": 196,
       "tags": [
         "master"
       ]
