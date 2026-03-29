@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
 
-export default function AlunoDetailRedirect({ params }: { params: { id: string } }) {
-  redirect(`/clientes/${params.id}`);
+export default async function AlunoDetailRedirect({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  redirect(`/clientes/${id}`);
 }
