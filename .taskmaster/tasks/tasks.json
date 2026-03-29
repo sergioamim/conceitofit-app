@@ -10078,6 +10078,18 @@
         "complexity": 6,
         "subtasks": [],
         "updatedAt": "2026-03-29T13:09:38.548Z"
+      },
+      {
+        "id": "249",
+        "title": "Corrigir conflito de handler ambíguo em GET /api/v1/comercial/adesoes",
+        "description": "O Spring mapeia dois controllers para o mesmo path GET /api/v1/comercial/adesoes: ComercialAdesaoController.listAdesoes() e ComercialController.listMatriculas(). Isso causa erro 500 (Ambiguous handler methods) e bloqueia funcionalidades no frontend.",
+        "details": "Solução: mover o mapeamento de listMatriculas no ComercialController para /api/v1/comercial/matriculas (ou remover se for duplicado), mantendo /api/v1/comercial/adesoes exclusivamente no ComercialAdesaoController. Verificar se há outros endpoints no ComercialController que conflitam com o ComercialAdesaoController. Testar que ambos os paths respondem corretamente após a correção.",
+        "testStrategy": "GET /api/v1/comercial/adesoes retorna 200 com lista de adesões. GET /api/v1/comercial/matriculas retorna 200 com lista de matrículas. Nenhum erro de Ambiguous handler no startup do Spring.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 2,
+        "subtasks": []
       }
     ],
     "metadata": {
