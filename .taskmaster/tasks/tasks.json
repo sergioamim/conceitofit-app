@@ -9655,14 +9655,14 @@
         "description": "Gerar UUID por request no http.ts, passar X-Request-Id header em todas as chamadas API, incluir request-id nos logs do Sentry e do logger.ts.",
         "details": "http.ts já usa crypto.randomUUID() para context-id. Criar X-Request-Id separado por chamada API. Passar no header de cada apiRequest(). Incluir no Sentry breadcrumb e no logger.warn/error. Permitir correlação frontend↔backend pelo mesmo request-id.",
         "testStrategy": "Requests ao backend incluem X-Request-Id header. Erros no Sentry mostram request-id. Logger inclui request-id.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "217"
         ],
         "priority": "medium",
         "complexity": 3,
         "subtasks": [],
-        "updatedAt": "2026-03-29T06:07:17.184Z"
+        "updatedAt": "2026-03-29T11:28:05.020Z"
       },
       {
         "id": "219",
@@ -10053,9 +10053,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:25:12.175Z",
+      "lastModified": "2026-03-29T11:28:05.021Z",
       "taskCount": 248,
-      "completedCount": 218,
+      "completedCount": 219,
       "tags": [
         "master"
       ]
