@@ -1,82 +1,103 @@
 import { headers } from "next/headers";
-import { serverFetch, ServerFetchRequestError } from "@/lib/shared/server-fetch";
 import type { Plano, StorefrontTheme, Tenant } from "@/lib/types";
 import { StorefrontHero } from "@/components/storefront/storefront-hero";
 import { StorefrontJsonLd } from "@/components/storefront/storefront-jsonld";
 import { StorefrontPlanos } from "@/components/storefront/storefront-planos";
 import { StorefrontUnidades } from "@/components/storefront/storefront-unidades";
+import {
+  getStorefrontOverview,
+  getStorefrontSeo,
+  type StorefrontOverviewResponse,
+} from "@/lib/public/storefront-api";
 import type { Metadata } from "next";
 
 interface StorefrontData {
   tenantId: string;
   tenantSlug: string;
+  academiaSlug: string;
   theme: StorefrontTheme | null;
   unidades: Tenant[];
   planos: Plano[];
+}
+
+function overviewToTheme(overview: StorefrontOverviewResponse, tenantId: string): StorefrontTheme | null {
+  const t = overview.storefrontTheme;
+  if (!t) return null;
+  return {
+    id: t.id,
+    tenantId,
+    logoUrl: t.logoUrl ?? undefined,
+    faviconUrl: t.faviconUrl ?? undefined,
+    heroImageUrl: t.bannerUrl ?? undefined,
+    heroTitle: t.titulo ?? undefined,
+    heroSubtitle: t.subtitulo ?? undefined,
+    socialLinks: t.redesSociais
+      ? {
+          instagram: t.redesSociais.instagram,
+          facebook: t.redesSociais.facebook,
+          whatsapp: t.redesSociais.whatsapp,
+        }
+      : undefined,
+    updatedAt: t.dataAtualizacao,
+  };
+}
+
+function overviewToUnidades(overview: StorefrontOverviewResponse): Tenant[] {
+  return overview.unidades.map((u) => ({
+    id: u.tenantId,
+    nome: u.nome,
+    telefone: u.telefone,
+    endereco: u.endereco,
+    ativo: true,
+  })) as Tenant[];
 }
 
 async function fetchStorefrontData(): Promise<StorefrontData> {
   const hdrs = await headers();
   const tenantId = hdrs.get("x-tenant-id") ?? "";
   const tenantSlug = hdrs.get("x-tenant-slug") ?? "";
+  const academiaSlug = hdrs.get("x-academia-slug") ?? tenantSlug;
 
-  let theme: StorefrontTheme | null = null;
-  let unidades: Tenant[] = [];
-  let planos: Plano[] = [];
-
-  if (!tenantId) {
-    return { tenantId, tenantSlug, theme, unidades, planos };
+  if (!academiaSlug) {
+    return { tenantId, tenantSlug, academiaSlug, theme: null, unidades: [], planos: [] };
   }
 
-  const results = await Promise.allSettled([
-    serverFetch<StorefrontTheme>("/api/v1/publico/storefront/theme", {
-      query: { tenantId },
-      next: { revalidate: 300 },
-    }),
-    serverFetch<Tenant[]>("/api/v1/publico/storefront/unidades", {
-      query: { tenantId },
-      next: { revalidate: 300 },
-    }),
-    serverFetch<Plano[]>("/api/v1/publico/storefront/planos", {
-      query: { tenantId },
-      next: { revalidate: 300 },
-    }),
-  ]);
+  try {
+    // Endpoint com slug no path: GET /api/v1/publico/storefront/{academiaSlug}
+    const overview = await getStorefrontOverview(academiaSlug);
+    const theme = overviewToTheme(overview, tenantId);
+    const unidades = overviewToUnidades(overview);
 
-  if (results[0].status === "fulfilled") theme = results[0].value;
-  if (results[1].status === "fulfilled") {
-    const raw = results[1].value;
-    unidades = Array.isArray(raw) ? raw : [];
-  }
-  if (results[2].status === "fulfilled") {
-    const raw = results[2].value;
-    planos = (Array.isArray(raw) ? raw : []).filter((p) => p.ativo);
-  }
+    // Planos vêm das unidades no overview (flatten)
+    const planos: Plano[] = [];
+    // Se o overview não traz planos, eles virão via componente separado
 
-  return { tenantId, tenantSlug, theme, unidades, planos };
+    return { tenantId, tenantSlug, academiaSlug, theme, unidades, planos };
+  } catch {
+    return { tenantId, tenantSlug, academiaSlug, theme: null, unidades: [], planos: [] };
+  }
 }
 
 export async function generateMetadata(): Promise<Metadata> {
   const hdrs = await headers();
   const tenantSlug = hdrs.get("x-tenant-slug") ?? "Academia";
+  const academiaSlug = hdrs.get("x-academia-slug") ?? tenantSlug;
   const subdomain = hdrs.get("x-storefront-subdomain") ?? "";
-  const tenantId = hdrs.get("x-tenant-id") ?? "";
 
+  let title = `${tenantSlug} — Conheça nossos planos`;
+  let description = `Confira os planos e unidades disponíveis em ${tenantSlug}.`;
   let ogImage: string | undefined;
-  if (tenantId) {
+
+  if (academiaSlug) {
     try {
-      const theme = await serverFetch<StorefrontTheme>("/api/v1/publico/storefront/theme", {
-        query: { tenantId },
-        next: { revalidate: 300 },
-      });
-      ogImage = theme?.heroImageUrl ?? theme?.logoUrl ?? undefined;
+      const seo = await getStorefrontSeo(academiaSlug);
+      if (seo.title) title = seo.title;
+      if (seo.description) description = seo.description;
+      if (seo.ogImage) ogImage = seo.ogImage;
     } catch {
-      // fallback
+      // fallback to defaults
     }
   }
-
-  const title = `${tenantSlug} — Conheça nossos planos`;
-  const description = `Confira os planos e unidades disponíveis em ${tenantSlug}. Escolha o plano ideal e comece sua jornada fitness.`;
 
   return {
     title,

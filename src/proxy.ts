@@ -25,6 +25,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 interface CacheEntry {
   tenantId: string;
   tenantSlug: string;
+  academiaSlug: string;
   resolvedAt: number;
 }
 
@@ -95,6 +96,8 @@ async function resolveTenant(
 
     const data = (await res.json()) as {
       tenantId?: string;
+      academiaId?: string;
+      academiaSlug?: string;
       slug?: string;
     };
 
@@ -106,6 +109,7 @@ async function resolveTenant(
     const entry: CacheEntry = {
       tenantId: data.tenantId,
       tenantSlug: data.slug ?? subdomain,
+      academiaSlug: data.academiaSlug ?? data.slug ?? subdomain,
       resolvedAt: Date.now(),
     };
     resolveCache.set(subdomain, entry);
@@ -148,6 +152,7 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-tenant-id", tenant.tenantId);
   requestHeaders.set("x-tenant-slug", tenant.tenantSlug);
+  requestHeaders.set("x-academia-slug", tenant.academiaSlug);
   requestHeaders.set("x-storefront-subdomain", subdomain);
 
   const { pathname } = request.nextUrl;
