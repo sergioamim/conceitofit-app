@@ -187,12 +187,12 @@ export default function ContasReceberPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
-              <th className="px-4 py-3 text-left font-semibold">Vencimento</th>
-              <th className="px-4 py-3 text-left font-semibold">Cliente</th>
-              <th className="px-4 py-3 text-left font-semibold">Descrição</th>
-              <th className="px-4 py-3 text-left font-semibold">Tipo</th>
-              <th className="px-4 py-3 text-left font-semibold">Valor</th>
-              <th className="px-4 py-3 text-left font-semibold">Status</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Vencimento</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Cliente</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Descrição</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Tipo</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Valor</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

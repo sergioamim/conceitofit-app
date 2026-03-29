@@ -61,6 +61,7 @@ export function ListErrorState({ error, onRetry, className }: ListErrorStateProp
   return (
     <div
       role="alert"
+      aria-live="assertive"
       className={`flex flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center ${MOTION_CLASSNAMES.fadeInSubtle} ${className ?? ""}`}
     >
       <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive ring-1 ring-destructive/20">

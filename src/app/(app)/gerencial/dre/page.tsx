@@ -434,11 +434,11 @@ export default function DrePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
-                  <th className="px-3 py-2 text-left font-semibold">Grupo</th>
-                  <th className="px-3 py-2 text-left font-semibold">Natureza</th>
-                  <th className="px-3 py-2 text-right font-semibold">Realizado</th>
-                  <th className="px-3 py-2 text-right font-semibold">Projetado</th>
-                  <th className="px-3 py-2 text-right font-semibold">Consolidado</th>
+                  <th scope="col" className="px-3 py-2 text-left font-semibold">Grupo</th>
+                  <th scope="col" className="px-3 py-2 text-left font-semibold">Natureza</th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">Realizado</th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">Projetado</th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">Consolidado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

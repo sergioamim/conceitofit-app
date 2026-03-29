@@ -298,12 +298,12 @@ export function TiposContaContent({ initialData }: { initialData: TipoContaPagar
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
-              <th className="px-4 py-3 text-left font-semibold">Nome</th>
-              <th className="px-4 py-3 text-left font-semibold">Categoria</th>
-              <th className="px-4 py-3 text-left font-semibold">Grupo DRE</th>
-              <th className="px-4 py-3 text-left font-semibold">Centro de custo padrão</th>
-              <th className="px-4 py-3 text-left font-semibold">Status</th>
-              <th className="px-4 py-3 text-left font-semibold">Ações</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Nome</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Categoria</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Grupo DRE</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Centro de custo padrão</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

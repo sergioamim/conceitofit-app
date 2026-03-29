@@ -220,6 +220,7 @@ const NavLinkItem = memo(function NavLinkItem({
       <Link
         href={item.href}
         onClick={onNavigate}
+        aria-current={active ? "page" : undefined}
         className={cn(
           "cursor-pointer flex flex-1 items-center rounded-md transition-colors",
           dense ? "gap-2 px-3 py-2 text-[13px]" : "gap-2.5 px-3 py-2 text-[13.5px] font-normal",
@@ -277,6 +278,7 @@ const CollapsibleSection = memo(function CollapsibleSection({
       <button
         type="button"
         onClick={onToggle}
+        aria-expanded={open}
         className={cn(
           "cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-2 text-[10px] font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--sidebar-foreground)_55%,transparent)] transition-colors hover:text-sidebar-foreground",
           collapsed && "justify-center"
@@ -367,7 +369,7 @@ function SidebarNavigation({
   }, [pathname]);
 
   return (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4">
+    <nav aria-label="Menu principal" className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4">
       {favoriteItems.length > 0 && (
         <div className="mb-4">
           {!collapsed && (

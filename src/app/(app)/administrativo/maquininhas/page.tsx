@@ -372,12 +372,12 @@ export default function MaquininhasPage() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-secondary text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">Adquirente</th>
-              <th className="px-4 py-3">Terminal</th>
-              <th className="px-4 py-3">Conta de repasse</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Ações</th>
+              <th scope="col" className="px-4 py-3">Nome</th>
+              <th scope="col" className="px-4 py-3">Adquirente</th>
+              <th scope="col" className="px-4 py-3">Terminal</th>
+              <th scope="col" className="px-4 py-3">Conta de repasse</th>
+              <th scope="col" className="px-4 py-3">Status</th>
+              <th scope="col" className="px-4 py-3">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-sm">

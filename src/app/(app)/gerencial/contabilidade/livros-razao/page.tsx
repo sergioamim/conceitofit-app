@@ -210,11 +210,11 @@ export default function LivrosRazaoPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                          <th className="px-2 py-1 text-left font-semibold">Data</th>
-                          <th className="px-2 py-1 text-left font-semibold">Conta</th>
-                          <th className="px-2 py-1 text-left font-semibold">Tipo</th>
-                          <th className="px-2 py-1 text-right font-semibold">Valor</th>
-                          <th className="px-2 py-1 text-left font-semibold">Descricao</th>
+                          <th scope="col" className="px-2 py-1 text-left font-semibold">Data</th>
+                          <th scope="col" className="px-2 py-1 text-left font-semibold">Conta</th>
+                          <th scope="col" className="px-2 py-1 text-left font-semibold">Tipo</th>
+                          <th scope="col" className="px-2 py-1 text-right font-semibold">Valor</th>
+                          <th scope="col" className="px-2 py-1 text-left font-semibold">Descricao</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">

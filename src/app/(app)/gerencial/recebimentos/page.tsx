@@ -303,13 +303,13 @@ export default function RecebimentosPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
-              <th className="px-4 py-3 text-left font-semibold">Cliente</th>
-              <th className="px-4 py-3 text-left font-semibold">Recebimento</th>
-              <th className="px-4 py-3 text-left font-semibold">Vencimento</th>
-              <th className="px-4 py-3 text-left font-semibold">Status</th>
-              <th className="px-4 py-3 text-left font-semibold">NFSe</th>
-              <th className="px-4 py-3 text-left font-semibold">Adquirente</th>
-              <th className="px-4 py-3 text-right font-semibold">Ações</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Cliente</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Recebimento</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Vencimento</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">NFSe</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Adquirente</th>
+              <th scope="col" className="px-4 py-3 text-right font-semibold">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
