@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
+import { Controller, useFormContext } from "react-hook-form";
 import type { ContaPagar, TipoContaPagar } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,41 +10,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { NovaContaFormState } from "./conta-pagar-types";
 import { CATEGORIA_LABEL, GRUPO_DRE_LABEL } from "./conta-pagar-types";
+import type { ContaPagarFormValues } from "./conta-pagar-schema";
 
 type ContaPagarFormFieldsProps = {
-  form: NovaContaFormState;
-  setForm: Dispatch<SetStateAction<NovaContaFormState>>;
   tiposAtivos: TipoContaPagar[];
   tiposConta: TipoContaPagar[];
   applyTipoConta: (tipoId: string) => void;
 };
 
 export function ContaPagarFormFields({
-  form,
-  setForm,
   tiposAtivos,
   applyTipoConta,
 }: ContaPagarFormFieldsProps) {
+  const { register, control, watch, setValue } = useFormContext<ContaPagarFormValues>();
+  const categoria = watch("categoria");
+  const grupoDre = watch("grupoDre");
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div className="space-y-1">
         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Tipo de conta
         </label>
-        <Select value={form.tipoContaId} onValueChange={applyTipoConta}>
-          <SelectTrigger className="w-full bg-secondary border-border">
-            <SelectValue placeholder="Selecione o tipo *" />
-          </SelectTrigger>
-          <SelectContent className="bg-card border-border">
-            {tiposAtivos.map((tipo) => (
-              <SelectItem key={tipo.id} value={tipo.id}>
-                {tipo.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Controller
+          control={control}
+          name="tipoContaId"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={applyTipoConta}>
+              <SelectTrigger className="w-full bg-secondary border-border">
+                <SelectValue placeholder="Selecione o tipo *" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                {tiposAtivos.map((tipo) => (
+                  <SelectItem key={tipo.id} value={tipo.id}>
+                    {tipo.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
       </div>
 
       <div className="space-y-1">
@@ -52,8 +58,7 @@ export function ContaPagarFormFields({
           Fornecedor
         </label>
         <Input
-          value={form.fornecedor}
-          onChange={(e) => setForm((v) => ({ ...v, fornecedor: e.target.value }))}
+          {...register("fornecedor")}
           placeholder="Nome do fornecedor *"
           className="bg-secondary border-border"
         />
@@ -64,8 +69,7 @@ export function ContaPagarFormFields({
           Documento do fornecedor
         </label>
         <Input
-          value={form.documentoFornecedor}
-          onChange={(e) => setForm((v) => ({ ...v, documentoFornecedor: e.target.value }))}
+          {...register("documentoFornecedor")}
           placeholder="CPF/CNPJ"
           className="bg-secondary border-border"
         />
@@ -76,8 +80,7 @@ export function ContaPagarFormFields({
           Descrição
         </label>
         <Input
-          value={form.descricao}
-          onChange={(e) => setForm((v) => ({ ...v, descricao: e.target.value }))}
+          {...register("descricao")}
           placeholder="Descrição da conta *"
           className="bg-secondary border-border"
         />
@@ -89,7 +92,7 @@ export function ContaPagarFormFields({
         </label>
         <Input
           readOnly
-          value={CATEGORIA_LABEL[form.categoria]}
+          value={CATEGORIA_LABEL[categoria]}
           className="bg-secondary border-border text-muted-foreground"
         />
       </div>
@@ -100,7 +103,7 @@ export function ContaPagarFormFields({
         </label>
         <Input
           readOnly
-          value={GRUPO_DRE_LABEL[form.grupoDre]}
+          value={GRUPO_DRE_LABEL[grupoDre]}
           className="bg-secondary border-border text-muted-foreground"
         />
       </div>
@@ -110,8 +113,7 @@ export function ContaPagarFormFields({
           Centro de custo
         </label>
         <Input
-          value={form.centroCusto}
-          onChange={(e) => setForm((v) => ({ ...v, centroCusto: e.target.value }))}
+          {...register("centroCusto")}
           placeholder="Opcional"
           className="bg-secondary border-border"
         />
@@ -121,20 +123,21 @@ export function ContaPagarFormFields({
         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Regime
         </label>
-        <Select
-          value={form.regime}
-          onValueChange={(value) =>
-            setForm((f) => ({ ...f, regime: value as ContaPagar["regime"] }))
-          }
-        >
-          <SelectTrigger className="w-full bg-secondary border-border">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-card border-border">
-            <SelectItem value="AVULSA">Avulsa</SelectItem>
-            <SelectItem value="FIXA">Fixa</SelectItem>
-          </SelectContent>
-        </Select>
+        <Controller
+          control={control}
+          name="regime"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger className="w-full bg-secondary border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="AVULSA">Avulsa</SelectItem>
+                <SelectItem value="FIXA">Fixa</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
       </div>
 
       <div className="space-y-1">
@@ -143,8 +146,7 @@ export function ContaPagarFormFields({
         </label>
         <Input
           type="date"
-          value={form.competencia}
-          onChange={(e) => setForm((v) => ({ ...v, competencia: e.target.value }))}
+          {...register("competencia")}
           className="bg-secondary border-border"
         />
       </div>
@@ -155,8 +157,7 @@ export function ContaPagarFormFields({
         </label>
         <Input
           type="date"
-          value={form.dataEmissao}
-          onChange={(e) => setForm((v) => ({ ...v, dataEmissao: e.target.value }))}
+          {...register("dataEmissao")}
           className="bg-secondary border-border"
         />
       </div>
@@ -167,14 +168,13 @@ export function ContaPagarFormFields({
         </label>
         <Input
           type="date"
-          value={form.dataVencimento}
-          onChange={(e) =>
-            setForm((v) => ({
-              ...v,
-              dataVencimento: e.target.value,
-              recorrenciaDiaDoMes: v.recorrenciaDiaDoMes || e.target.value.split("-")[2] || "",
-            }))
-          }
+          {...register("dataVencimento")}
+          onChange={(e) => {
+            register("dataVencimento").onChange(e);
+            const dia = e.target.value.split("-")[2] || "";
+            const currentDia = watch("recorrenciaDiaDoMes");
+            if (!currentDia) setValue("recorrenciaDiaDoMes", dia);
+          }}
           className="bg-secondary border-border"
         />
       </div>
@@ -187,8 +187,7 @@ export function ContaPagarFormFields({
           type="number"
           min={0}
           step="0.01"
-          value={form.valorOriginal}
-          onChange={(e) => setForm((v) => ({ ...v, valorOriginal: e.target.value }))}
+          {...register("valorOriginal")}
           className="bg-secondary border-border"
         />
       </div>
@@ -201,8 +200,7 @@ export function ContaPagarFormFields({
           type="number"
           min={0}
           step="0.01"
-          value={form.desconto}
-          onChange={(e) => setForm((v) => ({ ...v, desconto: e.target.value }))}
+          {...register("desconto")}
           className="bg-secondary border-border"
         />
       </div>
@@ -215,8 +213,7 @@ export function ContaPagarFormFields({
           type="number"
           min={0}
           step="0.01"
-          value={form.jurosMulta}
-          onChange={(e) => setForm((v) => ({ ...v, jurosMulta: e.target.value }))}
+          {...register("jurosMulta")}
           className="bg-secondary border-border"
         />
       </div>
@@ -226,8 +223,7 @@ export function ContaPagarFormFields({
           Observações
         </label>
         <textarea
-          value={form.observacoes}
-          onChange={(e) => setForm((v) => ({ ...v, observacoes: e.target.value }))}
+          {...register("observacoes")}
           className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
         />
       </div>

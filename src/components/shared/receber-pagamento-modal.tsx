@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import type { FormaPagamento, Pagamento, TipoFormaPagamento } from "@/lib/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,12 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
-
-type ReceberPagamentoFormValues = {
-  dataPagamento: string;
-  formaPagamento: TipoFormaPagamento | "";
-  observacoes: string;
-};
+import { receberPagamentoSchema, type ReceberPagamentoFormValues } from "./receber-pagamento-schema";
 
 export function ReceberPagamentoModal({
   pagamento,
@@ -35,20 +31,20 @@ export function ReceberPagamentoModal({
 }) {
   const formasAtivas = useMemo(() => formasPagamento.filter((f) => f.ativo), [formasPagamento]);
   const { register, control, handleSubmit, formState: { isValid } } = useForm<ReceberPagamentoFormValues>({
+    resolver: zodResolver(receberPagamentoSchema),
     defaultValues: {
       dataPagamento: getBusinessTodayIso(),
-      formaPagamento: "",
+      formaPagamento: undefined,
       observacoes: "",
     },
     mode: "onChange",
   });
 
   function onSubmit(values: ReceberPagamentoFormValues) {
-    if (!values.formaPagamento) return;
     onConfirm({
       dataPagamento: values.dataPagamento,
       formaPagamento: values.formaPagamento,
-      observacoes: values.observacoes.trim() || undefined,
+      observacoes: values.observacoes?.trim() || undefined,
     });
   }
 
@@ -80,7 +76,7 @@ export function ReceberPagamentoModal({
               <label htmlFor="receber-data-pagamento" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Data do pagamento *
               </label>
-              <Input id="receber-data-pagamento" type="date" aria-required {...register("dataPagamento", { required: true })} className="border-border bg-secondary" />
+              <Input id="receber-data-pagamento" type="date" aria-required {...register("dataPagamento")} className="border-border bg-secondary" />
             </div>
             <div className="space-y-1.5">
               <label id="receber-forma-label" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -89,9 +85,8 @@ export function ReceberPagamentoModal({
               <Controller
                 control={control}
                 name="formaPagamento"
-                rules={{ required: true }}
                 render={({ field }) => (
-                  <Select value={field.value || "__none__"} onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}>
+                  <Select value={field.value || "__none__"} onValueChange={(value) => field.onChange(value === "__none__" ? undefined : value)}>
                     <SelectTrigger aria-labelledby="receber-forma-label" aria-required className="w-full border-border bg-secondary">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>

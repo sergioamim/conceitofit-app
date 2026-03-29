@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { Atividade, TipoPlano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/tenant/planos/form";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
+import { planoFormSchema } from "./plano-form-schema";
 
 type PlanoFormState = Omit<PlanoFormValues, "beneficios"> & {
   beneficios: Array<{ value: string }>;
@@ -56,6 +58,7 @@ export function PlanoForm({
   const [activeTab, setActiveTab] = useState<"CONFIG" | "CONTRATO" | "BENEFICIOS">("CONFIG");
   const [contratoEditorMode, setContratoEditorMode] = useState<"VISUAL" | "HTML">("VISUAL");
   const formMethods = useForm<PlanoFormState>({
+    resolver: zodResolver(planoFormSchema),
     defaultValues: toFormState(initial),
   });
   const { register, control, handleSubmit, reset, setValue } = formMethods;

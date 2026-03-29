@@ -1,6 +1,8 @@
 "use client";
 
-import { memo, useCallback, useEffect, useId, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
+import { memo, useEffect, useId, useMemo, type ReactNode } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { CreateProspectInput, Funcionario, Prospect, OrigemProspect } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +10,7 @@ import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { prospectSchema, type ProspectFormValues } from "./prospect-schema";
 
 const ORIGEM_LABELS: Record<OrigemProspect, string> = {
   VISITA_PRESENCIAL: "Visita presencial",
@@ -32,14 +35,18 @@ function ProspectModalComponent({
   funcionarios: Funcionario[];
   initial?: Prospect | null;
 }) {
-  const [form, setForm] = useState<CreateProspectInput>({
-    nome: "",
-    telefone: "",
-    email: "",
-    cpf: "",
-    origem: "INSTAGRAM",
-    observacoes: "",
-    responsavelId: "",
+  const { register, control, handleSubmit, reset, formState: { isValid } } = useForm<ProspectFormValues>({
+    resolver: zodResolver(prospectSchema),
+    defaultValues: {
+      nome: "",
+      telefone: "",
+      email: "",
+      cpf: "",
+      origem: "INSTAGRAM",
+      observacoes: "",
+      responsavelId: "",
+    },
+    mode: "onChange",
   });
 
   const origemOptions = useMemo(
@@ -53,8 +60,7 @@ function ProspectModalComponent({
 
   useEffect(() => {
     if (initial) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
+      reset({
         nome: initial.nome,
         telefone: initial.telefone,
         email: initial.email ?? "",
@@ -64,7 +70,7 @@ function ProspectModalComponent({
         responsavelId: initial.responsavelId ?? "",
       });
     } else {
-      setForm({
+      reset({
         nome: "",
         telefone: "",
         email: "",
@@ -74,30 +80,12 @@ function ProspectModalComponent({
         responsavelId: "",
       });
     }
-  }, [initial, open]);
+  }, [initial, open, reset]);
 
-  const updateField = useCallback((key: keyof CreateProspectInput, value: string) => {
-    setForm((current) => ({ ...current, [key]: value }));
-  }, []);
-
-  const fieldHandlers = useMemo(
-    () => ({
-      nome: (value: string) => updateField("nome", value),
-      telefone: (value: string) => updateField("telefone", value),
-      cpf: (value: string) => updateField("cpf", value),
-      email: (value: string) => updateField("email", value),
-      observacoes: (value: string) => updateField("observacoes", value),
-      origem: (value: string) => updateField("origem", value as OrigemProspect),
-      responsavelId: (value: string) => updateField("responsavelId", value),
-    }),
-    [updateField]
-  );
-
-  function handleSubmit() {
-    if (!form.nome || !form.telefone) return;
+  function onSubmit(values: ProspectFormValues) {
     onSave({
-      ...form,
-      responsavelId: form.responsavelId ? form.responsavelId : undefined,
+      ...values,
+      responsavelId: values.responsavelId ? values.responsavelId : undefined,
     });
     onClose();
   }
@@ -110,86 +98,119 @@ function ProspectModalComponent({
             {initial ? "Editar Prospect" : "Novo Prospect"}
           </DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-2">
-          <div className="grid grid-cols-2 gap-3">
-            <ProspectInputField
-              label="Nome *"
-              value={form.nome}
-              placeholder="Nome completo"
-              onValueChange={fieldHandlers.nome}
-              required
-            />
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+                <Input
+                  placeholder="Nome completo"
+                  {...register("nome")}
+                  className="bg-secondary border-border"
+                  aria-required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
+                <Controller
+                  control={control}
+                  name="telefone"
+                  render={({ field }) => (
+                    <PhoneInput
+                      placeholder="(11) 99999-0000"
+                      value={field.value}
+                      onChange={field.onChange}
+                      className="bg-secondary border-border"
+                      aria-label="Telefone"
+                      aria-required
+                    />
+                  )}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</label>
+                <Controller
+                  control={control}
+                  name="cpf"
+                  render={({ field }) => (
+                    <MaskedInput
+                      mask="cpf"
+                      placeholder="000.000.000-00"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      className="bg-secondary border-border"
+                      aria-label="CPF"
+                    />
+                  )}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail</label>
+                <Input
+                  type="email"
+                  placeholder="exemplo@email.com"
+                  {...register("email")}
+                  className="bg-secondary border-border"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Origem</label>
+                <Controller
+                  control={control}
+                  name="origem"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="w-full bg-secondary border-border">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        {origemOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+              <ProspectSelectField
+                label="Responsável"
+                control={control}
+                name="responsavelId"
+                placeholder="Sem responsável"
+                withBlankOption
+                selectClassName="bg-secondary border-border"
+              >
+                {funcionarios.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.nome}
+                  </SelectItem>
+                ))}
+              </ProspectSelectField>
+            </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
-              <PhoneInput
-                placeholder="(11) 99999-0000"
-                value={form.telefone}
-                onChange={fieldHandlers.telefone}
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações</label>
+              <Input
+                placeholder="Observações do prospect"
+                {...register("observacoes")}
                 className="bg-secondary border-border"
-                aria-label="Telefone"
-                aria-required
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</label>
-              <MaskedInput
-                mask="cpf"
-                placeholder="000.000.000-00"
-                value={form.cpf ?? ""}
-                onChange={fieldHandlers.cpf}
-                className="bg-secondary border-border"
-                aria-label="CPF"
-              />
-            </div>
-            <ProspectInputField
-              label="E-mail"
-              type="email"
-              value={form.email ?? ""}
-              placeholder="exemplo@email.com"
-              onValueChange={fieldHandlers.email}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <ProspectSelectField
-              label="Origem"
-              value={form.origem}
-              onValueChange={fieldHandlers.origem}
-              options={origemOptions}
-              placeholder="Selecione"
-              selectClassName="bg-secondary border-border"
-            />
-            <ProspectSelectField
-              label="Responsável"
-              value={form.responsavelId ?? ""}
-              onValueChange={fieldHandlers.responsavelId}
-              placeholder="Sem responsável"
-              withBlankOption
-              selectClassName="bg-secondary border-border"
-            >
-              {funcionarios.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.nome}
-                </SelectItem>
-              ))}
-            </ProspectSelectField>
-          </div>
-          <ProspectInputField
-            label="Observações"
-            value={form.observacoes ?? ""}
-            placeholder="Observações do prospect"
-            onValueChange={fieldHandlers.observacoes}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="border-border">
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit} disabled={!form.nome || !form.telefone}>
-            Salvar
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="border-border">
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={!isValid}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
@@ -222,71 +243,62 @@ const ProspectInputField = memo(
     required?: boolean;
   }) => {
     const id = useId();
-    const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-      onValueChange(event.target.value);
-    };
 
     return (
       <div className="space-y-1.5">
         <label htmlFor={id} className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
-        <Input id={id} type={type} value={value} onChange={handleChange} placeholder={placeholder} className={className} aria-required={required || undefined} />
+        <Input id={id} type={type} value={value} onChange={(event) => onValueChange(event.target.value)} placeholder={placeholder} className={className} aria-required={required || undefined} />
       </div>
     );
   }
 );
 ProspectInputField.displayName = "ProspectInputField";
 
-const ProspectSelectField = memo(
-  ({
-    label,
-    value,
-    placeholder,
-    onValueChange,
-    options = [],
-    withBlankOption = false,
-    selectClassName = "bg-secondary border-border",
-    children,
-  }: {
-    label: string;
-    value: string;
-    placeholder: string;
-    onValueChange: (value: string) => void;
-    options?: SelectOption[];
-    withBlankOption?: boolean;
-    selectClassName?: string;
-    children?: ReactNode;
-  }) => {
-    const blankValue = "__SEM_SELECAO__";
+function ProspectSelectField({
+  label,
+  control,
+  name,
+  placeholder,
+  withBlankOption = false,
+  selectClassName = "bg-secondary border-border",
+  children,
+}: {
+  label: string;
+  control: any;
+  name: string;
+  placeholder: string;
+  withBlankOption?: boolean;
+  selectClassName?: string;
+  children?: ReactNode;
+}) {
+  const blankValue = "__SEM_SELECAO__";
+  const id = useId();
 
-    const id = useId();
+  return (
+    <div className="space-y-1.5">
+      <label id={`${id}-label`} className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+      <Controller
+        control={control}
+        name={name}
+        render={({ field }) => (
+          <Select
+            value={withBlankOption && !field.value ? blankValue : field.value}
+            onValueChange={(selectedValue) =>
+              field.onChange(withBlankOption && selectedValue === blankValue ? "" : selectedValue)
+            }
+          >
+            <SelectTrigger aria-labelledby={`${id}-label`} className={`w-full ${selectClassName}`}>
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              {withBlankOption && <SelectItem value={blankValue}>Sem responsável</SelectItem>}
+              {children}
+            </SelectContent>
+          </Select>
+        )}
+      />
+    </div>
+  );
+}
 
-    return (
-      <div className="space-y-1.5">
-        <label id={`${id}-label`} className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
-        <Select
-          value={withBlankOption && !value ? blankValue : value}
-          onValueChange={(selectedValue) =>
-            onValueChange(withBlankOption && selectedValue === blankValue ? "" : selectedValue)
-          }
-        >
-          <SelectTrigger aria-labelledby={`${id}-label`} className={`w-full ${selectClassName}`}>
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent className="bg-card border-border">
-            {withBlankOption && <SelectItem value={blankValue}>Sem responsável</SelectItem>}
-            {children
-              ? children
-              : options.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-          </SelectContent>
-        </Select>
-      </div>
-    );
-  }
-);
-ProspectSelectField.displayName = "ProspectSelectField";
-
-export { ProspectInputField, ProspectSelectField };
+export { ProspectInputField };

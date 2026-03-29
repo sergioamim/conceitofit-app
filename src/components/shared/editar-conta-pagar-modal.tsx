@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import type {
   CategoriaContaPagar,
   ContaPagar,
@@ -25,6 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  contaPagarFormSchema,
+  type ContaPagarFormValues,
+} from "./nova-conta-pagar-modal/conta-pagar-schema";
 
 const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   FOLHA: "Folha",
@@ -44,32 +50,7 @@ const GRUPO_DRE_LABEL: Record<GrupoDre, string> = {
   IMPOSTOS: "Impostos",
 };
 
-export type EdicaoContaFormState = {
-  tipoContaId: string;
-  fornecedor: string;
-  documentoFornecedor: string;
-  descricao: string;
-  categoria: CategoriaContaPagar;
-  grupoDre: GrupoDre;
-  centroCusto: string;
-  regime: ContaPagar["regime"];
-  competencia: string;
-  dataEmissao: string;
-  dataVencimento: string;
-  valorOriginal: string;
-  desconto: string;
-  jurosMulta: string;
-  observacoes: string;
-  recorrente: boolean;
-  recorrenciaTipo: "MENSAL" | "INTERVALO_DIAS";
-  recorrenciaIntervaloDias: string;
-  recorrenciaDiaDoMes: string;
-  recorrenciaDataInicial: string;
-  recorrenciaTermino: "SEM_FIM" | "EM_DATA" | "APOS_OCORRENCIAS";
-  recorrenciaDataFim: string;
-  recorrenciaNumeroOcorrencias: string;
-  criarLancamentoInicialAgora: boolean;
-};
+export type EdicaoContaFormState = ContaPagarFormValues;
 
 type EditarContaPagarModalProps = {
   open: boolean;
@@ -125,29 +106,30 @@ export function EditarContaPagarModal({
   initialForm,
   onSubmit,
 }: EditarContaPagarModalProps) {
-  const [form, setForm] = useState(initialForm);
+  const { register, control, handleSubmit, reset, setValue, watch } = useForm<ContaPagarFormValues>({
+    resolver: zodResolver(contaPagarFormSchema),
+    defaultValues: initialForm,
+  });
 
-  // Sync form when initialForm changes (new account selected)
-  const [prevInitial, setPrevInitial] = useState(initialForm);
-  if (initialForm !== prevInitial) {
-    setPrevInitial(initialForm);
-    setForm(initialForm);
-  }
+  const formValues = useWatch({ control }) as ContaPagarFormValues;
+
+  useEffect(() => {
+    reset(initialForm);
+  }, [initialForm, reset]);
 
   function applyTipoContaEdicao(tipoId: string) {
     const tipo = tiposConta.find((item) => item.id === tipoId);
-    setForm((prev) => ({
-      ...prev,
-      tipoContaId: tipoId,
-      categoria: tipo?.categoriaOperacional ?? prev.categoria,
-      grupoDre: tipo?.grupoDre ?? prev.grupoDre,
-      centroCusto: prev.centroCusto || tipo?.centroCustoPadrao || "",
-    }));
+    setValue("tipoContaId", tipoId);
+    if (tipo?.categoriaOperacional) setValue("categoria", tipo.categoriaOperacional);
+    if (tipo?.grupoDre) setValue("grupoDre", tipo.grupoDre);
+    if (!formValues.centroCusto && tipo?.centroCustoPadrao) {
+      setValue("centroCusto", tipo.centroCustoPadrao);
+    }
   }
 
-  async function handleSubmit() {
+  async function onFormSubmit(values: ContaPagarFormValues) {
     if (!contaEditandoId) return;
-    await onSubmit(contaEditandoId, form);
+    await onSubmit(contaEditandoId, values);
   }
 
   return (
@@ -160,366 +142,289 @@ export function EditarContaPagarModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Tipo de conta
-            </label>
-            <Select value={form.tipoContaId} onValueChange={applyTipoContaEdicao}>
-              <SelectTrigger className="w-full bg-secondary border-border">
-                <SelectValue placeholder="Selecione o tipo *" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {tiposAtivos.map((tipo) => (
-                  <SelectItem key={tipo.id} value={tipo.id}>
-                    {tipo.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Fornecedor
-            </label>
-            <Input
-              value={form.fornecedor}
-              onChange={(e) => setForm((v) => ({ ...v, fornecedor: e.target.value }))}
-              placeholder="Nome do fornecedor *"
-              className="bg-secondary border-border"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Documento do fornecedor
-            </label>
-            <Input
-              value={form.documentoFornecedor}
-              onChange={(e) => setForm((v) => ({ ...v, documentoFornecedor: e.target.value }))}
-              placeholder="CPF/CNPJ"
-              className="bg-secondary border-border"
-            />
-          </div>
-
-          <div className="space-y-1 md:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Descrição
-            </label>
-            <Input
-              value={form.descricao}
-              onChange={(e) => setForm((v) => ({ ...v, descricao: e.target.value }))}
-              placeholder="Descrição da conta *"
-              className="bg-secondary border-border"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Categoria
-            </label>
-            <Input value={CATEGORIA_LABEL[form.categoria]} readOnly className="bg-secondary border-border" />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Grupo DRE
-            </label>
-            <Input value={GRUPO_DRE_LABEL[form.grupoDre]} readOnly className="bg-secondary border-border" />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Centro de custo
-            </label>
-            <Input
-              value={form.centroCusto}
-              onChange={(e) => setForm((v) => ({ ...v, centroCusto: e.target.value }))}
-              placeholder="Opcional"
-              className="bg-secondary border-border"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Regime
-            </label>
-            <Select value={form.regime} onValueChange={(value) => setForm((v) => ({ ...v, regime: value as ContaPagar["regime"] }))}>
-              <SelectTrigger className="w-full bg-secondary border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                <SelectItem value="FIXA">Fixa</SelectItem>
-                <SelectItem value="AVULSA">Avulsa</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Competência
-            </label>
-            <Input
-              type="date"
-              value={form.competencia}
-              onChange={(e) => setForm((v) => ({ ...v, competencia: e.target.value }))}
-              className="bg-secondary border-border"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Data de emissão
-            </label>
-            <Input
-              type="date"
-              value={form.dataEmissao}
-              onChange={(e) => setForm((v) => ({ ...v, dataEmissao: e.target.value }))}
-              className="bg-secondary border-border"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Data de vencimento
-            </label>
-            <Input
-              type="date"
-              value={form.dataVencimento}
-              onChange={(e) => setForm((v) => ({ ...v, dataVencimento: e.target.value }))}
-              className="bg-secondary border-border"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Valor original
-            </label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={form.valorOriginal}
-              onChange={(e) => setForm((v) => ({ ...v, valorOriginal: e.target.value }))}
-              className="bg-secondary border-border"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Desconto
-            </label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={form.desconto}
-              onChange={(e) => setForm((v) => ({ ...v, desconto: e.target.value }))}
-              className="bg-secondary border-border"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Juros/Multa
-            </label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={form.jurosMulta}
-              onChange={(e) => setForm((v) => ({ ...v, jurosMulta: e.target.value }))}
-              className="bg-secondary border-border"
-            />
-          </div>
-
-          <div className="space-y-1 md:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Observações
-            </label>
-            <textarea
-              value={form.observacoes}
-              onChange={(e) => setForm((v) => ({ ...v, observacoes: e.target.value }))}
-              className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-secondary/30 p-4">
-          <label className="inline-flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={form.recorrente}
-              onChange={(e) =>
-                setForm((v) => ({
-                  ...v,
-                  recorrente: e.target.checked,
-                  regime: e.target.checked ? "FIXA" : v.regime,
-                  recorrenciaDiaDoMes:
-                    v.recorrenciaDiaDoMes || (v.dataVencimento.split("-")[2] ?? ""),
-                  recorrenciaDataInicial: v.recorrenciaDataInicial || v.dataVencimento,
-                }))
-              }
-            />
-            Conta recorrente
-          </label>
-
-          {form.recorrente && (
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Tipo de recorrência
-                </label>
-                <Select
-                  value={form.recorrenciaTipo}
-                  onValueChange={(value) =>
-                    setForm((v) => ({
-                      ...v,
-                      recorrenciaTipo: value as "MENSAL" | "INTERVALO_DIAS",
-                    }))
-                  }
-                >
-                  <SelectTrigger className="w-full bg-secondary border-border">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    <SelectItem value="MENSAL">Mensal</SelectItem>
-                    <SelectItem value="INTERVALO_DIAS">A cada X dias</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {form.recorrenciaTipo === "INTERVALO_DIAS" && (
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    A cada X dias
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={form.recorrenciaIntervaloDias}
-                    onChange={(e) =>
-                      setForm((v) => ({
-                        ...v,
-                        recorrenciaIntervaloDias: e.target.value,
-                      }))
-                    }
-                    className="bg-secondary border-border"
-                  />
-                </div>
-              )}
-
-              {form.recorrenciaTipo === "MENSAL" && (
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Dia do mês
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={31}
-                    value={form.recorrenciaDiaDoMes || (form.dataVencimento.split("-")[2] ?? "")}
-                    onChange={(e) =>
-                      setForm((v) => ({
-                        ...v,
-                        recorrenciaDiaDoMes: e.target.value,
-                      }))
-                    }
-                    className="bg-secondary border-border"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Data inicial (âncora)
-                </label>
-                <Input
-                  type="date"
-                  value={form.recorrenciaDataInicial}
-                  onChange={(e) =>
-                    setForm((v) => ({
-                      ...v,
-                      recorrenciaDataInicial: e.target.value,
-                    }))
-                  }
-                  className="bg-secondary border-border"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Término da recorrência
-                </label>
-                <Select
-                  value={form.recorrenciaTermino}
-                  onValueChange={(value) =>
-                    setForm((v) => ({
-                      ...v,
-                      recorrenciaTermino: value as "SEM_FIM" | "EM_DATA" | "APOS_OCORRENCIAS",
-                    }))
-                  }
-                >
-                  <SelectTrigger className="w-full bg-secondary border-border">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    <SelectItem value="SEM_FIM">Sem fim</SelectItem>
-                    <SelectItem value="EM_DATA">Em data</SelectItem>
-                    <SelectItem value="APOS_OCORRENCIAS">Após N ocorrências</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {form.recorrenciaTermino === "EM_DATA" && (
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Data fim
-                  </label>
-                  <Input
-                    type="date"
-                    value={form.recorrenciaDataFim}
-                    onChange={(e) =>
-                      setForm((v) => ({
-                        ...v,
-                        recorrenciaDataFim: e.target.value,
-                      }))
-                    }
-                    className="bg-secondary border-border"
-                  />
-                </div>
-              )}
-
-              {form.recorrenciaTermino === "APOS_OCORRENCIAS" && (
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Qtd. ocorrências
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={form.recorrenciaNumeroOcorrencias}
-                    onChange={(e) =>
-                      setForm((v) => ({
-                        ...v,
-                        recorrenciaNumeroOcorrencias: e.target.value,
-                      }))
-                    }
-                    className="bg-secondary border-border"
-                  />
-                </div>
-              )}
+        <form onSubmit={handleSubmit(onFormSubmit)}>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Tipo de conta
+              </label>
+              <Controller
+                control={control}
+                name="tipoContaId"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={applyTipoContaEdicao}>
+                    <SelectTrigger className="w-full bg-secondary border-border">
+                      <SelectValue placeholder="Selecione o tipo *" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {tiposAtivos.map((tipo) => (
+                        <SelectItem key={tipo.id} value={tipo.id}>
+                          {tipo.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
-          )}
-        </div>
 
-        <DialogFooter>
-          <Button variant="outline" className="border-border" onClick={() => onOpenChange(false)}>
-            Fechar
-          </Button>
-          <Button onClick={handleSubmit}>Salvar alterações</Button>
-        </DialogFooter>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Fornecedor
+              </label>
+              <Input
+                {...register("fornecedor")}
+                placeholder="Nome do fornecedor *"
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Documento do fornecedor
+              </label>
+              <Input
+                {...register("documentoFornecedor")}
+                placeholder="CPF/CNPJ"
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Descrição
+              </label>
+              <Input
+                {...register("descricao")}
+                placeholder="Descrição da conta *"
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Categoria
+              </label>
+              <Input value={CATEGORIA_LABEL[formValues.categoria ?? "OUTROS"]} readOnly className="bg-secondary border-border" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Grupo DRE
+              </label>
+              <Input value={GRUPO_DRE_LABEL[formValues.grupoDre ?? "DESPESA_OPERACIONAL"]} readOnly className="bg-secondary border-border" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Centro de custo
+              </label>
+              <Input
+                {...register("centroCusto")}
+                placeholder="Opcional"
+                className="bg-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Regime
+              </label>
+              <Controller
+                control={control}
+                name="regime"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full bg-secondary border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="FIXA">Fixa</SelectItem>
+                      <SelectItem value="AVULSA">Avulsa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Competência
+              </label>
+              <Input type="date" {...register("competencia")} className="bg-secondary border-border" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Data de emissão
+              </label>
+              <Input type="date" {...register("dataEmissao")} className="bg-secondary border-border" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Data de vencimento
+              </label>
+              <Input type="date" {...register("dataVencimento")} className="bg-secondary border-border" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Valor original
+              </label>
+              <Input type="number" min={0} step="0.01" {...register("valorOriginal")} className="bg-secondary border-border" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Desconto
+              </label>
+              <Input type="number" min={0} step="0.01" {...register("desconto")} className="bg-secondary border-border" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Juros/Multa
+              </label>
+              <Input type="number" min={0} step="0.01" {...register("jurosMulta")} className="bg-secondary border-border" />
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Observações
+              </label>
+              <textarea
+                {...register("observacoes")}
+                className="focus-ring-brand h-24 w-full resize-y rounded-md border border-border bg-secondary p-2 text-sm outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-secondary/30 p-4">
+            <label className="inline-flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={formValues.recorrente}
+                onChange={(e) => {
+                  setValue("recorrente", e.target.checked);
+                  if (e.target.checked) {
+                    setValue("regime", "FIXA");
+                    if (!watch("recorrenciaDiaDoMes")) {
+                      setValue("recorrenciaDiaDoMes", (formValues.dataVencimento ?? "").split("-")[2] ?? "");
+                    }
+                    if (!watch("recorrenciaDataInicial")) {
+                      setValue("recorrenciaDataInicial", formValues.dataVencimento ?? "");
+                    }
+                  }
+                }}
+              />
+              Conta recorrente
+            </label>
+
+            {formValues.recorrente && (
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Tipo de recorrência
+                  </label>
+                  <Controller
+                    control={control}
+                    name="recorrenciaTipo"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full bg-secondary border-border">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                          <SelectItem value="MENSAL">Mensal</SelectItem>
+                          <SelectItem value="INTERVALO_DIAS">A cada X dias</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+
+                {formValues.recorrenciaTipo === "INTERVALO_DIAS" && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      A cada X dias
+                    </label>
+                    <Input type="number" min={1} {...register("recorrenciaIntervaloDias")} className="bg-secondary border-border" />
+                  </div>
+                )}
+
+                {formValues.recorrenciaTipo === "MENSAL" && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Dia do mês
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={31}
+                      {...register("recorrenciaDiaDoMes")}
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Data inicial (âncora)
+                  </label>
+                  <Input type="date" {...register("recorrenciaDataInicial")} className="bg-secondary border-border" />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Término da recorrência
+                  </label>
+                  <Controller
+                    control={control}
+                    name="recorrenciaTermino"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full bg-secondary border-border">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                          <SelectItem value="SEM_FIM">Sem fim</SelectItem>
+                          <SelectItem value="EM_DATA">Em data</SelectItem>
+                          <SelectItem value="APOS_OCORRENCIAS">Após N ocorrências</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+
+                {formValues.recorrenciaTermino === "EM_DATA" && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Data fim
+                    </label>
+                    <Input type="date" {...register("recorrenciaDataFim")} className="bg-secondary border-border" />
+                  </div>
+                )}
+
+                {formValues.recorrenciaTermino === "APOS_OCORRENCIAS" && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Qtd. ocorrências
+                    </label>
+                    <Input type="number" min={1} {...register("recorrenciaNumeroOcorrencias")} className="bg-secondary border-border" />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" className="border-border" onClick={() => onOpenChange(false)}>
+              Fechar
+            </Button>
+            <Button type="submit">Salvar alterações</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

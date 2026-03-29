@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
@@ -13,19 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
-
-type NovaMatriculaFormValues = {
-  alunoId: string;
-  planoId: string;
-  dataInicio: string;
-  formaPagamento: TipoFormaPagamento | "";
-  desconto: string;
-  motivoDesconto: string;
-  renovacao: boolean;
-  convenioId: string;
-  parcelasAnuidade: string;
-  pagamentoPendente: boolean;
-};
+import { novaMatriculaSchema, type NovaMatriculaFormValues } from "./nova-matricula-schema";
 
 export function NovaMatriculaModal({
   open,
@@ -65,11 +54,12 @@ export function NovaMatriculaModal({
 
   const [error, setError] = useState("");
   const formMethods = useForm<NovaMatriculaFormValues>({
+    resolver: zodResolver(novaMatriculaSchema),
     defaultValues: {
       alunoId: prefillClienteId ?? "",
       planoId: "",
       dataInicio: getBusinessTodayIso(),
-      formaPagamento: "",
+      formaPagamento: undefined,
       desconto: "0",
       motivoDesconto: "",
       renovacao: false,
@@ -103,7 +93,7 @@ export function NovaMatriculaModal({
       alunoId: prefillClienteId ?? "",
       planoId: "",
       dataInicio: getBusinessTodayIso(),
-      formaPagamento: "",
+      formaPagamento: undefined,
       desconto: "0",
       motivoDesconto: "",
       renovacao: false,
@@ -116,7 +106,7 @@ export function NovaMatriculaModal({
   }
 
   async function onSubmit(values: NovaMatriculaFormValues) {
-    if (!tenantId || !values.alunoId || !values.planoId || !values.dataInicio || !values.formaPagamento || !dryRun) return;
+    if (!tenantId || !dryRun) return;
     
     if (values.pagamentoPendente) {
       const ok = confirm("Confirmar venda com pagamento pendente?");
