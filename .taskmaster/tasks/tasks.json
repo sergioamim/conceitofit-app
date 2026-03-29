@@ -9696,12 +9696,12 @@
         "description": "sanitize.ts (19 LOC) não tem nenhum teste. Módulo security-critical que usa DOMPurify. Adicionar cobertura completa.",
         "details": "Criar tests/unit/sanitize.test.ts. Testar: tags permitidas (p, b, strong, h1-h6, ul, ol, li, table) renderizam corretamente. Tags proibidas (script, iframe, object, embed) são removidas. Atributos maliciosos (onerror, onload, onclick, javascript:) são removidos. Edge cases: string vazia, HTML malformado, entidades HTML.",
         "testStrategy": "100% coverage no sanitize.ts. Testes passam no CI.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
         "subtasks": [],
-        "updatedAt": "2026-03-29T11:31:34.498Z"
+        "updatedAt": "2026-03-29T11:34:08.488Z"
       },
       {
         "id": "222",
@@ -10058,9 +10058,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:32:48.759Z",
+      "lastModified": "2026-03-29T11:34:08.488Z",
       "taskCount": 248,
-      "completedCount": 223,
+      "completedCount": 224,
       "tags": [
         "master"
       ]
