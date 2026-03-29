@@ -403,3 +403,38 @@ export interface GatewayPagamento {
   criadoEm?: LocalDateTime;
   atualizadoEm?: LocalDateTime;
 }
+
+export type StatusAssinatura = "ATIVA" | "PENDENTE" | "CANCELADA" | "SUSPENSA" | "VENCIDA";
+export type CicloAssinatura = "MENSAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
+
+export interface Assinatura {
+  id: UUID;
+  tenantId: UUID;
+  alunoId: UUID;
+  planoId: UUID;
+  clienteNome?: string;
+  planoNome?: string;
+  status: StatusAssinatura;
+  valor: number;
+  ciclo: CicloAssinatura;
+  dataInicio: LocalDate;
+  proximaCobranca?: LocalDate;
+  dataFim?: LocalDate;
+  gatewayId?: string;
+  gatewayAssinaturaId?: string;
+  criadoEm?: LocalDateTime;
+  atualizadoEm?: LocalDateTime;
+}
+
+export interface BillingConfig {
+  id: UUID;
+  tenantId: UUID;
+  provedorAtivo: ProvedorGateway;
+  chaveApi: string;
+  webhookUrl?: string;
+  webhookSecret?: string;
+  ambiente: "SANDBOX" | "PRODUCAO";
+  statusConexao: "ONLINE" | "OFFLINE" | "NAO_CONFIGURADO";
+  ultimoTesteEm?: LocalDateTime;
+  ativo: boolean;
+}

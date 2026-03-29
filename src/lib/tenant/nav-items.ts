@@ -72,6 +72,7 @@ export const administrativoItems: NavItem[] = [
   { href: "/administrativo/bandeiras", label: "Bandeiras de Cartão", icon: Settings },
   { href: "/administrativo/contas-bancarias", label: "Contas Bancárias", icon: Settings },
   { href: "/administrativo/nfse", label: "NFSe e Fiscal", icon: Settings },
+  { href: "/administrativo/billing", label: "Cobrança Recorrente", icon: CreditCard },
   { href: "/administrativo/integracoes", label: "Monitoramento de Integrações", icon: Settings },
   { href: "/administrativo/maquininhas", label: "Maquininhas", icon: Settings },
   { href: "/administrativo/catraca-status", label: "Status de Conexões", icon: Settings },
