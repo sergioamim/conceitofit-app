@@ -53,7 +53,9 @@ const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 const AUTH_REFRESH_PATH = "/api/v1/auth/refresh";
 const AUTH_LOGIN_PATH = "/api/v1/auth/login";
 const TENANT_CONTEXT_SYNC_PATH = "/api/v1/context/unidade-ativa";
-const TENANT_CONTEXT_MISMATCH_MESSAGE = "tenantId diverge da unidade ativa do contexto informado";
+// Tenant context error messages are centralised in error-codes.ts.
+// Local aliases kept to avoid changing the rest of this file.
+const TENANT_CONTEXT_MISMATCH_MESSAGE = "tenantid diverge da unidade ativa do contexto informado";
 const TENANT_CONTEXT_MISSING_MESSAGE = "x-context-id sem unidade ativa";
 // Rotas operacionais usam a unidade ativa do X-Context-Id no browser.
 const CONTEXT_SCOPED_OPERATIONAL_PATTERNS = [

@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { maskCPF, maskPhone } from "@/lib/utils";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { isTenantContextErrorMessage } from "@/lib/shared/utils/error-codes";
 import { formatDate } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useDialogState } from "@/hooks/use-dialog-state";
@@ -113,12 +114,7 @@ function ClientesPageContent() {
       applyLoadedData(snapshot);
     } catch (error) {
       const message = normalizeErrorMessage(error);
-      const normalizedMessage = message.toLowerCase();
-      const shouldRetryWithTenantSync =
-        normalizedMessage.includes("x-context-id sem unidade ativa") ||
-        normalizedMessage.includes("tenantid diverge da unidade ativa do contexto informado");
-
-      if (!shouldRetryWithTenantSync) {
+      if (!isTenantContextErrorMessage(message)) {
         setLoadError(message);
         return;
       }
