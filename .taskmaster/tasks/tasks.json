@@ -10173,13 +10173,14 @@
         "description": "Workspace hook de contas a pagar concentra estado, fetching, filtros, modais e handlers em 534 linhas.",
         "details": "Extrair em hooks menores: useContasPagarData (fetching), useContasPagarFilters (filtros), useContasPagarModals (estado de modais), useContasPagarActions (handlers de criar/pagar/editar/cancelar). O workspace hook passa a compor os hooks extraídos.",
         "testStrategy": "Página funciona identicamente. Cada hook extraído é testável isoladamente.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "252"
         ],
         "priority": "medium",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T22:50:03.253Z"
       },
       {
         "id": "256",
@@ -10217,13 +10218,14 @@
         "description": "Apenas 23 de 130+ formulários usam zodResolver. Padronizar os 10 mais usados.",
         "details": "Priorizar: prospect-modal, nova-matricula-modal, nova-conta-pagar-modal, editar-conta-pagar-modal, pagar-conta-modal, receber-pagamento-modal, plano-form (já usa RHF mas sem zod), cliente-edit-form. Criar schemas zod co-localizados. Inferir tipos via z.infer.",
         "testStrategy": "Formulários validam corretamente com dados válidos e inválidos. Zero regressão nos fluxos existentes.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "250"
         ],
         "priority": "medium",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T22:51:19.882Z"
       },
       {
         "id": "259",
@@ -10311,13 +10313,77 @@
         "description": "Pipeline, tarefas e playbooks existem como UI mas sem execução automática de cadências.",
         "details": "Implementar engine de cadências: ao prospect entrar em estágio X, criar tarefas automáticas com prazos. Ao task vencer sem ação, escalar ou mover prospect. Cadências definidas nos playbooks existentes. Backend precisa de scheduler/cron para verificar prazos.",
         "testStrategy": "Prospect novo gera tarefas automáticas conforme playbook. Tarefa vencida escalona.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "260"
         ],
         "priority": "medium",
         "complexity": 7,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir e Implementar Tipos para o Engine de Cadências",
+            "description": "Criar ou estender tipos TypeScript para representar regras de cadências, estados de execução, lógica de escalação e automações relacionadas a prospects no CRM. Isso inclui regras de gatilho, ações e políticas de prazo.",
+            "dependencies": [],
+            "details": "Analisar os tipos existentes em src/lib/shared/types/prospect.ts para integrar ou criar novos tipos como CrmCadenceRule, CrmCadenceExecution, CrmEscalationPolicy. Garantir compatibilidade e extensibilidade com CrmCadencia, CrmTask, CrmPlaybook, CrmAutomation já existentes no sistema.",
+            "status": "pending",
+            "testStrategy": "Revisão de código para garantir a conformidade com o design de tipos proposto e a correta integração com os tipos de dados existentes. Verificar a consistência dos novos tipos com o esquema de dados do banco de dados.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Desenvolver Endpoints da API e Lógica de Backend para Cadências",
+            "description": "Implementar endpoints da API para configurar playbooks de cadência, iniciar execuções e gerenciar tarefas geradas. Desenvolver a lógica de backend do scheduler/cron para verificar prazos de tarefas e disparar ações automáticas.",
+            "dependencies": [
+              1
+            ],
+            "details": "Estender src/lib/api/crm.ts com endpoints como /api/crm/cadences/configure, /api/crm/cadences/trigger, /api/crm/cadences/status. Implementar serviços de backend para processamento de cadências, verificando o status das tarefas e aplicando regras de escalação/movimentação. O scheduler deve ser configurado para rodar periodicamente, talvez usando um cron job ou um worker dedicado para o Next.js.",
+            "status": "pending",
+            "testStrategy": "Testes unitários para a lógica de backend que processa cadências e tarefas. Testes de integração para os novos endpoints da API, verificando a criação, o status e o ciclo de vida das cadências e tarefas geradas.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Criar Interface de Administração para Configuração de Cadências",
+            "description": "Desenvolver uma página no painel administrativo que permita aos usuários definir, editar e gerenciar as regras dos playbooks de cadência, incluindo seus gatilhos, tarefas automáticas e ações de escalação.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Criar uma nova rota e página Next.js em src/app/(backoffice)/admin/crm/cadences/config/page.tsx. Reutilizar componentes de UI existentes do backoffice para formulários e tabelas. A página deve permitir criar, editar e visualizar as regras de cadência e as ações automáticas (criação de tarefas, movimentação de prospect, escalação) através dos endpoints da API desenvolvidos.",
+            "status": "pending",
+            "testStrategy": "Testes de UI/UX para garantir que a configuração das cadências é intuitiva, funcional e responsiva. Validar que as configurações são salvas corretamente via API e que as alterações são refletidas no backend.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implementar Disparo Automático de Cadências por Mudança de Status de Prospect",
+            "description": "Desenvolver um mecanismo que automaticamente dispara uma cadência definida em um playbook quando o status de um prospect é alterado para um estágio específico, de acordo com as regras configuradas.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Modificar a lógica de atualização de status do prospect (provavelmente em um serviço de CRM existente) para que, após a persistência da mudança de status, ele consulte os playbooks de cadência configurados (via API desenvolvida na subtask 2) e, se houver uma cadência associada àquele novo status, inicie a execução da mesma, criando tarefas automáticas para o prospect.",
+            "status": "pending",
+            "testStrategy": "Criar um prospect, configurar uma cadência para um determinado status e alterar o status do prospect. Verificar se as tarefas automáticas são geradas corretamente, com os prazos e descrições esperados, e associadas ao prospect.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Desenvolver Página de Monitoramento de Execuções de Cadências",
+            "description": "Criar uma interface no backoffice para que os administradores possam visualizar o status atual e o histórico detalhado das execuções das cadências, incluindo tarefas criadas, prazos e ações de escalação.",
+            "dependencies": [
+              1,
+              2,
+              4
+            ],
+            "details": "Criar uma nova rota e página Next.js em src/app/(backoffice)/admin/crm/cadences/monitor/page.tsx. Esta página deve exibir uma lista de cadências em execução ou concluídas, seus prospects associados, as tarefas geradas, seus prazos, status e histórico de ações (como escalações). Deve consumir os dados fornecidos pela API de cadências e apresentar uma visualização clara e filtrável.",
+            "status": "pending",
+            "testStrategy": "Iniciar algumas cadências com diferentes regras e cenários (tarefas vencidas, escalações) e verificar se o painel de monitoramento exibe corretamente o progresso, as tarefas, os status e as ações tomadas de forma precisa e em tempo real.",
+            "parentId": "undefined"
+          }
+        ],
+        "updatedAt": "2026-03-29T22:50:25.998Z"
       },
       {
         "id": "262",
@@ -10404,9 +10470,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T22:46:39.466Z",
+      "lastModified": "2026-03-29T22:51:19.882Z",
       "taskCount": 267,
-      "completedCount": 259,
+      "completedCount": 260,
       "tags": [
         "master"
       ]
