@@ -9336,8 +9336,8 @@
         "description": "104 arquivos de teste existem mas cobertura de componentes React ainda é baixa. Ampliar para componentes críticos.",
         "details": "Criar testes para: 1) ClienteHeader — renderiza dados, ações, status suspenso. 2) ClienteTabs — navegação entre tabs, indicadores. 3) Sidebar — itens de navegação, collapse, mobile. 4) AppTopbar — branding, tenant selector. 5) CommandPalette — busca, navegação. 6) PaginatedTable — paginação, empty state. 7) CrudModal — open/close, form submit. Cada componente 3-5 cenários. Meta: cobertura > 50%.",
         "testStrategy": "npx vitest run passa. Coverage report mostra > 50% de componentes cobertos.",
-        "status": "in-progress",
-        "updatedAt": "2026-03-29T00:05:00.000Z",
+        "status": "done",
+        "updatedAt": "2026-03-29T00:10:00.000Z",
         "dependencies": [],
         "priority": "low",
         "complexity": 7,
@@ -9346,9 +9346,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T00:05:00.000Z",
+      "lastModified": "2026-03-29T00:10:00.000Z",
       "taskCount": 194,
-      "completedCount": 193,
+      "completedCount": 194,
       "tags": [
         "master"
       ]
