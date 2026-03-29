@@ -15,10 +15,6 @@ export type CriarAlunoComMatriculaResponse = Awaited<ReturnType<typeof createAlu
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-export function formatDate(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
 export async function checkUniqueness(tenantId: string, search: string) {
   if (!search) return false;
   try {

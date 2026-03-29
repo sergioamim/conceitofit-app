@@ -18,6 +18,7 @@ import {
   CRM_AUTOMATION_TRIGGER_LABEL,
 } from "@/lib/tenant/crm/workspace";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { formatDateTime } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,14 +27,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-function formatDateTime(value?: string): string {
-  if (!value) return "Sem registro";
-  return new Date(value).toLocaleString("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
 
 export function CrmContent() {
   const tenantContext = useTenantContext();
@@ -260,7 +253,7 @@ export function CrmContent() {
                             {CRM_AUTOMATION_ACTION_LABEL[automation.acao]}
                           </p>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            {automation.execucoes} execuções · último disparo {formatDateTime(automation.ultimaExecucao)}
+                            {automation.execucoes} execuções · último disparo {automation.ultimaExecucao ? formatDateTime(automation.ultimaExecucao) : "Sem registro"}
                           </p>
                         </div>
                         <Button

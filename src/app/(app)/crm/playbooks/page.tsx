@@ -39,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDateTime } from "@/lib/formatters";
 
 type PlaybookStepForm = {
   id?: string;
@@ -149,13 +150,6 @@ function toCadenciaForm(cadencia?: CrmCadencia | null): CadenciaFormState {
   };
 }
 
-function formatDateTime(value?: string): string {
-  if (!value) return "Sem atualização recente";
-  return new Date(value).toLocaleString("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
 
 export default function CrmPlaybooksPage() {
   const tenantContext = useTenantContext();
@@ -628,7 +622,7 @@ export default function CrmPlaybooksPage() {
                             {CRM_CADENCIA_TRIGGER_LABEL[cadencia.gatilho]} · etapa base{" "}
                             {stages.find((stage) => stage.status === cadencia.stageStatus)?.nome ?? cadencia.stageStatus}
                             {" · "}
-                            última execução {formatDateTime(cadencia.ultimaExecucao)}
+                            última execução {cadencia.ultimaExecucao ? formatDateTime(cadencia.ultimaExecucao) : "Sem atualização recente"}
                           </p>
                           <div className="mt-3 space-y-2">
                             {cadencia.passos.map((step, index) => (

@@ -11,15 +11,7 @@ import {
   listAltaFrequenciaApi,
 } from "@/lib/api/financial";
 import type { TransacaoSuspeita, PadraoIncomum, AltaFrequencia } from "@/lib/types";
-
-function formatBRL(v: number) {
-  return Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(v?: string) {
-  if (!v) return "—";
-  return new Date(v).toLocaleDateString("pt-BR");
-}
+import { formatBRL, formatDate } from "@/lib/formatters";
 
 const SEVERITY_CLASS: Record<string, string> = {
   INFO: "bg-secondary text-muted-foreground",

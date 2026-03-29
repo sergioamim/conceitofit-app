@@ -1,8 +1,5 @@
 import type { Plano, Tenant } from "@/lib/types";
-
-function formatBRL(value: number): string {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
+import { formatBRL } from "@/lib/formatters";
 
 function formatDuracao(dias: number): string {
   if (dias === 30 || dias === 31) return "/mês";

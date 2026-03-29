@@ -12,9 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState, ListErrorState } from "@/components/shared/list-states";
 import { getAcademiasHealthMap } from "@/lib/api/admin-metrics";
+import { formatDateTime } from "@/lib/formatters";
 import {
   filterAcademiasHealthMap,
-  formatDateTime,
   formatPercent,
   resolveContractBadgeClass,
   type HealthFilter,
@@ -96,7 +96,7 @@ function HealthAcademiaCard({ item }: { item: AcademiaHealthStatus }) {
           </div>
           <div>
             <p className="text-xs uppercase tracking-wider">Último login admin</p>
-            <p className="mt-1 text-sm font-semibold text-foreground">{formatDateTime(item.ultimoLoginAdmin)}</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{item.ultimoLoginAdmin ? formatDateTime(item.ultimoLoginAdmin) : "Sem login recente"}</p>
           </div>
         </div>
         {item.alertasRisco.length > 0 ? (
@@ -310,7 +310,7 @@ export default function AdminOperationalHealthPage() {
                             <TableCell className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <TimerReset className="size-3.5 text-muted-foreground" />
-                                <span>{formatDateTime(item.ultimoLoginAdmin)}</span>
+                                <span>{item.ultimoLoginAdmin ? formatDateTime(item.ultimoLoginAdmin) : "Sem login recente"}</span>
                               </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">

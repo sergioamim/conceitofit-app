@@ -70,17 +70,6 @@ export type CartoesTabState = {
   error: string | null;
 };
 
-export function formatDate(d: string) {
-  const normalized = d.includes("T") ? d.split("T")[0] : d;
-  const [year, month, day] = normalized.split("-");
-  if (!year || !month || !day) return normalized;
-  return `${day}/${month}/${year}`;
-}
-
-export function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
 function createIdleNfseTabState(tenantId: string | null = null): NfseTabState {
   return {
     tenantId,

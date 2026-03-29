@@ -1,6 +1,7 @@
 "use client";
 
-import { ContasPagarWorkspace, formatBRL } from "../hooks/use-contas-pagar-workspace";
+import { formatBRL } from "@/lib/formatters";
+import { ContasPagarWorkspace } from "../hooks/use-contas-pagar-workspace";
 
 interface ContasPagarStatsProps {
   workspace: ContasPagarWorkspace;

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDatetime } from "./prospect-shared";
+import { formatDateTime } from "@/lib/formatters";
 
 export function ProspectConversaTab({
   mensagens,
@@ -44,7 +44,7 @@ export function ProspectConversaTab({
           <div key={m.id} className="rounded-xl border border-border bg-secondary/30 p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-gym-accent">{m.autorNome}</span>
-              <span className="text-[11px] text-muted-foreground">{formatDatetime(m.datahora)}</span>
+              <span className="text-[11px] text-muted-foreground">{formatDateTime(m.datahora)}</span>
             </div>
             <p className="mt-1.5 text-sm leading-relaxed">{m.texto}</p>
           </div>

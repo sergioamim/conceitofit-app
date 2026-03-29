@@ -22,6 +22,7 @@ const ProspectDetailModal = dynamic(
 );
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/formatters";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 const ORIGEM_LABEL: Record<string, string> = {
@@ -33,10 +34,6 @@ const ORIGEM_LABEL: Record<string, string> = {
   SITE: "Site",
   OUTROS: "Outros",
 };
-
-function formatDate(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
-}
 
 function nowDateTime() {
   return new Date().toISOString().slice(0, 19);

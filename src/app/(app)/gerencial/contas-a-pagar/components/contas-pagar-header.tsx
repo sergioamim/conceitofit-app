@@ -3,7 +3,8 @@
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
-import { ContasPagarWorkspace, formatDate, formatBRL, contaTotal } from "../hooks/use-contas-pagar-workspace";
+import { formatBRL, formatDate } from "@/lib/formatters";
+import { ContasPagarWorkspace, contaTotal } from "../hooks/use-contas-pagar-workspace";
 
 interface ContasPagarHeaderProps {
   workspace: ContasPagarWorkspace;

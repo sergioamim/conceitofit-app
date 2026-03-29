@@ -16,17 +16,13 @@ import { VoucherCodigosModal } from "@/components/shared/voucher-codigos-modal";
 import { useCrudOperations } from "@/hooks/use-crud-operations";
 import { PageError } from "@/components/shared/page-error";
 
+import { formatDate } from "@/lib/formatters";
+
 const TIPO_LABEL: Record<string, string> = {
   DESCONTO: "Desconto",
   ACESSO: "Acesso livre",
   SESSAO: "Sessão avulsa",
 };
-
-function formatDate(dateStr: string) {
-  const [year, month, day] = dateStr.split("-");
-  if (!year || !month || !day) return dateStr;
-  return `${day}/${month}/${year}`;
-}
 
 function formatPeriodo(voucher: Voucher): string {
   const inicio = formatDate(voucher.periodoInicio);

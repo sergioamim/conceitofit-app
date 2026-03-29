@@ -6,6 +6,7 @@ import { serverFetch } from "@/lib/shared/server-fetch";
 import { logger } from "@/lib/shared/logger";
 import type { Plano, Tenant } from "@/lib/types";
 import type { Metadata } from "next";
+import { formatBRL } from "@/lib/formatters";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -94,10 +95,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatBRL(value: number): string {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 function formatDuracao(dias: number): string {
   if (dias === 30 || dias === 31) return "/mes";

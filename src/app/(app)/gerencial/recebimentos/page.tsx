@@ -21,6 +21,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
+import { formatBRL, formatDate } from "@/lib/formatters";
 
 type StatusFiltro = WithFilterAll<Pagamento["status"]>;
 
@@ -44,20 +45,11 @@ const RECEBIMENTO_FORM_DEFAULT: RecebimentoForm = {
   formaPagamento: "PIX",
 };
 
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-function formatDate(value?: string) {
-  if (!value) return "-";
-  const normalized = value.includes("T") ? value.split("T")[0] : value;
-  const [year, month, day] = normalized.split("-");
-  if (!year || !month || !day) return normalized;
-  return `${day}/${month}/${year}`;
-}
+const fmtDate = (v?: string) => {
+  if (!v) return "-";
+  const normalized = v.includes("T") ? v.split("T")[0] : v;
+  return formatDate(normalized);
+};
 
 function monthRangeFromNow() {
   return getBusinessMonthRange();
@@ -217,7 +209,7 @@ export default function RecebimentosPage() {
             columns={[
               { label: "Cliente", accessor: (r) => r.aluno?.nome ?? "—" },
               { label: "Valor", accessor: (r) => formatBRL(Number(r.valor ?? 0)) },
-              { label: "Vencimento", accessor: (r) => formatDate(r.dataVencimento) },
+              { label: "Vencimento", accessor: (r) => fmtDate(r.dataVencimento) },
               { label: "Status", accessor: "status" },
             ] satisfies ExportColumn<(typeof filtered)[number]>[]}
             filename="recebimentos"
@@ -342,8 +334,8 @@ export default function RecebimentosPage() {
                       </p>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      <p>{formatDate(item.dataVencimento)}</p>
-                      <p className="text-xs">{formatDate(item.dataPagamento)}</p>
+                      <p>{fmtDate(item.dataVencimento)}</p>
+                      <p className="text-xs">{fmtDate(item.dataPagamento)}</p>
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={item.status} />

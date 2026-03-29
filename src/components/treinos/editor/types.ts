@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/lib/formatters";
 import type { Dispatch, SetStateAction } from "react";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
 import type {
@@ -109,17 +110,10 @@ export function addDays(base: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function formatDateTime(value?: string): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("pt-BR");
-}
-
 export function formatDateRange(start?: string, end?: string): string {
   if (!start && !end) return "-";
-  if (!end) return formatDateTime(start);
-  return `${formatDateTime(start)} até ${formatDateTime(end)}`;
+  if (!end) return start ? formatDateTime(start) : "-";
+  return `${start ? formatDateTime(start) : "-"} até ${formatDateTime(end)}`;
 }
 
 export function buildExerciseDrawerState(exercicio?: TreinoV2CatalogExercise): ExerciseDrawerState {

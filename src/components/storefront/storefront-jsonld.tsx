@@ -1,6 +1,7 @@
 import type { Plano, StorefrontTheme, Tenant } from "@/lib/types";
 
-function formatBRL(value: number): string {
+/** Schema.org expects a plain decimal string for price (e.g. "99.90"). */
+function formatPrice(value: number): string {
   return value.toFixed(2);
 }
 
@@ -56,7 +57,7 @@ function buildOffersLd(planos: Plano[]) {
     "@type": "Offer",
     name: p.nome,
     description: p.descricao,
-    price: formatBRL(p.valor),
+    price: formatPrice(p.valor),
     priceCurrency: "BRL",
     availability: "https://schema.org/InStock",
   }));

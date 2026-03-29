@@ -8,7 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { STATUS_COLUMNS, ORIGEM_LABEL, formatDatetime } from "./prospect-shared";
+import { formatDateTime } from "@/lib/formatters";
+import { STATUS_COLUMNS, ORIGEM_LABEL } from "./prospect-shared";
 
 export function ProspectInfoTab({
   prospect,
@@ -51,7 +52,7 @@ export function ProspectInfoTab({
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Cadastrado em</p>
-          <p className="mt-0.5 font-medium">{formatDatetime(prospect.dataCriacao)}</p>
+          <p className="mt-0.5 font-medium">{formatDateTime(prospect.dataCriacao)}</p>
         </div>
         {prospect.observacoes && (
           <div className="col-span-2">
@@ -104,7 +105,7 @@ export function ProspectInfoTab({
               <div key={i} className="flex items-center gap-3 text-xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-gym-accent shrink-0" />
                 <StatusBadge status={log.status} />
-                <span className="text-muted-foreground">{formatDatetime(log.data)}</span>
+                <span className="text-muted-foreground">{formatDateTime(log.data)}</span>
               </div>
             ))}
           </div>

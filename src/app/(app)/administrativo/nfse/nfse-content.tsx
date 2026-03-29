@@ -28,6 +28,7 @@ import type {
   NfseRegimeTributario,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatDateTime } from "@/lib/formatters";
 import { PageError } from "@/components/shared/page-error";
 
 const AMBIENTE_OPTIONS: Array<{ value: NfseAmbiente; label: string }> = [
@@ -53,15 +54,6 @@ function getStatusClass(status: NfseConfiguracao["status"]) {
   if (status === "CONFIGURADA") return "bg-gym-teal/15 text-gym-teal border-gym-teal/25";
   if (status === "ERRO") return "bg-gym-danger/10 text-gym-danger border-gym-danger/25";
   return "bg-gym-warning/10 text-gym-warning border-gym-warning/25";
-}
-
-function formatDateTime(value?: string) {
-  if (!value) return "Ainda não executado";
-  const [datePart, timePart = ""] = value.split("T");
-  const [year, month, day] = datePart.split("-");
-  if (!year || !month || !day) return value;
-  const time = timePart.slice(0, 5);
-  return time ? `${day}/${month}/${year} ${time}` : `${day}/${month}/${year}`;
 }
 
 export function NfseContent() {
@@ -199,11 +191,11 @@ export function NfseContent() {
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Última validação</p>
-              <p className="mt-3 text-sm font-medium text-foreground">{formatDateTime(form.ultimaValidacaoEm)}</p>
+              <p className="mt-3 text-sm font-medium text-foreground">{form.ultimaValidacaoEm ? formatDateTime(form.ultimaValidacaoEm) : "Ainda não executado"}</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Última sincronização</p>
-              <p className="mt-3 text-sm font-medium text-foreground">{formatDateTime(form.ultimaSincronizacaoEm)}</p>
+              <p className="mt-3 text-sm font-medium text-foreground">{form.ultimaSincronizacaoEm ? formatDateTime(form.ultimaSincronizacaoEm) : "Ainda não executado"}</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Emissão automática</p>
