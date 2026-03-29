@@ -6,6 +6,7 @@ import {
   FileText,
   Globe,
   LayoutDashboard,
+  LineChart,
   Search,
   Settings,
   Shield,
@@ -32,6 +33,7 @@ export const backofficeNavGroups: BackofficeNavGroup[] = [
     title: "Geral",
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/admin/saas", label: "Metricas SaaS", icon: LineChart },
       { href: "/admin/busca", label: "Busca Global", icon: Search },
       { href: "/admin/bi", label: "BI Executivo", icon: BarChart3 },
     ],
