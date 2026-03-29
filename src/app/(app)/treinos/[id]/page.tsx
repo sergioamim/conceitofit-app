@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
@@ -11,7 +12,11 @@ import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { listTreinoExercicios, getTreinoWorkspace } from "@/lib/tenant/treinos/workspace";
 import type { Aluno, Exercicio, Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { TreinoV2Editor } from "@/components/treinos/treino-v2-editor";
+
+const TreinoV2Editor = dynamic(
+  () => import("@/components/treinos/treino-v2-editor").then((mod) => mod.TreinoV2Editor),
+  { ssr: false },
+);
 import { ListErrorState } from "@/components/shared/list-states";
 
 function resolveRole(access: ReturnType<typeof useAuthAccess>) {

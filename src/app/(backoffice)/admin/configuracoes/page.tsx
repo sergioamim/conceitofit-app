@@ -4,7 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, CheckCircle2, Clock3, Link2, RefreshCcw, ServerCrash } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useFieldArray, useForm, type UseFormRegisterReturn } from "react-hook-form";
-import { RichTextEditor } from "@/components/shared/rich-text-editor";
+import dynamic from "next/dynamic";
+
+const RichTextEditor = dynamic(
+  () => import("@/components/shared/rich-text-editor").then((mod) => mod.RichTextEditor),
+  { ssr: false },
+);
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
