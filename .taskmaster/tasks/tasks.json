@@ -10187,13 +10187,14 @@
         "description": "Workspace do perfil de cliente (/clientes/[id]) concentra 777 LOC com estado, fetching, handlers de exclusão, migração, suspensão, cartões, etc.",
         "details": "Extrair hooks por responsabilidade: useClienteData, useClienteExclusao, useClienteMigracao, useClienteSuspensao, useClienteCartoes. O workspace compõe os hooks extraídos.",
         "testStrategy": "Perfil do cliente funciona identicamente. Hooks extraídos testáveis.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "251"
         ],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T22:44:04.470Z"
       },
       {
         "id": "257",
@@ -10295,13 +10296,14 @@
         "description": "Sistema não tem canal de comunicação. WhatsApp é canal primário para academias (cobrança, follow-up, welcome).",
         "details": "Avaliar integração com API oficial WhatsApp Business ou Evolution API. Criar serviço de notificação com templates: welcome, vencimento de matrícula, cobrança pendente, follow-up de prospect. Backend precisa de endpoints para envio. Frontend precisa de configuração na admin e logs de envio.",
         "testStrategy": "Template de mensagem configurável na admin. Envio de welcome ao cadastrar aluno. Log de mensagens enviadas visível.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "259"
         ],
         "priority": "high",
         "complexity": 8,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-29T22:43:02.484Z"
       },
       {
         "id": "261",
@@ -10402,9 +10404,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T22:42:40.368Z",
+      "lastModified": "2026-03-29T22:44:04.470Z",
       "taskCount": 267,
-      "completedCount": 256,
+      "completedCount": 258,
       "tags": [
         "master"
       ]
