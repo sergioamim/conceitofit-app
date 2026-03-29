@@ -1,9 +1,17 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { NovaContaPagarModal } from "@/components/shared/nova-conta-pagar-modal";
-import { EditarContaPagarModal } from "@/components/shared/editar-conta-pagar-modal";
 import { PagarContaModal } from "@/components/shared/pagar-conta-modal";
+
+const NovaContaPagarModal = dynamic(
+  () => import("@/components/shared/nova-conta-pagar-modal").then((mod) => mod.NovaContaPagarModal),
+  { ssr: false },
+);
+const EditarContaPagarModal = dynamic(
+  () => import("@/components/shared/editar-conta-pagar-modal").then((mod) => mod.EditarContaPagarModal),
+  { ssr: false },
+);
 import { ContasPagarWorkspace } from "../hooks/use-contas-pagar-workspace";
 
 interface ContasPagarModalsProps {
