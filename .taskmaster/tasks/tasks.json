@@ -10113,7 +10113,9 @@
         "details": "Criar hook useDashboard() com useQuery. Query key: [\"dashboard\", tenantId, referenceDate]. Remover useState de dados, loading, error. Manter filtros como estado local. O hook useDashboard já existe em lib/query/use-dashboard.ts mas pode não estar sendo usado na página.",
         "testStrategy": "Dashboard carrega com cache. Navegar para outra página e voltar não refaz fetch. Refresh manual funciona.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          225
+        ],
         "priority": "high",
         "complexity": 4,
         "subtasks": []
@@ -10125,7 +10127,9 @@
         "details": "Criar/atualizar usePagamentos() hook. Substituir useState de dados por useQuery. Mutations (receber pagamento) via useMutation com invalidação de cache. O hook usePagamentos já existe em lib/query/use-pagamentos.ts.",
         "testStrategy": "Listagem funciona com cache. Receber pagamento invalida cache. Navegar e voltar não refetch.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          225
+        ],
         "priority": "high",
         "complexity": 5,
         "subtasks": []
@@ -10137,7 +10141,9 @@
         "details": "Criar useProspects() e useUpdateProspect()/useCreateProspect() hooks com TanStack Query. Query key: [\"prospects\", tenantId, filters]. Invalidar cache em create/update/status change.",
         "testStrategy": "Listagem com cache. Criar prospect invalida lista. Mudar status invalida corretamente.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          225
+        ],
         "priority": "high",
         "complexity": 5,
         "subtasks": []
@@ -10149,7 +10155,9 @@
         "details": "Criar useMatriculas() hook. Query key: [\"matriculas\", tenantId, filters]. Mutations para cancelar/renovar matrícula.",
         "testStrategy": "Listagem com cache. Cancelar matrícula invalida cache automaticamente.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          225
+        ],
         "priority": "medium",
         "complexity": 4,
         "subtasks": []
@@ -10161,7 +10169,9 @@
         "details": "Extrair em hooks menores: useContasPagarData (fetching), useContasPagarFilters (filtros), useContasPagarModals (estado de modais), useContasPagarActions (handlers de criar/pagar/editar/cancelar). O workspace hook passa a compor os hooks extraídos.",
         "testStrategy": "Página funciona identicamente. Cada hook extraído é testável isoladamente.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          252
+        ],
         "priority": "medium",
         "complexity": 4,
         "subtasks": []
@@ -10173,7 +10183,9 @@
         "details": "Extrair hooks por responsabilidade: useClienteData, useClienteExclusao, useClienteMigracao, useClienteSuspensao, useClienteCartoes. O workspace compõe os hooks extraídos.",
         "testStrategy": "Perfil do cliente funciona identicamente. Hooks extraídos testáveis.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          251
+        ],
         "priority": "medium",
         "complexity": 5,
         "subtasks": []
@@ -10185,7 +10197,9 @@
         "details": "Já existe useCommercialFlow separado. Avaliar o que resta no workspace de vendas e extrair hooks menores se aplicável.",
         "testStrategy": "Fluxo de vendas funciona identicamente.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          252
+        ],
         "priority": "low",
         "complexity": 4,
         "subtasks": []
@@ -10197,7 +10211,9 @@
         "details": "Priorizar: prospect-modal, nova-matricula-modal, nova-conta-pagar-modal, editar-conta-pagar-modal, pagar-conta-modal, receber-pagamento-modal, plano-form (já usa RHF mas sem zod), cliente-edit-form. Criar schemas zod co-localizados. Inferir tipos via z.infer.",
         "testStrategy": "Formulários validam corretamente com dados válidos e inválidos. Zero regressão nos fluxos existentes.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          250
+        ],
         "priority": "medium",
         "complexity": 6,
         "subtasks": []
@@ -10221,7 +10237,9 @@
         "details": "Avaliar integração com API oficial WhatsApp Business ou Evolution API. Criar serviço de notificação com templates: welcome, vencimento de matrícula, cobrança pendente, follow-up de prospect. Backend precisa de endpoints para envio. Frontend precisa de configuração na admin e logs de envio.",
         "testStrategy": "Template de mensagem configurável na admin. Envio de welcome ao cadastrar aluno. Log de mensagens enviadas visível.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          259
+        ],
         "priority": "high",
         "complexity": 8,
         "subtasks": []
@@ -10233,7 +10251,9 @@
         "details": "Implementar engine de cadências: ao prospect entrar em estágio X, criar tarefas automáticas com prazos. Ao task vencer sem ação, escalar ou mover prospect. Cadências definidas nos playbooks existentes. Backend precisa de scheduler/cron para verificar prazos.",
         "testStrategy": "Prospect novo gera tarefas automáticas conforme playbook. Tarefa vencida escalona.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          260
+        ],
         "priority": "medium",
         "complexity": 7,
         "subtasks": []
@@ -10245,7 +10265,9 @@
         "details": "Criar testes para: prospect-modal, receber-pagamento-modal, nova-matricula-modal, cliente-resumo-dialog, clientes-filter-bar, clientes-table, pagamentos-client, matriculas-client, status-badge, export-menu. Usar padrão existente: vi.mock para Dialog/Select, render + fireEvent + expect.",
         "testStrategy": "Cobertura de componentes sobe de 14% para 30%. CI não regride.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          258
+        ],
         "priority": "medium",
         "complexity": 5,
         "subtasks": []
@@ -10257,7 +10279,9 @@
         "details": "Requer mudança no backend para setar cookies httpOnly no login/refresh. Frontend remove leitura/escrita de localStorage para tokens. Manter localStorage apenas para preferências de UI (tema, tenant preferido). Atualizar seedAuthenticatedSession nos testes E2E.",
         "testStrategy": "Login funciona. Refresh funciona. Tokens não acessíveis via document.cookie ou localStorage. Testes E2E adaptados.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          259
+        ],
         "priority": "medium",
         "complexity": 7,
         "subtasks": []
@@ -10269,7 +10293,10 @@
         "details": "Opções: Sentry performance monitoring, PostHog, ou Plausible analytics. Implementar tracking de eventos core: login, criar prospect, criar matrícula, receber pagamento, concluir venda. Dashboard interno (admin) com métricas de adoção por academia.",
         "testStrategy": "Eventos de negócio registrados. Dashboard mostra dados reais de uso.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          251,
+          252
+        ],
         "priority": "low",
         "complexity": 5,
         "subtasks": []
@@ -10281,7 +10308,9 @@
         "details": "Integrar axe-core nos testes de componente via @axe-core/react ou vitest-axe. Adicionar check de a11y no CI. Priorizar: formulários, tabelas, modais, navegação. Lighthouse já roda no CI — adicionar threshold de accessibility > 90.",
         "testStrategy": "axe-core roda em CI sem critical violations. Lighthouse accessibility > 90.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          262
+        ],
         "priority": "low",
         "complexity": 3,
         "subtasks": []
