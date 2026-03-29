@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs";
+
 type LogLevel = "info" | "warn" | "error";
 
 interface LogMeta {
@@ -25,6 +27,22 @@ function emit(level: LogLevel, message: string, meta?: LogMeta) {
     consoleFn(tag, message, entry.extra);
   } else {
     consoleFn(tag, message);
+  }
+
+  // Capturar erros e warnings no Sentry quando DSN configurado
+  if (level === "error") {
+    const errorObj = meta?.error instanceof Error ? meta.error : new Error(message);
+    Sentry.captureException(errorObj, {
+      tags: { module: meta?.module },
+      extra: entry.extra,
+    });
+  } else if (level === "warn") {
+    Sentry.addBreadcrumb({
+      category: meta?.module ?? "app",
+      message,
+      level: "warning",
+      data: entry.extra,
+    });
   }
 }
 
