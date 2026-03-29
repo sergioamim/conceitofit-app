@@ -9587,14 +9587,14 @@
         "description": "119 arquivos têm \"use client\" desnecessário. Muitas páginas administrativas simples poderiam ser Server Components, reduzindo bundle JS.",
         "details": "Auditar as 119 páginas \"use client\" e classificar: 1) Podem ser 100% server (listagens read-only sem interação) 2) Podem ser hybrid (server com client islands) 3) Precisam ser client (formulários, estado complexo). Migrar categoria 1 primeiro (estimativa: 15-20 páginas). Para categoria 2, usar pattern de Server Component pai + Client Component filho. Priorizar páginas administrativas simples como salas, bandeiras, tipos-conta.",
         "testStrategy": "Páginas migradas renderizam corretamente. Bundle size reduzido (verificar com ANALYZE=true npm run build). SSR funciona sem erros.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "206"
         ],
         "priority": "low",
         "complexity": 8,
         "subtasks": [],
-        "updatedAt": "2026-03-29T04:02:21.841Z"
+        "updatedAt": "2026-03-29T04:12:03.963Z"
       },
       {
         "id": "214",
@@ -9636,9 +9636,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T04:11:07.982Z",
+      "lastModified": "2026-03-29T04:12:03.963Z",
       "taskCount": 216,
-      "completedCount": 211,
+      "completedCount": 212,
       "tags": [
         "master"
       ]
