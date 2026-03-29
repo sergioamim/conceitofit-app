@@ -66,7 +66,7 @@ function buildPolicySummary(detail: GlobalAdminUserDetail | null) {
     : "Essa pessoa recebe acesso automático apenas nas novas unidades da mesma academia.";
 }
 
-export function SummaryBlock({
+function SummaryBlock({
   label,
   value,
   secondary,

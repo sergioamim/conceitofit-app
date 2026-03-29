@@ -61,7 +61,7 @@ export const DEFAULT_FILTERS: ColaboradorListFilters = {
   flag: "TODOS",
 };
 
-export const DEFAULT_QUICK_CREATE: ColaboradorQuickCreateDraft = {
+const DEFAULT_QUICK_CREATE: ColaboradorQuickCreateDraft = {
   nome: "",
   emailProfissional: "",
   celular: "",
@@ -80,13 +80,13 @@ export const DEFAULT_QUICK_CREATE: ColaboradorQuickCreateDraft = {
   observacoes: "",
 };
 
-export const FALLBACK_PERFIS: RbacPerfil[] = [
+const FALLBACK_PERFIS: RbacPerfil[] = [
   { id: "perfil-admin-fallback", tenantId: "fallback", roleName: "ADMIN", displayName: "Administrador", active: true },
   { id: "perfil-gerente-fallback", tenantId: "fallback", roleName: "GERENTE", displayName: "Gerente", active: true },
   { id: "perfil-atendente-fallback", tenantId: "fallback", roleName: "ATENDENTE", displayName: "Atendente", active: true },
 ];
 
-export const DIAS_SEMANA: Array<FuncionarioHorario["diaSemana"]> = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
+const DIAS_SEMANA: Array<FuncionarioHorario["diaSemana"]> = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
 
 export type FuncionarioFormValues = {
   nome: string;
@@ -166,7 +166,7 @@ export type FuncionarioFormValues = {
   };
 };
 
-export function buildDefaultHorarios() {
+function buildDefaultHorarios() {
   return DIAS_SEMANA.map((dia) => ({
     diaSemana: dia,
     horaInicio: "09:00",

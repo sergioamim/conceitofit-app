@@ -12,19 +12,19 @@ import type {
 // Pagamento
 // ---------------------------------------------------------------------------
 
-export function isPagamentoPendente(status: StatusPagamento): boolean {
+function isPagamentoPendente(status: StatusPagamento): boolean {
   return status === "PENDENTE";
 }
 
-export function isPagamentoPago(status: StatusPagamento): boolean {
+function isPagamentoPago(status: StatusPagamento): boolean {
   return status === "PAGO";
 }
 
-export function isPagamentoVencido(status: StatusPagamento): boolean {
+function isPagamentoVencido(status: StatusPagamento): boolean {
   return status === "VENCIDO";
 }
 
-export function isPagamentoCancelado(status: StatusPagamento): boolean {
+function isPagamentoCancelado(status: StatusPagamento): boolean {
   return status === "CANCELADO";
 }
 
@@ -32,7 +32,7 @@ export function isPagamentoEmAberto(status: StatusPagamento): boolean {
   return status === "PENDENTE" || status === "VENCIDO";
 }
 
-export const STATUS_PAGAMENTO_EM_ABERTO: readonly StatusPagamento[] = ["PENDENTE", "VENCIDO"];
+const STATUS_PAGAMENTO_EM_ABERTO: readonly StatusPagamento[] = ["PENDENTE", "VENCIDO"];
 
 // ---------------------------------------------------------------------------
 // Cobrança (mesmo shape de StatusPagamento)
@@ -58,17 +58,17 @@ export function isContaPagarEmAberto(status: StatusContaPagar): boolean {
   return status === "PENDENTE" || status === "VENCIDA";
 }
 
-export const STATUS_CONTA_PAGAR_EM_ABERTO: readonly StatusContaPagar[] = ["PENDENTE", "VENCIDA"];
+const STATUS_CONTA_PAGAR_EM_ABERTO: readonly StatusContaPagar[] = ["PENDENTE", "VENCIDA"];
 
 // ---------------------------------------------------------------------------
 // Aluno
 // ---------------------------------------------------------------------------
 
-export function isAlunoAtivo(status: StatusAluno): boolean {
+function isAlunoAtivo(status: StatusAluno): boolean {
   return status === "ATIVO";
 }
 
-export function isAlunoCancelado(status: StatusAluno): boolean {
+function isAlunoCancelado(status: StatusAluno): boolean {
   return status === "CANCELADO";
 }
 
@@ -76,15 +76,15 @@ export function isAlunoCancelado(status: StatusAluno): boolean {
 // Matrícula
 // ---------------------------------------------------------------------------
 
-export function isMatriculaAtiva(status: StatusMatricula): boolean {
+function isMatriculaAtiva(status: StatusMatricula): boolean {
   return status === "ATIVA";
 }
 
-export function isMatriculaVencida(status: StatusMatricula): boolean {
+function isMatriculaVencida(status: StatusMatricula): boolean {
   return status === "VENCIDA";
 }
 
-export function isMatriculaCancelada(status: StatusMatricula): boolean {
+function isMatriculaCancelada(status: StatusMatricula): boolean {
   return status === "CANCELADA";
 }
 
@@ -92,11 +92,11 @@ export function isMatriculaCancelada(status: StatusMatricula): boolean {
 // Prospect
 // ---------------------------------------------------------------------------
 
-export function isProspectConvertido(status: StatusProspect): boolean {
+function isProspectConvertido(status: StatusProspect): boolean {
   return status === "CONVERTIDO";
 }
 
-export function isProspectPerdido(status: StatusProspect): boolean {
+function isProspectPerdido(status: StatusProspect): boolean {
   return status === "PERDIDO";
 }
 
@@ -104,10 +104,10 @@ export function isProspectPerdido(status: StatusProspect): boolean {
 // Venda
 // ---------------------------------------------------------------------------
 
-export function isVendaFechada(status: StatusVenda): boolean {
+function isVendaFechada(status: StatusVenda): boolean {
   return status === "FECHADA";
 }
 
-export function isVendaCancelada(status: StatusVenda): boolean {
+function isVendaCancelada(status: StatusVenda): boolean {
   return status === "CANCELADA";
 }

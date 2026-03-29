@@ -432,7 +432,7 @@ export async function updateProspectAgendamentoApi(input: {
   });
 }
 
-export async function listCrmPipelineStagesApi(input: {
+async function listCrmPipelineStagesApi(input: {
   tenantId: string;
 }): Promise<CrmPipelineStage[]> {
   try {
@@ -624,7 +624,7 @@ export async function updateCrmAutomacaoApi(input: {
   });
 }
 
-export async function listCrmActivitiesApi(input: {
+async function listCrmActivitiesApi(input: {
   tenantId: string;
   prospectId?: string;
   limit?: number;
