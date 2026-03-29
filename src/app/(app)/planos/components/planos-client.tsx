@@ -176,8 +176,8 @@ export function PlanosClient() {
                 <span className={p.permiteCobrancaRecorrente ? "text-gym-teal" : "text-gym-danger"}>
                   {p.permiteCobrancaRecorrente ? "Permitida" : "Não permitida"}
                 </span>
-                {p.permiteCobrancaRecorrente && p.diaCobrancaPadrao
-                  ? ` · dia ${p.diaCobrancaPadrao}`
+                {p.permiteCobrancaRecorrente && p.diaCobrancaPadrao?.length
+                  ? ` · dias ${p.diaCobrancaPadrao.join(", ")}`
                   : ""}
               </p>
             </div>
@@ -279,7 +279,7 @@ export function PlanosClient() {
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {p.permiteCobrancaRecorrente
-                    ? `Sim${p.diaCobrancaPadrao ? ` · dia ${p.diaCobrancaPadrao}` : ""}`
+                    ? `Sim${p.diaCobrancaPadrao?.length ? ` · dias ${p.diaCobrancaPadrao.join(", ")}` : ""}`
                     : "Não"}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">

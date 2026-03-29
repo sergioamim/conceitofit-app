@@ -12,8 +12,6 @@ import { formatBRL } from "@/lib/formatters";
 import type { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
 import type { ClienteWizardForm } from "./wizard-types";
 
-const DIA_COBRANCA_OPTIONS = [5, 10, 15, 20, 25];
-
 export function Step3Pagamento({
   fps, form, commercial
 }: {
@@ -47,8 +45,8 @@ export function Step3Pagamento({
         <div className="rounded-lg border border-border bg-secondary/40 p-4 text-sm">
           <p className="text-muted-foreground">Plano: <span className="font-semibold text-foreground">{selectedPlano.nome}</span></p>
           <p className="text-muted-foreground">Valor: <span className="font-bold text-gym-accent">{formatBRL(selectedPlano.valor)}</span></p>
-          {selectedPlano.diaCobrancaPadrao ? (
-            <p className="text-muted-foreground">Dia de cobranca padrao: <span className="font-semibold text-foreground">{selectedPlano.diaCobrancaPadrao}</span></p>
+          {selectedPlano.diaCobrancaPadrao?.length ? (
+            <p className="text-muted-foreground">Dias de cobranca: <span className="font-semibold text-foreground">{selectedPlano.diaCobrancaPadrao.join(", ")}</span></p>
           ) : null}
         </div>
       )}
@@ -93,21 +91,26 @@ export function Step3Pagamento({
       {isRecorrente && (
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dia de cobranca mensal *</label>
-          {selectedPlano?.diaCobrancaPadrao ? (
-            <p className="rounded-md border border-border bg-secondary/40 px-3 py-2 text-sm text-foreground">
-              Dia {selectedPlano.diaCobrancaPadrao} <span className="text-xs text-muted-foreground">(definido pelo plano)</span>
-            </p>
-          ) : (
+          {selectedPlano?.diaCobrancaPadrao?.length ? (
             <Controller name="pagamento.diaCobranca" control={control} render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full bg-card border-border"><SelectValue placeholder="Selecione o dia" /></SelectTrigger>
                 <SelectContent className="bg-card border-border">
-                  {DIA_COBRANCA_OPTIONS.map((dia) => (
+                  {selectedPlano.diaCobrancaPadrao!.map((dia) => (
                     <SelectItem key={dia} value={String(dia)}>Dia {dia}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )} />
+          ) : (
+            <Input
+              type="number"
+              min={1}
+              max={28}
+              placeholder="1 a 28"
+              {...register("pagamento.diaCobranca")}
+              className="bg-card border-border"
+            />
           )}
         </div>
       )}

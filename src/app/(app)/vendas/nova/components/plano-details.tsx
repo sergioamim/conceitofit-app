@@ -117,9 +117,11 @@ export function PlanoDetails({ workspace }: PlanoDetailsProps) {
             <label htmlFor="venda-plano-renovacao" className="cursor-pointer text-muted-foreground">
               Renovação automática {selectedPlano.permiteRenovacaoAutomatica ? "permitida" : "indisponível"} ·
               assinatura {selectedPlano.contratoAssinatura.toLowerCase()}
-              {selectedPlano.permiteCobrancaRecorrente && selectedPlano.diaCobrancaPadrao
-                ? ` · cobrança recorrente disponível (dia ${selectedPlano.diaCobrancaPadrao})`
-                : " · cobrança recorrente indisponível"}
+              {selectedPlano.permiteCobrancaRecorrente && selectedPlano.diaCobrancaPadrao?.length
+                ? ` · cobranca recorrente (dias ${selectedPlano.diaCobrancaPadrao.join(", ")})`
+                : selectedPlano.permiteCobrancaRecorrente
+                  ? " · cobranca recorrente (dia livre)"
+                  : " · cobranca recorrente indisponivel"}
             </label>
           </div>
         </div>

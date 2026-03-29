@@ -1,5 +1,14 @@
 import type { Atividade, ModoAssinaturaContrato, Plano, TipoPlano } from "@/lib/types";
 
+function parseDiasCobrancaInput(input: string): number[] | undefined {
+  const dias = input
+    .split(/[,;\s]+/)
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => Number.isFinite(n) && n >= 1 && n <= 28)
+    .sort((a, b) => a - b);
+  return dias.length > 0 ? dias : undefined;
+}
+
 export interface PlanoFormValues {
   nome: string;
   descricao: string;
@@ -67,7 +76,7 @@ export function planoToFormValues(plano: Plano): PlanoFormValues {
     parcelasMaxAnuidade: String(plano.parcelasMaxAnuidade ?? 1),
     permiteRenovacaoAutomatica: plano.permiteRenovacaoAutomatica,
     permiteCobrancaRecorrente: plano.permiteCobrancaRecorrente,
-    diaCobrancaPadrao: plano.diaCobrancaPadrao ? String(plano.diaCobrancaPadrao) : "",
+    diaCobrancaPadrao: plano.diaCobrancaPadrao?.join(", ") ?? "",
     contratoTemplateHtml: plano.contratoTemplateHtml ?? "",
     contratoAssinatura: plano.contratoAssinatura ?? "AMBAS",
     contratoEnviarAutomaticoEmail: plano.contratoEnviarAutomaticoEmail ?? false,
@@ -103,7 +112,7 @@ export function buildPlanoPayload(values: PlanoFormValues): Omit<Plano, "id" | "
     diaCobrancaPadrao:
       values.tipo === "AVULSO" || !values.permiteCobrancaRecorrente
         ? undefined
-        : Math.min(28, Math.max(1, parseInt(values.diaCobrancaPadrao, 10) || 1)),
+        : parseDiasCobrancaInput(values.diaCobrancaPadrao),
     contratoTemplateHtml: values.contratoTemplateHtml.trim() || undefined,
     contratoAssinatura: values.contratoAssinatura,
     contratoEnviarAutomaticoEmail: values.contratoEnviarAutomaticoEmail,

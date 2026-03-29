@@ -71,7 +71,7 @@ export interface Plano {
   parcelasMaxAnuidade?: number;
   permiteRenovacaoAutomatica: boolean;
   permiteCobrancaRecorrente: boolean;
-  diaCobrancaPadrao?: number;
+  diaCobrancaPadrao?: number[];
   contratoTemplateHtml?: string;
   contratoAssinatura: ModoAssinaturaContrato;
   contratoEnviarAutomaticoEmail: boolean;

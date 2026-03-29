@@ -257,8 +257,9 @@ export function PlanoForm({
                   Permite cobrança recorrente
                 </label>
                 <div className="space-y-1.5 md:max-w-60">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dia padrão de cobrança</label>
-                  <Input type="number" min={1} max={28} placeholder="1 a 28" {...register("diaCobrancaPadrao")} disabled={!form.permiteCobrancaRecorrente || form.tipo === "AVULSO"} className="border-border bg-secondary" />
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dias de cobranca</label>
+                  <Input placeholder="Ex: 5, 10, 15" {...register("diaCobrancaPadrao")} disabled={!form.permiteCobrancaRecorrente || form.tipo === "AVULSO"} className="border-border bg-secondary" />
+                  <p className="text-[10px] text-muted-foreground">Separados por virgula. Vazio = livre.</p>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <input type="checkbox" {...register("destaque")} />

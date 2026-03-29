@@ -98,6 +98,17 @@ const toBool = (v: unknown, fb = false): boolean => {
   return fb;
 };
 
+function normalizeDiasCobrancaPublic(value: unknown): number[] | undefined {
+  if (Array.isArray(value)) {
+    const dias = value.map(Number).filter((n) => Number.isFinite(n) && n >= 1 && n <= 28);
+    return dias.length > 0 ? dias.sort((a, b) => a - b) : undefined;
+  }
+  if (typeof value === "number" && Number.isFinite(value) && value >= 1 && value <= 28) {
+    return [value];
+  }
+  return undefined;
+}
+
 function normalizeTenant(raw: TenantApiResponse): Tenant {
   return {
     id: raw.id,
@@ -179,9 +190,7 @@ function normalizePlano(raw: PlanoApiRaw, tenantId: string): Plano {
       : Math.max(1, Math.floor(toNum(raw.parcelasMaxAnuidade, 1))),
     permiteRenovacaoAutomatica: toBool(raw.permiteRenovacaoAutomatica, tipo !== "AVULSO"),
     permiteCobrancaRecorrente: toBool(raw.permiteCobrancaRecorrente),
-    diaCobrancaPadrao: raw.diaCobrancaPadrao == null
-      ? undefined
-      : Math.max(1, Math.floor(toNum(raw.diaCobrancaPadrao, 1))),
+    diaCobrancaPadrao: normalizeDiasCobrancaPublic(raw.diaCobrancaPadrao),
     contratoTemplateHtml: raw.contratoTemplateHtml?.trim() || undefined,
     contratoAssinatura: raw.contratoAssinatura ?? "AMBAS",
     contratoEnviarAutomaticoEmail: toBool(raw.contratoEnviarAutomaticoEmail),
