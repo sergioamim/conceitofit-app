@@ -2,6 +2,7 @@ import {
   Activity,
   BarChart3,
   Building2,
+  CreditCard,
   FileText,
   Globe,
   LayoutDashboard,
@@ -50,6 +51,7 @@ export const backofficeNavGroups: BackofficeNavGroup[] = [
       { href: "/admin/financeiro/planos", label: "Planos da Plataforma", icon: Wallet },
       { href: "/admin/financeiro/contratos", label: "Contratos da Plataforma", icon: FileText },
       { href: "/admin/financeiro/cobrancas", label: "Cobranças da Plataforma", icon: Wallet },
+      { href: "/admin/financeiro/gateways", label: "Gateways de Pagamento", icon: CreditCard },
     ],
   },
   {
