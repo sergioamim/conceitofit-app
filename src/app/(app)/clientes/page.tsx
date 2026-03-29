@@ -6,10 +6,8 @@ import dynamic from "next/dynamic";
 import { Search, Plus, X, Download } from "lucide-react";
 import { useTableSearchParams } from "@/hooks/use-table-search-params";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import {
-  listAlunosPageService,
-  updateAlunoService,
-} from "@/lib/comercial/runtime";
+import { updateAlunoService } from "@/lib/comercial/runtime";
+import { useClientes } from "@/lib/query/use-clientes";
 import { useTenantContext } from "@/hooks/use-session-context";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { HoverPopover } from "@/components/shared/hover-popover";
@@ -45,107 +43,49 @@ const SEXO_LABEL: Record<string, string> = { M: "Masculino", F: "Feminino", OUTR
 function ClientesPageContent() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const router = useRouter();
-  const { tenantId, tenantResolved, setTenant } = useTenantContext();
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const { tenantId, tenantResolved } = useTenantContext();
   const { q, status: filtro, page, size: pageSize, setParams, clearParams, hasActiveFilters } = useTableSearchParams();
   const [buscaInput, setBuscaInput] = useState(q);
-  const busca = q; // alias para manter a funcionalidade preexistente da view
+  const busca = q;
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [totalClientes, setTotalClientes] = useState(0);
-  const [metaPage, setMetaPage] = useState(0);
-  const [metaSize, setMetaSize] = useState(20);
-  const [statusTotals, setStatusTotals] = useState({
-    TODOS: 0,
-    ATIVO: 0,
-    SUSPENSO: 0,
-    INATIVO: 0,
-    CANCELADO: 0,
-  });
   const [resumoOpen, setResumoOpen] = useState(false);
   const [clienteResumo, setClienteResumo] = useState<Aluno | null>(null);
   const [liberandoSuspensao, setLiberandoSuspensao] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const applyLoadedData = useCallback((paged: Awaited<ReturnType<typeof listAlunosPageService>>) => {
-    setAlunos(paged.items);
-    setHasNextPage(paged.hasNext);
-    setTotalClientes(paged.total ?? paged.items.length);
-    setMetaPage(paged.page);
-    setMetaSize(paged.size);
+  const statusFilter = filtro === "TODOS" ? undefined : (filtro as StatusAluno);
+  const { data: queryData, isLoading: loading, error: queryError, refetch } = useClientes({
+    tenantId,
+    tenantResolved,
+    status: statusFilter,
+    page,
+    size: pageSize,
+  });
 
-    const totais = paged.totaisStatus;
-    const todos = totais?.total ?? paged.total ?? paged.items.length;
-    const ativos = totais?.totalAtivo ?? 0;
-    const suspensos = totais?.totalSuspenso ?? 0;
-    const inativos = totais?.totalInativo ?? 0;
-    const cancelados = totais?.totalCancelado ?? totais?.cancelados ?? 0;
+  const loadError = queryError ? normalizeErrorMessage(queryError) : null;
 
-    setStatusTotals({
+  const alunos = queryData?.items ?? [];
+  const hasNextPage = queryData?.hasNext ?? false;
+  const totalClientes = queryData?.total ?? alunos.length;
+  const metaPage = queryData?.page ?? 0;
+  const metaSize = queryData?.size ?? 20;
+
+  const statusTotals = useMemo(() => {
+    const totais = queryData?.totaisStatus;
+    const todos = totais?.total ?? queryData?.total ?? alunos.length;
+    return {
       TODOS: todos,
-      ATIVO: ativos,
-      SUSPENSO: suspensos,
-      INATIVO: inativos,
-      CANCELADO: cancelados,
-    });
-  }, []);
-
-  const loadSnapshot = useCallback(async (currentTenantId: string) => {
-    return listAlunosPageService({
-      tenantId: currentTenantId,
-      status: filtro === "TODOS" ? undefined : filtro,
-      page,
-      size: pageSize,
-    });
-  }, [filtro, page, pageSize]);
-
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setLoadError(null);
-
-    try {
-      const snapshot = await loadSnapshot(tenantId);
-      applyLoadedData(snapshot);
-    } catch (error) {
-      const message = normalizeErrorMessage(error);
-      const normalizedMessage = message.toLowerCase();
-      const shouldRetryWithTenantSync =
-        normalizedMessage.includes("x-context-id sem unidade ativa") ||
-        normalizedMessage.includes("tenantid diverge da unidade ativa do contexto informado");
-
-      if (!shouldRetryWithTenantSync) {
-        setLoadError(message);
-        return;
-      }
-
-      try {
-        await setTenant(tenantId);
-        const snapshot = await loadSnapshot(tenantId);
-        applyLoadedData(snapshot);
-      } catch (retryError) {
-        setLoadError(normalizeErrorMessage(retryError));
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [applyLoadedData, loadSnapshot, setTenant, tenantId]);
+      ATIVO: totais?.totalAtivo ?? 0,
+      SUSPENSO: totais?.totalSuspenso ?? 0,
+      INATIVO: totais?.totalInativo ?? 0,
+      CANCELADO: totais?.totalCancelado ?? (totais as Record<string, number> | undefined)?.cancelados ?? 0,
+    };
+  }, [queryData, alunos.length]);
 
   useEffect(() => {
-    // page reseta sozinho com a exclusão da chave na URL, porém não alteramos o custom hook diretamente
-    setAlunos([]);
-    setHasNextPage(false);
-    setTotalClientes(0);
-    setLoadError(null);
     setSelectedIds([]);
   }, [tenantId]);
 
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void load();
-  }, [load, tenantId, tenantResolved]);
   useEffect(() => {
     setBuscaInput(q);
   }, [q]);
@@ -237,7 +177,7 @@ function ClientesPageContent() {
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
         onDone={async (created, opts) => {
-          await load();
+          await refetch();
           if (created && opts?.openSale) {
             setWizardOpen(false);
             router.push(`/vendas/nova?clienteId=${encodeURIComponent(created.id)}&prefill=1`);
@@ -516,7 +456,7 @@ function ClientesPageContent() {
                       setClienteResumo((prev) =>
                         prev ? { ...prev, status: "ATIVO", suspensao: undefined } : prev
                       );
-                      await load();
+                      await refetch();
                     } catch (error) {
                       console.error("[clientes] Falha ao liberar suspensão", error);
                       window.alert("Não foi possível liberar a suspensão no momento.");
