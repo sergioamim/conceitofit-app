@@ -11,11 +11,7 @@ import {
   registrarExecucaoTreinoWorkspace,
 } from "@/lib/tenant/treinos/workspace";
 import type { Treino, TreinoItem, TreinoExecucao } from "@/lib/types";
-
-function formatDate(v?: string) {
-  if (!v) return "—";
-  return new Date(`${v}T00:00:00`).toLocaleDateString("pt-BR");
-}
+import { formatDate } from "@/lib/formatters";
 
 const STATUS_CICLO_LABEL: Record<string, { label: string; class: string }> = {
   PLANEJADO: { label: "Planejado", class: "bg-secondary text-muted-foreground" },
@@ -128,7 +124,7 @@ function TreinoCard({
           <p className="text-xs text-muted-foreground">
             {treino.funcionarioNome ? `Prof. ${treino.funcionarioNome}` : ""}
             {treino.funcionarioNome && treino.dataInicio ? " · " : ""}
-            {treino.dataInicio ? `${formatDate(treino.dataInicio)} - ${formatDate(treino.dataFim)}` : ""}
+            {treino.dataInicio ? `${formatDate(treino.dataInicio)} - ${treino.dataFim ? formatDate(treino.dataFim) : "—"}` : ""}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

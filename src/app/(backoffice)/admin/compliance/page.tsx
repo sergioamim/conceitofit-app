@@ -53,21 +53,9 @@ import type {
   SolicitacaoExclusaoStatus,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatDate } from "@/lib/formatters";
 
 /* ── Helpers ──────────────────────────────────── */
-
-function formatDate(ts: string | undefined): string {
-  if (!ts) return "—";
-  try {
-    return new Date(ts).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return ts;
-  }
-}
 
 function formatNumber(n: number): string {
   return n.toLocaleString("pt-BR");
@@ -200,7 +188,7 @@ function AcademiasTable({
                   </span>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {formatDate(a.ultimaSolicitacaoExclusao)}
+                  {a.ultimaSolicitacaoExclusao ? formatDate(a.ultimaSolicitacaoExclusao) : "—"}
                 </TableCell>
               </TableRow>
             ))

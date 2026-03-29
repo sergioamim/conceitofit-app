@@ -5,6 +5,7 @@ import { getBusinessTodayIso } from "@/lib/business-date";
 import { getGradeMuralSnapshotApi, type GradeMuralItem, type GradeMuralSnapshot } from "@/lib/api/grade-mural";
 import type { DiaSemana } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatDate } from "@/lib/formatters";
 
 const DIA_LABEL: Record<DiaSemana, string> = {
   SEG: "Segunda",
@@ -15,11 +16,6 @@ const DIA_LABEL: Record<DiaSemana, string> = {
   SAB: "Sábado",
   DOM: "Domingo",
 };
-
-function formatDate(dateIso: string): string {
-  if (!dateIso) return "--/--/----";
-  return new Date(`${dateIso}T00:00:00`).toLocaleDateString("pt-BR");
-}
 
 function formatRange(start: string, end: string): string {
   return `${start} - ${end}`;

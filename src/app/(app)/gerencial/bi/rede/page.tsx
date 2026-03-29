@@ -16,6 +16,7 @@ import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
+import { formatBRL, formatPercent } from "@/lib/formatters";
 
 const ALL_TENANTS = "__ALL__";
 const SEGMENTO_OPTIONS: Array<{ value: BiSegmento; label: string }> = [
@@ -31,17 +32,6 @@ const SEGMENTO_OPTIONS: Array<{ value: BiSegmento; label: string }> = [
 
 function monthRangeFromNow() {
   return getBusinessMonthRange();
-}
-
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatPercent(value: number) {
-  return `${value.toLocaleString("pt-BR", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  })}%`;
 }
 
 function downloadCsv(filename: string, content: string) {

@@ -22,10 +22,6 @@ export const TIPO_LABEL: Record<FinancialAccountType, string> = {
   PATRIMONIO: "Patrimonio",
 };
 
-export function formatBRL(value: number) {
-  return Number(value ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
 export type ContasContabeisWorkspace = ReturnType<typeof useContasContabeisWorkspace>;
 
 export interface NovaContaForm {

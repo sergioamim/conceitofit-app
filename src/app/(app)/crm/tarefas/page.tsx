@@ -30,6 +30,7 @@ import type {
   StatusProspect,
 } from "@/lib/types";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { formatDateTime } from "@/lib/formatters";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { Button } from "@/components/ui/button";
 import {
@@ -85,13 +86,6 @@ function toForm(task?: CrmTask | null): FormState {
     vencimentoData: date,
     vencimentoHora: time.slice(0, 5),
   };
-}
-
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
 }
 
 export default function CrmTarefasPage() {

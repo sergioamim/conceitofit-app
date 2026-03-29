@@ -6,12 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRightLeft, Camera, KeyRound, MoreVertical, Pencil, Trash2 } from "lucide-react";
-
-function formatDate(d: string) {
-  const [year, month, day] = d.split("-");
-  if (!year || !month || !day) return d;
-  return `${day}/${month}/${year}`;
-}
+import { formatDate } from "@/lib/formatters";
 
 export function ClienteHeader({
   aluno,

@@ -3,8 +3,8 @@
 import { CheckCircle2 } from "lucide-react";
 import type { Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { formatBRL } from "@/lib/formatters";
-import { formatDate, type CriarAlunoComMatriculaResponse } from "./wizard-types";
+import { formatBRL, formatDate } from "@/lib/formatters";
+import { type CriarAlunoComMatriculaResponse } from "./wizard-types";
 
 export function StepSucesso({ result, plano, onClose }: { result: CriarAlunoComMatriculaResponse; plano?: Plano; onClose: () => void }) {
   return (

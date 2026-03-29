@@ -5,14 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Aluno, Plano, Tenant, Venda } from "@/lib/types";
-
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("pt-BR");
-}
+import { formatBRL, formatDateTime } from "@/lib/formatters";
 
 function escapeHtml(value: string) {
   return value

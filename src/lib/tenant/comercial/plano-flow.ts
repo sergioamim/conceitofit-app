@@ -1,3 +1,4 @@
+import { formatBRL } from "@/lib/formatters";
 import type {
   Convenio,
   Matricula,
@@ -62,11 +63,6 @@ export const STATUS_FLUXO_COMERCIAL_LABEL: Record<StatusFluxoComercial, string> 
   CANCELADO: "Cancelado",
   VENCIDO: "Vencido",
 };
-
-function formatBRL(value: number) {
-  const safe = Number.isFinite(value) ? value : 0;
-  return safe.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 export function buildPlanoVendaItems(plano: Plano, parcelasAnuidade: number, options?: { isentarMatricula?: boolean }): PlanoVendaItemDraft[] {
   const items: PlanoVendaItemDraft[] = [

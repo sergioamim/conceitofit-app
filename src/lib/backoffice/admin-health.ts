@@ -14,16 +14,6 @@ export function formatPercent(value: number) {
   })}%`;
 }
 
-export function formatDateTime(value?: string) {
-  if (!value) return "Sem login recente";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "Sem login recente";
-  return parsed.toLocaleString("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
-
 export function resolveContractBadgeClass(status: AcademiaContractStatus) {
   switch (status) {
     case "ATIVO":

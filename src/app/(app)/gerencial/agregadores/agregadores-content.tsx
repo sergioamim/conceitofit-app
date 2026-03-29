@@ -15,19 +15,9 @@ import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { AgregadorRepasseStatus, AgregadorTransacao } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
+import { formatBRL, formatDateTime } from "@/lib/formatters";
 
 type RepasseFiltro = WithFilterAll<AgregadorRepasseStatus>;
-
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("pt-BR");
-}
 
 function getRepasseClass(status: AgregadorRepasseStatus) {
   if (status === "LIQUIDADO") return "bg-gym-teal/15 text-gym-teal";

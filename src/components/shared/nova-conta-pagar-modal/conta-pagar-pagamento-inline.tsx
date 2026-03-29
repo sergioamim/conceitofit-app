@@ -11,7 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PagamentoNoCadastroState } from "./conta-pagar-types";
-import { FORMA_PAGAMENTO_LABEL, formatBRL } from "./conta-pagar-types";
+import { FORMA_PAGAMENTO_LABEL } from "./conta-pagar-types";
+import { formatBRL } from "@/lib/formatters";
 
 type ContaPagarPagamentoInlineProps = {
   registrarComoPaga: boolean;

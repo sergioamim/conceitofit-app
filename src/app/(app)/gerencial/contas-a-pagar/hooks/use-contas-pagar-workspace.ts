@@ -51,18 +51,6 @@ export const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   OUTROS: "Outros",
 };
 
-export function formatBRL(value: number) {
-  return Number(value ?? 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-export function formatDate(value?: string) {
-  if (!value) return "—";
-  return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR");
-}
-
 export function contaTotal(conta: ContaPagar) {
   return Math.max(
     0,

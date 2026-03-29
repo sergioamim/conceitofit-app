@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { ListErrorState } from "@/components/shared/list-states";
+import { formatBRL } from "@/lib/formatters";
 
 const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   FOLHA: "Folha",
@@ -30,10 +31,6 @@ const GRUPO_DRE_LABEL: Record<GrupoDre, string> = {
   DESPESA_FINANCEIRA: "Despesa financeira",
   IMPOSTOS: "Impostos",
 };
-
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 function percentLabel(value: number) {
   return `${value.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;

@@ -1,7 +1,7 @@
+import { formatDateTime as formatDateTimeCanonical } from "@/lib/formatters";
+
 const TIMEZONE = "America/Sao_Paulo";
 const DISPLAY_LOCALE = "pt-BR";
-const NO_VALUE_LABEL = "—";
-
 const EMPTY_JOB_ALIAS_DATE = "";
 
 const JOB_ALIAS_FORMAT_OPTIONS = {
@@ -12,14 +12,7 @@ const JOB_ALIAS_FORMAT_OPTIONS = {
   timeZone: TIMEZONE,
 } as const;
 
-const DATE_TIME_FORMAT_OPTIONS = {
-  dateStyle: "short",
-  timeStyle: "short",
-  timeZone: TIMEZONE,
-} as const;
-
 const jobAliasDateFormatter = new Intl.DateTimeFormat(DISPLAY_LOCALE, JOB_ALIAS_FORMAT_OPTIONS);
-const dateTimeFormatter = new Intl.DateTimeFormat(DISPLAY_LOCALE, DATE_TIME_FORMAT_OPTIONS);
 
 function normalizeIsoString(value: string): string {
   const trimmed = value.trim();
@@ -30,24 +23,20 @@ function normalizeIsoString(value: string): string {
   return `${trimmed}Z`;
 }
 
-function formatSafeTimestamp(
-  value: string | null | undefined,
-  fallback: string
-): string {
-  if (!value) return fallback;
-  const normalized = normalizeIsoString(value);
-  if (!normalized) return fallback;
-  const timestamp = Date.parse(normalized);
-  if (Number.isNaN(timestamp)) return fallback;
-  return fallback === EMPTY_JOB_ALIAS_DATE
-    ? jobAliasDateFormatter.format(new Date(timestamp))
-    : dateTimeFormatter.format(new Date(timestamp));
-}
-
 export function formatJobAliasDate(value?: string | null): string {
-  return formatSafeTimestamp(value, EMPTY_JOB_ALIAS_DATE);
+  if (!value) return EMPTY_JOB_ALIAS_DATE;
+  const normalized = normalizeIsoString(value);
+  if (!normalized) return EMPTY_JOB_ALIAS_DATE;
+  const timestamp = Date.parse(normalized);
+  if (Number.isNaN(timestamp)) return EMPTY_JOB_ALIAS_DATE;
+  return jobAliasDateFormatter.format(new Date(timestamp));
 }
 
 export function formatDateTime(value?: string | null): string {
-  return formatSafeTimestamp(value, NO_VALUE_LABEL);
+  if (!value) return "—";
+  const normalized = normalizeIsoString(value);
+  if (!normalized) return "—";
+  const timestamp = Date.parse(normalized);
+  if (Number.isNaN(timestamp)) return "—";
+  return formatDateTimeCanonical(new Date(timestamp).toISOString());
 }

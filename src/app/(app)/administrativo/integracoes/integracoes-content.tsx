@@ -14,6 +14,7 @@ import { INTEGRACAO_STATUS_LABEL, summarizeIntegracoesOperacionais } from "@/lib
 import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { IntegracaoOperacional, IntegracaoOperacionalStatus } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatDateTime } from "@/lib/formatters";
 import { PageError } from "@/components/shared/page-error";
 
 type StatusFiltro = IntegracaoOperacionalStatus | "TODAS";
@@ -29,11 +30,6 @@ function getSeverityClass(severity: "INFO" | "WARN" | "ERROR") {
   if (severity === "ERROR") return "text-gym-danger";
   if (severity === "WARN") return "text-gym-warning";
   return "text-gym-teal";
-}
-
-function formatDateTime(value?: string) {
-  if (!value) return "Sem execução";
-  return new Date(value).toLocaleString("pt-BR");
 }
 
 export function IntegracoesContent() {
@@ -205,11 +201,11 @@ export function IntegracoesContent() {
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-lg border border-border bg-secondary/20 p-3">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Última execução</p>
-                  <p className="mt-2 text-sm font-medium text-foreground">{formatDateTime(item.ultimaExecucaoEm)}</p>
+                  <p className="mt-2 text-sm font-medium text-foreground">{item.ultimaExecucaoEm ? formatDateTime(item.ultimaExecucaoEm) : "Sem execução"}</p>
                 </div>
                 <div className="rounded-lg border border-border bg-secondary/20 p-3">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Último sucesso</p>
-                  <p className="mt-2 text-sm font-medium text-foreground">{formatDateTime(item.ultimaSucessoEm)}</p>
+                  <p className="mt-2 text-sm font-medium text-foreground">{item.ultimaSucessoEm ? formatDateTime(item.ultimaSucessoEm) : "Sem execução"}</p>
                 </div>
                 <div className="rounded-lg border border-border bg-secondary/20 p-3">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Fila pendente</p>

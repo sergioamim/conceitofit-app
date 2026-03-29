@@ -11,18 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
+import { formatBRL, formatDate } from "@/lib/formatters";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 type PagamentoWithAluno = PagamentoComAluno & { aluno?: Aluno };
 type StatusFiltro = WithFilterAll<"PENDENTE" | "VENCIDO" | "PAGO" | "CANCELADO" | "EM_ABERTO">;
-
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(value: string) {
-  return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR");
-}
 
 function monthRangeFromNow() {
   return getBusinessMonthRange();

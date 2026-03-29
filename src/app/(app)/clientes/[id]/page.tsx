@@ -13,7 +13,8 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
-import { useClienteWorkspace, formatDate, formatBRL } from "./use-cliente-workspace";
+import { formatBRL, formatDate } from "@/lib/formatters";
+import { useClienteWorkspace } from "./use-cliente-workspace";
 import { ClienteDialogs } from "./cliente-dialogs";
 
 const NovaMatriculaModal = nextDynamic(

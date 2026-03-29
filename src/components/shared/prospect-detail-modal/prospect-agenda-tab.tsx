@@ -10,7 +10,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { STATUS_AG_LABEL, formatDate } from "./prospect-shared";
+import { formatDate } from "@/lib/formatters";
+import { STATUS_AG_LABEL } from "./prospect-shared";
 
 export type AgForm = {
   titulo: string;

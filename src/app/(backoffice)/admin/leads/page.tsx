@@ -21,6 +21,7 @@ import {
 import type { LeadB2b, LeadB2bStats, StatusLeadB2b } from "@/lib/shared/types/lead-b2b";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatDateTime } from "@/lib/formatters";
 
 const STATUS_OPTIONS: { value: StatusLeadB2b; label: string }[] = [
   { value: "NOVO", label: "Novo" },
@@ -190,21 +191,6 @@ export default function AdminLeadsPage() {
     }
   }
 
-  function formatDate(dateStr: string | undefined) {
-    if (!dateStr) return "—";
-    try {
-      return new Date(dateStr).toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return dateStr;
-    }
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <header className="space-y-2">
@@ -349,7 +335,7 @@ export default function AdminLeadsPage() {
                         {STATUS_OPTIONS.find((o) => o.value === l.status)?.label ?? l.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(l.dataCriacao)}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{l.dataCriacao ? formatDateTime(l.dataCriacao) : "—"}</td>
                   </>
                 )}
                 page={page}
@@ -413,9 +399,9 @@ export default function AdminLeadsPage() {
                           {selectedLead.utmCampaign ? ` / ${selectedLead.utmCampaign}` : ""}
                         </p>
                       )}
-                      <p className="text-xs">Criado em: {formatDate(selectedLead.dataCriacao)}</p>
+                      <p className="text-xs">Criado em: {selectedLead.dataCriacao ? formatDateTime(selectedLead.dataCriacao) : "—"}</p>
                       {selectedLead.dataAtualizacao && (
-                        <p className="text-xs">Atualizado em: {formatDate(selectedLead.dataAtualizacao)}</p>
+                        <p className="text-xs">Atualizado em: {selectedLead.dataAtualizacao ? formatDateTime(selectedLead.dataAtualizacao) : "—"}</p>
                       )}
                     </div>
                   </div>

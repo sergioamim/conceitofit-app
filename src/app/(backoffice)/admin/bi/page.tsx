@@ -10,14 +10,7 @@ import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { listBackofficeAcademiasApi } from "@/lib/api/backoffice";
 import { getAdminBiExecutivoCompleto, type AdminBiExecutivoData } from "@/lib/api/admin-bi";
 import type { Academia } from "@/lib/types";
-
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-}
-
-function formatPercent(value: number) {
-  return `${value.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
-}
+import { formatBRL, formatPercent } from "@/lib/formatters";
 
 function formatDelta(value: number, mode: "percent" | "currency" | "count") {
   if (mode === "currency") {

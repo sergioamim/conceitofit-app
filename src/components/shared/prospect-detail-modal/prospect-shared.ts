@@ -25,13 +25,4 @@ export const STATUS_AG_LABEL: Record<StatusAgendamento, string> = {
   CANCELADO: "Cancelado",
 };
 
-export function formatDatetime(dt: string) {
-  const d = new Date(dt);
-  return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-}
-
-export function formatDate(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
 export type Tab = "detalhes" | "conversa" | "agenda";

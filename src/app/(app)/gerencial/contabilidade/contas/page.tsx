@@ -10,10 +10,10 @@ import { ListErrorState } from "@/components/shared/list-states";
 import { ExportMenu } from "@/components/shared/export-menu";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import type { FinancialAccountType } from "@/lib/types";
+import { formatBRL } from "@/lib/formatters";
 import {
   useContasContabeisWorkspace,
   TIPO_LABEL,
-  formatBRL,
   type NovaContaForm,
 } from "./hooks/use-contas-contabeis-workspace";
 

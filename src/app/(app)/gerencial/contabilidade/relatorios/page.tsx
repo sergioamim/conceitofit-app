@@ -12,15 +12,7 @@ import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import { getBalancoPatrimonialApi, getFluxoCaixaApi } from "@/lib/api/financial";
 import type { BalancoPatrimonial, FluxoCaixa } from "@/lib/types";
-
-function formatBRL(v: number) {
-  return Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(v?: string) {
-  if (!v) return "—";
-  return new Date(`${v}T00:00:00`).toLocaleDateString("pt-BR");
-}
+import { formatBRL, formatDate } from "@/lib/formatters";
 
 type ReportType = "balanco" | "fluxo-caixa";
 

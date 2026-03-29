@@ -24,18 +24,12 @@ import {
 import type { Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
+import { formatDate } from "@/lib/formatters";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 const PAGE_SIZE = 12;
 
 type VigenciaFilter = WithFilterAll<"VIGENTE" | "VENCENDO" | "VENCIDO">;
-
-function formatDate(value?: string): string {
-  if (!value) return "-";
-  const [year, month, day] = value.slice(0, 10).split("-");
-  if (!year || !month || !day) return value;
-  return `${day}/${month}/${year}`;
-}
 
 function resolveAssignedStatusBadgeVariant(status: string) {
   if (status === "ENCERRADO" || status === "SUBSTITUIDO") return "destructive" as const;
@@ -397,7 +391,7 @@ export default function TreinosAtribuidosPage() {
                         {governance.customizadoLocalmente ? <Badge variant="outline">Customizado</Badge> : null}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {formatDate(workout.dataInicio)} até {formatDate(workout.dataFim)}
+                        {workout.dataInicio ? formatDate(workout.dataInicio) : "-"} até {workout.dataFim ? formatDate(workout.dataFim) : "-"}
                       </p>
                     </div>
                   </td>

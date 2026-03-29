@@ -45,15 +45,6 @@ const EMPTY_TEMPLATE_TOTALS: TreinoTemplateTotais = {
   comPendencias: 0,
 };
 
-export function formatDateTime(value?: string): string {
-  if (!value) return "-";
-  const [datePart, timePart] = value.split("T");
-  const [year, month, day] = datePart.split("-");
-  if (!year || !month || !day) return value;
-  const time = timePart?.slice(0, 5);
-  return time ? `${day}/${month}/${year} ${time}` : `${day}/${month}/${year}`;
-}
-
 export function resolveTemplateStatusBadgeVariant(status?: string): "secondary" | "outline" | "destructive" {
   if (status === "ARQUIVADO" || status === "CANCELADO") return "destructive";
   if (status === "RASCUNHO" || status === "EM_REVISAO") return "outline";

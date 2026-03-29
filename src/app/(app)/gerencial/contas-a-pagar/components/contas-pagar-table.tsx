@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { isContaPagarEmAberto, isContaPagarPendente } from "@/lib/domain/status-helpers";
-import { ContasPagarWorkspace, formatDate, formatBRL, contaTotal, CATEGORIA_LABEL, GRUPO_DRE_LABEL } from "../hooks/use-contas-pagar-workspace";
+import { formatBRL, formatDate } from "@/lib/formatters";
+import { ContasPagarWorkspace, contaTotal, CATEGORIA_LABEL, GRUPO_DRE_LABEL } from "../hooks/use-contas-pagar-workspace";
 
 interface ContasPagarTableProps {
   workspace: ContasPagarWorkspace;

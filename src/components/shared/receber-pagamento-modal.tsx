@@ -8,16 +8,13 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatBRL } from "@/lib/formatters";
 
 type ReceberPagamentoFormValues = {
   dataPagamento: string;
   formaPagamento: TipoFormaPagamento | "";
   observacoes: string;
 };
-
-function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 export function ReceberPagamentoModal({
   pagamento,

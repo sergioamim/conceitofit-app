@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useTreinosWorkspace, formatDateTime, resolveTemplateStatusBadgeVariant, getTemplateDisplayName } from "./use-treinos-workspace";
+import { formatDateTime } from "@/lib/formatters";
+import { useTreinosWorkspace, resolveTemplateStatusBadgeVariant, getTemplateDisplayName } from "./use-treinos-workspace";
 import { AssignmentDialog, ArchiveDialog } from "./treinos-dialogs";
 
 export default function TreinosPage() {
@@ -299,7 +300,7 @@ export default function TreinosPage() {
                         {template.professorNome ?? "Professor não informado"}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        Atualizado em {formatDateTime(template.atualizadoEm)}
+                        Atualizado em {template.atualizadoEm ? formatDateTime(template.atualizadoEm) : "-"}
                       </span>
                     </div>
                   </td>

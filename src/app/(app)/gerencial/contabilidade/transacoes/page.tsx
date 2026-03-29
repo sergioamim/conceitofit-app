@@ -20,15 +20,7 @@ import {
   cancelTransactionApi,
 } from "@/lib/api/financial";
 import type { FinancialTransaction, FinancialTransactionType, FinancialTransactionStatus } from "@/lib/types";
-
-function formatBRL(v: number) {
-  return Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(v?: string) {
-  if (!v) return "—";
-  return new Date(`${v}T00:00:00`).toLocaleDateString("pt-BR");
-}
+import { formatBRL, formatDate } from "@/lib/formatters";
 
 const TIPO_LABEL: Record<FinancialTransactionType, string> = {
   RECEITA: "Receita",

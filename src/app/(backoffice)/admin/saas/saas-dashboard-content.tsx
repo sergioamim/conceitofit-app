@@ -20,20 +20,12 @@ import type {
   SaasSeriesResponse,
   AcademiaOnboarding,
 } from "@/lib/api/admin-saas-metrics";
+import { formatBRL, formatPercent } from "@/lib/formatters";
 
-function formatBRL(value: number): string {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatPercent(value: number): string {
-  return `${value.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
-}
-
-function formatDate(iso: string): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleDateString("pt-BR");
-}
+const fmtDate = (iso: string): string => {
+  if (!iso) return "\u2014";
+  return new Date(iso).toLocaleDateString("pt-BR");
+};
 
 function formatNumber(n: number): string {
   return n.toLocaleString("pt-BR");
@@ -255,10 +247,10 @@ export function SaasDashboardContent({
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {formatDate(a.dataCriacao)}
+                      {fmtDate(a.dataCriacao)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {formatDate(a.dataOnboarding)}
+                      {fmtDate(a.dataOnboarding)}
                     </td>
                   </tr>
                 ))}
