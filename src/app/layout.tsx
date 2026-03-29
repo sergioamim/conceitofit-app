@@ -3,6 +3,8 @@ import { Space_Grotesk, IBM_Plex_Sans, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import Script from "next/script";
 import { AppQueryProvider } from "@/lib/query/query-provider";
+import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import "./globals.css";
 
 const display = Space_Grotesk({
@@ -73,6 +75,8 @@ export default function RootLayout({
               />
             )}
             {children}
+            <ServiceWorkerRegister />
+            <InstallPrompt />
           </AppQueryProvider>
         </ThemeProvider>
       </body>
