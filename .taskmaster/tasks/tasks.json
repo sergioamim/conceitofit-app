@@ -9886,14 +9886,14 @@
         "description": "Testar navegação entre steps, validação por step, draft persistence, submit final.",
         "details": "Criar tests/components/novo-cliente-wizard.test.tsx. Testar happy path (dados válidos em todos os steps → submit). Testar error path (validação falha em cada step). Testar draft persistence (recarregar mantém dados).",
         "testStrategy": "Happy path + error path cobertos. Draft persistence testado.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "230"
         ],
         "priority": "low",
         "complexity": 4,
         "subtasks": [],
-        "updatedAt": "2026-03-29T11:43:15.927Z"
+        "updatedAt": "2026-03-29T11:46:58.948Z"
       },
       {
         "id": "236",
@@ -10072,9 +10072,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T11:46:42.211Z",
+      "lastModified": "2026-03-29T11:46:58.948Z",
       "taskCount": 248,
-      "completedCount": 237,
+      "completedCount": 238,
       "tags": [
         "master"
       ]
