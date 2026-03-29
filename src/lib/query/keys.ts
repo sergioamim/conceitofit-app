@@ -11,4 +11,9 @@ export const queryKeys = {
     list: (tenantId: string, filters: Record<string, unknown>) =>
       ["pagamentos", "list", tenantId, filters] as const,
   },
+
+  matriculas: {
+    dashboard: (tenantId: string, monthKey: string, page: number) =>
+      ["matriculas", "dashboard", tenantId, monthKey, page] as const,
+  },
 } as const;

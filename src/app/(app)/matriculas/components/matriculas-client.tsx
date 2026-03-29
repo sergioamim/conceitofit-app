@@ -1,19 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, RefreshCcw, XCircle } from "lucide-react";
-import {
-  cancelarMatriculaService,
-  getMatriculasDashboardMensalService,
-  renovarMatriculaService,
-} from "@/lib/tenant/comercial/runtime";
 import {
   buildMonthKeyFromDate,
   formatDateLabel,
   formatMonthLabel,
 } from "@/lib/tenant/comercial/matriculas-insights";
-import type { MatriculaDashboardMensalPlano, MatriculaDashboardMensalResult } from "@/lib/api/matriculas";
+import type { MatriculaDashboardMensalPlano } from "@/lib/api/matriculas";
 import {
   resolveContratoStatusFromPlano,
   resolveFluxoComercialStatus,
@@ -21,8 +16,8 @@ import {
   STATUS_FLUXO_COMERCIAL_LABEL,
 } from "@/lib/tenant/comercial/plano-flow";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { useMatriculas, useRenovarMatricula, useCancelarMatricula } from "@/lib/query/use-matriculas";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { isTenantContextErrorMessage } from "@/lib/shared/utils/error-codes";
 import { formatBRL } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { ListErrorState } from "@/components/shared/list-states";
@@ -81,74 +76,34 @@ function buildPieGradient(groups: MatriculaDashboardMensalPlano[]) {
 
 export function MatriculasClient() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
-  const { tenantId, tenantResolved, setTenant } = useTenantContext();
-  const [dashboard, setDashboard] = useState<MatriculaDashboardMensalResult | null>(null);
+  const { tenantId, tenantResolved } = useTenantContext();
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [selectedMonthKey, setSelectedMonthKey] = useState("");
 
   useEffect(() => {
     setSelectedMonthKey(buildMonthKeyFromDate(new Date()));
   }, []);
 
-  const loadSnapshot = useCallback(
-    async (currentTenantId: string, currentMonthKey: string, currentPage: number) =>
-      getMatriculasDashboardMensalService({
-        tenantId: currentTenantId,
-        mes: currentMonthKey,
-        page: currentPage,
-        size: PAGE_SIZE,
-      }),
-    []
-  );
+  const { data: dashboard, isLoading: loading, error: queryError, refetch } = useMatriculas({
+    tenantId,
+    tenantResolved,
+    monthKey: selectedMonthKey,
+    page,
+  });
 
-  const load = useCallback(async () => {
-    if (!tenantId || !selectedMonthKey) return;
-    setLoading(true);
-    setError(null);
-
-    try {
-      const snapshot = await loadSnapshot(tenantId, selectedMonthKey, page);
-      setDashboard(snapshot);
-    } catch (loadError) {
-      const message = normalizeErrorMessage(loadError);
-      if (!isTenantContextErrorMessage(message)) {
-        setDashboard(null);
-        setError(message || "Não foi possível carregar os contratos da unidade ativa.");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        await setTenant(tenantId);
-        const snapshot = await loadSnapshot(tenantId, selectedMonthKey, page);
-        setDashboard(snapshot);
-      } catch (retryError) {
-        setDashboard(null);
-        setError(normalizeErrorMessage(retryError));
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [loadSnapshot, page, selectedMonthKey, setTenant, tenantId]);
+  const error = queryError ? normalizeErrorMessage(queryError) : null;
+  const renovarMutation = useRenovarMatricula();
+  const cancelarMutation = useCancelarMatricula();
 
   useEffect(() => {
     setPage(0);
-    setDashboard(null);
     setFeedback(null);
-    setError(null);
     setActionId(null);
   }, [tenantId]);
 
-  useEffect(() => {
-    if (!tenantResolved || !tenantId || !selectedMonthKey) return;
-    void load();
-  }, [load, selectedMonthKey, tenantId, tenantResolved]);
-
-  const visibleRows = dashboard?.contratos.items ?? [];
+  const visibleRows = dashboard?.contratos?.items ?? [];
   const activeGroups = dashboard?.carteiraAtivaPorPlano ?? [];
   const summary = dashboard?.resumo;
   const visibleMonthLabel = formatMonthLabel(dashboard?.mes || selectedMonthKey);
@@ -198,7 +153,7 @@ export function MatriculasClient() {
         </div>
       ) : null}
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-4">
@@ -394,9 +349,8 @@ export function MatriculasClient() {
                               if (!tenantId) return;
                               setActionId(row.id);
                               try {
-                                await renovarMatriculaService({ tenantId, id: row.id });
+                                await renovarMutation.mutateAsync({ tenantId, id: row.id });
                                 setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} renovado.`);
-                                await load();
                               } finally {
                                 setActionId(null);
                               }
@@ -416,9 +370,8 @@ export function MatriculasClient() {
                               confirm("Cancelar esta contratação?", async () => {
                                 setActionId(row.id);
                                 try {
-                                  await cancelarMatriculaService({ tenantId, id: row.id });
+                                  await cancelarMutation.mutateAsync({ tenantId, id: row.id });
                                   setFeedback(`Contrato de ${row.aluno?.nome ?? "cliente"} cancelado.`);
-                                  await load();
                                 } finally {
                                   setActionId(null);
                                 }
