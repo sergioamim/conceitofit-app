@@ -64,7 +64,7 @@ export default function AcessoUnidadePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const createUserForm = useForm<CreateUserFormValues>({
-    resolver: zodResolver<CreateUserFormValues>(
+    resolver: zodResolver(
       academiaUserCreateBaseFormSchema.pick({
         name: true,
         email: true,

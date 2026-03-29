@@ -27,9 +27,7 @@ function CadastroRedirect() {
   }
 
   return (
-    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
-      Redirecionando para matricula...
-    </div>
+    <SuspenseFallback variant="page" message="Redirecionando para matrícula..." />
   );
 }
 
@@ -37,9 +35,7 @@ export default function StorefrontCadastroPage() {
   return (
     <Suspense
       fallback={
-        <SuspenseFallback variant="page" message="Carregando jornada pública..." />
-          Carregando...
-        </div>
+        <SuspenseFallback variant="page" message="Carregando..." />
       }
     >
       <CadastroRedirect />

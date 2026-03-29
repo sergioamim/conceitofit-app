@@ -129,7 +129,7 @@ export function IaContent() {
             value={template ?? ""}
             readOnly
             className="min-h-[220px] w-full rounded-md border border-border bg-secondary p-3 font-mono text-sm"
-            placeholder="Clique em "Exibir template" para carregar."
+            placeholder="Clique em Exibir template para carregar."
           />
         </CardContent>
       </Card>

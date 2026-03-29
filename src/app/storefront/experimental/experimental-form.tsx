@@ -50,7 +50,7 @@ export function ExperimentalForm({ tenantId }: { tenantId: string }) {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<ExperimentalFormValues>({
-    resolver: zodResolver<ExperimentalFormValues>(experimentalSchema),
+    resolver: zodResolver(experimentalSchema),
     defaultValues: {
       nome: "",
       telefone: "",

@@ -167,7 +167,7 @@ export function useRbacPageState() {
     },
   });
   const tenantUserForm = useForm<CreateTenantUserFormState>({
-    resolver: zodResolver<CreateTenantUserFormState>(
+    resolver: zodResolver(
       academiaUserCreateBaseFormSchema.pick({
         name: true,
         email: true,
