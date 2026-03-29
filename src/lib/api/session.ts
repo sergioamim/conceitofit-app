@@ -35,9 +35,19 @@ export interface ImpersonationSessionState {
   originalSession: AuthSession;
 }
 
-const ACCESS_TOKEN_KEY = "academia-auth-token";
-const REFRESH_TOKEN_KEY = "academia-auth-refresh-token";
-const TOKEN_TYPE_KEY = "academia-auth-token-type";
+import {
+  getAccessToken as getAccessTokenFromStore,
+  getRefreshToken as getRefreshTokenFromStore,
+  getTokenType as getTokenTypeFromStore,
+  saveTokens,
+  clearTokens,
+  getFetchCredentials,
+  shouldInjectAuthHeader,
+  hasActiveSession,
+} from "./token-store";
+
+export { getFetchCredentials, shouldInjectAuthHeader, hasActiveSession };
+
 const EXPIRES_IN_KEY = "academia-auth-expires-in";
 const USER_ID_KEY = "academia-auth-user-id";
 const USER_KIND_KEY = "academia-auth-user-kind";
@@ -88,18 +98,15 @@ function clearAuthStorageKeys(keys: string[]): void {
 }
 
 export function getAccessToken(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY) ?? undefined;
+  return getAccessTokenFromStore();
 }
 
 export function getAccessTokenType(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(TOKEN_TYPE_KEY) ?? undefined;
+  return getTokenTypeFromStore();
 }
 
 export function getRefreshToken(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(REFRESH_TOKEN_KEY) ?? undefined;
+  return getRefreshTokenFromStore();
 }
 
 export function getActiveTenantIdFromSession(): string | undefined {
@@ -293,9 +300,7 @@ export function clearImpersonationSession(): void {
 
 export function saveAuthSession(session: AuthSession): void {
   if (!isBrowser()) return;
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, session.token);
-  window.localStorage.setItem(REFRESH_TOKEN_KEY, session.refreshToken);
-  if (session.type) window.localStorage.setItem(TOKEN_TYPE_KEY, session.type);
+  saveTokens({ token: session.token, refreshToken: session.refreshToken, type: session.type });
   if (session.expiresIn != null) window.localStorage.setItem(EXPIRES_IN_KEY, String(session.expiresIn));
   if (session.userId) {
     window.localStorage.setItem(USER_ID_KEY, session.userId);
@@ -408,10 +413,8 @@ export function clearAvailableTenants(): void {
 }
 
 export function clearAuthSession(): void {
+  clearTokens();
   clearAuthStorageKeys([
-    ACCESS_TOKEN_KEY,
-    REFRESH_TOKEN_KEY,
-    TOKEN_TYPE_KEY,
     EXPIRES_IN_KEY,
     USER_ID_KEY,
     USER_KIND_KEY,

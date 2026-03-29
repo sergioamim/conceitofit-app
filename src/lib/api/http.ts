@@ -8,6 +8,8 @@ import {
   getRefreshToken,
   saveAuthSession,
   setActiveTenantId,
+  getFetchCredentials,
+  shouldInjectAuthHeader,
 } from "./session";
 import { captureApiError } from "@/lib/shared/sentry";
 
@@ -545,16 +547,18 @@ async function performApiRequest<T>(input: {
   if (requestId) {
     headers["X-Request-Id"] = requestId;
   }
-  const token = getAccessToken();
-  if (token) {
-    headers["Authorization"] = `${getAccessTokenType() ?? "Bearer"} ${token}`;
-  }
+  if (shouldInjectAuthHeader()) {
+    const token = getAccessToken();
+    if (token) {
+      headers["Authorization"] = `${getAccessTokenType() ?? "Bearer"} ${token}`;
+    }
 
-  const isAuthEndpoint = input.path.startsWith("/api/v1/auth/");
-  if (!token && !isAuthEndpoint) {
-    const loginToken = await tryAutoLogin();
-    if (loginToken) {
-      headers["Authorization"] = `${loginToken.type} ${loginToken.token}`;
+    const isAuthEndpoint = input.path.startsWith("/api/v1/auth/");
+    if (!token && !isAuthEndpoint) {
+      const loginToken = await tryAutoLogin();
+      if (loginToken) {
+        headers["Authorization"] = `${loginToken.type} ${loginToken.token}`;
+      }
     }
   }
 
@@ -578,6 +582,7 @@ async function performApiRequest<T>(input: {
       method,
       headers,
       body: requestBody,
+      credentials: getFetchCredentials(),
     });
 
     if (
