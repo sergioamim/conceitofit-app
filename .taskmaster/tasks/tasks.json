@@ -10665,9 +10665,10 @@
             "description": "Estabelecer as chaves de query padronizadas para a grade de atividades, incluindo tenantId e weekStart para garantir unicidade e granularidade do cache do TanStack Query.",
             "dependencies": [],
             "details": "Criar uma função utilitária ou constante para gerar as query keys no formato [\"grade\", tenantId, weekStart]. Estas chaves serão utilizadas por todos os hooks e chamadas relacionadas aos dados da grade de atividades, garantindo uma gestão de cache consistente.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Validar que a função geradora de chaves produz as chaves esperadas para diferentes combinações de tenantId e weekStart através de testes unitários simples. Observar a estrutura e o conteúdo das chaves geradas.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:09:49.887Z"
           },
           {
             "id": 2,
@@ -10677,9 +10678,10 @@
               1
             ],
             "details": "Implementar o hook useGrade() utilizando useQuery do TanStack Query. A função de fetch deve encapsular a lógica de Promise.all que atualmente busca os dados de grade, atividades, salas e funcionários. Configurar staleTime: 10 * 60 * 1000 (10 minutos) e refetchOnWindowFocus: true para o hook.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testar o hook isoladamente mockando a API e verificando se os dados são retornados corretamente, se o estado de loading e erro são gerenciados e se as configurações de staleTime e refetchOnWindowFocus estão aplicadas conforme o esperado em cenários de uso. ",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:09:49.898Z"
           },
           {
             "id": 3,
@@ -10689,9 +10691,10 @@
               2
             ],
             "details": "Remover as declarações de useState para dados de grade, atividades, salas, funcionários e a função load() de grade-content.tsx. Chamar o hook useGrade() e consumir seus retornos (data, isLoading, isError) para adaptar a renderização do componente, lidando com os estados de carregamento e erro.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Realizar testes de integração no componente grade-content.tsx verificando se a grade de atividades carrega corretamente na interface do usuário, se os estados de loading são visíveis e se os dados persistem no cache ao navegar para outras páginas e retornar ao componente da grade.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:09:49.909Z"
           },
           {
             "id": 4,
@@ -10701,12 +10704,13 @@
               3
             ],
             "details": "Adicionar a exportação do useGrade() no arquivo apropriado (e.g., src/hooks/useGrade.ts) para permitir seu uso em outras partes do sistema, se necessário. Validar que a grade carrega com cache, verificar que trocar a semana invalida o cache para a nova semana, e confirmar que voltar para uma semana anterior usa o cache existente para carregamento instantâneo.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Executar testes manuais abrangentes no navegador: carregar a grade, navegar para frente e para trás nas semanas, sair da página da grade e retornar para verificar o comportamento do cache (os dados devem carregar instantaneamente se estiverem em cache).",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:09:49.920Z"
           }
         ],
-        "updatedAt": "2026-03-30T05:09:42.587Z"
+        "updatedAt": "2026-03-30T05:09:49.920Z"
       },
       {
         "id": "270",
@@ -11640,7 +11644,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:09:42.588Z",
+      "lastModified": "2026-03-30T05:09:49.920Z",
       "taskCount": 287,
       "completedCount": 270,
       "tags": [

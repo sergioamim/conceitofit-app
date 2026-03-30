@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { listVendasPageService, resolveVendaFluxoStatusFromApi } from "@/lib/tenant/comercial/runtime";
+import { resolveVendaFluxoStatusFromApi } from "@/lib/tenant/comercial/runtime";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { TipoFormaPagamento, Venda } from "@/lib/types";
 import { STATUS_FLUXO_COMERCIAL_LABEL } from "@/lib/tenant/comercial/plano-flow";
@@ -19,11 +19,12 @@ import {
 } from "@/components/ui/select";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { TableCell } from "@/components/ui/table";
-
 import { formatBRL, formatDateTime } from "@/lib/formatters";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { ListErrorState } from "@/components/shared/list-states";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useVendas } from "@/lib/query/use-vendas";
 
 const TIPO_LABEL: Record<Venda["tipo"], string> = {
   PLANO: "Contrato",
@@ -94,14 +95,9 @@ function isValidFilterDate(value: string): boolean {
 export default function VendasPage() {
   const { tenantId, tenantResolved } = useTenantContext();
   const today = todayIso();
-  const [vendas, setVendas] = useState<Venda[]>([]);
+
+  // UI state (filtros e paginação)
   const [page, setPage] = useState(0);
-  const [hasNext, setHasNext] = useState(false);
-  const [totalRegistros, setTotalRegistros] = useState<number | undefined>(undefined);
-  const [totalGeralPeriodo, setTotalGeralPeriodo] = useState<number | undefined>(undefined);
-  const [totaisPorFormaPagamento, setTotaisPorFormaPagamento] = useState<Partial<Record<TipoFormaPagamento, number>>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [periodoInicio, setPeriodoInicio] = useState(today);
   const [periodoFim, setPeriodoFim] = useState(today);
   const [filtroTipo, setFiltroTipo] = useState<TipoFiltro>(FILTER_ALL);
@@ -110,51 +106,27 @@ export default function VendasPage() {
   const [inicioNormalizado, fimNormalizado] = useMemo(() => {
     if (!periodoInicio || !periodoFim) return ["", ""];
     if (!isValidFilterDate(periodoInicio) || !isValidFilterDate(periodoFim)) return ["", ""];
-    return periodoInicio <= periodoFim
-      ? [periodoInicio, periodoFim]
-      : [periodoFim, periodoInicio];
+    return periodoInicio <= periodoFim ? [periodoInicio, periodoFim] : [periodoFim, periodoInicio];
   }, [periodoInicio, periodoFim]);
 
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    if (!inicioNormalizado || !fimNormalizado) {
-      setError(`Período inválido. Use datas a partir de ${MIN_FILTER_YEAR} no formato YYYY-MM-DD.`);
-      setVendas([]);
-      setHasNext(false);
-      setTotalRegistros(undefined);
-      setTotalGeralPeriodo(undefined);
-      setTotaisPorFormaPagamento({});
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await listVendasPageService({
-        tenantId,
-        page,
-        size: 20,
-        dataInicio: inicioNormalizado || undefined,
-        dataFim: fimNormalizado || undefined,
-        tipoVenda: filtroTipo === FILTER_ALL ? undefined : filtroTipo,
-        formaPagamento: filtroFormaPagamento === FILTER_ALL ? undefined : filtroFormaPagamento,
-      });
-      setVendas(response.items);
-      setHasNext(response.hasNext);
-      setTotalRegistros(response.total);
-      setTotalGeralPeriodo(response.totalGeral);
-      setTotaisPorFormaPagamento(response.totaisPorFormaPagamento ?? {});
-    } catch {
-      setError("Não foi possível carregar as vendas no momento.");
-      setVendas([]);
-      setHasNext(false);
-      setTotalRegistros(undefined);
-      setTotalGeralPeriodo(undefined);
-      setTotaisPorFormaPagamento({});
-    } finally {
-      setLoading(false);
-    }
-  }, [filtroFormaPagamento, filtroTipo, fimNormalizado, inicioNormalizado, page, tenantId]);
+  // Server state via TanStack Query
+  const { data: response, isLoading: loading, error: queryError, refetch } = useVendas({
+    tenantId: tenantId ?? undefined,
+    tenantResolved,
+    page,
+    size: PAGE_SIZE,
+    dataInicio: inicioNormalizado || undefined,
+    dataFim: fimNormalizado || undefined,
+    tipoVenda: filtroTipo === FILTER_ALL ? undefined : filtroTipo,
+    formaPagamento: filtroFormaPagamento === FILTER_ALL ? undefined : filtroFormaPagamento,
+  });
+
+  const vendas = response?.items ?? [];
+  const hasNext = response?.hasNext ?? false;
+  const totalRegistros = response?.total;
+  const totalGeralPeriodo = response?.totalGeral;
+  const totaisPorFormaPagamento = response?.totaisPorFormaPagamento ?? {};
+  const error = queryError ? normalizeErrorMessage(queryError) : null;
 
   const totalPaginas = useMemo(() => {
     if (typeof totalRegistros === "number" && totalRegistros > 0) {
@@ -164,11 +136,6 @@ export default function VendasPage() {
     if (hasNext) return page + 2;
     return page + 1;
   }, [hasNext, page, totalRegistros]);
-
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void load();
-  }, [load, tenantId, tenantResolved]);
 
   const totalFiltrado = useMemo(() => {
     if (typeof totalGeralPeriodo === "number") return totalGeralPeriodo;
@@ -329,7 +296,7 @@ export default function VendasPage() {
         ))}
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 
       <PaginatedTable<Venda>
         columns={[

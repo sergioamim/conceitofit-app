@@ -6,6 +6,8 @@ import { resolveAlunoTenantService } from "@/lib/tenant/comercial/runtime";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import type { PagamentoVenda, Plano, Tenant, TipoVenda } from "@/lib/types";
 import type { SuggestionOption } from "@/components/shared/suggestion-input";
 
@@ -17,6 +19,7 @@ export type VendaWorkspace = ReturnType<typeof useVendaWorkspace>;
 
 export function useVendaWorkspace() {
   const tenantContext = useTenantContext();
+  const queryClient = useQueryClient();
   const [tenantId, setTenantId] = useState(() => tenantContext.tenantId);
   const tenantIdRef = useRef(tenantId);
   const [tenant, setTenant] = useState<Tenant | null>(tenantContext.tenant ?? null);
@@ -181,6 +184,10 @@ export function useVendaWorkspace() {
         voucherPercent: flow.cupomPercent,
       });
       clearCart();
+      // Invalidar cache de vendas para que a listagem reflita a nova venda
+      if (tenantId) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.vendas.all(tenantId) });
+      }
       items.setSelectedItemId("");
       items.setItemQuery("");
       items.setQtd("1");
