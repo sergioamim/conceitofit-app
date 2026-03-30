@@ -11524,7 +11524,7 @@
         "description": "agregadores-content.tsx e catraca-acessos/page.tsx usam useState para dados tabulares com filtros.",
         "details": "Criar useAgregadores() e useCatracaAcessos() hooks.",
         "testStrategy": "Listagem com cache. Filtros funcionam.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -11579,7 +11579,7 @@
             "parentId": "undefined"
           }
         ],
-        "updatedAt": "2026-03-30T05:34:22.400Z"
+        "updatedAt": "2026-03-30T05:39:59.963Z"
       },
       {
         "id": "284",
@@ -11782,9 +11782,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:37:00.857Z",
+      "lastModified": "2026-03-30T05:39:59.964Z",
       "taskCount": 287,
-      "completedCount": 282,
+      "completedCount": 283,
       "tags": [
         "master"
       ]
