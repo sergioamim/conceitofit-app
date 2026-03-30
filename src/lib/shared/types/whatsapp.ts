@@ -1,47 +1,55 @@
 import type { UUID, LocalDateTime } from "./comum";
 
-export type WhatsAppTemplateType =
+export type WhatsAppTemplateEvent =
   | "WELCOME"
-  | "COBRANCA"
-  | "VENCIMENTO_MATRICULA"
-  | "FOLLOWUP_PROSPECT"
+  | "MATRICULA_VENCENDO"
+  | "COBRANCA_PENDENTE"
+  | "COBRANCA_VENCIDA"
+  | "PROSPECT_FOLLOWUP"
+  | "ANIVERSARIO"
   | "CUSTOM";
 
-export type WhatsAppMessageStatus =
-  | "ENVIADA"
-  | "ENTREGUE"
-  | "LIDA"
-  | "FALHA";
+export type WhatsAppMessageStatus = "ENVIADA" | "ENTREGUE" | "LIDA" | "FALHA";
+
+export interface WhatsAppConfig {
+  id: UUID;
+  tenantId: UUID;
+  provedor: "EVOLUTION_API" | "WHATSAPP_BUSINESS" | "OUTRO";
+  apiUrl?: string;
+  apiKey?: string;
+  instanciaId?: string;
+  numeroRemetente?: string;
+  ativo: boolean;
+  updatedAt?: LocalDateTime;
+}
+
+export type WhatsAppTemplateType = WhatsAppTemplateEvent;
 
 export interface WhatsAppTemplate {
   id: UUID;
-  slug: string;
+  tenantId?: UUID;
+  evento: WhatsAppTemplateEvent;
   nome: string;
-  tipo: WhatsAppTemplateType;
+  slug?: string;
+  tipo?: WhatsAppTemplateEvent;
   conteudo: string;
-  variables: string[];
   ativo: boolean;
-  createdAt?: LocalDateTime;
-  updatedAt?: LocalDateTime;
+  variaveis: string[];
+  variables?: string[];
+  criadoEm?: LocalDateTime;
+  atualizadoEm?: LocalDateTime;
 }
 
 export interface WhatsAppMessageLog {
   id: UUID;
-  templateId: UUID;
-  templateNome: string;
+  tenantId?: UUID;
+  templateId?: UUID;
+  templateNome?: string;
+  evento: WhatsAppTemplateEvent;
   destinatario: string;
-  destinatarioNome: string;
-  conteudoRenderizado: string;
+  destinatarioNome?: string;
+  conteudo: string;
   status: WhatsAppMessageStatus;
-  erro?: string;
+  erroMensagem?: string;
   enviadoEm: LocalDateTime;
-}
-
-export interface WhatsAppConfig {
-  provider: "EVOLUTION_API" | "WHATSAPP_BUSINESS" | "MOCK";
-  apiUrl?: string;
-  apiKey?: string;
-  instanceName?: string;
-  ativo: boolean;
-  updatedAt?: LocalDateTime;
 }

@@ -5,98 +5,141 @@ import type {
 } from "@/lib/types";
 import { apiRequest } from "./http";
 
-const BASE_PATH = "/api/v1/admin/whatsapp";
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
 
-// --- Templates ---
-
-export async function getWhatsAppTemplatesApi(): Promise<WhatsAppTemplate[]> {
-  const response = await apiRequest<WhatsAppTemplate[] | { items?: WhatsAppTemplate[] }>({
-    path: `${BASE_PATH}/templates`,
-  });
-  return Array.isArray(response) ? response : response.items ?? [];
+export async function getWhatsAppConfigApi(opts: {
+  tenantId: string;
+}): Promise<WhatsAppConfig | null> {
+  try {
+    return await apiRequest<WhatsAppConfig>({
+      path: "/api/v1/whatsapp/config",
+      query: { tenantId: opts.tenantId },
+    });
+  } catch {
+    return null;
+  }
 }
 
-export async function getWhatsAppTemplateApi(id: string): Promise<WhatsAppTemplate> {
-  return apiRequest<WhatsAppTemplate>({
-    path: `${BASE_PATH}/templates/${encodeURIComponent(id)}`,
-  });
-}
-
-export async function createWhatsAppTemplateApi(
-  input: Omit<WhatsAppTemplate, "id" | "createdAt" | "updatedAt">
-): Promise<WhatsAppTemplate> {
-  return apiRequest<WhatsAppTemplate>({
-    path: `${BASE_PATH}/templates`,
-    method: "POST",
-    body: input,
-  });
-}
-
-export async function updateWhatsAppTemplateApi(
-  id: string,
-  input: Partial<Omit<WhatsAppTemplate, "id" | "createdAt" | "updatedAt">>
-): Promise<WhatsAppTemplate> {
-  return apiRequest<WhatsAppTemplate>({
-    path: `${BASE_PATH}/templates/${encodeURIComponent(id)}`,
+export async function saveWhatsAppConfigApi(opts: {
+  tenantId: string;
+  data: Partial<Omit<WhatsAppConfig, "id" | "tenantId">>;
+}): Promise<WhatsAppConfig> {
+  return apiRequest<WhatsAppConfig>({
+    path: "/api/v1/whatsapp/config",
     method: "PUT",
-    body: input,
+    query: { tenantId: opts.tenantId },
+    body: opts.data,
   });
 }
 
-export async function deleteWhatsAppTemplateApi(id: string): Promise<void> {
+export async function testWhatsAppConnectionApi(opts: {
+  tenantId: string;
+}): Promise<{ success: boolean; message?: string }> {
+  return apiRequest<{ success: boolean; message?: string }>({
+    path: "/api/v1/whatsapp/config/test",
+    method: "POST",
+    query: { tenantId: opts.tenantId },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Templates
+// ---------------------------------------------------------------------------
+
+export async function listWhatsAppTemplatesApi(opts: {
+  tenantId: string;
+}): Promise<WhatsAppTemplate[]> {
+  const response = await apiRequest<unknown>({
+    path: "/api/v1/whatsapp/templates",
+    query: { tenantId: opts.tenantId },
+  });
+  if (Array.isArray(response)) return response;
+  const obj = response as Record<string, unknown>;
+  const list = obj.data ?? obj.items ?? obj.content;
+  return Array.isArray(list) ? list : [];
+}
+
+export async function createWhatsAppTemplateApi(opts: {
+  tenantId: string;
+  data: Omit<WhatsAppTemplate, "id" | "tenantId" | "criadoEm" | "atualizadoEm">;
+}): Promise<WhatsAppTemplate> {
+  return apiRequest<WhatsAppTemplate>({
+    path: "/api/v1/whatsapp/templates",
+    method: "POST",
+    query: { tenantId: opts.tenantId },
+    body: opts.data,
+  });
+}
+
+export async function updateWhatsAppTemplateApi(opts: {
+  tenantId: string;
+  id: string;
+  data: Partial<Omit<WhatsAppTemplate, "id" | "tenantId">>;
+}): Promise<WhatsAppTemplate> {
+  return apiRequest<WhatsAppTemplate>({
+    path: `/api/v1/whatsapp/templates/${opts.id}`,
+    method: "PUT",
+    query: { tenantId: opts.tenantId },
+    body: opts.data,
+  });
+}
+
+export async function deleteWhatsAppTemplateApi(opts: {
+  tenantId: string;
+  id: string;
+}): Promise<void> {
   await apiRequest<void>({
-    path: `${BASE_PATH}/templates/${encodeURIComponent(id)}`,
+    path: `/api/v1/whatsapp/templates/${opts.id}`,
     method: "DELETE",
+    query: { tenantId: opts.tenantId },
   });
 }
 
-// --- Logs ---
+// ---------------------------------------------------------------------------
+// Messages / Logs
+// ---------------------------------------------------------------------------
 
-export async function getWhatsAppLogsApi(params?: {
+export async function listWhatsAppLogsApi(opts: {
+  tenantId: string;
   page?: number;
   size?: number;
-  status?: string;
 }): Promise<WhatsAppMessageLog[]> {
-  const response = await apiRequest<WhatsAppMessageLog[] | { items?: WhatsAppMessageLog[] }>({
-    path: `${BASE_PATH}/logs`,
-    query: {
-      page: params?.page,
-      size: params?.size,
-      status: params?.status,
-    },
+  const response = await apiRequest<unknown>({
+    path: "/api/v1/whatsapp/logs",
+    query: { tenantId: opts.tenantId, page: opts.page, size: opts.size },
   });
-  return Array.isArray(response) ? response : response.items ?? [];
+  if (Array.isArray(response)) return response;
+  const obj = response as Record<string, unknown>;
+  const list = obj.data ?? obj.items ?? obj.content;
+  return Array.isArray(list) ? list : [];
 }
 
-// --- Envio ---
-
-export async function sendWhatsAppMessageApi(input: {
-  templateId: string;
-  destinatario: string;
-  destinatarioNome: string;
-  variables: Record<string, string>;
+export async function sendWhatsAppMessageApi(opts: {
+  tenantId: string;
+  data: {
+    templateId?: string;
+    evento: string;
+    destinatario: string;
+    destinatarioNome?: string;
+    variaveis?: Record<string, string>;
+  };
 }): Promise<WhatsAppMessageLog> {
   return apiRequest<WhatsAppMessageLog>({
-    path: `${BASE_PATH}/enviar`,
+    path: "/api/v1/whatsapp/send",
     method: "POST",
-    body: input,
+    query: { tenantId: opts.tenantId },
+    body: opts.data,
   });
 }
 
-// --- Config ---
+// ---------------------------------------------------------------------------
+// Aliases (compat with backoffice page)
+// ---------------------------------------------------------------------------
 
-export async function getWhatsAppConfigApi(): Promise<WhatsAppConfig> {
-  return apiRequest<WhatsAppConfig>({
-    path: `${BASE_PATH}/config`,
-  });
-}
+export const getWhatsAppTemplatesApi = (tenantId?: string) =>
+  listWhatsAppTemplatesApi({ tenantId: tenantId ?? "" });
 
-export async function updateWhatsAppConfigApi(
-  input: Partial<WhatsAppConfig>
-): Promise<WhatsAppConfig> {
-  return apiRequest<WhatsAppConfig>({
-    path: `${BASE_PATH}/config`,
-    method: "PUT",
-    body: input,
-  });
-}
+export const getWhatsAppLogsApi = (opts?: { size?: number; tenantId?: string }) =>
+  listWhatsAppLogsApi({ tenantId: opts?.tenantId ?? "", size: opts?.size });

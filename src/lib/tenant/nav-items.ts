@@ -12,6 +12,7 @@ import {
   LineChart,
   ListTree,
   Megaphone,
+  MessageSquare,
   Palette,
   Settings,
   ShoppingCart,
@@ -88,6 +89,7 @@ export const administrativoItems: NavItem[] = [
   { href: "/administrativo/servicos", label: "Serviços", icon: Settings },
   { href: "/administrativo/tipos-conta", label: "Tipos de Conta", icon: Settings },
   { href: "/administrativo/vouchers", label: "Vouchers", icon: Settings },
+  { href: "/administrativo/whatsapp", label: "WhatsApp", icon: MessageSquare },
   { href: "/administrativo/ia", label: "Integração com IA", icon: Settings },
 ];
 

@@ -53,6 +53,7 @@ import type {
   WhatsAppMessageLog,
   WhatsAppTemplate,
   WhatsAppTemplateType,
+  WhatsAppTemplateEvent,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import {
@@ -60,11 +61,16 @@ import {
   type WhatsAppTemplateFormValues,
 } from "@/lib/forms/whatsapp-schemas";
 
-const TIPO_LABELS: Record<WhatsAppTemplateType, string> = {
+const TIPO_LABELS: Record<string, string> = {
   WELCOME: "Boas-vindas",
-  COBRANCA: "Cobrança",
+  COBRANCA: "Cobranca",
+  COBRANCA_PENDENTE: "Cobranca pendente",
+  COBRANCA_VENCIDA: "Cobranca vencida",
+  MATRICULA_VENCENDO: "Matricula vencendo",
   VENCIMENTO_MATRICULA: "Vencimento",
+  PROSPECT_FOLLOWUP: "Follow-up prospect",
   FOLLOWUP_PROSPECT: "Follow-up",
+  ANIVERSARIO: "Aniversario",
   CUSTOM: "Personalizado",
 };
 
@@ -134,10 +140,10 @@ export default function AdminWhatsAppPage() {
     setEditingId(template.id);
     form.reset({
       nome: template.nome,
-      slug: template.slug,
-      tipo: template.tipo,
+      slug: template.slug ?? template.nome.toLowerCase().replace(/\s+/g, "-"),
+      tipo: (template.tipo ?? template.evento) as WhatsAppTemplateFormValues["tipo"],
       conteudo: template.conteudo,
-      variables: template.variables.join(", "),
+      variables: (template.variables ?? template.variaveis ?? []).join(", "),
       ativo: template.ativo,
     });
     setDialogOpen(true);
@@ -150,25 +156,22 @@ export default function AdminWhatsAppPage() {
         .map((v) => v.trim())
         .filter(Boolean);
 
+      const templateData = {
+        evento: values.tipo as WhatsAppTemplateEvent,
+        nome: values.nome,
+        slug: values.slug,
+        tipo: values.tipo as WhatsAppTemplateEvent,
+        conteudo: values.conteudo,
+        variaveis: variables,
+        variables,
+        ativo: values.ativo,
+      };
+
       if (editingId) {
-        await updateWhatsAppTemplateApi(editingId, {
-          nome: values.nome,
-          slug: values.slug,
-          tipo: values.tipo,
-          conteudo: values.conteudo,
-          variables,
-          ativo: values.ativo,
-        });
+        await updateWhatsAppTemplateApi({ tenantId: "", id: editingId, data: templateData });
         toast({ title: "Template atualizado" });
       } else {
-        await createWhatsAppTemplateApi({
-          nome: values.nome,
-          slug: values.slug,
-          tipo: values.tipo,
-          conteudo: values.conteudo,
-          variables,
-          ativo: values.ativo,
-        });
+        await createWhatsAppTemplateApi({ tenantId: "", data: templateData });
         toast({ title: "Template criado" });
       }
       setDialogOpen(false);
@@ -184,7 +187,7 @@ export default function AdminWhatsAppPage() {
 
   async function handleDelete(id: string) {
     try {
-      await deleteWhatsAppTemplateApi(id);
+      await deleteWhatsAppTemplateApi({ tenantId: "", id });
       toast({ title: "Template removido" });
       void loadData();
     } catch (error) {
@@ -299,7 +302,7 @@ export default function AdminWhatsAppPage() {
                             {template.ativo ? "Ativo" : "Inativo"}
                           </Badge>
                           <Badge className="border-border bg-secondary/50 text-muted-foreground">
-                            {TIPO_LABELS[template.tipo]}
+                            {TIPO_LABELS[template.tipo ?? template.evento] ?? template.tipo ?? template.evento}
                           </Badge>
                         </div>
                       </div>
@@ -313,9 +316,9 @@ export default function AdminWhatsAppPage() {
                           {template.conteudo}
                         </p>
                       </div>
-                      {template.variables.length > 0 && (
+                      {(template.variables ?? template.variaveis ?? []).length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
-                          {template.variables.map((v) => (
+                          {(template.variables ?? template.variaveis ?? []).map((v) => (
                             <Badge
                               key={v}
                               variant="outline"
@@ -409,7 +412,7 @@ export default function AdminWhatsAppPage() {
                           {formatTimestamp(log.enviadoEm)}
                         </TableCell>
                         <TableCell className="hidden max-w-xs truncate text-sm text-muted-foreground xl:table-cell">
-                          {log.conteudoRenderizado}
+                          {log.conteudo}
                         </TableCell>
                       </TableRow>
                     ))}
