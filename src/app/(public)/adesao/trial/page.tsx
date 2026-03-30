@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
+import { usePublicTenants } from "@/lib/query/use-public-tenants";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,9 +16,7 @@ import {
   submitPublicTrial,
 } from "@/lib/public/services";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
-import { listPublicTenants } from "@/lib/public/services";
 import { publicTrialFormSchema } from "@/lib/forms/public-journey-schemas";
-import type { Tenant } from "@/lib/types";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 function PublicJourneyFallback() {
@@ -29,7 +28,7 @@ function PublicJourneyFallback() {
 function TrialPageContent() {
   const router = useRouter();
   const { context, loading, error, resolvedTenantRef, persistDraft, draft, planId } = usePublicJourney();
-  const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
+  const { data: tenantOptions = [] } = usePublicTenants();
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const {
@@ -47,10 +46,6 @@ function TrialPageContent() {
       objetivo: "",
     },
   });
-
-  useEffect(() => {
-    void listPublicTenants().then(setTenantOptions);
-  }, []);
 
   useEffect(() => {
     if (!success) return;

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { usePublicTenants } from "@/lib/query/use-public-tenants";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +14,6 @@ import {
   buildPublicContractPreview,
   buildPublicJourneyHref,
   getPublicPlanQuote,
-  listPublicTenants,
   startPublicCheckout,
   type PublicCheckoutInput,
 } from "@/lib/public/services";
@@ -21,7 +21,7 @@ import { publicCheckoutFormSchema } from "@/lib/forms/public-journey-schemas";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatCurrency } from "@/lib/shared/formatters";
-import type { Tenant, TipoFormaPagamento } from "@/lib/types";
+import type { TipoFormaPagamento } from "@/lib/types";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 type CheckoutFormValues = {
@@ -43,7 +43,7 @@ function PublicJourneyFallback() {
 function CheckoutPublicoPageContent() {
   const router = useRouter();
   const { context, loading, error, resolvedTenantRef, persistDraft, draft, planId } = usePublicJourney();
-  const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
+  const { data: tenantOptions = [] } = usePublicTenants();
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const { register, control, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<CheckoutFormValues>({
@@ -58,10 +58,6 @@ function CheckoutPublicoPageContent() {
       aceitarTermos: false,
     },
   });
-
-  useEffect(() => {
-    void listPublicTenants().then(setTenantOptions);
-  }, []);
 
   useEffect(() => {
     if (!context) return;
