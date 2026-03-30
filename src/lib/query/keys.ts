@@ -28,4 +28,9 @@ export const queryKeys = {
     minhasReservas: (tenantId: string, alunoId: string) =>
       ["aulas", "reservas", tenantId, alunoId] as const,
   },
+
+  crm: {
+    all: (tenantId: string) => ["crm", tenantId] as const,
+    snapshot: (tenantId: string) => ["crm", "snapshot", tenantId] as const,
+  },
 } as const;
