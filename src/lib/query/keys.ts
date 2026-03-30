@@ -40,6 +40,11 @@ export const queryKeys = {
       ["vendas", "list", tenantId, filters] as const,
   },
 
+  crm: {
+    playbooks: (tenantId: string) => ["crm", "playbooks", tenantId] as const,
+    cadencias: (tenantId: string) => ["crm", "cadencias", tenantId] as const,
+  },
+
   aulas: {
     sessoes: (tenantId: string, dateFrom: string, dateTo: string) =>
       ["aulas", "sessoes", tenantId, dateFrom, dateTo] as const,

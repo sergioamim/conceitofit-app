@@ -1,16 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-import {
-  createCrmCadenciaApi,
-  createCrmPlaybookApi,
-  listCrmCadenciasApi,
-  listCrmPlaybooksApi,
-  updateCrmCadenciaApi,
-  updateCrmPlaybookApi,
-} from "@/lib/api/crm";
+import { useState, type FormEvent } from "react";
 import { normalizeCapabilityError } from "@/lib/api/backend-capability";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import {
+  useCrmPlaybooks,
+  useCrmCadencias,
+  useSavePlaybook,
+  useSaveCadencia,
+} from "@/lib/query/use-crm-playbooks";
 import type {
   CrmCadencia,
   CrmCadenciaAcao,
@@ -153,52 +151,22 @@ function toCadenciaForm(cadencia?: CrmCadencia | null): CadenciaFormState {
 
 export default function CrmPlaybooksPage() {
   const tenantContext = useTenantContext();
-  const [playbooks, setPlaybooks] = useState<CrmPlaybook[]>([]);
-  const [cadencias, setCadencias] = useState<CrmCadencia[]>([]);
   const [editingPlaybook, setEditingPlaybook] = useState<CrmPlaybook | null>(null);
   const [editingCadencia, setEditingCadencia] = useState<CrmCadencia | null>(null);
   const [playbookForm, setPlaybookForm] = useState<PlaybookFormState>(EMPTY_PLAYBOOK_FORM);
   const [cadenciaForm, setCadenciaForm] = useState<CadenciaFormState>(EMPTY_CADENCIA_FORM);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [cadenciasUnavailable, setCadenciasUnavailable] = useState(false);
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
   const stages: CrmPipelineStage[] = buildDefaultCrmPipelineStages(tenantId || "tenant-runtime");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    const [playbookResult, cadenciaResult] = await Promise.allSettled([
-      listCrmPlaybooksApi({ tenantId }),
-      listCrmCadenciasApi({ tenantId }),
-    ]);
+  const { data: playbooks = [], isLoading: playbooksLoading } = useCrmPlaybooks({ tenantId });
+  const { data: cadencias = [], isLoading: cadenciasLoading, isError: cadenciasError } = useCrmCadencias({ tenantId });
+  const savePlaybookMutation = useSavePlaybook(tenantId);
+  const saveCadenciaMutation = useSaveCadencia(tenantId);
 
-    if (playbookResult.status === "fulfilled") {
-      setPlaybooks(playbookResult.value);
-    } else {
-      setPlaybooks([]);
-      setError(normalizeCapabilityError(playbookResult.reason, "Falha ao carregar playbooks."));
-    }
-
-    if (cadenciaResult.status === "fulfilled") {
-      setCadencias(cadenciaResult.value);
-      setCadenciasUnavailable(false);
-    } else {
-      const message = normalizeCapabilityError(cadenciaResult.reason, "Falha ao carregar cadências.");
-      setCadencias([]);
-      setCadenciasUnavailable(message.startsWith("Backend ainda não expõe"));
-      if (!message.startsWith("Backend ainda não expõe")) {
-        setError((current) => current || message);
-      }
-    }
-
-    setLoading(false);
-  }, [tenantId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const loading = playbooksLoading || cadenciasLoading;
+  const saving = savePlaybookMutation.isPending || saveCadenciaMutation.isPending;
+  const cadenciasUnavailable = cadenciasError;
 
   function resetPlaybookForm(playbook?: CrmPlaybook | null) {
     setEditingPlaybook(playbook ?? null);
@@ -213,7 +181,6 @@ export default function CrmPlaybooksPage() {
   async function handleSavePlaybook(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!tenantId) return;
-    setSaving(true);
     setError("");
     try {
       const payload = {
@@ -230,31 +197,19 @@ export default function CrmPlaybooksPage() {
           obrigatoria: step.obrigatoria,
         })),
       };
-      if (editingPlaybook) {
-        await updateCrmPlaybookApi({
-          tenantId,
-          id: editingPlaybook.id,
-          data: payload,
-        });
-      } else {
-        await createCrmPlaybookApi({
-          tenantId,
-          data: payload,
-        });
-      }
+      await savePlaybookMutation.mutateAsync({
+        id: editingPlaybook?.id,
+        data: payload,
+      });
       resetPlaybookForm(null);
-      await load();
     } catch (submitError) {
       setError(normalizeCapabilityError(submitError, "Falha ao salvar playbook."));
-    } finally {
-      setSaving(false);
     }
   }
 
   async function handleSaveCadencia(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!tenantId) return;
-    setSaving(true);
     setError("");
     try {
       const payload = {
@@ -272,28 +227,13 @@ export default function CrmPlaybooksPage() {
           automatica: step.automatica,
         })),
       };
-      if (editingCadencia) {
-        await updateCrmCadenciaApi({
-          tenantId,
-          id: editingCadencia.id,
-          data: payload,
-        });
-      } else {
-        await createCrmCadenciaApi({
-          tenantId,
-          data: payload,
-        });
-      }
+      await saveCadenciaMutation.mutateAsync({
+        id: editingCadencia?.id,
+        data: payload,
+      });
       resetCadenciaForm(null);
-      await load();
     } catch (submitError) {
-      const message = normalizeCapabilityError(submitError, "Falha ao salvar cadência.");
-      setError(message);
-      if (message.startsWith("Backend ainda não expõe")) {
-        setCadenciasUnavailable(true);
-      }
-    } finally {
-      setSaving(false);
+      setError(normalizeCapabilityError(submitError, "Falha ao salvar cadência."));
     }
   }
 
