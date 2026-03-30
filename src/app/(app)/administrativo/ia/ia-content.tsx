@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -8,35 +8,37 @@ import { getBotPromptApi, getBotPromptTemplateApi } from "@/lib/api/bot";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useToast } from "@/components/ui/use-toast";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
+
+type BotPromptResponse = { prompt?: string; generatedAt?: string };
 
 export function IaContent() {
   const { toast } = useToast();
   const tenantContext = useTenantContext();
-  const [prompt, setPrompt] = useState("");
-  const [generatedAt, setGeneratedAt] = useState<string | undefined>(undefined);
-  const [template, setTemplate] = useState<string | null>(null);
-  const [loadingPrompt, setLoadingPrompt] = useState(false);
-  const [loadingTemplate, setLoadingTemplate] = useState(false);
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
-  const loadPrompt = useCallback(async () => {
-    setLoadingPrompt(true);
-    try {
-      const response = await getBotPromptApi({ tenantId });
-      setPrompt(response.prompt ?? "");
-      setGeneratedAt(response.generatedAt ?? undefined);
-    } catch {
-      toast({
-        title: "Erro ao carregar prompt",
-        description: "Não foi possível obter o prompt da API.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingPrompt(false);
-    }
-  }, [tenantId, toast]);
+  const {
+    items: promptItems,
+    isLoading: loadingPrompt,
+    refetch: loadPrompt,
+  } = useAdminCrud<BotPromptResponse>({
+    domain: "ia",
+    tenantId,
+    enabled: Boolean(tenantId),
+    listFn: async (tid) => {
+      const response = await getBotPromptApi({ tenantId: tid });
+      return [response];
+    },
+  });
 
-  const loadTemplate = useCallback(async () => {
+  const promptData = promptItems[0];
+  const prompt = promptData?.prompt ?? "";
+  const generatedAt = promptData?.generatedAt;
+
+  const [template, setTemplate] = useState<string | null>(null);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+
+  async function loadTemplate() {
     setLoadingTemplate(true);
     try {
       const raw = await getBotPromptTemplateApi();
@@ -50,12 +52,7 @@ export function IaContent() {
     } finally {
       setLoadingTemplate(false);
     }
-  }, [toast]);
-
-  useEffect(() => {
-    if (!tenantId) return;
-    void loadPrompt();
-  }, [tenantId, loadPrompt]);
+  }
 
   async function handleCopyPrompt() {
     try {
@@ -94,7 +91,7 @@ export function IaContent() {
             <Button variant="secondary" onClick={handleCopyPrompt} disabled={!prompt}>
               Copiar prompt
             </Button>
-            <Button onClick={loadPrompt} disabled={loadingPrompt}>
+            <Button onClick={() => void loadPrompt()} disabled={loadingPrompt}>
               {loadingPrompt ? "Atualizando..." : "Atualizar"}
             </Button>
           </div>

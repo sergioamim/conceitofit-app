@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { createContaBancariaApi, listContasBancariasApi, toggleContaBancariaApi,
 import type { ContaBancaria, PixTipo, TipoContaBancaria } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { PageError } from "@/components/shared/page-error";
-import { useCrudOperations } from "@/hooks/use-crud-operations";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 
 const TIPO_CONTA_LABEL: Record<TipoContaBancaria, string> = {
   CORRENTE: "Conta corrente",
@@ -65,8 +65,7 @@ interface ContasBancariasContentProps {
   tenantName: string;
 }
 
-export function ContasBancariasContent({ initialData, tenantId, tenantName }: ContasBancariasContentProps) {
-  const [saving, setSaving] = useState(false);
+export function ContasBancariasContent({ initialData: _initialData, tenantId, tenantName }: ContasBancariasContentProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -75,9 +74,18 @@ export function ContasBancariasContent({ initialData, tenantId, tenantName }: Co
   const [editing, setEditing] = useState<ContaBancaria | null>(null);
   const [form, setForm] = useState<FormConta>(FORM_DEFAULT);
 
-  const { items: contas, loading, error: loadError, reload } = useCrudOperations<ContaBancaria>({
-    listFn: () => listContasBancariasApi({ tenantId: tenantId || undefined }),
-    initialData,
+  const { items: contas, isLoading: loading, error: loadError, refetch, create, update, toggle } = useAdminCrud<
+    ContaBancaria,
+    Omit<ContaBancaria, "id" | "tenantId">,
+    Omit<ContaBancaria, "id" | "tenantId">
+  >({
+    domain: "contas-bancarias",
+    tenantId,
+    enabled: !!tenantId,
+    listFn: (tid) => listContasBancariasApi({ tenantId: tid }),
+    createFn: (tid, data) => createContaBancariaApi({ tenantId: tid, data }),
+    updateFn: (tid, id, data) => updateContaBancariaApi({ tenantId: tid, id, data }),
+    toggleFn: (tid, id) => toggleContaBancariaApi({ tenantId: tid, id }),
   });
 
   const filtered = useMemo(() => {
@@ -123,32 +131,21 @@ export function ContasBancariasContent({ initialData, tenantId, tenantName }: Co
       return;
     }
     if (!isFormValid()) return;
-    setSaving(true);
     setError(null);
     setSuccess(null);
     try {
       const payload = normalizeForm(form);
       if (editing) {
-        await updateContaBancariaApi({
-          tenantId: tenantId || undefined,
-          id: editing.id,
-          data: payload,
-        });
+        await update!.mutateAsync({ id: editing.id, data: payload });
       } else {
-        await createContaBancariaApi({
-          tenantId: tenantId || undefined,
-          data: payload,
-        });
+        await create!.mutateAsync(payload);
       }
       setModalOpen(false);
       setEditing(null);
       setForm(FORM_DEFAULT);
-      await reload();
       setSuccess(editing ? "Conta atualizada." : "Conta cadastrada.");
     } catch (saveError) {
       setError(normalizeErrorMessage(saveError));
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -160,11 +157,7 @@ export function ContasBancariasContent({ initialData, tenantId, tenantName }: Co
     setError(null);
     setSuccess(null);
     try {
-      await toggleContaBancariaApi({
-        tenantId: tenantId || undefined,
-        id: conta.id,
-      });
-      await reload();
+      await toggle!.mutateAsync(conta.id);
       setSuccess("Status da conta alterado com sucesso.");
     } catch (toggleError) {
       setError(normalizeErrorMessage(toggleError));
@@ -192,6 +185,8 @@ export function ContasBancariasContent({ initialData, tenantId, tenantName }: Co
     });
     setModalOpen(true);
   }
+
+  const saving = create?.isPending || update?.isPending;
 
   return (
     <div className="space-y-6">
@@ -222,7 +217,7 @@ export function ContasBancariasContent({ initialData, tenantId, tenantName }: Co
         />
       </div>
 
-      <PageError error={loadError} onRetry={reload} />
+      <PageError error={loadError} onRetry={refetch} />
 
       {(error || success) && (
         <div

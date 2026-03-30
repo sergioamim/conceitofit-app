@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   createUnidadeApi,
   deleteUnidadeApi,
@@ -27,6 +28,7 @@ import type { CatracaCredentialResponse } from "@/lib/api/catraca";
 import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { gerarCatracaCredencialAction, hasServerAdminToken } from "./actions";
 import { PageError } from "@/components/shared/page-error";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 
 type UnitForm = {
   nome: string;
@@ -84,10 +86,13 @@ const EMPTY_FORM: UnitForm = {
   cupomCustomWidthMm: "80",
 };
 
+// Sentinel tenantId for global (non-tenant-scoped) unidades API
+const GLOBAL_TENANT_KEY = "__global__";
+
 export function UnidadesContent() {
   const access = useAuthAccess();
   const tenantContext = useTenantContext();
-  const [rows, setRows] = useState<Tenant[]>([]);
+  const queryClient = useQueryClient();
   const [currentTenantId, setCurrentTenantId] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [confirmCredencialOpen, setConfirmCredencialOpen] = useState(false);
@@ -95,36 +100,30 @@ export function UnidadesContent() {
   const [form, setForm] = useState<UnitForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [loadError, setLoadError] = useState("");
   const [modalTab, setModalTab] = useState<"DADOS" | "CONFIG">("DADOS");
   const [credentialLoading, setCredentialLoading] = useState(false);
   const [credentialResult, setCredentialResult] = useState<CatracaCredentialResponse | null>(null);
   const [credentialError, setCredentialError] = useState("");
   const [credentialSuccess, setCredentialSuccess] = useState("");
   const [manualCatracaAdminToken, setManualCatracaAdminToken] = useState("");
-  const [loading, setLoading] = useState(true);
   const [hasConfiguredCatracaTokenFromEnv, setHasConfiguredCatracaTokenFromEnv] = useState(false);
+
+  const { items: rows, isLoading: loading, error: loadError, refetch, create, update, toggle } = useAdminCrud<
+    Tenant,
+    Omit<Tenant, "id">,
+    Partial<Tenant>
+  >({
+    domain: "unidades",
+    tenantId: GLOBAL_TENANT_KEY,
+    enabled: true,
+    listFn: () => listUnidadesApi(),
+    createFn: (_tid, data) => createUnidadeApi(data),
+    updateFn: (_tid, id, data) => updateUnidadeApi(id, data),
+    toggleFn: (_tid, id) => toggleUnidadeApi(id),
+  });
 
   const tenantSelecionado = rows.find((tenant) => tenant.id === currentTenantId);
   const tenantDisplay = tenantSelecionado?.nome || tenantSelecionado?.id || "Nenhuma unidade selecionada";
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setLoadError("");
-    try {
-      const all = await listUnidadesApi();
-      setRows(all);
-    } catch (err) {
-      setRows([]);
-      setLoadError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load, tenantContext.tenantId]);
 
   useEffect(() => {
     setCurrentTenantId(tenantContext.tenantId);
@@ -213,44 +212,30 @@ export function UnidadesContent() {
     setSaving(true);
     setError("");
     try {
+      const payload = {
+        nome: form.nome.trim(),
+        razaoSocial: form.razaoSocial.trim() || undefined,
+        documento: form.documento.trim() || undefined,
+        groupId: form.groupId.trim(),
+        subdomain: form.subdomain.trim() || undefined,
+        email: form.email.trim() || undefined,
+        telefone: form.telefone.trim() || undefined,
+        configuracoes: {
+          impressaoCupom: {
+            modo: form.cupomPrintMode,
+            larguraCustomMm: Math.max(40, Math.min(120, Number(form.cupomCustomWidthMm) || 80)),
+          },
+        },
+      };
+
       if (editing) {
-        await updateUnidadeApi(editing.id, {
-          nome: form.nome.trim(),
-          razaoSocial: form.razaoSocial.trim() || undefined,
-          documento: form.documento.trim() || undefined,
-          groupId: form.groupId.trim(),
-          subdomain: form.subdomain.trim() || undefined,
-          email: form.email.trim() || undefined,
-          telefone: form.telefone.trim() || undefined,
-          configuracoes: {
-            impressaoCupom: {
-              modo: form.cupomPrintMode,
-              larguraCustomMm: Math.max(40, Math.min(120, Number(form.cupomCustomWidthMm) || 80)),
-            },
-          },
-        });
+        await update!.mutateAsync({ id: editing.id, data: payload });
       } else {
-        await createUnidadeApi({
-          nome: form.nome.trim(),
-          razaoSocial: form.razaoSocial.trim() || undefined,
-          documento: form.documento.trim() || undefined,
-          groupId: form.groupId.trim(),
-          subdomain: form.subdomain.trim() || undefined,
-          email: form.email.trim() || undefined,
-          telefone: form.telefone.trim() || undefined,
-          configuracoes: {
-            impressaoCupom: {
-              modo: form.cupomPrintMode,
-              larguraCustomMm: Math.max(40, Math.min(120, Number(form.cupomCustomWidthMm) || 80)),
-            },
-          },
-          ativo: true,
-        });
+        await create!.mutateAsync({ ...payload, ativo: true } as Omit<Tenant, "id">);
       }
       setModalOpen(false);
       setEditing(null);
       setForm(EMPTY_FORM);
-      await load();
     } finally {
       setSaving(false);
     }
@@ -259,18 +244,17 @@ export function UnidadesContent() {
   async function handleSetCurrent(id: string) {
     await tenantContext.setTenant(id);
     setCurrentTenantId(id);
-    await load();
+    await refetch();
   }
 
   async function handleToggle(id: string) {
-    await toggleUnidadeApi(id);
-    await load();
+    await toggle!.mutateAsync(id);
   }
 
   async function handleDelete(id: string) {
     try {
       await deleteUnidadeApi(id);
-      await load();
+      await queryClient.invalidateQueries({ queryKey: ["admin", "unidades"] });
     } catch (e) {
       const message = e instanceof Error ? e.message : "Não foi possível remover a unidade.";
       window.alert(message);
@@ -518,7 +502,7 @@ export function UnidadesContent() {
         <Button onClick={openCreate}>Nova unidade</Button>
       </div>
 
-      <PageError error={loadError} onRetry={load} />
+      <PageError error={loadError} onRetry={refetch} />
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">

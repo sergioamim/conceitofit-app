@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Activity, RefreshCw, Siren, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import type { IntegracaoOperacional, IntegracaoOperacionalStatus } from "@/lib/t
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatDateTime } from "@/lib/formatters";
 import { PageError } from "@/components/shared/page-error";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 
 type StatusFiltro = IntegracaoOperacionalStatus | "TODAS";
 
@@ -35,33 +36,23 @@ function getSeverityClass(severity: "INFO" | "WARN" | "ERROR") {
 export function IntegracoesContent() {
   const access = useAuthAccess();
   const { tenantId, tenantName, tenantResolved } = useTenantContext();
-  const [integracoes, setIntegracoes] = useState<IntegracaoOperacional[]>([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    items: integracoes,
+    isLoading: loading,
+    error: queryError,
+    refetch: load,
+  } = useAdminCrud<IntegracaoOperacional>({
+    domain: "integracoes",
+    tenantId,
+    enabled: tenantResolved && !access.loading && access.canAccessElevatedModules,
+    listFn: (tid) => listIntegracoesOperacionaisApi({ tenantId: tid }),
+  });
+  const loadError = queryError ? normalizeErrorMessage(queryError) : null;
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusFiltro>("TODAS");
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    if (!tenantId || !access.canAccessElevatedModules) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      setIntegracoes(await listIntegracoesOperacionaisApi({ tenantId }));
-    } catch (loadErr) {
-      setLoadError(normalizeErrorMessage(loadErr));
-    } finally {
-      setLoading(false);
-    }
-  }, [access.canAccessElevatedModules, tenantId]);
-
-  useEffect(() => {
-    if (!access.loading && tenantResolved) {
-      void load();
-    }
-  }, [access.loading, load, tenantResolved]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -80,9 +71,9 @@ export function IntegracoesContent() {
     setError(null);
     setSuccess(null);
     try {
-      const updated = await reprocessarIntegracaoOperacionalApi({ tenantId, id });
-      setIntegracoes((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      await reprocessarIntegracaoOperacionalApi({ tenantId, id });
       setSuccess("Integração reprocessada com sucesso.");
+      void load();
     } catch (actionError) {
       setError(normalizeErrorMessage(actionError));
     } finally {

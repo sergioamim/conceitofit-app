@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { listarCatracaWsStatusApi } from "@/lib/api/catraca";
 import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { logger } from "@/lib/shared/logger";
 import type { Tenant } from "@/lib/types";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import { PageError } from "@/components/shared/page-error";
@@ -43,13 +43,17 @@ function getTenantStatusLabel(connected: number): string {
 
 export function CatracaStatusContent() {
   const access = useAuthAccess();
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const queryClient = useQueryClient();
   const [selectedTenantId, setSelectedTenantId] = useState(TODOS_TENANTS_VALUE);
-  const [rows, setRows] = useState<TenantStatusRow[]>([]);
-  const [totalConnectedAgents, setTotalConnectedAgents] = useState(0);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+
+  const tenantsQuery = useQuery<Tenant[]>({
+    queryKey: ["admin", "catraca-tenants"],
+    queryFn: () => listUnidadesApi(),
+    enabled: access.canAccessElevatedModules && !access.loading,
+    staleTime: 5 * 60_000,
+  });
+  const tenants = tenantsQuery.data ?? [];
 
   const tenantMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -59,31 +63,9 @@ export function CatracaStatusContent() {
     return map;
   }, [tenants]);
 
-  const filteredRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    const list = rows;
-    if (!term) return list;
-    return list.filter((row) => [row.nome, row.tenantId].join(" ").toLowerCase().includes(term));
-  }, [rows, search]);
-
-  useEffect(() => {
-    if (!access.canAccessElevatedModules) return;
-    void (async () => {
-      try {
-        const tenantsResponse = await listUnidadesApi();
-        setTenants(tenantsResponse);
-      } catch (error) {
-        logger.warn("[CatracaStatus] Failed to load tenants", { error });
-        setTenants([]);
-      }
-    })();
-  }, [access.canAccessElevatedModules]);
-
-  const load = useCallback(async () => {
-    if (!access.canAccessElevatedModules) return;
-    setLoading(true);
-    setError("");
-    try {
+  const statusQuery = useQuery({
+    queryKey: ["admin", "catraca-status", selectedTenantId],
+    queryFn: async () => {
       const status = await listarCatracaWsStatusApi({
         tenantId: selectedTenantId === TODOS_TENANTS_VALUE ? undefined : selectedTenantId,
       });
@@ -92,54 +74,56 @@ export function CatracaStatusContent() {
         status.tenants.map((item) => [item.tenantId, item.connectedAgents])
       );
 
+      let rows: TenantStatusRow[];
+
       if (selectedTenantId === TODOS_TENANTS_VALUE) {
         if (tenants.length > 0) {
-          setRows(
-            tenants
-              .map((tenant) => ({
-                tenantId: tenant.id,
-                nome: tenant.nome,
-                connectedAgents: statusByTenant.get(tenant.id) ?? 0,
-              }))
-              .sort((a, b) => a.nome.localeCompare(b.nome))
-          );
-          setTotalConnectedAgents(status.totalConnectedAgents);
-        } else {
-          setRows(
-            status.tenants.map((item) => ({
-              tenantId: item.tenantId,
-              nome: getTenantName(tenantMap, item.tenantId),
-              connectedAgents: item.connectedAgents,
+          rows = tenants
+            .map((tenant) => ({
+              tenantId: tenant.id,
+              nome: tenant.nome,
+              connectedAgents: statusByTenant.get(tenant.id) ?? 0,
             }))
-          );
-          setTotalConnectedAgents(status.totalConnectedAgents);
+            .sort((a, b) => a.nome.localeCompare(b.nome));
+        } else {
+          rows = status.tenants.map((item) => ({
+            tenantId: item.tenantId,
+            nome: getTenantName(tenantMap, item.tenantId),
+            connectedAgents: item.connectedAgents,
+          }));
         }
-        return;
+      } else {
+        const item = status.tenants.find((entry) => entry.tenantId === selectedTenantId);
+        rows = [
+          {
+            tenantId: selectedTenantId,
+            nome: getTenantName(tenantMap, selectedTenantId),
+            connectedAgents: item?.connectedAgents ?? 0,
+          },
+        ];
       }
 
-      const item = status.tenants.find((entry) => entry.tenantId === selectedTenantId);
-      setRows([
-        {
-          tenantId: selectedTenantId,
-          nome: getTenantName(tenantMap, selectedTenantId),
-          connectedAgents: item?.connectedAgents ?? 0,
-        },
-      ]);
-      setTotalConnectedAgents(item?.connectedAgents ?? 0);
-    } catch (loadError) {
-      setError(formatError(loadError));
-      setRows([]);
-      setTotalConnectedAgents(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [access.canAccessElevatedModules, selectedTenantId, tenants, tenantMap]);
+      return { rows, totalConnectedAgents: status.totalConnectedAgents };
+    },
+    enabled: access.canAccessElevatedModules && !access.loading,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
 
-  useEffect(() => {
-    if (!access.loading) {
-      void load();
-    }
-  }, [access.loading, load]);
+  const rows = statusQuery.data?.rows ?? [];
+  const totalConnectedAgents = statusQuery.data?.totalConnectedAgents ?? 0;
+  const loading = statusQuery.isLoading || statusQuery.isFetching;
+  const error = statusQuery.error ? formatError(statusQuery.error) : "";
+
+  const load = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["admin", "catraca-status"] });
+  }, [queryClient]);
+
+  const filteredRows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return rows;
+    return rows.filter((row) => [row.nome, row.tenantId].join(" ").toLowerCase().includes(term));
+  }, [rows, search]);
 
   const tenantsOptions = useMemo(
     () => [
@@ -159,7 +143,7 @@ export function CatracaStatusContent() {
             Monitore conexões WebSocket ativas por unidade (tenant).
           </p>
         </div>
-        <Button onClick={() => void load()} disabled={!access.canAccessElevatedModules || loading}>
+        <Button onClick={load} disabled={!access.canAccessElevatedModules || loading}>
           <RefreshCw className="mr-2 size-4" />
           {loading ? "Atualizando..." : "Atualizar"}
         </Button>

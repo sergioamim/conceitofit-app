@@ -1,17 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { createMaquininhaApi, listMaquininhasApi, toggleMaquininhaApi, updateMaquininhaApi } from "@/lib/api/maquininhas";
+import type { CreateMaquininhaApiInput, UpdateMaquininhaApiInput } from "@/lib/api/maquininhas";
 import { listContasBancariasApi } from "@/lib/api/contas-bancarias";
 import type { AdquirenteMaquininha, ContaBancaria } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { PageError } from "@/components/shared/page-error";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 
 type MaquininhaForm = {
   nome: string;
@@ -53,13 +56,7 @@ function getStatusClass(status: "ATIVA" | "INATIVA") {
 }
 
 export function MaquininhasContent() {
-  const [maquininhas, setMaquininhas] = useState<MaquininhaItem[]>([]);
-  const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -68,6 +65,28 @@ export function MaquininhasContent() {
 
   const [search, setSearch] = useState("");
   const { tenantId, tenantName, tenantResolved, loading: tenantLoading, error: tenantError } = useTenantContext();
+
+  const { items: maquininhas, isLoading: loading, error: loadError, refetch, create, update, toggle } = useAdminCrud<
+    MaquininhaItem,
+    CreateMaquininhaApiInput,
+    UpdateMaquininhaApiInput
+  >({
+    domain: "maquininhas",
+    tenantId,
+    enabled: tenantResolved && !!tenantId,
+    listFn: (tid) => listMaquininhasApi({ tenantId: tid }),
+    createFn: (tid, data) => createMaquininhaApi({ tenantId: tid, data }),
+    updateFn: (tid, id, data) => updateMaquininhaApi({ tenantId: tid, id, data }),
+    toggleFn: (tid, id) => toggleMaquininhaApi({ tenantId: tid, id }),
+  });
+
+  const contasBancariasQuery = useQuery<ContaBancaria[]>({
+    queryKey: ["admin", "contas-bancarias", tenantId ?? ""],
+    queryFn: () => listContasBancariasApi({ tenantId: tenantId || undefined }),
+    enabled: tenantResolved && !!tenantId,
+    staleTime: 5 * 60_000,
+  });
+  const contasBancarias = contasBancariasQuery.data ?? [];
 
   const contasAtivas = useMemo(
     () => contasBancarias.filter((conta) => conta.statusCadastro === "ATIVA"),
@@ -92,41 +111,6 @@ export function MaquininhasContent() {
         .includes(term)
     );
   }, [maquininhas, search, contasMap]);
-
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const [maqs, contas] = await Promise.all([
-        listMaquininhasApi({ tenantId: tenantId || undefined }),
-        listContasBancariasApi({ tenantId: tenantId || undefined }),
-      ]);
-      setMaquininhas(maqs);
-      setContasBancarias(contas);
-    } catch (loadErr) {
-      setLoadError(normalizeErrorMessage(loadErr));
-    } finally {
-      setLoading(false);
-      setHasLoadedOnce(true);
-    }
-  }, [tenantId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    setLoadError(tenantError);
-  }, [tenantError]);
-
-  useEffect(() => {
-    setHasLoadedOnce(false);
-    setModalOpen(false);
-    setEditing(null);
-    setForm(MAQUININHA_FORM_DEFAULT);
-    setSuccess(null);
-  }, [tenantId]);
 
   function isFormValid() {
     return Boolean(
@@ -162,7 +146,6 @@ export function MaquininhasContent() {
       return;
     }
     if (!isFormValid()) return;
-    setSaving(true);
     setError(null);
     setSuccess(null);
     try {
@@ -173,26 +156,16 @@ export function MaquininhasContent() {
         contaBancariaId: form.contaBancariaId,
       };
       if (editing) {
-        await updateMaquininhaApi({
-          tenantId: tenantId || undefined,
-          id: editing.id,
-          data: payload,
-        });
+        await update!.mutateAsync({ id: editing.id, data: payload });
       } else {
-        await createMaquininhaApi({
-          tenantId: tenantId || undefined,
-          data: payload,
-        });
+        await create!.mutateAsync(payload);
       }
       setModalOpen(false);
       setEditing(null);
       setForm(MAQUININHA_FORM_DEFAULT);
-      await load();
       setSuccess(editing ? "Maquininha atualizada." : "Maquininha cadastrada.");
     } catch (saveError) {
       setError(normalizeErrorMessage(saveError));
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -204,24 +177,22 @@ export function MaquininhasContent() {
     setError(null);
     setSuccess(null);
     try {
-      const updated = await toggleMaquininhaApi({
-        tenantId: tenantId || undefined,
-        id: item.id,
-      });
-      setMaquininhas((prev) => prev.map((entry) => (entry.id === updated.id ? updated : entry)));
+      await toggle!.mutateAsync(item.id);
       setSuccess(
-        `Maquininha ${updated.statusCadastro === "ATIVA" ? "ativada" : "inativada"} com sucesso.`
+        `Maquininha ${item.statusCadastro === "ATIVA" ? "inativada" : "ativada"} com sucesso.`
       );
     } catch (errorPayload) {
       setError(normalizeErrorMessage(errorPayload));
     }
   }
 
-  const initialLoading = tenantLoading || !tenantResolved || (loading && !hasLoadedOnce);
+  const saving = create?.isPending || update?.isPending;
+  const combinedLoadError = loadError || tenantError;
+  const initialLoading = tenantLoading || !tenantResolved || (loading && maquininhas.length === 0);
   const isTenantUnavailable = tenantResolved && !tenantId;
   const emptyStateMessage = isTenantUnavailable
     ? "Não foi possível identificar a unidade ativa."
-    : loadError
+    : combinedLoadError
       ? "Não foi possível carregar as maquininhas."
       : "Nenhuma maquininha cadastrada.";
 
@@ -252,7 +223,7 @@ export function MaquininhasContent() {
         />
       </div>
 
-      <PageError error={loadError} onRetry={load} />
+      <PageError error={combinedLoadError} onRetry={refetch} />
 
       {(error || success) && (
         <div
