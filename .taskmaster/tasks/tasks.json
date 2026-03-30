@@ -10375,13 +10375,14 @@
         "description": "Pipeline, tarefas e playbooks existem como UI mas sem execução automática de cadências.",
         "details": "Implementar engine de cadências: ao prospect entrar em estágio X, criar tarefas automáticas com prazos. Ao task vencer sem ação, escalar ou mover prospect. Cadências definidas nos playbooks existentes. Backend precisa de scheduler/cron para verificar prazos.",
         "testStrategy": "Prospect novo gera tarefas automáticas conforme playbook. Tarefa vencida escalona.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "260"
         ],
         "priority": "medium",
         "complexity": 7,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-30T03:36:30.608Z"
       },
       {
         "id": "262",
@@ -10570,9 +10571,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T03:25:41.895Z",
+      "lastModified": "2026-03-30T03:36:30.608Z",
       "taskCount": 267,
-      "completedCount": 265,
+      "completedCount": 266,
       "tags": [
         "master"
       ]
