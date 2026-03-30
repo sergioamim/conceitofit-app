@@ -22,6 +22,7 @@ import type {
   CrmTask,
   CrmTaskPrioridade,
   CrmTaskStatus,
+  CrmTaskTipo,
   StatusProspect,
 } from "@/lib/types";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
