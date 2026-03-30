@@ -11123,7 +11123,7 @@
         "description": "Kanban de prospects usa useState para dados de pipeline. Alta interatividade.",
         "details": "Reusar useProspects() existente. Adicionar mutations para drag-and-drop status change com optimistic updates.",
         "testStrategy": "Kanban carrega do cache de prospects. Mover card atualiza otimisticamente.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "253"
         ],
@@ -11177,7 +11177,8 @@
             "testStrategy": "Testes manuais: Mover múltiplos prospects rapidamente, verificar comportamento de optimistic updates e consistência final dos dados após recarregamento da página. Testar casos de sucesso e falha de rede para garantir que o rollback funciona. Considerar testes de integração para cobrir o fluxo completo.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:20:03.511Z"
       },
       {
         "id": "278",
@@ -11185,7 +11186,7 @@
         "description": "10 páginas administrativo usam o mesmo padrão: list+create+update+toggle. Arquivos: contas-bancarias, maquininhas, tipos-conta, atividades-grade, unidades, catraca-status, conciliacao-bancaria, nfse, ia, integracoes.",
         "details": "Criar hook genérico useAdminCrud<T>(config) ou hooks individuais por domínio. Usar useMutation com invalidação. Padrão: query key [\"admin\", domain, tenantId], staleTime 5min.",
         "testStrategy": "CRUD funciona em todas as 10 páginas. Toggle ativo/inativo invalida. Navegar e voltar usa cache.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "225"
         ],
@@ -11252,7 +11253,8 @@
             "testStrategy": "Para cada uma das 10 páginas, executar um fluxo completo de CRUD: listar (validar cache), criar um novo item, editar o item criado, alternar seu status e tentar excluí-lo (se aplicável), verificando se todas as operações são bem-sucedidas e os dados são atualizados corretamente na interface e no backend.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:19:55.564Z"
       },
       {
         "id": "279",
@@ -11260,7 +11262,7 @@
         "description": "billing-config-content.tsx usa useState para config, loading, saving, testing.",
         "details": "Criar useBillingConfig() com useQuery para load + useMutation para save e test. Já tem react-hook-form.",
         "testStrategy": "Config carrega com cache. Salvar invalida. Testar conexão funciona.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -11313,7 +11315,8 @@
             "testStrategy": "Testes E2E: Criar um cenário que visita a página de configuração, preenche um formulário, salva e verifica se os dados foram atualizados. Criar um cenário para testar a conexão com sucesso e falha. Verificar o comportamento do cache após um save bem-sucedido e ao retornar à página dentro do `staleTime`.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:22:26.039Z"
       },
       {
         "id": "280",
@@ -11657,9 +11660,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:19:30.834Z",
+      "lastModified": "2026-03-30T05:22:26.039Z",
       "taskCount": 287,
-      "completedCount": 276,
+      "completedCount": 277,
       "tags": [
         "master"
       ]
