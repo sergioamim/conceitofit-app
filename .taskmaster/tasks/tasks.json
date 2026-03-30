@@ -11780,21 +11780,21 @@
         "description": "4 páginas de adesão (trial, cadastro, checkout, pendências) usam useState para tenant options e form state.",
         "details": "Criar usePublicTenants() hook compartilhado. Mutations para submit. Draft state pode permanecer em context.",
         "testStrategy": "Tenant options carregam com cache. Submit funciona. Navegar entre etapas preserva dados.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "225"
         ],
         "priority": "low",
         "complexity": 4,
         "subtasks": [],
-        "updatedAt": "2026-03-30T05:49:37.052Z"
+        "updatedAt": "2026-03-30T05:54:12.432Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:53:41.897Z",
+      "lastModified": "2026-03-30T05:54:12.432Z",
       "taskCount": 287,
-      "completedCount": 286,
+      "completedCount": 287,
       "tags": [
         "master"
       ]
