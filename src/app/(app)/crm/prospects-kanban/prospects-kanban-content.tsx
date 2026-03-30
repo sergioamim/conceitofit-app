@@ -2,19 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import {
-  listCrmTasksApi,
-  listProspectsApi,
-  marcarProspectPerdidoApi,
-  updateProspectStatusApi,
-} from "@/lib/api/crm";
+import { listCrmTasksApi } from "@/lib/api/crm";
 import { listFuncionariosApi } from "@/lib/api/administrativo";
-import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { canTransitionProspectStatus } from "@/lib/tenant/crm/prospect-status";
 import type { CrmPipelineStage, Funcionario, Prospect, StatusProspect } from "@/lib/types";
 import { buildDefaultCrmPipelineStages } from "@/lib/tenant/crm/workspace";
-import { enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/tenant/crm/runtime";
+import { enrichCrmTasksRuntime } from "@/lib/tenant/crm/runtime";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { useProspects, useOptimisticProspectStatus } from "@/lib/query/use-prospects";
 import { StatusBadge } from "@/components/shared/status-badge";
 const ProspectDetailModal = dynamic(
   () => import("@/components/shared/prospect-detail-modal").then((mod) => mod.ProspectDetailModal),
@@ -35,70 +30,60 @@ const ORIGEM_LABEL: Record<string, string> = {
   OUTROS: "Outros",
 };
 
-function nowDateTime() {
-  return new Date().toISOString().slice(0, 19);
-}
-
 export function ProspectsKanbanContent() {
   const tenantContext = useTenantContext();
-  const [prospects, setProspects] = useState<Prospect[]>([]);
+  const tenantId = tenantContext.tenantId ?? "";
+
+  // Server state via TanStack Query
+  const { data: prospects = [], isLoading: prospectsLoading, error: prospectsError, refetch } = useProspects({
+    tenantId: tenantId || undefined,
+    tenantResolved: tenantContext.tenantResolved,
+  });
+  const statusMutation = useOptimisticProspectStatus(tenantId || undefined);
+
+  // Auxiliary data (funcionarios + tasks for stage counts)
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
-  const [stages, setStages] = useState<CrmPipelineStage[]>([]);
   const [openTasksByStage, setOpenTasksByStage] = useState<Record<string, number>>({});
+  const [auxLoading, setAuxLoading] = useState(true);
+
+  const loadAux = useCallback(async () => {
+    if (!tenantId) return;
+    setAuxLoading(true);
+    try {
+      const [funcs, crmTaskRows] = await Promise.all([
+        listFuncionariosApi(true),
+        listCrmTasksApi({ tenantId }),
+      ]);
+      setFuncionarios(funcs);
+      const enrichedTasks = enrichCrmTasksRuntime({ tasks: crmTaskRows, prospects, funcionarios: funcs });
+      const pipelineStages = buildDefaultCrmPipelineStages(tenantId);
+      const taskMap = pipelineStages.reduce<Record<string, number>>((acc, stage) => {
+        acc[stage.status] = enrichedTasks.filter(
+          (t) => t.stageStatus === stage.status && !["CONCLUIDA", "CANCELADA"].includes(t.status),
+        ).length;
+        return acc;
+      }, {});
+      setOpenTasksByStage(taskMap);
+    } catch {} finally {
+      setAuxLoading(false);
+    }
+  }, [tenantId, prospects]);
+
+  useEffect(() => { if (prospects.length > 0) void loadAux(); }, [loadAux, prospects.length]);
+
+  // UI state
   const [filtroStatus, setFiltroStatus] = useState<StatusProspect | typeof FILTER_ALL>(FILTER_ALL);
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>(FILTER_ALL);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [prospectRows, funcs, crmTaskRows] = await Promise.all([
-        listProspectsApi({ tenantId }),
-        listFuncionariosApi(true),
-        listCrmTasksApi({ tenantId }),
-      ]);
-      const normalizedProspects = prospectRows
-        .map((prospect) => normalizeProspectRuntime(prospect))
-        .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
-      const enrichedTasks = enrichCrmTasksRuntime({
-        tasks: crmTaskRows,
-        prospects: normalizedProspects,
-        funcionarios: funcs,
-      });
-      const pipelineStages = buildDefaultCrmPipelineStages(
-        tenantId || normalizedProspects[0]?.tenantId || enrichedTasks[0]?.tenantId || "tenant-runtime"
-      );
-      const taskMap = pipelineStages.reduce<Record<string, number>>((accumulator, stage) => {
-        accumulator[stage.status] = enrichedTasks.filter(
-          (task) =>
-            task.stageStatus === stage.status &&
-            !["CONCLUIDA", "CANCELADA"].includes(task.status)
-        ).length;
-        return accumulator;
-      }, {});
-      setProspects(normalizedProspects);
-      setFuncionarios(funcs);
-      setStages(pipelineStages);
-      setOpenTasksByStage(taskMap);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Falha ao carregar pipeline comercial.");
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const loading = prospectsLoading || auxLoading;
+  const stages = useMemo(() => buildDefaultCrmPipelineStages(tenantId || "tenant-runtime"), [tenantId]);
 
   useEffect(() => {
     setSelectedProspect((current) =>
-      current ? prospects.find((prospect) => prospect.id === current.id) ?? current : null
+      current ? prospects.find((p) => p.id === current.id) ?? current : null
     );
   }, [prospects]);
 
@@ -134,47 +119,13 @@ export function ProspectsKanbanContent() {
       return;
     }
     const motivo = status === "PERDIDO" ? prompt("Motivo da perda (opcional):") : undefined;
-    if (status === "PERDIDO" && motivo === null) {
-      return;
-    }
-    const at = nowDateTime();
-
-    setProspects((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? normalizeProspectRuntime(
-              {
-                ...item,
-                status,
-                dataUltimoContato: at,
-                motivoPerda: status === "PERDIDO" ? motivo || undefined : undefined,
-              },
-              item
-            )
-          : item
-      )
-    );
+    if (status === "PERDIDO" && motivo === null) return;
 
     try {
-      const updated =
-        status === "PERDIDO"
-          ? await marcarProspectPerdidoApi({
-              tenantId,
-              id,
-              motivo: motivo || undefined,
-            })
-          : await updateProspectStatusApi({
-              tenantId,
-              id,
-              status,
-            });
-
-      setProspects((prev) =>
-        prev.map((item) => (item.id === id ? normalizeProspectRuntime(updated, item) : item))
-      );
+      setError("");
+      await statusMutation.mutateAsync({ id, status, motivo: motivo ?? undefined });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Falha ao atualizar etapa do prospect.");
-      await load();
     }
   }
 
@@ -191,7 +142,7 @@ export function ProspectsKanbanContent() {
           funcionarios={funcionarios}
           onClose={() => setSelectedProspect(null)}
           onChanged={() => {
-            void load();
+            void refetch();
             setSelectedProspect(null);
           }}
         />

@@ -4,7 +4,7 @@ export { useDashboard } from "./use-dashboard";
 export { useClientes, useUpdateCliente } from "./use-clientes";
 export { usePagamentos } from "./use-pagamentos";
 export { useMatriculas, useRenovarMatricula, useCancelarMatricula } from "./use-matriculas";
-export { useProspects, useCreateProspect, useUpdateProspect, useUpdateProspectStatus, useMarkProspectLost, useDeleteProspect } from "./use-prospects";
+export { useProspects, useCreateProspect, useUpdateProspect, useUpdateProspectStatus, useOptimisticProspectStatus, useMarkProspectLost, useDeleteProspect } from "./use-prospects";
 export { useVendas } from "./use-vendas";
 export { useRecebimentos, useCreateRecebimentoAvulso, useEmitirNfse } from "./use-recebimentos";
 export { useAulasSessoes, useMinhasReservas, useReservarAula, useCancelarReserva } from "./use-aulas";

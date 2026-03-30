@@ -97,6 +97,61 @@ export function useUpdateProspectStatus(tenantId: string | undefined) {
   });
 }
 
+/**
+ * Mutation com optimistic update para o kanban drag-and-drop.
+ * Atualiza o cache imediatamente (UI responsiva) e reverte se a API falhar.
+ */
+export function useOptimisticProspectStatus(tenantId: string | undefined) {
+  const queryClient = useQueryClient();
+  const queryKey = queryKeys.prospects.all(tenantId ?? "");
+
+  return useMutation({
+    mutationFn: (input: { id: string; status: StatusProspect; motivo?: string }) =>
+      input.status === "PERDIDO"
+        ? marcarProspectPerdidoApi({ tenantId: tenantId!, id: input.id, motivo: input.motivo })
+        : updateProspectStatusApi({ tenantId: tenantId!, id: input.id, status: input.status }),
+
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Prospect[]>(queryKey);
+
+      queryClient.setQueryData<Prospect[]>(queryKey, (old) =>
+        old?.map((p) =>
+          p.id === variables.id
+            ? normalizeProspectRuntime(
+                { ...p, status: variables.status, dataUltimoContato: new Date().toISOString().slice(0, 19) },
+                p,
+              )
+            : p,
+        ),
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData<Prospect[]>(queryKey, context.previous);
+      }
+    },
+
+    onSettled: (_data, _error, variables) => {
+      if (tenantId) {
+        void queryClient.invalidateQueries({ queryKey });
+        void triggerCadenciasOnStatusChange({
+          tenantId,
+          prospectId: variables.id,
+          novoStatus: variables.status,
+        }).then((result) => {
+          if (result.errors.length > 0) {
+            logger.warn("Cadência(s) falharam ao disparar", { module: "crm-kanban", errors: result.errors });
+          }
+        });
+      }
+    },
+  });
+}
+
 export function useMarkProspectLost(tenantId: string | undefined) {
   const queryClient = useQueryClient();
 
