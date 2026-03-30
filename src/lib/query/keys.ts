@@ -11,4 +11,9 @@ export const queryKeys = {
     list: (tenantId: string, filters: Record<string, unknown>) =>
       ["pagamentos", "list", tenantId, filters] as const,
   },
+
+  grade: {
+    all: (tenantId: string) => ["grade", tenantId] as const,
+    week: (tenantId: string) => ["grade", "week", tenantId] as const,
+  },
 } as const;
