@@ -9,3 +9,5 @@ export { useVendas } from "./use-vendas";
 export { useRecebimentos, useCreateRecebimentoAvulso, useEmitirNfse } from "./use-recebimentos";
 export { useAulasSessoes, useMinhasReservas, useReservarAula, useCancelarReserva } from "./use-aulas";
 export { useCrmWorkspace, useToggleCrmAutomation } from "./use-crm";
+export { useAgregadores, useReprocessarAgregador } from "./use-agregadores";
+export { useCatracaAcessos } from "./use-catraca-acessos";

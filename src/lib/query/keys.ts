@@ -84,6 +84,16 @@ export const queryKeys = {
     logs: (tenantId: string) => ["whatsapp", "logs", tenantId] as const,
   },
 
+  agregadores: {
+    all: (tenantId: string) => ["agregadores", tenantId] as const,
+    list: (tenantId: string) => ["agregadores", "list", tenantId] as const,
+  },
+
+  catracaAcessos: {
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["catracaAcessos", "list", tenantId, filters] as const,
+  },
+
   funcionarios: {
     all: () => ["funcionarios"] as const,
   },
