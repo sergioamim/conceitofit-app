@@ -340,7 +340,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated || authenticated) return;
-    router.replace("/admin/login");
+    router.replace("/admin-login");
   }, [authenticated, hydrated, pathname, router, searchParams]);
 
   if (!hydrated || access.loading) {
