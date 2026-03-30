@@ -8,6 +8,8 @@ import {
   updateProspectStatusApi,
 } from "@/lib/api/crm";
 import { normalizeProspectRuntime } from "@/lib/tenant/crm/runtime";
+import { triggerCadenciasOnStatusChange } from "@/lib/tenant/crm/cadence-engine";
+import { logger } from "@/lib/shared/logger";
 import type { CreateProspectInput, Prospect, StatusProspect } from "@/lib/types";
 import { queryKeys } from "./keys";
 
@@ -33,13 +35,20 @@ export function useCreateProspect(tenantId: string | undefined) {
   return useMutation({
     mutationFn: (data: CreateProspectInput) =>
       createProspectApi({ tenantId: tenantId!, data }),
-    onSuccess: (_data, _variables, _context) => {
+    onSuccess: (_data) => {
       if (tenantId) {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.prospects.all(tenantId),
         });
-        import("@/lib/shared/analytics").then(({ trackProspectCreated }) => {
-          trackProspectCreated(tenantId, _data.id);
+        // Disparar cadências com gatilho NOVO_PROSPECT
+        void triggerCadenciasOnStatusChange({
+          tenantId,
+          prospectId: _data.id,
+          novoStatus: "NOVO",
+        }).then((result) => {
+          if (result.errors.length > 0) {
+            logger.warn("Cadência(s) falharam ao disparar para novo prospect", { module: "crm", errors: result.errors });
+          }
         });
       }
     },
@@ -68,10 +77,20 @@ export function useUpdateProspectStatus(tenantId: string | undefined) {
   return useMutation({
     mutationFn: (input: { id: string; status: StatusProspect }) =>
       updateProspectStatusApi({ tenantId: tenantId!, id: input.id, status: input.status }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       if (tenantId) {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.prospects.all(tenantId),
+        });
+        // Disparar cadências vinculadas à nova etapa
+        void triggerCadenciasOnStatusChange({
+          tenantId,
+          prospectId: variables.id,
+          novoStatus: variables.status,
+        }).then((result) => {
+          if (result.errors.length > 0) {
+            logger.warn("Cadência(s) falharam ao disparar", { module: "crm", errors: result.errors });
+          }
         });
       }
     },

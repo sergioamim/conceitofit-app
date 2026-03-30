@@ -27,6 +27,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CadenceExecutionsPanel } from "./cadence-executions-panel";
 
 export function CrmContent() {
   const tenantContext = useTenantContext();
@@ -305,6 +306,9 @@ export function CrmContent() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Cadências em execução */}
+          <CadenceExecutionsPanel tenantId={tenantId} />
         </>
       ) : null}
     </div>
