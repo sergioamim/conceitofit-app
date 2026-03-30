@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Copy, Loader2, Search, SquareArrowOutUpRight, UserPlus } from "lucide-react";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { PaginatedTable } from "@/components/shared/paginated-table";
@@ -16,11 +17,8 @@ import {
   buildTreinoV2SaveInput,
   summarizeTreinoV2AssignedGovernance,
 } from "@/lib/tenant/treinos/v2-runtime";
-import {
-  encerrarTreinoWorkspace,
-  listTreinosWorkspace,
-  saveTreinoWorkspace,
-} from "@/lib/tenant/treinos/workspace";
+import { saveTreinoWorkspace } from "@/lib/tenant/treinos/workspace";
+import { useTreinosAtribuidos, useEncerrarTreino } from "@/lib/query/use-treinos";
 import type { Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
@@ -47,10 +45,7 @@ function resolveVigenciaLabel(treino: Treino): VigenciaFilter {
 export default function TreinosAtribuidosPage() {
   const { tenantId, tenantName, tenantResolved } = useTenantContext();
   const { toast } = useToast();
-  const [workouts, setWorkouts] = useState<Treino[]>([]);
-  const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(FILTER_ALL);
   const [origemFilter, setOrigemFilter] = useState<string>(FILTER_ALL);
@@ -58,30 +53,14 @@ export default function TreinosAtribuidosPage() {
   const [vigenciaFilter, setVigenciaFilter] = useState<VigenciaFilter>(FILTER_ALL);
   const [page, setPage] = useState(0);
 
-  const loadData = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await listTreinosWorkspace({
-        tenantId,
-        tipoTreino: "CUSTOMIZADO",
-        page: 0,
-        size: 200,
-      });
-      setWorkouts(response.items);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-      setWorkouts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
+  const { data: workouts = [], isLoading: loading, isError, error: queryError } = useTreinosAtribuidos({
+    tenantId,
+    tenantResolved,
+  });
 
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void loadData();
-  }, [loadData, tenantId, tenantResolved]);
+  const error = isError ? normalizeErrorMessage(queryError) : null;
+  const encerrarMutation = useEncerrarTreino();
+  const queryClient = useQueryClient();
 
   const professorOptions = useMemo(
     () =>
@@ -159,12 +138,11 @@ export default function TreinosAtribuidosPage() {
     if (!tenantId || actingId) return;
     setActingId(workout.id);
     try {
-      await encerrarTreinoWorkspace({
+      await encerrarMutation.mutateAsync({
         tenantId,
         id: workout.id,
         observacao: "Encerrado pela listagem operacional de treinos atribuídos.",
       });
-      await loadData();
       toast({
         title: "Treino encerrado",
         description: workout.nome ?? workout.templateNome ?? workout.id,
@@ -223,7 +201,7 @@ export default function TreinosAtribuidosPage() {
           observacao: item.observacao,
         })),
       });
-      await loadData();
+      await queryClient.invalidateQueries({ queryKey: ["treinos"] });
       toast({
         title: "Treino duplicado",
         description: duplicated.nome ?? duplicated.id,
@@ -261,7 +239,7 @@ export default function TreinosAtribuidosPage() {
       </div>
 
       {error ? (
-        <ListErrorState error={error} onRetry={() => void loadData()} />
+        <ListErrorState error={error} />
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-4 xl:grid-cols-5">
