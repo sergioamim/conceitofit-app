@@ -11251,7 +11251,7 @@
         "id": 280,
         "title": "Migrar whatsapp admin para TanStack Query",
         "description": "whatsapp/page.tsx usa useState para config, templates e logs. 3 domínios num componente.",
-        "details": "Criar useWhatsAppConfig(), useWhatsAppTemplates(), useWhatsAppLogs() hooks separados. Mutations para CRUD de templates e save config.",
+        "details": "Criar useWhatsAppConfig(), useWhatsAppTemplates(), useWhatsAppLogs() hooks separados. Mutations para CRUD de templates e save config. IMPORTANTE: logs de mensagem devem usar staleTime:0 + refetchInterval:10s (polling) — NÃO cachear, operador precisa ver estado real em tempo real (ENVIADA→ENTREGUE→LIDA→FALHA).",
         "testStrategy": "Cada aba carrega com cache independente. CRUD templates invalida. Config salva invalida.",
         "status": "pending",
         "dependencies": [
@@ -11265,7 +11265,7 @@
             "title": "Implementar Hooks de Consulta para Dados do WhatsApp Admin",
             "description": "Desenvolver os hooks `useWhatsAppConfig()`, `useWhatsAppTemplates()` e `useWhatsAppLogs()` utilizando TanStack Query para buscar dados dos respectivos domínios (configurações, templates, logs) no admin do WhatsApp.",
             "dependencies": [],
-            "details": "Criar os `queryFn` para cada hook, definir `queryKey` apropriadas (ex: `[\"whatsapp\", \"config\"]`, `[\"whatsapp\", \"templates\"]`, `[\"whatsapp\", \"logs\"]`), e integrar com os serviços de API existentes. Configurar `staleTime` para otimização do cache, especialmente para dados menos voláteis como as configurações.",
+            "details": "useWhatsAppConfig(): staleTime 10min (config muda raramente). useWhatsAppTemplates(): staleTime 5min (templates mudam pouco). useWhatsAppLogs(): staleTime 0 + refetchInterval 10s (polling) — logs NÃO devem ser cacheados, operador precisa ver status em tempo real.",
             "status": "pending",
             "testStrategy": "Testar cada hook individualmente em um ambiente isolado para garantir que os dados são carregados corretamente, armazenados em cache e que os estados de carregamento/erro são gerenciados adequadamente."
           },
