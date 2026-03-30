@@ -11398,7 +11398,7 @@
         "description": "bi/page.tsx e bi/rede/page.tsx usam useState para snapshot BI. Dados agregados com filtros.",
         "details": "Criar useBiOperacional() e useBiRede() hooks. Query key inclui filtros (scope, tenantId, dateRange, segmento). staleTime 5min.",
         "testStrategy": "BI carrega com cache. Mudar filtros invalida seletivamente. Voltar ao filtro anterior usa cache.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -11452,7 +11452,8 @@
             "testStrategy": "Teste de integração completo para ambas as páginas: verificar o carregamento inicial dos dados, a aplicação de diferentes filtros e se a alteração dos filtros aciona uma nova busca. Confirmar que o `staleTime` funciona ao navegar entre as páginas e retornar a elas, utilizando o cache.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:37:00.856Z"
       },
       {
         "id": "282",
@@ -11460,7 +11461,7 @@
         "description": "Livros razão, transações, relatórios e monitoramento usam useState para server state.",
         "details": "Criar hooks: useLedgers(), useFinancialTransactions(), useFinancialReports(), useFinancialMonitoring(). Mutations com invalidação para CRUD.",
         "testStrategy": "Todas 4 páginas carregam com cache. CRUD invalida corretamente.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "225"
         ],
@@ -11514,7 +11515,8 @@
             "testStrategy": "Testes de integração end-to-end para cada uma das quatro páginas. Validar que as páginas carregam os dados com sucesso, que o cache é utilizado (verificar chamadas de rede no navegador), que as operações CRUD funcionam e invalidam o cache corretamente, e que os estados de carregamento e erro são exibidos adequadamente ao usuário.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:33:34.593Z"
       },
       {
         "id": "283",
@@ -11522,7 +11524,7 @@
         "description": "agregadores-content.tsx e catraca-acessos/page.tsx usam useState para dados tabulares com filtros.",
         "details": "Criar useAgregadores() e useCatracaAcessos() hooks.",
         "testStrategy": "Listagem com cache. Filtros funcionam.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "225"
         ],
@@ -11576,7 +11578,8 @@
             "testStrategy": "Teste end-to-end nas páginas `/agregadores` e `/catraca-acessos`: Verificar que ambas as listagens carregam corretamente na primeira visita, que a aplicação de filtros (se houver) atualiza os dados conforme esperado e que a navegação para fora e retorno à página utiliza o cache, garantindo uma experiência de usuário fluida e responsiva.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:34:22.400Z"
       },
       {
         "id": "284",
@@ -11645,7 +11648,7 @@
         "description": "Páginas do backoffice (academias, audit-log, compliance, segurança, financeiro, operacional, leads, busca, whatsapp) usam useState para server state.",
         "details": "Criar hooks por domínio: useAdminAcademias(), useAdminAuditLog(), useAdminCompliance(), useAdminSeguranca(), useAdminFinanceiro(), useAdminOperacional(). Agrupar por similaridade — muitas seguem padrão list+detail+toggle.",
         "testStrategy": "Todas páginas admin carregam com cache. CRUD funciona. Navegar entre abas preserva dados.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -11658,9 +11661,10 @@
             "description": "Estender o arquivo de chaves de query com novas chaves específicas para as entidades do backoffice admin, seguindo o padrão existente para garantir consistência.",
             "dependencies": [],
             "details": "Identificar todas as entidades de dados usadas nas páginas administrativas (academias, audit-log, financeiro, segurança, etc.) e criar as chaves de query correspondentes em src/lib/query/keys.ts. Isso inclui chaves para listas, detalhes e possíveis mutações.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Verificar se as novas chaves estão bem definidas e importáveis em outros módulos. Não há testes funcionais diretos para este item, apenas revisão de código.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:35:20.320Z"
           },
           {
             "id": 2,
@@ -11670,9 +11674,10 @@
               1
             ],
             "details": "Implementar useAdminAcademias em src/lib/query/admin/use-admin-academias.ts. O hook deve fornecer funções para buscar a lista de academias, detalhes de uma academia específica e possíveis mutações (ativação/desativação). Usar o padrão de TanStack Query já estabelecido em outros hooks.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Criar testes unitários para o hook, verificando se ele retorna dados corretamente, lida com estados de carregamento e erro, e invalida cache após mutações. Testar manualmente na página de academias para garantir que os dados são carregados via TanStack Query.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:35:20.340Z"
           },
           {
             "id": 3,
@@ -11682,9 +11687,10 @@
               1
             ],
             "details": "Implementar useAdminAuditLog em src/lib/query/admin/use-admin-audit-log.ts. O hook deve suportar busca de logs com paginação, filtros por data, usuário ou ação. Integrar com as APIs existentes para o Audit Log.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testes unitários para garantir que o hook busca dados com paginação e filtros corretos. Testes manuais na página de Audit Log para verificar o carregamento, paginação e aplicação de filtros.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:35:20.352Z"
           },
           {
             "id": 4,
@@ -11694,9 +11700,10 @@
               1
             ],
             "details": "Criar hooks em src/lib/query/admin/ com foco nas 5 páginas de financeiro. Os hooks devem abstrair a lógica de busca e mutação para dados como cobranças, contratos, gateways de pagamento e planos, permitindo a exibição e manipulação desses dados. Agrupar em arquivos como use-admin-financeiro-cobrancas.ts.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Escrever testes unitários para cada hook financeiro. Validar carregamento de dados e interações (e.g., status de cobrança) nas páginas de Finanças, garantindo que o TanStack Query gerencia o cache e as atualizações de forma eficiente.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:35:20.361Z"
           },
           {
             "id": 5,
@@ -11706,9 +11713,10 @@
               1
             ],
             "details": "Desenvolver hooks em src/lib/query/admin/ para as 5 páginas de segurança. Incluir hooks para buscar e gerenciar dados de catálogo de funcionalidades, perfis de acesso e revisões de segurança. Nomear arquivos de forma clara, como use-admin-seguranca-perfis.ts.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testes unitários para os hooks de segurança, verificando a obtenção e atualização de dados. Realizar testes manuais nas páginas de Segurança para confirmar que o controle de acesso e configurações são carregados e podem ser modificados corretamente.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:35:20.374Z"
           },
           {
             "id": 6,
@@ -11718,9 +11726,10 @@
               1
             ],
             "details": "Implementar os hooks em src/lib/query/admin/use-admin-operacional-alertas.ts e use-admin-operacional-saude.ts. Eles devem fornecer a funcionalidade para buscar e exibir informações sobre alertas do sistema e o status de saúde dos serviços, substituindo as chamadas diretas de API em useEffect.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testes unitários para validar a obtenção de dados de alertas e saúde. Testes manuais nas páginas correspondentes para verificar o carregamento e atualização das informações operacionais.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:35:20.382Z"
           },
           {
             "id": 7,
@@ -11730,9 +11739,10 @@
               1
             ],
             "details": "Criar os seguintes hooks em src/lib/query/admin/: useAdminLeads, useAdminCompliance, useAdminBusca, useAdminBI, useAdminWhatsapp, useAdminConfiguracoes. Cada hook deve encapsular a lógica de busca e manipulação de dados para sua respectiva área, seguindo o padrão dos hooks anteriores.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Para cada hook, desenvolver testes unitários para as funções de busca e mutação. Testar manualmente as respectivas páginas admin para garantir que os dados são carregados via TanStack Query e as funcionalidades CRUD operam conforme o esperado.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:35:20.391Z"
           },
           {
             "id": 8,
@@ -11747,12 +11757,13 @@
               7
             ],
             "details": "Iterar por todas as páginas em src/app/(backoffice)/admin/ e substituir as chamadas de API dentro de useEffect por chamadas aos novos hooks (e.g., useAdminAcademias, useAdminFinanceiro). Garantir que os estados de carregamento, erro e dados sejam corretamente mapeados para a UI. As páginas devem exibir os dados corretamente após a migração.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testes de integração ponta a ponta para cada página migrada. Validar o carregamento inicial, interações (filtros, paginação, CRUDs), estados de carregamento e erro, e o comportamento de cache ao navegar entre as páginas e abas. Confirmar que não há regressões funcionais.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:35:20.399Z"
           }
         ],
-        "updatedAt": "2026-03-30T05:25:58.029Z"
+        "updatedAt": "2026-03-30T05:35:20.399Z"
       },
       {
         "id": "287",
@@ -11771,9 +11782,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:29:30.078Z",
+      "lastModified": "2026-03-30T05:37:00.857Z",
       "taskCount": 287,
-      "completedCount": 280,
+      "completedCount": 282,
       "tags": [
         "master"
       ]
