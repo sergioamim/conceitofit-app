@@ -11186,7 +11186,7 @@
         "description": "10 páginas administrativo usam o mesmo padrão: list+create+update+toggle. Arquivos: contas-bancarias, maquininhas, tipos-conta, atividades-grade, unidades, catraca-status, conciliacao-bancaria, nfse, ia, integracoes.",
         "details": "Criar hook genérico useAdminCrud<T>(config) ou hooks individuais por domínio. Usar useMutation com invalidação. Padrão: query key [\"admin\", domain, tenantId], staleTime 5min.",
         "testStrategy": "CRUD funciona em todas as 10 páginas. Toggle ativo/inativo invalida. Navegar e voltar usa cache.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -11199,9 +11199,10 @@
             "description": "Implementar um hook reutilizável useAdminResource<T> para gerenciar as operações CRUD (listagem, criação, atualização e alternância de status) de recursos administrativos, utilizando o TanStack Query.",
             "dependencies": [],
             "details": "O hook deve encapsular useQuery para a operação de listagem e useMutation para as operações de criação, atualização e toggle de status. É fundamental que o hook garanta a invalidação adequada do cache após mutações bem-sucedidas. A query key padrão deve seguir o formato [\"admin\", domain, tenantId] e o staleTime configurado para 5 minutos. Considerar a flexibilidade para configurar endpoints de API e transformações de dados.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Criar testes unitários para o hook useAdminResource para verificar o funcionamento das operações de useQuery e useMutation. Simular chamadas de API e observar a invalidação do cache e a atualização dos dados. Testar a configuração de query key e staleTime.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:29:30.019Z"
           },
           {
             "id": 2,
@@ -11211,9 +11212,10 @@
               1
             ],
             "details": "Para cada uma das três páginas, identificar os componentes responsáveis pelas operações de listagem, criação, edição e toggle de status. Adaptar esses componentes para consumir os dados e manipular as ações através do useAdminResource, passando as configurações específicas de cada domínio.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Em cada página (Contas Bancárias, Maquininhas, Tipos de Conta), verificar manualmente se a listagem de itens funciona com cache (navegar e voltar). Testar a criação de um novo item, a edição de um existente e a alternância de status, confirmando que as alterações são refletidas e o cache é invalidado.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:29:30.033Z"
           },
           {
             "id": 3,
@@ -11223,9 +11225,10 @@
               1
             ],
             "details": "Para cada uma das três páginas, identificar os componentes responsáveis pelas operações de listagem, criação, edição e toggle de status. Adaptar esses componentes para consumir os dados e manipular as ações através do useAdminResource, passando as configurações específicas de cada domínio.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Em cada página (Atividades de Grade, Unidades, Catraca Status), verificar manualmente se a listagem de itens funciona com cache (navegar e voltar). Testar a criação de um novo item, a edição de um existente e a alternância de status, confirmando que as alterações são refletidas e o cache é invalidado.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:29:30.052Z"
           },
           {
             "id": 4,
@@ -11235,9 +11238,10 @@
               1
             ],
             "details": "Para cada uma das quatro páginas, identificar os componentes responsáveis pelas operações de listagem, criação, edição e toggle de status. Adaptar esses componentes para consumir os dados e manipular as ações através do useAdminResource, passando as configurações específicas de cada domínio.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Em cada página (Conciliação Bancária, NFSe, IA, Integrações), verificar manualmente se a listagem de itens funciona com cache (navegar e voltar). Testar a criação de um novo item, a edição de um existente e a alternância de status, confirmando que as alterações são refletidas e o cache é invalidado.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:29:30.064Z"
           },
           {
             "id": 5,
@@ -11249,12 +11253,13 @@
               4
             ],
             "details": "Verificar a estrutura de arquivos e exportações para assegurar que não há problemas de importação/exportação. Conduzir testes de aceitação do usuário (UAT) ou testes end-to-end (E2E) em um ambiente de homologação. Focar na cobertura de cenários de edge cases e interações complexas entre as funcionalidades.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Para cada uma das 10 páginas, executar um fluxo completo de CRUD: listar (validar cache), criar um novo item, editar o item criado, alternar seu status e tentar excluí-lo (se aplicável), verificando se todas as operações são bem-sucedidas e os dados são atualizados corretamente na interface e no backend.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:29:30.078Z"
           }
         ],
-        "updatedAt": "2026-03-30T05:19:55.564Z"
+        "updatedAt": "2026-03-30T05:29:30.078Z"
       },
       {
         "id": "279",
@@ -11640,7 +11645,7 @@
         "description": "Páginas do backoffice (academias, audit-log, compliance, segurança, financeiro, operacional, leads, busca, whatsapp) usam useState para server state.",
         "details": "Criar hooks por domínio: useAdminAcademias(), useAdminAuditLog(), useAdminCompliance(), useAdminSeguranca(), useAdminFinanceiro(), useAdminOperacional(). Agrupar por similaridade — muitas seguem padrão list+detail+toggle.",
         "testStrategy": "Todas páginas admin carregam com cache. CRUD funciona. Navegar entre abas preserva dados.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "225"
         ],
@@ -11746,7 +11751,8 @@
             "testStrategy": "Testes de integração ponta a ponta para cada página migrada. Validar o carregamento inicial, interações (filtros, paginação, CRUDs), estados de carregamento e erro, e o comportamento de cache ao navegar entre as páginas e abas. Confirmar que não há regressões funcionais.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:25:58.029Z"
       },
       {
         "id": "287",
@@ -11765,9 +11771,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:24:16.508Z",
+      "lastModified": "2026-03-30T05:29:30.078Z",
       "taskCount": 287,
-      "completedCount": 279,
+      "completedCount": 280,
       "tags": [
         "master"
       ]
