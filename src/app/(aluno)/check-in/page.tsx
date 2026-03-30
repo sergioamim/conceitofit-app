@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   CalendarDays,
@@ -13,8 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { listPresencasByAlunoApi } from "@/lib/api/presencas";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useCheckInPresencas } from "@/lib/query/use-portal-aluno";
 import { formatDate } from "@/lib/formatters";
 import type { Presenca } from "@/lib/shared/types/aluno";
 
@@ -148,32 +147,14 @@ function PresencaRow({ presenca }: { presenca: Presenca }) {
 
 export default function CheckInPage() {
   const { tenantId, userId, displayName, tenantResolved } = useTenantContext();
-  const [presencas, setPresencas] = useState<Presenca[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadPresencas = useCallback(async () => {
-    if (!tenantId || !userId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await listPresencasByAlunoApi({
-        tenantId,
-        alunoId: userId,
-      });
-      setPresencas(data);
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId, userId]);
+  const { data: presencas = [], isLoading: loading, isError, error: queryError, refetch } = useCheckInPresencas({
+    tenantId,
+    tenantResolved,
+    userId,
+  });
 
-  useEffect(() => {
-    if (tenantResolved && tenantId && userId) {
-      void loadPresencas();
-    }
-  }, [tenantResolved, tenantId, userId, loadPresencas]);
+  const error = isError ? (queryError instanceof Error ? queryError.message : "Falha ao carregar presenças.") : null;
 
   const hasIdentity = tenantResolved && tenantId && userId;
 
@@ -210,7 +191,7 @@ export default function CheckInPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={loadPresencas}
+            onClick={() => void refetch()}
             disabled={loading || !hasIdentity}
           >
             <RefreshCw

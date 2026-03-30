@@ -169,6 +169,16 @@ export const queryKeys = {
       ["treinos", "gruposMusculares", tenantId] as const,
   },
 
+  meusTreinos: {
+    list: (tenantId: string, userId: string) =>
+      ["meusTreinos", tenantId, userId] as const,
+  },
+
+  checkIn: {
+    presencas: (tenantId: string, userId: string) =>
+      ["checkIn", "presencas", tenantId, userId] as const,
+  },
+
   funcionarios: {
     all: () => ["funcionarios"] as const,
   },

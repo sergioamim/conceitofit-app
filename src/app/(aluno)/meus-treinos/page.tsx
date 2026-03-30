@@ -1,15 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronUp, Clock, Dumbbell, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import {
-  listTreinosWorkspace,
-  getTreinoWorkspace,
-  registrarExecucaoTreinoWorkspace,
-} from "@/lib/tenant/treinos/workspace";
+import { useMeusTreinos, useRegistrarExecucaoTreino } from "@/lib/query/use-portal-aluno";
 import type { Treino, TreinoItem, TreinoExecucao } from "@/lib/types";
 import { formatDate } from "@/lib/formatters";
 
@@ -223,53 +219,32 @@ function LoadingSkeleton() {
 
 export default function MeusTreinosPage() {
   const { tenantId, tenantResolved, userId } = useTenantContext();
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [treinos, setTreinos] = useState<Treino[]>([]);
   const [concluindoId, setConcluindoId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!tenantId || !userId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await listTreinosWorkspace({
-        tenantId,
-        alunoId: userId,
-        tipoTreino: "CUSTOMIZADO",
-        status: "ATIVO",
-      });
-      const detailed = await Promise.all(
-        result.items.map((t) => getTreinoWorkspace({ tenantId, id: t.id })),
-      );
-      setTreinos(detailed.filter((t): t is Treino => t !== null));
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId, userId]);
+  const { data: treinos = [], isLoading: loading } = useMeusTreinos({
+    tenantId,
+    tenantResolved,
+    userId,
+  });
 
-  useEffect(() => {
-    if (tenantResolved && tenantId && userId) void load();
-  }, [load, tenantResolved, tenantId, userId]);
+  const concluirMutation = useRegistrarExecucaoTreino();
 
-  const handleConcluir = useCallback(async (treinoId: string) => {
+  async function handleConcluir(treinoId: string) {
     if (!tenantId || concluindoId) return;
     setConcluindoId(treinoId);
     try {
-      const updated = await registrarExecucaoTreinoWorkspace({
+      await concluirMutation.mutateAsync({
         tenantId,
         id: treinoId,
         status: "CONCLUIDA",
       });
-      setTreinos((prev) => prev.map((t) => (t.id === treinoId ? updated : t)));
     } catch (err) {
       setError(normalizeErrorMessage(err));
     } finally {
       setConcluindoId(null);
     }
-  }, [tenantId, concluindoId]);
+  }
 
   const ativos = useMemo(() => treinos.filter((t) => t.status === "ATIVO"), [treinos]);
   const encerrados = useMemo(() => treinos.filter((t) => t.status !== "ATIVO"), [treinos]);
@@ -287,8 +262,8 @@ export default function MeusTreinosPage() {
       {error ? (
         <div role="alert" aria-live="assertive" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           {error}
-          <Button variant="ghost" size="sm" onClick={() => void load()} className="ml-2 text-xs">
-            Tentar novamente
+          <Button variant="ghost" size="sm" onClick={() => setError(null)} className="ml-2 text-xs">
+            Fechar
           </Button>
         </div>
       ) : null}
