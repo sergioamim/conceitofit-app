@@ -11123,7 +11123,7 @@
         "description": "Kanban de prospects usa useState para dados de pipeline. Alta interatividade.",
         "details": "Reusar useProspects() existente. Adicionar mutations para drag-and-drop status change com optimistic updates.",
         "testStrategy": "Kanban carrega do cache de prospects. Mover card atualiza otimisticamente.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "253"
         ],
@@ -11178,7 +11178,7 @@
             "parentId": "undefined"
           }
         ],
-        "updatedAt": "2026-03-30T05:20:03.511Z"
+        "updatedAt": "2026-03-30T05:23:03.760Z"
       },
       {
         "id": "278",
@@ -11660,9 +11660,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:22:26.039Z",
+      "lastModified": "2026-03-30T05:23:03.760Z",
       "taskCount": 287,
-      "completedCount": 277,
+      "completedCount": 278,
       "tags": [
         "master"
       ]
