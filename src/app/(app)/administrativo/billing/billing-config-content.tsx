@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,10 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { useTenantContext, useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import {
-  getBillingConfigApi,
-  saveBillingConfigApi,
-  testBillingConnectionApi,
-} from "@/lib/api/billing";
+  useBillingConfig,
+  useSaveBillingConfig,
+  useTestBillingConnection,
+} from "@/lib/query/use-billing-config";
 import type { BillingConfig, ProvedorGateway } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
@@ -89,12 +89,14 @@ export function BillingConfigContent() {
   const { tenantId } = useTenantContext();
   const access = useAuthAccess();
 
-  const [config, setConfig] = useState<BillingConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
+
+  const { data: config, isLoading: loading, error: queryError } = useBillingConfig({ tenantId });
+  const saveMutation = useSaveBillingConfig(tenantId);
+  const testMutation = useTestBillingConnection(tenantId);
+  const saving = saveMutation.isPending;
+  const testing = testMutation.isPending;
+  const loadError = queryError ? normalizeErrorMessage(queryError) : null;
 
   const form = useForm<BillingFormValues>({
     resolver: zodResolver(billingFormSchema),
@@ -107,26 +109,11 @@ export function BillingConfigContent() {
     mode: "onChange",
   });
 
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const loaded = await getBillingConfigApi({ tenantId });
-      setConfig(loaded);
-      if (loaded) {
-        form.reset(toFormValues(loaded));
-      }
-    } catch (error) {
-      setLoadError(normalizeErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId, form]);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (config) {
+      form.reset(toFormValues(config));
+    }
+  }, [config, form]);
 
   const webhookUrl = useMemo(() => {
     if (!tenantId) return "";
@@ -136,19 +123,13 @@ export function BillingConfigContent() {
 
   async function handleSave(values: BillingFormValues) {
     if (!tenantId) return;
-    setSaving(true);
     try {
-      const saved = await saveBillingConfigApi({
-        tenantId,
-        data: {
-          provedorAtivo: values.provedorAtivo,
-          chaveApi: values.chaveApi,
-          ambiente: values.ambiente,
-          ativo: values.ativo,
-        },
+      const saved = await saveMutation.mutateAsync({
+        provedorAtivo: values.provedorAtivo,
+        chaveApi: values.chaveApi,
+        ambiente: values.ambiente,
+        ativo: values.ativo,
       });
-      setConfig(saved);
-      form.reset(toFormValues(saved));
       toast({
         title: "Configuração salva",
         description: `Provedor ${PROVEDOR_OPTIONS.find((p) => p.value === saved.provedorAtivo)?.label ?? saved.provedorAtivo} configurado.`,
@@ -159,19 +140,15 @@ export function BillingConfigContent() {
         description: normalizeErrorMessage(error),
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
     }
   }
 
   async function handleTestConnection() {
     if (!tenantId) return;
-    setTesting(true);
     try {
-      const result = await testBillingConnectionApi({ tenantId });
+      const result = await testMutation.mutateAsync();
       if (result.success) {
         toast({ title: "Conexão OK", description: result.message || "Gateway respondeu com sucesso." });
-        void load();
       } else {
         toast({ title: "Falha na conexão", description: result.message || "Não foi possível conectar ao gateway.", variant: "destructive" });
       }
@@ -181,8 +158,6 @@ export function BillingConfigContent() {
         description: normalizeErrorMessage(error),
         variant: "destructive",
       });
-    } finally {
-      setTesting(false);
     }
   }
 
@@ -201,7 +176,7 @@ export function BillingConfigContent() {
       <div className="space-y-4">
         <h1 className="font-display text-2xl font-bold">Cobrança Recorrente</h1>
         <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">{loadError}</div>
-        <Button variant="outline" onClick={() => void load()}>Tentar novamente</Button>
+        <Button variant="outline" onClick={() => config ? form.reset(toFormValues(config)) : undefined}>Tentar novamente</Button>
       </div>
     );
   }
@@ -396,7 +371,7 @@ export function BillingConfigContent() {
             </div>
 
             <div className="flex justify-end gap-3 border-t border-border pt-4">
-              <Button type="button" variant="outline" onClick={() => void load()} disabled={saving} className="border-border">
+              <Button type="button" variant="outline" onClick={() => config ? form.reset(toFormValues(config)) : undefined} disabled={saving} className="border-border">
                 Descartar alterações
               </Button>
               <Button type="submit" disabled={saving || accessDenied || !form.formState.isValid}>
