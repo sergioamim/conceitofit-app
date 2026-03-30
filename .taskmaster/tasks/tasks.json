@@ -11017,7 +11017,50 @@
         ],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir e Implementar Query Keys para Campanhas",
+            "description": "Estabelecer uma estrutura clara e consistente de query keys para todas as operações relacionadas a campanhas de CRM (listagem, detalhes, etc.) no TanStack Query. Isso inclui a definição do array base e a composição para cenários específicos, como listar todas as campanhas ou uma campanha específica.",
+            "dependencies": [],
+            "details": "Criar uma constante, por exemplo, `CRM_CAMPAIGNS_KEYS = ['crm', 'campanhas']`, em um arquivo dedicado de `queryKeys` ou diretamente no hook. Assegurar que as chaves sejam descritivas, reutilizáveis e sigam as convenções existentes do projeto para TanStack Query. Exemplo: `CRM_CAMPAIGNS_KEYS.all` para listar, `CRM_CAMPAIGNS_KEYS.detail(id)` para detalhes.",
+            "status": "pending",
+            "testStrategy": "Revisão de código para garantir a conformidade com as diretrizes de query keys do TanStack Query e a clareza para futuros desenvolvedores. Validar a consistência com outras query keys existentes no projeto."
+          },
+          {
+            "id": 2,
+            "title": "Desenvolver Hook `useCrmCampanhas` e Mutations CRUD",
+            "description": "Criar o hook customizado `useCrmCampanhas` para buscar e gerenciar o estado da lista de campanhas, e implementar as mutations necessárias para criar, disparar e encerrar campanhas, utilizando o TanStack Query para gerenciamento de dados assíncronos e cache.",
+            "dependencies": [
+              1
+            ],
+            "details": "No diretório `hooks/` ou similar, criar `useCrmCampanhas.ts`. Implementar `useQuery` para buscar a lista de campanhas usando `queryKey: CRM_CAMPAIGNS_KEYS.all` e definir `staleTime: 2 * 60 * 1000` (2 minutos). Implementar `useMutation` para `criarCampanha`, `dispararCampanha` e `encerrarCampanha`. Após cada mutação bem-sucedida, garantir a invalidação do cache relevante com `queryClient.invalidateQueries(CRM_CAMPAIGNS_KEYS.all)` para forçar a revalidação da lista.",
+            "status": "pending",
+            "testStrategy": "Testes unitários para o hook e as mutations, verificando se as chamadas de API são feitas corretamente, os estados de `isLoading`/`isError` são atualizados, e o cache é invalidado após o sucesso das mutations. Simular cenários de sucesso e falha."
+          },
+          {
+            "id": 3,
+            "title": "Refatorar `campanhas/page.tsx` para usar `useCrmCampanhas`",
+            "description": "Adaptar o componente de página `campanhas/page.tsx` para consumir os dados da lista de campanhas e executar as ações de criação, disparo e encerramento através do hook `useCrmCampanhas` e suas mutations, removendo o uso de `useState` e lógica manual de fetching.",
+            "dependencies": [
+              2
+            ],
+            "details": "Abrir o arquivo `campanhas/page.tsx`. Substituir as chamadas de API e o gerenciamento de estado local (`useState`) para campanhas pela integração com `useCrmCampanhas`. Conectar os formulários e botões de ação existentes (criar, disparar, encerrar) às respectivas funções de `mutate` fornecidas pelas mutations. Garantir a correta exibição de estados de loading, erro e dados para uma experiência de usuário fluida.",
+            "status": "pending",
+            "testStrategy": "Teste de integração manual: navegar para a página de campanhas, verificar o carregamento e exibição da lista de campanhas (comportamento de cache), tentar criar uma nova campanha, disparar uma existente e encerrar uma. Observar se a UI reage corretamente aos estados de carregamento e sucesso/erro das operações."
+          },
+          {
+            "id": 4,
+            "title": "Finalizar Exportações e Adicionar Testes de Integração/E2E",
+            "description": "Garantir que o novo hook `useCrmCampanhas` seja exportado adequadamente para reusabilidade e desenvolver testes de integração ou end-to-end para validar o fluxo completo de gerenciamento de campanhas com a nova implementação de TanStack Query, confirmando o cache e as invalidações.",
+            "dependencies": [
+              3
+            ],
+            "details": "Confirmar que `useCrmCampanhas` é exportado em um arquivo `index.ts` ou similar no diretório de hooks. Criar um teste E2E (e.g., com Cypress ou Playwright) que simule um usuário navegando até a página de campanhas, verificando o carregamento inicial dos dados, criando uma nova campanha e validando que a lista é atualizada. O teste deve também verificar se o cache está sendo respeitado e invalidado corretamente, e que o `staleTime` de 2 minutos funciona.",
+            "status": "pending",
+            "testStrategy": "Testes E2E automatizados cobrindo: carregamento da lista de campanhas, comportamento de cache (e.g., navegação de ida e volta na página), criação de nova campanha com subsequente atualização da lista, e o tempo de `staleTime` para revalidação de dados em segundo plano."
+          }
+        ]
       },
       {
         "id": 277,
@@ -11031,7 +11074,51 @@
         ],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Adaptar hook `useProspects` para TanStack Query",
+            "description": "Modificar o hook `useProspects` existente para integrar-se com TanStack Query. Isso envolve encapsular a lógica de busca de dados atual em uma `queryFn` e configurar o `queryKey` e `staleTime` conforme especificado.",
+            "dependencies": [],
+            "details": "Criar um `queryKey` robusto para os prospects, possivelmente incluindo `tenantId` ou outros parâmetros relevantes (ex: `['prospects', tenantId]`). Envolver a função de busca de dados da API atual dentro de `queryFn` para o `useQuery`. Configurar `staleTime: 30 * 1000` para otimizar o cache.",
+            "status": "pending",
+            "testStrategy": "Verificar se o hook retorna dados com `data`, `isLoading` e `isError` corretamente, e se o cache está sendo respeitado com o `staleTime` configurado."
+          },
+          {
+            "id": 2,
+            "title": "Integrar dados de prospects no componente `ProspectsKanban`",
+            "description": "Substituir o gerenciamento de estado local (`useState`) para os dados do pipeline de prospects no componente `ProspectsKanban` pela utilização do novo hook `useProspects` adaptado para TanStack Query.",
+            "dependencies": [
+              1
+            ],
+            "details": "Remover todas as chamadas de `useState` relacionadas aos dados de prospects e pipelines. Chamar o `useProspects()` adaptado no componente `ProspectsKanban` e usar o objeto `data` retornado para popular as colunas do kanban. Implementar loaders visuais enquanto `isLoading` for true.",
+            "status": "pending",
+            "testStrategy": "Verificar se o kanban carrega e exibe todos os prospects corretamente ao acessar a página. Simular diferentes estados (carregamento, erro) para garantir que a UI se comporta conforme o esperado."
+          },
+          {
+            "id": 3,
+            "title": "Implementar mutation de mudança de status com optimistic updates",
+            "description": "Desenvolver uma mutation usando `useMutation` do TanStack Query para atualizar o status de um prospect (movimento de drag-and-drop). Esta mutation deve incluir a lógica de optimistic updates para garantir uma experiência de usuário fluida e responsiva.",
+            "dependencies": [
+              1
+            ],
+            "details": "Definir a função de `mutationFn` que chamará a API para atualizar o status do prospect. Implementar a função `onMutate` para realizar a atualização otimista no cache do TanStack Query, movendo o prospect para a nova coluna antes da resposta da API. Configurar `onError` para reverter a mudança otimista e `onSettled` para invalidar a query de prospects, garantindo a consistência dos dados após a finalização da mutação.",
+            "status": "pending",
+            "testStrategy": "Testar a funcionalidade de drag-and-drop, observando que a UI atualiza instantaneamente. Validar a reversão da atualização otimista em caso de falha da API e a consistência final dos dados após sucesso."
+          },
+          {
+            "id": 4,
+            "title": "Refatorar `KanbanContent` e testar drag-and-drop completo",
+            "description": "Refatorar o componente `KanbanContent` e seus subcomponentes para integrar a mutation de mudança de status. Realizar testes abrangentes na funcionalidade de arrastar e soltar para garantir que os optimistic updates, a persistência e a exibição de dados funcionem corretamente.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Conectar os eventos de drag-and-drop dentro do `KanbanContent` (ou nos componentes de card/coluna) para chamar a função `mutate` da mutation de status. Realizar testes de ponta a ponta: arrastar cards entre todas as colunas possíveis, verificar a atualização otimista na UI e a persistência correta no backend. Garantir que a UI se mantém responsiva durante e após as operações.",
+            "status": "pending",
+            "testStrategy": "Testes manuais: Mover múltiplos prospects rapidamente, verificar comportamento de optimistic updates e consistência final dos dados após recarregamento da página. Testar casos de sucesso e falha de rede para garantir que o rollback funciona. Considerar testes de integração para cobrir o fluxo completo."
+          }
+        ]
       },
       {
         "id": 278,
@@ -11045,7 +11132,63 @@
         ],
         "priority": "medium",
         "complexity": 6,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Desenvolver hook genérico useAdminResource",
+            "description": "Implementar um hook reutilizável useAdminResource<T> para gerenciar as operações CRUD (listagem, criação, atualização e alternância de status) de recursos administrativos, utilizando o TanStack Query.",
+            "dependencies": [],
+            "details": "O hook deve encapsular useQuery para a operação de listagem e useMutation para as operações de criação, atualização e toggle de status. É fundamental que o hook garanta a invalidação adequada do cache após mutações bem-sucedidas. A query key padrão deve seguir o formato [\"admin\", domain, tenantId] e o staleTime configurado para 5 minutos. Considerar a flexibilidade para configurar endpoints de API e transformações de dados.",
+            "status": "pending",
+            "testStrategy": "Criar testes unitários para o hook useAdminResource para verificar o funcionamento das operações de useQuery e useMutation. Simular chamadas de API e observar a invalidação do cache e a atualização dos dados. Testar a configuração de query key e staleTime."
+          },
+          {
+            "id": 2,
+            "title": "Migrar Contas Bancárias, Maquininhas e Tipos de Conta",
+            "description": "Refatorar as páginas administrativas de \"Contas Bancárias\", \"Maquininhas\" e \"Tipos de Conta\" para utilizarem o hook genérico useAdminResource, substituindo as implementações de gerenciamento de estado e chamadas de API existentes pelo TanStack Query.",
+            "dependencies": [
+              1
+            ],
+            "details": "Para cada uma das três páginas, identificar os componentes responsáveis pelas operações de listagem, criação, edição e toggle de status. Adaptar esses componentes para consumir os dados e manipular as ações através do useAdminResource, passando as configurações específicas de cada domínio.",
+            "status": "pending",
+            "testStrategy": "Em cada página (Contas Bancárias, Maquininhas, Tipos de Conta), verificar manualmente se a listagem de itens funciona com cache (navegar e voltar). Testar a criação de um novo item, a edição de um existente e a alternância de status, confirmando que as alterações são refletidas e o cache é invalidado."
+          },
+          {
+            "id": 3,
+            "title": "Migrar Atividades de Grade, Unidades e Catraca Status",
+            "description": "Refatorar as páginas administrativas de \"Atividades de Grade\", \"Unidades\" e \"Catraca Status\" para utilizarem o hook genérico useAdminResource, substituindo as implementações de gerenciamento de estado e chamadas de API existentes pelo TanStack Query.",
+            "dependencies": [
+              1
+            ],
+            "details": "Para cada uma das três páginas, identificar os componentes responsáveis pelas operações de listagem, criação, edição e toggle de status. Adaptar esses componentes para consumir os dados e manipular as ações através do useAdminResource, passando as configurações específicas de cada domínio.",
+            "status": "pending",
+            "testStrategy": "Em cada página (Atividades de Grade, Unidades, Catraca Status), verificar manualmente se a listagem de itens funciona com cache (navegar e voltar). Testar a criação de um novo item, a edição de um existente e a alternância de status, confirmando que as alterações são refletidas e o cache é invalidado."
+          },
+          {
+            "id": 4,
+            "title": "Migrar Conciliação Bancária, NFSe, IA e Integrações",
+            "description": "Refatorar as páginas administrativas de \"Conciliação Bancária\", \"NFSe\", \"IA\" e \"Integrações\" para utilizarem o hook genérico useAdminResource, substituindo as implementações de gerenciamento de estado e chamadas de API existentes pelo TanStack Query.",
+            "dependencies": [
+              1
+            ],
+            "details": "Para cada uma das quatro páginas, identificar os componentes responsáveis pelas operações de listagem, criação, edição e toggle de status. Adaptar esses componentes para consumir os dados e manipular as ações através do useAdminResource, passando as configurações específicas de cada domínio.",
+            "status": "pending",
+            "testStrategy": "Em cada página (Conciliação Bancária, NFSe, IA, Integrações), verificar manualmente se a listagem de itens funciona com cache (navegar e voltar). Testar a criação de um novo item, a edição de um existente e a alternância de status, confirmando que as alterações são refletidas e o cache é invalidado."
+          },
+          {
+            "id": 5,
+            "title": "Finalizar exportações e realizar testes de integração completos",
+            "description": "Garantir que todos os hooks e componentes migrados estejam corretamente exportados e acessíveis. Realizar uma bateria de testes de integração abrangentes em todas as 10 páginas administrativas para validar a funcionalidade completa de CRUD e toggle após a migração para TanStack Query.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Verificar a estrutura de arquivos e exportações para assegurar que não há problemas de importação/exportação. Conduzir testes de aceitação do usuário (UAT) ou testes end-to-end (E2E) em um ambiente de homologação. Focar na cobertura de cenários de edge cases e interações complexas entre as funcionalidades.",
+            "status": "pending",
+            "testStrategy": "Para cada uma das 10 páginas, executar um fluxo completo de CRUD: listar (validar cache), criar um novo item, editar o item criado, alternar seu status e tentar excluí-lo (se aplicável), verificando se todas as operações são bem-sucedidas e os dados são atualizados corretamente na interface e no backend."
+          }
+        ]
       },
       {
         "id": 279,
@@ -11059,7 +11202,50 @@
         ],
         "priority": "low",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir Query Keys e Tipagem do Config de Faturamento",
+            "description": "Criar ou identificar o local adequado para definir as chaves de query (query keys) para o `billing-config` seguindo o padrão da aplicação e definir as interfaces de tipagem para os dados de configuração de faturamento.",
+            "dependencies": [],
+            "details": "Criar `QUERY_KEYS.BILLING_CONFIG` no arquivo de chaves de query (e.g., `src/constants/queryKeys.ts` ou similar). Definir interfaces TypeScript para a estrutura dos dados de configuração de faturamento (e.g., `BillingConfig` e `BillingConfigFormValues`) se ainda não existirem, garantindo compatibilidade com o backend e `react-hook-form`.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Implementar Hook useBillingConfig com TanStack Query",
+            "description": "Desenvolver o hook `useBillingConfig` que utilizará `useQuery` para carregar a configuração de faturamento, e `useMutation` para as operações de salvar (save) e testar a conexão (test).",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar `src/hooks/useBillingConfig.ts`. Dentro deste hook: Usar `useQuery` com a chave definida em #1 para buscar os dados de configuração de faturamento, configurando `staleTime: 5 * 60 * 1000` (5 minutos). Usar `useMutation` para a função de salvar (`saveBillingConfig`), que invalidará o cache da query de `billing-config` após o sucesso. Usar `useMutation` para a função de testar a conexão (`testBillingConnection`). Garantir tratamento de loading, error e sucesso para todas as operações.",
+            "status": "pending",
+            "testStrategy": "Testar o hook isoladamente. Verificar se `useQuery` retorna os dados corretos e entra em estado `loading`/`success`/`error`. Verificar se `useMutation` para salvar invalida o cache após sucesso. Verificar se `useMutation` para testar funciona e retorna o status esperado."
+          },
+          {
+            "id": 3,
+            "title": "Refatorar billing-config-content.tsx para usar useBillingConfig",
+            "description": "Atualizar o componente `billing-config-content.tsx` para consumir o novo hook `useBillingConfig`, removendo os estados locais (`useState`) e a lógica de carregamento/salvamento/teste manual, substituindo-os pelas funcionalidades providas pelo TanStack Query.",
+            "dependencies": [
+              2
+            ],
+            "details": "Abrir `src/modules/billing/components/billing-config-content.tsx`. Substituir os `useState` de `config`, `loading`, `saving`, `testing` pelos estados e funções retornados por `useBillingConfig`. Integrar as funções `mutate` de `saveBillingConfig` e `testBillingConnection` com os handlers de submissão do `react-hook-form`. Manter a integração existente com `react-hook-form` e `zodResolver`. Remover imports de API diretos, se aplicável, em favor do hook.",
+            "status": "pending",
+            "testStrategy": "Teste de integração manual: Verificar se a configuração carrega ao acessar a página. Modificar a configuração e tentar salvar, observando se a UI reflete o estado de 'salvando' e se a atualização é persistida. Tentar salvar com dados inválidos para verificar a validação do `react-hook-form`. Clicar no botão 'Testar Conexão' e verificar o feedback de UI e o resultado do teste. Navegar para fora da página e voltar para verificar o comportamento do cache (dados carregam instantaneamente se não estiverem `stale`)."
+          },
+          {
+            "id": 4,
+            "title": "Exportar e Testar End-to-End da Configuração de Faturamento",
+            "description": "Garantir que o `useBillingConfig` e os componentes relacionados estejam corretamente exportados, e realizar testes end-to-end para validar o fluxo completo de gerenciamento da configuração de faturamento.",
+            "dependencies": [
+              3
+            ],
+            "details": "Verificar se o `useBillingConfig` está exportado de um `index.ts` adequado para ser reutilizável (se for um requisito de arquitetura). Executar testes end-to-end (se existirem ou criá-los para este fluxo) ou testes manuais abrangentes para: Carregamento inicial da configuração. Submissão bem-sucedida de novas configurações. Comportamento do cache ao navegar para fora e voltar. Tratamento de erros durante o salvamento. Funcionalidade de 'Testar Conexão' com cenários de sucesso e falha.",
+            "status": "pending",
+            "testStrategy": "Testes E2E: Criar um cenário que visita a página de configuração, preenche um formulário, salva e verifica se os dados foram atualizados. Criar um cenário para testar a conexão com sucesso e falha. Verificar o comportamento do cache após um save bem-sucedido e ao retornar à página dentro do `staleTime`."
+          }
+        ]
       },
       {
         "id": 280,
@@ -11073,7 +11259,53 @@
         ],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implementar Hooks de Consulta para Dados do WhatsApp Admin",
+            "description": "Desenvolver os hooks `useWhatsAppConfig()`, `useWhatsAppTemplates()` e `useWhatsAppLogs()` utilizando TanStack Query para buscar dados dos respectivos domínios (configurações, templates, logs) no admin do WhatsApp.",
+            "dependencies": [],
+            "details": "Criar os `queryFn` para cada hook, definir `queryKey` apropriadas (ex: `[\"whatsapp\", \"config\"]`, `[\"whatsapp\", \"templates\"]`, `[\"whatsapp\", \"logs\"]`), e integrar com os serviços de API existentes. Configurar `staleTime` para otimização do cache, especialmente para dados menos voláteis como as configurações.",
+            "status": "pending",
+            "testStrategy": "Testar cada hook individualmente em um ambiente isolado para garantir que os dados são carregados corretamente, armazenados em cache e que os estados de carregamento/erro são gerenciados adequadamente."
+          },
+          {
+            "id": 2,
+            "title": "Desenvolver Hooks de Mutação para CRUD de Templates e Salvar Config",
+            "description": "Criar hooks de mutação como `useCreateTemplate()`, `useUpdateTemplate()`, `useDeleteTemplate()` e `useSaveConfig()` para as operações de escrita nos domínios de templates e configuração do WhatsApp.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implementar as `mutationFn` para cada operação. Gerenciar o sucesso e erro das mutações. Crucialmente, implementar a lógica de invalidação de cache usando `queryClient.invalidateQueries()` para os `queryKey` relevantes após uma mutação bem-sucedida (ex: uma mutação em template deve invalidar `[\"whatsapp\", \"templates\"]`).",
+            "status": "pending",
+            "testStrategy": "Testar cada hook de mutação para verificar se as operações de escrita funcionam corretamente, se a invalidação do cache ocorre conforme esperado, forçando um novo `fetch` dos dados na próxima consulta e garantindo a atualização da UI."
+          },
+          {
+            "id": 3,
+            "title": "Refatorar whatsapp/page.tsx para integrar os novos hooks de TanStack Query",
+            "description": "Substituir o uso de `useState` e chamadas diretas à API em `whatsapp/page.tsx` pelos hooks de consulta e mutação recém-criados do TanStack Query para gerenciar o estado dos domínios de config, templates e logs.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Remover os estados locais (`useState`) para dados de config, templates e logs. Chamar `useWhatsAppConfig()`, `useWhatsAppTemplates()`, `useWhatsAppLogs()`. Mapear botões de CRUD de templates e formulários de config para chamar as mutações correspondentes. Ajustar o carregamento e tratamento de erros na UI conforme os estados (`isLoading`, `isError`, `data`) fornecidos por TanStack Query.",
+            "status": "pending",
+            "testStrategy": "Navegar até a página do admin do WhatsApp. Verificar o carregamento inicial dos dados de todas as abas. Realizar operações de CRUD em templates e salvar configurações, observando a atualização da UI e a consistência dos dados após as mutações."
+          },
+          {
+            "id": 4,
+            "title": "Adicionar Testes Unitários e de Integração e Otimizar Fluxo de Dados",
+            "description": "Escrever testes unitários para os hooks de TanStack Query e testes de integração para a página refatorada. Otimizar o fluxo de dados na `page.tsx` e garantir que os novos hooks possam ser reutilizados em outros locais, se necessário.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Criar arquivos de teste para `useWhatsAppConfig`, `useWhatsAppTemplates`, `useWhatsAppLogs` e seus hooks de mutação, utilizando `@testing-library/react-query` se aplicável. Garantir que `whatsapp/page.tsx` lida com estados de carregamento e erro de forma robusta e amigável ao usuário. Revisar a estrutura de pastas e exports para facilitar a reutilização dos hooks. Avaliar o uso de `select` nas queries para otimizações de renderização.",
+            "status": "pending",
+            "testStrategy": "Executar todos os testes unitários e de integração automatizados. Realizar testes manuais completos na página do admin do WhatsApp para validar todos os cenários de interação, incluindo carregamento, criação, edição, exclusão e salvamento, garantindo que o cache e a invalidação funcionam conforme o esperado e a UX não regrediu."
+          }
+        ]
       },
       {
         "id": 281,
@@ -11087,7 +11319,51 @@
         ],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir chaves de consulta e tipos para BI Operacional e BI Rede",
+            "description": "Criar as interfaces de tipos de dados para o BI operacional e de rede, incluindo os parâmetros de filtro (scope, tenantId, dateRange, segmento), e definir a estrutura das query keys para TanStack Query.",
+            "dependencies": [],
+            "details": "Criar um arquivo em 'src/hooks/bi/types.ts' para definir interfaces como 'BiQueryParams', 'BiOperacionalData', 'BiRedeData'. As chaves de consulta devem ser arrays, por exemplo, '[\"biOperacional\", BiQueryParams]' ou '[\"biRede\", BiQueryParams]'.",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 2,
+            "title": "Implementar hook `useBiOperacional` para BI Operacional",
+            "description": "Desenvolver o hook `useBiOperacional` utilizando TanStack Query para buscar e gerenciar os dados do BI operacional, aplicando os filtros necessários e configurando `staleTime` de 5 minutos conforme especificado.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar o arquivo 'src/hooks/bi/useBiOperacional.ts'. O hook deve aceitar um objeto de filtros (BiQueryParams) como argumento, construir a query key com base nesses filtros e usar `useQuery` para buscar os dados. Configurar `staleTime: 1000 * 60 * 5` (5 minutos).",
+            "status": "pending",
+            "testStrategy": "Escrever testes unitários para o hook `useBiOperacional` para verificar se a query key é gerada corretamente com base nos filtros e se a função de busca de dados é invocada adequadamente."
+          },
+          {
+            "id": 3,
+            "title": "Implementar hook `useBiRede` para BI Rede",
+            "description": "Desenvolver o hook `useBiRede` utilizando TanStack Query para buscar e gerenciar os dados do BI de rede, aplicando os filtros necessários e configurando `staleTime` de 5 minutos.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar o arquivo 'src/hooks/bi/useBiRede.ts'. O hook deve aceitar um objeto de filtros (BiQueryParams) como argumento, construir a query key com base nesses filtros e usar `useQuery` para buscar os dados. Configurar `staleTime: 1000 * 60 * 5` (5 minutos).",
+            "status": "pending",
+            "testStrategy": "Escrever testes unitários para o hook `useBiRede` para verificar se a query key é gerada corretamente com base nos filtros e se a função de busca de dados é invocada adequadamente."
+          },
+          {
+            "id": 4,
+            "title": "Refatorar páginas `bi/page.tsx` e `bi/rede/page.tsx` para usar os novos hooks",
+            "description": "Atualizar as páginas `bi/page.tsx` e `bi/rede/page.tsx` para consumir os dados através dos hooks `useBiOperacional` e `useBiRede` respectivamente, removendo a lógica de `useState` para gerenciamento de estado e carregamento de dados.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Em 'bi/page.tsx', substituir a lógica de `useState` e chamadas de API diretas pela invocação do hook `useBiOperacional({ scope, tenantId, dateRange, segmento })`. Em 'bi/rede/page.tsx', fazer o mesmo com `useBiRede({ scope, tenantId, dateRange, segmento })`. Garantir que os dados são exibidos corretamente e os filtros funcionam.",
+            "status": "pending",
+            "testStrategy": "Teste de integração completo para ambas as páginas: verificar o carregamento inicial dos dados, a aplicação de diferentes filtros e se a alteração dos filtros aciona uma nova busca. Confirmar que o `staleTime` funciona ao navegar entre as páginas e retornar a elas, utilizando o cache."
+          }
+        ]
       },
       {
         "id": 282,
@@ -11101,7 +11377,51 @@
         ],
         "priority": "low",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir e implementar Query Keys para módulos de Contabilidade",
+            "description": "Estabelecer um padrão de 'query keys' para os domínios de contabilidade (Livros Razão, Transações Financeiras, Relatórios Financeiros, Monitoramento Financeiro) para uso com TanStack Query, garantindo consistência e granularidade no cache.",
+            "dependencies": [],
+            "details": "Criar um arquivo centralizado, como 'src/queries/financial/keys.ts', para exportar objetos de 'query keys' seguindo um padrão consistente como ['financial', 'ledgers', { id }] ou ['financial', 'transactions', { status, dateRange }]. Isso permitirá cache e invalidação eficientes ao longo da migração.",
+            "status": "pending",
+            "testStrategy": "Revisão de código para conformidade com padrões de query keys existentes no projeto e garantir que as chaves sejam descritivas e únicas para cada domínio de contabilidade."
+          },
+          {
+            "id": 2,
+            "title": "Implementar hooks useLedgers() e useFinancialTransactions() com CRUD e invalidação",
+            "description": "Desenvolver os hooks 'useLedgers()' e 'useFinancialTransactions()' para buscar dados dos livros razão e transações financeiras, respectivamente. Incluir 'useMutation' para operações CRUD (Criar, Ler, Atualizar, Deletar) e configurar a lógica de invalidação de cache apropriada para cada domínio.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar os arquivos 'src/hooks/useLedgers.ts' e 'src/hooks/useFinancialTransactions.ts'. Para cada hook, implementar 'useQuery' para busca de dados e 'useMutation' para operações de escrita, garantindo que o cache seja invalidado (e.g., 'queryClient.invalidateQueries(financialKeys.ledgers.all())') após uma mutação bem-sucedida. Incluir tratamento de erros e estados de carregamento.",
+            "status": "pending",
+            "testStrategy": "Testes unitários para cada hook de query e mutation. Verificar se os dados são carregados corretamente e se as operações CRUD (criação, atualização, exclusão) funcionam conforme esperado. Validar que o cache é invalidado e os dados são re-buscados após uma mutação."
+          },
+          {
+            "id": 3,
+            "title": "Implementar hooks useFinancialReports() e useFinancialMonitoring()",
+            "description": "Desenvolver os hooks 'useFinancialReports()' e 'useFinancialMonitoring()' para buscar dados relacionados a relatórios financeiros e monitoramento financeiro. Estes hooks podem envolver filtros e parâmetros complexos, que devem ser gerenciados através das 'query keys'.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar os arquivos 'src/hooks/useFinancialReports.ts' e 'src/hooks/useFinancialMonitoring.ts'. Implementar 'useQuery' para buscar os dados, incorporando parâmetros de filtro dinâmicos nas 'query keys' para garantir cache eficiente para diferentes estados de relatórios e monitoramento. Avaliar se há necessidade de mutations e, se sim, implementar a invalidação de cache correspondente.",
+            "status": "pending",
+            "testStrategy": "Testes unitários para cada hook de query. Verificar se os dados de relatórios e monitoramento são carregados corretamente com diferentes combinações de parâmetros de filtro. Se mutations forem implementadas, testar a invalidação de cache."
+          },
+          {
+            "id": 4,
+            "title": "Refatorar páginas de Contabilidade para usar hooks TanStack Query e testar integração",
+            "description": "Atualizar as quatro páginas de contabilidade (Livros Razão, Transações Financeiras, Relatórios Financeiros, Monitoramento Financeiro) para consumir os novos hooks do TanStack Query, removendo o uso de 'useState' para estado do servidor e garantindo a correta exibição, interação e exportação dos dados.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Para cada uma das páginas (`LedgersPage`, `FinancialTransactionsPage`, `FinancialReportsPage`, `FinancialMonitoringPage`), substituir as chamadas 'fetch' existentes e o gerenciamento de estado local por chamadas aos respectivos hooks do TanStack Query (e.g., `const { data, isLoading, error } = useLedgers()`). Garantir que a integração com componentes da UI para filtros, paginação e operações CRUD funcione corretamente com o cache e os estados dos hooks. Finalmente, exportar os componentes e hooks conforme padrão do projeto.",
+            "status": "pending",
+            "testStrategy": "Testes de integração end-to-end para cada uma das quatro páginas. Validar que as páginas carregam os dados com sucesso, que o cache é utilizado (verificar chamadas de rede no navegador), que as operações CRUD funcionam e invalidam o cache corretamente, e que os estados de carregamento e erro são exibidos adequadamente ao usuário."
+          }
+        ]
       },
       {
         "id": 283,
@@ -11115,7 +11435,51 @@
         ],
         "priority": "low",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir Query Keys e Funções de Fetching para Agregadores e Catraca Acessos",
+            "description": "Criar as query keys padronizadas e as funções assíncronas de fetching (getters) para os dados de agregadores e acessos de catraca, considerando a estrutura dos filtros. Isso é um pré-requisito para os hooks do TanStack Query.",
+            "dependencies": [],
+            "details": "As query keys devem seguir o padrão `[\"agregadores\", { filtros }]` e `[\"catracaAcessos\", { filtros }]`. As funções de fetching (`fetchAgregadores`, `fetchCatracaAcessos`) devem aceitar um objeto de filtros como parâmetro e realizar a chamada à API usando a biblioteca padrão (e.g., Axios).",
+            "status": "pending",
+            "testStrategy": "Testar as funções `fetchAgregadores` e `fetchCatracaAcessos` unitariamente para garantir que formatam corretamente os parâmetros de query e realizam chamadas à API sem erros, retornando os dados esperados ou rejeitando em caso de falha."
+          },
+          {
+            "id": 2,
+            "title": "Implementar o Hook Personalizado `useAgregadores()` com TanStack Query",
+            "description": "Desenvolver o hook `useAgregadores()` que encapsula a lógica de fetching e cache para os dados de agregadores, utilizando TanStack Query e as query keys e funções de fetching definidas anteriormente. O hook deve suportar parâmetros de filtro.",
+            "dependencies": [
+              1
+            ],
+            "details": "O hook `useAgregadores()` deve utilizar a função `useQuery` do TanStack Query. Ele receberá um objeto de filtros, montará dinamicamente a `query key` baseada nos filtros e usará a função `fetchAgregadores`. O `staleTime` deve ser configurado para 2 minutos, alinhado com o contexto do projeto.",
+            "status": "pending",
+            "testStrategy": "Teste de integração: Verificar se o hook retorna os dados de agregadores, se os estados de carregamento (`isLoading`) e erro (`isError`) funcionam corretamente e se o mecanismo de cache do TanStack Query é ativado após múltiplas chamadas com os mesmos filtros."
+          },
+          {
+            "id": 3,
+            "title": "Implementar o Hook Personalizado `useCatracaAcessos()` com TanStack Query",
+            "description": "Desenvolver o hook `useCatracaAcessos()` que encapsula a lógica de fetching e cache para os dados de acessos de catraca, utilizando TanStack Query e as query keys e funções de fetching definidas anteriormente. O hook deve suportar parâmetros de filtro.",
+            "dependencies": [
+              1
+            ],
+            "details": "O hook `useCatracaAcessos()` deve utilizar a função `useQuery` do TanStack Query. Ele receberá um objeto de filtros, montará dinamicamente a `query key` baseada nos filtros e usará a função `fetchCatracaAcessos`. O `staleTime` deve ser configurado para 2 minutos, alinhado com o contexto do projeto.",
+            "status": "pending",
+            "testStrategy": "Teste de integração: Verificar se o hook retorna os dados de acessos de catraca, se os estados de carregamento (`isLoading`) e erro (`isError`) funcionam corretamente e se o mecanismo de cache do TanStack Query é ativado após múltiplas chamadas com os mesmos filtros."
+          },
+          {
+            "id": 4,
+            "title": "Refatorar `agregadores-content.tsx` e `catraca-acessos/page.tsx` para usar os novos Hooks",
+            "description": "Atualizar os componentes `agregadores-content.tsx` e `catraca-acessos/page.tsx` para consumir dados através dos hooks `useAgregadores()` e `useCatracaAcessos()`, respectivamente, substituindo as implementações existentes baseadas em `useState` e `useEffect`.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Remover as chamadas de API e gerenciamento de estado manual (`useState` e `useEffect`) nas páginas. Integrar os hooks `useAgregadores()` e `useCatracaAcessos()`, passando os estados de filtro já existentes como parâmetros. Adaptar a renderização da interface para usar os dados, estado de carregamento e erros retornados pelos hooks.",
+            "status": "pending",
+            "testStrategy": "Teste end-to-end nas páginas `/agregadores` e `/catraca-acessos`: Verificar que ambas as listagens carregam corretamente na primeira visita, que a aplicação de filtros (se houver) atualiza os dados conforme esperado e que a navegação para fora e retorno à página utiliza o cache, garantindo uma experiência de usuário fluida e responsiva."
+          }
+        ]
       },
       {
         "id": 284,
@@ -11129,7 +11493,37 @@
         ],
         "priority": "medium",
         "complexity": 5,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar Hooks de Query para Treinos (Detalhes, Atribuídos, Exercícios, Grupos Musculares)",
+            "description": "Desenvolver os hooks 'useTreinoDetail()', 'useTreinosAtribuidos()', 'useExercicios()' e 'useGruposMusculares()' utilizando TanStack Query. Estes hooks devem gerenciar o estado do servidor para as páginas de detalhes de treino, treinos atribuídos, lista de exercícios e grupos musculares, substituindo o uso de useState atual.",
+            "dependencies": [],
+            "details": "Analisar os endpoints da API para cada tipo de dado de treino. Definir 'queryKeys' apropriadas para cada hook, considerando dependências e invalidação. Implementar a lógica de fetching de dados dentro de cada hook. Configurar 'staleTime' para 2 minutos, conforme contexto do projeto. Garantir que os dados carreguem e sejam cacheados corretamente seguindo os padrões existentes no codebase.",
+            "status": "pending",
+            "testStrategy": "Verificar o carregamento inicial de cada hook em isolamento, garantindo que os dados corretos são obtidos da API e armazenados em cache. Testar a revalidação manual e a aplicação do staleTime configurado para 2 minutos."
+          },
+          {
+            "id": 2,
+            "title": "Implementar Mutations de Treinos e Refatorar Páginas de Detalhes e Atribuição",
+            "description": "Criar mutations para atribuir treinos e registrar execuções de exercícios. Integrar os hooks de query desenvolvidos na subtarefa 1 e as novas mutations nas respectivas 4 páginas (Detalhes do Treino, Treinos Atribuídos, Lista de Exercícios, Grupos Musculares), substituindo o gerenciamento de estado local por TanStack Query.",
+            "dependencies": [
+              1
+            ],
+            "details": "Desenvolver 'useMutation' hooks para as operações de atribuição de treinos e registro de execuções, incluindo a lógica de 'onSuccess' para invalidação de queries relevantes (ex: 'useTreinosAtribuidos' após uma nova atribuição). Refatorar as páginas 'Detalhes do Treino', 'Treinos Atribuídos', 'Lista de Exercícios' e 'Grupos Musculares' para consumir os novos hooks de query. Substituir todas as chamadas de API diretas e o gerenciamento de estado com 'useState' pelos hooks do TanStack Query. Implementar 'optimistic updates' quando aplicável para as mutations, seguindo padrões já adotados. Garantir a exibição correta dos dados e o funcionamento de todas as ações de atribuição/execução.",
+            "status": "pending",
+            "testStrategy": "Testar cada página refatorada para garantir que os dados são carregados via TanStack Query. Validar as mutations de atribuição e execução, confirmando a invalidação correta do cache e, se implementado, as atualizações otimistas. Assegurar que as páginas continuam funcionais e com a experiência do usuário esperada após a migração."
+          },
+          {
+            "id": 3,
+            "title": "Migrar Agregadores e Catraca Acessos para TanStack Query",
+            "description": "Desenvolver os hooks 'useAgregadores()' e 'useCatracaAcessos()' utilizando TanStack Query. Refatorar as duas páginas correspondentes para consumir esses hooks, garantindo a manipulação de dados tabulares com filtros. Exportar os hooks e testá-los, aplicando 'staleTime' de 2 minutos.",
+            "dependencies": [],
+            "details": "Analisar os endpoints da API para agregadores e acessos de catraca. Definir 'queryKeys' que incluam parâmetros de filtro para dados tabulares, seguindo a convenção de queries com filtros. Implementar 'useAgregadores()' e 'useCatracaAcessos()' com a lógica de fetching de dados e 'staleTime' de 2 minutos. Refatorar as páginas de agregadores e catraca-acessos para usar os novos hooks. Garantir que a lógica de filtragem, paginação e ordenação funcione corretamente com TanStack Query. Exportar os hooks para uso em outras partes da aplicação, se necessário. Criar testes unitários/de integração para os novos hooks e a integração nas páginas refatoradas.",
+            "status": "pending",
+            "testStrategy": "Testar as páginas de Agregadores e Catraca Acessos, verificando o carregamento dos dados via TanStack Query e o funcionamento dos filtros e paginação. Validar a aplicação do 'staleTime' de 2 minutos e a correta exportação e usabilidade dos hooks para consumo externo, se aplicável."
+          }
+        ]
       },
       {
         "id": 285,
