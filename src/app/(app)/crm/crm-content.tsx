@@ -1,23 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import {
-  listCrmAutomacoesApi,
-  listCrmTasksApi,
-  listProspectsApi,
-  updateCrmAutomacaoApi,
-} from "@/lib/api/crm";
-import { listFuncionariosApi } from "@/lib/api/administrativo";
+import { useCrmWorkspace, useToggleCrmAutomation } from "@/lib/query/use-crm";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
-import type { CrmAutomation, CrmWorkspaceSnapshot } from "@/lib/types";
-import { buildCrmWorkspaceSnapshotRuntime, enrichCrmTasksRuntime, normalizeProspectRuntime } from "@/lib/tenant/crm/runtime";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import {
   CRM_ACTIVITY_LABEL,
   CRM_AUTOMATION_ACTION_LABEL,
   CRM_AUTOMATION_TRIGGER_LABEL,
 } from "@/lib/tenant/crm/workspace";
-import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { formatDateTime } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,63 +22,14 @@ import { CadenceExecutionsPanel } from "./cadence-executions-panel";
 
 export function CrmContent() {
   const tenantContext = useTenantContext();
-  const [snapshot, setSnapshot] = useState<CrmWorkspaceSnapshot | null>(null);
-  const [automations, setAutomations] = useState<CrmAutomation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [savingAutomationId, setSavingAutomationId] = useState<string | null>(null);
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [prospectRows, taskRows, automationRows, funcionarioRows] = await Promise.all([
-        listProspectsApi({ tenantId }),
-        listCrmTasksApi({ tenantId }),
-        listCrmAutomacoesApi({ tenantId }),
-        listFuncionariosApi(true),
-      ]);
-      const prospects = prospectRows.map((prospect) => normalizeProspectRuntime(prospect));
-      const tasks = enrichCrmTasksRuntime({
-        tasks: taskRows,
-        prospects,
-        funcionarios: funcionarioRows,
-      });
-      setSnapshot(
-        buildCrmWorkspaceSnapshotRuntime({
-          tenantId,
-          prospects,
-          tasks,
-          automations: automationRows,
-        })
-      );
-      setAutomations(automationRows);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Falha ao carregar workspace de CRM.");
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
+  const { data, isLoading, error: queryError } = useCrmWorkspace(tenantId);
+  const toggleMutation = useToggleCrmAutomation(tenantId);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function handleToggleAutomation(row: CrmAutomation) {
-    if (!tenantId) return;
-    setSavingAutomationId(row.id);
-    try {
-      await updateCrmAutomacaoApi({
-        tenantId,
-        id: row.id,
-        data: { ativo: !row.ativo },
-      });
-      await load();
-    } finally {
-      setSavingAutomationId(null);
-    }
-  }
+  const snapshot = data?.snapshot ?? null;
+  const automations = data?.automations ?? [];
+  const error = queryError ? (queryError instanceof Error ? queryError.message : "Falha ao carregar workspace de CRM.") : "";
 
   const summaryCards = snapshot
     ? [
@@ -133,7 +75,7 @@ export function CrmContent() {
         </Card>
       ) : null}
 
-      {loading ? (
+      {isLoading ? (
         <div className="grid gap-4 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <Card key={index} className="border-border/60 bg-card/60">
@@ -146,7 +88,7 @@ export function CrmContent() {
         </div>
       ) : null}
 
-      {!loading && snapshot ? (
+      {!isLoading && snapshot ? (
         <>
           <div className="grid gap-4 md:grid-cols-4">
             {summaryCards.map((card) => (
@@ -260,10 +202,10 @@ export function CrmContent() {
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => handleToggleAutomation(automation)}
-                          disabled={savingAutomationId === automation.id}
+                          onClick={() => toggleMutation.mutate(automation)}
+                          disabled={toggleMutation.isPending}
                         >
-                          {savingAutomationId === automation.id
+                          {toggleMutation.isPending
                             ? "Salvando..."
                             : automation.ativo
                             ? "Pausar"
@@ -307,7 +249,6 @@ export function CrmContent() {
             </Card>
           </div>
 
-          {/* Cadências em execução */}
           <CadenceExecutionsPanel tenantId={tenantId} />
         </>
       ) : null}

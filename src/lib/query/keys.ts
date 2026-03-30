@@ -70,4 +70,9 @@ export const queryKeys = {
   funcionarios: {
     all: () => ["funcionarios"] as const,
   },
+
+  crm: {
+    all: (tenantId: string) => ["crm", tenantId] as const,
+    snapshot: (tenantId: string) => ["crm", "snapshot", tenantId] as const,
+  },
 } as const;
