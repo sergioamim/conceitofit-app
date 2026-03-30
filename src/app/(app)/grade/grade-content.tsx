@@ -1,19 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import {
-  listAtividadeGradesApi,
-  listAtividadesApi,
-  listFuncionariosApi,
-  listSalasApi,
-} from "@/lib/api/administrativo";
 import { getBusinessTodayDate, getBusinessTodayIso } from "@/lib/business-date";
-import { listHorariosApi } from "@/lib/api/contexto-unidades";
-import { getActiveTenantIdFromSession } from "@/lib/api/session";
-import type { Atividade, AtividadeGrade, DiaSemana, Funcionario, HorarioFuncionamento, Sala } from "@/lib/types";
+import type { Atividade, AtividadeGrade, DiaSemana } from "@/lib/types";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useGrade } from "@/lib/query/use-grade";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -64,57 +56,19 @@ function formatMinutes(totalMinutes: number) {
 }
 
 export function GradeContent() {
-  const tenantContext = useTenantContext();
+  const { tenantId } = useTenantContext();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(getBusinessTodayDate()));
-  const [grades, setGrades] = useState<AtividadeGrade[]>([]);
-  const [atividades, setAtividades] = useState<Atividade[]>([]);
-  const [salas, setSalas] = useState<Sala[]>([]);
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
-  const [horarios, setHorarios] = useState<HorarioFuncionamento[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
-  const load = useCallback(async () => {
-    if (!tenantId) {
-      setGrades([]);
-      setAtividades([]);
-      setSalas([]);
-      setFuncionarios([]);
-      setHorarios([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      const [g, a, sal, pro, h] = await Promise.all([
-        listAtividadeGradesApi({ apenasAtivas: true }),
-        listAtividadesApi({ tenantId, apenasAtivas: true }),
-        listSalasApi(true),
-        listFuncionariosApi(true),
-        listHorariosApi(tenantId),
-      ]);
-      setGrades(g);
-      setAtividades(a);
-      setSalas(sal);
-      setFuncionarios(pro);
-      setHorarios(h);
-    } catch (loadError) {
-      setGrades([]);
-      setAtividades([]);
-      setSalas([]);
-      setFuncionarios([]);
-      setHorarios([]);
-      setError(normalizeErrorMessage(loadError) || "Falha ao carregar grade.");
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
+  const { data: gradeData, isLoading: loading, isError, error } = useGrade({
+    tenantId,
+    tenantResolved: Boolean(tenantId),
+  });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const grades = gradeData?.grades ?? [];
+  const atividades = gradeData?.atividades ?? [];
+  const salas = gradeData?.salas ?? [];
+  const funcionarios = gradeData?.funcionarios ?? [];
+  const horarios = gradeData?.horarios ?? [];
 
   const atividadeMap = useMemo(() => new Map(atividades.map((a) => [a.id, a])), [atividades]);
   const salaMap = useMemo(() => new Map(salas.map((s) => [s.id, s])), [salas]);
@@ -222,9 +176,9 @@ export function GradeContent() {
         </div>
       </div>
 
-      {error ? (
+      {isError ? (
         <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          {error}
+          {error instanceof Error ? error.message : "Falha ao carregar grade."}
         </div>
       ) : null}
 

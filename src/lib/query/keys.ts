@@ -40,4 +40,9 @@ export const queryKeys = {
     minhasReservas: (tenantId: string, alunoId: string) =>
       ["aulas", "reservas", tenantId, alunoId] as const,
   },
+
+  grade: {
+    all: (tenantId: string) => ["grade", tenantId] as const,
+    week: (tenantId: string) => ["grade", "week", tenantId] as const,
+  },
 } as const;
