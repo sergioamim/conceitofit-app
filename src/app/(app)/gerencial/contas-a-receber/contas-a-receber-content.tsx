@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { getBusinessMonthRange } from "@/lib/business-date";
-import { listContasReceberOperacionais, type PagamentoComAluno } from "@/lib/tenant/financeiro/recebimentos";
+import { useContasReceber } from "@/lib/query/use-contas-receber";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
+import type { PagamentoComAluno } from "@/lib/tenant/financeiro/recebimentos";
 
 type PagamentoWithAluno = PagamentoComAluno & { aluno?: Aluno };
 type StatusFiltro = WithFilterAll<"PENDENTE" | "VENCIDO" | "PAGO" | "CANCELADO" | "EM_ABERTO">;
@@ -24,34 +25,16 @@ function monthRangeFromNow() {
 export function ContasAReceberContent() {
   const { tenantId } = useTenantContext();
   const initialRange = monthRangeFromNow();
-  const [loading, setLoading] = useState(true);
-  const [pagamentos, setPagamentos] = useState<PagamentoWithAluno[]>([]);
   const [status, setStatus] = useState<StatusFiltro>("EM_ABERTO");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState(initialRange.start);
   const [endDate, setEndDate] = useState(initialRange.end);
 
-  const load = useCallback(async () => {
-    if (!tenantId) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const data = await listContasReceberOperacionais({
-        tenantId,
-        startDate,
-        endDate,
-      });
-      setPagamentos(data);
-    } finally {
-      setLoading(false);
-    }
-  }, [endDate, startDate, tenantId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data: pagamentos = [], isLoading: loading } = useContasReceber({
+    tenantId,
+    startDate,
+    endDate,
+  });
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();

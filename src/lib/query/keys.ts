@@ -22,6 +22,11 @@ export const queryKeys = {
     all: (tenantId: string) => ["prospects", tenantId] as const,
   },
 
+  contasReceber: {
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["contasReceber", "list", tenantId, filters] as const,
+  },
+
   aulas: {
     sessoes: (tenantId: string, dateFrom: string, dateTo: string) =>
       ["aulas", "sessoes", tenantId, dateFrom, dateTo] as const,
