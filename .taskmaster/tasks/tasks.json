@@ -10718,7 +10718,7 @@
         "description": "Listagem de vendas usa useState para loading/error/data. Página acessada frequentemente após cada venda.",
         "details": "Criar useVendas() hook com useQuery. Query key: [\"vendas\", tenantId, filters]. Cache com staleTime 2min.",
         "testStrategy": "Listagem com cache. Criar venda invalida lista. Filtros funcionam.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -10772,7 +10772,7 @@
             "parentId": "undefined"
           }
         ],
-        "updatedAt": "2026-03-30T05:05:09.066Z"
+        "updatedAt": "2026-03-30T05:10:40.956Z"
       },
       {
         "id": "271",
@@ -11644,9 +11644,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:09:49.920Z",
+      "lastModified": "2026-03-30T05:10:40.956Z",
       "taskCount": 287,
-      "completedCount": 270,
+      "completedCount": 271,
       "tags": [
         "master"
       ]
