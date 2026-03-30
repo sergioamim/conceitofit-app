@@ -1,3 +1,5 @@
+"use client";
+
 import { useUnidadesWorkspace } from "./hooks/use-unidades-workspace";
 import { StatsCards } from "./components/stats-cards";
 import { AcademiaSidebar } from "./components/academia-sidebar";

@@ -107,7 +107,7 @@ export default function AdminSegurancaFuncionalidadesPage() {
   const [grants, setGrants] = useState<RbacGrant[]>([]);
   const [selectedFeatureKey, setSelectedFeatureKey] = useState("");
   const [query, setQuery] = useState("");
-  const [moduleFilter, setModuleFilter] = useState(FILTER_ALL);
+  const [moduleFilter, setModuleFilter] = useState<string>(FILTER_ALL);
   const [actionFilter, setActionFilter] = useState<typeof FILTER_ALL | RbacPermission>(FILTER_ALL);
   const [riskFilter, setRiskFilter] = useState<typeof FILTER_ALL | "BAIXO" | "MEDIO" | "ALTO" | "CRITICO">(FILTER_ALL);
   const [scopeFilter, setScopeFilter] = useState<typeof FILTER_ALL | SecurityBusinessScope>(FILTER_ALL);

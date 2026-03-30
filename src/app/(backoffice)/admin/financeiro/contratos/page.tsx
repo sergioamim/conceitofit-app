@@ -165,8 +165,8 @@ export default function AdminContratosPage() {
   const [academias, setAcademias] = useState<Academia[]>([]);
   const [planos, setPlanos] = useState<PlanoPlataforma[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(FILTER_ALL);
-  const [academiaFilter, setAcademiaFilter] = useState(FILTER_ALL);
-  const [planoFilter, setPlanoFilter] = useState(FILTER_ALL);
+  const [academiaFilter, setAcademiaFilter] = useState<string>(FILTER_ALL);
+  const [planoFilter, setPlanoFilter] = useState<string>(FILTER_ALL);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [todayDate, setTodayDate] = useState("");

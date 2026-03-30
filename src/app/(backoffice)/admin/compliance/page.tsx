@@ -424,7 +424,7 @@ function SolicitacoesExclusao({
                   </TableCell>
                   <TableCell className="text-sm">{s.academiaNome}</TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                    {formatDate(s.solicitadoEm)}
+                    {formatDate(s.solicitadoEm ?? "")}
                   </TableCell>
                   <TableCell>
                     <Badge

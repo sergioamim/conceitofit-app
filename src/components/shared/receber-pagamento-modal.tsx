@@ -16,7 +16,7 @@ import { formatBRL } from "@/lib/formatters";
 const receberPagamentoSchema = z.object({
   dataPagamento: requiredTrimmedString("Informe a data do pagamento."),
   formaPagamento: z.enum(["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "BOLETO", "RECORRENTE"], {
-    errorMap: () => ({ message: "Selecione a forma de pagamento." }),
+    message: "Selecione a forma de pagamento.",
   }).or(z.literal("")),
   observacoes: optionalTrimmedString().default(""),
 });

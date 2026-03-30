@@ -547,13 +547,13 @@ async function performApiRequest<T>(input: {
   if (requestId) {
     headers["X-Request-Id"] = requestId;
   }
+  const isAuthEndpoint = input.path.startsWith("/api/v1/auth/");
   if (shouldInjectAuthHeader()) {
     const token = getAccessToken();
     if (token) {
       headers["Authorization"] = `${getAccessTokenType() ?? "Bearer"} ${token}`;
     }
 
-    const isAuthEndpoint = input.path.startsWith("/api/v1/auth/");
     if (!token && !isAuthEndpoint) {
       const loginToken = await tryAutoLogin();
       if (loginToken) {

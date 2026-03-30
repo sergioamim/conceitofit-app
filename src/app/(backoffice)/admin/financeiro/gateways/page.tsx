@@ -66,7 +66,7 @@ const FIELDS: FormFieldConfig[] = [
 const gatewayFormSchema = z.object({
   nome: requiredTrimmedString("Informe o nome do gateway."),
   provedor: z.enum(["PAGARME", "STRIPE", "MERCADO_PAGO", "CIELO_ECOMMERCE", "ASAAS", "OUTRO"], {
-    required_error: "Selecione um provedor.",
+    message: "Selecione um provedor.",
   }),
   chaveApi: requiredTrimmedString("Informe a chave da API."),
   ambiente: z.enum(["SANDBOX", "PRODUCAO"]).default("SANDBOX"),

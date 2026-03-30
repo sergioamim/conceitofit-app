@@ -102,7 +102,7 @@ export default function AdminSegurancaPerfisPage() {
   const [riskFilter, setRiskFilter] = useState<typeof FILTER_ALL | "BAIXO" | "MEDIO" | "ALTO" | "CRITICO">(FILTER_ALL);
   const [statusFilter, setStatusFilter] = useState<typeof FILTER_ALL | "ATIVOS" | "INATIVOS">("ATIVOS");
   const [matrixQuery, setMatrixQuery] = useState("");
-  const [matrixModuleFilter, setMatrixModuleFilter] = useState(FILTER_ALL);
+  const [matrixModuleFilter, setMatrixModuleFilter] = useState<string>(FILTER_ALL);
   const [matrixRiskFilter, setMatrixRiskFilter] = useState<typeof FILTER_ALL | "BAIXO" | "MEDIO" | "ALTO" | "CRITICO">(FILTER_ALL);
   const [matrixAssignedFilter, setMatrixAssignedFilter] = useState<typeof FILTER_ALL | "ATRIBUIDAS" | "SEM_ATRIBUICAO">(FILTER_ALL);
   const [form, setForm] = useState<ProfileFormState>(EMPTY_FORM);

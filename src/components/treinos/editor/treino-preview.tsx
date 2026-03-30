@@ -144,7 +144,7 @@ export function AssignmentHistoryCard({
                   <span className="text-sm font-semibold text-foreground">Job {job.id}</span>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {formatDateTime(job.requestedAt)}
+                  {formatDateTime(job.requestedAt ?? "")}
                 </span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">

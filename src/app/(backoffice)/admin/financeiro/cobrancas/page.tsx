@@ -183,7 +183,7 @@ export default function AdminCobrancasPage() {
   const [cobrancas, setCobrancas] = useState<Cobranca[]>([]);
   const [contratos, setContratos] = useState<ContratoPlataforma[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(FILTER_ALL);
-  const [academiaFilter, setAcademiaFilter] = useState(FILTER_ALL);
+  const [academiaFilter, setAcademiaFilter] = useState<string>(FILTER_ALL);
   const [periodoFilter, setPeriodoFilter] = useState<typeof FILTER_ALL | "VENCIDAS" | "MES_ATUAL">(FILTER_ALL);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(10);

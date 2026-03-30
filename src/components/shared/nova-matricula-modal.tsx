@@ -22,7 +22,7 @@ const novaMatriculaSchema = z.object({
   planoId: requiredTrimmedString("Selecione o plano."),
   dataInicio: requiredTrimmedString("Informe a data de início."),
   formaPagamento: z.enum(["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "BOLETO", "RECORRENTE"], {
-    errorMap: () => ({ message: "Selecione a forma de pagamento." }),
+    message: "Selecione a forma de pagamento.",
   }).or(z.literal("")),
   desconto: z.string(),
   motivoDesconto: optionalTrimmedString().default(""),

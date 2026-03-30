@@ -60,8 +60,8 @@ export default function TransacoesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [transacoes, setTransacoes] = useState<FinancialTransaction[]>([]);
-  const [statusFiltro, setStatusFiltro] = useState(FILTER_ALL);
-  const [tipoFiltro, setTipoFiltro] = useState(FILTER_ALL);
+  const [statusFiltro, setStatusFiltro] = useState<string>(FILTER_ALL);
+  const [tipoFiltro, setTipoFiltro] = useState<string>(FILTER_ALL);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState(range.start);
   const [endDate, setEndDate] = useState(range.end);

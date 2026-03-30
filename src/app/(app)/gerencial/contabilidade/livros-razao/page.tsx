@@ -26,7 +26,7 @@ export default function LivrosRazaoPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ledgers, setLedgers] = useState<Ledger[]>([]);
-  const [statusFiltro, setStatusFiltro] = useState(FILTER_ALL);
+  const [statusFiltro, setStatusFiltro] = useState<string>(FILTER_ALL);
   const [search, setSearch] = useState("");
   const [openNovo, setOpenNovo] = useState(false);
   const [form, setForm] = useState<NovoLedgerForm>({ ...INITIAL_FORM, dataInicio: range.start, dataFim: range.end });

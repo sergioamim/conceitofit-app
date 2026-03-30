@@ -303,7 +303,7 @@ export default function CrmCadenciasPage() {
                       </div>
                       <div className="flex items-center justify-between pt-2">
                         <p className="text-xs text-muted-foreground">
-                          Última execução: {formatDateTime(cadencia.ultimaExecucao)}
+                          Última execução: {formatDateTime(cadencia.ultimaExecucao ?? "")}
                         </p>
                         <Button
                           variant="outline"
@@ -404,7 +404,7 @@ export default function CrmCadenciasPage() {
                                   {formatDateTime(passo.agendadoPara)}
                                 </TableCell>
                                 <TableCell className="text-xs text-muted-foreground">
-                                  {formatDateTime(passo.executadoEm)}
+                                  {formatDateTime(passo.executadoEm ?? "")}
                                 </TableCell>
                               </TableRow>
                             ))}

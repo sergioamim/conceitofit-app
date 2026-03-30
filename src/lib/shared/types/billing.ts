@@ -4,6 +4,7 @@ export type CicloAssinatura = "MENSAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
 
 export type StatusAssinatura =
   | "ATIVA"
+  | "PENDENTE"
   | "CANCELADA"
   | "SUSPENSA"
   | "VENCIDA"
