@@ -10866,7 +10866,7 @@
         "description": "Recebimentos usa useState para listagem com filtros. Página financeira acessada diariamente.",
         "details": "Criar useRecebimentos() hook. Query key: [\"recebimentos\", tenantId, startDate, endDate].",
         "testStrategy": "Listagem com cache. Filtros por data funcionam. Navegar e voltar preserva dados.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -10920,7 +10920,7 @@
             "parentId": "undefined"
           }
         ],
-        "updatedAt": "2026-03-30T05:14:18.126Z"
+        "updatedAt": "2026-03-30T05:17:12.758Z"
       },
       {
         "id": "274",
@@ -11651,9 +11651,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:16:58.138Z",
+      "lastModified": "2026-03-30T05:17:12.758Z",
       "taskCount": 287,
-      "completedCount": 273,
+      "completedCount": 274,
       "tags": [
         "master"
       ]
