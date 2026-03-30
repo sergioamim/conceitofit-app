@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { usePublicTenants } from "@/lib/query/use-public-tenants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PublicJourneyShell } from "@/components/public/public-journey-shell";
@@ -9,14 +10,12 @@ import {
   buildPublicJourneyHref,
   confirmPublicCheckoutPayment,
   getPublicCheckoutStatus,
-  listPublicTenants,
   signPublicCheckoutContract,
   type PublicCheckoutSummary,
 } from "@/lib/public/services";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatCurrency } from "@/lib/shared/formatters";
-import type { Tenant } from "@/lib/types";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 function PublicJourneyFallback() {
@@ -37,7 +36,7 @@ function PendenciasPublicasPageContent() {
     resetDraft,
     planId,
   } = usePublicJourney();
-  const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
+  const { data: tenantOptions = [] } = usePublicTenants();
   const [summary, setSummary] = useState<PublicCheckoutSummary | null>(null);
   const [saving, setSaving] = useState<"" | "PAYMENT" | "CONTRACT">("");
   const [pageError, setPageError] = useState("");
@@ -46,10 +45,6 @@ function PendenciasPublicasPageContent() {
     () => (summary?.contractHtml ? sanitizeHtml(summary.contractHtml) : undefined),
     [summary?.contractHtml],
   );
-
-  useEffect(() => {
-    void listPublicTenants().then(setTenantOptions);
-  }, []);
 
   useEffect(() => {
     if (!context) return;
