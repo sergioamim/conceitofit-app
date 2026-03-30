@@ -10100,12 +10100,12 @@
         "description": "12 arquivos duplicam formatBRL, formatDate, formatDateTime localmente em vez de importar de lib/shared/formatters.ts.",
         "details": "Auditar todos os arquivos com formatBRL/formatDate/formatDateTime/formatPhone duplicados. Remover implementações locais e importar do barrel centralizado. Garantir que as assinaturas são compatíveis. Adicionar lint rule (eslint-plugin-boundaries ou import/no-restricted-paths) para prevenir novas duplicações. Arquivos conhecidos: use-contas-pagar-workspace.ts, use-contas-contabeis-workspace.ts, wizard-types.tsx, prospect-shared.ts, bi/page.tsx, bi/rede/page.tsx, contabilidade/*/page.tsx.",
         "testStrategy": "Grep por function formatBRL e function formatDate fora de lib/shared/formatters.ts retorna zero resultados. Todas as páginas renderizam valores monetários e datas corretamente.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
         "subtasks": [],
-        "updatedAt": "2026-03-29T22:28:58.315Z"
+        "updatedAt": "2026-03-30T04:05:01.797Z"
       },
       {
         "id": "251",
@@ -10571,9 +10571,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T03:36:30.608Z",
+      "lastModified": "2026-03-30T04:05:01.797Z",
       "taskCount": 267,
-      "completedCount": 266,
+      "completedCount": 267,
       "tags": [
         "master"
       ]
