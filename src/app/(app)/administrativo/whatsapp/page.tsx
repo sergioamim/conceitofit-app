@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ListErrorState } from "@/components/shared/list-states";
+import { formatDateTime } from "@/lib/formatters";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import {
@@ -42,11 +43,6 @@ const STATUS_CLASS: Record<string, string> = {
   LIDA: "bg-gym-teal/15 text-gym-teal",
   FALHA: "bg-gym-danger/15 text-gym-danger",
 };
-
-function formatDateTime(v?: string) {
-  if (!v) return "—";
-  return new Date(v).toLocaleString("pt-BR");
-}
 
 type Tab = "config" | "templates" | "logs";
 

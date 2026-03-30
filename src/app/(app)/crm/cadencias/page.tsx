@@ -61,6 +61,7 @@ import {
 } from "@/lib/tenant/crm/workspace";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatDateTime } from "@/lib/formatters";
 import { getCrmStageName } from "@/lib/tenant/crm/workspace";
 
 const EXECUTION_STATUS_COLORS: Record<CrmCadenceExecutionStatus, string> = {
@@ -76,11 +77,6 @@ const STEP_STATUS_COLORS: Record<string, string> = {
   PULADO: "border-sky-500/30 bg-sky-500/10 text-sky-200",
   FALHA: "border-gym-danger/30 bg-gym-danger/10 text-gym-danger",
 };
-
-function formatDateTime(value?: string) {
-  if (!value) return "—";
-  return value.slice(0, 16).replace("T", " ");
-}
 
 export default function CrmCadenciasPage() {
   const { toast } = useToast();

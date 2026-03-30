@@ -30,6 +30,22 @@ export function formatDateTime(value: string): string {
   });
 }
 
+/** Formata CPF: 12345678901 → 123.456.789-01 */
+export function formatCpf(cpf: string): string {
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length !== 11) return cpf;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+/** Formata telefone: 11999990000 → (11) 99999-0000 */
+export function formatPhone(phone: string | null | undefined): string {
+  if (!phone) return "";
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return phone;
+}
+
 /** Formata um número como percentual com 1 casa decimal. Ex: 12.5 → "12,5%" */
 export function formatPercent(value: number): string {
   return `${value.toLocaleString("pt-BR", {
