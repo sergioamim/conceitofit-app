@@ -47,6 +47,8 @@ export const queryKeys = {
   },
 
   crm: {
+    all: (tenantId: string) => ["crm", tenantId] as const,
+    snapshot: (tenantId: string) => ["crm", "snapshot", tenantId] as const,
     playbooks: (tenantId: string) => ["crm", "playbooks", tenantId] as const,
     cadencias: (tenantId: string) => ["crm", "cadencias", tenantId] as const,
   },
@@ -67,12 +69,13 @@ export const queryKeys = {
     all: (tenantId: string) => ["crmTasks", tenantId] as const,
   },
 
-  funcionarios: {
-    all: () => ["funcionarios"] as const,
+  crmCampanhas: {
+    all: (tenantId: string) => ["crmCampanhas", tenantId] as const,
+    list: (tenantId: string, status?: string) =>
+      ["crmCampanhas", "list", tenantId, status] as const,
   },
 
-  crm: {
-    all: (tenantId: string) => ["crm", tenantId] as const,
-    snapshot: (tenantId: string) => ["crm", "snapshot", tenantId] as const,
+  funcionarios: {
+    all: () => ["funcionarios"] as const,
   },
 } as const;
