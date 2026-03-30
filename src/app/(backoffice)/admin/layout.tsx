@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronRight, Command, Eye, Globe } from "lucide-react";
+import { Building2, ChevronRight, Command, Eye, Globe, LogOut } from "lucide-react";
 import { Command as CmdkRoot, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "cmdk";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { TenantContextProvider } from "@/lib/tenant/hooks/use-session-context";
@@ -249,6 +249,23 @@ function AdminShellFrame({
               </div>
             ))}
           </nav>
+
+          <div className="mt-auto space-y-1 border-t border-border/50 pt-3">
+            <Link
+              href="/login"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-gym-teal/10 hover:text-gym-teal"
+            >
+              <Building2 className="size-4 shrink-0" />
+              Entrar como academia
+            </Link>
+            <Link
+              href="/conta/sair"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-gym-danger/10 hover:text-gym-danger"
+            >
+              <LogOut className="size-4 shrink-0" />
+              Sair
+            </Link>
+          </div>
         </aside>
 
         {/* Main content */}
@@ -323,9 +340,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated || authenticated) return;
-    const queryString = searchParams.toString();
-    const currentPath = `${pathname}${queryString ? `?${queryString}` : ""}`;
-    router.replace(buildLoginHref(currentPath, getNetworkSlugFromSession()));
+    router.replace("/admin/login");
   }, [authenticated, hydrated, pathname, router, searchParams]);
 
   if (!hydrated || access.loading) {
