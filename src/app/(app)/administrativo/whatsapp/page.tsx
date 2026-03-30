@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { MessageSquare, Plus, Send, Settings, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,19 +10,18 @@ import { ListErrorState } from "@/components/shared/list-states";
 import { formatDateTime } from "@/lib/formatters";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { testWhatsAppConnectionApi } from "@/lib/api/whatsapp";
 import {
-  getWhatsAppConfigApi,
-  saveWhatsAppConfigApi,
-  testWhatsAppConnectionApi,
-  listWhatsAppTemplatesApi,
-  createWhatsAppTemplateApi,
-  updateWhatsAppTemplateApi,
-  deleteWhatsAppTemplateApi,
-  listWhatsAppLogsApi,
-} from "@/lib/api/whatsapp";
+  useWhatsAppConfig,
+  useSaveWhatsAppConfig,
+  useWhatsAppTemplates,
+  useCreateWhatsAppTemplate,
+  useUpdateWhatsAppTemplate,
+  useDeleteWhatsAppTemplate,
+  useWhatsAppLogs,
+} from "@/lib/query/use-whatsapp";
 import type {
   WhatsAppConfig,
-  WhatsAppMessageLog,
   WhatsAppTemplate,
   WhatsAppTemplateEvent,
 } from "@/lib/types";
@@ -63,11 +62,15 @@ const INITIAL_TEMPLATE: TemplateForm = {
 export default function WhatsAppPage() {
   const { tenantId, tenantResolved } = useTenantContext();
   const [tab, setTab] = useState<Tab>("config");
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Config
-  const [config, setConfig] = useState<WhatsAppConfig | null>(null);
+  // Config query + form state
+  const { data: config, isLoading: configLoading, isError: configError, error: configErrorObj } = useWhatsAppConfig({
+    tenantId,
+    tenantResolved,
+  });
+  const saveConfigMutation = useSaveWhatsAppConfig();
+
   const [configForm, setConfigForm] = useState({
     provedor: "EVOLUTION_API" as WhatsAppConfig["provedor"],
     apiUrl: "",
@@ -76,62 +79,55 @@ export default function WhatsAppPage() {
     numeroRemetente: "",
     ativo: false,
   });
-  const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
 
-  // Templates
-  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+  useEffect(() => {
+    if (config) {
+      setConfigForm({
+        provedor: config.provedor,
+        apiUrl: config.apiUrl ?? "",
+        apiKey: config.apiKey ?? "",
+        instanciaId: config.instanciaId ?? "",
+        numeroRemetente: config.numeroRemetente ?? "",
+        ativo: config.ativo,
+      });
+    }
+  }, [config]);
+
+  // Templates query + mutations
+  const { data: templates = [], isLoading: templatesLoading } = useWhatsAppTemplates({
+    tenantId,
+    tenantResolved,
+  });
+  const createTemplateMutation = useCreateWhatsAppTemplate();
+  const updateTemplateMutation = useUpdateWhatsAppTemplate();
+  const deleteTemplateMutation = useDeleteWhatsAppTemplate();
+
   const [openTemplateModal, setOpenTemplateModal] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [templateForm, setTemplateForm] = useState<TemplateForm>(INITIAL_TEMPLATE);
 
-  // Logs
-  const [logs, setLogs] = useState<WhatsAppMessageLog[]>([]);
+  // Logs query (polling 10s, only when tab active)
+  const { data: logs = [], isLoading: logsLoading } = useWhatsAppLogs({
+    tenantId,
+    tenantResolved,
+    enabled: tab === "logs",
+  });
 
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [cfg, tpls, lgs] = await Promise.all([
-        getWhatsAppConfigApi({ tenantId }),
-        listWhatsAppTemplatesApi({ tenantId }),
-        listWhatsAppLogsApi({ tenantId, size: 50 }),
-      ]);
-      setConfig(cfg);
-      if (cfg) {
-        setConfigForm({
-          provedor: cfg.provedor,
-          apiUrl: cfg.apiUrl ?? "",
-          apiKey: cfg.apiKey ?? "",
-          instanciaId: cfg.instanciaId ?? "",
-          numeroRemetente: cfg.numeroRemetente ?? "",
-          ativo: cfg.ativo,
-        });
-      }
-      setTemplates(tpls);
-      setLogs(lgs);
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
+  const loading = configLoading || (tab === "templates" && templatesLoading) || (tab === "logs" && logsLoading);
 
   useEffect(() => {
-    if (tenantResolved && tenantId) void load();
-  }, [load, tenantResolved, tenantId]);
+    if (configError && configErrorObj) {
+      setError(normalizeErrorMessage(configErrorObj));
+    }
+  }, [configError, configErrorObj]);
 
   async function handleSaveConfig() {
     if (!tenantId) return;
-    setSaving(true);
     try {
-      const saved = await saveWhatsAppConfigApi({ tenantId, data: configForm });
-      setConfig(saved);
+      await saveConfigMutation.mutateAsync({ tenantId, data: configForm });
     } catch (err) {
       setError(normalizeErrorMessage(err));
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -169,14 +165,12 @@ export default function WhatsAppPage() {
     if (!tenantId || !templateForm.nome.trim() || !templateForm.conteudo.trim()) return;
     try {
       if (editingTemplateId) {
-        await updateWhatsAppTemplateApi({ tenantId, id: editingTemplateId, data: templateForm });
+        await updateTemplateMutation.mutateAsync({ tenantId, id: editingTemplateId, data: templateForm });
       } else {
         const variaveis = (templateForm.conteudo.match(/\{\{(\w+)\}\}/g) ?? []).map((v) => v.replace(/\{|\}/g, ""));
-        await createWhatsAppTemplateApi({ tenantId, data: { ...templateForm, variaveis } });
+        await createTemplateMutation.mutateAsync({ tenantId, data: { ...templateForm, variaveis } });
       }
       setOpenTemplateModal(false);
-      const updated = await listWhatsAppTemplatesApi({ tenantId });
-      setTemplates(updated);
     } catch (err) {
       setError(normalizeErrorMessage(err));
     }
@@ -185,8 +179,7 @@ export default function WhatsAppPage() {
   async function handleDeleteTemplate(id: string) {
     if (!tenantId || !confirm("Remover este template?")) return;
     try {
-      await deleteWhatsAppTemplateApi({ tenantId, id });
-      setTemplates((prev) => prev.filter((t) => t.id !== id));
+      await deleteTemplateMutation.mutateAsync({ tenantId, id });
     } catch (err) {
       setError(normalizeErrorMessage(err));
     }
@@ -200,7 +193,7 @@ export default function WhatsAppPage() {
         <p className="mt-1 text-sm text-muted-foreground">Configuracao, templates de mensagem e historico de envios.</p>
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => setError(null)} /> : null}
 
       {/* Tabs */}
       <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2">
@@ -274,8 +267,8 @@ export default function WhatsAppPage() {
                 <Button variant="outline" onClick={handleTestConnection} disabled={testing} className="border-border">
                   {testing ? "Testando..." : "Testar conexao"}
                 </Button>
-                <Button onClick={handleSaveConfig} disabled={saving}>
-                  {saving ? "Salvando..." : "Salvar configuracao"}
+                <Button onClick={handleSaveConfig} disabled={saveConfigMutation.isPending}>
+                  {saveConfigMutation.isPending ? "Salvando..." : "Salvar configuracao"}
                 </Button>
               </div>
             </div>

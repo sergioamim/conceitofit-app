@@ -75,6 +75,12 @@ export const queryKeys = {
       ["crmCampanhas", "list", tenantId, status] as const,
   },
 
+  whatsapp: {
+    config: (tenantId: string) => ["whatsapp", "config", tenantId] as const,
+    templates: (tenantId: string) => ["whatsapp", "templates", tenantId] as const,
+    logs: (tenantId: string) => ["whatsapp", "logs", tenantId] as const,
+  },
+
   funcionarios: {
     all: () => ["funcionarios"] as const,
   },
