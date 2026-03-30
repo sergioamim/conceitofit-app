@@ -56,4 +56,12 @@ export const queryKeys = {
     all: (tenantId: string) => ["grade", tenantId] as const,
     week: (tenantId: string) => ["grade", "week", tenantId] as const,
   },
+
+  crmTasks: {
+    all: (tenantId: string) => ["crmTasks", tenantId] as const,
+  },
+
+  funcionarios: {
+    all: () => ["funcionarios"] as const,
+  },
 } as const;
