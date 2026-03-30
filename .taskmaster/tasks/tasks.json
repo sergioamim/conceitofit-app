@@ -11461,7 +11461,7 @@
         "description": "Livros razão, transações, relatórios e monitoramento usam useState para server state.",
         "details": "Criar hooks: useLedgers(), useFinancialTransactions(), useFinancialReports(), useFinancialMonitoring(). Mutations com invalidação para CRUD.",
         "testStrategy": "Todas 4 páginas carregam com cache. CRUD invalida corretamente.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -11474,9 +11474,10 @@
             "description": "Estabelecer um padrão de 'query keys' para os domínios de contabilidade (Livros Razão, Transações Financeiras, Relatórios Financeiros, Monitoramento Financeiro) para uso com TanStack Query, garantindo consistência e granularidade no cache.",
             "dependencies": [],
             "details": "Criar um arquivo centralizado, como 'src/queries/financial/keys.ts', para exportar objetos de 'query keys' seguindo um padrão consistente como ['financial', 'ledgers', { id }] ou ['financial', 'transactions', { status, dateRange }]. Isso permitirá cache e invalidação eficientes ao longo da migração.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Revisão de código para conformidade com padrões de query keys existentes no projeto e garantir que as chaves sejam descritivas e únicas para cada domínio de contabilidade.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:42:09.847Z"
           },
           {
             "id": 2,
@@ -11486,9 +11487,10 @@
               1
             ],
             "details": "Criar os arquivos 'src/hooks/useLedgers.ts' e 'src/hooks/useFinancialTransactions.ts'. Para cada hook, implementar 'useQuery' para busca de dados e 'useMutation' para operações de escrita, garantindo que o cache seja invalidado (e.g., 'queryClient.invalidateQueries(financialKeys.ledgers.all())') após uma mutação bem-sucedida. Incluir tratamento de erros e estados de carregamento.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testes unitários para cada hook de query e mutation. Verificar se os dados são carregados corretamente e se as operações CRUD (criação, atualização, exclusão) funcionam conforme esperado. Validar que o cache é invalidado e os dados são re-buscados após uma mutação.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:42:09.857Z"
           },
           {
             "id": 3,
@@ -11498,9 +11500,10 @@
               1
             ],
             "details": "Criar os arquivos 'src/hooks/useFinancialReports.ts' e 'src/hooks/useFinancialMonitoring.ts'. Implementar 'useQuery' para buscar os dados, incorporando parâmetros de filtro dinâmicos nas 'query keys' para garantir cache eficiente para diferentes estados de relatórios e monitoramento. Avaliar se há necessidade de mutations e, se sim, implementar a invalidação de cache correspondente.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testes unitários para cada hook de query. Verificar se os dados de relatórios e monitoramento são carregados corretamente com diferentes combinações de parâmetros de filtro. Se mutations forem implementadas, testar a invalidação de cache.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:42:09.870Z"
           },
           {
             "id": 4,
@@ -11511,12 +11514,13 @@
               3
             ],
             "details": "Para cada uma das páginas (`LedgersPage`, `FinancialTransactionsPage`, `FinancialReportsPage`, `FinancialMonitoringPage`), substituir as chamadas 'fetch' existentes e o gerenciamento de estado local por chamadas aos respectivos hooks do TanStack Query (e.g., `const { data, isLoading, error } = useLedgers()`). Garantir que a integração com componentes da UI para filtros, paginação e operações CRUD funcione corretamente com o cache e os estados dos hooks. Finalmente, exportar os componentes e hooks conforme padrão do projeto.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testes de integração end-to-end para cada uma das quatro páginas. Validar que as páginas carregam os dados com sucesso, que o cache é utilizado (verificar chamadas de rede no navegador), que as operações CRUD funcionam e invalidam o cache corretamente, e que os estados de carregamento e erro são exibidos adequadamente ao usuário.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:42:09.879Z"
           }
         ],
-        "updatedAt": "2026-03-30T05:33:34.593Z"
+        "updatedAt": "2026-03-30T05:42:09.879Z"
       },
       {
         "id": "283",
@@ -11786,9 +11790,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:41:17.160Z",
+      "lastModified": "2026-03-30T05:42:09.879Z",
       "taskCount": 287,
-      "completedCount": 284,
+      "completedCount": 285,
       "tags": [
         "master"
       ]
