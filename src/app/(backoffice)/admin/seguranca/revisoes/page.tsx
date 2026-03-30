@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { GlobalSecurityShell, formatSecurityDateTime } from "@/components/security/global-security-shell";
 import { SecurityRiskBadge } from "@/components/security/security-badges";
 import { SecurityEmptyState, SecuritySectionFeedback } from "@/components/security/security-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getGlobalSecurityOverview, getGlobalSecurityReviewBoard } from "@/lib/backoffice/seguranca";
+import { useAdminSecurityOverview, useAdminSecurityReviewBoard } from "@/lib/query/admin";
 import type { GlobalAdminReviewBoard, GlobalAdminReviewBoardItem, GlobalAdminSecurityOverview } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
@@ -33,36 +33,17 @@ const EMPTY_OVERVIEW: GlobalAdminSecurityOverview = {
 };
 
 export default function AdminSegurancaRevisoesPage() {
-  const [board, setBoard] = useState<GlobalAdminReviewBoard>(EMPTY_BOARD);
-  const [overview, setOverview] = useState<GlobalAdminSecurityOverview>(EMPTY_OVERVIEW);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const boardQuery = useAdminSecurityReviewBoard();
+  const overviewQuery = useAdminSecurityOverview();
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setLoading(true);
-      try {
-        setError(null);
-        const [boardResponse, overviewResponse] = await Promise.all([
-          getGlobalSecurityReviewBoard(),
-          getGlobalSecurityOverview(),
-        ]);
-        if (!mounted) return;
-        setBoard(boardResponse);
-        setOverview({ ...EMPTY_OVERVIEW, ...overviewResponse });
-      } catch (loadError) {
-        if (!mounted) return;
-        setError(normalizeErrorMessage(loadError));
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-    void load();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const loading = boardQuery.isLoading || overviewQuery.isLoading;
+  const board: GlobalAdminReviewBoard = boardQuery.data ?? EMPTY_BOARD;
+  const overview: GlobalAdminSecurityOverview = overviewQuery.data
+    ? { ...EMPTY_OVERVIEW, ...overviewQuery.data }
+    : EMPTY_OVERVIEW;
+  const error = boardQuery.error || overviewQuery.error
+    ? normalizeErrorMessage(boardQuery.error ?? overviewQuery.error)
+    : null;
 
   const tabs = useMemo(
     () => [

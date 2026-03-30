@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
-import { createGlobalAcademia, listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
-import type { Academia, Tenant } from "@/lib/types";
+import { useAdminAcademias, useAdminUnidades, useCreateAcademia } from "@/lib/query/admin";
+import type { Academia } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 interface AcademiaForm {
@@ -27,38 +27,20 @@ type PageSize = 20 | 50 | 100 | 200;
 export default function AcademiasPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [academias, setAcademias] = useState<Academia[]>([]);
-  const [unidades, setUnidades] = useState<Tenant[]>([]);
+  const academiasQuery = useAdminAcademias();
+  const unidadesQuery = useAdminUnidades();
+  const createMutation = useCreateAcademia();
   const [form, setForm] = useState<AcademiaForm>({ nome: "", documento: "" });
-  const [saving, setSaving] = useState(false);
   const [busca, setBusca] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(20);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setLoading(true);
-      try {
-        setError(null);
-        const [acs, uns] = await Promise.all([listGlobalAcademias(), listGlobalUnidades()]);
-        if (!mounted) return;
-        setAcademias(acs);
-        setUnidades(uns);
-      } catch (loadError) {
-        if (!mounted) return;
-        setError(normalizeErrorMessage(loadError));
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const loading = academiasQuery.isLoading || unidadesQuery.isLoading;
+  const academias = academiasQuery.data ?? [];
+  const unidades = unidadesQuery.data ?? [];
+  const error = academiasQuery.error || unidadesQuery.error
+    ? normalizeErrorMessage(academiasQuery.error ?? unidadesQuery.error)
+    : null;
 
   const unidadesPorAcademia = useMemo(() => {
     const map = new Map<string, number>();
@@ -105,7 +87,9 @@ export default function AcademiasPage() {
     [academiasFiltradas, page, pageSize]
   );
 
-  async function handleCreate() {
+  const saving = createMutation.isPending;
+
+  function handleCreate() {
     if (loading) {
       return;
     }
@@ -113,27 +97,28 @@ export default function AcademiasPage() {
       toast({ title: "Informe o nome da academia", variant: "destructive" });
       return;
     }
-    setSaving(true);
-    try {
-      const created = await createGlobalAcademia({
+    createMutation.mutate(
+      {
         nome: form.nome.trim(),
         documento: form.documento.trim() || undefined,
         ativo: true,
-      });
-      setAcademias((prev) => [created, ...prev]);
-      setForm({ nome: "", documento: "" });
-      toast({ title: "Academia criada", description: created.nome });
-      setBusca("");
-      setPage(0);
-    } catch (createError) {
-      toast({
-        title: "Não foi possível criar a academia",
-        description: normalizeErrorMessage(createError),
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
+      },
+      {
+        onSuccess: (created) => {
+          setForm({ nome: "", documento: "" });
+          toast({ title: "Academia criada", description: created.nome });
+          setBusca("");
+          setPage(0);
+        },
+        onError: (createError) => {
+          toast({
+            title: "Não foi possível criar a academia",
+            description: normalizeErrorMessage(createError),
+            variant: "destructive",
+          });
+        },
+      }
+    );
   }
 
   function handleSearchChange(nextValue: string) {

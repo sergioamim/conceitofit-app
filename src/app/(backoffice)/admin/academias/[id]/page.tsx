@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { getGlobalAcademiaById, listGlobalUnidades, updateGlobalAcademia } from "@/lib/backoffice/admin";
-import type { Academia, Tenant } from "@/lib/types";
+import { useAdminAcademiaDetail, useAdminUnidades, useUpdateAcademia } from "@/lib/query/admin";
+import type { Academia } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 type AcademiaForm = {
@@ -44,74 +44,63 @@ export default function AcademiaDetalhePage() {
   const params = useParams();
   const id = params?.id as string;
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [academia, setAcademia] = useState<Academia | null>(null);
-  const [unidades, setUnidades] = useState<Tenant[]>([]);
+  const academiaQuery = useAdminAcademiaDetail(id);
+  const unidadesQuery = useAdminUnidades();
+  const updateMutation = useUpdateAcademia();
   const [form, setForm] = useState<AcademiaForm>(() => buildForm(null));
-  const [error, setError] = useState<string | null>(null);
+
+  const loading = academiaQuery.isLoading || unidadesQuery.isLoading;
+  const academia = academiaQuery.data ?? null;
+  const unidades = unidadesQuery.data ?? [];
+  const error = academiaQuery.error || unidadesQuery.error
+    ? normalizeErrorMessage(academiaQuery.error ?? unidadesQuery.error)
+    : null;
 
   useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setLoading(true);
-      try {
-        setError(null);
-        const [academiaResponse, unidadesResponse] = await Promise.all([
-          getGlobalAcademiaById(id),
-          listGlobalUnidades(),
-        ]);
-        if (!mounted) return;
-        setAcademia(academiaResponse);
-        setForm(buildForm(academiaResponse));
-        setUnidades(unidadesResponse);
-      } catch (loadError) {
-        if (!mounted) return;
-        setError(normalizeErrorMessage(loadError));
-      } finally {
-        if (mounted) setLoading(false);
-      }
+    if (academiaQuery.data) {
+      setForm(buildForm(academiaQuery.data));
     }
-
-    void load();
-    return () => {
-      mounted = false;
-    };
-  }, [id]);
+  }, [academiaQuery.data]);
 
   const unidadesDaAcademia = useMemo(
     () => unidades.filter((unit) => (unit.academiaId ?? unit.groupId) === id),
     [id, unidades]
   );
 
-  async function handleSave() {
+  const saving = updateMutation.isPending;
+
+  function handleSave() {
     if (!form.nome.trim()) {
       toast({ title: "Informe o nome da academia", variant: "destructive" });
       return;
     }
 
-    setSaving(true);
-    try {
-      const updated = await updateGlobalAcademia(id, {
-        nome: form.nome.trim(),
-        razaoSocial: form.razaoSocial.trim() || undefined,
-        documento: form.documento.trim() || undefined,
-        email: form.email.trim() || undefined,
-        telefone: form.telefone.trim() || undefined,
-        ativo: form.ativo === "ATIVA",
-      });
-      setAcademia(updated);
-      setForm(buildForm(updated));
-      toast({ title: "Academia atualizada", description: updated.nome });
-    } catch (saveError) {
-      toast({
-        title: "Não foi possível salvar a academia",
-        description: normalizeErrorMessage(saveError),
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
+    updateMutation.mutate(
+      {
+        id,
+        data: {
+          nome: form.nome.trim(),
+          razaoSocial: form.razaoSocial.trim() || undefined,
+          documento: form.documento.trim() || undefined,
+          email: form.email.trim() || undefined,
+          telefone: form.telefone.trim() || undefined,
+          ativo: form.ativo === "ATIVA",
+        },
+      },
+      {
+        onSuccess: (updated) => {
+          setForm(buildForm(updated));
+          toast({ title: "Academia atualizada", description: updated.nome });
+        },
+        onError: (saveError) => {
+          toast({
+            title: "Não foi possível salvar a academia",
+            description: normalizeErrorMessage(saveError),
+            variant: "destructive",
+          });
+        },
+      }
+    );
   }
 
   return (

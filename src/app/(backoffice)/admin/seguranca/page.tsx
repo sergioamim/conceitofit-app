@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { GlobalSecurityShell } from "@/components/security/global-security-shell";
 import { SecurityEligibilityBadge } from "@/components/security/security-badges";
 import { SecurityEmptyState, SecuritySectionFeedback } from "@/components/security/security-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getGlobalSecurityOverview, listEligibleNewUnitAdminsPreview } from "@/lib/backoffice/seguranca";
-import type { GlobalAdminSecurityOverview, GlobalAdminUserSummary } from "@/lib/types";
+import { useAdminSecurityOverview, useAdminSecurityEligiblePreview } from "@/lib/query/admin";
+import type { GlobalAdminSecurityOverview } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const EMPTY_OVERVIEW: GlobalAdminSecurityOverview = {
@@ -24,38 +23,17 @@ const EMPTY_OVERVIEW: GlobalAdminSecurityOverview = {
 };
 
 export default function AdminSegurancaPage() {
-  const [loading, setLoading] = useState(true);
-  const [overview, setOverview] = useState<GlobalAdminSecurityOverview>(EMPTY_OVERVIEW);
-  const [preview, setPreview] = useState<GlobalAdminUserSummary[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const overviewQuery = useAdminSecurityOverview();
+  const previewQuery = useAdminSecurityEligiblePreview();
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
-      setLoading(true);
-      try {
-        setError(null);
-        const [overviewResponse, previewResponse] = await Promise.all([
-          getGlobalSecurityOverview(),
-          listEligibleNewUnitAdminsPreview({ size: 5 }),
-        ]);
-        if (!mounted) return;
-        setOverview({ ...EMPTY_OVERVIEW, ...overviewResponse });
-        setPreview(previewResponse.items);
-      } catch (loadError) {
-        if (!mounted) return;
-        setError(normalizeErrorMessage(loadError));
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    void load();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const loading = overviewQuery.isLoading || previewQuery.isLoading;
+  const overview: GlobalAdminSecurityOverview = overviewQuery.data
+    ? { ...EMPTY_OVERVIEW, ...overviewQuery.data }
+    : EMPTY_OVERVIEW;
+  const preview = previewQuery.data?.items ?? [];
+  const error = overviewQuery.error || previewQuery.error
+    ? normalizeErrorMessage(overviewQuery.error ?? previewQuery.error)
+    : null;
 
   return (
     <GlobalSecurityShell

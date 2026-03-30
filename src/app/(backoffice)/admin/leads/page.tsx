@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, StickyNote, ArrowRightLeft } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -13,12 +14,12 @@ import { PaginatedTable } from "@/components/shared/paginated-table";
 import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
 import {
   getAdminLead,
-  getAdminLeadStats,
-  listAdminLeads,
   updateAdminLeadNotas,
   updateAdminLeadStatus,
 } from "@/lib/api/admin-leads";
-import type { LeadB2b, LeadB2bStats, StatusLeadB2b } from "@/lib/shared/types/lead-b2b";
+import { useAdminLeads, useAdminLeadStats } from "@/lib/query/admin";
+import { queryKeys } from "@/lib/query/keys";
+import type { LeadB2b, StatusLeadB2b } from "@/lib/shared/types/lead-b2b";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatDateTime } from "@/lib/formatters";
@@ -45,14 +46,21 @@ type PageSize = 20 | 50 | 100 | 200;
 
 export default function AdminLeadsPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [leads, setLeads] = useState<LeadB2b[]>([]);
-  const [stats, setStats] = useState<LeadB2bStats | null>(null);
+  const queryClient = useQueryClient();
+  const leadsQuery = useAdminLeads();
+  const statsQuery = useAdminLeadStats();
+
+  const leads = leadsQuery.data ?? [];
+  const stats = statsQuery.data ?? null;
+  const loading = leadsQuery.isLoading || statsQuery.isLoading;
+  const error = leadsQuery.error || statsQuery.error
+    ? normalizeErrorMessage(leadsQuery.error ?? statsQuery.error)
+    : null;
+
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<StatusLeadB2b | typeof FILTER_ALL>(FILTER_ALL);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(20);
-  const [error, setError] = useState<string | null>(null);
 
   // Detail panel state
   const [selectedLead, setSelectedLead] = useState<LeadB2b | null>(null);
@@ -60,32 +68,6 @@ export default function AdminLeadsPage() {
   const [notas, setNotas] = useState("");
   const [savingNotas, setSavingNotas] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setLoading(true);
-      try {
-        setError(null);
-        const [leadsData, statsData] = await Promise.all([
-          listAdminLeads(),
-          getAdminLeadStats(),
-        ]);
-        if (!mounted) return;
-        setLeads(leadsData);
-        setStats(statsData);
-      } catch (loadError) {
-        if (!mounted) return;
-        setError(normalizeErrorMessage(loadError));
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const leadOptions = useMemo<SuggestionOption[]>(
     () =>
@@ -152,7 +134,7 @@ export default function AdminLeadsPage() {
     try {
       const updated = await updateAdminLeadNotas(selectedLead.id, notas);
       setSelectedLead(updated);
-      setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.leads.all() });
       toast({ title: "Notas salvas" });
     } catch (err) {
       toast({
@@ -171,14 +153,7 @@ export default function AdminLeadsPage() {
     try {
       const updated = await updateAdminLeadStatus(selectedLead.id, newStatus);
       setSelectedLead(updated);
-      setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
-      // Refresh stats
-      try {
-        const newStats = await getAdminLeadStats();
-        setStats(newStats);
-      } catch {
-        // non-critical
-      }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.leads.all() });
       toast({ title: "Status atualizado", description: `Lead movido para ${newStatus}` });
     } catch (err) {
       toast({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
@@ -35,9 +35,10 @@ import {
   baixarAdminCobranca,
   cancelarAdminCobranca,
   createAdminCobranca,
-  listAdminCobrancas,
-  listAdminContratos,
 } from "@/lib/api/admin-billing";
+import { useAdminCobrancas, useAdminContratos } from "@/lib/query/admin";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import type { Cobranca, CobrancaStatus, ContratoPlataforma, TipoFormaPagamento } from "@/lib/types";
@@ -177,11 +178,14 @@ function toFormValues(contrato: ContratoPlataforma | null): CobrancaFormValues {
 
 export default function AdminCobrancasPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const cobrancasQuery = useAdminCobrancas();
+  const contratosQuery = useAdminContratos();
+  const loading = cobrancasQuery.isLoading || contratosQuery.isLoading;
+  const error = cobrancasQuery.error?.message ?? contratosQuery.error?.message ?? null;
+  const cobrancas = cobrancasQuery.data ?? [];
+  const contratos = contratosQuery.data ?? [];
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [cobrancas, setCobrancas] = useState<Cobranca[]>([]);
-  const [contratos, setContratos] = useState<ContratoPlataforma[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(FILTER_ALL);
   const [academiaFilter, setAcademiaFilter] = useState<string>(FILTER_ALL);
   const [periodoFilter, setPeriodoFilter] = useState<typeof FILTER_ALL | "VENCIDAS" | "MES_ATUAL">(FILTER_ALL);
@@ -231,27 +235,6 @@ export default function AdminCobrancasPage() {
     ],
     [contratoOptions]
   );
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setError(null);
-      const [cobrancasResponse, contratosResponse] = await Promise.all([
-        listAdminCobrancas(),
-        listAdminContratos(),
-      ]);
-      setCobrancas(cobrancasResponse);
-      setContratos(contratosResponse);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const filteredCobrancas = useMemo(() => {
     return cobrancas.filter((cobranca) => {
@@ -330,13 +313,7 @@ export default function AdminCobrancasPage() {
         juros: parseNumberString(values.juros),
         observacoes: values.observacoes?.trim() || undefined,
       });
-      setCobrancas((current) => [
-        {
-          ...saved,
-          academiaNome: saved.academiaNome || contrato?.academiaNome || "",
-        },
-        ...current.filter((item) => item.id !== saved.id),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.cobrancas() });
       setPage(0);
       setModalOpen(false);
       toast({
@@ -358,12 +335,12 @@ export default function AdminCobrancasPage() {
     if (!cobrancaParaBaixa) return;
     setBaixando(true);
     try {
-      const baixada = await baixarAdminCobranca(cobrancaParaBaixa.id, {
+      await baixarAdminCobranca(cobrancaParaBaixa.id, {
         dataPagamento: baixaForm.dataPagamento,
         formaPagamento: baixaForm.formaPagamento,
         observacoes: baixaForm.observacoes?.trim() || undefined,
       });
-      setCobrancas((current) => current.map((item) => (item.id === baixada.id ? { ...item, ...baixada } : item)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.cobrancas() });
       setCobrancaParaBaixa(null);
       setBaixaForm({
         dataPagamento: "",
@@ -390,7 +367,7 @@ export default function AdminCobrancasPage() {
     setCancelando(true);
     try {
       const cancelada = await cancelarAdminCobranca(cobrancaParaCancelar.id);
-      setCobrancas((current) => current.map((item) => (item.id === cancelada.id ? { ...item, ...cancelada } : item)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.cobrancas() });
       setCobrancaParaCancelar(null);
       toast({
         title: "Cobrança cancelada",
@@ -417,7 +394,7 @@ export default function AdminCobrancasPage() {
         </p>
       </header>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => { cobrancasQuery.refetch(); contratosQuery.refetch(); }} /> : null}
 
       <div className="grid gap-3 md:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">
