@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Eye, MonitorCheck, TrendingUp } from "lucide-react";
+import { AlertTriangle, Eye, TrendingUp } from "lucide-react";
 import { ListErrorState } from "@/components/shared/list-states";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 import {
   listTransacoesSuspeitasApi,
   listPadroesIncomunsApi,
@@ -19,37 +18,33 @@ const SEVERITY_CLASS: Record<string, string> = {
   CRITICAL: "bg-gym-danger/15 text-gym-danger",
 };
 
+type MonitoramentoData = {
+  suspeitas: TransacaoSuspeita[];
+  padroes: PadraoIncomum[];
+  altaFrequencia: AltaFrequencia[];
+};
+
 export default function MonitoramentoPage() {
   const tenantContext = useTenantContext();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [suspeitas, setSuspeitas] = useState<TransacaoSuspeita[]>([]);
-  const [padroes, setPadroes] = useState<PadraoIncomum[]>([]);
-  const [altaFreq, setAltaFreq] = useState<AltaFrequencia[]>([]);
 
-  const load = useCallback(async () => {
-    if (!tenantContext.tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [s, p, a] = await Promise.all([
-        listTransacoesSuspeitasApi({ tenantId: tenantContext.tenantId }),
-        listPadroesIncomunsApi({ tenantId: tenantContext.tenantId }),
-        listAltaFrequenciaApi({ tenantId: tenantContext.tenantId }),
+  const { items: dataArr, isLoading: loading, error: loadError, refetch } = useAdminCrud<MonitoramentoData>({
+    domain: "contabilidade-monitoramento",
+    tenantId: tenantContext.tenantId,
+    enabled: tenantContext.tenantResolved,
+    listFn: async (tid) => {
+      const [suspeitas, padroes, altaFrequencia] = await Promise.all([
+        listTransacoesSuspeitasApi({ tenantId: tid }),
+        listPadroesIncomunsApi({ tenantId: tid }),
+        listAltaFrequenciaApi({ tenantId: tid }),
       ]);
-      setSuspeitas(s);
-      setPadroes(p);
-      setAltaFreq(a);
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantContext.tenantId]);
+      // useAdminCrud expects T[], so we wrap in a single-element array
+      return [{ suspeitas, padroes, altaFrequencia }];
+    },
+  });
 
-  useEffect(() => {
-    if (tenantContext.tenantResolved && tenantContext.tenantId) void load();
-  }, [load, tenantContext.tenantId, tenantContext.tenantResolved]);
+  const data = dataArr[0] ?? { suspeitas: [], padroes: [], altaFrequencia: [] };
+  const { suspeitas, padroes, altaFrequencia: altaFreq } = data;
+  const error = loadError?.message ?? null;
 
   const suspeitasNaoRevisadas = suspeitas.filter((s) => !s.revisada).length;
   const padroesNaoResolvidos = padroes.filter((p) => !p.resolvido).length;
@@ -65,7 +60,7 @@ export default function MonitoramentoPage() {
         </p>
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">

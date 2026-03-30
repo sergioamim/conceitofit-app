@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { ListErrorState } from "@/components/shared/list-states";
 import { ExportMenu } from "@/components/shared/export-menu";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 import { listLedgersApi, createLedgerApi, closeLedgerApi, listLedgerEntriesApi } from "@/lib/api/financial";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import type { Ledger, LedgerEntry } from "@/lib/types";
@@ -23,33 +24,34 @@ const INITIAL_FORM: NovoLedgerForm = { nome: "", descricao: "", referencia: "", 
 export default function LivrosRazaoPage() {
   const tenantContext = useTenantContext();
   const range = getBusinessMonthRange();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [ledgers, setLedgers] = useState<Ledger[]>([]);
+  const queryClient = useQueryClient();
   const [statusFiltro, setStatusFiltro] = useState<string>(FILTER_ALL);
   const [search, setSearch] = useState("");
   const [openNovo, setOpenNovo] = useState(false);
   const [form, setForm] = useState<NovoLedgerForm>({ ...INITIAL_FORM, dataInicio: range.start, dataFim: range.end });
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [entries, setEntries] = useState<LedgerEntry[]>([]);
-  const [loadingEntries, setLoadingEntries] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!tenantContext.tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      setLedgers(await listLedgersApi({ tenantId: tenantContext.tenantId }));
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantContext.tenantId]);
+  const { items: ledgers, isLoading: loading, error: loadError, refetch, create } = useAdminCrud<Ledger, Parameters<typeof createLedgerApi>[0]>({
+    domain: "contabilidade-ledgers",
+    tenantId: tenantContext.tenantId,
+    enabled: tenantContext.tenantResolved,
+    listFn: (tid) => listLedgersApi({ tenantId: tid }),
+    createFn: (tid, data) => createLedgerApi({ ...data, tenantId: tid }),
+  });
 
-  useEffect(() => {
-    if (tenantContext.tenantResolved && tenantContext.tenantId) void load();
-  }, [load, tenantContext.tenantId, tenantContext.tenantResolved]);
+  const closeMutation = useMutation({
+    mutationFn: (id: string) => closeLedgerApi(id),
+    onSuccess: () => void refetch(),
+  });
+
+  const entriesQuery = useQuery<LedgerEntry[]>({
+    queryKey: ["admin", "contabilidade-ledger-entries", expandedId],
+    queryFn: () => listLedgerEntriesApi(expandedId!),
+    enabled: Boolean(expandedId),
+    staleTime: 2 * 60_000,
+  });
+
+  const error = loadError?.message ?? closeMutation.error?.message ?? null;
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -63,41 +65,33 @@ export default function LivrosRazaoPage() {
   async function handleCriar() {
     if (!form.nome.trim() || !form.referencia.trim() || !form.dataInicio || !form.dataFim) return;
     try {
-      setError(null);
-      await createLedgerApi({ tenantId: tenantContext.tenantId, ...form });
+      await create!.mutateAsync(form);
       setOpenNovo(false);
-      await load();
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
+    } catch {
+      // error is surfaced via create.error
     }
   }
 
   async function handleFechar(id: string) {
     try {
-      setError(null);
-      await closeLedgerApi(id);
-      await load();
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
+      await closeMutation.mutateAsync(id);
+    } catch {
+      // error is surfaced via closeMutation.error
     }
   }
 
-  async function handleToggleEntries(ledgerId: string) {
+  function handleToggleEntries(ledgerId: string) {
     if (expandedId === ledgerId) {
       setExpandedId(null);
-      setEntries([]);
       return;
     }
     setExpandedId(ledgerId);
-    setLoadingEntries(true);
-    try {
-      setEntries(await listLedgerEntriesApi(ledgerId));
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoadingEntries(false);
-    }
+    // Invalidate so it refetches if stale
+    queryClient.invalidateQueries({ queryKey: ["admin", "contabilidade-ledger-entries", ledgerId] });
   }
+
+  const entries = entriesQuery.data ?? [];
+  const loadingEntries = entriesQuery.isLoading;
 
   return (
     <div className="space-y-6">
@@ -129,7 +123,7 @@ export default function LivrosRazaoPage() {
         </div>
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 
       <div className="rounded-xl border border-border bg-card p-4">
         <div className="grid gap-3 md:grid-cols-2">

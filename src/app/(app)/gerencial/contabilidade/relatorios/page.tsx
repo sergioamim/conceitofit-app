@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ListErrorState } from "@/components/shared/list-states";
 import { ExportMenu } from "@/components/shared/export-menu";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import { getBalancoPatrimonialApi, getFluxoCaixaApi } from "@/lib/api/financial";
 import type { BalancoPatrimonial, FluxoCaixa } from "@/lib/types";
@@ -22,29 +22,38 @@ export default function RelatoriosPage() {
   const [reportType, setReportType] = useState<ReportType>("balanco");
   const [startDate, setStartDate] = useState(range.start);
   const [endDate, setEndDate] = useState(range.end);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [balanco, setBalanco] = useState<BalancoPatrimonial | null>(null);
-  const [fluxo, setFluxo] = useState<FluxoCaixa | null>(null);
+  // Track whether user has clicked "Gerar" so we can enable the query
+  const [fetchKey, setFetchKey] = useState<number>(0);
+  const [shouldFetch, setShouldFetch] = useState(false);
 
-  const loadReport = useCallback(async () => {
-    if (!tenantContext.tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      if (reportType === "balanco") {
-        setBalanco(await getBalancoPatrimonialApi({ tenantId: tenantContext.tenantId, dataBase: endDate }));
-        setFluxo(null);
-      } else {
-        setFluxo(await getFluxoCaixaApi({ tenantId: tenantContext.tenantId, startDate, endDate }));
-        setBalanco(null);
-      }
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantContext.tenantId, reportType, startDate, endDate]);
+  const balancoQuery = useQuery<BalancoPatrimonial | null>({
+    queryKey: ["admin", "contabilidade-relatorios", "balanco", endDate, fetchKey],
+    queryFn: () => getBalancoPatrimonialApi({ tenantId: tenantContext.tenantId, dataBase: endDate }),
+    enabled: shouldFetch && reportType === "balanco" && Boolean(tenantContext.tenantId),
+    staleTime: 5 * 60_000,
+  });
+
+  const fluxoQuery = useQuery<FluxoCaixa | null>({
+    queryKey: ["admin", "contabilidade-relatorios", "fluxo-caixa", startDate, endDate, fetchKey],
+    queryFn: () => getFluxoCaixaApi({ tenantId: tenantContext.tenantId, startDate, endDate }),
+    enabled: shouldFetch && reportType === "fluxo-caixa" && Boolean(tenantContext.tenantId),
+    staleTime: 5 * 60_000,
+  });
+
+  const loading = balancoQuery.isFetching || fluxoQuery.isFetching;
+  const error = balancoQuery.error?.message ?? fluxoQuery.error?.message ?? null;
+  const balanco = reportType === "balanco" ? (balancoQuery.data ?? null) : null;
+  const fluxo = reportType === "fluxo-caixa" ? (fluxoQuery.data ?? null) : null;
+
+  function handleGenerate() {
+    setShouldFetch(true);
+    setFetchKey((k) => k + 1);
+  }
+
+  function handleRetry() {
+    if (reportType === "balanco") void balancoQuery.refetch();
+    else void fluxoQuery.refetch();
+  }
 
   return (
     <div className="space-y-6">
@@ -54,7 +63,7 @@ export default function RelatoriosPage() {
         <p className="mt-1 text-sm text-muted-foreground">Balanco patrimonial e fluxo de caixa.</p>
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void loadReport()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={handleRetry} /> : null}
 
       <div className="rounded-xl border border-border bg-card p-4">
         <div className="grid gap-3 md:grid-cols-4">
@@ -77,7 +86,7 @@ export default function RelatoriosPage() {
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border-border bg-secondary" />
           </div>
           <div className="flex items-end">
-            <Button onClick={() => void loadReport()} disabled={loading} className="w-full">
+            <Button onClick={handleGenerate} disabled={loading} className="w-full">
               <FileText className="mr-2 size-4" />
               {loading ? "Gerando..." : "Gerar relatorio"}
             </Button>
