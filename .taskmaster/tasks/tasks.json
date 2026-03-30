@@ -10574,7 +10574,7 @@
         "description": "crm-content.tsx usa useState para prospects, tasks, automations e snapshot. Fetching manual via load() com Promise.all.",
         "details": "Criar useCrmWorkspace() hook com useQuery para o snapshot agregado. Mutations para toggleAutomation com invalidação. Remover useState de snapshot/automations/loading/error. O CadenceExecutionsPanel já carrega dados independentemente.",
         "testStrategy": "Workspace carrega com cache. Toggle automação invalida corretamente. Navegar e voltar não refaz fetch.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -10644,7 +10644,8 @@
             "testStrategy": "Testes de ponta a ponta (E2E ou manuais) que cubram o fluxo completo do usuário no CRM workspace: carregamento inicial, interações (toggle automation), navegação e retorno para verificar o uso do cache e a consistência dos dados. Confirmar que a migração não introduziu regressões em funcionalidades existentes.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:18:34.680Z"
       },
       {
         "id": "269",
@@ -11651,9 +11652,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:17:12.758Z",
+      "lastModified": "2026-03-30T05:18:34.680Z",
       "taskCount": 287,
-      "completedCount": 274,
+      "completedCount": 275,
       "tags": [
         "master"
       ]
