@@ -11057,7 +11057,7 @@
         "description": "Campanhas usa useState para listagem, criação e disparo.",
         "details": "Criar useCrmCampanhas() hook. Mutations para criar/disparar/encerrar.",
         "testStrategy": "Listagem com cache. Disparar campanha invalida lista.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -11070,9 +11070,10 @@
             "description": "Estabelecer uma estrutura clara e consistente de query keys para todas as operações relacionadas a campanhas de CRM (listagem, detalhes, etc.) no TanStack Query. Isso inclui a definição do array base e a composição para cenários específicos, como listar todas as campanhas ou uma campanha específica.",
             "dependencies": [],
             "details": "Criar uma constante, por exemplo, `CRM_CAMPAIGNS_KEYS = ['crm', 'campanhas']`, em um arquivo dedicado de `queryKeys` ou diretamente no hook. Assegurar que as chaves sejam descritivas, reutilizáveis e sigam as convenções existentes do projeto para TanStack Query. Exemplo: `CRM_CAMPAIGNS_KEYS.all` para listar, `CRM_CAMPAIGNS_KEYS.detail(id)` para detalhes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Revisão de código para garantir a conformidade com as diretrizes de query keys do TanStack Query e a clareza para futuros desenvolvedores. Validar a consistência com outras query keys existentes no projeto.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:19:30.799Z"
           },
           {
             "id": 2,
@@ -11082,9 +11083,10 @@
               1
             ],
             "details": "No diretório `hooks/` ou similar, criar `useCrmCampanhas.ts`. Implementar `useQuery` para buscar a lista de campanhas usando `queryKey: CRM_CAMPAIGNS_KEYS.all` e definir `staleTime: 2 * 60 * 1000` (2 minutos). Implementar `useMutation` para `criarCampanha`, `dispararCampanha` e `encerrarCampanha`. Após cada mutação bem-sucedida, garantir a invalidação do cache relevante com `queryClient.invalidateQueries(CRM_CAMPAIGNS_KEYS.all)` para forçar a revalidação da lista.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testes unitários para o hook e as mutations, verificando se as chamadas de API são feitas corretamente, os estados de `isLoading`/`isError` são atualizados, e o cache é invalidado após o sucesso das mutations. Simular cenários de sucesso e falha.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:19:30.810Z"
           },
           {
             "id": 3,
@@ -11094,9 +11096,10 @@
               2
             ],
             "details": "Abrir o arquivo `campanhas/page.tsx`. Substituir as chamadas de API e o gerenciamento de estado local (`useState`) para campanhas pela integração com `useCrmCampanhas`. Conectar os formulários e botões de ação existentes (criar, disparar, encerrar) às respectivas funções de `mutate` fornecidas pelas mutations. Garantir a correta exibição de estados de loading, erro e dados para uma experiência de usuário fluida.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Teste de integração manual: navegar para a página de campanhas, verificar o carregamento e exibição da lista de campanhas (comportamento de cache), tentar criar uma nova campanha, disparar uma existente e encerrar uma. Observar se a UI reage corretamente aos estados de carregamento e sucesso/erro das operações.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:19:30.820Z"
           },
           {
             "id": 4,
@@ -11106,11 +11109,13 @@
               3
             ],
             "details": "Confirmar que `useCrmCampanhas` é exportado em um arquivo `index.ts` ou similar no diretório de hooks. Criar um teste E2E (e.g., com Cypress ou Playwright) que simule um usuário navegando até a página de campanhas, verificando o carregamento inicial dos dados, criando uma nova campanha e validando que a lista é atualizada. O teste deve também verificar se o cache está sendo respeitado e invalidado corretamente, e que o `staleTime` de 2 minutos funciona.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testes E2E automatizados cobrindo: carregamento da lista de campanhas, comportamento de cache (e.g., navegação de ida e volta na página), criação de nova campanha com subsequente atualização da lista, e o tempo de `staleTime` para revalidação de dados em segundo plano.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:19:30.834Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:19:30.834Z"
       },
       {
         "id": "277",
@@ -11652,9 +11657,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:18:34.680Z",
+      "lastModified": "2026-03-30T05:19:30.834Z",
       "taskCount": 287,
-      "completedCount": 275,
+      "completedCount": 276,
       "tags": [
         "master"
       ]
