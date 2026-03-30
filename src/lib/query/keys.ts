@@ -11,4 +11,10 @@ export const queryKeys = {
     list: (tenantId: string, filters: Record<string, unknown>) =>
       ["pagamentos", "list", tenantId, filters] as const,
   },
+
+  crmCampanhas: {
+    all: (tenantId: string) => ["crmCampanhas", tenantId] as const,
+    list: (tenantId: string, status?: string) =>
+      ["crmCampanhas", "list", tenantId, status] as const,
+  },
 } as const;
