@@ -80,6 +80,8 @@ export const queryKeys = {
       integrations: () => ["admin", "configuracoes", "integrations"] as const,
       config: () => ["admin", "configuracoes", "config"] as const,
     },
+  },
+
   matriculas: {
     dashboard: (tenantId: string, monthKey: string, page: number) =>
       ["matriculas", "dashboard", tenantId, monthKey, page] as const,

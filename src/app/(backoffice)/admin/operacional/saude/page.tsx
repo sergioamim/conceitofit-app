@@ -14,11 +14,11 @@ import { EmptyState, ListErrorState } from "@/components/shared/list-states";
 import { useAdminSaudeAcademias } from "@/lib/query/admin";
 import {
   filterAcademiasHealthMap,
-  formatDateTime,
   formatPercent,
   resolveContractBadgeClass,
   type HealthFilter,
 } from "@/lib/backoffice/admin-health";
+import { formatDateTime } from "@/lib/formatters";
 import type { AcademiaHealthLevel, AcademiaHealthStatus } from "@/lib/types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
