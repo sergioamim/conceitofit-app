@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 import {
   listFinancialAccountsApi,
@@ -32,36 +32,34 @@ export interface NovaContaForm {
   contaPaiId: string;
 }
 
+type CreatePayload = Parameters<typeof createFinancialAccountApi>[0];
+type UpdatePayload = Partial<{ nome: string; descricao: string; status: string }>;
+
 export function useContasContabeisWorkspace() {
   const tenantContext = useTenantContext();
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [contas, setContas] = useState<FinancialAccount[]>([]);
   const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>(FILTER_ALL);
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>(FILTER_ALL);
   const [search, setSearch] = useState("");
   const [openNovaConta, setOpenNovaConta] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!tenantContext.tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await listFinancialAccountsApi({ tenantId: tenantContext.tenantId });
-      setContas(data);
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantContext.tenantId]);
+  const {
+    items: contas,
+    isLoading: loading,
+    error: loadError,
+    refetch,
+    create,
+    update,
+  } = useAdminCrud<FinancialAccount, CreatePayload, UpdatePayload>({
+    domain: "contabilidade-contas",
+    tenantId: tenantContext.tenantId,
+    enabled: tenantContext.tenantResolved,
+    listFn: (tid) => listFinancialAccountsApi({ tenantId: tid }),
+    createFn: (tid, data) => createFinancialAccountApi({ ...data, tenantId: tid }),
+    updateFn: (_tid, id, data) => updateFinancialAccountApi(id, data),
+  });
 
-  useEffect(() => {
-    if (tenantContext.tenantResolved && tenantContext.tenantId) {
-      void load();
-    }
-  }, [load, tenantContext.tenantId, tenantContext.tenantResolved]);
+  const error = loadError?.message ?? create?.error?.message ?? update?.error?.message ?? null;
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -96,8 +94,7 @@ export function useContasContabeisWorkspace() {
 
   async function handleCriarConta(form: NovaContaForm) {
     try {
-      setError(null);
-      await createFinancialAccountApi({
+      await create!.mutateAsync({
         tenantId: tenantContext.tenantId,
         codigo: form.codigo.trim(),
         nome: form.nome.trim(),
@@ -106,21 +103,19 @@ export function useContasContabeisWorkspace() {
         contaPaiId: form.contaPaiId || undefined,
       });
       setOpenNovaConta(false);
-      await load();
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
+    } catch {
+      // error is surfaced via create.error
     }
   }
 
   async function handleToggleStatus(conta: FinancialAccount) {
     try {
-      setError(null);
-      await updateFinancialAccountApi(conta.id, {
-        status: conta.status === "ATIVA" ? "INATIVA" : "ATIVA",
+      await update!.mutateAsync({
+        id: conta.id,
+        data: { status: conta.status === "ATIVA" ? "INATIVA" : "ATIVA" },
       });
-      await load();
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
+    } catch {
+      // error is surfaced via update.error
     }
   }
 
@@ -138,7 +133,7 @@ export function useContasContabeisWorkspace() {
     setOpenNovaConta,
     filtered,
     resumo,
-    load,
+    load: refetch,
     handleCriarConta,
     handleToggleStatus,
   };

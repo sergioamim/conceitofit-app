@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { ListErrorState } from "@/components/shared/list-states";
 import { ExportMenu } from "@/components/shared/export-menu";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import {
   listFinancialTransactionsApi,
@@ -57,9 +58,7 @@ const INITIAL_FORM: NovaTransacaoForm = {
 export default function TransacoesPage() {
   const tenantContext = useTenantContext();
   const range = getBusinessMonthRange();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [transacoes, setTransacoes] = useState<FinancialTransaction[]>([]);
+  const queryClient = useQueryClient();
   const [statusFiltro, setStatusFiltro] = useState<string>(FILTER_ALL);
   const [tipoFiltro, setTipoFiltro] = useState<string>(FILTER_ALL);
   const [search, setSearch] = useState("");
@@ -68,28 +67,35 @@ export default function TransacoesPage() {
   const [openNova, setOpenNova] = useState(false);
   const [form, setForm] = useState<NovaTransacaoForm>(INITIAL_FORM);
 
-  const load = useCallback(async () => {
-    if (!tenantContext.tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      setTransacoes(
-        await listFinancialTransactionsApi({
-          tenantId: tenantContext.tenantId,
-          startDate,
-          endDate,
-        }),
-      );
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantContext.tenantId, startDate, endDate]);
+  const { items: transacoes, isLoading: loading, error: loadError, refetch, create } = useAdminCrud<
+    FinancialTransaction,
+    Parameters<typeof createFinancialTransactionApi>[0]
+  >({
+    domain: `contabilidade-transacoes:${startDate}:${endDate}`,
+    tenantId: tenantContext.tenantId,
+    enabled: tenantContext.tenantResolved,
+    listFn: (tid) =>
+      listFinancialTransactionsApi({
+        tenantId: tid,
+        startDate,
+        endDate,
+      }),
+    createFn: (tid, data) => createFinancialTransactionApi({ ...data, tenantId: tid }),
+  });
 
-  useEffect(() => {
-    if (tenantContext.tenantResolved && tenantContext.tenantId) void load();
-  }, [load, tenantContext.tenantId, tenantContext.tenantResolved]);
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["admin", `contabilidade-transacoes:${startDate}:${endDate}`] });
+
+  const actionMutation = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: "confirm" | "reverse" | "cancel" }) => {
+      if (action === "confirm") return confirmTransactionApi(id);
+      if (action === "reverse") return reverseTransactionApi(id);
+      return cancelTransactionApi(id);
+    },
+    onSuccess: () => void invalidate(),
+  });
+
+  const error = loadError?.message ?? create?.error?.message ?? actionMutation.error?.message ?? null;
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -116,8 +122,7 @@ export default function TransacoesPage() {
   async function handleCriar() {
     if (!form.descricao.trim() || !form.valor || !form.data) return;
     try {
-      setError(null);
-      await createFinancialTransactionApi({
+      await create!.mutateAsync({
         tenantId: tenantContext.tenantId,
         tipo: form.tipo,
         descricao: form.descricao.trim(),
@@ -128,21 +133,16 @@ export default function TransacoesPage() {
       });
       setOpenNova(false);
       setForm(INITIAL_FORM);
-      await load();
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
+    } catch {
+      // error is surfaced via create.error
     }
   }
 
   async function handleAction(id: string, action: "confirm" | "reverse" | "cancel") {
     try {
-      setError(null);
-      if (action === "confirm") await confirmTransactionApi(id);
-      else if (action === "reverse") await reverseTransactionApi(id);
-      else await cancelTransactionApi(id);
-      await load();
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
+      await actionMutation.mutateAsync({ id, action });
+    } catch {
+      // error is surfaced via actionMutation.error
     }
   }
 
@@ -175,7 +175,7 @@ export default function TransacoesPage() {
         </div>
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">
