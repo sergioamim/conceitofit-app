@@ -11324,7 +11324,7 @@
         "description": "whatsapp/page.tsx usa useState para config, templates e logs. 3 domínios num componente.",
         "details": "Criar useWhatsAppConfig(), useWhatsAppTemplates(), useWhatsAppLogs() hooks separados. Mutations para CRUD de templates e save config. IMPORTANTE: logs de mensagem devem usar staleTime:0 + refetchInterval:10s (polling) — NÃO cachear, operador precisa ver estado real em tempo real (ENVIADA→ENTREGUE→LIDA→FALHA).",
         "testStrategy": "Cada aba carrega com cache independente. CRUD templates invalida. Config salva invalida.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -11337,9 +11337,10 @@
             "description": "Desenvolver os hooks `useWhatsAppConfig()`, `useWhatsAppTemplates()` e `useWhatsAppLogs()` utilizando TanStack Query para buscar dados dos respectivos domínios (configurações, templates, logs) no admin do WhatsApp.",
             "dependencies": [],
             "details": "useWhatsAppConfig(): staleTime 10min (config muda raramente). useWhatsAppTemplates(): staleTime 5min (templates mudam pouco). useWhatsAppLogs(): staleTime 0 + refetchInterval 10s (polling) — logs NÃO devem ser cacheados, operador precisa ver status em tempo real.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testar cada hook individualmente em um ambiente isolado para garantir que os dados são carregados corretamente, armazenados em cache e que os estados de carregamento/erro são gerenciados adequadamente.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:24:16.479Z"
           },
           {
             "id": 2,
@@ -11349,9 +11350,10 @@
               1
             ],
             "details": "Implementar as `mutationFn` para cada operação. Gerenciar o sucesso e erro das mutações. Crucialmente, implementar a lógica de invalidação de cache usando `queryClient.invalidateQueries()` para os `queryKey` relevantes após uma mutação bem-sucedida (ex: uma mutação em template deve invalidar `[\"whatsapp\", \"templates\"]`).",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testar cada hook de mutação para verificar se as operações de escrita funcionam corretamente, se a invalidação do cache ocorre conforme esperado, forçando um novo `fetch` dos dados na próxima consulta e garantindo a atualização da UI.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:24:16.489Z"
           },
           {
             "id": 3,
@@ -11362,9 +11364,10 @@
               2
             ],
             "details": "Remover os estados locais (`useState`) para dados de config, templates e logs. Chamar `useWhatsAppConfig()`, `useWhatsAppTemplates()`, `useWhatsAppLogs()`. Mapear botões de CRUD de templates e formulários de config para chamar as mutações correspondentes. Ajustar o carregamento e tratamento de erros na UI conforme os estados (`isLoading`, `isError`, `data`) fornecidos por TanStack Query.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Navegar até a página do admin do WhatsApp. Verificar o carregamento inicial dos dados de todas as abas. Realizar operações de CRUD em templates e salvar configurações, observando a atualização da UI e a consistência dos dados após as mutações.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:24:16.499Z"
           },
           {
             "id": 4,
@@ -11376,11 +11379,13 @@
               3
             ],
             "details": "Criar arquivos de teste para `useWhatsAppConfig`, `useWhatsAppTemplates`, `useWhatsAppLogs` e seus hooks de mutação, utilizando `@testing-library/react-query` se aplicável. Garantir que `whatsapp/page.tsx` lida com estados de carregamento e erro de forma robusta e amigável ao usuário. Revisar a estrutura de pastas e exports para facilitar a reutilização dos hooks. Avaliar o uso de `select` nas queries para otimizações de renderização.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Executar todos os testes unitários e de integração automatizados. Realizar testes manuais completos na página do admin do WhatsApp para validar todos os cenários de interação, incluindo carregamento, criação, edição, exclusão e salvamento, garantindo que o cache e a invalidação funcionam conforme o esperado e a UX não regrediu.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:24:16.508Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:24:16.508Z"
       },
       {
         "id": "281",
@@ -11641,7 +11646,107 @@
         ],
         "priority": "low",
         "complexity": 7,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Adicionar chaves de query admin em src/lib/query/keys.ts",
+            "description": "Estender o arquivo de chaves de query com novas chaves específicas para as entidades do backoffice admin, seguindo o padrão existente para garantir consistência.",
+            "dependencies": [],
+            "details": "Identificar todas as entidades de dados usadas nas páginas administrativas (academias, audit-log, financeiro, segurança, etc.) e criar as chaves de query correspondentes em src/lib/query/keys.ts. Isso inclui chaves para listas, detalhes e possíveis mutações.",
+            "status": "pending",
+            "testStrategy": "Verificar se as novas chaves estão bem definidas e importáveis em outros módulos. Não há testes funcionais diretos para este item, apenas revisão de código.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Criar useAdminAcademias hook para páginas de Academias",
+            "description": "Desenvolver um hook personalizado (useAdminAcademias) para gerenciar o estado do servidor relacionado às páginas de listagem e detalhes de academias, substituindo o useState/useEffect.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implementar useAdminAcademias em src/lib/query/admin/use-admin-academias.ts. O hook deve fornecer funções para buscar a lista de academias, detalhes de uma academia específica e possíveis mutações (ativação/desativação). Usar o padrão de TanStack Query já estabelecido em outros hooks.",
+            "status": "pending",
+            "testStrategy": "Criar testes unitários para o hook, verificando se ele retorna dados corretamente, lida com estados de carregamento e erro, e invalida cache após mutações. Testar manualmente na página de academias para garantir que os dados são carregados via TanStack Query.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Criar useAdminAuditLog hook para página de Audit Log",
+            "description": "Desenvolver o hook useAdminAuditLog para gerenciar a paginação e filtragem do log de auditoria no backoffice, substituindo o estado local (useState/useEffect).",
+            "dependencies": [
+              1
+            ],
+            "details": "Implementar useAdminAuditLog em src/lib/query/admin/use-admin-audit-log.ts. O hook deve suportar busca de logs com paginação, filtros por data, usuário ou ação. Integrar com as APIs existentes para o Audit Log.",
+            "status": "pending",
+            "testStrategy": "Testes unitários para garantir que o hook busca dados com paginação e filtros corretos. Testes manuais na página de Audit Log para verificar o carregamento, paginação e aplicação de filtros.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Criar useAdminFinanceiro hooks para páginas de Finanças",
+            "description": "Desenvolver hooks específicos (ex: useAdminCobrancas, useAdminContratos, useAdminPlanos) para as diversas páginas do domínio financeiro (dashboard, cobranças, contratos, gateways, planos), unificando a gestão de estado do servidor.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar hooks em src/lib/query/admin/ com foco nas 5 páginas de financeiro. Os hooks devem abstrair a lógica de busca e mutação para dados como cobranças, contratos, gateways de pagamento e planos, permitindo a exibição e manipulação desses dados. Agrupar em arquivos como use-admin-financeiro-cobrancas.ts.",
+            "status": "pending",
+            "testStrategy": "Escrever testes unitários para cada hook financeiro. Validar carregamento de dados e interações (e.g., status de cobrança) nas páginas de Finanças, garantindo que o TanStack Query gerencia o cache e as atualizações de forma eficiente.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Criar useAdminSeguranca hooks para páginas de Segurança",
+            "description": "Implementar hooks (ex: useAdminPerfis, useAdminFuncionalidades) para as páginas de Segurança (overview, catálogo, funcionalidades, perfis, revisões), padronizando a busca e manipulação de dados de controle de acesso.",
+            "dependencies": [
+              1
+            ],
+            "details": "Desenvolver hooks em src/lib/query/admin/ para as 5 páginas de segurança. Incluir hooks para buscar e gerenciar dados de catálogo de funcionalidades, perfis de acesso e revisões de segurança. Nomear arquivos de forma clara, como use-admin-seguranca-perfis.ts.",
+            "status": "pending",
+            "testStrategy": "Testes unitários para os hooks de segurança, verificando a obtenção e atualização de dados. Realizar testes manuais nas páginas de Segurança para confirmar que o controle de acesso e configurações são carregados e podem ser modificados corretamente.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Criar useAdminOperacional hooks para páginas Operacionais",
+            "description": "Criar hooks (ex: useAdminAlertas, useAdminSaude) para as páginas de 'Alertas' e 'Saúde do Sistema' do backoffice, centralizando a lógica de busca de dados operacionais.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implementar os hooks em src/lib/query/admin/use-admin-operacional-alertas.ts e use-admin-operacional-saude.ts. Eles devem fornecer a funcionalidade para buscar e exibir informações sobre alertas do sistema e o status de saúde dos serviços, substituindo as chamadas diretas de API em useEffect.",
+            "status": "pending",
+            "testStrategy": "Testes unitários para validar a obtenção de dados de alertas e saúde. Testes manuais nas páginas correspondentes para verificar o carregamento e atualização das informações operacionais.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 7,
+            "title": "Criar hooks para as demais páginas administrativas (Leads, Compliance, Busca, BI, Whatsapp, Configurações)",
+            "description": "Desenvolver os hooks de TanStack Query para as páginas administrativas restantes: Leads, Compliance, Busca Global, BI, Whatsapp e Configurações, cobrindo a funcionalidade de busca e gestão de dados para cada domínio.",
+            "dependencies": [
+              1
+            ],
+            "details": "Criar os seguintes hooks em src/lib/query/admin/: useAdminLeads, useAdminCompliance, useAdminBusca, useAdminBI, useAdminWhatsapp, useAdminConfiguracoes. Cada hook deve encapsular a lógica de busca e manipulação de dados para sua respectiva área, seguindo o padrão dos hooks anteriores.",
+            "status": "pending",
+            "testStrategy": "Para cada hook, desenvolver testes unitários para as funções de busca e mutação. Testar manualmente as respectivas páginas admin para garantir que os dados são carregados via TanStack Query e as funcionalidades CRUD operam conforme o esperado.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 8,
+            "title": "Migrar componentes das páginas admin para usar os novos hooks do TanStack Query",
+            "description": "Atualizar os componentes de todas as 20+ páginas do backoffice admin para consumir os novos hooks do TanStack Query, removendo as implementações antigas baseadas em useState e useEffect para fetching de dados.",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "details": "Iterar por todas as páginas em src/app/(backoffice)/admin/ e substituir as chamadas de API dentro de useEffect por chamadas aos novos hooks (e.g., useAdminAcademias, useAdminFinanceiro). Garantir que os estados de carregamento, erro e dados sejam corretamente mapeados para a UI. As páginas devem exibir os dados corretamente após a migração.",
+            "status": "pending",
+            "testStrategy": "Testes de integração ponta a ponta para cada página migrada. Validar o carregamento inicial, interações (filtros, paginação, CRUDs), estados de carregamento e erro, e o comportamento de cache ao navegar entre as páginas e abas. Confirmar que não há regressões funcionais.",
+            "parentId": "undefined"
+          }
+        ]
       },
       {
         "id": "287",
@@ -11660,9 +11765,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:23:03.760Z",
+      "lastModified": "2026-03-30T05:24:16.508Z",
       "taskCount": 287,
-      "completedCount": 278,
+      "completedCount": 279,
       "tags": [
         "master"
       ]
