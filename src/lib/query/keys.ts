@@ -22,6 +22,12 @@ export const queryKeys = {
     all: (tenantId: string) => ["prospects", tenantId] as const,
   },
 
+  vendas: {
+    all: (tenantId: string) => ["vendas", tenantId] as const,
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["vendas", "list", tenantId, filters] as const,
+  },
+
   aulas: {
     sessoes: (tenantId: string, dateFrom: string, dateTo: string) =>
       ["aulas", "sessoes", tenantId, dateFrom, dateTo] as const,
