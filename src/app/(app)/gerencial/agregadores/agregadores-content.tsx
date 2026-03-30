@@ -1,21 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CreditCard, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  listAgregadorTransacoesApi,
-  reprocessarAgregadorTransacaoApi,
-} from "@/lib/api/admin-financeiro";
 import { AGREGADOR_REPASSE_LABEL, summarizeAgregadorTransacoes } from "@/lib/backoffice/admin-financeiro";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import type { AgregadorRepasseStatus, AgregadorTransacao } from "@/lib/types";
+import type { AgregadorRepasseStatus } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 import { formatBRL, formatDateTime } from "@/lib/formatters";
+import { useAgregadores, useReprocessarAgregador } from "@/lib/query/use-agregadores";
 
 type RepasseFiltro = WithFilterAll<AgregadorRepasseStatus>;
 
@@ -28,32 +25,20 @@ function getRepasseClass(status: AgregadorRepasseStatus) {
 
 export function AgregadoresContent() {
   const { tenantId, tenantName, tenantResolved } = useTenantContext();
-  const [rows, setRows] = useState<AgregadorTransacao[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [actionId, setActionId] = useState<string | null>(null);
+
+  // Server state via TanStack Query
+  const { data: rows = [], isLoading: loading, error: queryError, refetch } = useAgregadores({
+    tenantId: tenantId ?? undefined,
+    tenantResolved,
+  });
+  const reprocessMutation = useReprocessarAgregador(tenantId ?? undefined);
+
+  // UI state
   const [search, setSearch] = useState("");
   const [repasse, setRepasse] = useState<RepasseFiltro>(FILTER_ALL);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      setRows(await listAgregadorTransacoesApi({ tenantId }));
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
-
-  useEffect(() => {
-    if (tenantResolved) {
-      void load();
-    }
-  }, [load, tenantResolved]);
+  const error = queryError ? normalizeErrorMessage(queryError) : reprocessMutation.error ? normalizeErrorMessage(reprocessMutation.error) : null;
+  const actionId = reprocessMutation.isPending ? (reprocessMutation.variables as string) : null;
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -75,22 +60,14 @@ export function AgregadoresContent() {
 
   const resumo = useMemo(() => summarizeAgregadorTransacoes(filtered), [filtered]);
 
-  async function handleReprocess(item: AgregadorTransacao) {
+  async function handleReprocess(item: { id: string; nsu?: string }) {
     if (!tenantId) return;
-    setActionId(item.id);
-    setError(null);
     setSuccess(null);
     try {
-      const updated = await reprocessarAgregadorTransacaoApi({
-        tenantId,
-        id: item.id,
-      });
-      setRows((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)));
-      setSuccess(`Transação ${updated.nsu} reprocessada.`);
-    } catch (actionError) {
-      setError(normalizeErrorMessage(actionError));
-    } finally {
-      setActionId(null);
+      await reprocessMutation.mutateAsync(item.id);
+      setSuccess(`Transação ${item.nsu ?? item.id} reprocessada.`);
+    } catch {
+      // error handled by mutation state
     }
   }
 
@@ -106,7 +83,7 @@ export function AgregadoresContent() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="border-border" onClick={() => void load()} disabled={loading}>
+          <Button variant="outline" className="border-border" onClick={() => void refetch()} disabled={loading}>
             <RefreshCw className="mr-2 size-4" />
             Atualizar
           </Button>
