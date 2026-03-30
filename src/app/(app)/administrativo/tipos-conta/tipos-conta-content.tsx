@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   createTipoContaPagarApi,
   listTiposContaPagarApi,
   toggleTipoContaPagarApi,
   updateTipoContaPagarApi,
 } from "@/lib/api/tipos-conta";
+import type { CreateTipoContaPagarApiInput, UpdateTipoContaPagarApiInput } from "@/lib/api/tipos-conta";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { CategoriaContaPagar, GrupoDre, TipoContaPagar } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 
 const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   FOLHA: "Folha",
@@ -54,10 +56,8 @@ const FORM_DEFAULT = {
   centroCustoPadrao: "",
 };
 
-export function TiposContaContent({ initialData }: { initialData: TipoContaPagar[] }) {
+export function TiposContaContent({ initialData: _initialData }: { initialData: TipoContaPagar[] }) {
   const { tenantId, tenantResolved } = useTenantContext();
-  const [tipos, setTipos] = useState<TipoContaPagar[]>(initialData);
-  const [loading, setLoading] = useState(initialData.length === 0);
   const [showAll, setShowAll] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -65,27 +65,19 @@ export function TiposContaContent({ initialData }: { initialData: TipoContaPagar
   const [editing, setEditing] = useState<TipoContaPagar | null>(null);
   const [form, setForm] = useState(FORM_DEFAULT);
 
-  const didSkipInitialRef = useRef(initialData.length > 0);
-
-  const load = useCallback(async (nextShowAll = showAll) => {
-    if (!tenantId) return;
-    setLoading(true);
-    try {
-      const data = await listTiposContaPagarApi({ tenantId, apenasAtivos: !nextShowAll });
-      setTipos(data);
-    } finally {
-      setLoading(false);
-    }
-  }, [showAll, tenantId]);
-
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    if (didSkipInitialRef.current) {
-      didSkipInitialRef.current = false;
-      return;
-    }
-    void load(showAll);
-  }, [load, showAll, tenantId, tenantResolved]);
+  const { items: tipos, isLoading: loading, create, update, toggle } = useAdminCrud<
+    TipoContaPagar,
+    CreateTipoContaPagarApiInput,
+    UpdateTipoContaPagarApiInput
+  >({
+    domain: `tipos-conta:${showAll ? "all" : "active"}`,
+    tenantId,
+    enabled: tenantResolved && !!tenantId,
+    listFn: (tid) => listTiposContaPagarApi({ tenantId: tid, apenasAtivos: !showAll }),
+    createFn: (tid, data) => createTipoContaPagarApi({ tenantId: tid, data }),
+    updateFn: (tid, id, data) => updateTipoContaPagarApi({ tenantId: tid, id, data }),
+    toggleFn: (tid, id) => toggleTipoContaPagarApi({ tenantId: tid, id }),
+  });
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -120,41 +112,30 @@ export function TiposContaContent({ initialData }: { initialData: TipoContaPagar
   async function handleSave() {
     if (!tenantId || !form.nome.trim()) return;
 
+    const data = {
+      nome: form.nome,
+      descricao: form.descricao,
+      categoriaOperacional: form.categoriaOperacional,
+      grupoDre: form.grupoDre,
+      centroCustoPadrao: form.centroCustoPadrao,
+    };
+
     if (editing) {
-      await updateTipoContaPagarApi({
-        tenantId,
-        id: editing.id,
-        data: {
-          nome: form.nome,
-          descricao: form.descricao,
-          categoriaOperacional: form.categoriaOperacional,
-          grupoDre: form.grupoDre,
-          centroCustoPadrao: form.centroCustoPadrao,
-        },
-      });
+      await update!.mutateAsync({ id: editing.id, data });
     } else {
-      await createTipoContaPagarApi({
-        tenantId,
-        data: {
-          nome: form.nome,
-          descricao: form.descricao,
-          categoriaOperacional: form.categoriaOperacional,
-          grupoDre: form.grupoDre,
-          centroCustoPadrao: form.centroCustoPadrao,
-        },
-      });
+      await create!.mutateAsync(data);
     }
     setModalOpen(false);
     setEditing(null);
     setForm(FORM_DEFAULT);
-    await load(showAll);
   }
 
   async function handleToggle(id: string) {
     if (!tenantId) return;
-    await toggleTipoContaPagarApi({ tenantId, id });
-    await load(showAll);
+    await toggle!.mutateAsync(id);
   }
+
+  const saving = create?.isPending || update?.isPending;
 
   return (
     <div className="space-y-6">
@@ -257,10 +238,11 @@ export function TiposContaContent({ initialData }: { initialData: TipoContaPagar
                 setModalOpen(false);
                 setEditing(null);
               }}
+              disabled={saving}
             >
               Cancelar
             </Button>
-            <Button onClick={handleSave}>{editing ? "Salvar alterações" : "Salvar tipo"}</Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : editing ? "Salvar alterações" : "Salvar tipo"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

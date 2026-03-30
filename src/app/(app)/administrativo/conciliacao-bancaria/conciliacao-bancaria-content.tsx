@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, FileCheck, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,6 +30,7 @@ import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { formatBRL } from "@/lib/formatters";
 import { PageError } from "@/components/shared/page-error";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 
 const ORIGEM_LABEL: Record<OrigemConciliacao, string> = {
   MANUAL: "Manual",
@@ -72,19 +73,19 @@ type ConciliarFormState = {
 
 const IMPORT_ORIGEM_OPTIONS: OrigemConciliacao[] = ["MANUAL", "OFX", "STONE"];
 
+/** Combined data returned from the list query */
+type ConciliacaoData = {
+  linhas: ConciliacaoLinha[];
+  contasBancarias: ContaBancaria[];
+  contasReceber: (Pagamento & { clienteNome?: string })[];
+  contasPagar: ContaPagar[];
+};
+
 export function ConciliacaoBancariaContent() {
   const initialRange = normalizeDateISO();
-  const [loading, setLoading] = useState(false);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
-  const [linhas, setLinhas] = useState<ConciliacaoLinha[]>([]);
-  const [contasReceber, setContasReceber] = useState<(Pagamento & { clienteNome?: string })[]>([]);
-  const [contasPagar, setContasPagar] = useState<ContaPagar[]>([]);
 
   const [filtroStatus, setFiltroStatus] = useState<ConciliacaoFiltro>("PENDENTE");
   const [filtroConta, setFiltroConta] = useState<string>("TODAS");
@@ -105,6 +106,76 @@ export function ConciliacaoBancariaContent() {
     observacao: "",
   });
   const { tenantId, tenantName, tenantResolved, loading: tenantLoading, error: tenantError } = useTenantContext();
+
+  // Capture filter state in refs for stable closure in listFn
+  const filterKey = `${filtroStatus}|${filtroConta}|${startDate}|${endDate}`;
+
+  const {
+    items: dataItems,
+    isLoading: loading,
+    error: queryError,
+    refetch: load,
+  } = useAdminCrud<ConciliacaoData>({
+    domain: "conciliacao-bancaria",
+    tenantId,
+    enabled: tenantResolved && Boolean(tenantId),
+    listFn: async (tid) => {
+      const [linhasResponse, contasResponse, pagamentosResponse, contasPagarResponse] = await Promise.all([
+        listarConciliacaoLinhasApi({
+          tenantId: tid || undefined,
+          status: filtroStatus === "TODAS" ? undefined : filtroStatus,
+          contaBancariaId: filtroConta === "TODAS" ? undefined : filtroConta,
+          startDate,
+          endDate,
+        }),
+        listContasBancariasApi({ tenantId: tid || undefined }),
+        listPagamentosApi({ tenantId: tid }),
+        listContasPagarApi({ tenantId: tid }),
+      ]);
+      return [{
+        linhas: linhasResponse,
+        contasBancarias: contasResponse,
+        contasReceber: pagamentosResponse,
+        contasPagar: contasPagarResponse,
+      }];
+    },
+  });
+
+  // Refetch when filters change
+  useEffect(() => {
+    if (tenantId) {
+      void load();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterKey]);
+
+  const loadError = queryError ? normalizeErrorMessage(queryError) : (tenantError ?? null);
+
+  const data = dataItems[0];
+  const linhas = data?.linhas ?? [];
+  const contasBancarias = data?.contasBancarias ?? [];
+  const contasReceber = data?.contasReceber ?? [];
+  const contasPagar = data?.contasPagar ?? [];
+  const hasLoadedOnce = dataItems.length > 0;
+
+  // Set initial import conta when contas load
+  useEffect(() => {
+    if (!importContaId && contasBancarias.length > 0) {
+      setImportContaId(contasBancarias[0].id);
+    }
+  }, [contasBancarias, importContaId]);
+
+  // Reset state on tenant change
+  useEffect(() => {
+    setSuccess(null);
+    setConciliarOpen(false);
+    setLinhaSelecionada(null);
+    setConciliarForm({
+      contaReceberId: NONE_OPTION,
+      contaPagarId: NONE_OPTION,
+      observacao: "",
+    });
+  }, [tenantId]);
 
   const contasBancariasMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -132,58 +203,6 @@ export function ConciliacaoBancariaContent() {
         .sort((a, b) => a.label.localeCompare(b.label)),
     [contasPagar]
   );
-
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const [linhasResponse, contasResponse, pagamentosResponse, contasPagarResponse] = await Promise.all([
-        listarConciliacaoLinhasApi({
-          tenantId: tenantId || undefined,
-          status: filtroStatus === "TODAS" ? undefined : filtroStatus,
-          contaBancariaId: filtroConta === "TODAS" ? undefined : filtroConta,
-          startDate,
-          endDate,
-        }),
-        listContasBancariasApi({ tenantId: tenantId || undefined }),
-        listPagamentosApi({ tenantId }),
-        listContasPagarApi({ tenantId }),
-      ]);
-      setLinhas(linhasResponse);
-      setContasBancarias(contasResponse);
-      setContasReceber(pagamentosResponse);
-      setContasPagar(contasPagarResponse);
-      if (!importContaId && contasResponse.length > 0) {
-        setImportContaId(contasResponse[0].id);
-      }
-    } catch (loadErr) {
-      setLoadError(normalizeErrorMessage(loadErr));
-    } finally {
-      setLoading(false);
-      setHasLoadedOnce(true);
-    }
-  }, [tenantId, filtroStatus, filtroConta, startDate, endDate, importContaId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    setLoadError(tenantError);
-  }, [tenantError]);
-
-  useEffect(() => {
-    setHasLoadedOnce(false);
-    setSuccess(null);
-    setConciliarOpen(false);
-    setLinhaSelecionada(null);
-    setConciliarForm({
-      contaReceberId: NONE_OPTION,
-      contaPagarId: NONE_OPTION,
-      observacao: "",
-    });
-  }, [tenantId]);
 
   const contasBancariasOptions = useMemo(
     () => [
@@ -274,7 +293,7 @@ export function ConciliacaoBancariaContent() {
         linhas: linhasParaImportar,
       });
       setSuccess("Importação concluída.");
-      await load();
+      void load();
     } catch (importError) {
       setError(normalizeErrorMessage(importError));
     } finally {
@@ -306,7 +325,7 @@ export function ConciliacaoBancariaContent() {
     setError(null);
     setSuccess(null);
     try {
-      const updated = await conciliarLinhaApi({
+      await conciliarLinhaApi({
         tenantId: tenantId || undefined,
         id: linhaSelecionada.id,
         contaReceberId:
@@ -315,19 +334,10 @@ export function ConciliacaoBancariaContent() {
           conciliarForm.contaPagarId === NONE_OPTION ? undefined : conciliarForm.contaPagarId,
         observacao: conciliarForm.observacao.trim() || undefined,
       });
-      setLinhas((prev) =>
-        prev
-          .map((linha) => (linha.id === updated.id ? updated : linha))
-          .filter((linha) => {
-            if (filtroStatus === "TODAS") return true;
-            if (filtroStatus === "PENDENTE") return linha.status === "PENDENTE";
-            if (filtroStatus === "CONCILIADA") return linha.status === "CONCILIADA";
-            return linha.status === "IGNORADA";
-          })
-      );
       setConciliarOpen(false);
       setLinhaSelecionada(null);
       setSuccess("Conciliação registrada com sucesso.");
+      void load();
     } catch (conciliationError) {
       setError(normalizeErrorMessage(conciliationError));
     } finally {
@@ -343,21 +353,12 @@ export function ConciliacaoBancariaContent() {
     setError(null);
     setSuccess(null);
     try {
-      const updated = await ignorarLinhaApi({
+      await ignorarLinhaApi({
         tenantId: tenantId || undefined,
         id: linha.id,
       });
-      setLinhas((prev) =>
-        prev
-          .map((item) => (item.id === updated.id ? updated : item))
-          .filter((item) => {
-            if (filtroStatus === "TODAS") return true;
-            if (filtroStatus === "PENDENTE") return item.status === "PENDENTE";
-            if (filtroStatus === "CONCILIADA") return item.status === "CONCILIADA";
-            return item.status === "IGNORADA";
-          })
-      );
       setSuccess("Lançamento ignorado.");
+      void load();
     } catch (ignoreError) {
       setError(normalizeErrorMessage(ignoreError));
     }

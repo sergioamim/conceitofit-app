@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, RefreshCw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ import type {
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatDateTime } from "@/lib/formatters";
 import { PageError } from "@/components/shared/page-error";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 
 const AMBIENTE_OPTIONS: Array<{ value: NfseAmbiente; label: string }> = [
   { value: "HOMOLOGACAO", label: "Homologação" },
@@ -59,31 +60,35 @@ function getStatusClass(status: NfseConfiguracao["status"]) {
 export function NfseContent() {
   const access = useAuthAccess();
   const { tenantId, tenantName, tenantResolved, loading: tenantLoading } = useTenantContext();
+
+  const {
+    items: configItems,
+    isLoading: loading,
+    error: queryError,
+    refetch: load,
+  } = useAdminCrud<NfseConfiguracao>({
+    domain: "nfse",
+    tenantId,
+    enabled: tenantResolved && !access.loading && access.canAccessElevatedModules,
+    listFn: async (tid) => {
+      const config = await getNfseConfiguracaoAtualApi({ tenantId: tid });
+      return config ? [config] : [];
+    },
+  });
+  const loadError = queryError ? normalizeErrorMessage(queryError) : null;
+
   const [form, setForm] = useState<NfseConfiguracao | null>(null);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!tenantId || !access.canAccessElevatedModules) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      setForm(await getNfseConfiguracaoAtualApi({ tenantId }));
-    } catch (loadErr) {
-      setLoadError(normalizeErrorMessage(loadErr));
-    } finally {
-      setLoading(false);
-    }
-  }, [access.canAccessElevatedModules, tenantId]);
-
+  // Sync query data into local form state when loaded (and not currently saving)
+  const loadedConfig = configItems[0] ?? null;
   useEffect(() => {
-    if (!access.loading && tenantResolved) {
-      void load();
+    if (loadedConfig && !saving) {
+      setForm(loadedConfig);
     }
-  }, [access.loading, load, tenantResolved]);
+  }, [loadedConfig, saving]);
 
   const checklist = useMemo(() => buildNfseChecklist(form ?? {}), [form]);
   const localErrors = useMemo(() => validateNfseConfiguracaoDraft(form ?? {}), [form]);
@@ -104,6 +109,7 @@ export function NfseContent() {
       const saved = await salvarNfseConfiguracaoAtualApi(form);
       setForm(saved);
       setSuccess("Configuração fiscal atualizada.");
+      void load();
     } catch (saveError) {
       setError(normalizeErrorMessage(saveError));
     } finally {
@@ -126,6 +132,7 @@ export function NfseContent() {
       const validated = await validarNfseConfiguracaoAtualApi({ tenantId });
       setForm(validated);
       setSuccess("Configuração validada com sucesso.");
+      void load();
     } catch (validationError) {
       setError(normalizeErrorMessage(validationError));
       void load();

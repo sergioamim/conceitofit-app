@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   createAtividadeGradeApi,
@@ -28,6 +28,7 @@ import {
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { PageError } from "@/components/shared/page-error";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
+import { useAdminCrud } from "@/lib/query/use-admin-crud";
 
 const DIA_LABEL: Record<DiaSemana, string> = {
   SEG: "Segunda",
@@ -39,13 +40,17 @@ const DIA_LABEL: Record<DiaSemana, string> = {
   DOM: "Domingo",
 };
 
+/** Combined data returned from the list query */
+type AtividadesGradeData = {
+  grades: AtividadeGrade[];
+  atividades: Atividade[];
+  salas: Sala[];
+  funcionarios: Funcionario[];
+};
+
 export function AtividadesGradeContent() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const tenantContext = useTenantContext();
-  const [grades, setGrades] = useState<AtividadeGrade[]>([]);
-  const [atividades, setAtividades] = useState<Atividade[]>([]);
-  const [salas, setSalas] = useState<Sala[]>([]);
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
   const [editing, setEditing] = useState<AtividadeGrade | null>(null);
@@ -54,52 +59,52 @@ export function AtividadesGradeContent() {
   const [filtroDia, setFiltroDia] = useState<DiaSemana | typeof FILTER_ALL>(FILTER_ALL);
   const [apenasAtivas, setApenasAtivas] = useState(true);
   const [savingOccurrence, setSavingOccurrence] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState("");
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
-  const load = useCallback(async () => {
-    if (!tenantId) {
-      setGrades([]);
-      setAtividades([]);
-      setSalas([]);
-      setFuncionarios([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setLoadError("");
-    try {
+  // Filter key to trigger refetch when API-level filters change
+  const filterKey = `${filtroAtividade}|${apenasAtivas}`;
+
+  const {
+    items: dataItems,
+    isLoading: loading,
+    error: queryError,
+    refetch: load,
+  } = useAdminCrud<AtividadesGradeData>({
+    domain: "atividades-grade",
+    tenantId,
+    enabled: Boolean(tenantId),
+    listFn: async (tid) => {
       const [g, a, sal, pro] = await Promise.all([
         listAtividadeGradesApi({
-          tenantId,
+          tenantId: tid,
           atividadeId: filtroAtividade === "TODAS" ? undefined : filtroAtividade,
           apenasAtivas: apenasAtivas ? true : undefined,
         }),
-        listAtividadesApi({ tenantId, apenasAtivas: false }),
+        listAtividadesApi({ tenantId: tid, apenasAtivas: false }),
         listSalasApi(),
         listFuncionariosApi(true),
       ]);
-      setGrades(g);
-      setAtividades(a);
-      setSalas(sal);
-      setFuncionarios(pro);
-    } catch (err) {
-      setGrades([]);
-      setAtividades([]);
-      setSalas([]);
-      setFuncionarios([]);
-      setLoadError(normalizeErrorMessage(err) || "Falha ao carregar grade de atividades.");
-    } finally {
-      setLoading(false);
-    }
-  }, [apenasAtivas, filtroAtividade, tenantId]);
+      return [{ grades: g, atividades: a, salas: sal, funcionarios: pro }];
+    },
+  });
 
+  // Refetch when API-level filters change
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (tenantId) {
+      void load();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterKey]);
+
+  const loadError = queryError ? (normalizeErrorMessage(queryError) || "Falha ao carregar grade de atividades.") : "";
+
+  const data = dataItems[0];
+  const grades = data?.grades ?? [];
+  const atividades = data?.atividades ?? [];
+  const salas = data?.salas ?? [];
+  const funcionarios = data?.funcionarios ?? [];
 
   const atividadeMap = useMemo(() => new Map(atividades.map((a) => [a.id, a])), [atividades]);
   const salaMap = useMemo(() => new Map(salas.map((s) => [s.id, s])), [salas]);
@@ -147,18 +152,18 @@ export function AtividadesGradeContent() {
 
     setModalOpen(false);
     setEditing(null);
-    await load();
+    void load();
   }
 
   async function handleToggle(id: string) {
     await toggleAtividadeGradeApi(id);
-    await load();
+    void load();
   }
 
   function handleDelete(id: string) {
     confirm("Remover este item da grade?", async () => {
       await deleteAtividadeGradeApi(id);
-      await load();
+      void load();
     });
   }
 
@@ -185,7 +190,7 @@ export function AtividadesGradeContent() {
       setOccurrenceModalOpen(false);
       setOccurrenceGrade(null);
       setFeedback("Ocorrência criada e disponibilizada para reservas.");
-      await load();
+      void load();
     } catch (saveError) {
       setError(normalizeErrorMessage(saveError) || "Falha ao criar ocorrência sob demanda.");
     } finally {
