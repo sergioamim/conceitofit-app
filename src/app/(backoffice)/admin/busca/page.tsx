@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { searchGlobalPessoas } from "@/lib/api/admin-search";
 import type { GlobalSearchPersonType, GlobalSearchResult } from "@/lib/types";
 import { ListErrorState, EmptyState } from "@/components/shared/list-states";
+import { formatCpf } from "@/lib/formatters";
 
 const TIPO_CONFIG: Record<GlobalSearchPersonType, { label: string; icon: typeof User; badgeClass: string }> = {
   ALUNO: { label: "Alunos", icon: User, badgeClass: "border-gym-teal/40 bg-gym-teal/10 text-gym-teal" },
@@ -30,15 +31,6 @@ function groupByTipo(items: GlobalSearchResult[]): Record<GlobalSearchPersonType
     groups[tipo].push(item);
   }
   return groups;
-}
-
-function formatCpf(value?: string) {
-  if (!value) return "";
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 11) {
-    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-  }
-  return value;
 }
 
 export default function BuscaGlobalPage() {
