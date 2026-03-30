@@ -10567,6 +10567,286 @@
         "complexity": 2,
         "subtasks": [],
         "updatedAt": "2026-03-29T23:12:37.447Z"
+      },
+      {
+        "id": "268",
+        "title": "Migrar CRM workspace (crm-content.tsx) para TanStack Query",
+        "description": "crm-content.tsx usa useState para prospects, tasks, automations e snapshot. Fetching manual via load() com Promise.all.",
+        "details": "Criar useCrmWorkspace() hook com useQuery para o snapshot agregado. Mutations para toggleAutomation com invalidação. Remover useState de snapshot/automations/loading/error. O CadenceExecutionsPanel já carrega dados independentemente.",
+        "testStrategy": "Workspace carrega com cache. Toggle automação invalida corretamente. Navegar e voltar não refaz fetch.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "high",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "269",
+        "title": "Migrar grade/grade-content.tsx para TanStack Query",
+        "description": "Grade de atividades usa useState para dados de grade, atividades, salas. Página de alta frequência de acesso.",
+        "details": "Criar useGrade() hook. Query key: [\"grade\", tenantId, weekStart]. Dados de grade mudam pouco — staleTime alto (10min).",
+        "testStrategy": "Grade carrega com cache. Trocar semana invalida. Voltar para semana anterior usa cache.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "high",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "270",
+        "title": "Migrar vendas/page.tsx para TanStack Query",
+        "description": "Listagem de vendas usa useState para loading/error/data. Página acessada frequentemente após cada venda.",
+        "details": "Criar useVendas() hook com useQuery. Query key: [\"vendas\", tenantId, filters]. Cache com staleTime 2min.",
+        "testStrategy": "Listagem com cache. Criar venda invalida lista. Filtros funcionam.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "high",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "271",
+        "title": "Migrar contas-a-receber para TanStack Query",
+        "description": "contas-a-receber-content.tsx usa useState para contas, formas pagamento. Domínio financeiro de alta frequência.",
+        "details": "Criar useContasReceber() hook. Mutations para receber/cancelar. Invalida cache no onSuccess.",
+        "testStrategy": "Listagem com cache. Receber conta invalida. Filtros preservados.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "high",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "272",
+        "title": "Migrar DRE (dre/page.tsx) para TanStack Query",
+        "description": "DRE usa useState para dados do relatório. Relatório financeiro consultado frequentemente.",
+        "details": "Criar useDre() hook. Query key: [\"dre\", tenantId, periodo]. staleTime 5min (dados financeiros mudam pouco).",
+        "testStrategy": "DRE carrega com cache. Trocar período invalida. Voltar ao período anterior usa cache.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "medium",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "273",
+        "title": "Migrar recebimentos/page.tsx para TanStack Query",
+        "description": "Recebimentos usa useState para listagem com filtros. Página financeira acessada diariamente.",
+        "details": "Criar useRecebimentos() hook. Query key: [\"recebimentos\", tenantId, startDate, endDate].",
+        "testStrategy": "Listagem com cache. Filtros por data funcionam. Navegar e voltar preserva dados.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "medium",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "274",
+        "title": "Migrar CRM tarefas (tarefas/page.tsx) para TanStack Query",
+        "description": "Tarefas CRM usa useState para tasks, funcionarios, prospects. CRUD manual.",
+        "details": "Criar useCrmTasks() hook com useQuery + mutations para criar/atualizar. Invalidar cache em mutations.",
+        "testStrategy": "Listagem com cache. Criar/concluir tarefa invalida. Filtros funcionam.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "medium",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "275",
+        "title": "Migrar CRM playbooks para TanStack Query",
+        "description": "Playbooks e cadências usam useState para listagem e CRUD.",
+        "details": "Criar useCrmPlaybooks() e useCrmCadencias() hooks. Mutations com invalidação.",
+        "testStrategy": "CRUD funciona com cache. Criar/editar invalida lista.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "medium",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "276",
+        "title": "Migrar CRM campanhas para TanStack Query",
+        "description": "Campanhas usa useState para listagem, criação e disparo.",
+        "details": "Criar useCrmCampanhas() hook. Mutations para criar/disparar/encerrar.",
+        "testStrategy": "Listagem com cache. Disparar campanha invalida lista.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "277",
+        "title": "Migrar prospects-kanban para TanStack Query",
+        "description": "Kanban de prospects usa useState para dados de pipeline. Alta interatividade.",
+        "details": "Reusar useProspects() existente. Adicionar mutations para drag-and-drop status change com optimistic updates.",
+        "testStrategy": "Kanban carrega do cache de prospects. Mover card atualiza otimisticamente.",
+        "status": "pending",
+        "dependencies": [
+          253
+        ],
+        "priority": "medium",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "278",
+        "title": "Migrar páginas administrativo CRUD para TanStack Query (batch)",
+        "description": "10 páginas administrativo usam o mesmo padrão: list+create+update+toggle. Arquivos: contas-bancarias, maquininhas, tipos-conta, atividades-grade, unidades, catraca-status, conciliacao-bancaria, nfse, ia, integracoes.",
+        "details": "Criar hook genérico useAdminCrud<T>(config) ou hooks individuais por domínio. Usar useMutation com invalidação. Padrão: query key [\"admin\", domain, tenantId], staleTime 5min.",
+        "testStrategy": "CRUD funciona em todas as 10 páginas. Toggle ativo/inativo invalida. Navegar e voltar usa cache.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "medium",
+        "complexity": 6,
+        "subtasks": []
+      },
+      {
+        "id": "279",
+        "title": "Migrar billing-config para TanStack Query",
+        "description": "billing-config-content.tsx usa useState para config, loading, saving, testing.",
+        "details": "Criar useBillingConfig() com useQuery para load + useMutation para save e test. Já tem react-hook-form.",
+        "testStrategy": "Config carrega com cache. Salvar invalida. Testar conexão funciona.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "low",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "280",
+        "title": "Migrar whatsapp admin para TanStack Query",
+        "description": "whatsapp/page.tsx usa useState para config, templates e logs. 3 domínios num componente.",
+        "details": "Criar useWhatsAppConfig(), useWhatsAppTemplates(), useWhatsAppLogs() hooks separados. Mutations para CRUD de templates e save config.",
+        "testStrategy": "Cada aba carrega com cache independente. CRUD templates invalida. Config salva invalida.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "281",
+        "title": "Migrar BI operacional e BI rede para TanStack Query",
+        "description": "bi/page.tsx e bi/rede/page.tsx usam useState para snapshot BI. Dados agregados com filtros.",
+        "details": "Criar useBiOperacional() e useBiRede() hooks. Query key inclui filtros (scope, tenantId, dateRange, segmento). staleTime 5min.",
+        "testStrategy": "BI carrega com cache. Mudar filtros invalida seletivamente. Voltar ao filtro anterior usa cache.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "282",
+        "title": "Migrar contabilidade (4 páginas) para TanStack Query",
+        "description": "Livros razão, transações, relatórios e monitoramento usam useState para server state.",
+        "details": "Criar hooks: useLedgers(), useFinancialTransactions(), useFinancialReports(), useFinancialMonitoring(). Mutations com invalidação para CRUD.",
+        "testStrategy": "Todas 4 páginas carregam com cache. CRUD invalida corretamente.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "low",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "283",
+        "title": "Migrar agregadores e catraca-acessos para TanStack Query",
+        "description": "agregadores-content.tsx e catraca-acessos/page.tsx usam useState para dados tabulares com filtros.",
+        "details": "Criar useAgregadores() e useCatracaAcessos() hooks.",
+        "testStrategy": "Listagem com cache. Filtros funcionam.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "low",
+        "complexity": 3,
+        "subtasks": []
+      },
+      {
+        "id": "284",
+        "title": "Migrar treinos (4 páginas) para TanStack Query",
+        "description": "Detalhes, atribuídos, exercícios e grupos musculares usam useState para server state.",
+        "details": "Criar hooks: useTreinoDetail(), useTreinosAtribuidos(), useExercicios(), useGruposMusculares(). Mutations para atribuir/registrar execução.",
+        "testStrategy": "Todas páginas carregam com cache. Atribuir treino invalida lista.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "medium",
+        "complexity": 5,
+        "subtasks": []
+      },
+      {
+        "id": "285",
+        "title": "Migrar portal do aluno (meus-treinos, check-in) para TanStack Query",
+        "description": "meus-treinos e check-in usam useState para dados do aluno logado.",
+        "details": "Criar useMeusTreinos() e useCheckIn() hooks. Mutation para registrar execução/presença com invalidação.",
+        "testStrategy": "Portal carrega com cache. Concluir treino invalida. Check-in registra e atualiza.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "medium",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": "286",
+        "title": "Migrar backoffice admin (20+ páginas) para TanStack Query",
+        "description": "Páginas do backoffice (academias, audit-log, compliance, segurança, financeiro, operacional, leads, busca, whatsapp) usam useState para server state.",
+        "details": "Criar hooks por domínio: useAdminAcademias(), useAdminAuditLog(), useAdminCompliance(), useAdminSeguranca(), useAdminFinanceiro(), useAdminOperacional(). Agrupar por similaridade — muitas seguem padrão list+detail+toggle.",
+        "testStrategy": "Todas páginas admin carregam com cache. CRUD funciona. Navegar entre abas preserva dados.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "low",
+        "complexity": 7,
+        "subtasks": []
+      },
+      {
+        "id": "287",
+        "title": "Migrar jornada pública (adesão) para TanStack Query",
+        "description": "4 páginas de adesão (trial, cadastro, checkout, pendências) usam useState para tenant options e form state.",
+        "details": "Criar usePublicTenants() hook compartilhado. Mutations para submit. Draft state pode permanecer em context.",
+        "testStrategy": "Tenant options carregam com cache. Submit funciona. Navegar entre etapas preserva dados.",
+        "status": "pending",
+        "dependencies": [
+          225
+        ],
+        "priority": "low",
+        "complexity": 4,
+        "subtasks": []
       }
     ],
     "metadata": {
