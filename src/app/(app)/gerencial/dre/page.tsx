@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { getDreGerencialApi, getDreProjecaoApi } from "@/lib/api/financeiro-gerencial";
 import { getBusinessCurrentMonthYear, getBusinessMonthRange } from "@/lib/business-date";
-import type { CategoriaContaPagar, DREProjecao, DREGerencial, DreProjectionScenario, GrupoDre } from "@/lib/types";
+import { useDreGerencial, useDreProjecao } from "@/lib/query/use-dre";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import type { CategoriaContaPagar, DreProjectionScenario, GrupoDre } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { ListErrorState } from "@/components/shared/list-states";
 import { formatBRL } from "@/lib/formatters";
@@ -58,12 +58,6 @@ const CENARIO_LABEL: Record<DreProjectionScenario, string> = {
 
 export default function DrePage() {
   const tenantContext = useTenantContext();
-  const [loading, setLoading] = useState(true);
-  const [loadingProjecao, setLoadingProjecao] = useState(true);
-  const [dre, setDre] = useState<DREGerencial | null>(null);
-  const [projecao, setProjecao] = useState<DREProjecao | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [projecaoError, setProjecaoError] = useState<string | null>(null);
   const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
   const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [customRange, setCustomRange] = useState(false);
@@ -80,57 +74,36 @@ export default function DrePage() {
     return toISODate(addMonths(new Date(year, month + 1, 0), 3));
   });
 
-  async function load() {
-    if (!tenantContext.tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getDreGerencialApi({
-        tenantId: tenantContext.tenantId,
-        ...(customRange
-          ? { startDate, endDate }
-          : { month: mes, year: ano }),
-      });
-      setDre(data);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }
+  const {
+    data: dre,
+    isLoading: loading,
+    error: dreError,
+    refetch: refetchDre,
+  } = useDreGerencial({
+    tenantId: tenantContext.tenantId,
+    tenantResolved: tenantContext.tenantResolved,
+    month: mes,
+    year: ano,
+    startDate,
+    endDate,
+    customRange,
+  });
 
-  useEffect(() => {
-    if (tenantContext.tenantResolved && tenantContext.tenantId) {
-      void load();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mes, ano, customRange, startDate, endDate, tenantContext.tenantId, tenantContext.tenantResolved]);
+  const error = dreError ? normalizeErrorMessage(dreError) : null;
 
-  async function loadProjecao() {
-    if (!tenantContext.tenantId) return;
-    setLoadingProjecao(true);
-    setProjecaoError(null);
-    try {
-      const data = await getDreProjecaoApi({
-        tenantId: tenantContext.tenantId,
-        startDate: projecaoStartDate,
-        endDate: projecaoEndDate,
-        cenario: cenarioProjecao,
-      });
-      setProjecao(data);
-    } catch (loadError) {
-      setProjecaoError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoadingProjecao(false);
-    }
-  }
+  const {
+    data: projecao,
+    isLoading: loadingProjecao,
+    error: projecaoQueryError,
+  } = useDreProjecao({
+    tenantId: tenantContext.tenantId,
+    tenantResolved: tenantContext.tenantResolved,
+    startDate: projecaoStartDate,
+    endDate: projecaoEndDate,
+    cenario: cenarioProjecao,
+  });
 
-  useEffect(() => {
-    if (tenantContext.tenantResolved && tenantContext.tenantId) {
-      void loadProjecao();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projecaoStartDate, projecaoEndDate, cenarioProjecao, tenantContext.tenantId, tenantContext.tenantResolved]);
+  const projecaoError = projecaoQueryError ? normalizeErrorMessage(projecaoQueryError) : null;
 
   const margins = useMemo(() => {
     if (!dre || dre.receitaLiquida <= 0) return { margem: 0, ebitda: 0, resultado: 0 };
@@ -226,7 +199,7 @@ export default function DrePage() {
       </div>
 
       {error ? (
-        <ListErrorState error={error} onRetry={() => void load()} />
+        <ListErrorState error={error} onRetry={() => void refetchDre()} />
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">

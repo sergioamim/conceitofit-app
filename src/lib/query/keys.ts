@@ -27,6 +27,13 @@ export const queryKeys = {
       ["contasReceber", "list", tenantId, filters] as const,
   },
 
+  dre: {
+    gerencial: (tenantId: string, periodo: string) =>
+      ["dre", "gerencial", tenantId, periodo] as const,
+    projecao: (tenantId: string, startDate: string, endDate: string, cenario: string) =>
+      ["dre", "projecao", tenantId, startDate, endDate, cenario] as const,
+  },
+
   aulas: {
     sessoes: (tenantId: string, dateFrom: string, dateTo: string) =>
       ["aulas", "sessoes", tenantId, dateFrom, dateTo] as const,
