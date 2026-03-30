@@ -11642,13 +11642,14 @@
         "description": "meus-treinos e check-in usam useState para dados do aluno logado.",
         "details": "Criar useMeusTreinos() e useCheckIn() hooks. Mutation para registrar execução/presença com invalidação.",
         "testStrategy": "Portal carrega com cache. Concluir treino invalida. Check-in registra e atualiza.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
         "priority": "medium",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-30T05:53:41.897Z"
       },
       {
         "id": "286",
@@ -11779,20 +11780,21 @@
         "description": "4 páginas de adesão (trial, cadastro, checkout, pendências) usam useState para tenant options e form state.",
         "details": "Criar usePublicTenants() hook compartilhado. Mutations para submit. Draft state pode permanecer em context.",
         "testStrategy": "Tenant options carregam com cache. Submit funciona. Navegar entre etapas preserva dados.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "225"
         ],
         "priority": "low",
         "complexity": 4,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-30T05:49:37.052Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:42:09.879Z",
+      "lastModified": "2026-03-30T05:53:41.897Z",
       "taskCount": 287,
-      "completedCount": 285,
+      "completedCount": 286,
       "tags": [
         "master"
       ]
