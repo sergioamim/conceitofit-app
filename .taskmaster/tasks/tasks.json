@@ -10837,7 +10837,7 @@
         "description": "DRE usa useState para dados do relatório. Relatório financeiro consultado frequentemente.",
         "details": "Criar useDre() hook. Query key: [\"dre\", tenantId, periodo]. staleTime 5min (dados financeiros mudam pouco).",
         "testStrategy": "DRE carrega com cache. Trocar período invalida. Voltar ao período anterior usa cache.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -10853,7 +10853,7 @@
             "parentId": "undefined"
           }
         ],
-        "updatedAt": "2026-03-30T05:05:33.911Z"
+        "updatedAt": "2026-03-30T05:07:59.260Z"
       },
       {
         "id": "273",
@@ -11639,9 +11639,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:06:59.318Z",
+      "lastModified": "2026-03-30T05:07:59.261Z",
       "taskCount": 287,
-      "completedCount": 268,
+      "completedCount": 269,
       "tags": [
         "master"
       ]
