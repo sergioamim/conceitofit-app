@@ -38,7 +38,6 @@ services:
       - "5432:5432"
     volumes:
       - conceito_pg_data:/var/lib/postgresql/data
-      - ../academia-java/infra/seed-dev.sql:/docker-entrypoint-initdb.d/99-seed-dev.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user_academia -d academia_db"]
       interval: 5s
@@ -125,6 +124,28 @@ services:
       start_period: 60s
       retries: 5
     restart: unless-stopped
+
+  # ── Seed de desenvolvimento ──
+  # Roda DEPOIS do backend (Flyway cria as tabelas antes).
+  # Executa uma vez e sai — não fica rodando.
+  seed:
+    image: postgres:16-alpine
+    container_name: conceito-seed
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ../academia-java/infra/seed-dev.sql:/seed.sql:ro
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo "Aguardando 5s para garantir que migrations finalizaram..."
+        sleep 5
+        echo "Executando seed de desenvolvimento..."
+        PGPASSWORD=password_academia psql -h db -U user_academia -d academia_db -f /seed.sql
+        echo "Seed concluído."
+    restart: "no"
 
   # ── Frontend Next.js ──
   frontend:
