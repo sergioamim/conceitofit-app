@@ -10866,7 +10866,7 @@
         "description": "Recebimentos usa useState para listagem com filtros. Página financeira acessada diariamente.",
         "details": "Criar useRecebimentos() hook. Query key: [\"recebimentos\", tenantId, startDate, endDate].",
         "testStrategy": "Listagem com cache. Filtros por data funcionam. Navegar e voltar preserva dados.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "225"
         ],
@@ -10919,7 +10919,8 @@
             "testStrategy": "Testes E2E simulando navegação, aplicação de filtros, e verificação do comportamento de cache (dados não recarregam imediatamente ao retornar à página, mas sim após staleTime). Verificar a consistência dos dados após a aplicação dos filtros e a resposta da UI a estados de carregamento e erro.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:14:18.126Z"
       },
       {
         "id": "274",
@@ -10927,7 +10928,7 @@
         "description": "Tarefas CRM usa useState para tasks, funcionarios, prospects. CRUD manual.",
         "details": "Criar useCrmTasks() hook com useQuery + mutations para criar/atualizar. Invalidar cache em mutations.",
         "testStrategy": "Listagem com cache. Criar/concluir tarefa invalida. Filtros funcionam.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -10940,9 +10941,10 @@
             "description": "Criar e padronizar as chaves de query (query keys) para as listas de tarefas, funcionários e prospects usadas no módulo de CRM. Este passo é fundamental para o correto gerenciamento do cache do TanStack Query.",
             "dependencies": [],
             "details": "Analisar a estrutura de dados existente e definir query keys como `['crmTasks', { tenantId, filters }]`, `['crmEmployees', { tenantId }]` e `['crmProspects', { tenantId }]`. Assegurar que quaisquer IDs de tenant ou parâmetros de filtro relevantes sejam incorporados nas chaves para garantir o isolamento e a granularidade adequada do cache.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:16:58.098Z"
           },
           {
             "id": 2,
@@ -10952,9 +10954,10 @@
               1
             ],
             "details": "Criar o arquivo `src/hooks/useCrmTasks.ts`. Dentro do hook, implementar `useQuery` para buscar tarefas (com filtros), funcionários e prospects, configurando um `staleTime` de 30 segundos (30000 ms) para otimizar o desempenho. Implementar `useMutation` para `createTask`, `updateTask` e `completeTask`. Garantir que as funções `onSuccess` de cada mutação invalidem as query keys relevantes (ex: `queryClient.invalidateQueries(['crmTasks'])`) para forçar a revalidação e atualização da interface do usuário.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Realizar testes unitários para o hook `useCrmTasks` para verificar se as funções de query buscam dados corretamente, se as funções de mutation são executadas e se a invalidacão do cache é disparada como esperado após as operações de sucesso. Utilizar o `QueryClientProvider` para simular o ambiente de testes.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:16:58.110Z"
           },
           {
             "id": 3,
@@ -10964,9 +10967,10 @@
               2
             ],
             "details": "Modificar o componente `tarefas/page.tsx` para importar e consumir os dados e funções de mutação do `useCrmTasks`. Remover todas as instâncias de `useState` e chamadas `fetch` manuais relacionadas a tarefas, funcionários e prospects. Adaptar a renderização da lista, os formulários de criação/edição e os botões de ação para interagir com as funções e estados fornecidos pelo hook. Validar que a lógica de filtragem existente e a exibição de dados persistem corretamente.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Conduzir testes de integração na página `tarefas/page.tsx`. Verificar se a lista de tarefas é carregada e exibida corretamente, se os filtros funcionam como antes, e se as operações de criar, atualizar e concluir tarefas refletem as mudanças na interface do usuário de forma imediata e consistente, aproveitando o cache e a invalidacão do TanStack Query.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:16:58.126Z"
           },
           {
             "id": 4,
@@ -10976,11 +10980,13 @@
               3
             ],
             "details": "Criar novos testes E2E ou estender os existentes para a rota `/tarefas` utilizando a estrutura de testes do projeto (ex: Playwright/Cypress). Cobrir cenários como: carregamento inicial da página (verificar uso do cache e `staleTime`), criação de uma nova tarefa (verificar atualização da lista), conclusão de uma tarefa (verificar atualização e invalidacão), e aplicação de diferentes filtros. Revisar e ajustar `staleTime`, `gcTime` e outras configurações do TanStack Query para garantir o desempenho ideal e a consistência dos dados.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Executar os testes E2E para validar a integridade funcional da página pós-migração. Focar em cenários que simulem a interação real do usuário, como navegar para a página de tarefas, criar, editar ou concluir uma tarefa e aplicar filtros, garantindo que a UI reflita o estado correto do backend e que as otimizações de cache estejam funcionando.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:16:58.138Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:16:58.138Z"
       },
       {
         "id": "275",
@@ -10988,7 +10994,7 @@
         "description": "Playbooks e cadências usam useState para listagem e CRUD.",
         "details": "Criar useCrmPlaybooks() e useCrmCadencias() hooks. Mutations com invalidação.",
         "testStrategy": "CRUD funciona com cache. Criar/editar invalida lista.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -11041,7 +11047,8 @@
             "testStrategy": "Testes E2E com Cypress/Playwright cobrindo os cenários de CRUD, verificando o comportamento da UI e a consistência dos dados após as operações. Verificar o uso do cache através das ferramentas de desenvolvimento do navegador ou mocks, e que o `staleTime` é respeitado.",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:16:46.844Z"
       },
       {
         "id": "276",
@@ -11644,9 +11651,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:10:40.956Z",
+      "lastModified": "2026-03-30T05:16:58.138Z",
       "taskCount": 287,
-      "completedCount": 271,
+      "completedCount": 273,
       "tags": [
         "master"
       ]
