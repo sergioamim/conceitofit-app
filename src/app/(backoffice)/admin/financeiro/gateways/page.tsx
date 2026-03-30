@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { z } from "zod";
 import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
@@ -13,12 +13,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  ativarAdminGateway,
   createAdminGateway,
-  desativarAdminGateway,
-  listAdminGateways,
   updateAdminGateway,
+  ativarAdminGateway,
+  desativarAdminGateway,
 } from "@/lib/api/admin-gateways";
+import { useAdminGateways } from "@/lib/query/admin";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import type { GatewayPagamento, ProvedorGateway } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -108,32 +110,17 @@ function buildPayload(values: GatewayFormValues): Omit<GatewayPagamento, "id" | 
 
 export default function AdminGatewaysPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const gatewaysQuery = useAdminGateways();
+  const loading = gatewaysQuery.isLoading;
+  const error = gatewaysQuery.error ? normalizeErrorMessage(gatewaysQuery.error) : null;
+  const gateways = gatewaysQuery.data ?? [];
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [gateways, setGateways] = useState<GatewayPagamento[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<GatewayPagamento | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setError(null);
-      const response = await listAdminGateways();
-      setGateways(response);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const filteredGateways = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -180,7 +167,7 @@ export default function AdminGatewaysPage() {
     try {
       const payload = buildPayload(values);
       const saved = id ? await updateAdminGateway(id, payload) : await createAdminGateway(payload);
-      setGateways((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.gateways() });
       setPage(0);
       handleCloseModal();
       toast({
@@ -203,7 +190,7 @@ export default function AdminGatewaysPage() {
       const toggled = gateway.ativo
         ? await desativarAdminGateway(gateway.id)
         : await ativarAdminGateway(gateway.id);
-      setGateways((current) => current.map((item) => (item.id === toggled.id ? toggled : item)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.gateways() });
       toast({
         title: toggled.ativo ? "Gateway ativado" : "Gateway desativado",
         description: toggled.nome,
@@ -227,7 +214,7 @@ export default function AdminGatewaysPage() {
         </p>
       </header>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void gatewaysQuery.refetch()} /> : null}
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-4">

@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { listGlobalAcademias } from "@/lib/backoffice/admin";
 import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { ListErrorState } from "@/components/shared/list-states";
@@ -33,12 +32,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import {
   createAdminContrato,
-  listAdminContratos,
-  listAdminPlanos,
   reativarAdminContrato,
   suspenderAdminContrato,
   updateAdminContrato,
 } from "@/lib/api/admin-billing";
+import { useAdminContratos, useAdminPlanos } from "@/lib/query/admin";
+import { useAdminAcademias } from "@/lib/query/admin";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import type {
@@ -158,12 +159,16 @@ function toFormValues(
 
 export default function AdminContratosPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const contratosQuery = useAdminContratos();
+  const academiasQuery = useAdminAcademias();
+  const planosQuery = useAdminPlanos();
+  const loading = contratosQuery.isLoading || academiasQuery.isLoading || planosQuery.isLoading;
+  const error = contratosQuery.error?.message ?? academiasQuery.error?.message ?? planosQuery.error?.message ?? null;
+  const contratos = contratosQuery.data ?? [];
+  const academias = academiasQuery.data ?? [];
+  const planos = planosQuery.data ?? [];
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [contratos, setContratos] = useState<ContratoPlataforma[]>([]);
-  const [academias, setAcademias] = useState<Academia[]>([]);
-  const [planos, setPlanos] = useState<PlanoPlataforma[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(FILTER_ALL);
   const [academiaFilter, setAcademiaFilter] = useState(FILTER_ALL);
   const [planoFilter, setPlanoFilter] = useState(FILTER_ALL);
@@ -211,29 +216,6 @@ export default function AdminContratosPage() {
     ],
     [academiaOptions, planoOptions]
   );
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setError(null);
-      const [contratosResponse, academiasResponse, planosResponse] = await Promise.all([
-        listAdminContratos(),
-        listGlobalAcademias(),
-        listAdminPlanos(),
-      ]);
-      setContratos(contratosResponse);
-      setAcademias(academiasResponse);
-      setPlanos(planosResponse);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const filteredContratos = useMemo(() => {
     return contratos.filter((contrato) => {
@@ -299,7 +281,7 @@ export default function AdminContratosPage() {
         historicoPlanosIds,
       };
       const saved = id ? await updateAdminContrato(id, payload) : await createAdminContrato(payload);
-      setContratos((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.contratos() });
       closeModal();
       setPage(0);
       toast({
@@ -322,7 +304,7 @@ export default function AdminContratosPage() {
     setSuspendendo(true);
     try {
       const suspenso = await suspenderAdminContrato(contratoParaSuspender.id, motivoSuspensao);
-      setContratos((current) => current.map((item) => (item.id === suspenso.id ? suspenso : item)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.contratos() });
       setSuspenderOpen(false);
       setContratoParaSuspender(null);
       setMotivoSuspensao("");
@@ -346,7 +328,7 @@ export default function AdminContratosPage() {
     setReativando(true);
     try {
       const reativado = await reativarAdminContrato(contratoParaReativar.id);
-      setContratos((current) => current.map((item) => (item.id === reativado.id ? reativado : item)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.contratos() });
       setContratoParaReativar(null);
       toast({
         title: "Contrato reativado",
@@ -373,7 +355,7 @@ export default function AdminContratosPage() {
         </p>
       </header>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => { contratosQuery.refetch(); academiasQuery.refetch(); planosQuery.refetch(); }} /> : null}
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-4">

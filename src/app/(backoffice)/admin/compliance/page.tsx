@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -42,10 +42,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  getComplianceDashboardApi,
   executarSolicitacaoExclusaoApi,
   rejeitarSolicitacaoExclusaoApi,
 } from "@/lib/api/admin-compliance";
+import { useAdminComplianceDashboard } from "@/lib/query/admin";
 import type {
   ComplianceAcademiaResumo,
   ComplianceDashboard,
@@ -569,22 +569,10 @@ function SolicitacoesExclusao({
 /* ── Page ─────────────────────────────────────── */
 
 export default function CompliancePage() {
-  const [dashboard, setDashboard] = useState<ComplianceDashboard | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadDashboard = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    getComplianceDashboardApi()
-      .then(setDashboard)
-      .catch((err) => setError(normalizeErrorMessage(err)))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
+  const dashboardQuery = useAdminComplianceDashboard();
+  const dashboard = dashboardQuery.data ?? null;
+  const loading = dashboardQuery.isLoading;
+  const error = dashboardQuery.error ? normalizeErrorMessage(dashboardQuery.error) : null;
 
   return (
     <div className="space-y-8">
@@ -658,7 +646,7 @@ export default function CompliancePage() {
           {/* Solicitações de Exclusão */}
           <SolicitacoesExclusao
             solicitacoes={dashboard.solicitacoesPendentes}
-            onActionCompleted={loadDashboard}
+            onActionCompleted={() => void dashboardQuery.refetch()}
           />
         </>
       )}

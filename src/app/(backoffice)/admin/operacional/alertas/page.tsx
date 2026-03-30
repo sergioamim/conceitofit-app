@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BellRing, CircleAlert, Rocket, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,18 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ListErrorState, ListLoadingSkeleton } from "@/components/shared/list-states";
-import { getAlertasOperacionais, getFeatureUsageByAcademia } from "@/lib/api/admin-metrics";
+import { useAdminAlertasOperacionais } from "@/lib/query/admin";
 import { formatDateTime, formatPercent } from "@/lib/formatters";
 import type {
-  AlertaOperacional,
   AlertaOperacionalSeveridade,
-  FeatureUsageAcademia,
   FeatureUsageIndicator,
   FeatureUsageKey,
   FeatureUsageStatus,
 } from "@/lib/types";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
-
 type SeverityFilter = "TODAS" | AlertaOperacionalSeveridade;
 type UsageFilter = "TODAS" | FeatureUsageStatus;
 
@@ -147,34 +143,15 @@ function FeatureUsageBadge({ indicator }: { indicator: FeatureUsageIndicator }) 
 }
 
 export default function AdminOperationalAlertsPage() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [alertas, setAlertas] = useState<AlertaOperacional[]>([]);
-  const [featureUsage, setFeatureUsage] = useState<FeatureUsageAcademia[]>([]);
+  const alertasQuery = useAdminAlertasOperacionais();
+  const alertas = alertasQuery.data?.alertas.items ?? [];
+  const featureUsage = alertasQuery.data?.featureUsage.items ?? [];
+  const loading = alertasQuery.isLoading;
+  const error = alertasQuery.error ? alertasQuery.error.message : null;
+
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("TODAS");
   const [usageFilter, setUsageFilter] = useState<UsageFilter>("TODAS");
   const [search, setSearch] = useState("");
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setError(null);
-      const [alertasResponse, featureUsageResponse] = await Promise.all([
-        getAlertasOperacionais(),
-        getFeatureUsageByAcademia(),
-      ]);
-      setAlertas(alertasResponse.items);
-      setFeatureUsage(featureUsageResponse.items);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const filteredAlertas = useMemo(() => {
     const searchTerm = search.trim().toLocaleLowerCase("pt-BR");
@@ -325,7 +302,7 @@ export default function AdminOperationalAlertsPage() {
         </div>
 
         <div className="flex gap-2">
-          <Button type="button" variant="outline" className="border-border" onClick={() => void load()}>
+          <Button type="button" variant="outline" className="border-border" onClick={() => void alertasQuery.refetch()}>
             Atualizar
           </Button>
           <Link href="/admin">
@@ -334,7 +311,7 @@ export default function AdminOperationalAlertsPage() {
         </div>
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void alertasQuery.refetch()} /> : null}
 
       {loading ? (
         <div className="space-y-6">

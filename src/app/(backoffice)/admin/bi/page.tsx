@@ -1,15 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FileChartColumnIncreasing } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { ListErrorState } from "@/components/shared/list-states";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { listBackofficeAcademiasApi } from "@/lib/api/backoffice";
-import { getAdminBiExecutivoCompleto, type AdminBiExecutivoData } from "@/lib/api/admin-bi";
-import type { Academia } from "@/lib/types";
+import { useAdminBiAcademias, useAdminBiExecutivo } from "@/lib/query/admin";
+import type { AdminBiExecutivoData } from "@/lib/api/admin-bi";
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -44,47 +43,24 @@ function LoadingSkeleton() {
 }
 
 export default function AdminBiPage() {
-  const [academias, setAcademias] = useState<Academia[]>([]);
   const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
-  const [biData, setBiData] = useState<AdminBiExecutivoData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadAcademias = useCallback(async () => {
-    try {
-      const list = await listBackofficeAcademiasApi();
-      setAcademias(list);
-      if (list.length > 0 && !selectedAcademiaId) {
-        setSelectedAcademiaId(list[0].id);
-      }
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    }
-  }, [selectedAcademiaId]);
+  const academiasQuery = useAdminBiAcademias();
+  const biQuery = useAdminBiExecutivo(selectedAcademiaId || null);
 
-  const loadBiData = useCallback(async () => {
-    if (!selectedAcademiaId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getAdminBiExecutivoCompleto(selectedAcademiaId);
-      setBiData(data);
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedAcademiaId]);
+  const academias = academiasQuery.data ?? [];
+  const biData = biQuery.data ?? null;
+  const loading = biQuery.isLoading;
+  const error = academiasQuery.error || biQuery.error
+    ? normalizeErrorMessage(academiasQuery.error ?? biQuery.error)
+    : null;
 
+  // Auto-select first academia when data loads
   useEffect(() => {
-    void loadAcademias();
-  }, [loadAcademias]);
-
-  useEffect(() => {
-    if (selectedAcademiaId) {
-      void loadBiData();
+    if (academiasQuery.data && academiasQuery.data.length > 0 && !selectedAcademiaId) {
+      setSelectedAcademiaId(academiasQuery.data[0].id);
     }
-  }, [loadBiData, selectedAcademiaId]);
+  }, [academiasQuery.data, selectedAcademiaId]);
 
   const selectedAcademia = academias.find((a) => a.id === selectedAcademiaId);
 
@@ -120,7 +96,7 @@ export default function AdminBiPage() {
         </div>
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void loadBiData()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void biQuery.refetch()} /> : null}
 
       {loading || !biData ? (
         <LoadingSkeleton />

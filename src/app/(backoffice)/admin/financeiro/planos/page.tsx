@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { z } from "zod";
 import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
@@ -14,10 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import {
   createAdminPlano,
-  listAdminPlanos,
   toggleAdminPlano,
   updateAdminPlano,
 } from "@/lib/api/admin-billing";
+import { useAdminPlanos } from "@/lib/query/admin";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import { formatBRL } from "@/lib/formatters";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import type { CicloPlanoPlataforma, PlanoPlataforma } from "@/lib/types";
@@ -138,32 +140,17 @@ function getCicloLabel(ciclo: CicloPlanoPlataforma) {
 
 export default function AdminPlanosPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const planosQuery = useAdminPlanos();
+  const loading = planosQuery.isLoading;
+  const error = planosQuery.error ? normalizeErrorMessage(planosQuery.error) : null;
+  const planos = planosQuery.data ?? [];
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [planos, setPlanos] = useState<PlanoPlataforma[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<PlanoPlataforma | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setError(null);
-      const response = await listAdminPlanos();
-      setPlanos(response);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const filteredPlanos = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -214,7 +201,7 @@ export default function AdminPlanosPage() {
     try {
       const payload = buildPayload(values);
       const saved = id ? await updateAdminPlano(id, payload) : await createAdminPlano(payload);
-      setPlanos((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.planos() });
       setPage(0);
       handleCloseModal();
       toast({
@@ -235,7 +222,7 @@ export default function AdminPlanosPage() {
   async function handleToggle(plano: PlanoPlataforma) {
     try {
       const toggled = await toggleAdminPlano(plano.id);
-      setPlanos((current) => current.map((item) => (item.id === toggled.id ? toggled : item)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.planos() });
       toast({
         title: toggled.ativo ? "Plano reativado" : "Plano inativado",
         description: toggled.nome,
@@ -259,7 +246,7 @@ export default function AdminPlanosPage() {
         </p>
       </header>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void planosQuery.refetch()} /> : null}
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-4">

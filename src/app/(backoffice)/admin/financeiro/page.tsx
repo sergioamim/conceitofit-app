@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertTriangle, ArrowUpRight, Building2, CreditCard, TrendingDown, Wallet } from "lucide-react";
 import { EmptyState, ListErrorState, ListLoadingSkeleton } from "@/components/shared/list-states";
 import { Badge } from "@/components/ui/badge";
@@ -9,10 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getDashboardFinanceiroAdmin } from "@/lib/api/admin-billing";
+import { useAdminFinanceiroDashboard } from "@/lib/query/admin";
 import { formatBRL, formatDate, formatPercent } from "@/lib/formatters";
 import type {
-  DashboardFinanceiroAdmin,
   DashboardFinanceiroAgingItem,
   DashboardFinanceiroPeriodo,
   DashboardFinanceiroPlanoComparativo,
@@ -88,26 +87,12 @@ function QuickActions() {
 
 export default function AdminFinanceiroDashboardPage() {
   const [periodo, setPeriodo] = useState<DashboardFinanceiroPeriodo>("12M");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [dashboard, setDashboard] = useState<DashboardFinanceiroAdmin | null>(null);
 
-  const load = useCallback(async (nextPeriodo: DashboardFinanceiroPeriodo) => {
-    setLoading(true);
-    try {
-      setError(null);
-      const response = await getDashboardFinanceiroAdmin(nextPeriodo);
-      setDashboard(response);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const dashboardQuery = useAdminFinanceiroDashboard(periodo);
 
-  useEffect(() => {
-    void load(periodo);
-  }, [load, periodo]);
+  const loading = dashboardQuery.isLoading;
+  const error = dashboardQuery.error ? normalizeErrorMessage(dashboardQuery.error) : null;
+  const dashboard = dashboardQuery.data ?? null;
 
   const maxMrr = useMemo(
     () => Math.max(1, ...(dashboard?.evolucaoMrr ?? []).map((item) => item.mrr)),
@@ -166,7 +151,7 @@ export default function AdminFinanceiroDashboardPage() {
         </div>
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load(periodo)} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void dashboardQuery.refetch()} /> : null}
 
       {loading ? (
         <div className="space-y-6">

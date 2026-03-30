@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useState } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { TableCell } from "@/components/ui/table";
 import { PaginatedTable } from "@/components/shared/paginated-table";
-import { listAuditLogsApi } from "@/lib/api/admin-audit";
+import { useAdminAuditLog } from "@/lib/query/admin";
 import type {
   AuditLogAction,
   AuditLogEntityType,
@@ -76,12 +76,7 @@ function formatTimestamp(ts: string): string {
 }
 
 export default function AuditLogPage() {
-  const [items, setItems] = useState<AuditLogEntry[]>([]);
   const [page, setPage] = useState(0);
-  const [total, setTotal] = useState<number | undefined>();
-  const [hasNext, setHasNext] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const [filterAction, setFilterAction] = useState("");
   const [filterEntityType, setFilterEntityType] = useState("");
@@ -89,40 +84,21 @@ export default function AuditLogPage() {
   const [filterEndDate, setFilterEndDate] = useState("");
   const [filterQuery, setFilterQuery] = useState("");
 
-  useEffect(() => {
-    let mounted = true;
-    startTransition(() => {
-      setLoading(true);
-      setError(null);
-    });
+  const auditQuery = useAdminAuditLog({
+    page,
+    size: PAGE_SIZE,
+    action: filterAction || undefined,
+    entityType: filterEntityType || undefined,
+    startDate: filterStartDate || undefined,
+    endDate: filterEndDate || undefined,
+    query: filterQuery || undefined,
+  });
 
-    listAuditLogsApi({
-      page,
-      size: PAGE_SIZE,
-      action: filterAction || undefined,
-      entityType: filterEntityType || undefined,
-      startDate: filterStartDate || undefined,
-      endDate: filterEndDate || undefined,
-      query: filterQuery || undefined,
-    })
-      .then((result) => {
-        if (!mounted) return;
-        setItems(result.items);
-        setTotal(result.total);
-        setHasNext(result.hasNext);
-      })
-      .catch((err) => {
-        if (!mounted) return;
-        setError(normalizeErrorMessage(err));
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [page, filterAction, filterEntityType, filterStartDate, filterEndDate, filterQuery]);
+  const items = auditQuery.data?.items ?? [];
+  const total = auditQuery.data?.total;
+  const hasNext = auditQuery.data?.hasNext ?? false;
+  const loading = auditQuery.isLoading;
+  const error = auditQuery.error ? normalizeErrorMessage(auditQuery.error) : null;
 
   function handleClearFilters() {
     setFilterAction("");

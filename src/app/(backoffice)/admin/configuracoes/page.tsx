@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, CheckCircle2, Clock3, Link2, RefreshCcw, ServerCrash } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useFieldArray, useForm, type UseFormRegisterReturn } from "react-hook-form";
 import { RichTextEditor } from "@/components/shared/rich-text-editor";
 import { Badge } from "@/components/ui/badge";
@@ -15,11 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  getGlobalConfigApi,
-  getIntegrationStatusApi,
-  updateGlobalConfigApi,
-} from "@/lib/api/admin-config";
+import { updateGlobalConfigApi } from "@/lib/api/admin-config";
+import { useAdminIntegrations, useAdminGlobalConfig } from "@/lib/query/admin";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import type { GlobalConfig, IntegrationHealthStatus, IntegrationStatus } from "@/lib/types";
 import { globalConfigFormSchema, integrationStatusFilterSchema, type GlobalConfigFormValues } from "@/lib/forms/admin-config-schemas";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -158,13 +157,18 @@ function summarizeStatuses(integrations: IntegrationStatus[]) {
 
 export default function AdminConfiguracoesPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [integrationError, setIntegrationError] = useState<string | null>(null);
-  const [configError, setConfigError] = useState<string | null>(null);
-  const [integrations, setIntegrations] = useState<IntegrationStatus[]>([]);
-  const [config, setConfig] = useState<GlobalConfig | null>(null);
   const [statusFilter, setStatusFilter] = useState<"TODAS" | IntegrationHealthStatus>("TODAS");
+
+  const integrationsQuery = useAdminIntegrations();
+  const configQuery = useAdminGlobalConfig();
+
+  const loading = integrationsQuery.isLoading || configQuery.isLoading;
+  const integrations = integrationsQuery.data ?? [];
+  const config = configQuery.data ?? EMPTY_GLOBAL_CONFIG;
+  const integrationError = integrationsQuery.error ? normalizeErrorMessage(integrationsQuery.error) : null;
+  const configError = configQuery.error ? normalizeErrorMessage(configQuery.error) : null;
 
   const form = useForm<GlobalConfigFormValues>({
     resolver: zodResolver<GlobalConfigFormValues>(globalConfigFormSchema),
@@ -176,40 +180,16 @@ export default function AdminConfiguracoesPage() {
     name: "emailTemplates",
   });
 
-  const loadPage = useCallback(async () => {
-    setLoading(true);
-    try {
-      setIntegrationError(null);
-      setConfigError(null);
-
-      const [integrationResult, globalConfigResult] = await Promise.allSettled([
-        getIntegrationStatusApi(),
-        getGlobalConfigApi(),
-      ]);
-
-      if (integrationResult.status === "fulfilled") {
-        setIntegrations(integrationResult.value);
-      } else {
-        setIntegrations([]);
-        setIntegrationError(normalizeErrorMessage(integrationResult.reason));
-      }
-
-      if (globalConfigResult.status === "fulfilled") {
-        setConfig(globalConfigResult.value);
-        form.reset(globalConfigToForm(globalConfigResult.value));
-      } else {
-        setConfig(EMPTY_GLOBAL_CONFIG);
-        form.reset(globalConfigToForm(EMPTY_GLOBAL_CONFIG));
-        setConfigError(normalizeErrorMessage(globalConfigResult.reason));
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [form]);
-
   useEffect(() => {
-    void loadPage();
-  }, [loadPage]);
+    if (configQuery.data) {
+      form.reset(globalConfigToForm(configQuery.data));
+    }
+  }, [configQuery.data, form]);
+
+  function handleRefresh() {
+    void integrationsQuery.refetch();
+    void configQuery.refetch();
+  }
 
   const statusSummary = useMemo(() => summarizeStatuses(integrations), [integrations]);
   const visibleIntegrations = useMemo(() => {
@@ -220,8 +200,8 @@ export default function AdminConfiguracoesPage() {
   async function handleSave(values: GlobalConfigFormValues) {
     setSaving(true);
     try {
-      const persisted = await updateGlobalConfigApi(formToGlobalConfig(values, config));
-      setConfig(persisted);
+      const persisted = await updateGlobalConfigApi(formToGlobalConfig(values, configQuery.data ?? null));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.configuracoes.all() });
       form.reset(globalConfigToForm(persisted));
       toast({
         title: "Configurações globais atualizadas",
@@ -257,7 +237,7 @@ export default function AdminConfiguracoesPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" className="border-border" onClick={() => void loadPage()} disabled={loading}>
+              <Button variant="outline" className="border-border" onClick={handleRefresh} disabled={loading}>
                 <RefreshCcw className="mr-2 size-4" />
                 Atualizar
               </Button>
