@@ -10298,7 +10298,7 @@
         "description": "Sistema não tem canal de comunicação. WhatsApp é canal primário para academias (cobrança, follow-up, welcome).",
         "details": "Avaliar integração com API oficial WhatsApp Business ou Evolution API. Criar serviço de notificação com templates: welcome, vencimento de matrícula, cobrança pendente, follow-up de prospect. Backend precisa de endpoints para envio. Frontend precisa de configuração na admin e logs de envio.",
         "testStrategy": "Template de mensagem configurável na admin. Envio de welcome ao cadastrar aluno. Log de mensagens enviadas visível.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "259"
         ],
@@ -10367,7 +10367,7 @@
             "parentId": "undefined"
           }
         ],
-        "updatedAt": "2026-03-29T22:39:00.859Z"
+        "updatedAt": "2026-03-30T03:25:41.895Z"
       },
       {
         "id": "261",
@@ -10389,7 +10389,7 @@
         "description": "Apenas 19 testes para 133 componentes (14%). Priorizar formulários e modais críticos.",
         "details": "Criar testes para: prospect-modal, receber-pagamento-modal, nova-matricula-modal, cliente-resumo-dialog, clientes-filter-bar, clientes-table, pagamentos-client, matriculas-client, status-badge, export-menu. Usar padrão existente: vi.mock para Dialog/Select, render + fireEvent + expect.",
         "testStrategy": "Cobertura de componentes sobe de 14% para 30%. CI não regride.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "258"
         ],
@@ -10447,7 +10447,7 @@
             "parentId": "undefined"
           }
         ],
-        "updatedAt": "2026-03-29T23:07:17.407Z"
+        "updatedAt": "2026-03-29T23:12:52.622Z"
       },
       {
         "id": "263",
@@ -10486,13 +10486,60 @@
         "description": "Zero testes de acessibilidade. 177 aria-* existem mas não são validados automaticamente.",
         "details": "Integrar axe-core nos testes de componente via @axe-core/react ou vitest-axe. Adicionar check de a11y no CI. Priorizar: formulários, tabelas, modais, navegação. Lighthouse já roda no CI — adicionar threshold de accessibility > 90.",
         "testStrategy": "axe-core roda em CI sem critical violations. Lighthouse accessibility > 90.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "262"
         ],
         "priority": "low",
         "complexity": 3,
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Instalar e configurar vitest-axe",
+            "description": "Adicionar a dependência vitest-axe ao projeto e integrá-lo ao ambiente de testes existente configurado em tests/setup.ts, para que os matchers de acessibilidade estejam disponíveis globalmente ou por importação fácil nos testes de componentes.",
+            "dependencies": [],
+            "details": "Instalar 'vitest-axe' como devDependency. Editar 'tests/setup.ts' para importar 'vitest-axe/extend-expect' e/ou configurar a função 'configureAxe' para uso padrão. Assegurar que a configuração inicial do axe-core seja compatível com a suíte de testes existente (vitest, happy-dom, @testing-library/react).",
+            "status": "pending",
+            "testStrategy": "Criar um teste de componente dummy para verificar se os matchers de 'vitest-axe' (ex: toHaveNoViolations) estão disponíveis e funcionam corretamente sem erros de configuração.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implementar testes de acessibilidade em componentes críticos",
+            "description": "Desenvolver testes unitários de acessibilidade para componentes chave da aplicação, focando inicialmente em formulários, modais, tabelas e elementos de navegação, utilizando as funcionalidades do vitest-axe para detectar violações.",
+            "dependencies": [
+              1
+            ],
+            "details": "Identificar os principais componentes em 'tests/components/' que se enquadram nas categorias de formulários, modais, tabelas e navegação. Adicionar novos arquivos de teste ou estender testes existentes para incluir 'expect(container).toHaveNoViolations()' para cada componente, garantindo que não haja violações de acessibilidade conforme as diretrizes do axe-core.",
+            "status": "pending",
+            "testStrategy": "Rodar a suíte de testes com 'vitest' e verificar se os novos testes de acessibilidade identificam e reportam violações, ou passam sem falhas se o componente for acessível. Testar com um componente que intencionalmente possui uma violação para confirmar a detecção.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Adicionar validação de acessibilidade no CI com axe",
+            "description": "Criar um novo passo ou um novo workflow de CI que execute os testes de acessibilidade automatizados com axe-core, garantindo que novas violações não sejam introduzidas no codebase em futuras submissões.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Analisar os workflows existentes em '.github/workflows/'. Adicionar um novo job ou um novo passo em um job existente que execute 'npm test' ou 'vitest' para rodar os testes de acessibilidade. Configurar para que o CI falhe se houver violações de acessibilidade detectadas pelo axe-core nos testes de componentes.",
+            "status": "pending",
+            "testStrategy": "Abrir um Pull Request com uma violação de acessibilidade intencional em um componente testado e verificar se o CI falha. Em seguida, corrigir a violação e garantir que o CI passe, indicando que a validação foi bem-sucedida.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Configurar threshold de acessibilidade do Lighthouse no CI",
+            "description": "Ajustar a configuração do Lighthouse no workflow de CI existente para que a pontuação de acessibilidade deva ser superior a 90 para que o build seja considerado bem-sucedido, elevando o padrão de qualidade.",
+            "dependencies": [],
+            "details": "Editar o arquivo '.github/workflows/lighthouse.yml'. Localizar a etapa que executa o Lighthouse (ex: 'actions/lighthouse') e adicionar ou modificar a configuração do threshold de acessibilidade para '> 90' ou '> 0.90', dependendo da sintaxe da ação de Lighthouse utilizada, na seção de 'audits' ou 'performance.accessibility'.",
+            "status": "pending",
+            "testStrategy": "Executar o workflow de CI em um branch que tenha uma página com pontuação de acessibilidade do Lighthouse abaixo de 90 e verificar se o build falha. Depois, garantir que em um branch com pontuação superior a 90 o build passe.",
+            "parentId": "undefined"
+          }
+        ],
+        "updatedAt": "2026-03-30T03:23:00.334Z"
       },
       {
         "id": "266",
@@ -10523,9 +10570,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-29T23:12:37.447Z",
+      "lastModified": "2026-03-30T03:25:41.895Z",
       "taskCount": 267,
-      "completedCount": 262,
+      "completedCount": 265,
       "tags": [
         "master"
       ]
