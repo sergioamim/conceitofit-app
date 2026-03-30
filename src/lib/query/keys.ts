@@ -2,6 +2,9 @@ export const queryKeys = {
   dashboard: (tenantId: string, referenceDate: string) =>
     ["dashboard", tenantId, referenceDate] as const,
 
+  billingConfig: (tenantId: string) =>
+    ["billingConfig", tenantId] as const,
+
   clientes: {
     all: (tenantId: string) => ["clientes", tenantId] as const,
     list: (tenantId: string, filters: Record<string, unknown>) =>
