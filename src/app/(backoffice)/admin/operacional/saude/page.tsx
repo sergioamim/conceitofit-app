@@ -95,7 +95,7 @@ function HealthAcademiaCard({ item }: { item: AcademiaHealthStatus }) {
           </div>
           <div>
             <p className="text-xs uppercase tracking-wider">Último login admin</p>
-            <p className="mt-1 text-sm font-semibold text-foreground">{formatDateTime(item.ultimoLoginAdmin)}</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{item.ultimoLoginAdmin ? formatDateTime(item.ultimoLoginAdmin) : "—"}</p>
           </div>
         </div>
         {item.alertasRisco.length > 0 ? (
@@ -294,7 +294,7 @@ export default function AdminOperationalHealthPage() {
                             <TableCell className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <TimerReset className="size-3.5 text-muted-foreground" />
-                                <span>{formatDateTime(item.ultimoLoginAdmin)}</span>
+                                <span>{item.ultimoLoginAdmin ? formatDateTime(item.ultimoLoginAdmin) : "—"}</span>
                               </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">
