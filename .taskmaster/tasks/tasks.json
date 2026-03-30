@@ -11587,7 +11587,7 @@
         "description": "Detalhes, atribuídos, exercícios e grupos musculares usam useState para server state.",
         "details": "Criar hooks: useTreinoDetail(), useTreinosAtribuidos(), useExercicios(), useGruposMusculares(). Mutations para atribuir/registrar execução.",
         "testStrategy": "Todas páginas carregam com cache. Atribuir treino invalida lista.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -11600,9 +11600,10 @@
             "description": "Desenvolver os hooks 'useTreinoDetail()', 'useTreinosAtribuidos()', 'useExercicios()' e 'useGruposMusculares()' utilizando TanStack Query. Estes hooks devem gerenciar o estado do servidor para as páginas de detalhes de treino, treinos atribuídos, lista de exercícios e grupos musculares, substituindo o uso de useState atual.",
             "dependencies": [],
             "details": "Analisar os endpoints da API para cada tipo de dado de treino. Definir 'queryKeys' apropriadas para cada hook, considerando dependências e invalidação. Implementar a lógica de fetching de dados dentro de cada hook. Configurar 'staleTime' para 2 minutos, conforme contexto do projeto. Garantir que os dados carreguem e sejam cacheados corretamente seguindo os padrões existentes no codebase.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Verificar o carregamento inicial de cada hook em isolamento, garantindo que os dados corretos são obtidos da API e armazenados em cache. Testar a revalidação manual e a aplicação do staleTime configurado para 2 minutos.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:41:17.134Z"
           },
           {
             "id": 2,
@@ -11612,9 +11613,10 @@
               1
             ],
             "details": "Desenvolver 'useMutation' hooks para as operações de atribuição de treinos e registro de execuções, incluindo a lógica de 'onSuccess' para invalidação de queries relevantes (ex: 'useTreinosAtribuidos' após uma nova atribuição). Refatorar as páginas 'Detalhes do Treino', 'Treinos Atribuídos', 'Lista de Exercícios' e 'Grupos Musculares' para consumir os novos hooks de query. Substituir todas as chamadas de API diretas e o gerenciamento de estado com 'useState' pelos hooks do TanStack Query. Implementar 'optimistic updates' quando aplicável para as mutations, seguindo padrões já adotados. Garantir a exibição correta dos dados e o funcionamento de todas as ações de atribuição/execução.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testar cada página refatorada para garantir que os dados são carregados via TanStack Query. Validar as mutations de atribuição e execução, confirmando a invalidação correta do cache e, se implementado, as atualizações otimistas. Assegurar que as páginas continuam funcionais e com a experiência do usuário esperada após a migração.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:41:17.149Z"
           },
           {
             "id": 3,
@@ -11622,11 +11624,13 @@
             "description": "Desenvolver os hooks 'useAgregadores()' e 'useCatracaAcessos()' utilizando TanStack Query. Refatorar as duas páginas correspondentes para consumir esses hooks, garantindo a manipulação de dados tabulares com filtros. Exportar os hooks e testá-los, aplicando 'staleTime' de 2 minutos.",
             "dependencies": [],
             "details": "Analisar os endpoints da API para agregadores e acessos de catraca. Definir 'queryKeys' que incluam parâmetros de filtro para dados tabulares, seguindo a convenção de queries com filtros. Implementar 'useAgregadores()' e 'useCatracaAcessos()' com a lógica de fetching de dados e 'staleTime' de 2 minutos. Refatorar as páginas de agregadores e catraca-acessos para usar os novos hooks. Garantir que a lógica de filtragem, paginação e ordenação funcione corretamente com TanStack Query. Exportar os hooks para uso em outras partes da aplicação, se necessário. Criar testes unitários/de integração para os novos hooks e a integração nas páginas refatoradas.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Testar as páginas de Agregadores e Catraca Acessos, verificando o carregamento dos dados via TanStack Query e o funcionamento dos filtros e paginação. Validar a aplicação do 'staleTime' de 2 minutos e a correta exportação e usabilidade dos hooks para consumo externo, se aplicável.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-03-30T05:41:17.159Z"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:41:17.159Z"
       },
       {
         "id": "285",
@@ -11782,9 +11786,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:39:59.964Z",
+      "lastModified": "2026-03-30T05:41:17.160Z",
       "taskCount": 287,
-      "completedCount": 283,
+      "completedCount": 284,
       "tags": [
         "master"
       ]
