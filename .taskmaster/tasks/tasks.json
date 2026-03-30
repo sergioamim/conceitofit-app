@@ -10652,7 +10652,7 @@
         "description": "Grade de atividades usa useState para dados de grade, atividades, salas. Página de alta frequência de acesso.",
         "details": "Criar useGrade() hook. Query key: [\"grade\", tenantId, weekStart]. Dados de grade mudam pouco — staleTime alto (10min).",
         "testStrategy": "Grade carrega com cache. Trocar semana invalida. Voltar para semana anterior usa cache.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "225"
         ],
@@ -10705,7 +10705,8 @@
             "testStrategy": "Executar testes manuais abrangentes no navegador: carregar a grade, navegar para frente e para trás nas semanas, sair da página da grade e retornar para verificar o comportamento do cache (os dados devem carregar instantaneamente se estiverem em cache).",
             "parentId": "undefined"
           }
-        ]
+        ],
+        "updatedAt": "2026-03-30T05:09:42.587Z"
       },
       {
         "id": "270",
@@ -11639,9 +11640,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-30T05:07:59.261Z",
+      "lastModified": "2026-03-30T05:09:42.588Z",
       "taskCount": 287,
-      "completedCount": 269,
+      "completedCount": 270,
       "tags": [
         "master"
       ]
