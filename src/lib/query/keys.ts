@@ -158,6 +158,17 @@ export const queryKeys = {
       ["catracaAcessos", "list", tenantId, filters] as const,
   },
 
+  treinos: {
+    detail: (tenantId: string, id: string) =>
+      ["treinos", "detail", tenantId, id] as const,
+    atribuidos: (tenantId: string) =>
+      ["treinos", "atribuidos", tenantId] as const,
+    exercicios: (tenantId: string, filters?: Record<string, unknown>) =>
+      ["treinos", "exercicios", tenantId, filters] as const,
+    gruposMusculares: (tenantId: string) =>
+      ["treinos", "gruposMusculares", tenantId] as const,
+  },
+
   funcionarios: {
     all: () => ["funcionarios"] as const,
   },
