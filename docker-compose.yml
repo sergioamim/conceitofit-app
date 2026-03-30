@@ -95,6 +95,8 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
+    volumes:
+      - backend_logs:/app/logs
     environment:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/academia_db
@@ -208,6 +210,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  backend_logs:
   conceito_pg_data:
     # Volume nomeado para compartilhar entre compose files.
     # Se o backend standalone já criou dados, este compose reutiliza
