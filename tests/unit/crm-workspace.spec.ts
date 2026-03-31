@@ -4,12 +4,12 @@ import {
   getEffectiveCrmTaskStatus,
   getCrmStageName,
   isCrmTaskOverdue,
-} from "../../src/lib/crm/workspace";
+} from "../../src/lib/tenant/crm/workspace";
 import {
   buildCrmWorkspaceSnapshotRuntime,
   enrichCrmTasksRuntime,
   normalizeProspectRuntime,
-} from "../../src/lib/crm/runtime";
+} from "../../src/lib/tenant/crm/runtime";
 
 test.describe("crm workspace helpers", () => {
   test("buildDefaultCrmPipelineStages cria as etapas base em ordem", async () => {

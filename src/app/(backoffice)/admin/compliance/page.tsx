@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -42,10 +42,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  getComplianceDashboardApi,
   executarSolicitacaoExclusaoApi,
   rejeitarSolicitacaoExclusaoApi,
 } from "@/lib/api/admin-compliance";
+import { useAdminComplianceDashboard } from "@/lib/query/admin";
 import type {
   ComplianceAcademiaResumo,
   ComplianceDashboard,
@@ -53,21 +53,9 @@ import type {
   SolicitacaoExclusaoStatus,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatDate } from "@/lib/formatters";
 
 /* ── Helpers ──────────────────────────────────── */
-
-function formatDate(ts: string | undefined): string {
-  if (!ts) return "—";
-  try {
-    return new Date(ts).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return ts;
-  }
-}
 
 function formatNumber(n: number): string {
   return n.toLocaleString("pt-BR");
@@ -75,12 +63,14 @@ function formatNumber(n: number): string {
 
 const STATUS_LABELS: Record<SolicitacaoExclusaoStatus, string> = {
   PENDENTE: "Pendente",
+  EM_PROCESSAMENTO: "Em processamento",
   EXECUTADA: "Executada",
   REJEITADA: "Rejeitada",
 };
 
 const STATUS_COLORS: Record<SolicitacaoExclusaoStatus, string> = {
   PENDENTE: "bg-gym-warning/15 text-gym-warning border-gym-warning/30",
+  EM_PROCESSAMENTO: "bg-blue-500/15 text-blue-400 border-blue-500/30",
   EXECUTADA: "bg-gym-teal/15 text-gym-teal border-gym-teal/30",
   REJEITADA: "bg-gym-danger/15 text-gym-danger border-gym-danger/30",
 };
@@ -198,7 +188,7 @@ function AcademiasTable({
                   </span>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {formatDate(a.ultimaSolicitacaoExclusao)}
+                  {a.ultimaSolicitacaoExclusao ? formatDate(a.ultimaSolicitacaoExclusao) : "—"}
                 </TableCell>
               </TableRow>
             ))
@@ -427,14 +417,14 @@ function SolicitacoesExclusao({
               filtered.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">
-                    {s.solicitanteNome}
+                    {s.alunoNome}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {s.solicitanteEmail}
+                    {s.email ?? "—"}
                   </TableCell>
                   <TableCell className="text-sm">{s.academiaNome}</TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                    {formatDate(s.dataSolicitacao)}
+                    {formatDate(s.solicitadoEm ?? "")}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -458,7 +448,7 @@ function SolicitacoesExclusao({
                             setActionState({
                               type: "executar",
                               id: s.id,
-                              nome: s.solicitanteNome,
+                              nome: s.alunoNome,
                             })
                           }
                           className="text-gym-teal hover:text-gym-teal"
@@ -475,7 +465,7 @@ function SolicitacoesExclusao({
                             setActionState({
                               type: "rejeitar",
                               id: s.id,
-                              nome: s.solicitanteNome,
+                              nome: s.alunoNome,
                             });
                           }}
                           className="text-gym-danger hover:text-gym-danger"
@@ -487,7 +477,7 @@ function SolicitacoesExclusao({
                     )}
                     {s.status !== "PENDENTE" && (
                       <span className="text-xs text-muted-foreground">
-                        {s.responsavelNome ?? "—"}
+                        {s.solicitadoPor ?? "—"}
                       </span>
                     )}
                   </TableCell>
@@ -567,22 +557,10 @@ function SolicitacoesExclusao({
 /* ── Page ─────────────────────────────────────── */
 
 export default function CompliancePage() {
-  const [dashboard, setDashboard] = useState<ComplianceDashboard | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadDashboard = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    getComplianceDashboardApi()
-      .then(setDashboard)
-      .catch((err) => setError(normalizeErrorMessage(err)))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
+  const dashboardQuery = useAdminComplianceDashboard();
+  const dashboard = dashboardQuery.data ?? null;
+  const loading = dashboardQuery.isLoading;
+  const error = dashboardQuery.error ? normalizeErrorMessage(dashboardQuery.error) : null;
 
   return (
     <div className="space-y-8">
@@ -612,7 +590,7 @@ export default function CompliancePage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               title="Dados Pessoais"
-              value={formatNumber(dashboard.totalDadosPessoais)}
+              value={formatNumber(dashboard.totalDadosPessoaisArmazenados)}
               description="Total estimado de registros com dados pessoais"
               icon={Database}
             />
@@ -655,8 +633,8 @@ export default function CompliancePage() {
 
           {/* Solicitações de Exclusão */}
           <SolicitacoesExclusao
-            solicitacoes={dashboard.solicitacoes}
-            onActionCompleted={loadDashboard}
+            solicitacoes={dashboard.solicitacoesPendentes}
+            onActionCompleted={() => void dashboardQuery.refetch()}
           />
         </>
       )}

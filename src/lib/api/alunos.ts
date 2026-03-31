@@ -7,6 +7,7 @@ import type {
   ClienteOperationalContext,
   Matricula,
   Pagamento,
+  Sexo,
   StatusAluno,
   TenantOperationalEligibility,
   TenantOperationalEligibilityReason,
@@ -20,7 +21,7 @@ type CreateAlunoInput = {
   telefoneSec?: string;
   cpf: string;
   dataNascimento: string;
-  sexo: "M" | "F" | "OUTRO";
+  sexo: Sexo;
   rg?: string;
   endereco?: {
     cep?: string;
@@ -345,10 +346,7 @@ export async function updateAlunoApi(input: {
     path: `/api/v1/comercial/alunos/${input.id}`,
     method: "PUT",
     query: { tenantId: input.tenantId },
-    body: {
-      tenantId: input.tenantId,
-      ...input.data,
-    },
+    body: input.data,
   });
   return normalizeAluno(response);
 }

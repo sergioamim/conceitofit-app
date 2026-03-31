@@ -2,7 +2,7 @@
 
 import { Building2, ChevronDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DEFAULT_ACTIVE_TENANT_LABEL, DEFAULT_BASE_TENANT_LABEL } from "@/hooks/use-session-context";
+import { DEFAULT_ACTIVE_TENANT_LABEL, DEFAULT_BASE_TENANT_LABEL } from "@/lib/tenant/hooks/use-session-context";
 import type { Tenant, TenantOperationalEligibility } from "@/lib/types";
 import { cn } from "@/lib/utils";
 

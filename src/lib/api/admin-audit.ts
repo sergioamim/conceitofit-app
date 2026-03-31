@@ -188,6 +188,7 @@ function normalizeImpersonationSession(payload: RawImpersonationSessionPayload):
 /* ── Public API ───────────────────────────────── */
 
 export interface ListAuditLogsInput {
+  tenantId?: string;
   page?: number;
   size?: number;
   action?: string;
@@ -225,6 +226,7 @@ export async function listAuditLogsApi(
     page: input.page ?? 0,
     size: input.size ?? 20,
   };
+  if (input.tenantId) query.tenantId = input.tenantId;
   if (input.action) query.action = input.action;
   if (input.entityType) query.entityType = input.entityType;
   if (input.academiaId) query.academiaId = input.academiaId;

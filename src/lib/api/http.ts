@@ -8,7 +8,10 @@ import {
   getRefreshToken,
   saveAuthSession,
   setActiveTenantId,
+  getFetchCredentials,
+  shouldInjectAuthHeader,
 } from "./session";
+import { captureApiError } from "@/lib/shared/sentry";
 
 export interface ApiErrorPayload {
   timestamp?: string;
@@ -19,6 +22,7 @@ export interface ApiErrorPayload {
   fieldErrors?: Record<string, string> | null;
   responseBody?: string;
   contextId?: string;
+  requestId?: string;
 }
 
 export interface ApiResponseWithMeta<T> {
@@ -33,6 +37,7 @@ export class ApiRequestError extends Error {
   public readonly fieldErrors?: Record<string, string> | null;
   public readonly responseBody?: string;
   public readonly contextId?: string;
+  public readonly requestId?: string;
 
   constructor(payload: ApiErrorPayload & { statusCode?: number }) {
     const status = payload.status ?? payload.statusCode ?? 500;
@@ -46,6 +51,7 @@ export class ApiRequestError extends Error {
     this.fieldErrors = payload.fieldErrors;
     this.responseBody = payload.responseBody;
     this.contextId = payload.contextId;
+    this.requestId = payload.requestId;
   }
 }
 
@@ -53,7 +59,9 @@ const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 const AUTH_REFRESH_PATH = "/api/v1/auth/refresh";
 const AUTH_LOGIN_PATH = "/api/v1/auth/login";
 const TENANT_CONTEXT_SYNC_PATH = "/api/v1/context/unidade-ativa";
-const TENANT_CONTEXT_MISMATCH_MESSAGE = "tenantId diverge da unidade ativa do contexto informado";
+// Tenant context error messages are centralised in error-codes.ts.
+// Local aliases kept to avoid changing the rest of this file.
+const TENANT_CONTEXT_MISMATCH_MESSAGE = "tenantid diverge da unidade ativa do contexto informado";
 const TENANT_CONTEXT_MISSING_MESSAGE = "x-context-id sem unidade ativa";
 // Rotas operacionais usam a unidade ativa do X-Context-Id no browser.
 const CONTEXT_SCOPED_OPERATIONAL_PATTERNS = [
@@ -119,6 +127,16 @@ function getContextId(): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Gera um UUID único por request para correlação frontend↔backend. */
+function generateRequestId(): string | undefined {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch { /* fallback */ }
+  return undefined;
 }
 
 export function buildApiUrl(path: string, query?: Record<string, string | number | boolean | undefined>): string {
@@ -525,16 +543,22 @@ async function performApiRequest<T>(input: {
   if (contextId) {
     headers["X-Context-Id"] = contextId;
   }
-  const token = getAccessToken();
-  if (token) {
-    headers["Authorization"] = `${getAccessTokenType() ?? "Bearer"} ${token}`;
+  const requestId = generateRequestId();
+  if (requestId) {
+    headers["X-Request-Id"] = requestId;
   }
-
   const isAuthEndpoint = input.path.startsWith("/api/v1/auth/");
-  if (!token && !isAuthEndpoint) {
-    const loginToken = await tryAutoLogin();
-    if (loginToken) {
-      headers["Authorization"] = `${loginToken.type} ${loginToken.token}`;
+  if (shouldInjectAuthHeader()) {
+    const token = getAccessToken();
+    if (token) {
+      headers["Authorization"] = `${getAccessTokenType() ?? "Bearer"} ${token}`;
+    }
+
+    if (!token && !isAuthEndpoint) {
+      const loginToken = await tryAutoLogin();
+      if (loginToken) {
+        headers["Authorization"] = `${loginToken.type} ${loginToken.token}`;
+      }
     }
   }
 
@@ -558,6 +582,7 @@ async function performApiRequest<T>(input: {
       method,
       headers,
       body: requestBody,
+      credentials: getFetchCredentials(),
     });
 
     if (
@@ -626,8 +651,19 @@ async function performApiRequest<T>(input: {
       responseBody: rawBody ?? payload?.responseBody,
       fieldErrors: payload?.fieldErrors,
       contextId: response.headers.get("X-Context-Id") ?? headers["X-Context-Id"],
+      requestId: response.headers.get("X-Request-Id") ?? headers["X-Request-Id"],
     };
-    throw new ApiRequestError(details);
+    const apiError = new ApiRequestError(details);
+
+    if (response.status >= 500) {
+      captureApiError(apiError, {
+        httpStatus: response.status,
+        path: input.path,
+        method,
+      });
+    }
+
+    throw apiError;
   }
 
   const { parsedBody } = await readResponseBody(response);
@@ -701,12 +737,18 @@ async function tryAutoLogin(): Promise<{ token: string; type: string } | undefin
   if (autoLoginInFlight) {
     return autoLoginInFlight;
   }
+  if (process.env.NODE_ENV !== "development") {
+    return undefined;
+  }
   if (process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN === "false") {
     return undefined;
   }
+  const email = process.env.NEXT_PUBLIC_DEV_AUTH_EMAIL;
+  const password = process.env.NEXT_PUBLIC_DEV_AUTH_PASSWORD;
+  if (!email || !password) {
+    return undefined;
+  }
   autoLoginInFlight = (async () => {
-    const email = process.env.NEXT_PUBLIC_DEV_AUTH_EMAIL ?? "admin@academia.local";
-    const password = process.env.NEXT_PUBLIC_DEV_AUTH_PASSWORD ?? "12345678";
     const response = await fetch(resolveRequestUrl(AUTH_LOGIN_PATH), {
       method: "POST",
       headers: {

@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { FieldAsyncFeedbackStatus } from "@/components/shared/field-async-feedback";
+import { logger } from "@/lib/shared/logger";
 
 export type AsyncFieldValidationResult = {
   valid: boolean;
@@ -47,7 +48,8 @@ export function useAsyncFieldValidation({
             setStatus("error");
             setMessage(result.message ?? "Já cadastrado");
           }
-        } catch {
+        } catch (error) {
+          logger.warn("[useAsyncFieldValidation] Validation request failed", { error });
           if (currentRequestId !== requestIdRef.current) return;
           setStatus("error");
           setMessage("Erro ao verificar. Tente novamente.");

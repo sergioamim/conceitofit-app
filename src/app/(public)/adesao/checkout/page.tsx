@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { usePublicTenants } from "@/lib/query/use-public-tenants";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,13 +14,15 @@ import {
   buildPublicContractPreview,
   buildPublicJourneyHref,
   getPublicPlanQuote,
-  listPublicTenants,
   startPublicCheckout,
   type PublicCheckoutInput,
 } from "@/lib/public/services";
 import { publicCheckoutFormSchema } from "@/lib/forms/public-journey-schemas";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
-import type { Tenant, TipoFormaPagamento } from "@/lib/types";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { formatCurrency } from "@/lib/shared/formatters";
+import type { TipoFormaPagamento } from "@/lib/types";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 type CheckoutFormValues = {
   planId: string;
@@ -31,22 +34,16 @@ type CheckoutFormValues = {
   aceitarTermos: boolean;
 };
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
 function PublicJourneyFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-      Carregando jornada pública...
-    </div>
+    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
   );
 }
 
 function CheckoutPublicoPageContent() {
   const router = useRouter();
   const { context, loading, error, resolvedTenantRef, persistDraft, draft, planId } = usePublicJourney();
-  const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
+  const { data: tenantOptions = [] } = usePublicTenants();
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const { register, control, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<CheckoutFormValues>({
@@ -61,10 +58,6 @@ function CheckoutPublicoPageContent() {
       aceitarTermos: false,
     },
   });
-
-  useEffect(() => {
-    void listPublicTenants().then(setTenantOptions);
-  }, []);
 
   useEffect(() => {
     if (!context) return;
@@ -85,7 +78,7 @@ function CheckoutPublicoPageContent() {
   const formaPagamento = useWatch({ control, name: "formaPagamento" });
   const selectedPlan = context?.planos.find((plan) => plan.id === selectedPlanId) ?? context?.planos[0] ?? null;
   const quote = selectedPlan ? getPublicPlanQuote(selectedPlan) : null;
-  const contractPreview =
+  const contractPreviewRaw =
     context && selectedPlan && draft.signup
       ? buildPublicContractPreview({
           plano: selectedPlan,
@@ -94,12 +87,15 @@ function CheckoutPublicoPageContent() {
           academia: context.academia,
         })
       : undefined;
+  // Sanitiza HTML do contrato — template vem do backend mas valores substituídos podem conter input de usuário
+  const contractPreview = useMemo(
+    () => (contractPreviewRaw ? sanitizeHtml(contractPreviewRaw) : undefined),
+    [contractPreviewRaw],
+  );
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Carregando jornada pública...
-      </div>
+      <SuspenseFallback variant="page" message="Carregando jornada pública..." />
     );
   }
 

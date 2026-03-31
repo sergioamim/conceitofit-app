@@ -1,16 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import type { Aluno, Plano } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRightLeft, Camera, KeyRound, MoreVertical, Pencil, Trash2 } from "lucide-react";
-
-function formatDate(d: string) {
-  const [year, month, day] = d.split("-");
-  if (!year || !month || !day) return d;
-  return `${day}/${month}/${year}`;
-}
+import { formatDate } from "@/lib/formatters";
 
 export function ClienteHeader({
   aluno,
@@ -72,10 +68,9 @@ export function ClienteHeader({
     >
       <div className="flex items-start gap-4">
         <div className="relative">
-          <div className="h-16 w-16 overflow-hidden rounded-full border border-border bg-secondary shadow-inner">
+          <div className="relative h-16 w-16 overflow-hidden rounded-full border border-border bg-secondary shadow-inner">
             {aluno.foto ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={aluno.foto} alt={aluno.nome} className="h-full w-full object-cover" />
+              <Image src={aluno.foto} alt={aluno.nome} fill unoptimized className="object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-sm font-semibold uppercase text-muted-foreground">
                 Foto

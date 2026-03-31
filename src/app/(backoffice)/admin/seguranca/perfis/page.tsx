@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { buildSecurityFeatureCatalog, buildStandardizedProfiles } from "@/lib/backoffice/security-governance";
 import { listGlobalSecurityUsers } from "@/lib/backoffice/seguranca";
-import { useAuthAccess, useRbacTenant } from "@/lib/rbac/hooks";
+import { useAuthAccess, useRbacTenant } from "@/lib/tenant/rbac/hooks";
 import {
   createPerfilService,
   listAuditoriaService,
@@ -26,7 +26,7 @@ import {
   listPerfisService,
   saveGrantService,
   updatePerfilService,
-} from "@/lib/rbac/services";
+} from "@/lib/tenant/rbac/services";
 import type {
   GlobalAdminUserSummary,
   RbacAuditoriaItem,
@@ -37,6 +37,7 @@ import type {
   SecurityBusinessScope,
   SecurityProfileMatrixItem,
 } from "@/lib/types";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 type ProfileFormState = {
@@ -97,13 +98,13 @@ export default function AdminSegurancaPerfisPage() {
   const [auditoria, setAuditoria] = useState<RbacAuditoriaItem[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState("");
   const [query, setQuery] = useState("");
-  const [scopeFilter, setScopeFilter] = useState<SecurityBusinessScope | "TODOS">("TODOS");
-  const [riskFilter, setRiskFilter] = useState<"TODOS" | "BAIXO" | "MEDIO" | "ALTO" | "CRITICO">("TODOS");
-  const [statusFilter, setStatusFilter] = useState<"TODOS" | "ATIVOS" | "INATIVOS">("ATIVOS");
+  const [scopeFilter, setScopeFilter] = useState<SecurityBusinessScope | typeof FILTER_ALL>(FILTER_ALL);
+  const [riskFilter, setRiskFilter] = useState<typeof FILTER_ALL | "BAIXO" | "MEDIO" | "ALTO" | "CRITICO">(FILTER_ALL);
+  const [statusFilter, setStatusFilter] = useState<typeof FILTER_ALL | "ATIVOS" | "INATIVOS">("ATIVOS");
   const [matrixQuery, setMatrixQuery] = useState("");
-  const [matrixModuleFilter, setMatrixModuleFilter] = useState("TODOS");
-  const [matrixRiskFilter, setMatrixRiskFilter] = useState<"TODOS" | "BAIXO" | "MEDIO" | "ALTO" | "CRITICO">("TODOS");
-  const [matrixAssignedFilter, setMatrixAssignedFilter] = useState<"TODOS" | "ATRIBUIDAS" | "SEM_ATRIBUICAO">("TODOS");
+  const [matrixModuleFilter, setMatrixModuleFilter] = useState<string>(FILTER_ALL);
+  const [matrixRiskFilter, setMatrixRiskFilter] = useState<typeof FILTER_ALL | "BAIXO" | "MEDIO" | "ALTO" | "CRITICO">(FILTER_ALL);
+  const [matrixAssignedFilter, setMatrixAssignedFilter] = useState<typeof FILTER_ALL | "ATRIBUIDAS" | "SEM_ATRIBUICAO">(FILTER_ALL);
   const [form, setForm] = useState<ProfileFormState>(EMPTY_FORM);
   const [pendingGrantChange, setPendingGrantChange] = useState<PendingGrantChange | null>(null);
   const [loading, setLoading] = useState(true);
@@ -155,8 +156,8 @@ export default function AdminSegurancaPerfisPage() {
     return standardizedProfiles.filter((profile) => {
       if (statusFilter === "ATIVOS" && !profile.active) return false;
       if (statusFilter === "INATIVOS" && profile.active) return false;
-      if (scopeFilter !== "TODOS" && profile.recommendedScope !== scopeFilter) return false;
-      if (riskFilter !== "TODOS" && profile.riskLevel !== riskFilter) return false;
+      if (scopeFilter !== FILTER_ALL && profile.recommendedScope !== scopeFilter) return false;
+      if (riskFilter !== FILTER_ALL && profile.riskLevel !== riskFilter) return false;
       if (!normalizedQuery) return true;
       return [profile.displayName, profile.roleName, profile.objective]
         .join(" ")
@@ -174,8 +175,8 @@ export default function AdminSegurancaPerfisPage() {
     if (!selectedProfile) return [];
     const normalizedQuery = matrixQuery.trim().toLocaleLowerCase();
     return selectedProfile.matrix.filter((item) => {
-      if (matrixModuleFilter !== "TODOS" && item.moduleLabel !== matrixModuleFilter) return false;
-      if (matrixRiskFilter !== "TODOS" && item.riskLevel !== matrixRiskFilter) return false;
+      if (matrixModuleFilter !== FILTER_ALL && item.moduleLabel !== matrixModuleFilter) return false;
+      if (matrixRiskFilter !== FILTER_ALL && item.riskLevel !== matrixRiskFilter) return false;
       if (matrixAssignedFilter === "ATRIBUIDAS" && item.permissions.length === 0) return false;
       if (matrixAssignedFilter === "SEM_ATRIBUICAO" && item.permissions.length > 0) return false;
       if (!normalizedQuery) return true;
@@ -334,12 +335,12 @@ export default function AdminSegurancaPerfisPage() {
               </div>
               <div className="space-y-2">
                 <Label>Escopo recomendado</Label>
-                <Select value={scopeFilter} onValueChange={(value) => setScopeFilter(value as SecurityBusinessScope | "TODOS")}>
+                <Select value={scopeFilter} onValueChange={(value) => setScopeFilter(value as SecurityBusinessScope | typeof FILTER_ALL)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TODOS">Todos</SelectItem>
+                    <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                     <SelectItem value="UNIDADE">Unidade</SelectItem>
                     <SelectItem value="ACADEMIA">Academia</SelectItem>
                     <SelectItem value="REDE">Rede</SelectItem>
@@ -353,7 +354,7 @@ export default function AdminSegurancaPerfisPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TODOS">Todas</SelectItem>
+                    <SelectItem value={FILTER_ALL}>Todas</SelectItem>
                     <SelectItem value="BAIXO">Baixo</SelectItem>
                     <SelectItem value="MEDIO">Médio</SelectItem>
                     <SelectItem value="ALTO">Alto</SelectItem>
@@ -370,7 +371,7 @@ export default function AdminSegurancaPerfisPage() {
                   <SelectContent>
                     <SelectItem value="ATIVOS">Ativos</SelectItem>
                     <SelectItem value="INATIVOS">Inativos</SelectItem>
-                    <SelectItem value="TODOS">Todos</SelectItem>
+                    <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -539,7 +540,7 @@ export default function AdminSegurancaPerfisPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="TODOS">Todos</SelectItem>
+                      <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                       {modules.map((moduleLabel) => (
                         <SelectItem key={moduleLabel} value={moduleLabel}>
                           {moduleLabel}
@@ -555,7 +556,7 @@ export default function AdminSegurancaPerfisPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="TODOS">Todas</SelectItem>
+                      <SelectItem value={FILTER_ALL}>Todas</SelectItem>
                       <SelectItem value="BAIXO">Baixo</SelectItem>
                       <SelectItem value="MEDIO">Médio</SelectItem>
                       <SelectItem value="ALTO">Alto</SelectItem>
@@ -570,7 +571,7 @@ export default function AdminSegurancaPerfisPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="TODOS">Todas</SelectItem>
+                      <SelectItem value={FILTER_ALL}>Todas</SelectItem>
                       <SelectItem value="ATRIBUIDAS">Só atribuídas</SelectItem>
                       <SelectItem value="SEM_ATRIBUICAO">Só lacunas</SelectItem>
                     </SelectContent>

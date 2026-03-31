@@ -4,7 +4,7 @@ import {
   formatDateLabel,
   formatMonthLabel,
   listAvailableMonthKeys,
-} from "../../src/lib/comercial/matriculas-insights";
+} from "../../src/lib/tenant/comercial/matriculas-insights";
 import type { Matricula } from "../../src/lib/types";
 
 function makeMatricula(

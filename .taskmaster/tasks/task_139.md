@@ -1,46 +1,19 @@
 # Task ID: 139
 
-**Title:** Backend: API de audit log global (/admin/audit-log)
+**Title:** Extrair nav-items do backoffice e corrigir duplicidade
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
-**Priority:** medium
+**Priority:** low
 
-**Description:** Implementar endpoints para registro e consulta de audit log global: listagem paginada de ações administrativas com filtros e endpoints de impersonation.
+**Description:** Mover navegação do backoffice para arquivo dedicado e remover item duplicado de Compliance LGPD.
 
 **Details:**
 
-Endpoints:
-1. GET /api/v1/administrativo/audit-log?page=0&size=50&action=&entityType=&startDate=&endDate=&userId= → { items: [{ id, timestamp, userId, userName, action, entityType, entityId, entityName, academiaId, academiaNome, tenantId, tenantNome, detalhes, ip }], total, page, size, hasNext }
-2. POST /api/v1/administrativo/audit-log/usuarios/{userId}/impersonate body: { justificativa } → { token, expiresIn, impersonatedUserId }
-3. POST /api/v1/administrativo/audit-log/impersonation/end → void
-O audit log deve ser populado automaticamente por um interceptor/aspecto que registra ações de CRUD em entidades principais (academias, unidades, usuários, contratos). Impersonation gera token temporário (30min) com scope do usuário impersonado.
+Criar src/lib/backoffice/nav-items.ts com estrutura semelhante a src/lib/nav-items.ts (incluindo ícones Lucide e agrupamento por seção). Substituir array hardcoded em src/app/(backoffice)/admin/layout.tsx por import do novo arquivo. Remover duplicidade do item 'Compliance LGPD'.
 
 **Test Strategy:**
 
-Executar ação de CRUD e verificar registro no audit log. Filtrar por entityType e período. Testar impersonation com token temporário.
-
-## Subtasks
-
-### 139.1. Criar modelo AuditLog e interceptor de ações
-
-**Status:** pending  
-**Dependencies:** None  
-
-Entidade audit_log com registro automático de CRUDs via interceptor/aspecto
-
-### 139.2. Criar endpoint de listagem com filtros paginados
-
-**Status:** pending  
-**Dependencies:** 139.1  
-
-GET /audit-log com filtros por action, entityType, período, userId
-
-### 139.3. Criar endpoints de impersonation com token temporário
-
-**Status:** pending  
-**Dependencies:** 139.1  
-
-POST impersonate (gera token 30min) + POST end (invalida token)
+Abrir /admin e validar que sidebar renderiza todos os itens sem duplicações.

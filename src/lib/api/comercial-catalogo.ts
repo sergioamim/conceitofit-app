@@ -86,6 +86,17 @@ function limitString(value: string | undefined, maxLength: number): string | und
   return value.slice(0, maxLength);
 }
 
+function normalizeDiasCobranca(value: unknown, fallback?: number[]): number[] | undefined {
+  if (Array.isArray(value)) {
+    const dias = value.map(Number).filter((n) => Number.isFinite(n) && n >= 1 && n <= 28);
+    return dias.length > 0 ? dias.sort((a, b) => a - b) : undefined;
+  }
+  if (typeof value === "number" && Number.isFinite(value) && value >= 1 && value <= 28) {
+    return [value];
+  }
+  return fallback;
+}
+
 function extractPlanoItems(response: PlanoListApiResponse): PlanoApiResponse[] {
   if (Array.isArray(response)) {
     return response;
@@ -188,10 +199,7 @@ export function normalizePlanoApiResponse(input: PlanoApiResponse, fallback?: Pa
       input.permiteCobrancaRecorrente,
       fallback?.permiteCobrancaRecorrente ?? false
     ),
-    diaCobrancaPadrao:
-      input.diaCobrancaPadrao == null && fallback?.diaCobrancaPadrao == null
-        ? undefined
-        : Math.max(1, Math.floor(toNumber(input.diaCobrancaPadrao, fallback?.diaCobrancaPadrao ?? 1))),
+    diaCobrancaPadrao: normalizeDiasCobranca(input.diaCobrancaPadrao, fallback?.diaCobrancaPadrao),
     contratoTemplateHtml: cleanString(input.contratoTemplateHtml) ?? fallback?.contratoTemplateHtml,
     contratoAssinatura: input.contratoAssinatura ?? fallback?.contratoAssinatura ?? "AMBAS",
     contratoEnviarAutomaticoEmail: toBoolean(

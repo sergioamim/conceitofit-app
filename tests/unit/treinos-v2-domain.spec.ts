@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { TREINOS_V2_ENDPOINTS } from "../../src/lib/api/treinos-v2";
-import { TREINOS_V2_BACKLOG_COVERAGE } from "../../src/lib/treinos/v2-backlog";
+import { TREINOS_V2_BACKLOG_COVERAGE } from "../../src/lib/tenant/treinos/v2-backlog";
 import {
   TREINOS_V2_DECISIONS,
   createTreinoV2MetricField,
@@ -11,7 +11,7 @@ import {
   resolveTreinoV2Permissions,
   validateTreinoV2Template,
   type TreinoV2Template,
-} from "../../src/lib/treinos/v2-domain";
+} from "../../src/lib/tenant/treinos/v2-domain";
 
 function makeTemplate(overrides: Partial<TreinoV2Template> = {}): TreinoV2Template {
   return {

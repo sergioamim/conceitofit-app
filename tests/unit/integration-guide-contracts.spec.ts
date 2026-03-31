@@ -9,7 +9,7 @@ import {
   buildPlanoPayload,
   getDefaultPlanoFormValues,
   isPlanoFormValid,
-} from "../../src/lib/planos/form";
+} from "../../src/lib/tenant/planos/form";
 import { createFormaPagamentoApi } from "../../src/lib/api/formas-pagamento";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { listPlanosApi } from "@/lib/api/comercial-catalogo";
-import { novoVoucherStepSchema } from "@/lib/forms/administrativo-schemas";
+import { novoVoucherStepSchema } from "@/lib/tenant/forms/administrativo-schemas";
 import type { Plano, VoucherAplicarEm, VoucherEscopo } from "@/lib/types";
 
 const VOUCHER_TYPES = [

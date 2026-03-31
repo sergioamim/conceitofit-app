@@ -1,13 +1,26 @@
 [
   {
-    "generatedAt": "2026-03-14T21:34:54.596Z",
+    "generatedAt": "2026-03-31T17:04:43.910Z",
     "profile": "core",
     "suitesExecutadas": [
-      "unit"
+      "unit",
+      "smoke"
     ],
-    "lines": null,
-    "statements": null,
-    "functions": null,
-    "branches": null
+    "lines": 49.15,
+    "statements": 53.98,
+    "functions": 49.22,
+    "branches": 65.55
+  },
+  {
+    "generatedAt": "2026-03-31T17:08:18.764Z",
+    "profile": "core",
+    "suitesExecutadas": [
+      "unit",
+      "smoke"
+    ],
+    "lines": 49.15,
+    "statements": 53.98,
+    "functions": 49.22,
+    "branches": 65.55
   }
 ]

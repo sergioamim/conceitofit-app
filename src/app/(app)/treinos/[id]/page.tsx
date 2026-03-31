@@ -1,17 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
-import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
-import { listTreinoExercicios, getTreinoWorkspace } from "@/lib/treinos/workspace";
-import type { Aluno, Exercicio, Treino } from "@/lib/types";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { TreinoV2Editor } from "@/components/treinos/treino-v2-editor";
+import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { useTreinoDetail } from "@/lib/query/use-treinos";
+
+const TreinoV2Editor = dynamic(
+  () => import("@/components/treinos/treino-v2-editor").then((mod) => mod.TreinoV2Editor),
+  { ssr: false },
+);
 import { ListErrorState } from "@/components/shared/list-states";
 
 function resolveRole(access: ReturnType<typeof useAuthAccess>) {
@@ -27,52 +30,23 @@ export default function TreinoDetalhePage() {
   const treinoId = params?.id ?? "";
   const { tenantId, tenantResolved } = useTenantContext();
   const access = useAuthAccess();
-  const [treino, setTreino] = useState<Treino | null>(null);
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [exercicios, setExercicios] = useState<Exercicio[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
 
-  const loadData = useCallback(async () => {
-    if (!tenantId) return;
-    if (!treinoId.trim()) {
-      setNotFound(true);
-      setLoading(false);
-      return;
-    }
+  const { data: detailData, isLoading: loading, isError, error: queryError } = useTreinoDetail({
+    tenantId,
+    tenantResolved,
+    treinoId,
+  });
 
-    setLoading(true);
-    setError(null);
+  const treino = detailData?.treino ?? null;
+  const exercicios = detailData?.exercicios ?? [];
+  const alunos = detailData?.alunos ?? [];
+  const queryClient = useQueryClient();
+  const notFound = !loading && !treino && !isError;
+  const error = isError ? (queryError instanceof Error ? queryError.message : "Falha ao carregar treino.") : null;
 
-    try {
-      const [treinoData, exerciciosData, alunosResponse] = await Promise.all([
-        getTreinoWorkspace({ tenantId, id: treinoId }),
-        listTreinoExercicios({ tenantId, ativo: true }),
-        listAlunosApi({ tenantId, status: "ATIVO", page: 0, size: 200 }),
-      ]);
-
-      if (!treinoData) {
-        setNotFound(true);
-        setTreino(null);
-        return;
-      }
-
-      setNotFound(false);
-      setTreino(treinoData);
-      setExercicios(exerciciosData);
-      setAlunos(extractAlunosFromListResponse(alunosResponse));
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId, treinoId]);
-
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void loadData();
-  }, [loadData, tenantId, tenantResolved]);
+  const handleInvalidate = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["treinos"] });
+  }, [queryClient]);
 
   const role = useMemo(() => resolveRole(access), [access]);
   const autoOpenAssignment = searchParams?.get("assign") === "1";
@@ -113,7 +87,7 @@ export default function TreinoDetalhePage() {
       />
 
       {error ? (
-        <ListErrorState error={error} onRetry={() => void loadData()} />
+        <ListErrorState error={error} onRetry={handleInvalidate} />
       ) : null}
 
       <TreinoV2Editor
@@ -123,8 +97,8 @@ export default function TreinoDetalhePage() {
         exercicios={exercicios}
         role={role}
         autoOpenAssignment={autoOpenAssignment}
-        onTreinoChange={setTreino}
-        onCatalogChange={setExercicios}
+        onTreinoChange={() => handleInvalidate()}
+        onCatalogChange={() => handleInvalidate()}
       />
     </div>
   );

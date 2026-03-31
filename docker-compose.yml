@@ -1,0 +1,218 @@
+version: "3.8"
+
+# ============================================================================
+# Conceito Fit — Stack Completa
+# ============================================================================
+#
+# USO:
+#   docker compose up --build           → Stack completa (DB + Backend + Frontend + MinIO + Monitoring)
+#   docker compose up frontend          → Só frontend (se backend já roda fora do compose)
+#   docker compose --profile monitoring up  → Inclui Prometheus + Grafana
+#
+# Se o docker-compose do backend (academia-java) já estiver rodando com o DB
+# na porta 5432, pare-o primeiro OU use o profile "no-db":
+#   docker compose --profile no-db up --build
+#
+# Portas expostas:
+#   3000  → Frontend (Next.js)
+#   8080  → Backend (Spring Boot API)
+#   5432  → PostgreSQL
+#   9000  → MinIO API (S3-compatible)
+#   9001  → MinIO Console (conceito-admin / conceito-secret-2024)
+#   9090  → Prometheus  (profile: monitoring)
+#   3001  → Grafana     (profile: monitoring, admin/admin)
+# ============================================================================
+
+services:
+  # ── PostgreSQL ──
+  # Compartilha o mesmo volume "conceito_pg_data" que o backend standalone.
+  # Se já houver um container rodando na 5432, pare-o ou use profile no-db.
+  db:
+    image: postgres:16-alpine
+    container_name: conceito-db
+    environment:
+      POSTGRES_DB: academia_db
+      POSTGRES_USER: user_academia
+      POSTGRES_PASSWORD: password_academia
+    ports:
+      - "5432:5432"
+    volumes:
+      - conceito_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_academia -d academia_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── MinIO (Object Storage S3-compatible) ──
+  minio:
+    image: minio/minio:RELEASE.2024-06-13T22-53-53Z
+    container_name: conceito-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: conceito-admin
+      MINIO_ROOT_PASSWORD: conceito-secret-2024
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Cria buckets padrão na primeira execução
+  minio-init:
+    image: minio/mc:RELEASE.2024-06-12T14-34-03Z
+    container_name: conceito-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 conceito-admin conceito-secret-2024;
+      mc mb --ignore-existing local/academia-uploads;
+      mc mb --ignore-existing local/academia-fotos;
+      mc mb --ignore-existing local/academia-contratos;
+      mc mb --ignore-existing local/academia-backups;
+      mc anonymous set download local/academia-fotos;
+      echo 'MinIO buckets criados com sucesso';
+      "
+
+  # ── Backend Java ──
+  backend:
+    build:
+      context: ../academia-java
+      dockerfile: Dockerfile
+    container_name: conceito-backend
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/academia_db
+      SPRING_DATASOURCE_USERNAME: user_academia
+      SPRING_DATASOURCE_PASSWORD: password_academia
+      SPRING_FLYWAY_URL: jdbc:postgresql://db:5432/academia_db
+      SPRING_FLYWAY_USER: user_academia
+      SPRING_FLYWAY_PASSWORD: password_academia
+      APP_ENCRYPTION_KEY: "cTZgv19tULZQCjjq9ZtFgXpca3t1e9aG5bTa2GPOtOU="
+      JWT_SECRET: "dev-jwt-secret-key-conceito-fit-2026-min-32-chars!"
+      JWT_LEGACY_HS256_ENABLED: "true"
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+      # MinIO / S3 Storage
+      STORAGE_ENDPOINT: http://minio:9000
+      STORAGE_ACCESS_KEY: conceito-admin
+      STORAGE_SECRET_KEY: conceito-secret-2024
+      STORAGE_REGION: us-east-1
+      STORAGE_BUCKET_UPLOADS: academia-uploads
+      STORAGE_BUCKET_FOTOS: academia-fotos
+      STORAGE_BUCKET_CONTRATOS: academia-contratos
+      STORAGE_BUCKET_BACKUPS: academia-backups
+      STORAGE_PUBLIC_URL: http://localhost:9000
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/liveness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 180s
+      retries: 10
+    restart: unless-stopped
+
+  # ── Seed de desenvolvimento ──
+  # Roda DEPOIS do backend (Flyway cria as tabelas antes).
+  # Executa uma vez e sai — não fica rodando.
+  seed:
+    image: postgres:16-alpine
+    container_name: conceito-seed
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ../academia-java/infra/seed-dev.sql:/seed.sql:ro
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo "Aguardando 5s para garantir que migrations finalizaram..."
+        sleep 5
+        echo "Executando seed de desenvolvimento..."
+        PGPASSWORD=password_academia psql -h db -U user_academia -d academia_db -f /seed.sql
+        echo "Seed concluído."
+    restart: "no"
+
+  # ── Frontend Next.js ──
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: conceito-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:8080"
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      HOSTNAME: "0.0.0.0"
+      BACKEND_PROXY_TARGET: http://backend:8080
+      # Sentry (opcional — deixar vazio para desabilitar)
+      NEXT_PUBLIC_SENTRY_DSN: ""
+      SENTRY_AUTH_TOKEN: ""
+    restart: unless-stopped
+
+  # ── Prometheus (profile: monitoring) ──
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: conceito-prometheus
+    profiles: ["monitoring"]
+    depends_on:
+      - backend
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../academia-java/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    restart: unless-stopped
+
+  # ── Grafana (profile: monitoring) ──
+  grafana:
+    image: grafana/grafana:10.4.1
+    container_name: conceito-grafana
+    profiles: ["monitoring"]
+    depends_on:
+      - prometheus
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../academia-java/infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../academia-java/infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+
+volumes:
+  conceito_pg_data:
+    # Volume nomeado para compartilhar entre compose files.
+    # Se o backend standalone já criou dados, este compose reutiliza
+    # ao apontar para o mesmo volume.
+    name: conceito_pg_data
+  minio_data:
+  prometheus_data:
+  grafana_data:

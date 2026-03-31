@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { ExercicioModal, type ExercicioForm } from "@/components/shared/exercicio-modal";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
@@ -11,50 +11,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  listTreinoExercicios,
-  listTreinoGruposMusculares,
-  saveTreinoExercicio,
-  toggleTreinoExercicio,
-} from "@/lib/treinos/workspace";
-import type { Exercicio, GrupoMuscular } from "@/lib/types";
+import { useExercicios, useSaveExercicio, useToggleExercicio } from "@/lib/query/use-treinos";
+import type { Exercicio } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
 
 export default function ExerciciosPage() {
   const { tenantId, tenantResolved } = useTenantContext();
   const { toast } = useToast();
-  const [exercicios, setExercicios] = useState<Exercicio[]>([]);
-  const [gruposMusculares, setGruposMusculares] = useState<GrupoMuscular[]>([]);
   const [busca, setBusca] = useState("");
   const [apenasAtivos, setApenasAtivos] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Exercicio | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    try {
-      setError(null);
-      const [exerciciosResponse, gruposResponse] = await Promise.all([
-        listTreinoExercicios({ tenantId, ativo: apenasAtivos ? true : undefined }),
-        listTreinoGruposMusculares({ tenantId }),
-      ]);
-      setExercicios(exerciciosResponse);
-      setGruposMusculares(gruposResponse);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [apenasAtivos, tenantId]);
+  const { data, isLoading: loading, isError, error: queryError } = useExercicios({
+    tenantId,
+    tenantResolved,
+    apenasAtivos,
+  });
 
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void load();
-  }, [load, tenantId, tenantResolved]);
+  const exercicios = data?.exercicios ?? [];
+  const gruposMusculares = data?.gruposMusculares ?? [];
+  const error = isError ? normalizeErrorMessage(queryError) : null;
+
+  const saveExercicioMutation = useSaveExercicio();
+  const toggleExercicioMutation = useToggleExercicio();
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -68,7 +49,7 @@ export default function ExerciciosPage() {
 
   async function handleSaveExercicio(payload: ExercicioForm) {
     if (!tenantId) return;
-    const saved = await saveTreinoExercicio({
+    const saved = await saveExercicioMutation.mutateAsync({
       tenantId,
       id: payload.id,
       nome: payload.nome,
@@ -78,7 +59,6 @@ export default function ExerciciosPage() {
       videoUrl: payload.videoUrl,
       unidade: payload.unidade,
     });
-    setExercicios((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
     setModalOpen(false);
     setEditing(null);
     toast({
@@ -90,8 +70,7 @@ export default function ExerciciosPage() {
   async function handleToggle(item: Exercicio) {
     if (!tenantId) return;
     try {
-      const toggled = await toggleTreinoExercicio({ tenantId, id: item.id });
-      setExercicios((current) => current.map((entry) => (entry.id === toggled.id ? toggled : entry)));
+      const toggled = await toggleExercicioMutation.mutateAsync({ tenantId, id: item.id });
       toast({
         title: toggled.ativo ? "Exercício reativado" : "Exercício inativado",
         description: toggled.nome,
@@ -127,7 +106,7 @@ export default function ExerciciosPage() {
       </div>
 
       {error ? (
-        <ListErrorState error={error} onRetry={() => void load()} />
+        <ListErrorState error={error} />
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">

@@ -4,7 +4,7 @@ import {
   sortDistribuicaoAcademias,
   toggleSortState,
   type OperacionalSortState,
-} from "../../src/lib/admin-metrics";
+} from "../../src/lib/backoffice/admin-metrics";
 
 const rows = [
   {

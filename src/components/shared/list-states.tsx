@@ -60,6 +60,8 @@ export function ListErrorState({ error, onRetry, className }: ListErrorStateProp
 
   return (
     <div
+      role="alert"
+      aria-live="assertive"
       className={`flex flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center ${MOTION_CLASSNAMES.fadeInSubtle} ${className ?? ""}`}
     >
       <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive ring-1 ring-destructive/20">
@@ -93,7 +95,8 @@ export function ListLoadingSkeleton({
   className,
 }: ListLoadingSkeletonProps) {
   return (
-    <div className={`space-y-3 ${className ?? ""}`}>
+    <div role="status" aria-live="polite" className={`space-y-3 ${className ?? ""}`}>
+      <span className="sr-only">Carregando dados…</span>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
           {Array.from({ length: columns }).map((_, j) => (

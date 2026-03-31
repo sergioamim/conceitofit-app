@@ -13,7 +13,7 @@ import {
   resolveAlunoTenantService,
   resolveVendaFluxoStatusFromApi,
   updateAlunoService,
-} from "../../src/lib/comercial/runtime";
+} from "../../src/lib/tenant/comercial/runtime";
 import { mockFetchWithSequence } from "./support/test-runtime";
 
 const envSnapshot = {

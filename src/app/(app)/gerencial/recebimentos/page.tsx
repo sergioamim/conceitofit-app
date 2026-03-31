@@ -1,27 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getNfseConfiguracaoAtualApi, listAgregadorTransacoesApi } from "@/lib/api/admin-financeiro";
-import { emitirNfsePagamentoApi } from "@/lib/api/pagamentos";
-import { AGREGADOR_REPASSE_LABEL, getNfseBloqueioMensagem, summarizeRecebimentosOperacionais } from "@/lib/admin-financeiro";
+import { AGREGADOR_REPASSE_LABEL, getNfseBloqueioMensagem, summarizeRecebimentosOperacionais } from "@/lib/backoffice/admin-financeiro";
 import { getBusinessMonthRange } from "@/lib/business-date";
-import {
-  createRecebimentoAvulsoService,
-  listContasReceberOperacionais,
-  type PagamentoComAluno,
-} from "@/lib/financeiro/recebimentos";
-import { useTenantContext } from "@/hooks/use-session-context";
-import type { AgregadorTransacao, NfseConfiguracao, Pagamento, TipoFormaPagamento } from "@/lib/types";
+import type { PagamentoComAluno } from "@/lib/tenant/financeiro/recebimentos";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import type { Pagamento, TipoFormaPagamento } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
+import { formatBRL, formatDate } from "@/lib/formatters";
+import { useRecebimentos, useCreateRecebimentoAvulso, useEmitirNfse } from "@/lib/query/use-recebimentos";
 
-type StatusFiltro = "TODOS" | Pagamento["status"];
+type StatusFiltro = WithFilterAll<Pagamento["status"]>;
 
 type RecebimentoForm = {
   clienteNome: string;
@@ -43,20 +40,11 @@ const RECEBIMENTO_FORM_DEFAULT: RecebimentoForm = {
   formaPagamento: "PIX",
 };
 
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-function formatDate(value?: string) {
-  if (!value) return "-";
-  const normalized = value.includes("T") ? value.split("T")[0] : value;
-  const [year, month, day] = normalized.split("-");
-  if (!year || !month || !day) return normalized;
-  return `${day}/${month}/${year}`;
-}
+const fmtDate = (v?: string) => {
+  if (!v) return "-";
+  const normalized = v.includes("T") ? v.split("T")[0] : v;
+  return formatDate(normalized);
+};
 
 function monthRangeFromNow() {
   return getBusinessMonthRange();
@@ -65,59 +53,42 @@ function monthRangeFromNow() {
 export default function RecebimentosPage() {
   const { tenantId, tenantName, tenantResolved } = useTenantContext();
   const initialRange = monthRangeFromNow();
-  const [pagamentos, setPagamentos] = useState<PagamentoComAluno[]>([]);
-  const [transacoes, setTransacoes] = useState<AgregadorTransacao[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+
+  // UI state
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFiltro>("TODOS");
+  const [status, setStatus] = useState<StatusFiltro>(FILTER_ALL);
   const [startDate, setStartDate] = useState(initialRange.start);
   const [endDate, setEndDate] = useState(initialRange.end);
   const [modalOpen, setModalOpen] = useState(false);
-  const [nfseConfiguracao, setNfseConfiguracao] = useState<NfseConfiguracao | null>(null);
   const [form, setForm] = useState<RecebimentoForm>({
     ...RECEBIMENTO_FORM_DEFAULT,
     dataVencimento: initialRange.end,
     dataPagamento: initialRange.end,
   });
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [pagamentosResponse, transacoesResponse, nfseConfig] = await Promise.all([
-        listContasReceberOperacionais({
-          tenantId,
-          startDate,
-          endDate,
-        }),
-        listAgregadorTransacoesApi({ tenantId }),
-        getNfseConfiguracaoAtualApi({ tenantId }).catch(() => null),
-      ]);
-      setPagamentos(pagamentosResponse);
-      setTransacoes(transacoesResponse);
-      setNfseConfiguracao(nfseConfig);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [endDate, startDate, tenantId]);
+  // Server state via TanStack Query
+  const { data, isLoading: loading, error: queryError, refetch } = useRecebimentos({
+    tenantId: tenantId ?? undefined,
+    tenantResolved,
+    startDate,
+    endDate,
+  });
 
-  useEffect(() => {
-    if (tenantResolved) {
-      void load();
-    }
-  }, [load, tenantResolved]);
+  const createMutation = useCreateRecebimentoAvulso(tenantId ?? undefined);
+  const nfseMutation = useEmitirNfse(tenantId ?? undefined);
+
+  const pagamentos = data?.pagamentos ?? [];
+  const transacoes = data?.transacoes ?? [];
+  const nfseConfiguracao = data?.nfseConfiguracao ?? null;
+  const error = queryError ? normalizeErrorMessage(queryError) : createMutation.error ? normalizeErrorMessage(createMutation.error) : nfseMutation.error ? normalizeErrorMessage(nfseMutation.error) : null;
+  const saving = createMutation.isPending || nfseMutation.isPending;
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return pagamentos.filter((item) => {
       if (item.dataVencimento < startDate || item.dataVencimento > endDate) return false;
-      if (status !== "TODOS" && item.status !== status) return false;
+      if (status !== FILTER_ALL && item.status !== status) return false;
       if (!term) return true;
       return [
         item.aluno?.nome ?? "",
@@ -144,58 +115,35 @@ export default function RecebimentosPage() {
 
   async function handleCreateRecebimento() {
     if (!tenantId) return;
-    if (!form.descricao.trim() || !form.valor || !form.dataVencimento) {
-      setError("Preencha descrição, valor e vencimento.");
-      return;
-    }
+    if (!form.descricao.trim() || !form.valor || !form.dataVencimento) return;
 
-    setSaving(true);
-    setError(null);
     setSuccess(null);
     try {
-      await createRecebimentoAvulsoService({
-        tenantId,
-        data: {
-          clienteNome: form.clienteNome.trim() || undefined,
-          descricao: form.descricao.trim(),
-          valor: Number(form.valor),
-          dataVencimento: form.dataVencimento,
-          status: form.status,
-          dataPagamento: form.status === "PAGO" ? form.dataPagamento : undefined,
-          formaPagamento: form.status === "PAGO" ? form.formaPagamento : undefined,
-        },
+      await createMutation.mutateAsync({
+        clienteNome: form.clienteNome.trim() || undefined,
+        descricao: form.descricao.trim(),
+        valor: Number(form.valor),
+        dataVencimento: form.dataVencimento,
+        status: form.status,
+        dataPagamento: form.status === "PAGO" ? form.dataPagamento : undefined,
+        formaPagamento: form.status === "PAGO" ? form.formaPagamento : undefined,
       });
       setModalOpen(false);
-      setForm({
-        ...RECEBIMENTO_FORM_DEFAULT,
-        dataVencimento: endDate,
-        dataPagamento: endDate,
-      });
+      setForm({ ...RECEBIMENTO_FORM_DEFAULT, dataVencimento: endDate, dataPagamento: endDate });
       setSuccess("Recebimento avulso criado.");
-      await load();
-    } catch (createError) {
-      setError(normalizeErrorMessage(createError));
-    } finally {
-      setSaving(false);
+    } catch {
+      // error handled by mutation state
     }
   }
 
   async function handleEmitirNfse(id: string) {
     if (!tenantId) return;
-    setSaving(true);
-    setError(null);
     setSuccess(null);
     try {
-      await emitirNfsePagamentoApi({
-        tenantId,
-        id,
-      });
+      await nfseMutation.mutateAsync(id);
       setSuccess("NFSe emitida com sucesso.");
-      await load();
-    } catch (emitError) {
-      setError(normalizeErrorMessage(emitError));
-    } finally {
-      setSaving(false);
+    } catch {
+      // error handled by mutation state
     }
   }
 
@@ -216,7 +164,7 @@ export default function RecebimentosPage() {
             columns={[
               { label: "Cliente", accessor: (r) => r.aluno?.nome ?? "—" },
               { label: "Valor", accessor: (r) => formatBRL(Number(r.valor ?? 0)) },
-              { label: "Vencimento", accessor: (r) => formatDate(r.dataVencimento) },
+              { label: "Vencimento", accessor: (r) => fmtDate(r.dataVencimento) },
               { label: "Status", accessor: "status" },
             ] satisfies ExportColumn<(typeof filtered)[number]>[]}
             filename="recebimentos"
@@ -289,7 +237,7 @@ export default function RecebimentosPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="border-border bg-card">
-              <SelectItem value="TODOS">Todos</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos</SelectItem>
               <SelectItem value="PENDENTE">Pendente</SelectItem>
               <SelectItem value="VENCIDO">Vencido</SelectItem>
               <SelectItem value="PAGO">Pago</SelectItem>
@@ -303,13 +251,13 @@ export default function RecebimentosPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
-              <th className="px-4 py-3 text-left font-semibold">Cliente</th>
-              <th className="px-4 py-3 text-left font-semibold">Recebimento</th>
-              <th className="px-4 py-3 text-left font-semibold">Vencimento</th>
-              <th className="px-4 py-3 text-left font-semibold">Status</th>
-              <th className="px-4 py-3 text-left font-semibold">NFSe</th>
-              <th className="px-4 py-3 text-left font-semibold">Adquirente</th>
-              <th className="px-4 py-3 text-right font-semibold">Ações</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Cliente</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Recebimento</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Vencimento</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">NFSe</th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold">Adquirente</th>
+              <th scope="col" className="px-4 py-3 text-right font-semibold">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -341,8 +289,8 @@ export default function RecebimentosPage() {
                       </p>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      <p>{formatDate(item.dataVencimento)}</p>
-                      <p className="text-xs">{formatDate(item.dataPagamento)}</p>
+                      <p>{fmtDate(item.dataVencimento)}</p>
+                      <p className="text-xs">{fmtDate(item.dataPagamento)}</p>
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={item.status} />

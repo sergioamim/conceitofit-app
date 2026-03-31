@@ -1,3 +1,6 @@
+import { formatDateTime } from "@/lib/formatters";
+
+export { formatDateTime };
 import type { Dispatch, SetStateAction } from "react";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
 import type {
@@ -5,8 +8,8 @@ import type {
   TreinoV2DefaultObjective,
   TreinoV2ExerciseType,
   TreinoV2TechniqueType,
-} from "@/lib/treinos/v2-domain";
-import type { TreinoV2EditorSeed } from "@/lib/treinos/v2-runtime";
+} from "@/lib/tenant/treinos/v2-domain";
+import type { TreinoV2EditorSeed } from "@/lib/tenant/treinos/v2-runtime";
 import type { Aluno, Exercicio, Treino } from "@/lib/types";
 
 export const OBJECTIVE_OPTIONS: TreinoV2DefaultObjective[] = [
@@ -109,17 +112,10 @@ export function addDays(base: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function formatDateTime(value?: string): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("pt-BR");
-}
-
 export function formatDateRange(start?: string, end?: string): string {
   if (!start && !end) return "-";
-  if (!end) return formatDateTime(start);
-  return `${formatDateTime(start)} até ${formatDateTime(end)}`;
+  if (!end) return start ? formatDateTime(start) : "-";
+  return `${start ? formatDateTime(start) : "-"} até ${formatDateTime(end)}`;
 }
 
 export function buildExerciseDrawerState(exercicio?: TreinoV2CatalogExercise): ExerciseDrawerState {

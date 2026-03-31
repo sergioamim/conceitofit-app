@@ -6,8 +6,8 @@ import { Download, FileChartColumnIncreasing, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
-import { BI_KPI_CATALOG, buildBiExportCsv, resolveBiScopeAccess } from "@/lib/bi/analytics";
+import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { BI_KPI_CATALOG, buildBiExportCsv, resolveBiScopeAccess } from "@/lib/tenant/bi/analytics";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import { getBiOperacionalSnapshotApi } from "@/lib/api/bi";
 import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
@@ -16,9 +16,11 @@ import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
+import { formatBRL, formatPercent } from "@/lib/formatters";
 
 const SEGMENTO_OPTIONS: Array<{ value: BiSegmento; label: string }> = [
-  { value: "TODOS", label: "Todos os segmentos" },
+  { value: FILTER_ALL, label: "Todos os segmentos" },
   { value: "VISITA_PRESENCIAL", label: "Visita presencial" },
   { value: "WHATSAPP", label: "WhatsApp" },
   { value: "INSTAGRAM", label: "Instagram" },
@@ -30,17 +32,6 @@ const SEGMENTO_OPTIONS: Array<{ value: BiSegmento; label: string }> = [
 
 function monthRangeFromNow() {
   return getBusinessMonthRange();
-}
-
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatPercent(value: number) {
-  return `${value.toLocaleString("pt-BR", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  })}%`;
 }
 
 function formatDelta(value: number, mode: "percent" | "currency" | "count") {
@@ -94,7 +85,7 @@ export default function BiOperacionalPage() {
   const [scope, setScope] = useState<BiEscopo>(scopeAccess.defaultScope);
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
-  const [segmento, setSegmento] = useState<BiSegmento>("TODOS");
+  const [segmento, setSegmento] = useState<BiSegmento>(FILTER_ALL);
   const [startDate, setStartDate] = useState(start);
   const [endDate, setEndDate] = useState(end);
   const [snapshot, setSnapshot] = useState<BiOperationalSnapshot | null>(null);
@@ -417,13 +408,13 @@ export default function BiOperacionalPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-secondary text-[11px] uppercase tracking-wider text-muted-foreground">
-                    <th className="px-3 py-2 text-left font-semibold">Unidade</th>
-                    <th className="px-3 py-2 text-right font-semibold">Receita</th>
-                    <th className="px-3 py-2 text-right font-semibold">Ativos</th>
-                    <th className="px-3 py-2 text-right font-semibold">Conversão</th>
-                    <th className="px-3 py-2 text-right font-semibold">Ocupação</th>
-                    <th className="px-3 py-2 text-right font-semibold">Inadimplência</th>
-                    <th className="px-3 py-2 text-right font-semibold">Retenção</th>
+                    <th scope="col" className="px-3 py-2 text-left font-semibold">Unidade</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Receita</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Ativos</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Conversão</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Ocupação</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Inadimplência</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">Retenção</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">

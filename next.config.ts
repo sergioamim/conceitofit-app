@@ -7,12 +7,60 @@ const withBundleAnalyzer =
 
 const backendProxyTarget = process.env.BACKEND_PROXY_TARGET ?? "http://localhost:8080";
 const backendProxyMaxBodySize = Number.parseInt(process.env.BACKEND_PROXY_MAX_BODY_SIZE ?? "150", 10) || 150;
+const isDev = process.env.NODE_ENV === "development";
+
+const scriptSrc = isDev
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'";
+
+const securityHeaders = [
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      scriptSrc,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
+      "frame-ancestors 'none'",
+    ].join("; "),
+  },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains",
+  },
+  {
+    key: "X-Content-Type-Options",
+    value: "nosniff",
+  },
+  {
+    key: "X-Frame-Options",
+    value: "DENY",
+  },
+  {
+    key: "Referrer-Policy",
+    value: "strict-origin-when-cross-origin",
+  },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
+];
 
 const nextConfig: NextConfig = {
   output: 'standalone',
   experimental: {
     // Needed for EVO backup uploads (~70MB) forwarded through /backend rewrite.
     proxyClientMaxBodySize: backendProxyMaxBodySize * 1024 * 1024,
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: securityHeaders,
+      },
+    ];
   },
   async redirects() {
     return [
@@ -41,4 +89,31 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBundleAnalyzer(nextConfig);
+const finalConfig = withBundleAnalyzer(nextConfig);
+
+function applySentry(config: NextConfig): NextConfig {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { withSentryConfig } = require("@sentry/nextjs");
+    return withSentryConfig(config, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      silent: !process.env.CI,
+      hideSourceMaps: true,
+      disableLogger: true,
+      tunnelRoute: "/monitoring",
+      widenClientFileUpload: true,
+      sourcemaps: {
+        disable: !process.env.SENTRY_AUTH_TOKEN,
+      },
+    });
+  } catch {
+    // @sentry/nextjs não instalado — prosseguir sem Sentry
+    return config;
+  }
+}
+
+export default process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? applySentry(finalConfig)
+  : finalConfig;

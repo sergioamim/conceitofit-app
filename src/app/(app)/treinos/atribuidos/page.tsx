@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Copy, Loader2, Search, SquareArrowOutUpRight, UserPlus } from "lucide-react";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { PaginatedTable } from "@/components/shared/paginated-table";
@@ -10,31 +11,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { DEFAULT_ACTIVE_TENANT_LABEL, useTenantContext } from "@/hooks/use-session-context";
+import { DEFAULT_ACTIVE_TENANT_LABEL, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import {
   buildTreinoV2EditorSeed,
   buildTreinoV2SaveInput,
   summarizeTreinoV2AssignedGovernance,
-} from "@/lib/treinos/v2-runtime";
-import {
-  encerrarTreinoWorkspace,
-  listTreinosWorkspace,
-  saveTreinoWorkspace,
-} from "@/lib/treinos/workspace";
+} from "@/lib/tenant/treinos/v2-runtime";
+import { saveTreinoWorkspace } from "@/lib/tenant/treinos/workspace";
+import { useTreinosAtribuidos, useEncerrarTreino } from "@/lib/query/use-treinos";
 import type { Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
+import { formatDate } from "@/lib/formatters";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 const PAGE_SIZE = 12;
 
-type VigenciaFilter = "TODOS" | "VIGENTE" | "VENCENDO" | "VENCIDO";
-
-function formatDate(value?: string): string {
-  if (!value) return "-";
-  const [year, month, day] = value.slice(0, 10).split("-");
-  if (!year || !month || !day) return value;
-  return `${day}/${month}/${year}`;
-}
+type VigenciaFilter = WithFilterAll<"VIGENTE" | "VENCENDO" | "VENCIDO">;
 
 function resolveAssignedStatusBadgeVariant(status: string) {
   if (status === "ENCERRADO" || status === "SUBSTITUIDO") return "destructive" as const;
@@ -46,47 +39,28 @@ function resolveVigenciaLabel(treino: Treino): VigenciaFilter {
   if (treino.statusValidade === "VENCIDO") return "VENCIDO";
   if (treino.statusValidade === "VENCENDO") return "VENCENDO";
   if (treino.statusValidade === "ATIVO") return "VIGENTE";
-  return "TODOS";
+  return FILTER_ALL;
 }
 
 export default function TreinosAtribuidosPage() {
   const { tenantId, tenantName, tenantResolved } = useTenantContext();
   const { toast } = useToast();
-  const [workouts, setWorkouts] = useState<Treino[]>([]);
-  const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("TODOS");
-  const [origemFilter, setOrigemFilter] = useState<string>("TODOS");
-  const [professorFilter, setProfessorFilter] = useState<string>("TODOS");
-  const [vigenciaFilter, setVigenciaFilter] = useState<VigenciaFilter>("TODOS");
+  const [statusFilter, setStatusFilter] = useState<string>(FILTER_ALL);
+  const [origemFilter, setOrigemFilter] = useState<string>(FILTER_ALL);
+  const [professorFilter, setProfessorFilter] = useState<string>(FILTER_ALL);
+  const [vigenciaFilter, setVigenciaFilter] = useState<VigenciaFilter>(FILTER_ALL);
   const [page, setPage] = useState(0);
 
-  const loadData = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await listTreinosWorkspace({
-        tenantId,
-        tipoTreino: "CUSTOMIZADO",
-        page: 0,
-        size: 200,
-      });
-      setWorkouts(response.items);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-      setWorkouts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
+  const { data: workouts = [], isLoading: loading, isError, error: queryError } = useTreinosAtribuidos({
+    tenantId,
+    tenantResolved,
+  });
 
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void loadData();
-  }, [loadData, tenantId, tenantResolved]);
+  const error = isError ? normalizeErrorMessage(queryError) : null;
+  const encerrarMutation = useEncerrarTreino();
+  const queryClient = useQueryClient();
 
   const professorOptions = useMemo(
     () =>
@@ -125,10 +99,10 @@ export default function TreinosAtribuidosPage() {
           .join(" ")
           .toLowerCase()
           .includes(query);
-      const matchesStatus = statusFilter === "TODOS" || governance.status === statusFilter;
-      const matchesOrigem = origemFilter === "TODOS" || governance.origem === origemFilter;
-      const matchesProfessor = professorFilter === "TODOS" || workout.funcionarioNome === professorFilter;
-      const matchesVigencia = vigenciaFilter === "TODOS" || resolveVigenciaLabel(workout) === vigenciaFilter;
+      const matchesStatus = statusFilter === FILTER_ALL || governance.status === statusFilter;
+      const matchesOrigem = origemFilter === FILTER_ALL || governance.origem === origemFilter;
+      const matchesProfessor = professorFilter === FILTER_ALL || workout.funcionarioNome === professorFilter;
+      const matchesVigencia = vigenciaFilter === FILTER_ALL || resolveVigenciaLabel(workout) === vigenciaFilter;
       return matchesSearch && matchesStatus && matchesOrigem && matchesProfessor && matchesVigencia;
     });
   }, [governanceItems, origemFilter, professorFilter, search, statusFilter, vigenciaFilter]);
@@ -164,12 +138,11 @@ export default function TreinosAtribuidosPage() {
     if (!tenantId || actingId) return;
     setActingId(workout.id);
     try {
-      await encerrarTreinoWorkspace({
+      await encerrarMutation.mutateAsync({
         tenantId,
         id: workout.id,
         observacao: "Encerrado pela listagem operacional de treinos atribuídos.",
       });
-      await loadData();
       toast({
         title: "Treino encerrado",
         description: workout.nome ?? workout.templateNome ?? workout.id,
@@ -228,7 +201,7 @@ export default function TreinosAtribuidosPage() {
           observacao: item.observacao,
         })),
       });
-      await loadData();
+      await queryClient.invalidateQueries({ queryKey: ["treinos"] });
       toast({
         title: "Treino duplicado",
         description: duplicated.nome ?? duplicated.id,
@@ -266,7 +239,7 @@ export default function TreinosAtribuidosPage() {
       </div>
 
       {error ? (
-        <ListErrorState error={error} onRetry={() => void loadData()} />
+        <ListErrorState error={error} />
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-4 xl:grid-cols-5">
@@ -298,7 +271,7 @@ export default function TreinosAtribuidosPage() {
             value={statusFilter}
             onChange={setStatusFilter}
             options={[
-              { value: "TODOS", label: "Todos" },
+              { value: FILTER_ALL, label: "Todos" },
               { value: "RASCUNHO", label: "Rascunho" },
               { value: "AGENDADO", label: "Agendado" },
               { value: "ATIVO", label: "Ativo" },
@@ -312,7 +285,7 @@ export default function TreinosAtribuidosPage() {
             value={origemFilter}
             onChange={setOrigemFilter}
             options={[
-              { value: "TODOS", label: "Todas" },
+              { value: FILTER_ALL, label: "Todas" },
               { value: "TEMPLATE", label: "Template" },
               { value: "MASSA", label: "Lote" },
               { value: "MANUAL", label: "Manual" },
@@ -324,7 +297,7 @@ export default function TreinosAtribuidosPage() {
             label="Professor"
             value={professorFilter}
             onChange={setProfessorFilter}
-            options={[{ value: "TODOS", label: "Todos" }, ...professorOptions.map((item) => ({ value: item, label: item }))]}
+            options={[{ value: FILTER_ALL, label: "Todos" }, ...professorOptions.map((item) => ({ value: item, label: item }))]}
           />
 
           <FilterSelect
@@ -332,7 +305,7 @@ export default function TreinosAtribuidosPage() {
             value={vigenciaFilter}
             onChange={(value) => setVigenciaFilter(value as VigenciaFilter)}
             options={[
-              { value: "TODOS", label: "Todas" },
+              { value: FILTER_ALL, label: "Todas" },
               { value: "VIGENTE", label: "Vigente" },
               { value: "VENCENDO", label: "Vencendo" },
               { value: "VENCIDO", label: "Vencido" },
@@ -396,7 +369,7 @@ export default function TreinosAtribuidosPage() {
                         {governance.customizadoLocalmente ? <Badge variant="outline">Customizado</Badge> : null}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {formatDate(workout.dataInicio)} até {formatDate(workout.dataFim)}
+                        {workout.dataInicio ? formatDate(workout.dataInicio) : "-"} até {workout.dataFim ? formatDate(workout.dataFim) : "-"}
                       </p>
                     </div>
                   </td>

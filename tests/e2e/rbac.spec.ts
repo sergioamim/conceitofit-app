@@ -523,7 +523,7 @@ test.describe("RBAC", () => {
     await page.getByRole("button", { name: "Criar usuário" }).click();
 
     await expect(page.getByText("Usuário criado na rede atual.")).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Buscar por nome ou e-mail" })).toHaveValue("Carla Operações");
+    await expect(page.getByRole("combobox", { name: "Buscar por nome ou e-mail" })).toHaveValue("Carla Operações");
     await expect(page.getByRole("cell", { name: "ADMIN", exact: true })).toBeVisible();
   });
 });

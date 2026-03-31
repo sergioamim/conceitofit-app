@@ -1,18 +1,11 @@
 "use client";
 
 import type { BiSeriePonto } from "@/lib/types";
+import { formatBRL } from "@/lib/formatters";
 
 type BiTrendBarsProps = {
   points: BiSeriePonto[];
 };
-
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  });
-}
 
 export function BiTrendBars({ points }: BiTrendBarsProps) {
   const maxReceita = Math.max(1, ...points.map((item) => item.receita));

@@ -25,8 +25,8 @@ import type {
   Matricula,
   ReservaAula,
 } from "@/lib/types";
-import { RESERVA_AULA_STATUS_LABEL } from "@/lib/aulas/reservas";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { RESERVA_AULA_STATUS_LABEL } from "@/lib/tenant/aulas/reservas";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,14 +38,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const RESERVAS_DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
-  timeZone: "America/Sao_Paulo",
-});
-
-function formatDate(value: string): string {
-  return RESERVAS_DATE_FORMATTER.format(new Date(`${value}T12:00:00`));
-}
+import { formatDate } from "@/lib/formatters";
 
 function sessionLabel(session: AulaSessao): string {
   const occurrenceLabel = session.origemTipo === "OCORRENCIA_AVULSA" ? " · Ocorrência" : "";

@@ -26,6 +26,7 @@ export function FieldAsyncFeedback({ status, message, className }: FieldAsyncFee
         className
       )}
       role="status"
+      aria-live="polite"
     >
       {status === "loading" && <Loader2 className="size-3.5 motion-safe:animate-spin" />}
       {status === "success" && <CheckCircle2 className="size-3.5" />}

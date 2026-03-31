@@ -1,0 +1,165 @@
+# CD – Deploy automático em Cloud Run após merge na main
+# Trigger: push na branch main (após merge de PR)
+# Flow: checkout → auth GCP → build Docker → push Artifact Registry → deploy Cloud Run → health check
+#
+# Pré-requisitos no repositório (Settings → Secrets and variables → Actions):
+#   Secrets:
+#     - GCP_PROJECT_ID            → ID do projeto GCP (ex: academia-app-prod)
+#     - GCP_REGION                → Região do Cloud Run (ex: southamerica-east1)
+#     - GCP_SERVICE_NAME          → Nome do serviço Cloud Run (ex: academia-frontend)
+#     - GCP_WORKLOAD_IDENTITY_PROVIDER → Provider de Workload Identity Federation
+#     - GCP_SERVICE_ACCOUNT_EMAIL → Email da SA usada pelo WIF
+#     - GCP_ARTIFACT_REGISTRY     → Registry path (ex: southamerica-east1-docker.pkg.dev/academia-app-prod/frontend)
+#
+#   Variáveis de ambiente do Cloud Run são configuradas via --set-env-vars ou --set-secrets no deploy.
+#   Defina-as no console do Cloud Run ou adicione ao step de deploy conforme necessário.
+
+name: "CD – Deploy Cloud Run"
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".taskmaster/**"
+      - "docs/**"
+
+concurrency:
+  group: deploy-cloud-run
+  cancel-in-progress: false # nunca cancelar deploy em andamento
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # necessário para Workload Identity Federation
+
+    steps:
+      # ---------------------------------------------------------------
+      # 1. Checkout
+      # ---------------------------------------------------------------
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      # ---------------------------------------------------------------
+      # 2. Autenticação GCP via Workload Identity Federation (sem keys)
+      # ---------------------------------------------------------------
+      - name: Autenticar no Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          token_format: access_token
+
+      # ---------------------------------------------------------------
+      # 3. Configurar Docker para Artifact Registry
+      # ---------------------------------------------------------------
+      - name: Configurar Docker para Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.GCP_REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      # ---------------------------------------------------------------
+      # 4. Build e push da imagem Docker
+      # ---------------------------------------------------------------
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.GCP_ARTIFACT_REGISTRY }}:${{ env.IMAGE_TAG }}
+            ${{ secrets.GCP_ARTIFACT_REGISTRY }}:latest
+          cache-from: type=registry,ref=${{ secrets.GCP_ARTIFACT_REGISTRY }}:latest
+          cache-to: type=inline
+
+      # ---------------------------------------------------------------
+      # 5. Deploy no Cloud Run
+      # ---------------------------------------------------------------
+      - name: Deploy no Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ secrets.GCP_SERVICE_NAME }}
+          region: ${{ secrets.GCP_REGION }}
+          image: ${{ secrets.GCP_ARTIFACT_REGISTRY }}:${{ env.IMAGE_TAG }}
+          flags: |
+            --port=8080
+            --cpu=1
+            --memory=512Mi
+            --min-instances=0
+            --max-instances=10
+            --concurrency=80
+            --no-traffic
+
+      # ---------------------------------------------------------------
+      # 6. Health check antes de rotear tráfego
+      # ---------------------------------------------------------------
+      - name: Health check na nova revisão
+        id: healthcheck
+        run: |
+          REVISION_URL="${{ steps.deploy.outputs.url }}"
+          echo "Verificando saúde em: $REVISION_URL"
+
+          MAX_RETRIES=10
+          RETRY_DELAY=5
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$REVISION_URL" || echo "000")
+            echo "Tentativa $i/$MAX_RETRIES: HTTP $STATUS"
+
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+              echo "Health check OK (HTTP $STATUS)"
+              echo "healthy=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            sleep $RETRY_DELAY
+          done
+
+          echo "Health check falhou após $MAX_RETRIES tentativas"
+          echo "healthy=false" >> "$GITHUB_OUTPUT"
+          exit 1
+
+      # ---------------------------------------------------------------
+      # 7. Rotear 100% do tráfego para a nova revisão
+      # ---------------------------------------------------------------
+      - name: Rotear tráfego para nova revisão
+        if: steps.healthcheck.outputs.healthy == 'true'
+        run: |
+          gcloud run services update-traffic \
+            ${{ secrets.GCP_SERVICE_NAME }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --to-latest
+
+      # ---------------------------------------------------------------
+      # 8. Rollback se health check falhar
+      # ---------------------------------------------------------------
+      - name: Rollback – remover revisão com falha
+        if: failure() && steps.deploy.outcome == 'success'
+        run: |
+          echo "⚠ Health check falhou. Mantendo revisão anterior com 100% do tráfego."
+          echo "A revisão com falha (${{ env.IMAGE_TAG }}) não recebeu tráfego (--no-traffic)."
+          echo "Nenhuma ação de rollback necessária — tráfego continua na revisão anterior."
+
+      # ---------------------------------------------------------------
+      # 9. Resumo do deploy
+      # ---------------------------------------------------------------
+      - name: Resumo
+        if: success()
+        run: |
+          echo "### ✅ Deploy realizado com sucesso" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Serviço:** ${{ secrets.GCP_SERVICE_NAME }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Região:** ${{ secrets.GCP_REGION }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Imagem:** \`${{ env.IMAGE_TAG }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **URL:** ${{ steps.deploy.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"

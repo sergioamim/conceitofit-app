@@ -13,18 +13,19 @@ import type {
   ColaboradorFlagFiltro,
   ColaboradorListFilters,
   ColaboradorQuickCreateDraft,
-} from "@/lib/administrativo-colaboradores";
+} from "@/lib/tenant/administrativo-colaboradores";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
-export const STATUS_OPERACIONAL_OPTIONS: Array<{ value: FuncionarioStatusOperacional | "TODOS"; label: string }> = [
-  { value: "TODOS", label: "Todos os status" },
+export const STATUS_OPERACIONAL_OPTIONS: Array<{ value: WithFilterAll<FuncionarioStatusOperacional>; label: string }> = [
+  { value: FILTER_ALL, label: "Todos os status" },
   { value: "ATIVO", label: "Ativo" },
   { value: "BLOQUEADO", label: "Bloqueado" },
   { value: "INATIVO", label: "Inativo" },
   { value: "DESLIGADO", label: "Desligado" },
 ];
 
-export const STATUS_ACESSO_OPTIONS: Array<{ value: FuncionarioStatusAcesso | "TODOS"; label: string }> = [
-  { value: "TODOS", label: "Qualquer acesso" },
+export const STATUS_ACESSO_OPTIONS: Array<{ value: WithFilterAll<FuncionarioStatusAcesso>; label: string }> = [
+  { value: FILTER_ALL, label: "Qualquer acesso" },
   { value: "SEM_ACESSO", label: "Sem acesso" },
   { value: "ATIVO", label: "Acesso ativo" },
   { value: "CONVITE_PENDENTE", label: "Convite pendente" },
@@ -33,7 +34,7 @@ export const STATUS_ACESSO_OPTIONS: Array<{ value: FuncionarioStatusAcesso | "TO
 ];
 
 export const FLAG_OPTIONS: Array<{ value: ColaboradorFlagFiltro; label: string }> = [
-  { value: "TODOS", label: "Todas as flags" },
+  { value: FILTER_ALL, label: "Todas as flags" },
   { value: "AULAS", label: "Ministra aulas" },
   { value: "CATRACA", label: "Opera catraca" },
   { value: "FORA_HORARIO", label: "Fora do horário" },
@@ -54,14 +55,14 @@ export const TIPO_CONTRATACAO_OPTIONS: FuncionarioTipoContratacao[] = ["CLT", "P
 
 export const DEFAULT_FILTERS: ColaboradorListFilters = {
   query: "",
-  statusOperacional: "TODOS",
-  statusAcesso: "TODOS",
+  statusOperacional: FILTER_ALL,
+  statusAcesso: FILTER_ALL,
   cargoId: "",
   unidadeId: "",
-  flag: "TODOS",
+  flag: FILTER_ALL,
 };
 
-export const DEFAULT_QUICK_CREATE: ColaboradorQuickCreateDraft = {
+const DEFAULT_QUICK_CREATE: ColaboradorQuickCreateDraft = {
   nome: "",
   emailProfissional: "",
   celular: "",
@@ -86,7 +87,7 @@ export const FALLBACK_PERFIS: RbacPerfil[] = [
   { id: "perfil-atendente-fallback", tenantId: "fallback", roleName: "ATENDENTE", displayName: "Atendente", active: true },
 ];
 
-export const DIAS_SEMANA: Array<FuncionarioHorario["diaSemana"]> = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
+const DIAS_SEMANA: Array<FuncionarioHorario["diaSemana"]> = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
 
 export type FuncionarioFormValues = {
   nome: string;
@@ -166,7 +167,7 @@ export type FuncionarioFormValues = {
   };
 };
 
-export function buildDefaultHorarios() {
+function buildDefaultHorarios() {
   return DIAS_SEMANA.map((dia) => ({
     diaSemana: dia,
     horaInicio: "09:00",

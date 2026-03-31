@@ -21,11 +21,11 @@ import {
   listUsersApi,
   unlinkUserPerfilApi,
 } from "@/lib/api/rbac";
-import { validateAcademiaUserCreateDraft } from "@/lib/security-user-create";
-import { academiaUserCreateBaseFormSchema } from "@/lib/forms/security-user-create-schemas";
+import { validateAcademiaUserCreateDraft } from "@/lib/tenant/security-user-create";
+import { academiaUserCreateBaseFormSchema } from "@/lib/tenant/forms/security-user-create-schemas";
 import type { RbacPerfil, RbacUser, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { useAuthAccess, useTenantContext } from "@/hooks/use-session-context";
+import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { ListErrorState } from "@/components/shared/list-states";
 
 function isCustomerRole(roleName: string | undefined): boolean {

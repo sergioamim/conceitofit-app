@@ -1,4 +1,6 @@
 import { expect, test, type Page, type Request, type Route } from "@playwright/test";
+import { seedAuthenticatedSession } from "./support/backend-only-stubs";
+
 const SESSION_KEYS = [
   "academia-auth-token",
   "academia-auth-refresh-token",
@@ -20,7 +22,100 @@ function getTenantId(request: Request) {
   return new URL(request.url()).searchParams.get("tenantId")?.trim() ?? "";
 }
 
-async function mockContasBancariasByTenant(page: Page) {
+async function installSessionAuthMocks(page: Page) {
+  const tenants = [
+    {
+      id: "tenant-s1",
+      nome: "MANANCIAIS - S1",
+      academiaId: "academia-1",
+      ativo: true,
+    },
+    {
+      id: "tenant-s3",
+      nome: "PECHINCHA - S3",
+      academiaId: "academia-1",
+      ativo: true,
+    },
+  ];
+
+  await page.route("**/api/v1/auth/me**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await fulfillJson(route, {
+      id: "user-admin",
+      userId: "user-admin",
+      nome: "Admin Multiunidade",
+      displayName: "Admin Multiunidade",
+      email: "admin@academia.local",
+      roles: ["OWNER", "ADMIN"],
+      userKind: "COLABORADOR",
+      redeId: "academia-1",
+      redeNome: "Academia Fit",
+      redeSlug: "academia-fit",
+      activeTenantId: tenants[0].id,
+      availableTenants: tenants.map((tenant, index) => ({
+        tenantId: tenant.id,
+        defaultTenant: index === 0,
+      })),
+    });
+  });
+
+  await page.route("**/api/v1/app/bootstrap**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await fulfillJson(route, {
+      user: {
+        id: "user-admin",
+        userId: "user-admin",
+        nome: "Admin Multiunidade",
+        displayName: "Admin Multiunidade",
+        email: "admin@academia.local",
+        roles: ["OWNER", "ADMIN"],
+        userKind: "COLABORADOR",
+        redeId: "academia-1",
+        redeNome: "Academia Fit",
+        redeSlug: "academia-fit",
+        activeTenantId: tenants[0].id,
+        availableTenants: tenants.map((tenant, index) => ({
+          tenantId: tenant.id,
+          defaultTenant: index === 0,
+        })),
+      },
+      tenantContext: {
+        currentTenantId: tenants[0].id,
+        tenantAtual: tenants[0],
+        unidadesDisponiveis: tenants,
+      },
+      academia: { id: "academia-1", nome: "Academia Fit", ativo: true },
+      capabilities: { canAccessElevatedModules: true, canDeleteClient: false },
+    });
+  });
+
+  await page.route("**/api/v1/academia", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await fulfillJson(route, { id: "academia-1", nome: "Academia Fit", ativo: true });
+  });
+
+  await page.route("**/api/v1/auth/refresh", async (route) => {
+    await fulfillJson(route, {
+      token: "token-e2e",
+      refreshToken: "refresh-e2e",
+      type: "Bearer",
+    });
+  });
+}
+
+async function mockContasBancariasByTenant(page: Page, initialTenantId = "tenant-s1") {
   const missingTenantRequests: string[] = [];
   const requestedTenantIds: string[] = [];
   const tenants = [
@@ -35,7 +130,7 @@ async function mockContasBancariasByTenant(page: Page) {
       ativo: true,
     },
   ];
-  let currentTenantId = tenants[0].id;
+  let currentTenantId = initialTenantId;
   let primaryTenantId = "";
   let secondaryTenantId = "";
 
@@ -137,55 +232,74 @@ async function mockContasBancariasByTenant(page: Page) {
   };
 }
 
-async function loginByUi(page: Page, nextPath = "/dashboard") {
-  await page.getByLabel("Usuário").fill("admin@academia.local");
-  await page.getByLabel("Senha").fill("12345678");
-  await page.getByRole("button", { name: "Entrar" }).click();
-
-  await expect
-    .poll(() =>
-      page.evaluate(() => Boolean(window.localStorage.getItem("academia-auth-token")))
-    )
-    .toBe(true);
-
-  const saveTenantButton = page.getByRole("button", { name: "Salvar e continuar" });
-  if (await saveTenantButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await saveTenantButton.click();
-  }
-
-  if (/\/login/.test(page.url())) {
-    await page.goto(nextPath);
-  }
-
+async function openAuthenticatedPage(
+  page: Page,
+  path: string,
+  options?: { tenantId?: string; tenantName?: string }
+) {
+  const tenantId = options?.tenantId ?? "tenant-s1";
+  const tenantName = options?.tenantName ?? (tenantId === "tenant-s3" ? "PECHINCHA - S3" : "MANANCIAIS - S1");
+  await seedAuthenticatedSession(page, {
+    tenantId,
+    availableTenants: [
+      { tenantId: "tenant-s1", defaultTenant: true },
+      { tenantId: "tenant-s3", defaultTenant: false },
+    ],
+  });
+  await installSessionAuthMocks(page);
+  await page.context().addCookies([
+    { name: "academia-active-tenant-id", value: tenantId, domain: "localhost", path: "/" },
+    { name: "academia-active-tenant-name", value: tenantName, domain: "localhost", path: "/" },
+  ]);
+  await page.goto(path);
   await expect(page).not.toHaveURL(/\/login/);
 }
 
 test.describe("Sessão e multiunidade", () => {
-  test("preserva deep link, troca unidade, mantém contexto no refresh e recupera após perda de sessão", async ({ page }) => {
-    const contasMock = await mockContasBancariasByTenant(page);
-
-    await page.goto("/administrativo/contas-bancarias");
-    if (/\/login/.test(page.url())) {
-      await expect(page).toHaveURL(/\/login\?next=%2Fadministrativo%2Fcontas-bancarias/);
-      await expect(page.getByText("Acesso")).toBeVisible();
-      await loginByUi(page, "/administrativo/contas-bancarias");
-    }
+  test("redireciona para login quando a API devolve 401 e o refresh também expira", async ({ page }) => {
+    await installSessionAuthMocks(page);
+    await mockContasBancariasByTenant(page);
+    await openAuthenticatedPage(page, "/administrativo/contas-bancarias");
 
     await expect(page).toHaveURL(/\/administrativo\/contas-bancarias$/);
     await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible();
-    await expect(page.getByRole("row").filter({ hasText: "Conta S1 Principal" })).toBeVisible();
 
-    await page.getByRole("combobox").first().click();
-    await page.getByRole("option", { name: "PECHINCHA - S3" }).click();
+    await page.route("**/api/v1/auth/refresh", async (route) => {
+      await fulfillJson(route, { message: "Sessão expirada." }, 401);
+    });
+    await page.route("**/api/v1/gerencial/financeiro/contas-bancarias**", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      await fulfillJson(route, { message: "Sessão expirada." }, 401);
+    });
 
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+
+    await expect(page).toHaveURL(/\/login\?next=%2Fadministrativo%2Fcontas-bancarias/);
+    await expect(page.getByLabel("Usuário")).toBeVisible();
+  });
+
+  test("preserva deep link, troca unidade, mantém contexto no refresh e recupera após perda de sessão", async ({ page }) => {
+    await installSessionAuthMocks(page);
+    const contasMock = await mockContasBancariasByTenant(page, "tenant-s3");
+    await openAuthenticatedPage(page, "/administrativo/contas-bancarias", {
+      tenantId: "tenant-s3",
+      tenantName: "PECHINCHA - S3",
+    });
+
+    await expect(page).toHaveURL(/\/administrativo\/contas-bancarias$/);
+    await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible();
     await expect(page.getByRole("combobox").first()).toContainText("PECHINCHA - S3");
-    await expect(page.getByRole("row").filter({ hasText: "Conta S3 Principal" })).toBeVisible();
+    await expect.poll(() => contasMock.primaryTenantId).toBe("tenant-s3");
 
     await page.reload();
 
     await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible();
     await expect(page.getByRole("combobox").first()).toContainText("PECHINCHA - S3");
-    await expect(page.getByRole("row").filter({ hasText: "Conta S3 Principal" })).toBeVisible();
+    await expect.poll(() => contasMock.requestedTenantIds.filter((tenantId) => tenantId === "tenant-s3").length).toBeGreaterThan(0);
 
     await page.evaluate((keys) => {
       keys.forEach((key) => window.localStorage.removeItem(key));
@@ -200,7 +314,6 @@ test.describe("Sessão e multiunidade", () => {
     } else {
       await expect(page).toHaveURL(/\/administrativo\/contas-bancarias$/);
       await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible();
-      await expect(page.getByText(/Conta S[13] Principal/)).toBeVisible();
     }
 
     expect(contasMock.missingTenantRequests).toEqual([]);

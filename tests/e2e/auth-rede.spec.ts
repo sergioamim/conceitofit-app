@@ -32,7 +32,13 @@ function buildHostBasedUrl(baseURL: string | undefined, subdomain: string, pathn
   return url.toString();
 }
 
-async function installAuthNetworkMocks(page: Page, captured: CapturedRequests) {
+async function installAuthNetworkMocks(
+  page: Page,
+  captured: CapturedRequests,
+  options?: {
+    forcePasswordChange?: boolean;
+  }
+) {
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const method = request.method();
@@ -91,6 +97,17 @@ async function installAuthNetworkMocks(page: Page, captured: CapturedRequests) {
           availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
           availableScopes: ["REDE"],
           broadAccess: false,
+          forcePasswordChange: options?.forcePasswordChange === true,
+        },
+      });
+      return;
+    }
+
+    if (path === "/api/v1/auth/change-password" && method === "POST") {
+      await route.fulfill({
+        status: 200,
+        json: {
+          message: "Senha atualizada com sucesso.",
         },
       });
       return;
@@ -362,5 +379,40 @@ test.describe("acesso por rede", () => {
         channel: "APP",
       },
     });
+  });
+
+  test("redireciona para troca obrigatória de senha quando o login exigir primeiro acesso", async ({ page }) => {
+    const captured: CapturedRequests = { contextIdentifiers: [] };
+    await installAuthNetworkMocks(page, captured, { forcePasswordChange: true });
+
+    await page.goto("/app/rede-norte/login?next=%2Fdashboard");
+    await page.getByLabel("Identificador").fill("ana@qa.local");
+    await page.getByLabel("Senha").fill("12345678");
+    await page.getByRole("button", { name: "Entrar" }).click();
+
+    await expect(page).toHaveURL(/\/primeiro-acesso\/trocar-senha(?:\?|$)/);
+    await expect(page.getByRole("heading", { name: "Defina sua nova senha" })).toBeVisible();
+
+    await page.getByLabel(/^Nova senha$/).fill("NovaSenha123");
+    await page.getByLabel(/^Confirmar nova senha$/).fill("NovaSenha123");
+    await page.getByRole("button", { name: "Salvar nova senha" }).click();
+
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.getByText("Unidade Centro").first()).toBeVisible();
+
+    const sessionSnapshot = await page.evaluate(() => ({
+      forcePasswordChangeRequired: window.localStorage.getItem("academia-auth-force-password-change-required"),
+    }));
+
+    expect(sessionSnapshot.forcePasswordChangeRequired).toBe("false");
+  });
+
+  test("bloqueia acesso direto à troca obrigatória sem contexto válido", async ({ page }) => {
+    const captured: CapturedRequests = { contextIdentifiers: [] };
+    await installAuthNetworkMocks(page, captured);
+
+    await page.goto("/primeiro-acesso/trocar-senha");
+
+    await expect(page).toHaveURL(/\/login$/);
   });
 });

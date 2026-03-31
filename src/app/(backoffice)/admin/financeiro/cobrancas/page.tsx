@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
@@ -35,16 +35,19 @@ import {
   baixarAdminCobranca,
   cancelarAdminCobranca,
   createAdminCobranca,
-  listAdminCobrancas,
-  listAdminContratos,
 } from "@/lib/api/admin-billing";
+import { useAdminCobrancas, useAdminContratos } from "@/lib/query/admin";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import type { Cobranca, CobrancaStatus, ContratoPlataforma, TipoFormaPagamento } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { isCobrancaEmAberto, isCobrancaPendente } from "@/lib/domain/status-helpers";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 type PageSize = 10 | 20 | 50;
-type StatusFilter = "TODOS" | CobrancaStatus;
+type StatusFilter = WithFilterAll<CobrancaStatus>;
 
 type CobrancaFormValues = {
   contratoId: string;
@@ -143,7 +146,7 @@ function getStatusBadgeClass(status: CobrancaStatus) {
 }
 
 function toCobrancaStatus(cobranca: Cobranca, todayDate = ""): CobrancaStatus {
-  if (cobranca.status === "PENDENTE" && todayDate && cobranca.dataVencimento < todayDate) {
+  if (isCobrancaPendente(cobranca.status) && todayDate && cobranca.dataVencimento < todayDate) {
     return "VENCIDO";
   }
   return cobranca.status;
@@ -175,14 +178,17 @@ function toFormValues(contrato: ContratoPlataforma | null): CobrancaFormValues {
 
 export default function AdminCobrancasPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const cobrancasQuery = useAdminCobrancas();
+  const contratosQuery = useAdminContratos();
+  const loading = cobrancasQuery.isLoading || contratosQuery.isLoading;
+  const error = cobrancasQuery.error?.message ?? contratosQuery.error?.message ?? null;
+  const cobrancas = cobrancasQuery.data ?? [];
+  const contratos = contratosQuery.data ?? [];
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [cobrancas, setCobrancas] = useState<Cobranca[]>([]);
-  const [contratos, setContratos] = useState<ContratoPlataforma[]>([]);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("TODOS");
-  const [academiaFilter, setAcademiaFilter] = useState("TODOS");
-  const [periodoFilter, setPeriodoFilter] = useState<"TODOS" | "VENCIDAS" | "MES_ATUAL">("TODOS");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(FILTER_ALL);
+  const [academiaFilter, setAcademiaFilter] = useState<string>(FILTER_ALL);
+  const [periodoFilter, setPeriodoFilter] = useState<typeof FILTER_ALL | "VENCIDAS" | "MES_ATUAL">(FILTER_ALL);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [todayDate, setTodayDate] = useState("");
@@ -230,32 +236,11 @@ export default function AdminCobrancasPage() {
     [contratoOptions]
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setError(null);
-      const [cobrancasResponse, contratosResponse] = await Promise.all([
-        listAdminCobrancas(),
-        listAdminContratos(),
-      ]);
-      setCobrancas(cobrancasResponse);
-      setContratos(contratosResponse);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const filteredCobrancas = useMemo(() => {
     return cobrancas.filter((cobranca) => {
       const effectiveStatus = toCobrancaStatus(cobranca, todayDate);
-      if (statusFilter !== "TODOS" && effectiveStatus !== statusFilter) return false;
-      if (academiaFilter !== "TODOS" && cobranca.academiaId !== academiaFilter) return false;
+      if (statusFilter !== FILTER_ALL && effectiveStatus !== statusFilter) return false;
+      if (academiaFilter !== FILTER_ALL && cobranca.academiaId !== academiaFilter) return false;
       if (periodoFilter === "VENCIDAS" && effectiveStatus !== "VENCIDO") return false;
       if (periodoFilter === "MES_ATUAL" && !cobranca.dataVencimento.startsWith(currentMonthKey)) return false;
       return true;
@@ -276,7 +261,7 @@ export default function AdminCobrancasPage() {
 
     cobrancas.forEach((cobranca) => {
       const effectiveStatus = toCobrancaStatus(cobranca, todayDate);
-      if (effectiveStatus === "PENDENTE") pendente += cobranca.valor;
+      if (isCobrancaPendente(effectiveStatus)) pendente += cobranca.valor;
       if (effectiveStatus === "VENCIDO") vencido += cobranca.valor;
       if (effectiveStatus === "PAGO" && cobranca.dataPagamento?.startsWith(currentMonthKey)) {
         recebidoMes += cobranca.valor;
@@ -299,9 +284,9 @@ export default function AdminCobrancasPage() {
   }, [cobrancas, contratos]);
 
   function resetFilters() {
-    setStatusFilter("TODOS");
-    setAcademiaFilter("TODOS");
-    setPeriodoFilter("TODOS");
+    setStatusFilter(FILTER_ALL);
+    setAcademiaFilter(FILTER_ALL);
+    setPeriodoFilter(FILTER_ALL);
     setPage(0);
   }
 
@@ -328,13 +313,7 @@ export default function AdminCobrancasPage() {
         juros: parseNumberString(values.juros),
         observacoes: values.observacoes?.trim() || undefined,
       });
-      setCobrancas((current) => [
-        {
-          ...saved,
-          academiaNome: saved.academiaNome || contrato?.academiaNome || "",
-        },
-        ...current.filter((item) => item.id !== saved.id),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.cobrancas() });
       setPage(0);
       setModalOpen(false);
       toast({
@@ -356,12 +335,12 @@ export default function AdminCobrancasPage() {
     if (!cobrancaParaBaixa) return;
     setBaixando(true);
     try {
-      const baixada = await baixarAdminCobranca(cobrancaParaBaixa.id, {
+      await baixarAdminCobranca(cobrancaParaBaixa.id, {
         dataPagamento: baixaForm.dataPagamento,
         formaPagamento: baixaForm.formaPagamento,
         observacoes: baixaForm.observacoes?.trim() || undefined,
       });
-      setCobrancas((current) => current.map((item) => (item.id === baixada.id ? { ...item, ...baixada } : item)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.cobrancas() });
       setCobrancaParaBaixa(null);
       setBaixaForm({
         dataPagamento: "",
@@ -388,7 +367,7 @@ export default function AdminCobrancasPage() {
     setCancelando(true);
     try {
       const cancelada = await cancelarAdminCobranca(cobrancaParaCancelar.id);
-      setCobrancas((current) => current.map((item) => (item.id === cancelada.id ? { ...item, ...cancelada } : item)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.cobrancas() });
       setCobrancaParaCancelar(null);
       toast({
         title: "Cobrança cancelada",
@@ -415,7 +394,7 @@ export default function AdminCobrancasPage() {
         </p>
       </header>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => { cobrancasQuery.refetch(); contratosQuery.refetch(); }} /> : null}
 
       <div className="grid gap-3 md:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">
@@ -459,7 +438,7 @@ export default function AdminCobrancasPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todos os status</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos os status</SelectItem>
                 {STATUS_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -479,7 +458,7 @@ export default function AdminCobrancasPage() {
                 <SelectValue placeholder="Academia" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todas as academias</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todas as academias</SelectItem>
                 {academias.map((academia) => (
                   <SelectItem key={academia.id} value={academia.id}>
                     {academia.nome}
@@ -491,7 +470,7 @@ export default function AdminCobrancasPage() {
             <Select
               value={periodoFilter}
               onValueChange={(value) => {
-                setPeriodoFilter(value as "TODOS" | "VENCIDAS" | "MES_ATUAL");
+                setPeriodoFilter(value as typeof FILTER_ALL | "VENCIDAS" | "MES_ATUAL");
                 setPage(0);
               }}
             >
@@ -499,7 +478,7 @@ export default function AdminCobrancasPage() {
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todo o período</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todo o período</SelectItem>
                 <SelectItem value="VENCIDAS">Somente vencidas</SelectItem>
                 <SelectItem value="MES_ATUAL">Vencimento no mês atual</SelectItem>
               </SelectContent>
@@ -589,7 +568,7 @@ export default function AdminCobrancasPage() {
                     <div className="flex justify-end">
                       <DataTableRowActions
                         actions={[
-                          ...(effectiveStatus === "PENDENTE" || effectiveStatus === "VENCIDO"
+                          ...(isCobrancaEmAberto(effectiveStatus)
                             ? [
                                 {
                                   kind: "edit" as const,

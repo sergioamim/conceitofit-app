@@ -13,7 +13,10 @@ import type {
   UploadAnaliseResponse,
 } from "@/lib/api/importacao-evo";
 import type { EvoArquivoHistoricoNormalizado } from "@/lib/backoffice/importacao-evo";
-
+import type { Tenant } from "@/lib/types";
+import { formatCnpj } from "@/lib/utils/cnpj";
+import { normalizeSubdomain } from "@/lib/utils/subdomain";
+import { formatJobAliasDate } from "./date-time-format";
 
 
 export type JobHistoryMeta = {

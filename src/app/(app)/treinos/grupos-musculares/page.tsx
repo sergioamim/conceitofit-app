@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ListTree, Search } from "lucide-react";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { Badge } from "@/components/ui/badge";
@@ -12,12 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  listTreinoExercicios,
-  listTreinoGruposMusculares,
-  saveTreinoGrupoMuscular,
-  toggleTreinoGrupoMuscular,
-} from "@/lib/treinos/workspace";
+import { useGruposMusculares, useSaveGrupoMuscular, useToggleGrupoMuscular } from "@/lib/query/use-treinos";
 import type { Exercicio, GrupoMuscular } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
@@ -37,37 +32,21 @@ const EMPTY_FORM: FormState = {
 export default function GruposMuscularesPage() {
   const { tenantId, tenantResolved } = useTenantContext();
   const { toast } = useToast();
-  const [grupos, setGrupos] = useState<GrupoMuscular[]>([]);
-  const [exercicios, setExercicios] = useState<Exercicio[]>([]);
   const [busca, setBusca] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<GrupoMuscular | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    try {
-      setError(null);
-      const [gruposResponse, exerciciosResponse] = await Promise.all([
-        listTreinoGruposMusculares({ tenantId }),
-        listTreinoExercicios({ tenantId }),
-      ]);
-      setGrupos(gruposResponse);
-      setExercicios(exerciciosResponse);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
+  const { data, isLoading: loading, isError, error: queryError } = useGruposMusculares({
+    tenantId,
+    tenantResolved,
+  });
 
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void load();
-  }, [load, tenantId, tenantResolved]);
+  const grupos = data?.grupos ?? [];
+  const exercicios = data?.exercicios ?? [];
+  const error = isError ? normalizeErrorMessage(queryError) : null;
+
+  const saveGrupoMutation = useSaveGrupoMuscular();
+  const toggleGrupoMutation = useToggleGrupoMuscular();
 
   const gruposFiltrados = useMemo(() => {
     const term = busca.trim().toLowerCase();
@@ -102,22 +81,22 @@ export default function GruposMuscularesPage() {
     setForm(EMPTY_FORM);
   }
 
+  const saving = saveGrupoMutation.isPending;
+
   async function handleSave() {
     if (!tenantId) return;
     if (!form.nome.trim()) {
       toast({ title: "Informe o nome do grupo muscular", variant: "destructive" });
       return;
     }
-    setSaving(true);
     try {
-      const saved = await saveTreinoGrupoMuscular({
+      const saved = await saveGrupoMutation.mutateAsync({
         tenantId,
         id: editing?.id,
         nome: form.nome,
         descricao: form.descricao,
         categoria: form.categoria,
       });
-      setGrupos((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       toast({
         title: editing ? "Grupo muscular atualizado" : "Grupo muscular criado",
         description: saved.nome,
@@ -129,16 +108,13 @@ export default function GruposMuscularesPage() {
         description: normalizeErrorMessage(saveError),
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
     }
   }
 
   async function handleToggle(item: GrupoMuscular) {
     if (!tenantId) return;
     try {
-      const toggled = await toggleTreinoGrupoMuscular({ tenantId, id: item.id });
-      setGrupos((current) => current.map((entry) => (entry.id === toggled.id ? toggled : entry)));
+      const toggled = await toggleGrupoMutation.mutateAsync({ tenantId, id: item.id });
       toast({
         title: toggled.ativo ? "Grupo muscular reativado" : "Grupo muscular inativado",
         description: toggled.nome,
@@ -162,7 +138,7 @@ export default function GruposMuscularesPage() {
       </div>
 
       {error ? (
-        <ListErrorState error={error} onRetry={() => void load()} />
+        <ListErrorState error={error} />
       ) : null}
 
       <Card className="border-border bg-card">

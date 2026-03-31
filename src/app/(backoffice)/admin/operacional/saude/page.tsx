@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, HeartPulse, ShieldAlert, TimerReset } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,19 +11,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState, ListErrorState } from "@/components/shared/list-states";
-import { getAcademiasHealthMap } from "@/lib/api/admin-metrics";
+import { useAdminSaudeAcademias } from "@/lib/query/admin";
 import {
   filterAcademiasHealthMap,
-  formatDateTime,
   formatPercent,
   resolveContractBadgeClass,
   type HealthFilter,
-} from "@/lib/admin-health";
+} from "@/lib/backoffice/admin-health";
+import { formatDateTime } from "@/lib/formatters";
 import type { AcademiaHealthLevel, AcademiaHealthStatus } from "@/lib/types";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 const HEALTH_FILTER_OPTIONS: Array<{ value: HealthFilter; label: string }> = [
-  { value: "TODOS", label: "Todos os níveis" },
+  { value: FILTER_ALL, label: "Todos os níveis" },
   { value: "SAUDAVEL", label: "Saudável" },
   { value: "RISCO", label: "Risco" },
   { value: "CRITICO", label: "Crítico" },
@@ -95,7 +95,7 @@ function HealthAcademiaCard({ item }: { item: AcademiaHealthStatus }) {
           </div>
           <div>
             <p className="text-xs uppercase tracking-wider">Último login admin</p>
-            <p className="mt-1 text-sm font-semibold text-foreground">{formatDateTime(item.ultimoLoginAdmin)}</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{item.ultimoLoginAdmin ? formatDateTime(item.ultimoLoginAdmin) : "—"}</p>
           </div>
         </div>
         {item.alertasRisco.length > 0 ? (
@@ -114,28 +114,13 @@ function HealthAcademiaCard({ item }: { item: AcademiaHealthStatus }) {
 }
 
 export default function AdminOperationalHealthPage() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<AcademiaHealthStatus[]>([]);
-  const [healthFilter, setHealthFilter] = useState<HealthFilter>("TODOS");
+  const saudeQuery = useAdminSaudeAcademias();
+  const items = saudeQuery.data?.items ?? [];
+  const loading = saudeQuery.isLoading;
+  const error = saudeQuery.error ? saudeQuery.error.message : null;
+
+  const [healthFilter, setHealthFilter] = useState<HealthFilter>(FILTER_ALL);
   const [planoFilter, setPlanoFilter] = useState("");
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setError(null);
-      const response = await getAcademiasHealthMap();
-      setItems(response.items);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const planos = useMemo(
     () =>
@@ -215,7 +200,7 @@ export default function AdminOperationalHealthPage() {
         </div>
 
         <div className="flex gap-2">
-          <Button type="button" variant="outline" className="border-border" onClick={() => void load()}>
+          <Button type="button" variant="outline" className="border-border" onClick={() => void saudeQuery.refetch()}>
             Atualizar
           </Button>
           <Link href="/admin">
@@ -224,7 +209,7 @@ export default function AdminOperationalHealthPage() {
         </div>
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void saudeQuery.refetch()} /> : null}
 
       {loading ? (
         <div className="space-y-4">
@@ -253,7 +238,7 @@ export default function AdminOperationalHealthPage() {
               message="Nenhuma academia corresponde aos filtros aplicados."
               action={
                 <Button type="button" variant="outline" className="border-border" onClick={() => {
-                  setHealthFilter("TODOS");
+                  setHealthFilter(FILTER_ALL);
                   setPlanoFilter("");
                 }}>
                   Limpar filtros
@@ -309,7 +294,7 @@ export default function AdminOperationalHealthPage() {
                             <TableCell className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <TimerReset className="size-3.5 text-muted-foreground" />
-                                <span>{formatDateTime(item.ultimoLoginAdmin)}</span>
+                                <span>{item.ultimoLoginAdmin ? formatDateTime(item.ultimoLoginAdmin) : "—"}</span>
                               </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">

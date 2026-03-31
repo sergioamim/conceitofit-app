@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo } from "react";
 import type { Academia } from "@/lib/types";
-import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant-theme";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant/tenant-theme";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 
 function applyThemeVars(academia?: Academia) {
   const root = document.documentElement;

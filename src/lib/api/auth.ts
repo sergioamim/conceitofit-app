@@ -4,7 +4,7 @@ import {
   buildTenantAccessFromEligibility,
   normalizeOperationalAccess,
   type OperationalAccessState,
-} from "@/lib/tenant-operational-access";
+} from "@/lib/tenant/tenant-operational-access";
 import {
   getAvailableScopesFromSession,
   getAccessTokenType,
@@ -13,10 +13,12 @@ import {
   getBaseTenantIdFromSession,
   getBroadAccessFromSession,
   getDisplayNameFromSession,
+  getForcePasswordChangeRequiredFromSession,
   getNetworkIdFromSession,
-  getNetworkNameFromSession,
   getNetworkSubdomainFromSession,
+  getNetworkNameFromSession,
   getNetworkSlugFromSession,
+  getAuthSessionSnapshot,
   getUserIdFromSession,
   getUserKindFromSession,
   saveAuthSession,
@@ -63,6 +65,7 @@ interface LoginApiResponse {
   availableScopes?: string[];
   broadAccess?: boolean;
   operationalAccess?: OperationalAccessApiResponse;
+  forcePasswordChange?: boolean;
 }
 
 interface MeApiResponse {
@@ -178,6 +181,12 @@ function normalizeSession(
         : options?.preserveTenantContext
           ? getBroadAccessFromSession()
           : undefined,
+    forcePasswordChangeRequired:
+      typeof response.forcePasswordChange === "boolean"
+        ? response.forcePasswordChange
+        : options?.preserveTenantContext
+          ? getForcePasswordChangeRequiredFromSession()
+          : false,
   };
 }
 
@@ -277,6 +286,35 @@ export async function loginApi(input: {
     fallbackNetworkSlug: input.redeIdentifier?.trim() || undefined,
   });
   saveAuthSession(session);
+  void import("@/lib/shared/analytics")
+    .then(({ trackLogin }) => {
+      trackLogin(session.activeTenantId, session.userId);
+    })
+    .catch(() => undefined);
+  return session;
+}
+
+export async function adminLoginApi(input: {
+  email: string;
+  password: string;
+}): Promise<AuthSession> {
+  // Fluxo administrativo é global e não participa da resolução por rede.
+  const response = await apiRequest<LoginApiResponse>({
+    path: "/api/v1/admin/auth/login",
+    method: "POST",
+    includeContextHeader: false,
+    body: {
+      email: input.email.trim(),
+      password: input.password,
+    },
+  });
+  const session = normalizeSession(response);
+  saveAuthSession(session);
+  void import("@/lib/shared/analytics")
+    .then(({ trackLogin }) => {
+      trackLogin(session.activeTenantId, session.userId);
+    })
+    .catch(() => undefined);
   return session;
 }
 
@@ -430,5 +468,41 @@ export async function requestFirstAccessApi(input: {
 
   return {
     message: response.message?.trim() || "Se o identificador estiver apto para primeiro acesso nesta rede, enviaremos as próximas instruções.",
+  };
+}
+
+export async function changeForcedPasswordApi(input: {
+  newPassword: string;
+  confirmNewPassword: string;
+}): Promise<{ message: string }> {
+  const response = await apiRequest<Partial<LoginApiResponse> & { message?: string }>({
+    path: "/api/v1/auth/change-password",
+    method: "POST",
+    includeContextHeader: false,
+    headers: buildNetworkHeader(getNetworkSubdomainFromSession()),
+    body: {
+      newPassword: input.newPassword,
+      confirmNewPassword: input.confirmNewPassword,
+    },
+  });
+
+  if (response.token && response.refreshToken) {
+    const session = normalizeSession(response as LoginApiResponse, { preserveTenantContext: true });
+    saveAuthSession({
+      ...session,
+      forcePasswordChangeRequired: false,
+    });
+  } else {
+    const snapshot = getAuthSessionSnapshot();
+    if (snapshot) {
+      saveAuthSession({
+        ...snapshot,
+        forcePasswordChangeRequired: false,
+      });
+    }
+  }
+
+  return {
+    message: response.message?.trim() || "Senha atualizada com sucesso.",
   };
 }

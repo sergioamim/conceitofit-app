@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { buildTreinoV2Observacoes, parseTreinoV2Metadata } from "../../src/lib/treinos/v2-runtime";
+import { buildTreinoV2Observacoes, parseTreinoV2Metadata } from "../../src/lib/tenant/treinos/v2-runtime";
 
 type StubTreino = {
   id: string;

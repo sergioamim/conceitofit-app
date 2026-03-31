@@ -1,18 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  createCrmCampanhaApi,
-  dispararCrmCampanhaApi,
-  encerrarCrmCampanhaApi,
-  listCrmCampanhasApi,
-  updateCrmCampanhaApi,
-} from "@/lib/api/crm";
 import { listVouchersApi } from "@/lib/api/beneficios";
 import { normalizeCapabilityError } from "@/lib/api/backend-capability";
-import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import {
+  useCrmCampanhas,
+  useCreateCrmCampanha,
+  useUpdateCrmCampanha,
+  useDispararCrmCampanha,
+  useEncerrarCrmCampanha,
+} from "@/lib/query/use-crm-campanhas";
 import type {
   CampanhaCRM,
   CampanhaCanal,
@@ -70,59 +69,56 @@ function statusStyle(status: CampanhaStatus): string {
 
 export default function CampanhasCrmPage() {
   const tenantContext = useTenantContext();
-  const [rows, setRows] = useState<CampanhaCRM[]>([]);
+  const tenantId = tenantContext.tenantId ?? "";
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [statusFilter, setStatusFilter] = useState<"TODAS" | CampanhaStatus>("TODAS");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CampanhaCRM | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [campaignsUnavailable, setCampaignsUnavailable] = useState(false);
   const [writeUnavailable, setWriteUnavailable] = useState(false);
-  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    const [campanhasResult, vouchersResult] = await Promise.allSettled([
-      listCrmCampanhasApi({
-        tenantId,
-        status: statusFilter === "TODAS" ? undefined : statusFilter,
-      }),
-      listVouchersApi(),
-    ]);
+  const {
+    data: rows = [],
+    isLoading: loading,
+    isError: queryError,
+    error: queryErrorObj,
+  } = useCrmCampanhas({
+    tenantId: tenantId || undefined,
+    tenantResolved: Boolean(tenantId),
+    status: statusFilter === "TODAS" ? undefined : statusFilter,
+  });
 
-    if (campanhasResult.status === "fulfilled") {
-      setRows(campanhasResult.value);
-      setCampaignsUnavailable(false);
-    } else {
-      const message = normalizeCapabilityError(campanhasResult.reason, "Falha ao carregar campanhas CRM.");
-      setRows([]);
+  const createMutation = useCreateCrmCampanha();
+  const updateMutation = useUpdateCrmCampanha();
+  const dispararMutation = useDispararCrmCampanha();
+  const encerrarMutation = useEncerrarCrmCampanha();
+
+  useEffect(() => {
+    if (queryError && queryErrorObj) {
+      const message = normalizeCapabilityError(queryErrorObj, "Falha ao carregar campanhas CRM.");
       setCampaignsUnavailable(message.startsWith("Backend ainda não expõe"));
       if (!message.startsWith("Backend ainda não expõe")) {
         setError(message);
       }
     }
+  }, [queryError, queryErrorObj]);
 
-    if (vouchersResult.status === "fulfilled") {
+  const loadVouchers = useCallback(async () => {
+    try {
+      const result = await listVouchersApi();
       setVouchers(
-        vouchersResult.value.filter((v) => v.ativo && (v.usarNaVenda || v.tipo.toUpperCase().includes("DESCONTO")))
+        result.filter((v) => v.ativo && (v.usarNaVenda || v.tipo.toUpperCase().includes("DESCONTO")))
       );
-    } else {
+    } catch {
       setVouchers([]);
-      setError((current) =>
-        current || normalizeCapabilityError(vouchersResult.reason, "Falha ao carregar vouchers da campanha.")
-      );
     }
-
-    setLoading(false);
-  }, [statusFilter, tenantId]);
+  }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadVouchers();
+  }, [loadVouchers]);
 
   const summary = useMemo(() => {
     const total = rows.length;
@@ -170,59 +166,39 @@ export default function CampanhasCrmPage() {
       setError("Selecione ao menos um canal.");
       return;
     }
-    setSaving(true);
     setError("");
     try {
+      const payload = {
+        nome: form.nome.trim(),
+        descricao: form.descricao.trim() || undefined,
+        publicoAlvo: form.publicoAlvo,
+        canais: form.canais,
+        voucherId: form.voucherId === "none" ? undefined : form.voucherId,
+        dataInicio: form.dataInicio,
+        dataFim: form.dataFim || undefined,
+        status: form.status,
+      };
       if (editing) {
-        await updateCrmCampanhaApi({
-          tenantId,
-          id: editing.id,
-          data: {
-            nome: form.nome.trim(),
-            descricao: form.descricao.trim() || undefined,
-            publicoAlvo: form.publicoAlvo,
-            canais: form.canais,
-            voucherId: form.voucherId === "none" ? undefined : form.voucherId,
-            dataInicio: form.dataInicio,
-            dataFim: form.dataFim || undefined,
-            status: form.status,
-          },
-        });
+        await updateMutation.mutateAsync({ tenantId, id: editing.id, data: payload });
       } else {
-        await createCrmCampanhaApi({
-          tenantId,
-          data: {
-            nome: form.nome.trim(),
-            descricao: form.descricao.trim() || undefined,
-            publicoAlvo: form.publicoAlvo,
-            canais: form.canais,
-            voucherId: form.voucherId === "none" ? undefined : form.voucherId,
-            dataInicio: form.dataInicio,
-            dataFim: form.dataFim || undefined,
-            status: form.status,
-          },
-        });
+        await createMutation.mutateAsync({ tenantId, data: payload });
       }
       setModalOpen(false);
       setEditing(null);
       setForm(EMPTY_FORM);
-      await load();
     } catch (submitError) {
       const message = normalizeCapabilityError(submitError, "Falha ao salvar campanha CRM.");
       setError(message);
       if (message.startsWith("Backend ainda não expõe")) {
         setWriteUnavailable(true);
       }
-    } finally {
-      setSaving(false);
     }
   }
 
   async function handleDisparar(id: string) {
     if (!tenantId || campaignsUnavailable || writeUnavailable) return;
     try {
-      await dispararCrmCampanhaApi({ tenantId, id });
-      await load();
+      await dispararMutation.mutateAsync({ tenantId, id });
     } catch (submitError) {
       const message = normalizeCapabilityError(submitError, "Falha ao disparar campanha CRM.");
       setError(message);
@@ -235,8 +211,7 @@ export default function CampanhasCrmPage() {
   async function handleEncerrar(id: string) {
     if (!tenantId || campaignsUnavailable || writeUnavailable) return;
     try {
-      await encerrarCrmCampanhaApi({ tenantId, id });
-      await load();
+      await encerrarMutation.mutateAsync({ tenantId, id });
     } catch (submitError) {
       const message = normalizeCapabilityError(submitError, "Falha ao encerrar campanha CRM.");
       setError(message);
@@ -254,6 +229,8 @@ export default function CampanhasCrmPage() {
         : [...prev.canais, canal],
     }));
   }
+
+  const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -438,11 +415,11 @@ export default function CampanhasCrmPage() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-secondary">
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Campanha</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Público / Canais</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Voucher</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ações</th>
+              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Campanha</th>
+              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Público / Canais</th>
+              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Voucher</th>
+              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

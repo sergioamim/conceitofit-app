@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request, type Route } from "@playwright/test";
+import { seedAuthenticatedSession } from "./support/backend-only-stubs";
 
 type ContaSeed = {
   id: string;
@@ -55,7 +56,7 @@ function normalizePath(pathname: string) {
 }
 
 function getTenantId(request: Request) {
-  return new URL(request.url()).searchParams.get("tenantId")?.trim() ?? "";
+  return new URL(request.url()).searchParams.get("tenantId")?.trim() || "tenant-1";
 }
 
 function parseBody<T = unknown>(request: Request): T {
@@ -67,19 +68,89 @@ function parseBody<T = unknown>(request: Request): T {
   }
 }
 
+async function installFinanceiroAuthMocks(page: Page) {
+  const tenantData = { id: "tenant-1", nome: "Unidade Centro", academiaId: "academia-1", ativo: true };
+  await page.route("**/api/v1/auth/me**", async (route) => {
+    if (route.request().method() !== "GET") { await route.fallback(); return; }
+    await fulfillJson(route, {
+      id: "user-admin",
+      userId: "user-admin",
+      nome: "Admin Financeiro",
+      displayName: "Admin Financeiro",
+      email: "admin@academia.local",
+      roles: ["OWNER", "ADMIN"],
+      userKind: "COLABORADOR",
+      redeId: "academia-1",
+      redeNome: "Academia Fit",
+      redeSlug: "academia-fit",
+      activeTenantId: "tenant-1",
+      availableTenants: [{ tenantId: "tenant-1", defaultTenant: true }],
+    });
+  });
+  await page.route("**/api/v1/app/bootstrap**", async (route) => {
+    if (route.request().method() !== "GET") { await route.fallback(); return; }
+    await fulfillJson(route, {
+      user: {
+        id: "user-admin",
+        userId: "user-admin",
+        nome: "Admin Financeiro",
+        displayName: "Admin Financeiro",
+        email: "admin@academia.local",
+        roles: ["OWNER", "ADMIN"],
+        userKind: "COLABORADOR",
+        redeId: "academia-1",
+        redeNome: "Academia Fit",
+        redeSlug: "academia-fit",
+        activeTenantId: "tenant-1",
+        availableTenants: [{ tenantId: "tenant-1", defaultTenant: true }],
+      },
+      tenantContext: {
+        currentTenantId: "tenant-1",
+        tenantAtual: tenantData,
+        unidadesDisponiveis: [tenantData],
+      },
+      academia: { id: "academia-1", nome: "Academia Fit", ativo: true },
+      capabilities: { canAccessElevatedModules: true, canDeleteClient: false },
+    });
+  });
+  await page.route("**/api/v1/context/unidade-ativa**", async (route) => {
+    const method = route.request().method();
+    if (method !== "GET" && method !== "PUT") { await route.fallback(); return; }
+    await fulfillJson(route, {
+      currentTenantId: "tenant-1",
+      tenantAtual: tenantData,
+      unidadesDisponiveis: [tenantData],
+    });
+  });
+  await page.route("**/api/v1/academia**", async (route) => {
+    if (route.request().method() !== "GET") { await route.fallback(); return; }
+    const url = new URL(route.request().url());
+    const path = normalizePath(url.pathname);
+    if (path !== "/api/v1/academia") { await route.fallback(); return; }
+    await fulfillJson(route, { id: "academia-1", nome: "Academia Fit", ativo: true });
+  });
+  // Mock auth refresh to prevent session clearing
+  await page.route("**/api/v1/auth/refresh**", async (route) => {
+    await fulfillJson(route, { token: "token-e2e", refreshToken: "refresh-e2e", type: "Bearer" });
+  });
+  // Mock pagamentos and contas-pagar (used by conciliação page)
+  await page.route("**/api/v1/comercial/pagamentos**", async (route) => {
+    if (route.request().method() !== "GET") { await route.fallback(); return; }
+    await fulfillJson(route, []);
+  });
+  await page.route("**/api/v1/gerencial/financeiro/contas-pagar**", async (route) => {
+    if (route.request().method() !== "GET") { await route.fallback(); return; }
+    await fulfillJson(route, []);
+  });
+}
+
 async function openAuthenticatedPage(page: Page, path: string, heading: string) {
-  await page.goto("/login");
-  await page.getByLabel("Usuário").fill("admin@academia.local");
-  await page.getByLabel("Senha").fill("12345678");
-  await page.getByRole("button", { name: "Entrar" }).click();
-
-  const unitStep = page.getByRole("heading", { name: "Unidade prioritária" });
-  if (await unitStep.isVisible()) {
-    await page.getByRole("combobox").click();
-    await page.getByRole("option").first().click();
-    await page.getByRole("button", { name: /Salvar e continuar/i }).click();
-  }
-
+  await seedAuthenticatedSession(page, { tenantId: "tenant-1" });
+  await installFinanceiroAuthMocks(page);
+  await page.context().addCookies([
+    { name: "academia-active-tenant-id", value: "tenant-1", domain: "localhost", path: "/" },
+    { name: "academia-active-tenant-name", value: "Unidade Centro", domain: "localhost", path: "/" },
+  ]);
   await page.goto(path);
   await expect(page.getByRole("heading", { name: heading })).toBeVisible();
 }
@@ -89,10 +160,17 @@ async function mockContasBancariasApi(
   initialRows: ContaSeed[],
   options?: {
     validationErrorApelido?: string;
+    loadErrorCount?: number;
+    loadErrorMessage?: string;
+    forbiddenErrorApelido?: string;
+    forbiddenErrorMessage?: string;
+    serverErrorApelido?: string;
+    serverErrorMessage?: string;
   }
 ) {
   let contas = [...initialRows];
   const missingTenantRequests: string[] = [];
+  let remainingLoadErrors = options?.loadErrorCount ?? 0;
 
   await page.route("**/api/v1/gerencial/financeiro/contas-bancarias**", async (route) => {
     const request = route.request();
@@ -108,12 +186,31 @@ async function mockContasBancariasApi(
     }
 
     if (path === "/api/v1/gerencial/financeiro/contas-bancarias" && method === "GET") {
+      if (remainingLoadErrors > 0) {
+        remainingLoadErrors -= 1;
+        await fulfillJson(route, {
+          message: options?.loadErrorMessage ?? "Falha temporária no servidor.",
+        }, 500);
+        return;
+      }
       await fulfillJson(route, contas);
       return;
     }
 
     if (path === "/api/v1/gerencial/financeiro/contas-bancarias" && method === "POST") {
       const payload = parseBody<Partial<ContaSeed>>(request);
+      if (payload.apelido === options?.serverErrorApelido) {
+        await fulfillJson(route, {
+          message: options?.serverErrorMessage ?? "Falha temporária no servidor.",
+        }, 500);
+        return;
+      }
+      if (payload.apelido === options?.forbiddenErrorApelido) {
+        await fulfillJson(route, {
+          message: options?.forbiddenErrorMessage ?? "Sem permissão para cadastrar conta.",
+        }, 403);
+        return;
+      }
       if (payload.apelido === options?.validationErrorApelido) {
         await fulfillJson(route, {
           message: "Validation error",
@@ -271,6 +368,39 @@ async function mockConciliacaoApi(page: Page, initialRows: ConciliacaoLinhaSeed[
 }
 
 test.describe("Financeiro admin pages", () => {
+  test("contas bancárias mantém empty state e exibe erros 500 e 403 ao salvar", async ({ page }) => {
+    const { missingTenantRequests } = await mockContasBancariasApi(page, [], {
+      serverErrorApelido: "Conta instável",
+      serverErrorMessage: "Falha temporária no servidor.",
+      forbiddenErrorApelido: "Conta restrita",
+      forbiddenErrorMessage: "Sem permissão para cadastrar conta.",
+    });
+
+    await openAuthenticatedPage(page, "/administrativo/contas-bancarias", "Contas bancárias");
+
+    await expect(page.getByText("Nenhuma conta bancária encontrada.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Nova conta bancária" }).click();
+    await page.getByPlaceholder("Ex.: Conta principal").fill("Conta instável");
+    await page.getByPlaceholder("Ex.: Banco do Brasil").fill("Banco Instável");
+    await page.getByPlaceholder("Ex.: 0001").fill("1234");
+    await page.getByPlaceholder("Ex.: 12345-6").fill("778899");
+    await page.getByPlaceholder("Ex.: 9").fill("1");
+    await page.getByPlaceholder("Nome completo do titular").fill("Academia Matriz");
+    await page.getByRole("button", { name: "Salvar" }).click();
+
+    await expect(page.getByText("Falha temporária no servidor.")).toBeVisible();
+
+    await page.getByPlaceholder("Ex.: Conta principal").fill("Conta restrita");
+    await page.getByRole("button", { name: "Salvar" }).click();
+
+    await expect(page.getByText("Sem permissão para cadastrar conta.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Cancelar" }).click();
+    await expect(page.getByText("Nenhuma conta bancária encontrada.")).toBeVisible();
+    expect(missingTenantRequests).toEqual([]);
+  });
+
   test("contas bancárias aguarda tenant e mostra field errors da API", async ({ page }) => {
     const { missingTenantRequests } = await mockContasBancariasApi(page, [
       {

@@ -271,7 +271,7 @@ export function ServicoModal({
               <div className="space-y-1.5">
                 <label htmlFor="servico-validade" className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Validade (dias)
-                  <HoverPopover content="Use para serviços com expiração após a venda ou consumo." />
+                  <HoverPopover content="Use para serviços com expiração após a venda ou consumo."><span className="cursor-help text-muted-foreground">ⓘ</span></HoverPopover>
                 </label>
                 <Input id="servico-validade" type="number" min={1} {...register("validadeDias")} className="border-border bg-secondary" />
               </div>

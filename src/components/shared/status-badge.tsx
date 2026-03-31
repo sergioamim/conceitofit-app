@@ -66,6 +66,8 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <motion.span
       {...motionProps}
+      role="status"
+      aria-live="polite"
       aria-label={`Status: ${config.label}`}
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold",

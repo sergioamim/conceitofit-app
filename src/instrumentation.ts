@@ -1,3 +1,5 @@
+import { logger } from "@/lib/shared/logger";
+
 function createExtendPolyfill() {
   return function extend(target: object, source: unknown) {
     const value = source as Record<string, unknown> | null;
@@ -18,6 +20,14 @@ function createExtendPolyfill() {
 export async function register() {
   if (typeof window !== "undefined") return;
 
+  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    if (process.env.NEXT_RUNTIME === "edge") {
+      await import("../sentry.edge.config");
+    } else {
+      await import("../sentry.server.config");
+    }
+  }
+
   try {
     const utilModule = (await import("util")) as {
       _extend?: unknown;
@@ -37,6 +47,17 @@ export async function register() {
       value: createExtendPolyfill(),
     });
   } catch (error) {
-    console.warn("[instrumentation] Falha ao aplicar compatibilidade util._extend:", error);
+    logger.warn("Falha ao aplicar compatibilidade util._extend", { module: "instrumentation", error });
   }
 }
+
+export const onRequestError = process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? async (
+      err: { digest?: string } & Error,
+      _request: unknown,
+      context: { routerKind: string; routePath: string; routeType: string },
+    ) => {
+      const { captureRequestError } = await import("@sentry/nextjs");
+      captureRequestError(err, _request as Parameters<typeof captureRequestError>[1], context);
+    }
+  : undefined;

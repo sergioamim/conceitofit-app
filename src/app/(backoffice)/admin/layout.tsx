@@ -2,32 +2,173 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ReactNode, Suspense, useEffect, useState } from "react";
+import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Building2, ChevronRight, Command, Eye, Globe, LogOut } from "lucide-react";
+import { Command as CmdkRoot, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "cmdk";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
-import { TenantContextProvider } from "@/hooks/use-session-context";
-import { useAuthAccess } from "@/hooks/use-session-context";
+import { TenantContextProvider } from "@/lib/tenant/hooks/use-session-context";
+import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
+import { BackofficeContextProvider, useBackofficeContext } from "@/lib/backoffice/backoffice-context";
 import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
-import { buildLoginHref } from "@/lib/auth-redirect";
+import { buildLoginHref } from "@/lib/tenant/auth-redirect";
+import { backofficeNavGroups, allBackofficeNavItems } from "@/lib/backoffice/nav-items";
+import type { BackofficeNavItem } from "@/lib/backoffice/nav-items";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/operacional/saude", label: "Saúde Operacional" },
-  { href: "/admin/operacional/alertas", label: "Alertas Operacionais" },
-  { href: "/admin/compliance", label: "Compliance LGPD" },
-  { href: "/admin/academias", label: "Academias" },
-  { href: "/admin/unidades", label: "Unidades" },
-  { href: "/admin/financeiro", label: "Financeiro B2B" },
-  { href: "/admin/financeiro/planos", label: "Planos da Plataforma" },
-  { href: "/admin/financeiro/contratos", label: "Contratos da Plataforma" },
-  { href: "/admin/financeiro/cobrancas", label: "Cobranças da Plataforma" },
-  { href: "/admin/busca", label: "Busca Global" },
-  { href: "/admin/seguranca", label: "Segurança" },
-  { href: "/admin/configuracoes", label: "Configurações" },
-  { href: "/admin/importacao-evo", label: "Importação EVO" },
-  { href: "/admin/audit-log", label: "Audit Log" },
-  { href: "/admin/compliance", label: "Compliance LGPD" },
-];
+// ---------------------------------------------------------------------------
+// Breadcrumbs
+// ---------------------------------------------------------------------------
+
+function useBreadcrumbs(pathname: string | null) {
+  return useMemo(() => {
+    if (!pathname) return [];
+    const navItem = allBackofficeNavItems.find(
+      (item) => pathname === item.href || pathname.startsWith(item.href + "/"),
+    );
+    const crumbs: { label: string; href?: string }[] = [
+      { label: "Backoffice", href: "/admin" },
+    ];
+    if (navItem && navItem.href !== "/admin") {
+      const group = backofficeNavGroups.find((g) =>
+        g.items.some((i) => i.href === navItem.href),
+      );
+      if (group) {
+        crumbs.push({ label: group.title });
+      }
+      crumbs.push({ label: navItem.label, href: navItem.href });
+    }
+    return crumbs;
+  }, [pathname]);
+}
+
+function Breadcrumbs({ pathname }: { pathname: string | null }) {
+  const crumbs = useBreadcrumbs(pathname);
+
+  if (crumbs.length <= 1) return null;
+
+  return (
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-muted-foreground">
+      {crumbs.map((crumb, i) => (
+        <span key={`${crumb.label}-${i}`} className="flex items-center gap-1">
+          {i > 0 && <ChevronRight className="size-3" />}
+          {crumb.href && i < crumbs.length - 1 ? (
+            <Link href={crumb.href} className="hover:text-foreground transition-colors">
+              {crumb.label}
+            </Link>
+          ) : (
+            <span className={i === crumbs.length - 1 ? "text-foreground font-medium" : ""}>
+              {crumb.label}
+            </span>
+          )}
+        </span>
+      ))}
+    </nav>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Command Palette
+// ---------------------------------------------------------------------------
+
+function CommandPalette({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+
+  const handleSelect = useCallback(
+    (item: BackofficeNavItem) => {
+      onClose();
+      router.push(item.href);
+    },
+    [onClose, router],
+  );
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    if (open) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
+      <div className="fixed inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-xl border border-border bg-card shadow-2xl">
+        <CmdkRoot label="Command palette" className="flex flex-col">
+          <CommandInput
+            placeholder="Navegar para..."
+            className="border-b border-border bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            autoFocus
+          />
+          <CommandList className="max-h-72 overflow-y-auto p-2">
+            <CommandEmpty className="px-4 py-6 text-center text-sm text-muted-foreground">
+              Nenhuma página encontrada.
+            </CommandEmpty>
+            {backofficeNavGroups.map((group) => (
+              <CommandGroup
+                key={group.title}
+                heading={group.title}
+                className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground/60"
+              >
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <CommandItem
+                      key={item.href}
+                      value={`${group.title} ${item.label}`}
+                      onSelect={() => handleSelect(item)}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground aria-selected:bg-gym-accent/10 aria-selected:text-foreground"
+                    >
+                      <Icon className="size-4 shrink-0" />
+                      {item.label}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </CmdkRoot>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Mode Badge
+// ---------------------------------------------------------------------------
+
+function ModeBadge() {
+  const { mode, inspectedTenant } = useBackofficeContext();
+
+  if (mode === "tenant" && inspectedTenant) {
+    return (
+      <div className="flex items-center gap-1.5 rounded-full border border-gym-warning/30 bg-gym-warning/10 px-2.5 py-1 text-[11px] font-semibold text-gym-warning">
+        <Eye className="size-3" />
+        Inspecionando: {inspectedTenant.tenantName ?? inspectedTenant.tenantId}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 rounded-full border border-gym-accent/30 bg-gym-accent/10 px-2.5 py-1 text-[11px] font-semibold text-gym-accent">
+      <Globe className="size-3" />
+      Plataforma
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Shell Frame
+// ---------------------------------------------------------------------------
 
 function AdminShellFrame({
   children,
@@ -36,40 +177,116 @@ function AdminShellFrame({
   children: ReactNode;
   pathname?: string;
 }) {
+  const [cmdkOpen, setCmdkOpen] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdkOpen((prev) => !prev);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
+      <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} />
+
       <div className="mx-auto flex max-w-6xl gap-6 px-6 py-6">
-        <aside className="sticky top-6 h-fit w-56 rounded-lg border border-border/80 bg-card/80 p-3 shadow-sm">
-          <div className="mb-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gym-accent">Conceito Fit</p>
+        {/* Sidebar */}
+        <aside className="sticky top-6 flex h-fit w-56 shrink-0 flex-col gap-4 rounded-lg border border-border/80 bg-card/80 p-3 shadow-sm">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gym-accent">
+              Conceito Fit
+            </p>
             <p className="text-sm font-bold">Backoffice</p>
           </div>
-          <nav className="flex flex-col gap-1 text-sm">
-            {navItems.map((item) => {
-              const active = pathname != null && (pathname === item.href || pathname.startsWith(item.href + "/"));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "rounded-md px-3 py-2 transition-colors",
-                    active
-                      ? "bg-gym-accent/10 text-foreground border border-gym-accent/30"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+
+          <button
+            onClick={() => setCmdkOpen(true)}
+            className="flex items-center gap-2 rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <Command className="size-3" />
+            <span className="flex-1 text-left">Buscar...</span>
+            <kbd className="rounded border border-border bg-background px-1 py-0.5 text-[10px] font-mono">
+              ⌘K
+            </kbd>
+          </button>
+
+          <nav aria-label="Menu backoffice" className="flex flex-col gap-3 text-sm">
+            {backofficeNavGroups.map((group) => (
+              <div key={group.title}>
+                <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
+                  {group.title}
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active =
+                      pathname != null &&
+                      (pathname === item.href ||
+                        pathname.startsWith(item.href + "/"));
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "flex items-center gap-2 rounded-md px-3 py-2 transition-colors",
+                          active
+                            ? "border border-gym-accent/30 bg-gym-accent/10 text-foreground"
+                            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                        )}
+                      >
+                        <Icon className="size-4 shrink-0" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
+
+          <div className="mt-auto space-y-1 border-t border-border/50 pt-3">
+            <Link
+              href="/admin/entrar-como-academia"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-gym-teal/10 hover:text-gym-teal"
+            >
+              <Building2 className="size-4 shrink-0" />
+              Entrar como academia
+            </Link>
+            <Link
+              href="/conta/sair"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-gym-danger/10 hover:text-gym-danger"
+            >
+              <LogOut className="size-4 shrink-0" />
+              Sair
+            </Link>
+          </div>
         </aside>
-        <main className="flex-1">{children}</main>
+
+        {/* Main content */}
+        <div className="flex flex-1 flex-col gap-4">
+          {/* Header */}
+          <header className="flex items-center justify-between">
+            <Breadcrumbs pathname={pathname ?? null} />
+            <ModeBadge />
+          </header>
+
+          <main className="flex-1">{children}</main>
+        </div>
       </div>
       <DevSessionPanel />
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Status / Auth
+// ---------------------------------------------------------------------------
 
 function AdminStatusPanel({
   className,
@@ -122,14 +339,8 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!hydrated || authenticated) {
-      return;
-    }
-    if (!authenticated) {
-      const queryString = searchParams.toString();
-      const currentPath = `${pathname}${queryString ? `?${queryString}` : ""}`;
-      router.replace(buildLoginHref(currentPath, getNetworkSlugFromSession()));
-    }
+    if (!hydrated || authenticated) return;
+    router.replace("/admin-login");
   }, [authenticated, hydrated, pathname, router, searchParams]);
 
   if (!hydrated || access.loading) {
@@ -162,17 +373,23 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     );
   }
 
-  return (
-    <AdminShellFrame pathname={pathname}>{children}</AdminShellFrame>
-  );
+  return <AdminShellFrame pathname={pathname}>{children}</AdminShellFrame>;
 }
+
+// ---------------------------------------------------------------------------
+// Layout export
+// ---------------------------------------------------------------------------
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <TenantContextProvider>
-      <Suspense fallback={<AdminLayoutFallback>{children}</AdminLayoutFallback>}>
-        <AdminLayoutContent>{children}</AdminLayoutContent>
-      </Suspense>
+      <BackofficeContextProvider>
+        <Suspense
+          fallback={<AdminLayoutFallback>{children}</AdminLayoutFallback>}
+        >
+          <AdminLayoutContent>{children}</AdminLayoutContent>
+        </Suspense>
+      </BackofficeContextProvider>
     </TenantContextProvider>
   );
 }

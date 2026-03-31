@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ZodError } from "zod";
 import {
   publicCheckoutFormSchema,
   publicSignupFormSchema,
@@ -30,7 +31,7 @@ test.describe("zod resolver forms", () => {
 
   test("propaga mensagens do schema quando o valor é inválido", async () => {
     const resolver = zodResolver(publicCheckoutFormSchema);
-    const result = await resolver(
+    await expect(async () => resolver(
       {
         planId: "",
         formaPagamento: "CARTAO_CREDITO",
@@ -42,10 +43,21 @@ test.describe("zod resolver forms", () => {
       },
       {},
       {} as never
-    );
-
-    expect(result.errors.planId?.message).toBe("Selecione um plano para concluir a adesão.");
-    expect(result.errors.parcelas?.message).toBe("Informe ao menos uma parcela.");
-    expect(result.errors.aceitarTermos?.message).toBe("Aceite os termos da adesão para continuar.");
+    )).rejects.toMatchObject<Partial<ZodError>>({
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          path: ["planId"],
+          message: "Selecione um plano para concluir a adesão.",
+        }),
+        expect.objectContaining({
+          path: ["parcelas"],
+          message: "Informe ao menos uma parcela.",
+        }),
+        expect.objectContaining({
+          path: ["aceitarTermos"],
+          message: "Aceite os termos da adesão para continuar.",
+        }),
+      ]),
+    });
   });
 });

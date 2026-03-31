@@ -7,13 +7,15 @@ import { AppTopbar } from "@/components/layout/app-topbar";
 import { AppContentShell } from "@/components/layout/app-content-shell";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
+import { SentryContextSync } from "@/components/layout/sentry-context-sync";
 import { ImpersonationBanner } from "@/components/backoffice/impersonation-banner";
+import { BackendStatusBanner } from "@/components/layout/backend-status-banner";
 import { Button } from "@/components/ui/button";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
-import { TenantContextProvider, useTenantContext } from "@/hooks/use-session-context";
-import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { TenantContextProvider, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { useUserPreferences } from "@/lib/tenant/hooks/use-user-preferences";
 import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
-import { buildLoginHref } from "@/lib/auth-redirect";
+import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { isClientOperationalEligibilityEnabled } from "@/lib/feature-flags";
 
 function isClientScopedUser(userKind?: string): boolean {
@@ -126,6 +128,7 @@ function AppShellFrame({
         Saltar para o conteúdo
       </a>
       <TenantThemeSync />
+      <SentryContextSync />
       {mobileMenuOpen ? (
         <button
           type="button"
@@ -136,6 +139,7 @@ function AppShellFrame({
       ) : null}
       <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={onCloseMenu} shellReady={shellReady} />
       <main className="flex flex-1 flex-col overflow-hidden relative">
+        <BackendStatusBanner />
         <ImpersonationBanner />
         <AppTopbar onOpenMenu={onOpenMenu} shellReady={shellReady} />
         <AppContentShell>{children}</AppContentShell>

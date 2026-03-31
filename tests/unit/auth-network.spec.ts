@@ -1,10 +1,17 @@
 import { expect, test } from "@playwright/test";
-import { getAccessNetworkContextApi, loginApi, requestPasswordRecoveryApi } from "../../src/lib/api/auth";
+import {
+  adminLoginApi,
+  changeForcedPasswordApi,
+  getAccessNetworkContextApi,
+  loginApi,
+  requestPasswordRecoveryApi,
+} from "../../src/lib/api/auth";
 import { getSessionBootstrapApi } from "../../src/lib/api/contexto-unidades";
 import {
   clearAuthSession,
   getAvailableScopesFromSession,
   getBroadAccessFromSession,
+  getForcePasswordChangeRequiredFromSession,
   getNetworkSubdomainFromSession,
   getNetworkSlugFromSession,
   saveAuthSession,
@@ -66,6 +73,73 @@ test.describe("auth por rede", () => {
       expect(getNetworkSlugFromSession()).toBe("rede-norte");
       expect(getAvailableScopesFromSession()).toEqual(["REDE"]);
       expect(getBroadAccessFromSession()).toBeTruthy();
+    } finally {
+      restore();
+    }
+  });
+
+  test("loginApi persiste o flag de troca obrigatória de senha quando o backend exigir primeiro acesso", async () => {
+    const { restore } = mockFetchWithSequence([
+      {
+        body: {
+          token: "token-rede",
+          refreshToken: "refresh-rede",
+          redeSlug: "rede-norte",
+          redeNome: "Rede Norte",
+          forcePasswordChange: true,
+        },
+      },
+    ]);
+
+    try {
+      const session = await loginApi({
+        identifier: "ana@qa.local",
+        password: "12345678",
+        redeIdentifier: "rede-norte",
+      });
+
+      expect(session.forcePasswordChangeRequired).toBe(true);
+      expect(getForcePasswordChangeRequiredFromSession()).toBe(true);
+    } finally {
+      restore();
+    }
+  });
+
+  test("adminLoginApi usa endpoint global e persiste a sessao sem contexto de rede", async () => {
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
+          token: "token-admin",
+          refreshToken: "refresh-admin",
+          userId: "user-admin",
+          userKind: "ADMIN",
+          displayName: "Admin Master",
+          activeTenantId: "tenant-admin",
+          tenantBaseId: "tenant-admin-base",
+          availableScopes: ["GLOBAL"],
+          broadAccess: true,
+        },
+      },
+    ]);
+
+    try {
+      const session = await adminLoginApi({
+        email: "admin@qa.local",
+        password: "12345678",
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.url).toContain("/api/v1/admin/auth/login");
+      expect(calls[0]?.method).toBe("POST");
+      expect(calls[0]?.headers.get("X-Rede-Identifier")).toBeNull();
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        email: "admin@qa.local",
+        password: "12345678",
+      });
+      expect(session.token).toBe("token-admin");
+      expect(session.refreshToken).toBe("refresh-admin");
+      expect(session.availableScopes).toEqual(["GLOBAL"]);
+      expect(session.activeTenantId).toBe("tenant-admin");
     } finally {
       restore();
     }
@@ -163,6 +237,42 @@ test.describe("auth por rede", () => {
 
       expect(calls[1]?.url).toContain("/api/v1/auth/rede-contexto");
       expect(calls[1]?.headers.get("X-Rede-Identifier")).toBe("rede-invalida");
+    } finally {
+      restore();
+    }
+  });
+
+  test("changeForcedPasswordApi usa a sessão atual e limpa o flag após sucesso", async () => {
+    saveAuthSession({
+      token: "token-rede",
+      refreshToken: "refresh-rede",
+      networkSubdomain: "rede-norte",
+      forcePasswordChangeRequired: true,
+    });
+
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
+          message: "Senha alterada com sucesso.",
+        },
+      },
+    ]);
+
+    try {
+      const response = await changeForcedPasswordApi({
+        newPassword: "NovaSenha123",
+        confirmNewPassword: "NovaSenha123",
+      });
+
+      expect(response.message).toBe("Senha alterada com sucesso.");
+      expect(calls[0]?.url).toContain("/api/v1/auth/change-password");
+      expect(calls[0]?.method).toBe("POST");
+      expect(calls[0]?.headers.get("X-Rede-Identifier")).toBe("rede-norte");
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        newPassword: "NovaSenha123",
+        confirmNewPassword: "NovaSenha123",
+      });
+      expect(getForcePasswordChangeRequiredFromSession()).toBe(false);
     } finally {
       restore();
     }

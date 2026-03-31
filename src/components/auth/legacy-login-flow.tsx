@@ -12,8 +12,8 @@ import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-uni
 import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/lib/api/session";
 import type { Tenant } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { resolvePostLoginPath } from "@/lib/auth-redirect";
-import { legacyLoginFormSchema, legacyTenantStepFormSchema } from "@/lib/forms/auth-schemas";
+import { buildForcedPasswordChangeHref, resolvePostLoginPath } from "@/lib/tenant/auth-redirect";
+import { legacyLoginFormSchema, legacyTenantStepFormSchema } from "@/lib/tenant/forms/auth-schemas";
 
 type LegacyLoginFormValues = import("zod").input<typeof legacyLoginFormSchema>;
 type LegacyTenantFormValues = import("zod").input<typeof legacyTenantStepFormSchema>;
@@ -32,8 +32,8 @@ export function LegacyLoginFlow({
   const loginForm = useForm<LegacyLoginFormValues>({
     resolver: zodResolver(legacyLoginFormSchema),
     defaultValues: {
-      username: "admin@academia.local",
-      password: "12345678",
+      username: process.env.NEXT_PUBLIC_DEV_AUTH_EMAIL ?? "",
+      password: process.env.NEXT_PUBLIC_DEV_AUTH_PASSWORD ?? "",
     },
   });
   const tenantForm = useForm<LegacyTenantFormValues>({
@@ -52,8 +52,8 @@ export function LegacyLoginFlow({
   useEffect(() => {
     if (step === "LOGIN") {
       loginForm.reset({
-        username: "admin@academia.local",
-        password: "12345678",
+        username: process.env.NEXT_PUBLIC_DEV_AUTH_EMAIL ?? "",
+        password: process.env.NEXT_PUBLIC_DEV_AUTH_PASSWORD ?? "",
       });
       tenantForm.reset({ tenantId: "" });
     }
@@ -63,7 +63,11 @@ export function LegacyLoginFlow({
     setSaving(true);
     setError(null);
     try {
-      await loginApi({ email: values.username.trim(), password: values.password });
+      const session = await loginApi({ email: values.username.trim(), password: values.password });
+      if (session.forcePasswordChangeRequired) {
+        router.push(buildForcedPasswordChangeHref(resolvedNextPath));
+        return;
+      }
       const context = await getTenantContextApi();
       const activeTenants = context.unidadesDisponiveis.filter((item) => item.ativo !== false);
       const preferredTenantId = getPreferredTenantId();

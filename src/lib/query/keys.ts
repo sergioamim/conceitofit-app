@@ -1,0 +1,191 @@
+export const queryKeys = {
+  dashboard: (tenantId: string, referenceDate: string) =>
+    ["dashboard", tenantId, referenceDate] as const,
+
+  billingConfig: (tenantId: string) =>
+    ["billingConfig", tenantId] as const,
+
+  clientes: {
+    all: (tenantId: string) => ["clientes", tenantId] as const,
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["clientes", "list", tenantId, filters] as const,
+  },
+
+  pagamentos: {
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["pagamentos", "list", tenantId, filters] as const,
+  },
+
+  // ── Admin / Backoffice ──────────────────────────────────────────────
+  admin: {
+    academias: {
+      all: () => ["admin", "academias"] as const,
+      list: () => ["admin", "academias", "list"] as const,
+      detail: (id: string) => ["admin", "academias", "detail", id] as const,
+    },
+    unidades: {
+      all: () => ["admin", "unidades"] as const,
+      list: () => ["admin", "unidades", "list"] as const,
+    },
+    auditLog: {
+      all: () => ["admin", "audit-log"] as const,
+      list: (filters: Record<string, unknown>) =>
+        ["admin", "audit-log", "list", filters] as const,
+    },
+    financeiro: {
+      all: () => ["admin", "financeiro"] as const,
+      dashboard: (periodo: string) =>
+        ["admin", "financeiro", "dashboard", periodo] as const,
+      cobrancas: () => ["admin", "financeiro", "cobrancas"] as const,
+      contratos: () => ["admin", "financeiro", "contratos"] as const,
+      planos: () => ["admin", "financeiro", "planos"] as const,
+      gateways: () => ["admin", "financeiro", "gateways"] as const,
+    },
+    seguranca: {
+      all: () => ["admin", "seguranca"] as const,
+      overview: () => ["admin", "seguranca", "overview"] as const,
+      eligiblePreview: () =>
+        ["admin", "seguranca", "eligible-preview"] as const,
+      funcionalidades: (tenantId: string) =>
+        ["admin", "seguranca", "funcionalidades", tenantId] as const,
+      perfis: (tenantId: string) =>
+        ["admin", "seguranca", "perfis", tenantId] as const,
+      revisoes: () => ["admin", "seguranca", "revisoes"] as const,
+      catalogo: () => ["admin", "seguranca", "catalogo"] as const,
+      perfisPadrao: () => ["admin", "seguranca", "perfis-padrao"] as const,
+      reviewBoard: () => ["admin", "seguranca", "review-board"] as const,
+    },
+    operacional: {
+      all: () => ["admin", "operacional"] as const,
+      alertas: () => ["admin", "operacional", "alertas"] as const,
+      saude: () => ["admin", "operacional", "saude"] as const,
+    },
+    leads: {
+      all: () => ["admin", "leads"] as const,
+      list: () => ["admin", "leads", "list"] as const,
+      stats: () => ["admin", "leads", "stats"] as const,
+      detail: (id: string) => ["admin", "leads", "detail", id] as const,
+    },
+    compliance: {
+      all: () => ["admin", "compliance"] as const,
+      dashboard: () => ["admin", "compliance", "dashboard"] as const,
+    },
+    busca: {
+      results: (query: string, size: number) =>
+        ["admin", "busca", query, size] as const,
+    },
+    bi: {
+      academias: () => ["admin", "bi", "academias"] as const,
+      executivo: (academiaId: string) =>
+        ["admin", "bi", "executivo", academiaId] as const,
+    },
+    configuracoes: {
+      all: () => ["admin", "configuracoes"] as const,
+      integrations: () => ["admin", "configuracoes", "integrations"] as const,
+      config: () => ["admin", "configuracoes", "config"] as const,
+    },
+  },
+
+  matriculas: {
+    dashboard: (tenantId: string, monthKey: string, page: number) =>
+      ["matriculas", "dashboard", tenantId, monthKey, page] as const,
+  },
+
+  prospects: {
+    all: (tenantId: string) => ["prospects", tenantId] as const,
+  },
+
+  contasReceber: {
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["contasReceber", "list", tenantId, filters] as const,
+  },
+
+  dre: {
+    gerencial: (tenantId: string, periodo: string) =>
+      ["dre", "gerencial", tenantId, periodo] as const,
+    projecao: (tenantId: string, startDate: string, endDate: string, cenario: string) =>
+      ["dre", "projecao", tenantId, startDate, endDate, cenario] as const,
+  },
+
+  recebimentos: {
+    all: (tenantId: string) => ["recebimentos", tenantId] as const,
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["recebimentos", "list", tenantId, filters] as const,
+  },
+
+  vendas: {
+    all: (tenantId: string) => ["vendas", tenantId] as const,
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["vendas", "list", tenantId, filters] as const,
+  },
+
+  crm: {
+    all: (tenantId: string) => ["crm", tenantId] as const,
+    snapshot: (tenantId: string) => ["crm", "snapshot", tenantId] as const,
+    playbooks: (tenantId: string) => ["crm", "playbooks", tenantId] as const,
+    cadencias: (tenantId: string) => ["crm", "cadencias", tenantId] as const,
+  },
+
+  aulas: {
+    sessoes: (tenantId: string, dateFrom: string, dateTo: string) =>
+      ["aulas", "sessoes", tenantId, dateFrom, dateTo] as const,
+    minhasReservas: (tenantId: string, alunoId: string) =>
+      ["aulas", "reservas", tenantId, alunoId] as const,
+  },
+
+  grade: {
+    all: (tenantId: string) => ["grade", tenantId] as const,
+    week: (tenantId: string) => ["grade", "week", tenantId] as const,
+  },
+
+  crmTasks: {
+    all: (tenantId: string) => ["crmTasks", tenantId] as const,
+  },
+
+  crmCampanhas: {
+    all: (tenantId: string) => ["crmCampanhas", tenantId] as const,
+    list: (tenantId: string, status?: string) =>
+      ["crmCampanhas", "list", tenantId, status] as const,
+  },
+
+  whatsapp: {
+    config: (tenantId: string) => ["whatsapp", "config", tenantId] as const,
+    templates: (tenantId: string) => ["whatsapp", "templates", tenantId] as const,
+    logs: (tenantId: string) => ["whatsapp", "logs", tenantId] as const,
+  },
+
+  agregadores: {
+    all: (tenantId: string) => ["agregadores", tenantId] as const,
+    list: (tenantId: string) => ["agregadores", "list", tenantId] as const,
+  },
+
+  catracaAcessos: {
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["catracaAcessos", "list", tenantId, filters] as const,
+  },
+
+  treinos: {
+    detail: (tenantId: string, id: string) =>
+      ["treinos", "detail", tenantId, id] as const,
+    atribuidos: (tenantId: string) =>
+      ["treinos", "atribuidos", tenantId] as const,
+    exercicios: (tenantId: string, filters?: Record<string, unknown>) =>
+      ["treinos", "exercicios", tenantId, filters] as const,
+    gruposMusculares: (tenantId: string) =>
+      ["treinos", "gruposMusculares", tenantId] as const,
+  },
+
+  meusTreinos: {
+    list: (tenantId: string, userId: string) =>
+      ["meusTreinos", tenantId, userId] as const,
+  },
+
+  checkIn: {
+    presencas: (tenantId: string, userId: string) =>
+      ["checkIn", "presencas", tenantId, userId] as const,
+  },
+
+  funcionarios: {
+    all: () => ["funcionarios"] as const,
+  },
+} as const;

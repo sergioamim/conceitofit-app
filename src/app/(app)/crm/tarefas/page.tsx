@@ -1,14 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import {
-  createCrmTaskApi,
-  listCrmTasksApi,
-  listProspectsApi,
-  updateCrmTaskApi,
-} from "@/lib/api/crm";
-import { listFuncionariosApi } from "@/lib/api/administrativo";
 import { normalizeCapabilityError } from "@/lib/api/backend-capability";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { getBusinessTodayIso } from "@/lib/business-date";
@@ -17,19 +10,24 @@ import {
   CRM_TASK_PRIORITY_LABEL,
   CRM_TASK_STATUS_LABEL,
   CRM_TASK_TYPE_LABEL,
-} from "@/lib/crm/workspace";
-import { enrichCrmTasksRuntime, normalizeProspectRuntime, sortCrmTasksRuntime } from "@/lib/crm/runtime";
+} from "@/lib/tenant/crm/workspace";
+import {
+  useCrmTasksQuery,
+  useCreateCrmTask,
+  useUpdateCrmTask,
+} from "@/lib/query/use-crm-tasks";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type {
   CrmPipelineStage,
   CrmTask,
   CrmTaskPrioridade,
   CrmTaskStatus,
   CrmTaskTipo,
-  Funcionario,
-  Prospect,
   StatusProspect,
 } from "@/lib/types";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { formatDateTime } from "@/lib/formatters";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -86,73 +84,50 @@ function toForm(task?: CrmTask | null): FormState {
   };
 }
 
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
-
 export default function CrmTarefasPage() {
   const tenantContext = useTenantContext();
-  const [rows, setRows] = useState<CrmTask[]>([]);
-  const [prospects, setProspects] = useState<Prospect[]>([]);
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
+
+  const {
+    data: queryData,
+    isLoading: loading,
+    error: queryError,
+  } = useCrmTasksQuery({
+    tenantId,
+    enabled: tenantContext.tenantResolved,
+  });
+
+  const rows = queryData?.tasks ?? [];
+  const prospects = queryData?.prospects ?? [];
+  const funcionarios = queryData?.funcionarios ?? [];
+
+  const createMutation = useCreateCrmTask();
+  const updateMutation = useUpdateCrmTask();
+  const saving = createMutation.isPending || updateMutation.isPending;
+
   const [editing, setEditing] = useState<CrmTask | null>(null);
   const [filterStatus, setFilterStatus] = useState<CrmTaskStatus | "TODAS">("TODAS");
-  const [filterResponsavel, setFilterResponsavel] = useState<string>("TODOS");
+  const [filterResponsavel, setFilterResponsavel] = useState<string>(FILTER_ALL);
   const [filterPrioridade, setFilterPrioridade] = useState<CrmTaskPrioridade | "TODAS">("TODAS");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [writeUnavailable, setWriteUnavailable] = useState(false);
-  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
+
   const { register, handleSubmit, reset, setValue, getValues } = useForm<FormState>({
     defaultValues: EMPTY_FORM,
   });
+
   const stages = useMemo<CrmPipelineStage[]>(
     () => buildDefaultCrmPipelineStages(tenantId || "tenant-runtime"),
-    [tenantId]
+    [tenantId],
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [taskRows, prospectRows, funcionarioRows] = await Promise.all([
-        listCrmTasksApi({ tenantId }),
-        listProspectsApi({ tenantId }),
-        listFuncionariosApi(true),
-      ]);
-      const normalizedProspects = prospectRows
-        .map((prospect) => normalizeProspectRuntime(prospect))
-        .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
-      setRows(
-        sortCrmTasksRuntime(
-          enrichCrmTasksRuntime({
-            tasks: taskRows,
-            prospects: normalizedProspects,
-            funcionarios: funcionarioRows,
-          })
-        )
-      );
-      setProspects(normalizedProspects);
-      setFuncionarios(funcionarioRows);
-    } catch (loadError) {
-      setError(normalizeCapabilityError(loadError, "Falha ao carregar tarefas comerciais."));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Derive error from query or local mutation errors
+  const displayError = error || (queryError ? normalizeErrorMessage(queryError) : "");
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
       if (filterStatus !== "TODAS" && row.status !== filterStatus) return false;
-      if (filterResponsavel !== "TODOS" && row.responsavelId !== filterResponsavel) return false;
+      if (filterResponsavel !== FILTER_ALL && row.responsavelId !== filterResponsavel) return false;
       if (filterPrioridade !== "TODAS" && row.prioridade !== filterPrioridade) return false;
       return true;
     });
@@ -173,7 +148,6 @@ export default function CrmTarefasPage() {
 
   async function onSubmit(form: FormState) {
     if (!tenantId) return;
-    setSaving(true);
     setError("");
     try {
       const payload = {
@@ -188,36 +162,25 @@ export default function CrmTarefasPage() {
         vencimentoEm: `${form.vencimentoData}T${form.vencimentoHora}:00`,
       };
       if (editing) {
-        await updateCrmTaskApi({
-          tenantId,
-          id: editing.id,
-          data: payload,
-        });
+        await updateMutation.mutateAsync({ tenantId, id: editing.id, data: payload });
       } else {
-        await createCrmTaskApi({
-          tenantId,
-          data: payload,
-        });
+        await createMutation.mutateAsync({ tenantId, data: payload });
       }
       resetForm(null);
-      await load();
     } catch (submitError) {
       const message = normalizeCapabilityError(submitError, "Falha ao salvar tarefa CRM.");
       setError(message);
       if (message.startsWith("Backend ainda não expõe")) {
         setWriteUnavailable(true);
       }
-    } finally {
-      setSaving(false);
     }
   }
 
   async function handleConcluir(task: CrmTask) {
     if (!tenantId) return;
-    setSaving(true);
     setError("");
     try {
-      await updateCrmTaskApi({
+      await updateMutation.mutateAsync({
         tenantId,
         id: task.id,
         data: { status: "CONCLUIDA" },
@@ -225,15 +188,12 @@ export default function CrmTarefasPage() {
       if (editing?.id === task.id) {
         resetForm(null);
       }
-      await load();
     } catch (submitError) {
       const message = normalizeCapabilityError(submitError, "Falha ao concluir tarefa.");
       setError(message);
       if (message.startsWith("Backend ainda não expõe")) {
         setWriteUnavailable(true);
       }
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -272,9 +232,9 @@ export default function CrmTarefasPage() {
         </div>
       </div>
 
-      {error ? (
+      {displayError ? (
         <Card className="border-rose-500/40 bg-rose-500/10">
-          <CardContent className="px-6 py-5 text-sm text-rose-100">{error}</CardContent>
+          <CardContent className="px-6 py-5 text-sm text-rose-100">{displayError}</CardContent>
         </Card>
       ) : null}
       {writeUnavailable ? (
@@ -333,7 +293,7 @@ export default function CrmTarefasPage() {
                   onChange={(event) => setFilterResponsavel(event.target.value)}
                   className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                 >
-                  <option value="TODOS">Todos</option>
+                  <option value={FILTER_ALL}>Todos</option>
                   {funcionarios.map((funcionario) => (
                     <option key={funcionario.id} value={funcionario.id}>
                       {funcionario.nome}

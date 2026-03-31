@@ -1,6 +1,9 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
+import { memo, useEffect, useId, useMemo, type ChangeEvent, type ReactNode } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 import type { CreateProspectInput, Funcionario, Prospect, OrigemProspect } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +11,7 @@ import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { requiredTrimmedString, optionalTrimmedString } from "@/lib/forms/zod-helpers";
 
 const ORIGEM_LABELS: Record<OrigemProspect, string> = {
   VISITA_PRESENCIAL: "Visita presencial",
@@ -18,6 +22,41 @@ const ORIGEM_LABELS: Record<OrigemProspect, string> = {
   SITE: "Site",
   OUTROS: "Outros",
 };
+
+const prospectFormSchema = z.object({
+  nome: requiredTrimmedString("Informe o nome do prospect."),
+  telefone: requiredTrimmedString("Informe o telefone."),
+  email: z.union([z.literal(""), z.string().email("E-mail inválido.")]).optional(),
+  cpf: optionalTrimmedString(),
+  origem: requiredTrimmedString("Selecione a origem."),
+  observacoes: optionalTrimmedString(),
+  responsavelId: optionalTrimmedString(),
+});
+
+type ProspectFormValues = z.infer<typeof prospectFormSchema>;
+
+const DEFAULT_VALUES: ProspectFormValues = {
+  nome: "",
+  telefone: "",
+  email: "",
+  cpf: "",
+  origem: "INSTAGRAM",
+  observacoes: "",
+  responsavelId: "",
+};
+
+function toFormValues(initial?: Prospect | null): ProspectFormValues {
+  if (!initial) return DEFAULT_VALUES;
+  return {
+    nome: initial.nome,
+    telefone: initial.telefone,
+    email: initial.email ?? "",
+    cpf: initial.cpf ?? "",
+    origem: initial.origem,
+    observacoes: initial.observacoes ?? "",
+    responsavelId: initial.responsavelId ?? "",
+  };
+}
 
 function ProspectModalComponent({
   open,
@@ -32,14 +71,15 @@ function ProspectModalComponent({
   funcionarios: Funcionario[];
   initial?: Prospect | null;
 }) {
-  const [form, setForm] = useState<CreateProspectInput>({
-    nome: "",
-    telefone: "",
-    email: "",
-    cpf: "",
-    origem: "INSTAGRAM",
-    observacoes: "",
-    responsavelId: "",
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ProspectFormValues>({
+    resolver: zodResolver(prospectFormSchema),
+    defaultValues: toFormValues(initial),
   });
 
   const origemOptions = useMemo(
@@ -52,52 +92,18 @@ function ProspectModalComponent({
   );
 
   useEffect(() => {
-    if (initial) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
-        nome: initial.nome,
-        telefone: initial.telefone,
-        email: initial.email ?? "",
-        cpf: initial.cpf ?? "",
-        origem: initial.origem,
-        observacoes: initial.observacoes ?? "",
-        responsavelId: initial.responsavelId ?? "",
-      });
-    } else {
-      setForm({
-        nome: "",
-        telefone: "",
-        email: "",
-        cpf: "",
-        origem: "INSTAGRAM",
-        observacoes: "",
-        responsavelId: "",
-      });
-    }
-  }, [initial, open]);
+    reset(toFormValues(initial));
+  }, [initial, open, reset]);
 
-  const updateField = useCallback((key: keyof CreateProspectInput, value: string) => {
-    setForm((current) => ({ ...current, [key]: value }));
-  }, []);
-
-  const fieldHandlers = useMemo(
-    () => ({
-      nome: (value: string) => updateField("nome", value),
-      telefone: (value: string) => updateField("telefone", value),
-      cpf: (value: string) => updateField("cpf", value),
-      email: (value: string) => updateField("email", value),
-      observacoes: (value: string) => updateField("observacoes", value),
-      origem: (value: string) => updateField("origem", value as OrigemProspect),
-      responsavelId: (value: string) => updateField("responsavelId", value),
-    }),
-    [updateField]
-  );
-
-  function handleSubmit() {
-    if (!form.nome || !form.telefone) return;
+  function onFormSubmit(values: ProspectFormValues) {
     onSave({
-      ...form,
-      responsavelId: form.responsavelId ? form.responsavelId : undefined,
+      nome: values.nome,
+      telefone: values.telefone,
+      email: values.email || "",
+      cpf: values.cpf || "",
+      origem: values.origem as OrigemProspect,
+      observacoes: values.observacoes || "",
+      responsavelId: values.responsavelId ? values.responsavelId : undefined,
     });
     onClose();
   }
@@ -110,82 +116,147 @@ function ProspectModalComponent({
             {initial ? "Editar Prospect" : "Novo Prospect"}
           </DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-2">
-          <div className="grid grid-cols-2 gap-3">
-            <ProspectInputField
-              label="Nome *"
-              value={form.nome}
-              placeholder="Nome completo"
-              onValueChange={fieldHandlers.nome}
-            />
+        <form onSubmit={handleSubmit(onFormSubmit)}>
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+                <Input
+                  placeholder="Nome completo"
+                  {...register("nome")}
+                  className="bg-secondary border-border"
+                  aria-required
+                />
+                {errors.nome ? (
+                  <p className="text-xs text-gym-danger">{errors.nome.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
+                <Controller
+                  control={control}
+                  name="telefone"
+                  render={({ field }) => (
+                    <PhoneInput
+                      placeholder="(11) 99999-0000"
+                      value={field.value}
+                      onChange={field.onChange}
+                      className="bg-secondary border-border"
+                      aria-label="Telefone"
+                      aria-required
+                    />
+                  )}
+                />
+                {errors.telefone ? (
+                  <p className="text-xs text-gym-danger">{errors.telefone.message}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</label>
+                <Controller
+                  control={control}
+                  name="cpf"
+                  render={({ field }) => (
+                    <MaskedInput
+                      mask="cpf"
+                      placeholder="000.000.000-00"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      className="bg-secondary border-border"
+                      aria-label="CPF"
+                    />
+                  )}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail</label>
+                <Input
+                  type="email"
+                  placeholder="exemplo@email.com"
+                  {...register("email")}
+                  className="bg-secondary border-border"
+                />
+                {errors.email ? (
+                  <p className="text-xs text-gym-danger">{errors.email.message}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Origem</label>
+                <Controller
+                  control={control}
+                  name="origem"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="w-full bg-secondary border-border">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        {origemOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.origem ? (
+                  <p className="text-xs text-gym-danger">{errors.origem.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Responsável</label>
+                <Controller
+                  control={control}
+                  name="responsavelId"
+                  render={({ field }) => {
+                    const blankValue = "__SEM_SELECAO__";
+                    return (
+                      <Select
+                        value={!field.value ? blankValue : field.value}
+                        onValueChange={(selectedValue) =>
+                          field.onChange(selectedValue === blankValue ? "" : selectedValue)
+                        }
+                      >
+                        <SelectTrigger className="w-full bg-secondary border-border">
+                          <SelectValue placeholder="Sem responsável" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                          <SelectItem value={blankValue}>Sem responsável</SelectItem>
+                          {funcionarios.map((f) => (
+                            <SelectItem key={f.id} value={f.id}>
+                              {f.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }}
+                />
+              </div>
+            </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
-              <PhoneInput
-                placeholder="(11) 99999-0000"
-                value={form.telefone}
-                onChange={fieldHandlers.telefone}
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações</label>
+              <Input
+                placeholder="Observações do prospect"
+                {...register("observacoes")}
                 className="bg-secondary border-border"
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</label>
-              <MaskedInput
-                mask="cpf"
-                placeholder="000.000.000-00"
-                value={form.cpf ?? ""}
-                onChange={fieldHandlers.cpf}
-                className="bg-secondary border-border"
-              />
-            </div>
-            <ProspectInputField
-              label="E-mail"
-              type="email"
-              value={form.email ?? ""}
-              placeholder="exemplo@email.com"
-              onValueChange={fieldHandlers.email}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <ProspectSelectField
-              label="Origem"
-              value={form.origem}
-              onValueChange={fieldHandlers.origem}
-              options={origemOptions}
-              placeholder="Selecione"
-              selectClassName="bg-secondary border-border"
-            />
-            <ProspectSelectField
-              label="Responsável"
-              value={form.responsavelId ?? ""}
-              onValueChange={fieldHandlers.responsavelId}
-              placeholder="Sem responsável"
-              withBlankOption
-              selectClassName="bg-secondary border-border"
-            >
-              {funcionarios.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.nome}
-                </SelectItem>
-              ))}
-            </ProspectSelectField>
-          </div>
-          <ProspectInputField
-            label="Observações"
-            value={form.observacoes ?? ""}
-            placeholder="Observações do prospect"
-            onValueChange={fieldHandlers.observacoes}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="border-border">
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit} disabled={!form.nome || !form.telefone}>
-            Salvar
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose} className="border-border">
+              Cancelar
+            </Button>
+            <Button type="submit">
+              Salvar
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
@@ -207,6 +278,7 @@ const ProspectInputField = memo(
     type = "text",
     onValueChange,
     className = "bg-secondary border-border",
+    required = false,
   }: {
     label: string;
     value: string;
@@ -214,15 +286,17 @@ const ProspectInputField = memo(
     type?: string;
     className?: string;
     onValueChange: (value: string) => void;
+    required?: boolean;
   }) => {
+    const id = useId();
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
       onValueChange(event.target.value);
     };
 
     return (
       <div className="space-y-1.5">
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
-        <Input type={type} value={value} onChange={handleChange} placeholder={placeholder} className={className} />
+        <label htmlFor={id} className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+        <Input id={id} type={type} value={value} onChange={handleChange} placeholder={placeholder} className={className} aria-required={required || undefined} />
       </div>
     );
   }
@@ -251,16 +325,18 @@ const ProspectSelectField = memo(
   }) => {
     const blankValue = "__SEM_SELECAO__";
 
+    const id = useId();
+
     return (
       <div className="space-y-1.5">
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+        <label id={`${id}-label`} className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
         <Select
           value={withBlankOption && !value ? blankValue : value}
           onValueChange={(selectedValue) =>
             onValueChange(withBlankOption && selectedValue === blankValue ? "" : selectedValue)
           }
         >
-          <SelectTrigger className={`w-full ${selectClassName}`}>
+          <SelectTrigger aria-labelledby={`${id}-label`} className={`w-full ${selectClassName}`}>
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">

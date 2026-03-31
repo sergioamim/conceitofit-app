@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect } from "react";
+import { usePublicTenants } from "@/lib/query/use-public-tenants";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -12,16 +13,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { PublicJourneyShell } from "@/components/public/public-journey-shell";
 import { FieldAsyncFeedback } from "@/components/shared/field-async-feedback";
 import { useAsyncFieldValidation } from "@/hooks/use-async-field-validation";
-import { checkAlunoDuplicidadeService } from "@/lib/comercial/runtime";
+import { checkAlunoDuplicidadeService } from "@/lib/tenant/comercial/runtime";
 import {
   buildPublicJourneyHref,
   getPublicPlanQuote,
-  listPublicTenants,
   type PublicSignupDraft,
 } from "@/lib/public/services";
 import { publicSignupFormSchema } from "@/lib/forms/public-journey-schemas";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
-import type { Sexo, Tenant } from "@/lib/types";
+import { formatCurrency } from "@/lib/shared/formatters";
+import type { Sexo } from "@/lib/types";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 const DEFAULT_SIGNUP: PublicSignupDraft = {
   nome: "",
@@ -34,31 +36,19 @@ const DEFAULT_SIGNUP: PublicSignupDraft = {
   objetivo: "",
 };
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
 function PublicJourneyFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-      Carregando jornada pública...
-    </div>
+    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
   );
 }
 
 function CadastroPublicoPageContent() {
   const { context, loading, error, resolvedTenantRef, persistDraft, draft, planId } = usePublicJourney();
-  const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
-
-  useEffect(() => {
-    void listPublicTenants().then(setTenantOptions);
-  }, []);
+  const { data: tenantOptions = [] } = usePublicTenants();
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Carregando jornada pública...
-      </div>
+      <SuspenseFallback variant="page" message="Carregando jornada pública..." />
     );
   }
 

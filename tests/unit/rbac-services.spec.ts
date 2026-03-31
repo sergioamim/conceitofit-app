@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { listPerfisApi } from "../../src/lib/api/rbac";
-import { listPerfisService, saveGrantService } from "../../src/lib/rbac/services";
+import { listPerfisService, saveGrantService } from "../../src/lib/tenant/rbac/services";
 
 const envSnapshot = {
   devAutoLogin: process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN,

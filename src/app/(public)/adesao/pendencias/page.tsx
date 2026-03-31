@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { usePublicTenants } from "@/lib/query/use-public-tenants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PublicJourneyShell } from "@/components/public/public-journey-shell";
@@ -9,22 +10,17 @@ import {
   buildPublicJourneyHref,
   confirmPublicCheckoutPayment,
   getPublicCheckoutStatus,
-  listPublicTenants,
   signPublicCheckoutContract,
   type PublicCheckoutSummary,
 } from "@/lib/public/services";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
-import type { Tenant } from "@/lib/types";
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
+import { sanitizeHtml } from "@/lib/sanitize";
+import { formatCurrency } from "@/lib/shared/formatters";
+import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
 function PublicJourneyFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-      Carregando jornada pública...
-    </div>
+    <SuspenseFallback variant="page" message="Carregando jornada pública..." />
   );
 }
 
@@ -40,14 +36,15 @@ function PendenciasPublicasPageContent() {
     resetDraft,
     planId,
   } = usePublicJourney();
-  const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
+  const { data: tenantOptions = [] } = usePublicTenants();
   const [summary, setSummary] = useState<PublicCheckoutSummary | null>(null);
   const [saving, setSaving] = useState<"" | "PAYMENT" | "CONTRACT">("");
   const [pageError, setPageError] = useState("");
-
-  useEffect(() => {
-    void listPublicTenants().then(setTenantOptions);
-  }, []);
+  // Sanitiza HTML do contrato — vem do backend mas pode conter dados de input do usuário
+  const safeContractHtml = useMemo(
+    () => (summary?.contractHtml ? sanitizeHtml(summary.contractHtml) : undefined),
+    [summary?.contractHtml],
+  );
 
   useEffect(() => {
     if (!context) return;
@@ -83,9 +80,7 @@ function PendenciasPublicasPageContent() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Carregando jornada pública...
-      </div>
+      <SuspenseFallback variant="page" message="Carregando jornada pública..." />
     );
   }
 
@@ -277,10 +272,10 @@ function PendenciasPublicasPageContent() {
               <CardTitle>Contrato e fechamento</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {summary.contractHtml ? (
+              {safeContractHtml ? (
                 <div
                   className="max-h-[480px] overflow-auto rounded-2xl border border-border/70 bg-secondary/20 p-4 text-sm text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: summary.contractHtml }}
+                  dangerouslySetInnerHTML={{ __html: safeContractHtml }}
                 />
               ) : (
                 <div className="rounded-2xl border border-dashed border-border/80 px-4 py-8 text-center text-sm text-muted-foreground">

@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { listGlobalAcademias } from "@/lib/backoffice/admin";
 import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { ListErrorState } from "@/components/shared/list-states";
@@ -33,12 +32,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import {
   createAdminContrato,
-  listAdminContratos,
-  listAdminPlanos,
   reativarAdminContrato,
   suspenderAdminContrato,
   updateAdminContrato,
 } from "@/lib/api/admin-billing";
+import { useAdminContratos, useAdminPlanos } from "@/lib/query/admin";
+import { useAdminAcademias } from "@/lib/query/admin";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import type {
@@ -49,9 +50,10 @@ import type {
   StatusContratoPlataforma,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
 type PageSize = 10 | 20 | 50;
-type StatusFilter = "TODOS" | StatusContratoPlataforma;
+type StatusFilter = WithFilterAll<StatusContratoPlataforma>;
 
 type ContratoFormValues = {
   academiaId: string;
@@ -157,15 +159,19 @@ function toFormValues(
 
 export default function AdminContratosPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const contratosQuery = useAdminContratos();
+  const academiasQuery = useAdminAcademias();
+  const planosQuery = useAdminPlanos();
+  const loading = contratosQuery.isLoading || academiasQuery.isLoading || planosQuery.isLoading;
+  const error = contratosQuery.error?.message ?? academiasQuery.error?.message ?? planosQuery.error?.message ?? null;
+  const contratos = contratosQuery.data ?? [];
+  const academias = academiasQuery.data ?? [];
+  const planos = planosQuery.data ?? [];
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [contratos, setContratos] = useState<ContratoPlataforma[]>([]);
-  const [academias, setAcademias] = useState<Academia[]>([]);
-  const [planos, setPlanos] = useState<PlanoPlataforma[]>([]);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("TODOS");
-  const [academiaFilter, setAcademiaFilter] = useState("TODOS");
-  const [planoFilter, setPlanoFilter] = useState("TODOS");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(FILTER_ALL);
+  const [academiaFilter, setAcademiaFilter] = useState<string>(FILTER_ALL);
+  const [planoFilter, setPlanoFilter] = useState<string>(FILTER_ALL);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [todayDate, setTodayDate] = useState("");
@@ -211,34 +217,11 @@ export default function AdminContratosPage() {
     [academiaOptions, planoOptions]
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setError(null);
-      const [contratosResponse, academiasResponse, planosResponse] = await Promise.all([
-        listAdminContratos(),
-        listGlobalAcademias(),
-        listAdminPlanos(),
-      ]);
-      setContratos(contratosResponse);
-      setAcademias(academiasResponse);
-      setPlanos(planosResponse);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const filteredContratos = useMemo(() => {
     return contratos.filter((contrato) => {
-      if (statusFilter !== "TODOS" && contrato.status !== statusFilter) return false;
-      if (academiaFilter !== "TODOS" && contrato.academiaId !== academiaFilter) return false;
-      if (planoFilter !== "TODOS" && contrato.planoId !== planoFilter) return false;
+      if (statusFilter !== FILTER_ALL && contrato.status !== statusFilter) return false;
+      if (academiaFilter !== FILTER_ALL && contrato.academiaId !== academiaFilter) return false;
+      if (planoFilter !== FILTER_ALL && contrato.planoId !== planoFilter) return false;
       return true;
     });
   }, [academiaFilter, contratos, planoFilter, statusFilter]);
@@ -259,9 +242,9 @@ export default function AdminContratosPage() {
   );
 
   function resetFilters() {
-    setStatusFilter("TODOS");
-    setAcademiaFilter("TODOS");
-    setPlanoFilter("TODOS");
+    setStatusFilter(FILTER_ALL);
+    setAcademiaFilter(FILTER_ALL);
+    setPlanoFilter(FILTER_ALL);
     setPage(0);
   }
 
@@ -298,7 +281,7 @@ export default function AdminContratosPage() {
         historicoPlanosIds,
       };
       const saved = id ? await updateAdminContrato(id, payload) : await createAdminContrato(payload);
-      setContratos((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.contratos() });
       closeModal();
       setPage(0);
       toast({
@@ -321,7 +304,7 @@ export default function AdminContratosPage() {
     setSuspendendo(true);
     try {
       const suspenso = await suspenderAdminContrato(contratoParaSuspender.id, motivoSuspensao);
-      setContratos((current) => current.map((item) => (item.id === suspenso.id ? suspenso : item)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.contratos() });
       setSuspenderOpen(false);
       setContratoParaSuspender(null);
       setMotivoSuspensao("");
@@ -345,7 +328,7 @@ export default function AdminContratosPage() {
     setReativando(true);
     try {
       const reativado = await reativarAdminContrato(contratoParaReativar.id);
-      setContratos((current) => current.map((item) => (item.id === reativado.id ? reativado : item)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.financeiro.contratos() });
       setContratoParaReativar(null);
       toast({
         title: "Contrato reativado",
@@ -372,7 +355,7 @@ export default function AdminContratosPage() {
         </p>
       </header>
 
-      {error ? <ListErrorState error={error} onRetry={() => void load()} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => { contratosQuery.refetch(); academiasQuery.refetch(); planosQuery.refetch(); }} /> : null}
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-4">
@@ -412,7 +395,7 @@ export default function AdminContratosPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todos os status</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos os status</SelectItem>
                 {STATUS_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -432,7 +415,7 @@ export default function AdminContratosPage() {
                 <SelectValue placeholder="Academia" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todas as academias</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todas as academias</SelectItem>
                 {academias.map((academia) => (
                   <SelectItem key={academia.id} value={academia.id}>
                     {academia.nome}
@@ -452,7 +435,7 @@ export default function AdminContratosPage() {
                 <SelectValue placeholder="Plano" />
               </SelectTrigger>
               <SelectContent className="border-border bg-card">
-                <SelectItem value="TODOS">Todos os planos</SelectItem>
+                <SelectItem value={FILTER_ALL}>Todos os planos</SelectItem>
                 {planos.map((plano) => (
                   <SelectItem key={plano.id} value={plano.id}>
                     {plano.nome}

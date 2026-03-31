@@ -1,0 +1,29 @@
+name: accessibility
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  a11y-tests:
+    name: Accessibility Tests (axe-core)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Run a11y tests
+        run: npx vitest run tests/a11y/ --reporter=verbose

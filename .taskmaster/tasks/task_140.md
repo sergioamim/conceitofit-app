@@ -1,47 +1,19 @@
 # Task ID: 140
 
-**Title:** Backend: API de métricas operacionais globais (/admin/metricas)
+**Title:** Configurar Vitest e testes unitários básicos
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
-**Priority:** medium
+**Priority:** low
 
-**Description:** Implementar endpoints para métricas operacionais cross-tenant: dashboard global, mapa de saúde, alertas operacionais e uso de features por academia.
+**Description:** Adicionar Vitest + Testing Library e criar testes iniciais para utilitários críticos.
 
 **Details:**
 
-Endpoints:
-1. GET /api/v1/admin/metricas/operacionais/global → { totalAlunosAtivos, totalMatriculasAtivas, vendasMesQuantidade, vendasMesValor, ticketMedio, novasMatriculasMes, evolucaoMensal: [{ mes, novosAlunos, churn }], distribuicaoPorAcademia: [{ academiaId, academiaNome, unidades, alunosAtivos, matriculasAtivas, vendasMes }] }
-2. GET /api/v1/admin/metricas/operacionais/saude → [{ academiaId, academiaNome, totalUnidades, alunosAtivos, churnMensal, inadimplenciaPct, ultimoLoginAdmin, statusContrato, classificacao: SAUDAVEL|RISCO|CRITICO }]
-3. GET /api/v1/admin/metricas/operacionais/alertas → [{ id, tipo, severidade: INFO|WARNING|CRITICAL, mensagem, academiaId, academiaNome, criadoEm, acao }]
-4. GET /api/v1/admin/metricas/operacionais/features → [{ academiaId, academiaNome, features: { treinos, crm, catraca, vendasOnline, bi } }]
-Para saúde: SAUDAVEL = alunos>50 e inadimplencia<10%, RISCO = entre, CRITICO = alunos<10 ou inadimplencia>20% ou sem login 30d.
+Adicionar vitest, @testing-library/react, @testing-library/jest-dom em devDependencies. Criar vitest.config.ts e tests/setup.ts. Testes de exemplo para access-control, api/session e tenant-context.
 
 **Test Strategy:**
 
-Verificar que totais globais batem com soma individual. Confirmar classificação de saúde por regras. Verificar alertas gerados automaticamente.
-
-## Subtasks
-
-### 140.1. Criar endpoint de dashboard operacional global
-
-**Status:** pending  
-**Dependencies:** None  
-
-Agregação cross-tenant de alunos, matrículas, vendas com evolução mensal
-
-### 140.2. Criar endpoint de mapa de saúde das academias
-
-**Status:** pending  
-**Dependencies:** None  
-
-Classificação automática (saudável/risco/crítico) por regras de negócio
-
-### 140.3. Criar endpoints de alertas e uso de features
-
-**Status:** pending  
-**Dependencies:** None  
-
-Alertas automáticos por regras + mapa de features ativas por academia
+Rodar npx vitest run e validar que os testes passam.

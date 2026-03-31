@@ -14,10 +14,10 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CargoModal } from "@/components/shared/cargo-modal";
-import { useAuthAccess } from "@/hooks/use-session-context";
+import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import { createCargoApi, createFuncionarioApi, updateCargoApi, updateFuncionarioApi } from "@/lib/api/administrativo";
-import { buildQuickCreateColaboradorPayload } from "@/lib/administrativo-colaboradores";
-import { buildFuncionarioProfileFormSchema } from "@/lib/forms/administrativo-schemas";
+import { buildQuickCreateColaboradorPayload } from "@/lib/tenant/administrativo-colaboradores";
+import { buildFuncionarioProfileFormSchema } from "@/lib/tenant/forms/administrativo-schemas";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { Cargo, FuncionarioStatusAcesso, FuncionarioStatusOperacional } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -73,7 +73,7 @@ export function FuncionarioFormPage({ mode, funcionarioId }: FuncionarioFormPage
     defaultValues: createFuncionarioFormDefaults(tenantContext.tenantId),
   });
 
-  const values = useWatch({ control: form.control }) ?? createFuncionarioFormDefaults(tenantContext.tenantId);
+  const values = (useWatch({ control: form.control }) ?? createFuncionarioFormDefaults(tenantContext.tenantId)) as FuncionarioFormValues;
 
   useEffect(() => {
     setHasMounted(true);

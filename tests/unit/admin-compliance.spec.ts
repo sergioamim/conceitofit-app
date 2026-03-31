@@ -5,7 +5,7 @@ import {
   countComplianceDataPoints,
   normalizeComplianceTermsStatus,
   normalizeSolicitacaoExclusaoStatus,
-} from "../../src/lib/admin-compliance";
+} from "../../src/lib/backoffice/admin-compliance";
 
 test.describe("admin compliance helpers", () => {
   test("calcula total agregado de dados pessoais por academia", () => {

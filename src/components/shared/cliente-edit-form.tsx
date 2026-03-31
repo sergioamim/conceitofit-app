@@ -1,37 +1,44 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { updateAlunoService } from "@/lib/comercial/runtime";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
+import { updateAlunoService } from "@/lib/tenant/comercial/runtime";
+import { fetchCep } from "@/lib/shared/cep-lookup";
 import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { requiredTrimmedString, optionalTrimmedString } from "@/lib/forms/zod-helpers";
 
-interface EditForm {
-  nome: string;
-  email: string;
-  telefone: string;
-  telefoneSec: string;
-  cpf: string;
-  rg: string;
-  dataNascimento: string;
-  sexo: Aluno["sexo"] | "";
-  enderecoCep: string;
-  enderecoLogradouro: string;
-  enderecoNumero: string;
-  enderecoComplemento: string;
-  enderecoBairro: string;
-  enderecoCidade: string;
-  enderecoEstado: string;
-  emergenciaNome: string;
-  emergenciaTelefone: string;
-  emergenciaParentesco: string;
-  observacoesMedicas: string;
-}
+const clienteFormSchema = z.object({
+  nome: requiredTrimmedString("Informe o nome."),
+  email: requiredTrimmedString("Informe o e-mail.").email("E-mail inválido."),
+  telefone: requiredTrimmedString("Informe o telefone."),
+  telefoneSec: optionalTrimmedString(),
+  cpf: requiredTrimmedString("Informe o CPF."),
+  rg: optionalTrimmedString(),
+  dataNascimento: requiredTrimmedString("Informe a data de nascimento."),
+  sexo: requiredTrimmedString("Selecione o sexo."),
+  enderecoCep: optionalTrimmedString(),
+  enderecoLogradouro: optionalTrimmedString(),
+  enderecoNumero: optionalTrimmedString(),
+  enderecoComplemento: optionalTrimmedString(),
+  enderecoBairro: optionalTrimmedString(),
+  enderecoCidade: optionalTrimmedString(),
+  enderecoEstado: optionalTrimmedString(),
+  emergenciaNome: optionalTrimmedString(),
+  emergenciaTelefone: optionalTrimmedString(),
+  emergenciaParentesco: optionalTrimmedString(),
+  observacoesMedicas: optionalTrimmedString(),
+});
 
-function buildForm(aluno: Aluno): EditForm {
+type ClienteFormValues = z.infer<typeof clienteFormSchema>;
+
+function buildForm(aluno: Aluno): ClienteFormValues {
   return {
     nome: aluno.nome,
     email: aluno.email,
@@ -40,7 +47,7 @@ function buildForm(aluno: Aluno): EditForm {
     cpf: aluno.cpf,
     rg: aluno.rg ?? "",
     dataNascimento: aluno.dataNascimento,
-    sexo: aluno.sexo,
+    sexo: aluno.sexo || "",
     enderecoCep: aluno.endereco?.cep ?? "",
     enderecoLogradouro: aluno.endereco?.logradouro ?? "",
     enderecoNumero: aluno.endereco?.numero ?? "",
@@ -64,33 +71,40 @@ export function ClienteEditForm({
   onCancel: () => void;
   onSaved?: () => Promise<void> | void;
 }) {
-  const [form, setForm] = useState<EditForm>(() => buildForm(aluno));
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<ClienteFormValues>({
+    resolver: zodResolver(clienteFormSchema),
+    defaultValues: buildForm(aluno),
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
   useEffect(() => {
-    setForm(buildForm(aluno));
+    reset(buildForm(aluno));
     setError("");
-  }, [aluno]);
+  }, [aluno, reset]);
+
+  const enderecoCep = watch("enderecoCep");
 
   useEffect(() => {
-    const cep = form.enderecoCep.replace(/\D/g, "");
-    if (cep.length !== 8) return;
-    fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.erro) return;
-        setForm((prev) => ({
-          ...prev,
-          enderecoLogradouro: data.logradouro ?? prev.enderecoLogradouro,
-          enderecoBairro: data.bairro ?? prev.enderecoBairro,
-          enderecoCidade: data.localidade ?? prev.enderecoCidade,
-          enderecoEstado: data.uf ?? prev.enderecoEstado,
-        }));
-      })
-      .catch(() => undefined);
-  }, [form.enderecoCep]);
+    fetchCep(enderecoCep ?? "").then((data) => {
+      if (!data) return;
+      if (data.logradouro) setValue("enderecoLogradouro", data.logradouro);
+      if (data.bairro) setValue("enderecoBairro", data.bairro);
+      if (data.localidade) setValue("enderecoCidade", data.localidade);
+      if (data.uf) setValue("enderecoEstado", data.uf);
+    });
+  }, [enderecoCep, setValue]);
 
-  const handleSave = async () => {
+  const onFormSubmit = async (form: ClienteFormValues) => {
     setLoading(true);
     setError("");
     try {
@@ -105,7 +119,7 @@ export function ClienteEditForm({
           cpf: form.cpf,
           rg: form.rg || undefined,
           dataNascimento: form.dataNascimento,
-          sexo: form.sexo || undefined,
+          sexo: (form.sexo as Aluno["sexo"]) || undefined,
           endereco: {
             cep: form.enderecoCep || undefined,
             logradouro: form.enderecoLogradouro || undefined,
@@ -118,7 +132,7 @@ export function ClienteEditForm({
           contatoEmergencia: form.emergenciaNome
             ? {
                 nome: form.emergenciaNome,
-                telefone: form.emergenciaTelefone,
+                telefone: form.emergenciaTelefone ?? "",
                 parentesco: form.emergenciaParentesco || undefined,
               }
             : undefined,
@@ -135,62 +149,82 @@ export function ClienteEditForm({
     }
   };
 
-  function setField<K extends keyof EditForm>(key: K, value: EditForm[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <h2 className="font-display text-lg font-bold">Editar cliente</h2>
       <div className="rounded-xl border border-border bg-card p-6">
         <h3 className="text-sm font-semibold text-muted-foreground">Dados pessoais</h3>
         <div className="mt-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-              <Input value={form.nome} onChange={(e) => setField("nome", e.target.value)} className="bg-secondary border-border" />
+              <label htmlFor="edit-nome" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+              <Input id="edit-nome" {...register("nome")} className="bg-secondary border-border" />
+              {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
-              <Input type="email" value={form.email} onChange={(e) => setField("email", e.target.value)} className="bg-secondary border-border" />
+              <label htmlFor="edit-email" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
+              <Input id="edit-email" type="email" {...register("email")} className="bg-secondary border-border" />
+              {errors.email ? <p className="text-xs text-gym-danger">{errors.email.message}</p> : null}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
-              <PhoneInput value={form.telefone} onChange={(v) => setField("telefone", v)} className="bg-secondary border-border" />
+              <label htmlFor="edit-telefone" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
+              <Controller
+                control={control}
+                name="telefone"
+                render={({ field }) => (
+                  <PhoneInput id="edit-telefone" value={field.value} onChange={field.onChange} className="bg-secondary border-border" />
+                )}
+              />
+              {errors.telefone ? <p className="text-xs text-gym-danger">{errors.telefone.message}</p> : null}
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone secundário</label>
-              <PhoneInput value={form.telefoneSec} onChange={(v) => setField("telefoneSec", v)} className="bg-secondary border-border" />
+              <label htmlFor="edit-telefoneSec" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone secundário</label>
+              <Controller
+                control={control}
+                name="telefoneSec"
+                render={({ field }) => (
+                  <PhoneInput id="edit-telefoneSec" value={field.value ?? ""} onChange={field.onChange} className="bg-secondary border-border" />
+                )}
+              />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF *</label>
-              <MaskedInput mask="cpf" value={form.cpf} onChange={(v) => setField("cpf", v)} className="bg-secondary border-border" />
+              <label htmlFor="edit-cpf" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF *</label>
+              <Controller
+                control={control}
+                name="cpf"
+                render={({ field }) => (
+                  <MaskedInput id="edit-cpf" mask="cpf" value={field.value} onChange={field.onChange} className="bg-secondary border-border" />
+                )}
+              />
+              {errors.cpf ? <p className="text-xs text-gym-danger">{errors.cpf.message}</p> : null}
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">RG</label>
-              <Input value={form.rg} onChange={(e) => setField("rg", e.target.value)} className="bg-secondary border-border" />
+              <label htmlFor="edit-rg" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">RG</label>
+              <Input id="edit-rg" {...register("rg")} className="bg-secondary border-border" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data de nascimento</label>
-              <Input type="date" value={form.dataNascimento} onChange={(e) => setField("dataNascimento", e.target.value)} className="bg-secondary border-border" />
+              <label htmlFor="edit-dataNascimento" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data de nascimento</label>
+              <Input id="edit-dataNascimento" type="date" {...register("dataNascimento")} className="bg-secondary border-border" />
+              {errors.dataNascimento ? <p className="text-xs text-gym-danger">{errors.dataNascimento.message}</p> : null}
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sexo</label>
+            <label htmlFor="edit-sexo" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sexo</label>
             <select
+              id="edit-sexo"
               className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
-              value={form.sexo}
-              onChange={(e) => setField("sexo", e.target.value as Aluno["sexo"] | "")}
+              {...register("sexo")}
             >
               <option value="">Selecione</option>
               <option value="M">Masculino</option>
               <option value="F">Feminino</option>
               <option value="OUTRO">Outro</option>
             </select>
+            {errors.sexo ? <p className="text-xs text-gym-danger">{errors.sexo.message}</p> : null}
           </div>
         </div>
       </div>
@@ -199,32 +233,38 @@ export function ClienteEditForm({
         <h3 className="text-sm font-semibold text-muted-foreground">Endereço</h3>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CEP</label>
-            <MaskedInput mask="cep" value={form.enderecoCep} onChange={(v) => setField("enderecoCep", v)} className="bg-secondary border-border" />
+            <label htmlFor="edit-cep" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CEP</label>
+            <Controller
+              control={control}
+              name="enderecoCep"
+              render={({ field }) => (
+                <MaskedInput id="edit-cep" mask="cep" value={field.value ?? ""} onChange={field.onChange} className="bg-secondary border-border" />
+              )}
+            />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Logradouro</label>
-            <Input value={form.enderecoLogradouro} onChange={(e) => setField("enderecoLogradouro", e.target.value)} className="bg-secondary border-border" />
+            <label htmlFor="edit-logradouro" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Logradouro</label>
+            <Input id="edit-logradouro" {...register("enderecoLogradouro")} className="bg-secondary border-border" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Número</label>
-            <Input value={form.enderecoNumero} onChange={(e) => setField("enderecoNumero", e.target.value)} className="bg-secondary border-border" />
+            <label htmlFor="edit-numero" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Número</label>
+            <Input id="edit-numero" {...register("enderecoNumero")} className="bg-secondary border-border" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Complemento</label>
-            <Input value={form.enderecoComplemento} onChange={(e) => setField("enderecoComplemento", e.target.value)} className="bg-secondary border-border" />
+            <label htmlFor="edit-complemento" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Complemento</label>
+            <Input id="edit-complemento" {...register("enderecoComplemento")} className="bg-secondary border-border" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Bairro</label>
-            <Input value={form.enderecoBairro} onChange={(e) => setField("enderecoBairro", e.target.value)} className="bg-secondary border-border" />
+            <label htmlFor="edit-bairro" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Bairro</label>
+            <Input id="edit-bairro" {...register("enderecoBairro")} className="bg-secondary border-border" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cidade</label>
-            <Input value={form.enderecoCidade} onChange={(e) => setField("enderecoCidade", e.target.value)} className="bg-secondary border-border" />
+            <label htmlFor="edit-cidade" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cidade</label>
+            <Input id="edit-cidade" {...register("enderecoCidade")} className="bg-secondary border-border" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</label>
-            <Input value={form.enderecoEstado} onChange={(e) => setField("enderecoEstado", e.target.value)} className="bg-secondary border-border" />
+            <label htmlFor="edit-estado" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</label>
+            <Input id="edit-estado" {...register("enderecoEstado")} className="bg-secondary border-border" />
           </div>
         </div>
       </div>
@@ -233,29 +273,35 @@ export function ClienteEditForm({
         <h3 className="text-sm font-semibold text-muted-foreground">Contato de emergência</h3>
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome</label>
-            <Input value={form.emergenciaNome} onChange={(e) => setField("emergenciaNome", e.target.value)} className="bg-secondary border-border" />
+            <label htmlFor="edit-emergencia-nome" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome</label>
+            <Input id="edit-emergencia-nome" {...register("emergenciaNome")} className="bg-secondary border-border" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</label>
-            <PhoneInput value={form.emergenciaTelefone} onChange={(v) => setField("emergenciaTelefone", v)} className="bg-secondary border-border" />
+            <label htmlFor="edit-emergencia-telefone" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</label>
+            <Controller
+              control={control}
+              name="emergenciaTelefone"
+              render={({ field }) => (
+                <PhoneInput id="edit-emergencia-telefone" value={field.value ?? ""} onChange={field.onChange} className="bg-secondary border-border" />
+              )}
+            />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>
-            <Input value={form.emergenciaParentesco} onChange={(e) => setField("emergenciaParentesco", e.target.value)} className="bg-secondary border-border" />
+            <label htmlFor="edit-emergencia-parentesco" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>
+            <Input id="edit-emergencia-parentesco" {...register("emergenciaParentesco")} className="bg-secondary border-border" />
           </div>
         </div>
       </div>
 
       <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" className="border-border" onClick={onCancel}>
+        <Button type="button" variant="outline" className="border-border" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button onClick={handleSave} disabled={loading}>
+        <Button type="submit" disabled={loading}>
           {loading ? "Salvando..." : "Salvar alterações"}
         </Button>
       </div>
-      {error ? <p className="text-sm text-gym-danger">{error}</p> : null}
-    </div>
+      {error ? <p role="alert" aria-live="assertive" className="text-sm text-gym-danger">{error}</p> : null}
+    </form>
   );
 }

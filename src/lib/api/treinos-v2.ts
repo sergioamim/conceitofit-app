@@ -14,7 +14,7 @@ import type {
   TreinoV2TemplateSnapshot,
   TreinoV2TemplateStatus,
   TreinoV2ValidationIssue,
-} from "@/lib/treinos/v2-domain";
+} from "@/lib/tenant/treinos/v2-domain";
 
 export interface TreinoV2CatalogExercise {
   id: string;

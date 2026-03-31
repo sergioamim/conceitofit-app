@@ -1,15 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, User, Briefcase, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { searchGlobalPessoas } from "@/lib/api/admin-search";
+import { useAdminBusca } from "@/lib/query/admin";
 import type { GlobalSearchPersonType, GlobalSearchResult } from "@/lib/types";
 import { ListErrorState, EmptyState } from "@/components/shared/list-states";
+import { formatCpf } from "@/lib/formatters";
 
 const TIPO_CONFIG: Record<GlobalSearchPersonType, { label: string; icon: typeof User; badgeClass: string }> = {
   ALUNO: { label: "Alunos", icon: User, badgeClass: "border-gym-teal/40 bg-gym-teal/10 text-gym-teal" },
@@ -32,57 +32,26 @@ function groupByTipo(items: GlobalSearchResult[]): Record<GlobalSearchPersonType
   return groups;
 }
 
-function formatCpf(value?: string) {
-  if (!value) return "";
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 11) {
-    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-  }
-  return value;
-}
-
 export default function BuscaGlobalPage() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<GlobalSearchResult[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [searched, setSearched] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const search = useCallback(async (q: string) => {
-    const trimmed = q.trim();
-    if (trimmed.length < 2) {
-      setResults([]);
-      setTotal(0);
-      setSearched(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await searchGlobalPessoas({ query: trimmed, size: 50 });
-      setResults(response.items);
-      setTotal(response.total);
-      setSearched(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao buscar. Tente novamente.");
-      setResults([]);
-      setSearched(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      void search(query);
+    const timeout = setTimeout(() => {
+      setDebouncedQuery(query);
     }, 300);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [query, search]);
+    return () => clearTimeout(timeout);
+  }, [query]);
+
+  const buscaQuery = useAdminBusca(debouncedQuery, 50);
+
+  const results = buscaQuery.data?.items ?? [];
+  const total = buscaQuery.data?.total ?? 0;
+  const loading = buscaQuery.isFetching;
+  const error = buscaQuery.error
+    ? (buscaQuery.error instanceof Error ? buscaQuery.error.message : "Erro ao buscar. Tente novamente.")
+    : null;
+  const searched = debouncedQuery.trim().length >= 2;
 
   const grouped = groupByTipo(results);
 
@@ -112,7 +81,7 @@ export default function BuscaGlobalPage() {
         )}
       </div>
 
-      {error ? <ListErrorState error={error} onRetry={() => void search(query)} /> : null}
+      {error ? <ListErrorState error={error} onRetry={() => void buscaQuery.refetch()} /> : null}
 
       {searched && !error && results.length === 0 && (
         <EmptyState variant="search" message={`Nenhum resultado encontrado para "${query.trim()}".`} />

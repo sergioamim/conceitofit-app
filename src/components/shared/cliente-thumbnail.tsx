@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 type ClienteThumbnailSize = "sm" | "md" | "lg" | number;
@@ -53,15 +54,14 @@ export function ClienteThumbnail({
   return (
     <div
       className={cn(
-        "shrink-0 overflow-hidden rounded-full border border-border bg-secondary shadow-inner",
+        "relative shrink-0 overflow-hidden rounded-full border border-border bg-secondary shadow-inner",
         sizeClass(size),
         className
       )}
       style={dynamicSizeStyle}
     >
       {foto ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={foto} alt={resolvedAlt} className="h-full w-full object-cover" />
+        <Image src={foto} alt={resolvedAlt} fill unoptimized className="object-cover" />
       ) : (
         <div
           className="flex h-full w-full items-center justify-center font-semibold"

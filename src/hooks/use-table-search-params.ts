@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import type { StatusAluno } from "@/lib/types";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 export function useTableSearchParams() {
   const router = useRouter();
@@ -8,7 +9,7 @@ export function useTableSearchParams() {
   const searchParams = useSearchParams();
 
   const q = searchParams.get("q") ?? "";
-  const status = (searchParams.get("status") ?? "TODOS") as StatusAluno | "TODOS";
+  const status = (searchParams.get("status") ?? FILTER_ALL) as StatusAluno | typeof FILTER_ALL;
   const page = parseInt(searchParams.get("page") ?? "0", 10);
   const size = parseInt(searchParams.get("size") ?? "20", 10) as 20 | 50 | 100 | 200;
 
@@ -43,7 +44,7 @@ export function useTableSearchParams() {
     router.push(pathname, { scroll: false });
   }, [pathname, router]);
 
-  const hasActiveFilters = q !== "" || status !== "TODOS";
+  const hasActiveFilters = q !== "" || status !== FILTER_ALL;
 
   return {
     q,

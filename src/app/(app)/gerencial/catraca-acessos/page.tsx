@@ -8,11 +8,11 @@ import type {
   CatracaAcessosResumo,
   CatracaAcessosSerieDiaria,
 } from "@/lib/api/catraca";
-import { listarAcessosCatracaDashboardApi } from "@/lib/api/catraca";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { useCatracaAcessos } from "@/lib/query/use-catraca-acessos";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { ClienteThumbnail } from "@/components/shared/cliente-thumbnail";
 import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
@@ -20,9 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TableCell } from "@/components/ui/table";
+import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 
-type TipoLiberacaoFiltro = "TODOS" | "MANUAL" | "AUTOMATICA";
-type StatusFiltro = "TODOS" | "LIBERADO" | "BLOQUEADO";
+type TipoLiberacaoFiltro = WithFilterAll<"MANUAL" | "AUTOMATICA">;
+type StatusFiltro = WithFilterAll<"LIBERADO" | "BLOQUEADO">;
 type TipoLiberacaoNormalizado = "MANUAL" | "AUTOMATICA" | "INDEFINIDA";
 
 function getTodayDate(): string {
@@ -201,15 +202,7 @@ export default function CatracaAcessosPage() {
   const { tenantId, tenantResolved } = useTenantContext();
   const [activeTab, setActiveTab] = useState<"DASHBOARD" | "ACESSOS">("DASHBOARD");
   const [page, setPage] = useState(0);
-  const [size] = useState(20);
-  const [items, setItems] = useState<CatracaAcesso[]>([]);
-  const [total, setTotal] = useState(0);
-  const [hasNext, setHasNext] = useState(false);
-  const [dashboardResumoApi, setDashboardResumoApi] = useState<CatracaAcessosResumo | null>(null);
-  const [dashboardSerieApi, setDashboardSerieApi] = useState<CatracaAcessosSerieDiaria[] | null>(null);
-  const [dashboardRankingApi, setDashboardRankingApi] = useState<CatracaAcessosRankingItem[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const size = 20;
 
   const [periodStartDraft, setPeriodStartDraft] = useState(() => getTodayDate());
   const [periodEndDraft, setPeriodEndDraft] = useState(() => getTodayDate());
@@ -229,61 +222,41 @@ export default function CatracaAcessosPage() {
   const [loadingClienteOptions, setLoadingClienteOptions] = useState(false);
   const [erroClienteOptions, setErroClienteOptions] = useState("");
 
-  const [tipoLiberacaoFiltro, setTipoLiberacaoFiltro] = useState<TipoLiberacaoFiltro>("TODOS");
-  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("TODOS");
+  const [tipoLiberacaoFiltro, setTipoLiberacaoFiltro] = useState<TipoLiberacaoFiltro>(FILTER_ALL);
+  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>(FILTER_ALL);
 
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setError("");
-    try {
-      const response = await listarAcessosCatracaDashboardApi({
-        tenantId,
-        page,
-        size,
-        startDate: periodStart,
-        endDate: periodEnd,
-        tipoLiberacao: tipoLiberacaoFiltro,
-        status: statusFiltro,
-        uniqueWindowMinutes: 120,
-      });
+  // Server state via TanStack Query
+  const { data: response, isLoading: loading, error: queryError, refetch } = useCatracaAcessos({
+    tenantId: tenantId ?? undefined,
+    tenantResolved,
+    page,
+    size,
+    startDate: periodStart,
+    endDate: periodEnd,
+    tipoLiberacao: tipoLiberacaoFiltro,
+    status: statusFiltro,
+  });
 
-      const sortedItems = [...response.items].sort(
-        (first, second) =>
-          toTimestamp(second.occurredAt ?? second.createdAt) - toTimestamp(first.occurredAt ?? first.createdAt)
-      );
+  const items = useMemo(() => {
+    if (!response?.items) return [];
+    return [...response.items].sort(
+      (first, second) =>
+        toTimestamp(second.occurredAt ?? second.createdAt) - toTimestamp(first.occurredAt ?? first.createdAt),
+    );
+  }, [response?.items]);
 
-      setItems(sortedItems);
-      setHasNext(response.hasNext);
-      setDashboardResumoApi(response.resumo ?? null);
-      setDashboardSerieApi(response.serieDiaria ?? null);
-      setDashboardRankingApi(response.rankingFrequencia ?? null);
-      setTotal(
-        estimateTotal({
-          total: response.total,
-          page: response.page,
-          size: response.size,
-          itemsLength: sortedItems.length,
-          hasNext: response.hasNext,
-        })
-      );
-    } catch (loadError) {
-      setItems([]);
-      setHasNext(false);
-      setTotal(0);
-      setDashboardResumoApi(null);
-      setDashboardSerieApi(null);
-      setDashboardRankingApi(null);
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [page, periodEnd, periodStart, size, statusFiltro, tenantId, tipoLiberacaoFiltro]);
-
-  useEffect(() => {
-    if (!tenantResolved || !tenantId) return;
-    void load();
-  }, [load, tenantId, tenantResolved]);
+  const hasNext = response?.hasNext ?? false;
+  const dashboardResumoApi = response?.resumo ?? null;
+  const dashboardSerieApi = response?.serieDiaria ?? null;
+  const dashboardRankingApi = response?.rankingFrequencia ?? null;
+  const total = estimateTotal({
+    total: response?.total ?? 0,
+    page: response?.page ?? 0,
+    size: response?.size ?? size,
+    itemsLength: items.length,
+    hasNext,
+  });
+  const error = queryError ? normalizeErrorMessage(queryError) : "";
 
   useEffect(() => {
     setPage(0);
@@ -358,14 +331,14 @@ export default function CatracaAcessosPage() {
   const globallyFilteredItems = useMemo(() => {
     let scoped = items;
 
-    if (statusFiltro !== "TODOS") {
+    if (statusFiltro !== FILTER_ALL) {
       scoped = scoped.filter((item) => {
         const blocked = isBlockedStatus(item.status);
         return statusFiltro === "BLOQUEADO" ? blocked : !blocked;
       });
     }
 
-    if (tipoLiberacaoFiltro !== "TODOS") {
+    if (tipoLiberacaoFiltro !== FILTER_ALL) {
       scoped = scoped.filter((item) => resolveTipoLiberacao(item.releaseType, item.issuedBy) === tipoLiberacaoFiltro);
     }
 
@@ -423,15 +396,8 @@ export default function CatracaAcessosPage() {
   const showSuggestionHint = clienteQuery.trim().length > 0 && clienteQuery.trim().length < 3;
 
   function applyPeriodFilter() {
-    if (!periodStartDraft || !periodEndDraft) {
-      setError("Informe a data inicial e final para filtrar.");
-      return;
-    }
-    if (periodStartDraft > periodEndDraft) {
-      setError("Período inválido: data inicial maior que a data final.");
-      return;
-    }
-    setError("");
+    if (!periodStartDraft || !periodEndDraft) return;
+    if (periodStartDraft > periodEndDraft) return;
     setPage(0);
     setPeriodStart(periodStartDraft);
     setPeriodEnd(periodEndDraft);
@@ -439,7 +405,6 @@ export default function CatracaAcessosPage() {
 
   function resetTodayPeriod() {
     const today = getTodayDate();
-    setError("");
     setPage(0);
     setPeriodStartDraft(today);
     setPeriodEndDraft(today);
@@ -457,7 +422,7 @@ export default function CatracaAcessosPage() {
             Visualize indicadores e eventos de acesso da unidade com filtros globais.
           </p>
         </div>
-        <Button type="button" onClick={() => void load()} disabled={loading}>
+        <Button type="button" onClick={() => void refetch()} disabled={loading}>
           <RefreshCw className="mr-2 size-4" />
           {loading ? "Atualizando..." : "Atualizar"}
         </Button>
@@ -501,7 +466,7 @@ export default function CatracaAcessosPage() {
               <SelectValue placeholder="Tipo de liberação" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="TODOS">Todos os tipos</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos os tipos</SelectItem>
               <SelectItem value="AUTOMATICA">Automática</SelectItem>
               <SelectItem value="MANUAL">Manual</SelectItem>
             </SelectContent>
@@ -518,7 +483,7 @@ export default function CatracaAcessosPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="TODOS">Todos os status</SelectItem>
+              <SelectItem value={FILTER_ALL}>Todos os status</SelectItem>
               <SelectItem value="LIBERADO">Liberados</SelectItem>
               <SelectItem value="BLOQUEADO">Bloqueados</SelectItem>
             </SelectContent>

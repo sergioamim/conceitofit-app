@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import {
-  executarSolicitacaoExclusao,
-  getComplianceDashboard,
-  rejeitarSolicitacaoExclusao,
+  executarSolicitacaoExclusaoApi,
+  getComplianceDashboardApi,
+  rejeitarSolicitacaoExclusaoApi,
 } from "../../src/lib/api/admin-compliance";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
@@ -187,10 +187,10 @@ test.describe("admin compliance api", () => {
     ]);
 
     try {
-      const dashboard = await getComplianceDashboard();
+      const dashboard = await getComplianceDashboardApi();
 
       expect(calls).toHaveLength(1);
-      expect(calls[0]?.url).toContain("/api/v1/admin/compliance/dashboard");
+      expect(calls[0]?.url).toContain("/api/v1/administrativo/compliance/dashboard");
       expect(dashboard.totalDadosPessoaisArmazenados).toBe(107);
       expect(dashboard.solicitacoesExclusaoPendentes).toBe(1);
       expect(dashboard.academias[0]).toEqual(
@@ -232,20 +232,21 @@ test.describe("admin compliance api", () => {
     ]);
 
     try {
-      await executarSolicitacaoExclusao("req-10");
-      await rejeitarSolicitacaoExclusao("req-11");
+      await executarSolicitacaoExclusaoApi("req-10");
+      await rejeitarSolicitacaoExclusaoApi("req-11", "Duplicidade de solicitação");
 
       expect(calls).toHaveLength(2);
       expect(calls[0]).toEqual(
         expect.objectContaining({
           method: "POST",
-          url: expect.stringContaining("/api/v1/admin/compliance/solicitacoes-exclusao/req-10/executar"),
+          url: expect.stringContaining("/api/v1/administrativo/compliance/solicitacoes/req-10/executar"),
         })
       );
       expect(calls[1]).toEqual(
         expect.objectContaining({
           method: "POST",
-          url: expect.stringContaining("/api/v1/admin/compliance/solicitacoes-exclusao/req-11/rejeitar"),
+          url: expect.stringContaining("/api/v1/administrativo/compliance/solicitacoes/req-11/rejeitar"),
+          body: JSON.stringify({ motivo: "Duplicidade de solicitação" }),
         })
       );
     } finally {

@@ -15,13 +15,13 @@ import { getFeatureFlagsMatrixApi, toggleFeatureForAcademiaApi } from "@/lib/api
 import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/lib/api/backoffice";
 import { ApiRequestError } from "@/lib/api/http";
 import { buildSecurityFeatureCatalog } from "@/lib/backoffice/security-governance";
-import { useAuthAccess, useRbacTenant } from "@/lib/rbac/hooks";
+import { useAuthAccess, useRbacTenant } from "@/lib/tenant/rbac/hooks";
 import {
   listFeaturesService,
   listGrantsService,
   listPerfisService,
   updateFeatureService,
-} from "@/lib/rbac/services";
+} from "@/lib/tenant/rbac/services";
 import type {
   Academia,
   FeatureFlagMatrix,
@@ -34,6 +34,7 @@ import type {
   SecurityBusinessScope,
   Tenant,
 } from "@/lib/types";
+import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 function permissionLabel(permission: RbacPermission) {
@@ -106,10 +107,10 @@ export default function AdminSegurancaFuncionalidadesPage() {
   const [grants, setGrants] = useState<RbacGrant[]>([]);
   const [selectedFeatureKey, setSelectedFeatureKey] = useState("");
   const [query, setQuery] = useState("");
-  const [moduleFilter, setModuleFilter] = useState("TODOS");
-  const [actionFilter, setActionFilter] = useState<"TODOS" | RbacPermission>("TODOS");
-  const [riskFilter, setRiskFilter] = useState<"TODOS" | "BAIXO" | "MEDIO" | "ALTO" | "CRITICO">("TODOS");
-  const [scopeFilter, setScopeFilter] = useState<"TODOS" | SecurityBusinessScope>("TODOS");
+  const [moduleFilter, setModuleFilter] = useState<string>(FILTER_ALL);
+  const [actionFilter, setActionFilter] = useState<typeof FILTER_ALL | RbacPermission>(FILTER_ALL);
+  const [riskFilter, setRiskFilter] = useState<typeof FILTER_ALL | "BAIXO" | "MEDIO" | "ALTO" | "CRITICO">(FILTER_ALL);
+  const [scopeFilter, setScopeFilter] = useState<typeof FILTER_ALL | SecurityBusinessScope>(FILTER_ALL);
   const [enabledValue, setEnabledValue] = useState("ATIVA");
   const [rolloutValue, setRolloutValue] = useState("100");
   const [featureFlagsMatrix, setFeatureFlagsMatrix] = useState<FeatureFlagMatrix | null>(null);
@@ -175,10 +176,10 @@ export default function AdminSegurancaFuncionalidadesPage() {
   const filteredCatalog = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return catalog.filter((item) => {
-      if (moduleFilter !== "TODOS" && item.moduleLabel !== moduleFilter) return false;
-      if (actionFilter !== "TODOS" && !item.permissionLevels.includes(actionFilter)) return false;
-      if (riskFilter !== "TODOS" && item.riskLevel !== riskFilter) return false;
-      if (scopeFilter !== "TODOS" && !item.scopes.includes(scopeFilter)) return false;
+      if (moduleFilter !== FILTER_ALL && item.moduleLabel !== moduleFilter) return false;
+      if (actionFilter !== FILTER_ALL && !item.permissionLevels.includes(actionFilter)) return false;
+      if (riskFilter !== FILTER_ALL && item.riskLevel !== riskFilter) return false;
+      if (scopeFilter !== FILTER_ALL && !item.scopes.includes(scopeFilter)) return false;
       if (!normalizedQuery) return true;
       return [item.businessLabel, item.featureKey, item.description, item.moduleLabel]
         .join(" ")
@@ -348,7 +349,7 @@ export default function AdminSegurancaFuncionalidadesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TODOS">Todos</SelectItem>
+                    <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                     {modules.map((moduleLabel) => (
                       <SelectItem key={moduleLabel} value={moduleLabel}>
                         {moduleLabel}
@@ -364,7 +365,7 @@ export default function AdminSegurancaFuncionalidadesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TODOS">Todas</SelectItem>
+                    <SelectItem value={FILTER_ALL}>Todas</SelectItem>
                     <SelectItem value="VIEW">Visualizar</SelectItem>
                     <SelectItem value="EDIT">Editar</SelectItem>
                     <SelectItem value="MANAGE">Administrar</SelectItem>
@@ -378,7 +379,7 @@ export default function AdminSegurancaFuncionalidadesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TODOS">Todas</SelectItem>
+                    <SelectItem value={FILTER_ALL}>Todas</SelectItem>
                     <SelectItem value="BAIXO">Baixo</SelectItem>
                     <SelectItem value="MEDIO">Médio</SelectItem>
                     <SelectItem value="ALTO">Alto</SelectItem>
@@ -393,7 +394,7 @@ export default function AdminSegurancaFuncionalidadesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TODOS">Todos</SelectItem>
+                    <SelectItem value={FILTER_ALL}>Todos</SelectItem>
                     <SelectItem value="UNIDADE">Unidade</SelectItem>
                     <SelectItem value="ACADEMIA">Academia</SelectItem>
                     <SelectItem value="REDE">Rede</SelectItem>
@@ -571,8 +572,8 @@ export default function AdminSegurancaFuncionalidadesPage() {
                 <table className="min-w-[960px] w-full border-collapse text-sm">
                   <thead className="bg-secondary/40">
                     <tr>
-                      <th className="min-w-[280px] px-4 py-3 text-left font-semibold">Feature</th>
-                      <th className="min-w-[180px] px-4 py-3 text-left font-semibold">Override global</th>
+                      <th scope="col" className="min-w-[280px] px-4 py-3 text-left font-semibold">Feature</th>
+                      <th scope="col" className="min-w-[180px] px-4 py-3 text-left font-semibold">Override global</th>
                       {(featureFlagsMatrix?.academias ?? []).map((academia) => (
                         <th key={academia.academiaId} className="min-w-[220px] px-4 py-3 text-left font-semibold">
                           <div className="space-y-1">

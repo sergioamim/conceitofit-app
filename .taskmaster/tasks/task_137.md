@@ -1,38 +1,35 @@
 # Task ID: 137
 
-**Title:** Backend: API de busca global cross-tenant (/admin/search)
+**Title:** Redirecionar para /dashboard ao trocar de unidade ativa
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
 **Priority:** high
 
-**Description:** Implementar endpoint GET /api/v1/admin/search/pessoas para busca global de alunos, funcionários e administradores em qualquer academia/unidade. Suporta busca por nome, CPF e email com paginação.
+**Description:** Ao trocar de unidade ativa (tenant) via ActiveTenantSelector no topbar, redirecionar o usuário para /dashboard com o novo tenant. Atualmente a URL permanece a mesma após a troca, o que causa confusão em páginas com dados contextuais (ex: /clientes/[id], modais abertos).
 
 **Details:**
 
-Endpoint: GET /api/v1/admin/search/pessoas
-Query params: q (string, min 2 chars), tipo (ALUNO|FUNCIONARIO|ADMIN, opcional), page (default 0), size (default 30)
-Response: { items: [{ id, tipo, nome, cpf?, email?, telefone?, academiaId?, academiaNome?, tenantId?, unidadeNome?, status? }], total: number }
-Lógica: buscar em paralelo nas tabelas de alunos, funcionários e usuários admin. Para alunos, buscar por nome (LIKE) ou CPF (exact) ou email (exact). Incluir academiaId/academiaNome e tenantId/unidadeNome no resultado. Limitar a 30 resultados por tipo. Requer autenticação de admin global.
+No handler handleChangeTenant em src/components/layout/app-topbar.tsx, após await setTenant(nextId) completar com sucesso, chamar router.push('/dashboard') para forçar navegação ao dashboard da nova unidade. Isso garante que o usuário sempre veja o dashboard atualizado e evita dados stale de outra unidade. Verificar que: (1) o redirect só acontece após a troca ser confirmada com sucesso; (2) se a troca falhar, o usuário permanece na página atual; (3) modais abertos são fechados ou irrelevantes após o redirect; (4) o dashboard carrega corretamente com o novo tenantId ativo.
 
 **Test Strategy:**
 
-Buscar por CPF existente e confirmar retorno correto. Buscar por nome parcial e verificar resultados de múltiplos tenants. Buscar com tipo=ALUNO e confirmar filtragem.
+Navegar até /clientes/[id] com um perfil aberto, trocar de unidade via selector no topbar, verificar que o redirect vai para /dashboard com dados do novo tenant. Testar também em outras páginas contextuais (/matriculas, /pagamentos) para garantir o comportamento consistente. Testar cenário de erro: simular falha na troca e verificar que o usuário permanece na página atual.
 
 ## Subtasks
 
-### 137.1. Criar controller e service de busca global
+### 137.137. Adicionar router.push('/dashboard') após troca de tenant bem-sucedida
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
-Endpoint GET /api/v1/admin/search/pessoas com busca paralela em alunos, funcionários e admins
+Em app-topbar.tsx, importar useRouter e após await setTenant(nextId) redirecionar para /dashboard
 
-### 137.2. Implementar busca cross-tenant com join de academia/unidade
+### 137.137. Garantir que redirect só ocorre em caso de sucesso
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 137.1  
 
-Query que resolve academiaId/academiaNome/unidadeNome para cada resultado
+Verificar que se setTenant falhar (throw), o redirect não acontece e o usuário permanece na página atual com feedback de erro

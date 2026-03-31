@@ -7,6 +7,7 @@ import { getAlunoApi } from "@/lib/api/alunos";
 import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { cn } from "@/lib/utils";
+import { formatDateTime } from "@/lib/formatters";
 import { ClienteThumbnail } from "@/components/shared/cliente-thumbnail";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,30 +75,13 @@ function parseDate(value?: string): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function formatDate(value?: string): string | undefined {
+function formatDateTimeMonitor(value?: string): string {
+  if (!value) return "agora";
   const parsed = parseDate(value);
-  if (!parsed) return undefined;
-  return parsed.toLocaleDateString("pt-BR");
+  if (!parsed) return "agora";
+  return formatDateTime(parsed.toISOString());
 }
 
-function formatTime(value?: string): string | undefined {
-  const parsed = parseDate(value);
-  if (!parsed) return undefined;
-  return parsed.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function formatDateTime(value?: string): string {
-  const dateLabel = formatDate(value);
-  const timeLabel = formatTime(value);
-  if (!dateLabel && !timeLabel) return "agora";
-  if (!dateLabel) return timeLabel ?? "agora";
-  if (!timeLabel) return dateLabel;
-  return `${dateLabel} as ${timeLabel}`;
-}
 
 function isLiberadoStatus(status?: string): boolean {
   const normalized = status?.trim().toUpperCase() ?? "";
@@ -271,7 +255,7 @@ async function buildEventFromAcesso(input: {
     memberId,
     planoVenceEm: formatPlanExpiryLabel(planoVencimento),
     aniversarioHoje: isBirthday(dataNascimento),
-    acessoEmLabel: formatDateTime(occurredAt),
+    acessoEmLabel: formatDateTimeMonitor(occurredAt),
     gateLabel: resolveGate(acesso),
   };
 }

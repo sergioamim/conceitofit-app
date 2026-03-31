@@ -3,8 +3,8 @@ import {
   buildQuickCreateColaboradorPayload,
   filterColaboradores,
   normalizeFuncionarioRecord,
-} from "../../src/lib/administrativo-colaboradores";
-import { buildFuncionarioProfileFormSchema } from "../../src/lib/forms/administrativo-schemas";
+} from "../../src/lib/tenant/administrativo-colaboradores";
+import { buildFuncionarioProfileFormSchema } from "../../src/lib/tenant/forms/administrativo-schemas";
 import { listFuncionariosApi } from "../../src/lib/api/administrativo";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 import { createFuncionarioFormDefaults, funcionarioToFormValues } from "../../src/components/administrativo/funcionarios/shared";

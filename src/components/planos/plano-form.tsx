@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { Atividade, TipoPlano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +15,10 @@ import {
   filterAtividadesSelecionadas,
   getDefaultPlanoFormValues,
   isPlanoFormValid,
-} from "@/lib/planos/form";
+} from "@/lib/tenant/planos/form";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
+import { planoFormSchema } from "./plano-form-schema";
 
 type PlanoFormState = Omit<PlanoFormValues, "beneficios"> & {
   beneficios: Array<{ value: string }>;
@@ -56,6 +58,7 @@ export function PlanoForm({
   const [activeTab, setActiveTab] = useState<"CONFIG" | "CONTRATO" | "BENEFICIOS">("CONFIG");
   const [contratoEditorMode, setContratoEditorMode] = useState<"VISUAL" | "HTML">("VISUAL");
   const formMethods = useForm<PlanoFormState>({
+    resolver: zodResolver(planoFormSchema),
     defaultValues: toFormState(initial),
   });
   const { register, control, handleSubmit, reset, setValue } = formMethods;
@@ -110,9 +113,11 @@ export function PlanoForm({
         onDiscard={discardDraft}
       />
       <form className="space-y-6" onSubmit={handleSubmit(submitForm)}>
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2">
+      <div role="tablist" aria-label="Seções do plano" className="flex items-center gap-2 rounded-xl border border-border bg-card p-2">
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "CONFIG"}
           onClick={() => setActiveTab("CONFIG")}
           className={cn(
             "cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -123,6 +128,8 @@ export function PlanoForm({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "CONTRATO"}
           onClick={() => setActiveTab("CONTRATO")}
           className={cn(
             "cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -133,6 +140,8 @@ export function PlanoForm({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "BENEFICIOS"}
           onClick={() => setActiveTab("BENEFICIOS")}
           className={cn(
             "cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -147,7 +156,7 @@ export function PlanoForm({
       </div>
 
       {activeTab === "CONFIG" ? (
-        <>
+        <div role="tabpanel" aria-label="Configurações">
           <div className="rounded-xl border border-border bg-card p-4 md:p-5">
             <h2 className="font-display text-base font-semibold text-foreground">Dados do plano</h2>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -251,8 +260,9 @@ export function PlanoForm({
                   Permite cobrança recorrente
                 </label>
                 <div className="space-y-1.5 md:max-w-60">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dia padrão de cobrança</label>
-                  <Input type="number" min={1} max={28} placeholder="1 a 28" {...register("diaCobrancaPadrao")} disabled={!form.permiteCobrancaRecorrente || form.tipo === "AVULSO"} className="border-border bg-secondary" />
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dias de cobranca</label>
+                  <Input placeholder="Ex: 5, 10, 15" {...register("diaCobrancaPadrao")} disabled={!form.permiteCobrancaRecorrente || form.tipo === "AVULSO"} className="border-border bg-secondary" />
+                  <p className="text-[10px] text-muted-foreground">Separados por virgula. Vazio = livre.</p>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <input type="checkbox" {...register("destaque")} />
@@ -265,10 +275,11 @@ export function PlanoForm({
               </div>
             </div>
           </div>
-        </>
+        </div>
       ) : null}
 
       {activeTab === "CONTRATO" ? (
+        <div role="tabpanel" aria-label="Contrato">
         <div className="rounded-xl border border-border bg-card p-4 md:p-5">
           <h2 className="font-display text-base font-semibold text-foreground">Contrato do plano</h2>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -317,9 +328,11 @@ export function PlanoForm({
             )}
           </div>
         </div>
+        </div>
       ) : null}
 
       {activeTab === "BENEFICIOS" ? (
+        <div role="tabpanel" aria-label="Atividades e benefícios">
         <div className="rounded-xl border border-border bg-card p-4 md:p-5">
           <h2 className="font-display text-base font-semibold text-foreground">Atividades e benefícios</h2>
           <div className="mt-4 space-y-4">
@@ -364,6 +377,7 @@ export function PlanoForm({
               </div>
             </div>
           </div>
+        </div>
         </div>
       ) : null}
 

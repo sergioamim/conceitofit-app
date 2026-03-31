@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
 import { emitirNfseEmLoteApi } from "@/lib/api/pagamentos";
-import { getNfseBloqueioMensagem } from "@/lib/admin-financeiro";
-import { listContasReceberOperacionais, type PagamentoComAluno } from "@/lib/financeiro/recebimentos";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
+import { listContasReceberOperacionais, type PagamentoComAluno } from "@/lib/tenant/financeiro/recebimentos";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { NfseConfiguracao } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -142,16 +142,16 @@ export default function EmitirNfseEmLotePage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-secondary">
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Pagamento
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Cliente
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Valor
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Status
                     </th>
                   </tr>

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   validateAcademiaUserCreateDraft,
   validateGlobalUserCreateDraft,
-} from "../../src/lib/security-user-create";
+} from "../../src/lib/tenant/security-user-create";
 
 test.describe("security user create validators", () => {
   test("monta payload global com escopo de rede e política opcional", () => {

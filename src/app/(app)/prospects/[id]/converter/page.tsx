@@ -11,7 +11,7 @@ import {
 import { listPlanosApi } from "@/lib/api/comercial-catalogo";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
-import { useTenantContext } from "@/hooks/use-session-context";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
@@ -294,7 +294,7 @@ function Step3({
   onChange: (d: PagamentoData) => void;
 }) {
   const desconto = parseFloat(data.desconto) || 0;
-  const valorFinal = (plano?.valor ?? 0) - desconto;
+  const valorFinal = (plano?.valor ?? 0) + (plano?.valorMatricula ?? 0) - desconto;
 
   return (
     <div className="space-y-5">
@@ -405,65 +405,137 @@ function Step3({
 function Step4({
   result,
   plano,
+  pagamentoData,
+  desconto,
 }: {
   result: ConverterProspectResponse;
   plano: Plano | undefined;
+  pagamentoData: PagamentoData;
+  desconto: number;
 }) {
   const router = useRouter();
+  const valorPlano = plano?.valor ?? 0;
+  const valorMatricula = plano?.valorMatricula ?? 0;
+  const total = valorPlano + valorMatricula - desconto;
 
   return (
-    <div className="space-y-6 text-center">
-      <div className="flex justify-center">
-        <div className="flex size-16 items-center justify-center rounded-full bg-gym-teal/15">
-          <CheckCircle2 className="size-8 text-gym-teal" />
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="flex justify-center">
+          <div className="flex size-16 items-center justify-center rounded-full bg-gym-teal/15">
+            <CheckCircle2 className="size-8 text-gym-teal" />
+          </div>
         </div>
-      </div>
-      <div>
-        <h3 className="font-display text-2xl font-bold">Conversão realizada!</h3>
+        <h3 className="mt-4 font-display text-2xl font-bold">Conversão realizada!</h3>
         <p className="mt-1 text-muted-foreground">
           {result.aluno.nome} agora é um cliente ativo.
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 text-left">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Cliente
-          </p>
-          <p className="mt-1 font-bold">{result.aluno.nome}</p>
-          <p className="text-xs text-muted-foreground">CPF: {result.aluno.cpf}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Matrícula
-          </p>
-          <p className="mt-1 font-bold">{plano?.nome}</p>
-          <p className="text-xs text-muted-foreground">
-            {formatDate(result.matricula.dataInicio)} →{" "}
-            {formatDate(result.matricula.dataFim)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Pagamento
-          </p>
-          <p className="mt-1 font-display text-lg font-bold text-gym-accent">
-            {formatBRL(result.pagamento.valorFinal)}
-          </p>
-          <p className="text-xs text-gym-warning">Pendente</p>
+      {/* Resumo do cliente */}
+      <div className="rounded-xl border border-border bg-secondary/30 p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cliente</p>
+        <p className="mt-1 text-lg font-bold">{result.aluno.nome}</p>
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span>CPF: {result.aluno.cpf}</span>
+          {result.aluno.email && <span>{result.aluno.email}</span>}
+          {result.aluno.telefone && <span>{result.aluno.telefone}</span>}
         </div>
       </div>
 
-      <div className="flex justify-center gap-3">
+      {/* Resumo do plano */}
+      {plano && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Plano contratado</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-lg font-bold">{plano.nome}</p>
+              <p className="text-sm text-muted-foreground">
+                {TIPO_PLANO_LABEL[plano.tipo]} · {plano.duracaoDias} dias
+              </p>
+            </div>
+            <span className="rounded-full bg-gym-teal/15 px-2.5 py-0.5 text-xs font-semibold text-gym-teal">
+              Ativo
+            </span>
+          </div>
+
+          <div className="space-y-1.5 border-t border-border pt-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Valor do plano</span>
+              <span>{formatBRL(valorPlano)}</span>
+            </div>
+            {valorMatricula > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Taxa de matrícula</span>
+                <span>{formatBRL(valorMatricula)}</span>
+              </div>
+            )}
+            {desconto > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Desconto</span>
+                <span className="text-gym-teal">- {formatBRL(desconto)}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-border pt-2 font-semibold">
+              <span>Total</span>
+              <span className="font-display text-lg text-gym-accent">{formatBRL(total)}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span>Início: {formatDate(result.matricula.dataInicio)}</span>
+            <span>Fim: {formatDate(result.matricula.dataFim)}</span>
+            <span>Pagamento: {pagamentoData.formaPagamento}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Pagamento pendente */}
+      <div className="rounded-xl border border-gym-warning/30 bg-gym-warning/5 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pagamento</p>
+            <p className="mt-1 font-display text-xl font-bold text-gym-accent">
+              {formatBRL(result.pagamento.valorFinal)}
+            </p>
+            <p className="text-xs text-gym-warning font-semibold">Pendente — aguardando recebimento</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-gym-warning/30 text-gym-warning hover:bg-gym-warning/10"
+            onClick={() => router.push(`/pagamentos?clienteId=${result.aluno.id}`)}
+          >
+            Receber pagamento
+          </Button>
+        </div>
+      </div>
+
+      {/* Ações */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Button
           variant="outline"
-          onClick={() => router.push("/pagamentos")}
           className="border-border"
+          onClick={() => router.push(`/clientes/${result.aluno.id}`)}
+        >
+          Ver perfil do cliente
+        </Button>
+        <Button
+          variant="outline"
+          className="border-border"
+          onClick={() => router.push(`/pagamentos?clienteId=${result.aluno.id}`)}
         >
           Ver pagamentos
         </Button>
+        <Button
+          variant="outline"
+          className="border-border"
+          onClick={() => router.push("/prospects")}
+        >
+          Voltar aos prospects
+        </Button>
         <Button onClick={() => router.push("/clientes")}>
-          Ver clientes
+          Ver todos os clientes
         </Button>
       </div>
     </div>
@@ -682,7 +754,12 @@ export default function ConverterPage() {
           />
         )}
         {step === 4 && result && (
-          <Step4 result={result} plano={selectedPlano} />
+          <Step4
+            result={result}
+            plano={selectedPlano}
+            pagamentoData={pagamentoData}
+            desconto={parseFloat(pagamentoData.desconto) || 0}
+          />
         )}
       </div>
 

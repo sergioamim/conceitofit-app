@@ -5,7 +5,7 @@ import {
   summarizeIntegracoesOperacionais,
   summarizeRecebimentosOperacionais,
   validateNfseConfiguracaoDraft,
-} from "../../src/lib/admin-financeiro";
+} from "../../src/lib/backoffice/admin-financeiro";
 import type { AgregadorTransacao, IntegracaoOperacional, Pagamento } from "../../src/lib/types";
 
 test.describe("admin financeiro helpers", () => {
