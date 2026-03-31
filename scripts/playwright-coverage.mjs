@@ -23,6 +23,12 @@ const SMOKE_E2E_SPECS = [
   "tests/e2e/adesao-publica.spec.ts",
   "tests/e2e/treinos-template-list.spec.ts",
   "tests/e2e/treinos-v2-editor.spec.ts",
+  // Lote 1 — alto impacto (Task 291)
+  "tests/e2e/financeiro-admin.spec.ts",
+  "tests/e2e/reservas-aulas.spec.ts",
+  "tests/e2e/crm-operacional.spec.ts",
+  "tests/e2e/rbac.spec.ts",
+  "tests/e2e/bi-operacional.spec.ts",
 ];
 
 const EXECUTABLE_LINE_COMMENT_PATTERNS = [/^\/\//, /^\/\*/, /^\*+$/, /^\*+\//];
