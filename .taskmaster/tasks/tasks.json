@@ -11867,7 +11867,7 @@
         "dependencies": [
           "292"
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -12051,7 +12051,7 @@
           "300",
           "307"
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": []
       },
       {
@@ -12078,7 +12078,7 @@
       "version": "1.0.0",
       "lastModified": "2026-03-31T14:20:00.000Z",
       "taskCount": 309,
-      "completedCount": 297,
+      "completedCount": 298,
       "tags": [
         "master"
       ]
