@@ -11,6 +11,7 @@ import {
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
 import { emitirNfsePagamentoApi, listPagamentosApi, receberPagamentoApi } from "@/lib/api/pagamentos";
 import { createVendaApi, listVendasApi, type ListVendasApiEnvelopeResult } from "@/lib/api/vendas";
+import { trackNfseEmitted, trackPagamentoReceived } from "@/lib/shared/analytics";
 import type {
   Convenio,
   FormaPagamento,
@@ -65,7 +66,6 @@ export async function receberPagamentoService(input: {
   data: Parameters<typeof receberPagamentoApi>[0]["data"];
 }): Promise<Pagamento> {
   const result = await receberPagamentoApi(input);
-  const { trackPagamentoReceived } = await import("@/lib/shared/analytics");
   trackPagamentoReceived(input.tenantId, result.id, result.valorFinal);
   return result;
 }
@@ -75,7 +75,6 @@ export async function emitirNfsePagamentoService(input: {
   id: string;
 }): Promise<Pagamento> {
   const result = await emitirNfsePagamentoApi(input);
-  const { trackNfseEmitted } = await import("@/lib/shared/analytics");
   trackNfseEmitted(input.tenantId, result.id);
   return result;
 }

@@ -16,7 +16,6 @@ const CORE_HISTORY_PATH = path.join(ROOT, "docs", "TEST_COVERAGE_HISTORY_CORE.js
 
 const SMOKE_E2E_SPECS = [
   "tests/e2e/sessao-multiunidade.spec.ts",
-  "tests/e2e/clientes-cadastro.spec.ts",
   "tests/e2e/comercial-fluxo.spec.ts",
   "tests/e2e/admin-financeiro-integracoes.spec.ts",
   "tests/e2e/backoffice-global.spec.ts",
@@ -77,6 +76,7 @@ const COVERAGE_PROFILES = {
       "Task 26 fecha a meta de 60% sobre o runtime core compartilhado em src/lib, onde a instrumentacao Node/V8 ja e confiavel.",
       "UI e bundle client-only permanecem fora deste gate ate existir instrumentacao dedicada no navegador; o controle funcional segue pela suite smoke.",
       "Task 27 promove esses thresholds a gate de merge, publica artefatos e adiciona piso inicial por arquivo alterado no core.",
+      "Os scripts padrao de report, baseline e gate operam no perfil core; o perfil full segue como baseline informacional do repositorio.",
     ],
     notes: [
       "A cobertura core mede o runtime compartilhado em src/lib executado em processos Node pelas suites Playwright unit e smoke E2E.",
@@ -129,12 +129,14 @@ const COVERAGE_PROFILES = {
       },
     ],
     policy: [
-      "Os gates iniciais ficam definidos sobre o baseline instrumentado atual para impedir regressao bruta antes da task 26.",
-      "A automacao de CI e bloqueio de merge ficam para a task 27; nesta fase o gate e documental e executavel via coverage:baseline.",
+      "O perfil full continua como baseline informacional do repositorio inteiro e nao substitui o gate obrigatorio do perfil core.",
+      "A meta de 60% fica formalmente aplicada ao perfil core em src/lib, onde a instrumentacao Node/V8 e confiavel para gate de merge.",
+      "Os thresholds do full permanecem como piso documental para acompanhar tendencia global sem bloquear areas ainda nao instrumentadas no bundle cliente.",
     ],
     notes: [
       "A cobertura atual mede arquivos do src executados em processos Node durante as suites Playwright unit e smoke E2E.",
-      "A trilha smoke E2E cobre autenticacao/contexto, clientes, comercial, admin financeiro, backoffice, adesao publica e treinos V2.",
+      "A trilha smoke E2E cobre fluxos hermeticos de autenticacao/contexto, comercial, admin financeiro, backoffice, adesao publica e treinos V2.",
+      "Suites que ainda dependem de backend externo, health checks reais ou dados nao deterministas ficam fora deste lote de coverage e seguem validadas separadamente.",
       "Branch coverage e derivada de estruturas explicitas do AST TypeScript; nao replica exatamente a semantica de Istanbul.",
       "Client code executado exclusivamente no bundle do navegador ainda nao possui instrumentacao dedicada nesta baseline.",
     ],
@@ -428,15 +430,24 @@ function updateCoverageHistory(summary) {
   const current = fs.existsSync(activeProfile.historyPath)
     ? JSON.parse(fs.readFileSync(activeProfile.historyPath, "utf8"))
     : [];
-  const history = Array.isArray(current) ? current : [];
+  const history = (Array.isArray(current) ? current : []).filter(
+    (entry) =>
+      entry &&
+      typeof entry.generatedAt === "string" &&
+      typeof entry.profile === "string" &&
+      Number.isFinite(entry.lines) &&
+      Number.isFinite(entry.statements) &&
+      Number.isFinite(entry.functions) &&
+      Number.isFinite(entry.branches),
+  );
   history.push({
     generatedAt: summary.generatedAt,
     profile: summary.profile,
     suitesExecutadas: summary.baseline.suitesExecutadas,
-    lines: Number(formatPct(summary.summary.lines.pct)),
-    statements: Number(formatPct(summary.summary.statements.pct)),
-    functions: Number(formatPct(summary.summary.functions.pct)),
-    branches: Number(formatPct(summary.summary.branches.pct)),
+    lines: toRoundedPct(summary.summary.lines.pct),
+    statements: toRoundedPct(summary.summary.statements.pct),
+    functions: toRoundedPct(summary.summary.functions.pct),
+    branches: toRoundedPct(summary.summary.branches.pct),
   });
   const trimmed = history.slice(-20);
   fs.writeFileSync(activeProfile.historyPath, JSON.stringify(trimmed, null, 2));
@@ -899,6 +910,11 @@ function renderLcov(summary) {
 }
 
 function renderHtml(summary, history = []) {
+  const gateHeading = summary.profile === "full" ? "Baseline Informacional E Meta" : "Meta e Gates";
+  const gateDescription =
+    summary.profile === "full"
+      ? "O perfil full acompanha o repositorio inteiro. O gate obrigatorio de 60% permanece no perfil core."
+      : "O perfil core e o gate obrigatorio da trilha, focado no runtime compartilhado instrumentado em Node.";
   const rows = summary.files
     .slice()
     .sort((left, right) => left.lines.pct - right.lines.pct)
@@ -1023,8 +1039,9 @@ function renderHtml(summary, history = []) {
       </div>
 
       <div class="section">
-        <h2>Meta e Gates</h2>
+        <h2>${escapeHtml(gateHeading)}</h2>
         <p>Meta global acordada: <strong>${summary.targets.globalGoalPct}%</strong>.</p>
+        <p>${escapeHtml(gateDescription)}</p>
         <p>Gates ativos: lines ${summary.targets.activeGates.lines}% | statements ${summary.targets.activeGates.statements}% | functions ${summary.targets.activeGates.functions}% | branches ${summary.targets.activeGates.branches}%.</p>
         <p>Snapshot atual: lines ${summary.targets.snapshotPct.lines}% | statements ${summary.targets.snapshotPct.statements}% | functions ${summary.targets.snapshotPct.functions}% | branches ${summary.targets.snapshotPct.branches}%.</p>
         <p>Piso inicial por arquivo alterado no core: ${summary.targets.changedFilesLinesPct}% em lines.</p>
@@ -1098,6 +1115,18 @@ function renderHtml(summary, history = []) {
 }
 
 function renderMarkdown(summary, history = []) {
+  const gatesSectionTitle =
+    summary.profile === "full" ? "Baseline Informacional E Meta" : "Meta Incremental E Gates Ativos";
+  const gateContextLines =
+    summary.profile === "full"
+      ? [
+          "- Este perfil acompanha o repositorio inteiro e continua informacional.",
+          "- O gate obrigatorio de 60% fica no perfil `core`, usado pelos scripts padrao de `coverage:*` para merge.",
+        ]
+      : [
+          "- Este perfil `core` e o gate obrigatorio da trilha.",
+          "- Os scripts padrao de `coverage:report`, `coverage:baseline` e `coverage:gate` operam neste perfil.",
+        ];
   const topGroups = summary.groups
     .slice()
     .sort((left, right) => left.lines.pct - right.lines.pct)
@@ -1150,9 +1179,10 @@ function renderMarkdown(summary, history = []) {
 | Functions | ${summary.summary.functions.covered} | ${summary.summary.functions.total} | ${formatPct(summary.summary.functions.pct)} |
 | Branches | ${summary.summary.branches.covered} | ${summary.summary.branches.total} | ${formatPct(summary.summary.branches.pct)} |
 
-## Meta Incremental E Gates Ativos
+## ${gatesSectionTitle}
 
 - Meta global desta trilha: \`${summary.targets.globalGoalPct}%\`
+${gateContextLines.join("\n")}
 - Gates ativos:
   - Lines: \`${summary.targets.activeGates.lines}%\`
   - Statements: \`${summary.targets.activeGates.statements}%\`
@@ -1387,6 +1417,11 @@ function sanitizeLcovName(name) {
 function formatPct(value) {
   if (value == null || !Number.isFinite(value)) return "NaN%";
   return `${value.toFixed(2)}%`;
+}
+
+function toRoundedPct(value) {
+  if (value == null || !Number.isFinite(value)) return null;
+  return Number(value.toFixed(2));
 }
 
 function formatMetric(metric) {

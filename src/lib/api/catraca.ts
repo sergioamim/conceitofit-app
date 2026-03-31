@@ -562,7 +562,7 @@ function normalizeRanking(payload: Record<string, unknown>): CatracaAcessosRanki
     .filter(Boolean) as CatracaAcessosRankingItem[];
 }
 
-async function listarAcessosCatracaApi(
+export async function listarAcessosCatracaApi(
   input: ListarAcessosCatracaInput
 ): Promise<CatracaAcessosResponse> {
   const page = Math.max(0, input.page ?? 0);
