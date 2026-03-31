@@ -12,7 +12,7 @@ import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-uni
 import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/lib/api/session";
 import type { Tenant } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { resolvePostLoginPath } from "@/lib/tenant/auth-redirect";
+import { buildForcedPasswordChangeHref, resolvePostLoginPath } from "@/lib/tenant/auth-redirect";
 import { legacyLoginFormSchema, legacyTenantStepFormSchema } from "@/lib/tenant/forms/auth-schemas";
 
 type LegacyLoginFormValues = import("zod").input<typeof legacyLoginFormSchema>;
@@ -63,7 +63,11 @@ export function LegacyLoginFlow({
     setSaving(true);
     setError(null);
     try {
-      await loginApi({ email: values.username.trim(), password: values.password });
+      const session = await loginApi({ email: values.username.trim(), password: values.password });
+      if (session.forcePasswordChangeRequired) {
+        router.push(buildForcedPasswordChangeHref(resolvedNextPath));
+        return;
+      }
       const context = await getTenantContextApi();
       const activeTenants = context.unidadesDisponiveis.filter((item) => item.ativo !== false);
       const preferredTenantId = getPreferredTenantId();

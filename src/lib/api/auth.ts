@@ -13,10 +13,12 @@ import {
   getBaseTenantIdFromSession,
   getBroadAccessFromSession,
   getDisplayNameFromSession,
+  getForcePasswordChangeRequiredFromSession,
   getNetworkIdFromSession,
-  getNetworkNameFromSession,
   getNetworkSubdomainFromSession,
+  getNetworkNameFromSession,
   getNetworkSlugFromSession,
+  getAuthSessionSnapshot,
   getUserIdFromSession,
   getUserKindFromSession,
   saveAuthSession,
@@ -63,6 +65,7 @@ interface LoginApiResponse {
   availableScopes?: string[];
   broadAccess?: boolean;
   operationalAccess?: OperationalAccessApiResponse;
+  forcePasswordChange?: boolean;
 }
 
 interface MeApiResponse {
@@ -174,6 +177,12 @@ function normalizeSession(
         : options?.preserveTenantContext
           ? getBroadAccessFromSession()
           : undefined,
+    forcePasswordChangeRequired:
+      typeof response.forcePasswordChange === "boolean"
+        ? response.forcePasswordChange
+        : options?.preserveTenantContext
+          ? getForcePasswordChangeRequiredFromSession()
+          : false,
   };
 }
 
@@ -447,5 +456,41 @@ export async function requestFirstAccessApi(input: {
 
   return {
     message: response.message?.trim() || "Se o identificador estiver apto para primeiro acesso nesta rede, enviaremos as próximas instruções.",
+  };
+}
+
+export async function changeForcedPasswordApi(input: {
+  newPassword: string;
+  confirmNewPassword: string;
+}): Promise<{ message: string }> {
+  const response = await apiRequest<Partial<LoginApiResponse> & { message?: string }>({
+    path: "/api/v1/auth/change-password",
+    method: "POST",
+    includeContextHeader: false,
+    headers: buildNetworkHeader(getNetworkSubdomainFromSession()),
+    body: {
+      newPassword: input.newPassword,
+      confirmNewPassword: input.confirmNewPassword,
+    },
+  });
+
+  if (response.token && response.refreshToken) {
+    const session = normalizeSession(response as LoginApiResponse, { preserveTenantContext: true });
+    saveAuthSession({
+      ...session,
+      forcePasswordChangeRequired: false,
+    });
+  } else {
+    const snapshot = getAuthSessionSnapshot();
+    if (snapshot) {
+      saveAuthSession({
+        ...snapshot,
+        forcePasswordChangeRequired: false,
+      });
+    }
+  }
+
+  return {
+    message: response.message?.trim() || "Senha atualizada com sucesso.",
   };
 }

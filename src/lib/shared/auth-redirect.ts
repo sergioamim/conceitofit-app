@@ -3,6 +3,7 @@ import { buildNetworkAccessHref, normalizeNetworkSubdomain } from "@/lib/network
 
 const DEFAULT_POST_LOGIN_PATH = "/dashboard";
 const DEFAULT_LOGIN_PATH = "/login";
+const FORCE_PASSWORD_CHANGE_PATH = "/primeiro-acesso/trocar-senha";
 
 export function resolvePostLoginPath(rawValue?: string | null): string {
   const candidate = rawValue?.trim();
@@ -27,4 +28,12 @@ export function buildLoginHref(nextPath?: string, networkSlug?: string | null): 
     return loginBasePath;
   }
   return `${loginBasePath}?next=${encodeURIComponent(resolvedNext)}`;
+}
+
+export function buildForcedPasswordChangeHref(nextPath?: string): string {
+  const resolvedNext = resolvePostLoginPath(nextPath);
+  if (resolvedNext === DEFAULT_POST_LOGIN_PATH) {
+    return FORCE_PASSWORD_CHANGE_PATH;
+  }
+  return `${FORCE_PASSWORD_CHANGE_PATH}?next=${encodeURIComponent(resolvedNext)}`;
 }
