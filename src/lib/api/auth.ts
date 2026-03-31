@@ -269,9 +269,11 @@ export async function loginApi(input: {
     fallbackNetworkSlug: input.redeIdentifier?.trim() || undefined,
   });
   saveAuthSession(session);
-  import("@/lib/shared/analytics").then(({ trackLogin }) => {
-    trackLogin(session.activeTenantId, session.userId);
-  });
+  void import("@/lib/shared/analytics")
+    .then(({ trackLogin }) => {
+      trackLogin(session.activeTenantId, session.userId);
+    })
+    .catch(() => undefined);
   return session;
 }
 
@@ -291,9 +293,11 @@ export async function adminLoginApi(input: {
   });
   const session = normalizeSession(response);
   saveAuthSession(session);
-  import("@/lib/shared/analytics").then(({ trackLogin }) => {
-    trackLogin(session.activeTenantId, session.userId);
-  });
+  void import("@/lib/shared/analytics")
+    .then(({ trackLogin }) => {
+      trackLogin(session.activeTenantId, session.userId);
+    })
+    .catch(() => undefined);
   return session;
 }
 
