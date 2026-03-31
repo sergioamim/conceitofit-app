@@ -6554,7 +6554,7 @@
             "description": "Levantar as funções locais de moeda/data/percentual e os formatos atuais nas páginas alvo.",
             "dependencies": [],
             "details": "Revisar as 10 páginas listadas e os padrões em `src/lib/public/services.ts` e `src/app/(app)/gerencial/bi/page.tsx`, registrando regras de fallback e coerções existentes.",
-      "status": "done",
+            "status": "done",
             "testStrategy": null,
             "parentId": "undefined"
           },
@@ -12079,23 +12079,20 @@
         "description": "Desenvolver um componente React reutilizável OnboardingChecklist que consome a API GET /api/v1/onboarding/status para exibir um checklist progressivo de configuração inicial da academia.",
         "details": "1.  **Criação do Cliente API:** Em `src/lib/api/onboarding-api.ts`, criar uma função assíncrona `getOnboardingStatus()` que faz uma requisição GET para `/api/v1/onboarding/status`. Esta função deve manipular a autenticação existente (e.g., token do localStorage/cookies) e retornar o status do onboarding, incluindo as etapas, seus status e as rotas de configuração.\n2.  **Criação do Componente:** Criar o componente `OnboardingChecklist.tsx` em `src/components/shared/onboarding/`.\n3.  **Estrutura do Componente:**\n    *   O componente deve receber uma prop `onDismiss?: () => void` para permitir o fechamento.\n    *   No topo, renderizar uma barra de progresso (`ProgressBar` do `src/components/ui/` ou similar) que reflete o percentual de etapas concluídas.\n    *   Iterar sobre a lista de etapas recebidas da API, exibindo para cada uma:\n        *   O título da etapa.\n        *   Um ícone de 'check verde' para etapas completadas ou um ícone indicando pendência.\n        *   Para etapas pendentes, um botão 'Configurar agora' com um `href` (usando `next/link`) para a rota de configuração especificada pela API.\n    *   Utilizar componentes UI existentes (botões, ícones, etc.) de `src/components/ui/` ou `src/components/shared/` para manter a consistência visual.\n4.  **Estado e Carregamento:** Gerenciar o estado de carregamento e erro da requisição API. Exibir um skeleton loader (se disponível em `src/components/shared/`) ou uma mensagem de 'Carregando...' enquanto aguarda a resposta da API.\n5.  **Reutilização:** O componente deve ser agendado para inclusão nas páginas `src/app/(app)/dashboard/page.tsx` ou em um modal global pós-login para academias com onboarding pendente.\n\nDEPENDÊNCIA CROSS-REPO: Requer backend task academia-java#368 (GET /api/v1/onboarding/status) implementada primeiro.",
         "testStrategy": "1.  **Testes de Unidade/Integração (Jest/React Testing Library):**\n    *   Verificar se o `getOnboardingStatus()` em `src/lib/api/onboarding-api.ts` faz a chamada correta para a API e trata respostas de sucesso/erro.\n    *   Testar a renderização do `OnboardingChecklist` em diferentes estados: carregando, com todas as etapas pendentes, com algumas etapas completadas, e com todas as etapas completadas.\n    *   Verificar se a barra de progresso reflete corretamente o número de etapas completadas.\n    *   Assegurar que os botões 'Configurar agora' possuem os `href` corretos para as rotas de configuração.\n    *   Testar o comportamento da prop `onDismiss` quando fornecida.\n2.  **Testes Manuais:**\n    *   Simular diferentes estados de onboarding via dados mockados ou ambiente de desenvolvimento com dados reais (se possível).\n    *   Verificar visualmente se o componente se integra bem na UI, se os ícones e a barra de progresso são exibidos corretamente.\n    *   Clicar nos botões 'Configurar agora' para confirmar que a navegação ocorre para as páginas corretas.\n    *   Confirmar que o componente pode ser fechado corretamente via `onDismiss` (se implementado na interface que o usa).",
-<<<<<<< Updated upstream
         "status": "done",
-=======
-        "status": "in-progress",
->>>>>>> Stashed changes
         "dependencies": [
           "56",
           "64"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-31T21:16:01.453Z"
       },
       {
         "id": "314",
         "title": "Integrar Checklist de Onboarding no Dashboard",
         "description": "Integrar um componente de checklist de onboarding no dashboard principal, visível quando o progresso geral estiver abaixo de 100%, e exibir uma mensagem de parabéns quando completo, controlando sua exibição via localStorage. A exibição e as chamadas à API devem ser condicionalmente desativadas se o tenant já tiver completado o onboarding.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "313"
         ],
@@ -12125,7 +12122,7 @@
         "description": "Desenvolver a página `/boas-vindas` que será exibida uma única vez após o primeiro acesso de um usuário, especificamente depois da troca de senha. A página deve ser acolhedora e motivacional.",
         "details": "1.  **Definição da Rota e Componente**: Criar o arquivo `src/app/(app)/boas-vindas/page.tsx` para a nova página de boas-vindas. Esta rota deve fazer parte do layout principal da aplicação `(app)`.2.  **Lógica de Exibição Única (Frontend)**: No `page.tsx` ou em um componente de layout superior, implementar a lógica para garantir que esta página seja exibida apenas uma vez. Isto deve ser feito verificando um flag no estado da sessão do usuário (e.g., `user.hasSeenWelcomePage` ou `user.isFirstLogin`). Se o flag indicar que a página já foi vista ou que o usuário não está no estado de 'primeiro acesso pós-troca de senha', redirecionar o usuário para o `/dashboard`. A lógica para obter o estado do usuário deve reutilizar os mecanismos de autenticação e sessão já existentes, possivelmente via um `useUser` hook ou dados passados por `serverFetch` se for um RSC.3.  **Busca de Dados**: Utilizar as APIs existentes para buscar:    *   Nome do usuário logado para personalização da mensagem.    *   URL do logotipo da academia (se configurado) com base no `subdominio` da rede, conforme alinhado na Task 64. Acesso a estas informações pode ser feito por um endpoint de perfil de usuário (e.g., `/api/v1/user/profile`) ou via contexto da sessão.4.  **Composição da Interface (UI)**:    *   Centralizar o conteúdo principal da página.    *   Exibir o logotipo da academia de forma proeminente (condicionalmente, se disponível).    *   Mensagem de boas-vindas personalizada, como \"Olá, [Nome do Usuário]! Bem-vindo(a) à [Nome da Academia]!\".    *   Uma breve explicação sobre as funcionalidades do sistema e seus benefícios.    *   Um botão \"Começar Configuração\" que, ao ser clicado, deve redirecionar o usuário para a rota `/dashboard` (usando `router.push`).5.  **Integração com Backend (Implícito)**: Embora seja uma tarefa de frontend, a lógica de 'exibição única' pressupõe que o backend tenha um mecanismo para marcar que o usuário já completou o primeiro acesso e/ou visualizou a página de boas-vindas após a troca de senha. Esta flag deve ser atualizada no backend após a conclusão da troca de senha e lida pelo frontend. Consultar a equipe de backend sobre o flag específico (`firstAccessCompleted` ou similar) no perfil do usuário.6.  **Reutilização de Componentes**: Utilizar componentes de UI existentes da biblioteca de design do projeto (botões, tipografia, layout de container) para manter a consistência visual. Exemplos podem ser `Button`, `Typography`, `Container` ou componentes similares encontrados em `src/components/ui/` ou `src/app/(app)/_components/`.",
         "testStrategy": "1.  **Cenário de Primeiro Acesso Pós-Troca de Senha**: Simular um fluxo de usuário que acabou de trocar a senha no primeiro acesso. Verificar se o usuário é automaticamente redirecionado para `/boas-vindas`.2.  **Verificação de Conteúdo**: Na página `/boas-vindas`, verificar se a mensagem de boas-vindas está personalizada com o nome do usuário, se o logotipo da academia é exibido corretamente (se configurado) e se a explicação do sistema está presente.3.  **Funcionalidade do Botão**: Clicar no botão \"Começar Configuração\" e verificar se o usuário é redirecionado corretamente para `/dashboard`.4.  **Cenário de Acesso Subsequente**: Após completar o fluxo e visualizar a página, deslogar e logar novamente com o mesmo usuário. Verificar se o usuário *não* é redirecionado para `/boas-vindas`, mas sim para a rota padrão pós-login (e.g., `/dashboard`).5.  **Acesso Direto Não Autenticado**: Tentar acessar `/boas-vindas` diretamente via URL sem estar logado. Verificar se o usuário é redirecionado para a página de login.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "56",
           "64",
@@ -12133,7 +12130,7 @@
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-03-31T21:04:14.659Z"
+        "updatedAt": "2026-03-31T21:15:44.806Z"
       },
       {
         "id": "318",
@@ -12141,14 +12138,14 @@
         "description": "Desenvolver a página `/admin/onboarding/provisionar` no backoffice para permitir o provisionamento de novas academias, incluindo um formulário de dados e a exibição das credenciais geradas.",
         "details": "1.  **Criação da Rota e Componente**: Criar o arquivo `src/app/(admin)/onboarding/provisionar/page.tsx` para a nova página. Esta rota deve fazer parte do layout administrativo `(admin)`.2.  **Desenvolvimento do Formulário**: Implementar um formulário com os seguintes campos: `nome da academia`, `CNPJ`, `nome da unidade principal`, `nome do administrador`, `email do administrador` e `telefone`. Utilizar componentes de UI existentes em `src/components/ui/` para inputs, botões, etc.3.  **Validação com Zod**: Integrar validação de esquema com Zod para todos os campos do formulário. Criar um esquema Zod apropriado que inclua regras para cada campo (e.g., email válido, CNPJ no formato correto, campos obrigatórios).4.  **Integração com API de Provisionamento**: Ao submeter o formulário, fazer uma requisição POST para o endpoint `/api/v1/admin/onboarding/provision`. Criar ou estender um cliente de API em `src/lib/api/admin-onboarding-api.ts` (ou um arquivo similar na pasta `admin`) para encapsular essa chamada. A requisição deve enviar os dados do formulário no corpo.5.  **Exibição de Credenciais**: Após uma resposta de sucesso da API, exibir um card contendo as credenciais geradas (email e senha temporária) da nova academia. Este card deve incluir um botão para 'Copiar Credenciais' (copiar para a área de transferência) e outro para 'Enviar Credenciais' (via WhatsApp/email, que pode abrir um cliente de email ou WhatsApp com um texto pré-preenchido).6.  **Tratamento de Erros**: Implementar o tratamento de erros para requisições falhas à API, exibindo mensagens de feedback apropriadas ao usuário.7.  **Estilização**: Garantir que a página e o formulário sigam o padrão de design do backoffice.\n\nDEPENDÊNCIA CROSS-REPO: Requer backend task academia-java#369 (POST /api/v1/admin/onboarding/provision) implementada primeiro.",
         "testStrategy": "1.  **Navegação e Acesso**: Acessar a rota `/admin/onboarding/provisionar` após realizar o login administrativo (dependência 289). Verificar se a página carrega corretamente.2.  **Validação do Formulário**: Testar a submissão do formulário com dados inválidos (e.g., email mal formatado, CNPJ inválido, campos obrigatórios vazios). Confirmar que as mensagens de erro do Zod são exibidas corretamente e a submissão é bloqueada.3.  **Submissão com Sucesso**: Preencher o formulário com dados válidos e submeter. Verificar se a requisição POST para `/api/v1/admin/onboarding/provision` é feita corretamente (via ferramentas de desenvolvedor). Confirmar que, após o sucesso, o card de credenciais é exibido com o email e a senha temporária.4.  **Funcionalidade 'Copiar Credenciais'**: Clicar no botão 'Copiar Credenciais' e verificar se o texto das credenciais é copiado para a área de transferência.5.  **Funcionalidade 'Enviar Credenciais'**: Clicar no botão 'Enviar Credenciais' e verificar se a ação de envio (e.g., abrir cliente de email/WhatsApp) é disparada com o conteúdo pré-preenchido.6.  **Tratamento de Erros da API**: Simular uma falha na resposta da API (e.g., código de status 500 ou 4xx) e verificar se a mensagem de erro é exibida adequadamente na UI.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "16",
           "289"
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-03-31T21:05:41.396Z"
+        "updatedAt": "2026-03-31T21:16:10.000Z"
       },
       {
         "id": "319",
@@ -12171,24 +12168,12 @@
     ],
     "metadata": {
       "version": "1.0.0",
-<<<<<<< Updated upstream
-      "lastModified": "2026-03-31T21:14:38.000Z",
-      "taskCount": 309,
-      "completedCount": 300,
-      "tags": [
-        "master"
-      ],
-      "created": "2026-03-31T19:55:36.675Z",
-      "description": "Tasks for master context",
-      "updated": "2026-03-31T21:14:38.000Z"
-=======
-      "lastModified": "2026-03-31T21:05:41.396Z",
+      "lastModified": "2026-03-31T21:16:10.000Z",
       "taskCount": 315,
-      "completedCount": 309,
+      "completedCount": 313,
       "tags": [
         "master"
       ]
->>>>>>> Stashed changes
     }
   }
 }
