@@ -83,17 +83,17 @@ Estes sao os endpoints chamados pelo frontend que **nao existem** no OpenAPI do 
 | `/api/v1/crm/cadencias/{id}` | `crm.ts` | Endpoint nao existe |
 | `/api/v1/crm/atividades` | `crm.ts` | Endpoint nao existe |
 | `/api/v1/crm/tarefas/{id}` | `crm.ts` | GET/PUT por id nao existe (so tem GET lista e PATCH status) |
-| `/api/v1/comercial/matriculas/{id}/contrato/assinar` | `matriculas.ts` | Path incorreto; backend tem `assinar-contrato` |
-| `/api/v1/comercial/pagamentos/{id}/nfse` | `pagamentos.ts` | Backend tem `emitir-nfse`, nao `nfse` |
-| `/api/v1/comercial/pagamentos/nfse/lote` | `pagamentos.ts` | Endpoint de emissao em lote nao existe |
-| `/api/v1/comercial/vendas/{id}` | `vendas.ts` | GET por id nao existe no backend |
-| `/api/v1/comercial/vouchers/validar` | `beneficios.ts` | Endpoint de validacao de voucher nao existe |
-| `/api/v1/grupos-musculares/{id}/toggle` | `treinos.ts` | Toggle nao existe; backend so tem PUT/DELETE |
-| `/api/v1/treinos/{id}/atribuir` | `treinos.ts` | Backend tem `templates/{id}/atribuir`, nao `treinos/{id}/atribuir` |
-| `/api/v1/administrativo/integracoes-operacionais` | `admin-financeiro.ts` | Modulo inteiro nao existe |
-| `/api/v1/administrativo/integracoes-operacionais/{id}/reprocessar` | `admin-financeiro.ts` | Nao existe |
-| `/api/v1/gerencial/agregadores/transacoes` | `admin-financeiro.ts` | Backend tem `gerencial/agregadores/visitas`, nao `transacoes` |
-| `/api/v1/gerencial/agregadores/transacoes/{id}/reprocessar` | `admin-financeiro.ts` | Nao existe |
+| `/api/v1/comercial/matriculas/{id}/contrato/assinar` | `matriculas.ts` | ~~Path incorreto~~ **CORRIGIDO** — alias adicionado no backend |
+| `/api/v1/comercial/pagamentos/{id}/nfse` | `pagamentos.ts` | ~~Backend tem `emitir-nfse`~~ **CORRIGIDO** — alias adicionado |
+| `/api/v1/comercial/pagamentos/nfse/lote` | `pagamentos.ts` | ~~Nao existe~~ **CORRIGIDO** — endpoint criado |
+| `/api/v1/comercial/vendas/{id}` | `vendas.ts` | ~~GET nao existe~~ **CORRIGIDO** — endpoint criado |
+| `/api/v1/comercial/vouchers/validar` | `beneficios.ts` | ~~Nao existe~~ **CORRIGIDO** — endpoint criado |
+| `/api/v1/grupos-musculares/{id}/toggle` | `treinos.ts` | ~~Toggle nao existe~~ **CORRIGIDO** — PATCH toggle criado |
+| `/api/v1/treinos/{id}/atribuir` | `treinos.ts` | ~~Path diferente~~ **CORRIGIDO** — alias adicionado |
+| `/api/v1/administrativo/integracoes-operacionais` | `admin-financeiro.ts` | ~~Nao existe~~ **CORRIGIDO** — controller stub criado |
+| `/api/v1/administrativo/integracoes-operacionais/{id}/reprocessar` | `admin-financeiro.ts` | ~~Nao existe~~ **CORRIGIDO** — endpoint stub criado |
+| `/api/v1/gerencial/agregadores/transacoes` | `admin-financeiro.ts` | ~~Path diferente~~ **CORRIGIDO** — alias para visitas |
+| `/api/v1/gerencial/agregadores/transacoes/{id}/reprocessar` | `admin-financeiro.ts` | ~~Nao existe~~ **CORRIGIDO** — endpoint stub criado |
 
 ### P1 - Mismatch de enum no Login
 
