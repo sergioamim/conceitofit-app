@@ -279,6 +279,7 @@ export async function adminLoginApi(input: {
   email: string;
   password: string;
 }): Promise<AuthSession> {
+  // Fluxo administrativo é global e não participa da resolução por rede.
   const response = await apiRequest<LoginApiResponse>({
     path: "/api/v1/admin/auth/login",
     method: "POST",

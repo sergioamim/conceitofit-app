@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { getAccessNetworkContextApi, loginApi, requestPasswordRecoveryApi } from "../../src/lib/api/auth";
+import {
+  adminLoginApi,
+  getAccessNetworkContextApi,
+  loginApi,
+  requestPasswordRecoveryApi,
+} from "../../src/lib/api/auth";
 import { getSessionBootstrapApi } from "../../src/lib/api/contexto-unidades";
 import {
   clearAuthSession,
@@ -66,6 +71,46 @@ test.describe("auth por rede", () => {
       expect(getNetworkSlugFromSession()).toBe("rede-norte");
       expect(getAvailableScopesFromSession()).toEqual(["REDE"]);
       expect(getBroadAccessFromSession()).toBeTruthy();
+    } finally {
+      restore();
+    }
+  });
+
+  test("adminLoginApi usa endpoint global e persiste a sessao sem contexto de rede", async () => {
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
+          token: "token-admin",
+          refreshToken: "refresh-admin",
+          userId: "user-admin",
+          userKind: "ADMIN",
+          displayName: "Admin Master",
+          activeTenantId: "tenant-admin",
+          tenantBaseId: "tenant-admin-base",
+          availableScopes: ["GLOBAL"],
+          broadAccess: true,
+        },
+      },
+    ]);
+
+    try {
+      const session = await adminLoginApi({
+        email: "admin@qa.local",
+        password: "12345678",
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.url).toContain("/api/v1/admin/auth/login");
+      expect(calls[0]?.method).toBe("POST");
+      expect(calls[0]?.headers.get("X-Rede-Identifier")).toBeNull();
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        email: "admin@qa.local",
+        password: "12345678",
+      });
+      expect(session.token).toBe("token-admin");
+      expect(session.refreshToken).toBe("refresh-admin");
+      expect(session.availableScopes).toEqual(["GLOBAL"]);
+      expect(session.activeTenantId).toBe("tenant-admin");
     } finally {
       restore();
     }
