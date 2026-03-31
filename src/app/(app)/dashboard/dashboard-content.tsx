@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -21,7 +21,7 @@ import {
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useDashboard } from "@/lib/query/use-dashboard";
 import { StatusBadge } from "@/components/shared/status-badge";
-import type { DashboardData, Prospect, StatusAluno } from "@/lib/types";
+import type { DashboardData, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL, formatDate } from "@/lib/formatters";
@@ -46,6 +46,7 @@ function MetricCard({
   icon: Icon,
   tone,
   delta,
+  testId,
 }: {
   title: string;
   value: string;
@@ -53,6 +54,7 @@ function MetricCard({
   icon: React.ElementType;
   tone: "accent" | "teal" | "warning" | "danger";
   delta?: { up: boolean; text: string; label: string };
+  testId?: string;
 }) {
   const toneClass = {
     accent: "text-gym-accent border-gym-accent/20",
@@ -62,7 +64,7 @@ function MetricCard({
   }[tone];
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-xl border border-border bg-card p-4" data-testid={testId}>
       <div className="flex items-start justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
         <Icon className={`size-4 ${toneClass.split(" ")[0]}`} />
@@ -89,10 +91,7 @@ export function DashboardContent({
 }) {
   const tenantContext = useTenantContext();
   const [showAllProspects, setShowAllProspects] = useState(false);
-  const [prospectsPage, setProspectsPage] = useState<Prospect[]>([]);
   const [prospectsPageNumber, setProspectsPageNumber] = useState(1);
-  const [prospectsPageHasNext, setProspectsPageHasNext] = useState(false);
-  const [prospectsPageLoading, setProspectsPageLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
 
@@ -106,38 +105,20 @@ export function DashboardContent({
   const error = queryError ? normalizeErrorMessage(queryError) : null;
 
   const openProspects = useMemo(() => {
-    if (!dashboardData?.prospectsRecentes) return [] as Prospect[];
-    return [...dashboardData.prospectsRecentes]
+    const prospects = dashboardData?.prospectsRecentes ?? [];
+    return [...prospects]
       .filter((prospect) => prospect.status !== "CONVERTIDO" && prospect.status !== "PERDIDO")
       .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
-  }, [dashboardData?.prospectsRecentes]);
+  }, [dashboardData]);
 
-  const resetProspectsPagination = useCallback(() => {
-    setShowAllProspects(false);
-    setProspectsPage([]);
-    setProspectsPageNumber(1);
-    setProspectsPageHasNext(false);
-  }, []);
+  const prospectsPage = useMemo(() => {
+    const startIndex = Math.max(0, (prospectsPageNumber - 1) * PROSPECTS_PAGE_SIZE);
+    return openProspects.slice(startIndex, startIndex + PROSPECTS_PAGE_SIZE);
+  }, [openProspects, prospectsPageNumber]);
 
-  const loadProspectsPageData = useCallback((page: number) => {
-    setProspectsPageLoading(true);
-    const startIndex = Math.max(0, (page - 1) * PROSPECTS_PAGE_SIZE);
-    const pageItems = openProspects.slice(startIndex, startIndex + PROSPECTS_PAGE_SIZE);
-    setProspectsPage(pageItems);
-    setProspectsPageNumber(page);
-    setProspectsPageHasNext(startIndex + PROSPECTS_PAGE_SIZE < openProspects.length);
-    setProspectsPageLoading(false);
-  }, [openProspects]);
-
-  useEffect(() => {
-    resetProspectsPagination();
-  }, [resetProspectsPagination, selectedDate]);
-
-  useEffect(() => {
-    if (showAllProspects) {
-      loadProspectsPageData(prospectsPageNumber);
-    }
-  }, [loadProspectsPageData, prospectsPageNumber, showAllProspects]);
+  const prospectsPageHasNext = useMemo(() => {
+    return prospectsPageNumber * PROSPECTS_PAGE_SIZE < openProspects.length;
+  }, [openProspects.length, prospectsPageNumber]);
 
   const recentProspects = useMemo(() => openProspects.slice(0, 5), [openProspects]);
 
@@ -190,6 +171,8 @@ export function DashboardContent({
                 const nextDate = e.target.value;
                 if (!nextDate) return;
                 setSelectedDate(nextDate);
+                setShowAllProspects(false);
+                setProspectsPageNumber(1);
               }}
               className="bg-secondary border-border text-sm"
             />
@@ -216,7 +199,7 @@ export function DashboardContent({
       {tab === "CLIENTES" && (
         <>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <MetricCard title="Clientes ativos" value={String(metrics.statusAlunoCount.ATIVO)} subtitle={`${metrics.statusAlunoCount.SUSPENSO} suspensos · ${metrics.statusAlunoCount.INATIVO} inativos`} icon={Users} tone="teal" />
+            <MetricCard testId="alunos-ativos-card" title="Clientes ativos" value={String(metrics.statusAlunoCount.ATIVO)} subtitle={`${metrics.statusAlunoCount.SUSPENSO} suspensos · ${metrics.statusAlunoCount.INATIVO} inativos`} icon={Users} tone="teal" />
             <MetricCard title="Novos prospects" value={String(metrics.prospectsNovos)} subtitle="entradas no mês" icon={UserPlus} tone="accent" delta={{ ...deltaLabel(metrics.prospectsNovos, metrics.prospectsNovosAnterior), label: "vs mês anterior" }} />
             <MetricCard title="Visitas aguardando contato" value={String(metrics.visitasAguardandoRetorno)} subtitle="prioridade comercial" icon={CalendarClock} tone="warning" />
             <MetricCard title="Follow-up pendente (48h+)" value={String(metrics.followupPendente)} subtitle="prospects sem contato recente" icon={AlertTriangle} tone="danger" />
@@ -226,16 +209,19 @@ export function DashboardContent({
             <div className="rounded-xl border border-border bg-card p-5">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-display text-base font-bold">Prospects recentes</h2>
-                {showAllProspects ? (
-                  <button type="button" onClick={() => setShowAllProspects(false)} className="text-xs text-gym-accent hover:underline">Ver recentes</button>
-                ) : (
-                  <button type="button" onClick={() => { setShowAllProspects(true); if (prospectsPage.length === 0) void loadProspectsPageData(1); }} className="text-xs text-gym-accent hover:underline">Ver todos</button>
-                )}
+                <div className="flex items-center gap-3">
+                  <Link href="/prospects" className="text-xs text-gym-accent hover:underline" data-testid="prospects-recentes-link">
+                    Ver pipeline
+                  </Link>
+                  {showAllProspects ? (
+                    <button type="button" onClick={() => setShowAllProspects(false)} className="text-xs text-gym-accent hover:underline">Ver recentes</button>
+                  ) : (
+                    <button type="button" onClick={() => { setShowAllProspects(true); setProspectsPageNumber(1); }} className="text-xs text-gym-accent hover:underline">Ver todos</button>
+                  )}
+                </div>
               </div>
               {showAllProspects ? (
-                prospectsPageLoading ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">Carregando prospects...</p>
-                ) : prospectsPage.length === 0 ? (
+                prospectsPage.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Nenhum prospect ativo</p>
                 ) : (
                   <div className="space-y-3">
@@ -246,9 +232,9 @@ export function DashboardContent({
                       </div>
                     ))}
                     <div className="flex items-center justify-end gap-2 pt-1">
-                      <button type="button" disabled={prospectsPageLoading || prospectsPageNumber <= 1} onClick={() => void loadProspectsPageData(prospectsPageNumber - 1)} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50">Anterior</button>
+                      <button type="button" disabled={prospectsPageNumber <= 1} onClick={() => setProspectsPageNumber((current) => Math.max(1, current - 1))} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50">Anterior</button>
                       <span className="text-xs text-muted-foreground">Página {prospectsPageNumber}</span>
-                      <button type="button" disabled={prospectsPageLoading || !prospectsPageHasNext} onClick={() => void loadProspectsPageData(prospectsPageNumber + 1)} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50">Próxima</button>
+                      <button type="button" disabled={!prospectsPageHasNext} onClick={() => setProspectsPageNumber((current) => current + 1)} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50">Próxima</button>
                     </div>
                   </div>
                 )
@@ -291,8 +277,8 @@ export function DashboardContent({
       {tab === "VENDAS" && (
         <>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <MetricCard title="Contratos vendidos" value={String(metrics.matriculasDoMes)} subtitle="matrículas criadas no mês" icon={BarChart3} tone="accent" delta={{ ...deltaLabel(metrics.matriculasDoMes, metrics.matriculasDoMesAnterior), label: "vs mês anterior" }} />
-            <MetricCard title="Valor total vendido" value={formatBRL(metrics.receitaDoMes)} subtitle="somatório dos contratos" icon={CircleDollarSign} tone="teal" delta={{ ...deltaLabel(metrics.receitaDoMes, metrics.receitaDoMesAnterior), label: "vs mês anterior" }} />
+            <MetricCard testId="matriculas-card" title="Contratos vendidos" value={String(metrics.matriculasDoMes)} subtitle="matrículas criadas no mês" icon={BarChart3} tone="accent" delta={{ ...deltaLabel(metrics.matriculasDoMes, metrics.matriculasDoMesAnterior), label: "vs mês anterior" }} />
+            <MetricCard testId="receita-card" title="Valor total vendido" value={formatBRL(metrics.receitaDoMes)} subtitle="somatório dos contratos" icon={CircleDollarSign} tone="teal" delta={{ ...deltaLabel(metrics.receitaDoMes, metrics.receitaDoMesAnterior), label: "vs mês anterior" }} />
             <MetricCard title="Média por contrato" value={formatBRL(metrics.matriculasDoMes ? metrics.receitaDoMes / metrics.matriculasDoMes : 0)} subtitle="ticket médio de contrato" icon={TrendingUp} tone="teal" />
             <MetricCard title="Taxa de conversão" value={`${conversionRate}%`} subtitle="matrículas / prospects novos" icon={UserCheck} tone="accent" delta={{ ...conversionDelta, label: "vs mês anterior" }} />
           </div>
