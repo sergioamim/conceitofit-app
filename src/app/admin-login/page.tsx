@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { adminLoginApi } from "@/lib/api/auth";
 import { getAccessToken } from "@/lib/api/session";
+import { buildForcedPasswordChangeHref } from "@/lib/tenant/auth-redirect";
 
 const backofficeLoginSchema = z.object({
   email: z.string().min(1, "Informe o e-mail."),
@@ -39,10 +40,14 @@ export default function AdminLoginPage() {
     setSaving(true);
     setError(null);
     try {
-      await adminLoginApi({
+      const session = await adminLoginApi({
         email: values.email.trim(),
         password: values.password,
       });
+      if (session.forcePasswordChangeRequired) {
+        router.push(buildForcedPasswordChangeHref("/admin"));
+        return;
+      }
       router.push("/admin");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao autenticar.");

@@ -22,6 +22,7 @@ export interface AuthSession {
   availableTenants?: TenantAccess[];
   availableScopes?: AuthSessionScope[];
   broadAccess?: boolean;
+  forcePasswordChangeRequired?: boolean;
 }
 
 export interface ImpersonationSessionState {
@@ -61,6 +62,7 @@ const BASE_TENANT_ID_KEY = "academia-auth-base-tenant-id";
 const AVAILABLE_TENANTS_KEY = "academia-auth-available-tenants";
 const AVAILABLE_SCOPES_KEY = "academia-auth-available-scopes";
 const BROAD_ACCESS_KEY = "academia-auth-broad-access";
+const FORCE_PASSWORD_CHANGE_REQUIRED_KEY = "academia-auth-force-password-change-required";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
 const IMPERSONATION_SESSION_KEY = "academia-impersonation-session";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
@@ -162,6 +164,11 @@ export function getBroadAccessFromSession(): boolean {
   return window.localStorage.getItem(BROAD_ACCESS_KEY) === "true";
 }
 
+export function getForcePasswordChangeRequiredFromSession(): boolean {
+  if (!isBrowser()) return false;
+  return window.localStorage.getItem(FORCE_PASSWORD_CHANGE_REQUIRED_KEY) === "true";
+}
+
 export function getAvailableScopesFromSession(): AuthSessionScope[] {
   if (!isBrowser()) return [];
   const raw = window.localStorage.getItem(AVAILABLE_SCOPES_KEY);
@@ -226,6 +233,7 @@ export function getAuthSessionSnapshot(): AuthSession | null {
     availableTenants: getAvailableTenantsFromSession(),
     availableScopes: getAvailableScopesFromSession(),
     broadAccess: getBroadAccessFromSession(),
+    forcePasswordChangeRequired: getForcePasswordChangeRequiredFromSession(),
   };
 }
 
@@ -359,6 +367,10 @@ export function saveAuthSession(session: AuthSession): void {
     window.localStorage.removeItem(AVAILABLE_SCOPES_KEY);
   }
   window.localStorage.setItem(BROAD_ACCESS_KEY, session.broadAccess ? "true" : "false");
+  window.localStorage.setItem(
+    FORCE_PASSWORD_CHANGE_REQUIRED_KEY,
+    session.forcePasswordChangeRequired ? "true" : "false"
+  );
   notifyAuthSessionUpdated();
 }
 
@@ -428,6 +440,7 @@ export function clearAuthSession(): void {
     AVAILABLE_TENANTS_KEY,
     AVAILABLE_SCOPES_KEY,
     BROAD_ACCESS_KEY,
+    FORCE_PASSWORD_CHANGE_REQUIRED_KEY,
     PREFERRED_TENANT_ID_KEY,
     CONTEXT_STORAGE_KEY,
   ]);

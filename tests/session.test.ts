@@ -5,6 +5,7 @@ import {
   getActiveTenantIdFromSession,
   getAvailableTenantsFromSession,
   getDisplayNameFromSession,
+  getForcePasswordChangeRequiredFromSession,
   saveAuthSession,
   type AuthSession,
 } from "@/lib/api/session";
@@ -59,12 +60,18 @@ describe("session storage", () => {
     expect(tenants[0].tenantId).toBe("t1");
   });
 
+  it("saves and retrieves forced password change flag", () => {
+    saveAuthSession(makeSession({ forcePasswordChangeRequired: true }));
+    expect(getForcePasswordChangeRequiredFromSession()).toBe(true);
+  });
+
   it("clears session completely", () => {
     saveAuthSession(makeSession());
     clearAuthSession();
     expect(getAccessToken()).toBeUndefined();
     expect(getDisplayNameFromSession()).toBeUndefined();
     expect(getActiveTenantIdFromSession()).toBeUndefined();
+    expect(getForcePasswordChangeRequiredFromSession()).toBe(false);
   });
 
   it("returns undefined when no session exists", () => {

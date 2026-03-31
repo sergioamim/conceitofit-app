@@ -14,7 +14,7 @@ import {
 } from "@/lib/api/auth";
 import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-unidades";
 import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/lib/api/session";
-import { resolvePostLoginPath } from "@/lib/tenant/auth-redirect";
+import { buildForcedPasswordChangeHref, resolvePostLoginPath } from "@/lib/tenant/auth-redirect";
 import { buildNetworkAccessHref } from "@/lib/network-subdomain";
 import {
   networkCredentialFormSchema,
@@ -159,12 +159,17 @@ export function NetworkAccessFlow({
     setSuccessMessage(null);
 
     try {
-      await loginApi({
+      const session = await loginApi({
         identifier: values.identifier.trim(),
         password: values.password,
         redeIdentifier: networkSubdomain,
         channel: "APP",
       });
+
+      if (session.forcePasswordChangeRequired) {
+        router.push(buildForcedPasswordChangeHref(resolvedNextPath));
+        return;
+      }
 
       const tenantContext = await getTenantContextApi();
       const activeTenants = tenantContext.unidadesDisponiveis.filter((item) => item.ativo !== false);

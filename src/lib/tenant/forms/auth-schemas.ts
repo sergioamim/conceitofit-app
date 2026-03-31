@@ -22,3 +22,16 @@ export const legacyLoginFormSchema = z.object({
 export const legacyTenantStepFormSchema = z.object({
   tenantId: requiredTrimmedString("Selecione a unidade prioritária."),
 });
+
+export const forcedPasswordChangeFormSchema = z
+  .object({
+    newPassword: requiredTrimmedString("Informe a nova senha.")
+      .min(8, "A nova senha deve ter pelo menos 8 caracteres.")
+      .regex(/[A-Za-z]/, "A nova senha deve conter pelo menos uma letra.")
+      .regex(/\d/, "A nova senha deve conter pelo menos um número."),
+    confirmNewPassword: requiredTrimmedString("Confirme a nova senha."),
+  })
+  .refine((values) => values.newPassword === values.confirmNewPassword, {
+    message: "A confirmação da senha deve ser idêntica à nova senha.",
+    path: ["confirmNewPassword"],
+  });
