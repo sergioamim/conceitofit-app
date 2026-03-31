@@ -438,10 +438,26 @@ export default function AdminProvisionarAcademiaPage() {
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <CredentialField label="Academia" value={credentials.academiaNome} />
-              <CredentialField label="Unidade principal" value={credentials.unidadePrincipalNome} />
-              <CredentialField label="E-mail" value={credentials.adminEmail} />
-              <CredentialField label="Senha temporária" value={credentials.temporaryPassword} />
+              <CredentialField
+                fieldId="provision-credential-academia"
+                label="Academia"
+                value={credentials.academiaNome}
+              />
+              <CredentialField
+                fieldId="provision-credential-unidade-principal"
+                label="Unidade principal"
+                value={credentials.unidadePrincipalNome}
+              />
+              <CredentialField
+                fieldId="provision-credential-admin-email"
+                label="E-mail"
+                value={credentials.adminEmail}
+              />
+              <CredentialField
+                fieldId="provision-credential-temporary-password"
+                label="Senha temporária"
+                value={credentials.temporaryPassword}
+              />
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -459,13 +475,21 @@ export default function AdminProvisionarAcademiaPage() {
   );
 }
 
-function CredentialField({ label, value }: { label: string; value: string }) {
+function CredentialField({
+  fieldId,
+  label,
+  value,
+}: {
+  fieldId: string;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+      <Label htmlFor={fieldId} className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
         {label}
       </Label>
-      <Input value={value} readOnly className="border-border bg-secondary" />
+      <Input id={fieldId} value={value} readOnly className="border-border bg-secondary" />
     </div>
   );
 }

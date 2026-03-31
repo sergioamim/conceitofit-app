@@ -2160,6 +2160,31 @@ type AdminOnboardingSeed = {
   ultimaMensagem?: string;
 };
 
+type E2EAuthProfileSeed = {
+  id: string;
+  nome: string;
+  email: string;
+  roles: string[];
+  availableScopes: Array<"GLOBAL" | "REDE" | "UNIDADE">;
+  broadAccess?: boolean;
+};
+
+type ProvisionedAdminAccountSeed = {
+  id: string;
+  tenantId: string;
+  academiaId: string;
+  nome: string;
+  email: string;
+  password: string;
+  temporaryPassword: string;
+  forcePasswordChange: boolean;
+};
+
+type OnboardingChecklistProgressSeed = {
+  academiaConfigurada: boolean;
+  planoCriado: boolean;
+};
+
 type AdminSecurityMembershipState = {
   id: string;
   tenantId: string;
@@ -2695,6 +2720,7 @@ export async function installAdminCrudApiMocks(page: Page) {
 
   const counters = {
     academia: 10,
+    plano: 10,
     unidade: 10,
     cargo: 10,
     funcionario: 10,
@@ -2709,9 +2735,40 @@ export async function installAdminCrudApiMocks(page: Page) {
     membership: 10,
   };
 
+  const onboardingChecklistByTenant = new Map<string, OnboardingChecklistProgressSeed>(
+    unidades.map((item) => [
+      item.id,
+      {
+        academiaConfigurada: true,
+        planoCriado: true,
+      },
+    ]),
+  );
+
+  let currentAuthProfile: E2EAuthProfileSeed = {
+    id: "user-admin-global",
+    nome: "Sergio Amim",
+    email: "admin@academia.local",
+    roles: ["OWNER", "ADMIN"],
+    availableScopes: ["GLOBAL"],
+    broadAccess: true,
+  };
+
+  let provisionedAdminAccounts: ProvisionedAdminAccountSeed[] = [];
+
   function nextId(prefix: string, counterKey: keyof typeof counters) {
     counters[counterKey] += 1;
     return `${prefix}-${counters[counterKey]}`;
+  }
+
+  function slugify(value: string) {
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 32);
   }
 
   function resolveTenantId(url: URL) {
@@ -2760,31 +2817,120 @@ export async function installAdminCrudApiMocks(page: Page) {
     return state;
   }
 
-  function buildAuthPayload() {
-    return {
-      id: "user-admin-global",
-      nome: "Sergio Amim",
-      email: "admin@academia.local",
-      roles: ["OWNER", "ADMIN"],
-      activeTenantId: currentTenantId,
-      availableTenants: unidades.map((item) => ({
-        tenantId: item.id,
-        defaultTenant: item.id === currentTenantId,
-      })),
-    };
+  function getCurrentVisibleTenants() {
+    const account = provisionedAdminAccounts.find((item) => item.email === currentAuthProfile.email);
+    if (!account) {
+      return unidades;
+    }
+
+    return unidades.filter((item) => item.id === account.tenantId);
   }
 
-  function buildSessionPayload() {
+  function getCurrentActiveTenant() {
+    return getCurrentVisibleTenants().find((item) => item.id === currentTenantId) ?? getCurrentVisibleTenants()[0] ?? unidades[0];
+  }
+
+  function buildAvailableTenantsPayload() {
+    const activeTenantId = getCurrentActiveTenant()?.id ?? currentTenantId;
+    return getCurrentVisibleTenants().map((item) => ({
+      tenantId: item.id,
+      defaultTenant: item.id === activeTenantId,
+    }));
+  }
+
+  function buildLoginResponse(forcePasswordChange = false) {
+    const activeTenantId = getCurrentActiveTenant()?.id ?? currentTenantId;
+    currentTenantId = activeTenantId;
+
     return {
       token: "token-e2e",
       refreshToken: "refresh-e2e",
       type: "Bearer",
-      activeTenantId: currentTenantId,
-      availableTenants: unidades.map((item) => ({
-        tenantId: item.id,
-        defaultTenant: item.id === currentTenantId,
-      })),
+      userId: currentAuthProfile.id,
+      displayName: currentAuthProfile.nome,
+      activeTenantId,
+      availableTenants: buildAvailableTenantsPayload(),
+      availableScopes: currentAuthProfile.availableScopes,
+      broadAccess: currentAuthProfile.broadAccess ?? false,
+      forcePasswordChange,
     };
+  }
+
+  function getOnboardingChecklistProgress(tenantId: string) {
+    const current = onboardingChecklistByTenant.get(tenantId);
+    if (current) {
+      return current;
+    }
+
+    const initial = {
+      academiaConfigurada: true,
+      planoCriado: true,
+    };
+    onboardingChecklistByTenant.set(tenantId, initial);
+    return initial;
+  }
+
+  function updateOnboardingChecklistProgress(
+    tenantId: string,
+    changes: Partial<OnboardingChecklistProgressSeed>,
+  ) {
+    const current = getOnboardingChecklistProgress(tenantId);
+    const next = {
+      ...current,
+      ...changes,
+    };
+    onboardingChecklistByTenant.set(tenantId, next);
+    return next;
+  }
+
+  function buildOnboardingStatusPayload(tenantId: string) {
+    const progress = getOnboardingChecklistProgress(tenantId);
+    const etapas = [
+      {
+        id: "dados-academia",
+        titulo: "Dados da Academia",
+        status: progress.academiaConfigurada ? "CONCLUIDA" : "PENDENTE",
+        rotaConfiguracao: "/administrativo/academia",
+      },
+      {
+        id: "criar-plano",
+        titulo: "Criar Plano",
+        status: progress.planoCriado ? "CONCLUIDA" : "PENDENTE",
+        rotaConfiguracao: "/planos/novo",
+      },
+    ];
+
+    const etapasConcluidas = etapas.filter((item) => item.status === "CONCLUIDA").length;
+    return {
+      percentualConclusao: Math.round((etapasConcluidas / etapas.length) * 100),
+      concluido: etapasConcluidas === etapas.length,
+      totalEtapas: etapas.length,
+      etapasConcluidas,
+      etapas,
+    };
+  }
+
+  function buildAuthPayload() {
+    const activeTenantId = getCurrentActiveTenant()?.id ?? currentTenantId;
+    currentTenantId = activeTenantId;
+
+    return {
+      id: currentAuthProfile.id,
+      userId: currentAuthProfile.id,
+      nome: currentAuthProfile.nome,
+      displayName: currentAuthProfile.nome,
+      email: currentAuthProfile.email,
+      roles: currentAuthProfile.roles,
+      userKind: "COLABORADOR",
+      activeTenantId,
+      availableTenants: buildAvailableTenantsPayload(),
+      availableScopes: currentAuthProfile.availableScopes,
+      broadAccess: currentAuthProfile.broadAccess ?? false,
+    };
+  }
+
+  function buildSessionPayload() {
+    return buildLoginResponse(false);
   }
 
   function normalizeBooleanInput(value: unknown, fallback = false) {
@@ -2964,6 +3110,22 @@ export async function installAdminCrudApiMocks(page: Page) {
       const path = normalizeApiPath(url.pathname);
       const method = request.method();
 
+      if (path === "/api/v1/admin/auth/login" && method === "POST") {
+        const payload = parseBody<{ email?: string; password?: string }>(request);
+        const email = payload.email?.trim() || "admin@academia.local";
+
+        currentAuthProfile = {
+          id: "user-admin-global",
+          nome: "Sergio Amim",
+          email,
+          roles: ["OWNER", "ADMIN"],
+          availableScopes: ["GLOBAL"],
+          broadAccess: true,
+        };
+        await fulfillJson(route, buildLoginResponse(false));
+        return;
+      }
+
       if (path === "/api/v1/auth/me" && method === "GET") {
         await fulfillJson(route, buildAuthPayload());
         return;
@@ -2980,12 +3142,13 @@ export async function installAdminCrudApiMocks(page: Page) {
       }
 
       if (path === "/api/v1/app/bootstrap" && method === "GET") {
+        const tenantAtual = getCurrentActiveTenant();
         await fulfillJson(route, {
           user: buildAuthPayload(),
           tenantContext: {
-            currentTenantId,
-            tenantAtual: getTenant(currentTenantId),
-            unidadesDisponiveis: unidades,
+            currentTenantId: tenantAtual?.id ?? currentTenantId,
+            tenantAtual,
+            unidadesDisponiveis: getCurrentVisibleTenants(),
           },
           academia: buildActiveAcademiaPayload(),
           branding: buildActiveAcademiaPayload().branding,
@@ -2998,20 +3161,24 @@ export async function installAdminCrudApiMocks(page: Page) {
       }
 
     if (path === "/api/v1/context/unidade-ativa" && method === "GET") {
+      const tenantAtual = getCurrentActiveTenant();
       await fulfillJson(route, {
-        currentTenantId,
-        tenantAtual: getTenant(currentTenantId),
-        unidadesDisponiveis: unidades,
+        currentTenantId: tenantAtual?.id ?? currentTenantId,
+        tenantAtual,
+        unidadesDisponiveis: getCurrentVisibleTenants(),
       });
       return;
     }
 
     if (/^\/api\/v1\/context\/unidade-ativa\/[^/]+$/.test(path) && method === "PUT") {
-      currentTenantId = path.split("/").at(-1) ?? currentTenantId;
+      const requestedTenantId = path.split("/").at(-1) ?? currentTenantId;
+      if (getCurrentVisibleTenants().some((item) => item.id === requestedTenantId)) {
+        currentTenantId = requestedTenantId;
+      }
       await fulfillJson(route, {
         currentTenantId,
-        tenantAtual: getTenant(currentTenantId),
-        unidadesDisponiveis: unidades,
+        tenantAtual: getCurrentActiveTenant(),
+        unidadesDisponiveis: getCurrentVisibleTenants(),
       });
       return;
     }
@@ -3040,12 +3207,45 @@ export async function installAdminCrudApiMocks(page: Page) {
     }
 
     if (path === "/api/v1/unidades" && method === "GET") {
-      await fulfillJson(route, unidades);
+      await fulfillJson(route, getCurrentVisibleTenants());
       return;
     }
 
     if (path === "/api/v1/academia" && method === "GET") {
       await fulfillJson(route, buildActiveAcademiaPayload());
+      return;
+    }
+
+    if (path === "/api/v1/academia/dashboard" && method === "GET") {
+      await fulfillJson(route, {
+        totalAlunosAtivos: 12,
+        prospectsNovos: 4,
+        matriculasDoMes: 2,
+        receitaDoMes: 3200,
+        prospectsRecentes: [],
+        matriculasVencendo: [],
+        pagamentosPendentes: [],
+        statusAlunoCount: {
+          ATIVO: 12,
+          INATIVO: 0,
+          SUSPENSO: 0,
+          CANCELADO: 0,
+        },
+        prospectsEmAberto: 3,
+        followupPendente: 1,
+        visitasAguardandoRetorno: 1,
+        prospectsNovosAnterior: 2,
+        matriculasDoMesAnterior: 1,
+        receitaDoMesAnterior: 1800,
+        ticketMedio: 1600,
+        ticketMedioAnterior: 1800,
+        pagamentosRecebidosMes: 3200,
+        pagamentosRecebidosMesAnterior: 1800,
+        vendasNovas: 1,
+        vendasRecorrentes: 1,
+        inadimplencia: 0,
+        aReceber: 450,
+      });
       return;
     }
 
@@ -3066,7 +3266,13 @@ export async function installAdminCrudApiMocks(page: Page) {
           branding: payload.branding ?? buildActiveAcademiaPayload().branding,
         },
       );
+      updateOnboardingChecklistProgress(currentTenantId, { academiaConfigurada: true });
       await fulfillJson(route, buildActiveAcademiaPayload());
+      return;
+    }
+
+    if (path === "/api/v1/onboarding/status" && method === "GET") {
+      await fulfillJson(route, buildOnboardingStatusPayload(currentTenantId));
       return;
     }
 
@@ -3075,6 +3281,34 @@ export async function installAdminCrudApiMocks(page: Page) {
       const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivos"), false);
       const planos = planosByTenant.get(tenantId) ?? [];
       await fulfillJson(route, activeOnly ? planos.filter((item) => item.ativo) : planos);
+      return;
+    }
+
+    if (path === "/api/v1/comercial/planos" && method === "POST") {
+      const tenantId = resolveTenantId(url);
+      const payload = parseBody<Partial<PlanoSeed>>(request);
+      const created: PlanoSeed = {
+        id: nextId("plano", "plano"),
+        tenantId,
+        nome: payload.nome?.trim() || "Novo plano",
+        descricao: payload.descricao?.trim() || undefined,
+        tipo: payload.tipo ?? "MENSAL",
+        duracaoDias: Number(payload.duracaoDias) > 0 ? Number(payload.duracaoDias) : 30,
+        valor: Number(payload.valor) > 0 ? Number(payload.valor) : 99.9,
+        valorMatricula: Number(payload.valorMatricula) >= 0 ? Number(payload.valorMatricula) : 0,
+        cobraAnuidade: payload.cobraAnuidade ?? false,
+        valorAnuidade: payload.valorAnuidade ? Number(payload.valorAnuidade) : undefined,
+        destaque: payload.destaque ?? false,
+        ativo: true,
+        ordem: payload.ordem ? Number(payload.ordem) : undefined,
+        beneficios: payload.beneficios ?? [],
+        permiteRenovacaoAutomatica: payload.permiteRenovacaoAutomatica ?? true,
+        contratoAssinatura: payload.contratoAssinatura ?? "AMBAS",
+        contratoTemplateHtml: payload.contratoTemplateHtml,
+      };
+      planosByTenant.set(tenantId, [created, ...(planosByTenant.get(tenantId) ?? [])]);
+      updateOnboardingChecklistProgress(tenantId, { planoCriado: true });
+      await fulfillJson(route, created, 201);
       return;
     }
 
@@ -3113,6 +3347,138 @@ export async function installAdminCrudApiMocks(page: Page) {
       created.groupId = created.id;
       academias = [created, ...academias];
       await fulfillJson(route, buildAcademiaPayload(created.id), 201);
+      return;
+    }
+
+    if (path === "/api/v1/admin/onboarding/provision" && method === "POST") {
+      const payload = parseBody<{
+        nomeAcademia?: string;
+        cnpj?: string;
+        nomeUnidadePrincipal?: string;
+        nomeAdministrador?: string;
+        emailAdministrador?: string;
+        telefone?: string;
+      }>(request);
+      const academiaId = nextId("academia", "academia");
+      const tenantId = nextId("tenant", "unidade");
+      const academiaSlug = slugify(payload.nomeAcademia?.trim() || academiaId) || academiaId;
+      const unidadeSlug = slugify(payload.nomeUnidadePrincipal?.trim() || tenantId) || tenantId;
+      const temporaryPassword = `Temp#${counters.unidade}Onb`;
+      const academia: TenantSeed = {
+        id: academiaId,
+        academiaId,
+        groupId: academiaId,
+        nome: payload.nomeAcademia?.trim() || "Nova academia",
+        razaoSocial: payload.nomeAcademia?.trim() || "Nova academia",
+        documento: payload.cnpj?.trim(),
+        subdomain: academiaSlug,
+        email: payload.emailAdministrador?.trim(),
+        telefone: payload.telefone?.trim(),
+        ativo: true,
+        branding: {
+          appName: payload.nomeAcademia?.trim() || "Nova academia",
+          themePreset: "premium",
+          useCustomColors: false,
+        },
+      };
+      const unidade: TenantSeed = {
+        id: tenantId,
+        academiaId,
+        groupId: academiaId,
+        nome: payload.nomeUnidadePrincipal?.trim() || "Unidade principal",
+        razaoSocial: payload.nomeUnidadePrincipal?.trim() || "Unidade principal",
+        documento: payload.cnpj?.trim(),
+        subdomain: unidadeSlug,
+        email: payload.emailAdministrador?.trim(),
+        telefone: payload.telefone?.trim(),
+        ativo: true,
+        branding: academia.branding,
+      };
+      academias = [academia, ...academias];
+      unidades = [unidade, ...unidades];
+      mergeOnboardingState({
+        tenantId,
+        academiaId,
+        estrategia: "IMPORTAR_DEPOIS",
+        status: "AGUARDANDO_IMPORTACAO",
+        ultimaMensagem: "Provisionamento concluído aguardando configuração inicial.",
+      });
+      onboardingChecklistByTenant.set(tenantId, {
+        academiaConfigurada: false,
+        planoCriado: false,
+      });
+      provisionedAdminAccounts = [
+        {
+          id: `user-${tenantId}`,
+          tenantId,
+          academiaId,
+          nome: payload.nomeAdministrador?.trim() || "Administrador da academia",
+          email: payload.emailAdministrador?.trim() || `${academiaSlug}@academia.local`,
+          password: temporaryPassword,
+          temporaryPassword,
+          forcePasswordChange: true,
+        },
+        ...provisionedAdminAccounts.filter((item) => item.tenantId !== tenantId),
+      ];
+      await fulfillJson(
+        route,
+        {
+          academiaId,
+          tenantId,
+          unidadePrincipalId: tenantId,
+          nomeAcademia: academia.nome,
+          nomeUnidadePrincipal: unidade.nome,
+          emailAdministrador: provisionedAdminAccounts[0].email,
+          senhaTemporaria: temporaryPassword,
+        },
+        201,
+      );
+      return;
+    }
+
+    if (path === "/api/v1/auth/login" && method === "POST") {
+      const payload = parseBody<{ email?: string; identifier?: string; password?: string }>(request);
+      const email = payload.email?.trim() || payload.identifier?.trim() || "";
+      const account = provisionedAdminAccounts.find((item) => item.email === email);
+
+      if (!account || account.password !== (payload.password ?? "")) {
+        await fulfillJson(route, { message: "Credenciais inválidas." }, 401);
+        return;
+      }
+
+      currentTenantId = account.tenantId;
+      currentAuthProfile = {
+        id: account.id,
+        nome: account.nome,
+        email: account.email,
+        roles: ["ADMIN"],
+        availableScopes: ["UNIDADE"],
+        broadAccess: false,
+      };
+      await fulfillJson(route, buildLoginResponse(account.forcePasswordChange));
+      return;
+    }
+
+    if (path === "/api/v1/auth/change-password" && method === "POST") {
+      const payload = parseBody<{ newPassword?: string }>(request);
+      const account = provisionedAdminAccounts.find((item) => item.email === currentAuthProfile.email);
+
+      if (account && payload.newPassword?.trim()) {
+        provisionedAdminAccounts = provisionedAdminAccounts.map((item) =>
+          item.email === account.email
+            ? {
+                ...item,
+                password: payload.newPassword!.trim(),
+                forcePasswordChange: false,
+              }
+            : item,
+        );
+      }
+
+      await fulfillJson(route, {
+        ...buildLoginResponse(false),
+        message: "Senha atualizada com sucesso.",
+      });
       return;
     }
 
