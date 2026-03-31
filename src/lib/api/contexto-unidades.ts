@@ -44,6 +44,7 @@ interface TenantConfiguracoesApi {
 interface TenantApiResponse {
   id: string;
   academiaId?: string | null;
+  academiaNome?: string | null;
   nome: string;
   razaoSocial?: string | null;
   documento?: string | null;
@@ -176,6 +177,7 @@ function normalizeTenant(input: TenantApiResponse): Tenant {
   return {
     id: input.id,
     academiaId: input.academiaId ?? undefined,
+    academiaNome: input.academiaNome ?? undefined,
     nome: input.nome,
     razaoSocial: input.razaoSocial ?? undefined,
     documento: input.documento ?? undefined,

@@ -56,6 +56,7 @@ export interface ClienteMigracaoUnidadeResult {
 export interface Tenant {
   id: UUID;
   academiaId?: UUID;
+  academiaNome?: string;
   nome: string;
   razaoSocial?: string;
   documento?: string;
