@@ -154,6 +154,8 @@ function normalizeClienteOperationalContext(
 function normalizeClienteMigracaoResult(
   input: ClienteMigracaoUnidadeApiResponse,
 ): ClienteMigracaoUnidadeResult {
+  type BlockedByItem = NonNullable<ClienteMigracaoUnidadeResult["blockedBy"]>[number];
+
   return {
     success: input.success !== false,
     auditId: input.auditId?.trim() || undefined,
@@ -171,12 +173,12 @@ function normalizeClienteMigracaoResult(
         ? input.preservarContextoComercial
         : undefined,
     blockedBy: (input.blockedBy ?? [])
-      .map((item) => {
+      .map<BlockedByItem | null>((item) => {
         const code = item.code?.trim() ?? "";
         const message = item.message?.trim() ?? "";
         return code && message ? { code, message } : null;
       })
-      .filter((item): item is NonNullable<ClienteMigracaoUnidadeResult["blockedBy"]>[number] => item !== null),
+      .filter((item): item is BlockedByItem => item !== null),
     aluno: input.aluno ? normalizeAluno(input.aluno) : undefined,
   };
 }
