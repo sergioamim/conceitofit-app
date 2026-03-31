@@ -160,10 +160,17 @@ async function mockContasBancariasApi(
   initialRows: ContaSeed[],
   options?: {
     validationErrorApelido?: string;
+    loadErrorCount?: number;
+    loadErrorMessage?: string;
+    forbiddenErrorApelido?: string;
+    forbiddenErrorMessage?: string;
+    serverErrorApelido?: string;
+    serverErrorMessage?: string;
   }
 ) {
   let contas = [...initialRows];
   const missingTenantRequests: string[] = [];
+  let remainingLoadErrors = options?.loadErrorCount ?? 0;
 
   await page.route("**/api/v1/gerencial/financeiro/contas-bancarias**", async (route) => {
     const request = route.request();
@@ -179,12 +186,31 @@ async function mockContasBancariasApi(
     }
 
     if (path === "/api/v1/gerencial/financeiro/contas-bancarias" && method === "GET") {
+      if (remainingLoadErrors > 0) {
+        remainingLoadErrors -= 1;
+        await fulfillJson(route, {
+          message: options?.loadErrorMessage ?? "Falha temporária no servidor.",
+        }, 500);
+        return;
+      }
       await fulfillJson(route, contas);
       return;
     }
 
     if (path === "/api/v1/gerencial/financeiro/contas-bancarias" && method === "POST") {
       const payload = parseBody<Partial<ContaSeed>>(request);
+      if (payload.apelido === options?.serverErrorApelido) {
+        await fulfillJson(route, {
+          message: options?.serverErrorMessage ?? "Falha temporária no servidor.",
+        }, 500);
+        return;
+      }
+      if (payload.apelido === options?.forbiddenErrorApelido) {
+        await fulfillJson(route, {
+          message: options?.forbiddenErrorMessage ?? "Sem permissão para cadastrar conta.",
+        }, 403);
+        return;
+      }
       if (payload.apelido === options?.validationErrorApelido) {
         await fulfillJson(route, {
           message: "Validation error",
@@ -342,6 +368,39 @@ async function mockConciliacaoApi(page: Page, initialRows: ConciliacaoLinhaSeed[
 }
 
 test.describe("Financeiro admin pages", () => {
+  test("contas bancárias mantém empty state e exibe erros 500 e 403 ao salvar", async ({ page }) => {
+    const { missingTenantRequests } = await mockContasBancariasApi(page, [], {
+      serverErrorApelido: "Conta instável",
+      serverErrorMessage: "Falha temporária no servidor.",
+      forbiddenErrorApelido: "Conta restrita",
+      forbiddenErrorMessage: "Sem permissão para cadastrar conta.",
+    });
+
+    await openAuthenticatedPage(page, "/administrativo/contas-bancarias", "Contas bancárias");
+
+    await expect(page.getByText("Nenhuma conta bancária encontrada.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Nova conta bancária" }).click();
+    await page.getByPlaceholder("Ex.: Conta principal").fill("Conta instável");
+    await page.getByPlaceholder("Ex.: Banco do Brasil").fill("Banco Instável");
+    await page.getByPlaceholder("Ex.: 0001").fill("1234");
+    await page.getByPlaceholder("Ex.: 12345-6").fill("778899");
+    await page.getByPlaceholder("Ex.: 9").fill("1");
+    await page.getByPlaceholder("Nome completo do titular").fill("Academia Matriz");
+    await page.getByRole("button", { name: "Salvar" }).click();
+
+    await expect(page.getByText("Falha temporária no servidor.")).toBeVisible();
+
+    await page.getByPlaceholder("Ex.: Conta principal").fill("Conta restrita");
+    await page.getByRole("button", { name: "Salvar" }).click();
+
+    await expect(page.getByText("Sem permissão para cadastrar conta.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Cancelar" }).click();
+    await expect(page.getByText("Nenhuma conta bancária encontrada.")).toBeVisible();
+    expect(missingTenantRequests).toEqual([]);
+  });
+
   test("contas bancárias aguarda tenant e mostra field errors da API", async ({ page }) => {
     const { missingTenantRequests } = await mockContasBancariasApi(page, [
       {
