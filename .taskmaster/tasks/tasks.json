@@ -11802,7 +11802,7 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-03-31T12:08:41.126Z"
+        "updatedAt": "2026-03-31T12:12:08.026Z"
       },
       {
         "id": "289",
@@ -11818,7 +11818,7 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-03-31T12:08:43.104Z"
+        "updatedAt": "2026-03-31T12:12:11.279Z"
       },
       {
         "id": "290",
@@ -11830,14 +11830,255 @@
         "dependencies": [],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-03-31T12:08:45.467Z"
+        "updatedAt": "2026-03-31T12:12:14.198Z"
+      },
+      {
+        "id": "291",
+        "title": "Integrar E2E existentes ao smoke suite — lote 1 (alto impacto)",
+        "description": "Adicionar os 5 specs E2E de alto impacto na cobertura de src/lib ao array SMOKE_E2E_SPECS em scripts/playwright-coverage.mjs.",
+        "details": "Editar o arquivo `scripts/playwright-coverage.mjs` e adicionar os seguintes caminhos de specs ao array `SMOKE_E2E_SPECS`: `tests/e2e/financeiro-admin.spec.ts`, `tests/e2e/reservas-aulas.spec.ts`, `tests/e2e/crm-operacional.spec.ts`, `tests/e2e/rbac.spec.ts`, `tests/e2e/bi-operacional.spec.ts`. Certificar-se de que cada spec executa com sucesso individualmente antes da integração. Pseudo-código: `// scripts/playwright-coverage.mjs \n const SMOKE_E2E_SPECS = [\n   'tests/e2e/financeiro-admin.spec.ts',\n   'tests/e2e/reservas-aulas.spec.ts',\n   'tests/e2e/crm-operacional.spec.ts',\n   'tests/e2e/rbac.spec.ts',\n   'tests/e2e/bi-operacional.spec.ts'\n   // ... outros specs existentes\n ];`",
+        "testStrategy": "Rodar individualmente cada spec (`npx playwright test tests/e2e/financeiro-admin.spec.ts`). Após a integração, executar `npm run coverage:report` e validar que a porcentagem de cobertura de linhas em `src/lib` aumentou.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-03-31T12:19:39.174Z"
+      },
+      {
+        "id": "292",
+        "title": "Integrar E2E existentes ao smoke suite — lote 2 (médio impacto)",
+        "description": "Adicionar os 7 specs E2E de médio impacto na cobertura ao array SMOKE_E2E_SPECS.",
+        "details": "Continuar editando `scripts/playwright-coverage.mjs` e adicionar os seguintes specs: `tests/e2e/billing-config.spec.ts`, `tests/e2e/security-flows.spec.ts`, `tests/e2e/backoffice-seguranca.spec.ts`, `tests/e2e/backoffice-seguranca-governanca.spec.ts`, `tests/e2e/backoffice-seguranca-rollout.spec.ts`, `tests/e2e/backoffice-configuracoes.spec.ts`, `tests/e2e/backoffice-importacao-evo.spec.ts`. Pseudo-código: `// Adicionar ao SMOKE_E2E_SPECS \n 'tests/e2e/billing-config.spec.ts',\n 'tests/e2e/security-flows.spec.ts',\n // ... demais specs`",
+        "testStrategy": "Verificar a execução bem-sucedida de cada novo spec adicionado. Rodar `npm run coverage:report` e validar o aumento da cobertura de linhas.",
+        "priority": "high",
+        "dependencies": [
+          "291"
+        ],
+        "status": "in-progress",
+        "subtasks": []
+      },
+      {
+        "id": "293",
+        "title": "Integrar E2E existentes ao smoke suite — lote 3 (complementar)",
+        "description": "Adicionar os 17 specs E2E restantes ao array SMOKE_E2E_SPECS, garantindo que todos os 39 specs existentes contribuam para a cobertura.",
+        "details": "Completar a adição dos specs restantes em `scripts/playwright-coverage.mjs`: `tests/e2e/clientes-context-recovery.spec.ts`, `tests/e2e/clientes-exclusao-controlada.spec.ts`, `tests/e2e/clientes-migracao-unidade.spec.ts`, `tests/e2e/clientes-nfse.spec.ts`, `tests/e2e/clientes-url-state.spec.ts`, `tests/e2e/demo-account.spec.ts`, `tests/e2e/auth-rede.spec.ts`, `tests/e2e/admin-backoffice-global-crud.spec.ts`, `tests/e2e/admin-catalogo-crud.spec.ts`, `tests/e2e/admin-config-api-only.spec.ts`, `tests/e2e/admin-financeiro-operacional-crud.spec.ts`, `tests/e2e/admin-unidade-base-equipe.spec.ts`, `tests/e2e/app-multiunidade-contrato.spec.ts`, `tests/e2e/layout-bottom-nav.spec.ts`, `tests/e2e/operacional-grade-catraca.spec.ts`, `tests/e2e/planos-context-recovery.spec.ts`, `tests/e2e/treinos-web.spec.ts`, `tests/e2e/treinos-atribuidos.spec.ts`. Pseudo-código: `// Adicionar os 17 specs restantes ao SMOKE_E2E_SPECS`",
+        "testStrategy": "Confirmar que todos os 39 specs E2E presentes no projeto (`tests/e2e/*.spec.ts`) estão agora incluídos no `SMOKE_E2E_SPECS`. Executar o suite completo de cobertura (`npm run coverage:report`) e validar o aumento total da cobertura.",
+        "priority": "high",
+        "dependencies": [
+          "292"
+        ],
+        "status": "in-progress",
+        "subtasks": []
+      },
+      {
+        "id": "294",
+        "title": "Criar E2E spec — Dashboard principal",
+        "description": "Desenvolver um novo spec E2E para cobrir a funcionalidade do Dashboard principal, incluindo renderização, cards de métricas, prospects e pagamentos pendentes, e navegação.",
+        "details": "Criar o arquivo `tests/e2e/dashboard.spec.ts`. Implementar testes para: 1. Acessar a página do Dashboard. 2. Verificar a renderização dos cards de métricas (alunos ativos, receita, matrículas). 3. Validar a exibição de listas de prospects e pagamentos. 4. Testar a navegação para páginas de detalhe a partir do dashboard. Utilizar mocks para a API `getDashboardApi` para controlar os dados exibidos via `page.route` do Playwright. Pseudo-código: `test('Dashboard renders metrics and navigation', async ({ page }) => {\n   await page.route('**/api/dashboard', route => route.fulfill({ status: 200, body: JSON.stringify({ 'totalAlunosAtivos': 100, 'receitaMensal': 50000, 'novasMatriculas': 10 }) }));\n   await page.goto('/dashboard');\n   await expect(page.locator('[data-testid=\"alunos-ativos-card\"]')).toBeVisible();\n   await page.locator('[data-testid=\"prospects-recentes-link\"]').click();\n   await expect(page).toHaveURL(/.*prospects/);\n });`",
+        "testStrategy": "Executar o spec `dashboard.spec.ts` em modo headless e com UI para verificar a interação visual. Garantir que todos os elementos esperados são renderizados e que as navegações funcionam corretamente com os dados mockados.",
+        "priority": "high",
+        "dependencies": [
+          "293"
+        ],
+        "status": "in-progress",
+        "subtasks": []
+      },
+      {
+        "id": "295",
+        "title": "Criar E2E spec — Prospects lista + conversão",
+        "description": "Desenvolver um novo spec E2E para cobrir as funcionalidades de listagem de prospects, criação via modal, progressão de status e o fluxo de conversão (wizard).",
+        "details": "Criar o arquivo `tests/e2e/prospects.spec.ts`. Implementar testes para: 1. Acessar a página de prospects e verificar a lista com filtros. 2. Abrir o modal de criação de prospect, preencher e salvar. 3. Alterar o status de um prospect (NOVO → CONTATADO → QUALIFICADO). 4. Iniciar e completar o wizard de conversão de prospect (`/prospects/[id]/converter`). Mockar as APIs `listProspectsApi`, `createProspectApi`, `updateProspectApi`, `convertProspectApi` usando `page.route`. Pseudo-código: `test('Prospect conversion flow', async ({ page }) => {\n   await page.route('**/api/prospects', route => route.fulfill({ status: 200, body: JSON.stringify([{ id: '123', name: 'João', status: 'NOVO' }]) }));\n   await page.goto('/prospects');\n   await page.locator('[data-testid=\"novo-prospect-button\"]').click();\n   await page.fill('#prospect-name', 'Novo Prospect');\n   await page.click('button:text(\"Salvar\")');\n   await page.goto('/prospects/123/converter');\n   await page.click('button:text(\"Próximo\")');\n   // interact with wizard steps\n });`",
+        "testStrategy": "Executar o spec `prospects.spec.ts` para validar o fluxo completo, desde a listagem até a conversão. Verificar mensagens de sucesso e erros, e o estado final dos dados após as interações. Assegurar que os mocks de API simulam os comportamentos esperados.",
+        "priority": "high",
+        "dependencies": [
+          "294"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "296",
+        "title": "Criar E2E spec — Matrículas + Pagamentos",
+        "description": "Desenvolver um novo spec E2E para cobrir as funcionalidades de listagem e gerenciamento de matrículas e pagamentos, incluindo cancelamento e emissão em lote.",
+        "details": "Criar o arquivo `tests/e2e/matriculas-pagamentos.spec.ts`. Implementar testes para: 1. Acessar a página de matrículas, verificar lista e filtros, e warnings de expiração. 2. Testar o cancelamento de uma matrícula. 3. Acessar a página de pagamentos, verificar lista e filtros. 4. Interagir com o modal 'Receber' para um pagamento. 5. Testar o fluxo de emissão em lote de pagamentos (`/pagamentos/emitir-em-lote`). Mockar as APIs `listMatriculasApi`, `cancelMatriculaApi`, `listPagamentosApi`, `receberPagamentoApi` via `page.route`. Pseudo-código: `test('Bulk payment emission', async ({ page }) => {\n   await page.route('**/api/pagamentos/emitir-em-lote', route => route.fulfill({ status: 200 }));\n   await page.goto('/pagamentos/emitir-em-lote');\n   await page.check('input[type=\"checkbox\"]');\n   await page.click('button:text(\"Emitir Selecionados\")');\n   await expect(page.locator('text=Emissão concluída')).toBeVisible();\n });`",
+        "testStrategy": "Executar o spec `matriculas-pagamentos.spec.ts` para verificar todos os fluxos. Validar a aplicação de filtros, a resposta visual a ações como cancelamento e recebimento, e a correta execução da emissão em lote. Mocks devem simular cenários de sucesso e falha.",
+        "priority": "high",
+        "dependencies": [
+          "295"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "297",
+        "title": "Criar E2E spec — Grade de aulas + Atividades",
+        "description": "Desenvolver um novo spec E2E para cobrir a visualização da grade semanal de aulas e a listagem de atividades, incluindo filtros.",
+        "details": "Criar o arquivo `tests/e2e/grade-atividades.spec.ts`. Implementar testes para: 1. Acessar a página da grade de aulas. 2. Verificar a renderização da grade semanal e a exibição das aulas. 3. Aplicar filtros por modalidade e instrutor. 4. Acessar a listagem de atividades e verificar a exibição. Mockar as APIs `getGradeApi`, `listAtividadesApi` via `page.route`. Pseudo-código: `test('Class schedule filtering', async ({ page }) => {\n   await page.route('**/api/grade', route => route.fulfill({ status: 200, body: JSON.stringify([{ id: 'yoga-class', title: 'Yoga', instructor: 'Maria' }]) }));\n   await page.goto('/grade-aulas');\n   await page.selectOption('[data-testid=\"modalidade-filter\"]', 'Yoga');\n   await expect(page.locator('.aula-card:not(:has-text(\"Yoga\"))')).not.toBeVisible();\n });`",
+        "testStrategy": "Executar o spec `grade-atividades.spec.ts`. Validar que a grade carrega corretamente, os filtros funcionam como esperado, e que as atividades são listadas sem erros. Testar diferentes combinações de filtros com dados mockados.",
+        "priority": "high",
+        "dependencies": [
+          "296"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "298",
+        "title": "Criar E2E spec — CRM avançado (campanhas, playbooks, tarefas)",
+        "description": "Desenvolver um novo spec E2E para cobrir as funcionalidades avançadas de CRM, incluindo campanhas, playbooks, tarefas e o Kanban de prospects.",
+        "details": "Criar o arquivo `tests/e2e/crm-avancado.spec.ts`. Implementar testes para: 1. Listagem, criação e ativação/pausa de campanhas de CRM. 2. Listagem e criação de playbooks/cadências. 3. Listagem e conclusão de tarefas de CRM. 4. Testar a funcionalidade de drag & drop de cards de prospects entre colunas no Kanban. Mockar as APIs `listCampanhasApi`, `createCampanhaApi`, `listPlaybooksApi`, `listCrmTasksApi` via `page.route`. Pseudo-código: `test('CRM Kanban drag and drop', async ({ page }) => {\n   await page.goto('/crm/kanban');\n   const prospectCard = page.locator('[data-testid=\"prospect-card-1\"]');\n   const targetColumn = page.locator('[data-testid=\"qualificado-column\"]');\n   await prospectCard.dragAndDrop(targetColumn);\n   await expect(targetColumn.locator('[data-testid=\"prospect-card-1\"]')).toBeVisible();\n });`",
+        "testStrategy": "Executar o spec `crm-avancado.spec.ts`. Verificar a criação e gerenciamento de campanhas e playbooks, a conclusão de tarefas e, crucialmente, o comportamento do drag & drop no Kanban. Utilizar mocks para simular as respostas da API e diferentes estados.",
+        "priority": "high",
+        "dependencies": [
+          "297"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "299",
+        "title": "Criar E2E spec — Gerencial (DRE, contas a receber, BI)",
+        "description": "Desenvolver um novo spec E2E para cobrir as funcionalidades gerenciais, incluindo DRE, contas a receber, BI de rede e recebimentos.",
+        "details": "Criar o arquivo `tests/e2e/gerencial.spec.ts`. Implementar testes para: 1. Visualização da DRE com seletor de período. 2. Listagem de contas a receber com filtros. 3. Visualização do BI de rede (visão multi-academia). 4. Listagem de recebimentos com filtros. Mockar as APIs `getDreApi`, `listContasReceberApi`, `getBiRedeApi`, `listRecebimentosApi` via `page.route`. Pseudo-código: `test('DRE period selection', async ({ page }) => {\n   await page.route('**/api/dre', route => route.fulfill({ status: 200, body: JSON.stringify({ 'receitaTotal': 10000, 'despesasTotal': 5000 }) }));\n   await page.goto('/gerencial/dre');\n   await page.selectOption('[data-testid=\"periodo-selector\"]', 'lastMonth');\n   await expect(page.locator('text=Receita Total: R$10.000,00')).toBeVisible();\n });`",
+        "testStrategy": "Executar o spec `gerencial.spec.ts`. Validar a correta exibição dos dados financeiros e gerenciais, a funcionalidade dos seletores de período e filtros, e a integridade dos dados mockados.",
+        "priority": "high",
+        "dependencies": [
+          "298"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "300",
+        "title": "Criar E2E spec — Administrativo (funcionários, salas, horários)",
+        "description": "Desenvolver um novo spec E2E para cobrir as funcionalidades administrativas de gerenciamento de funcionários, salas, horários, produtos e formas de pagamento.",
+        "details": "Criar o arquivo `tests/e2e/administrativo.spec.ts`. Implementar testes para: 1. Listagem, cadastro e edição de funcionários. 2. Listagem e criação de salas. 3. Configuração de grade de horários. 4. Listagem e criação de produtos. 5. Listagem de formas de pagamento. Mockar as APIs `listFuncionariosApi`, `createFuncionarioApi`, `listSalasApi`, `listHorariosApi`, `listProdutosApi`, `listFormasPagamentoApi` via `page.route`. Pseudo-código: `test('Employee management flow', async ({ page }) => {\n   await page.goto('/admin/funcionarios');\n   await page.locator('[data-testid=\"novo-funcionario-button\"]').click();\n   await page.fill('#funcionario-nome', 'Funcionario Teste');\n   await page.click('button:text(\"Salvar\")');\n   await expect(page.locator('text=Funcionario Teste')).toBeVisible();\n });`",
+        "testStrategy": "Executar o spec `administrativo.spec.ts`. Verificar se os formulários de cadastro e edição funcionam, se as listas são atualizadas corretamente e se os dados são persistidos via mocks. Garantir que a configuração de horários e a gestão de produtos e formas de pagamento funcionem.",
+        "priority": "high",
+        "dependencies": [
+          "299"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "301",
+        "title": "Testes unitários — src/lib/tenant/bi/analytics.ts",
+        "description": "Adicionar testes unitários abrangentes para as funções de cálculo e agregação de KPIs no módulo `bi/analytics.ts`.",
+        "details": "Criar o arquivo `tests/unit/bi-analytics-full.spec.ts`. Implementar testes para: 1. Funções de agregação de KPIs (ex: calcularAlunosAtivos, calcularReceitaMedia). 2. Cálculos de conversão, ocupação e inadimplência. 3. Funções de formatação de séries temporais. 4. Cenários de borda como dados vazios, valores zero ou períodos sem dados. Utilizar bibliotecas de mock para dependências externas, se houver. Pseudo-código: `describe('analytics calculations', () => {\n   it('should calculate active students correctly', () => {\n     const data = [{ id: 1, active: true }, { id: 2, active: false }];\n     expect(calculateAlunosAtivos(data)).toBe(1);\n   });\n   it('should handle empty data for KPIs', () => {\n     expect(calculateReceitaMedia([])).toBe(0);\n   });\n });`",
+        "testStrategy": "Executar os testes unitários (`npx playwright test tests/unit/bi-analytics-full.spec.ts --project=unit`). Validar que todos os cenários, incluindo os de borda, são cobertos e que as funções retornam os valores esperados. Verificar a cobertura de linhas do arquivo `analytics.ts` após a execução.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "302",
+        "title": "Testes unitários — src/lib/tenant/treinos (v2-runtime + v2-domain)",
+        "description": "Adicionar testes unitários para o lifecycle de treinos, lógica de renovação/revisão e cálculos de progressão nos módulos `v2-runtime.ts` e `v2-domain.ts`.",
+        "details": "Criar o arquivo `tests/unit/treinos-v2-full.spec.ts`. Implementar testes para: 1. Ciclo de vida de um treino (criação, atribuição, execução, encerramento). 2. Lógica de renovação e revisão de treinos. 3. Cálculos de progressão (volume, carga, repetições). 4. Cenários de borda como treino sem exercícios, exercício desativado, aluno sem histórico. Mockar quaisquer dependências de dados ou serviços. Pseudo-código: `describe('workout lifecycle', () => {\n   it('should correctly mark a workout as completed', () => {\n     const workout = { status: 'active', exercises: [{ id: 1, completed: false }] };\n     const updatedWorkout = completeWorkout(workout);\n     expect(updatedWorkout.status).toBe('completed');\n   });\n });`",
+        "testStrategy": "Executar os testes unitários. Validar as transições de estado dos treinos, a precisão dos cálculos de progressão e o tratamento de cenários negativos. Assegurar alta cobertura de linha para `v2-runtime.ts` e `v2-domain.ts`.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "303",
+        "title": "Testes unitários — src/lib/tenant/rbac/hooks.ts",
+        "description": "Adicionar testes unitários para os hooks de controle de acesso (`useAuthAccess`, `useRbacTenant`, `canAccessElevatedModules`) no módulo `rbac/hooks.ts`.",
+        "details": "Criar o arquivo `tests/unit/rbac-hooks.spec.ts`. Utilizar `@testing-library/react-hooks` ou similar para testar os hooks de forma isolada. Implementar testes para: 1. Resolução de permissões baseada em roles para `useAuthAccess`. 2. Contexto de tenant para RBAC em `useRbacTenant`. 3. Lógica de acesso elevado em `canAccessElevatedModules`. 4. Cenários de borda: usuário sem roles, múltiplos perfis, perfil inativo, ausência de contexto. Mockar dependências de autenticação ou contexto global. Pseudo-código: `describe('useAuthAccess', () => {\n   it('should grant access for allowed role', () => {\n     // Mock useSessionContext to return a user with 'admin' role\n     const { result } = renderHook(() => useAuthAccess(['admin']));\n     expect(result.current.can('manage_users')).toBe(true);\n   });\n });`",
+        "testStrategy": "Executar os testes unitários. Validar que as permissões são concedidas ou negadas conforme a configuração das roles e o contexto do tenant. Assegurar que os cenários de borda são tratados corretamente e que o módulo `rbac/hooks.ts` atinja alta cobertura.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "304",
+        "title": "Testes unitários — src/lib/tenant/hooks/use-session-context.tsx",
+        "description": "Adicionar testes unitários para o hook `use-session-context.tsx`, cobrindo inicialização, troca de tenant, persistência e refresh de token.",
+        "details": "Criar o arquivo `tests/unit/session-context-full.spec.ts`. Utilizar `@testing-library/react-hooks` para testar o hook. Implementar testes para: 1. Inicialização da sessão com e sem dados pré-existentes. 2. Troca de tenant ativo e suas implicações. 3. Persistência e recuperação de dados da sessão via `localStorage`. 4. Fluxo de refresh de token. 5. Cenários de borda: sessão expirada, token inválido, tenant removido, erros de armazenamento. Mockar `localStorage` e quaisquer chamadas de API de autenticação. Pseudo-código: `describe('useSessionContext', () => {\n   it('should initialize session from localStorage', () => {\n     localStorage.setItem('session', JSON.stringify({ token: 'abc', tenantId: 'tenant1' }));\n     const { result } = renderHook(() => useSessionContext());\n     expect(result.current.session.token).toBe('abc');\n     expect(result.current.activeTenantId).toBe('tenant1');\n   });\n });`",
+        "testStrategy": "Executar os testes unitários. Validar a integridade da sessão durante as operações (login, logout, troca de tenant) e a correta interação com `localStorage`. Testar a resiliência a cenários de erro e a recuperação da sessão. Alta cobertura de linha para `use-session-context.tsx`.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "305",
+        "title": "Testes unitários — src/lib/tenant/financeiro/recebimentos.ts",
+        "description": "Adicionar testes unitários para as funções de cálculo de resumo financeiro, agrupamento e filtros no módulo `financeiro/recebimentos.ts`.",
+        "details": "Criar o arquivo `tests/unit/financeiro-recebimentos-full.spec.ts`. Implementar testes para: 1. Cálculos de resumo financeiro (total recebido, pendente, atrasado). 2. Agrupamento de recebimentos por forma de pagamento. 3. Aplicação de filtros por período e status. 4. Cenários de borda: listas vazias, valores negativos, datas inválidas, dados inconsistentes. Pseudo-código: `describe('recebimentos calculations', () => {\n   it('should calculate total received correctly', () => {\n     const payments = [{ amount: 100, status: 'paid' }, { amount: 50, status: 'pending' }];\n     expect(calculateTotalReceived(payments)).toBe(100);\n   });\n   it('should filter payments by status', () => {\n     const payments = [{ status: 'paid' }, { status: 'pending' }];\n     expect(filterPaymentsByStatus(payments, 'paid').length).toBe(1);\n   });\n });`",
+        "testStrategy": "Executar os testes unitários. Validar a precisão dos cálculos financeiros e a correta aplicação dos filtros e agrupamentos. Assegurar que o módulo `financeiro/recebimentos.ts` atinja alta cobertura, especialmente para lógica de negócios crítica.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "306",
+        "title": "Testes unitários — src/lib/query/ (hooks TanStack Query)",
+        "description": "Adicionar testes unitários para os hooks de `TanStack Query` em `src/lib/query/`, verificando chaves, exports e estrutura básica.",
+        "details": "Criar o arquivo `tests/unit/query-hooks.spec.ts`. Implementar testes para: 1. Verificar que as `query keys` são únicas e determinísticas para cada hook. 2. Validar que todos os hooks esperados são exportados corretamente pelo `index.ts` do diretório `query`. 3. Assegurar que a estrutura básica dos hooks (existência de `queryFn`, `queryKey`, e `enabled` quando aplicável) está correta, sem testar a renderização de React diretamente. Foco na lógica de configuração do `TanStack Query`. Pseudo-código: `import * as queryExports from 'src/lib/query';\n describe('query hooks', () => {\n   it('should have unique query keys for different parameters', () => {\n     const key1 = ['myQuery', 1];\n     const key2 = ['myQuery', 2];\n     expect(key1).not.toEqual(key2);\n   });\n   it('should export all expected hooks', () => {\n     expect(queryExports).toHaveProperty('useSomeDataQuery');\n   });\n });`",
+        "testStrategy": "Executar os testes unitários. Validar a conformidade dos hooks com as melhores práticas do `TanStack Query`, assegurando consistência nas chaves e exports. Não é necessário testar o comportamento de caching ou fetching da biblioteca em si, mas sim a integração e configuração correta dos hooks.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "307",
+        "title": "Criar E2E spec — Admin backoffice (financeiro + segurança + operacional)",
+        "description": "Desenvolver um novo spec E2E para cobrir as páginas do backoffice administrativo, incluindo módulos financeiro, segurança, operacional, compliance e leads.",
+        "details": "Criar o arquivo `tests/e2e/admin-backoffice-coverage.spec.ts`. Implementar testes para: 1. Admin financeiro: dashboards, cobranças, contratos, gateways, planos. 2. Admin segurança: overview, revisões. 3. Admin operacional: alertas, saúde. 4. Admin compliance: dashboard LGPD. 5. Admin leads: lista, detalhe, mudança de status. Mockar todos os endpoints das APIs administrativas relevantes (já usando TanStack Query) via `page.route`. Pseudo-código: `test('Admin finance dashboard loads', async ({ page }) => {\n   await page.route('**/api/admin/financeiro/dashboard', route => route.fulfill({ status: 200, body: JSON.stringify({ 'totalFaturamento': 100000 }) }));\n   await page.goto('/admin/financeiro/dashboard');\n   await expect(page.locator('text=Visão Geral Financeira')).toBeVisible();\n   await expect(page.locator('text=R$100.000,00')).toBeVisible();\n });`",
+        "testStrategy": "Executar o spec `admin-backoffice-coverage.spec.ts`. Validar a renderização e interação com os diferentes módulos do backoffice administrativo. Assegurar que os dados mockados são exibidos corretamente e que as ações (ex: mudança de status de lead) são refletidas na UI. Foco na cobertura de UI/UX para estas áreas.",
+        "priority": "high",
+        "dependencies": [
+          "293"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "308",
+        "title": "Expandir smoke suite com cenários de erro e edge cases",
+        "description": "Adicionar testes de cenários negativos e de borda aos specs E2E existentes no smoke suite, cobrindo falhas de API, sessões expiradas, dados vazios, validações e permissões negadas.",
+        "details": "Revisar os specs já integrados ao smoke suite (e.g., `financeiro-admin.spec.ts`, `dashboard.spec.ts`, etc.) e adicionar blocos de teste para: 1. Simular timeout ou erro de API (status 500) e verificar a exibição de mensagens de erro. 2. Simular sessão expirada (status 401/403) e verificar o redirecionamento para login. 3. Testar a renderização de 'empty states' quando dados estão vazios. 4. Validar mensagens de erro em formulários para entradas inválidas. 5. Testar o fallback ou exibição de mensagens de 'acesso negado' para permissões insuficientes. Pseudo-código: `test('API error handling', async ({ page }) => {\n   await page.route('**/api/some-endpoint', route => route.fulfill({ status: 500 }));\n   await page.goto('/some-page');\n   await expect(page.locator('text=Ocorreu um erro inesperado')).toBeVisible();\n });`",
+        "testStrategy": "Executar o smoke suite completo (`npm test -- --project=e2e`). Validar que os cenários de erro e borda são corretamente detectados e que a aplicação se comporta de forma resiliente e com feedback adequado ao usuário. Verificar se as mensagens de erro são claras e se os redirecionamentos de segurança funcionam.",
+        "priority": "high",
+        "dependencies": [
+          "300",
+          "307"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "309",
+        "title": "Atualizar script de cobertura e gates para nova meta",
+        "description": "Ajustar os thresholds de cobertura no script `playwright-coverage.mjs` para refletir a nova meta de 60% e atualizar a documentação de cobertura.",
+        "details": "Após a cobertura de linhas atingir aproximadamente 55-60%, editar `scripts/playwright-coverage.mjs` para atualizar o `thresholds.lines` de 17.54% para 60% (ou o valor aproximado atingido). Atualizar o arquivo `docs/TEST_COVERAGE_CORE.md` com o novo snapshot de cobertura e as métricas. Criar ou atualizar `docs/TEST_COVERAGE_GOVERNANCE.md` com a documentação da cobertura por grupo de módulos (e.g., E2E, Unitário). Pseudo-código: `// scripts/playwright-coverage.mjs \n const thresholds = { \n   lines: 60, // Atualizar este valor \n   statements: 60, \n   branches: 60, \n   functions: 60 \n };`",
+        "testStrategy": "Executar o comando `npm run coverage:report` e verificar que o pipeline de CI/CD (se configurado) não falha devido a novos gates de cobertura. Validar que os arquivos de documentação (`docs/TEST_COVERAGE_CORE.md` e `docs/TEST_COVERAGE_GOVERNANCE.md`) foram atualizados com as informações corretas e refletem a nova meta e o status da cobertura.",
+        "priority": "high",
+        "dependencies": [
+          "301",
+          "302",
+          "303",
+          "304",
+          "305",
+          "306",
+          "308"
+        ],
+        "status": "pending",
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-31T12:08:45.468Z",
-      "taskCount": 290,
-      "completedCount": 290,
+      "lastModified": "2026-03-31T14:20:00.000Z",
+      "taskCount": 309,
+      "completedCount": 297,
       "tags": [
         "master"
       ]
