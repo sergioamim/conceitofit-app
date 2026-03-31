@@ -62,10 +62,10 @@ export default function AdminLoginPage() {
             <Shield className="size-6 text-gym-accent" />
           </div>
           <CardTitle>
-            <h1 className="font-display text-xl font-bold">Backoffice Conceito Fit</h1>
+            <h1 className="font-display text-xl font-bold">Conceito Fit</h1>
           </CardTitle>
           <CardDescription>
-            Acesso administrativo da plataforma.
+            Acesso administrativo da plataforma
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -116,7 +116,7 @@ export default function AdminLoginPage() {
               </div>
             ) : null}
             <Button type="submit" className="w-full" disabled={saving}>
-              {saving ? "Entrando..." : "Entrar no Backoffice"}
+              {saving ? "Entrando..." : "Entrar"}
             </Button>
           </form>
         </CardContent>
