@@ -275,6 +275,27 @@ export async function loginApi(input: {
   return session;
 }
 
+export async function adminLoginApi(input: {
+  email: string;
+  password: string;
+}): Promise<AuthSession> {
+  const response = await apiRequest<LoginApiResponse>({
+    path: "/api/v1/admin/auth/login",
+    method: "POST",
+    includeContextHeader: false,
+    body: {
+      email: input.email.trim(),
+      password: input.password,
+    },
+  });
+  const session = normalizeSession(response);
+  saveAuthSession(session);
+  import("@/lib/shared/analytics").then(({ trackLogin }) => {
+    trackLogin(session.activeTenantId, session.userId);
+  });
+  return session;
+}
+
 export async function refreshTokenApi(refreshToken: string): Promise<AuthSession> {
   const response = await apiRequest<LoginApiResponse>({
     path: "/api/v1/auth/refresh",

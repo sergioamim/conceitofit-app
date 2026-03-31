@@ -9,7 +9,7 @@ import { Shield } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { loginApi } from "@/lib/api/auth";
+import { adminLoginApi } from "@/lib/api/auth";
 import { getAccessToken } from "@/lib/api/session";
 
 const backofficeLoginSchema = z.object({
@@ -39,7 +39,7 @@ export default function AdminLoginPage() {
     setSaving(true);
     setError(null);
     try {
-      await loginApi({
+      await adminLoginApi({
         email: values.email.trim(),
         password: values.password,
       });
