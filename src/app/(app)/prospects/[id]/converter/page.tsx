@@ -294,7 +294,7 @@ function Step3({
   onChange: (d: PagamentoData) => void;
 }) {
   const desconto = parseFloat(data.desconto) || 0;
-  const valorFinal = (plano?.valor ?? 0) - desconto;
+  const valorFinal = (plano?.valor ?? 0) + (plano?.valorMatricula ?? 0) - desconto;
 
   return (
     <div className="space-y-5">
