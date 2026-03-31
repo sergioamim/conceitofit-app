@@ -252,7 +252,7 @@ function AdminShellFrame({
 
           <div className="mt-auto space-y-1 border-t border-border/50 pt-3">
             <Link
-              href="/login"
+              href="/admin/entrar-como-academia"
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-gym-teal/10 hover:text-gym-teal"
             >
               <Building2 className="size-4 shrink-0" />
