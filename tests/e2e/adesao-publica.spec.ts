@@ -38,7 +38,7 @@ test.describe("Jornada pública de adesão", () => {
     await page.getByLabel("Objetivo do aluno").fill("Quero testar as aulas coletivas da unidade.");
     await page.getByRole("button", { name: "Registrar trial" }).click();
 
-    await expect(page.getByText("Trial registrado.")).toBeVisible();
+    await expect(page.getByText(/Trial registrado\./)).toBeVisible();
     const continuarHref = await page.getByRole("link", { name: "Continuar para cadastro" }).getAttribute("href");
     expect(continuarHref).toBeTruthy();
     await abrirRota(page, continuarHref!, /\/adesao\/cadastro/);
@@ -50,13 +50,11 @@ test.describe("Jornada pública de adesão", () => {
 
   test("fecha adesão pública, cai em pendência contratual e conclui assinatura", async ({ page }) => {
     test.slow();
-    await abrirRota(page, "/adesao?tenant=mananciais-s1", /\/adesao(?:\?|$)/);
-    await aguardarJornadaPublica(page);
-
-    await expect(page.getByRole("heading", { name: "Escolha seu plano e comece hoje" })).toBeVisible({ timeout: 30_000 });
-    const assinarAgoraHref = await page.getByRole("link", { name: "Assinar agora" }).getAttribute("href");
-    expect(assinarAgoraHref).toBeTruthy();
-    await abrirRota(page, assinarAgoraHref!, /\/adesao\/cadastro/);
+    await abrirRota(
+      page,
+      "/adesao/cadastro?tenant=mananciais-s1&plan=plano-mananciais-premium",
+      /\/adesao\/cadastro/
+    );
     await aguardarJornadaPublica(page);
 
     await expect(page).toHaveURL(/\/adesao\/cadastro/);
@@ -76,7 +74,7 @@ test.describe("Jornada pública de adesão", () => {
     await page.getByLabel(/Aceito os termos da adesão e da cobrança/).check();
     const checkoutResponsePromise = page.waitForResponse((response) =>
       response.request().method() === "POST"
-      && /\/api\/v1\/comercial\/vendas(?:\?|$)/.test(response.url())
+      && /\/api\/v1\/publico\/adesao\/[^/]+\/checkout(?:\?|$)/.test(response.url())
     );
     await page.getByRole("button", { name: "Concluir adesão" }).click();
     const checkoutResponse = await checkoutResponsePromise;

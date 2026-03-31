@@ -153,6 +153,38 @@ type VendaSeed = {
   dataCriacao: string;
 };
 
+type AdesaoPublicaSeed = {
+  id: string;
+  tokenPublico: string;
+  tenantId: string;
+  academiaId: string;
+  planoId: string | null;
+  origem: "TRIAL" | "CADASTRO_PUBLICO";
+  status:
+    | "TRIAL_INICIADO"
+    | "CADASTRO_RECEBIDO"
+    | "CHECKOUT_INICIADO"
+    | "AGUARDANDO_CONTRATO"
+    | "AGUARDANDO_PAGAMENTO"
+    | "CONCLUIDA";
+  candidatoNome: string;
+  candidatoEmail: string;
+  candidatoTelefone: string | null;
+  candidatoCpf: string | null;
+  contratoStatus: "PENDENTE" | "ASSINADO" | null;
+  pagamentoStatus:
+    | "CRIADO"
+    | "AUTORIZADO"
+    | "CAPTURADO"
+    | "LIQUIDADO"
+    | null;
+  alunoId: string | null;
+  contratoId: string | null;
+  pagamentoId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type ReservasTenantSeed = {
   id: string;
   nome: string;
@@ -484,11 +516,13 @@ export async function installPublicJourneyApiMocks(page: Page) {
   let vendaCounter = 1;
   let matriculaCounter = 1;
   let pagamentoCounter = 1;
+  let adesaoCounter = 1;
   let prospects: ProspectSeed[] = [];
   let alunos: AlunoSeed[] = [];
   let matriculas: MatriculaSeed[] = [];
   let pagamentos: PagamentoSeed[] = [];
   let vendas: VendaSeed[] = [];
+  let adesoes: AdesaoPublicaSeed[] = [];
 
   function getTenantFromRequest(url: URL): TenantSeed {
     const queryTenant = url.searchParams.get("tenantId");
@@ -498,6 +532,11 @@ export async function installPublicJourneyApiMocks(page: Page) {
       throw new Error(`Tenant ${tenantId} não encontrado no stub`);
     }
     return tenant;
+  }
+
+  function findAdesao(path: string, token?: string | null): AdesaoPublicaSeed | undefined {
+    const adesaoId = path.split("/")[5] ?? "";
+    return adesoes.find((item) => item.id === adesaoId && (!token || item.tokenPublico === token));
   }
 
   await page.route("**/api/v1/**", async (route) => {
@@ -587,6 +626,232 @@ export async function installPublicJourneyApiMocks(page: Page) {
       };
       prospects = [created, ...prospects];
       await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (path === "/api/v1/publico/adesao/trials" && method === "POST") {
+      const payload = parseBody<{
+        tenantId?: string;
+        nome?: string;
+        email?: string;
+        telefone?: string;
+      }>(request);
+      const tenant = tenants.find((item) => item.id === payload.tenantId) ?? getTenantFromRequest(url);
+      const createdAt = nowIso();
+      const adesao: AdesaoPublicaSeed = {
+        id: `adesao-publica-${adesaoCounter++}`,
+        tokenPublico: `token-adesao-${adesaoCounter}`,
+        tenantId: tenant.id,
+        academiaId: tenant.academiaId,
+        planoId: null,
+        origem: "TRIAL",
+        status: "TRIAL_INICIADO",
+        candidatoNome: payload.nome?.trim() || "Lead público",
+        candidatoEmail: payload.email?.trim() || "",
+        candidatoTelefone: payload.telefone?.trim() || null,
+        candidatoCpf: null,
+        contratoStatus: null,
+        pagamentoStatus: null,
+        alunoId: null,
+        contratoId: null,
+        pagamentoId: null,
+        createdAt,
+        updatedAt: createdAt,
+      };
+      adesoes = [adesao, ...adesoes];
+      await fulfillJson(route, { ...adesao, trialDias: 7, mensagemStatus: null, pendencias: [] }, 201);
+      return;
+    }
+
+    if (path === "/api/v1/publico/adesao/cadastros" && method === "POST") {
+      const payload = parseBody<{
+        tenantId?: string;
+        nome?: string;
+        email?: string;
+        telefone?: string;
+        cpf?: string;
+      }>(request);
+      const tenant = tenants.find((item) => item.id === payload.tenantId) ?? getTenantFromRequest(url);
+      const createdAt = nowIso();
+      const adesao: AdesaoPublicaSeed = {
+        id: `adesao-publica-${adesaoCounter++}`,
+        tokenPublico: `token-adesao-${adesaoCounter}`,
+        tenantId: tenant.id,
+        academiaId: tenant.academiaId,
+        planoId: null,
+        origem: "CADASTRO_PUBLICO",
+        status: "CADASTRO_RECEBIDO",
+        candidatoNome: payload.nome?.trim() || "Aluno público",
+        candidatoEmail: payload.email?.trim() || "",
+        candidatoTelefone: payload.telefone?.trim() || null,
+        candidatoCpf: payload.cpf?.trim() || null,
+        contratoStatus: null,
+        pagamentoStatus: null,
+        alunoId: null,
+        contratoId: null,
+        pagamentoId: null,
+        createdAt,
+        updatedAt: createdAt,
+      };
+      adesoes = [adesao, ...adesoes];
+      await fulfillJson(route, { ...adesao, trialDias: null, mensagemStatus: null, pendencias: [] }, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/publico\/adesao\/[^/]+\/checkout$/.test(path) && method === "POST") {
+      const token = request.headers()["x-adesao-token"];
+      const adesao = findAdesao(path, token);
+      const payload = parseBody<{ planoId?: string }>(request);
+      if (!adesao) {
+        await fulfillJson(route, { message: "Adesão não encontrada." }, 404);
+        return;
+      }
+      const plano = findPlan(plansByTenant.get(adesao.tenantId) ?? [], payload.planoId ?? "");
+      const createdAt = nowIso();
+      Object.assign(adesao, {
+        planoId: plano.id,
+        status: "AGUARDANDO_CONTRATO",
+        contratoStatus: "PENDENTE",
+        pagamentoStatus: "CRIADO",
+        alunoId: adesao.alunoId ?? `aluno-publico-${alunoCounter++}`,
+        contratoId: adesao.contratoId ?? `contrato-publico-${matriculaCounter++}`,
+        pagamentoId: adesao.pagamentoId ?? `pagamento-publico-${pagamentoCounter++}`,
+        updatedAt: createdAt,
+      });
+      await fulfillJson(route, {
+        ...adesao,
+        trialDias: null,
+        mensagemStatus: null,
+        pendencias: [
+          {
+            codigo: "CONTRATO",
+            descricao: "Contrato pendente de assinatura.",
+            obrigatoria: true,
+            resolvida: false,
+            resolvidaEm: null,
+          },
+          {
+            codigo: "PAGAMENTO",
+            descricao: "Pagamento pendente de confirmação.",
+            obrigatoria: true,
+            resolvida: false,
+            resolvidaEm: null,
+          },
+        ],
+      });
+      return;
+    }
+
+    if (/^\/api\/v1\/publico\/adesao\/[^/]+\/contrato\/otp$/.test(path) && method === "POST") {
+      const token = request.headers()["x-adesao-token"];
+      const adesao = findAdesao(path, token);
+      if (!adesao) {
+        await fulfillJson(route, { message: "Adesão não encontrada." }, 404);
+        return;
+      }
+      await fulfillJson(route, {
+        enviadoEm: nowIso(),
+        otpValidoAte: `${todayIso()}T23:59:59`,
+      });
+      return;
+    }
+
+    if (/^\/api\/v1\/publico\/adesao\/[^/]+\/contrato\/assinaturas$/.test(path) && method === "POST") {
+      const token = request.headers()["x-adesao-token"];
+      const adesao = findAdesao(path, token);
+      if (!adesao) {
+        await fulfillJson(route, { message: "Adesão não encontrada." }, 404);
+        return;
+      }
+      adesao.contratoStatus = "ASSINADO";
+      adesao.status = adesao.pagamentoStatus === "LIQUIDADO" ? "CONCLUIDA" : "AGUARDANDO_PAGAMENTO";
+      adesao.updatedAt = nowIso();
+      await fulfillJson(route, {
+        ...adesao,
+        trialDias: null,
+        mensagemStatus: null,
+        pendencias: [
+          {
+            codigo: "CONTRATO",
+            descricao: "Contrato assinado.",
+            obrigatoria: true,
+            resolvida: true,
+            resolvidaEm: nowIso(),
+          },
+          {
+            codigo: "PAGAMENTO",
+            descricao: "Pagamento pendente de confirmação.",
+            obrigatoria: true,
+            resolvida: adesao.pagamentoStatus === "LIQUIDADO",
+            resolvidaEm: adesao.pagamentoStatus === "LIQUIDADO" ? nowIso() : null,
+          },
+        ],
+      });
+      return;
+    }
+
+    if (/^\/api\/v1\/publico\/adesao\/[^/]+\/pagamento\/confirmacao$/.test(path) && method === "POST") {
+      const token = request.headers()["x-adesao-token"];
+      const adesao = findAdesao(path, token);
+      if (!adesao) {
+        await fulfillJson(route, { message: "Adesão não encontrada." }, 404);
+        return;
+      }
+      adesao.pagamentoStatus = "LIQUIDADO";
+      adesao.status = adesao.contratoStatus === "ASSINADO" ? "CONCLUIDA" : "AGUARDANDO_CONTRATO";
+      adesao.updatedAt = nowIso();
+      await fulfillJson(route, {
+        ...adesao,
+        trialDias: null,
+        mensagemStatus: "Contratação concluída.",
+        pendencias: [
+          {
+            codigo: "CONTRATO",
+            descricao: "Contrato assinado.",
+            obrigatoria: true,
+            resolvida: adesao.contratoStatus === "ASSINADO",
+            resolvidaEm: adesao.contratoStatus === "ASSINADO" ? nowIso() : null,
+          },
+          {
+            codigo: "PAGAMENTO",
+            descricao: "Pagamento confirmado.",
+            obrigatoria: true,
+            resolvida: true,
+            resolvidaEm: nowIso(),
+          },
+        ],
+      });
+      return;
+    }
+
+    if (/^\/api\/v1\/publico\/adesao\/[^/]+$/.test(path) && method === "GET") {
+      const token = request.headers()["x-adesao-token"];
+      const adesao = findAdesao(path, token);
+      if (!adesao) {
+        await fulfillJson(route, { message: "Adesão não encontrada." }, 404);
+        return;
+      }
+      await fulfillJson(route, {
+        ...adesao,
+        trialDias: adesao.origem === "TRIAL" ? 7 : null,
+        mensagemStatus: adesao.status === "CONCLUIDA" ? "Contratação concluída." : null,
+        pendencias: [
+          {
+            codigo: "CONTRATO",
+            descricao: "Contrato pendente de assinatura.",
+            obrigatoria: true,
+            resolvida: adesao.contratoStatus === "ASSINADO",
+            resolvidaEm: adesao.contratoStatus === "ASSINADO" ? nowIso() : null,
+          },
+          {
+            codigo: "PAGAMENTO",
+            descricao: "Pagamento pendente de confirmação.",
+            obrigatoria: true,
+            resolvida: adesao.pagamentoStatus === "LIQUIDADO",
+            resolvidaEm: adesao.pagamentoStatus === "LIQUIDADO" ? nowIso() : null,
+          },
+        ],
+      });
       return;
     }
 

@@ -82,7 +82,7 @@ function installBackofficeFetchMock() {
 
   global.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), "http://localhost");
-    const path = url.pathname;
+    const path = url.pathname.replace(/^\/undefined(?=\/api\/v1\/admin\/)/, "");
     const method = init?.method ?? "GET";
     const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
 

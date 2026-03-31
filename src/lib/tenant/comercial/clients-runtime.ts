@@ -24,6 +24,7 @@ import {
 } from "@/lib/api/cartoes";
 import { liberarAcessoCatracaApi, obterCatracaWsStatusPorTenantApi } from "@/lib/api/catraca";
 import { ApiRequestError } from "@/lib/api/http";
+import { trackAlunoCreated, trackMatriculaCreated } from "@/lib/shared/analytics";
 import type {
   Aluno,
   AlunoTotaisStatus,
@@ -142,7 +143,6 @@ export async function createAlunoService(input: {
   data: Parameters<typeof createAlunoApi>[0]["data"];
 }): Promise<Aluno> {
   const result = await createAlunoApi(input);
-  const { trackAlunoCreated } = await import("@/lib/shared/analytics");
   trackAlunoCreated(input.tenantId, result.id);
   return result;
 }
@@ -152,7 +152,6 @@ export async function createAlunoComMatriculaService(input: {
   data: Parameters<typeof createAlunoComMatriculaApi>[0]["data"];
 }) {
   const result = await createAlunoComMatriculaApi(input);
-  const { trackAlunoCreated, trackMatriculaCreated } = await import("@/lib/shared/analytics");
   trackAlunoCreated(input.tenantId, result.aluno.id);
   if (result.matricula?.id) {
     trackMatriculaCreated(input.tenantId, result.matricula.id, input.data.planoId);
