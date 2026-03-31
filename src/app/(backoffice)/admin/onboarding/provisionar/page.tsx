@@ -1,0 +1,531 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiRequestError } from "@/lib/api/http";
+import { Check, Copy, KeyRound, Mail, MessageCircle, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  provisionAcademiaAdminApi,
+  type AdminOnboardingProvisionResult,
+} from "@/lib/api/admin-onboarding-api";
+import {
+  adminOnboardingProvisionFormSchema,
+  normalizeProvisionPhone,
+  type AdminOnboardingProvisionFormValues,
+} from "@/lib/forms/admin-onboarding-provision-form";
+import { formatPhone } from "@/lib/shared/formatters";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { formatCnpj } from "@/lib/utils/cnpj";
+import { PhoneInput } from "@/components/shared/phone-input";
+
+const DEFAULT_VALUES: AdminOnboardingProvisionFormValues = {
+  academiaNome: "",
+  cnpj: "",
+  unidadePrincipalNome: "",
+  adminNome: "",
+  adminEmail: "",
+  telefone: "",
+};
+
+type CopyCredentialsButtonProps = {
+  text: string;
+};
+
+function CopyCredentialsButton({ text }: CopyCredentialsButtonProps) {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast({
+        title: "Credenciais copiadas",
+        description: "As credenciais foram copiadas para a área de transferência.",
+      });
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      toast({
+        title: "Não foi possível copiar",
+        description: "Tente novamente ou copie manualmente os dados exibidos abaixo.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  return (
+    <Button type="button" variant="outline" className="border-border" onClick={() => void handleCopy()}>
+      {copied ? <Check className="mr-2 size-4 text-gym-teal" /> : <Copy className="mr-2 size-4" />}
+      {copied ? "Copiado" : "Copiar credenciais"}
+    </Button>
+  );
+}
+
+function buildCredentialsText(
+  credentials: AdminOnboardingProvisionResult,
+  values: AdminOnboardingProvisionFormValues,
+) {
+  return [
+    `Academia: ${credentials.academiaNome}`,
+    `Unidade principal: ${credentials.unidadePrincipalNome}`,
+    `Administrador: ${values.adminNome}`,
+    `E-mail: ${credentials.adminEmail}`,
+    `Senha temporária: ${credentials.temporaryPassword}`,
+  ].join("\n");
+}
+
+function buildSendCredentialsHref(
+  credentials: AdminOnboardingProvisionResult,
+  values: AdminOnboardingProvisionFormValues,
+) {
+  const text = [
+    `Olá, ${values.adminNome}!`,
+    "",
+    `A academia ${credentials.academiaNome} foi provisionada com sucesso.`,
+    `Unidade principal: ${credentials.unidadePrincipalNome}`,
+    `E-mail de acesso: ${credentials.adminEmail}`,
+    `Senha temporária: ${credentials.temporaryPassword}`,
+    "",
+    "Recomendamos trocar a senha no primeiro acesso.",
+  ].join("\n");
+
+  const phone = normalizeProvisionPhone(values.telefone);
+  if (phone) {
+    return {
+      href: `https://wa.me/${phone}?text=${encodeURIComponent(text)}`,
+      label: "Abre WhatsApp com a mensagem pronta",
+      icon: MessageCircle,
+    };
+  }
+
+  return {
+    href: `mailto:${encodeURIComponent(credentials.adminEmail)}?subject=${encodeURIComponent(
+      `Credenciais iniciais da academia ${credentials.academiaNome}`,
+    )}&body=${encodeURIComponent(text)}`,
+    label: "Abre e-mail com a mensagem pronta",
+    icon: Mail,
+  };
+}
+
+function mapFieldError(
+  field: string,
+): keyof AdminOnboardingProvisionFormValues | null {
+  switch (field) {
+    case "nomeAcademia":
+    case "academiaNome":
+      return "academiaNome";
+    case "cnpj":
+      return "cnpj";
+    case "nomeUnidadePrincipal":
+    case "unidadePrincipalNome":
+      return "unidadePrincipalNome";
+    case "nomeAdministrador":
+    case "adminNome":
+      return "adminNome";
+    case "emailAdministrador":
+    case "adminEmail":
+    case "email":
+      return "adminEmail";
+    case "telefone":
+    case "telefoneAdministrador":
+      return "telefone";
+    default:
+      return null;
+  }
+}
+
+export default function AdminProvisionarAcademiaPage() {
+  const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [credentials, setCredentials] = useState<AdminOnboardingProvisionResult | null>(null);
+
+  const form = useForm<AdminOnboardingProvisionFormValues>({
+    resolver: zodResolver(adminOnboardingProvisionFormSchema),
+    defaultValues: DEFAULT_VALUES,
+  });
+
+  const values = form.watch();
+  const credentialsText = useMemo(
+    () => (credentials ? buildCredentialsText(credentials, values) : ""),
+    [credentials, values],
+  );
+  const sendAction = useMemo(
+    () => (credentials ? buildSendCredentialsHref(credentials, values) : null),
+    [credentials, values],
+  );
+
+  async function handleSubmit(values: AdminOnboardingProvisionFormValues) {
+    setSubmitting(true);
+    setSubmitError("");
+    setCredentials(null);
+
+    try {
+      const result = await provisionAcademiaAdminApi(values);
+
+      if (!result.temporaryPassword) {
+        throw new Error(
+          "A API respondeu sem senha temporária. Confirme se o backend da task academia-java#369 já está disponível.",
+        );
+      }
+
+      setCredentials(result);
+      toast({
+        title: "Academia provisionada",
+        description: "As credenciais iniciais já estão prontas para envio ao administrador.",
+      });
+    } catch (error) {
+      if (error instanceof ApiRequestError) {
+        Object.entries(error.fieldErrors ?? {}).forEach(([field, message]) => {
+          const mappedField = mapFieldError(field);
+          if (mappedField) {
+            form.setError(mappedField, { type: "server", message });
+          }
+        });
+      }
+
+      const message = normalizeErrorMessage(error);
+      setSubmitError(message);
+      toast({
+        title: "Falha ao provisionar academia",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[28px] border border-border bg-card">
+        <div className="relative overflow-hidden border-b border-border px-6 py-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(61,232,160,0.16),transparent_44%),radial-gradient(circle_at_bottom_right,rgba(91,141,239,0.16),transparent_40%)]" />
+          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Onboarding Global
+              </div>
+              <div>
+                <h1 className="font-display text-3xl font-bold tracking-tight">
+                  Provisionar nova academia
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+                  Cria a academia, registra a unidade principal e devolve o acesso inicial do administrador em um único fluxo operacional.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <InfoPill
+                icon={Sparkles}
+                title="Fluxo único"
+                description="Cadastro institucional e credenciais no mesmo submit."
+              />
+              <InfoPill
+                icon={ShieldCheck}
+                title="Dependência backend"
+                description="Requer o endpoint /api/v1/admin/onboarding/provision ativo."
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 px-6 py-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <Card className="border-border/70 bg-card/80">
+            <CardHeader>
+              <CardTitle>Dados para provisionamento</CardTitle>
+              <CardDescription>
+                Informe os dados mínimos da operação. O formulário valida CNPJ, e-mail e telefone antes de enviar.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-5" onSubmit={form.handleSubmit(handleSubmit)}>
+                <div className="space-y-1.5">
+                  <Label htmlFor="provision-academia-nome">Nome da academia</Label>
+                  <Input
+                    id="provision-academia-nome"
+                    {...form.register("academiaNome")}
+                    className="border-border bg-secondary"
+                    placeholder="Ex: Academia Conceito Fit Copacabana"
+                  />
+                  {form.formState.errors.academiaNome ? (
+                    <p className="text-xs text-gym-danger">{form.formState.errors.academiaNome.message}</p>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="provision-cnpj">CNPJ</Label>
+                    <Controller
+                      control={form.control}
+                      name="cnpj"
+                      render={({ field }) => (
+                        <Input
+                          id="provision-cnpj"
+                          value={field.value}
+                          onChange={(event) => field.onChange(formatCnpj(event.target.value))}
+                          className="border-border bg-secondary"
+                          placeholder="00.000.000/0000-00"
+                        />
+                      )}
+                    />
+                    {form.formState.errors.cnpj ? (
+                      <p className="text-xs text-gym-danger">{form.formState.errors.cnpj.message}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="provision-telefone">Telefone</Label>
+                    <Controller
+                      control={form.control}
+                      name="telefone"
+                      render={({ field }) => (
+                        <PhoneInput
+                          id="provision-telefone"
+                          value={field.value}
+                          onChange={field.onChange}
+                          className="border-border bg-secondary"
+                          placeholder="(21) 99999-0000"
+                        />
+                      )}
+                    />
+                    {form.formState.errors.telefone ? (
+                      <p className="text-xs text-gym-danger">{form.formState.errors.telefone.message}</p>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="provision-unidade-principal">Nome da unidade principal</Label>
+                  <Input
+                    id="provision-unidade-principal"
+                    {...form.register("unidadePrincipalNome")}
+                    className="border-border bg-secondary"
+                    placeholder="Ex: Copacabana Matriz"
+                  />
+                  {form.formState.errors.unidadePrincipalNome ? (
+                    <p className="text-xs text-gym-danger">{form.formState.errors.unidadePrincipalNome.message}</p>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="provision-admin-nome">Nome do administrador</Label>
+                    <Input
+                      id="provision-admin-nome"
+                      {...form.register("adminNome")}
+                      className="border-border bg-secondary"
+                      placeholder="Ex: Mariana Costa"
+                    />
+                    {form.formState.errors.adminNome ? (
+                      <p className="text-xs text-gym-danger">{form.formState.errors.adminNome.message}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="provision-admin-email">E-mail do administrador</Label>
+                    <Input
+                      id="provision-admin-email"
+                      type="email"
+                      {...form.register("adminEmail")}
+                      className="border-border bg-secondary"
+                      placeholder="mariana@academia.com"
+                    />
+                    {form.formState.errors.adminEmail ? (
+                      <p className="text-xs text-gym-danger">{form.formState.errors.adminEmail.message}</p>
+                    ) : null}
+                  </div>
+                </div>
+
+                {submitError ? (
+                  <div className="rounded-2xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+                    {submitError}
+                  </div>
+                ) : null}
+
+                <div className="flex flex-wrap gap-3">
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? "Provisionando..." : "Provisionar academia"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-border"
+                    onClick={() => {
+                      form.reset(DEFAULT_VALUES);
+                      setSubmitError("");
+                      setCredentials(null);
+                    }}
+                    disabled={submitting}
+                  >
+                    Limpar formulário
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            <Card className="border-border/70 bg-card/80">
+              <CardHeader>
+                <CardTitle>Checklist operacional</CardTitle>
+                <CardDescription>
+                  Fluxo pensado para o time global provisionar uma nova academia sem sair do backoffice.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <StepRow
+                  title="1. Validar dados institucionais"
+                  description="Nome da academia, CNPJ e unidade principal entram no mesmo payload de provisionamento."
+                />
+                <StepRow
+                  title="2. Criar administrador inicial"
+                  description="O e-mail e telefone do responsável já preparam o envio imediato das credenciais."
+                />
+                <StepRow
+                  title="3. Distribuir acesso"
+                  description="Depois do sucesso, use o card abaixo para copiar ou abrir o canal de envio com a mensagem pronta."
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card/80">
+              <CardHeader>
+                <CardTitle>Prévia do envio</CardTitle>
+                <CardDescription>
+                  O botão de envio prioriza WhatsApp quando o telefone estiver preenchido; caso contrário, abre e-mail.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Administrador</p>
+                  <p className="mt-2 text-sm text-foreground">{values.adminNome || "Ainda não informado"}</p>
+                  <p className="mt-1">{values.adminEmail || "Sem e-mail informado"}</p>
+                  <p className="mt-1">{values.telefone ? formatPhone(values.telefone) : "Sem telefone informado"}</p>
+                </div>
+                <Textarea
+                  readOnly
+                  value={
+                    credentialsText ||
+                    "As credenciais provisionadas aparecerão aqui assim que a API responder com sucesso."
+                  }
+                  className="min-h-40 border-border bg-secondary font-mono text-xs"
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {credentials ? (
+        <Card className="border-gym-teal/30 bg-gym-teal/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="size-5 text-gym-teal" />
+              Credenciais geradas
+            </CardTitle>
+            <CardDescription>
+              Guarde e compartilhe estes dados apenas com o administrador responsável pela academia provisionada.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <CredentialField label="Academia" value={credentials.academiaNome} />
+              <CredentialField label="Unidade principal" value={credentials.unidadePrincipalNome} />
+              <CredentialField label="E-mail" value={credentials.adminEmail} />
+              <CredentialField label="Senha temporária" value={credentials.temporaryPassword} />
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <CopyCredentialsButton text={credentialsText} />
+              {sendAction ? <SendCredentialsButton action={sendAction} /> : null}
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Se o backend devolver um e-mail diferente do informado no formulário, este card sempre prioriza o retorno oficial da API.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+function CredentialField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+        {label}
+      </Label>
+      <Input value={value} readOnly className="border-border bg-secondary" />
+    </div>
+  );
+}
+
+function InfoPill({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-background/60 px-4 py-3">
+      <div className="flex items-start gap-3">
+        <div className="rounded-full border border-border/70 bg-secondary/60 p-2">
+          <Icon className="size-4 text-gym-accent" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SendCredentialsButton({
+  action,
+}: {
+  action: {
+    href: string;
+    label: string;
+    icon: LucideIcon;
+  };
+}) {
+  const Icon = action.icon;
+
+  return (
+    <Button type="button" asChild>
+      <a href={action.href} target="_blank" rel="noreferrer noopener" aria-label={action.label}>
+        <Icon className="mr-2 size-4" />
+        Enviar credenciais
+      </a>
+    </Button>
+  );
+}
+
+function StepRow({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-secondary/25 p-4">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}
