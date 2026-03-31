@@ -82,10 +82,6 @@ interface TenantBootstrapUserApiResponse {
   email?: string;
   roles?: string[];
   userKind?: string;
-  hasSeenWelcomePage?: boolean;
-  isFirstLogin?: boolean;
-  firstAccessCompleted?: boolean;
-  firstAccessPending?: boolean;
   redeId?: string;
   redeSubdominio?: string;
   redeSlug?: string;
@@ -326,10 +322,6 @@ export async function getSessionBootstrapApi(): Promise<{
       email: response.user.email,
       roles: response.user.roles ?? [],
       userKind: response.user.userKind,
-      hasSeenWelcomePage: response.user.hasSeenWelcomePage,
-      isFirstLogin: response.user.isFirstLogin,
-      firstAccessCompleted: response.user.firstAccessCompleted,
-      firstAccessPending: response.user.firstAccessPending,
       networkId: response.user.redeId,
       networkSubdomain: response.user.redeSubdominio ?? response.user.redeSlug,
       networkSlug: response.user.redeSlug,

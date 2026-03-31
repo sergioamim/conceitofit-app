@@ -76,10 +76,6 @@ interface MeApiResponse {
   email?: string;
   roles?: string[];
   userKind?: string;
-  hasSeenWelcomePage?: boolean;
-  isFirstLogin?: boolean;
-  firstAccessCompleted?: boolean;
-  firstAccessPending?: boolean;
   redeId?: string;
   redeSubdominio?: string;
   redeSlug?: string;
@@ -198,10 +194,6 @@ export interface AuthUser {
   email?: string;
   roles?: string[];
   userKind?: string;
-  hasSeenWelcomePage?: boolean;
-  isFirstLogin?: boolean;
-  firstAccessCompleted?: boolean;
-  firstAccessPending?: boolean;
   networkId?: string;
   networkSubdomain?: string;
   networkSlug?: string;
@@ -343,10 +335,6 @@ export async function meApi(): Promise<AuthUser> {
     email: response.email,
     roles: response.roles ?? [],
     userKind: response.userKind,
-    hasSeenWelcomePage: response.hasSeenWelcomePage,
-    isFirstLogin: response.isFirstLogin,
-    firstAccessCompleted: response.firstAccessCompleted,
-    firstAccessPending: response.firstAccessPending,
     networkId: response.redeId,
     networkSubdomain: response.redeSubdominio ?? response.redeSlug,
     networkSlug: response.redeSlug,

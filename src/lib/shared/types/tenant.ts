@@ -1,8 +1,9 @@
-import { UUID, LocalDate, LocalDateTime, Endereco, StatusCadastro } from './comum';
+import { UUID, LocalDate, LocalDateTime, Endereco } from './comum';
 import { Aluno, StatusAluno } from './aluno';
-import { OrigemProspect } from './prospect';
+import { OrigemProspect, Prospect } from './prospect';
 import { Matricula } from './matricula';
-import { Pagamento, GrupoDre, CategoriaContaPagar, DreProjectionScenario } from './pagamento';
+import { Pagamento } from './pagamento';
+import { Plano } from './plano';
 
 export interface TenantOperationalEligibilityReason {
   code: string;
@@ -48,7 +49,7 @@ export interface ClienteMigracaoUnidadeResult {
   baseTenantIdAtual?: UUID;
   suggestedActiveTenantId?: UUID;
   preservarContextoComercial?: boolean;
-  blockedBy?: any[]; // ClienteExclusaoBlockedBy
+  blockedBy?: unknown[]; // ClienteExclusaoBlockedBy
   aluno?: Aluno;
 }
 
@@ -120,6 +121,24 @@ export interface UnidadeOnboardingState {
   criadoEm: LocalDateTime;
   atualizadoEm: LocalDateTime;
   eventos: UnidadeOnboardingEvent[];
+}
+
+export type OnboardingChecklistStepStatus = "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDA";
+
+export interface OnboardingChecklistStep {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  status: OnboardingChecklistStepStatus;
+  rotaConfiguracao?: string;
+}
+
+export interface OnboardingStatus {
+  percentualConclusao: number;
+  concluido: boolean;
+  totalEtapas: number;
+  etapasConcluidas: number;
+  etapas: OnboardingChecklistStep[];
 }
 
 export type TenantThemePreset =
@@ -202,8 +221,8 @@ export interface DashboardData {
   prospectsNovos: number;
   matriculasDoMes: number;
   receitaDoMes: number;
-  prospectsRecentes: any[]; // Prospect
-  matriculasVencendo: (Matricula & { aluno?: Aluno; plano?: any })[];
+  prospectsRecentes: Prospect[];
+  matriculasVencendo: (Matricula & { aluno?: Aluno; plano?: Plano })[];
   pagamentosPendentes: (Pagamento & { aluno?: Aluno })[];
   statusAlunoCount: Record<StatusAluno, number>;
   prospectsEmAberto: number;

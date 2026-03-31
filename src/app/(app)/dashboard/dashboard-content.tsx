@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useDashboard } from "@/lib/query/use-dashboard";
+import { OnboardingChecklist } from "@/components/shared/onboarding/OnboardingChecklist";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { DashboardData, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -94,6 +95,7 @@ export function DashboardContent({
   const [prospectsPageNumber, setProspectsPageNumber] = useState(1);
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
+  const [checklistDismissed, setChecklistDismissed] = useState(false);
 
   const { data: dashboardData, isLoading: loading, error: queryError, refetch } = useDashboard({
     tenantId: tenantContext.tenantId,
@@ -193,6 +195,10 @@ export function DashboardContent({
           </button>
         ))}
       </div>
+
+      {!checklistDismissed ? (
+        <OnboardingChecklist hideWhenComplete onDismiss={() => setChecklistDismissed(true)} />
+      ) : null}
 
       {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 
