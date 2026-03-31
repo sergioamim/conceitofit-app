@@ -161,15 +161,15 @@ export function PlanoForm({
             <h2 className="font-display text-base font-semibold text-foreground">Dados do plano</h2>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-                <Input {...register("nome")} placeholder="Ex: Mensal Completo" className="border-border bg-secondary" />
+                <label htmlFor="plano-form-nome" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+                <Input id="plano-form-nome" {...register("nome")} placeholder="Ex: Mensal Completo" className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descrição</label>
-                <Input {...register("descricao")} placeholder="Descrição do plano" className="border-border bg-secondary" />
+                <label htmlFor="plano-form-descricao" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descrição</label>
+                <Input id="plano-form-descricao" {...register("descricao")} placeholder="Descrição do plano" className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo *</label>
+                <label htmlFor="plano-form-tipo" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo *</label>
                 <Controller
                   control={control}
                   name="tipo"
@@ -186,7 +186,7 @@ export function PlanoForm({
                         }
                       }}
                     >
-                      <SelectTrigger className="w-full border-border bg-secondary">
+                      <SelectTrigger id="plano-form-tipo" className="w-full border-border bg-secondary">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent className="border-border bg-card">
@@ -201,16 +201,16 @@ export function PlanoForm({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Duração (dias) *</label>
-                <Input type="number" min={1} {...register("duracaoDias")} className="border-border bg-secondary" />
+                <label htmlFor="plano-form-duracao-dias" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Duração (dias) *</label>
+                <Input id="plano-form-duracao-dias" type="number" min={1} {...register("duracaoDias")} className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Valor (R$) *</label>
-                <Input type="number" min={0} step="0.01" {...register("valor")} className="border-border bg-secondary" />
+                <label htmlFor="plano-form-valor" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Valor (R$) *</label>
+                <Input id="plano-form-valor" type="number" min={0} step="0.01" {...register("valor")} className="border-border bg-secondary" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Matrícula (R$)</label>
-                <Input type="number" min={0} step="0.01" {...register("valorMatricula")} className="border-border bg-secondary" />
+                <label htmlFor="plano-form-valor-matricula" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Matrícula (R$)</label>
+                <Input id="plano-form-valor-matricula" type="number" min={0} step="0.01" {...register("valorMatricula")} className="border-border bg-secondary" />
               </div>
             </div>
           </div>
