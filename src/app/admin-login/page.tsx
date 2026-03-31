@@ -15,7 +15,6 @@ import { getAccessToken } from "@/lib/api/session";
 const backofficeLoginSchema = z.object({
   email: z.string().min(1, "Informe o e-mail."),
   password: z.string().min(1, "Informe a senha."),
-  redeIdentifier: z.string().min(1, "Informe o identificador da rede."),
 });
 
 type BackofficeLoginForm = z.infer<typeof backofficeLoginSchema>;
@@ -27,7 +26,7 @@ export default function AdminLoginPage() {
 
   const form = useForm<BackofficeLoginForm>({
     resolver: zodResolver(backofficeLoginSchema),
-    defaultValues: { email: "", password: "", redeIdentifier: "" },
+    defaultValues: { email: "", password: "" },
   });
 
   useEffect(() => {
@@ -43,8 +42,6 @@ export default function AdminLoginPage() {
       await loginApi({
         email: values.email.trim(),
         password: values.password,
-        redeIdentifier: values.redeIdentifier.trim(),
-        channel: "BACKOFFICE",
       });
       router.push("/admin");
     } catch (err) {
@@ -70,19 +67,6 @@ export default function AdminLoginPage() {
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="admin-rede">Rede (subdomínio)</label>
-              <Input
-                id="admin-rede"
-                type="text"
-                placeholder="demo"
-                className="border-border bg-secondary"
-                {...form.register("redeIdentifier")}
-              />
-              {form.formState.errors.redeIdentifier ? (
-                <p className="text-xs text-gym-danger">{form.formState.errors.redeIdentifier.message}</p>
-              ) : null}
-            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="admin-email">E-mail</label>
               <Input
