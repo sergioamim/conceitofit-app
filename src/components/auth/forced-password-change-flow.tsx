@@ -46,15 +46,20 @@ export function ForcedPasswordChangeFlow({
     const requiresForcePasswordChange = getForcePasswordChangeRequiredFromSession();
     const nextNetworkSubdomain = getNetworkSubdomainFromSession() ?? null;
 
-    if (!token || !requiresForcePasswordChange) {
+    if (!token) {
       router.replace(buildLoginHref(undefined, nextNetworkSubdomain));
+      return;
+    }
+
+    if (!requiresForcePasswordChange) {
+      router.replace(resolvedNextPath);
       return;
     }
 
     setNetworkName(getNetworkNameFromSession() ?? "sua rede");
     setNetworkSubdomain(nextNetworkSubdomain);
     setGuardStatus("allowed");
-  }, [router]);
+  }, [resolvedNextPath, router]);
 
   async function handleSubmit(values: ForcedPasswordChangeFormValues) {
     setSaving(true);
