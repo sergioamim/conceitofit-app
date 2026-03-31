@@ -14,7 +14,7 @@ import {
   saveTreinoWorkspace,
   toggleTreinoExercicio,
   resetTreinosWorkspace,
-} from "../../src/lib/treinos/workspace";
+} from "../../src/lib/tenant/treinos/workspace";
 
 const TENANT_ID = "550e8400-e29b-41d4-a716-446655440001";
 const ALUNO_ID = "al-s1-001";

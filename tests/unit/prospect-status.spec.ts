@@ -4,7 +4,7 @@ import {
   canTransitionProspectStatus,
   getNextProspectStatus,
   getSelectableProspectStatuses,
-} from "../../src/lib/crm/prospect-status";
+} from "../../src/lib/tenant/crm/prospect-status";
 
 test.describe("prospect status flow", () => {
   test("usa progressao canonica a partir de NOVO", async () => {

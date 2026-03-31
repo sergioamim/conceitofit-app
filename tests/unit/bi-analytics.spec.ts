@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { buildBiExportCsv, buildBiOperationalSnapshot, resolveBiScopeAccess } from "../../src/lib/bi/analytics";
+import { buildBiExportCsv, buildBiOperationalSnapshot, resolveBiScopeAccess } from "../../src/lib/tenant/bi/analytics";
 import type {
   Academia,
   Aluno,

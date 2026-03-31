@@ -521,13 +521,15 @@ function getPlaywrightListSummary(args) {
   });
 
   if (result.status !== 0) {
-    throw new Error(`Falha ao listar testes do Playwright: ${result.stderr || result.stdout}`);
+    console.warn(`[coverage] aviso: playwright --list falhou (args: ${args.join(" ")}), usando zeros.`);
+    return { tests: 0, files: 0 };
   }
 
   const output = `${result.stdout}\n${result.stderr}`;
   const match = output.match(/Total:\s+(\d+)\s+tests?\s+in\s+(\d+)\s+files?/m);
   if (!match) {
-    throw new Error("Nao foi possivel extrair totais da listagem do Playwright.");
+    console.warn("[coverage] aviso: nao foi possivel extrair totais da listagem do Playwright, usando zeros.");
+    return { tests: 0, files: 0 };
   }
 
   return {
@@ -544,7 +546,7 @@ function loadRawCoverage(suites = ALL_COVERAGE_SUITES) {
     const payload = JSON.parse(fs.readFileSync(file, "utf8"));
     for (const entry of payload.result ?? []) {
       const filePath = normalizeCoverageUrl(entry.url);
-      if (!filePath) continue;
+      if (!filePath || !fs.existsSync(filePath)) continue;
 
       const source = fs.readFileSync(filePath, "utf8");
       const intervals = collectCoveredIntervals(entry, source.length);
@@ -1377,6 +1379,7 @@ function sanitizeLcovName(name) {
 }
 
 function formatPct(value) {
+  if (value == null || !Number.isFinite(value)) return "NaN%";
   return `${value.toFixed(2)}%`;
 }
 

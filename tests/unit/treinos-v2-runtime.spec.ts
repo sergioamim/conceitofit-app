@@ -12,7 +12,7 @@ import {
   summarizeTreinoV2AssignedGovernance,
   summarizeTreinoV2TemplateGovernance,
   toTreinoV2CatalogExercise,
-} from "../../src/lib/treinos/v2-runtime";
+} from "../../src/lib/tenant/treinos/v2-runtime";
 import type { Exercicio, Treino } from "../../src/lib/types";
 
 function makeTreino(overrides: Partial<Treino> = {}): Treino {

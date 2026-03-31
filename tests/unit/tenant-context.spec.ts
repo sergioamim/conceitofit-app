@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { DEFAULT_ACTIVE_TENANT_LABEL } from "../../src/hooks/use-session-context";
+import { DEFAULT_ACTIVE_TENANT_LABEL } from "../../src/lib/tenant/hooks/use-session-context";
 import {
   clearAuthSession,
   getActiveTenantIdFromSession,
@@ -16,7 +16,7 @@ import {
   resolveTenantContextSnapshot,
   syncTenantContextInStore,
   tenantContextNeedsRepair,
-} from "../../src/lib/tenant-context";
+} from "../../src/lib/tenant/tenant-context";
 import { installMockBrowser } from "./support/test-runtime";
 
 let browser: ReturnType<typeof installMockBrowser> | undefined;

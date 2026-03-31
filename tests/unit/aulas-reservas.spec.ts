@@ -3,7 +3,7 @@ import {
   createSessaoAulaId,
   getNextOccurrenceForDiasSemana,
   listDatesBetween,
-} from "../../src/lib/aulas/reservas";
+} from "../../src/lib/tenant/aulas/reservas";
 
 test.describe("aulas reservas helpers", () => {
   test("createSessaoAulaId compõe id estável por grade e data", async () => {

@@ -9,5 +9,29 @@
     "statements": null,
     "functions": null,
     "branches": null
+  },
+  {
+    "generatedAt": "2026-03-31T04:03:02.761Z",
+    "profile": "core",
+    "suitesExecutadas": [
+      "unit",
+      "smoke"
+    ],
+    "lines": null,
+    "statements": null,
+    "functions": null,
+    "branches": null
+  },
+  {
+    "generatedAt": "2026-03-31T04:03:23.388Z",
+    "profile": "core",
+    "suitesExecutadas": [
+      "unit",
+      "smoke"
+    ],
+    "lines": null,
+    "statements": null,
+    "functions": null,
+    "branches": null
   }
 ]

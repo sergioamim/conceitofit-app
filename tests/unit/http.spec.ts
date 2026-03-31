@@ -12,7 +12,7 @@ import {
   saveAuthSession,
   setPreferredTenantId,
 } from "../../src/lib/api/session";
-import { listAlunosPageService } from "../../src/lib/comercial/runtime";
+import { listAlunosPageService } from "../../src/lib/tenant/comercial/runtime";
 
 class MemoryStorage implements Storage {
   private readonly store = new Map<string, string>();

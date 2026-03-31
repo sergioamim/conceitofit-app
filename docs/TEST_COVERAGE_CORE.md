@@ -2,25 +2,25 @@
 
 ## Snapshot
 
-- Gerado em: `2026-03-14T21:34:54.596Z`
+- Gerado em: `2026-03-31T04:03:23.388Z`
 - Perfil: `core`
 - Escopo instrumentado atual: `src/lib/**/*.{ts,tsx}`
 - Runtime de coleta: `V8` via `NODE_V8_COVERAGE`
 - Suites consideradas:
-  - Playwright unit: `101` testes em `33` arquivos
-  - Playwright e2e: `29` testes em `19` arquivos
+  - Playwright unit: `199` testes em `58` arquivos
+  - Playwright e2e: `89` testes em `39` arquivos
   - Smoke e2e de coverage: `8` arquivos
-- Suites executadas neste snapshot: `unit`
-- Baseline funcional atual do repositorio: `130` testes Playwright em `52` arquivos
+- Suites executadas neste snapshot: `unit, smoke`
+- Baseline funcional atual do repositorio: `288` testes Playwright em `97` arquivos
 
 ## Coverage Atual
 
 | Metrica | Coberto | Total | Percentual |
 | --- | ---: | ---: | ---: |
-| Lines | 6635 | 10576 | 62.74% |
-| Statements | 2193 | 3238 | 67.73% |
-| Functions | 751 | 1087 | 69.09% |
-| Branches | 1991 | 2504 | 79.51% |
+| Lines | 3630 | 20694 | 17.54% |
+| Statements | 1212 | 6298 | 19.24% |
+| Functions | 403 | 2350 | 17.15% |
+| Branches | 1246 | 4880 | 25.53% |
 
 ## Meta Incremental E Gates Ativos
 
@@ -31,10 +31,10 @@
   - Functions: `60%`
   - Branches: `60%`
 - Snapshot atual:
-  - Lines: `62%`
-  - Statements: `67%`
-  - Functions: `69%`
-  - Branches: `79%`
+  - Lines: `17%`
+  - Statements: `19%`
+  - Functions: `17%`
+  - Branches: `25%`
 - Piso inicial por arquivo alterado: `40%` em lines
 - Marcos intermediarios:
   - M1: `20%` focando infra compartilhada, src/lib/api, sessao e tenant/contexto
@@ -61,35 +61,37 @@
 
 | Gerado Em | Perfil | Suites | Lines | Statements | Functions | Branches |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
+| 2026-03-31T04:03:23.388Z | core | unit, smoke | NaN% | NaN% | NaN% | NaN% |
+| 2026-03-31T04:03:02.761Z | core | unit, smoke | NaN% | NaN% | NaN% | NaN% |
 | 2026-03-14T21:34:54.596Z | core | unit | NaN% | NaN% | NaN% | NaN% |
 
 ## Grupos Prioritarios
 
 | Grupo | Arquivos | Lines | Statements | Functions | Branches |
 | --- | ---: | ---: | ---: | ---: | ---: |
+| src/lib/domain | 1 | 0.00% (0/56) | 0.00% (0/20) | 0.00% (0/18) | 0.00% (0/3) |
+| src/lib/export | 1 | 0.00% (0/53) | 0.00% (0/30) | 0.00% (0/11) | 0.00% (0/13) |
+| src/lib/forms | 6 | 0.00% (0/144) | 0.00% (0/34) | 0.00% (0/11) | 0.00% (0/10) |
 | src/lib/icons | 1 | 0.00% (0/38) | 0.00% (0/14) | 0.00% (0/3) | 0.00% (0/3) |
-| src/lib/rbac | 2 | 11.42% (62/543) | 15.64% (38/243) | 18.03% (11/61) | 15.79% (12/76) |
-| src/lib/tenant-theme.ts | 1 | 20.24% (17/84) | 60.00% (6/10) | 100.00% (3/3) | 83.33% (5/6) |
-| src/lib/public | 3 | 27.41% (162/591) | 38.68% (82/212) | 44.12% (30/68) | 28.70% (33/115) |
-| src/lib/aulas | 1 | 42.72% (44/103) | 67.50% (27/40) | 69.23% (9/13) | 55.56% (5/9) |
-| src/lib/planos | 1 | 45.36% (44/97) | 56.25% (9/16) | 75.00% (6/8) | 46.15% (18/39) |
-| src/lib/backoffice | 4 | 49.83% (148/297) | 47.00% (47/100) | 56.10% (23/41) | 44.44% (24/54) |
-| src/lib/business-date.ts | 1 | 57.14% (32/56) | 59.09% (13/22) | 90.91% (10/11) | 0.00% (0/1) |
+| src/lib/query | 34 | 0.00% (0/1681) | 0.00% (0/334) | 0.00% (0/403) | 0.00% (0/132) |
+| src/lib/sanitize.ts | 1 | 0.00% (0/12) | 0.00% (0/1) | 0.00% (0/1) | 100.00% (0/0) |
+| src/lib/shared | 20 | 0.00% (0/803) | 0.00% (0/362) | 0.00% (0/92) | 0.00% (0/198) |
+| src/lib/tenant | 34 | 0.00% (0/6386) | 0.00% (0/2039) | 0.00% (0/595) | 0.00% (0/1293) |
 
 ## Top Gaps Por Arquivo
 
 | Arquivo | Lines | Statements | Functions | Branches |
 | --- | ---: | ---: | ---: | ---: |
-| src/lib/rbac/hooks.ts | 0.00% (0/387) | 0.00% (0/191) | 0.00% (0/30) | 0.00% (0/58) |
-| src/lib/api/cartoes.ts | 0.00% (0/112) | 0.00% (0/32) | 0.00% (0/13) | 0.00% (0/26) |
-| src/lib/public/use-public-journey.ts | 0.00% (0/80) | 0.00% (0/32) | 0.00% (0/10) | 0.00% (0/17) |
-| src/lib/api/beneficios.ts | 0.00% (0/77) | 0.00% (0/16) | 0.00% (0/14) | 0.00% (0/4) |
-| src/lib/api/conciliacao-bancaria.ts | 0.00% (0/71) | 0.00% (0/9) | 0.00% (0/5) | 0.00% (0/4) |
-| src/lib/treinos/v2-backlog.ts | 0.00% (0/62) | 0.00% (0/1) | 100.00% (0/0) | 100.00% (0/0) |
-| src/lib/api/contas-bancarias.ts | 0.00% (0/57) | 0.00% (0/9) | 0.00% (0/5) | 0.00% (0/3) |
-| src/lib/api/maquininhas.ts | 0.00% (0/52) | 0.00% (0/9) | 0.00% (0/5) | 0.00% (0/1) |
-| src/lib/api/dashboard.ts | 0.00% (0/45) | 0.00% (0/16) | 0.00% (0/5) | 0.00% (0/12) |
-| src/lib/icons/activity-icons.ts | 0.00% (0/38) | 0.00% (0/14) | 0.00% (0/3) | 0.00% (0/3) |
+| src/lib/tenant/bi/analytics.ts | 0.00% (0/531) | 0.00% (0/159) | 0.00% (0/67) | 0.00% (0/88) |
+| src/lib/tenant/treinos/v2-runtime.ts | 0.00% (0/469) | 0.00% (0/111) | 0.00% (0/42) | 0.00% (0/116) |
+| src/lib/tenant/treinos/workspace.ts | 0.00% (0/457) | 0.00% (0/107) | 0.00% (0/46) | 0.00% (0/132) |
+| src/lib/tenant/rbac/hooks.ts | 0.00% (0/421) | 0.00% (0/202) | 0.00% (0/31) | 0.00% (0/63) |
+| src/lib/tenant/administrativo-colaboradores.ts | 0.00% (0/413) | 0.00% (0/154) | 0.00% (0/25) | 0.00% (0/130) |
+| src/lib/tenant/financeiro/recebimentos.ts | 0.00% (0/349) | 0.00% (0/147) | 0.00% (0/25) | 0.00% (0/116) |
+| src/lib/backoffice/security-governance.ts | 0.00% (0/342) | 0.00% (0/93) | 0.00% (0/47) | 0.00% (0/65) |
+| src/lib/api/admin-billing.ts | 0.00% (0/327) | 0.00% (0/88) | 0.00% (0/41) | 0.00% (0/135) |
+| src/lib/tenant/hooks/use-session-context.tsx | 0.00% (0/322) | 0.00% (0/120) | 0.00% (0/32) | 0.00% (0/39) |
+| src/lib/api/backoffice-seguranca/_shared.ts | 0.00% (0/303) | 0.00% (0/77) | 0.00% (0/35) | 0.00% (0/187) |
 
 ## Notas Metodologicas
 

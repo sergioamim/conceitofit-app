@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { resolveTenantTheme, TENANT_THEME_OPTIONS, TENANT_THEME_PRESETS } from "../../src/lib/tenant-theme";
+import { resolveTenantTheme, TENANT_THEME_OPTIONS, TENANT_THEME_PRESETS } from "../../src/lib/tenant/tenant-theme";
 
 test.describe("tenant theme presets", () => {
   test("expõe o catálogo ampliado com presets claros e Dracula", async () => {

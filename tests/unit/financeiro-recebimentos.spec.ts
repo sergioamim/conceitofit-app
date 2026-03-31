@@ -4,7 +4,7 @@ import {
   createRecebimentoAvulsoService,
   importarPagamentosEmLoteService,
   listContasReceberOperacionais,
-} from "../../src/lib/financeiro/recebimentos";
+} from "../../src/lib/tenant/financeiro/recebimentos";
 
 const envSnapshot = {
   devAutoLogin: process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN,
