@@ -178,7 +178,8 @@ test.describe("Dashboard principal", () => {
     await expect(page.getByTestId("receita-card")).toContainText("R$");
 
     await page.getByRole("button", { name: "Financeiro" }).click();
-    await expect(page.getByRole("heading", { name: "Pagamentos pendentes e vencidos" })).toBeVisible();
+    await expect(page.getByText("Recebimentos do mês")).toBeVisible();
+    await expect(page.locator("h2", { hasText: "Pagamentos pendentes e vencidos" })).toBeVisible();
     await expect(page.getByText("R$ 299,90")).toBeVisible();
   });
 
@@ -190,6 +191,7 @@ test.describe("Dashboard principal", () => {
 
     await page.goto("/dashboard");
     await page.getByRole("button", { name: "Financeiro" }).click();
+    await expect(page.getByText("Recebimentos do mês")).toBeVisible();
     await page.getByRole("link", { name: "Ver todos" }).click();
     await expect(page).toHaveURL(/\/pagamentos$/);
   });
