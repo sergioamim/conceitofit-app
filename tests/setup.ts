@@ -14,6 +14,12 @@ afterEach(() => {
 // happy-dom/jsdom provide their own, but the native one can shadow it.
 // Ensure `window.localStorage` has the full Storage API.
 if (typeof window !== "undefined") {
+  if (window.location?.origin !== "http://localhost:3001") {
+    window.location.href = "http://localhost:3001";
+  }
+
+  globalThis.location = window.location;
+
   const store = new Map<string, string>();
   const storage: Storage = {
     get length() {
