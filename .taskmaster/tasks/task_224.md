@@ -2,7 +2,7 @@
 
 **Title:** Adicionar HEALTHCHECK no Dockerfile e endpoint /api/health
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

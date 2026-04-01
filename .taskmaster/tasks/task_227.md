@@ -2,9 +2,9 @@
 
 **Title:** Migrar /pagamentos para TanStack Query
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 225
+**Dependencies:** 225 ✓
 
 **Priority:** medium
 

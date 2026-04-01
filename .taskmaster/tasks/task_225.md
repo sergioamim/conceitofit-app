@@ -2,7 +2,7 @@
 
 **Title:** Configurar TanStack Query provider e devtools
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

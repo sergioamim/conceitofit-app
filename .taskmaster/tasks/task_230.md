@@ -2,7 +2,7 @@
 
 **Title:** Splitar novo-cliente-wizard.tsx (924 LOC)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

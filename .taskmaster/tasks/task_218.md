@@ -2,9 +2,9 @@
 
 **Title:** Adicionar request correlation (X-Request-Id) entre frontend e backend
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 217
+**Dependencies:** 217 ✓
 
 **Priority:** medium
 

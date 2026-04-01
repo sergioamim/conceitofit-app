@@ -2,7 +2,7 @@
 
 **Title:** Splitar admin/seguranca/usuarios/page.tsx (942 LOC)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

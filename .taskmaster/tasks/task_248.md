@@ -2,9 +2,9 @@
 
 **Title:** Migrar 10 páginas administrativas simples para RSC
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 247
+**Dependencies:** 247 ✓
 
 **Priority:** low
 

@@ -2,7 +2,7 @@
 
 **Title:** Testes para business-date.ts (100% coverage)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

@@ -2,7 +2,7 @@
 
 **Title:** Fix: Corrigir build error em seguranca/acesso-unidade/page.tsx
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

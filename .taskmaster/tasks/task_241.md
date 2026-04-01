@@ -2,9 +2,9 @@
 
 **Title:** Página "Minhas Aulas" com reserva online no portal do aluno
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 239
+**Dependencies:** 239 ✓
 
 **Priority:** medium
 

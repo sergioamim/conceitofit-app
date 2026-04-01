@@ -2,7 +2,7 @@
 
 **Title:** Testes para receber-pagamento-modal.tsx
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

@@ -2,7 +2,7 @@
 
 **Title:** Splitar clientes-client.tsx (578 LOC, 12 useState)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

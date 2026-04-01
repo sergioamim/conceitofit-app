@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 327, 329
+**Dependencies:** 327 ✓, 329 ✓
 
 **Priority:** high
 

@@ -2,9 +2,9 @@
 
 **Title:** Página de configuração de billing por academia
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 244
+**Dependencies:** 244 ✓
 
 **Priority:** medium
 

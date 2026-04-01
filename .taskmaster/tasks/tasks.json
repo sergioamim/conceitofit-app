@@ -12764,10 +12764,10 @@
             "description": "Mapear qual request nao resolve ou resolve com shape insuficiente em cada falha de loading.",
             "dependencies": [],
             "details": "Cobrir integrações financeiras, atividades operacionais, grade/catraca, reservas, BI operacional e quaisquer outras telas que o relatório mostrou presas em carregamento.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "334",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T19:03:05.313Z"
           },
           {
             "id": 2,
@@ -12777,10 +12777,10 @@
               1
             ],
             "details": "Garantir que campos usados por cards, tabelas, status fiscais e telas administrativas de integracao estejam presentes e coerentes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "334",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T19:03:09.954Z"
           },
           {
             "id": 3,
@@ -12790,10 +12790,10 @@
               1
             ],
             "details": "Validar especificamente listas, cards e componentes que dependem de dados agregados ou de relacionamento entre atividades, unidades e sessões.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "334",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T19:03:14.536Z"
           },
           {
             "id": 4,
@@ -12811,7 +12811,7 @@
           }
         ],
         "complexity": 8,
-        "updatedAt": "2026-04-01T18:24:36.561Z",
+        "updatedAt": "2026-04-01T19:03:14.536Z",
         "recommendedSubtasks": 4,
         "expansionPrompt": "Dividir a tarefa em: 1. Priorização e triagem de specs com loading infinito/dados faltantes nos módulos financeiro e operacional. 2. Identificação e correção de requests não resolvidas/incompletas para financeiro. 3. Identificação e correção de requests não resolvidas/incompletas para operacional. 4. Ajuste de awaits para dependências assíncronas legítimas e documentação de endpoints."
       },
@@ -12892,7 +12892,7 @@
         "description": "Fechar o ciclo do relatorio atual com reruns por grupo, lista clara de residuos e atualizacao da referencia operacional da suite E2E.",
         "details": "Esta task depende de 330, 331, 332, 333, 334 e 335.\n\nEscopo obrigatorio:\n1. Reexecutar as suites por agrupamento de causa-raiz, nao somente o comando global, para confirmar que as correcoes realmente eliminaram cada familia de falha.\n2. Consolidar um resumo final por bucket: autenticacao app, autenticacao backoffice, auth-rede/storefront, adesao publica, loading financeiro/operacional, demo e residuos funcionais isolados.\n3. Abrir follow-ups apenas para falhas remanescentes que ja nao sejam mais problemas de fixture, auth ou mocks minimos.\n4. Atualizar a documentacao interna necessaria para o time entender como semear sessao e quais contratos minimos cada shell espera.\n5. Regenerar os arquivos do Taskmaster ao final e garantir que o backlog reflita corretamente o estado desta campanha de estabilizacao.\n\nCriterio de aceite: o time deve conseguir olhar o backlog e saber exatamente quais grupos foram estabilizados, quais ainda restam e qual comando reproduz cada bucket.",
         "testStrategy": "Executar reruns por bucket apos as correcoes, comparar o resultado com o relatório inicial e atualizar Taskmaster/documentacao com o estado final desta campanha de estabilizacao.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "330",
           "331",
@@ -12909,10 +12909,10 @@
             "description": "Separar comandos e suites sentinela por autenticacao app, backoffice, auth-rede, adesao, loading e demo.",
             "dependencies": [],
             "details": "A matriz precisa permitir reproduzir rapidamente cada familia de falha sem depender do run global completo.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "336",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T19:04:05.839Z"
           },
           {
             "id": 2,
@@ -12922,10 +12922,10 @@
               1
             ],
             "details": "Produzir um resumo claro por bucket, incluindo diferenças entre falha de fixture resolvida e falha funcional residual.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "336",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T19:04:07.960Z"
           },
           {
             "id": 3,
@@ -12935,10 +12935,10 @@
               2
             ],
             "details": "Evitar novos itens genéricos: cada resíduo deve apontar spec, modulo, causa provável e estratégia de reprodução.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "336",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T19:04:09.996Z"
           },
           {
             "id": 4,
@@ -12949,23 +12949,62 @@
               3
             ],
             "details": "Atualizar a documentação necessária para semeadura de sessão/mocks mínimos e garantir que tasks.json e arquivos markdown do Taskmaster reflitam o estado final.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "336",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T19:04:12.014Z"
           }
         ],
         "complexity": 5,
-        "updatedAt": "2026-04-01T17:05:34.000Z",
+        "updatedAt": "2026-04-01T19:04:50.655Z",
         "recommendedSubtasks": 5,
         "expansionPrompt": "Dividir a tarefa em: 1. Reexecução de suites por agrupamento de causa-raiz. 2. Consolidação do resumo final de falhas por bucket. 3. Abertura de follow-ups para falhas funcionais remanescentes. 4. Atualização da documentação interna sobre sessão e mocks E2E. 5. Regeneração dos arquivos do Taskmaster e validação do backlog."
+      },
+      {
+        "id": "337",
+        "title": "Corrigir resíduos funcionais dos sentinelas do app em dashboard e billing",
+        "description": "Tratar apenas falhas funcionais remanescentes dos sentinelas do shell do app, sem reabrir a camada de sessão/fixture.",
+        "details": "Escopo: tests/e2e/dashboard.spec.ts e tests/e2e/billing-config.spec.ts. Reproduções já observadas após a estabilização de auth: 1) heading Pagamentos pendentes e vencidos não encontrado no dashboard após abrir a aba Financeiro; 2) billing-config com seletor estrito em Asaas, toasts de sucesso não encontrados e webhook esperado ausente. Estratégia: alinhar asserts e/ou comportamento real das telas, mantendo as fixtures atuais. Fora de escopo: qualquer ajuste em installE2EAuthSession ou contrato mínimo de shell.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "336"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "338",
+        "title": "Corrigir crashes reais em rotas globais do backoffice /admin",
+        "description": "Resolver falhas de rota/módulo no shell global do backoffice que sobraram após a estabilização de auth.",
+        "details": "Escopo: tests/e2e/admin-backoffice-coverage.spec.ts, tests/e2e/admin-backoffice-global-crud.spec.ts e tests/e2e/backoffice-impersonation.spec.ts. Reproduções já catalogadas: /admin/financeiro/contratos com ERR_CONNECTION_RESET; /admin/seguranca/funcionalidades, /admin/operacional/alertas, /admin/academias e /admin/seguranca/usuarios/user-bruno com ERR_CONNECTION_REFUSED. Estratégia: revisar crashes do dev/runtime nessas rotas e garantir que o shell global continue subindo com os mesmos contratos de sessão usados na task 331. Fora de escopo: reabrir seeds operacionais ou fallback genérico de mocks.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "336"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "339",
+        "title": "Corrigir boundary server/client em /admin/importacao-evo",
+        "description": "Ajustar a tela de importação EVO para não chamar hook client-only no servidor.",
+        "details": "Reprodução já observada no fluxo de tests/e2e/backoffice-seguranca.spec.ts ao navegar para /admin/importacao-evo: Attempted to call useEvoImportPage() from the server but useEvoImportPage is on the client. Estratégia: revisar o boundary de server/client em src/app/(backoffice)/admin/importacao-evo-p0 e garantir que a rota seja renderizável no shell global sem mascarar erro com remoção de asserts. Fora de escopo: mudanças na fixture de backoffice global.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "336"
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T21:25:00.000Z",
-      "taskCount": 332,
-      "completedCount": 330,
+      "lastModified": "2026-04-01T19:04:50.656Z",
+      "taskCount": 335,
+      "completedCount": 331,
       "tags": [
         "master"
       ]

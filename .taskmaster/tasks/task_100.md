@@ -22,7 +22,7 @@ Executar `npm run lint` para garantir que imports e tipagens ficaram corretos. V
 
 ### 100.1. Mapear formatadores existentes e padrões de saída
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Levantar as funções locais de moeda/data/percentual e os formatos atuais nas páginas alvo.

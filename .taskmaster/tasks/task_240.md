@@ -2,9 +2,9 @@
 
 **Title:** Página "Meus Treinos" no portal do aluno
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 239
+**Dependencies:** 239 ✓
 
 **Priority:** medium
 

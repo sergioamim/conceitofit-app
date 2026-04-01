@@ -2,9 +2,9 @@
 
 **Title:** Eliminar loading infinito e payloads incompletos em modulos financeiro e operacional
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 327, 328, 329, 330
+**Dependencies:** 327 ✓, 328 ✓, 329 ✓, 330 ✓
 
 **Priority:** high
 
@@ -31,7 +31,7 @@ Reexecutar as specs de financeiro/operacional priorizadas e confirmar que estado
 
 ### 334.1. Identificar endpoints bloqueantes por spec e por modulo
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Mapear qual request nao resolve ou resolve com shape insuficiente em cada falha de loading.
@@ -42,7 +42,7 @@ Cobrir integrações financeiras, atividades operacionais, grade/catraca, reserv
 
 ### 334.2. Corrigir mocks do dominio financeiro
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 334.1  
 
 Completar payloads e transicoes necessarias para integracoes, billing e emissor fiscal sairem do loading.
@@ -53,7 +53,7 @@ Garantir que campos usados por cards, tabelas, status fiscais e telas administra
 
 ### 334.3. Corrigir mocks do dominio operacional e gerencial
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 334.1  
 
 Completar endpoints e payloads de atividades, grade, reservas e BI para destravar a UI.
@@ -64,7 +64,7 @@ Validar especificamente listas, cards e componentes que dependem de dados agrega
 
 ### 334.4. Trocar waits cegos por sinais reais de pronto
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 334.2, 334.3  
 
 Ajustar as specs para aguardarem o evento correto de renderização completa quando necessário.
