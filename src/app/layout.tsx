@@ -3,6 +3,7 @@ import { Space_Grotesk, IBM_Plex_Sans, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import Script from "next/script";
 import { AppQueryProvider } from "@/lib/query/query-provider";
+import { getAppEnv } from "@/lib/env";
 import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import "./globals.css";
@@ -48,6 +49,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  getAppEnv();
+
   const isReactScanEnabled =
     process.env.NODE_ENV === "development" &&
     process.env.NEXT_PUBLIC_REACT_SCAN === "true";

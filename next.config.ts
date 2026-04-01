@@ -1,12 +1,15 @@
 import type { NextConfig } from "next";
+import { getAppEnv } from "./src/lib/env";
 
 const withBundleAnalyzer =
   process.env.ANALYZE === "true"
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     ? require("@next/bundle-analyzer")({ enabled: true })
     : (config: NextConfig) => config;
 
-const backendProxyTarget = process.env.BACKEND_PROXY_TARGET ?? "http://localhost:8080";
-const backendProxyMaxBodySize = Number.parseInt(process.env.BACKEND_PROXY_MAX_BODY_SIZE ?? "150", 10) || 150;
+const env = getAppEnv();
+const backendProxyTarget = env.BACKEND_PROXY_TARGET;
+const backendProxyMaxBodySize = env.BACKEND_PROXY_MAX_BODY_SIZE;
 const isDev = process.env.NODE_ENV === "development";
 
 const scriptSrc = isDev
@@ -114,6 +117,6 @@ function applySentry(config: NextConfig): NextConfig {
   }
 }
 
-export default process.env.NEXT_PUBLIC_SENTRY_DSN
+export default env.NEXT_PUBLIC_SENTRY_DSN
   ? applySentry(finalConfig)
   : finalConfig;
