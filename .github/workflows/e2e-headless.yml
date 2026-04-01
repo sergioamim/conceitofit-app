@@ -38,3 +38,63 @@ jobs:
           path: |
             playwright-report/
             test-results/
+
+  e2e-real-backend-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start backend stack
+        run: docker compose up -d db minio backend
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:8080/actuator/health/liveness >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Backend não ficou saudável a tempo" >&2
+          docker compose logs backend
+          exit 1
+
+      - name: Run development seed
+        run: docker compose run --rm seed
+
+      - name: Run real backend smoke
+        env:
+          PLAYWRIGHT_REAL_BACKEND: "1"
+        run: npm run test:e2e:smoke-real
+
+      - name: Upload real-backend artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-real-backend
+          path: |
+            playwright-report/
+            test-results/
+
+      - name: Dump backend logs on failure
+        if: failure()
+        run: docker compose logs backend
+
+      - name: Stop backend stack
+        if: always()
+        run: docker compose down -v
