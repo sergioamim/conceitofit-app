@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Request, type Route } from "@playwright/test";
 import { seedAuthenticatedSession } from "./support/backend-only-stubs";
 import { E2E_AUTH_SESSION_STORAGE_KEYS } from "./support/auth-session";
+import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
 
 const SESSION_KEYS = [...E2E_AUTH_SESSION_STORAGE_KEYS];
 
@@ -32,13 +33,13 @@ async function installSessionAuthMocks(page: Page) {
     },
   ];
 
-  await page.route("**/api/v1/auth/me**", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.fallback();
-      return;
-    }
-
-    await fulfillJson(route, {
+  await installOperationalAppShellMocks(page, {
+    currentTenantId: tenants[0].id,
+    tenants: tenants.map((tenant) => ({
+      ...tenant,
+      groupId: "academia-1",
+    })),
+    user: {
       id: "user-admin",
       userId: "user-admin",
       nome: "Admin Multiunidade",
@@ -46,58 +47,24 @@ async function installSessionAuthMocks(page: Page) {
       email: "admin@academia.local",
       roles: ["OWNER", "ADMIN"],
       userKind: "COLABORADOR",
-      redeId: "academia-1",
-      redeNome: "Academia Fit",
-      redeSlug: "academia-fit",
       activeTenantId: tenants[0].id,
+      tenantBaseId: tenants[0].id,
       availableTenants: tenants.map((tenant, index) => ({
         tenantId: tenant.id,
         defaultTenant: index === 0,
       })),
-    });
-  });
-
-  await page.route("**/api/v1/app/bootstrap**", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.fallback();
-      return;
-    }
-
-    await fulfillJson(route, {
-      user: {
-        id: "user-admin",
-        userId: "user-admin",
-        nome: "Admin Multiunidade",
-        displayName: "Admin Multiunidade",
-        email: "admin@academia.local",
-        roles: ["OWNER", "ADMIN"],
-        userKind: "COLABORADOR",
-        redeId: "academia-1",
-        redeNome: "Academia Fit",
-        redeSlug: "academia-fit",
-        activeTenantId: tenants[0].id,
-        availableTenants: tenants.map((tenant, index) => ({
-          tenantId: tenant.id,
-          defaultTenant: index === 0,
-        })),
-      },
-      tenantContext: {
-        currentTenantId: tenants[0].id,
-        tenantAtual: tenants[0],
-        unidadesDisponiveis: tenants,
-      },
-      academia: { id: "academia-1", nome: "Academia Fit", ativo: true },
-      capabilities: { canAccessElevatedModules: true, canDeleteClient: false },
-    });
-  });
-
-  await page.route("**/api/v1/academia", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.fallback();
-      return;
-    }
-
-    await fulfillJson(route, { id: "academia-1", nome: "Academia Fit", ativo: true });
+      availableScopes: ["UNIDADE"],
+      broadAccess: false,
+      redeId: "academia-1",
+      redeNome: "Academia Fit",
+      redeSlug: "academia-fit",
+    },
+    academia: { id: "academia-1", nome: "Academia Fit", ativo: true },
+    capabilities: { canAccessElevatedModules: true, canDeleteClient: false },
+    routes: {
+      tenantContext: false,
+      authRefresh: false,
+    },
   });
 
   await page.route("**/api/v1/auth/refresh", async (route) => {

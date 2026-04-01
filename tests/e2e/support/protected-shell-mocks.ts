@@ -37,12 +37,41 @@ export type E2EProtectedShellMockOptions = {
     canAccessElevatedModules?: boolean;
     canDeleteClient?: boolean;
   };
+  routes?: {
+    authMe?: boolean;
+    bootstrap?: boolean;
+    tenantContext?: boolean;
+    academia?: boolean;
+    authRefresh?: boolean;
+    onboardingStatus?: boolean;
+  };
 };
 
 export type E2EProtectedShellController = {
   getCurrentTenantId: () => string;
   getCurrentTenant: () => E2ETenantContextSeed;
   getTenants: () => E2ETenantContextSeed[];
+};
+
+export type E2EOperationalAppMockOptions = E2EProtectedShellMockOptions & {
+  onboardingStatus?: {
+    percentualConclusao?: number;
+    concluido?: boolean;
+    totalEtapas?: number;
+    etapasConcluidas?: number;
+    etapas?: Array<{
+      id: string;
+      titulo: string;
+      descricao?: string;
+      status: "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDA";
+      rotaConfiguracao?: string;
+    }>;
+  };
+  refreshSession?: {
+    token?: string;
+    refreshToken?: string;
+    type?: string;
+  };
 };
 
 const DEFAULT_TENANTS: E2ETenantContextSeed[] = [
@@ -139,80 +168,140 @@ export async function installProtectedShellMocks(
     unidadesDisponiveis: tenants,
   });
 
-  await page.route("**/api/v1/auth/me**", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.fallback();
-      return;
-    }
+  if (options.routes?.authMe !== false) {
+    await page.route("**/api/v1/auth/me**", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
 
-    await fulfillJson(route, buildUserPayload(tenants, currentTenantId, options));
-  });
-
-  await page.route("**/api/v1/app/bootstrap**", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.fallback();
-      return;
-    }
-
-    const currentTenant = getCurrentTenant();
-    const user = buildUserPayload(tenants, currentTenantId, options);
-    await fulfillJson(route, {
-      user,
-      tenantContext: buildTenantContextPayload(),
-      academia: buildAcademiaPayload(currentTenant, options),
-      capabilities: {
-        canAccessElevatedModules:
-          options.capabilities?.canAccessElevatedModules ?? user.roles.some((role) => role !== "VIEWER"),
-        canDeleteClient: options.capabilities?.canDeleteClient ?? false,
-      },
+      await fulfillJson(route, buildUserPayload(tenants, currentTenantId, options));
     });
-  });
+  }
 
-  await page.route("**/api/v1/context/unidade-ativa**", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.fallback();
-      return;
-    }
+  if (options.routes?.bootstrap !== false) {
+    await page.route("**/api/v1/app/bootstrap**", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
 
-    await fulfillJson(route, buildTenantContextPayload());
-  });
+      const currentTenant = getCurrentTenant();
+      const user = buildUserPayload(tenants, currentTenantId, options);
+      await fulfillJson(route, {
+        user,
+        tenantContext: buildTenantContextPayload(),
+        academia: buildAcademiaPayload(currentTenant, options),
+        capabilities: {
+          canAccessElevatedModules:
+            options.capabilities?.canAccessElevatedModules ?? user.roles.some((role) => role !== "VIEWER"),
+          canDeleteClient: options.capabilities?.canDeleteClient ?? false,
+        },
+      });
+    });
+  }
 
-  await page.route("**/api/v1/context/unidade-ativa/**", async (route) => {
-    const request = route.request();
-    if (request.method() !== "PUT") {
-      await route.fallback();
-      return;
-    }
+  if (options.routes?.tenantContext !== false) {
+    await page.route("**/api/v1/context/unidade-ativa**", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
 
-    const url = new URL(request.url());
-    const path = normalizePath(url.pathname);
-    const match = path.match(/^\/api\/v1\/context\/unidade-ativa\/([^/]+)$/);
+      await fulfillJson(route, buildTenantContextPayload());
+    });
 
-    if (!match) {
-      await route.fallback();
-      return;
-    }
+    await page.route("**/api/v1/context/unidade-ativa/**", async (route) => {
+      const request = route.request();
+      if (request.method() !== "PUT") {
+        await route.fallback();
+        return;
+      }
 
-    const nextTenantId = decodeURIComponent(match[1] ?? "").trim();
-    if (nextTenantId && tenants.some((tenant) => tenant.id === nextTenantId)) {
-      currentTenantId = nextTenantId;
-    }
+      const url = new URL(request.url());
+      const path = normalizePath(url.pathname);
+      const match = path.match(/^\/api\/v1\/context\/unidade-ativa\/([^/]+)$/);
 
-    await fulfillJson(route, buildTenantContextPayload());
-  });
+      if (!match) {
+        await route.fallback();
+        return;
+      }
 
-  await page.route("**/api/v1/academia", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.fallback();
-      return;
-    }
+      const nextTenantId = decodeURIComponent(match[1] ?? "").trim();
+      if (nextTenantId && tenants.some((tenant) => tenant.id === nextTenantId)) {
+        currentTenantId = nextTenantId;
+      }
 
-    await fulfillJson(route, buildAcademiaPayload(getCurrentTenant(), options));
-  });
+      await fulfillJson(route, buildTenantContextPayload());
+    });
+  }
+
+  if (options.routes?.academia !== false) {
+    await page.route("**/api/v1/academia", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+
+      await fulfillJson(route, buildAcademiaPayload(getCurrentTenant(), options));
+    });
+  }
 
   return {
     getCurrentTenantId: () => currentTenantId,
     getCurrentTenant,
     getTenants: () => tenants,
   };
+}
+
+export async function installOperationalAppShellMocks(
+  page: Page,
+  options: E2EOperationalAppMockOptions = {},
+): Promise<E2EProtectedShellController> {
+  const controller = await installProtectedShellMocks(page, {
+    ...options,
+    routes: {
+      authMe: true,
+      bootstrap: true,
+      tenantContext: true,
+      academia: true,
+      authRefresh: false,
+      onboardingStatus: false,
+      ...options.routes,
+    },
+  });
+
+  if (options.routes?.authRefresh !== false) {
+    await page.route("**/api/v1/auth/refresh**", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.fallback();
+        return;
+      }
+
+      await fulfillJson(route, {
+        token: options.refreshSession?.token ?? "token-e2e-refresh",
+        refreshToken: options.refreshSession?.refreshToken ?? "refresh-e2e-refresh",
+        type: options.refreshSession?.type ?? "Bearer",
+      });
+    });
+  }
+
+  if (options.routes?.onboardingStatus !== false) {
+    await page.route("**/api/v1/onboarding/status**", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+
+      await fulfillJson(route, {
+        percentualConclusao: options.onboardingStatus?.percentualConclusao ?? 100,
+        concluido: options.onboardingStatus?.concluido ?? true,
+        totalEtapas: options.onboardingStatus?.totalEtapas ?? 0,
+        etapasConcluidas: options.onboardingStatus?.etapasConcluidas ?? 0,
+        etapas: options.onboardingStatus?.etapas ?? [],
+      });
+    });
+  }
+
+  return controller;
 }

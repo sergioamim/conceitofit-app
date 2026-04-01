@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { installE2EAuthSession } from "./support/auth-session";
+import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
 
 type StubExercise = {
   id: string;
@@ -162,28 +163,42 @@ async function installTreinosV2Stubs(page: Page) {
     },
   ];
 
+  await installOperationalAppShellMocks(page, {
+    currentTenantId: "tn-1",
+    tenants: [
+      {
+        id: "tn-1",
+        nome: "Unidade Centro",
+        ativo: true,
+        academiaId: "acd-1",
+        groupId: "acd-1",
+      },
+    ],
+    user: {
+      id: "user-1",
+      userId: "user-1",
+      nome: "Admin Treinos",
+      displayName: "Admin Treinos",
+      email: "admin@academia.local",
+      roles: ["ADMIN"],
+      userKind: "COLABORADOR",
+      activeTenantId: "tn-1",
+      tenantBaseId: "tn-1",
+      availableScopes: ["UNIDADE"],
+      broadAccess: false,
+    },
+    academia: {
+      id: "acd-1",
+      nome: "Academia Treinos",
+      ativo: true,
+    },
+    capabilities: {
+      canAccessElevatedModules: true,
+      canDeleteClient: false,
+    },
+  });
+
   await Promise.all([
-    page.route("**/backend/api/v1/auth/me", async (route) => {
-      await route.fulfill(
-        json({
-          id: "user-1",
-          nome: "Admin Treinos",
-          email: "admin@academia.local",
-          roles: ["ADMIN"],
-          activeTenantId: "tn-1",
-          availableTenants: [{ tenantId: "tn-1", defaultTenant: true }],
-        }),
-      );
-    }),
-    page.route("**/backend/api/v1/context/unidade-ativa", async (route) => {
-      await route.fulfill(
-        json({
-          currentTenantId: "tn-1",
-          tenantAtual: { id: "tn-1", academiaId: "acd-1", nome: "Unidade Centro", ativo: true },
-          unidadesDisponiveis: [{ id: "tn-1", academiaId: "acd-1", nome: "Unidade Centro", ativo: true }],
-        }),
-      );
-    }),
     page.route("**/backend/api/v1/comercial/alunos**", async (route) => {
       await route.fulfill(
         json({
