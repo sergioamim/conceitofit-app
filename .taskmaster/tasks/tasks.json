@@ -12166,6 +12166,78 @@
         "priority": "high",
         "subtasks": [],
         "updatedAt": "2026-03-31T23:58:42.586Z"
+      },
+      {
+        "id": 320,
+        "title": "Migrar auth de localStorage para httpOnly cookies (frontend)",
+        "description": "Adaptar frontend para usar cookies httpOnly em vez de localStorage para tokens JWT.",
+        "details": "Remover leitura/escrita de tokens em localStorage (session.ts, token-store.ts). fetch() com credentials:'include' para enviar cookies automaticamente. Remover header Authorization manual do http.ts — cookie vai automaticamente. Manter token-store em memoria (runtime) como cache para verificar se esta logado sem ler cookie. Logout chama /auth/logout que limpa cookies server-side. Ajustar session.ts para nao armazenar tokens, apenas user info (userId, displayName, tenantId).\n\nDEPENDÊNCIA CROSS-REPO: Requer backend task academia-java#372 implementada primeiro.",
+        "testStrategy": "Login funciona sem localStorage. Refresh funciona via cookie. Logout limpa sessao. Navegacao entre paginas mantem sessao.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 6,
+        "subtasks": []
+      },
+      {
+        "id": 321,
+        "title": "Validação de env vars com Zod schema no startup",
+        "description": "Criar schema Zod que valida variaveis de ambiente obrigatorias no build/startup do Next.js.",
+        "details": "Criar src/lib/env.ts com z.object({BACKEND_PROXY_TARGET: z.string().url(), NEXT_PUBLIC_SENTRY_DSN: z.string().optional(), ...}). Importar no layout.tsx raiz (server-side) para validar no startup. Se falhar, log claro com variaveis faltantes. Nao usar t3-env (overhead desnecessario), Zod puro basta.",
+        "testStrategy": "Build falha com mensagem clara se BACKEND_PROXY_TARGET nao definido. Build passa com todas vars definidas.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 2,
+        "subtasks": []
+      },
+      {
+        "id": 322,
+        "title": "Adicionar --coverage ao Vitest e gate no CI",
+        "description": "Medir cobertura de testes real e publicar no CI.",
+        "details": "Adicionar provider: 'v8' ao vitest.config.ts. Adicionar script 'test:coverage' no package.json. No GitHub Actions workflow, rodar test:coverage e publicar report como artifact. Adicionar badge de coverage no README. Nao bloquear merge por enquanto (apenas medir), threshold pode vir depois.",
+        "testStrategy": "npm run test:coverage gera relatorio. CI publica artifact com coverage HTML.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 2,
+        "subtasks": []
+      },
+      {
+        "id": 323,
+        "title": "Limpar rotas legadas do storefront",
+        "description": "Remover rotas duplicadas e arquivos orfaos do storefront apos migracao para [academiaSlug].",
+        "details": "Remover: src/app/storefront/unidade/ (substituido por [academiaSlug]/unidades/), src/app/storefront/resolve-storefront-headers.ts (nao mais necessario), referencias a STOREFRONT_DEV_TENANT_ID e STOREFRONT_DEV_ACADEMIA_SLUG. Atualizar storefront/page.tsx para redirecionar para /storefront ou mostrar listagem de academias. Verificar que nenhum link interno aponta para rotas removidas.",
+        "testStrategy": "Acessar /storefront/unidade/xxx retorna 404. Acessar /storefront/demo funciona. Links internos apontam para novas rotas.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 2,
+        "subtasks": []
+      },
+      {
+        "id": 324,
+        "title": "Smoke test E2E: Prospect → Cliente → Matrícula → Pagamento",
+        "description": "Teste Playwright que valida o pipeline comercial completo end-to-end.",
+        "details": "Fluxo: (1) login como operador, (2) criar prospect via modal, (3) converter prospect em cliente, (4) criar matricula para o cliente com plano, (5) verificar pagamento gerado, (6) marcar pagamento como recebido. Se esse teste passa, o core do produto funciona. Usar fixtures para dados de teste. Rodar no CI com backend real (docker-compose).",
+        "testStrategy": "Teste passa com backend ativo. Teste falha graciosamente se backend offline. Coverage do fluxo mais critico do produto.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "complexity": 4,
+        "subtasks": []
+      },
+      {
+        "id": 325,
+        "title": "Pagina /status publica com saude do sistema",
+        "description": "Pagina simples que mostra status do frontend, backend e banco de dados.",
+        "details": "Server component que chama: (1) /api/health do Next.js (frontend ok), (2) GET /api/v1/health/full do backend (banco, storage). Renderiza cards com status UP/DOWN, latencia e timestamp. Sem autenticacao. Visual minimalista, pode ser acessada por qualquer pessoa. Util para suporte ao cliente.\n\nDEPENDÊNCIA CROSS-REPO: Requer backend task academia-java#373 (health check completo) implementada primeiro.",
+        "testStrategy": "Pagina carrega e mostra status. Com backend offline mostra DOWN. Sem auth necessario.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 2,
+        "subtasks": []
       }
     ],
     "metadata": {
