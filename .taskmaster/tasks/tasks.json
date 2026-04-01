@@ -12236,18 +12236,19 @@
         "description": "Pagina simples que mostra status do frontend, backend e banco de dados.",
         "details": "Server component que chama: (1) /api/health do Next.js (frontend ok), (2) GET /api/v1/health/full do backend (banco, storage). Renderiza cards com status UP/DOWN, latencia e timestamp. Sem autenticacao. Visual minimalista, pode ser acessada por qualquer pessoa. Util para suporte ao cliente.\n\nDEPENDÊNCIA CROSS-REPO: Requer backend task academia-java#373 (health check completo) implementada primeiro.",
         "testStrategy": "Pagina carrega e mostra status. Com backend offline mostra DOWN. Sem auth necessario.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-01T13:33:57.719Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T13:32:41.780Z",
+      "lastModified": "2026-04-01T13:33:57.720Z",
       "taskCount": 321,
-      "completedCount": 317,
+      "completedCount": 318,
       "tags": [
         "master"
       ]

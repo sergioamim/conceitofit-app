@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { extractSubdomain } from "@/lib/storefront/subdomain";
 
 // ---------------------------------------------------------------------------
 // Storefront subdomain middleware
@@ -42,36 +43,6 @@ function getCached(subdomain: string): CacheEntry | null | undefined {
     return undefined;
   }
   return entry;
-}
-
-// ---------------------------------------------------------------------------
-// Extração de subdomínio
-// ---------------------------------------------------------------------------
-
-function extractSubdomain(host: string): string | undefined {
-  const hostname = host.split(":")[0]?.toLowerCase() ?? "";
-  if (!hostname) return undefined;
-
-  // Dev: algo.localhost → "algo"
-  if (hostname.endsWith(".localhost")) {
-    const label = hostname.replace(/\.localhost$/, "");
-    return label && label !== "localhost" ? label : undefined;
-  }
-
-  // Produção: sub.dominio.com.br → "sub" (ignora domínios raiz)
-  const parts = hostname.split(".");
-  if (parts.length < 3) return undefined; // dominio.com.br → sem subdomínio
-
-  const candidate = parts[0];
-  if (!candidate || candidate === "www") return undefined;
-
-  // Verifica se o host base (sem subdomínio) é um root host conhecido
-  const baseHost = parts.slice(1).join(".");
-  if (ROOT_HOSTS.has(hostname) || ROOT_HOSTS.has(baseHost)) {
-    return undefined; // é o domínio raiz da app, não storefront
-  }
-
-  return candidate;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,7 +97,7 @@ async function resolveTenant(
 
 export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
-  const subdomain = extractSubdomain(host);
+  const subdomain = extractSubdomain(host, ROOT_HOSTS);
 
   // Sem subdomínio → fluxo normal da aplicação
   if (!subdomain) {
