@@ -5,6 +5,11 @@ type CreateVendaResponse = {
   id?: string;
 };
 
+type PublicApiRequest = {
+  method: string;
+  path: string;
+};
+
 async function abrirRota(page: Page, url: string, matcher: RegExp) {
   try {
     await page.goto(url, { waitUntil: "domcontentloaded" });
@@ -20,6 +25,30 @@ async function aguardarJornadaPublica(page: Page) {
   await expect(page.getByText("Carregando jornada pública...")).not.toBeVisible({ timeout: 30_000 });
 }
 
+function capturarRequestsPublicos(page: Page): PublicApiRequest[] {
+  const requests: PublicApiRequest[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (!url.pathname.includes("/api/v1/")) return;
+    requests.push({
+      method: request.method(),
+      path: url.pathname.replace(/^\/backend/, ""),
+    });
+  });
+  return requests;
+}
+
+function expectRequestRegistrada(
+  requests: PublicApiRequest[],
+  method: string,
+  matcher: RegExp,
+) {
+  expect(
+    requests.some((entry) => entry.method === method && matcher.test(entry.path)),
+    `Esperava request ${method} ${matcher}.\nRecebidas: ${requests.map((entry) => `${entry.method} ${entry.path}`).join("\n")}`,
+  ).toBe(true);
+}
+
 test.describe("Jornada pública de adesão", () => {
   test.beforeEach(async ({ page }) => {
     await installPublicJourneyApiMocks(page);
@@ -27,6 +56,7 @@ test.describe("Jornada pública de adesão", () => {
 
   test("capta trial e segue para o cadastro da unidade", async ({ page }) => {
     test.slow();
+    const requests = capturarRequestsPublicos(page);
     await abrirRota(page, "/adesao/trial?tenant=pechincha-s3", /\/adesao\/trial/);
     await aguardarJornadaPublica(page);
 
@@ -46,10 +76,17 @@ test.describe("Jornada pública de adesão", () => {
 
     await expect(page).toHaveURL(/\/adesao\/cadastro/);
     await expect(page.getByRole("heading", { name: "Complete o pré-cadastro" })).toBeVisible({ timeout: 30_000 });
+    expectRequestRegistrada(requests, "GET", /^\/api\/v1\/unidades$/);
+    expectRequestRegistrada(requests, "GET", /^\/api\/v1\/context\/unidade-ativa$/);
+    expectRequestRegistrada(requests, "GET", /^\/api\/v1\/academia$/);
+    expectRequestRegistrada(requests, "GET", /^\/api\/v1\/comercial\/planos$/);
+    expectRequestRegistrada(requests, "GET", /^\/api\/v1\/gerencial\/financeiro\/formas-pagamento$/);
+    expectRequestRegistrada(requests, "POST", /^\/api\/v1\/publico\/adesao\/trials$/);
   });
 
   test("fecha adesão pública, cai em pendência contratual e conclui assinatura", async ({ page }) => {
     test.slow();
+    const requests = capturarRequestsPublicos(page);
     await abrirRota(
       page,
       "/adesao/cadastro?tenant=mananciais-s1&plan=plano-mananciais-premium",
@@ -98,5 +135,11 @@ test.describe("Jornada pública de adesão", () => {
     await expect(page.getByText("PAGO", { exact: true })).toBeVisible();
     await expect(page.getByText("ASSINADO", { exact: true })).toBeVisible();
     await expect(page.getByText("Contratação concluída.")).toBeVisible();
+    expectRequestRegistrada(requests, "POST", /^\/api\/v1\/publico\/adesao\/cadastros$/);
+    expectRequestRegistrada(requests, "POST", /^\/api\/v1\/publico\/adesao\/[^/]+\/checkout$/);
+    expectRequestRegistrada(requests, "GET", /^\/api\/v1\/publico\/adesao\/[^/]+$/);
+    expectRequestRegistrada(requests, "POST", /^\/api\/v1\/publico\/adesao\/[^/]+\/contrato\/otp$/);
+    expectRequestRegistrada(requests, "POST", /^\/api\/v1\/publico\/adesao\/[^/]+\/contrato\/assinaturas$/);
+    expectRequestRegistrada(requests, "POST", /^\/api\/v1\/publico\/adesao\/[^/]+\/pagamento\/confirmacao$/);
   });
 });

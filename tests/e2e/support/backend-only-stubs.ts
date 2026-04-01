@@ -186,6 +186,14 @@ type AdesaoPublicaSeed = {
   updatedAt: string;
 };
 
+type AdesaoPendenciaSeed = {
+  codigo: "DADOS_CADASTRAIS" | "PAGAMENTO" | "CONTRATO";
+  descricao: string;
+  obrigatoria: boolean;
+  resolvida: boolean;
+  resolvidaEm: string | null;
+};
+
 type ReservasTenantSeed = {
   id: string;
   nome: string;
@@ -308,6 +316,75 @@ function buildAcademiaFromTenant(tenant: TenantSeed) {
     telefone: tenant.telefone,
     ativo: true,
     branding: tenant.branding,
+  };
+}
+
+function buildCatalogoPublicoResponse(tenant: TenantSeed, planos: PlanoSeed[]) {
+  return {
+    tenantId: tenant.id,
+    academiaId: tenant.academiaId,
+    nomeUnidade: tenant.nome,
+    subdomain: tenant.subdomain,
+    planos: planos
+      .filter((plano) => plano.ativo)
+      .sort((left, right) => {
+        if (left.destaque === right.destaque) {
+          return (left.ordem ?? 999) - (right.ordem ?? 999);
+        }
+        return left.destaque ? -1 : 1;
+      })
+      .map((plano) => ({
+        id: plano.id,
+        nome: plano.nome,
+        descricao: plano.descricao ?? "",
+        tipo: plano.tipo,
+        duracaoDias: plano.duracaoDias,
+        valor: plano.valor,
+        valorMatricula: plano.valorMatricula,
+        destaque: plano.destaque ?? false,
+        beneficios: plano.beneficios ?? [],
+      })),
+  };
+}
+
+function resolveAdesaoPendencias(adesao: AdesaoPublicaSeed): AdesaoPendenciaSeed[] {
+  if (adesao.status === "TRIAL_INICIADO") {
+    return [];
+  }
+
+  const pendencias: AdesaoPendenciaSeed[] = [];
+  if (adesao.contratoStatus) {
+    const contratoAssinado = adesao.contratoStatus === "ASSINADO";
+    pendencias.push({
+      codigo: "CONTRATO",
+      descricao: contratoAssinado ? "Contrato assinado." : "Contrato pendente de assinatura.",
+      obrigatoria: true,
+      resolvida: contratoAssinado,
+      resolvidaEm: contratoAssinado ? nowIso() : null,
+    });
+  }
+
+  if (adesao.pagamentoStatus) {
+    const pagamentoConcluido =
+      adesao.pagamentoStatus === "LIQUIDADO" || adesao.pagamentoStatus === "CAPTURADO";
+    pendencias.push({
+      codigo: "PAGAMENTO",
+      descricao: pagamentoConcluido ? "Pagamento confirmado." : "Pagamento pendente de confirmação.",
+      obrigatoria: true,
+      resolvida: pagamentoConcluido,
+      resolvidaEm: pagamentoConcluido ? nowIso() : null,
+    });
+  }
+
+  return pendencias;
+}
+
+function buildAdesaoStatusResponse(adesao: AdesaoPublicaSeed) {
+  return {
+    ...adesao,
+    trialDias: adesao.origem === "TRIAL" ? 7 : null,
+    mensagemStatus: adesao.status === "CONCLUIDA" ? "Contratação concluída." : null,
+    pendencias: resolveAdesaoPendencias(adesao),
   };
 }
 
@@ -604,6 +681,13 @@ export async function installPublicJourneyApiMocks(page: Page) {
       return;
     }
 
+    if (path === "/api/v1/publico/adesao/catalogo" && method === "GET") {
+      const tenantRef = url.searchParams.get("subdomain") ?? url.searchParams.get("tenantId");
+      const tenant = tenants.find((item) => item.subdomain === tenantRef || item.id === tenantRef) ?? getTenantFromRequest(url);
+      await fulfillJson(route, buildCatalogoPublicoResponse(tenant, plansByTenant.get(tenant.id) ?? []));
+      return;
+    }
+
     if (/^\/api\/v1\/comercial\/planos\/[^/]+$/.test(path) && method === "GET") {
       const tenant = getTenantFromRequest(url);
       const planId = path.split("/").at(-1) ?? "";
@@ -667,7 +751,7 @@ export async function installPublicJourneyApiMocks(page: Page) {
         updatedAt: createdAt,
       };
       adesoes = [adesao, ...adesoes];
-      await fulfillJson(route, { ...adesao, trialDias: 7, mensagemStatus: null, pendencias: [] }, 201);
+      await fulfillJson(route, buildAdesaoStatusResponse(adesao), 201);
       return;
     }
 
@@ -702,7 +786,33 @@ export async function installPublicJourneyApiMocks(page: Page) {
         updatedAt: createdAt,
       };
       adesoes = [adesao, ...adesoes];
-      await fulfillJson(route, { ...adesao, trialDias: null, mensagemStatus: null, pendencias: [] }, 201);
+      await fulfillJson(route, buildAdesaoStatusResponse(adesao), 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/publico\/adesao\/[^/]+\/cadastro$/.test(path) && method === "PUT") {
+      const token = request.headers()["x-adesao-token"];
+      const adesao = findAdesao(path, token);
+      const payload = parseBody<{
+        nome?: string;
+        email?: string;
+        telefone?: string;
+        cpf?: string;
+      }>(request);
+      if (!adesao) {
+        await fulfillJson(route, { message: "Adesão não encontrada." }, 404);
+        return;
+      }
+      Object.assign(adesao, {
+        origem: "CADASTRO_PUBLICO",
+        status: "CADASTRO_RECEBIDO",
+        candidatoNome: payload.nome?.trim() || adesao.candidatoNome,
+        candidatoEmail: payload.email?.trim() || adesao.candidatoEmail,
+        candidatoTelefone: payload.telefone?.trim() || adesao.candidatoTelefone,
+        candidatoCpf: payload.cpf?.trim() || adesao.candidatoCpf,
+        updatedAt: nowIso(),
+      });
+      await fulfillJson(route, buildAdesaoStatusResponse(adesao));
       return;
     }
 
@@ -726,27 +836,7 @@ export async function installPublicJourneyApiMocks(page: Page) {
         pagamentoId: adesao.pagamentoId ?? `pagamento-publico-${pagamentoCounter++}`,
         updatedAt: createdAt,
       });
-      await fulfillJson(route, {
-        ...adesao,
-        trialDias: null,
-        mensagemStatus: null,
-        pendencias: [
-          {
-            codigo: "CONTRATO",
-            descricao: "Contrato pendente de assinatura.",
-            obrigatoria: true,
-            resolvida: false,
-            resolvidaEm: null,
-          },
-          {
-            codigo: "PAGAMENTO",
-            descricao: "Pagamento pendente de confirmação.",
-            obrigatoria: true,
-            resolvida: false,
-            resolvidaEm: null,
-          },
-        ],
-      });
+      await fulfillJson(route, buildAdesaoStatusResponse(adesao));
       return;
     }
 
@@ -774,27 +864,7 @@ export async function installPublicJourneyApiMocks(page: Page) {
       adesao.contratoStatus = "ASSINADO";
       adesao.status = adesao.pagamentoStatus === "LIQUIDADO" ? "CONCLUIDA" : "AGUARDANDO_PAGAMENTO";
       adesao.updatedAt = nowIso();
-      await fulfillJson(route, {
-        ...adesao,
-        trialDias: null,
-        mensagemStatus: null,
-        pendencias: [
-          {
-            codigo: "CONTRATO",
-            descricao: "Contrato assinado.",
-            obrigatoria: true,
-            resolvida: true,
-            resolvidaEm: nowIso(),
-          },
-          {
-            codigo: "PAGAMENTO",
-            descricao: "Pagamento pendente de confirmação.",
-            obrigatoria: true,
-            resolvida: adesao.pagamentoStatus === "LIQUIDADO",
-            resolvidaEm: adesao.pagamentoStatus === "LIQUIDADO" ? nowIso() : null,
-          },
-        ],
-      });
+      await fulfillJson(route, buildAdesaoStatusResponse(adesao));
       return;
     }
 
@@ -808,27 +878,47 @@ export async function installPublicJourneyApiMocks(page: Page) {
       adesao.pagamentoStatus = "LIQUIDADO";
       adesao.status = adesao.contratoStatus === "ASSINADO" ? "CONCLUIDA" : "AGUARDANDO_CONTRATO";
       adesao.updatedAt = nowIso();
-      await fulfillJson(route, {
-        ...adesao,
-        trialDias: null,
-        mensagemStatus: "Contratação concluída.",
-        pendencias: [
-          {
-            codigo: "CONTRATO",
-            descricao: "Contrato assinado.",
-            obrigatoria: true,
-            resolvida: adesao.contratoStatus === "ASSINADO",
-            resolvidaEm: adesao.contratoStatus === "ASSINADO" ? nowIso() : null,
-          },
-          {
-            codigo: "PAGAMENTO",
-            descricao: "Pagamento confirmado.",
-            obrigatoria: true,
-            resolvida: true,
-            resolvidaEm: nowIso(),
-          },
-        ],
-      });
+      await fulfillJson(route, buildAdesaoStatusResponse(adesao));
+      return;
+    }
+
+    if (/^\/api\/v1\/publico\/adesao\/[^/]+\/pendencias$/.test(path) && method === "GET") {
+      const token = request.headers()["x-adesao-token"];
+      const adesao = findAdesao(path, token);
+      if (!adesao) {
+        await fulfillJson(route, { message: "Adesão não encontrada." }, 404);
+        return;
+      }
+      await fulfillJson(route, resolveAdesaoPendencias(adesao));
+      return;
+    }
+
+    if (/^\/api\/v1\/publico\/adesao\/[^/]+\/pendencias\/[^/]+$/.test(path) && method === "PATCH") {
+      const token = request.headers()["x-adesao-token"];
+      const adesao = findAdesao(path, token);
+      const codigo = path.split("/").at(-1) ?? "";
+      const payload = parseBody<{ resolvida?: boolean }>(request);
+      if (!adesao) {
+        await fulfillJson(route, { message: "Adesão não encontrada." }, 404);
+        return;
+      }
+      if (codigo === "CONTRATO") {
+        adesao.contratoStatus = payload.resolvida ? "ASSINADO" : "PENDENTE";
+      }
+      if (codigo === "PAGAMENTO") {
+        adesao.pagamentoStatus = payload.resolvida ? "LIQUIDADO" : "CRIADO";
+      }
+      if (adesao.contratoStatus === "ASSINADO" && adesao.pagamentoStatus === "LIQUIDADO") {
+        adesao.status = "CONCLUIDA";
+      } else if (adesao.contratoStatus === "ASSINADO") {
+        adesao.status = "AGUARDANDO_PAGAMENTO";
+      } else if (adesao.pagamentoStatus === "LIQUIDADO") {
+        adesao.status = "AGUARDANDO_CONTRATO";
+      } else {
+        adesao.status = "AGUARDANDO_CONTRATO";
+      }
+      adesao.updatedAt = nowIso();
+      await fulfillJson(route, buildAdesaoStatusResponse(adesao));
       return;
     }
 
@@ -839,27 +929,7 @@ export async function installPublicJourneyApiMocks(page: Page) {
         await fulfillJson(route, { message: "Adesão não encontrada." }, 404);
         return;
       }
-      await fulfillJson(route, {
-        ...adesao,
-        trialDias: adesao.origem === "TRIAL" ? 7 : null,
-        mensagemStatus: adesao.status === "CONCLUIDA" ? "Contratação concluída." : null,
-        pendencias: [
-          {
-            codigo: "CONTRATO",
-            descricao: "Contrato pendente de assinatura.",
-            obrigatoria: true,
-            resolvida: adesao.contratoStatus === "ASSINADO",
-            resolvidaEm: adesao.contratoStatus === "ASSINADO" ? nowIso() : null,
-          },
-          {
-            codigo: "PAGAMENTO",
-            descricao: "Pagamento pendente de confirmação.",
-            obrigatoria: true,
-            resolvida: adesao.pagamentoStatus === "LIQUIDADO",
-            resolvidaEm: adesao.pagamentoStatus === "LIQUIDADO" ? nowIso() : null,
-          },
-        ],
-      });
+      await fulfillJson(route, buildAdesaoStatusResponse(adesao));
       return;
     }
 
