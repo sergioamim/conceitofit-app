@@ -12821,7 +12821,7 @@
         "description": "Fazer os testes de criacao de conta demo cobrirem o submit real, o salvamento da sessao e a entrada no dashboard demo sem regressao.",
         "details": "Esta task depende de 327, 329 e 330, porque o dashboard demo reutiliza o shell autenticado do app.\n\nEscopo obrigatorio:\n1. Revisar tests/e2e/demo-account.spec.ts e src/app/(public)/b2b/demo/demo-form.tsx.\n2. Confirmar se o route pattern mockado (**/api/v1/publico/demo) casa com a chamada real de createDemoAccount.\n3. Verificar se a resposta mockada entrega todas as propriedades que saveAuthSession e o shell do dashboard agora precisam.\n4. Garantir que o redirect para /dashboard?demo=1 encontre bootstrap/contexto suficientes para o banner e para o shell inicial.\n5. Corrigir tambem os cenarios de validacao que hoje podem estar falhando por markup/labels divergentes do formulario atual.\n\nCriterio de aceite: os cenarios de submit valido, banner visivel e dismiss persistente devem passar sem depender de backend real.",
         "testStrategy": "Reexecutar demo-account.spec.ts e validar submit, redirect para /dashboard?demo=1, banner visível e persistencia do dismiss sem depender de backend real.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "327",
           "329",
@@ -12882,7 +12882,7 @@
           }
         ],
         "complexity": 6,
-        "updatedAt": "2026-04-01T21:15:00.000Z",
+        "updatedAt": "2026-04-01T21:25:00.000Z",
         "recommendedSubtasks": 3,
         "expansionPrompt": "Dividir a tarefa em: 1. Revisão de tests/e2e/demo-account.spec.ts e `demo-form.tsx`. 2. Confirmação do mock de createDemoAccount e validação da resposta para `saveAuthSession`. 3. Garantia de bootstrap e contexto suficientes para o dashboard demo (`/dashboard?demo=1`) e correção de validações de formulário."
       },
@@ -12963,7 +12963,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T21:15:00.000Z",
+      "lastModified": "2026-04-01T21:25:00.000Z",
       "taskCount": 332,
       "completedCount": 330,
       "tags": [
