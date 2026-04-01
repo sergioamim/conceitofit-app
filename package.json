@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:mock": "next dev --webpack -p 3000 -H localhost",
+    "dev:mock": "BACKEND_PROXY_TARGET=http://localhost:8080 next dev --webpack -p 3000 -H localhost",
     "dev:api": "NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 BACKEND_PROXY_TARGET=http://localhost:8080 next dev --webpack -p 3001 -H localhost",
     "dev:api:scan": "NEXT_PUBLIC_REACT_SCAN=true NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 BACKEND_PROXY_TARGET=http://localhost:8080 next dev --webpack -p 3001 -H localhost",
     "dev:3001:api": "NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 BACKEND_PROXY_TARGET=http://localhost:8080 next dev --webpack -p 3001 -H localhost",

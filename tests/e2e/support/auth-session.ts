@@ -71,6 +71,8 @@ export const E2E_AUTH_SESSION_STORAGE_KEYS = [
   "academia-auth-broad-access",
   "academia-auth-force-password-change-required",
 ] as const;
+const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
+const E2E_BASE_URL = "http://localhost:3000";
 
 const DEFAULT_TENANT_ID = "tenant-e2e";
 
@@ -203,6 +205,7 @@ export function buildE2EAuthSession(seed: E2EAuthSessionSeed = {}): ResolvedE2EA
 }
 
 function writeE2EAuthSessionInBrowser(session: ResolvedE2EAuthSession): void {
+  const activeTenantCookieKey = "academia-active-tenant-id";
   const storage = window.localStorage;
   const setStorageValue = (key: string, value?: string) => {
     if (!value) {
@@ -210,6 +213,14 @@ function writeE2EAuthSessionInBrowser(session: ResolvedE2EAuthSession): void {
       return;
     }
     storage.setItem(key, value);
+  };
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const writeCookie = (name: string, value?: string) => {
+    if (!value) {
+      document.cookie = `${name}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`;
+      return;
+    }
+    document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; SameSite=Lax${secure}`;
   };
 
   setStorageValue("academia-auth-token", session.token);
@@ -237,6 +248,7 @@ function writeE2EAuthSessionInBrowser(session: ResolvedE2EAuthSession): void {
   );
   setStorageValue("academia-auth-network-name", session.networkName);
   setStorageValue("academia-auth-active-tenant-id", session.activeTenantId);
+  writeCookie(activeTenantCookieKey, session.activeTenantId);
   setStorageValue("academia-auth-preferred-tenant-id", session.preferredTenantId);
   setStorageValue("academia-auth-base-tenant-id", session.baseTenantId);
   setStorageValue(
@@ -268,6 +280,15 @@ export async function installE2EAuthSession(
   seed: E2EAuthSessionSeed = {},
 ): Promise<ResolvedE2EAuthSession> {
   const session = buildE2EAuthSession(seed);
+  if (session.activeTenantId) {
+    await page.context().addCookies([
+      {
+        name: ACTIVE_TENANT_COOKIE_KEY,
+        value: session.activeTenantId,
+        url: E2E_BASE_URL,
+      },
+    ]);
+  }
   await page.addInitScript(writeE2EAuthSessionInBrowser, session);
   return session;
 }
@@ -277,13 +298,24 @@ export async function applyE2EAuthSession(
   seed: E2EAuthSessionSeed = {},
 ): Promise<ResolvedE2EAuthSession> {
   const session = buildE2EAuthSession(seed);
+  if (session.activeTenantId) {
+    await page.context().addCookies([
+      {
+        name: ACTIVE_TENANT_COOKIE_KEY,
+        value: session.activeTenantId,
+        url: E2E_BASE_URL,
+      },
+    ]);
+  }
   await page.evaluate(writeE2EAuthSessionInBrowser, session);
   return session;
 }
 
 export async function clearE2EAuthSession(page: Page): Promise<void> {
+  await page.context().clearCookies();
   await page.evaluate((keys) => {
     keys.forEach((key) => window.localStorage.removeItem(key));
+    document.cookie = "academia-active-tenant-id=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
     window.dispatchEvent(new Event("academia-session-updated"));
   }, [...E2E_AUTH_SESSION_STORAGE_KEYS]);
 }
