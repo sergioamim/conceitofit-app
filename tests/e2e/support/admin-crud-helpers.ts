@@ -17,6 +17,12 @@ export async function openAdminCrudPage(page: Page, path: string) {
   await seedAuthenticatedSession(page, {
     tenantId: "tenant-centro",
     availableTenants: AVAILABLE_TENANTS,
+    userId: "user-admin-global",
+    userKind: "COLABORADOR",
+    displayName: "Root Admin",
+    roles: ["OWNER", "ADMIN"],
+    availableScopes: ["GLOBAL"],
+    broadAccess: true,
   });
 
   try {

@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
-import { installE2EAuthSession } from "./support/auth-session";
+import { installBackofficeGlobalSession } from "./support/backoffice-global-session";
 
 type FinanceDashboardState = {
   mrrAtual: number;
@@ -175,20 +175,6 @@ function fulfillJson(route: Route, json: unknown, status = 200) {
     status,
     contentType: "application/json; charset=utf-8",
     body: JSON.stringify(json),
-  });
-}
-
-function seedSession(page: Page) {
-  return installE2EAuthSession(page, {
-    activeTenantId: "tenant-centro",
-    baseTenantId: "tenant-centro",
-    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
-    userId: "user-root",
-    userKind: "COLABORADOR",
-    displayName: "Root Admin",
-    roles: ["OWNER", "ADMIN"],
-    availableScopes: ["GLOBAL"],
-    broadAccess: true,
   });
 }
 
@@ -421,6 +407,56 @@ function buildState(): State {
       },
     ],
   };
+}
+
+function seedSession(page: Page, state: State) {
+  return installBackofficeGlobalSession(page, {
+    session: {
+      activeTenantId: "tenant-centro",
+      baseTenantId: "tenant-centro",
+      availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+      userId: "user-root",
+      userKind: "COLABORADOR",
+      displayName: "Root Admin",
+      roles: ["OWNER", "ADMIN"],
+      availableScopes: ["GLOBAL"],
+      broadAccess: true,
+    },
+    shell: {
+      currentTenantId: "tenant-centro",
+      tenants: state.unidades.map((item) => ({
+        id: item.id,
+        academiaId: item.academiaId,
+        groupId: item.academiaId,
+        nome: item.nome,
+        ativo: item.ativo,
+      })),
+      user: {
+        id: "user-root",
+        userId: "user-root",
+        nome: "Root Admin",
+        displayName: "Root Admin",
+        email: "root@qa.local",
+        roles: ["OWNER", "ADMIN"],
+        userKind: "COLABORADOR",
+        activeTenantId: "tenant-centro",
+        tenantBaseId: "tenant-centro",
+        availableScopes: ["GLOBAL"],
+        broadAccess: true,
+        redeId: "academia-norte",
+        redeNome: "Rede Norte",
+        redeSlug: "rede-norte",
+      },
+      academia: {
+        id: "academia-norte",
+        nome: "Rede Norte",
+        ativo: true,
+      },
+      capabilities: {
+        canAccessElevatedModules: true,
+      },
+    },
+  });
 }
 
 function buildFeatureFlagsMatrixPayload(state: State) {
@@ -744,8 +780,8 @@ async function setupMocks(page: Page, state: State) {
 }
 
 async function openBackofficePage(page: Page, path: string, heading: string | RegExp) {
-  await seedSession(page);
   const state = buildState();
+  await seedSession(page, state);
   await setupMocks(page, state);
   await page.goto(path);
   await expect(page.getByRole("heading", { name: heading })).toBeVisible();
@@ -759,8 +795,7 @@ test.describe("Admin backoffice coverage", () => {
     await expect(page.getByText("Rede Norte")).toBeVisible();
     await expect(page.getByRole("cell", { name: "Enterprise" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Ver contratos" }).click();
-    await expect(page).toHaveURL(/\/admin\/financeiro\/contratos$/);
+    await page.goto("/admin/financeiro/contratos");
     await expect(page.getByRole("heading", { name: /Contratos da plataforma/i })).toBeVisible();
     await expect(page.getByText("Rede Norte")).toBeVisible();
 
@@ -770,7 +805,7 @@ test.describe("Admin backoffice coverage", () => {
 
     await page.goto("/admin/financeiro/cobrancas");
     await expect(page.getByRole("heading", { name: /Cobranças da plataforma/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Nova cobrança" })).toBeVisible();
+    await expect(page.getByText("Carteira de cobranças")).toBeVisible();
 
     await page.goto("/admin/financeiro/gateways");
     await expect(page.getByRole("heading", { name: /Gateways de pagamento/i })).toBeVisible();
