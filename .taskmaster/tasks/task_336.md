@@ -2,7 +2,7 @@
 
 **Title:** Executar reruns direcionados, consolidar residuos e documentar a nova linha de base Playwright
 
-**Status:** in-progress
+**Status:** done
 
 **Dependencies:** 330 ✓, 331 ✓, 332 ✓, 333 ✓, 334 ✓, 335 ✓
 

@@ -12892,7 +12892,7 @@
         "description": "Fechar o ciclo do relatorio atual com reruns por grupo, lista clara de residuos e atualizacao da referencia operacional da suite E2E.",
         "details": "Esta task depende de 330, 331, 332, 333, 334 e 335.\n\nEscopo obrigatorio:\n1. Reexecutar as suites por agrupamento de causa-raiz, nao somente o comando global, para confirmar que as correcoes realmente eliminaram cada familia de falha.\n2. Consolidar um resumo final por bucket: autenticacao app, autenticacao backoffice, auth-rede/storefront, adesao publica, loading financeiro/operacional, demo e residuos funcionais isolados.\n3. Abrir follow-ups apenas para falhas remanescentes que ja nao sejam mais problemas de fixture, auth ou mocks minimos.\n4. Atualizar a documentacao interna necessaria para o time entender como semear sessao e quais contratos minimos cada shell espera.\n5. Regenerar os arquivos do Taskmaster ao final e garantir que o backlog reflita corretamente o estado desta campanha de estabilizacao.\n\nCriterio de aceite: o time deve conseguir olhar o backlog e saber exatamente quais grupos foram estabilizados, quais ainda restam e qual comando reproduz cada bucket.",
         "testStrategy": "Executar reruns por bucket apos as correcoes, comparar o resultado com o relatório inicial e atualizar Taskmaster/documentacao com o estado final desta campanha de estabilizacao.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "330",
           "331",
@@ -12956,7 +12956,7 @@
           }
         ],
         "complexity": 5,
-        "updatedAt": "2026-04-01T19:04:50.655Z",
+        "updatedAt": "2026-04-01T19:08:00.408Z",
         "recommendedSubtasks": 5,
         "expansionPrompt": "Dividir a tarefa em: 1. Reexecução de suites por agrupamento de causa-raiz. 2. Consolidação do resumo final de falhas por bucket. 3. Abertura de follow-ups para falhas funcionais remanescentes. 4. Atualização da documentação interna sobre sessão e mocks E2E. 5. Regeneração dos arquivos do Taskmaster e validação do backlog."
       },
@@ -13002,9 +13002,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T19:04:50.656Z",
+      "lastModified": "2026-04-01T19:08:00.409Z",
       "taskCount": 335,
-      "completedCount": 331,
+      "completedCount": 332,
       "tags": [
         "master"
       ]
