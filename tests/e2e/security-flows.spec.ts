@@ -1,26 +1,15 @@
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   applyE2EAuthSession,
   clearE2EAuthSession,
   installE2EAuthSession,
 } from "./support/auth-session";
+import { fulfillJson, installProtectedShellMocks } from "./support/protected-shell-mocks";
 
 const TENANTS = [
   { id: "tenant-centro", nome: "Unidade Centro", ativo: true },
   { id: "tenant-barra", nome: "Unidade Barra", ativo: true },
 ];
-
-async function fulfillJson(route: Route, json: unknown, status = 200) {
-  await route.fulfill({
-    status,
-    contentType: "application/json; charset=utf-8",
-    body: JSON.stringify(json),
-  });
-}
-
-function normalizedPath(pathname: string) {
-  return pathname.replace(/^\/backend/, "");
-}
 
 async function installSecurityMocks(
   page: Page,
@@ -38,117 +27,84 @@ async function installSecurityMocks(
     broadAccess = false,
   } = options;
 
-  let currentTenantId = TENANTS[0].id;
+  const shell = await installProtectedShellMocks(page, {
+    currentTenantId: TENANTS[0].id,
+    tenants: TENANTS.map((tenant) => ({
+      ...tenant,
+      academiaId: "academia-1",
+      groupId: "academia-1",
+    })),
+    user: {
+      userId: "user-1",
+      nome: "Admin Teste",
+      displayName: "Admin Teste",
+      email: "admin@academia.local",
+      roles,
+      userKind,
+      activeTenantId: TENANTS[0].id,
+      tenantBaseId: TENANTS[0].id,
+      availableScopes: ["UNIDADE"],
+      broadAccess,
+    },
+    academia: { id: "academia-1", nome: "Academia Teste", ativo: true },
+    capabilities: {
+      canAccessElevatedModules: true,
+      canDeleteClient: false,
+    },
+  });
 
-  await page.route("**/api/v1/**", async (route) => {
-    const request = route.request();
-    const method = request.method();
-    const url = new URL(request.url());
-    const path = normalizedPath(url.pathname);
-
-    if (path === "/api/v1/auth/login" && method === "POST") {
-      if (loginShouldFail) {
-        await fulfillJson(route, { error: "Unauthorized", message: "Credenciais inválidas." }, 401);
-        return;
-      }
-      await fulfillJson(route, {
-        token: "token-valid",
-        refreshToken: "refresh-valid",
-        type: "Bearer",
-        expiresIn: 3600,
-        userId: "user-1",
-        displayName: "Admin Teste",
-        userKind,
-        redeId: null,
-        redeSlug: null,
-        redeNome: null,
-        activeTenantId: TENANTS[0].id,
-        tenantBaseId: TENANTS[0].id,
-        availableTenants: TENANTS.map((t, i) => ({ tenantId: t.id, defaultTenant: i === 0 })),
-        availableScopes: ["UNIDADE"],
-        broadAccess,
-      });
+  await page.route("**/api/v1/auth/login", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
       return;
     }
 
-    if (path === "/api/v1/context/unidade-ativa" && method === "GET") {
-      const tenantAtual = TENANTS.find((t) => t.id === currentTenantId) ?? TENANTS[0];
-      await fulfillJson(route, {
-        currentTenantId,
-        tenantAtual,
-        unidadesDisponiveis: TENANTS,
-      });
+    if (loginShouldFail) {
+      await fulfillJson(route, { error: "Unauthorized", message: "Credenciais inválidas." }, 401);
       return;
     }
 
-    const switchMatch = path.match(/^\/api\/v1\/context\/unidade-ativa\/([^/]+)$/);
-    if (method === "PUT" && switchMatch) {
-      currentTenantId = decodeURIComponent(switchMatch[1] ?? "").trim() || currentTenantId;
-      const tenantAtual = TENANTS.find((t) => t.id === currentTenantId) ?? TENANTS[0];
-      await fulfillJson(route, {
-        currentTenantId,
-        tenantAtual,
-        unidadesDisponiveis: TENANTS,
-      });
+    await fulfillJson(route, {
+      token: "token-valid",
+      refreshToken: "refresh-valid",
+      type: "Bearer",
+      expiresIn: 3600,
+      userId: "user-1",
+      displayName: "Admin Teste",
+      userKind,
+      redeId: null,
+      redeSlug: null,
+      redeNome: null,
+      activeTenantId: TENANTS[0].id,
+      tenantBaseId: TENANTS[0].id,
+      availableTenants: TENANTS.map((t, i) => ({ tenantId: t.id, defaultTenant: i === 0 })),
+      availableScopes: ["UNIDADE"],
+      broadAccess,
+    });
+  });
+
+  await page.route("**/api/v1/academia/dashboard", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
       return;
     }
 
-    if (path === "/api/v1/app/bootstrap" && method === "GET") {
-      const tenantAtual = TENANTS.find((t) => t.id === currentTenantId) ?? TENANTS[0];
-      await fulfillJson(route, {
-        user: {
-          userId: "user-1",
-          nome: "Admin Teste",
-          displayName: "Admin Teste",
-          email: "admin@academia.local",
-          roles,
-          userKind,
-          activeTenantId: currentTenantId,
-          tenantBaseId: TENANTS[0].id,
-          availableTenants: TENANTS.map((t, i) => ({ tenantId: t.id, defaultTenant: i === 0 })),
-          availableScopes: ["UNIDADE"],
-          broadAccess,
-        },
-        tenantContext: {
-          currentTenantId,
-          tenantAtual,
-          unidadesDisponiveis: TENANTS,
-        },
-        academia: { id: "academia-1", nome: "Academia Teste", ativo: true },
-      });
-      return;
-    }
-
-    if (path === "/api/v1/auth/me" && method === "GET") {
-      await fulfillJson(route, {
-        userId: "user-1",
-        nome: "Admin Teste",
-        email: "admin@academia.local",
-        roles,
-      });
-      return;
-    }
-
-    if (path === "/api/v1/academia" && method === "GET") {
-      await fulfillJson(route, { id: "academia-1", nome: "Academia Teste", ativo: true });
-      return;
-    }
-
-    if (path === "/api/v1/academia/dashboard" && method === "GET") {
-      await fulfillJson(route, {
-        totalAlunosAtivos: 50,
-        prospectsNovos: 5,
-        matriculasDoMes: 3,
-        receitaDoMes: 10000,
-        prospectsRecentes: [],
-        matriculasVencendo: [],
-        pagamentosPendentes: [],
-        statusAlunoCount: { ATIVO: 50, INATIVO: 2, SUSPENSO: 0, CANCELADO: 1 },
-      });
-      return;
-    }
-
-    await route.fulfill({ status: 200, json: {} });
+    const currentTenantId = shell.getCurrentTenantId();
+    const currentTenant = shell.getCurrentTenant();
+    await fulfillJson(route, {
+      totalAlunosAtivos: currentTenantId === "tenant-barra" ? 38 : 50,
+      prospectsNovos: currentTenantId === "tenant-barra" ? 3 : 5,
+      matriculasDoMes: currentTenantId === "tenant-barra" ? 2 : 3,
+      receitaDoMes: currentTenantId === "tenant-barra" ? 7800 : 10000,
+      prospectsRecentes: [],
+      matriculasVencendo: [],
+      pagamentosPendentes: [],
+      statusAlunoCount: { ATIVO: currentTenantId === "tenant-barra" ? 38 : 50, INATIVO: 2, SUSPENSO: 0, CANCELADO: 1 },
+      tenantAtual: {
+        id: currentTenant.id,
+        nome: currentTenant.nome,
+      },
+    });
   });
 }
 
