@@ -48,8 +48,8 @@ interface OperationalAccessApiResponse {
 }
 
 interface LoginApiResponse {
-  token: string;
-  refreshToken: string;
+  token?: string;
+  refreshToken?: string;
   type?: string;
   expiresIn?: number;
   userId?: string;
@@ -320,6 +320,15 @@ export async function refreshTokenApi(refreshToken: string): Promise<AuthSession
   const session = normalizeSession(response, { preserveTenantContext: true });
   saveAuthSession(session);
   return session;
+}
+
+export async function logoutApi(): Promise<void> {
+  await apiRequest<void>({
+    path: "/api/v1/auth/logout",
+    method: "POST",
+    includeContextHeader: false,
+    retryOnAuthFailure: false,
+  });
 }
 
 export async function meApi(): Promise<AuthUser> {

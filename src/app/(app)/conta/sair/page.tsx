@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { logoutApi } from "@/lib/api/auth";
 import { clearAuthSession, getNetworkSlugFromSession } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 
@@ -14,6 +15,11 @@ export default function SairPage() {
     setSaving(true);
     try {
       const redirectHref = buildLoginHref(undefined, getNetworkSlugFromSession());
+      try {
+        await logoutApi();
+      } catch {
+        // Seguimos com a limpeza local mesmo se o backend não responder.
+      }
       clearAuthSession();
       router.replace(redirectHref);
       if (typeof window !== "undefined") {

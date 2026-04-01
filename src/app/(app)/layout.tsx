@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { TenantContextProvider, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useUserPreferences } from "@/lib/tenant/hooks/use-user-preferences";
-import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
+import { AUTH_SESSION_UPDATED_EVENT, getNetworkSlugFromSession, hasActiveSession } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { isClientOperationalEligibilityEnabled } from "@/lib/feature-flags";
 
@@ -180,7 +180,7 @@ function AppLayoutContent({
 
   useEffect(() => {
     function syncAuthenticated() {
-      setAuthenticated(Boolean(getAccessToken()));
+      setAuthenticated(hasActiveSession());
       setHydrated(true);
     }
 

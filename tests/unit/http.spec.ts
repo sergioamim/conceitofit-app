@@ -9,6 +9,7 @@ import {
   getAvailableTenantsFromSession,
   getAccessToken,
   getRefreshToken,
+  hasActiveSession,
   saveAuthSession,
   setPreferredTenantId,
 } from "../../src/lib/api/session";
@@ -50,6 +51,7 @@ type FetchCall = {
   url: string;
   method: string;
   headers: Headers;
+  credentials?: RequestCredentials;
 };
 
 function installMockBrowser(): MockBrowser {
@@ -87,6 +89,7 @@ function mockFetchSequence(
       url: String(input),
       method: init?.method ?? "GET",
       headers: new Headers(init?.headers),
+      credentials: init?.credentials,
     };
     calls.push(call);
     const response = responses[calls.length - 1];
@@ -152,6 +155,23 @@ test.afterEach(() => {
 });
 
 test.describe("http apiRequest", () => {
+  test("mantém tokens apenas em memória e usa flag de sessão ativa no navegador", async () => {
+    saveAuthSession({
+      token: "access-token",
+      refreshToken: "refresh-token",
+      type: "Bearer",
+      userId: "user-1",
+      displayName: "Usuário Teste",
+    });
+
+    expect(getAccessToken()).toBe("access-token");
+    expect(getRefreshToken()).toBe("refresh-token");
+    expect(hasActiveSession()).toBeTruthy();
+    expect(window.localStorage.getItem("academia-auth-token")).toBeNull();
+    expect(window.localStorage.getItem("academia-auth-refresh-token")).toBeNull();
+    expect(window.localStorage.getItem("academia-auth-session-active")).toBe("true");
+  });
+
   test("select trigger não usa suppressHydrationWarning", () => {
     const source = readFileSync(`${process.cwd()}/src/components/ui/select.tsx`, "utf8");
     expect(source).not.toMatch(/suppressHydrationWarning/);
@@ -190,6 +210,7 @@ test.describe("http apiRequest", () => {
       expect(calls[0].url).toContain("status=ATIVA");
       expect(calls[0].headers.get("X-Context-Id")).toBeTruthy();
       expect(calls[0].headers.get("Authorization")).toBe("Bearer access-token");
+      expect(calls[0].credentials).toBe("include");
     } finally {
       restore();
     }
@@ -822,7 +843,9 @@ test.describe("http apiRequest", () => {
       expect(calls).toHaveLength(3);
       expect(calls[0].headers.get("Authorization")).toBe("Bearer token-expired");
       expect(calls[1].url).toContain("/api/v1/auth/refresh");
+      expect(calls[1].credentials).toBe("include");
       expect(calls[2].headers.get("Authorization")).toBe("Bearer token-fresh");
+      expect(calls[2].credentials).toBe("include");
       expect(calls[2].url).not.toContain("tenantId=");
       expect(calls[2].headers.get("X-Context-Id")).toBeTruthy();
       expect(getActiveTenantIdFromSession()).toBe("tenant-active");
@@ -872,6 +895,7 @@ test.describe("http apiRequest", () => {
       expect(calls).toHaveLength(2);
       expect(calls[0].headers.get("Authorization")).toBe("Bearer token-expired");
       expect(calls[1].url).toContain("/api/v1/auth/refresh");
+      expect(calls[1].credentials).toBe("include");
       expect(getAccessToken()).toBeUndefined();
       expect(getRefreshToken()).toBeUndefined();
       expect(window.localStorage.getItem(CONTEXT_STORAGE_KEY)).toBeNull();
@@ -919,6 +943,7 @@ test.describe("http apiRequest", () => {
 
       expect(calls).toHaveLength(3);
       expect(calls[1].url).toContain("/api/v1/auth/refresh");
+      expect(calls[1].credentials).toBe("include");
       expect(calls[2].headers.get("Authorization")).toBe("Bearer token-fresh");
       expect(window.localStorage.getItem(CONTEXT_STORAGE_KEY)).toBeNull();
       expect(getAccessToken()).toBeUndefined();
@@ -930,38 +955,42 @@ test.describe("http apiRequest", () => {
     }
   });
 
-  test("limpa sessao quando 401 ocorre sem refresh token disponivel", async () => {
+  test("tenta refresh via cookie mesmo sem refresh token em memória", async () => {
     saveAuthSession({
       token: "token-invalid",
-      refreshToken: "refresh-token",
       type: "Bearer",
+      userId: "user-cookie",
       activeTenantId: "tenant-active",
       availableTenants: [{ tenantId: "tenant-active", defaultTenant: true }],
     });
-    window.localStorage.removeItem("academia-auth-refresh-token");
-    window.localStorage.setItem(CONTEXT_STORAGE_KEY, "ctx-stale");
 
     const { calls, restore } = mockFetchSequence([
       new Response(JSON.stringify({ message: "jwt malformed" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       }),
+      new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
     ]);
 
     try {
-      await expect(async () =>
-        apiRequest<{ ok: boolean }>({
-          path: "/api/v1/administrativo/cargos",
-        })
-      ).rejects.toMatchObject({
-        message: "jwt malformed",
-        status: 401,
+      const response = await apiRequest<{ ok: boolean }>({
+        path: "/api/v1/administrativo/cargos",
       });
 
-      expect(calls).toHaveLength(1);
-      expect(getAccessToken()).toBeUndefined();
-      expect(getRefreshToken()).toBeUndefined();
-      expect(window.localStorage.getItem(CONTEXT_STORAGE_KEY)).toBeNull();
+      expect(response.ok).toBe(true);
+      expect(calls).toHaveLength(3);
+      expect(calls[1].url).toContain("/api/v1/auth/refresh");
+      expect(calls[1].credentials).toBe("include");
+      expect(calls[1].headers.get("Authorization")).toBeNull();
+      expect(calls[2].headers.get("Authorization")).toBeNull();
+      expect(hasActiveSession()).toBeTruthy();
     } finally {
       restore();
     }

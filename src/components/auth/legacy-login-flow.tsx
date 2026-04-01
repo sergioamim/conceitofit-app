@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { loginApi } from "@/lib/api/auth";
 import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-unidades";
-import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/lib/api/session";
+import { getPreferredTenantId, hasActiveSession, setPreferredTenantId } from "@/lib/api/session";
 import type { Tenant } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { buildForcedPasswordChangeHref, resolvePostLoginPath } from "@/lib/tenant/auth-redirect";
@@ -44,7 +44,7 @@ export function LegacyLoginFlow({
   });
 
   useEffect(() => {
-    if (getAccessToken()) {
+    if (hasActiveSession()) {
       router.replace(resolvedNextPath);
     }
   }, [resolvedNextPath, router]);

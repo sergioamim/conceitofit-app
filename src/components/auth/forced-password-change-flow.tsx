@@ -6,10 +6,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { changeForcedPasswordApi } from "@/lib/api/auth";
 import {
-  getAccessToken,
   getForcePasswordChangeRequiredFromSession,
   getNetworkNameFromSession,
   getNetworkSubdomainFromSession,
+  hasActiveSession,
 } from "@/lib/api/session";
 import { buildLoginHref, resolvePostLoginPath } from "@/lib/tenant/auth-redirect";
 import { forcedPasswordChangeFormSchema } from "@/lib/tenant/forms/auth-schemas";
@@ -42,11 +42,10 @@ export function ForcedPasswordChangeFlow({
   });
 
   useEffect(() => {
-    const token = getAccessToken();
     const requiresForcePasswordChange = getForcePasswordChangeRequiredFromSession();
     const nextNetworkSubdomain = getNetworkSubdomainFromSession() ?? null;
 
-    if (!token) {
+    if (!hasActiveSession()) {
       router.replace(buildLoginHref(undefined, nextNetworkSubdomain));
       return;
     }

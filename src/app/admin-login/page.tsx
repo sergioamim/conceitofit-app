@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { adminLoginApi } from "@/lib/api/auth";
-import { getAccessToken } from "@/lib/api/session";
+import { hasActiveSession } from "@/lib/api/session";
 import { buildForcedPasswordChangeHref } from "@/lib/tenant/auth-redirect";
 
 const backofficeLoginSchema = z.object({
@@ -31,7 +31,7 @@ export default function AdminLoginPage() {
   });
 
   useEffect(() => {
-    if (getAccessToken()) {
+    if (hasActiveSession()) {
       router.replace("/admin");
     }
   }, [router]);

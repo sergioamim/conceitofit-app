@@ -8,9 +8,11 @@ import { setTenantContextApi } from "@/lib/api/contexto-unidades";
 import {
   getActiveTenantIdFromSession,
   getAvailableTenantsFromSession,
+  getAuthSessionSnapshot,
+  getRolesFromSession,
   AUTH_SESSION_CLEARED_EVENT,
   AUTH_SESSION_UPDATED_EVENT,
-  getAccessToken,
+  hasActiveSession,
 } from "@/lib/api/session";
 import {
   getOptimisticTenantContextSnapshot,
@@ -42,6 +44,52 @@ export {
 export type { TenantContextSnapshot } from "@/lib/tenant/tenant-context";
 
 const TenantContextReact = createContext<TenantContextValue | null>(null);
+
+function buildUnprovidedTenantContextValue(): TenantContextValue {
+  return {
+    ...buildTenantContextState(EMPTY_TENANT_CONTEXT_SNAPSHOT, {
+      loading: true,
+      status: "loading",
+      error: null,
+    }),
+    refresh: async () => undefined,
+    setTenant: async () => undefined,
+    switchActiveTenant: async () => undefined,
+    syncAcademiaBranding: () => undefined,
+  };
+}
+
+function resolveUnprovidedTenantContextValue(): TenantContextValue {
+  const snapshot = getOptimisticTenantContextSnapshot();
+  const session = getAuthSessionSnapshot();
+  const roles = getRolesFromSession();
+
+  return {
+    ...buildTenantContextState(snapshot, {
+      loading: false,
+      status: "idle",
+      error: null,
+      roles,
+      canAccessElevatedModules: hasElevatedAccess(roles),
+      activeTenantId: snapshot.tenantId,
+      activeTenant: snapshot.tenant,
+      baseTenantId: session?.baseTenantId ?? snapshot.tenantId,
+      userId: session?.userId,
+      displayName: session?.displayName,
+      userKind: session?.userKind,
+      networkId: session?.networkId,
+      networkSlug: session?.networkSlug ?? session?.networkSubdomain,
+      networkSubdomain: session?.networkSubdomain ?? session?.networkSlug,
+      networkName: session?.networkName,
+      availableScopes: session?.availableScopes ?? [],
+      broadAccess: session?.broadAccess ?? false,
+    }),
+    refresh: async () => undefined,
+    setTenant: async () => undefined,
+    switchActiveTenant: async () => undefined,
+    syncAcademiaBranding: () => undefined,
+  };
+}
 
 export function TenantContextProvider({ children }: { children: React.ReactNode }) {
   const requestIdRef = useRef(0);
@@ -103,7 +151,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
 
   const hasSessionContextState = useCallback(() => {
     return (
-      Boolean(getAccessToken())
+      hasActiveSession()
       || Boolean(getActiveTenantIdFromSession())
       || getAvailableTenantsFromSession().length > 0
     );
@@ -276,7 +324,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
       const hasSession = hasSessionContextState();
       setHydrated(true);
       syncFromStore();
-      sessionTokenRef.current = getAccessToken();
+      sessionTokenRef.current = hasActiveSession() ? "active" : undefined;
 
       if (hasSession) {
         void refresh();
@@ -296,7 +344,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
     function handleSessionUpdate() {
       if (suppressSessionUpdateRef.current > 0) return;
 
-      const token = getAccessToken();
+      const token = hasActiveSession() ? "active" : undefined;
       const tokenChanged = sessionTokenRef.current !== token;
       sessionTokenRef.current = token;
 
@@ -364,19 +412,33 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
 
 export function useTenantContext(): TenantContextValue {
   const context = useContext(TenantContextReact);
+  const [fallbackContext, setFallbackContext] = useState<TenantContextValue>(() =>
+    buildUnprovidedTenantContextValue()
+  );
+
+  useEffect(() => {
+    if (context) return;
+
+    function syncFallbackContext() {
+      setFallbackContext(resolveUnprovidedTenantContextValue());
+    }
+
+    syncFallbackContext();
+    window.addEventListener(AUTH_SESSION_UPDATED_EVENT, syncFallbackContext);
+    window.addEventListener(AUTH_SESSION_CLEARED_EVENT, syncFallbackContext);
+    window.addEventListener(TENANT_CONTEXT_UPDATED_EVENT, syncFallbackContext);
+    window.addEventListener("storage", syncFallbackContext);
+    return () => {
+      window.removeEventListener(AUTH_SESSION_UPDATED_EVENT, syncFallbackContext);
+      window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, syncFallbackContext);
+      window.removeEventListener(TENANT_CONTEXT_UPDATED_EVENT, syncFallbackContext);
+      window.removeEventListener("storage", syncFallbackContext);
+    };
+  }, [context]);
+
   if (context) return context;
 
-  return {
-    ...buildTenantContextState(EMPTY_TENANT_CONTEXT_SNAPSHOT, {
-      loading: true,
-      status: "loading",
-      error: null,
-    }),
-    refresh: async () => undefined,
-    setTenant: async () => undefined,
-    switchActiveTenant: async () => undefined,
-    syncAcademiaBranding: () => undefined,
-  };
+  return fallbackContext;
 }
 
 export function useAuthAccess() {

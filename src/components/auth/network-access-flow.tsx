@@ -13,7 +13,7 @@ import {
   type AccessNetworkContext,
 } from "@/lib/api/auth";
 import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-unidades";
-import { getAccessToken, getPreferredTenantId, setPreferredTenantId } from "@/lib/api/session";
+import { getPreferredTenantId, hasActiveSession, setPreferredTenantId } from "@/lib/api/session";
 import { buildForcedPasswordChangeHref, resolvePostLoginPath } from "@/lib/tenant/auth-redirect";
 import { buildNetworkAccessHref } from "@/lib/network-subdomain";
 import {
@@ -125,7 +125,7 @@ export function NetworkAccessFlow({
   }, [networkSubdomain]);
 
   useEffect(() => {
-    if (mode === "login" && getAccessToken()) {
+    if (mode === "login" && hasActiveSession()) {
       router.replace(resolvedNextPath);
     }
   }, [mode, resolvedNextPath, router]);

@@ -12173,12 +12173,12 @@
         "description": "Frontend web usa cookies httpOnly. Nao envia mais header Authorization manualmente — cookie vai automaticamente com credentials:include.",
         "details": "http.ts: adicionar credentials:'include' em todos os fetch(). Remover injecao manual do header Authorization. session.ts: nao armazenar tokens em localStorage (apenas user info: userId, displayName, tenantId, network). Token-store em memória fica como cache para saber se esta logado (verificar via /auth/me ou flag). Login: nao precisa salvar token do response body (cookie ja foi setado pelo backend). Refresh: automatico via cookie. Logout: chama /auth/logout (backend limpa cookies) + limpa session info do localStorage.\n\nIMPORTANTE: Nao quebrar compatibilidade — se por algum motivo o cookie nao estiver presente, o fallback de header ainda funciona (util para dev/debug).\n\nDEPENDÊNCIA CROSS-REPO: Requer backend task academia-java#390 implementada primeiro.",
         "testStrategy": "Login funciona, cookie setado. Navegacao mantem sessao via cookie. localStorage nao contem tokens. Logout limpa tudo.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 6,
         "subtasks": [],
-        "updatedAt": "2026-04-01T13:20:13.274Z"
+        "updatedAt": "2026-04-01T13:32:41.780Z"
       },
       {
         "id": "321",
@@ -12245,9 +12245,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T13:21:04.691Z",
+      "lastModified": "2026-04-01T13:32:41.780Z",
       "taskCount": 321,
-      "completedCount": 316,
+      "completedCount": 317,
       "tags": [
         "master"
       ]

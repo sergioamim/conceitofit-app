@@ -86,7 +86,7 @@ interface AuthTenantAccessPayload {
 }
 
 interface AuthSessionPayload {
-  token: string;
+  token?: string;
   refreshToken?: string;
   type?: string;
   expiresIn?: number;
@@ -445,6 +445,7 @@ async function syncTenantContext(
   const response = await fetch(resolveRequestUrl(`${TENANT_CONTEXT_SYNC_PATH}/${tenantId}`), {
     method: "PUT",
     headers: syncHeaders,
+    credentials: getFetchCredentials(),
   });
 
   return response.ok;
@@ -473,7 +474,7 @@ function persistAuthSessionFromPayload(
     fallbackRefreshToken?: string;
     preserveTenantContext?: boolean;
   }
-): { token: string; type: string } {
+): { token?: string; type: string } {
   const nextType = payload.type ?? getAccessTokenType() ?? "Bearer";
   const nextAvailableTenants =
     normalizeAuthTenantAccess(payload.availableTenants) ??
@@ -548,17 +549,15 @@ async function performApiRequest<T>(input: {
     headers["X-Request-Id"] = requestId;
   }
   const isAuthEndpoint = input.path.startsWith("/api/v1/auth/");
-  if (shouldInjectAuthHeader()) {
-    const token = getAccessToken();
-    if (token) {
-      headers["Authorization"] = `${getAccessTokenType() ?? "Bearer"} ${token}`;
-    }
+  const token = getAccessToken();
+  if (shouldInjectAuthHeader() && token) {
+    headers["Authorization"] = `${getAccessTokenType() ?? "Bearer"} ${token}`;
+  }
 
-    if (!token && !isAuthEndpoint) {
-      const loginToken = await tryAutoLogin();
-      if (loginToken) {
-        headers["Authorization"] = `${loginToken.type} ${loginToken.token}`;
-      }
+  if (!token && !isAuthEndpoint) {
+    const loginToken = await tryAutoLogin();
+    if (loginToken?.token) {
+      headers["Authorization"] = `${loginToken.type} ${loginToken.token}`;
     }
   }
 
@@ -592,20 +591,23 @@ async function performApiRequest<T>(input: {
       !retriedAfterRefresh
     ) {
       const refreshToken = getRefreshToken();
-      if (refreshToken) {
-        const refreshed = await tryRefreshToken(refreshToken);
-        if (refreshed) {
+      const refreshed = await tryRefreshToken(refreshToken);
+      if (refreshed) {
+        if (refreshed.token) {
           headers.Authorization = `${refreshed.type} ${refreshed.token}`;
-          const retriedResponse = await fetch(requestUrl, {
-            method,
-            headers,
-            body: requestBody,
-          });
-          if (retriedResponse.status === 401) {
-            clearAuthSession();
-          }
-          return retriedResponse;
+        } else {
+          delete headers.Authorization;
         }
+        const retriedResponse = await fetch(requestUrl, {
+          method,
+          headers,
+          body: requestBody,
+          credentials: getFetchCredentials(),
+        });
+        if (retriedResponse.status === 401) {
+          clearAuthSession();
+        }
+        return retriedResponse;
       }
       clearAuthSession();
       return response;
@@ -698,12 +700,12 @@ export async function apiRequestWithMeta<T>(input: {
   return performApiRequest<T>(input);
 }
 
-let refreshInFlight: Promise<{ token: string; type: string } | undefined> | null = null;
-let autoLoginInFlight: Promise<{ token: string; type: string } | undefined> | null = null;
+let refreshInFlight: Promise<{ token?: string; type: string } | undefined> | null = null;
+let autoLoginInFlight: Promise<{ token?: string; type: string } | undefined> | null = null;
 
 async function tryRefreshToken(
-  refreshToken: string
-): Promise<{ token: string; type: string } | undefined> {
+  refreshToken?: string
+): Promise<{ token?: string; type: string } | undefined> {
   if (refreshInFlight) {
     return refreshInFlight;
   }
@@ -714,13 +716,15 @@ async function tryRefreshToken(
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ refreshToken }),
+      body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,
+      credentials: getFetchCredentials(),
     });
     if (!response.ok) {
       clearAuthSession();
       return undefined;
     }
-    const payload = (await response.json()) as AuthSessionPayload;
+    const { parsedBody } = await readResponseBody(response);
+    const payload = ((parsedBody && typeof parsedBody === "object") ? parsedBody : {}) as AuthSessionPayload;
     return persistAuthSessionFromPayload(payload, {
       fallbackRefreshToken: refreshToken,
       preserveTenantContext: true,
@@ -733,7 +737,7 @@ async function tryRefreshToken(
   }
 }
 
-async function tryAutoLogin(): Promise<{ token: string; type: string } | undefined> {
+async function tryAutoLogin(): Promise<{ token?: string; type: string } | undefined> {
   if (autoLoginInFlight) {
     return autoLoginInFlight;
   }
@@ -756,6 +760,7 @@ async function tryAutoLogin(): Promise<{ token: string; type: string } | undefin
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ email, password }),
+      credentials: getFetchCredentials(),
     });
     if (!response.ok) return undefined;
     const payload = (await response.json()) as AuthSessionPayload;

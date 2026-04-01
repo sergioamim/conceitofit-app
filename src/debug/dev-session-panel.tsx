@@ -15,6 +15,7 @@ import {
   getActiveTenantIdFromSession,
   getAvailableTenantsFromSession,
   getRefreshToken,
+  hasActiveSession,
   type TenantAccess,
 } from "@/lib/api/session";
 import { hasElevatedAccess, normalizeRoles } from "@/lib/access-control";
@@ -36,6 +37,7 @@ type DebugUserState = {
 };
 
 type SessionMetadata = {
+  sessionActive: boolean;
   tokenPresent: boolean;
   refreshTokenPresent: boolean;
   tokenType: string;
@@ -45,6 +47,7 @@ type SessionMetadata = {
 
 function buildSessionMetadata(): SessionMetadata {
   return {
+    sessionActive: hasActiveSession(),
     tokenPresent: Boolean(getAccessToken()),
     refreshTokenPresent: Boolean(getRefreshToken()),
     tokenType: getAccessTokenType() ?? "-",
@@ -222,8 +225,8 @@ export function DevSessionPanel() {
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">API real</Badge>
               <Badge variant="outline">{pathname || "/"}</Badge>
-              <Badge variant={sessionMetadata.tokenPresent ? "secondary" : "destructive"}>
-                {sessionMetadata.tokenPresent ? "Token presente" : "Sem token"}
+              <Badge variant={sessionMetadata.sessionActive ? "secondary" : "destructive"}>
+                {sessionMetadata.sessionActive ? "Sessão ativa" : "Sessão ausente"}
               </Badge>
               <Badge variant={hasElevatedAccess(user.roles) ? "secondary" : "outline"}>
                 {accessLevel}

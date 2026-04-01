@@ -6,11 +6,9 @@ import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "
 import { Building2, ChevronRight, Command, Eye, Globe, LogOut } from "lucide-react";
 import { Command as CmdkRoot, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "cmdk";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
-import { TenantContextProvider } from "@/lib/tenant/hooks/use-session-context";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import { BackofficeContextProvider, useBackofficeContext } from "@/lib/backoffice/backoffice-context";
-import { AUTH_SESSION_UPDATED_EVENT, getAccessToken, getNetworkSlugFromSession } from "@/lib/api/session";
-import { buildLoginHref } from "@/lib/tenant/auth-redirect";
+import { AUTH_SESSION_UPDATED_EVENT, hasActiveSession } from "@/lib/api/session";
 import { backofficeNavGroups, allBackofficeNavItems } from "@/lib/backoffice/nav-items";
 import type { BackofficeNavItem } from "@/lib/backoffice/nav-items";
 import { cn } from "@/lib/utils";
@@ -194,9 +192,9 @@ function AdminShellFrame({
     <div className="min-h-screen bg-background">
       <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} />
 
-      <div className="mx-auto flex max-w-6xl gap-6 px-6 py-6">
+      <div className="flex min-h-screen">
         {/* Sidebar */}
-        <aside className="sticky top-6 flex h-fit w-56 shrink-0 flex-col gap-4 rounded-lg border border-border/80 bg-card/80 p-3 shadow-sm">
+        <aside className="sticky top-0 flex h-screen w-72 shrink-0 flex-col gap-4 overflow-y-auto border-r border-border/80 bg-card/80 p-4 shadow-sm">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-gym-accent">
               Conceito Fit
@@ -269,7 +267,7 @@ function AdminShellFrame({
         </aside>
 
         {/* Main content */}
-        <div className="flex flex-1 flex-col gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 px-6 py-6">
           {/* Header */}
           <header className="flex items-center justify-between">
             <Breadcrumbs pathname={pathname ?? null} />
@@ -325,7 +323,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function syncAuthenticated() {
-      setAuthenticated(Boolean(getAccessToken()));
+      setAuthenticated(hasActiveSession());
       setHydrated(true);
     }
 
@@ -382,14 +380,12 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <TenantContextProvider>
-      <BackofficeContextProvider>
-        <Suspense
-          fallback={<AdminLayoutFallback>{children}</AdminLayoutFallback>}
-        >
-          <AdminLayoutContent>{children}</AdminLayoutContent>
-        </Suspense>
-      </BackofficeContextProvider>
-    </TenantContextProvider>
+    <BackofficeContextProvider>
+      <Suspense
+        fallback={<AdminLayoutFallback>{children}</AdminLayoutFallback>}
+      >
+        <AdminLayoutContent>{children}</AdminLayoutContent>
+      </Suspense>
+    </BackofficeContextProvider>
   );
 }

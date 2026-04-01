@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { clearAuthSession, getNetworkSlugFromSession } from "@/lib/api/session";
+import { logoutApi } from "@/lib/api/auth";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { DEFAULT_TENANT_APP_NAME } from "@/lib/tenant/tenant-theme";
 import { MOTION_CLASSNAMES } from "@/lib/ui-motion";
@@ -622,6 +623,11 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
                 setLoggingOut(true);
                 try {
                   const redirectHref = buildLoginHref(undefined, getNetworkSlugFromSession());
+                  try {
+                    await logoutApi();
+                  } catch {
+                    // Seguimos com a limpeza local mesmo se o backend falhar.
+                  }
                   clearAuthSession();
                   router.replace(redirectHref);
                   if (typeof window !== "undefined") {

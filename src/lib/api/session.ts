@@ -6,8 +6,8 @@ export interface TenantAccess {
 export type AuthSessionScope = "UNIDADE" | "REDE" | "GLOBAL";
 
 export interface AuthSession {
-  token: string;
-  refreshToken: string;
+  token?: string;
+  refreshToken?: string;
   type?: string;
   expiresIn?: number;
   userId?: string;
@@ -63,6 +63,7 @@ const AVAILABLE_TENANTS_KEY = "academia-auth-available-tenants";
 const AVAILABLE_SCOPES_KEY = "academia-auth-available-scopes";
 const BROAD_ACCESS_KEY = "academia-auth-broad-access";
 const FORCE_PASSWORD_CHANGE_REQUIRED_KEY = "academia-auth-force-password-change-required";
+const SESSION_ACTIVE_KEY = "academia-auth-session-active";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
 const IMPERSONATION_SESSION_KEY = "academia-impersonation-session";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
@@ -211,7 +212,7 @@ export function getAuthSessionSnapshot(): AuthSession | null {
   if (!isBrowser()) return null;
   const token = getAccessToken();
   const refreshToken = getRefreshToken();
-  if (!token || !refreshToken) return null;
+  if (!hasActiveSession()) return null;
 
   const rawExpiresIn = window.localStorage.getItem(EXPIRES_IN_KEY);
   const expiresIn = rawExpiresIn ? Number(rawExpiresIn) : undefined;
@@ -235,6 +236,40 @@ export function getAuthSessionSnapshot(): AuthSession | null {
     broadAccess: getBroadAccessFromSession(),
     forcePasswordChangeRequired: getForcePasswordChangeRequiredFromSession(),
   };
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const normalizedToken = token.trim();
+  if (!normalizedToken) return null;
+
+  const [, payload] = normalizedToken.split(".");
+  if (!payload) return null;
+
+  const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+
+  try {
+    if (typeof window !== "undefined" && typeof window.atob === "function") {
+      return JSON.parse(window.atob(padded)) as Record<string, unknown>;
+    }
+
+    return JSON.parse(Buffer.from(padded, "base64").toString("utf-8")) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+export function getRolesFromSession(): string[] {
+  const token = getAccessToken();
+  if (!token) return [];
+
+  const payload = decodeJwtPayload(token);
+  const roles = payload?.roles;
+  if (!Array.isArray(roles)) return [];
+
+  return roles
+    .map((role) => (typeof role === "string" ? role.trim().toUpperCase() : ""))
+    .filter(Boolean);
 }
 
 export function getImpersonationSession(): ImpersonationSessionState | null {
@@ -309,7 +344,12 @@ export function clearImpersonationSession(): void {
 export function saveAuthSession(session: AuthSession): void {
   if (!isBrowser()) return;
   saveTokens({ token: session.token, refreshToken: session.refreshToken, type: session.type });
-  if (session.expiresIn != null) window.localStorage.setItem(EXPIRES_IN_KEY, String(session.expiresIn));
+  if (session.expiresIn != null) {
+    window.localStorage.setItem(EXPIRES_IN_KEY, String(session.expiresIn));
+  } else {
+    window.localStorage.removeItem(EXPIRES_IN_KEY);
+  }
+  window.localStorage.setItem(SESSION_ACTIVE_KEY, "true");
   if (session.userId) {
     window.localStorage.setItem(USER_ID_KEY, session.userId);
   } else {
@@ -428,6 +468,7 @@ export function clearAuthSession(): void {
   clearTokens();
   clearAuthStorageKeys([
     EXPIRES_IN_KEY,
+    SESSION_ACTIVE_KEY,
     USER_ID_KEY,
     USER_KIND_KEY,
     DISPLAY_NAME_KEY,

@@ -1,16 +1,17 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlunoBottomNav } from "@/components/layout/aluno-bottom-nav";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
 import { TenantContextProvider, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { logoutApi } from "@/lib/api/auth";
 import {
   AUTH_SESSION_UPDATED_EVENT,
-  getAccessToken,
   getNetworkSlugFromSession,
+  hasActiveSession,
   clearAuthSession,
 } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
@@ -18,9 +19,15 @@ import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 function AlunoTopbar() {
   const { displayName, networkName } = useTenantContext();
 
-  function handleLogout() {
-    clearAuthSession();
-    window.location.assign("/login");
+  async function handleLogout() {
+    try {
+      await logoutApi();
+    } catch {
+      // Mesmo sem resposta do backend, limpamos o estado local.
+    } finally {
+      clearAuthSession();
+      window.location.assign("/login");
+    }
   }
 
   return (
@@ -39,7 +46,7 @@ function AlunoTopbar() {
         size="icon"
         className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
         aria-label="Sair"
-        onClick={handleLogout}
+        onClick={() => void handleLogout()}
       >
         <LogOut className="size-4" />
       </Button>
@@ -78,7 +85,7 @@ function AlunoLayoutContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     function syncAuthenticated() {
-      setAuthenticated(Boolean(getAccessToken()));
+      setAuthenticated(hasActiveSession());
       setHydrated(true);
     }
 
