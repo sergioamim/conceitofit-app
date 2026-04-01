@@ -58,15 +58,18 @@ test.describe("Admin catálogo CRUD", () => {
 
     await openAdminCrudPage(page, "/administrativo/convenios");
 
+    const dialog = page.getByRole("dialog");
     await page.getByRole("button", { name: "Novo convênio" }).click();
-    await page.getByRole("dialog").locator("input").first().fill(convenioNome);
-    await page.getByRole("dialog").getByRole("button", { name: "Criar" }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.locator("input").first().fill(convenioNome);
+    await dialog.locator('button[type="submit"]').click();
 
     let convenioRow = page.getByRole("row").filter({ hasText: convenioNome });
     await expect(convenioRow).toBeVisible();
     await convenioRow.getByRole("button", { name: "Editar" }).click();
-    await page.getByRole("dialog").locator("input").first().fill(convenioEditado);
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar" }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.locator("input").first().fill(convenioEditado);
+    await dialog.locator('button[type="submit"]').click();
 
     convenioRow = page.getByRole("row").filter({ hasText: convenioEditado });
     await expect(convenioRow).toBeVisible();
@@ -82,15 +85,18 @@ test.describe("Admin catálogo CRUD", () => {
 
     await openAdminCrudPage(page, "/administrativo/vouchers");
 
+    const dialog = page.getByRole("dialog");
     await page.getByRole("button", { name: "Novo voucher" }).click();
-    await selectComboboxOption(page, page.getByRole("dialog").getByRole("combobox").nth(1), "Desconto");
-    await page.getByPlaceholder("Digite o nome do voucher").fill(voucherNome);
-    await page.locator('input[type="date"]').first().fill("2026-03-17");
-    await page.locator('input[type="date"]').nth(1).fill("2026-04-17");
-    await page.getByPlaceholder("Ex: 100").fill("25");
-    await page.getByPlaceholder("Ex: VERAO2025").fill(`PROMO${suffix}`);
-    await page.getByRole("button", { name: "Próximo →" }).click();
-    await page.getByRole("button", { name: "Gerar Voucher" }).click();
+    await expect(dialog).toBeVisible();
+    await selectComboboxOption(page, dialog.getByRole("combobox").first(), "Desconto");
+    await dialog.getByPlaceholder("Digite o nome do voucher").fill(voucherNome);
+    await dialog.locator('input[type="date"]').first().fill("2026-03-17");
+    await dialog.locator('input[type="date"]').nth(1).fill("2026-04-17");
+    await dialog.locator('input[type="number"]').fill("25");
+    await dialog.getByPlaceholder("EX: AMIGO30").fill(`PROMO${suffix}`);
+    await dialog.getByRole("button", { name: /Próximo/i }).click();
+    await expect(dialog.getByRole("button", { name: /Gerar voucher/i })).toBeVisible();
+    await dialog.getByRole("button", { name: /Gerar voucher/i }).click();
 
     const voucherRow = page.getByRole("row").filter({ hasText: voucherNome });
     await expect(voucherRow).toBeVisible();

@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
-import { seedAuthenticatedSession } from "./support/backend-only-stubs";
+import { applyE2EAuthSession } from "./support/auth-session";
 import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
 
 const TENANT_MANANCIAIS = {
@@ -340,6 +340,15 @@ async function installBiApiMocks(page: Page) {
     await fulfillJson(route, [TENANT_MANANCIAIS, TENANT_PECHINCHA]);
   });
 
+  await page.route("**/api/v1/academia", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await fulfillJson(route, ACADEMIA);
+  });
+
   await page.route("**/api/v1/crm/prospects**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -459,18 +468,56 @@ async function installBiApiMocks(page: Page) {
       items: reservasByTenant[tenantId as keyof typeof reservasByTenant] ?? [],
     });
   });
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = normalizePath(url.pathname);
+
+    const knownRoutes = [
+      "/api/v1/auth/me",
+      "/api/v1/app/bootstrap",
+      "/api/v1/context/unidade-ativa",
+      "/api/v1/unidades",
+      "/api/v1/academia",
+      "/api/v1/crm/prospects",
+      "/api/v1/comercial/alunos",
+      "/api/v1/comercial/matriculas",
+      "/api/v1/comercial/adesoes",
+      "/api/v1/gerencial/financeiro/contas-receber",
+      "/api/v1/administrativo/atividades-grade",
+      "/api/v1/agenda/aulas/reservas",
+    ];
+
+    if (
+      knownRoutes.includes(path)
+      || path.startsWith("/api/v1/context/unidade-ativa/")
+    ) {
+      await route.fallback();
+      return;
+    }
+
+    await fulfillJson(route, {});
+  });
 }
 
 test.describe("BI operacional e visão de rede", () => {
   test("navega entre visão unitária e rede com filtros gerenciais", async ({ page }) => {
-    await seedAuthenticatedSession(page, {
+    await installBiApiMocks(page);
+    await page.goto("/login");
+    await applyE2EAuthSession(page, {
       tenantId: TENANT_MANANCIAIS.id,
       availableTenants: [
         { tenantId: TENANT_MANANCIAIS.id, defaultTenant: true },
         { tenantId: TENANT_PECHINCHA.id },
       ],
+      userId: "user-admin",
+      userKind: "COLABORADOR",
+      displayName: "Admin BI",
+      roles: ["OWNER", "ADMIN"],
+      availableScopes: ["UNIDADE"],
+      broadAccess: false,
     });
-    await installBiApiMocks(page);
 
     await page.goto("/gerencial/bi");
     await expect(page.getByRole("heading", { name: "BI Operacional" })).toBeVisible();
