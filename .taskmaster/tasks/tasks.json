@@ -12249,18 +12249,19 @@
         "description": "Remover dependencia de backend/localhost nos testes de componentes e a11y.",
         "details": "Adicionar mocks de fetch para testes que carregam recursos externos (ex: prospect modal e wizard). Usar MSW ou mocks pontuais no setup dos testes para impedir requests reais para localhost/evil.com. Garantir que os testes de a11y e unitarios nao dependam de servidor rodando.",
         "testStrategy": "npm run test:coverage passa sem backend ativo e sem conexoes para localhost.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-01T15:00:50.996Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T13:45:00.000Z",
+      "lastModified": "2026-04-01T15:00:50.997Z",
       "taskCount": 322,
-      "completedCount": 319,
+      "completedCount": 320,
       "tags": [
         "master"
       ]

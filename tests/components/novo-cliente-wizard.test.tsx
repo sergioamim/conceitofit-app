@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
 
 // ── Mocks ──────────────────────────────────────────────────────────────
@@ -14,6 +15,22 @@ vi.mock("@/components/ui/dialog", () => ({
 vi.mock("@/components/shared/form-draft-components", () => ({
   FormDraftIndicator: () => null,
   RestoreDraftModal: () => null,
+}));
+
+vi.mock("@/components/shared/novo-cliente-wizard/wizard-step-dados", () => ({
+  Step1Dados: () => <div data-testid="step-dados">Step 1</div>,
+}));
+
+vi.mock("@/components/shared/novo-cliente-wizard/wizard-step-plano", () => ({
+  Step2Plano: () => <div data-testid="step-plano">Step 2</div>,
+}));
+
+vi.mock("@/components/shared/novo-cliente-wizard/wizard-step-pagamento", () => ({
+  Step3Pagamento: () => <div data-testid="step-pagamento">Step 3</div>,
+}));
+
+vi.mock("@/components/shared/novo-cliente-wizard/wizard-step-sucesso", () => ({
+  StepSucesso: () => <div data-testid="step-sucesso">Sucesso</div>,
 }));
 
 const mockPlanos = [
@@ -72,19 +89,59 @@ vi.mock("@/lib/business-date", () => ({
   getBusinessTodayIso: () => "2026-03-29",
 }));
 
+const wizardStateRef = vi.hoisted(() => ({
+  current: null as any,
+}));
+
+vi.mock("@/components/shared/novo-cliente-wizard/use-cliente-wizard-state", () => ({
+  useClienteWizardState: () => wizardStateRef.current,
+}));
+
 // ── Helpers ────────────────────────────────────────────────────────────
 
-function renderWizard(props: Partial<Parameters<typeof NovoClienteWizard>[0]> = {}) {
+function createWizardState(overrides: Record<string, unknown> = {}) {
+  return {
+    step: 1,
+    setStep: vi.fn(),
+    showComplementary: false,
+    setShowComplementary: vi.fn(),
+    result: null,
+    loading: false,
+    form: {
+      getValues: vi.fn(() => ({ selectedPlano: "p1" })),
+    },
+    draft: {
+      hasDraft: false,
+      restoreDraft: vi.fn(),
+      discardDraft: vi.fn(),
+      clearDraft: vi.fn(),
+      lastModified: null,
+    },
+    isDirty: false,
+    isValid: false,
+    planos: mockPlanos,
+    formas: mockFormas,
+    commercial: {
+      addPlanoToCart: vi.fn(),
+    },
+    fullReset: vi.fn(),
+    handleNext: vi.fn(),
+    handleCreateOnly: vi.fn(),
+    ...overrides,
+  };
+}
+
+function renderWizard(
+  props: Partial<Parameters<typeof NovoClienteWizard>[0]> = {},
+  wizardStateOverrides: Record<string, unknown> = {},
+) {
   const defaultProps = {
     open: true,
     onClose: vi.fn(),
     onDone: vi.fn(),
   };
+  wizardStateRef.current = createWizardState(wizardStateOverrides);
   return render(<NovoClienteWizard {...defaultProps} {...props} />);
-}
-
-function fillStep1() {
-  fireEvent.change(screen.getByTestId("novo-cliente-nome"), { target: { value: "Maria Teste" } });
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────
@@ -116,7 +173,7 @@ describe("NovoClienteWizard", () => {
 
     it("exibe campos do step 1 via testid", () => {
       renderWizard();
-      expect(screen.getByTestId("novo-cliente-nome")).toBeInTheDocument();
+      expect(screen.getByTestId("step-dados")).toBeInTheDocument();
     });
   });
 
@@ -128,45 +185,48 @@ describe("NovoClienteWizard", () => {
       expect(onClose).toHaveBeenCalled();
     });
 
-    it("exibe botão 'Completar cadastro' no step 1", () => {
+    it("exibe botão 'Continuar com plano' no step 1", () => {
       renderWizard();
-      expect(screen.getByText(/completar cadastro/i)).toBeInTheDocument();
+      expect(screen.getByText(/continuar com plano/i)).toBeInTheDocument();
     });
 
-    it("exibe botão 'Pré-cadastro' no step 1", () => {
+    it("exibe botão 'Apenas pre-cadastro' no step 1", () => {
       renderWizard();
-      expect(screen.getByText("Pré-cadastro")).toBeInTheDocument();
+      expect(screen.getByText("Apenas pre-cadastro")).toBeInTheDocument();
     });
   });
 
   describe("Validação por step", () => {
-    it("não avança para step 2 com campos vazios", async () => {
+    it("mantém as ações desabilitadas quando o estado do formulário é inválido", () => {
       renderWizard();
-      fireEvent.click(screen.getByText(/completar cadastro/i));
-      // Deve permanecer no step 1 (campo nome ainda visível)
-      await waitFor(() => {
-        expect(screen.getByTestId("novo-cliente-nome")).toBeInTheDocument();
-      });
+      expect(screen.getByText("Apenas pre-cadastro")).toBeDisabled();
+      expect(screen.getByText(/continuar com plano/i)).toBeDisabled();
     });
 
-    it("botão Pré-cadastro está desabilitado com formulário inválido", () => {
+    it("botão Apenas pre-cadastro está desabilitado com formulário inválido", () => {
       renderWizard();
-      const btn = screen.getByText("Pré-cadastro");
+      const btn = screen.getByText("Apenas pre-cadastro");
       expect(btn).toBeDisabled();
     });
   });
 
   describe("Pré-cadastro (createOnly)", () => {
-    it("botão pré-cadastro visível no step 1", () => {
+    it("botão apenas pre-cadastro visível no step 1", () => {
       renderWizard();
-      expect(screen.getByText("Pré-cadastro")).toBeInTheDocument();
-      expect(screen.getByText(/pré-cadastro \+ venda/i)).toBeInTheDocument();
+      expect(screen.getByText("Apenas pre-cadastro")).toBeInTheDocument();
+      expect(screen.getByText(/continuar com plano/i)).toBeInTheDocument();
     });
 
     it("botões de ação desabilitados quando form inválido", () => {
       renderWizard();
-      expect(screen.getByText("Pré-cadastro")).toBeDisabled();
-      expect(screen.getByText(/pré-cadastro \+ venda/i)).toBeDisabled();
+      expect(screen.getByText("Apenas pre-cadastro")).toBeDisabled();
+      expect(screen.getByText(/continuar com plano/i)).toBeDisabled();
+    });
+
+    it("habilita as ações quando o estado do formulário é válido", () => {
+      renderWizard({}, { isValid: true });
+      expect(screen.getByText("Apenas pre-cadastro")).toBeEnabled();
+      expect(screen.getByText(/continuar com plano/i)).toBeEnabled();
     });
   });
 });
