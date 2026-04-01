@@ -12966,7 +12966,7 @@
         "description": "Tratar apenas falhas funcionais remanescentes dos sentinelas do shell do app, sem reabrir a camada de sessão/fixture.",
         "details": "Escopo: tests/e2e/dashboard.spec.ts e tests/e2e/billing-config.spec.ts. Reproduções já observadas após a estabilização de auth: 1) heading Pagamentos pendentes e vencidos não encontrado no dashboard após abrir a aba Financeiro; 2) billing-config com seletor estrito em Asaas, toasts de sucesso não encontrados e webhook esperado ausente. Estratégia: alinhar asserts e/ou comportamento real das telas, mantendo as fixtures atuais. Fora de escopo: qualquer ajuste em installE2EAuthSession ou contrato mínimo de shell.",
         "testStrategy": "",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "336"
         ],
@@ -13000,14 +13000,14 @@
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-01T21:30:00.000Z"
+        "updatedAt": "2026-04-01T21:40:00.000Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T21:30:00.000Z",
+      "lastModified": "2026-04-01T21:40:00.000Z",
       "taskCount": 335,
-      "completedCount": 332,
+      "completedCount": 333,
       "tags": [
         "master"
       ]
