@@ -132,6 +132,17 @@ function parseNumberString(value?: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function pushAcademiaOption(target: Map<string, string>, academiaId?: string | null, academiaNome?: string | null) {
+  const normalizedId = academiaId?.trim();
+  const normalizedNome = academiaNome?.trim();
+
+  if (!normalizedId || !normalizedNome) {
+    return;
+  }
+
+  target.set(normalizedId, normalizedNome);
+}
+
 function getStatusBadgeClass(status: CobrancaStatus) {
   switch (status) {
     case "PAGO":
@@ -275,10 +286,10 @@ export default function AdminCobrancasPage() {
   const academias = useMemo(() => {
     const map = new Map<string, string>();
     contratos.forEach((contrato) => {
-      map.set(contrato.academiaId, contrato.academiaNome);
+      pushAcademiaOption(map, contrato.academiaId, contrato.academiaNome);
     });
     cobrancas.forEach((cobranca) => {
-      map.set(cobranca.academiaId, cobranca.academiaNome);
+      pushAcademiaOption(map, cobranca.academiaId, cobranca.academiaNome);
     });
     return Array.from(map.entries()).map(([id, nome]) => ({ id, nome }));
   }, [cobrancas, contratos]);

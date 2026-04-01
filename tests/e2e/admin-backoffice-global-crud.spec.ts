@@ -40,23 +40,29 @@ test.describe("Admin backoffice global CRUD", () => {
     await page.goto("/admin/seguranca/usuarios");
     await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible();
 
-    await page.getByLabel("Nome ou e-mail").fill("Sergio");
+    await page.getByLabel("Pessoa, e-mail ou CPF").fill("Sergio");
     await page.getByRole("button", { name: "Aplicar filtros" }).click();
-    await page.getByRole("link", { name: "Abrir" }).first().click();
+    await page.getByRole("link", { name: "Abrir governança" }).first().click();
 
-    await expect(page.getByRole("heading", { name: "Detalhe do usuário" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sergio Amim" })).toBeVisible();
+    await page.getByRole("tab", { name: "Escopos e acessos" }).click();
 
     await selectComboboxOption(
       page,
       page.getByRole("combobox", { name: "Unidade para associar" }),
-      unidadeNome,
+      `Academia E2E ${suffix} · ${unidadeNome}`,
     );
     await selectComboboxOption(
       page,
-      page.getByText("Unidade padrão no vínculo").locator("..").getByRole("combobox"),
+      page.getByText("Virar base operacional").locator("..").getByRole("combobox"),
       "Sim",
     );
-    await page.getByRole("button", { name: "Associar unidade" }).click();
+    await selectComboboxOption(
+      page,
+      page.getByRole("combobox", { name: "Papel inicial do acesso" }),
+      "FINANCEIRO",
+    );
+    await page.getByRole("button", { name: "Confirmar acesso" }).click();
 
     await expect(page.getByText(unidadeNome).first()).toBeVisible();
     await page.getByRole("tab", { name: "Novas unidades" }).click();
