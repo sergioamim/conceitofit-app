@@ -12647,10 +12647,10 @@
               1
             ],
             "details": "Separar claramente quando o teste deve esperar 404 intencional e quando o 404 atual e apenas mismatch de resolucao de storefront.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "332",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:20:00.000Z"
           },
           {
             "id": 4,
@@ -12661,14 +12661,14 @@
               3
             ],
             "details": "Registrar no detalhe da task qual combinacao de host/subdominio/header o runtime atual espera e como os mocks devem representá-la.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "332",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:20:00.000Z"
           }
         ],
         "complexity": 7,
-        "updatedAt": "2026-04-01T17:05:34.000Z",
+        "updatedAt": "2026-04-01T18:20:00.000Z",
         "recommendedSubtasks": 4,
         "expansionPrompt": "Dividir a tarefa em: 1. Revisão completa de tests/e2e/auth-rede.spec.ts e `buildHostBasedUrl`. 2. Verificação e ajuste de headers/query params de rede nos mocks. 3. Correção de cenários de 'Storefront não encontrada' e 'Carregando contexto'. 4. Documentação do contrato frontend para resolução de rede."
       },
@@ -12963,9 +12963,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T18:11:11.404Z",
+      "lastModified": "2026-04-01T18:25:00.000Z",
       "taskCount": 332,
-      "completedCount": 326,
+      "completedCount": 327,
       "tags": [
         "master"
       ]
