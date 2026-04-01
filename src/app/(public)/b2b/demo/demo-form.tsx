@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,11 +16,18 @@ export function DemoForm() {
   const router = useRouter();
   const [apiError, setApiError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   const {
     register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
+    setError,
+    clearErrors,
+    formState: { errors },
   } = useForm<DemoAccountFormValues>({
     resolver: zodResolver(demoAccountFormSchema),
     defaultValues: {
@@ -30,10 +37,59 @@ export function DemoForm() {
     },
   });
 
-  async function onSubmit(values: DemoAccountFormValues) {
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    clearErrors();
     setApiError(null);
+    const formData = new FormData(event.currentTarget);
+    const submittedValues = {
+      nome: String(formData.get("nome") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      senha: String(formData.get("senha") ?? ""),
+    };
+    const normalizedValues = {
+      nome: submittedValues.nome.trim(),
+      email: submittedValues.email.trim(),
+      senha: submittedValues.senha,
+    };
+    const nomeCheck = demoAccountFormSchema.shape.nome.safeParse(
+      normalizedValues.nome,
+    );
+    const emailCheck = demoAccountFormSchema.shape.email.safeParse(
+      normalizedValues.email,
+    );
+    const senhaCheck = demoAccountFormSchema.shape.senha.safeParse(
+      normalizedValues.senha,
+    );
+    const hasErrors =
+      !nomeCheck.success || !emailCheck.success || !senhaCheck.success;
+    if (hasErrors) {
+      if (!nomeCheck.success) {
+        setError("nome", {
+          type: "manual",
+          message: nomeCheck.error.issues[0]?.message ?? "Informe seu nome.",
+        });
+      }
+      if (!emailCheck.success) {
+        setError("email", {
+          type: "manual",
+          message:
+            emailCheck.error.issues[0]?.message ?? "Informe um e-mail valido.",
+        });
+      }
+      if (!senhaCheck.success) {
+        setError("senha", {
+          type: "manual",
+          message:
+            senhaCheck.error.issues[0]?.message ??
+            "A senha deve ter no minimo 6 caracteres.",
+        });
+      }
+      return;
+    }
     try {
-      const response = await createDemoAccount(values);
+      setIsSubmitting(true);
+      const response = await createDemoAccount(normalizedValues);
 
       // Save auth session from the demo account response
       saveAuthSession({
@@ -43,7 +99,7 @@ export function DemoForm() {
         expiresIn: response.expiresIn,
         userId: response.userId,
         userKind: response.userKind ?? "DEMO",
-        displayName: response.displayName ?? values.nome,
+        displayName: response.displayName ?? normalizedValues.nome,
         networkId: response.redeId,
         networkSubdomain: response.redeSubdominio ?? response.redeSlug,
         networkSlug: response.redeSlug,
@@ -64,12 +120,17 @@ export function DemoForm() {
       setApiError(
         err instanceof Error ? err.message : "Erro inesperado. Tente novamente.",
       );
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={onSubmit}
+      data-testid="demo-form"
+      data-hydrated={hydrated ? "true" : "false"}
+      noValidate
       className="w-full space-y-4 text-left"
     >
       {apiError && (
