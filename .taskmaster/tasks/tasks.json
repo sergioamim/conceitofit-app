@@ -12198,12 +12198,12 @@
         "description": "Medir cobertura de testes real e publicar no CI.",
         "details": "Adicionar provider: 'v8' ao vitest.config.ts. Adicionar script 'test:coverage' no package.json. No GitHub Actions workflow, rodar test:coverage e publicar report como artifact. Adicionar badge de coverage no README. Nao bloquear merge por enquanto (apenas medir), threshold pode vir depois.",
         "testStrategy": "npm run test:coverage gera relatorio. CI publica artifact com coverage HTML.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 2,
         "subtasks": [],
-        "updatedAt": "2026-04-01T13:20:29.199Z"
+        "updatedAt": "2026-04-01T13:52:00.000Z"
       },
       {
         "id": "323",
@@ -12211,7 +12211,7 @@
         "description": "Remover rotas duplicadas e arquivos orfaos do storefront apos migracao para [academiaSlug].",
         "details": "Remover: src/app/storefront/unidade/ (substituido por [academiaSlug]/unidades/), src/app/storefront/resolve-storefront-headers.ts (nao mais necessario), referencias a STOREFRONT_DEV_TENANT_ID e STOREFRONT_DEV_ACADEMIA_SLUG. Atualizar storefront/page.tsx para redirecionar para /storefront ou mostrar listagem de academias. Verificar que nenhum link interno aponta para rotas removidas.",
         "testStrategy": "Acessar /storefront/unidade/xxx retorna 404. Acessar /storefront/demo funciona. Links internos apontam para novas rotas.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 2,
@@ -12258,9 +12258,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T13:45:00.000Z",
+      "lastModified": "2026-04-01T13:52:00.000Z",
       "taskCount": 322,
-      "completedCount": 319,
+      "completedCount": 321,
       "tags": [
         "master"
       ]
