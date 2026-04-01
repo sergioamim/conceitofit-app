@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installE2EAuthSession } from "./support/auth-session";
 
 // ---------------------------------------------------------------------------
 // Seed state
@@ -29,30 +30,28 @@ function defaultConfig(): BillingConfigSeed {
 // ---------------------------------------------------------------------------
 
 function seedSession(page: Page) {
-  return page.addInitScript(() => {
-    window.localStorage.setItem("academia-auth-token", "token-billing-e2e");
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-billing-e2e");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    window.localStorage.setItem("academia-auth-active-tenant-id", "tenant-centro");
-    window.localStorage.setItem("academia-auth-preferred-tenant-id", "tenant-centro");
-    window.localStorage.setItem(
-      "academia-auth-available-tenants",
-      JSON.stringify([{ tenantId: "tenant-centro", defaultTenant: true }]),
-    );
+  return installE2EAuthSession(page, {
+    activeTenantId: "tenant-centro",
+    baseTenantId: "tenant-centro",
+    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+    userId: "user-billing",
+    userKind: "COLABORADOR",
+    displayName: "Admin Billing",
+    roles: ["ADMIN"],
+    availableScopes: ["UNIDADE"],
   });
 }
 
 function seedSessionNoPermission(page: Page) {
-  return page.addInitScript(() => {
-    window.localStorage.setItem("academia-auth-token", "token-billing-viewer");
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-billing-viewer");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    window.localStorage.setItem("academia-auth-active-tenant-id", "tenant-centro");
-    window.localStorage.setItem("academia-auth-preferred-tenant-id", "tenant-centro");
-    window.localStorage.setItem(
-      "academia-auth-available-tenants",
-      JSON.stringify([{ tenantId: "tenant-centro", defaultTenant: true }]),
-    );
+  return installE2EAuthSession(page, {
+    activeTenantId: "tenant-centro",
+    baseTenantId: "tenant-centro",
+    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+    userId: "user-billing-viewer",
+    userKind: "COLABORADOR",
+    displayName: "Viewer Billing",
+    roles: ["VIEWER"],
+    availableScopes: ["UNIDADE"],
   });
 }
 

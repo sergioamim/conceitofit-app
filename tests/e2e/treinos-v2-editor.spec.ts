@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installE2EAuthSession } from "./support/auth-session";
 
 type StubExercise = {
   id: string;
@@ -64,16 +65,15 @@ type StubTreino = {
 };
 
 function seedSession(page: Page) {
-  return page.addInitScript(() => {
-    window.localStorage.setItem("academia-auth-token", "token-treinos-v2");
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-treinos-v2");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    window.localStorage.setItem("academia-auth-active-tenant-id", "tn-1");
-    window.localStorage.setItem("academia-auth-preferred-tenant-id", "tn-1");
-    window.localStorage.setItem(
-      "academia-auth-available-tenants",
-      JSON.stringify([{ tenantId: "tn-1", defaultTenant: true }]),
-    );
+  return installE2EAuthSession(page, {
+    activeTenantId: "tn-1",
+    baseTenantId: "tn-1",
+    availableTenants: [{ tenantId: "tn-1", defaultTenant: true }],
+    userId: "user-1",
+    userKind: "COLABORADOR",
+    displayName: "Admin Treinos",
+    roles: ["ADMIN"],
+    availableScopes: ["UNIDADE"],
   });
 }
 

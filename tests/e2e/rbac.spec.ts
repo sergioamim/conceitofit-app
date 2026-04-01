@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installE2EAuthSession } from "./support/auth-session";
 
 type RbacPerfilSeed = {
   id: string;
@@ -132,15 +133,15 @@ async function openPageAsAuthenticated(
     readyControlName: "Perfis",
   },
 ) {
-  await page.addInitScript(() => {
-    window.localStorage.setItem("academia-auth-token", "token-rbac");
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-rbac");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    window.localStorage.setItem("academia-auth-active-tenant-id", "tenant-1");
-    window.localStorage.setItem(
-      "academia-auth-available-tenants",
-      JSON.stringify([{ tenantId: "tenant-1", defaultTenant: true }])
-    );
+  await installE2EAuthSession(page, {
+    activeTenantId: "tenant-1",
+    baseTenantId: "tenant-1",
+    availableTenants: [{ tenantId: "tenant-1", defaultTenant: true }],
+    userId: "user-admin",
+    userKind: "COLABORADOR",
+    displayName: "Admin RBAC",
+    roles: ["ADMIN"],
+    availableScopes: ["UNIDADE"],
   });
   await page.goto(input.path ?? "/seguranca/rbac");
   await expect(page.getByRole("heading", { name: input.heading })).toBeVisible();

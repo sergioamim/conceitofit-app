@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { installE2EAuthSession } from "./support/auth-session";
 
 type CreatedProspect = {
   id: string;
@@ -128,33 +129,7 @@ async function loginAsOperationalUser(page: Page, request: APIRequestContext) {
   });
   expect(contextResponse.ok()).toBe(true);
 
-  await page.addInitScript((seed) => {
-    window.localStorage.setItem("academia-auth-token", seed.token);
-    window.localStorage.setItem("academia-auth-refresh-token", seed.refreshToken);
-    window.localStorage.setItem("academia-auth-token-type", seed.type);
-    window.localStorage.setItem("academia-auth-expires-in", String(seed.expiresIn));
-    if (seed.userId) window.localStorage.setItem("academia-auth-user-id", seed.userId);
-    if (seed.userKind) window.localStorage.setItem("academia-auth-user-kind", seed.userKind);
-    if (seed.displayName) window.localStorage.setItem("academia-auth-display-name", seed.displayName);
-    if (seed.networkId) window.localStorage.setItem("academia-auth-network-id", seed.networkId);
-    if (seed.networkSubdomain) {
-      window.localStorage.setItem("academia-auth-network-subdomain", seed.networkSubdomain);
-      window.localStorage.setItem("academia-auth-network-slug", seed.networkSubdomain);
-    }
-    if (seed.networkName) window.localStorage.setItem("academia-auth-network-name", seed.networkName);
-    if (seed.activeTenantId) window.localStorage.setItem("academia-auth-active-tenant-id", seed.activeTenantId);
-    if (seed.baseTenantId) window.localStorage.setItem("academia-auth-base-tenant-id", seed.baseTenantId);
-    window.localStorage.setItem("academia-auth-preferred-tenant-id", seed.preferredTenantId);
-    window.localStorage.setItem("academia-auth-available-tenants", JSON.stringify(seed.availableTenants));
-    if (seed.availableScopes.length > 0) {
-      window.localStorage.setItem("academia-auth-available-scopes", JSON.stringify(seed.availableScopes));
-    }
-    window.localStorage.setItem("academia-auth-broad-access", seed.broadAccess ? "true" : "false");
-    window.localStorage.setItem(
-      "academia-auth-force-password-change-required",
-      seed.forcePasswordChangeRequired ? "true" : "false",
-    );
-  }, {
+  await installE2EAuthSession(page, {
     token: session.token,
     refreshToken: session.refreshToken,
     type: session.type ?? "Bearer",

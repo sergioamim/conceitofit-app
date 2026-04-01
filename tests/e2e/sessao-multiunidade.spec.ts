@@ -1,14 +1,8 @@
 import { expect, test, type Page, type Request, type Route } from "@playwright/test";
 import { seedAuthenticatedSession } from "./support/backend-only-stubs";
+import { E2E_AUTH_SESSION_STORAGE_KEYS } from "./support/auth-session";
 
-const SESSION_KEYS = [
-  "academia-auth-token",
-  "academia-auth-refresh-token",
-  "academia-auth-token-type",
-  "academia-auth-expires-in",
-  "academia-auth-active-tenant-id",
-  "academia-auth-available-tenants",
-];
+const SESSION_KEYS = [...E2E_AUTH_SESSION_STORAGE_KEYS];
 
 async function fulfillJson(route: Route, json: unknown, status = 200) {
   await route.fulfill({
