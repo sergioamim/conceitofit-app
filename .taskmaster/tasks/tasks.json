@@ -12537,7 +12537,7 @@
         "description": "Fazer voltar a passar as specs de /admin/** que hoje caem no login administrativo ou ficam presas em validacao de permissao.",
         "details": "Esta task depende de 327, 328 e 329. Ela cobre o bucket adminLogin do relatório.\n\nEscopo obrigatorio:\n1. Reexecutar como sentinelas: tests/e2e/backoffice-seguranca.spec.ts, tests/e2e/backoffice-configuracoes.spec.ts, tests/e2e/backoffice-impersonation.spec.ts, tests/e2e/admin-backoffice-coverage.spec.ts, tests/e2e/admin-backoffice-global-crud.spec.ts e tests/e2e/onboarding-fluxo-completo.spec.ts.\n2. Validar o contrato esperado por useAuthAccess e pelo shell do backoffice em src/app/(backoffice)/admin/layout.tsx.\n3. Garantir que usuarios elevados recebam canAccessElevatedModules e demais metadados de acesso coerentes com o cenario testado.\n4. Corrigir divergencias entre seeds de tenant operacionais e o modo plataforma/backoffice quando elas estiverem disparando bloqueios indevidos.\n5. Listar claramente quais falhas remanescentes sao de RBAC/backoffice real e nao mais de boot/auth.\n\nCriterio de aceite: nenhuma spec de /admin/** deve cair em /admin-login por ausencia de contrato de sessao ou bootstrap incompleto.",
         "testStrategy": "Reexecutar as sentinelas de /admin/** e garantir que nenhuma caia em /admin-login; falhas residuais devem estar relacionadas a RBAC, dados de modulo ou comportamento funcional do backoffice.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "327",
           "328",
@@ -12577,10 +12577,10 @@
               2
             ],
             "details": "Cobrir seguranca, configuracoes, impersonation, CRUD global e onboarding sem depender de seeds operacionais incoerentes com o modo plataforma.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "331",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:30:26.078Z"
           },
           {
             "id": 4,
@@ -12598,7 +12598,7 @@
           }
         ],
         "complexity": 7,
-        "updatedAt": "2026-04-01T18:06:54.598Z",
+        "updatedAt": "2026-04-01T18:30:26.078Z",
         "recommendedSubtasks": 4,
         "expansionPrompt": "Dividir a tarefa em: 1. Execução inicial de sentinelas do backoffice e triagem das falhas. 2. Validação do contrato de useAuthAccess e shell backoffice. 3. Correção de divergências de tenant e metadados de acesso elevado. 4. Identificação e categorização de falhas remanescentes de RBAC/backoffice."
       },
@@ -12835,10 +12835,10 @@
             "description": "Confirmar que o mock da API demo casa com a chamada real de createDemoAccount.",
             "dependencies": [],
             "details": "Revisar route pattern, payload enviado, shape da resposta e nomes de campos consumidos por saveAuthSession no fluxo de conta demo.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "335",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T21:15:00.000Z"
           },
           {
             "id": 2,
@@ -12848,10 +12848,10 @@
               1
             ],
             "details": "Ajustar o que for necessario para que saveAuthSession e o shell autenticado do app reconhecam o usuario demo e permitam o redirect para /dashboard?demo=1.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "335",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T21:15:00.000Z"
           },
           {
             "id": 3,
@@ -12861,10 +12861,10 @@
               1
             ],
             "details": "Corrigir cenarios de nome, email e senha invalidos quando a falha estiver na divergencia de markup, labels ou mensagens exibidas.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "335",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T21:15:00.000Z"
           },
           {
             "id": 4,
@@ -12875,14 +12875,14 @@
               3
             ],
             "details": "Executar os cenarios de banner visivel no dashboard e de dismiss persistente na mesma sessao, registrando qualquer dependencia adicional de bootstrap.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "335",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T21:15:00.000Z"
           }
         ],
         "complexity": 6,
-        "updatedAt": "2026-04-01T17:05:34.000Z",
+        "updatedAt": "2026-04-01T21:15:00.000Z",
         "recommendedSubtasks": 3,
         "expansionPrompt": "Dividir a tarefa em: 1. Revisão de tests/e2e/demo-account.spec.ts e `demo-form.tsx`. 2. Confirmação do mock de createDemoAccount e validação da resposta para `saveAuthSession`. 3. Garantia de bootstrap e contexto suficientes para o dashboard demo (`/dashboard?demo=1`) e correção de validações de formulário."
       },
@@ -12963,9 +12963,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T18:24:36.562Z",
+      "lastModified": "2026-04-01T21:15:00.000Z",
       "taskCount": 332,
-      "completedCount": 329,
+      "completedCount": 330,
       "tags": [
         "master"
       ]
