@@ -11,9 +11,6 @@ export default defineConfig({
   },
   test: {
     environment: "happy-dom",
-    happyDOM: {
-      url: "http://localhost:3001",
-    },
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     coverage: {
