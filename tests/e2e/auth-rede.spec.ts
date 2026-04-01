@@ -12,6 +12,12 @@ type CapturedRequests = {
   contextIdentifiers: string[];
 };
 
+// Contrato atual de rede:
+// - Host/subdominio: /login lê x-forwarded-host (ou host) para resolver subdomínio.
+// - Rota explícita: /app/[rede]/(login|forgot-password|first-access).
+// - Query: /login?redeIdentifier=rede-alvo.
+// - Header na API: X-Rede-Identifier.
+
 function normalizedPath(pathname: string) {
   return pathname.replace(/^\/backend/, "");
 }
@@ -22,14 +28,6 @@ function parseBody(raw: string | null) {
   } catch {
     return {};
   }
-}
-
-function buildHostBasedUrl(baseURL: string | undefined, subdomain: string, pathname: string, search?: string): string {
-  const url = new URL(baseURL ?? "http://127.0.0.1:3000");
-  url.hostname = `${subdomain}.localhost`;
-  url.pathname = pathname;
-  url.search = search ?? "";
-  return url.toString();
 }
 
 async function installAuthNetworkMocks(
@@ -321,18 +319,13 @@ test.describe("acesso por rede", () => {
     });
   });
 
-  test("usa o subdomínio do host em /login e mantém links canônicos", async ({ page }, testInfo) => {
+  test("usa o subdomínio do host em /login e mantém links canônicos", async ({ page }) => {
     const captured: CapturedRequests = { contextIdentifiers: [] };
     await installAuthNetworkMocks(page, captured);
 
-    await page.goto(
-      buildHostBasedUrl(
-        typeof testInfo.project.use.baseURL === "string" ? testInfo.project.use.baseURL : undefined,
-        "rede-norte",
-        "/login",
-        "next=%2Fdashboard",
-      )
-    );
+    await page.setExtraHTTPHeaders({ "x-forwarded-host": "rede-norte.localhost" });
+
+    await page.goto("/login?next=%2Fdashboard");
 
     await expect(page.getByRole("heading", { name: "Portal Rede Norte" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Recuperar senha" })).toHaveAttribute(
