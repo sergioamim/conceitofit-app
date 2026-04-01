@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { seedAuthenticatedSession } from "./support/backend-only-stubs";
+import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
 
 const TENANT_MANANCIAIS = {
   id: "tenant-mananciais-s1",
@@ -36,202 +37,427 @@ function normalizePath(pathname: string) {
 }
 
 async function installBiApiMocks(page: Page) {
-  let currentTenantId = TENANT_MANANCIAIS.id;
+  await installOperationalAppShellMocks(page, {
+    currentTenantId: TENANT_MANANCIAIS.id,
+    tenants: [TENANT_MANANCIAIS, TENANT_PECHINCHA],
+    user: {
+      id: "user-admin",
+      userId: "user-admin",
+      nome: "Admin BI",
+      displayName: "Admin BI",
+      email: "admin@academia.local",
+      roles: ["OWNER", "ADMIN"],
+      userKind: "COLABORADOR",
+      activeTenantId: TENANT_MANANCIAIS.id,
+      availableTenants: [
+        { tenantId: TENANT_MANANCIAIS.id, defaultTenant: true },
+        { tenantId: TENANT_PECHINCHA.id, defaultTenant: false },
+      ],
+      availableScopes: ["UNIDADE"],
+      broadAccess: false,
+      redeId: ACADEMIA.id,
+      redeNome: ACADEMIA.nome,
+      redeSlug: "academia-sergio-amim",
+    },
+    academia: ACADEMIA,
+    capabilities: { canAccessElevatedModules: true, canDeleteClient: false },
+  });
 
-  await page.route("**/api/v1/**", async (route) => {
+  const prospectsByTenant = {
+    [TENANT_MANANCIAIS.id]: [
+      {
+        id: "prospect-mananciais-1",
+        tenantId: TENANT_MANANCIAIS.id,
+        nome: "João Silva",
+        telefone: "(21) 99999-0001",
+        email: "joao@test.local",
+        origem: "WHATSAPP",
+        status: "NOVO",
+        dataCriacao: "2026-03-01T10:00:00",
+      },
+    ],
+    [TENANT_PECHINCHA.id]: [
+      {
+        id: "prospect-pechincha-1",
+        tenantId: TENANT_PECHINCHA.id,
+        nome: "Ana Rocha",
+        telefone: "(21) 99999-0003",
+        email: "ana@test.local",
+        origem: "SITE",
+        status: "NOVO",
+        dataCriacao: "2026-03-03T14:30:00",
+      },
+    ],
+  } as const;
+
+  const alunosByTenant = {
+    [TENANT_MANANCIAIS.id]: [
+      {
+        id: "aluno-mananciais-1",
+        tenantId: TENANT_MANANCIAIS.id,
+        nome: "Maria Santos",
+        email: "maria@test.local",
+        telefone: "(21) 99999-0002",
+        cpf: "11111111111",
+        dataNascimento: "1995-01-01",
+        sexo: "F",
+        status: "ATIVO",
+        dataCadastro: "2026-01-15",
+      },
+    ],
+    [TENANT_PECHINCHA.id]: [
+      {
+        id: "aluno-pechincha-1",
+        tenantId: TENANT_PECHINCHA.id,
+        nome: "Carlos Lima",
+        email: "carlos@test.local",
+        telefone: "(21) 98888-0004",
+        cpf: "22222222222",
+        dataNascimento: "1992-04-18",
+        sexo: "M",
+        status: "ATIVO",
+        dataCadastro: "2026-02-10",
+      },
+    ],
+  } as const;
+
+  const matriculasByTenant = {
+    [TENANT_MANANCIAIS.id]: [
+      {
+        id: "mat-mananciais-1",
+        tenantId: TENANT_MANANCIAIS.id,
+        alunoId: "aluno-mananciais-1",
+        planoId: "plano-1",
+        dataInicio: "2026-01-15",
+        dataFim: "2026-12-31",
+        valorPago: 189.9,
+        valorMatricula: 59.9,
+        desconto: 0,
+        formaPagamento: "PIX",
+        status: "ATIVA",
+        renovacaoAutomatica: true,
+        dataCriacao: "2026-01-15",
+      },
+    ],
+    [TENANT_PECHINCHA.id]: [
+      {
+        id: "mat-pechincha-1",
+        tenantId: TENANT_PECHINCHA.id,
+        alunoId: "aluno-pechincha-1",
+        planoId: "plano-2",
+        dataInicio: "2026-02-10",
+        dataFim: "2026-12-31",
+        valorPago: 209.9,
+        valorMatricula: 49.9,
+        desconto: 10,
+        formaPagamento: "CARTAO_CREDITO",
+        status: "ATIVA",
+        renovacaoAutomatica: true,
+        dataCriacao: "2026-02-10",
+      },
+    ],
+  } as const;
+
+  const contasReceberByTenant = {
+    [TENANT_MANANCIAIS.id]: [
+      {
+        id: "cr-mananciais-pago",
+        tenantId: TENANT_MANANCIAIS.id,
+        cliente: "Maria Santos",
+        descricao: "Mensalidade Março",
+        categoria: "MENSALIDADE",
+        competencia: "2026-03-01",
+        dataVencimento: "2026-03-10",
+        dataRecebimento: "2026-03-10",
+        valorOriginal: 189.9,
+        desconto: 0,
+        jurosMulta: 0,
+        status: "RECEBIDA",
+        dataCriacao: "2026-03-01T08:00:00",
+      },
+      {
+        id: "cr-mananciais-pendente",
+        tenantId: TENANT_MANANCIAIS.id,
+        cliente: "Maria Santos",
+        descricao: "Mensalidade Abril",
+        categoria: "MENSALIDADE",
+        competencia: "2026-04-01",
+        dataVencimento: "2026-04-10",
+        valorOriginal: 189.9,
+        desconto: 0,
+        jurosMulta: 0,
+        status: "PENDENTE",
+        dataCriacao: "2026-04-01T08:00:00",
+      },
+      {
+        id: "cr-mananciais-vencido",
+        tenantId: TENANT_MANANCIAIS.id,
+        cliente: "Maria Santos",
+        descricao: "Mensalidade Fevereiro",
+        categoria: "MENSALIDADE",
+        competencia: "2026-02-01",
+        dataVencimento: "2026-02-10",
+        valorOriginal: 189.9,
+        desconto: 0,
+        jurosMulta: 12,
+        status: "VENCIDA",
+        dataCriacao: "2026-02-01T08:00:00",
+      },
+    ],
+    [TENANT_PECHINCHA.id]: [
+      {
+        id: "cr-pechincha-pago",
+        tenantId: TENANT_PECHINCHA.id,
+        cliente: "Carlos Lima",
+        descricao: "Mensalidade Março",
+        categoria: "MENSALIDADE",
+        competencia: "2026-03-01",
+        dataVencimento: "2026-03-08",
+        dataRecebimento: "2026-03-08",
+        valorOriginal: 209.9,
+        desconto: 5,
+        jurosMulta: 0,
+        status: "RECEBIDA",
+        dataCriacao: "2026-03-02T08:30:00",
+      },
+      {
+        id: "cr-pechincha-pendente",
+        tenantId: TENANT_PECHINCHA.id,
+        cliente: "Carlos Lima",
+        descricao: "Mensalidade Abril",
+        categoria: "MENSALIDADE",
+        competencia: "2026-04-01",
+        dataVencimento: "2026-04-08",
+        valorOriginal: 209.9,
+        desconto: 0,
+        jurosMulta: 0,
+        status: "PENDENTE",
+        dataCriacao: "2026-04-02T08:30:00",
+      },
+    ],
+  } as const;
+
+  const gradesByTenant = {
+    [TENANT_MANANCIAIS.id]: [
+      {
+        id: "grade-mananciais-1",
+        tenantId: TENANT_MANANCIAIS.id,
+        atividadeId: "atividade-bike",
+        diasSemana: ["SEG", "QUA"],
+        definicaoHorario: "PREVIAMENTE",
+        horaInicio: "07:00",
+        horaFim: "07:50",
+        capacidade: 20,
+        duracaoMinutos: 50,
+        checkinLiberadoMinutosAntes: 15,
+        acessoClientes: "TODOS_CLIENTES",
+        permiteReserva: true,
+        limitarVagasAgregadores: false,
+        exibirWellhub: true,
+        permitirSaidaAntesInicio: false,
+        permitirEscolherNumeroVaga: false,
+        exibirNoAppCliente: true,
+        exibirNoAutoatendimento: true,
+        exibirNoWodTv: false,
+        finalizarAtividadeAutomaticamente: true,
+        desabilitarListaEspera: false,
+        ativo: true,
+      },
+    ],
+    [TENANT_PECHINCHA.id]: [
+      {
+        id: "grade-pechincha-1",
+        tenantId: TENANT_PECHINCHA.id,
+        atividadeId: "atividade-yoga",
+        diasSemana: ["TER", "QUI"],
+        definicaoHorario: "PREVIAMENTE",
+        horaInicio: "18:00",
+        horaFim: "18:50",
+        capacidade: 18,
+        duracaoMinutos: 50,
+        checkinLiberadoMinutosAntes: 20,
+        acessoClientes: "TODOS_CLIENTES",
+        permiteReserva: true,
+        limitarVagasAgregadores: false,
+        exibirWellhub: false,
+        permitirSaidaAntesInicio: false,
+        permitirEscolherNumeroVaga: false,
+        exibirNoAppCliente: true,
+        exibirNoAutoatendimento: true,
+        exibirNoWodTv: false,
+        finalizarAtividadeAutomaticamente: true,
+        desabilitarListaEspera: false,
+        ativo: true,
+      },
+    ],
+  } as const;
+
+  const reservasByTenant = {
+    [TENANT_MANANCIAIS.id]: [
+      {
+        id: "reserva-mananciais-1",
+        tenantId: TENANT_MANANCIAIS.id,
+        sessaoId: "sessao-mananciais-1",
+        atividadeGradeId: "grade-mananciais-1",
+        atividadeId: "atividade-bike",
+        atividadeNome: "Bike Indoor",
+        alunoId: "aluno-mananciais-1",
+        alunoNome: "Maria Santos",
+        data: "2026-03-16",
+        horaInicio: "07:00",
+        horaFim: "07:50",
+        origem: "BACKOFFICE",
+        status: "CONFIRMADA",
+        dataCriacao: "2026-03-12T08:00:00",
+      },
+    ],
+    [TENANT_PECHINCHA.id]: [
+      {
+        id: "reserva-pechincha-1",
+        tenantId: TENANT_PECHINCHA.id,
+        sessaoId: "sessao-pechincha-1",
+        atividadeGradeId: "grade-pechincha-1",
+        atividadeId: "atividade-yoga",
+        atividadeNome: "Yoga Flow",
+        alunoId: "aluno-pechincha-1",
+        alunoNome: "Carlos Lima",
+        data: "2026-03-17",
+        horaInicio: "18:00",
+        horaFim: "18:50",
+        origem: "BACKOFFICE",
+        status: "CONFIRMADA",
+        dataCriacao: "2026-03-12T09:30:00",
+      },
+    ],
+  } as const;
+
+  await page.route("**/api/v1/unidades", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await fulfillJson(route, [TENANT_MANANCIAIS, TENANT_PECHINCHA]);
+  });
+
+  await page.route("**/api/v1/crm/prospects**", async (route) => {
     const request = route.request();
-    const method = request.method();
     const url = new URL(request.url());
     const path = normalizePath(url.pathname);
+    const tenantId = url.searchParams.get("tenantId")?.trim() || TENANT_MANANCIAIS.id;
 
-    // Auth/session endpoints
-    if (path === "/api/v1/auth/me" && method === "GET") {
-      await fulfillJson(route, {
-        id: "user-admin",
-        userId: "user-admin",
-        nome: "Admin BI",
-        displayName: "Admin BI",
-        email: "admin@academia.local",
-        roles: ["OWNER", "ADMIN"],
-        userKind: "COLABORADOR",
-        redeId: ACADEMIA.id,
-        redeNome: ACADEMIA.nome,
-        redeSlug: "academia-sergio-amim",
-        activeTenantId: currentTenantId,
-        availableTenants: [
-          { tenantId: TENANT_MANANCIAIS.id, defaultTenant: true },
-          { tenantId: TENANT_PECHINCHA.id, defaultTenant: false },
-        ],
-      });
+    if (request.method() !== "GET" || path !== "/api/v1/crm/prospects") {
+      await route.fallback();
       return;
     }
 
-    if (path === "/api/v1/app/bootstrap" && method === "GET") {
-      await fulfillJson(route, {
-        user: {
-          id: "user-admin",
-          userId: "user-admin",
-          nome: "Admin BI",
-          displayName: "Admin BI",
-          email: "admin@academia.local",
-          roles: ["OWNER", "ADMIN"],
-          userKind: "COLABORADOR",
-          redeId: ACADEMIA.id,
-          redeNome: ACADEMIA.nome,
-          redeSlug: "academia-sergio-amim",
-          activeTenantId: currentTenantId,
-          availableTenants: [
-            { tenantId: TENANT_MANANCIAIS.id, defaultTenant: true },
-            { tenantId: TENANT_PECHINCHA.id, defaultTenant: false },
-          ],
-          availableScopes: ["UNIDADE"],
-          broadAccess: false,
-        },
-        tenantContext: {
-          currentTenantId,
-          tenantAtual: TENANT_MANANCIAIS,
-          unidadesDisponiveis: [TENANT_MANANCIAIS, TENANT_PECHINCHA],
-        },
-        academia: ACADEMIA,
-        capabilities: { canAccessElevatedModules: true, canDeleteClient: false },
-      });
+    await fulfillJson(route, {
+      items: prospectsByTenant[tenantId as keyof typeof prospectsByTenant] ?? [],
+      page: 0,
+      size: 20,
+      hasNext: false,
+    });
+  });
+
+  await page.route("**/api/v1/comercial/alunos**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = normalizePath(url.pathname);
+    const tenantId = url.searchParams.get("tenantId")?.trim() || TENANT_MANANCIAIS.id;
+    const alunos = alunosByTenant[tenantId as keyof typeof alunosByTenant] ?? [];
+
+    if (request.method() !== "GET" || path !== "/api/v1/comercial/alunos") {
+      await route.fallback();
       return;
     }
 
-    if (path === "/api/v1/context/unidade-ativa" && method === "GET") {
-      await fulfillJson(route, {
-        currentTenantId,
-        tenantAtual: currentTenantId === TENANT_PECHINCHA.id ? TENANT_PECHINCHA : TENANT_MANANCIAIS,
-        unidadesDisponiveis: [TENANT_MANANCIAIS, TENANT_PECHINCHA],
-      });
+    await fulfillJson(route, {
+      items: alunos,
+      page: 0,
+      size: 1000,
+      hasNext: false,
+      totaisStatus: { total: alunos.length, ativos: alunos.length, suspensos: 0, inativos: 0, cancelados: 0 },
+    });
+  });
+
+  await page.route("**/api/v1/comercial/matriculas**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = normalizePath(url.pathname);
+    const tenantId = url.searchParams.get("tenantId")?.trim() || TENANT_MANANCIAIS.id;
+
+    if (request.method() !== "GET" || path !== "/api/v1/comercial/matriculas") {
+      await route.fallback();
       return;
     }
 
-    if (/^\/api\/v1\/context\/unidade-ativa\/[^/]+$/.test(path) && method === "PUT") {
-      currentTenantId = path.split("/").at(-1) ?? currentTenantId;
-      const tenant = currentTenantId === TENANT_PECHINCHA.id ? TENANT_PECHINCHA : TENANT_MANANCIAIS;
-      await fulfillJson(route, {
-        currentTenantId,
-        tenantAtual: tenant,
-        unidadesDisponiveis: [TENANT_MANANCIAIS, TENANT_PECHINCHA],
-      });
+    await fulfillJson(route, matriculasByTenant[tenantId as keyof typeof matriculasByTenant] ?? []);
+  });
+
+  await page.route("**/api/v1/comercial/adesoes**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = normalizePath(url.pathname);
+    const tenantId = url.searchParams.get("tenantId")?.trim() || TENANT_MANANCIAIS.id;
+
+    if (request.method() !== "GET" || path !== "/api/v1/comercial/adesoes") {
+      await route.fallback();
       return;
     }
 
-    if (path === "/api/v1/academia" && method === "GET") {
-      await fulfillJson(route, ACADEMIA);
+    await fulfillJson(route, matriculasByTenant[tenantId as keyof typeof matriculasByTenant] ?? []);
+  });
+
+  await page.route("**/api/v1/gerencial/financeiro/contas-receber**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = normalizePath(url.pathname);
+    const tenantId = url.searchParams.get("tenantId")?.trim() || TENANT_MANANCIAIS.id;
+    const status = url.searchParams.get("status")?.trim();
+    const statusMap = {
+      PAGO: "RECEBIDA",
+      PENDENTE: "PENDENTE",
+      VENCIDO: "VENCIDA",
+    } as const;
+
+    if (request.method() !== "GET" || path !== "/api/v1/gerencial/financeiro/contas-receber") {
+      await route.fallback();
       return;
     }
 
-    if (path === "/api/v1/unidades" && method === "GET") {
-      await fulfillJson(route, [TENANT_MANANCIAIS, TENANT_PECHINCHA]);
+    const contas = contasReceberByTenant[tenantId as keyof typeof contasReceberByTenant] ?? [];
+    const filtered = status ? contas.filter((item) => item.status === statusMap[status as keyof typeof statusMap]) : contas;
+    await fulfillJson(route, filtered);
+  });
+
+  await page.route("**/api/v1/administrativo/atividades-grade**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = normalizePath(url.pathname);
+    const tenantId = url.searchParams.get("tenantId")?.trim() || TENANT_MANANCIAIS.id;
+
+    if (request.method() !== "GET" || path !== "/api/v1/administrativo/atividades-grade") {
+      await route.fallback();
       return;
     }
 
-    // Prospects
-    if (path === "/api/v1/crm/prospects" && method === "GET") {
-      await fulfillJson(route, {
-        items: [
-          {
-            id: "prospect-1",
-            tenantId: currentTenantId,
-            nome: "João Silva",
-            telefone: "(21) 99999-0001",
-            email: "joao@test.local",
-            origem: "WHATSAPP",
-            status: "NOVO",
-            dataCriacao: "2026-03-01T10:00:00",
-          },
-        ],
-        page: 0,
-        size: 20,
-        hasNext: false,
-      });
+    await fulfillJson(route, gradesByTenant[tenantId as keyof typeof gradesByTenant] ?? []);
+  });
+
+  await page.route("**/api/v1/agenda/aulas/reservas**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = normalizePath(url.pathname);
+    const tenantId = url.searchParams.get("tenantId")?.trim() || TENANT_MANANCIAIS.id;
+
+    if (request.method() !== "GET" || path !== "/api/v1/agenda/aulas/reservas") {
+      await route.fallback();
       return;
     }
 
-    // Alunos
-    if (path === "/api/v1/comercial/alunos" && method === "GET") {
-      await fulfillJson(route, {
-        items: [
-          {
-            id: "aluno-1",
-            tenantId: currentTenantId,
-            nome: "Maria Santos",
-            email: "maria@test.local",
-            telefone: "(21) 99999-0002",
-            cpf: "11111111111",
-            dataNascimento: "1995-01-01",
-            sexo: "F",
-            status: "ATIVO",
-            dataCadastro: "2026-01-15",
-          },
-        ],
-        page: 0,
-        size: 1000,
-        hasNext: false,
-        totaisStatus: { total: 1, ativos: 1, suspensos: 0, inativos: 0, cancelados: 0 },
-      });
-      return;
-    }
-
-    // Matriculas
-    if ((path === "/api/v1/comercial/adesoes" || path === "/api/v1/comercial/matriculas") && method === "GET") {
-      await fulfillJson(route, [
-        {
-          id: "mat-1",
-          tenantId: currentTenantId,
-          alunoId: "aluno-1",
-          planoId: "plano-1",
-          dataInicio: "2026-01-15",
-          dataFim: "2026-12-31",
-          valorPago: 189.9,
-          valorMatricula: 59.9,
-          desconto: 0,
-          formaPagamento: "PIX",
-          status: "ATIVA",
-          renovacaoAutomatica: true,
-          dataCriacao: "2026-01-15",
-        },
-      ]);
-      return;
-    }
-
-    // Contas a receber / pagamentos
-    if (
-      (path === "/api/v1/gerencial/financeiro/contas-receber" ||
-        path === "/api/v1/comercial/pagamentos") &&
-      method === "GET"
-    ) {
-      await fulfillJson(route, []);
-      return;
-    }
-
-    // Atividade grades
-    if (path === "/api/v1/administrativo/atividades-grade" && method === "GET") {
-      await fulfillJson(route, []);
-      return;
-    }
-
-    // Reservas aula
-    if (path === "/api/v1/agenda/aulas/reservas" && method === "GET") {
-      await fulfillJson(route, []);
-      return;
-    }
-
-    // Auth refresh
-    if (path === "/api/v1/auth/refresh" && method === "POST") {
-      await fulfillJson(route, { token: "token-e2e", refreshToken: "refresh-e2e", type: "Bearer" });
-      return;
-    }
-
-    // Catch-all: return empty for any unhandled GET
-    if (method === "GET") {
-      await fulfillJson(route, []);
-      return;
-    }
-
-    await route.continue();
+    await fulfillJson(route, {
+      items: reservasByTenant[tenantId as keyof typeof reservasByTenant] ?? [],
+    });
   });
 }
 

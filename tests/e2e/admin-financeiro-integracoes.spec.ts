@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Request, type Route } from "@playwright/test";
 import { installAdminCrudApiMocks, seedAuthenticatedSession } from "./support/backend-only-stubs";
+import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
 
 type TenantContextSeed = {
   currentTenantId: string;
@@ -132,6 +133,42 @@ async function fulfillJson(route: Route, json: unknown, status = 200) {
 
 async function installAdminFinanceiroApi(page: Page) {
   await installAdminCrudApiMocks(page);
+  await installOperationalAppShellMocks(page, {
+    currentTenantId: "tenant-1",
+    tenants: [
+      {
+        id: "tenant-1",
+        nome: "Unidade Centro",
+        ativo: true,
+        academiaId: "academia-e2e",
+        groupId: "academia-e2e",
+      },
+    ],
+    user: {
+      id: "user-admin-financeiro",
+      userId: "user-admin-financeiro",
+      nome: "Admin Financeiro",
+      displayName: "Admin Financeiro",
+      email: "financeiro@academia.local",
+      roles: ["OWNER", "ADMIN"],
+      activeTenantId: "tenant-1",
+      availableTenants: [{ tenantId: "tenant-1", defaultTenant: true }],
+      availableScopes: ["UNIDADE"],
+      broadAccess: false,
+      redeId: "academia-e2e",
+      redeNome: "Academia E2E",
+      redeSlug: "academia-e2e",
+    },
+    academia: {
+      id: "academia-e2e",
+      nome: "Academia E2E",
+      ativo: true,
+    },
+    capabilities: {
+      canAccessElevatedModules: true,
+      canDeleteClient: false,
+    },
+  });
 
   const tenantContext: TenantContextSeed = {
     currentTenantId: "tenant-1",
