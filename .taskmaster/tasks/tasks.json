@@ -12255,13 +12255,717 @@
         "complexity": 2,
         "subtasks": [],
         "updatedAt": "2026-04-01T15:00:50.996Z"
+      },
+      {
+        "id": "327",
+        "title": "Estabilizar contrato de sessao E2E e fixture compartilhada",
+        "description": "Consolidar um helper unico de autenticacao Playwright alinhado ao contrato atual de sessao, eliminando redirecionamentos indevidos para login em testes autenticados.",
+        "details": "Contexto: os layouts protegidos do app e do backoffice agora usam hasActiveSession() e o token-store considera a flag academia-auth-session-active, alem do estado em memoria. Muitas specs ainda gravam somente token/tenant diretamente no localStorage, o que derruba suites inteiras para /login ou /admin-login.\n\nEscopo obrigatorio:\n1. Auditar todos os helpers e seeds de sessao existentes em tests/e2e/support/backend-only-stubs.ts e nas specs que fazem page.addInitScript manual.\n2. Definir um helper canônico de sessao autenticada E2E que persista todos os campos minimos hoje esperados pelo frontend: flag de sessao ativa, token type, tenant ativo/preferido, availableTenants, baseTenant quando aplicavel, displayName/userKind/userId quando a tela depender disso, availableScopes e broadAccess quando afetarem guardas.\n3. Garantir compatibilidade com os dois shells protegidos: src/app/(app)/layout.tsx e src/app/(backoffice)/admin/layout.tsx.\n4. Ajustar o helper para ser reutilizavel por specs operacionais, specs administrativas e fluxos publicos que autenticam no meio do teste.\n5. Documentar no detalhe da task quais chaves de storage sao obrigatorias, quais sao opcionais e quais dependem do papel do usuario ou do modulo.\n\nFora de escopo: corrigir seletores de tela ou mocks de dominio especificos. Esta task deve apenas criar a base segura para que as demais deixem de falhar por autenticação/regressão de fixture.",
+        "testStrategy": "Executar um smoke E2E minimo para /dashboard e /admin apos semear sessao via helper compartilhado, confirmando que ambos os layouts reconhecem a sessao e nao redirecionam para login.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar todas as sementes de sessao E2E existentes",
+            "description": "Localizar helpers e specs que escrevem chaves de sessao manualmente no localStorage.",
+            "dependencies": [],
+            "details": "Mapear page.addInitScript, helpers em tests/e2e/support e qualquer seed inline usada por suites autenticadas. Registrar quais chaves cada variante grava hoje e quais gaps existem em relacao ao contrato atual de hasActiveSession().",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "327",
+            "updatedAt": "2026-04-01T17:24:17.922Z"
+          },
+          {
+            "id": 2,
+            "title": "Definir o contrato canonico de sessao Playwright",
+            "description": "Listar campos obrigatorios, opcionais e condicionais para sessao autenticada em E2E.",
+            "dependencies": [
+              1
+            ],
+            "details": "Documentar explicitamente flag academia-auth-session-active, token type, tenant ativo/preferido, availableTenants, baseTenantId, userId, userKind, displayName, availableScopes, broadAccess e qualquer outro campo exigido pelos shells atuais.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "327",
+            "updatedAt": "2026-04-01T17:24:19.797Z"
+          },
+          {
+            "id": 3,
+            "title": "Implementar helper compartilhado aderente ao contrato atual",
+            "description": "Concentrar a criacao da sessao autenticada E2E em um helper reutilizavel no support do Playwright.",
+            "dependencies": [
+              2
+            ],
+            "details": "Atualizar tests/e2e/support/backend-only-stubs.ts ou helper equivalente para aceitar overrides controlados e persistir todos os campos necessarios ao runtime atual sem depender de seeds duplicadas nas specs.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "327",
+            "updatedAt": "2026-04-01T17:24:21.486Z"
+          },
+          {
+            "id": 4,
+            "title": "Validar o helper contra os shells do app e do backoffice",
+            "description": "Confirmar que a nova fixture atende src/app/(app)/layout.tsx e src/app/(backoffice)/admin/layout.tsx.",
+            "dependencies": [
+              3
+            ],
+            "details": "Executar pelo menos um teste sentinela de cada shell e registrar no detalhe da task quais chaves permanecem obrigatorias por modulo para evitar regressao futura de fixture.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "327",
+            "updatedAt": "2026-04-01T17:24:23.092Z"
+          }
+        ],
+        "complexity": 9,
+        "updatedAt": "2026-04-01T17:24:23.092Z",
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Dividir a tarefa em: 1. Auditoria completa de helpers e seeds de sessão. 2. Definição do contrato canônico de sessão E2E. 3. Implementação do helper de sessão. 4. Integração do helper com layouts protegidos. 5. Documentação detalhada das chaves de storage e uso."
+      },
+      {
+        "id": "328",
+        "title": "Migrar specs autenticadas para o helper canonico de sessao",
+        "description": "Substituir seeds manuais de localStorage por um caminho compartilhado de autenticacao Playwright, reduzindo divergencia entre specs e fixture.",
+        "details": "Esta task depende da 327 e deve consumir o helper definitivo criado nela.\n\nEscopo obrigatorio:\n1. Mapear todas as specs que hoje fazem page.addInitScript com chaves de sessao escritas manualmente.\n2. Classificar os usos por perfil: usuario operacional, usuario elevado/backoffice, viewer sem permissao, fluxo com troca de tenant e fluxo que autentica apos submit.\n3. Refatorar as specs para usar o helper compartilhado em vez de seeds inline, preservando apenas overrides realmente necessarios por cenario.\n4. Remover duplicacao de payloads de sessao e centralizar defaults em um ponto unico de manutencao.\n5. Garantir que as specs continuem legiveis: a fixture precisa aceitar input de tenant, scopes, broadAccess, userKind e displayName sem exigir reescrita ad hoc em cada teste.\n\nArquivos prioritarios para migracao: tests/e2e/support/backend-only-stubs.ts, tests/e2e/support/admin-crud-helpers.ts, tests/e2e/billing-config.spec.ts, tests/e2e/backoffice-seguranca.spec.ts, tests/e2e/backoffice-configuracoes.spec.ts, tests/e2e/backoffice-impersonation.spec.ts, tests/e2e/admin-backoffice-coverage.spec.ts, tests/e2e/treinos-v2-editor.spec.ts, tests/e2e/security-flows.spec.ts, tests/e2e/dashboard.spec.ts e demais specs que tocam shells protegidos.\n\nDefinition of done: nenhuma spec do intervalo trabalhado deve depender de sementes divergentes de sessao quando o helper compartilhado puder ser usado.",
+        "testStrategy": "Reexecutar um conjunto de specs migradas de cada familia principal e garantir que nao exista mais seed manual de sessao onde o helper compartilhado cobre o caso.",
+        "status": "done",
+        "dependencies": [
+          "327"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Inventariar specs com addInitScript manual",
+            "description": "Separar por familia as specs que ainda semeiam sessao inline.",
+            "dependencies": [],
+            "details": "Classificar arquivos por shell, perfil de usuario e necessidade de override para orientar a migracao sem perder legibilidade.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "328",
+            "updatedAt": "2026-04-01T18:02:25.690Z"
+          },
+          {
+            "id": 2,
+            "title": "Migrar helpers compartilhados e bases administrativas",
+            "description": "Atualizar helpers support, billing, CRUD administrativo e suites de seguranca para usar o helper canonico.",
+            "dependencies": [
+              1
+            ],
+            "details": "Atacar primeiro os pontos que destravam mais specs de uma vez, como tests/e2e/support/admin-crud-helpers.ts, billing-config e suites base de seguranca/backoffice.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "328",
+            "updatedAt": "2026-04-01T18:02:27.453Z"
+          },
+          {
+            "id": 3,
+            "title": "Migrar suites operacionais e fluxos do shell do app",
+            "description": "Aplicar o helper canonico em dashboard, security-flows, treinos, clientes e suites semelhantes.",
+            "dependencies": [
+              2
+            ],
+            "details": "Remover seeds duplicadas e preservar apenas overrides que representem diferencas reais de papel, tenant ou escopo.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "328",
+            "updatedAt": "2026-04-01T18:02:29.251Z"
+          },
+          {
+            "id": 4,
+            "title": "Remover duplicacoes remanescentes e documentar excecoes",
+            "description": "Deixar claro quando uma spec ainda precisa de complemento proprio alem do helper.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Registrar no detalhe da task quais cenarios continuam exigindo campos extras e por que eles nao devem voltar a virar uma seed paralela completa.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "328",
+            "updatedAt": "2026-04-01T18:02:30.930Z"
+          }
+        ],
+        "complexity": 7,
+        "updatedAt": "2026-04-01T18:02:30.930Z",
+        "recommendedSubtasks": 4,
+        "expansionPrompt": "Dividir a tarefa em: 1. Mapeamento e classificação de specs com seeds manuais. 2. Refatoração de specs operacionais (ex: /dashboard, clientes). 3. Refatoração de specs administrativas (ex: backoffice). 4. Consolidação de payloads e remoção de duplicação."
+      },
+      {
+        "id": "329",
+        "title": "Padronizar mocks minimos de bootstrap, contexto e autorizacao para E2E",
+        "description": "Criar um contrato minimo e consistente de mocks para auth/me, app/bootstrap, unidade ativa e endpoints de contexto usados pelos layouts e sidebars.",
+        "details": "Esta task depende da 327 e deve atacar a segunda causa-raiz do relatório: specs que ate entram autenticadas, mas recebem payloads incompletos para os providers e guardas atuais.\n\nEscopo obrigatorio:\n1. Inventariar quais requests de bootstrap/contexto cada shell faz hoje antes da tela especifica carregar.\n2. Definir respostas minimas compartilhadas para: /api/v1/auth/me, /api/v1/app/bootstrap, /api/v1/context/unidade-ativa, PUT de troca de unidade, /api/v1/academia e endpoints auxiliares que sidebars/topbars consultam cedo.\n3. Garantir que os mocks tragam campos consistentes entre si: tenant ativo, tenant base, availableTenants, availableScopes, broadAccess, capabilities e dados da academia/rede quando o shell precisar disso.\n4. Eliminar fallbacks genericos perigosos que respondem 200 {} e mascaram falta de contrato, substituindo-os por payloads realistas ou por falha explicita quando o endpoint nao tiver sido coberto.\n5. Documentar no detalhe da task quais modulos podem reaproveitar esse pacote de mocks e quais exigem complementos proprios de dominio.\n\nFora de escopo: corrigir assertivas de tela. O objetivo aqui e estabilizar o handshake entre teste e runtime compartilhado.",
+        "testStrategy": "Rodar sentinelas do app e do backoffice com mocks compartilhados, validando que auth/me, app/bootstrap, contexto e academia entregam payloads consistentes e suficientes para o shell subir.",
+        "status": "done",
+        "dependencies": [
+          "327"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear requests minimos de cada shell protegido",
+            "description": "Levantar todas as chamadas feitas antes da tela especifica carregar.",
+            "dependencies": [],
+            "details": "Cobrir auth/me, app/bootstrap, contexto de unidade, academia/rede e qualquer request acionada por sidebar/topbar no primeiro paint do shell.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "329",
+            "updatedAt": "2026-04-01T18:01:12.699Z"
+          },
+          {
+            "id": 2,
+            "title": "Criar pacote compartilhado de mocks minimos",
+            "description": "Padronizar respostas coerentes para autenticacao, bootstrap e contexto.",
+            "dependencies": [
+              1
+            ],
+            "details": "Garantir alinhamento entre tenant ativo, tenant base, availableTenants, scopes, broadAccess, capabilities e dados de academia/rede nas respostas compartilhadas.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "329",
+            "updatedAt": "2026-04-01T18:00:32.143Z"
+          },
+          {
+            "id": 3,
+            "title": "Eliminar fallbacks 200 vazio que mascaram contrato faltante",
+            "description": "Substituir respostas genericas por payload realista ou erro explicito.",
+            "dependencies": [
+              2
+            ],
+            "details": "Remover a pratica de responder 200 {} para endpoints desconhecidos quando isso esconder problema de contrato e produzir falso positivo ou loading infinito.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "329",
+            "updatedAt": "2026-04-01T18:00:32.315Z"
+          },
+          {
+            "id": 4,
+            "title": "Validar consistencia dos mocks contra providers e guardas atuais",
+            "description": "Confirmar que useAuthAccess, TenantContext e layouts protegidos aceitam o contrato compartilhado.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Executar smoke nas rotas sentinela e ajustar os payloads minimos ate que providers e guardas deixem de cair em estados intermediarios inconsistentes.",
+            "status": "done",
+            "testStrategy": null,
+            "parentId": "329",
+            "updatedAt": "2026-04-01T18:01:14.490Z"
+          }
+        ],
+        "complexity": 8,
+        "updatedAt": "2026-04-01T18:01:14.490Z",
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Dividir a tarefa em: 1. Inventário de requests de bootstrap/contexto por shell. 2. Definição do contrato mínimo de mocks para /auth/me e /app/bootstrap. 3. Definição do contrato mínimo de mocks para /context/unidade-ativa e troca de unidade. 4. Definição do contrato mínimo para /academia e auxiliares. 5. Documentação dos mocks e módulos que podem reusá-los."
+      },
+      {
+        "id": "330",
+        "title": "Recuperar suites do app autenticado que hoje redirecionam para /login",
+        "description": "Fazer voltar a passar as specs do shell operacional que hoje quebram antes mesmo de exercer a funcionalidade da tela.",
+        "details": "Esta task depende de 327, 328 e 329. Ela cobre as falhas agrupadas no bucket de login do app: /dashboard, /clientes, /administrativo, /planos, /treinos e fluxos semelhantes.\n\nEscopo obrigatorio:\n1. Reexecutar primeiro um subconjunto sentinela: tests/e2e/security-flows.spec.ts, tests/e2e/dashboard.spec.ts, tests/e2e/clientes-cadastro.spec.ts, tests/e2e/billing-config.spec.ts, tests/e2e/admin-financeiro-operacional-crud.spec.ts, tests/e2e/treinos-v2-editor.spec.ts e tests/e2e/sessao-multiunidade.spec.ts.\n2. Confirmar que cada uma entra no shell autenticado correto sem bounce para /login.\n3. Ajustar apenas o necessario nas fixtures, seeds e mocks para remover regressões de guarda/autorizacao e de contexto inicial.\n4. Registrar, no detalhe da task, quais specs ainda falham depois disso por causa funcional real de tela para que possam ser tratadas em tasks posteriores.\n5. Nao encobrir regressões com waits cegos: se a tela falhar depois do shell montar, registrar isso como resíduo funcional e nao como problema de autenticacao.\n\nCriterio de aceite: o bucket de falhas que termina em heading 'Acesso' do app precisa ser reduzido a zero ou transformado em falhas funcionais explicitas de tela.",
+        "testStrategy": "Reexecutar as specs sentinela do bucket de login do app e verificar que todas chegam ao shell autenticado; qualquer falha residual deve ser funcional e nao redirecionamento para /login.",
+        "status": "in-progress",
+        "dependencies": [
+          "327",
+          "328",
+          "329"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Reproduzir e confirmar o bucket de login do app",
+            "description": "Rodar as specs sentinela do shell operacional antes da correção fina.",
+            "dependencies": [],
+            "details": "Usar security-flows, dashboard, clientes-cadastro, billing-config, admin-financeiro-operacional-crud, treinos-v2-editor e sessao-multiunidade para validar a natureza do problema.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "330",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Destravar a entrada no shell autenticado",
+            "description": "Ajustar fixture e mocks ate as paginas deixarem de cair em /login.",
+            "dependencies": [
+              1
+            ],
+            "details": "Tratar somente problemas de autenticacao, guards e contexto inicial. Nao misturar com correcoes de seletores ou bugs de tela ainda.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "330",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Estabilizar familias principais do app autenticado",
+            "description": "Aplicar correcoes nas suites de /dashboard, /clientes, /administrativo, /planos e /treinos.",
+            "dependencies": [
+              2
+            ],
+            "details": "Agrupar por causa-raiz para que a mesma correcao derrube varios testes e nao gere retrabalho fragmentado.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "330",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 4,
+            "title": "Catalogar residuos funcionais apos o shell subir",
+            "description": "Separar claramente o que ainda e bug de tela ou mock de dominio.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Registrar no detalhe da task quais specs passaram da fase de login e quais falhas remanescentes devem ser tratadas em tasks de dominio posteriores.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "330",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          }
+        ],
+        "complexity": 7,
+        "updatedAt": "2026-04-01T18:06:40.356Z",
+        "recommendedSubtasks": 4,
+        "expansionPrompt": "Dividir a tarefa em: 1. Execução inicial de sentinelas do app e triagem das falhas. 2. Ajustes de fixtures e mocks para /dashboard e security-flows. 3. Ajustes de fixtures e mocks para clientes/cadastro e faturamento. 4. Ajustes para treinos-v2-editor e sessao-multiunidade."
+      },
+      {
+        "id": "331",
+        "title": "Recuperar suites do backoffice global que hoje redirecionam para /admin-login",
+        "description": "Fazer voltar a passar as specs de /admin/** que hoje caem no login administrativo ou ficam presas em validacao de permissao.",
+        "details": "Esta task depende de 327, 328 e 329. Ela cobre o bucket adminLogin do relatório.\n\nEscopo obrigatorio:\n1. Reexecutar como sentinelas: tests/e2e/backoffice-seguranca.spec.ts, tests/e2e/backoffice-configuracoes.spec.ts, tests/e2e/backoffice-impersonation.spec.ts, tests/e2e/admin-backoffice-coverage.spec.ts, tests/e2e/admin-backoffice-global-crud.spec.ts e tests/e2e/onboarding-fluxo-completo.spec.ts.\n2. Validar o contrato esperado por useAuthAccess e pelo shell do backoffice em src/app/(backoffice)/admin/layout.tsx.\n3. Garantir que usuarios elevados recebam canAccessElevatedModules e demais metadados de acesso coerentes com o cenario testado.\n4. Corrigir divergencias entre seeds de tenant operacionais e o modo plataforma/backoffice quando elas estiverem disparando bloqueios indevidos.\n5. Listar claramente quais falhas remanescentes sao de RBAC/backoffice real e nao mais de boot/auth.\n\nCriterio de aceite: nenhuma spec de /admin/** deve cair em /admin-login por ausencia de contrato de sessao ou bootstrap incompleto.",
+        "testStrategy": "Reexecutar as sentinelas de /admin/** e garantir que nenhuma caia em /admin-login; falhas residuais devem estar relacionadas a RBAC, dados de modulo ou comportamento funcional do backoffice.",
+        "status": "in-progress",
+        "dependencies": [
+          "327",
+          "328",
+          "329"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Reproduzir o bucket adminLogin com sentinelas do backoffice",
+            "description": "Executar as suites principais de seguranca, configuracoes, impersonation, coverage e onboarding.",
+            "dependencies": [],
+            "details": "Usar esse conjunto para confirmar rapidamente se a sessao do backoffice e reconhecida e se o modo plataforma sobe sem bloqueio indevido.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "331",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Alinhar contrato de acesso elevado do backoffice",
+            "description": "Garantir canAccessElevatedModules e metadados correlatos nas respostas mockadas.",
+            "dependencies": [
+              1
+            ],
+            "details": "Validar o contrato exigido por useAuthAccess e pelo layout src/app/(backoffice)/admin/layout.tsx para usuarios elevados e demais perfis administrativos.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "331",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Estabilizar suites prioritarias de /admin/**",
+            "description": "Remover regressões de auth/boot nas rotas administrativas mais representativas.",
+            "dependencies": [
+              2
+            ],
+            "details": "Cobrir seguranca, configuracoes, impersonation, CRUD global e onboarding sem depender de seeds operacionais incoerentes com o modo plataforma.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "331",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 4,
+            "title": "Separar residuos reais de RBAC ou dominio",
+            "description": "Registrar quais falhas remanescentes ja nao sao mais problema de login administrativo.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Documentar no detalhe da task qualquer falha que persista por regra de negocio, permissao ou dados de modulo para evitar regressao de escopo.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "331",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          }
+        ],
+        "complexity": 7,
+        "updatedAt": "2026-04-01T18:06:54.598Z",
+        "recommendedSubtasks": 4,
+        "expansionPrompt": "Dividir a tarefa em: 1. Execução inicial de sentinelas do backoffice e triagem das falhas. 2. Validação do contrato de useAuthAccess e shell backoffice. 3. Correção de divergências de tenant e metadados de acesso elevado. 4. Identificação e categorização de falhas remanescentes de RBAC/backoffice."
+      },
+      {
+        "id": "332",
+        "title": "Corrigir fluxos auth-rede, subdominio e storefront",
+        "description": "Alinhar os testes de acesso por rede com o runtime atual de subdominio, headers e resolucao de storefront, removendo 404 e loading eterno nesses cenarios.",
+        "details": "Esta task depende de 327 e 329.\n\nEscopo obrigatorio:\n1. Revisar tests/e2e/auth-rede.spec.ts ponta a ponta, incluindo buildHostBasedUrl, rotas /app/[rede]/login, forgot-password, first-access e qualquer dependencia de hostname/subdominio.\n2. Verificar se os headers e query params usados pelo runtime atual para resolver contexto de rede e storefront batem com os mocks do teste.\n3. Corrigir o cenario que cai em 'Storefront nao encontrada' e o cenario que fica em 'Carregando contexto da rede...'.\n4. Garantir que o teste cubra tanto o caso feliz quanto a rede invalida sem depender de comportamento antigo da rota.\n5. Documentar no detalhe da task qual e o contrato atual aceito pelo frontend para rede: host, slug, header e fallback.\n\nCriterio de aceite: a suite auth-rede deve falhar apenas se houver regressao real de UX ou contrato, e nao por mismatch de infraestrutura local do teste.",
+        "testStrategy": "Rodar auth-rede.spec.ts inteiro e confirmar que os cenarios feliz, primeiro acesso, rede invalida e resolucao canonica de links nao falham mais por 404 ou loading infinito.",
+        "status": "in-progress",
+        "dependencies": [
+          "327",
+          "329"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Auditar contrato de host, slug e header nos fluxos de rede",
+            "description": "Comparar os utilitarios do teste com o runtime atual de resolucao de contexto.",
+            "dependencies": [],
+            "details": "Revisar buildHostBasedUrl, query params, headers enviados e qualquer dependencia de hostname/subdominio implicita no frontend atual.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "332",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Corrigir o caso feliz de autenticacao por rede",
+            "description": "Garantir que login, forgot-password e first-access recebam contexto valido e transitem corretamente.",
+            "dependencies": [
+              1
+            ],
+            "details": "Ajustar mocks e navigations para que o fluxo principal use o contrato atual e nao dependa de comportamento legado das rotas.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "332",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Corrigir rede invalida e storefront nao encontrada",
+            "description": "Tratar de forma deterministica o cenário negativo sem conflitar com o happy path.",
+            "dependencies": [
+              1
+            ],
+            "details": "Separar claramente quando o teste deve esperar 404 intencional e quando o 404 atual e apenas mismatch de resolucao de storefront.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "332",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 4,
+            "title": "Documentar o contrato aceito pelo frontend para auth-rede",
+            "description": "Deixar host, slug, header e fallback descritos para futuras manutencoes.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Registrar no detalhe da task qual combinacao de host/subdominio/header o runtime atual espera e como os mocks devem representá-la.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "332",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          }
+        ],
+        "complexity": 7,
+        "updatedAt": "2026-04-01T17:05:34.000Z",
+        "recommendedSubtasks": 4,
+        "expansionPrompt": "Dividir a tarefa em: 1. Revisão completa de tests/e2e/auth-rede.spec.ts e `buildHostBasedUrl`. 2. Verificação e ajuste de headers/query params de rede nos mocks. 3. Correção de cenários de 'Storefront não encontrada' e 'Carregando contexto'. 4. Documentação do contrato frontend para resolução de rede."
+      },
+      {
+        "id": "333",
+        "title": "Corrigir jornada publica de adesao com mocks aderentes ao runtime atual",
+        "description": "Atualizar os testes de adesao publica para refletirem corretamente os endpoints, estados de carregamento e transicoes reais do fluxo publico.",
+        "details": "Esta task depende de 327 e 329.\n\nEscopo obrigatorio:\n1. Auditar tests/e2e/adesao-publica.spec.ts e installPublicJourneyApiMocks em tests/e2e/support/backend-only-stubs.ts.\n2. Mapear todas as requests reais disparadas pelas telas /adesao/trial, /adesao/cadastro, /adesao/checkout e /adesao/pendencias.\n3. Garantir que os mocks devolvam payloads completos para branding, tenant, catalogo, checkout, pendencias e confirmacao final.\n4. Resolver o caso que fica preso em 'Carregando jornada publica...' e validar que o fluxo de checkout + assinatura + pagamento percorre os estados esperados sem depender de navegacao antiga.\n5. Manter separacao clara entre dados de catalogo, dados da jornada e efeitos do checkout para evitar novos mocks monoliticos dificeis de manter.\n\nCriterio de aceite: a suite de adesao publica precisa ser novamente um sentinel confiavel do fluxo publico, sem waits artificiais para mascarar falta de contrato.",
+        "testStrategy": "Reexecutar adesao-publica.spec.ts completo e confirmar que trial, cadastro, checkout e pendencias percorrem os estados esperados sem ficar presos em carregamento.",
+        "status": "in-progress",
+        "dependencies": [
+          "327",
+          "329"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Mapear requests reais da jornada publica por etapa",
+            "description": "Levantar o que cada tela de adesao consulta antes e depois de navegar.",
+            "dependencies": [],
+            "details": "Cobrir /adesao/trial, /adesao/cadastro, /adesao/checkout e /adesao/pendencias, incluindo branding, tenant, catalogo, checkout e pendencias.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "333",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Atualizar mocks de branding, tenant e catalogo",
+            "description": "Garantir payloads completos para a jornada publica subir sem fallback quebrado.",
+            "dependencies": [
+              1
+            ],
+            "details": "Revisar installPublicJourneyApiMocks para refletir o shape atual esperado pelas telas e pelos componentes de catalogo/resumo.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "333",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Corrigir transicoes de checkout, assinatura e pagamento",
+            "description": "Alinhar respostas de checkout e pendencias aos estados usados pelo frontend atual.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Validar criacao de venda/checkout, pendencia de assinatura, assinatura concluida e marcacao de pagamento como recebido sem depender de navegacao ou endpoints antigos.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "333",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 4,
+            "title": "Revalidar trial e fluxo completo de conclusao",
+            "description": "Garantir que os dois testes da suite voltem a ser sentinelas confiaveis do fluxo publico.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Reexecutar os cenarios do trial e da adesao completa e registrar qualquer dependencia residual de mock que ainda precise ser separada por dominio.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "333",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          }
+        ],
+        "complexity": 6,
+        "updatedAt": "2026-04-01T18:07:09.916Z",
+        "recommendedSubtasks": 4,
+        "expansionPrompt": "Dividir a tarefa em: 1. Auditoria de tests/e2e/adesao-publica.spec.ts e installPublicJourneyApiMocks. 2. Mapeamento de requests reais e definição de mocks para branding/tenant/catálogo. 3. Mapeamento de requests reais e definição de mocks para checkout/pagamento. 4. Resolução de estados de 'Carregando' e validação do fluxo completo."
+      },
+      {
+        "id": "334",
+        "title": "Eliminar loading infinito e payloads incompletos em modulos financeiro e operacional",
+        "description": "Resolver falhas onde a shell monta, mas a tela fica em carregamento permanente ou com dados parciais insuficientes para completar o fluxo testado.",
+        "details": "Esta task depende de 327, 328, 329 e 330.\n\nEscopo obrigatorio:\n1. Priorizar as specs que no relatório exibem sinais de loading infinito ou dados faltantes: tests/e2e/admin-financeiro-integracoes.spec.ts, tests/e2e/admin-financeiro-operacional-crud.spec.ts, tests/e2e/operacional-grade-catraca.spec.ts, tests/e2e/reservas-aulas.spec.ts, tests/e2e/bi-operacional.spec.ts e demais relacionadas.\n2. Identificar em cada uma qual request nunca resolve ou resolve com shape insuficiente para a UI sair do estado de loading.\n3. Corrigir os mocks de dominio necessarios sem voltar a usar fallbacks 200 {} genericos.\n4. Se houver polling ou dependencia assincrona legitima da UI, ajustar o teste para esperar o sinal correto de pronto, nao apenas um timeout arbitrario.\n5. Registrar no detalhe da task quais endpoints passaram a ser obrigatorios para esses modulos e quais cards/listagens dependem de cada um.\n\nCriterio de aceite: nenhuma das specs desse grupo deve permanecer presa em 'Carregando atividades...', 'Emissor fiscal da unidade ativa: Carregando...' ou equivalentes sem uma causa funcional explicita documentada.",
+        "testStrategy": "Reexecutar as specs de financeiro/operacional priorizadas e confirmar que estados de loading infinito foram eliminados sem introduzir waits cegos nem respostas 200 vazias.",
+        "status": "pending",
+        "dependencies": [
+          "327",
+          "328",
+          "329",
+          "330"
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Identificar endpoints bloqueantes por spec e por modulo",
+            "description": "Mapear qual request nao resolve ou resolve com shape insuficiente em cada falha de loading.",
+            "dependencies": [],
+            "details": "Cobrir integrações financeiras, atividades operacionais, grade/catraca, reservas, BI operacional e quaisquer outras telas que o relatório mostrou presas em carregamento.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "334",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Corrigir mocks do dominio financeiro",
+            "description": "Completar payloads e transicoes necessarias para integracoes, billing e emissor fiscal sairem do loading.",
+            "dependencies": [
+              1
+            ],
+            "details": "Garantir que campos usados por cards, tabelas, status fiscais e telas administrativas de integracao estejam presentes e coerentes.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "334",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Corrigir mocks do dominio operacional e gerencial",
+            "description": "Completar endpoints e payloads de atividades, grade, reservas e BI para destravar a UI.",
+            "dependencies": [
+              1
+            ],
+            "details": "Validar especificamente listas, cards e componentes que dependem de dados agregados ou de relacionamento entre atividades, unidades e sessões.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "334",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 4,
+            "title": "Trocar waits cegos por sinais reais de pronto",
+            "description": "Ajustar as specs para aguardarem o evento correto de renderização completa quando necessário.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Usar indicadores reais de UI pronta ou responses esperadas, sem mascarar regressões com timeouts arbitrários ou sleeps desnecessários.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "334",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          }
+        ],
+        "complexity": 8,
+        "updatedAt": "2026-04-01T17:05:34.000Z",
+        "recommendedSubtasks": 4,
+        "expansionPrompt": "Dividir a tarefa em: 1. Priorização e triagem de specs com loading infinito/dados faltantes nos módulos financeiro e operacional. 2. Identificação e correção de requests não resolvidas/incompletas para financeiro. 3. Identificação e correção de requests não resolvidas/incompletas para operacional. 4. Ajuste de awaits para dependências assíncronas legítimas e documentação de endpoints."
+      },
+      {
+        "id": "335",
+        "title": "Corrigir fluxo publico de conta demo e bootstrap pos-login demo",
+        "description": "Fazer os testes de criacao de conta demo cobrirem o submit real, o salvamento da sessao e a entrada no dashboard demo sem regressao.",
+        "details": "Esta task depende de 327, 329 e 330, porque o dashboard demo reutiliza o shell autenticado do app.\n\nEscopo obrigatorio:\n1. Revisar tests/e2e/demo-account.spec.ts e src/app/(public)/b2b/demo/demo-form.tsx.\n2. Confirmar se o route pattern mockado (**/api/v1/publico/demo) casa com a chamada real de createDemoAccount.\n3. Verificar se a resposta mockada entrega todas as propriedades que saveAuthSession e o shell do dashboard agora precisam.\n4. Garantir que o redirect para /dashboard?demo=1 encontre bootstrap/contexto suficientes para o banner e para o shell inicial.\n5. Corrigir tambem os cenarios de validacao que hoje podem estar falhando por markup/labels divergentes do formulario atual.\n\nCriterio de aceite: os cenarios de submit valido, banner visivel e dismiss persistente devem passar sem depender de backend real.",
+        "testStrategy": "Reexecutar demo-account.spec.ts e validar submit, redirect para /dashboard?demo=1, banner visível e persistencia do dismiss sem depender de backend real.",
+        "status": "pending",
+        "dependencies": [
+          "327",
+          "329",
+          "330"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Validar endpoint e payload do fluxo demo",
+            "description": "Confirmar que o mock da API demo casa com a chamada real de createDemoAccount.",
+            "dependencies": [],
+            "details": "Revisar route pattern, payload enviado, shape da resposta e nomes de campos consumidos por saveAuthSession no fluxo de conta demo.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "335",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Corrigir sessao e bootstrap pos-login demo",
+            "description": "Garantir que o dashboard receba sessao valida e bootstrap suficiente apos o submit.",
+            "dependencies": [
+              1
+            ],
+            "details": "Ajustar o que for necessario para que saveAuthSession e o shell autenticado do app reconhecam o usuario demo e permitam o redirect para /dashboard?demo=1.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "335",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Revisar validacoes e asserts do formulario demo",
+            "description": "Alinhar labels, mensagens e estados do formulario aos testes atuais.",
+            "dependencies": [
+              1
+            ],
+            "details": "Corrigir cenarios de nome, email e senha invalidos quando a falha estiver na divergencia de markup, labels ou mensagens exibidas.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "335",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 4,
+            "title": "Revalidar banner demo e persistencia do dismiss",
+            "description": "Confirmar o comportamento completo apos a criacao da conta demo.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Executar os cenarios de banner visivel no dashboard e de dismiss persistente na mesma sessao, registrando qualquer dependencia adicional de bootstrap.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "335",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          }
+        ],
+        "complexity": 6,
+        "updatedAt": "2026-04-01T17:05:34.000Z",
+        "recommendedSubtasks": 3,
+        "expansionPrompt": "Dividir a tarefa em: 1. Revisão de tests/e2e/demo-account.spec.ts e `demo-form.tsx`. 2. Confirmação do mock de createDemoAccount e validação da resposta para `saveAuthSession`. 3. Garantia de bootstrap e contexto suficientes para o dashboard demo (`/dashboard?demo=1`) e correção de validações de formulário."
+      },
+      {
+        "id": "336",
+        "title": "Executar reruns direcionados, consolidar residuos e documentar a nova linha de base Playwright",
+        "description": "Fechar o ciclo do relatorio atual com reruns por grupo, lista clara de residuos e atualizacao da referencia operacional da suite E2E.",
+        "details": "Esta task depende de 330, 331, 332, 333, 334 e 335.\n\nEscopo obrigatorio:\n1. Reexecutar as suites por agrupamento de causa-raiz, nao somente o comando global, para confirmar que as correcoes realmente eliminaram cada familia de falha.\n2. Consolidar um resumo final por bucket: autenticacao app, autenticacao backoffice, auth-rede/storefront, adesao publica, loading financeiro/operacional, demo e residuos funcionais isolados.\n3. Abrir follow-ups apenas para falhas remanescentes que ja nao sejam mais problemas de fixture, auth ou mocks minimos.\n4. Atualizar a documentacao interna necessaria para o time entender como semear sessao e quais contratos minimos cada shell espera.\n5. Regenerar os arquivos do Taskmaster ao final e garantir que o backlog reflita corretamente o estado desta campanha de estabilizacao.\n\nCriterio de aceite: o time deve conseguir olhar o backlog e saber exatamente quais grupos foram estabilizados, quais ainda restam e qual comando reproduz cada bucket.",
+        "testStrategy": "Executar reruns por bucket apos as correcoes, comparar o resultado com o relatório inicial e atualizar Taskmaster/documentacao com o estado final desta campanha de estabilizacao.",
+        "status": "pending",
+        "dependencies": [
+          "330",
+          "331",
+          "332",
+          "333",
+          "334",
+          "335"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definir matriz de rerun por bucket de causa-raiz",
+            "description": "Separar comandos e suites sentinela por autenticacao app, backoffice, auth-rede, adesao, loading e demo.",
+            "dependencies": [],
+            "details": "A matriz precisa permitir reproduzir rapidamente cada familia de falha sem depender do run global completo.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "336",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 2,
+            "title": "Executar reruns e consolidar resultados finais",
+            "description": "Rodar os grupos corrigidos e registrar o que passou, o que evoluiu e o que ainda resta.",
+            "dependencies": [
+              1
+            ],
+            "details": "Produzir um resumo claro por bucket, incluindo diferenças entre falha de fixture resolvida e falha funcional residual.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "336",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 3,
+            "title": "Abrir follow-ups apenas para residuos reais",
+            "description": "Transformar remanescentes em backlog de bugs funcionais quando eles nao forem mais problemas de base E2E.",
+            "dependencies": [
+              2
+            ],
+            "details": "Evitar novos itens genéricos: cada resíduo deve apontar spec, modulo, causa provável e estratégia de reprodução.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "336",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          },
+          {
+            "id": 4,
+            "title": "Atualizar documentacao e regenerar arquivos do Taskmaster",
+            "description": "Fechar a campanha com referencia operacional e arquivos consistentes para outras IAs.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Atualizar a documentação necessária para semeadura de sessão/mocks mínimos e garantir que tasks.json e arquivos markdown do Taskmaster reflitam o estado final.",
+            "status": "pending",
+            "testStrategy": null,
+            "parentId": "336",
+            "updatedAt": "2026-04-01T17:05:34.000Z"
+          }
+        ],
+        "complexity": 5,
+        "updatedAt": "2026-04-01T17:05:34.000Z",
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Dividir a tarefa em: 1. Reexecução de suites por agrupamento de causa-raiz. 2. Consolidação do resumo final de falhas por bucket. 3. Abertura de follow-ups para falhas funcionais remanescentes. 4. Atualização da documentação interna sobre sessão e mocks E2E. 5. Regeneração dos arquivos do Taskmaster e validação do backlog."
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T15:00:50.997Z",
-      "taskCount": 322,
-      "completedCount": 322,
+      "lastModified": "2026-04-01T18:07:09.917Z",
+      "taskCount": 332,
+      "completedCount": 325,
       "tags": [
         "master"
       ]
