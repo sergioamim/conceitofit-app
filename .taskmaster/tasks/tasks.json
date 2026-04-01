@@ -12966,12 +12966,13 @@
         "description": "Tratar apenas falhas funcionais remanescentes dos sentinelas do shell do app, sem reabrir a camada de sessão/fixture.",
         "details": "Escopo: tests/e2e/dashboard.spec.ts e tests/e2e/billing-config.spec.ts. Reproduções já observadas após a estabilização de auth: 1) heading Pagamentos pendentes e vencidos não encontrado no dashboard após abrir a aba Financeiro; 2) billing-config com seletor estrito em Asaas, toasts de sucesso não encontrados e webhook esperado ausente. Estratégia: alinhar asserts e/ou comportamento real das telas, mantendo as fixtures atuais. Fora de escopo: qualquer ajuste em installE2EAuthSession ou contrato mínimo de shell.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "336"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-01T19:44:21.269Z"
       },
       {
         "id": "338",
@@ -12979,12 +12980,13 @@
         "description": "Resolver falhas de rota/módulo no shell global do backoffice que sobraram após a estabilização de auth.",
         "details": "Escopo: tests/e2e/admin-backoffice-coverage.spec.ts, tests/e2e/admin-backoffice-global-crud.spec.ts e tests/e2e/backoffice-impersonation.spec.ts. Reproduções já catalogadas: /admin/financeiro/contratos com ERR_CONNECTION_RESET; /admin/seguranca/funcionalidades, /admin/operacional/alertas, /admin/academias e /admin/seguranca/usuarios/user-bruno com ERR_CONNECTION_REFUSED. Estratégia: revisar crashes do dev/runtime nessas rotas e garantir que o shell global continue subindo com os mesmos contratos de sessão usados na task 331. Fora de escopo: reabrir seeds operacionais ou fallback genérico de mocks.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "336"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-01T19:44:15.872Z"
       },
       {
         "id": "339",
@@ -12992,17 +12994,18 @@
         "description": "Ajustar a tela de importação EVO para não chamar hook client-only no servidor.",
         "details": "Reprodução já observada no fluxo de tests/e2e/backoffice-seguranca.spec.ts ao navegar para /admin/importacao-evo: Attempted to call useEvoImportPage() from the server but useEvoImportPage is on the client. Estratégia: revisar o boundary de server/client em src/app/(backoffice)/admin/importacao-evo-p0 e garantir que a rota seja renderizável no shell global sem mascarar erro com remoção de asserts. Fora de escopo: mudanças na fixture de backoffice global.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "336"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-01T21:30:00.000Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T19:08:00.409Z",
+      "lastModified": "2026-04-01T21:30:00.000Z",
       "taskCount": 335,
       "completedCount": 332,
       "tags": [
