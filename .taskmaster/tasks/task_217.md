@@ -2,7 +2,7 @@
 
 **Title:** Integrar Sentry no frontend para error tracking
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

@@ -2,9 +2,9 @@
 
 **Title:** Vincular matrícula a assinatura recorrente
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 244, 245
+**Dependencies:** 244 ✓, 245 ✓
 
 **Priority:** medium
 

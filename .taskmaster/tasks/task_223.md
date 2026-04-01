@@ -2,7 +2,7 @@
 
 **Title:** Criar workflow GitHub Actions para deploy em Cloud Run (CD)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

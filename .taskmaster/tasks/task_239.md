@@ -2,7 +2,7 @@
 
 **Title:** Criar estrutura de rotas do portal do aluno
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

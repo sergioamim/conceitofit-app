@@ -2,7 +2,7 @@
 
 **Title:** Splitar runtime.ts (~1500 LOC) por domínio
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

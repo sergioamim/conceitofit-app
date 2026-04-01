@@ -2,9 +2,9 @@
 
 **Title:** Testes para novo-cliente-wizard (após split)
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 230
+**Dependencies:** 230 ✓
 
 **Priority:** low
 

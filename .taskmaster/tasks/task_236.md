@@ -2,7 +2,7 @@
 
 **Title:** Testes para plano-form.tsx
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

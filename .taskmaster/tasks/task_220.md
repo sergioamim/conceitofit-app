@@ -2,7 +2,7 @@
 
 **Title:** Remover unsafe-eval do CSP em produção
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

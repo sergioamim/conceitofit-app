@@ -2,9 +2,9 @@
 
 **Title:** Recuperar suites do app autenticado que hoje redirecionam para /login
 
-**Status:** pending
+**Status:** done
 
-**Dependencies:** 327, 328, 329
+**Dependencies:** 327 ✓, 328 ✓, 329 ✓
 
 **Priority:** high
 
@@ -31,7 +31,7 @@ Reexecutar as specs sentinela do bucket de login do app e verificar que todas ch
 
 ### 330.1. Reproduzir e confirmar o bucket de login do app
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Rodar as specs sentinela do shell operacional antes da correção fina.
@@ -42,7 +42,7 @@ Usar security-flows, dashboard, clientes-cadastro, billing-config, admin-finance
 
 ### 330.2. Destravar a entrada no shell autenticado
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 330.1  
 
 Ajustar fixture e mocks ate as paginas deixarem de cair em /login.
@@ -53,7 +53,7 @@ Tratar somente problemas de autenticacao, guards e contexto inicial. Nao mistura
 
 ### 330.3. Estabilizar familias principais do app autenticado
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 330.2  
 
 Aplicar correcoes nas suites de /dashboard, /clientes, /administrativo, /planos e /treinos.
@@ -64,7 +64,7 @@ Agrupar por causa-raiz para que a mesma correcao derrube varios testes e nao ger
 
 ### 330.4. Catalogar residuos funcionais apos o shell subir
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 330.2, 330.3  
 
 Separar claramente o que ainda e bug de tela ou mock de dominio.

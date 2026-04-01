@@ -2,7 +2,7 @@
 
 **Title:** Testes unitários para feature-flags.ts
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

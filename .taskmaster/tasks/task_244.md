@@ -2,7 +2,7 @@
 
 **Title:** Criar API client para billing recorrente (gateway)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

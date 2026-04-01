@@ -2,7 +2,7 @@
 
 **Title:** Testes unitários para sanitize.ts (security-critical)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

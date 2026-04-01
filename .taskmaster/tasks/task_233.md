@@ -2,7 +2,7 @@
 
 **Title:** Splitar nova-conta-pagar-modal.tsx (704 LOC)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

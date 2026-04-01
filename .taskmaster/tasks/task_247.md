@@ -2,7 +2,7 @@
 
 **Title:** Auditar e classificar 119 páginas "use client" para migração RSC
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
