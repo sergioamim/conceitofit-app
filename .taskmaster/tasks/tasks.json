@@ -12168,7 +12168,7 @@
         "updatedAt": "2026-03-31T23:58:42.586Z"
       },
       {
-        "id": 320,
+        "id": "320",
         "title": "Dual auth: httpOnly cookies no web, manter Bearer para mobile/API",
         "description": "Frontend web usa cookies httpOnly. Nao envia mais header Authorization manualmente — cookie vai automaticamente com credentials:include.",
         "details": "http.ts: adicionar credentials:'include' em todos os fetch(). Remover injecao manual do header Authorization. session.ts: nao armazenar tokens em localStorage (apenas user info: userId, displayName, tenantId, network). Token-store em memória fica como cache para saber se esta logado (verificar via /auth/me ou flag). Login: nao precisa salvar token do response body (cookie ja foi setado pelo backend). Refresh: automatico via cookie. Logout: chama /auth/logout (backend limpa cookies) + limpa session info do localStorage.\n\nIMPORTANTE: Nao quebrar compatibilidade — se por algum motivo o cookie nao estiver presente, o fallback de header ainda funciona (util para dev/debug).\n\nDEPENDÊNCIA CROSS-REPO: Requer backend task academia-java#390 implementada primeiro.",
@@ -12180,7 +12180,7 @@
         "subtasks": []
       },
       {
-        "id": 321,
+        "id": "321",
         "title": "Validação de env vars com Zod schema no startup",
         "description": "Criar schema Zod que valida variaveis de ambiente obrigatorias no build/startup do Next.js.",
         "details": "Criar src/lib/env.ts com z.object({BACKEND_PROXY_TARGET: z.string().url(), NEXT_PUBLIC_SENTRY_DSN: z.string().optional(), ...}). Importar no layout.tsx raiz (server-side) para validar no startup. Se falhar, log claro com variaveis faltantes. Nao usar t3-env (overhead desnecessario), Zod puro basta.",
@@ -12192,7 +12192,7 @@
         "subtasks": []
       },
       {
-        "id": 322,
+        "id": "322",
         "title": "Adicionar --coverage ao Vitest e gate no CI",
         "description": "Medir cobertura de testes real e publicar no CI.",
         "details": "Adicionar provider: 'v8' ao vitest.config.ts. Adicionar script 'test:coverage' no package.json. No GitHub Actions workflow, rodar test:coverage e publicar report como artifact. Adicionar badge de coverage no README. Nao bloquear merge por enquanto (apenas medir), threshold pode vir depois.",
@@ -12204,7 +12204,7 @@
         "subtasks": []
       },
       {
-        "id": 323,
+        "id": "323",
         "title": "Limpar rotas legadas do storefront",
         "description": "Remover rotas duplicadas e arquivos orfaos do storefront apos migracao para [academiaSlug].",
         "details": "Remover: src/app/storefront/unidade/ (substituido por [academiaSlug]/unidades/), src/app/storefront/resolve-storefront-headers.ts (nao mais necessario), referencias a STOREFRONT_DEV_TENANT_ID e STOREFRONT_DEV_ACADEMIA_SLUG. Atualizar storefront/page.tsx para redirecionar para /storefront ou mostrar listagem de academias. Verificar que nenhum link interno aponta para rotas removidas.",
@@ -12216,7 +12216,7 @@
         "subtasks": []
       },
       {
-        "id": 324,
+        "id": "324",
         "title": "Smoke test E2E: Prospect → Cliente → Matrícula → Pagamento",
         "description": "Teste Playwright que valida o pipeline comercial completo end-to-end.",
         "details": "Fluxo: (1) login como operador, (2) criar prospect via modal, (3) converter prospect em cliente, (4) criar matricula para o cliente com plano, (5) verificar pagamento gerado, (6) marcar pagamento como recebido. Se esse teste passa, o core do produto funciona. Usar fixtures para dados de teste. Rodar no CI com backend real (docker-compose).",
@@ -12228,23 +12228,24 @@
         "subtasks": []
       },
       {
-        "id": 325,
+        "id": "325",
         "title": "Pagina /status publica com saude do sistema",
         "description": "Pagina simples que mostra status do frontend, backend e banco de dados.",
         "details": "Server component que chama: (1) /api/health do Next.js (frontend ok), (2) GET /api/v1/health/full do backend (banco, storage). Renderiza cards com status UP/DOWN, latencia e timestamp. Sem autenticacao. Visual minimalista, pode ser acessada por qualquer pessoa. Util para suporte ao cliente.\n\nDEPENDÊNCIA CROSS-REPO: Requer backend task academia-java#373 (health check completo) implementada primeiro.",
         "testStrategy": "Pagina carrega e mostra status. Com backend offline mostra DOWN. Sem auth necessario.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "complexity": 2,
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-01T13:33:57.719Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-31T23:58:42.586Z",
-      "taskCount": 315,
-      "completedCount": 315,
+      "lastModified": "2026-04-01T13:33:57.720Z",
+      "taskCount": 321,
+      "completedCount": 316,
       "tags": [
         "master"
       ]
