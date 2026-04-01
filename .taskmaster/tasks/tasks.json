@@ -12466,7 +12466,7 @@
         "description": "Fazer voltar a passar as specs do shell operacional que hoje quebram antes mesmo de exercer a funcionalidade da tela.",
         "details": "Esta task depende de 327, 328 e 329. Ela cobre as falhas agrupadas no bucket de login do app: /dashboard, /clientes, /administrativo, /planos, /treinos e fluxos semelhantes.\n\nEscopo obrigatorio:\n1. Reexecutar primeiro um subconjunto sentinela: tests/e2e/security-flows.spec.ts, tests/e2e/dashboard.spec.ts, tests/e2e/clientes-cadastro.spec.ts, tests/e2e/billing-config.spec.ts, tests/e2e/admin-financeiro-operacional-crud.spec.ts, tests/e2e/treinos-v2-editor.spec.ts e tests/e2e/sessao-multiunidade.spec.ts.\n2. Confirmar que cada uma entra no shell autenticado correto sem bounce para /login.\n3. Ajustar apenas o necessario nas fixtures, seeds e mocks para remover regressões de guarda/autorizacao e de contexto inicial.\n4. Registrar, no detalhe da task, quais specs ainda falham depois disso por causa funcional real de tela para que possam ser tratadas em tasks posteriores.\n5. Nao encobrir regressões com waits cegos: se a tela falhar depois do shell montar, registrar isso como resíduo funcional e nao como problema de autenticacao.\n\nCriterio de aceite: o bucket de falhas que termina em heading 'Acesso' do app precisa ser reduzido a zero ou transformado em falhas funcionais explicitas de tela.",
         "testStrategy": "Reexecutar as specs sentinela do bucket de login do app e verificar que todas chegam ao shell autenticado; qualquer falha residual deve ser funcional e nao redirecionamento para /login.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "327",
           "328",
@@ -12480,10 +12480,10 @@
             "description": "Rodar as specs sentinela do shell operacional antes da correção fina.",
             "dependencies": [],
             "details": "Usar security-flows, dashboard, clientes-cadastro, billing-config, admin-financeiro-operacional-crud, treinos-v2-editor e sessao-multiunidade para validar a natureza do problema.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "330",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:10:08.040Z"
           },
           {
             "id": 2,
@@ -12493,10 +12493,10 @@
               1
             ],
             "details": "Tratar somente problemas de autenticacao, guards e contexto inicial. Nao misturar com correcoes de seletores ou bugs de tela ainda.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "330",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:10:38.533Z"
           },
           {
             "id": 3,
@@ -12506,10 +12506,10 @@
               2
             ],
             "details": "Agrupar por causa-raiz para que a mesma correcao derrube varios testes e nao gere retrabalho fragmentado.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "330",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:11:09.558Z"
           },
           {
             "id": 4,
@@ -12520,14 +12520,14 @@
               3
             ],
             "details": "Registrar no detalhe da task quais specs passaram da fase de login e quais falhas remanescentes devem ser tratadas em tasks de dominio posteriores.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "330",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:11:11.404Z"
           }
         ],
         "complexity": 7,
-        "updatedAt": "2026-04-01T18:06:40.356Z",
+        "updatedAt": "2026-04-01T18:11:11.404Z",
         "recommendedSubtasks": 4,
         "expansionPrompt": "Dividir a tarefa em: 1. Execução inicial de sentinelas do app e triagem das falhas. 2. Ajustes de fixtures e mocks para /dashboard e security-flows. 3. Ajustes de fixtures e mocks para clientes/cadastro e faturamento. 4. Ajustes para treinos-v2-editor e sessao-multiunidade."
       },
@@ -12606,9 +12606,9 @@
         "id": "332",
         "title": "Corrigir fluxos auth-rede, subdominio e storefront",
         "description": "Alinhar os testes de acesso por rede com o runtime atual de subdominio, headers e resolucao de storefront, removendo 404 e loading eterno nesses cenarios.",
-        "details": "Esta task depende de 327 e 329.\n\nEscopo obrigatorio:\n1. Revisar tests/e2e/auth-rede.spec.ts ponta a ponta, incluindo buildHostBasedUrl, rotas /app/[rede]/login, forgot-password, first-access e qualquer dependencia de hostname/subdominio.\n2. Verificar se os headers e query params usados pelo runtime atual para resolver contexto de rede e storefront batem com os mocks do teste.\n3. Corrigir o cenario que cai em 'Storefront nao encontrada' e o cenario que fica em 'Carregando contexto da rede...'.\n4. Garantir que o teste cubra tanto o caso feliz quanto a rede invalida sem depender de comportamento antigo da rota.\n5. Documentar no detalhe da task qual e o contrato atual aceito pelo frontend para rede: host, slug, header e fallback.\n\nCriterio de aceite: a suite auth-rede deve falhar apenas se houver regressao real de UX ou contrato, e nao por mismatch de infraestrutura local do teste.",
+        "details": "Esta task depende de 327 e 329.\n\nEscopo obrigatorio:\n1. Revisar tests/e2e/auth-rede.spec.ts ponta a ponta, incluindo buildHostBasedUrl, rotas /app/[rede]/login, forgot-password, first-access e qualquer dependencia de hostname/subdominio.\n2. Verificar se os headers e query params usados pelo runtime atual para resolver contexto de rede e storefront batem com os mocks do teste.\n3. Corrigir o cenario que cai em 'Storefront nao encontrada' e o cenario que fica em 'Carregando contexto da rede...'.\n4. Garantir que o teste cubra tanto o caso feliz quanto a rede invalida sem depender de comportamento antigo da rota.\n5. Documentar no detalhe da task qual e o contrato atual aceito pelo frontend para rede: host, slug, header e fallback.\n\nContrato atual (validado):\n- Host/subdominio: /login resolve rede usando x-forwarded-host (ou host).\n- Rota canonica: /app/[rede]/(login|forgot-password|first-access).\n- Query: /login?redeIdentifier=rede-alvo.\n- Header na API: X-Rede-Identifier.\n\nCriterio de aceite: a suite auth-rede deve falhar apenas se houver regressao real de UX ou contrato, e nao por mismatch de infraestrutura local do teste.",
         "testStrategy": "Rodar auth-rede.spec.ts inteiro e confirmar que os cenarios feliz, primeiro acesso, rede invalida e resolucao canonica de links nao falham mais por 404 ou loading infinito.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "327",
           "329"
@@ -12621,10 +12621,10 @@
             "description": "Comparar os utilitarios do teste com o runtime atual de resolucao de contexto.",
             "dependencies": [],
             "details": "Revisar buildHostBasedUrl, query params, headers enviados e qualquer dependencia de hostname/subdominio implicita no frontend atual.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "332",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:20:00.000Z"
           },
           {
             "id": 2,
@@ -12634,10 +12634,10 @@
               1
             ],
             "details": "Ajustar mocks e navigations para que o fluxo principal use o contrato atual e nao dependa de comportamento legado das rotas.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "332",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:20:00.000Z"
           },
           {
             "id": 3,
@@ -12963,9 +12963,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T18:07:09.917Z",
+      "lastModified": "2026-04-01T18:11:11.404Z",
       "taskCount": 332,
-      "completedCount": 325,
+      "completedCount": 326,
       "tags": [
         "master"
       ]
