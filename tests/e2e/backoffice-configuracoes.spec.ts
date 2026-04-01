@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installE2EAuthSession } from "./support/auth-session";
+import { installProtectedShellMocks } from "./support/protected-shell-mocks";
 
 type IntegrationSeed = {
   integrationKey: "PAYMENTS" | "NFSE" | "CATRACA" | "EVO_IMPORT";
@@ -40,16 +42,19 @@ type GlobalConfigSeed = {
 };
 
 function seedSession(page: Page) {
-  return page.addInitScript(() => {
-    window.localStorage.setItem("academia-auth-token", "token-backoffice-config");
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-backoffice-config");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    window.localStorage.setItem("academia-auth-active-tenant-id", "tenant-centro");
-    window.localStorage.setItem("academia-auth-preferred-tenant-id", "tenant-centro");
-    window.localStorage.setItem(
-      "academia-auth-available-tenants",
-      JSON.stringify([{ tenantId: "tenant-centro", defaultTenant: true }])
-    );
+  return installE2EAuthSession(page, {
+    token: "token-backoffice-config",
+    refreshToken: "refresh-backoffice-config",
+    type: "Bearer",
+    userId: "user-root",
+    userKind: "COLABORADOR",
+    displayName: "Root Admin",
+    activeTenantId: "tenant-centro",
+    preferredTenantId: "tenant-centro",
+    baseTenantId: "tenant-centro",
+    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+    availableScopes: ["GLOBAL"],
+    broadAccess: true,
   });
 }
 
@@ -58,55 +63,46 @@ function normalizedPath(path: string) {
 }
 
 async function setupMocks(page: Page, state: { integrations: IntegrationSeed[]; globalConfig: GlobalConfigSeed }) {
+  await installProtectedShellMocks(page, {
+    currentTenantId: "tenant-centro",
+    tenants: [
+      {
+        id: "tenant-centro",
+        academiaId: "academia-norte",
+        groupId: "academia-norte",
+        nome: "Unidade Centro",
+        ativo: true,
+      },
+    ],
+    user: {
+      id: "user-root",
+      userId: "user-root",
+      nome: "Root Admin",
+      displayName: "Root Admin",
+      email: "root@qa.local",
+      roles: ["OWNER", "ADMIN"],
+      userKind: "COLABORADOR",
+      activeTenantId: "tenant-centro",
+      tenantBaseId: "tenant-centro",
+      availableScopes: ["GLOBAL"],
+      broadAccess: true,
+    },
+    academia: {
+      id: "academia-norte",
+      nome: "Rede Norte",
+      ativo: true,
+    },
+    capabilities: {
+      canAccessElevatedModules: true,
+      canDeleteClient: false,
+    },
+  });
+
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = normalizedPath(url.pathname);
     const method = request.method();
-
-    if (path === "/api/v1/auth/me" && method === "GET") {
-      await route.fulfill({
-        status: 200,
-        json: {
-          id: "user-root",
-          nome: "Root Admin",
-          email: "root@qa.local",
-          roles: ["OWNER", "ADMIN"],
-          activeTenantId: "tenant-centro",
-          availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
-          capabilities: {
-            canAccessElevatedModules: true,
-          },
-        },
-      });
-      return;
-    }
-
-    if (path === "/api/v1/context/unidade-ativa" && method === "GET") {
-      await route.fulfill({
-        status: 200,
-        json: {
-          currentTenantId: "tenant-centro",
-          tenantAtual: {
-            id: "tenant-centro",
-            academiaId: "academia-norte",
-            groupId: "academia-norte",
-            nome: "Unidade Centro",
-            ativo: true,
-          },
-          unidadesDisponiveis: [
-            {
-              id: "tenant-centro",
-              academiaId: "academia-norte",
-              groupId: "academia-norte",
-              nome: "Unidade Centro",
-              ativo: true,
-            },
-          ],
-        },
-      });
-      return;
-    }
 
     if (path === "/api/v1/admin/configuracoes/integracoes/status" && method === "GET") {
       await route.fulfill({
@@ -141,7 +137,7 @@ async function setupMocks(page: Page, state: { integrations: IntegrationSeed[]; 
       return;
     }
 
-    await route.fulfill({ status: 404, json: { message: `Unhandled ${method} ${path}` } });
+    await route.fallback();
   });
 }
 

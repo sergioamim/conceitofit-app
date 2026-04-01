@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installE2EAuthSession } from "./support/auth-session";
+import { installProtectedShellMocks } from "./support/protected-shell-mocks";
 
 // ---------------------------------------------------------------------------
 // Seed state
@@ -29,30 +31,36 @@ function defaultConfig(): BillingConfigSeed {
 // ---------------------------------------------------------------------------
 
 function seedSession(page: Page) {
-  return page.addInitScript(() => {
-    window.localStorage.setItem("academia-auth-token", "token-billing-e2e");
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-billing-e2e");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    window.localStorage.setItem("academia-auth-active-tenant-id", "tenant-centro");
-    window.localStorage.setItem("academia-auth-preferred-tenant-id", "tenant-centro");
-    window.localStorage.setItem(
-      "academia-auth-available-tenants",
-      JSON.stringify([{ tenantId: "tenant-centro", defaultTenant: true }]),
-    );
+  return installE2EAuthSession(page, {
+    token: "token-billing-e2e",
+    refreshToken: "refresh-billing-e2e",
+    type: "Bearer",
+    userId: "user-billing",
+    userKind: "COLABORADOR",
+    displayName: "Admin Billing",
+    activeTenantId: "tenant-centro",
+    preferredTenantId: "tenant-centro",
+    baseTenantId: "tenant-centro",
+    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+    availableScopes: ["UNIDADE"],
+    broadAccess: false,
   });
 }
 
 function seedSessionNoPermission(page: Page) {
-  return page.addInitScript(() => {
-    window.localStorage.setItem("academia-auth-token", "token-billing-viewer");
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-billing-viewer");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    window.localStorage.setItem("academia-auth-active-tenant-id", "tenant-centro");
-    window.localStorage.setItem("academia-auth-preferred-tenant-id", "tenant-centro");
-    window.localStorage.setItem(
-      "academia-auth-available-tenants",
-      JSON.stringify([{ tenantId: "tenant-centro", defaultTenant: true }]),
-    );
+  return installE2EAuthSession(page, {
+    token: "token-billing-viewer",
+    refreshToken: "refresh-billing-viewer",
+    type: "Bearer",
+    userId: "user-billing-viewer",
+    userKind: "COLABORADOR",
+    displayName: "Viewer Billing",
+    activeTenantId: "tenant-centro",
+    preferredTenantId: "tenant-centro",
+    baseTenantId: "tenant-centro",
+    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+    availableScopes: ["UNIDADE"],
+    broadAccess: false,
   });
 }
 
@@ -67,38 +75,42 @@ async function setupMocks(
 ) {
   const elevated = options?.elevated ?? true;
 
+  await installProtectedShellMocks(page, {
+    currentTenantId: "tenant-centro",
+    tenants: [
+      {
+        id: "tenant-centro",
+        academiaId: "acad-1",
+        groupId: "acad-1",
+        nome: "Unidade Centro",
+        ativo: true,
+      },
+    ],
+    user: {
+      id: elevated ? "user-billing" : "user-billing-viewer",
+      userId: elevated ? "user-billing" : "user-billing-viewer",
+      nome: elevated ? "Admin Billing" : "Viewer Billing",
+      displayName: elevated ? "Admin Billing" : "Viewer Billing",
+      email: "billing@qa.local",
+      roles: elevated ? ["ADMIN"] : ["VIEWER"],
+      userKind: "COLABORADOR",
+      activeTenantId: "tenant-centro",
+      tenantBaseId: "tenant-centro",
+      availableScopes: ["UNIDADE"],
+      broadAccess: false,
+    },
+    academia: { id: "acad-1", nome: "Academia Teste", ativo: true },
+    capabilities: {
+      canAccessElevatedModules: elevated,
+      canDeleteClient: false,
+    },
+  });
+
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = normalizedPath(url.pathname);
     const method = request.method();
-
-    // Auth
-    if (path === "/api/v1/auth/me" && method === "GET") {
-      await route.fulfill({
-        status: 200,
-        json: {
-          id: "user-billing",
-          nome: elevated ? "Admin Billing" : "Viewer Billing",
-          email: "billing@qa.local",
-          roles: elevated ? ["ADMIN"] : ["VIEWER"],
-          activeTenantId: "tenant-centro",
-          availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
-          capabilities: { canAccessElevatedModules: elevated },
-        },
-      });
-      return;
-    }
-
-    // Context
-    if (path.startsWith("/api/v1/context/") && method === "GET") {
-      await route.fulfill({ status: 200, json: { tenantId: "tenant-centro" } });
-      return;
-    }
-    if (path.startsWith("/api/v1/context/") && method === "PUT") {
-      await route.fulfill({ status: 200, json: {} });
-      return;
-    }
 
     // Billing config GET
     if (path === "/api/v1/billing/config" && method === "GET") {
@@ -123,23 +135,13 @@ async function setupMocks(
       return;
     }
 
-    // Tenant/academia endpoints (sidebar, layout)
-    if (path === "/api/v1/academia" && method === "GET") {
-      await route.fulfill({
-        status: 200,
-        json: { id: "acad-1", nome: "Academia Teste" },
-      });
-      return;
-    }
-
     // Health
     if (path.includes("/actuator/health")) {
       await route.fulfill({ status: 200, json: { status: "UP" } });
       return;
     }
 
-    // Fallback
-    await route.fulfill({ status: 200, json: {} });
+    await route.fallback();
   });
 }
 
