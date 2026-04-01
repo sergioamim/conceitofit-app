@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { installE2EAuthSession } from "./support/auth-session";
+import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
 
 const TENANT = {
   id: "tenant-centro",
@@ -109,75 +110,49 @@ async function seedAuthenticatedSession(page: Page) {
 }
 
 async function installDashboardMocks(page: Page) {
+  await installOperationalAppShellMocks(page, {
+    currentTenantId: TENANT.id,
+    tenants: [
+      {
+        ...TENANT,
+        academiaId: "academia-1",
+        groupId: "academia-1",
+      },
+    ],
+    user: {
+      userId: "user-dashboard",
+      nome: "Operador Dashboard",
+      displayName: "Operador Dashboard",
+      email: "dashboard@teste.local",
+      roles: ["ADMIN"],
+      userKind: "COLABORADOR",
+      activeTenantId: TENANT.id,
+      tenantBaseId: TENANT.id,
+      availableScopes: ["UNIDADE"],
+      broadAccess: false,
+    },
+    academia: {
+      id: "academia-1",
+      nome: "Academia Teste",
+      ativo: true,
+    },
+    capabilities: {
+      canAccessElevatedModules: true,
+      canDeleteClient: false,
+    },
+  });
+
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const method = request.method();
     const url = new URL(request.url());
     const path = normalizedPath(url.pathname);
 
-    if (path === "/api/v1/app/bootstrap" && method === "GET") {
-      await fulfillJson(route, {
-        tenantContext: {
-          currentTenantId: TENANT.id,
-          tenantAtual: TENANT,
-          unidadesDisponiveis: [TENANT],
-        },
-        user: {
-          userId: "user-dashboard",
-          nome: "Operador Dashboard",
-          displayName: "Operador Dashboard",
-          email: "dashboard@teste.local",
-          roles: ["ADMIN"],
-          userKind: "COLABORADOR",
-          activeTenantId: TENANT.id,
-          tenantBaseId: TENANT.id,
-          availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
-          availableScopes: ["UNIDADE"],
-          broadAccess: false,
-        },
-        academia: {
-          id: "academia-1",
-          nome: "Academia Teste",
-          ativo: true,
-        },
-      });
-      return;
-    }
-
     if (path === "/api/v1/academia/dashboard" && method === "GET") {
       await fulfillJson(route, DASHBOARD_RESPONSE);
       return;
     }
-
-    if (path === "/api/v1/context/unidade-ativa" && method === "GET") {
-      await fulfillJson(route, {
-        currentTenantId: TENANT.id,
-        tenantAtual: TENANT,
-        unidadesDisponiveis: [TENANT],
-      });
-      return;
-    }
-
-    if (path === "/api/v1/auth/me" && method === "GET") {
-      await fulfillJson(route, {
-        userId: "user-dashboard",
-        nome: "Operador Dashboard",
-        email: "dashboard@teste.local",
-        roles: ["ADMIN"],
-      });
-      return;
-    }
-
-    if (path === "/api/v1/academia" && method === "GET") {
-      await fulfillJson(route, {
-        id: "academia-1",
-        nome: "Academia Teste",
-        ativo: true,
-      });
-      return;
-    }
-
-    await fulfillJson(route, {});
+    await route.fallback();
   });
 }
 
