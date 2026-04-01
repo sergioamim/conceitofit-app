@@ -12223,12 +12223,12 @@
         "description": "Teste Playwright que valida o pipeline comercial completo end-to-end.",
         "details": "Fluxo: (1) login como operador, (2) criar prospect via modal, (3) converter prospect em cliente, (4) criar matricula para o cliente com plano, (5) verificar pagamento gerado, (6) marcar pagamento como recebido. Se esse teste passa, o core do produto funciona. Usar fixtures para dados de teste. Rodar no CI com backend real (docker-compose).",
         "testStrategy": "Teste passa com backend ativo. Teste falha graciosamente se backend offline. Coverage do fluxo mais critico do produto.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "complexity": 4,
         "subtasks": [],
-        "updatedAt": "2026-04-01T13:21:04.691Z"
+        "updatedAt": "2026-04-01T14:13:43.416Z"
       },
       {
         "id": "325",
@@ -12246,9 +12246,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T13:33:57.720Z",
+      "lastModified": "2026-04-01T14:13:43.416Z",
       "taskCount": 321,
-      "completedCount": 318,
+      "completedCount": 319,
       "tags": [
         "master"
       ]
