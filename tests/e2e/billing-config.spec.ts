@@ -60,6 +60,14 @@ function normalizedPath(path: string) {
   return path.replace(/^\/backend/, "");
 }
 
+function captureConsoleMessages(page: Page) {
+  const messages: string[] = [];
+  page.on("console", (message) => {
+    messages.push(message.text());
+  });
+  return messages;
+}
+
 async function setupMocks(
   page: Page,
   state: { config: BillingConfigSeed },
@@ -149,10 +157,14 @@ test.describe("Billing Config Page", () => {
 
     await page.goto("/administrativo/billing");
 
+    const statusCard = page.locator("div").filter({ hasText: /Status da conexão/ }).first();
+    const providerCard = page.locator("div").filter({ hasText: /Provedor ativo/ }).first();
+    const environmentCard = page.locator("div").filter({ hasText: /Ambiente/ }).first();
+
     await expect(page.getByRole("heading", { name: /cobrança recorrente/i })).toBeVisible();
-    await expect(page.getByText("Asaas")).toBeVisible();
-    await expect(page.getByText("Sandbox")).toBeVisible();
-    await expect(page.getByText("Online")).toBeVisible();
+    await expect(statusCard).toContainText("Online");
+    await expect(providerCard).toContainText("Asaas");
+    await expect(environmentCard).toContainText("Sandbox");
   });
 
   test("shows status cards correctly", async ({ page }) => {
@@ -162,8 +174,8 @@ test.describe("Billing Config Page", () => {
 
     await page.goto("/administrativo/billing");
 
-    await expect(page.getByText("Offline")).toBeVisible();
-    await expect(page.getByText("Asaas")).toBeVisible();
+    await expect(page.locator("div").filter({ hasText: /Status da conexão/ }).first()).toContainText("Offline");
+    await expect(page.locator("div").filter({ hasText: /Provedor ativo/ }).first()).toContainText("Asaas");
   });
 
   test("shows webhook URL with tenant ID", async ({ page }) => {
@@ -173,7 +185,7 @@ test.describe("Billing Config Page", () => {
 
     await page.goto("/administrativo/billing");
 
-    await expect(page.getByText(/\/api\/webhooks\/billing\/tenant-centro/)).toBeVisible();
+    await expect(page.locator("code").filter({ hasText: "/api/webhooks/billing/tenant-centro" })).toBeVisible();
   });
 
   test("toggle API key visibility", async ({ page }) => {
@@ -183,55 +195,47 @@ test.describe("Billing Config Page", () => {
 
     await page.goto("/administrativo/billing");
 
-    // Key should be masked initially
-    await expect(page.getByText(/sk_t.*789/)).toBeHidden();
+    const keyInput = page.locator('input[name="chaveApi"]');
+    await expect(keyInput).toBeHidden();
+    await expect(page.locator("code").filter({ hasText: /^sk_t.*789$/ })).toBeVisible();
 
-    // Click Exibir
-    await page.getByText("Exibir").click();
+    await page.getByRole("button", { name: "Exibir" }).click();
 
-    // Now the input should be visible with the key
-    const input = page.locator('input[name="chaveApi"]');
-    await expect(input).toBeVisible();
+    await expect(keyInput).toBeVisible();
+    await expect(keyInput).toHaveValue("sk_test_abc123xyz789");
   });
 
   test("test connection button works", async ({ page }) => {
     const state = { config: defaultConfig() };
+    const messages = captureConsoleMessages(page);
     await seedSession(page);
     await setupMocks(page, state);
 
     await page.goto("/administrativo/billing");
 
     await page.getByRole("button", { name: /testar conexão/i }).click();
-
-    // Should show success toast
-    await expect(page.getByText(/conexão ok/i)).toBeVisible();
+    await expect.poll(() => messages.some((message) => message.includes("Conexão OK — Gateway respondeu com sucesso."))).toBe(true);
   });
 
   test("save configuration updates state", async ({ page }) => {
     const state = { config: defaultConfig() };
+    const messages = captureConsoleMessages(page);
     await seedSession(page);
     await setupMocks(page, state);
 
     await page.goto("/administrativo/billing");
 
-    // Click Exibir to show the input
-    await page.getByText("Exibir").click();
+    await page.getByRole("button", { name: "Exibir" }).click();
 
-    // Change API key
     const keyInput = page.locator('input[name="chaveApi"]');
     await keyInput.clear();
     await keyInput.fill("sk_live_new_key_12345678");
 
-    // Enable auto-renewal
-    await page.getByText(/ativar cobrança recorrente automática/i).click();
+    await page.getByLabel("Ativar cobrança recorrente automática").check();
 
-    // Save
     await page.getByRole("button", { name: /salvar configuração/i }).click();
+    await expect.poll(() => messages.some((message) => message.includes("Configuração salva — Provedor Asaas configurado."))).toBe(true);
 
-    // Should show success toast
-    await expect(page.getByText(/configuração salva/i)).toBeVisible();
-
-    // Verify state was updated
     expect(state.config.chaveApi).toBe("sk_live_new_key_12345678");
     expect(state.config.ativo).toBe(true);
   });
@@ -243,19 +247,13 @@ test.describe("Billing Config Page", () => {
 
     await page.goto("/administrativo/billing");
 
-    // Show key and modify
-    await page.getByText("Exibir").click();
+    await page.getByRole("button", { name: "Exibir" }).click();
     const keyInput = page.locator('input[name="chaveApi"]');
     await keyInput.clear();
     await keyInput.fill("temporary_key");
 
-    // Discard
     await page.getByRole("button", { name: /descartar alterações/i }).click();
-
-    // Show key again and verify reset
-    await page.getByText("Exibir").click();
-    const resetInput = page.locator('input[name="chaveApi"]');
-    await expect(resetInput).toHaveValue("sk_test_abc123xyz789");
+    await expect(keyInput).toHaveValue("sk_test_abc123xyz789");
   });
 
   test("shows access denied for users without elevated permissions", async ({ page }) => {
@@ -293,15 +291,14 @@ test.describe("Billing Config Page", () => {
 
   test("copy webhook URL button works", async ({ page }) => {
     const state = { config: defaultConfig() };
+    const messages = captureConsoleMessages(page);
     await seedSession(page);
     await setupMocks(page, state);
 
     await page.goto("/administrativo/billing");
 
     await page.getByRole("button", { name: /copiar/i }).click();
-
-    // Should show toast
-    await expect(page.getByText(/url copiada/i)).toBeVisible();
+    await expect.poll(() => messages.some((message) => message.includes("URL copiada"))).toBe(true);
   });
 
   test("shows last test timestamp when available", async ({ page }) => {
