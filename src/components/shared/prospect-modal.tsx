@@ -249,7 +249,7 @@ function ProspectModalComponent({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={onClose} className="border-border">
+            <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
             <Button type="submit">

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { axe } from "vitest-axe";
@@ -14,11 +15,23 @@ vi.mock("@/components/ui/dialog", () => ({
 vi.mock("@/components/ui/select", () => ({
   Select: ({ children }: any) => <div>{children}</div>,
   SelectTrigger: ({ children, "aria-labelledby": labelledBy }: any) => (
-    <button role="combobox" aria-expanded="false" aria-labelledby={labelledBy}>{children}</button>
+    <button
+      role="combobox"
+      aria-controls="mock-select-options"
+      aria-expanded="false"
+      aria-labelledby={labelledBy}
+      aria-label={labelledBy ? undefined : "Selecionar opção"}
+    >
+      {children}
+    </button>
   ),
   SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-  SelectContent: ({ children }: any) => <div role="listbox">{children}</div>,
-  SelectItem: ({ children, value }: any) => <div role="option">{children}</div>,
+  SelectContent: ({ children }: any) => (
+    <div id="mock-select-options" role="listbox" aria-label="Opções disponíveis">
+      {children}
+    </div>
+  ),
+  SelectItem: ({ children }: any) => <div role="option" aria-selected="false">{children}</div>,
 }));
 
 vi.mock("@/components/shared/phone-input", () => ({
@@ -52,10 +65,7 @@ describe("ProspectModal a11y", () => {
 
   it("has no accessibility violations when open", async () => {
     const { container } = render(<ProspectModal {...props} />);
-    // Combobox mock doesn't fully replicate Radix Select a11y — skip combobox-specific rules
-    const results = await axe(container, {
-      rules: { "aria-input-field-name": { enabled: false } },
-    });
+    const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
 });
