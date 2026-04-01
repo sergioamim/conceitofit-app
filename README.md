@@ -1,5 +1,7 @@
 # Conceito Fit Frontend
 
+[![Cobertura de testes](https://github.com/sergioamim/conceitofit-app/actions/workflows/unit-coverage.yml/badge.svg)](https://github.com/sergioamim/conceitofit-app/actions/workflows/unit-coverage.yml)
+
 Aplicação Next.js (App Router) para operação de academias multiunidade.
 
 ## Requisitos

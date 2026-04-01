@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { MapPin, ChevronRight } from "lucide-react";
 import type { Tenant } from "@/lib/types";
 
@@ -6,9 +5,8 @@ export function StorefrontUnidades({ unidades }: { unidades: Tenant[] }) {
   return (
     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
       {unidades.map((unidade) => (
-        <Link
+        <div
           key={unidade.id}
-          href={`/storefront/unidade/${unidade.id}`}
           className="group rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-lg hover:border-gym-accent/40"
         >
           <h3 className="font-display text-lg font-bold group-hover:text-gym-accent transition-colors">
@@ -42,10 +40,10 @@ export function StorefrontUnidades({ unidades }: { unidades: Tenant[] }) {
           )}
 
           <div className="mt-4 flex items-center gap-1 text-sm font-semibold text-gym-accent">
-            Ver planos e detalhes
+            Planos e detalhes nesta pagina
             <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </div>
-        </Link>
+        </div>
       ))}
     </div>
   );
