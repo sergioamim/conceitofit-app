@@ -190,12 +190,9 @@ export default async function StorefrontHomePage() {
               {singleUnit.telefone && (
                 <p className="mt-1 text-sm text-muted-foreground">{singleUnit.telefone}</p>
               )}
-              <a
-                href={`/storefront/unidade/${singleUnit.id}`}
-                className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-gym-accent hover:underline"
-              >
-                Ver detalhes, horarios e mapa &rarr;
-              </a>
+              <p className="mt-4 text-sm font-semibold text-gym-accent">
+                Detalhes e planos disponiveis nesta pagina
+              </p>
             </div>
           </div>
         </section>
