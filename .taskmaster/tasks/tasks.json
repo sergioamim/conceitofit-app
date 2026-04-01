@@ -12678,7 +12678,7 @@
         "description": "Atualizar os testes de adesao publica para refletirem corretamente os endpoints, estados de carregamento e transicoes reais do fluxo publico.",
         "details": "Esta task depende de 327 e 329.\n\nEscopo obrigatorio:\n1. Auditar tests/e2e/adesao-publica.spec.ts e installPublicJourneyApiMocks em tests/e2e/support/backend-only-stubs.ts.\n2. Mapear todas as requests reais disparadas pelas telas /adesao/trial, /adesao/cadastro, /adesao/checkout e /adesao/pendencias.\n3. Garantir que os mocks devolvam payloads completos para branding, tenant, catalogo, checkout, pendencias e confirmacao final.\n4. Resolver o caso que fica preso em 'Carregando jornada publica...' e validar que o fluxo de checkout + assinatura + pagamento percorre os estados esperados sem depender de navegacao antiga.\n5. Manter separacao clara entre dados de catalogo, dados da jornada e efeitos do checkout para evitar novos mocks monoliticos dificeis de manter.\n\nCriterio de aceite: a suite de adesao publica precisa ser novamente um sentinel confiavel do fluxo publico, sem waits artificiais para mascarar falta de contrato.",
         "testStrategy": "Reexecutar adesao-publica.spec.ts completo e confirmar que trial, cadastro, checkout e pendencias percorrem os estados esperados sem ficar presos em carregamento.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "327",
           "329"
@@ -12691,10 +12691,10 @@
             "description": "Levantar o que cada tela de adesao consulta antes e depois de navegar.",
             "dependencies": [],
             "details": "Cobrir /adesao/trial, /adesao/cadastro, /adesao/checkout e /adesao/pendencias, incluindo branding, tenant, catalogo, checkout e pendencias.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "333",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:11:51.079Z"
           },
           {
             "id": 2,
@@ -12704,10 +12704,10 @@
               1
             ],
             "details": "Revisar installPublicJourneyApiMocks para refletir o shape atual esperado pelas telas e pelos componentes de catalogo/resumo.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "333",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:11:52.825Z"
           },
           {
             "id": 3,
@@ -12718,10 +12718,10 @@
               2
             ],
             "details": "Validar criacao de venda/checkout, pendencia de assinatura, assinatura concluida e marcacao de pagamento como recebido sem depender de navegacao ou endpoints antigos.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "333",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:11:54.541Z"
           },
           {
             "id": 4,
@@ -12732,14 +12732,14 @@
               3
             ],
             "details": "Reexecutar os cenarios do trial e da adesao completa e registrar qualquer dependencia residual de mock que ainda precise ser separada por dominio.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "333",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:11:56.257Z"
           }
         ],
         "complexity": 6,
-        "updatedAt": "2026-04-01T18:07:09.916Z",
+        "updatedAt": "2026-04-01T18:11:56.257Z",
         "recommendedSubtasks": 4,
         "expansionPrompt": "Dividir a tarefa em: 1. Auditoria de tests/e2e/adesao-publica.spec.ts e installPublicJourneyApiMocks. 2. Mapeamento de requests reais e definição de mocks para branding/tenant/catálogo. 3. Mapeamento de requests reais e definição de mocks para checkout/pagamento. 4. Resolução de estados de 'Carregando' e validação do fluxo completo."
       },
@@ -12963,9 +12963,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T18:25:00.000Z",
+      "lastModified": "2026-04-01T18:11:56.257Z",
       "taskCount": 332,
-      "completedCount": 327,
+      "completedCount": 328,
       "tags": [
         "master"
       ]
