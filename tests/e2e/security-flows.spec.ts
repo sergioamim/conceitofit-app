@@ -1,19 +1,9 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
-
-const SESSION_KEYS = [
-  "academia-auth-token",
-  "academia-auth-refresh-token",
-  "academia-auth-token-type",
-  "academia-auth-expires-in",
-  "academia-auth-active-tenant-id",
-  "academia-auth-available-tenants",
-  "academia-auth-user-id",
-  "academia-auth-user-kind",
-  "academia-auth-display-name",
-  "academia-auth-available-scopes",
-  "academia-auth-broad-access",
-  "academia-auth-base-tenant-id",
-];
+import {
+  applyE2EAuthSession,
+  clearE2EAuthSession,
+  installE2EAuthSession,
+} from "./support/auth-session";
 
 const TENANTS = [
   { id: "tenant-centro", nome: "Unidade Centro", ativo: true },
@@ -163,20 +153,24 @@ async function installSecurityMocks(
 }
 
 async function seedSession(page: Page) {
-  await page.addInitScript((tenants) => {
-    window.localStorage.setItem("academia-auth-token", "token-valid");
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-valid");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    window.localStorage.setItem("academia-auth-expires-in", "3600");
-    window.localStorage.setItem("academia-auth-user-id", "user-1");
-    window.localStorage.setItem("academia-auth-user-kind", "COLABORADOR");
-    window.localStorage.setItem("academia-auth-display-name", "Admin Teste");
-    window.localStorage.setItem("academia-auth-active-tenant-id", tenants[0].id);
-    window.localStorage.setItem("academia-auth-base-tenant-id", tenants[0].id);
-    window.localStorage.setItem("academia-auth-available-tenants", JSON.stringify(tenants));
-    window.localStorage.setItem("academia-auth-available-scopes", JSON.stringify(["UNIDADE"]));
-    window.localStorage.setItem("academia-auth-broad-access", "false");
-  }, TENANTS);
+  await installE2EAuthSession(page, {
+    token: "token-valid",
+    refreshToken: "refresh-valid",
+    type: "Bearer",
+    expiresIn: 3600,
+    userId: "user-1",
+    userKind: "COLABORADOR",
+    displayName: "Admin Teste",
+    activeTenantId: TENANTS[0].id,
+    baseTenantId: TENANTS[0].id,
+    preferredTenantId: TENANTS[0].id,
+    availableTenants: TENANTS.map((tenant, index) => ({
+      tenantId: tenant.id,
+      defaultTenant: index === 0,
+    })),
+    availableScopes: ["UNIDADE"],
+    broadAccess: false,
+  });
 }
 
 test.describe("Fluxos críticos de segurança e tenant", () => {
@@ -261,6 +255,35 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
     }
   });
 
+  test("helper compartilhado permite autenticar no meio do fluxo publico", async ({ page }) => {
+    await installSecurityMocks(page);
+
+    await page.goto("/login");
+    await expect(page.getByLabel("Usuário")).toBeVisible();
+
+    await applyE2EAuthSession(page, {
+      token: "token-valid",
+      refreshToken: "refresh-valid",
+      type: "Bearer",
+      expiresIn: 3600,
+      userId: "user-1",
+      userKind: "COLABORADOR",
+      displayName: "Admin Teste",
+      activeTenantId: TENANTS[0].id,
+      baseTenantId: TENANTS[0].id,
+      preferredTenantId: TENANTS[0].id,
+      availableTenants: TENANTS.map((tenant, index) => ({
+        tenantId: tenant.id,
+        defaultTenant: index === 0,
+      })),
+      availableScopes: ["UNIDADE"],
+      broadAccess: false,
+    });
+
+    await page.goto("/dashboard");
+    await expect(page).not.toHaveURL(/\/login/);
+  });
+
   test("sessão expirada (token removido) redireciona para login ao recarregar", async ({ page }) => {
     await installSecurityMocks(page);
     await seedSession(page);
@@ -268,9 +291,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
     await page.goto("/dashboard");
     await expect(page).not.toHaveURL(/\/login/);
 
-    await page.evaluate((keys) => {
-      keys.forEach((key) => window.localStorage.removeItem(key));
-    }, SESSION_KEYS);
+    await clearE2EAuthSession(page);
 
     await page.reload();
     await page.waitForLoadState("networkidle");

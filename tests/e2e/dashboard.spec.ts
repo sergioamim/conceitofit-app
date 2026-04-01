@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { installE2EAuthSession } from "./support/auth-session";
 
 const TENANT = {
   id: "tenant-centro",
@@ -91,23 +92,20 @@ function normalizedPath(pathname: string) {
 }
 
 async function seedAuthenticatedSession(page: Page) {
-  await page.addInitScript((tenant) => {
-    window.localStorage.setItem("academia-auth-token", "token-dashboard");
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-dashboard");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    window.localStorage.setItem("academia-auth-expires-in", "3600");
-    window.localStorage.setItem("academia-auth-user-id", "user-dashboard");
-    window.localStorage.setItem("academia-auth-user-kind", "COLABORADOR");
-    window.localStorage.setItem("academia-auth-display-name", "Operador Dashboard");
-    window.localStorage.setItem("academia-auth-active-tenant-id", tenant.id);
-    window.localStorage.setItem("academia-auth-base-tenant-id", tenant.id);
-    window.localStorage.setItem(
-      "academia-auth-available-tenants",
-      JSON.stringify([{ tenantId: tenant.id, defaultTenant: true }]),
-    );
-    window.localStorage.setItem("academia-auth-available-scopes", JSON.stringify(["UNIDADE"]));
-    window.localStorage.setItem("academia-auth-broad-access", "false");
-  }, TENANT);
+  await installE2EAuthSession(page, {
+    token: "token-dashboard",
+    refreshToken: "refresh-dashboard",
+    type: "Bearer",
+    expiresIn: 3600,
+    userId: "user-dashboard",
+    userKind: "COLABORADOR",
+    displayName: "Operador Dashboard",
+    activeTenantId: TENANT.id,
+    baseTenantId: TENANT.id,
+    availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
+    availableScopes: ["UNIDADE"],
+    broadAccess: false,
+  });
 }
 
 async function installDashboardMocks(page: Page) {
