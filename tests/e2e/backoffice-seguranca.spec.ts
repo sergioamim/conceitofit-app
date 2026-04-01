@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installE2EAuthSession } from "./support/auth-session";
 
 type AcademiaSeed = {
   id: string;
@@ -69,16 +70,19 @@ type State = {
 };
 
 function seedSession(page: Page) {
-  return page.addInitScript(() => {
-    window.localStorage.setItem("academia-auth-token", "token-backoffice-security");
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-backoffice-security");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    window.localStorage.setItem("academia-auth-active-tenant-id", "tenant-centro");
-    window.localStorage.setItem("academia-auth-preferred-tenant-id", "tenant-centro");
-    window.localStorage.setItem(
-      "academia-auth-available-tenants",
-      JSON.stringify([{ tenantId: "tenant-centro", defaultTenant: true }])
-    );
+  return installE2EAuthSession(page, {
+    refreshToken: "refresh-backoffice-security",
+    type: "Bearer",
+    activeTenantId: "tenant-centro",
+    baseTenantId: "tenant-centro",
+    preferredTenantId: "tenant-centro",
+    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+    userId: "backoffice-root",
+    userKind: "COLABORADOR",
+    displayName: "Admin Segurança",
+    roles: ["SUPER_ADMIN"],
+    availableScopes: ["GLOBAL"],
+    broadAccess: true,
   });
 }
 

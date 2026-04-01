@@ -4,6 +4,13 @@ function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
+function readStorageToken(key: string): string | undefined {
+  if (!isBrowser()) return undefined;
+  const storage = globalThis.window?.localStorage;
+  const value = storage?.getItem(key)?.trim();
+  return value || undefined;
+}
+
 function readSessionActiveFlag(): boolean {
   if (!isBrowser()) return false;
   const storage = globalThis.window?.localStorage;
@@ -21,15 +28,15 @@ function normalizeToken(value: string | undefined): string | undefined {
 }
 
 export function getAccessToken(): string | undefined {
-  return accessTokenMemory;
+  return accessTokenMemory ?? readStorageToken("academia-auth-token");
 }
 
 export function getRefreshToken(): string | undefined {
-  return refreshTokenMemory;
+  return refreshTokenMemory ?? readStorageToken("academia-auth-refresh-token");
 }
 
 export function getTokenType(): string | undefined {
-  return tokenTypeMemory ?? "Bearer";
+  return tokenTypeMemory ?? readStorageToken("academia-auth-token-type") ?? "Bearer";
 }
 
 export function saveTokens(input: {

@@ -1,4 +1,5 @@
 import type { Page, Request, Route } from "@playwright/test";
+import { installE2EAuthSession, type E2EAuthSessionSeed } from "./auth-session";
 
 type TenantSeed = {
   id: string;
@@ -324,29 +325,36 @@ export async function seedAuthenticatedSession(
     tenantId: string;
     tenantName?: string;
     availableTenants?: Array<{ tenantId: string; defaultTenant?: boolean }>;
+    baseTenantId?: string;
+    userId?: string;
+    userKind?: string;
+    displayName?: string;
+    availableScopes?: string[];
+    broadAccess?: boolean;
+    networkId?: string;
+    networkSubdomain?: string;
+    networkName?: string;
+    forcePasswordChangeRequired?: boolean;
   }
 ) {
-  const payload = {
-    accessToken: "token-e2e",
-    refreshToken: "refresh-e2e",
-    tokenType: "Bearer",
-    tenantId: options.tenantId,
+  const seed: E2EAuthSessionSeed = {
+    activeTenantId: options.tenantId,
     preferredTenantId: options.tenantId,
+    baseTenantId: options.baseTenantId ?? options.tenantId,
     availableTenants:
       options.availableTenants ?? [{ tenantId: options.tenantId, defaultTenant: true }],
+    userId: options.userId,
+    userKind: options.userKind,
+    displayName: options.displayName,
+    availableScopes: options.availableScopes,
+    broadAccess: options.broadAccess,
+    networkId: options.networkId,
+    networkSubdomain: options.networkSubdomain,
+    networkName: options.networkName,
+    forcePasswordChangeRequired: options.forcePasswordChangeRequired,
   };
 
-  await page.addInitScript((session) => {
-    window.localStorage.setItem("academia-auth-token", session.accessToken);
-    window.localStorage.setItem("academia-auth-refresh-token", session.refreshToken);
-    window.localStorage.setItem("academia-auth-token-type", session.tokenType);
-    window.localStorage.setItem("academia-auth-active-tenant-id", session.tenantId);
-    window.localStorage.setItem("academia-auth-preferred-tenant-id", session.preferredTenantId);
-    window.localStorage.setItem(
-      "academia-auth-available-tenants",
-      JSON.stringify(session.availableTenants),
-    );
-  }, payload);
+  await installE2EAuthSession(page, seed);
 }
 
 export async function installPublicJourneyApiMocks(page: Page) {
