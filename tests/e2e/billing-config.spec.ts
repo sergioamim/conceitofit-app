@@ -32,35 +32,27 @@ function defaultConfig(): BillingConfigSeed {
 
 function seedSession(page: Page) {
   return installE2EAuthSession(page, {
-    token: "token-billing-e2e",
-    refreshToken: "refresh-billing-e2e",
-    type: "Bearer",
+    activeTenantId: "tenant-centro",
+    baseTenantId: "tenant-centro",
+    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
     userId: "user-billing",
     userKind: "COLABORADOR",
     displayName: "Admin Billing",
-    activeTenantId: "tenant-centro",
-    preferredTenantId: "tenant-centro",
-    baseTenantId: "tenant-centro",
-    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+    roles: ["ADMIN"],
     availableScopes: ["UNIDADE"],
-    broadAccess: false,
   });
 }
 
 function seedSessionNoPermission(page: Page) {
   return installE2EAuthSession(page, {
-    token: "token-billing-viewer",
-    refreshToken: "refresh-billing-viewer",
-    type: "Bearer",
+    activeTenantId: "tenant-centro",
+    baseTenantId: "tenant-centro",
+    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
     userId: "user-billing-viewer",
     userKind: "COLABORADOR",
     displayName: "Viewer Billing",
-    activeTenantId: "tenant-centro",
-    preferredTenantId: "tenant-centro",
-    baseTenantId: "tenant-centro",
-    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+    roles: ["VIEWER"],
     availableScopes: ["UNIDADE"],
-    broadAccess: false,
   });
 }
 

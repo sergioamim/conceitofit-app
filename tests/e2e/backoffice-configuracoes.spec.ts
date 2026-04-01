@@ -43,16 +43,13 @@ type GlobalConfigSeed = {
 
 function seedSession(page: Page) {
   return installE2EAuthSession(page, {
-    token: "token-backoffice-config",
-    refreshToken: "refresh-backoffice-config",
-    type: "Bearer",
+    activeTenantId: "tenant-centro",
+    baseTenantId: "tenant-centro",
+    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
     userId: "user-root",
     userKind: "COLABORADOR",
     displayName: "Root Admin",
-    activeTenantId: "tenant-centro",
-    preferredTenantId: "tenant-centro",
-    baseTenantId: "tenant-centro",
-    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+    roles: ["OWNER", "ADMIN"],
     availableScopes: ["GLOBAL"],
     broadAccess: true,
   });

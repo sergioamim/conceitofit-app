@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request, type Route } from "@playwright/test";
+import { installE2EAuthSession } from "./support/auth-session";
 
 const TENANT_A = {
   id: "tenant-contrato-a",
@@ -40,24 +41,16 @@ async function seedSession(
     availableTenants?: Array<{ tenantId: string; defaultTenant?: boolean }>;
   },
 ) {
-  await page.addInitScript((session) => {
-    window.localStorage.setItem("academia-auth-token", session.token);
-    window.localStorage.setItem("academia-auth-refresh-token", "refresh-e2e");
-    window.localStorage.setItem("academia-auth-token-type", "Bearer");
-    if (session.tenantId) {
-      window.localStorage.setItem("academia-auth-active-tenant-id", session.tenantId);
-      window.localStorage.setItem("academia-auth-preferred-tenant-id", session.tenantId);
-    }
-    if (session.availableTenants) {
-      window.localStorage.setItem(
-        "academia-auth-available-tenants",
-        JSON.stringify(session.availableTenants),
-      );
-    }
-  }, {
+  await installE2EAuthSession(page, {
     token: input.token ?? "token-e2e",
-    tenantId: input.tenantId ?? "",
+    activeTenantId: input.tenantId,
+    preferredTenantId: input.tenantId,
+    baseTenantId: input.tenantId,
     availableTenants: input.availableTenants,
+    userId: "cliente-1",
+    userKind: "CLIENTE",
+    displayName: "Cliente Multiunidade",
+    availableScopes: ["UNIDADE"],
   });
 }
 
