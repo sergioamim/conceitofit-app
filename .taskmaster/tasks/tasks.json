@@ -12242,12 +12242,24 @@
         "complexity": 2,
         "subtasks": [],
         "updatedAt": "2026-04-01T13:33:57.719Z"
+      },
+      {
+        "id": "326",
+        "title": "Mockar fetchs externos nos testes unitarios/a11y",
+        "description": "Remover dependencia de backend/localhost nos testes de componentes e a11y.",
+        "details": "Adicionar mocks de fetch para testes que carregam recursos externos (ex: prospect modal e wizard). Usar MSW ou mocks pontuais no setup dos testes para impedir requests reais para localhost/evil.com. Garantir que os testes de a11y e unitarios nao dependam de servidor rodando.",
+        "testStrategy": "npm run test:coverage passa sem backend ativo e sem conexoes para localhost.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "complexity": 2,
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T14:13:43.416Z",
-      "taskCount": 321,
+      "lastModified": "2026-04-01T13:45:00.000Z",
+      "taskCount": 322,
       "completedCount": 319,
       "tags": [
         "master"
