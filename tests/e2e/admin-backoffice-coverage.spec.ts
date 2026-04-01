@@ -805,7 +805,7 @@ test.describe("Admin backoffice coverage", () => {
 
     await page.goto("/admin/financeiro/cobrancas");
     await expect(page.getByRole("heading", { name: /Cobranças da plataforma/i })).toBeVisible();
-    await expect(page.getByText("Carteira de cobranças")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Nova cobrança" })).toBeVisible();
 
     await page.goto("/admin/financeiro/gateways");
     await expect(page.getByRole("heading", { name: /Gateways de pagamento/i })).toBeVisible();

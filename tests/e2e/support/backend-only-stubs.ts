@@ -3720,6 +3720,22 @@ export async function installAdminCrudApiMocks(page: Page) {
       return;
     }
 
+    if (path === "/api/v1/auth/perfis" && method === "GET") {
+      const includeInactive = normalizeBooleanInput(url.searchParams.get("includeInactive"), false);
+      const page = Number(url.searchParams.get("page") ?? 0);
+      const size = Number(url.searchParams.get("size") ?? profileCatalog.length);
+      const items = includeInactive ? profileCatalog : profileCatalog.filter((profile) => profile.active);
+
+      await fulfillJson(route, {
+        items,
+        page,
+        size,
+        hasNext: false,
+        total: items.length,
+      });
+      return;
+    }
+
     if (/^\/api\/v1\/admin\/seguranca\/usuarios\/[^/]+$/.test(path) && method === "GET") {
       const userId = path.split("/").at(-1) ?? "";
       const user = securityUsers.find((item) => item.id === userId);
