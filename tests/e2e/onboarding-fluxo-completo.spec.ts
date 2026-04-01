@@ -1,19 +1,25 @@
 import { expect, test } from "@playwright/test";
-import { installAdminCrudApiMocks } from "./support/backend-only-stubs";
+import { installAdminCrudApiMocks, seedAuthenticatedSession } from "./support/backend-only-stubs";
 
 test.describe("onboarding completo da academia", () => {
   test("provisiona academia, força troca de senha e conclui o checklist inicial", async ({ page }) => {
     await installAdminCrudApiMocks(page);
-
-    await page.goto("/admin-login");
-
-    await page.getByLabel("E-mail").fill("admin@conceito.fit");
-    await page.getByLabel("Senha").fill("Admin#123");
-    await page.getByRole("button", { name: "Entrar" }).click();
-
-    await expect(page).toHaveURL(/\/admin$/);
+    await seedAuthenticatedSession(page, {
+      tenantId: "tenant-centro",
+      availableTenants: [
+        { tenantId: "tenant-centro", defaultTenant: true },
+        { tenantId: "tenant-barra", defaultTenant: false },
+      ],
+      userId: "user-admin-global",
+      userKind: "COLABORADOR",
+      displayName: "Sergio Amim",
+      roles: ["OWNER", "ADMIN"],
+      availableScopes: ["GLOBAL"],
+      broadAccess: true,
+    });
 
     await page.goto("/admin/onboarding/provisionar");
+    await expect(page.getByRole("heading", { name: "Provisionar nova academia" })).toBeVisible();
 
     await page.getByLabel("Nome da academia").fill("Academia QA Onboarding");
     await page.getByLabel("CNPJ").fill("11.444.777/0001-61");

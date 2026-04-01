@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { installE2EAuthSession } from "./support/auth-session";
+import { installBackofficeGlobalSession } from "./support/backoffice-global-session";
 
 type AcademiaSeed = {
   id: string;
@@ -58,20 +58,6 @@ type State = {
   targetUser: UserSeed;
   audit: AuditEntrySeed[];
 };
-
-function seedSession(page: Page) {
-  return installE2EAuthSession(page, {
-    activeTenantId: "tenant-centro",
-    baseTenantId: "tenant-centro",
-    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
-    userId: "user-root",
-    userKind: "COLABORADOR",
-    displayName: "Root Admin",
-    roles: ["OWNER", "ADMIN"],
-    availableScopes: ["GLOBAL"],
-    broadAccess: true,
-  });
-}
 
 function normalizedPath(path: string) {
   return path.replace(/^\/backend/, "");
@@ -232,6 +218,50 @@ function authUserPayload(user: UserSeed) {
   };
 }
 
+function seedSession(page: Page, state: State) {
+  return installBackofficeGlobalSession(page, {
+    session: {
+      activeTenantId: "tenant-centro",
+      baseTenantId: "tenant-centro",
+      availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+      userId: "user-root",
+      userKind: "COLABORADOR",
+      displayName: "Root Admin",
+      roles: ["OWNER", "ADMIN"],
+      availableScopes: ["GLOBAL"],
+      broadAccess: true,
+    },
+    shell: {
+      currentTenantId: "tenant-centro",
+      tenants: state.tenants,
+      user: {
+        id: state.adminUser.id,
+        userId: state.adminUser.id,
+        nome: state.adminUser.nome,
+        displayName: state.adminUser.nome,
+        email: state.adminUser.email,
+        roles: state.adminUser.roles,
+        userKind: state.adminUser.userKind,
+        activeTenantId: "tenant-centro",
+        tenantBaseId: "tenant-centro",
+        availableScopes: ["GLOBAL"],
+        broadAccess: true,
+        redeId: "academia-norte",
+        redeNome: "Rede Norte",
+        redeSlug: "rede-norte",
+      },
+      academia: {
+        id: "academia-norte",
+        nome: "Rede Norte",
+        ativo: true,
+      },
+      capabilities: {
+        canAccessElevatedModules: true,
+      },
+    },
+  });
+}
+
 async function setupMocks(page: Page, state: State) {
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
@@ -389,7 +419,7 @@ async function setupMocks(page: Page, state: State) {
 test.describe("Backoffice impersonation", () => {
   test("inicia impersonação, abre o app com banner e encerra com trilha no audit log", async ({ page }) => {
     const state = buildState();
-    await seedSession(page);
+    await seedSession(page, state);
     await setupMocks(page, state);
 
     await page.goto("/admin/seguranca/usuarios/user-bruno");
@@ -399,7 +429,8 @@ test.describe("Backoffice impersonation", () => {
     await page.getByLabel("Justificativa obrigatória").fill("Suporte operacional para reproduzir o contexto do gerente.");
     await page.getByRole("button", { name: "Confirmar e entrar como usuário" }).click();
 
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await page.waitForURL("**/dashboard", { timeout: 15000 });
+    await page.waitForLoadState("domcontentloaded");
     await expect(page.getByText("Você está operando como Bruno Suporte")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     await expect(page.getByText("7")).toBeVisible();
@@ -411,6 +442,6 @@ test.describe("Backoffice impersonation", () => {
     await page.goto("/admin/audit-log");
     await expect(page.getByText("Impersonou")).toBeVisible();
     await expect(page.getByText("Encerrou impersonação")).toBeVisible();
-    await expect(page.getByRole("gridcell", { name: "Bruno Suporte" }).first()).toBeVisible();
+    await expect(page.getByRole("row").filter({ hasText: "Bruno Suporte" }).first()).toBeVisible();
   });
 });

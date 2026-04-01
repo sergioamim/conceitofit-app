@@ -10,8 +10,8 @@ test.describe("Admin backoffice global CRUD", () => {
 
     await openAdminCrudPage(page, "/admin/academias");
 
-    await page.getByLabel("Nome *").fill(academiaNome);
-    await page.getByLabel("Documento").fill("55332211000177");
+    await page.locator("#academia-nome").fill(academiaNome);
+    await page.locator("#academia-doc").fill("55332211000177");
     await page.getByRole("button", { name: "Criar academia" }).click();
 
     const academiaRow = page.getByRole("row").filter({ hasText: academiaNome });
@@ -26,10 +26,10 @@ test.describe("Admin backoffice global CRUD", () => {
     await page.getByRole("link", { name: "Nova unidade" }).click();
     await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible();
 
-    await page.getByLabel("Nome da unidade *").fill(unidadeNome);
-    await page.getByLabel("Documento *").fill(unidadeDocumento);
-    await page.getByLabel("Subdomínio").fill(`exp-${suffix}`);
-    await page.getByLabel("E-mail *").fill(`unidade-${suffix}@qa.local`);
+    await page.locator("#backoffice-unidade-nome").fill(unidadeNome);
+    await page.locator("#backoffice-unidade-documento").fill(unidadeDocumento);
+    await page.locator("#backoffice-unidade-subdomain").fill(`exp-${suffix}`);
+    await page.locator("#backoffice-unidade-email").fill(`unidade-${suffix}@qa.local`);
     await page.getByRole("button", { name: "Criar unidade" }).click();
 
     const unidadeRow = page.getByRole("row").filter({ hasText: unidadeNome });
@@ -38,7 +38,7 @@ test.describe("Admin backoffice global CRUD", () => {
     await expect(unidadeRow.getByText("Inativa")).toBeVisible();
 
     await page.goto("/admin/seguranca/usuarios");
-    await expect(page.getByRole("heading", { name: "Usuários administrativos" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible();
 
     await page.getByLabel("Nome ou e-mail").fill("Sergio");
     await page.getByRole("button", { name: "Aplicar filtros" }).click();

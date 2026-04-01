@@ -1,5 +1,9 @@
 import type { Page, Request, Route } from "@playwright/test";
-import { installE2EAuthSession, type E2EAuthSessionSeed } from "./auth-session";
+import {
+  buildE2EAuthSession,
+  installE2EAuthSession,
+  type E2EAuthSessionSeed,
+} from "./auth-session";
 
 type TenantSeed = {
   id: string;
@@ -406,6 +410,7 @@ export async function seedAuthenticatedSession(
     userId?: string;
     userKind?: string;
     displayName?: string;
+    roles?: string[];
     availableScopes?: string[];
     broadAccess?: boolean;
     networkId?: string;
@@ -423,6 +428,7 @@ export async function seedAuthenticatedSession(
     userId: options.userId,
     userKind: options.userKind,
     displayName: options.displayName,
+    roles: options.roles,
     availableScopes: options.availableScopes,
     broadAccess: options.broadAccess,
     networkId: options.networkId,
@@ -2919,11 +2925,24 @@ export async function installAdminCrudApiMocks(page: Page) {
   function buildLoginResponse(forcePasswordChange = false) {
     const activeTenantId = getCurrentActiveTenant()?.id ?? currentTenantId;
     currentTenantId = activeTenantId;
+    const authSession = buildE2EAuthSession({
+      activeTenantId,
+      preferredTenantId: activeTenantId,
+      baseTenantId: activeTenantId,
+      availableTenants: buildAvailableTenantsPayload(),
+      userId: currentAuthProfile.id,
+      userKind: "COLABORADOR",
+      displayName: currentAuthProfile.nome,
+      roles: currentAuthProfile.roles,
+      availableScopes: currentAuthProfile.availableScopes,
+      broadAccess: currentAuthProfile.broadAccess ?? false,
+      forcePasswordChangeRequired: forcePasswordChange,
+    });
 
     return {
-      token: "token-e2e",
-      refreshToken: "refresh-e2e",
-      type: "Bearer",
+      token: authSession.token,
+      refreshToken: authSession.refreshToken,
+      type: authSession.type,
       userId: currentAuthProfile.id,
       displayName: currentAuthProfile.nome,
       activeTenantId,

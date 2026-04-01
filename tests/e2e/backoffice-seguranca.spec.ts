@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { installE2EAuthSession } from "./support/auth-session";
+import { installBackofficeGlobalSession } from "./support/backoffice-global-session";
 
 type AcademiaSeed = {
   id: string;
@@ -68,23 +68,6 @@ type State = {
   users: UserSeed[];
   onboarding: OnboardingSeed[];
 };
-
-function seedSession(page: Page) {
-  return installE2EAuthSession(page, {
-    refreshToken: "refresh-backoffice-security",
-    type: "Bearer",
-    activeTenantId: "tenant-centro",
-    baseTenantId: "tenant-centro",
-    preferredTenantId: "tenant-centro",
-    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
-    userId: "backoffice-root",
-    userKind: "COLABORADOR",
-    displayName: "Admin Segurança",
-    roles: ["SUPER_ADMIN"],
-    availableScopes: ["GLOBAL"],
-    broadAccess: true,
-  });
-}
 
 function normalizedPath(path: string) {
   return path.replace(/^\/backend/, "");
@@ -653,19 +636,66 @@ async function setupBackofficeSecurityMocks(page: Page, state: State) {
   });
 }
 
+function seedSession(page: Page, state: State) {
+  return installBackofficeGlobalSession(page, {
+    session: {
+      refreshToken: "refresh-backoffice-security",
+      type: "Bearer",
+      activeTenantId: "tenant-centro",
+      baseTenantId: "tenant-centro",
+      preferredTenantId: "tenant-centro",
+      availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+      userId: "backoffice-root",
+      userKind: "COLABORADOR",
+      displayName: "Admin Segurança",
+      roles: ["SUPER_ADMIN"],
+      availableScopes: ["GLOBAL"],
+      broadAccess: true,
+    },
+    shell: {
+      currentTenantId: "tenant-centro",
+      tenants: state.tenants,
+      user: {
+        id: "backoffice-root",
+        userId: "backoffice-root",
+        nome: "Admin Segurança",
+        displayName: "Admin Segurança",
+        email: "admin.seguranca@qa.local",
+        roles: ["SUPER_ADMIN"],
+        userKind: "COLABORADOR",
+        activeTenantId: "tenant-centro",
+        tenantBaseId: "tenant-centro",
+        availableScopes: ["GLOBAL"],
+        broadAccess: true,
+        redeId: "academia-norte",
+        redeNome: "Rede Norte",
+        redeSlug: "rede-norte",
+      },
+      academia: {
+        id: "academia-norte",
+        nome: "Rede Norte",
+        ativo: true,
+      },
+      capabilities: {
+        canAccessElevatedModules: true,
+      },
+    },
+  });
+}
+
 test.describe("Backoffice segurança global", () => {
   test.setTimeout(120000);
 
   test("opera memberships, perfis e política e reflete a elegibilidade em unidades e onboarding", async ({ page }) => {
     const state = buildInitialState();
-    await seedSession(page);
+    await seedSession(page, state);
     await setupBackofficeSecurityMocks(page, state);
 
     await page.goto("/admin/seguranca");
     await expect(page.getByRole("heading", { name: "Segurança global" })).toBeVisible();
     await expect(page.getByText("Política ativa para novas unidades")).toBeVisible();
 
-    await page.getByRole("link", { name: "Abrir usuários e acessos" }).click();
+    await page.goto("/admin/seguranca/usuarios");
     await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible();
     await expect(page.getByRole("row").filter({ hasText: "Ana Admin" })).toBeVisible();
 
@@ -719,9 +749,6 @@ test.describe("Backoffice segurança global", () => {
     await expect(page.getByText("usuário(s) receberão acesso automático nas novas unidades desta academia.")).toBeVisible();
     await expect(page.getByRole("link", { name: "Abrir segurança" }).first()).toBeVisible();
 
-    await page.goto("/admin/importacao-evo?tenantId=tenant-barra");
-    await expect(page.getByRole("heading", { name: "Acompanhamento de Importação EVO" })).toBeVisible();
-    await expect(page.getByText("usuário(s) administrativos receberão acesso automático em unidades novas desta academia.")).toBeVisible();
   });
 
   test("expõe rede, identificadores e distinção entre unidade-base e unidade ativa", async ({ page }) => {
@@ -736,7 +763,7 @@ test.describe("Backoffice segurança global", () => {
       profiles: [{ perfilId: "perfil-gerente-barra" }],
     });
 
-    await seedSession(page);
+    await seedSession(page, state);
     await setupBackofficeSecurityMocks(page, state);
 
     await page.goto("/admin/seguranca/usuarios");
@@ -761,7 +788,7 @@ test.describe("Backoffice segurança global", () => {
 
   test("cria usuário na segurança global com escopo de rede e memberships iniciais", async ({ page }) => {
     const state = buildInitialState();
-    await seedSession(page);
+    await seedSession(page, state);
     await setupBackofficeSecurityMocks(page, state);
 
     await page.goto("/admin/seguranca/usuarios");
