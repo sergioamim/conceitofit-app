@@ -12749,7 +12749,7 @@
         "description": "Resolver falhas onde a shell monta, mas a tela fica em carregamento permanente ou com dados parciais insuficientes para completar o fluxo testado.",
         "details": "Esta task depende de 327, 328, 329 e 330.\n\nEscopo obrigatorio:\n1. Priorizar as specs que no relatório exibem sinais de loading infinito ou dados faltantes: tests/e2e/admin-financeiro-integracoes.spec.ts, tests/e2e/admin-financeiro-operacional-crud.spec.ts, tests/e2e/operacional-grade-catraca.spec.ts, tests/e2e/reservas-aulas.spec.ts, tests/e2e/bi-operacional.spec.ts e demais relacionadas.\n2. Identificar em cada uma qual request nunca resolve ou resolve com shape insuficiente para a UI sair do estado de loading.\n3. Corrigir os mocks de dominio necessarios sem voltar a usar fallbacks 200 {} genericos.\n4. Se houver polling ou dependencia assincrona legitima da UI, ajustar o teste para esperar o sinal correto de pronto, nao apenas um timeout arbitrario.\n5. Registrar no detalhe da task quais endpoints passaram a ser obrigatorios para esses modulos e quais cards/listagens dependem de cada um.\n\nCriterio de aceite: nenhuma das specs desse grupo deve permanecer presa em 'Carregando atividades...', 'Emissor fiscal da unidade ativa: Carregando...' ou equivalentes sem uma causa funcional explicita documentada.",
         "testStrategy": "Reexecutar as specs de financeiro/operacional priorizadas e confirmar que estados de loading infinito foram eliminados sem introduzir waits cegos nem respostas 200 vazias.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "327",
           "328",
@@ -12804,14 +12804,14 @@
               3
             ],
             "details": "Usar indicadores reais de UI pronta ou responses esperadas, sem mascarar regressões com timeouts arbitrários ou sleeps desnecessários.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": null,
             "parentId": "334",
-            "updatedAt": "2026-04-01T17:05:34.000Z"
+            "updatedAt": "2026-04-01T18:24:28.284Z"
           }
         ],
         "complexity": 8,
-        "updatedAt": "2026-04-01T18:16:44.283Z",
+        "updatedAt": "2026-04-01T18:24:36.561Z",
         "recommendedSubtasks": 4,
         "expansionPrompt": "Dividir a tarefa em: 1. Priorização e triagem de specs com loading infinito/dados faltantes nos módulos financeiro e operacional. 2. Identificação e correção de requests não resolvidas/incompletas para financeiro. 3. Identificação e correção de requests não resolvidas/incompletas para operacional. 4. Ajuste de awaits para dependências assíncronas legítimas e documentação de endpoints."
       },
@@ -12963,9 +12963,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-01T18:16:44.283Z",
+      "lastModified": "2026-04-01T18:24:36.562Z",
       "taskCount": 332,
-      "completedCount": 328,
+      "completedCount": 329,
       "tags": [
         "master"
       ]
