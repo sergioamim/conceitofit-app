@@ -46,6 +46,16 @@ async function abrirComSessaoApiE2e(page: Page) {
   await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
 }
 
+async function selecionarPlano(page: Page, nomePlano: RegExp) {
+  const radio = page.getByRole("radio", { name: nomePlano });
+  if (await radio.count()) {
+    await radio.click();
+    return;
+  }
+
+  await page.getByRole("button", { name: nomePlano }).click();
+}
+
 async function preencherDadosPessoais(page: Page, input: ClientePayload) {
   const modal = page.getByRole("dialog");
   await expect(modal.getByRole("heading", { name: "Novo cliente" })).toBeVisible();
@@ -76,7 +86,7 @@ test.describe("Cadastro de clientes (Playwright)", () => {
     await page.getByRole("dialog").getByRole("button", { name: /Continuar com plano/i }).click();
 
     await expect(page.getByText("Escolha o plano")).toBeVisible();
-    await page.getByRole("button", { name: /Plano Premium/i }).click();
+    await selecionarPlano(page, /Plano Premium/i);
     await page.getByRole("button", { name: "Próximo" }).click();
 
     await expect(page.getByText(/Data de inicio \*/i)).toBeVisible();
