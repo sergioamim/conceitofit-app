@@ -2,7 +2,7 @@
 
 **Title:** Implementar fluxo “Entrar como academia/unidade” usando endpoint oficial
 
-**Status:** in-progress
+**Status:** done
 
 **Dependencies:** 411 ✓
 
@@ -13,4 +13,3 @@
 **Implementação**
 - `src/lib/api/auth.ts`: adicionada `adminEntrarComoUnidadeApi` para consumir o endpoint oficial e salvar a sessão única.
 - `src/app/(backoffice)/admin/entrar-como-academia/page.tsx`: fluxo atualizado para usar o endpoint, com justificativa opcional e redirecionamento para `/dashboard` após atualizar a sessão.
-

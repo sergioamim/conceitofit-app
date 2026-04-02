@@ -13346,13 +13346,13 @@
         "description": "Consumir `POST /api/v1/admin/auth/entrar-como-unidade` e reemitir sessão enriquecida.",
         "details": "Escopo: atualizar UI do backoffice para enviar `academiaId`, `tenantId` e justificativa opcional, persistir o token retornado e redirecionar para `/dashboard` com contexto ativo definido.",
         "testStrategy": "Testar manualmente no backoffice com mock/fixture e validar que o redirecionamento acontece com a sessão atualizada.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "411"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-02T12:05:00.000Z"
+        "updatedAt": "2026-04-02T13:10:00.000Z"
       },
       {
         "id": "413",
@@ -13399,9 +13399,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-02T12:45:00.000Z",
+      "lastModified": "2026-04-02T13:10:00.000Z",
       "taskCount": 360,
-      "completedCount": 356,
+      "completedCount": 357,
       "tags": [
         "master"
       ]
