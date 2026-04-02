@@ -2735,13 +2735,47 @@ export async function installAdminCrudApiMocks(page: Page) {
     },
   ];
 
-  let atividadesGrade = [
+  type AtividadeGradeSeed = {
+    id: string;
+    tenantId: string;
+    atividadeId: string;
+    salaId: string;
+    funcionarioId?: string;
+    diasSemana: string[];
+    definicaoHorario: string;
+    horaInicio: string;
+    horaFim: string;
+    capacidade: number;
+    checkinLiberadoMinutosAntes: number;
+    duracaoMinutos: number;
+    codigo?: string;
+    grupoAtividades?: string;
+    publico?: string;
+    dificuldade?: number;
+    descricaoAgenda?: string;
+    acessoClientes: string;
+    permiteReserva: boolean;
+    limitarVagasAgregadores: boolean;
+    exibirWellhub: boolean;
+    permitirSaidaAntesInicio: boolean;
+    permitirEscolherNumeroVaga: boolean;
+    exibirNoAppCliente: boolean;
+    exibirNoAutoatendimento: boolean;
+    exibirNoWodTv: boolean;
+    finalizarAtividadeAutomaticamente: boolean;
+    desabilitarListaEspera: boolean;
+    local?: string;
+    instrutor?: string;
+    ativo: boolean;
+  };
+
+  let atividadesGrade: AtividadeGradeSeed[] = [
     {
       id: "atividade-grade-musculacao",
       tenantId: "tenant-centro",
       atividadeId: "atividade-musculacao",
       salaId: "sala-principal",
-      funcionarioId: undefined,
+      funcionarioId: undefined as string | undefined,
       diasSemana: ["SEG", "QUA", "SEX"],
       definicaoHorario: "PREVIAMENTE" as const,
       horaInicio: "07:00",
@@ -2766,7 +2800,7 @@ export async function installAdminCrudApiMocks(page: Page) {
       finalizarAtividadeAutomaticamente: true,
       desabilitarListaEspera: false,
       local: "Sala Principal",
-      instrutor: undefined,
+      instrutor: undefined as string | undefined,
       ativo: true,
     },
   ];
@@ -2863,6 +2897,7 @@ export async function installAdminCrudApiMocks(page: Page) {
     conta: 10,
     maquininha: 10,
     atividade: 10,
+    atividadeGrade: 10,
     membership: 10,
   };
 
@@ -4758,10 +4793,14 @@ export async function installAdminCrudApiMocks(page: Page) {
     }
 
     if (path === "/api/v1/administrativo/atividades-grade" && method === "POST") {
-      const payload = parseBody<Partial<(typeof atividadesGrade)[number]>>(request);
+      const payload = parseBody<Partial<AtividadeGradeSeed>>(request);
       const tenantId = resolveTenantId(url);
       const atividadeId = payload.atividadeId?.trim() || atividades[0]?.id || "";
-      const salaId = payload.salaId?.trim() || salas.find((item) => item.tenantId === tenantId && item.ativo)?.id || undefined;
+      const salaId =
+        payload.salaId?.trim()
+        || salas.find((item) => item.tenantId === tenantId && item.ativo)?.id
+        || salas[0]?.id
+        || "";
       const funcionarioId = payload.funcionarioId?.trim() || undefined;
       const created = {
         id: nextId("atividade-grade", "atividadeGrade"),
