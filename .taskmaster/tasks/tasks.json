@@ -13374,13 +13374,13 @@
         "description": "Propagar tipos do endpoint e ajustar testes/mocks relacionados ao handoff.",
         "details": "Escopo: adicionar tipos do contrato de `entrar-como-unidade`, atualizar stubs e testes E2E/integração que dependem do fluxo admin -> operacional.",
         "testStrategy": "Rodar testes focados do handoff e garantir que mocks/fixtures passam com o novo contrato.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "413"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-02T12:05:00.000Z"
+        "updatedAt": "2026-04-02T14:05:00.000Z"
       },
       {
         "id": "415",
@@ -13399,9 +13399,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-02T13:30:00.000Z",
+      "lastModified": "2026-04-02T14:05:00.000Z",
       "taskCount": 360,
-      "completedCount": 358,
+      "completedCount": 359,
       "tags": [
         "master"
       ]
