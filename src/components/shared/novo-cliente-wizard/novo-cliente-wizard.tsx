@@ -75,7 +75,7 @@ export function NovoClienteWizard({
             )}
             {w.step === 2 && <Step2Plano planos={w.planos} form={w.form} onSelectPlano={(p) => w.commercial.addPlanoToCart(p)} />}
             {w.step === 3 && <Step3Pagamento fps={w.formas} form={w.form} commercial={w.commercial} />}
-            {w.step === 4 && w.result && <StepSucesso result={w.result} plano={w.planos.find((p) => p.id === w.form.getValues().selectedPlano)} onClose={() => { onClose(); w.fullReset(); }} />}
+            {w.step === 4 && w.result && <StepSucesso result={w.result} plano={w.planos.find((p) => p.id === w.form.getValues().selectedPlano)} onClose={() => void w.handleSuccessClose()} />}
           </div>
 
           {w.step <= 3 && (
