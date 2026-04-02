@@ -2,24 +2,36 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Building2, MapPin, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { getTenantContextApi } from "@/lib/api/contexto-unidades";
+import { adminEntrarComoUnidadeApi } from "@/lib/api/auth";
 import { setPreferredTenantId } from "@/lib/api/session";
-import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
+const entrarComoSchema = z.object({
+  justificativa: z.string().trim().max(400, "Máximo de 400 caracteres.").optional(),
+});
+
+type EntrarComoForm = z.infer<typeof entrarComoSchema>;
+
 export default function EntrarComoAcademiaPage() {
   const router = useRouter();
-  const { switchActiveTenant } = useTenantContext();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const form = useForm<EntrarComoForm>({
+    resolver: zodResolver(entrarComoSchema),
+    defaultValues: { justificativa: "" },
+  });
 
   const loadTenants = useCallback(async () => {
     setLoading(true);
@@ -55,14 +67,19 @@ export default function EntrarComoAcademiaPage() {
 
   const selectedTenant = tenants.find((t) => t.id === selectedTenantId);
 
-  async function handleEntrar() {
-    if (!selectedTenantId) return;
+  async function handleEntrar(values: EntrarComoForm) {
+    if (!selectedTenantId || !selectedTenant) return;
     setSwitching(true);
     setError(null);
     try {
-      await switchActiveTenant(selectedTenantId);
+      const academiaId = selectedTenant.academiaId ?? selectedTenant.groupId ?? selectedTenant.id;
+      await adminEntrarComoUnidadeApi({
+        academiaId,
+        tenantId: selectedTenantId,
+        justificativa: values.justificativa?.trim() || undefined,
+      });
       setPreferredTenantId(selectedTenantId);
-      router.push("/dashboard");
+      window.location.assign("/dashboard");
     } catch (err) {
       setError(normalizeErrorMessage(err));
     } finally {
@@ -158,23 +175,40 @@ export default function EntrarComoAcademiaPage() {
                   <p className="text-sm text-muted-foreground">Selecione uma unidade ao lado.</p>
                 )}
 
-                <Button
-                  onClick={handleEntrar}
-                  disabled={!selectedTenantId || switching}
-                  className="w-full"
-                >
-                  {switching ? (
-                    <>
-                      <Loader2 className="mr-1 size-3.5 animate-spin" />
-                      Entrando...
-                    </>
-                  ) : (
-                    <>
-                      Entrar na unidade
-                      <ArrowRight className="ml-1 size-3.5" />
-                    </>
-                  )}
-                </Button>
+                <form className="space-y-3" onSubmit={form.handleSubmit(handleEntrar)}>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="justificativa">
+                      Justificativa (opcional)
+                    </label>
+                    <Textarea
+                      id="justificativa"
+                      rows={3}
+                      className="border-border bg-secondary"
+                      placeholder="Ex.: auditoria de cadastro da unidade"
+                      {...form.register("justificativa")}
+                    />
+                    {form.formState.errors.justificativa ? (
+                      <p className="text-xs text-gym-danger">{form.formState.errors.justificativa.message}</p>
+                    ) : null}
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={!selectedTenantId || switching}
+                    className="w-full"
+                  >
+                    {switching ? (
+                      <>
+                        <Loader2 className="mr-1 size-3.5 animate-spin" />
+                        Entrando...
+                      </>
+                    ) : (
+                      <>
+                        Entrar na unidade
+                        <ArrowRight className="ml-1 size-3.5" />
+                      </>
+                    )}
+                  </Button>
+                </form>
               </CardContent>
             </Card>
 

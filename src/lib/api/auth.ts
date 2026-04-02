@@ -327,6 +327,31 @@ export async function adminLoginApi(input: {
   return session;
 }
 
+export async function adminEntrarComoUnidadeApi(input: {
+  academiaId: string;
+  tenantId: string;
+  justificativa?: string;
+}): Promise<AuthSession> {
+  const response = await apiRequest<LoginApiResponse>({
+    path: "/api/v1/admin/auth/entrar-como-unidade",
+    method: "POST",
+    includeContextHeader: false,
+    body: {
+      academiaId: input.academiaId,
+      tenantId: input.tenantId,
+      justificativa: input.justificativa?.trim() || undefined,
+    },
+  });
+  const session = normalizeSession(response);
+  saveAuthSession(session);
+  void import("@/lib/shared/analytics")
+    .then(({ trackLogin }) => {
+      trackLogin(session.activeTenantId, session.userId);
+    })
+    .catch(() => undefined);
+  return session;
+}
+
 export async function refreshTokenApi(refreshToken: string): Promise<AuthSession> {
   const response = await apiRequest<LoginApiResponse>({
     path: "/api/v1/auth/refresh",
