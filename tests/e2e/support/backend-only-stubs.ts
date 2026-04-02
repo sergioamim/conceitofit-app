@@ -2771,9 +2771,6 @@ export async function installAdminCrudApiMocks(page: Page) {
   };
 
   let atividadesGrade: AtividadeGradeSeed[] = [
-  };
-
-  let atividadesGrade: AtividadeGradeSeed[] = [
     {
       id: "atividade-grade-musculacao",
       tenantId: "tenant-centro",
@@ -4829,7 +4826,6 @@ export async function installAdminCrudApiMocks(page: Page) {
     };
 
     if (path === "/api/v1/administrativo/atividades-grade" && method === "POST") {
-      const payload = parseBody<Partial<AtividadeGradeSeed>>(request);
       const payload = parseBody<AtividadeGradePayload>(request);
       const tenantId = resolveTenantId(url);
       const atividadeId = payload.atividadeId?.trim() || atividades[0]?.id || "";
@@ -4886,7 +4882,6 @@ export async function installAdminCrudApiMocks(page: Page) {
 
     if (/^\/api\/v1\/administrativo\/atividades-grade\/[^/]+$/.test(path) && method === "PUT") {
       const gradeId = path.split("/").at(-1) ?? "";
-      const payload = parseBody<
       const payload = parseBody<AtividadeGradePayload>(request);
       const payloadExtras = payload as Record<string, unknown>;
       atividadesGrade = atividadesGrade.map((item) =>
