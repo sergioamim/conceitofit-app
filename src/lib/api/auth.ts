@@ -69,6 +69,12 @@ interface LoginApiResponse {
   forcePasswordChange?: boolean;
 }
 
+export interface AdminEntrarComoUnidadeRequest {
+  academiaId: string;
+  tenantId: string;
+  justificativa?: string;
+}
+
 interface MeApiResponse {
   id?: string;
   userId?: string;
@@ -327,11 +333,7 @@ export async function adminLoginApi(input: {
   return session;
 }
 
-export async function adminEntrarComoUnidadeApi(input: {
-  academiaId: string;
-  tenantId: string;
-  justificativa?: string;
-}): Promise<AuthSession> {
+export async function adminEntrarComoUnidadeApi(input: AdminEntrarComoUnidadeRequest): Promise<AuthSession> {
   const response = await apiRequest<LoginApiResponse>({
     path: "/api/v1/admin/auth/entrar-como-unidade",
     method: "POST",

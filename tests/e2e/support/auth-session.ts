@@ -97,6 +97,10 @@ function buildUnsignedJwt(seed: {
   displayName?: string;
   activeTenantId?: string;
   baseTenantId?: string;
+  networkId?: string;
+  networkSubdomain?: string;
+  networkSlug?: string;
+  networkName?: string;
 }): string {
   const header = encodeBase64Url(JSON.stringify({ alg: "none", typ: "JWT" }));
   const payload = encodeBase64Url(
@@ -107,6 +111,12 @@ function buildUnsignedJwt(seed: {
       display_name: seed.displayName,
       tenant_id: seed.activeTenantId,
       tenant_base_id: seed.baseTenantId,
+      activeTenantId: seed.activeTenantId,
+      tenantBaseId: seed.baseTenantId,
+      redeId: seed.networkId,
+      redeSubdominio: seed.networkSubdomain,
+      redeSlug: seed.networkSlug,
+      redeNome: seed.networkName,
       roles: seed.roles ?? [],
     }),
   );
@@ -184,6 +194,10 @@ export function buildE2EAuthSession(seed: E2EAuthSessionSeed = {}): ResolvedE2EA
           displayName,
           activeTenantId,
           baseTenantId,
+          networkId: seed.networkId?.trim(),
+          networkSubdomain: seed.networkSubdomain?.trim(),
+          networkSlug: seed.networkSlug?.trim(),
+          networkName: seed.networkName?.trim(),
         })
       : "token-e2e");
 

@@ -3270,6 +3270,16 @@ export async function installAdminCrudApiMocks(page: Page) {
         return;
       }
 
+      if (path === "/api/v1/admin/auth/entrar-como-unidade" && method === "POST") {
+        const payload = parseBody<{ tenantId?: string; academiaId?: string }>(request);
+        const requestedTenantId = payload.tenantId?.trim();
+        if (requestedTenantId && getTenant(requestedTenantId)) {
+          currentTenantId = requestedTenantId;
+        }
+        await fulfillJson(route, buildLoginResponse(false));
+        return;
+      }
+
       if (path === "/api/v1/auth/me" && method === "GET") {
         await fulfillJson(route, buildAuthPayload());
         return;
