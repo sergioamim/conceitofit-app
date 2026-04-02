@@ -13132,13 +13132,97 @@
         "priority": "high",
         "subtasks": [],
         "updatedAt": "2026-04-02T02:50:43.294Z"
+      },
+      {
+        "id": "348",
+        "title": "Revalidar Relatório Playwright de 2026-04-02",
+        "description": "Revalidar o relatório Playwright gerado em 2026-04-02, identificando e separando falhas 'stale' de falhas reais, e estabelecendo uma baseline de resíduos com evidências.",
+        "details": "Esta tarefa envolve a análise profunda do relatório de testes Playwright datado de 2026-04-02. Primeiro, localizar o relatório específico no ambiente de relatórios do projeto. Em seguida, identificar os cenários de teste que resultaram em falhas ou instabilidades, com foco especial naqueles que se referem a `localhost:9323`. Rerodar esses cenários individualmente ou em grupos menores para verificar a consistência das falhas. Utilizar comandos como `npx playwright test <caminho/do/arquivo/de/teste.spec.ts> --project=chromium --headed` para rerodar, observando os fluxos cobertos por tarefas como 'Smoke test E2E' (Task 324) e 'Jornada pública de adesão' (Task 333).\n\nApós as rerodadas, classificar as falhas:\n1.  **Falhas 'Stale'**: Aquelas que não se reproduzem após a rerodagem, possivelmente devido a condições ambientais temporárias, intermitência de rede ou bugs já resolvidos.\n2.  **Falhas Reais**: Aquelas que se reproduzem consistentemente e indicam problemas persistentes no código da aplicação.\n\nPor fim, documentar uma 'baseline objetiva de resíduos'. Isso significa criar um documento (por exemplo, `docs/Playwright_Report_2026-04-02_Revalidation.md`) que categorize cada falha persistente (residue) e forneça evidências claras (screenshots, vídeos gerados pelo Playwright, logs). Cada 'bucket' de falhas deve ter suas evidências consolidadas, detalhando o contexto e a potencial causa-raiz.",
+        "testStrategy": "A estratégia de teste para esta tarefa é predominantemente manual e de documentação. Primeiro, garantir que os cenários de teste identificados foram rerodados e seus resultados registrados. Validar que todas as falhas no relatório original foram analisadas e classificadas como 'stale' ou 'reais'. Confirmar a existência de um documento (`docs/Playwright_Report_2026-04-02_Revalidation.md`) que detalhe a revalidação, categorize as falhas reais ('resíduos') e inclua links ou referências para as evidências (screenshots/vídeos do Playwright). Os testes críticos, como o `tests/e2e/smoke-test.spec.ts` e `tests/e2e/adesao-publica.spec.ts`, devem ter seus estados de passagem/falha atualizados e documentados no relatório final após a revalidação.",
+        "status": "done",
+        "dependencies": [
+          "324",
+          "333"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T03:36:12.082Z"
+      },
+      {
+        "id": "349",
+        "title": "Corrigir falhas Playwright do shell operacional e app autenticado",
+        "description": "Resolver as falhas dos testes Playwright E2E para o shell operacional e app autenticado, cobrindo as áreas de dashboard, clientes, comercial, CRM, operação e navegação mobile.",
+        "details": "Esta tarefa visa estabilizar os testes Playwright nos fluxos críticos do backoffice e do aplicativo autenticado. Com base na revalidação do relatório de testes (Task 348) e na estabilização dos fluxos de autenticação (Tasks 332, 333) e multiunidade (Task 3), o foco será em:\n\n1.  **Bootstrap de Sessão:** Revisar a lógica de `tests/e2e/support/auth-utils.ts` e `tests/e2e/support/backend-only-stubs.ts` para garantir que o bootstrap da sessão para usuários autenticados (operador, admin, etc.) seja robusto e consistente, especialmente para cenários de multiunidade e troca de contexto.\n2.  **Seletores (Selectors):** Auditar os seletores usados nos testes Playwright para os módulos mencionados (dashboard, clientes, comercial, CRM, operação). Corrigir seletores que estejam muito acoplados à implementação, usando `data-testid` ou classes CSS estáveis quando possível, em vez de IDs gerados dinamicamente ou estruturas DOM voláteis. Focar em arquivos como `tests/e2e/backoffice-dashboard.spec.ts`, `tests/e2e/backoffice-clientes.spec.ts`, `tests/e2e/backoffice-comercial.spec.ts`, `tests/e2e/backoffice-crm.spec.ts` e `tests/e2e/backoffice-operacional.spec.ts` (ou equivalentes que cubram essas áreas).\n3.  **Mocks Protegidos:** Assegurar que os mocks de API definidos em `tests/e2e/support/backend-only-stubs.ts` e em arquivos de teste específicos estejam corretamente configurados e 'protegidos'. Isso significa que eles devem cobrir todos os endpoints relevantes para os fluxos testados, retornar dados consistentes com os contratos da API e não interferir com outras chamadas de rede que não deveriam ser mockadas. Implementar validações para garantir que os mocks estejam sendo aplicados corretamente.\n4.  **Navegação Mobile:** Investigar e corrigir falhas relacionadas à navegação em dispositivos móveis ou viewports responsivos, com foco na estabilidade do layout e interações em cenários como `tests/e2e/layout-bottom-nav.spec.ts` (já coberto pela 344 mas precisa ser revisto em contexto). Simular diferentes tamanhos de tela (`page.setViewportSize`) e interagir com componentes específicos de UI mobile (ex: hambúrguer menu, bottom navigation).\n\n**Escopo:** Abrange `tests/e2e/*` que cobrem os módulos citados e os fundamentos de autenticação/sessão.",
+        "testStrategy": "1.  Executar os testes Playwright para cada bucket afetado individualmente, tanto em modo headless quanto headed para depuração (ex: `npx playwright test tests/e2e/backoffice-dashboard.spec.ts --headed`).\n2.  Utilizar as ferramentas de inspeção do Playwright (`page.pause()`, Playwright Inspector) para identificar problemas de seletores e estados da UI.\n3.  Verificar o tráfego de rede durante os testes para garantir que os mocks estejam sendo aplicados corretamente e que não há chamadas de API inesperadas ou falhas de rede.\n4.  Rodar a suíte completa de testes `npx playwright test` para confirmar a estabilidade geral após as correções.\n5.  Prestar atenção especial aos logs do console e de rede durante a execução dos testes para identificar erros de runtime ou warnings de API.",
+        "status": "in-progress",
+        "dependencies": [
+          "3",
+          "332",
+          "333",
+          "348"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T03:42:36.989Z"
+      },
+      {
+        "id": "350",
+        "title": "Corrigir falhas Playwright do backoffice global e financeiro",
+        "description": "Resolver falhas persistentes nos testes Playwright E2E para os módulos do backoffice global e financeiro, cobrindo admin coverage, CRUD global, catálogo, financeiro operacional, segurança, impersonation, BI e importação EVO, com foco no alinhamento de contratos de UI e stubs do shell global.",
+        "details": "Esta tarefa visa estabilizar e refinar os testes Playwright E2E para as áreas críticas do backoffice global e financeiro. Com base no relatório de revalidação de testes (Task 348) e nos esforços anteriores de correção (Tasks 338, 339, 341, 342), o foco será em:\n\n1.  **Análise de Falhas:** Revisar as falhas identificadas no relatório da Task 348 que se referem aos arquivos de teste em `tests/e2e/` relacionados a `admin-coverage.spec.ts`, `admin-backoffice-global-crud.spec.ts`, `admin-catalogo-crud.spec.ts`, `backoffice-financeiro-operacional-crud.spec.ts`, `backoffice-seguranca.spec.ts`, `backoffice-impersonation.spec.ts`, `bi-operacional.spec.ts` e `admin/importacao-evo-p0/page.tsx`, `backoffice-financeiro-integracoes.spec.ts`.\n2.  **Alinhamento de Contratos de UI:** Para cada fluxo falho, auditar a interação entre a interface de usuário e as APIs. Garantir que os componentes de frontend estejam fazendo as chamadas corretas, com os payloads esperados, e que estejam interpretando as respostas do backend conforme o contrato atual.\n3.  **Refinamento de Stubs do Shell Global:** Revisar e ajustar `tests/e2e/support/backend-only-stubs.ts` e outros arquivos de stubbing para garantir que os mocks das APIs financeiras e globais (ex: `/api/v1/admin/...`) reflitam precisamente o comportamento atual do backend, incluindo cenários de sucesso, erro, validação, paginação e diferentes permissões de usuário (admin, operador, etc.). Prestar atenção especial a contratos de dados e esquemas de resposta.\n4.  **Cobertura Específica:**\n    *   **Admin Coverage e CRUD Global:** Validar operações CRUD para entidades globais e a navegação/exibição em telas de cobertura administrativa.\n    *   **Catálogo:** Assegurar a estabilidade das operações de criação, leitura, atualização e exclusão de itens de catálogo.\n    *   **Financeiro Operacional:** Testar fluxos de transações, relatórios e configurações financeiras.\n    *   **Segurança e Impersonation:** Verificar permissões, acesso baseado em regras e o funcionamento da funcionalidade de impersonation em diversos módulos.\n    *   **BI:** Garantir que os dashboards e relatórios de Business Intelligence carreguem e exibam dados corretamente.\n    *   **Importação EVO:** Validar o fluxo de importação, exibição de status, tratamento de erros e consistência de dados após a importação. Reassegurar que a integração com o shell global não gere regressões.\n5.  **Robustez contra Falhas Intermitentes:** Priorizar a identificação e correção de falhas que ocorrem de forma não determinística, utilizando ferramentas de depuração do Playwright para entender o estado da aplicação e do DOM no momento da falha.",
+        "testStrategy": "1.  **Execução Detalhada:** Rodar os testes Playwright para cada bucket afetado individualmente, utilizando `npx playwright test <caminho/do/arquivo/de/teste.spec.ts> --headed` para depuração visual.\n2.  **Verificação de Contratos:** Para cada correção, inspecionar as requisições de rede feitas pelos testes Playwright (via `page.route` ou logs) para garantir que os contratos de UI/API estejam sendo respeitados, tanto para o frontend quanto para os stubs.\n3.  **Ambientes Múltiplos:** Testar em diferentes configurações de ambiente (ex: com stubs ativados e desativados, se aplicável, e contra um backend real em ambiente de staging) para identificar discrepâncias.\n4.  **Impersonation e Permissões:** Executar testes críticos sob diferentes perfis de usuário (admin, operador, com e sem impersonation) para verificar que as regras de segurança e acesso continuam válidas.\n5.  **Regressão:** Após as correções, executar um ciclo completo dos testes de backoffice global e financeiro para garantir que nenhuma nova regressão foi introduzida nas áreas já estabilizadas. A validação final será com todos os testes Playwright dos escopos mencionados passando consistentemente em múltiplos runs, sem falhas intermitentes.",
+        "status": "in-progress",
+        "dependencies": [
+          "338",
+          "339",
+          "341",
+          "342",
+          "348"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T10:05:00.000Z"
+      },
+      {
+        "id": "351",
+        "title": "Corrigir falhas Playwright dos fluxos publicos e de autenticacao contextualizada",
+        "description": "Esta tarefa visa resolver as falhas de testes Playwright E2E nos fluxos de adesão pública, demo account, autenticação por rede, security-flows e onboarding completo, garantindo o correto bootstrap, redirecionamento e sincronização de tenant/rede.",
+        "details": "Com base na revalidação dos relatórios de testes (Task 348) e nos esforços anteriores para estabilizar fluxos de autenticação (Tasks 332, 333) e multiunidade (Task 3), o foco desta tarefa será em:\n\n1.  **Adesão Pública:** Revisar e estabilizar os cenários em `tests/e2e/adesao-publica.spec.ts`. Garantir que os mocks definidos em `tests/e2e/support/backend-only-stubs.ts` para `installPublicJourneyApiMocks` estejam alinhados com o runtime atual, cobrindo trial, cadastro, checkout e pendências.\n2.  **Auth-Rede e Subdomínio:** Corrigir falhas em `tests/e2e/auth-rede.spec.ts`. Validar a função `buildHostBasedUrl` e as rotas `/app/[rede]/login`, `forgot-password` e `first-access` para que resolvam corretamente o contexto da rede via subdomínio/hostname e headers, evitando 404s ou carregamentos infinitos.\n3.  **Demo Account:** Investigar a existência de fluxos e testes para 'demo account'. Se houver falhas, corrigir os cenários de criação/login e navegação como conta demo. Se inexistentes, avaliar a necessidade de criar um cenário básico de teste para este fluxo.\n4.  **Security Flows:** Analisar e corrigir testes relacionados a fluxos de segurança (ex: reset de senha, primeiro acesso, autenticação de dois fatores se aplicável) que possam estar falhando. Consultar `tests/e2e/backoffice-seguranca.spec.ts` e arquivos relacionados.\n5.  **Onboarding Completo:** Validar a jornada completa do usuário desde a adesão pública até o primeiro login e acesso ao dashboard. Isso envolve a sequência de `adesao-publica` seguida pela experiência de 'primeiro acesso' e configuração inicial.\n6.  **Bootstrap, Redirect e Sincronização de Tenant/Rede:**\n    *   **Bootstrap:** Assegurar que o bootstrap da sessão (`tests/e2e/support/auth-utils.ts`, `backend-only-stubs.ts`) funcione corretamente para usuários autenticados e fluxos públicos.\n    *   **Redirect:** Verificar o correto funcionamento dos redirecionamentos pós-login/logout e em situações de troca de contexto, utilizando as correções da Task 164 (`src/lib/tenant/auth-redirect.ts`).\n    *   **Sincronização de Tenant/Rede:** Garantir que a troca e resolução do contexto de academia/unidade/rede esteja estável, conforme estabelecido na Task 3, refletindo-se em todos os fluxos acima. Isso inclui validação de `tenantId` e `networkId` nos payloads e URLs.",
+        "testStrategy": "1.  **Execução Focada:** Rodar os testes Playwright para cada arquivo `.spec.ts` afetado individualmente (ex: `npx playwright test tests/e2e/adesao-publica.spec.ts --headed`) para facilitar a depuração visual.\n2.  **Validação de Rede:** Utilizar o Playwright Inspector e as ferramentas de rede do navegador para inspecionar requisições e respostas HTTP durante os testes, comparando os payloads mockados com os esperados pelo runtime.\n3.  **Cobertura de Fluxos:** Garantir que todos os subfluxos (ex: trial, cadastro, checkout, pendências para adesão; login, forgot-password, first-access para auth-rede) estejam sendo percorridos sem falhas.\n4.  **Verificação de Contexto:** Confirmar que o `tenantId` e o `networkId` estão sendo corretamente resolvidos e mantidos no contexto da aplicação e nas URLs durante a navegação e após os redirecionamentos.\n5.  **Teste de Regressão:** Após as correções, executar novamente os testes completos relacionados a auth-rede, adesão pública e onboarding para garantir que nenhuma regressão foi introduzida.",
+        "status": "pending",
+        "dependencies": [
+          "3",
+          "164",
+          "332",
+          "333",
+          "348"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "352",
+        "title": "Investigar Resíduos de Backend Expostos por Testes Playwright",
+        "description": "Analisar as interações backend detectadas por testes Playwright, focando no smoke comercial e fluxos de autenticação/onboarding, para identificar e documentar resíduos que requerem correção no backend (academia-java) ou clarificação no frontend.",
+        "details": "Esta tarefa exige uma análise aprofundada dos resultados dos testes Playwright, especialmente aqueles relacionados ao fluxo comercial (Task 324) e à jornada de adesão pública (Task 333), utilizando as descobertas da Task 348 como ponto de partida. O foco é identificar qualquer requisição HTTP ou interação com o backend que pareça residual, inesperada ou que utilize contratos desatualizados ou incompletos.\n\nPassos de implementação:\n1.  **Revisar Relatórios Playwright:** Consultar os logs e traces gerados pelos testes Playwright, em particular os cenários que cobrem o fluxo de \"Prospect → Cliente → Matrícula → Pagamento\" (Task 324) e a \"Jornada Pública de Adesão\" (Task 333). Utilizar os dados e a classificação de falhas da Task 348.\n2.  **Identificar Padrões de Interação Suspeitos:** Procurar por:\n    *   Requisições para URLs `localhost:9323` ou qualquer outro endpoint que não corresponda ao ambiente de backend configurado (academia-java).\n    *   Envio de headers ou parâmetros de query legados (ex: `tenantId` em fluxos que deveriam usar `X-Rede-Identifier` conforme Task 63).\n    *   Exposição de dados sensíveis ou informações de debug em respostas de APIs públicas ou sem autenticação.\n    *   Endpoints que não estão documentados ou que parecem ser utilizados de forma não intencional pelo frontend.\n3.  **Reprodução e Análise:** Para cada \"resíduo\" identificado, tentar reproduzir o cenário manualmente no navegador com as ferramentas de desenvolvedor abertas ou via um proxy de rede (como o Playwright utiliza internamente ou um proxy externo como o Charles/Fiddler) para capturar o tráfego de rede detalhado. Isso ajudará a entender o contexto da requisição.\n4.  **Documentação dos Resíduos:** Para cada item encontrado, documentar:\n    *   **Endpoint:** A URL completa da requisição.\n    *   **Método HTTP:** (GET, POST, PUT, etc.).\n    *   **Payload/Resposta:** Partes relevantes do corpo da requisição e da resposta.\n    *   **Contexto do Teste:** Qual cenário Playwright ou fluxo de usuário disparou essa interação.\n    *   **Problema Potencial:** Explicar por que é considerado um resíduo ou um problema (e.g., segurança, contrato desatualizado, erro).\n    *   **Ação Proposta:** Classificar se a correção é necessária no `academia-java` (backend, e.g., remover endpoint, ajustar contrato de API) ou no frontend (e.g., remover chamada legada, tratar erro).\n    *   **Evidências:** Capturas de tela dos devtools, logs de rede.\n5.  **Relatório Consolidado:** Gerar um relatório final com a lista de todos os resíduos documentados, a classificação das ações (frontend/backend) e as recomendações de prioridade para correção.",
+        "testStrategy": "A validação da tarefa será a entrega de um relatório abrangente e bem-estruturado. O relatório deve conter:\n1.  Uma lista detalhada de todas as interações backend consideradas \"resíduos\" com base na análise dos testes Playwright (especialmente Task 324 e 333).\n2.  Para cada item na lista, deve haver uma descrição clara do problema, a URL do endpoint, o contexto em que foi observado e a classificação da responsabilidade (correção no `academia-java` ou no frontend).\n3.  As classificações de responsabilidade devem ser justificadas com base nos contratos de autenticação (Tasks 62, 63) e nas expectativas do fluxo comercial e de onboarding.\n4.  O relatório deve incluir evidências visuais (capturas de tela das ferramentas de desenvolvedor, logs de rede) para cada resíduo identificado.\n5.  A ausência de um relatório ou um relatório incompleto indicará que a tarefa não foi concluída com sucesso. A análise deve cobrir de forma satisfatória os fluxos de autenticação, onboarding e o smoke comercial.",
+        "status": "pending",
+        "dependencies": [
+          "348",
+          "324",
+          "333",
+          "62",
+          "63"
+        ],
+        "priority": "high",
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-02T02:50:43.294Z",
-      "taskCount": 343,
-      "completedCount": 343,
+      "lastModified": "2026-04-02T10:05:00.000Z",
+      "taskCount": 348,
+      "completedCount": 344,
       "tags": [
         "master"
       ]
