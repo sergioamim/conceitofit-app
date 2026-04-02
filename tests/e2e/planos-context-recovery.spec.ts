@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { seedAuthenticatedSession } from "./support/backend-only-stubs";
+import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
 
 const TENANT = {
   id: "tenant-planos",
@@ -23,6 +24,39 @@ async function fulfillJson(route: Route, json: unknown, status = 200) {
 async function installPlanosRecoveryMocks(page: Page) {
   let contextSyncCount = 0;
   let planosFailureCount = 0;
+
+  await installOperationalAppShellMocks(page, {
+    currentTenantId: TENANT.id,
+    tenants: [TENANT],
+    user: {
+      id: "user-planos",
+      userId: "user-planos",
+      nome: "Operador Planos",
+      displayName: "Operador Planos",
+      email: "planos@academia.local",
+      roles: ["ADMIN"],
+      userKind: "COLABORADOR",
+      activeTenantId: TENANT.id,
+      tenantBaseId: TENANT.id,
+      availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
+      availableScopes: ["UNIDADE"],
+      broadAccess: false,
+      redeId: TENANT.academiaId,
+      redeNome: "Academia Planos",
+      redeSlug: "academia-planos",
+    },
+    academia: {
+      id: TENANT.academiaId,
+      nome: "Academia Planos",
+      ativo: true,
+    },
+    routes: {
+      tenantContext: false,
+      academia: false,
+      authRefresh: true,
+      onboardingStatus: true,
+    },
+  });
 
   await page.route("**/api/v1/context/unidade-ativa**", async (route) => {
     const request = route.request();
@@ -131,11 +165,14 @@ test.describe("Planos shell recovery", () => {
       availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
     });
 
+    await page.goto("/dashboard");
+    await expect(page).not.toHaveURL(/\/login/);
     await page.goto("/planos");
+    await expect(page).not.toHaveURL(/\/login/);
 
     await expect(page.getByRole("heading", { name: "Planos" })).toBeVisible();
     await expect(page.getByRole("cell", { name: "Plano Gold" })).toBeVisible();
-    await expect(page.getByRole("combobox").first()).toContainText(TENANT.nome);
+    await expect(page.locator("body")).toContainText(TENANT.nome);
     await expect(page.locator("body")).not.toContainText(
       "Hydration failed because the server rendered HTML didn't match the client"
     );

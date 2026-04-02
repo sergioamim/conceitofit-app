@@ -424,7 +424,7 @@ function isTenantContextSyncError(
   return messages.some(
     (value) =>
       value.includes(TENANT_CONTEXT_MISMATCH_MESSAGE.toLowerCase()) ||
-      value.includes(TENANT_CONTEXT_MISSING_MESSAGE)
+      value.includes(TENANT_CONTEXT_MISSING_MESSAGE.toLowerCase())
   );
 }
 

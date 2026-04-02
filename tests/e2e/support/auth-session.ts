@@ -74,6 +74,11 @@ export const E2E_AUTH_SESSION_STORAGE_KEYS = [
 const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
 const E2E_BASE_URL = "http://localhost:3000";
 
+function resolveE2EBaseUrl() {
+  const configuredBaseUrl = process.env.PLAYWRIGHT_BASE_URL?.trim();
+  return configuredBaseUrl && /^https?:\/\//.test(configuredBaseUrl) ? configuredBaseUrl : E2E_BASE_URL;
+}
+
 const DEFAULT_TENANT_ID = "tenant-e2e";
 
 function encodeBase64Url(value: string): string {
@@ -285,7 +290,7 @@ export async function installE2EAuthSession(
       {
         name: ACTIVE_TENANT_COOKIE_KEY,
         value: session.activeTenantId,
-        url: E2E_BASE_URL,
+        url: resolveE2EBaseUrl(),
       },
     ]);
   }
@@ -303,7 +308,7 @@ export async function applyE2EAuthSession(
       {
         name: ACTIVE_TENANT_COOKIE_KEY,
         value: session.activeTenantId,
-        url: E2E_BASE_URL,
+        url: resolveE2EBaseUrl(),
       },
     ]);
   }

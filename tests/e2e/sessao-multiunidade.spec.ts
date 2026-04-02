@@ -4,6 +4,7 @@ import { E2E_AUTH_SESSION_STORAGE_KEYS } from "./support/auth-session";
 import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
 
 const SESSION_KEYS = [...E2E_AUTH_SESSION_STORAGE_KEYS];
+const E2E_BASE_URL = process.env.PLAYWRIGHT_BASE_URL?.trim() || "http://localhost:3000";
 
 async function fulfillJson(route: Route, json: unknown, status = 200) {
   await route.fulfill({
@@ -209,8 +210,8 @@ async function openAuthenticatedPage(
   });
   await installSessionAuthMocks(page);
   await page.context().addCookies([
-    { name: "academia-active-tenant-id", value: tenantId, domain: "localhost", path: "/" },
-    { name: "academia-active-tenant-name", value: tenantName, domain: "localhost", path: "/" },
+    { name: "academia-active-tenant-id", value: tenantId, url: E2E_BASE_URL },
+    { name: "academia-active-tenant-name", value: tenantName, url: E2E_BASE_URL },
   ]);
   await page.goto(path);
   await expect(page).not.toHaveURL(/\/login/);

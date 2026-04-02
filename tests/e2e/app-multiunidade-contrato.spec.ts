@@ -283,6 +283,12 @@ test.describe("App multiunidade orientado por contrato", () => {
     await page.getByRole("combobox", { name: "Selecionar unidade ativa" }).click();
     await page.getByRole("option", { name: TENANT_B.nome }).click();
 
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.getByRole("combobox", { name: "Selecionar unidade ativa" })).toContainText(TENANT_B.nome);
+    await expect(page.getByText(/Indisponíveis no momento: Unidade Bloqueada: Contrato suspenso na unidade./)).toBeVisible();
+
+    await page.goto("/clientes");
+    await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
     await expect(page.getByText("Cliente Unidade Beta")).toBeVisible();
     await expect(page.getByText("Cliente Unidade Alpha")).toHaveCount(0);
   });
