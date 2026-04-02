@@ -179,6 +179,23 @@ async function installDemoBootstrapMocks(page: Page) {
     }
     await route.fallback();
   });
+
+  await page.route("**/api/v1/onboarding/status**", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        json: {
+          percentualConclusao: 100,
+          concluido: true,
+          totalEtapas: 0,
+          etapasConcluidas: 0,
+          etapas: [],
+        },
+      });
+      return;
+    }
+    await route.fallback();
+  });
 }
 
 async function seedDemoSession(page: Page) {

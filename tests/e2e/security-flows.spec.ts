@@ -106,6 +106,21 @@ async function installSecurityMocks(
       },
     });
   });
+
+  await page.route("**/api/v1/onboarding/status", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await fulfillJson(route, {
+      percentualConclusao: 100,
+      concluido: true,
+      totalEtapas: 0,
+      etapasConcluidas: 0,
+      etapas: [],
+    });
+  });
 }
 
 async function seedSession(page: Page) {

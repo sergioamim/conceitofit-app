@@ -25,6 +25,10 @@ async function aguardarJornadaPublica(page: Page) {
   await expect(page.getByText("Carregando jornada pública...")).not.toBeVisible({ timeout: 30_000 });
 }
 
+async function aguardarBotaoHabilitado(page: Page, name: string) {
+  await expect(page.getByRole("button", { name })).toBeEnabled({ timeout: 15_000 });
+}
+
 function capturarRequestsPublicos(page: Page): PublicApiRequest[] {
   const requests: PublicApiRequest[] = [];
   page.on("request", (request) => {
@@ -66,6 +70,7 @@ test.describe("Jornada pública de adesão", () => {
     await page.getByLabel("E-mail").fill("julia.monteiro@email.com");
     await page.getByLabel("Telefone").fill("(21) 98888-7766");
     await page.getByLabel("Objetivo do aluno").fill("Quero testar as aulas coletivas da unidade.");
+    await aguardarBotaoHabilitado(page, "Registrar trial");
     await page.getByRole("button", { name: "Registrar trial" }).click();
 
     await expect(page.getByText(/Trial registrado\./)).toBeVisible();
@@ -102,6 +107,7 @@ test.describe("Jornada pública de adesão", () => {
     await page.getByLabel("Data de nascimento").fill("1993-02-10");
     await page.getByLabel("Cidade").fill("São Paulo");
     await page.getByLabel("Objetivo / observações").fill("Foco em musculação e spinning no período da manhã.");
+    await aguardarBotaoHabilitado(page, "Ir para checkout");
     await page.getByRole("button", { name: "Ir para checkout" }).click();
 
     await abrirRota(page, "/adesao/checkout?tenant=mananciais-s1&plan=plano-mananciais-premium", /\/adesao\/checkout/);
@@ -109,6 +115,7 @@ test.describe("Jornada pública de adesão", () => {
     const signNow = page.getByLabel(/Assinar contrato agora/);
     await signNow.uncheck();
     await page.getByLabel(/Aceito os termos da adesão e da cobrança/).check();
+    await aguardarBotaoHabilitado(page, "Concluir adesão");
     const checkoutResponsePromise = page.waitForResponse((response) =>
       response.request().method() === "POST"
       && /\/api\/v1\/publico\/adesao\/[^/]+\/checkout(?:\?|$)/.test(response.url())
