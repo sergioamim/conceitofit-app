@@ -96,6 +96,9 @@ export function NovoClienteWizard({
                       <Button type="button" variant="secondary" onClick={() => w.handleCreateOnly()} disabled={w.loading || !w.isValid}>
                         Apenas pre-cadastro
                       </Button>
+                      <Button type="button" variant="outline" onClick={() => w.handleCreateOnly({ openSale: true })} disabled={w.loading || !w.isValid} className="border-border">
+                        Pré-cadastro + venda
+                      </Button>
                       <Button type="button" onClick={w.handleNext} disabled={w.loading || !w.isValid}>
                         Continuar com plano <ArrowRight className="size-3.5" />
                       </Button>

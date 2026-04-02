@@ -261,7 +261,7 @@ test.describe("Exclusão controlada de clientes", () => {
 
     await modal.locator("textarea").fill("Cliente solicitou remoção e há conflito operacional.");
     await modal.getByRole("button", { name: "Excluir cliente" }).click();
-    await expect(modal.getByText("Existem vendas em aberto.")).toBeVisible();
+    await expect(modal.getByRole("listitem").filter({ hasText: "Existem vendas em aberto." })).toBeVisible();
 
     await modal.locator("textarea").fill("Novo motivo auditável.");
     await modal.getByRole("button", { name: "Excluir cliente" }).click();
@@ -283,7 +283,7 @@ test.describe("Exclusão controlada de clientes", () => {
       availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
     });
 
-    await page.goto(`/clientes/${ALUNO.id}/cartoes`);
+    await page.goto(`/clientes/${ALUNO.id}?tab=cartoes`);
     await expect(page).toHaveURL(new RegExp(`/clientes/${ALUNO.id}\\?tab=cartoes$`));
     await expect(page.getByRole("button", { name: "Cartões" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Cartões" })).toBeVisible();

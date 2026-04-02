@@ -73,14 +73,15 @@ test.describe("Cadastro de clientes (Playwright)", () => {
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Novo cliente" })).toBeVisible();
 
     await preencherDadosPessoais(page, payload);
-    await page.getByRole("button", { name: /Completar cadastro/i }).click();
+    await page.getByRole("dialog").getByRole("button", { name: /Continuar com plano/i }).click();
 
     await expect(page.getByText("Escolha o plano")).toBeVisible();
     await page.getByRole("button", { name: /Plano Premium/i }).click();
     await page.getByRole("button", { name: "Próximo" }).click();
 
-    await expect(page.getByText("Data de início *")).toBeVisible();
-    await page.getByRole("combobox").last().click();
+    await expect(page.getByText(/Data de inicio \*/i)).toBeVisible();
+    await expect(page.getByText(/Forma de pagamento \*/i)).toBeVisible();
+    await page.getByRole("combobox").filter({ hasText: /Selecione/i }).click();
     await page.getByRole("option", { name: "Dinheiro" }).first().click();
     const createResponsePromise = page.waitForResponse((response) =>
       response.request().method() === "POST"
@@ -90,8 +91,9 @@ test.describe("Cadastro de clientes (Playwright)", () => {
     const createResponse = await createResponsePromise;
     const created = (await createResponse.json()) as CreateAlunoComMatriculaResponse;
 
-    await expect(page.getByText("Cadastro realizado!")).toBeVisible();
-    await page.getByRole("button", { name: "Fechar" }).click();
+    const successDialog = page.getByRole("dialog").filter({ hasText: "Cadastro realizado!" });
+    await expect(successDialog).toBeVisible();
+    await successDialog.getByRole("button", { name: /^Fechar$/ }).click();
 
     await abrirRota(page, `/clientes/${created.aluno.id}`, new RegExp(`/clientes/${created.aluno.id}$`));
     await expect(page.getByRole("heading", { name: payload.nome })).toBeVisible();
@@ -106,9 +108,9 @@ test.describe("Cadastro de clientes (Playwright)", () => {
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Novo cliente" })).toBeVisible();
     await expect(page.getByText("Escolha o plano")).not.toBeVisible();
     await expect(page.getByRole("dialog").locator("#novo-cliente-nome")).toBeVisible();
-    await expect(page.getByRole("dialog").getByRole("button", { name: /Pré-cadastro$/i })).toBeDisabled();
+    await expect(page.getByRole("dialog").getByRole("button", { name: /Apenas pre-cadastro/i })).toBeDisabled();
     await expect(page.getByRole("dialog").getByRole("button", { name: /Pré-cadastro \+ venda/i })).toBeDisabled();
-    await expect(page.getByRole("dialog").getByRole("button", { name: /Completar cadastro/i })).toBeDisabled();
+    await expect(page.getByRole("dialog").getByRole("button", { name: /Continuar com plano/i })).toBeDisabled();
   });
 
   test("Cenário 3: cria cliente sem matrícula (cadastro direto)", async ({ page }) => {
@@ -130,7 +132,7 @@ test.describe("Cadastro de clientes (Playwright)", () => {
       && /\/api\/v1\/comercial\/alunos(?:\?|$)/.test(response.url())
       && !response.url().includes("alunos-com-matricula")
     );
-    await page.getByRole("dialog").getByRole("button", { name: /Pré-cadastro$/i }).click();
+    await page.getByRole("dialog").getByRole("button", { name: /Apenas pre-cadastro/i }).click();
     const createResponse = await createResponsePromise;
     const created = (await createResponse.json()) as CreateAlunoResponse;
 

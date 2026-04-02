@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { logger } from "@/lib/shared/logger";
 import { useTableSearchParams } from "@/hooks/use-table-search-params";
@@ -14,6 +14,8 @@ import type { Aluno } from "@/lib/types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 import { useClientesData } from "./use-clientes-data";
+
+const subscribeNoop = () => () => {};
 
 export function useClientesWorkspace() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
@@ -32,6 +34,11 @@ export function useClientesWorkspace() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<"cadastro" | "nome">("cadastro");
   const updateMutation = useUpdateCliente(tenantId);
+  const currentMonthYear = useSyncExternalStore(
+    subscribeNoop,
+    () => getBusinessTodayIso().slice(0, 7),
+    () => null,
+  );
 
   const data = useClientesData({
     tenantId,
@@ -77,7 +84,11 @@ export function useClientesWorkspace() {
 
   // Metrics
   const metrics = useMemo(() => {
-    const ym = getBusinessTodayIso().slice(0, 7);
+    if (!currentMonthYear) {
+      return { novos: 0, renovados: 0, naoRenovados: 0, evadidos: 0 };
+    }
+
+    const ym = currentMonthYear;
     const novos = data.alunos.filter((a) => a.dataCadastro.startsWith(ym)).length;
     const evadidos = data.alunos.filter(
       (a) =>
@@ -85,7 +96,7 @@ export function useClientesWorkspace() {
         a.dataCadastro.startsWith(ym),
     ).length;
     return { novos, renovados: 0, naoRenovados: 0, evadidos };
-  }, [data.alunos]);
+  }, [currentMonthYear, data.alunos]);
 
   // Resumo dialog derived state
   const clienteResumoPlano = useMemo(() => {
