@@ -5,6 +5,7 @@ import { logger } from "@/lib/shared/logger";
 import type { ContaBancaria } from "@/lib/types";
 import { ContasBancariasContent } from "./contas-bancarias-content";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
+import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
 
 async function getTenantData(): Promise<{ id: string; name: string }> {
   const jar = await cookies();
@@ -19,7 +20,7 @@ async function Loader() {
   let data: ContaBancaria[] = [];
 
   try {
-    if (tenantId) {
+    if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
       data = await serverFetch<ContaBancaria[]>("/api/v1/administrativo/contas-bancarias", {
         query: { tenantId },
         next: { revalidate: 0 },

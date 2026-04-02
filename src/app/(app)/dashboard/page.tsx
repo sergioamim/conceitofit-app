@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { cookies } from "next/headers";
 import type { DashboardData } from "@/lib/types";
 import { getBusinessTodayIso } from "@/lib/shared/business-date";
+import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
 
 async function getActiveTenantId(): Promise<string | undefined> {
   const jar = await cookies();
@@ -28,7 +29,10 @@ async function fetchDashboard(tenantId: string, referenceDate: string): Promise<
 async function DashboardLoader() {
   const date = getBusinessTodayIso();
   const tenantId = await getActiveTenantId();
-  const data = tenantId ? await fetchDashboard(tenantId, date) : null;
+  const data =
+    tenantId && !shouldBypassAuthenticatedSSRFetch()
+      ? await fetchDashboard(tenantId, date)
+      : null;
 
   return <DashboardContent initialData={data} initialDate={date} />;
 }

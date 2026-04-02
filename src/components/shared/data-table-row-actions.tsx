@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowUpRight,
@@ -76,6 +75,7 @@ export function DataTableRowActions({
         const Icon = action.icon ?? DEFAULT_ICONS[action.kind];
         const title = action.title ?? action.label;
         const classes = cn("rounded-lg border bg-card/80 shadow-none", toneClass(resolveTone(action)));
+        const shouldRenderExpandedLink = action.kind === "open" && Boolean(action.href);
 
         if (action.href) {
           return (
@@ -83,15 +83,22 @@ export function DataTableRowActions({
               key={`${action.kind}-${action.label}`}
               asChild
               type="button"
-              size="icon-sm"
+              size={shouldRenderExpandedLink ? "sm" : "icon-sm"}
               variant="ghost"
               aria-label={action.label}
               title={title}
               className={classes}
             >
-              <Link href={action.href}>
-                <Icon className="size-4" />
-              </Link>
+              {shouldRenderExpandedLink ? (
+                <a href={action.href}>
+                  <Icon className="size-4" />
+                  <span>{action.label}</span>
+                </a>
+              ) : (
+                <a href={action.href}>
+                  <Icon className="size-4" />
+                </a>
+              )}
             </Button>
           );
         }

@@ -2771,6 +2771,9 @@ export async function installAdminCrudApiMocks(page: Page) {
   };
 
   let atividadesGrade: AtividadeGradeSeed[] = [
+  };
+
+  let atividadesGrade: AtividadeGradeSeed[] = [
     {
       id: "atividade-grade-musculacao",
       tenantId: "tenant-centro",
@@ -4793,8 +4796,41 @@ export async function installAdminCrudApiMocks(page: Page) {
       return;
     }
 
+    type AtividadeGradePayload = {
+      atividadeId?: string;
+      salaId?: string;
+      funcionarioId?: string;
+      diasSemana?: string[];
+      definicaoHorario?: (typeof atividadesGrade)[number]["definicaoHorario"];
+      horaInicio?: string;
+      horaFim?: string;
+      capacidade?: number;
+      checkinLiberadoMinutosAntes?: number;
+      duracaoMinutos?: number;
+      codigo?: string;
+      grupoAtividades?: string;
+      publico?: string;
+      dificuldade?: (typeof atividadesGrade)[number]["dificuldade"];
+      descricaoAgenda?: string;
+      acessoClientes?: (typeof atividadesGrade)[number]["acessoClientes"];
+      permiteReserva?: boolean;
+      limitarVagasAgregadores?: boolean;
+      exibirWellhub?: boolean;
+      permitirSaidaAntesInicio?: boolean;
+      permitirEscolherNumeroVaga?: boolean;
+      exibirNoAppCliente?: boolean;
+      exibirNoAutoatendimento?: boolean;
+      exibirNoWodTv?: boolean;
+      finalizarAtividadeAutomaticamente?: boolean;
+      desabilitarListaEspera?: boolean;
+      local?: string;
+      instrutor?: string;
+      ativo?: boolean;
+    };
+
     if (path === "/api/v1/administrativo/atividades-grade" && method === "POST") {
       const payload = parseBody<Partial<AtividadeGradeSeed>>(request);
+      const payload = parseBody<AtividadeGradePayload>(request);
       const tenantId = resolveTenantId(url);
       const atividadeId = payload.atividadeId?.trim() || atividades[0]?.id || "";
       const payloadExtras = payload as Record<string, unknown>;
@@ -4851,12 +4887,7 @@ export async function installAdminCrudApiMocks(page: Page) {
     if (/^\/api\/v1\/administrativo\/atividades-grade\/[^/]+$/.test(path) && method === "PUT") {
       const gradeId = path.split("/").at(-1) ?? "";
       const payload = parseBody<
-        Partial<(typeof atividadesGrade)[number]> & {
-          funcionarioId?: string;
-          local?: string;
-          instrutor?: string;
-        }
-      >(request);
+      const payload = parseBody<AtividadeGradePayload>(request);
       const payloadExtras = payload as Record<string, unknown>;
       atividadesGrade = atividadesGrade.map((item) =>
         item.id === gradeId

@@ -403,7 +403,11 @@ export function FuncionariosListPage() {
                         <button
                           type="button"
                           className="w-full text-left"
-                          onClick={() => router.push(`/administrativo/funcionarios/${funcionario.id}`)}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            router.push(`/administrativo/funcionarios/${funcionario.id}`);
+                          }}
                         >
                           <p className="font-medium text-foreground">{funcionario.nome}</p>
                           <p className="text-sm text-muted-foreground">

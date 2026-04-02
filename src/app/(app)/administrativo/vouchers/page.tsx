@@ -5,6 +5,7 @@ import { logger } from "@/lib/shared/logger";
 import type { Voucher } from "@/lib/types";
 import { VouchersContent } from "./vouchers-content";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
+import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
 
 async function getActiveTenantId(): Promise<string | undefined> {
   const jar = await cookies();
@@ -17,7 +18,7 @@ async function Loader() {
   let usageCounts: Record<string, number> = {};
 
   try {
-    if (tenantId) {
+    if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
       const [vouchersData, countsData] = await Promise.all([
         serverFetch<Voucher[]>("/api/v1/administrativo/vouchers", {
           query: { tenantId },

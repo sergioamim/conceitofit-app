@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { logger } from "@/lib/shared/logger";
+import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
 
 async function getActiveTenantId(): Promise<string | undefined> {
   const jar = await cookies();
@@ -69,7 +70,7 @@ export function createTenantLoader<T>(
     let data: T = empty;
 
     try {
-      if (tenantId) {
+      if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
         data = await serverFetch<T>(url, {
           query: { tenantId, ...query },
           next: { revalidate: 0 },

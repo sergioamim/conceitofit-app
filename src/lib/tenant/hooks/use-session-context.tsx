@@ -18,6 +18,7 @@ import {
   getOptimisticTenantContextSnapshot,
   getTenantContextSnapshotFromStore,
   resetTenantContextMemory,
+  syncTenantContextInStore,
   TENANT_CONTEXT_UPDATED_EVENT,
 } from "@/lib/tenant/tenant-context";
 
@@ -261,8 +262,30 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
 
     try {
       const bootstrapState = await runWithoutSessionEcho(async () => {
-        await setTenantContextApi(normalizedTenantId);
-        return loadSessionBootstrapState();
+        const switchedContext = await setTenantContextApi(normalizedTenantId);
+        const nextBootstrapState = await loadSessionBootstrapState();
+        if (nextBootstrapState.snapshot.tenantId === normalizedTenantId) {
+          return nextBootstrapState;
+        }
+
+        const switchedTenant =
+          switchedContext.unidadesDisponiveis.find((tenant) => tenant.id === normalizedTenantId)
+          ?? (switchedContext.tenantAtual?.id === normalizedTenantId ? switchedContext.tenantAtual : null);
+
+        if (!switchedTenant) {
+          return nextBootstrapState;
+        }
+
+        const correctedSnapshot = syncTenantContextInStore({
+          currentTenantId: normalizedTenantId,
+          tenantAtual: switchedTenant,
+          tenants: switchedContext.unidadesDisponiveis,
+        });
+
+        return {
+          ...nextBootstrapState,
+          snapshot: correctedSnapshot,
+        };
       });
       if (requestIdRef.current !== currentRequestId) return;
 

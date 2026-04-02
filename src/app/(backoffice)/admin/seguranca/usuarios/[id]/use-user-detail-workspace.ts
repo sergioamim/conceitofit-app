@@ -379,7 +379,9 @@ export function useUserDetailWorkspace() {
       });
 
       resetImpersonationDialog();
-      window.location.assign(response.redirectTo || "/dashboard");
+      window.setTimeout(() => {
+        window.location.assign(response.redirectTo || "/dashboard");
+      }, 0);
     } catch (error) {
       toast({
         title: "Não foi possível iniciar a impersonação",
