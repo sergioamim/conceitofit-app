@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-import { installE2EAuthSession } from "./support/auth-session";
-import { installProtectedShellMocks } from "./support/protected-shell-mocks";
+import { installE2EAuthSession, type ResolvedE2EAuthSession } from "./support/auth-session";
+import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
 
 // ---------------------------------------------------------------------------
 // Seed state
@@ -71,11 +71,16 @@ function captureConsoleMessages(page: Page) {
 async function setupMocks(
   page: Page,
   state: { config: BillingConfigSeed },
-  options?: { elevated?: boolean },
+  options?: { elevated?: boolean; session?: ResolvedE2EAuthSession },
 ) {
   const elevated = options?.elevated ?? true;
 
-  await installProtectedShellMocks(page, {
+  await page.context().addCookies([
+    { name: "academia-active-tenant-id", value: "tenant-centro", domain: "localhost", path: "/" },
+    { name: "academia-active-tenant-name", value: "Unidade Centro", domain: "localhost", path: "/" },
+  ]);
+
+  await installOperationalAppShellMocks(page, {
     currentTenantId: "tenant-centro",
     tenants: [
       {
@@ -104,6 +109,13 @@ async function setupMocks(
       canAccessElevatedModules: elevated,
       canDeleteClient: false,
     },
+    refreshSession: options?.session
+      ? {
+          token: options.session.token,
+          refreshToken: options.session.refreshToken,
+          type: options.session.type,
+        }
+      : undefined,
   });
 
   await page.route("**/api/v1/**", async (route) => {
@@ -152,8 +164,8 @@ async function setupMocks(
 test.describe("Billing Config Page", () => {
   test("renders page with config data", async ({ page }) => {
     const state = { config: defaultConfig() };
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 
@@ -169,8 +181,8 @@ test.describe("Billing Config Page", () => {
 
   test("shows status cards correctly", async ({ page }) => {
     const state = { config: { ...defaultConfig(), statusConexao: "OFFLINE" as const } };
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 
@@ -180,8 +192,8 @@ test.describe("Billing Config Page", () => {
 
   test("shows webhook URL with tenant ID", async ({ page }) => {
     const state = { config: defaultConfig() };
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 
@@ -190,8 +202,8 @@ test.describe("Billing Config Page", () => {
 
   test("toggle API key visibility", async ({ page }) => {
     const state = { config: defaultConfig() };
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 
@@ -208,8 +220,8 @@ test.describe("Billing Config Page", () => {
   test("test connection button works", async ({ page }) => {
     const state = { config: defaultConfig() };
     const messages = captureConsoleMessages(page);
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 
@@ -220,8 +232,8 @@ test.describe("Billing Config Page", () => {
   test("save configuration updates state", async ({ page }) => {
     const state = { config: defaultConfig() };
     const messages = captureConsoleMessages(page);
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 
@@ -242,8 +254,8 @@ test.describe("Billing Config Page", () => {
 
   test("discard changes resets form", async ({ page }) => {
     const state = { config: defaultConfig() };
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 
@@ -258,8 +270,8 @@ test.describe("Billing Config Page", () => {
 
   test("shows access denied for users without elevated permissions", async ({ page }) => {
     const state = { config: defaultConfig() };
-    await seedSessionNoPermission(page);
-    await setupMocks(page, state, { elevated: false });
+    const session = await seedSessionNoPermission(page);
+    await setupMocks(page, state, { elevated: false, session });
 
     await page.goto("/administrativo/billing");
 
@@ -274,8 +286,8 @@ test.describe("Billing Config Page", () => {
 
   test("auto-renewal checkbox toggles correctly", async ({ page }) => {
     const state = { config: defaultConfig() };
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 
@@ -292,8 +304,8 @@ test.describe("Billing Config Page", () => {
   test("copy webhook URL button works", async ({ page }) => {
     const state = { config: defaultConfig() };
     const messages = captureConsoleMessages(page);
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 
@@ -303,8 +315,8 @@ test.describe("Billing Config Page", () => {
 
   test("shows last test timestamp when available", async ({ page }) => {
     const state = { config: defaultConfig() };
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 
@@ -320,8 +332,8 @@ test.describe("Billing Config Page", () => {
         provedorAtivo: "",
       },
     };
-    await seedSession(page);
-    await setupMocks(page, state);
+    const session = await seedSession(page);
+    await setupMocks(page, state, { session });
 
     await page.goto("/administrativo/billing");
 

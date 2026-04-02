@@ -113,7 +113,15 @@ export function FormasPagamentoContent({ initialData }: { initialData: FormaPaga
             Configure meios e condições de pagamento
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)} disabled={!tenantResolved || !tenantId}>Nova forma</Button>
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setModalOpen(true);
+          }}
+          disabled={!tenantResolved || !tenantId}
+        >
+          Nova forma
+        </Button>
       </div>
 
       <PageError error={error} onRetry={reload} />
