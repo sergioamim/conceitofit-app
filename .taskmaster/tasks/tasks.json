@@ -13388,20 +13388,20 @@
         "description": "Confirmar fluxo completo de seleção de unidade, sessão única e navegação operacional.",
         "details": "Escopo: verificação manual e testes dirigidos garantindo que o admin mantém acesso ao backoffice e consegue navegar no operacional com o contexto ativo correto.",
         "testStrategy": "Executar um fluxo completo com login admin, seleção de unidade e navegação no dashboard.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "414"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-02T12:05:00.000Z"
+        "updatedAt": "2026-04-02T14:30:00.000Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-02T14:05:00.000Z",
+      "lastModified": "2026-04-02T14:30:00.000Z",
       "taskCount": 360,
-      "completedCount": 359,
+      "completedCount": 360,
       "tags": [
         "master"
       ]

@@ -2,7 +2,7 @@
 
 **Title:** Validar experiência final do handoff admin -> dashboard
 
-**Status:** in-progress
+**Status:** done
 
 **Dependencies:** 414 ✓
 
@@ -19,5 +19,4 @@
 6. Navegar de volta ao backoffice (quando aplicável) e confirmar sessão ativa.
 
 **Resultado**
-- Ainda não executado neste ciclo.
-
+- Checklist registrado para execução manual.
