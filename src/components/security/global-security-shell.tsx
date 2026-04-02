@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -67,7 +66,7 @@ export function GlobalSecurityShell({
                 {GLOBAL_SECURITY_SECTIONS.map((section) => {
                   const active = pathname === section.href || pathname.startsWith(`${section.href}/`);
                   return (
-                    <Link
+                    <a
                       key={section.href}
                       href={section.href}
                       className={cn(
@@ -78,7 +77,7 @@ export function GlobalSecurityShell({
                       )}
                     >
                       {section.label}
-                    </Link>
+                    </a>
                   );
                 })}
               </div>
@@ -103,13 +102,13 @@ export function GlobalSecurityShell({
               </div>
               <div className="space-y-2">
                 {GLOBAL_SECURITY_LEGACY_LINKS.map((item) => (
-                  <Link
+                  <a
                     key={item.href}
                     href={item.href}
                     className="block rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-gym-accent/30"
                   >
                     {item.label}
-                  </Link>
+                  </a>
                 ))}
               </div>
             </div>
@@ -123,4 +122,3 @@ export function GlobalSecurityShell({
     </div>
   );
 }
-

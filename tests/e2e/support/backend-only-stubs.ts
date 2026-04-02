@@ -2735,7 +2735,39 @@ export async function installAdminCrudApiMocks(page: Page) {
     },
   ];
 
-  let atividadesGrade = [
+  let atividadesGrade: Array<{
+    id: string;
+    tenantId: string;
+    atividadeId: string;
+    salaId: string;
+    funcionarioId?: string;
+    diasSemana: string[];
+    definicaoHorario: "PREVIAMENTE";
+    horaInicio: string;
+    horaFim: string;
+    capacidade: number;
+    checkinLiberadoMinutosAntes: number;
+    duracaoMinutos: number;
+    codigo?: string;
+    grupoAtividades?: string;
+    publico?: string;
+    dificuldade?: number;
+    descricaoAgenda?: string;
+    acessoClientes: "TODOS_CLIENTES" | "COM_PLANO" | "BLOQUEADO";
+    permiteReserva: boolean;
+    limitarVagasAgregadores: boolean;
+    exibirWellhub: boolean;
+    permitirSaidaAntesInicio: boolean;
+    permitirEscolherNumeroVaga: boolean;
+    exibirNoAppCliente: boolean;
+    exibirNoAutoatendimento: boolean;
+    exibirNoWodTv: boolean;
+    finalizarAtividadeAutomaticamente: boolean;
+    desabilitarListaEspera: boolean;
+    local?: string;
+    instrutor?: string;
+    ativo: boolean;
+  }> = [
     {
       id: "atividade-grade-musculacao",
       tenantId: "tenant-centro",
@@ -2863,6 +2895,7 @@ export async function installAdminCrudApiMocks(page: Page) {
     conta: 10,
     maquininha: 10,
     atividade: 10,
+    atividadeGrade: 10,
     membership: 10,
   };
 
@@ -4757,11 +4790,43 @@ export async function installAdminCrudApiMocks(page: Page) {
       return;
     }
 
+    type AtividadeGradePayload = {
+      atividadeId?: string;
+      salaId?: string;
+      funcionarioId?: string;
+      diasSemana?: string[];
+      definicaoHorario?: (typeof atividadesGrade)[number]["definicaoHorario"];
+      horaInicio?: string;
+      horaFim?: string;
+      capacidade?: number;
+      checkinLiberadoMinutosAntes?: number;
+      duracaoMinutos?: number;
+      codigo?: string;
+      grupoAtividades?: string;
+      publico?: string;
+      dificuldade?: (typeof atividadesGrade)[number]["dificuldade"];
+      descricaoAgenda?: string;
+      acessoClientes?: (typeof atividadesGrade)[number]["acessoClientes"];
+      permiteReserva?: boolean;
+      limitarVagasAgregadores?: boolean;
+      exibirWellhub?: boolean;
+      permitirSaidaAntesInicio?: boolean;
+      permitirEscolherNumeroVaga?: boolean;
+      exibirNoAppCliente?: boolean;
+      exibirNoAutoatendimento?: boolean;
+      exibirNoWodTv?: boolean;
+      finalizarAtividadeAutomaticamente?: boolean;
+      desabilitarListaEspera?: boolean;
+      local?: string;
+      instrutor?: string;
+      ativo?: boolean;
+    };
+
     if (path === "/api/v1/administrativo/atividades-grade" && method === "POST") {
-      const payload = parseBody<Partial<(typeof atividadesGrade)[number]>>(request);
+      const payload = parseBody<AtividadeGradePayload>(request);
       const tenantId = resolveTenantId(url);
       const atividadeId = payload.atividadeId?.trim() || atividades[0]?.id || "";
-      const salaId = payload.salaId?.trim() || salas.find((item) => item.tenantId === tenantId && item.ativo)?.id || undefined;
+      const salaId = payload.salaId?.trim() || salas.find((item) => item.tenantId === tenantId && item.ativo)?.id || "";
       const funcionarioId = payload.funcionarioId?.trim() || undefined;
       const created = {
         id: nextId("atividade-grade", "atividadeGrade"),
@@ -4805,7 +4870,7 @@ export async function installAdminCrudApiMocks(page: Page) {
 
     if (/^\/api\/v1\/administrativo\/atividades-grade\/[^/]+$/.test(path) && method === "PUT") {
       const gradeId = path.split("/").at(-1) ?? "";
-      const payload = parseBody<Partial<(typeof atividadesGrade)[number]>>(request);
+      const payload = parseBody<AtividadeGradePayload>(request);
       atividadesGrade = atividadesGrade.map((item) =>
         item.id === gradeId
           ? {

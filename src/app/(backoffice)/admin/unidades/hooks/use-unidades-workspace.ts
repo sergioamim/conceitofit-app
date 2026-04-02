@@ -108,7 +108,12 @@ function isOnboardingCollectionRouteError(message: string) {
 
 function isOnboardingEndpointUnavailable(message: string) {
   const normalized = message.toLowerCase();
-  return isOnboardingCollectionRouteError(message) || normalized.includes("not found");
+  return (
+    isOnboardingCollectionRouteError(message)
+    || normalized.includes("not found")
+    || normalized.includes("unidade não encontrada")
+    || normalized.includes("unidade nao encontrada")
+  );
 }
 
 export type UnidadesWorkspace = ReturnType<typeof useUnidadesWorkspace>;
@@ -213,7 +218,7 @@ export function useUnidadesWorkspace() {
         const message = normalizeErrorMessage(onboardingError);
         setOnboarding([]);
         setOnboardingWarning(
-          isOnboardingCollectionRouteError(message)
+          isOnboardingEndpointUnavailable(message)
             ? "A listagem global de onboarding não está disponível no backend atual. O cadastro e a edição das unidades seguem funcionando normalmente."
             : `Não foi possível carregar o onboarding global: ${message}`
         );
