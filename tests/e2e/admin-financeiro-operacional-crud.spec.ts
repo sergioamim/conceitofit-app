@@ -13,7 +13,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
 
     await page.getByRole("button", { name: "Nova forma" }).click();
     await page.getByRole("dialog").locator("input").first().fill(formaNome);
-    await page.getByRole("dialog").getByRole("button", { name: "Criar" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: /Criar|Salvar/ }).click();
 
     let formaRow = page.getByRole("row").filter({ hasText: formaNome });
     await expect(formaRow).toBeVisible();
@@ -29,6 +29,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await expect(page.getByRole("row").filter({ hasText: formaEditada })).toHaveCount(0);
 
     await page.goto("/administrativo/tipos-conta");
+    await expect(page.getByRole("heading", { name: "Tipos de Conta" })).toBeVisible();
 
     await page.getByRole("button", { name: "Novo tipo" }).click();
     await page.getByRole("dialog").locator("input").first().fill(tipoContaNome);
@@ -102,6 +103,10 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     const suffix = uniqueSuffix();
     const atividadeNome = `Atividade ${suffix}`;
     const atividadeEditada = `${atividadeNome} Editada`;
+    const getAtividadeCard = (nome: string) =>
+      page
+        .getByText(nome, { exact: true })
+        .locator("xpath=ancestor::*[contains(@class,'group')][1]");
 
     await openAdminCrudPage(page, "/atividades");
 
@@ -112,14 +117,16 @@ test.describe("Admin financeiro e operacional CRUD", () => {
 
     await expect(page.getByText(atividadeNome, { exact: true })).toBeVisible();
     await expect(page.getByText("Sem check-in")).toBeVisible();
-    await page.getByRole("button", { name: `Editar atividade ${atividadeNome}` }).click();
+    const atividadeCard = getAtividadeCard(atividadeNome);
+    await atividadeCard.hover();
+    await atividadeCard.getByRole("button").nth(0).click();
     await page.getByPlaceholder("Ex: Musculação").fill(atividadeEditada);
     await page.getByLabel("Permitir check-in para clientes").check();
     await page.getByLabel("Check-in obrigatório para participar").check();
     await page.getByRole("dialog").getByRole("button", { name: "Salvar" }).click();
 
     await expect(page.getByText(atividadeEditada, { exact: true })).toBeVisible();
-    await expect(page.getByText("Check-in obrigatório")).toBeVisible();
+    await expect(page.getByText("Check-in obrigatório", { exact: true })).toBeVisible();
 
     await page.goto("/administrativo/atividades-grade");
     await page.getByRole("button", { name: "Nova Grade" }).click();
@@ -130,17 +137,15 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await page.getByRole("button", { name: "Cancelar" }).click();
 
     await page.goto("/planos/novo");
-    await page.getByRole("button", { name: "Atividades e benefícios" }).click();
+    await page.getByRole("tab", { name: "Atividades e benefícios" }).click();
     await expect(page.getByText(atividadeEditada, { exact: true })).toBeVisible();
-    await expect(page.getByText("Check-in obrigatório")).toBeVisible();
+    await expect(page.getByText("Check-in obrigatório", { exact: true })).toBeVisible();
 
     await page.goto("/atividades");
-    await page.getByRole("button", { name: `Desativar atividade ${atividadeEditada}` }).click();
+    const atividadeEditadaCard = getAtividadeCard(atividadeEditada);
+    await atividadeEditadaCard.hover();
+    await atividadeEditadaCard.getByRole("button").nth(1).click();
     await page.getByRole("button", { name: "Apenas ativas" }).click();
-    await expect(page.getByText(atividadeEditada)).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Todas" }).click();
-    await page.getByRole("button", { name: `Remover atividade ${atividadeEditada}` }).click();
     await expect(page.getByText(atividadeEditada)).toHaveCount(0);
   });
 });

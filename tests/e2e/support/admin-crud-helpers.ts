@@ -6,6 +6,8 @@ const AVAILABLE_TENANTS = [
   { tenantId: "tenant-barra", defaultTenant: false },
   { tenantId: "tenant-vila-maria", defaultTenant: false },
 ];
+const ACTIVE_TENANT_ID = "tenant-centro";
+const ACTIVE_TENANT_NAME = "Unidade Centro";
 let uniqueCounter = 0;
 
 export async function openAdminCrudPage(page: Page, path: string) {
@@ -15,15 +17,29 @@ export async function openAdminCrudPage(page: Page, path: string) {
 
   await installAdminCrudApiMocks(page);
   await seedAuthenticatedSession(page, {
-    tenantId: "tenant-centro",
+    tenantId: ACTIVE_TENANT_ID,
     availableTenants: AVAILABLE_TENANTS,
     userId: "user-admin-global",
     userKind: "COLABORADOR",
     displayName: "Root Admin",
     roles: ["OWNER", "ADMIN"],
-    availableScopes: ["GLOBAL"],
+    availableScopes: ["UNIDADE"],
     broadAccess: true,
   });
+  await page.context().addCookies([
+    {
+      name: "academia-active-tenant-id",
+      value: ACTIVE_TENANT_ID,
+      domain: "localhost",
+      path: "/",
+    },
+    {
+      name: "academia-active-tenant-name",
+      value: ACTIVE_TENANT_NAME,
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
 
   try {
     await page.goto(path, { waitUntil: "commit" });

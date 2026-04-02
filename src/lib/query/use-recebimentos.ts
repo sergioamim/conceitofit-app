@@ -58,9 +58,10 @@ export function useCreateRecebimentoAvulso(tenantId: string | undefined) {
       dataPagamento?: string;
       formaPagamento?: TipoFormaPagamento;
     }) => createRecebimentoAvulsoService({ tenantId: tenantId!, data }),
-    onSuccess: () => {
+    onSuccess: async () => {
       if (tenantId) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.recebimentos.all(tenantId) });
+        await queryClient.invalidateQueries({ queryKey: ["recebimentos", "list", tenantId] });
+        await queryClient.refetchQueries({ queryKey: ["recebimentos", "list", tenantId], type: "active" });
       }
     },
   });
@@ -72,9 +73,30 @@ export function useEmitirNfse(tenantId: string | undefined) {
   return useMutation({
     mutationFn: (id: string) =>
       emitirNfsePagamentoApi({ tenantId: tenantId!, id }),
-    onSuccess: () => {
+    onSuccess: async (pagamento) => {
       if (tenantId) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.recebimentos.all(tenantId) });
+        queryClient.setQueriesData<RecebimentosData>(
+          { queryKey: ["recebimentos", "list", tenantId] },
+          (current) =>
+            current
+              ? {
+                  ...current,
+                  pagamentos: current.pagamentos.map((item) =>
+                    item.id === pagamento.id
+                      ? {
+                          ...item,
+                          nfseEmitida: pagamento.nfseEmitida,
+                          nfseNumero: pagamento.nfseNumero,
+                          nfseChave: pagamento.nfseChave,
+                          dataEmissaoNfse: pagamento.dataEmissaoNfse,
+                        }
+                      : item
+                  ),
+                }
+              : current
+        );
+        await queryClient.invalidateQueries({ queryKey: ["recebimentos", "list", tenantId] });
+        await queryClient.refetchQueries({ queryKey: ["recebimentos", "list", tenantId], type: "active" });
       }
     },
   });

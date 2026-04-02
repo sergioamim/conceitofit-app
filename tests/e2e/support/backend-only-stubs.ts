@@ -2724,6 +2724,53 @@ export async function installAdminCrudApiMocks(page: Page) {
     },
   ];
 
+  const salas = [
+    {
+      id: "sala-principal",
+      tenantId: "tenant-centro",
+      nome: "Sala Principal",
+      descricao: "Espaço principal para aulas coletivas.",
+      capacidadePadrao: 20,
+      ativo: true,
+    },
+  ];
+
+  let atividadesGrade = [
+    {
+      id: "atividade-grade-musculacao",
+      tenantId: "tenant-centro",
+      atividadeId: "atividade-musculacao",
+      salaId: "sala-principal",
+      funcionarioId: undefined,
+      diasSemana: ["SEG", "QUA", "SEX"],
+      definicaoHorario: "PREVIAMENTE" as const,
+      horaInicio: "07:00",
+      horaFim: "08:00",
+      capacidade: 20,
+      checkinLiberadoMinutosAntes: 60,
+      duracaoMinutos: 60,
+      codigo: "MUSC-SEG",
+      grupoAtividades: "Musculação",
+      publico: "Adulto",
+      dificuldade: 2 as const,
+      descricaoAgenda: "Treino livre na sala principal.",
+      acessoClientes: "TODOS_CLIENTES" as const,
+      permiteReserva: true,
+      limitarVagasAgregadores: false,
+      exibirWellhub: false,
+      permitirSaidaAntesInicio: false,
+      permitirEscolherNumeroVaga: false,
+      exibirNoAppCliente: true,
+      exibirNoAutoatendimento: false,
+      exibirNoWodTv: false,
+      finalizarAtividadeAutomaticamente: true,
+      desabilitarListaEspera: false,
+      local: "Sala Principal",
+      instrutor: undefined,
+      ativo: true,
+    },
+  ];
+
   const profileCatalog = [
     {
       id: "perfil-owner",
@@ -4614,6 +4661,13 @@ export async function installAdminCrudApiMocks(page: Page) {
       return;
     }
 
+    if (path === "/api/v1/administrativo/salas" && method === "GET") {
+      const tenantId = resolveTenantId(url);
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivas"), false);
+      await fulfillJson(route, filterActiveItems(salas.filter((item) => item.tenantId === tenantId), activeOnly));
+      return;
+    }
+
     if (path === "/api/v1/administrativo/atividades" && method === "POST") {
       const tenantId = resolveTenantId(url);
       const payload = parseBody<Partial<AtividadeSeed> & { descricao?: string; icone?: string; cor?: string; permiteCheckin?: boolean; checkinObrigatorio?: boolean }>(request);
@@ -4673,6 +4727,138 @@ export async function installAdminCrudApiMocks(page: Page) {
     if (/^\/api\/v1\/administrativo\/atividades\/[^/]+$/.test(path) && method === "DELETE") {
       const atividadeId = path.split("/").at(-1) ?? "";
       atividades = atividades.filter((item) => item.id !== atividadeId);
+      await fulfillNoContent(route);
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/atividades-grade" && method === "GET") {
+      const tenantId = resolveTenantId(url);
+      const atividadeId = url.searchParams.get("atividadeId")?.trim();
+      const activeOnly = normalizeBooleanInput(url.searchParams.get("apenasAtivas"), false);
+      await fulfillJson(
+        route,
+        filterActiveItems(
+          atividadesGrade
+            .filter((item) => item.tenantId === tenantId)
+            .filter((item) => (atividadeId ? item.atividadeId === atividadeId : true)),
+          activeOnly,
+        ),
+      );
+      return;
+    }
+
+    if (path === "/api/v1/administrativo/atividades-grade" && method === "POST") {
+      const payload = parseBody<Partial<(typeof atividadesGrade)[number]>>(request);
+      const tenantId = resolveTenantId(url);
+      const atividadeId = payload.atividadeId?.trim() || atividades[0]?.id || "";
+      const salaId = payload.salaId?.trim() || salas.find((item) => item.tenantId === tenantId && item.ativo)?.id || undefined;
+      const funcionarioId = payload.funcionarioId?.trim() || undefined;
+      const created = {
+        id: nextId("atividade-grade", "atividadeGrade"),
+        tenantId,
+        atividadeId,
+        salaId,
+        funcionarioId,
+        diasSemana: payload.diasSemana?.length ? payload.diasSemana : ["SEG"],
+        definicaoHorario: payload.definicaoHorario ?? "PREVIAMENTE",
+        horaInicio: payload.horaInicio?.trim() || "07:00",
+        horaFim: payload.horaFim?.trim() || "08:00",
+        capacidade: Math.max(1, normalizeNumberInput(payload.capacidade, 20)),
+        checkinLiberadoMinutosAntes: Math.max(0, normalizeNumberInput(payload.checkinLiberadoMinutosAntes, 60)),
+        duracaoMinutos: Math.max(1, normalizeNumberInput(payload.duracaoMinutos, 60)),
+        codigo: payload.codigo?.trim() || undefined,
+        grupoAtividades: payload.grupoAtividades?.trim() || undefined,
+        publico: payload.publico?.trim() || undefined,
+        dificuldade: payload.dificuldade,
+        descricaoAgenda: payload.descricaoAgenda?.trim() || undefined,
+        acessoClientes: payload.acessoClientes ?? "TODOS_CLIENTES",
+        permiteReserva: payload.permiteReserva ?? true,
+        limitarVagasAgregadores: payload.limitarVagasAgregadores ?? false,
+        exibirWellhub: payload.exibirWellhub ?? false,
+        permitirSaidaAntesInicio: payload.permitirSaidaAntesInicio ?? false,
+        permitirEscolherNumeroVaga: payload.permitirEscolherNumeroVaga ?? false,
+        exibirNoAppCliente: payload.exibirNoAppCliente ?? true,
+        exibirNoAutoatendimento: payload.exibirNoAutoatendimento ?? false,
+        exibirNoWodTv: payload.exibirNoWodTv ?? false,
+        finalizarAtividadeAutomaticamente: payload.finalizarAtividadeAutomaticamente ?? true,
+        desabilitarListaEspera: payload.desabilitarListaEspera ?? false,
+        local: payload.local?.trim() || salas.find((item) => item.id === salaId)?.nome,
+        instrutor:
+          payload.instrutor?.trim()
+          || funcionarios.find((item) => item.id === funcionarioId)?.nome,
+        ativo: true,
+      };
+      atividadesGrade = [created, ...atividadesGrade];
+      await fulfillJson(route, created, 201);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/atividades-grade\/[^/]+$/.test(path) && method === "PUT") {
+      const gradeId = path.split("/").at(-1) ?? "";
+      const payload = parseBody<Partial<(typeof atividadesGrade)[number]>>(request);
+      atividadesGrade = atividadesGrade.map((item) =>
+        item.id === gradeId
+          ? {
+              ...item,
+              atividadeId: payload.atividadeId?.trim() || item.atividadeId,
+              salaId: payload.salaId?.trim() || item.salaId,
+              funcionarioId: payload.funcionarioId?.trim() || item.funcionarioId,
+              diasSemana: payload.diasSemana?.length ? payload.diasSemana : item.diasSemana,
+              definicaoHorario: payload.definicaoHorario ?? item.definicaoHorario,
+              horaInicio: payload.horaInicio?.trim() || item.horaInicio,
+              horaFim: payload.horaFim?.trim() || item.horaFim,
+              capacidade: payload.capacidade == null ? item.capacidade : Math.max(1, normalizeNumberInput(payload.capacidade, item.capacidade)),
+              checkinLiberadoMinutosAntes:
+                payload.checkinLiberadoMinutosAntes == null
+                  ? item.checkinLiberadoMinutosAntes
+                  : Math.max(0, normalizeNumberInput(payload.checkinLiberadoMinutosAntes, item.checkinLiberadoMinutosAntes)),
+              duracaoMinutos:
+                payload.duracaoMinutos == null
+                  ? item.duracaoMinutos
+                  : Math.max(1, normalizeNumberInput(payload.duracaoMinutos, item.duracaoMinutos)),
+              codigo: payload.codigo?.trim() || item.codigo,
+              grupoAtividades: payload.grupoAtividades?.trim() || item.grupoAtividades,
+              publico: payload.publico?.trim() || item.publico,
+              dificuldade: payload.dificuldade ?? item.dificuldade,
+              descricaoAgenda: payload.descricaoAgenda?.trim() || item.descricaoAgenda,
+              acessoClientes: payload.acessoClientes ?? item.acessoClientes,
+              permiteReserva: payload.permiteReserva ?? item.permiteReserva,
+              limitarVagasAgregadores: payload.limitarVagasAgregadores ?? item.limitarVagasAgregadores,
+              exibirWellhub: payload.exibirWellhub ?? item.exibirWellhub,
+              permitirSaidaAntesInicio: payload.permitirSaidaAntesInicio ?? item.permitirSaidaAntesInicio,
+              permitirEscolherNumeroVaga: payload.permitirEscolherNumeroVaga ?? item.permitirEscolherNumeroVaga,
+              exibirNoAppCliente: payload.exibirNoAppCliente ?? item.exibirNoAppCliente,
+              exibirNoAutoatendimento: payload.exibirNoAutoatendimento ?? item.exibirNoAutoatendimento,
+              exibirNoWodTv: payload.exibirNoWodTv ?? item.exibirNoWodTv,
+              finalizarAtividadeAutomaticamente: payload.finalizarAtividadeAutomaticamente ?? item.finalizarAtividadeAutomaticamente,
+              desabilitarListaEspera: payload.desabilitarListaEspera ?? item.desabilitarListaEspera,
+              local: payload.local?.trim() || item.local,
+              instrutor: payload.instrutor?.trim() || item.instrutor,
+              ativo: payload.ativo ?? item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, atividadesGrade.find((item) => item.id === gradeId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/atividades-grade\/[^/]+\/toggle$/.test(path) && method === "PATCH") {
+      const gradeId = path.split("/").at(-2) ?? "";
+      atividadesGrade = atividadesGrade.map((item) =>
+        item.id === gradeId
+          ? {
+              ...item,
+              ativo: !item.ativo,
+            }
+          : item,
+      );
+      await fulfillJson(route, atividadesGrade.find((item) => item.id === gradeId) ?? null);
+      return;
+    }
+
+    if (/^\/api\/v1\/administrativo\/atividades-grade\/[^/]+$/.test(path) && method === "DELETE") {
+      const gradeId = path.split("/").at(-1) ?? "";
+      atividadesGrade = atividadesGrade.filter((item) => item.id !== gradeId);
       await fulfillNoContent(route);
       return;
     }

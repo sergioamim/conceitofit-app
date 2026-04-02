@@ -237,7 +237,7 @@ export async function installProtectedShellMocks(
   }
 
   if (options.routes?.academia !== false) {
-    await page.route("**/api/v1/academia", async (route) => {
+    await page.route("**/api/v1/academia**", async (route) => {
       if (route.request().method() !== "GET") {
         await route.fallback();
         return;

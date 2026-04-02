@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Plus, Pencil, Trash2, Power } from "lucide-react";
 import { useDialogState } from "@/hooks/use-dialog-state";
 import {
@@ -205,18 +205,24 @@ export function AtividadesContent({ initialData, tenantId }: AtividadesContentPr
                   setEditing(a);
                   modal.open();
                 }}
+                aria-label={`Editar atividade ${a.nome}`}
+                title={`Editar atividade ${a.nome}`}
                 className="rounded-md border border-border bg-secondary px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 <Pencil className="size-3" />
               </button>
               <button
                 onClick={() => handleToggle(a.id)}
+                aria-label={`${a.ativo ? "Desativar" : "Ativar"} atividade ${a.nome}`}
+                title={`${a.ativo ? "Desativar" : "Ativar"} atividade ${a.nome}`}
                 className="rounded-md border border-border bg-secondary px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 <Power className="size-3" />
               </button>
               <button
                 onClick={() => handleDelete(a.id)}
+                aria-label={`Remover atividade ${a.nome}`}
+                title={`Remover atividade ${a.nome}`}
                 className="rounded-md border border-gym-danger/40 bg-gym-danger/10 px-2 py-1 text-xs text-gym-danger hover:border-gym-danger/70"
               >
                 <Trash2 className="size-3" />
