@@ -13255,7 +13255,7 @@
         "description": "Ajustar o fluxo de `Nova Venda` para que a seleção de plano/serviço/produto materialize itens no carrinho e habilite o CTA principal.",
         "details": "Escopo: `tests/e2e/comercial-fluxo.spec.ts` e os componentes de venda/carrinho. Evidência atual em `test-results/comercial-fluxo-Fluxo-come-5254f-rato-pendente-de-assinatura-chromium/error-context.md`: cliente e planos renderizados, porém `Itens da venda` permanece com `0 item(ns)` e o botão `Finalizar venda` segue desabilitado. Revisar a integração entre seleção do item, estado do carrinho, totalização e gating do submit. Investigar especialmente os componentes em `src/app/(app)/vendas/nova` e a composição compartilhada em `src/components/shared/checkout-payment.tsx` / `cart-items`. Fora de escopo: o resíduo de consistência do backend real após conversão comercial, já catalogado na Task 352.",
         "testStrategy": "Executar `tests/e2e/comercial-fluxo.spec.ts` em chromium e validar que, após selecionar cliente e plano, o carrinho contém ao menos um item e `Finalizar venda` fica habilitado. Depois rodar o smoke comercial real para confirmar que o frontend não bloqueia mais o fluxo antes da etapa dependente do backend.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "348",
           "349",
@@ -13264,7 +13264,7 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-02T04:54:55.081Z"
+        "updatedAt": "2026-04-02T05:07:36.570Z"
       },
       {
         "id": "356",
@@ -13302,9 +13302,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-02T05:00:34.000Z",
+      "lastModified": "2026-04-02T05:07:36.571Z",
       "taskCount": 353,
-      "completedCount": 349,
+      "completedCount": 350,
       "tags": [
         "master"
       ]
