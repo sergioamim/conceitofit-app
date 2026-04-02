@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { changeForcedPasswordApi } from "@/lib/api/auth";
 import {
+  AUTH_SESSION_CLEARED_EVENT,
+  AUTH_SESSION_UPDATED_EVENT,
   getForcePasswordChangeRequiredFromSession,
   getNetworkNameFromSession,
   getNetworkSubdomainFromSession,
@@ -19,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 type ForcedPasswordChangeFormValues = import("zod").input<typeof forcedPasswordChangeFormSchema>;
+type GuardStatus = "checking" | "allowed" | "redirecting" | "error";
+const FIRST_ACCESS_GUARD_TIMEOUT_MS = 4_000;
 
 export function ForcedPasswordChangeFlow({
   nextPath,
@@ -27,7 +32,8 @@ export function ForcedPasswordChangeFlow({
 }) {
   const router = useRouter();
   const resolvedNextPath = useMemo(() => resolvePostLoginPath(nextPath), [nextPath]);
-  const [guardStatus, setGuardStatus] = useState<"checking" | "allowed">("checking");
+  const [guardStatus, setGuardStatus] = useState<GuardStatus>("checking");
+  const [guardError, setGuardError] = useState<string | null>(null);
   const [networkName, setNetworkName] = useState<string>("sua rede");
   const [networkSubdomain, setNetworkSubdomain] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,23 +48,63 @@ export function ForcedPasswordChangeFlow({
   });
 
   useEffect(() => {
-    const requiresForcePasswordChange = getForcePasswordChangeRequiredFromSession();
-    const nextNetworkSubdomain = getNetworkSubdomainFromSession() ?? null;
+    let mounted = true;
+    let settled = false;
 
-    if (!hasActiveSession()) {
-      router.replace(buildLoginHref(undefined, nextNetworkSubdomain));
-      return;
-    }
+    const syncGuard = () => {
+      if (!mounted) return;
 
-    if (!requiresForcePasswordChange) {
-      router.replace(resolvedNextPath);
-      return;
-    }
+      const nextNetworkSubdomain = getNetworkSubdomainFromSession() ?? null;
+      setNetworkName(getNetworkNameFromSession() ?? "sua rede");
+      setNetworkSubdomain(nextNetworkSubdomain);
 
-    setNetworkName(getNetworkNameFromSession() ?? "sua rede");
-    setNetworkSubdomain(nextNetworkSubdomain);
-    setGuardStatus("allowed");
+      if (!hasActiveSession()) {
+        settled = true;
+        setGuardError("Sua sessão de primeiro acesso expirou ou não foi carregada. Faça login novamente para continuar.");
+        setGuardStatus("redirecting");
+        router.replace(buildLoginHref(undefined, nextNetworkSubdomain));
+        return;
+      }
+
+      if (!getForcePasswordChangeRequiredFromSession()) {
+        settled = true;
+        setGuardError(null);
+        setGuardStatus("redirecting");
+        router.replace(resolvedNextPath);
+        return;
+      }
+
+      settled = true;
+      setGuardError(null);
+      setGuardStatus("allowed");
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      if (!mounted || settled) return;
+      setNetworkName(getNetworkNameFromSession() ?? "sua rede");
+      setNetworkSubdomain(getNetworkSubdomainFromSession() ?? null);
+      setGuardError("Não foi possível validar o contexto do primeiro acesso. Tente entrar novamente.");
+      setGuardStatus("error");
+    }, FIRST_ACCESS_GUARD_TIMEOUT_MS);
+
+    syncGuard();
+    window.addEventListener(AUTH_SESSION_UPDATED_EVENT, syncGuard);
+    window.addEventListener(AUTH_SESSION_CLEARED_EVENT, syncGuard);
+    window.addEventListener("storage", syncGuard);
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(timeoutId);
+      window.removeEventListener(AUTH_SESSION_UPDATED_EVENT, syncGuard);
+      window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, syncGuard);
+      window.removeEventListener("storage", syncGuard);
+    };
   }, [resolvedNextPath, router]);
+
+  useEffect(() => {
+    void router.prefetch(resolvedNextPath);
+    void router.prefetch(buildLoginHref(undefined, networkSubdomain));
+  }, [networkSubdomain, resolvedNextPath, router]);
 
   async function handleSubmit(values: ForcedPasswordChangeFormValues) {
     setSaving(true);
@@ -102,8 +148,21 @@ export function ForcedPasswordChangeFlow({
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {guardStatus === "checking" ? (
-            <p className="text-sm text-muted-foreground">Validando contexto do primeiro acesso...</p>
+          {guardStatus === "checking" || guardStatus === "redirecting" ? (
+            <p className="text-sm text-muted-foreground">
+              {guardStatus === "redirecting"
+                ? "Redirecionando com o contexto autenticado..."
+                : "Validando contexto do primeiro acesso..."}
+            </p>
+          ) : guardStatus === "error" ? (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-3 py-3 text-sm text-gym-danger">
+                {guardError ?? "Não foi possível validar o contexto do primeiro acesso."}
+              </div>
+              <Button asChild className="w-full">
+                <Link href={buildLoginHref(undefined, networkSubdomain)}>Voltar para o login</Link>
+              </Button>
+            </div>
           ) : (
             <form className="space-y-4" onSubmit={form.handleSubmit(handleSubmit)}>
               <div className="space-y-2">

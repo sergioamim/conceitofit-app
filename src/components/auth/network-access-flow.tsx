@@ -30,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type FlowMode = "login" | "recovery" | "first-access";
 type LoginStep = "LOGIN" | "TENANT";
+const NETWORK_CONTEXT_TIMEOUT_MS = 4_000;
 
 type LoginFormValues = import("zod").input<typeof networkLoginFormSchema>;
 type CredentialFormValues = import("zod").input<typeof networkCredentialFormSchema>;
@@ -98,9 +99,15 @@ export function NetworkAccessFlow({
 
   useEffect(() => {
     let mounted = true;
+    const timeoutId = window.setTimeout(() => {
+      if (!mounted) return;
+      setLoadingContext(false);
+      setContextError((current) => current ?? "Tempo esgotado ao carregar o contexto da rede.");
+    }, NETWORK_CONTEXT_TIMEOUT_MS);
 
     async function loadContext() {
       setLoadingContext(true);
+      setContextError(null);
       try {
         const response = await getAccessNetworkContextApi(networkSubdomain, { allowDefaultFallback: false });
         if (!mounted) return;
@@ -115,12 +122,14 @@ export function NetworkAccessFlow({
         setContextError(nextError);
       } finally {
         if (mounted) setLoadingContext(false);
+        window.clearTimeout(timeoutId);
       }
     }
 
     void loadContext();
     return () => {
       mounted = false;
+      window.clearTimeout(timeoutId);
     };
   }, [networkSubdomain]);
 
@@ -128,6 +137,12 @@ export function NetworkAccessFlow({
     if (mode === "login" && hasActiveSession()) {
       router.replace(resolvedNextPath);
     }
+  }, [mode, resolvedNextPath, router]);
+
+  useEffect(() => {
+    if (mode !== "login") return;
+    void router.prefetch(resolvedNextPath);
+    void router.prefetch(buildForcedPasswordChangeHref(resolvedNextPath));
   }, [mode, resolvedNextPath, router]);
 
   useEffect(() => {
@@ -150,7 +165,7 @@ export function NetworkAccessFlow({
   async function finalizeTenantStep(targetTenantId: string) {
     await setTenantContextApi(targetTenantId);
     setPreferredTenantId(targetTenantId);
-    router.push(resolvedNextPath);
+    router.replace(resolvedNextPath);
   }
 
   async function handleLoginSubmit(values: LoginFormValues) {
@@ -167,7 +182,7 @@ export function NetworkAccessFlow({
       });
 
       if (session.forcePasswordChangeRequired) {
-        router.push(buildForcedPasswordChangeHref(resolvedNextPath));
+        router.replace(buildForcedPasswordChangeHref(resolvedNextPath));
         return;
       }
 

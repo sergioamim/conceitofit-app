@@ -50,6 +50,11 @@ export function LegacyLoginFlow({
   }, [resolvedNextPath, router]);
 
   useEffect(() => {
+    void router.prefetch(resolvedNextPath);
+    void router.prefetch(buildForcedPasswordChangeHref(resolvedNextPath));
+  }, [resolvedNextPath, router]);
+
+  useEffect(() => {
     if (step === "LOGIN") {
       loginForm.reset({
         username: process.env.NEXT_PUBLIC_DEV_AUTH_EMAIL ?? "",
@@ -65,7 +70,7 @@ export function LegacyLoginFlow({
     try {
       const session = await loginApi({ email: values.username.trim(), password: values.password });
       if (session.forcePasswordChangeRequired) {
-        router.push(buildForcedPasswordChangeHref(resolvedNextPath));
+        router.replace(buildForcedPasswordChangeHref(resolvedNextPath));
         return;
       }
       const context = await getTenantContextApi();
@@ -75,7 +80,7 @@ export function LegacyLoginFlow({
 
       if (preferredIsValid && preferredTenantId) {
         await setTenantContextApi(preferredTenantId);
-        router.push(resolvedNextPath);
+        router.replace(resolvedNextPath);
         return;
       }
 
@@ -95,7 +100,7 @@ export function LegacyLoginFlow({
     try {
       await setTenantContextApi(values.tenantId);
       setPreferredTenantId(values.tenantId);
-      router.push(resolvedNextPath);
+      router.replace(resolvedNextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível definir a unidade prioritária.");
     } finally {

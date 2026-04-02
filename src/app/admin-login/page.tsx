@@ -36,6 +36,11 @@ export default function AdminLoginPage() {
     }
   }, [router]);
 
+  useEffect(() => {
+    void router.prefetch("/admin");
+    void router.prefetch(buildForcedPasswordChangeHref("/admin"));
+  }, [router]);
+
   async function onSubmit(values: BackofficeLoginForm) {
     setSaving(true);
     setError(null);
@@ -45,10 +50,10 @@ export default function AdminLoginPage() {
         password: values.password,
       });
       if (session.forcePasswordChangeRequired) {
-        router.push(buildForcedPasswordChangeHref("/admin"));
+        router.replace(buildForcedPasswordChangeHref("/admin"));
         return;
       }
-      router.push("/admin");
+      router.replace("/admin");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao autenticar.");
     } finally {
