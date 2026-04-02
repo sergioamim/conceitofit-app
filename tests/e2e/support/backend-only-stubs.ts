@@ -1,4 +1,5 @@
 import type { Page, Request, Route } from "@playwright/test";
+import type { AtividadeGrade, DiaSemana } from "@/lib/types";
 import {
   buildE2EAuthSession,
   installE2EAuthSession,
@@ -2735,7 +2736,7 @@ export async function installAdminCrudApiMocks(page: Page) {
     },
   ];
 
-  let atividadesGrade = [
+  let atividadesGrade: AtividadeGrade[] = [
     {
       id: "atividade-grade-musculacao",
       tenantId: "tenant-centro",
@@ -2863,6 +2864,7 @@ export async function installAdminCrudApiMocks(page: Page) {
     conta: 10,
     maquininha: 10,
     atividade: 10,
+    atividadeGrade: 10,
     membership: 10,
   };
 
@@ -4758,18 +4760,29 @@ export async function installAdminCrudApiMocks(page: Page) {
     }
 
     if (path === "/api/v1/administrativo/atividades-grade" && method === "POST") {
-      const payload = parseBody<Partial<(typeof atividadesGrade)[number]>>(request);
+      const payload = parseBody<
+        Partial<(typeof atividadesGrade)[number]> & {
+          funcionarioId?: string;
+          local?: string;
+          instrutor?: string;
+        }
+      >(request);
+      const payloadExtras = payload as Record<string, unknown>;
       const tenantId = resolveTenantId(url);
       const atividadeId = payload.atividadeId?.trim() || atividades[0]?.id || "";
       const salaId = payload.salaId?.trim() || salas.find((item) => item.tenantId === tenantId && item.ativo)?.id || undefined;
-      const funcionarioId = payload.funcionarioId?.trim() || undefined;
-      const created = {
+      const funcionarioId =
+        typeof payloadExtras.funcionarioId === "string" ? payloadExtras.funcionarioId.trim() || undefined : undefined;
+      const created: AtividadeGrade = {
         id: nextId("atividade-grade", "atividadeGrade"),
         tenantId,
         atividadeId,
         salaId,
         funcionarioId,
-        diasSemana: payload.diasSemana?.length ? payload.diasSemana : ["SEG"],
+        diasSemana:
+          Array.isArray(payload.diasSemana) && payload.diasSemana.length > 0
+            ? (payload.diasSemana as DiaSemana[])
+            : ["SEG"],
         definicaoHorario: payload.definicaoHorario ?? "PREVIAMENTE",
         horaInicio: payload.horaInicio?.trim() || "07:00",
         horaFim: payload.horaFim?.trim() || "08:00",
@@ -4792,9 +4805,12 @@ export async function installAdminCrudApiMocks(page: Page) {
         exibirNoWodTv: payload.exibirNoWodTv ?? false,
         finalizarAtividadeAutomaticamente: payload.finalizarAtividadeAutomaticamente ?? true,
         desabilitarListaEspera: payload.desabilitarListaEspera ?? false,
-        local: payload.local?.trim() || salas.find((item) => item.id === salaId)?.nome,
+        local:
+          typeof payloadExtras.local === "string"
+            ? payloadExtras.local.trim() || salas.find((item) => item.id === salaId)?.nome
+            : salas.find((item) => item.id === salaId)?.nome,
         instrutor:
-          payload.instrutor?.trim()
+          (typeof payloadExtras.instrutor === "string" ? payloadExtras.instrutor.trim() : "")
           || funcionarios.find((item) => item.id === funcionarioId)?.nome,
         ativo: true,
       };
@@ -4805,15 +4821,28 @@ export async function installAdminCrudApiMocks(page: Page) {
 
     if (/^\/api\/v1\/administrativo\/atividades-grade\/[^/]+$/.test(path) && method === "PUT") {
       const gradeId = path.split("/").at(-1) ?? "";
-      const payload = parseBody<Partial<(typeof atividadesGrade)[number]>>(request);
+      const payload = parseBody<
+        Partial<(typeof atividadesGrade)[number]> & {
+          funcionarioId?: string;
+          local?: string;
+          instrutor?: string;
+        }
+      >(request);
+      const payloadExtras = payload as Record<string, unknown>;
       atividadesGrade = atividadesGrade.map((item) =>
         item.id === gradeId
           ? {
               ...item,
               atividadeId: payload.atividadeId?.trim() || item.atividadeId,
               salaId: payload.salaId?.trim() || item.salaId,
-              funcionarioId: payload.funcionarioId?.trim() || item.funcionarioId,
-              diasSemana: payload.diasSemana?.length ? payload.diasSemana : item.diasSemana,
+              funcionarioId:
+                typeof payloadExtras.funcionarioId === "string"
+                  ? payloadExtras.funcionarioId.trim() || item.funcionarioId
+                  : item.funcionarioId,
+              diasSemana:
+                Array.isArray(payload.diasSemana) && payload.diasSemana.length > 0
+                  ? (payload.diasSemana as DiaSemana[])
+                  : item.diasSemana,
               definicaoHorario: payload.definicaoHorario ?? item.definicaoHorario,
               horaInicio: payload.horaInicio?.trim() || item.horaInicio,
               horaFim: payload.horaFim?.trim() || item.horaFim,
@@ -4842,8 +4871,14 @@ export async function installAdminCrudApiMocks(page: Page) {
               exibirNoWodTv: payload.exibirNoWodTv ?? item.exibirNoWodTv,
               finalizarAtividadeAutomaticamente: payload.finalizarAtividadeAutomaticamente ?? item.finalizarAtividadeAutomaticamente,
               desabilitarListaEspera: payload.desabilitarListaEspera ?? item.desabilitarListaEspera,
-              local: payload.local?.trim() || item.local,
-              instrutor: payload.instrutor?.trim() || item.instrutor,
+              local:
+                typeof payloadExtras.local === "string"
+                  ? payloadExtras.local.trim() || item.local
+                  : item.local,
+              instrutor:
+                typeof payloadExtras.instrutor === "string"
+                  ? payloadExtras.instrutor.trim() || item.instrutor
+                  : item.instrutor,
               ativo: payload.ativo ?? item.ativo,
             }
           : item,

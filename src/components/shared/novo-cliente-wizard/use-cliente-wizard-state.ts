@@ -108,6 +108,15 @@ export function useClienteWizardState(callbacks: {
     draft.clearDraft();
   }
 
+  async function handleSuccessClose() {
+    const created = result?.aluno;
+    callbacks.onClose();
+    fullReset();
+    if (callbacks.onDone) {
+      await callbacks.onDone(created);
+    }
+  }
+
   async function handleNext() {
     if (step === 1) {
       const ok = await trigger(["nome", "telefone", "cpf", "email"]);
@@ -170,9 +179,6 @@ export function useClienteWizardState(callbacks: {
         setResult(resp);
         setStep(4);
         draft.clearDraft();
-        if (callbacks.onDone) {
-          void callbacks.onDone(resp.aluno);
-        }
       } finally {
         setLoading(false);
       }
@@ -216,5 +222,6 @@ export function useClienteWizardState(callbacks: {
     fullReset,
     handleNext,
     handleCreateOnly,
+    handleSuccessClose,
   };
 }

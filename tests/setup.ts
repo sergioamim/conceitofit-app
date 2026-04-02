@@ -14,6 +14,15 @@ afterEach(() => {
 // happy-dom/jsdom provide their own, but the native one can shadow it.
 // Ensure `window.localStorage` has the full Storage API.
 if (typeof window !== "undefined") {
+  const happyDomWindow = window as Window & {
+    happyDOM?: {
+      settings: {
+        disableCSSFileLoading: boolean;
+        disableIframePageLoading: boolean;
+        disableJavaScriptFileLoading: boolean;
+      };
+    };
+  };
   const store = new Map<string, string>();
   const storage: Storage = {
     get length() {
@@ -42,9 +51,9 @@ if (typeof window !== "undefined") {
   });
 
   // Avoid resource fetches triggered by DOM nodes such as <link> and <iframe>.
-  window.happyDOM.settings.disableCSSFileLoading = true;
-  window.happyDOM.settings.disableIframePageLoading = true;
-  window.happyDOM.settings.disableJavaScriptFileLoading = true;
+  happyDomWindow.happyDOM!.settings.disableCSSFileLoading = true;
+  happyDomWindow.happyDOM!.settings.disableIframePageLoading = true;
+  happyDomWindow.happyDOM!.settings.disableJavaScriptFileLoading = true;
 }
 
 const TEST_FETCH_RESPONSE_HEADERS = { "content-type": "application/json" };

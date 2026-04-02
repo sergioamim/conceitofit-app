@@ -31,12 +31,12 @@ function ClientesPageContent() {
           onClose={ws.wizard.close}
           onDone={async (created, opts) => {
             await ws.load();
-            if (created && opts?.openSale) {
-              ws.wizard.close();
-              ws.router.push(
-                `/vendas/nova?clienteId=${encodeURIComponent(created.id)}&prefill=1`,
-              );
+            if (!created) return;
+            if (opts?.openSale) {
+              ws.router.push(`/vendas/nova?clienteId=${encodeURIComponent(created.id)}&prefill=1`);
+              return;
             }
+            ws.router.push(`/clientes/${encodeURIComponent(created.id)}`);
           }}
         />
       ) : null}
