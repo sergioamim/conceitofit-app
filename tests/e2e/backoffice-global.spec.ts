@@ -1,29 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-
-async function loginWithRedirect(page: Page, targetPath: string) {
-  await page.goto(targetPath);
-  await expect(page).toHaveURL(new RegExp(`/login\\?next=${encodeURIComponent(targetPath).replace(/\//g, "\\/")}`));
-
-  await page.getByLabel("Usuário").fill("admin@academia.local");
-  await page.getByLabel("Senha").fill("12345678");
-  await page.getByRole("button", { name: "Entrar" }).click();
-
-  const targetRegex = new RegExp(`${targetPath.replace(/\//g, "\\/")}$`);
-  const navigatedDirectly = await page
-    .waitForURL(targetRegex, { timeout: 1500 })
-    .then(() => true)
-    .catch(() => false);
-
-  if (!navigatedDirectly) {
-    const saveTenantButton = page.getByRole("button", { name: /Salvar e continuar/i });
-    await expect(saveTenantButton).toBeVisible();
-    await page.getByRole("combobox").click();
-    await page.getByRole("option").first().click();
-    await saveTenantButton.click();
-  }
-
-  await expect(page).toHaveURL(targetRegex);
-}
+import { expect, test } from "@playwright/test";
+import { openAdminCrudPage } from "./support/admin-crud-helpers";
 
 test.describe("Backoffice global", () => {
   test("gerencia academias e unidades pelo fluxo principal", async ({ page }) => {
@@ -35,13 +11,13 @@ test.describe("Backoffice global", () => {
     const unidadeEditada = `${unidadeNome} Editada`;
     const unidadeEmail = `unidade-${stamp}@qa.local`;
 
-    await loginWithRedirect(page, "/admin");
+    await openAdminCrudPage(page, "/admin");
     await expect(page.getByRole("heading", { name: "Dashboard do backoffice" })).toBeVisible();
 
     await page.goto("/admin/academias");
     await expect(page.getByRole("heading", { name: "Academias" })).toBeVisible();
-    await page.getByLabel("Nome *").fill(academiaNome);
-    await page.getByLabel("Documento").fill(academiaDocumento);
+    await page.locator("#academia-nome").fill(academiaNome);
+    await page.locator("#academia-doc").fill(academiaDocumento);
     await page.getByRole("button", { name: "Criar academia" }).click();
 
     const academiaRow = page.getByRole("row").filter({ hasText: academiaNome });
@@ -68,11 +44,7 @@ test.describe("Backoffice global", () => {
 
     const unidadeRow = page.getByRole("row").filter({ hasText: unidadeNome });
     await expect(unidadeRow).toBeVisible();
-    await page.getByRole("link", { name: "Abrir academia" }).click();
-    await expect(page.getByRole("heading", { name: academiaNome })).toBeVisible();
-    const unidadeCard = page.getByText(unidadeNome).locator("..").locator("..");
-    await expect(unidadeCard).toBeVisible();
-    await unidadeCard.getByRole("link", { name: "Editar unidade" }).click();
+    await unidadeRow.getByRole("button", { name: "Editar" }).click();
     await expect(page.getByRole("button", { name: "Salvar unidade" })).toBeVisible();
     await page.getByLabel("Nome da unidade *").fill(unidadeEditada);
     await page.getByRole("button", { name: "Salvar unidade" }).click();

@@ -72,6 +72,7 @@ export const E2E_AUTH_SESSION_STORAGE_KEYS = [
   "academia-auth-force-password-change-required",
 ] as const;
 const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
+const ACCESS_TOKEN_COOKIE_KEY = "academia-access-token";
 const E2E_BASE_URL = "http://localhost:3000";
 
 function resolveE2EBaseUrl() {
@@ -211,6 +212,7 @@ export function buildE2EAuthSession(seed: E2EAuthSessionSeed = {}): ResolvedE2EA
 
 function writeE2EAuthSessionInBrowser(session: ResolvedE2EAuthSession): void {
   const activeTenantCookieKey = "academia-active-tenant-id";
+  const accessTokenCookieKey = "academia-access-token";
   const storage = window.localStorage;
   const setStorageValue = (key: string, value?: string) => {
     if (!value) {
@@ -254,6 +256,7 @@ function writeE2EAuthSessionInBrowser(session: ResolvedE2EAuthSession): void {
   setStorageValue("academia-auth-network-name", session.networkName);
   setStorageValue("academia-auth-active-tenant-id", session.activeTenantId);
   writeCookie(activeTenantCookieKey, session.activeTenantId);
+  writeCookie(accessTokenCookieKey, session.token);
   setStorageValue("academia-auth-preferred-tenant-id", session.preferredTenantId);
   setStorageValue("academia-auth-base-tenant-id", session.baseTenantId);
   setStorageValue(
@@ -294,6 +297,13 @@ export async function installE2EAuthSession(
       },
     ]);
   }
+  await page.context().addCookies([
+    {
+      name: ACCESS_TOKEN_COOKIE_KEY,
+      value: session.token,
+      url: resolveE2EBaseUrl(),
+    },
+  ]);
   await page.addInitScript(writeE2EAuthSessionInBrowser, session);
   return session;
 }
@@ -312,6 +322,13 @@ export async function applyE2EAuthSession(
       },
     ]);
   }
+  await page.context().addCookies([
+    {
+      name: ACCESS_TOKEN_COOKIE_KEY,
+      value: session.token,
+      url: resolveE2EBaseUrl(),
+    },
+  ]);
   await page.evaluate(writeE2EAuthSessionInBrowser, session);
   return session;
 }

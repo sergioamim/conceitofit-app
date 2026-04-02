@@ -55,8 +55,16 @@ export async function openAdminCrudPage(page: Page, path: string) {
 }
 
 export async function selectComboboxOption(page: Page, combobox: Locator, optionName: string) {
+  await combobox.scrollIntoViewIfNeeded();
+  const tagName = await combobox.evaluate((element) => element.tagName.toLowerCase());
+
+  if (tagName === "select") {
+    await combobox.selectOption({ label: optionName });
+    return;
+  }
+
   await combobox.click();
-  await page.getByRole("option", { name: optionName }).click();
+  await page.getByRole("option", { name: optionName, exact: true }).click();
 }
 
 export function uniqueSuffix() {

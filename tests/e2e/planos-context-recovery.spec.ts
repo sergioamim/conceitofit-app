@@ -171,7 +171,7 @@ test.describe("Planos shell recovery", () => {
     await expect(page).not.toHaveURL(/\/login/);
 
     await expect(page.getByRole("heading", { name: "Planos" })).toBeVisible();
-    await expect(page.getByRole("cell", { name: "Plano Gold" })).toBeVisible();
+    await expect(page.getByText("Plano Gold").first()).toBeVisible();
     await expect(page.locator("body")).toContainText(TENANT.nome);
     await expect(page.locator("body")).not.toContainText(
       "Hydration failed because the server rendered HTML didn't match the client"

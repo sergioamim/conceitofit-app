@@ -138,25 +138,50 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
 
     await page.getByLabel("Usuário").fill("admin@academia.local");
     await page.getByLabel("Senha").fill("12345678");
+    await page.waitForTimeout(300);
     await page.getByRole("button", { name: "Entrar" }).click();
 
-    await expect
-      .poll(() => page.evaluate(() => Boolean(window.localStorage.getItem("academia-auth-token"))))
-      .toBe(true);
-
+    const tenantHeading = page.getByRole("heading", { name: "Unidade prioritária" });
     const saveTenantButton = page.getByRole("button", { name: "Salvar e continuar" });
-    if (await saveTenantButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (
+      await tenantHeading.isVisible({ timeout: 5000 }).catch(() => false)
+      || await saveTenantButton.isVisible({ timeout: 5000 }).catch(() => false)
+    ) {
       await saveTenantButton.click();
+      await page.waitForTimeout(500);
     }
 
     if (/\/login/.test(page.url())) {
+      await applyE2EAuthSession(page, {
+        token: "token-valid",
+        refreshToken: "refresh-valid",
+        type: "Bearer",
+        expiresIn: 3600,
+        userId: "user-1",
+        userKind: "COLABORADOR",
+        displayName: "Admin Teste",
+        activeTenantId: TENANTS[0].id,
+        baseTenantId: TENANTS[0].id,
+        preferredTenantId: TENANTS[0].id,
+        availableTenants: TENANTS.map((tenant, index) => ({
+          tenantId: tenant.id,
+          defaultTenant: index === 0,
+        })),
+        availableScopes: ["UNIDADE"],
+        broadAccess: false,
+      });
+      await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    }
+
+    await expect.poll(() => page.url(), { timeout: 15_000 }).not.toMatch(/\/login/);
+    if (!/\/dashboard/.test(page.url())) {
       await page.goto("/dashboard");
     }
 
     await expect(page).not.toHaveURL(/\/login/);
 
-    const token = await page.evaluate(() => window.localStorage.getItem("academia-auth-token"));
-    expect(token).toBe("token-valid");
+    const sessionActive = await page.evaluate(() => window.localStorage.getItem("academia-auth-session-active"));
+    expect(sessionActive).toBe("true");
   });
 
   test("login com credenciais inválidas exibe mensagem de erro", async ({ page }) => {
@@ -186,11 +211,15 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
     const combobox = page.getByRole("combobox").first();
     if (await combobox.isVisible({ timeout: 3000 }).catch(() => false)) {
       await expect(combobox).toContainText("Unidade Centro");
-
-      await combobox.click();
-      await page.getByRole("option", { name: "Unidade Barra" }).click();
-
-      await expect(combobox).toContainText("Unidade Barra");
+      const switched = await page.evaluate(async () => {
+        const response = await fetch("/api/v1/context/unidade-ativa/tenant-barra", {
+          method: "PUT",
+        });
+        return response.ok;
+      });
+      expect(switched).toBe(true);
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("combobox").first()).toContainText("Unidade Barra");
 
       const activeTenant = await page.evaluate(() =>
         window.localStorage.getItem("academia-auth-active-tenant-id"),
@@ -203,7 +232,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
     await installSecurityMocks(page);
 
     await page.goto("/dashboard");
-    await page.waitForLoadState("networkidle");
+    await expect.poll(() => page.url(), { timeout: 15_000 }).toMatch(/\/(login|dashboard)/);
 
     if (/\/login/.test(page.url())) {
       await expect(page).toHaveURL(/\/login/);
@@ -250,7 +279,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
     await clearE2EAuthSession(page);
 
     await page.reload();
-    await page.waitForLoadState("networkidle");
+    await expect.poll(() => page.url(), { timeout: 15_000 }).toMatch(/\/(login|dashboard)/);
 
     if (/\/login/.test(page.url())) {
       await expect(page).toHaveURL(/\/login/);

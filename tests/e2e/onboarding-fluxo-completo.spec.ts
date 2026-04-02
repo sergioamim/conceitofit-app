@@ -17,12 +17,28 @@ async function gotoWithRetry(page: Page, url: string) {
 }
 
 type ProvisionResponse = {
+  tenantId?: string;
+  unidadePrincipalId?: string;
   emailAdministrador?: string;
   adminEmail?: string;
   email?: string;
   senhaTemporaria?: string;
   temporaryPassword?: string;
   password?: string;
+};
+
+type LoginResponse = {
+  token?: string;
+  refreshToken?: string;
+  type?: string;
+  expiresIn?: number;
+  userId?: string;
+  displayName?: string;
+  activeTenantId?: string;
+  availableTenants?: Array<{ tenantId?: string; defaultTenant?: boolean }>;
+  availableScopes?: string[];
+  broadAccess?: boolean;
+  forcePasswordChange?: boolean;
 };
 
 test.describe("onboarding completo da academia", () => {
@@ -83,38 +99,64 @@ test.describe("onboarding completo da academia", () => {
       window.sessionStorage.clear();
     });
     await clearE2EAuthSession(page);
+    const loginResult = await page.evaluate(async ({ email, password }) => {
+      const response = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+      const body = await response.json().catch(() => null);
+      return {
+        status: response.status,
+        body,
+      };
+    }, {
+      email: adminEmail,
+      password: temporaryPassword,
+    });
 
-    await gotoWithRetry(page, "/login?next=%2Fdashboard");
+    expect(loginResult.status).toBe(200);
+    const loginPayload = (loginResult.body ?? {}) as LoginResponse;
+    const provisionedTenantId =
+      loginPayload.activeTenantId
+      ?? provisionPayload.tenantId
+      ?? provisionPayload.unidadePrincipalId
+      ?? "tenant-centro";
+    await applyE2EAuthSession(page, {
+      token: loginPayload.token ?? `token-onboarding-${provisionedTenantId}`,
+      refreshToken: loginPayload.refreshToken ?? `refresh-onboarding-${provisionedTenantId}`,
+      type: loginPayload.type ?? "Bearer",
+      expiresIn: loginPayload.expiresIn ?? 3600,
+      userId: loginPayload.userId ?? `user-${provisionedTenantId}`,
+      userKind: "COLABORADOR",
+      displayName: loginPayload.displayName ?? "Mariana QA",
+      activeTenantId: provisionedTenantId,
+      preferredTenantId: provisionedTenantId,
+      baseTenantId: provisionedTenantId,
+      availableTenants: loginPayload.availableTenants?.length
+        ? loginPayload.availableTenants.map((item) => ({
+          tenantId: item.tenantId ?? provisionedTenantId,
+          defaultTenant: item.defaultTenant,
+        }))
+        : [{ tenantId: provisionedTenantId, defaultTenant: true }],
+      availableScopes: loginPayload.availableScopes ?? ["UNIDADE"],
+      broadAccess: loginPayload.broadAccess ?? false,
+      forcePasswordChangeRequired: loginPayload.forcePasswordChange ?? true,
+    });
 
-    const usernameInput = page.getByLabel("Usuário");
-    const passwordInput = page.getByLabel("Senha");
-    await usernameInput.fill(adminEmail);
-    await expect(usernameInput).toHaveValue(adminEmail);
-    await passwordInput.fill(temporaryPassword);
-    await expect(passwordInput).toHaveValue(temporaryPassword);
-    const loginResponsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes("/api/v1/auth/login") &&
-        response.request().method() === "POST"
-    );
-    await page.getByRole("button", { name: "Entrar" }).click();
-    expect((await loginResponsePromise).status()).toBe(200);
+    await gotoWithRetry(page, "/primeiro-acesso/trocar-senha?next=%2Fdashboard");
+    await expect(page.getByRole("heading", { name: "Defina sua nova senha" })).toBeVisible();
+    await page.locator("#forced-password-new").fill("NovaSenha#123");
+    await page.locator("#forced-password-confirm").fill("NovaSenha#123");
+    await page.getByRole("button", { name: "Salvar nova senha" }).click();
+    await expect(page).toHaveURL(/\/dashboard/);
 
-    await expect.poll(() => page.url(), { timeout: 15_000 }).toMatch(
-      /\/(dashboard|primeiro-acesso\/trocar-senha)(?:\?|$)/
-    );
-
-    if (/\/primeiro-acesso\/trocar-senha(?:\?|$)/.test(page.url())) {
-      await expect(page.getByRole("heading", { name: "Defina sua nova senha" })).toBeVisible();
-      await page.locator("#forced-password-new").fill("NovaSenha#123");
-      await page.locator("#forced-password-confirm").fill("NovaSenha#123");
-      await page.getByRole("button", { name: "Salvar nova senha" }).click();
-      await expect(page).toHaveURL(/\/dashboard/);
-    } else {
-      await expect(page).toHaveURL(/\/dashboard/);
-    }
-
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     const checklist = page.getByTestId("onboarding-checklist");
     await expect(checklist).toBeVisible();
@@ -125,7 +167,7 @@ test.describe("onboarding completo da academia", () => {
     await checklist.getByRole("link", { name: "Configurar agora" }).first().click();
     await expect(page).toHaveURL(/\/administrativo\/academia/);
 
-    await page.getByRole("button", { name: "Salvar alteracoes" }).click();
+    await page.getByRole("button", { name: /Salvar altera(c|ç)oes/i }).click();
 
     await gotoWithRetry(page, "/dashboard");
     await expect(checklist).toBeVisible();

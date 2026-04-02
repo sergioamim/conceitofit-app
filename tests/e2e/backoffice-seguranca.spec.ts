@@ -796,7 +796,7 @@ test.describe("Backoffice segurança global", () => {
 
     await page.getByLabel("Nome completo").fill("Carla Operações");
     await page.getByLabel("E-mail principal").fill("carla@qa.local");
-    await page.getByLabel("CPF opcional").fill("111.222.333-44");
+    await page.locator("#global-user-cpf").fill("111.222.333-44");
     await page.getByLabel("Academia de referência global").click();
     await page.getByRole("option", { name: "Rede Norte" }).click();
     await page.locator("label").filter({ hasText: "Unidade Centro" }).locator("input").check();
