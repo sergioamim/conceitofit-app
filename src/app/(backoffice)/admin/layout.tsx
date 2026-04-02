@@ -12,12 +12,14 @@ import {
   AUTH_SESSION_UPDATED_EVENT,
   clearAuthSession,
   getNetworkSlugFromSession,
+  getRolesFromSession,
   hasActiveSession,
 } from "@/lib/api/session";
 import { logoutApi } from "@/lib/api/auth";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { backofficeNavGroups, allBackofficeNavItems } from "@/lib/backoffice/nav-items";
 import type { BackofficeNavItem } from "@/lib/backoffice/nav-items";
+import { hasElevatedAccess } from "@/lib/access-control";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -384,6 +386,10 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
   const access = useAuthAccess();
   const [hydrated, setHydrated] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const sessionRoles = useMemo(() => getRolesFromSession(), [authenticated]);
+  const resolvedRoles = access.roles.length > 0 ? access.roles : sessionRoles;
+  const accessLoading = access.loading && resolvedRoles.length === 0;
+  const canAccessElevated = access.canAccessElevatedModules || hasElevatedAccess(resolvedRoles);
 
   useEffect(() => {
     function syncAuthenticated() {
@@ -405,7 +411,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     router.replace("/admin-login");
   }, [authenticated, hydrated, pathname, router, searchParams]);
 
-  if (!hydrated || access.loading) {
+  if (!hydrated || accessLoading) {
     return (
       <AdminShellFrame pathname={pathname}>
         <AdminStatusPanel className="border-border text-muted-foreground">
@@ -425,7 +431,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!access.canAccessElevatedModules) {
+  if (!canAccessElevated) {
     return (
       <AdminShellFrame pathname={pathname}>
         <AdminStatusPanel className="border-gym-danger/30 bg-gym-danger/10 text-gym-danger">
