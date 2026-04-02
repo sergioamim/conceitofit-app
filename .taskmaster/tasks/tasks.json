@@ -13218,13 +13218,93 @@
         "priority": "high",
         "subtasks": [],
         "updatedAt": "2026-04-02T03:48:09.597Z"
+      },
+      {
+        "id": "353",
+        "title": "Corrigir bootstrap de contexto e stuck-loaders do shell autenticado",
+        "description": "Resolver os cenários em que o shell autenticado sobe, mas fica preso sem unidade ativa resolvida ou com dashboard em loading indefinido.",
+        "details": "Escopo: `tests/e2e/app-multiunidade-contrato.spec.ts`, `tests/e2e/sessao-multiunidade.spec.ts`, `tests/e2e/comercial-smoke-real.spec.ts` e pontos compartilhados do shell autenticado. Evidências atuais: `Selecionar unidade ativa` desabilitado e `Carregando dashboard...` persistente em `test-results/app-multiunidade-contrato--b3fe4-aliza-bloqueios-contratuais-chromium/error-context.md` e `test-results/sessao-multiunidade-Sessão-35194-1-e-o-refresh-também-expira-chromium/error-context.md`. Revisar principalmente `src/components/layout/active-tenant-selector.tsx`, `src/app/(app)/dashboard/dashboard-content.tsx`, o bootstrap de sessão/contexto e os contratos usados pelos helpers E2E. A saída esperada é: shell converge para dados, empty state ou erro explícito; não fica preso em loading nem bloqueia a troca/visualização de unidade ativa.",
+        "testStrategy": "Executar `tests/e2e/app-multiunidade-contrato.spec.ts`, `tests/e2e/sessao-multiunidade.spec.ts` e `tests/e2e/comercial-smoke-real.spec.ts` em chromium. Validar que o seletor de unidade deixa de ficar desabilitado quando o contexto é elegível e que o dashboard não permanece indefinidamente em loading.",
+        "status": "done",
+        "dependencies": [
+          "348",
+          "349"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T05:00:34.000Z"
+      },
+      {
+        "id": "354",
+        "title": "Corrigir guards de auth contextualizada, rede e primeiro acesso",
+        "description": "Eliminar os estados de loading infinito e travas de guard nos fluxos de login por rede, primeiro acesso e onboarding completo.",
+        "details": "Escopo: `tests/e2e/auth-rede.spec.ts`, `tests/e2e/onboarding-fluxo-completo.spec.ts` e fluxos compartilhados de credencial contextualizada. Evidências atuais: `Carregando contexto da rede...` em `test-results/auth-rede-acesso-por-rede--3dc7c-ogin-exigir-primeiro-acesso-chromium/error-context.md` e `Validando contexto do primeiro acesso...` em `test-results/onboarding-fluxo-completo--197d5-conclui-o-checklist-inicial-chromium/error-context.md`. Revisar `src/components/auth/network-access-flow.tsx`, `src/components/auth/forced-password-change-flow.tsx`, bootstrap contextual, timeout/fallback de guard e transições após resolução de contexto. Fora de escopo: reescrever contrato de autenticação do backend. O foco é garantir que a UI sempre avance para formulário, fallback ou erro visível.",
+        "testStrategy": "Executar `tests/e2e/auth-rede.spec.ts` e `tests/e2e/onboarding-fluxo-completo.spec.ts` em chromium. Confirmar que os fluxos deixam de parar em estados intermediários de “carregando/validando contexto” e que os redirecionamentos de primeiro acesso convergem.",
+        "status": "pending",
+        "dependencies": [
+          "348",
+          "351"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T10:30:00.000Z"
+      },
+      {
+        "id": "355",
+        "title": "Corrigir composição do carrinho em Nova Venda e reabilitar finalização",
+        "description": "Ajustar o fluxo de `Nova Venda` para que a seleção de plano/serviço/produto materialize itens no carrinho e habilite o CTA principal.",
+        "details": "Escopo: `tests/e2e/comercial-fluxo.spec.ts` e os componentes de venda/carrinho. Evidência atual em `test-results/comercial-fluxo-Fluxo-come-5254f-rato-pendente-de-assinatura-chromium/error-context.md`: cliente e planos renderizados, porém `Itens da venda` permanece com `0 item(ns)` e o botão `Finalizar venda` segue desabilitado. Revisar a integração entre seleção do item, estado do carrinho, totalização e gating do submit. Investigar especialmente os componentes em `src/app/(app)/vendas/nova` e a composição compartilhada em `src/components/shared/checkout-payment.tsx` / `cart-items`. Fora de escopo: o resíduo de consistência do backend real após conversão comercial, já catalogado na Task 352.",
+        "testStrategy": "Executar `tests/e2e/comercial-fluxo.spec.ts` em chromium e validar que, após selecionar cliente e plano, o carrinho contém ao menos um item e `Finalizar venda` fica habilitado. Depois rodar o smoke comercial real para confirmar que o frontend não bloqueia mais o fluxo antes da etapa dependente do backend.",
+        "status": "in-progress",
+        "dependencies": [
+          "348",
+          "349",
+          "351",
+          "352"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T04:54:55.081Z"
+      },
+      {
+        "id": "356",
+        "title": "Estabilizar bootstrap de permissão e sessão do backoffice global",
+        "description": "Corrigir o shell global do backoffice para não ficar preso em validação de permissões ou redirecionar incorretamente para guard legado.",
+        "details": "Escopo: `tests/e2e/backoffice-seguranca.spec.ts`, `tests/e2e/admin-backoffice-global-crud.spec.ts`, `tests/e2e/bi-operacional.spec.ts` e rotas que dependem do layout global de `/admin`. Evidências atuais: `Validando permissões do backoffice...` preso em `test-results/backoffice-seguranca-Backo-73db2-de-em-unidades-e-onboarding-chromium/error-context.md` e o bucket de BI caindo numa tela genérica de login em `test-results/bi-operacional-BI-operacio-e6feb-rede-com-filtros-gerenciais-chromium/error-context.md`. Revisar `src/app/(backoffice)/admin/layout.tsx`, bootstrap de autenticação administrativa, resolução de `access.loading`, comportamento de redirect e acoplamento entre shell global e áreas operacionais. Fora de escopo: mudanças de backend em RBAC global que alterem o contrato de permissões.",
+        "testStrategy": "Executar `tests/e2e/backoffice-seguranca.spec.ts`, `tests/e2e/admin-backoffice-global-crud.spec.ts` e `tests/e2e/bi-operacional.spec.ts` em chromium. Validar que o backoffice sai do estado de validação, renderiza o conteúdo esperado e não cai em login indevido quando a fixture fornece sessão válida.",
+        "status": "pending",
+        "dependencies": [
+          "348",
+          "350"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T10:30:00.000Z"
+      },
+      {
+        "id": "357",
+        "title": "Revalidar buckets Playwright após correções frontend e isolar resíduo final",
+        "description": "Reexecutar os buckets impactados depois das correções frontend e documentar o que restar como dependência real de backend ou fixture.",
+        "details": "Escopo: rerun focalizado dos buckets afetados nesta rodada, com nova consolidação de evidências. O objetivo não é “passar pano” nos testes, mas confirmar que as correções frontend removeram stuck-loaders, guard loops, problemas de carrinho e bootstrap de backoffice. Em seguida, registrar o residual final com separação explícita entre: frontend resolvido, backend ainda necessário e ruído de harness. Reutilizar como referência os documentos `docs/PLAYWRIGHT_RESIDUOS_BACKEND_TASK_352_2026-04-02.md` e `docs/PLAYWRIGHT_FRONTEND_TASKS_2026-04-02.md`.",
+        "testStrategy": "Executar, no mínimo, `tests/e2e/app-multiunidade-contrato.spec.ts`, `tests/e2e/sessao-multiunidade.spec.ts`, `tests/e2e/auth-rede.spec.ts`, `tests/e2e/onboarding-fluxo-completo.spec.ts`, `tests/e2e/comercial-fluxo.spec.ts`, `tests/e2e/backoffice-seguranca.spec.ts` e `tests/e2e/bi-operacional.spec.ts`. Consolidar novo relatório e validar que qualquer falha remanescente está claramente classificada como frontend, backend ou fixture.",
+        "status": "pending",
+        "dependencies": [
+          "353",
+          "354",
+          "355",
+          "356",
+          "352"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T10:30:00.000Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-02T04:00:38.000Z",
-      "taskCount": 348,
-      "completedCount": 348,
+      "lastModified": "2026-04-02T05:00:34.000Z",
+      "taskCount": 353,
+      "completedCount": 349,
       "tags": [
         "master"
       ]
