@@ -53,7 +53,6 @@ async function abrirComSessaoMock(page: Page) {
     availableTenants: [{ tenantId: "tenant-mananciais-s1", defaultTenant: true }],
   });
   await abrirRota(page, "/clientes", /\/clientes(?:\?|$)/);
-  await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
 }
 
@@ -102,7 +101,12 @@ test.describe("Fluxo comercial canônico", () => {
       /\/vendas\/nova/
     );
     await expect(page.getByRole("heading", { name: "Nova Venda" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("#venda-cliente-suggestion")).toHaveValue(
+      new RegExp(payload.nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+      { timeout: 30_000 },
+    );
     await page.getByRole("button", { name: /Plano Premium/i }).click();
+    await expect(page.getByRole("button", { name: "Finalizar venda" })).toBeEnabled();
     const vendaRequestPromise = page.waitForRequest((request) =>
       request.method() === "POST"
       && /\/api\/v1\/comercial\/vendas(?:\?|$)/.test(request.url())
