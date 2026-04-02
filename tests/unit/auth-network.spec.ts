@@ -10,11 +10,13 @@ import {
 import { getSessionBootstrapApi } from "../../src/lib/api/contexto-unidades";
 import {
   clearAuthSession,
+  hasBackofficeReturnSession,
   getAvailableScopesFromSession,
   getBroadAccessFromSession,
   getForcePasswordChangeRequiredFromSession,
   getNetworkSubdomainFromSession,
   getNetworkSlugFromSession,
+  restoreBackofficeReturnSession,
   saveAuthSession,
 } from "../../src/lib/api/session";
 import { installMockBrowser, mockFetchWithSequence } from "./support/test-runtime";
@@ -147,6 +149,18 @@ test.describe("auth por rede", () => {
   });
 
   test("adminEntrarComoUnidadeApi troca para a unidade via endpoint de contexto", async () => {
+    saveAuthSession({
+      token: "token-admin",
+      refreshToken: "refresh-admin",
+      userId: "user-admin",
+      userKind: "ADMIN",
+      displayName: "Admin Master",
+      activeTenantId: "tenant-admin",
+      tenantBaseId: "tenant-admin-base",
+      availableScopes: ["GLOBAL"],
+      broadAccess: true,
+    });
+
     const { calls, restore } = mockFetchWithSequence([
       {
         body: {
@@ -176,8 +190,11 @@ test.describe("auth por rede", () => {
       expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
         tenantId: "tenant-centro",
       });
+      expect(hasBackofficeReturnSession()).toBeTruthy();
       expect(session.activeTenantId).toBe("tenant-centro");
       expect(session.token).toBe("token-admin-unidade");
+      const restored = restoreBackofficeReturnSession();
+      expect(restored?.originalSession.token).toBe("token-admin");
     } finally {
       restore();
     }

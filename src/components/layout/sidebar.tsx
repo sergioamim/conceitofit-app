@@ -21,7 +21,12 @@ import {
   Sun,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { clearAuthSession, getNetworkSlugFromSession } from "@/lib/api/session";
+import {
+  clearAuthSession,
+  getNetworkSlugFromSession,
+  hasBackofficeReturnSession,
+  restoreBackofficeReturnSession,
+} from "@/lib/api/session";
 import { logoutApi } from "@/lib/api/auth";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { DEFAULT_TENANT_APP_NAME } from "@/lib/tenant/tenant-theme";
@@ -527,6 +532,7 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
     ? superUserMarkers.some((marker) => normalizedUserKind.includes(marker))
     : false;
   const isSuperUser = hasSuperRole || hasSuperKind;
+  const canReturnToBackoffice = hasBackofficeReturnSession();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -575,7 +581,6 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
                 { label: "Trocar senha", href: "/conta/seguranca" },
                 { label: "Preferências", href: "/conta/preferencias" },
                 { label: "Notificações", href: "/conta/notificacoes" },
-                ...(isSuperUser ? [{ label: "Backoffice Admin", href: "/admin" }] : []),
               ].map((item) => (
                 <Link
                   key={item.label}
@@ -586,6 +591,29 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
                   {item.label}
                 </Link>
               ))}
+              {isSuperUser ? (
+                canReturnToBackoffice ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      restoreBackofficeReturnSession();
+                      window.location.assign("/admin");
+                    }}
+                    className="block w-full rounded-md px-2 py-2 text-left text-[13px] text-[color:color-mix(in_srgb,var(--sidebar-foreground)_68%,transparent)] hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  >
+                    Voltar ao backoffice
+                  </button>
+                ) : (
+                  <Link
+                    href="/admin"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="block w-full rounded-md px-2 py-2 text-left text-[13px] text-[color:color-mix(in_srgb,var(--sidebar-foreground)_68%,transparent)] hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  >
+                    Backoffice Admin
+                  </Link>
+                )
+              ) : null}
               <div className="my-1 h-px bg-sidebar-border" />
               <button
                 type="button"

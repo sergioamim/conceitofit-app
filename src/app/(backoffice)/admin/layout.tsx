@@ -13,7 +13,9 @@ import {
   clearAuthSession,
   getNetworkSlugFromSession,
   getRolesFromSession,
+  hasBackofficeReturnSession,
   hasActiveSession,
+  restoreBackofficeReturnSession,
 } from "@/lib/api/session";
 import { logoutApi } from "@/lib/api/auth";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
@@ -410,6 +412,20 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     if (!hydrated || authenticated) return;
     router.replace("/admin-login");
   }, [authenticated, hydrated, pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (!hydrated || !authenticated || accessLoading || canAccessElevated) {
+      return;
+    }
+    if (!hasBackofficeReturnSession()) {
+      return;
+    }
+    const restored = restoreBackofficeReturnSession();
+    if (!restored) {
+      return;
+    }
+    window.location.assign("/admin");
+  }, [accessLoading, authenticated, canAccessElevated, hydrated]);
 
   if (!hydrated || accessLoading) {
     return (

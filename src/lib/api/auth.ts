@@ -10,6 +10,7 @@ import {
   getAccessTokenType,
   getActiveTenantIdFromSession,
   getAvailableTenantsFromSession,
+  getAuthSessionSnapshot,
   getBaseTenantIdFromSession,
   getBroadAccessFromSession,
   getDisplayNameFromSession,
@@ -18,10 +19,10 @@ import {
   getNetworkSubdomainFromSession,
   getNetworkNameFromSession,
   getNetworkSlugFromSession,
-  getAuthSessionSnapshot,
   getSessionClaimsFromToken,
   getUserIdFromSession,
   getUserKindFromSession,
+  rememberBackofficeReturnSession,
   saveAuthSession,
   type AuthSession,
 } from "./session";
@@ -334,6 +335,7 @@ export async function adminLoginApi(input: {
 }
 
 export async function adminEntrarComoUnidadeApi(input: AdminEntrarComoUnidadeRequest): Promise<AuthSession> {
+  rememberBackofficeReturnSession(getAuthSessionSnapshot());
   const response = await apiRequest<LoginApiResponse>({
     path: "/api/v1/auth/context/tenant",
     method: "POST",
@@ -342,7 +344,10 @@ export async function adminEntrarComoUnidadeApi(input: AdminEntrarComoUnidadeReq
       tenantId: input.tenantId,
     },
   });
-  const session = normalizeSession(response);
+  const session = normalizeSession(response, {
+    preserveTenantContext: true,
+    fallbackActiveTenantId: input.tenantId,
+  });
   saveAuthSession(session);
   void import("@/lib/shared/analytics")
     .then(({ trackLogin }) => {

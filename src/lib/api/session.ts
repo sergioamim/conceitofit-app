@@ -50,6 +50,11 @@ export interface ImpersonationSessionState {
   originalSession: AuthSession;
 }
 
+export interface BackofficeReturnSessionState {
+  originalSession: AuthSession;
+  storedAt: string;
+}
+
 import {
   getAccessToken as getAccessTokenFromStore,
   getRefreshToken as getRefreshTokenFromStore,
@@ -80,6 +85,7 @@ const FORCE_PASSWORD_CHANGE_REQUIRED_KEY = "academia-auth-force-password-change-
 const SESSION_ACTIVE_KEY = "academia-auth-session-active";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
 const IMPERSONATION_SESSION_KEY = "academia-impersonation-session";
+const BACKOFFICE_RETURN_SESSION_KEY = "academia-backoffice-return-session";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
 export const AUTH_SESSION_CLEARED_EVENT = "academia-session-cleared";
@@ -337,6 +343,17 @@ function normalizeScopesFromClaims(value: unknown): AuthSessionScope[] {
     .filter((item): item is AuthSessionScope => item === "UNIDADE" || item === "REDE" || item === "GLOBAL");
 }
 
+function canReturnToBackofficeFromSession(session: AuthSession | null | undefined): boolean {
+  if (!session) return false;
+
+  const scopes =
+    session.availableScopes?.length
+      ? session.availableScopes
+      : getSessionClaimsFromToken(session.token).availableScopes ?? [];
+
+  return scopes.includes("GLOBAL") || Boolean(session.broadAccess);
+}
+
 export function getSessionClaimsFromToken(token?: string): AuthSessionTokenClaims {
   if (!token) return {};
   const payload = decodeJwtPayload(token);
@@ -396,6 +413,66 @@ export function getImpersonationSession(): ImpersonationSessionState | null {
   } catch {
     return null;
   }
+}
+
+export function getBackofficeReturnSession(): BackofficeReturnSessionState | null {
+  if (!isBrowser()) return null;
+  const raw = window.sessionStorage.getItem(BACKOFFICE_RETURN_SESSION_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<BackofficeReturnSessionState>;
+    if (!parsed || typeof parsed !== "object" || !parsed.originalSession) {
+      return null;
+    }
+    if (!canReturnToBackofficeFromSession(parsed.originalSession)) {
+      return null;
+    }
+    return {
+      originalSession: parsed.originalSession,
+      storedAt: parsed.storedAt ?? "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function hasBackofficeReturnSession(): boolean {
+  return Boolean(getBackofficeReturnSession());
+}
+
+export function rememberBackofficeReturnSession(session?: AuthSession | null): void {
+  if (!isBrowser()) return;
+  if (hasBackofficeReturnSession()) return;
+
+  const originalSession = session ?? getAuthSessionSnapshot();
+  if (!canReturnToBackofficeFromSession(originalSession)) {
+    return;
+  }
+  if (!originalSession) {
+    return;
+  }
+
+  window.sessionStorage.setItem(
+    BACKOFFICE_RETURN_SESSION_KEY,
+    JSON.stringify({
+      originalSession,
+      storedAt: new Date().toISOString(),
+    } satisfies BackofficeReturnSessionState)
+  );
+}
+
+export function clearBackofficeReturnSession(): void {
+  if (!isBrowser()) return;
+  window.sessionStorage.removeItem(BACKOFFICE_RETURN_SESSION_KEY);
+}
+
+export function restoreBackofficeReturnSession(): BackofficeReturnSessionState | null {
+  const snapshot = getBackofficeReturnSession();
+  if (!snapshot) return null;
+  clearBackofficeReturnSession();
+  saveAuthSession(snapshot.originalSession);
+  return snapshot;
 }
 
 export function isImpersonating(): boolean {
@@ -573,6 +650,7 @@ export function clearAvailableTenants(): void {
 export function clearAuthSession(): void {
   clearTokens();
   clearServerSessionCookies();
+  clearBackofficeReturnSession();
   clearAuthStorageKeys([
     EXPIRES_IN_KEY,
     SESSION_ACTIVE_KEY,
