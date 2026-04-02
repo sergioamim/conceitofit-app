@@ -56,6 +56,16 @@ async function abrirComSessaoMock(page: Page) {
   await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
 }
 
+async function selecionarPlano(page: Page, nomePlano: RegExp) {
+  const radio = page.getByRole("radio", { name: nomePlano });
+  if (await radio.count()) {
+    await radio.click();
+    return;
+  }
+
+  await page.getByRole("button", { name: nomePlano }).click();
+}
+
 async function preencherDadosPessoais(page: Page, input: ClientePayload) {
   const modal = page.getByRole("dialog");
   await expect(modal.getByRole("heading", { name: "Novo cliente" })).toBeVisible();
@@ -105,7 +115,13 @@ test.describe("Fluxo comercial canônico", () => {
       new RegExp(payload.nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
       { timeout: 30_000 },
     );
-    await page.getByRole("button", { name: /Plano Premium/i }).click();
+    const cartSection = page.locator("div").filter({
+      has: page.getByRole("heading", { name: "Itens da venda" }),
+    }).first();
+    await selecionarPlano(page, /Plano Premium/i);
+    await expect(cartSection).not.toContainText("0 item(ns)");
+    await expect(cartSection).toContainText(/Plano Premium/i);
+    await expect(cartSection.getByText("Nenhum item adicionado.")).toBeHidden();
     await expect(page.getByRole("button", { name: "Finalizar venda" })).toBeEnabled();
     const vendaRequestPromise = page.waitForRequest((request) =>
       request.method() === "POST"
