@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { serverFetch } from "@/lib/shared/server-fetch";
 import { logger } from "@/lib/shared/logger";
@@ -23,9 +22,9 @@ async function resolvePlano(slug: string, tenantId: string): Promise<Plano | nul
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const hdrs = await headers();
-  const tenantSlug = hdrs.get("x-tenant-slug") ?? "Academia";
-  const tenantId = hdrs.get("x-tenant-id") ?? "";
+  const { resolveStorefrontHeaders } = await import("../../resolve-storefront-headers");
+  const { tenantId, tenantSlug: rawSlug } = await resolveStorefrontHeaders();
+  const tenantSlug = rawSlug || "Academia";
 
   let planoNome = slug.replace(/-/g, " ");
   if (tenantId) {
@@ -41,8 +40,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function PlanoSlugPage({ params }: PageProps) {
   const { slug } = await params;
-  const hdrs = await headers();
-  const tenantId = hdrs.get("x-tenant-id") ?? "";
+  const { resolveStorefrontHeaders } = await import("../../resolve-storefront-headers");
+  const { tenantId } = await resolveStorefrontHeaders();
 
   if (!tenantId) return notFound();
 

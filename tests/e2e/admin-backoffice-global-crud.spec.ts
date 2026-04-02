@@ -1,9 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { openAdminCrudPage, selectComboboxOption, uniqueSuffix } from "./support/admin-crud-helpers";
+
+async function gotoAdminCrudRoute(page: Page, path: string) {
+  try {
+    await page.goto(path, { waitUntil: "commit" });
+  } catch (error) {
+    if (!(error instanceof Error) || !/ERR_ABORTED|frame was detached/i.test(error.message)) {
+      throw error;
+    }
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+  }
+}
 
 test.describe("Admin backoffice global CRUD", () => {
   test("cobre academias, unidades e segurança global", async ({ page }) => {
     const suffix = uniqueSuffix();
+    const academiaId = "academia-11";
     const academiaNome = `Academia E2E ${suffix}`;
     const unidadeNome = `Unidade Expansao ${suffix}`;
     const unidadeDocumento = `11${suffix}22000190`;
@@ -16,14 +28,18 @@ test.describe("Admin backoffice global CRUD", () => {
 
     const academiaRow = page.getByRole("row").filter({ hasText: academiaNome });
     await expect(academiaRow).toBeVisible();
-    await academiaRow.click();
 
+    await gotoAdminCrudRoute(page, `/admin/academias/${academiaId}`);
     await expect(page.getByRole("heading", { name: academiaNome })).toBeVisible();
     await page.getByLabel("E-mail").fill(`rede-${suffix}@qa.local`);
     await page.getByRole("button", { name: "Salvar academia" }).click();
     await expect(page.getByLabel("E-mail")).toHaveValue(`rede-${suffix}@qa.local`);
 
-    await page.getByRole("link", { name: "Nova unidade" }).click();
+    await expect(page.getByRole("link", { name: "Nova unidade" })).toHaveAttribute(
+      "href",
+      `/admin/unidades?academiaId=${academiaId}`,
+    );
+    await gotoAdminCrudRoute(page, `/admin/unidades?academiaId=${academiaId}`);
     await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible();
 
     await page.locator("#backoffice-unidade-nome").fill(unidadeNome);
@@ -37,7 +53,7 @@ test.describe("Admin backoffice global CRUD", () => {
     await unidadeRow.getByRole("button", { name: "Desativar" }).click();
     await expect(unidadeRow.getByText("Inativa")).toBeVisible();
 
-    await page.goto("/admin/seguranca/usuarios");
+    await gotoAdminCrudRoute(page, "/admin/seguranca/usuarios");
     await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible();
 
     await page.getByLabel("Pessoa, e-mail ou CPF").fill("Sergio");

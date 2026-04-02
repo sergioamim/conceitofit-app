@@ -1,11 +1,11 @@
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ExperimentalForm } from "./experimental-form";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const hdrs = await headers();
-  const tenantSlug = hdrs.get("x-tenant-slug") ?? "Academia";
+  const { resolveStorefrontHeaders } = await import("../resolve-storefront-headers");
+  const { tenantSlug: rawSlug } = await resolveStorefrontHeaders();
+  const tenantSlug = rawSlug || "Academia";
   return {
     title: `Aula Experimental Gratis — ${tenantSlug}`,
     description: `Agende sua aula experimental gratis na ${tenantSlug}. Sem compromisso.`,
@@ -13,9 +13,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ExperimentalPage() {
-  const hdrs = await headers();
-  const tenantId = hdrs.get("x-tenant-id") ?? "";
-  const tenantSlug = hdrs.get("x-tenant-slug") ?? "Academia";
+  const { resolveStorefrontHeaders } = await import("../resolve-storefront-headers");
+  const { tenantId, tenantSlug: rawSlug } = await resolveStorefrontHeaders();
+  const tenantSlug = rawSlug || "Academia";
 
   if (!tenantId) return notFound();
 

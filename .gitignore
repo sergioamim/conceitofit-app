@@ -2,6 +2,8 @@
 
 # claude worktrees
 .claude/worktrees/
+/worktrees/
+.taskmaster/parallel-run/
 
 # dependencies
 /node_modules

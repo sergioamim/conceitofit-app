@@ -6,13 +6,15 @@ import { Building2, MapPin, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-unidades";
+import { getTenantContextApi } from "@/lib/api/contexto-unidades";
 import { setPreferredTenantId } from "@/lib/api/session";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 export default function EntrarComoAcademiaPage() {
   const router = useRouter();
+  const { switchActiveTenant } = useTenantContext();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export default function EntrarComoAcademiaPage() {
     setSwitching(true);
     setError(null);
     try {
-      await setTenantContextApi(selectedTenantId);
+      await switchActiveTenant(selectedTenantId);
       setPreferredTenantId(selectedTenantId);
       router.push("/dashboard");
     } catch (err) {

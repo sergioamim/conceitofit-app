@@ -8,10 +8,26 @@ import { Command as CmdkRoot, CommandInput, CommandList, CommandEmpty, CommandGr
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import { BackofficeContextProvider, useBackofficeContext } from "@/lib/backoffice/backoffice-context";
-import { AUTH_SESSION_UPDATED_EVENT, hasActiveSession } from "@/lib/api/session";
+import {
+  AUTH_SESSION_UPDATED_EVENT,
+  clearAuthSession,
+  getNetworkSlugFromSession,
+  hasActiveSession,
+} from "@/lib/api/session";
+import { logoutApi } from "@/lib/api/auth";
+import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { backofficeNavGroups, allBackofficeNavItems } from "@/lib/backoffice/nav-items";
 import type { BackofficeNavItem } from "@/lib/backoffice/nav-items";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ---------------------------------------------------------------------------
 // Breadcrumbs
@@ -176,6 +192,8 @@ function AdminShellFrame({
   pathname?: string;
 }) {
   const [cmdkOpen, setCmdkOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -187,6 +205,22 @@ function AdminShellFrame({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      const redirectHref = buildLoginHref(undefined, getNetworkSlugFromSession());
+      try {
+        await logoutApi();
+      } catch {
+        // Seguimos com a limpeza local mesmo se o backend falhar.
+      }
+      clearAuthSession();
+      window.location.assign(redirectHref);
+    } finally {
+      setLoggingOut(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -256,13 +290,14 @@ function AdminShellFrame({
               <Building2 className="size-4 shrink-0" />
               Entrar como academia
             </Link>
-            <Link
-              href="/conta/sair"
+            <button
+              type="button"
+              onClick={() => setLogoutOpen(true)}
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-gym-danger/10 hover:text-gym-danger"
             >
               <LogOut className="size-4 shrink-0" />
               Sair
-            </Link>
+            </button>
           </div>
         </aside>
 
@@ -277,6 +312,35 @@ function AdminShellFrame({
           <main className="flex-1">{children}</main>
         </div>
       </div>
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent className="border-border bg-card">
+          <DialogHeader>
+            <DialogTitle>Encerrar sessão?</DialogTitle>
+            <DialogDescription>
+              Você será redirecionado para o login. Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-border"
+              onClick={() => setLogoutOpen(false)}
+              disabled={loggingOut}
+            >
+              Não, permanecer
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={loggingOut}
+              onClick={() => void handleLogout()}
+            >
+              {loggingOut ? "Saindo..." : "Sim, sair"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <DevSessionPanel />
     </div>
   );

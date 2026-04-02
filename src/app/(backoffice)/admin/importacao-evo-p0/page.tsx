@@ -1,3 +1,5 @@
+"use client";
+
 import { Suspense } from "react";
 import { ImportacaoEvoP0Client } from "./components/ImportacaoEvoP0Client";
 

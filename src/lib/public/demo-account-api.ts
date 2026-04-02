@@ -20,18 +20,19 @@ export interface DemoAccountResponse {
   mensagem?: string;
 }
 
+function resolvePublicDemoUrl(): string {
+  if (typeof window !== "undefined") {
+    return "/backend/api/v1/publico/demo";
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? "";
+  return baseUrl ? `${baseUrl}/api/v1/publico/demo` : "/backend/api/v1/publico/demo";
+}
+
 export async function createDemoAccount(
   data: DemoAccountFormValues,
 ): Promise<DemoAccountResponse> {
-  const baseUrl =
-    (typeof process !== "undefined"
-      ? process.env.NEXT_PUBLIC_API_BASE_URL
-      : undefined) ?? "";
-  const url = baseUrl
-    ? `${baseUrl}/api/v1/publico/demo`
-    : "/backend/api/v1/publico/demo";
-
-  const res = await fetch(url, {
+  const res = await fetch(resolvePublicDemoUrl(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

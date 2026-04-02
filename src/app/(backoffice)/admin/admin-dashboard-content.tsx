@@ -83,15 +83,17 @@ export function AdminDashboardContent({
   operationalError: string | null;
 }) {
   const [sortState, setSortState] = useState<OperacionalSortState>(DEFAULT_SORT);
+  const evolucaoNovosAlunos = metricas?.evolucaoNovosAlunos ?? [];
+  const distribuicaoAcademias = metricas?.distribuicaoAcademias ?? [];
 
   const maxSerie = useMemo(
-    () => Math.max(1, ...(metricas?.evolucaoNovosAlunos ?? []).map((item) => item.total)),
-    [metricas?.evolucaoNovosAlunos]
+    () => Math.max(1, ...evolucaoNovosAlunos.map((item) => item.total)),
+    [evolucaoNovosAlunos]
   );
 
   const distribuicaoOrdenada = useMemo(
-    () => sortDistribuicaoAcademias(metricas?.distribuicaoAcademias ?? [], sortState),
-    [metricas?.distribuicaoAcademias, sortState]
+    () => sortDistribuicaoAcademias(distribuicaoAcademias, sortState),
+    [distribuicaoAcademias, sortState]
   );
 
   const trendTone = resolveTrendTone(metricas?.tendenciaCrescimentoPercentual ?? 0);
@@ -189,9 +191,9 @@ export function AdminDashboardContent({
               <p className="text-sm text-muted-foreground">Últimos 6 meses consolidados em toda a rede.</p>
             </CardHeader>
             <CardContent>
-              {metricas?.evolucaoNovosAlunos.length ? (
+              {evolucaoNovosAlunos.length ? (
                 <div className="space-y-3">
-                  {metricas.evolucaoNovosAlunos.map((item) => {
+                  {evolucaoNovosAlunos.map((item) => {
                     const width = Math.max(8, Math.round((item.total / maxSerie) * 100));
                     return (
                       <div key={item.referencia} className="grid grid-cols-[74px_1fr_48px] items-center gap-3">

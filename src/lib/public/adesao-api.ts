@@ -180,13 +180,12 @@ export interface ConfirmarPagamentoRequest {
 // ---------------------------------------------------------------------------
 
 function resolveBaseUrl(): string {
-  const baseUrl =
-    (typeof process !== "undefined"
-      ? process.env.NEXT_PUBLIC_API_BASE_URL
-      : undefined) ?? "";
-  return baseUrl
-    ? `${baseUrl}/api/v1/publico/adesao`
-    : "/backend/api/v1/publico/adesao";
+  if (typeof window !== "undefined") {
+    return "/backend/api/v1/publico/adesao";
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? "";
+  return baseUrl ? `${baseUrl}/api/v1/publico/adesao` : "/backend/api/v1/publico/adesao";
 }
 
 async function adesaoFetch<T>(

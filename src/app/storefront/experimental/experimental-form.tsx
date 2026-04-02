@@ -16,14 +16,19 @@ const experimentalSchema = z.object({
 
 type ExperimentalFormValues = z.infer<typeof experimentalSchema>;
 
-async function submitExperimental(tenantId: string, data: ExperimentalFormValues) {
-  const baseUrl =
-    (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_API_BASE_URL : undefined) ?? "";
-  const url = baseUrl
+function resolveExperimentalUrl() {
+  if (typeof window !== "undefined") {
+    return "/backend/api/v1/publico/storefront/experimental";
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? "";
+  return baseUrl
     ? `${baseUrl}/api/v1/publico/storefront/experimental`
     : "/backend/api/v1/publico/storefront/experimental";
+}
 
-  const res = await fetch(url, {
+async function submitExperimental(tenantId: string, data: ExperimentalFormValues) {
+  const res = await fetch(resolveExperimentalUrl(), {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ ...data, tenantId }),

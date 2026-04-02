@@ -4,6 +4,14 @@ import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AlunoBottomNav } from "@/components/layout/aluno-bottom-nav";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
 import { TenantContextProvider, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
@@ -18,15 +26,22 @@ import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 
 function AlunoTopbar() {
   const { displayName, networkName } = useTenantContext();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   async function handleLogout() {
+    setLoggingOut(true);
     try {
-      await logoutApi();
-    } catch {
-      // Mesmo sem resposta do backend, limpamos o estado local.
-    } finally {
+      const redirectHref = buildLoginHref(undefined, getNetworkSlugFromSession());
+      try {
+        await logoutApi();
+      } catch {
+        // Mesmo sem resposta do backend, limpamos o estado local.
+      }
       clearAuthSession();
-      window.location.assign("/login");
+      window.location.assign(redirectHref);
+    } finally {
+      setLoggingOut(false);
     }
   }
 
@@ -46,10 +61,39 @@ function AlunoTopbar() {
         size="icon"
         className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
         aria-label="Sair"
-        onClick={() => void handleLogout()}
+        onClick={() => setLogoutOpen(true)}
       >
         <LogOut className="size-4" />
       </Button>
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent className="border-border bg-card">
+          <DialogHeader>
+            <DialogTitle>Encerrar sessão?</DialogTitle>
+            <DialogDescription>
+              Você será redirecionado para o login. Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-border"
+              onClick={() => setLogoutOpen(false)}
+              disabled={loggingOut}
+            >
+              Não, permanecer
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={loggingOut}
+              onClick={() => void handleLogout()}
+            >
+              {loggingOut ? "Saindo..." : "Sim, sair"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

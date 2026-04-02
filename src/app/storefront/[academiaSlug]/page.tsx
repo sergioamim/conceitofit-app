@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import type { Plano, StorefrontTheme, Tenant } from "@/lib/types";
 import { StorefrontHero } from "@/components/storefront/storefront-hero";
 import { StorefrontJsonLd } from "@/components/storefront/storefront-jsonld";
@@ -11,13 +12,8 @@ import {
 import { logger } from "@/lib/shared/logger";
 import type { Metadata } from "next";
 
-interface StorefrontData {
-  tenantId: string;
-  tenantSlug: string;
-  academiaSlug: string;
-  theme: StorefrontTheme | null;
-  unidades: Tenant[];
-  planos: Plano[];
+interface PageProps {
+  params: Promise<{ academiaSlug: string }>;
 }
 
 function overviewToTheme(overview: StorefrontOverviewResponse, tenantId: string): StorefrontTheme | null {
@@ -52,49 +48,19 @@ function overviewToUnidades(overview: StorefrontOverviewResponse): Tenant[] {
   })) as Tenant[];
 }
 
-async function fetchStorefrontData(): Promise<StorefrontData> {
-  const { resolveStorefrontHeaders } = await import("./resolve-storefront-headers");
-  const { tenantId, tenantSlug, academiaSlug } = await resolveStorefrontHeaders();
-
-  if (!academiaSlug) {
-    return { tenantId, tenantSlug, academiaSlug, theme: null, unidades: [], planos: [] };
-  }
-
-  try {
-    // Endpoint com slug no path: GET /api/v1/publico/storefront/{academiaSlug}
-    const overview = await getStorefrontOverview(academiaSlug);
-    const theme = overviewToTheme(overview, tenantId);
-    const unidades = overviewToUnidades(overview);
-
-    // Planos vêm das unidades no overview (flatten)
-    const planos: Plano[] = [];
-    // Se o overview não traz planos, eles virão via componente separado
-
-    return { tenantId, tenantSlug, academiaSlug, theme, unidades, planos };
-  } catch (error) {
-    logger.warn("[Storefront/Page] Overview fetch failed, falling back to empty data", { error });
-    return { tenantId, tenantSlug, academiaSlug, theme: null, unidades: [], planos: [] };
-  }
-}
-
-export async function generateMetadata(): Promise<Metadata> {
-  const { resolveStorefrontHeaders } = await import("./resolve-storefront-headers");
-  const { tenantSlug: rawSlug, academiaSlug, subdomain } = await resolveStorefrontHeaders();
-  const tenantSlug = rawSlug || "Academia";
-
-  let title = `${tenantSlug} — Conheça nossos planos`;
-  let description = `Confira os planos e unidades disponíveis em ${tenantSlug}.`;
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { academiaSlug } = await params;
+  let title = `${academiaSlug} — Conheça nossos planos`;
+  let description = `Confira os planos e unidades disponíveis.`;
   let ogImage: string | undefined;
 
-  if (academiaSlug) {
-    try {
-      const seo = await getStorefrontSeo(academiaSlug);
-      if (seo.title) title = seo.title;
-      if (seo.description) description = seo.description;
-      if (seo.ogImage) ogImage = seo.ogImage;
-    } catch (error) {
-      logger.warn("[Storefront/Page] SEO fetch failed, using defaults", { error });
-    }
+  try {
+    const seo = await getStorefrontSeo(academiaSlug);
+    if (seo.title) title = seo.title;
+    if (seo.description) description = seo.description;
+    if (seo.ogImage) ogImage = seo.ogImage;
+  } catch {
+    // fallback ao título genérico
   }
 
   return {
@@ -103,73 +69,64 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      siteName: tenantSlug,
       type: "website",
-      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630, alt: tenantSlug }] } : {}),
-    },
-    twitter: {
-      card: ogImage ? "summary_large_image" : "summary",
-      title,
-      description,
-      ...(ogImage ? { images: [ogImage] } : {}),
+      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630 }] } : {}),
     },
     robots: { index: true, follow: true },
-    ...(subdomain ? { alternates: { canonical: "/" } } : {}),
   };
 }
 
-export default async function StorefrontHomePage() {
-  const data = await fetchStorefrontData();
+export default async function AcademiaStorefrontPage({ params }: PageProps) {
+  const { academiaSlug } = await params;
 
-  if (!data.tenantId) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-muted-foreground">Não foi possível identificar a academia.</p>
-      </div>
-    );
+  let overview: StorefrontOverviewResponse;
+  try {
+    overview = await getStorefrontOverview(academiaSlug);
+  } catch (error) {
+    logger.warn("[Storefront] Overview fetch failed", { error, academiaSlug });
+    return notFound();
   }
 
-  const singleUnit = data.unidades.length === 1 ? data.unidades[0] : null;
+  const theme = overviewToTheme(overview, overview.academiaId);
+  const unidades = overviewToUnidades(overview);
+  const planos: Plano[] = [];
+  const singleUnit = unidades.length === 1 ? unidades[0] : null;
 
   return (
     <main>
       <StorefrontJsonLd
-        tenantSlug={data.tenantSlug}
-        theme={data.theme}
-        unidades={data.unidades}
-        planos={data.planos}
+        tenantSlug={overview.academiaSlug}
+        theme={theme}
+        unidades={unidades}
+        planos={planos}
       />
 
-      {/* Hero */}
-      <StorefrontHero theme={data.theme} tenantSlug={data.tenantSlug} />
+      <StorefrontHero theme={theme} tenantSlug={overview.nome} />
 
-      {/* Planos */}
-      {data.planos.length > 0 && (
+      {planos.length > 0 && (
         <section id="planos" className="py-16">
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="mb-2 text-center font-display text-2xl font-bold">Nossos Planos</h2>
             <p className="mb-10 text-center text-sm text-muted-foreground">
               Escolha o plano ideal para você
             </p>
-            <StorefrontPlanos planos={data.planos} singleUnit={singleUnit} />
+            <StorefrontPlanos planos={planos} singleUnit={singleUnit} />
           </div>
         </section>
       )}
 
-      {/* Unidades */}
-      {data.unidades.length > 1 && (
+      {unidades.length > 1 && (
         <section id="unidades" className="border-t border-border/60 py-16">
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="mb-2 text-center font-display text-2xl font-bold">Nossas Unidades</h2>
             <p className="mb-10 text-center text-sm text-muted-foreground">
               Encontre a unidade mais próxima de você
             </p>
-            <StorefrontUnidades unidades={data.unidades} />
+            <StorefrontUnidades unidades={unidades} academiaSlug={academiaSlug} />
           </div>
         </section>
       )}
 
-      {/* Single unit details */}
       {singleUnit && (
         <section id="unidades" className="border-t border-border/60 py-16">
           <div className="mx-auto max-w-6xl px-6">
@@ -186,9 +143,12 @@ export default async function StorefrontHomePage() {
               {singleUnit.telefone && (
                 <p className="mt-1 text-sm text-muted-foreground">{singleUnit.telefone}</p>
               )}
-              <p className="mt-4 text-sm font-semibold text-gym-accent">
-                Detalhes e planos disponiveis nesta pagina
-              </p>
+              <a
+                href={`/storefront/${academiaSlug}/unidades/${singleUnit.id}`}
+                className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-gym-accent hover:underline"
+              >
+                Ver detalhes, horarios e mapa &rarr;
+              </a>
             </div>
           </div>
         </section>

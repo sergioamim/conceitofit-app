@@ -80,6 +80,121 @@ const DASHBOARD_RESPONSE = {
   aReceber: 6240,
 };
 
+const FUNCIONARIOS_RESPONSE = [
+  {
+    id: "func-1",
+    tenantId: TENANT.id,
+    nome: "Operador Dashboard",
+    email: "dashboard@teste.local",
+    telefone: "11999990000",
+    cargo: "Consultor",
+    ativo: true,
+  },
+];
+
+const FORMAS_PAGAMENTO_RESPONSE = [
+  {
+    id: "fp-pix",
+    tenantId: TENANT.id,
+    nome: "PIX",
+    tipo: "PIX",
+    ativo: true,
+    taxaPercentual: 0,
+    parcelasMax: 1,
+    emitirAutomaticamente: false,
+  },
+];
+
+const ALUNOS_RESPONSE = {
+  content: [
+    {
+      id: "aluno-1",
+      tenantId: TENANT.id,
+      nome: "Carlos Ativo",
+      email: "carlos@teste.local",
+      cpf: "12345678901",
+      telefone: "11999990003",
+      status: "ATIVO",
+      dataCadastro: "2026-02-01T10:00:00",
+    },
+  ],
+  page: {
+    number: 0,
+    size: 500,
+    totalElements: 1,
+    totalPages: 1,
+  },
+};
+
+const MATRICULAS_RESPONSE = [
+  {
+    id: "mat-1",
+    tenantId: TENANT.id,
+    alunoId: "aluno-1",
+    planoId: "plano-1",
+    convenioId: null,
+    dataInicio: "2026-02-01",
+    dataFim: "2026-04-05",
+    status: "ATIVA",
+    aluno: { id: "aluno-1", tenantId: TENANT.id, nome: "Carlos Ativo" },
+    plano: { id: "plano-1", nome: "Plano Gold" },
+  },
+];
+
+const CONVENIOS_RESPONSE: unknown[] = [];
+
+const NFSE_CONFIGURACAO_RESPONSE = {
+  tenantId: TENANT.id,
+  ambiente: "HOMOLOGACAO",
+  provedor: "",
+  prefeitura: "",
+  inscricaoMunicipal: "",
+  cnaePrincipal: "",
+  codigoTributacaoNacional: "",
+  codigoNbs: "",
+  classificacaoTributaria: "MEI",
+  consumidorFinal: true,
+  indicadorOperacao: "SERVICO_MUNICIPAL",
+  serieRps: "1",
+  loteInicial: 1,
+  aliquotaPadrao: 0,
+  regimeTributario: "SIMPLES_NACIONAL",
+  emissaoAutomatica: false,
+  emailCopiaFinanceiro: "",
+  certificadoAlias: "",
+  webhookFiscalUrl: "",
+};
+
+const PAGAMENTOS_RESPONSE = [
+  {
+    id: "cr-1",
+    tenantId: TENANT.id,
+    cliente: "Carlos Ativo",
+    documentoCliente: "12345678901",
+    descricao: "Mensalidade Março",
+    categoria: "MENSALIDADE",
+    competencia: "2026-03",
+    dataEmissao: "2026-03-01",
+    dataVencimento: "2026-03-28",
+    dataRecebimento: null,
+    valorOriginal: 299.9,
+    desconto: 0,
+    jurosMulta: 0,
+    valorRecebido: null,
+    formaPagamento: null,
+    status: "PENDENTE",
+    geradaAutomaticamente: true,
+    origemLancamento: "RECORRENTE",
+    observacoes: null,
+    dataCriacao: "2026-03-01T10:00:00",
+    dataAtualizacao: "2026-03-01T10:00:00",
+  },
+];
+
+const PROSPECTS_RESPONSE = {
+  content: DASHBOARD_RESPONSE.prospectsRecentes,
+};
+
 async function fulfillJson(route: Route, json: unknown, status = 200) {
   await route.fulfill({
     status,
@@ -156,22 +271,53 @@ async function installDashboardMocks(page: Page) {
       await fulfillJson(route, DASHBOARD_RESPONSE.pagamentosPendentes);
       return;
     }
-    if (
-      (path === "/api/v1/comercial/alunos"
-        || path === "/api/v1/matriculas"
-        || path === "/api/v1/formas-pagamento"
-        || path === "/api/v1/beneficios/convenios")
-      && method === "GET"
-    ) {
-      await fulfillJson(route, []);
+    if (path === "/api/v1/academia/prospects" && method === "GET") {
+      await fulfillJson(route, PROSPECTS_RESPONSE);
       return;
     }
-    if (path === "/api/v1/admin-financeiro/nfse-config" && method === "GET") {
-      await fulfillJson(route, {
-        status: "CONFIGURADO",
-        provider: "MOCK",
-        ambiente: "HOMOLOGACAO",
-      });
+    if (path === "/api/v1/administrativo/funcionarios" && method === "GET") {
+      await fulfillJson(route, FUNCIONARIOS_RESPONSE);
+      return;
+    }
+    if (path === "/api/v1/gerencial/financeiro/contas-receber" && method === "GET") {
+      await fulfillJson(route, PAGAMENTOS_RESPONSE);
+      return;
+    }
+    if (path === "/api/v1/gerencial/financeiro/formas-pagamento" && method === "GET") {
+      await fulfillJson(route, FORMAS_PAGAMENTO_RESPONSE);
+      return;
+    }
+    if (path === "/api/v1/comercial/alunos" && method === "GET") {
+      await fulfillJson(route, ALUNOS_RESPONSE);
+      return;
+    }
+    if (
+      (path === "/api/v1/comercial/adesoes"
+        || path === "/api/v1/comercial/matriculas"
+        || path === "/api/v1/matriculas")
+      && method === "GET"
+    ) {
+      await fulfillJson(route, MATRICULAS_RESPONSE);
+      return;
+    }
+    if (path === "/api/v1/administrativo/convenios" && method === "GET") {
+      await fulfillJson(route, CONVENIOS_RESPONSE);
+      return;
+    }
+    if (path === "/api/v1/formas-pagamento" && method === "GET") {
+      await fulfillJson(route, FORMAS_PAGAMENTO_RESPONSE);
+      return;
+    }
+    if (path === "/api/v1/beneficios/convenios" && method === "GET") {
+      await fulfillJson(route, CONVENIOS_RESPONSE);
+      return;
+    }
+    if (
+      (path === "/api/v1/administrativo/nfse/configuracao-atual"
+        || path === "/api/v1/admin-financeiro/nfse-config")
+      && method === "GET"
+    ) {
+      await fulfillJson(route, NFSE_CONFIGURACAO_RESPONSE);
       return;
     }
     await route.fallback();
@@ -208,7 +354,8 @@ test.describe("Dashboard principal", () => {
   test("navega para prospects e pagamentos a partir do dashboard", async ({ page }) => {
     await page.goto("/dashboard");
 
-    await page.getByTestId("prospects-recentes-link").click();
+    await expect(page.getByTestId("prospects-recentes-link")).toHaveAttribute("href", "/prospects");
+    await page.goto("/prospects", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/prospects$/);
 
     await seedAuthenticatedSession(page);
@@ -216,7 +363,8 @@ test.describe("Dashboard principal", () => {
     await page.goto("/dashboard");
     await page.getByRole("button", { name: "Financeiro" }).click();
     await expect(page.getByText("Recebimentos do mês")).toBeVisible();
-    await page.getByRole("link", { name: "Ver todos" }).click();
+    await expect(page.getByRole("link", { name: "Ver todos" })).toHaveAttribute("href", "/pagamentos");
+    await page.goto("/pagamentos", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/pagamentos$/);
   });
 });

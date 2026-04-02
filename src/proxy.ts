@@ -119,7 +119,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // Subdomínio válido: injetar headers e rewrite para rota /storefront
+  // Subdomínio válido: injetar headers e rewrite para /storefront/{academiaSlug}
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-tenant-id", tenant.tenantId);
   requestHeaders.set("x-tenant-slug", tenant.tenantSlug);
@@ -127,15 +127,31 @@ export async function proxy(request: NextRequest) {
   requestHeaders.set("x-storefront-subdomain", subdomain);
 
   const { pathname } = request.nextUrl;
+  const slug = tenant.academiaSlug;
 
-  // Rotas já internas (/storefront, /storefront-not-found) não precisam de rewrite
-  if (pathname.startsWith("/storefront")) {
+  // Já está na rota correta do storefront
+  if (pathname.startsWith(`/storefront/${slug}`)) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // Rewrite qualquer rota pública do subdomain para /storefront
+  // Rota antiga /storefront sem slug → rewrite para /storefront/{slug}
+  if (pathname === "/storefront" || pathname === "/storefront/") {
+    const url = request.nextUrl.clone();
+    url.pathname = `/storefront/${slug}`;
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  }
+
+  // Subrotas do storefront antigo → rewrite adicionando slug
+  if (pathname.startsWith("/storefront/")) {
+    const sub = pathname.slice("/storefront".length);
+    const url = request.nextUrl.clone();
+    url.pathname = `/storefront/${slug}${sub}`;
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  }
+
+  // Qualquer outra rota no subdomínio → rewrite para /storefront/{slug}
   const url = request.nextUrl.clone();
-  url.pathname = `/storefront${pathname === "/" ? "" : pathname}`;
+  url.pathname = `/storefront/${slug}${pathname === "/" ? "" : pathname}`;
   return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
 }
 

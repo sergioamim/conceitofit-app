@@ -5,18 +5,19 @@ export interface LeadB2bResponse {
   mensagem: string;
 }
 
+function resolvePublicLeadUrl(): string {
+  if (typeof window !== "undefined") {
+    return "/backend/api/v1/publico/leads";
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? "";
+  return baseUrl ? `${baseUrl}/api/v1/publico/leads` : "/backend/api/v1/publico/leads";
+}
+
 export async function submitLeadB2b(
   data: LeadB2bFormValues,
 ): Promise<LeadB2bResponse> {
-  const baseUrl =
-    (typeof process !== "undefined"
-      ? process.env.NEXT_PUBLIC_API_BASE_URL
-      : undefined) ?? "";
-  const url = baseUrl
-    ? `${baseUrl}/api/v1/publico/leads`
-    : "/backend/api/v1/publico/leads";
-
-  const res = await fetch(url, {
+  const res = await fetch(resolvePublicLeadUrl(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

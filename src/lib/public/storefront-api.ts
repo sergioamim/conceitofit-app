@@ -81,6 +81,7 @@ export interface StorefrontUnidadePlanosResponse {
 export interface StorefrontPlanoPublicoResponse {
   id: string;
   nome: string;
+  slug?: string;
   descricao: string;
   tipo: string;
   duracaoDias: number;
@@ -88,6 +89,7 @@ export interface StorefrontPlanoPublicoResponse {
   valorMatricula: number;
   destaque: boolean;
   beneficios: string[];
+  ordem?: number;
 }
 
 export interface StorefrontAtividadesResponse {
@@ -126,8 +128,8 @@ export interface StorefrontUnidadeDetalhadaResponse {
   nome: string;
   telefone: string;
   email: string;
-  whatsapp: string;
-  descricaoPublica: string;
+  whatsapp: string | null;
+  descricaoPublica: string | null;
   endereco: {
     logradouro?: string;
     numero?: string;
@@ -136,18 +138,18 @@ export interface StorefrontUnidadeDetalhadaResponse {
     cidade?: string;
     estado?: string;
     cep?: string;
-  };
+  } | null;
   latitude: number | null;
   longitude: number | null;
   horarioFuncionamento: StorefrontHorarioResponse[];
-  fotos: string[];
+  fotos: string[] | null;
   planos: StorefrontPlanoPublicoResponse[];
 }
 
 export interface StorefrontHorarioResponse {
-  diaSemana: string;
-  horaAbertura: string;
-  horaFechamento: string;
+  dia: string;
+  abre: string;
+  fecha: string;
   fechado: boolean;
 }
 

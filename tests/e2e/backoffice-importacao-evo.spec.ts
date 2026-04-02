@@ -537,12 +537,18 @@ test.describe("Backoffice importacao EVO", () => {
     await expect(contratosHistoricoCard.getByText("Parcial")).toBeVisible();
     await expect(recebimentosHistoricoCard.getByText("Nunca importado")).toBeVisible();
     const funcoesHistoricoCard = page.locator('label').filter({ hasText: "Funções exercidas" }).first();
+    const retryFuncoesButton = funcoesHistoricoCard.locator(
+      'button:has-text("Tentar somente erros (aguardando backend)")',
+    );
+    const verRejeicoesFuncoesButton = funcoesHistoricoCard.locator(
+      'button:has-text("Ver rejeições")',
+    );
     await expect(funcoesHistoricoCard.getByText("Com erros")).toBeVisible();
-    await expect(
-      funcoesHistoricoCard.getByRole("button").filter({ hasText: "Tentar somente erros (aguardando backend)" })
-    ).toBeDisabled();
-    await page.locator('button:has-text("Ver rejeições")').last().click();
-    await expect(page.getByRole("tabpanel", { name: "Acompanhar Job" }).getByText(/^Rejeições$/)).toBeVisible();
+    await expect(retryFuncoesButton).toBeDisabled();
+    await verRejeicoesFuncoesButton.click();
+    const acompanhamentoTab = page.getByRole("tabpanel", { name: "Acompanhar Job" });
+    await expect(acompanhamentoTab.locator('input[value="job-funcoes-1"]')).toBeVisible();
+    await expect(acompanhamentoTab.getByText(/^Rejeições$/)).toBeVisible();
     await expect(page.getByText("Reenvie a malha de funções após corrigir o catálogo legado.")).toBeVisible();
 
     await page.getByRole("tab", { name: "Importar por Pacote (ZIP/CSV)" }).click();
@@ -555,15 +561,15 @@ test.describe("Backoffice importacao EVO", () => {
     await page.getByRole("tabpanel", { name: "Importar por Pacote (ZIP/CSV)" }).getByLabel("Alias do job").fill(jobAlias);
     await page.getByRole("button", { name: "Criar Job" }).click();
 
-    const acompanhamento = page.getByRole("tabpanel", { name: "Acompanhar Job" });
+    const acompanhamento = acompanhamentoTab;
     await expect(acompanhamento.getByText("Job de importação")).toBeVisible();
     await expect(acompanhamento.getByText("CONCLUIDO").first()).toBeVisible({ timeout: 15000 });
     await expect(acompanhamento.getByLabel("Alias do job")).toHaveValue(jobAlias);
-    await expect(acompanhamento.getByText("Diagnóstico de colaboradores")).toBeVisible();
-    await expect(acompanhamento.getByText("Funções e cargos").first()).toBeVisible();
-    await expect(acompanhamento.getByText("Tipos operacionais", { exact: true })).toBeVisible();
-    await expect(acompanhamento.getByText("Contratação", { exact: true })).toBeVisible();
-    await expect(acompanhamento.getByText("Perfil legado", { exact: true })).toBeVisible();
+    await expect(acompanhamento.getByText("Diagnóstico de colaboradores", { exact: true }).first()).toBeVisible();
+    await expect(acompanhamento.getByText("Funções e cargos", { exact: true }).first()).toBeVisible();
+    await expect(acompanhamento.getByText("Tipos operacionais", { exact: true }).first()).toBeVisible();
+    await expect(acompanhamento.getByText("Contratação", { exact: true }).first()).toBeVisible();
+    await expect(acompanhamento.getByText("Perfil legado", { exact: true }).first()).toBeVisible();
     await expect(acompanhamento.getByText("Sem linhas", { exact: true })).toBeVisible();
     await expect(acompanhamento.getByText("Não selecionado", { exact: true })).toBeVisible();
     await expect(acompanhamento.getByText("Últimos jobs salvos")).toBeVisible();

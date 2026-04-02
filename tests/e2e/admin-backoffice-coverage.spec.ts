@@ -788,6 +788,19 @@ async function openBackofficePage(page: Page, path: string, heading: string | Re
   return state;
 }
 
+async function gotoBackofficePage(page: Page, path: string, heading: string | RegExp) {
+  try {
+    await page.goto(path, { waitUntil: "commit" });
+  } catch (error) {
+    if (!(error instanceof Error) || !/ERR_ABORTED|frame was detached/i.test(error.message)) {
+      throw error;
+    }
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+  }
+
+  await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+}
+
 test.describe("Admin backoffice coverage", () => {
   test("cobre dashboard financeiro e modulos satelites", async ({ page }) => {
     await openBackofficePage(page, "/admin/financeiro", /Dashboard financeiro da plataforma/i);
@@ -795,20 +808,16 @@ test.describe("Admin backoffice coverage", () => {
     await expect(page.getByText("Rede Norte")).toBeVisible();
     await expect(page.getByRole("cell", { name: "Enterprise" })).toBeVisible();
 
-    await page.goto("/admin/financeiro/contratos");
-    await expect(page.getByRole("heading", { name: /Contratos da plataforma/i })).toBeVisible();
+    await gotoBackofficePage(page, "/admin/financeiro/contratos", /Contratos da plataforma/i);
     await expect(page.getByText("Rede Norte")).toBeVisible();
 
-    await page.goto("/admin/financeiro/planos");
-    await expect(page.getByRole("heading", { name: /Planos da plataforma/i })).toBeVisible();
+    await gotoBackofficePage(page, "/admin/financeiro/planos", /Planos da plataforma/i);
     await expect(page.getByText("Enterprise")).toBeVisible();
 
-    await page.goto("/admin/financeiro/cobrancas");
-    await expect(page.getByRole("heading", { name: /Cobranças da plataforma/i })).toBeVisible();
+    await gotoBackofficePage(page, "/admin/financeiro/cobrancas", /Cobranças da plataforma/i);
     await expect(page.getByRole("button", { name: "Nova cobrança" })).toBeVisible();
 
-    await page.goto("/admin/financeiro/gateways");
-    await expect(page.getByRole("heading", { name: /Gateways de pagamento/i })).toBeVisible();
+    await gotoBackofficePage(page, "/admin/financeiro/gateways", /Gateways de pagamento/i);
     await expect(page.getByText("Pagar.me principal")).toBeVisible();
   });
 
@@ -835,8 +844,7 @@ test.describe("Admin backoffice coverage", () => {
     await expect(page.getByText("Contrato vencendo em 7 dias")).toBeVisible();
     await expect(page.getByText("Rede Norte", { exact: true })).toBeVisible();
 
-    await page.goto("/admin/operacional/saude");
-    await expect(page.getByRole("heading", { name: /Mapa de saúde das academias/i })).toBeVisible();
+    await gotoBackofficePage(page, "/admin/operacional/saude", /Mapa de saúde das academias/i);
     await expect(page.getByText("Rede Sul", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Growth", { exact: true }).first()).toBeVisible();
 

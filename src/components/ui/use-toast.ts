@@ -41,7 +41,7 @@ const globalToast = (options: ToastOptions): void => {
   const text = [toText(title), toText(description)].filter(Boolean).join(" — ");
   if (!text) return;
 
-  const safeConsoleError = (value: string): void => {
+  const safeConsoleMethod = (methodName: "log" | "warn", value: string): void => {
     if (typeof globalThis !== "object") {
       return;
     }
@@ -52,45 +52,25 @@ const globalToast = (options: ToastOptions): void => {
         return;
       }
 
-      const method = (consoleRef as { error?: unknown }).error;
+      const method = (consoleRef as { log?: unknown; warn?: unknown })[methodName];
       if (typeof method !== "function") {
         return;
       }
 
-      method(value);
-    } catch {
-      // Keep toast operation non-blocking if console is unavailable or not fully functional.
-    }
-  };
-
-  const safeConsoleLog = (value: string): void => {
-    if (typeof globalThis !== "object") {
-      return;
-    }
-
-    try {
-      const consoleRef: unknown = (globalThis as { console?: unknown }).console;
-      if (!consoleRef || typeof consoleRef !== "object") {
-        return;
-      }
-
-      const method = (consoleRef as { log?: unknown }).log;
-      if (typeof method !== "function") {
-        return;
-      }
-
-      method(value);
+      method.call(consoleRef, value);
     } catch {
       // Keep toast operation non-blocking if console is unavailable or not fully functional.
     }
   };
 
   if (variant === "destructive") {
-    safeConsoleError(text);
+    // `console.error` aciona o overlay do Next em dev até para validações de UX.
+    // Para toast destrutivo, manter o sinal no console sem promover a mensagem a erro de runtime.
+    safeConsoleMethod("warn", text);
     return;
   }
 
-  safeConsoleLog(text);
+  safeConsoleMethod("log", text);
 };
 
 export function useToast(): ToastReturn {

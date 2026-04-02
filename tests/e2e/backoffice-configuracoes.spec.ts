@@ -1,6 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { installE2EAuthSession } from "./support/auth-session";
-import { installProtectedShellMocks } from "./support/protected-shell-mocks";
+import { installBackofficeGlobalSession } from "./support/backoffice-global-session";
 
 type IntegrationSeed = {
   integrationKey: "PAYMENTS" | "NFSE" | "CATRACA" | "EVO_IMPORT";
@@ -42,16 +41,55 @@ type GlobalConfigSeed = {
 };
 
 function seedSession(page: Page) {
-  return installE2EAuthSession(page, {
-    activeTenantId: "tenant-centro",
-    baseTenantId: "tenant-centro",
-    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
-    userId: "user-root",
-    userKind: "COLABORADOR",
-    displayName: "Root Admin",
-    roles: ["OWNER", "ADMIN"],
-    availableScopes: ["GLOBAL"],
-    broadAccess: true,
+  return installBackofficeGlobalSession(page, {
+    session: {
+      activeTenantId: "tenant-centro",
+      baseTenantId: "tenant-centro",
+      availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+      userId: "user-root",
+      userKind: "COLABORADOR",
+      displayName: "Root Admin",
+      roles: ["OWNER", "ADMIN"],
+      availableScopes: ["GLOBAL"],
+      broadAccess: true,
+    },
+    shell: {
+      currentTenantId: "tenant-centro",
+      tenants: [
+        {
+          id: "tenant-centro",
+          academiaId: "academia-norte",
+          groupId: "academia-norte",
+          nome: "Unidade Centro",
+          ativo: true,
+        },
+      ],
+      user: {
+        id: "user-root",
+        userId: "user-root",
+        nome: "Root Admin",
+        displayName: "Root Admin",
+        email: "root@qa.local",
+        roles: ["OWNER", "ADMIN"],
+        userKind: "COLABORADOR",
+        activeTenantId: "tenant-centro",
+        tenantBaseId: "tenant-centro",
+        availableScopes: ["GLOBAL"],
+        broadAccess: true,
+        redeId: "academia-norte",
+        redeNome: "Rede Norte",
+        redeSlug: "rede-norte",
+      },
+      academia: {
+        id: "academia-norte",
+        nome: "Rede Norte",
+        ativo: true,
+      },
+      capabilities: {
+        canAccessElevatedModules: true,
+        canDeleteClient: false,
+      },
+    },
   });
 }
 
@@ -60,41 +98,6 @@ function normalizedPath(path: string) {
 }
 
 async function setupMocks(page: Page, state: { integrations: IntegrationSeed[]; globalConfig: GlobalConfigSeed }) {
-  await installProtectedShellMocks(page, {
-    currentTenantId: "tenant-centro",
-    tenants: [
-      {
-        id: "tenant-centro",
-        academiaId: "academia-norte",
-        groupId: "academia-norte",
-        nome: "Unidade Centro",
-        ativo: true,
-      },
-    ],
-    user: {
-      id: "user-root",
-      userId: "user-root",
-      nome: "Root Admin",
-      displayName: "Root Admin",
-      email: "root@qa.local",
-      roles: ["OWNER", "ADMIN"],
-      userKind: "COLABORADOR",
-      activeTenantId: "tenant-centro",
-      tenantBaseId: "tenant-centro",
-      availableScopes: ["GLOBAL"],
-      broadAccess: true,
-    },
-    academia: {
-      id: "academia-norte",
-      nome: "Rede Norte",
-      ativo: true,
-    },
-    capabilities: {
-      canAccessElevatedModules: true,
-      canDeleteClient: false,
-    },
-  });
-
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());

@@ -27,6 +27,7 @@ import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { DEFAULT_TENANT_APP_NAME } from "@/lib/tenant/tenant-theme";
 import { MOTION_CLASSNAMES } from "@/lib/ui-motion";
 import { cn } from "@/lib/utils";
+import { normalizeRoles } from "@/lib/access-control";
 import {
   mainNavItems as navItems,
   atividadeItems,
@@ -39,9 +40,8 @@ import {
   NavItem,
   } from "@/lib/tenant/nav-items";
   import { useUserPreferences } from "@/lib/tenant/hooks/use-user-preferences";
-  import {
+import {
   DEFAULT_ACADEMIA_LABEL,
-
   DEFAULT_ACTIVE_TENANT_LABEL,
   useAuthAccess,
   useTenantContext,
@@ -511,10 +511,22 @@ function SidebarNavigation({
 const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed: boolean }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const access = useAuthAccess();
+  const { userKind } = useTenantContext();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const normalizedRoles = normalizeRoles(access.roles);
+  const normalizedUserKind = userKind?.trim().toUpperCase();
+  const superUserMarkers = ["SUPER", "OWNER", "ROOT", "GLOBAL_ADMIN"];
+  const hasSuperRole = normalizedRoles.some((role) =>
+    superUserMarkers.some((marker) => role.includes(marker)),
+  );
+  const hasSuperKind = normalizedUserKind
+    ? superUserMarkers.some((marker) => normalizedUserKind.includes(marker))
+    : false;
+  const isSuperUser = hasSuperRole || hasSuperKind;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -563,6 +575,7 @@ const SidebarUserPill = memo(function SidebarUserPill({ collapsed }: { collapsed
                 { label: "Trocar senha", href: "/conta/seguranca" },
                 { label: "Preferências", href: "/conta/preferencias" },
                 { label: "Notificações", href: "/conta/notificacoes" },
+                ...(isSuperUser ? [{ label: "Backoffice Admin", href: "/admin" }] : []),
               ].map((item) => (
                 <Link
                   key={item.label}

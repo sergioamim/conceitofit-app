@@ -6,6 +6,7 @@ import {
   getAvailableTenantsFromSession,
   getDisplayNameFromSession,
   getForcePasswordChangeRequiredFromSession,
+  hasActiveSession,
   saveAuthSession,
   type AuthSession,
 } from "@/lib/api/session";
@@ -22,6 +23,10 @@ function makeSession(overrides?: Partial<AuthSession>): AuthSession {
   };
 }
 
+function makeJwtLikeToken(): string {
+  return "header.payload.signature";
+}
+
 describe("session storage", () => {
   beforeEach(() => {
     clearAuthSession();
@@ -34,6 +39,18 @@ describe("session storage", () => {
   it("saves and retrieves access token", () => {
     saveAuthSession(makeSession());
     expect(getAccessToken()).toBe("test-token");
+  });
+
+  it("sincroniza apenas o cookie de tenant quando o token não é JWT real", () => {
+    saveAuthSession(makeSession());
+    expect(document.cookie).not.toContain("academia-access-token=");
+    expect(document.cookie).toContain("academia-active-tenant-id=tenant-1");
+  });
+
+  it("sincroniza cookie de access token para SSR quando o token parece JWT", () => {
+    saveAuthSession(makeSession({ token: makeJwtLikeToken() }));
+    expect(document.cookie).toContain("academia-access-token=header.payload.signature");
+    expect(document.cookie).toContain("academia-active-tenant-id=tenant-1");
   });
 
   it("saves and retrieves display name", () => {
@@ -72,10 +89,20 @@ describe("session storage", () => {
     expect(getDisplayNameFromSession()).toBeUndefined();
     expect(getActiveTenantIdFromSession()).toBeUndefined();
     expect(getForcePasswordChangeRequiredFromSession()).toBe(false);
+    expect(document.cookie).not.toContain("academia-access-token=");
+    expect(document.cookie).not.toContain("academia-active-tenant-id=");
   });
 
   it("returns undefined when no session exists", () => {
     expect(getAccessToken()).toBeUndefined();
     expect(getDisplayNameFromSession()).toBeUndefined();
+  });
+
+  it("ignora token em memória quando a flag de sessão ativa foi removida", () => {
+    saveAuthSession(makeSession());
+    window.localStorage.removeItem("academia-auth-session-active");
+
+    expect(hasActiveSession()).toBe(false);
+    expect(getAccessToken()).toBeUndefined();
   });
 });

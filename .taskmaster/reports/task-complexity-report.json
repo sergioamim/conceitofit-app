@@ -1,77 +1,93 @@
 {
 	"meta": {
-		"generatedAt": "2026-03-10T21:00:22.283Z",
-		"tasksAnalyzed": 8,
-		"totalTasks": 8,
-		"analysisCount": 8,
+		"generatedAt": "2026-04-01T17:05:16.981Z",
+		"tasksAnalyzed": 10,
+		"totalTasks": 332,
+		"analysisCount": 10,
 		"thresholdScore": 5,
 		"projectName": "WEB | academia-app",
 		"usedResearch": false
 	},
 	"complexityAnalysis": [
 		{
-			"taskId": 1,
-			"taskTitle": "Alinhar contrato HTTP e camada de consumo da API",
-			"complexityScore": 8,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Quebre em subtarefas para: mapear imports de @/lib/mock/services nas páginas, auditar apiRequest/http e normalizações, alinhar tipos/schemas nas APIs (src/lib/api/*), padronizar tratamento de erros e estados na UI, e adicionar testes de integração/Playwright para fluxos críticos.",
-			"reasoning": "O código já tem um client HTTP centralizado com refresh de token, headers e erro tipado (src/lib/api/http.ts, src/lib/utils/api-error.ts), mas as telas ainda consomem massivamente @/lib/mock/services (ex.: src/app/(app)/vendas/page.tsx, src/app/(app)/matriculas/page.tsx, src/components/layout/app-topbar.tsx). Isso implica refatoração transversal de serviços/hooks e alinhamento de contratos nas APIs tipadas, além de ajustar estados de erro e loading. Há dependência direta de sessão/localStorage e de múltiplos endpoints, elevando o esforço e exigindo testes de regressão."
-		},
-		{
-			"taskId": 2,
-			"taskTitle": "Consolidar fluxo web de contratos, matricula e venda",
-			"complexityScore": 7,
-			"recommendedSubtasks": 4,
-			"expansionPrompt": "Gerar subtarefas para: mapear telas e serviços do fluxo atual (vendas, matrículas, planos), alinhar contratos/estados com APIs existentes (src/lib/api/vendas.ts e catálogo), ajustar UI/validações e navegação, e fechar cobertura de testes end-to-end do fluxo comercial.",
-			"reasoning": "Existem telas de vendas e matrículas, mas elas usam mock e simplificações de estado; há API de vendas com normalizações e envelopes (src/lib/api/vendas.ts). Consolidar o fluxo exige ajuste de telas, estados de contrato e matrículas, e integração consistente com o backend. O esforço é moderado-alto por envolver múltiplas rotas e componentes (ex.: checkout interno e listagens) e validações comerciais."
-		},
-		{
-			"taskId": 3,
-			"taskTitle": "Corrigir contexto, sessao e experiencia multiunidade",
-			"complexityScore": 7,
-			"recommendedSubtasks": 4,
-			"expansionPrompt": "Divida em: auditoria de sessão/localStorage e eventos de store, implementação de troca de unidade usando APIs de contexto (src/lib/api/contexto-unidades.ts, src/lib/api/auth.ts), alinhamento de permissões e guardas de navegação, e testes de refresh/reentrada e troca de unidade.",
-			"reasoning": "A experiência multiunidade hoje depende de mock store e eventos como academia-store-updated (ex.: src/components/layout/app-topbar.tsx, src/components/layout/tenant-theme-sync.tsx), enquanto a camada real tem APIs de contexto e sessão. Corrigir envolve sincronizar token/tenant, headers e stores, com impacto em navegação, menus e permissões. O escopo é transversal e requer testes de sessão e troca de unidade."
-		},
-		{
-			"taskId": 4,
-			"taskTitle": "Construir CRM operacional com automacoes",
+			"taskId": 327,
+			"taskTitle": "Estabilizar contrato de sessao E2E e fixture compartilhada",
 			"complexityScore": 9,
 			"recommendedSubtasks": 5,
-			"expansionPrompt": "Planeje subtarefas para: definir telas e componentes do workspace de CRM (pipeline, tarefas, playbooks), implementar views e filtros, integrar novas superfícies de automação e histórico com APIs, tratar estados UX (loading/erro/vazio), e adicionar testes de fluxo comercial.",
-			"reasoning": "Há APIs de CRM e telas de prospects/agendamentos já implementadas (src/lib/api/crm.ts, páginas em src/app/(app)/crm), mas não existem pipelines, tarefas e automações operacionais completas. Isso demanda novas estruturas de dados, UI rica e integrações adicionais, além de testes de usabilidade e regressão. É um módulo grande e multifásico."
+			"expansionPrompt": "Dividir a tarefa em: 1. Auditoria completa de helpers e seeds de sessão. 2. Definição do contrato canônico de sessão E2E. 3. Implementação do helper de sessão. 4. Integração do helper com layouts protegidos. 5. Documentação detalhada das chaves de storage e uso.",
+			"reasoning": "Esta é uma tarefa de alta complexidade, pois exige uma compreensão profunda do fluxo de autenticação do aplicativo e backoffice, além de uma análise extensiva de código existente em diversos arquivos (tests/e2e/support/backend-only-stubs.ts, layouts em src/app/). O design do helper canônico precisa ser flexível para suportar múltiplos perfis e cenários de tenant, o que representa um desafio técnico significativo. Sua natureza fundamental (dependência para 8 outras tarefas) aumenta o risco e a necessidade de uma implementação robusta."
 		},
 		{
-			"taskId": 5,
-			"taskTitle": "Construir reservas, vagas e operacao de aulas",
-			"complexityScore": 9,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Crie subtarefas para: modelar o domínio de reservas/vagas (tipos e APIs), construir telas de agenda/ocupação/waitlist, implementar operações de reserva/cancelamento/check-in, tratar responsividade e estados, e validar com testes de integração.",
-			"reasoning": "Não há APIs específicas nem telas de reservas/booking no código atual (rg não encontrou endpoints em src/lib/api). Existem apenas componentes de grade e check-in em atividades, o que indica que o módulo de reservas é praticamente greenfield. Isso envolve novos contratos, UI e fluxos operacionais complexos, elevando a complexidade."
-		},
-		{
-			"taskId": 6,
-			"taskTitle": "Criar jornada digital web de adesao e checkout",
-			"complexityScore": 8,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Divida em: mapear rotas públicas da jornada, construir formulários e catálogo de planos, integrar checkout/contrato com APIs, ajustar validações e mensagens de erro, e adicionar testes de navegação e conversão.",
-			"reasoning": "Existe apenas um componente interno de pagamento (src/components/shared/checkout-payment.tsx) e a jornada digital pública não está presente. Será necessário criar novas rotas e formulários, integrar com contratos/checkout no backend, lidar com branding por academia e estados de erro. O esforço é alto por envolver fluxo público e segurança."
-		},
-		{
-			"taskId": 7,
-			"taskTitle": "Expandir modulos administrativos, financeiros e de integracao",
+			"taskId": 328,
+			"taskTitle": "Migrar specs autenticadas para o helper canonico de sessao",
 			"complexityScore": 7,
 			"recommendedSubtasks": 4,
-			"expansionPrompt": "Estruture subtarefas para: inventariar lacunas nas telas administrativas/financeiras, implementar configurações e operações faltantes (NFSe/agregadores/recebimentos), integrar monitoramento e auditoria, e alinhar permissões e testes.",
-			"reasoning": "Há módulos administrativos e financeiros já existentes (rotas em src/app/(app)/administrativo e gerencial, APIs em src/lib/api), mas as áreas de NFSe, agregadores e integrações parecem incompletas. Isso sugere trabalho de extensão e refinamento, com impacto em permissões e feedbacks. Complexidade moderada-alta."
+			"expansionPrompt": "Dividir a tarefa em: 1. Mapeamento e classificação de specs com seeds manuais. 2. Refatoração de specs operacionais (ex: /dashboard, clientes). 3. Refatoração de specs administrativas (ex: backoffice). 4. Consolidação de payloads e remoção de duplicação.",
+			"reasoning": "Esta tarefa possui complexidade média-alta. Embora o trabalho seja em grande parte repetitivo (substituir seeds), requer atenção minuciosa para não introduzir regressões. A vasta lista de arquivos a serem migrados, incluindo helpers e specs importantes (backend-only-stubs.ts, admin-crud-helpers.ts, etc.), indica um volume considerável de trabalho. A dependência da Task 327 significa que o helper já deve estar estável e bem definido. O desafio está em garantir que os cenários específicos de cada spec sejam mantidos ou adaptados corretamente ao novo helper."
 		},
 		{
-			"taskId": 8,
-			"taskTitle": "Criar BI operacional e visao de rede",
+			"taskId": 329,
+			"taskTitle": "Padronizar mocks minimos de bootstrap, contexto e autorizacao para E2E",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Dividir a tarefa em: 1. Inventário de requests de bootstrap/contexto por shell. 2. Definição do contrato mínimo de mocks para /auth/me e /app/bootstrap. 3. Definição do contrato mínimo de mocks para /context/unidade-ativa e troca de unidade. 4. Definição do contrato mínimo para /academia e auxiliares. 5. Documentação dos mocks e módulos que podem reusá-los.",
+			"reasoning": "A complexidade desta tarefa é alta devido à necessidade de definir contratos de mocks API consistentes e abrangentes para endpoints cruciais de inicialização do aplicativo. Isso exige um entendimento profundo de como os layouts (app e backoffice) consomem dados de autenticação e contexto. A eliminação de mocks genéricos (200 {}) e a criação de payloads realistas requerem engenharia cuidadosa e validação contra o comportamento real do frontend. Esta tarefa é uma base fundamental para o sucesso das tarefas subsequentes de recuperação de suítes."
+		},
+		{
+			"taskId": 330,
+			"taskTitle": "Recuperar suites do app autenticado que hoje redirecionam para /login",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Dividir a tarefa em: 1. Execução inicial de sentinelas do app e triagem das falhas. 2. Ajustes de fixtures e mocks para /dashboard e security-flows. 3. Ajustes de fixtures e mocks para clientes/cadastro e faturamento. 4. Ajustes para treinos-v2-editor e sessao-multiunidade.",
+			"reasoning": "Com as dependências 327, 328 e 329 concluídas, esta tarefa é de complexidade média-alta. O desafio reside na depuração de cada falha específica e na distinção entre problemas de autenticação/bootstrap e falhas funcionais reais da tela. Requer uma execução sistemática dos testes sentinela listados e ajustes precisos nos mocks e fixtures para resolver os redirecionamentos. O volume de specs listadas indica que pode haver muitas variantes de falhas a serem investigadas."
+		},
+		{
+			"taskId": 331,
+			"taskTitle": "Recuperar suites do backoffice global que hoje redirecionam para /admin-login",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Dividir a tarefa em: 1. Execução inicial de sentinelas do backoffice e triagem das falhas. 2. Validação do contrato de useAuthAccess e shell backoffice. 3. Correção de divergências de tenant e metadados de acesso elevado. 4. Identificação e categorização de falhas remanescentes de RBAC/backoffice.",
+			"reasoning": "Semelhante à Task 330, esta tarefa tem complexidade média-alta. Ela exige a aplicação das bases estabelecidas nas tarefas 327, 328 e 329 ao contexto específico do backoffice. Os desafios adicionais incluem lidar com contratos de acesso mais complexos (useAuthAccess, canAccessElevatedModules) e as nuances do modo plataforma/backoffice e multi-tenant. A depuração e correção exigirão precisão para garantir que as permissões e o contexto estejam corretos para cada cenário de teste."
+		},
+		{
+			"taskId": 332,
+			"taskTitle": "Corrigir fluxos auth-rede, subdominio e storefront",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Dividir a tarefa em: 1. Revisão completa de tests/e2e/auth-rede.spec.ts e `buildHostBasedUrl`. 2. Verificação e ajuste de headers/query params de rede nos mocks. 3. Correção de cenários de 'Storefront não encontrada' e 'Carregando contexto'. 4. Documentação do contrato frontend para resolução de rede.",
+			"reasoning": "Esta tarefa apresenta complexidade média-alta. Envolve a configuração de ambiente de teste E2E para mimetizar comportamentos de rede e subdomínio, que são intrinsecamente mais complexos de mockar e depurar. A necessidade de verificar `buildHostBasedUrl` e o uso de headers/query params para resolver o contexto da rede, além de garantir que os mocks se alinhem ao runtime atual, são pontos críticos. Requer um bom entendimento de infraestrutura de rede e da arquitetura do aplicativo Next.js."
+		},
+		{
+			"taskId": 333,
+			"taskTitle": "Corrigir jornada publica de adesao com mocks aderentes ao runtime atual",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Dividir a tarefa em: 1. Auditoria de tests/e2e/adesao-publica.spec.ts e installPublicJourneyApiMocks. 2. Mapeamento de requests reais e definição de mocks para branding/tenant/catálogo. 3. Mapeamento de requests reais e definição de mocks para checkout/pagamento. 4. Resolução de estados de 'Carregando' e validação do fluxo completo.",
+			"reasoning": "Esta tarefa tem complexidade média. Embora o fluxo de adesão pública seja multifacetado, as dependências 327 e 329 ajudam a isolar a autenticação e o bootstrap. O desafio principal é mapear todas as chamadas API e estados da UI para garantir que os mocks sejam completos e correspondam às expectativas do frontend em cada etapa (branding, catálogo, checkout, pagamento). A necessidade de evitar mocks monolíticos e manter a clareza da separação de dados também contribui para a complexidade."
+		},
+		{
+			"taskId": 334,
+			"taskTitle": "Eliminar loading infinito e payloads incompletos em modulos financeiro e operacional",
 			"complexityScore": 8,
 			"recommendedSubtasks": 4,
-			"expansionPrompt": "Gere subtarefas para: definir o shell analítico e filtros por unidade/rede, construir dashboards e cards principais, integrar gráficos/exportações e tratamento de estados, e validar performance/permissões com testes.",
-			"reasoning": "Existem APIs de dashboard e páginas gerenciais, mas não um módulo de BI consolidado com comparativos de rede. Será preciso criar novas views, componentes de gráficos, filtros globais e considerar performance. O esforço é alto, mas com apoio parcial das APIs existentes."
+			"expansionPrompt": "Dividir a tarefa em: 1. Priorização e triagem de specs com loading infinito/dados faltantes nos módulos financeiro e operacional. 2. Identificação e correção de requests não resolvidas/incompletas para financeiro. 3. Identificação e correção de requests não resolvidas/incompletas para operacional. 4. Ajuste de awaits para dependências assíncronas legítimas e documentação de endpoints.",
+			"reasoning": "Esta tarefa é de complexidade alta. Ela exige uma depuração aprofundada para identificar as causas raiz dos 'loading infinito' e dos 'payloads incompletos', o que muitas vezes significa investigar o contrato de cada API consumida pela UI. A necessidade de criar mocks de domínio detalhados e específicos, sem recorrer a fallbacks genéricos, é um desafio. Além disso, distinguir entre problemas de mock e estados de carregamento legítimos requer um bom entendimento do comportamento da UI. A dependência de várias tarefas anteriores (327, 328, 329, 330) implica que os problemas residuais são mais sutis."
+		},
+		{
+			"taskId": 335,
+			"taskTitle": "Corrigir fluxo publico de conta demo e bootstrap pos-login demo",
+			"complexityScore": 6,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Dividir a tarefa em: 1. Revisão de tests/e2e/demo-account.spec.ts e `demo-form.tsx`. 2. Confirmação do mock de createDemoAccount e validação da resposta para `saveAuthSession`. 3. Garantia de bootstrap e contexto suficientes para o dashboard demo (`/dashboard?demo=1`) e correção de validações de formulário.",
+			"reasoning": "Esta tarefa tem complexidade média. O principal desafio é garantir que o fluxo de criação de conta demo transicione corretamente para uma sessão autenticada (demo) e que o dashboard subsequente seja carregado com o contexto adequado. Isso envolve verificar o contrato do mock da API de criação de conta demo, bem como os dados necessários para `saveAuthSession` e o bootstrap do dashboard. A interação entre um fluxo público e um shell autenticado pode introduzir pontos de falha sutis."
+		},
+		{
+			"taskId": 336,
+			"taskTitle": "Executar reruns direcionados, consolidar residuos e documentar a nova linha de base Playwright",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Dividir a tarefa em: 1. Reexecução de suites por agrupamento de causa-raiz. 2. Consolidação do resumo final de falhas por bucket. 3. Abertura de follow-ups para falhas funcionais remanescentes. 4. Atualização da documentação interna sobre sessão e mocks E2E. 5. Regeneração dos arquivos do Taskmaster e validação do backlog.",
+			"reasoning": "Esta é uma tarefa de complexidade média, principalmente de coordenação, análise e documentação. Não envolve codificação complexa, mas exige atenção aos detalhes para garantir que todas as correções anteriores sejam validadas e que os resíduos sejam categorizados de forma clara e acionável. A documentação e a atualização do backlog são cruciais para o encerramento eficaz da campanha de estabilização. A dependência de todas as outras tarefas de estabilização E2E significa que ela só pode ser iniciada após a conclusão da maior parte do trabalho técnico."
 		}
 	]
 }

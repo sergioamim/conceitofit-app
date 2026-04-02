@@ -1,6 +1,7 @@
 "use client";
 
 import { Controller, type UseFormReturn } from "react-hook-form";
+import { MaskedInput } from "@/components/shared/masked-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -75,10 +76,18 @@ export function UsuariosCreateForm({
 
           <div className="space-y-2">
             <Label htmlFor="global-user-cpf">CPF</Label>
-            <Input
-              id="global-user-cpf"
-              {...createUserForm.register("cpf")}
-              placeholder="111.222.333-44"
+            <Controller
+              control={createUserForm.control}
+              name="cpf"
+              render={({ field }) => (
+                <MaskedInput
+                  id="global-user-cpf"
+                  mask="cpf"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder="111.222.333-44"
+                />
+              )}
             />
           </div>
 

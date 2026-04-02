@@ -71,21 +71,11 @@ export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
 export const AUTH_SESSION_CLEARED_EVENT = "academia-session-cleared";
 export const IMPERSONATION_SESSION_UPDATED_EVENT = "academia-impersonation-updated";
+const ACCESS_TOKEN_COOKIE_KEY = "academia-access-token";
+const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
-}
-
-function writeAccessTokenCookie(token?: string): void {
-  if (!isBrowser()) return;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-
-  if (!token) {
-    document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`;
-    return;
-  }
-
-  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=${encodeURIComponent(token)}; Path=/; SameSite=Lax${secure}`;
 }
 
 function notifyAuthSessionUpdated(): void {
@@ -111,6 +101,47 @@ function clearAuthStorageKeys(keys: string[]): void {
   for (const key of keys) {
     window.localStorage.removeItem(key);
   }
+}
+
+function writeCookie(name: string, value: string, maxAgeSeconds?: number): void {
+  if (!isBrowser()) return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const maxAge = typeof maxAgeSeconds === "number" ? `; Max-Age=${maxAgeSeconds}` : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; SameSite=Lax${maxAge}${secure}`;
+}
+
+function expireCookie(name: string): void {
+  if (!isBrowser()) return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${name}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`;
+}
+
+function isJwtLikeToken(value: string | undefined): boolean {
+  if (typeof value !== "string") return false;
+  const normalized = value.trim();
+  if (!normalized) return false;
+  return normalized.split(".").length === 3;
+}
+
+function syncServerSessionCookies(session: AuthSession): void {
+  if (!isBrowser()) return;
+
+  if (isJwtLikeToken(session.token)) {
+    writeCookie(ACCESS_TOKEN_COOKIE_KEY, session.token!.trim());
+  } else {
+    expireCookie(ACCESS_TOKEN_COOKIE_KEY);
+  }
+
+  if (session.activeTenantId?.trim()) {
+    writeCookie(ACTIVE_TENANT_COOKIE_KEY, session.activeTenantId.trim());
+  } else {
+    expireCookie(ACTIVE_TENANT_COOKIE_KEY);
+  }
+}
+
+function clearServerSessionCookies(): void {
+  expireCookie(ACCESS_TOKEN_COOKIE_KEY);
+  expireCookie(ACTIVE_TENANT_COOKIE_KEY);
 }
 
 export function getAccessToken(): string | undefined {
@@ -357,7 +388,7 @@ export function clearImpersonationSession(): void {
 export function saveAuthSession(session: AuthSession): void {
   if (!isBrowser()) return;
   saveTokens({ token: session.token, refreshToken: session.refreshToken, type: session.type });
-  writeAccessTokenCookie(session.token);
+  syncServerSessionCookies(session);
   if (session.expiresIn != null) {
     window.localStorage.setItem(EXPIRES_IN_KEY, String(session.expiresIn));
   } else {
@@ -431,10 +462,12 @@ export function saveAuthSession(session: AuthSession): void {
 export function setActiveTenantId(tenantId?: string): void {
   if (!isBrowser()) return;
   if (!tenantId) {
+    expireCookie(ACTIVE_TENANT_COOKIE_KEY);
     window.localStorage.removeItem(ACTIVE_TENANT_ID_KEY);
     notifyAuthSessionUpdated();
     return;
   }
+  writeCookie(ACTIVE_TENANT_COOKIE_KEY, tenantId);
   window.localStorage.setItem(ACTIVE_TENANT_ID_KEY, tenantId);
   notifyAuthSessionUpdated();
 }
@@ -480,7 +513,7 @@ export function clearAvailableTenants(): void {
 
 export function clearAuthSession(): void {
   clearTokens();
-  writeAccessTokenCookie();
+  clearServerSessionCookies();
   clearAuthStorageKeys([
     EXPIRES_IN_KEY,
     SESSION_ACTIVE_KEY,

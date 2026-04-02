@@ -31,6 +31,7 @@ import {
   removeUserMembershipProfile,
   updateUserMembership,
 } from "@/lib/backoffice/seguranca";
+import { formatCpf } from "@/lib/shared/formatters";
 import type {
   GlobalAdminAccessException,
   GlobalAdminMembership,
@@ -64,6 +65,10 @@ function buildPolicySummary(detail: GlobalAdminUserDetail | null) {
   return detail.policy.scope === "REDE"
     ? "Essa pessoa recebe acesso automático em toda nova unidade da rede."
     : "Essa pessoa recebe acesso automático apenas nas novas unidades da mesma academia.";
+}
+
+function formatLoginIdentifier(label: string, value: string) {
+  return label.trim().toUpperCase() === "CPF" ? formatCpf(value) : value;
 }
 
 function SummaryBlock({
@@ -143,7 +148,9 @@ export function ResumoTab({
               label="Identificadores de login"
               value={
                 detail.loginIdentifiers?.length
-                  ? detail.loginIdentifiers.map((identifier) => `${identifier.label}: ${identifier.value}`).join(" · ")
+                  ? detail.loginIdentifiers
+                      .map((identifier) => `${identifier.label}: ${formatLoginIdentifier(identifier.label, identifier.value)}`)
+                      .join(" · ")
                   : detail.email
               }
             />

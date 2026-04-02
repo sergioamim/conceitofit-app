@@ -28,14 +28,23 @@ function normalizeToken(value: string | undefined): string | undefined {
 }
 
 export function getAccessToken(): string | undefined {
+  if (isBrowser() && !readSessionActiveFlag()) {
+    return undefined;
+  }
   return accessTokenMemory ?? readStorageToken("academia-auth-token");
 }
 
 export function getRefreshToken(): string | undefined {
+  if (isBrowser() && !readSessionActiveFlag()) {
+    return undefined;
+  }
   return refreshTokenMemory ?? readStorageToken("academia-auth-refresh-token");
 }
 
 export function getTokenType(): string | undefined {
+  if (isBrowser() && !readSessionActiveFlag()) {
+    return undefined;
+  }
   return tokenTypeMemory ?? readStorageToken("academia-auth-token-type") ?? "Bearer";
 }
 
@@ -64,8 +73,8 @@ export function shouldInjectAuthHeader(): boolean {
 }
 
 export function hasActiveSession(): boolean {
-  if (accessTokenMemory || refreshTokenMemory) {
-    return true;
+  if (isBrowser()) {
+    return readSessionActiveFlag();
   }
-  return readSessionActiveFlag();
+  return Boolean(accessTokenMemory || refreshTokenMemory);
 }

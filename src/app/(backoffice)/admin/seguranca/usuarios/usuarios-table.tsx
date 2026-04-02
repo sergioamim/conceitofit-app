@@ -10,6 +10,7 @@ import {
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { Button } from "@/components/ui/button";
 import { TableCell } from "@/components/ui/table";
+import { formatCpf } from "@/lib/shared/formatters";
 import type { GlobalAdminUserSummary } from "@/lib/types";
 import { type Filters, PAGE_SIZE, getScopeLabel } from "./usuarios-types";
 
@@ -21,6 +22,10 @@ interface UsuariosTableProps {
   hasNext: boolean;
   onPrevious: () => void;
   onNext: () => void;
+}
+
+function formatLoginIdentifier(label: string, value: string) {
+  return label.trim().toUpperCase() === "CPF" ? formatCpf(value) : value;
 }
 
 export function UsuariosTable({
@@ -65,7 +70,9 @@ export function UsuariosTable({
               <p className="text-xs text-muted-foreground">{item.email}</p>
               {item.loginIdentifiers?.length ? (
                 <p className="text-xs text-muted-foreground">
-                  {item.loginIdentifiers.map((identifier) => `${identifier.label}: ${identifier.value}`).join(" · ")}
+                  {item.loginIdentifiers
+                    .map((identifier) => `${identifier.label}: ${formatLoginIdentifier(identifier.label, identifier.value)}`)
+                    .join(" · ")}
                 </p>
               ) : null}
             </div>
