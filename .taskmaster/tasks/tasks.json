@@ -13298,13 +13298,110 @@
         "priority": "high",
         "subtasks": [],
         "updatedAt": "2026-04-02T05:15:19.508Z"
+      },
+      {
+        "id": "358",
+        "title": "Evitar fetch SSR autenticado durante Playwright no app operacional",
+        "description": "Desabilitar o bootstrap SSR autenticado em ambiente Playwright para eliminar warnings de token inválido e desacoplar os testes E2E dos cookies mockados no servidor.",
+        "details": "Escopo: adicionar um helper server-side para detectar runtime Playwright, propagar esse sinal pelo webServer do Playwright e evitar `serverFetch` autenticado em páginas operacionais que hoje fazem fallback ruidoso para o client. Aplicar ao dashboard e aos loaders administrativos que usam `serverFetch` no SSR. Fora de escopo: mudanças no backend de autenticação ou aceitação de tokens fake. A estratégia é deixar o SSR devolver `initialData` vazio em Playwright, permitindo que o client carregue via mocks do próprio E2E.",
+        "testStrategy": "Executar ao menos `tests/e2e/dashboard.spec.ts` em chromium e validar que a página continua funcional sem emitir warnings de `Token ausente ou inválido` no bootstrap SSR. Verificar lint dos arquivos alterados e confirmar que o web server do Playwright sobe com `PLAYWRIGHT_TEST=1`.",
+        "status": "done",
+        "dependencies": [
+          "349",
+          "357"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T11:40:00.000Z"
+      },
+      {
+        "id": "410",
+        "title": "Mapear impacto da sessão única contextualizada no backoffice e dashboard",
+        "description": "Analisar onde o frontend assume tokens distintos e listar ajustes necessários para o token enriquecido com contexto.",
+        "details": "Escopo: identificar guardas, hooks e fluxos que diferenciam sessão administrativa vs operacional e mapear onde o `activeTenantId` e `redeId` precisam ser respeitados. Incluir `src/app/(backoffice)`, `src/app/(app)` e a camada de sessão em `src/lib/api/session.ts`.",
+        "testStrategy": "Revisão manual das áreas tocadas e checklist dos pontos de impacto mapeados.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T12:20:00.000Z"
+      },
+      {
+        "id": "411",
+        "title": "Adaptar camada de sessão para token único enriquecido",
+        "description": "Atualizar utilitários de sessão para suportar token único com `redeId` e `activeTenantId` ativos.",
+        "details": "Escopo: ajustar leitura/gravação de sessão, persistência de `activeTenantId`, eventos e helpers de roles para operar sem troca de token entre backoffice e operacional. Manter compatibilidade com login administrativo existente.",
+        "testStrategy": "Validar login admin e sessão operacional com mocks, garantindo que a sessão única persiste e dispara eventos de atualização.",
+        "status": "done",
+        "dependencies": [
+          "410"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T12:45:00.000Z"
+      },
+      {
+        "id": "412",
+        "title": "Implementar fluxo “Entrar como academia/unidade” usando endpoint oficial",
+        "description": "Consumir `POST /api/v1/admin/auth/entrar-como-unidade` e reemitir sessão enriquecida.",
+        "details": "Escopo: atualizar UI do backoffice para enviar `academiaId`, `tenantId` e justificativa opcional, persistir o token retornado e redirecionar para `/dashboard` com contexto ativo definido.",
+        "testStrategy": "Testar manualmente no backoffice com mock/fixture e validar que o redirecionamento acontece com a sessão atualizada.",
+        "status": "pending",
+        "dependencies": [
+          "411"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T12:05:00.000Z"
+      },
+      {
+        "id": "413",
+        "title": "Alinhar guards, bootstrap e navegação ao tenant ativo do token",
+        "description": "Garantir que guards operacionais usem `activeTenantId` inicial do token enriquecido.",
+        "details": "Escopo: ajustar bootstrap de contexto, guardas de navegação e redirecionamentos para respeitar o tenant ativo definido na sessão única. Verificar `useTenantContext`, `loadSessionBootstrapState` e guardas em layouts.",
+        "testStrategy": "Simular sessão enriquecida e validar que o dashboard e páginas operacionais carregam diretamente no tenant correto.",
+        "status": "pending",
+        "dependencies": [
+          "412"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T12:05:00.000Z"
+      },
+      {
+        "id": "414",
+        "title": "Atualizar tipos, contratos e cobertura do handoff contextualizado",
+        "description": "Propagar tipos do endpoint e ajustar testes/mocks relacionados ao handoff.",
+        "details": "Escopo: adicionar tipos do contrato de `entrar-como-unidade`, atualizar stubs e testes E2E/integração que dependem do fluxo admin -> operacional.",
+        "testStrategy": "Rodar testes focados do handoff e garantir que mocks/fixtures passam com o novo contrato.",
+        "status": "pending",
+        "dependencies": [
+          "413"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T12:05:00.000Z"
+      },
+      {
+        "id": "415",
+        "title": "Validar experiência final do handoff admin -> dashboard",
+        "description": "Confirmar fluxo completo de seleção de unidade, sessão única e navegação operacional.",
+        "details": "Escopo: verificação manual e testes dirigidos garantindo que o admin mantém acesso ao backoffice e consegue navegar no operacional com o contexto ativo correto.",
+        "testStrategy": "Executar um fluxo completo com login admin, seleção de unidade e navegação no dashboard.",
+        "status": "pending",
+        "dependencies": [
+          "414"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T12:05:00.000Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-02T05:15:19.508Z",
-      "taskCount": 353,
-      "completedCount": 353,
+      "lastModified": "2026-04-02T12:45:00.000Z",
+      "taskCount": 360,
+      "completedCount": 356,
       "tags": [
         "master"
       ]

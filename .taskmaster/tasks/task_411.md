@@ -2,7 +2,7 @@
 
 **Title:** Adaptar camada de sessão para token único enriquecido
 
-**Status:** in-progress
+**Status:** done
 
 **Dependencies:** 410 ✓
 
@@ -20,4 +20,3 @@
 **Resumo do impacto**
 - A sessão única passa a ser enriquecida mesmo que o backend envie apenas o token.
 - Mantém compatibilidade com login administrativo e preservação de contexto quando necessário.
-
