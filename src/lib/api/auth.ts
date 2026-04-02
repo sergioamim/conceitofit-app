@@ -19,6 +19,7 @@ import {
   getNetworkNameFromSession,
   getNetworkSlugFromSession,
   getAuthSessionSnapshot,
+  getSessionClaimsFromToken,
   getUserIdFromSession,
   getUserKindFromSession,
   saveAuthSession,
@@ -113,6 +114,7 @@ function normalizeSession(
     fallbackNetworkSlug?: string;
   }
 ): AuthSession {
+  const tokenClaims = getSessionClaimsFromToken(response.token);
   const operationalAccess = normalizeOperationalAccess(response.operationalAccess);
   const availableTenants = response.availableTenants?.map((item) => ({
     tenantId: item.tenantId,
@@ -130,37 +132,48 @@ function normalizeSession(
     expiresIn: response.expiresIn,
     userId:
       response.userId ??
+      tokenClaims.userId ??
       (options?.preserveTenantContext ? getUserIdFromSession() : undefined),
     userKind:
       response.userKind ??
+      tokenClaims.userKind ??
       (options?.preserveTenantContext ? getUserKindFromSession() : undefined),
     displayName:
       response.displayName ??
+      tokenClaims.displayName ??
       (options?.preserveTenantContext ? getDisplayNameFromSession() : undefined),
     networkId:
       response.redeId ??
+      tokenClaims.networkId ??
       (options?.preserveTenantContext ? getNetworkIdFromSession() : undefined),
     networkSubdomain:
       response.redeSubdominio ??
       response.redeSlug ??
+      tokenClaims.networkSubdomain ??
+      tokenClaims.networkSlug ??
       options?.fallbackNetworkSubdomain ??
       options?.fallbackNetworkSlug ??
       (options?.preserveTenantContext ? getNetworkSubdomainFromSession() : undefined),
     networkSlug:
       response.redeSubdominio ??
       response.redeSlug ??
+      tokenClaims.networkSubdomain ??
+      tokenClaims.networkSlug ??
       options?.fallbackNetworkSubdomain ??
       options?.fallbackNetworkSlug ??
       (options?.preserveTenantContext ? getNetworkSlugFromSession() : undefined),
     networkName:
       response.redeNome ??
+      tokenClaims.networkName ??
       (options?.preserveTenantContext ? getNetworkNameFromSession() : undefined),
     activeTenantId:
       response.activeTenantId ??
+      tokenClaims.activeTenantId ??
       options?.fallbackActiveTenantId ??
       (options?.preserveTenantContext ? getActiveTenantIdFromSession() : undefined),
     baseTenantId:
       response.tenantBaseId ??
+      tokenClaims.baseTenantId ??
       (options?.preserveTenantContext ? getBaseTenantIdFromSession() : undefined),
     availableTenants:
       availableTenants ??
@@ -168,12 +181,16 @@ function normalizeSession(
     availableScopes:
       availableScopes.length > 0
         ? availableScopes
+        : tokenClaims.availableScopes && tokenClaims.availableScopes.length > 0
+          ? tokenClaims.availableScopes
         : options?.preserveTenantContext
           ? getAvailableScopesFromSession()
           : undefined,
     broadAccess:
       typeof response.broadAccess === "boolean"
         ? response.broadAccess
+        : typeof tokenClaims.broadAccess === "boolean"
+          ? tokenClaims.broadAccess
         : options?.preserveTenantContext
           ? getBroadAccessFromSession()
           : undefined,

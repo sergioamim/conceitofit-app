@@ -25,6 +25,20 @@ export interface AuthSession {
   forcePasswordChangeRequired?: boolean;
 }
 
+export interface AuthSessionTokenClaims {
+  userId?: string;
+  userKind?: string;
+  displayName?: string;
+  networkId?: string;
+  networkSubdomain?: string;
+  networkSlug?: string;
+  networkName?: string;
+  activeTenantId?: string;
+  baseTenantId?: string;
+  availableScopes?: AuthSessionScope[];
+  broadAccess?: boolean;
+}
+
 export interface ImpersonationSessionState {
   targetUserId: string;
   targetUserName: string;
@@ -300,6 +314,52 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function normalizeClaimString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized || undefined;
+}
+
+function readClaimString(payload: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const candidate = normalizeClaimString(payload[key]);
+    if (candidate) return candidate;
+  }
+  return undefined;
+}
+
+function normalizeScopesFromClaims(value: unknown): AuthSessionScope[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim().toUpperCase() : ""))
+    .filter((item): item is AuthSessionScope => item === "UNIDADE" || item === "REDE" || item === "GLOBAL");
+}
+
+export function getSessionClaimsFromToken(token?: string): AuthSessionTokenClaims {
+  if (!token) return {};
+  const payload = decodeJwtPayload(token);
+  if (!payload) return {};
+
+  const activeTenantId = readClaimString(payload, ["activeTenantId", "tenantId", "unidadeId"]);
+  const baseTenantId = readClaimString(payload, ["tenantBaseId", "baseTenantId"]);
+  const networkSubdomain = readClaimString(payload, ["redeSubdominio", "networkSubdomain"]);
+  const networkSlug = readClaimString(payload, ["redeSlug", "networkSlug"]);
+
+  return {
+    userId: readClaimString(payload, ["userId", "sub", "id"]),
+    userKind: readClaimString(payload, ["userKind", "tipoUsuario"]),
+    displayName: readClaimString(payload, ["displayName", "nome"]),
+    networkId: readClaimString(payload, ["redeId", "networkId"]),
+    networkSubdomain,
+    networkSlug,
+    networkName: readClaimString(payload, ["redeNome", "networkName"]),
+    activeTenantId,
+    baseTenantId,
+    availableScopes: normalizeScopesFromClaims(payload.availableScopes ?? payload.scopes),
+    broadAccess: typeof payload.broadAccess === "boolean" ? payload.broadAccess : undefined,
+  };
 }
 
 export function getRolesFromSession(): string[] {
