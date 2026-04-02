@@ -119,30 +119,45 @@ async function loadSessionBootstrapFromLegacy(): Promise<SessionBootstrapLoadRes
   };
 }
 
+async function loadSessionBootstrapFromEndpoint(): Promise<SessionBootstrapLoadResult> {
+  const bootstrap = await getSessionBootstrapApi();
+  const roles = normalizeRoles(bootstrap.user.roles);
+  return {
+    snapshot: syncTenantContextInStore({
+      currentTenantId: bootstrap.tenantContext.currentTenantId,
+      tenantAtual: bootstrap.tenantContext.tenantAtual,
+      tenants: bootstrap.tenantContext.unidadesDisponiveis,
+    }),
+    authUser: bootstrap.user,
+    roles,
+    canAccessElevatedModules:
+      bootstrap.capabilities?.canAccessElevatedModules ?? hasElevatedAccess(roles),
+    canDeleteClient:
+      bootstrap.capabilities?.canDeleteClient ?? hasClientDeleteCapability(roles),
+    academia: bootstrap.academia,
+    brandingSnapshotOverride: bootstrap.branding,
+    error: null,
+  };
+}
+
 export async function loadSessionBootstrapState(): Promise<SessionBootstrapLoadResult> {
   if (!isSessionBootstrapEndpointEnabled()) {
-    return loadSessionBootstrapFromLegacy();
+    try {
+      return await loadSessionBootstrapFromLegacy();
+    } catch (error) {
+      if (isSessionBootstrapFallbackEnabled()) {
+        try {
+          return await loadSessionBootstrapFromEndpoint();
+        } catch {
+          throw error;
+        }
+      }
+      throw error;
+    }
   }
 
   try {
-    const bootstrap = await getSessionBootstrapApi();
-    const roles = normalizeRoles(bootstrap.user.roles);
-    return {
-      snapshot: syncTenantContextInStore({
-        currentTenantId: bootstrap.tenantContext.currentTenantId,
-        tenantAtual: bootstrap.tenantContext.tenantAtual,
-        tenants: bootstrap.tenantContext.unidadesDisponiveis,
-      }),
-      authUser: bootstrap.user,
-      roles,
-      canAccessElevatedModules:
-        bootstrap.capabilities?.canAccessElevatedModules ?? hasElevatedAccess(roles),
-      canDeleteClient:
-        bootstrap.capabilities?.canDeleteClient ?? hasClientDeleteCapability(roles),
-      academia: bootstrap.academia,
-      brandingSnapshotOverride: bootstrap.branding,
-      error: null,
-    };
+    return await loadSessionBootstrapFromEndpoint();
   } catch (error) {
     if (isSessionBootstrapFallbackEnabled() && isSessionBootstrapMissingRouteError(error)) {
       return loadSessionBootstrapFromLegacy();
