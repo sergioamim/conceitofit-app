@@ -122,3 +122,69 @@ Situação final desta task:
 1. Corrigir a dupla declaração de `ACCESS_TOKEN_COOKIE_KEY` em `src/lib/api/session.ts`.
 2. Reexecutar `tests/e2e/adesao-publica.spec.ts` e `tests/e2e/comercial-fluxo.spec.ts` após o build voltar a compilar.
 3. Investigar o pós-conversão do `tests/e2e/comercial-smoke-real.spec.ts`, focando na disponibilidade/legibilidade de aluno, matrícula e pagamento após a resposta de sucesso do backend.
+
+## Atualização da task 357
+
+Após as correções de frontend das tasks seguintes, este relatório foi revalidado em `2026-04-02` com rerun focalizado dos buckets mais sensíveis.
+
+### Comandos executados
+
+```bash
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 \
+PLAYWRIGHT_WEB_SERVER_COMMAND='node -e "setInterval(() => {}, 1 << 30)"' \
+  npx playwright test \
+    tests/e2e/app-multiunidade-contrato.spec.ts \
+    tests/e2e/sessao-multiunidade.spec.ts \
+    tests/e2e/auth-rede.spec.ts \
+    tests/e2e/onboarding-fluxo-completo.spec.ts \
+    tests/e2e/comercial-fluxo.spec.ts \
+    tests/e2e/backoffice-seguranca.spec.ts \
+    tests/e2e/bi-operacional.spec.ts \
+    --project=chromium --reporter=line
+```
+
+Resultado observado:
+
+- `17 passed (21.8s)`
+- os buckets de multiunidade, auth por rede, onboarding, comercial mockado, segurança global e BI operacional ficaram verdes
+- não reapareceram stuck-loaders, guard loops, bootstrap quebrado de backoffice ou o bloqueio do carrinho em `Nova Venda`
+
+Rerun complementar com backend real:
+
+```bash
+PLAYWRIGHT_REAL_BACKEND=1 \
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 \
+PLAYWRIGHT_WEB_SERVER_COMMAND='node -e "setInterval(() => {}, 1 << 30)"' \
+  npx playwright test tests/e2e/comercial-smoke-real.spec.ts \
+    --project=chromium --workers=1 --reporter=line
+```
+
+Resultado observado:
+
+- a autenticação, criação do prospect e a conversão continuam avançando normalmente
+- o único resíduo final permaneceu no pós-conversão do backend:
+
+```text
+Error: Conversao concluida, mas aluno/matricula/pagamento nao ficaram legiveis para 106.809.176-24.
+```
+
+### Baseline consolidada após a task 357
+
+| Bucket | Situação após rerun | Classificação |
+| --- | --- | --- |
+| `app-multiunidade-contrato.spec.ts` | Verde | Frontend resolvido |
+| `sessao-multiunidade.spec.ts` | Verde | Frontend resolvido |
+| `auth-rede.spec.ts` | Verde | Frontend resolvido |
+| `onboarding-fluxo-completo.spec.ts` | Verde | Frontend resolvido |
+| `comercial-fluxo.spec.ts` | Verde | Frontend resolvido |
+| `backoffice-seguranca.spec.ts` | Verde | Frontend resolvido |
+| `bi-operacional.spec.ts` | Verde | Frontend resolvido |
+| `comercial-smoke-real.spec.ts` | Ainda falha no pós-conversão | Resíduo real de backend |
+
+### Conclusão atualizada
+
+Depois das correções de frontend desta rodada, o relatório antigo deixou de apontar um conjunto misturado de falhas reproduzíveis. O estado mais atual fica assim:
+
+1. os buckets focados de frontend revalidaram verdes no runtime atual;
+2. o resíduo final reproduzível continua concentrado no smoke comercial com backend real;
+3. a dependência real remanescente para fechar a trilha segue no `academia-java`, especificamente na legibilidade síncrona de aluno, matrícula e pagamento após a conversão do prospect.
