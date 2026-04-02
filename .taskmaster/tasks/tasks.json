@@ -13240,14 +13240,14 @@
         "description": "Eliminar os estados de loading infinito e travas de guard nos fluxos de login por rede, primeiro acesso e onboarding completo.",
         "details": "Escopo: `tests/e2e/auth-rede.spec.ts`, `tests/e2e/onboarding-fluxo-completo.spec.ts` e fluxos compartilhados de credencial contextualizada. Evidências atuais: `Carregando contexto da rede...` em `test-results/auth-rede-acesso-por-rede--3dc7c-ogin-exigir-primeiro-acesso-chromium/error-context.md` e `Validando contexto do primeiro acesso...` em `test-results/onboarding-fluxo-completo--197d5-conclui-o-checklist-inicial-chromium/error-context.md`. Revisar `src/components/auth/network-access-flow.tsx`, `src/components/auth/forced-password-change-flow.tsx`, bootstrap contextual, timeout/fallback de guard e transições após resolução de contexto. Fora de escopo: reescrever contrato de autenticação do backend. O foco é garantir que a UI sempre avance para formulário, fallback ou erro visível.",
         "testStrategy": "Executar `tests/e2e/auth-rede.spec.ts` e `tests/e2e/onboarding-fluxo-completo.spec.ts` em chromium. Confirmar que os fluxos deixam de parar em estados intermediários de “carregando/validando contexto” e que os redirecionamentos de primeiro acesso convergem.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "348",
           "351"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-02T10:30:00.000Z"
+        "updatedAt": "2026-04-02T05:07:46.000Z"
       },
       {
         "id": "355",
@@ -13302,9 +13302,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-02T05:07:36.571Z",
+      "lastModified": "2026-04-02T05:07:46.000Z",
       "taskCount": 353,
-      "completedCount": 350,
+      "completedCount": 351,
       "tags": [
         "master"
       ]
