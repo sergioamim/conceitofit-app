@@ -1,5 +1,4 @@
 import type { Page, Request, Route } from "@playwright/test";
-import type { DiaSemana } from "@/lib/types";
 import {
   buildE2EAuthSession,
   installE2EAuthSession,
@@ -2776,7 +2775,7 @@ export async function installAdminCrudApiMocks(page: Page) {
       tenantId: "tenant-centro",
       atividadeId: "atividade-musculacao",
       salaId: "sala-principal",
-      funcionarioId: undefined as string | undefined,
+      funcionarioId: undefined,
       diasSemana: ["SEG", "QUA", "SEX"],
       definicaoHorario: "PREVIAMENTE" as const,
       horaInicio: "07:00",
@@ -2801,7 +2800,7 @@ export async function installAdminCrudApiMocks(page: Page) {
       finalizarAtividadeAutomaticamente: true,
       desabilitarListaEspera: false,
       local: "Sala Principal",
-      instrutor: undefined as string | undefined,
+      instrutor: undefined,
       ativo: true,
     },
   ];
@@ -4793,50 +4792,16 @@ export async function installAdminCrudApiMocks(page: Page) {
       return;
     }
 
-    type AtividadeGradePayload = {
-      atividadeId?: string;
-      salaId?: string;
-      funcionarioId?: string;
-      diasSemana?: string[];
-      definicaoHorario?: (typeof atividadesGrade)[number]["definicaoHorario"];
-      horaInicio?: string;
-      horaFim?: string;
-      capacidade?: number;
-      checkinLiberadoMinutosAntes?: number;
-      duracaoMinutos?: number;
-      codigo?: string;
-      grupoAtividades?: string;
-      publico?: string;
-      dificuldade?: (typeof atividadesGrade)[number]["dificuldade"];
-      descricaoAgenda?: string;
-      acessoClientes?: (typeof atividadesGrade)[number]["acessoClientes"];
-      permiteReserva?: boolean;
-      limitarVagasAgregadores?: boolean;
-      exibirWellhub?: boolean;
-      permitirSaidaAntesInicio?: boolean;
-      permitirEscolherNumeroVaga?: boolean;
-      exibirNoAppCliente?: boolean;
-      exibirNoAutoatendimento?: boolean;
-      exibirNoWodTv?: boolean;
-      finalizarAtividadeAutomaticamente?: boolean;
-      desabilitarListaEspera?: boolean;
-      local?: string;
-      instrutor?: string;
-      ativo?: boolean;
-    };
-
     if (path === "/api/v1/administrativo/atividades-grade" && method === "POST") {
-      const payload = parseBody<AtividadeGradePayload>(request);
+      const payload = parseBody<Partial<(typeof atividadesGrade)[number]>>(request);
       const tenantId = resolveTenantId(url);
       const atividadeId = payload.atividadeId?.trim() || atividades[0]?.id || "";
-      const payloadExtras = payload as Record<string, unknown>;
       const salaId =
         payload.salaId?.trim()
         || salas.find((item) => item.tenantId === tenantId && item.ativo)?.id
         || salas[0]?.id
         || "";
-      const funcionarioId =
-        typeof payloadExtras.funcionarioId === "string" ? payloadExtras.funcionarioId.trim() || undefined : undefined;
+      const funcionarioId = payload.funcionarioId?.trim() || undefined;
       const created: AtividadeGradeSeed = {
         id: nextId("atividade-grade", "atividadeGrade"),
         tenantId,
@@ -4866,12 +4831,9 @@ export async function installAdminCrudApiMocks(page: Page) {
         exibirNoWodTv: payload.exibirNoWodTv ?? false,
         finalizarAtividadeAutomaticamente: payload.finalizarAtividadeAutomaticamente ?? true,
         desabilitarListaEspera: payload.desabilitarListaEspera ?? false,
-        local:
-          typeof payloadExtras.local === "string"
-            ? payloadExtras.local.trim() || salas.find((item) => item.id === salaId)?.nome
-            : salas.find((item) => item.id === salaId)?.nome,
+        local: payload.local?.trim() || salas.find((item) => item.id === salaId)?.nome,
         instrutor:
-          (typeof payloadExtras.instrutor === "string" ? payloadExtras.instrutor.trim() : "")
+          payload.instrutor?.trim()
           || funcionarios.find((item) => item.id === funcionarioId)?.nome,
         ativo: true,
       };
@@ -4882,22 +4844,15 @@ export async function installAdminCrudApiMocks(page: Page) {
 
     if (/^\/api\/v1\/administrativo\/atividades-grade\/[^/]+$/.test(path) && method === "PUT") {
       const gradeId = path.split("/").at(-1) ?? "";
-      const payload = parseBody<AtividadeGradePayload>(request);
-      const payloadExtras = payload as Record<string, unknown>;
+      const payload = parseBody<Partial<(typeof atividadesGrade)[number]>>(request);
       atividadesGrade = atividadesGrade.map((item) =>
         item.id === gradeId
           ? {
               ...item,
               atividadeId: payload.atividadeId?.trim() || item.atividadeId,
               salaId: payload.salaId?.trim() || item.salaId,
-              funcionarioId:
-                typeof payloadExtras.funcionarioId === "string"
-                  ? payloadExtras.funcionarioId.trim() || item.funcionarioId
-                  : item.funcionarioId,
-              diasSemana:
-                Array.isArray(payload.diasSemana) && payload.diasSemana.length > 0
-                  ? (payload.diasSemana as DiaSemana[])
-                  : item.diasSemana,
+              funcionarioId: payload.funcionarioId?.trim() || item.funcionarioId,
+              diasSemana: payload.diasSemana?.length ? payload.diasSemana : item.diasSemana,
               definicaoHorario: payload.definicaoHorario ?? item.definicaoHorario,
               horaInicio: payload.horaInicio?.trim() || item.horaInicio,
               horaFim: payload.horaFim?.trim() || item.horaFim,
@@ -4926,14 +4881,8 @@ export async function installAdminCrudApiMocks(page: Page) {
               exibirNoWodTv: payload.exibirNoWodTv ?? item.exibirNoWodTv,
               finalizarAtividadeAutomaticamente: payload.finalizarAtividadeAutomaticamente ?? item.finalizarAtividadeAutomaticamente,
               desabilitarListaEspera: payload.desabilitarListaEspera ?? item.desabilitarListaEspera,
-              local:
-                typeof payloadExtras.local === "string"
-                  ? payloadExtras.local.trim() || item.local
-                  : item.local,
-              instrutor:
-                typeof payloadExtras.instrutor === "string"
-                  ? payloadExtras.instrutor.trim() || item.instrutor
-                  : item.instrutor,
+              local: payload.local?.trim() || item.local,
+              instrutor: payload.instrutor?.trim() || item.instrutor,
               ativo: payload.ativo ?? item.ativo,
             }
           : item,
