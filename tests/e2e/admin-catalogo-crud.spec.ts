@@ -88,7 +88,7 @@ test.describe("Admin catálogo CRUD", () => {
     const dialog = page.getByRole("dialog");
     await page.getByRole("button", { name: "Novo voucher" }).click();
     await expect(dialog).toBeVisible();
-    await selectComboboxOption(page, dialog.getByRole("combobox").first(), "Desconto");
+    await selectComboboxOption(page, dialog.getByRole("combobox").nth(1), "Desconto");
     await dialog.getByPlaceholder("Digite o nome do voucher").fill(voucherNome);
     await dialog.locator('input[type="date"]').first().fill("2026-03-17");
     await dialog.locator('input[type="date"]').nth(1).fill("2026-04-17");

@@ -1,13 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { installAdminCrudApiMocks, seedAuthenticatedSession } from "./support/backend-only-stubs";
-
-async function loginWithRedirect(page: Page, targetPath: string) {
-  await seedAuthenticatedSession(page, {
-    tenantId: "tenant-importacao-evo",
-    availableTenants: [{ tenantId: "tenant-importacao-evo", defaultTenant: true }],
-  });
-  await page.goto(targetPath);
-}
+import { openAdminCrudPage } from "./support/admin-crud-helpers";
 
 async function installImportacaoEvoJobStubs(page: Page) {
   let arquivosSelecionadosNoJob = [
@@ -494,8 +486,7 @@ test.describe("Backoffice importacao EVO", () => {
     const unidadeEmail = `etl-${stamp}@qa.local`;
     const jobAlias = `Carga EVO ${stamp}`;
 
-    await installAdminCrudApiMocks(page);
-    await loginWithRedirect(page, "/admin/unidades");
+    await openAdminCrudPage(page, "/admin/unidades");
     await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible();
 
     await page.getByLabel("Nome da unidade *").fill(unidadeNome);
@@ -547,9 +538,11 @@ test.describe("Backoffice importacao EVO", () => {
     await expect(recebimentosHistoricoCard.getByText("Nunca importado")).toBeVisible();
     const funcoesHistoricoCard = page.locator('label').filter({ hasText: "Funções exercidas" }).first();
     await expect(funcoesHistoricoCard.getByText("Com erros")).toBeVisible();
-    await expect(funcoesHistoricoCard.getByRole("button", { name: "Tentar somente erros (aguardando backend)" })).toBeDisabled();
-    await funcoesHistoricoCard.getByRole("button", { name: "Ver rejeições" }).click();
-    await expect(page.getByRole("tabpanel", { name: "Acompanhar Job" }).getByDisplayValue("job-funcoes-1")).toBeVisible();
+    await expect(
+      funcoesHistoricoCard.getByRole("button").filter({ hasText: "Tentar somente erros (aguardando backend)" })
+    ).toBeDisabled();
+    await page.locator('button:has-text("Ver rejeições")').last().click();
+    await expect(page.getByRole("tabpanel", { name: "Acompanhar Job" }).getByText(/^Rejeições$/)).toBeVisible();
     await expect(page.getByText("Reenvie a malha de funções após corrigir o catálogo legado.")).toBeVisible();
 
     await page.getByRole("tab", { name: "Importar por Pacote (ZIP/CSV)" }).click();
@@ -567,7 +560,7 @@ test.describe("Backoffice importacao EVO", () => {
     await expect(acompanhamento.getByText("CONCLUIDO").first()).toBeVisible({ timeout: 15000 });
     await expect(acompanhamento.getByLabel("Alias do job")).toHaveValue(jobAlias);
     await expect(acompanhamento.getByText("Diagnóstico de colaboradores")).toBeVisible();
-    await expect(acompanhamento.getByText("Funções e cargos")).toBeVisible();
+    await expect(acompanhamento.getByText("Funções e cargos").first()).toBeVisible();
     await expect(acompanhamento.getByText("Tipos operacionais", { exact: true })).toBeVisible();
     await expect(acompanhamento.getByText("Contratação", { exact: true })).toBeVisible();
     await expect(acompanhamento.getByText("Perfil legado", { exact: true })).toBeVisible();

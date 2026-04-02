@@ -66,6 +66,7 @@ const FORCE_PASSWORD_CHANGE_REQUIRED_KEY = "academia-auth-force-password-change-
 const SESSION_ACTIVE_KEY = "academia-auth-session-active";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
 const IMPERSONATION_SESSION_KEY = "academia-impersonation-session";
+const ACCESS_TOKEN_COOKIE_KEY = "academia-access-token";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
 export const AUTH_SESSION_CLEARED_EVENT = "academia-session-cleared";
@@ -73,6 +74,18 @@ export const IMPERSONATION_SESSION_UPDATED_EVENT = "academia-impersonation-updat
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
+}
+
+function writeAccessTokenCookie(token?: string): void {
+  if (!isBrowser()) return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+
+  if (!token) {
+    document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`;
+    return;
+  }
+
+  document.cookie = `${ACCESS_TOKEN_COOKIE_KEY}=${encodeURIComponent(token)}; Path=/; SameSite=Lax${secure}`;
 }
 
 function notifyAuthSessionUpdated(): void {
@@ -344,6 +357,7 @@ export function clearImpersonationSession(): void {
 export function saveAuthSession(session: AuthSession): void {
   if (!isBrowser()) return;
   saveTokens({ token: session.token, refreshToken: session.refreshToken, type: session.type });
+  writeAccessTokenCookie(session.token);
   if (session.expiresIn != null) {
     window.localStorage.setItem(EXPIRES_IN_KEY, String(session.expiresIn));
   } else {
@@ -466,6 +480,7 @@ export function clearAvailableTenants(): void {
 
 export function clearAuthSession(): void {
   clearTokens();
+  writeAccessTokenCookie();
   clearAuthStorageKeys([
     EXPIRES_IN_KEY,
     SESSION_ACTIVE_KEY,

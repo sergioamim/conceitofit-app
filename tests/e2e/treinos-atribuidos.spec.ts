@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { buildTreinoV2Observacoes, parseTreinoV2Metadata } from "../../src/lib/tenant/treinos/v2-runtime";
 import { installE2EAuthSession } from "./support/auth-session";
+import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
 
 type StubTreino = {
   id: string;
@@ -23,7 +24,7 @@ type StubTreino = {
 };
 
 function seedSession(page: Page) {
-  return installE2EAuthSession(page, {
+  const session = installE2EAuthSession(page, {
     activeTenantId: "tn-1",
     baseTenantId: "tn-1",
     availableTenants: [{ tenantId: "tn-1", defaultTenant: true }],
@@ -33,6 +34,47 @@ function seedSession(page: Page) {
     roles: ["ADMIN"],
     availableScopes: ["UNIDADE"],
   });
+
+  const shell = installOperationalAppShellMocks(page, {
+    currentTenantId: "tn-1",
+    tenants: [
+      {
+        id: "tn-1",
+        nome: "Unidade Centro",
+        academiaId: "acd-1",
+        groupId: "acd-1",
+        ativo: true,
+      },
+    ],
+    user: {
+      id: "user-1",
+      userId: "user-1",
+      nome: "Admin Treinos",
+      displayName: "Admin Treinos",
+      email: "admin@academia.local",
+      roles: ["ADMIN"],
+      userKind: "COLABORADOR",
+      activeTenantId: "tn-1",
+      tenantBaseId: "tn-1",
+      availableTenants: [{ tenantId: "tn-1", defaultTenant: true }],
+      availableScopes: ["UNIDADE"],
+      broadAccess: false,
+      redeId: "acd-1",
+      redeNome: "Academia Treinos",
+      redeSlug: "academia-treinos",
+    },
+    academia: {
+      id: "acd-1",
+      nome: "Academia Treinos",
+      ativo: true,
+    },
+    routes: {
+      authRefresh: true,
+      onboardingStatus: true,
+    },
+  });
+
+  return Promise.all([session, shell]);
 }
 
 function json(body: unknown, status = 200) {

@@ -152,6 +152,28 @@ async function installDashboardMocks(page: Page) {
       await fulfillJson(route, DASHBOARD_RESPONSE);
       return;
     }
+    if (path === "/api/v1/comercial/pagamentos" && method === "GET") {
+      await fulfillJson(route, DASHBOARD_RESPONSE.pagamentosPendentes);
+      return;
+    }
+    if (
+      (path === "/api/v1/comercial/alunos"
+        || path === "/api/v1/matriculas"
+        || path === "/api/v1/formas-pagamento"
+        || path === "/api/v1/beneficios/convenios")
+      && method === "GET"
+    ) {
+      await fulfillJson(route, []);
+      return;
+    }
+    if (path === "/api/v1/admin-financeiro/nfse-config" && method === "GET") {
+      await fulfillJson(route, {
+        status: "CONFIGURADO",
+        provider: "MOCK",
+        ambiente: "HOMOLOGACAO",
+      });
+      return;
+    }
     await route.fallback();
   });
 }
@@ -189,6 +211,8 @@ test.describe("Dashboard principal", () => {
     await page.getByTestId("prospects-recentes-link").click();
     await expect(page).toHaveURL(/\/prospects$/);
 
+    await seedAuthenticatedSession(page);
+    await installDashboardMocks(page);
     await page.goto("/dashboard");
     await page.getByRole("button", { name: "Financeiro" }).click();
     await expect(page.getByText("Recebimentos do mês")).toBeVisible();

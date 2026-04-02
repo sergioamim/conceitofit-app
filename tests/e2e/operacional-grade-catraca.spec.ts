@@ -275,7 +275,7 @@ test.describe("Operacional grade e catraca", () => {
     await page.goto("/grade");
     await expect(page.getByRole("heading", { name: "Grade" })).toBeVisible();
     await expect(page.getByText("Calendário semanal das atividades configuradas na Grade")).toBeVisible();
-    await expect(page.getByText("Bike")).toBeVisible();
+    await expect(page.getByText("Local: Studio Bike").first()).toBeVisible();
 
     await page.goto("/atividades");
     await expect(page.getByRole("heading", { name: "Atividades" })).toBeVisible();
@@ -290,6 +290,6 @@ test.describe("Operacional grade e catraca", () => {
     await page.goto("/administrativo/catraca-status");
     await expect(page.getByRole("heading", { name: "Status de conexões Catraca" })).toBeVisible();
     await expect(page.getByText("Total de agentes conectados")).toBeVisible();
-    await expect(page.getByText("Unidade Centro")).toBeVisible();
+    await expect(page.getByText("Unidade Centro").first()).toBeVisible();
   });
 });
