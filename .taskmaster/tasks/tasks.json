@@ -13360,13 +13360,13 @@
         "description": "Garantir que guards operacionais usem `activeTenantId` inicial do token enriquecido.",
         "details": "Escopo: ajustar bootstrap de contexto, guardas de navegação e redirecionamentos para respeitar o tenant ativo definido na sessão única. Verificar `useTenantContext`, `loadSessionBootstrapState` e guardas em layouts.",
         "testStrategy": "Simular sessão enriquecida e validar que o dashboard e páginas operacionais carregam diretamente no tenant correto.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "412"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-02T12:05:00.000Z"
+        "updatedAt": "2026-04-02T13:30:00.000Z"
       },
       {
         "id": "414",
@@ -13399,9 +13399,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-02T13:10:00.000Z",
+      "lastModified": "2026-04-02T13:30:00.000Z",
       "taskCount": 360,
-      "completedCount": 357,
+      "completedCount": 358,
       "tags": [
         "master"
       ]
