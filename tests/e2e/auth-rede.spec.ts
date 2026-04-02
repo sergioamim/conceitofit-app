@@ -241,6 +241,20 @@ async function installAuthNetworkMocks(
       return;
     }
 
+    if (path === "/api/v1/onboarding/status" && method === "GET") {
+      await route.fulfill({
+        status: 200,
+        json: {
+          percentualConclusao: 100,
+          concluido: true,
+          totalEtapas: 0,
+          etapasConcluidas: 0,
+          etapas: [],
+        },
+      });
+      return;
+    }
+
     await route.fulfill({ status: 200, json: {} });
   });
 }
