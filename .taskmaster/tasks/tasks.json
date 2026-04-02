@@ -13395,13 +13395,71 @@
         "priority": "high",
         "subtasks": [],
         "updatedAt": "2026-04-02T14:30:00.000Z"
+      },
+      {
+        "id": "416",
+        "title": "Reestabilizar login e jornadas públicas de aquisição",
+        "description": "Corrigir regressões em login e fluxos públicos para que o usuário avance do formulário inicial ao destino esperado sem ficar preso na tela de entrada ou falhar no handoff para o app autenticado.",
+        "details": "Escopo: `tests/e2e/security-flows.spec.ts`, `tests/e2e/adesao-publica.spec.ts` e `tests/e2e/demo-account.spec.ts`. Evidências atuais: `security-flows` ainda para na tela `Acesso` em `test-results/security-flows-Fluxos-crít-f8bd5--redireciona-para-dashboard-chromium/error-context.md`; `demo-account` permanece no formulário público sem redirecionar para `/dashboard?demo=1` em `test-results/demo-account-Fluxo-de-cont-2e921-a-para-dashboard-com-demo-1-chromium/error-context.md`; `adesao-publica` sobe com tenant/plano e formulário preenchido, mas ainda precisa voltar a convergir até checkout/pendências no runtime atual, conforme histórico consolidado em `docs/PLAYWRIGHT_RESIDUOS_BACKEND_TASK_352_2026-04-02.md` e `docs/PLAYWRIGHT_STABILIZATION_BASELINE_2026-04-01.md`. Revisar principalmente bootstrap de sessão e redirect em `src/lib/api/session.ts`, `src/app/login`, `src/app/(public)/adesao*` e `src/app/(public)/b2b/demo/*`.",
+        "testStrategy": "Executar `tests/e2e/security-flows.spec.ts`, `tests/e2e/adesao-publica.spec.ts` e `tests/e2e/demo-account.spec.ts` em chromium. Validar que o login redireciona para o dashboard com tenant resolvido, que a conta demo persiste a sessão e abre `/dashboard?demo=1`, e que a jornada pública volta a avançar até as etapas finais sem travar no formulário inicial.",
+        "status": "done",
+        "dependencies": [
+          "353",
+          "354"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T21:02:53.609Z"
+      },
+      {
+        "id": "417",
+        "title": "Reestabilizar shell operacional por unidade e CRUD administrativo",
+        "description": "Corrigir rotas autenticadas por unidade que ainda sobem com placeholders de contexto, seletor bloqueado ou loadings intermináveis, quebrando CRUD administrativo e telas operacionais.",
+        "details": "Escopo: `tests/e2e/admin-catalogo-crud.spec.ts`, `tests/e2e/admin-config-api-only.spec.ts`, `tests/e2e/admin-financeiro-operacional-crud.spec.ts`, `tests/e2e/admin-unidade-base-equipe.spec.ts`, `tests/e2e/operacional-grade-catraca.spec.ts`, `tests/e2e/layout-bottom-nav.spec.ts` e `tests/e2e/planos-context-recovery.spec.ts`. Evidências atuais: `layout-bottom-nav` e `planos-context-recovery` ainda mostram `Selecionar unidade ativa` desabilitado e `Carregando dashboard...` em `test-results/layout-bottom-nav-Bottom-N-64312-alhos-críticos-da-BottomNav-chromium/error-context.md` e `test-results/planos-context-recovery-Pl-c20e7-em-erro-runtime-na-listagem-chromium/error-context.md`; `admin-financeiro-operacional-crud` fica em `Carregando atividades...`; os buckets administrativos seguem exibindo shell/menu, mas sem contexto consistente de academia/unidade para convergir o conteúdo. Reutilizar como fonte de verdade o pacote administrativo descrito em `docs/task-34-playwright-admin-crud.md` e a baseline anterior da task `334` em `docs/PLAYWRIGHT_STABILIZATION_BASELINE_2026-04-01.md`. Revisar `src/components/layout/*`, seleção de unidade ativa, rotas `src/app/(app)/administrativo/*`, `src/app/(app)/grade`, `src/app/(app)/atividades` e componentes compartilhados de tabela/listagem.",
+        "testStrategy": "Executar os sete specs do escopo em chromium. Validar que a shell autenticada deixa de renderizar placeholders de `Academia`/`Unidade ativa`, que o seletor de unidade volta a habilitar quando a fixture é elegível e que cada rota administrativa/operacional sai do loading para dados, estado vazio ou erro explícito.",
+        "status": "pending",
+        "dependencies": [
+          "353"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T20:51:05.000Z"
+      },
+      {
+        "id": "418",
+        "title": "Reestabilizar módulos avançados do backoffice global",
+        "description": "Resolver as falhas remanescentes do backoffice global depois do bootstrap básico, cobrindo rotas satélite, impersonação, onboarding/unidades e importação EVO.",
+        "details": "Escopo: `tests/e2e/admin-backoffice-coverage.spec.ts`, `tests/e2e/backoffice-global.spec.ts`, `tests/e2e/backoffice-impersonation.spec.ts`, `tests/e2e/backoffice-importacao-evo.spec.ts` e `tests/e2e/backoffice-seguranca-rollout.spec.ts`. Evidências atuais: vários buckets ainda ficam presos em `Validando permissões do backoffice...`, como em `test-results/admin-backoffice-coverage--9a392-anceiro-e-modulos-satelites-chromium/error-context.md`, `test-results/backoffice-impersonation-B-275c4-rra-com-trilha-no-audit-log-chromium/error-context.md` e `test-results/backoffice-seguranca-rollo-3f6bd-registra-exceção-controlada-chromium/error-context.md`; já `backoffice-global` entra em `/admin/academias`, então o resíduo ali é funcional de rota/mutação; `backoffice-importacao-evo` rende o fluxo de unidades, mas acusa `Não foi possível carregar o onboarding global: Unidade não encontrada` em `test-results/backoffice-importacao-evo--ab6ba-ui-job-pelo-fluxo-principal-chromium/error-context.md`. Revisar `src/app/(backoffice)/admin/*`, guards globais, resolução de academia/unidade no contexto administrativo, impersonação e a jornada de importação EVO.",
+        "testStrategy": "Executar os cinco specs do escopo em chromium. Validar que o shell global sai do estado de validação, que impersonação/audit log voltam a completar a trilha esperada e que o fluxo de onboarding/importação EVO consegue localizar o contexto correto sem erro de unidade inexistente.",
+        "status": "pending",
+        "dependencies": [
+          "356"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T20:51:05.000Z"
+      },
+      {
+        "id": "419",
+        "title": "Reestabilizar jornadas operacionais de clientes e CRM",
+        "description": "Corrigir os fluxos de cadastro de cliente e workspace CRM para que navegação, criação e módulos principais voltem a convergir no runtime atual.",
+        "details": "Escopo: `tests/e2e/clientes-cadastro.spec.ts` e `tests/e2e/crm-operacional.spec.ts`. Evidências atuais: `clientes-cadastro` cai na listagem de `/clientes` sem completar o fluxo esperado de `Novo cliente`, com shell já carregada em `test-results/clientes-cadastro-Cadastro-9580d-iente-com-plano-e-pagamento-chromium/error-context.md`; `crm-operacional` renderiza o menu e o workspace CRM, mas ainda falha antes de validar campanhas, funil, playbooks e tarefas em `test-results/crm-operacional-CRM-operac-205e2-módulos-operacionais-do-CRM-chromium/error-context.md`. Revisar especialmente `src/app/(app)/clientes/*`, `src/components/clientes/*`, `src/app/(app)/crm/*`, `src/components/crm/*` e contratos mínimos/mocks compartilhados pelos helpers E2E dessas jornadas.",
+        "testStrategy": "Executar `tests/e2e/clientes-cadastro.spec.ts` e `tests/e2e/crm-operacional.spec.ts` em chromium. Validar que o wizard/modal de cliente volta a abrir e concluir a jornada com plano/pagamento e que o workspace CRM navega pelos módulos operacionais esperados sem regressão de contexto.",
+        "status": "done",
+        "dependencies": [
+          "353",
+          "355"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-02T21:08:12.252Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-02T14:30:00.000Z",
-      "taskCount": 360,
-      "completedCount": 360,
+      "lastModified": "2026-04-02T21:08:12.253Z",
+      "taskCount": 364,
+      "completedCount": 362,
       "tags": [
         "master"
       ]
