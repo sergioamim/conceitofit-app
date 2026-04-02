@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  adminEntrarComoUnidadeApi,
   adminLoginApi,
   changeForcedPasswordApi,
   getAccessNetworkContextApi,
@@ -140,6 +141,43 @@ test.describe("auth por rede", () => {
       expect(session.refreshToken).toBe("refresh-admin");
       expect(session.availableScopes).toEqual(["GLOBAL"]);
       expect(session.activeTenantId).toBe("tenant-admin");
+    } finally {
+      restore();
+    }
+  });
+
+  test("adminEntrarComoUnidadeApi troca para a unidade via endpoint de contexto", async () => {
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
+          token: "token-admin-unidade",
+          refreshToken: "refresh-admin-unidade",
+          userId: "user-admin",
+          userKind: "ADMIN",
+          displayName: "Admin Master",
+          activeTenantId: "tenant-centro",
+          tenantBaseId: "tenant-admin-base",
+          availableScopes: ["GLOBAL"],
+          broadAccess: true,
+        },
+      },
+    ]);
+
+    try {
+      const session = await adminEntrarComoUnidadeApi({
+        academiaId: "academia-norte",
+        tenantId: "tenant-centro",
+        justificativa: "auditoria",
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.url).toContain("/api/v1/auth/context/tenant");
+      expect(calls[0]?.method).toBe("POST");
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        tenantId: "tenant-centro",
+      });
+      expect(session.activeTenantId).toBe("tenant-centro");
+      expect(session.token).toBe("token-admin-unidade");
     } finally {
       restore();
     }
