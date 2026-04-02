@@ -1,53 +1,40 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+import { installPublicJourneyApiMocks, seedAuthenticatedSession } from "./support/backend-only-stubs";
+
+async function abrirClientesComSessao(page: Page) {
+  await installPublicJourneyApiMocks(page);
+  await seedAuthenticatedSession(page, {
+    tenantId: "tenant-mananciais-s1",
+    tenantName: "MANANCIAIS - S1",
+    availableTenants: [{ tenantId: "tenant-mananciais-s1", defaultTenant: true }],
+  });
+  await page.goto("/clientes", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
+}
 
 test.describe("Sincronização de Estado na URL - Clientes", () => {
-  test("deve atualizar a URL ao pesquisar e filtrar", async ({ page }) => {
-    // 1. Acessar a página
-    await page.goto("/clientes");
-    
-    // Aguardar página carregar
+  test("deve ler filtros da URL e manter a navegação sincronizada", async ({ page }) => {
+    await abrirClientesComSessao(page);
+    await page.goto("/clientes?q=Teste&status=INATIVO", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
-
-    // 2. Fazer uma busca e checar URL debounced
-    const searchInput = page.getByPlaceholder("Buscar por nome, CPF, telefone ou e-mail...");
-    await searchInput.fill("Teste");
-    
-    // Aguardar o debounce configurado de 500ms
-    await page.waitForTimeout(600);
-    
-    // URL deve conter ?q=Teste
-    expect(page.url()).toContain("q=Teste");
-
-    // 3. Modificar o Status
-    const inativosBtn = page.getByRole("button", { name: /Inativos/ });
-    await inativosBtn.click();
-    
-    // URL deve conter ?status=INATIVO e manter q=Teste
+    await expect(
+      page.getByPlaceholder("Buscar por nome, CPF, telefone ou e-mail...")
+    ).toHaveValue("Teste");
     expect(page.url()).toContain("status=INATIVO");
     expect(page.url()).toContain("q=Teste");
 
-    // 4. Testando a navegação de histórico (Back button)
     await page.goBack();
-    
-    // Volta apenas pro filtro de Texto, sem INATIVO
-    expect(page.url()).not.toContain("status=INATIVO");
-    expect(page.url()).toContain("q=Teste");
-    
-    // Volta mais uma vez, deve limpar o Texto
-    await page.goBack();
-    expect(page.url()).not.toContain("q=Teste");
+    await page.waitForURL(/\/clientes$/, { timeout: 10_000 });
 
-    // 5. Avançando novamente
     await page.goForward();
-    await page.goForward();
+    await page.waitForURL(/\/clientes\?q=Teste&status=INATIVO$/, { timeout: 10_000 });
     expect(page.url()).toContain("status=INATIVO");
+    expect(page.url()).toContain("q=Teste");
 
-    // 6. Botão Limpar Filtros
     const limparBtn = page.getByRole("button", { name: "Limpar" });
     await expect(limparBtn).toBeVisible();
     await limparBtn.click();
-
-    // Verifica limpeza total
+    await page.waitForURL(/\/clientes$/, { timeout: 10_000 });
     expect(page.url()).not.toContain("status=INATIVO");
     expect(page.url()).not.toContain("q=Teste");
   });

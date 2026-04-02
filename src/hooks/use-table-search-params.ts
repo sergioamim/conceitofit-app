@@ -1,12 +1,12 @@
 import { useCallback } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { StatusAluno } from "@/lib/types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 export function useTableSearchParams() {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const currentQueryString = searchParams.toString();
 
   const q = searchParams.get("q") ?? "";
   const status = (searchParams.get("status") ?? FILTER_ALL) as StatusAluno | typeof FILTER_ALL;
@@ -15,7 +15,7 @@ export function useTableSearchParams() {
 
   const setParams = useCallback(
     (updates: Record<string, string | number | null | undefined>) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(currentQueryString);
       let resetPage = false;
       
       Object.entries(updates).forEach(([key, value]) => {
@@ -35,14 +35,16 @@ export function useTableSearchParams() {
         params.delete("page");
       }
 
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      const nextQueryString = params.toString();
+      const nextUrl = nextQueryString ? `${pathname}?${nextQueryString}` : pathname;
+      window.history.pushState(null, "", nextUrl);
     },
-    [pathname, router, searchParams]
+    [currentQueryString, pathname]
   );
 
   const clearParams = useCallback(() => {
-    router.push(pathname, { scroll: false });
-  }, [pathname, router]);
+    window.history.pushState(null, "", pathname);
+  }, [pathname]);
 
   const hasActiveFilters = q !== "" || status !== FILTER_ALL;
 

@@ -2,11 +2,13 @@
 
 import { Cake } from "lucide-react";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { useSyncExternalStore } from "react";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { ClienteThumbnail } from "@/components/shared/cliente-thumbnail";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { formatDate, formatCpf, formatPhone } from "@/lib/formatters";
+import { getBusinessTodayIso } from "@/lib/business-date";
 import type { Aluno } from "@/lib/types";
 
 const SEXO_LABEL: Record<string, string> = {
@@ -15,11 +17,11 @@ const SEXO_LABEL: Record<string, string> = {
   OUTRO: "Outro",
 };
 
-function isBirthdayToday(dataNascimento?: string): boolean {
-  if (!dataNascimento) return false;
-  const today = new Date();
-  const mmdd = `-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  return dataNascimento.endsWith(mmdd);
+const subscribeNoop = () => () => {};
+
+function isBirthdayToday(dataNascimento: string | undefined, todayMonthDay: string | null): boolean {
+  if (!dataNascimento || !todayMonthDay) return false;
+  return dataNascimento.endsWith(todayMonthDay);
 }
 
 const COLUMNS = [
@@ -62,6 +64,12 @@ export function ClientesTable({
   onClienteClick,
   router,
 }: ClientesTableProps) {
+  const todayMonthDay = useSyncExternalStore(
+    subscribeNoop,
+    () => getBusinessTodayIso().slice(5),
+    () => null,
+  );
+
   return (
     <PaginatedTable<Aluno>
       isLoading={loading}
@@ -78,7 +86,7 @@ export function ClientesTable({
       onRowClick={(aluno) => router.push(`/clientes/${aluno.id}`)}
       rowClassName={() => "cursor-pointer transition-colors hover:bg-secondary/40"}
       renderCells={(aluno) => {
-        const birthday = isBirthdayToday(aluno.dataNascimento);
+        const birthday = isBirthdayToday(aluno.dataNascimento, todayMonthDay);
         return (
         <>
           <td className="px-4 py-3">
