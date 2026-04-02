@@ -348,6 +348,15 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
       const tokenChanged = sessionTokenRef.current !== token;
       sessionTokenRef.current = token;
 
+      if (tokenChanged && hasSessionContextState()) {
+        resetTenantContextMemory();
+        setState(buildTenantContextState(EMPTY_TENANT_CONTEXT_SNAPSHOT, {
+          loading: true,
+          status: "loading",
+          error: null,
+        }));
+      }
+
       if (!hasSessionContextState()) {
         clearContextMemory();
         return;
