@@ -250,7 +250,7 @@ test.describe("acesso por rede", () => {
     const captured: CapturedRequests = { contextIdentifiers: [] };
     await installAuthNetworkMocks(page, captured);
 
-    await page.goto("/app/rede-norte/login?next=%2Fdashboard");
+    await page.goto("/app/rede-norte/login?next=%2Fdashboard", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Portal Rede Norte" })).toBeVisible();
     await expect(page.getByText("Suporte: suporte@redenorte.local")).toBeVisible();
@@ -293,12 +293,12 @@ test.describe("acesso por rede", () => {
     const captured: CapturedRequests = { contextIdentifiers: [] };
     await installAuthNetworkMocks(page, captured);
 
-    await page.goto("/app/rede-norte/forgot-password");
+    await page.goto("/app/rede-norte/forgot-password", { waitUntil: "domcontentloaded" });
     await page.getByLabel("Identificador").fill("ana@qa.local");
     await page.getByRole("button", { name: "Enviar instruções" }).click();
     await expect(page.getByText("Instruções enviadas para a rede correta.")).toBeVisible();
 
-    await page.goto("/app/rede-norte/first-access");
+    await page.goto("/app/rede-norte/first-access", { waitUntil: "domcontentloaded" });
     await page.getByLabel("Identificador").fill("111.222.333-44");
     await page.getByRole("button", { name: "Solicitar primeiro acesso" }).click();
     await expect(page.getByText("Convite de primeiro acesso emitido para esta rede.")).toBeVisible();
@@ -325,7 +325,7 @@ test.describe("acesso por rede", () => {
 
     await page.setExtraHTTPHeaders({ "x-forwarded-host": "rede-norte.localhost" });
 
-    await page.goto("/login?next=%2Fdashboard");
+    await page.goto("/login?next=%2Fdashboard", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Portal Rede Norte" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Recuperar senha" })).toHaveAttribute(
@@ -339,7 +339,7 @@ test.describe("acesso por rede", () => {
     const captured: CapturedRequests = { contextIdentifiers: [] };
     await installAuthNetworkMocks(page, captured);
 
-    await page.goto("/login?redeIdentifier=sergioamim");
+    await page.goto("/login?redeIdentifier=sergioamim", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Portal Rede Norte" })).toBeVisible();
     await expect(page.getByText("Subdomínio: rede-norte")).toBeVisible();
@@ -350,7 +350,7 @@ test.describe("acesso por rede", () => {
     const captured: CapturedRequests = { contextIdentifiers: [] };
     await installAuthNetworkMocks(page, captured);
 
-    await page.goto("/app/rede-invalida/login");
+    await page.goto("/app/rede-invalida/login", { waitUntil: "domcontentloaded" });
 
     await expect(
       page.getByText("Não foi possível carregar o contexto visual da rede agora. Você ainda pode continuar e validar o acesso no envio.")
@@ -378,7 +378,7 @@ test.describe("acesso por rede", () => {
     const captured: CapturedRequests = { contextIdentifiers: [] };
     await installAuthNetworkMocks(page, captured, { forcePasswordChange: true });
 
-    await page.goto("/app/rede-norte/login?next=%2Fdashboard");
+    await page.goto("/app/rede-norte/login?next=%2Fdashboard", { waitUntil: "domcontentloaded" });
     await page.getByLabel("Identificador").fill("ana@qa.local");
     await page.getByLabel("Senha").fill("12345678");
     await page.getByRole("button", { name: "Entrar" }).click();
@@ -404,7 +404,7 @@ test.describe("acesso por rede", () => {
     const captured: CapturedRequests = { contextIdentifiers: [] };
     await installAuthNetworkMocks(page, captured);
 
-    await page.goto("/primeiro-acesso/trocar-senha");
+    await page.goto("/primeiro-acesso/trocar-senha", { waitUntil: "domcontentloaded" });
 
     await expect(page).toHaveURL(/\/login$/);
   });

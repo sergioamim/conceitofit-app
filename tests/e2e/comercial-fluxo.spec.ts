@@ -81,7 +81,7 @@ test.describe("Fluxo comercial canônico", () => {
 
     await abrirComSessaoMock(page);
 
-    await page.goto("/clientes");
+    await page.goto("/clientes", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
 
     await page.getByRole("button", { name: "Novo cliente" }).click();

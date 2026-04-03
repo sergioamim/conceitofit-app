@@ -334,7 +334,7 @@ test.describe("treinos atribuídos", () => {
   test("lista rastreabilidade e permite encerrar e duplicar treinos", async ({ page }) => {
     await seedSession(page);
     await installTreinosAtribuidosStubs(page);
-    await page.goto("/treinos/atribuidos");
+    await page.goto("/treinos/atribuidos", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Treinos atribuídos" })).toBeVisible();
     await expect(page.getByText("Template Base").first()).toBeVisible();

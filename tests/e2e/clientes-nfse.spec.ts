@@ -244,7 +244,7 @@ test.describe("Perfil do cliente - aba NFS-e", () => {
       availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
     });
 
-    await page.goto(`/clientes/${ALUNO.id}`);
+    await page.goto(`/clientes/${ALUNO.id}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: ALUNO.nome })).toBeVisible();
     await expect.poll(() => mocks.getNfseConfiguracaoCalls()).toBe(0);
 

@@ -241,7 +241,7 @@ test.describe("Treino padrão listagem", () => {
   test("usa endpoint canônico de templates com busca server-side, paginação e filtro de pendências", async ({ page }) => {
     await seedSession(page);
     await installTreinosListStubs(page);
-    await page.goto("/treinos");
+    await page.goto("/treinos", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Treino Padrão" })).toBeVisible();
     await expect(page.getByRole("row").filter({ hasText: "Treino Padrão Alpha" })).toBeVisible();
@@ -324,7 +324,7 @@ test.describe("Treino padrão listagem", () => {
         }),
       });
     });
-    await page.goto("/treinos");
+    await page.goto("/treinos", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Carregando templates...")).toBeVisible();
     await expect(page.getByText("Nenhum treino padrão encontrado")).toBeVisible();
   });
@@ -374,7 +374,7 @@ test.describe("Treino padrão listagem", () => {
         body: JSON.stringify({ items: [], page: 0, size: 200, total: 0, hasNext: false }),
       });
     });
-    await page.goto("/treinos");
+    await page.goto("/treinos", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Falha ao carregar treino padrão.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Tentar novamente" })).toBeVisible();
   });

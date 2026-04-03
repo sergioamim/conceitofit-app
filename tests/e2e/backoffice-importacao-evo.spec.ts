@@ -585,7 +585,7 @@ test.describe("Backoffice importacao EVO", () => {
     await page.getByLabel("Selecionar para retry").check();
     await expect(page.getByText("Reprocesso seletivo preparado")).toBeVisible();
 
-    await page.goto("/admin/unidades");
+    await page.goto("/admin/unidades", { waitUntil: "domcontentloaded" });
     const unidadeAtualizada = page.getByRole("row").filter({ hasText: unidadeNome });
     await expect(unidadeAtualizada).toBeVisible();
   });

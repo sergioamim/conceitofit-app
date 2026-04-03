@@ -422,14 +422,14 @@ test.describe("Backoffice impersonation", () => {
     await seedSession(page, state);
     await setupMocks(page, state);
 
-    await page.goto("/admin/seguranca/usuarios/user-bruno");
+    await page.goto("/admin/seguranca/usuarios/user-bruno", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("button", { name: "Entrar como este usuário" })).toBeVisible();
 
     await page.getByRole("button", { name: "Entrar como este usuário" }).click();
     await page.getByLabel("Justificativa obrigatória").fill("Suporte operacional para reproduzir o contexto do gerente.");
     await page.getByRole("button", { name: "Confirmar e entrar como usuário" }).click();
 
-    await page.waitForURL("**/dashboard", { timeout: 15000 });
+    await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
     await page.waitForLoadState("domcontentloaded");
     await expect(page.getByText("Você está operando como Bruno Suporte")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
@@ -439,7 +439,7 @@ test.describe("Backoffice impersonation", () => {
     await expect(page).toHaveURL(/\/admin\/seguranca\/usuarios\/user-bruno$/);
     await expect(page.getByRole("button", { name: "Entrar como este usuário" })).toBeVisible();
 
-    await page.goto("/admin/audit-log");
+    await page.goto("/admin/audit-log", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Impersonou")).toBeVisible();
     await expect(page.getByText("Encerrou impersonação")).toBeVisible();
     await expect(page.getByRole("row").filter({ hasText: "Bruno Suporte" }).first()).toBeVisible();

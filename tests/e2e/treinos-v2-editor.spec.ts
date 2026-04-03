@@ -388,7 +388,7 @@ test.describe("treinos v2 editor", () => {
   test("opera editor unificado, biblioteca e publicação", async ({ page }) => {
     await seedSession(page);
     await installTreinosV2Stubs(page);
-    await page.goto("/treinos/tpl-1");
+    await page.goto("/treinos/tpl-1", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Template Base" })).toBeVisible();
     await page.getByLabel("Repetições 1").first().fill("10");
@@ -425,7 +425,7 @@ test.describe("treinos v2 editor", () => {
   test("executa atribuição individual e em massa com resumo operacional", async ({ page }) => {
     await seedSession(page);
     await installTreinosV2Stubs(page);
-    await page.goto("/treinos/tpl-1?assign=1");
+    await page.goto("/treinos/tpl-1?assign=1", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Atribuir treino padrão" })).toBeVisible();
     await page.locator("#assignment-aluno").selectOption("al-1");

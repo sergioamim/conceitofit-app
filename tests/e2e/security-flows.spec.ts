@@ -133,7 +133,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
   test("login com credenciais válidas redireciona para dashboard", async ({ page }) => {
     await installSecurityMocks(page);
 
-    await page.goto("/login?next=%2Fdashboard");
+    await page.goto("/login?next=%2Fdashboard", { waitUntil: "domcontentloaded" });
     await expect(page.getByLabel("Usuário")).toBeVisible();
 
     await page.getByLabel("Usuário").fill("admin@academia.local");
@@ -175,7 +175,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
 
     await expect.poll(() => page.url(), { timeout: 15_000 }).not.toMatch(/\/login/);
     if (!/\/dashboard/.test(page.url())) {
-      await page.goto("/dashboard");
+      await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     }
 
     await expect(page).not.toHaveURL(/\/login/);
@@ -187,7 +187,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
   test("login com credenciais inválidas exibe mensagem de erro", async ({ page }) => {
     await installSecurityMocks(page, { loginShouldFail: true });
 
-    await page.goto("/login");
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
     await expect(page.getByLabel("Usuário")).toBeVisible();
 
     await page.getByLabel("Usuário").fill("wrong@email.com");
@@ -205,7 +205,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
     await installSecurityMocks(page);
     await seedSession(page);
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page).not.toHaveURL(/\/login/);
 
     const combobox = page.getByRole("combobox").first();
@@ -231,7 +231,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
   test("acesso a rota protegida sem sessão redireciona para login", async ({ page }) => {
     await installSecurityMocks(page);
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect.poll(() => page.url(), { timeout: 15_000 }).toMatch(/\/(login|dashboard)/);
 
     if (/\/login/.test(page.url())) {
@@ -243,7 +243,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
   test("helper compartilhado permite autenticar no meio do fluxo publico", async ({ page }) => {
     await installSecurityMocks(page);
 
-    await page.goto("/login");
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
     await expect(page.getByLabel("Usuário")).toBeVisible();
 
     await applyE2EAuthSession(page, {
@@ -265,7 +265,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
       broadAccess: false,
     });
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page).not.toHaveURL(/\/login/);
   });
 
@@ -273,7 +273,7 @@ test.describe("Fluxos críticos de segurança e tenant", () => {
     await installSecurityMocks(page);
     await seedSession(page);
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page).not.toHaveURL(/\/login/);
 
     await clearE2EAuthSession(page);

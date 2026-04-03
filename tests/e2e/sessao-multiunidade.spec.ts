@@ -213,7 +213,7 @@ async function openAuthenticatedPage(
     { name: "academia-active-tenant-id", value: tenantId, url: E2E_BASE_URL },
     { name: "academia-active-tenant-name", value: tenantName, url: E2E_BASE_URL },
   ]);
-  await page.goto(path);
+  await page.goto(path, { waitUntil: "domcontentloaded" });
   await expect(page).not.toHaveURL(/\/login/);
 }
 

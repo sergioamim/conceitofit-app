@@ -201,7 +201,7 @@ test.describe("Backoffice configurações globais", () => {
     await seedSession(page);
     await setupMocks(page, state);
 
-    await page.goto("/admin/configuracoes");
+    await page.goto("/admin/configuracoes", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Configurações e integrações" })).toBeVisible();
     await expect(page.getByText("Gateway PIX/Boleto")).toBeVisible();

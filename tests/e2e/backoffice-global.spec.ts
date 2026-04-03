@@ -14,7 +14,7 @@ test.describe("Backoffice global", () => {
     await openAdminCrudPage(page, "/admin");
     await expect(page.getByRole("heading", { name: "Dashboard do backoffice" })).toBeVisible();
 
-    await page.goto("/admin/academias");
+    await page.goto("/admin/academias", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Academias" })).toBeVisible();
     await page.locator("#academia-nome").fill(academiaNome);
     await page.locator("#academia-doc").fill(academiaDocumento);

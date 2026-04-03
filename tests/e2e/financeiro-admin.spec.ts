@@ -151,7 +151,8 @@ async function openAuthenticatedPage(page: Page, path: string, heading: string) 
     { name: "academia-active-tenant-id", value: "tenant-1", domain: "localhost", path: "/" },
     { name: "academia-active-tenant-name", value: "Unidade Centro", domain: "localhost", path: "/" },
   ]);
-  await page.goto(path);
+  await page.goto(path, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("load");
   await expect(page.getByRole("heading", { name: heading })).toBeVisible();
 }
 

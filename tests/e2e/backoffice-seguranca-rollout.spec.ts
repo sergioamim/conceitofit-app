@@ -335,14 +335,14 @@ test.describe("Backoffice segurança rollout", () => {
     await seedSession(page);
     await setupMocks(page, state);
 
-    await page.goto("/admin/seguranca");
+    await page.goto("/admin/seguranca", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Segurança global" })).toBeVisible();
 
     await page.getByRole("link", { name: "Revisões e auditoria", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Revisões e auditoria" })).toBeVisible();
     await expect(page.getByText("Recertificar acesso amplo")).toBeVisible();
 
-    await page.goto("/admin/seguranca/usuarios");
+    await page.goto("/admin/seguranca/usuarios", { waitUntil: "domcontentloaded" });
     await page.getByRole("link", { name: "Abrir governança" }).click();
     await expect(page.getByRole("heading", { name: "Ana Admin" })).toBeVisible();
 

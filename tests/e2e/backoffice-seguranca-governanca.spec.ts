@@ -440,7 +440,7 @@ test.describe("Backoffice segurança governança", () => {
     await seedSession(page);
     await setupMocks(page, state);
 
-    await page.goto("/admin/seguranca/perfis");
+    await page.goto("/admin/seguranca/perfis", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Perfis padronizados" })).toBeVisible();
 
     await page.getByLabel("Nome amigável").fill("Administrador Global");
@@ -453,7 +453,7 @@ test.describe("Backoffice segurança governança", () => {
     await page.getByRole("button", { name: "Confirmar ajuste" }).click();
     await expect(page.getByText("Preview de impacto")).not.toBeVisible();
 
-    await page.goto("/admin/seguranca/funcionalidades");
+    await page.goto("/admin/seguranca/funcionalidades", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Funcionalidades" })).toBeVisible();
 
     await page.getByLabel("Buscar").fill("Financeiro");

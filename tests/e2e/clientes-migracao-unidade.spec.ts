@@ -257,7 +257,7 @@ test.describe("Migração administrativa de unidade-base", () => {
       ],
     });
 
-    await page.goto(`/clientes/${ALUNO.id}`);
+    await page.goto(`/clientes/${ALUNO.id}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: ALUNO.nome })).toBeVisible();
     await expect(page.getByText("Unidade-base")).toBeVisible();
     await expect(page.getByText(TENANT_ORIGEM.nome).first()).toBeVisible();
@@ -296,7 +296,7 @@ test.describe("Migração administrativa de unidade-base", () => {
       ],
     });
 
-    await page.goto(`/clientes/${ALUNO.id}`);
+    await page.goto(`/clientes/${ALUNO.id}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: ALUNO.nome })).toBeVisible();
 
     await page.locator("button.h-9.px-2").click();

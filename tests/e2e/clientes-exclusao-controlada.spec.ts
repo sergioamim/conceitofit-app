@@ -245,7 +245,7 @@ test.describe("Exclusão controlada de clientes", () => {
       availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
     });
 
-    await page.goto(`/clientes/${ALUNO.id}`);
+    await page.goto(`/clientes/${ALUNO.id}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: ALUNO.nome })).toBeVisible();
 
     await page.locator("button.h-9.px-2").click();
@@ -283,7 +283,7 @@ test.describe("Exclusão controlada de clientes", () => {
       availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
     });
 
-    await page.goto(`/clientes/${ALUNO.id}?tab=cartoes`);
+    await page.goto(`/clientes/${ALUNO.id}?tab=cartoes`, { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(new RegExp(`/clientes/${ALUNO.id}\\?tab=cartoes$`));
     await expect(page.getByRole("button", { name: "Cartões" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Cartões" })).toBeVisible();

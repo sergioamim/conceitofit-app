@@ -111,9 +111,9 @@ test.describe("Bottom Navigation Mobile", () => {
   test("deve exibir a BottomNav em mobile e ocultar em desktop", async ({ page }) => {
     await installBottomNavShell(page);
     // Acessa uma página não requerendo onboarding profundo
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page).not.toHaveURL(/\/login/);
-    
+
     // BottomNav localizador
     const bottomNav = page.locator("nav.fixed.bottom-0");
     
@@ -132,7 +132,7 @@ test.describe("Bottom Navigation Mobile", () => {
     await installBottomNavShell(page);
     // Volta para Mobile
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page).not.toHaveURL(/\/login/);
 
     const bottomNav = page.locator("nav.fixed.bottom-0");
@@ -147,7 +147,7 @@ test.describe("Bottom Navigation Mobile", () => {
     await clientesLink.click();
 
     // Esperar navegação
-    await page.waitForURL("**/clientes**");
+    await page.waitForURL(/\/clientes/, { timeout: 15_000 });
     await expect(page).not.toHaveURL(/\/login/);
 
     // "Clientes" deve estar ativo
@@ -159,7 +159,7 @@ test.describe("Bottom Navigation Mobile", () => {
     const checkinLink = bottomNav.getByRole("link", { name: "Check-in" });
     await expect(checkinLink).toBeVisible();
     await checkinLink.click();
-    await page.waitForURL("**/gerencial/catraca-acessos**");
+    await page.waitForURL(/\/gerencial\/catraca-acessos/, { timeout: 15_000 });
     await expect(page).not.toHaveURL(/\/login/);
     await expect(bottomNav.getByRole("link", { name: "Check-in" })).toHaveAttribute("aria-current", "page");
   });
