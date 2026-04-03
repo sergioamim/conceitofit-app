@@ -30,13 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
 
 /* ---------- FormFieldConfig ---------- */
 
 export type FormFieldConfig = {
   name: string;
   label: string;
-  type: "text" | "number" | "textarea" | "select" | "checkbox";
+  type: "text" | "number" | "textarea" | "select" | "checkbox" | "suggestion";
   required?: boolean;
   placeholder?: string;
   min?: number;
@@ -49,6 +50,12 @@ export type FormFieldConfig = {
   checkboxLabel?: string;
   /** For checkbox: helper text below */
   helperText?: string;
+  /** For suggestion: options list */
+  suggestionOptions?: SuggestionOption[];
+  /** For suggestion: display text field name (the text shown in input) */
+  suggestionDisplayField?: string;
+  /** For suggestion: callback when dropdown opens / user types */
+  onFocusOpen?: () => void;
 };
 
 /* ---------- Props ---------- */
@@ -185,6 +192,49 @@ function renderField<T extends FieldValues>(
                 ))}
               </SelectContent>
             </Select>
+          )}
+        />
+        {field.helperText ? (
+          <p id={helperTextId} className="text-[11px] text-muted-foreground">
+            {field.helperText}
+          </p>
+        ) : null}
+        {error ? <p id={errorId} className="text-xs text-gym-danger">{String(error.message)}</p> : null}
+      </div>
+    );
+  }
+
+  if (field.type === "suggestion") {
+    const displayField = (field.suggestionDisplayField ?? `${field.name}Display`) as Path<T>;
+    return (
+      <div key={field.name} className={field.className ?? "space-y-1.5"}>
+        <label
+          htmlFor={fieldId}
+          className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          {field.label}
+        </label>
+        <Controller
+          control={control}
+          name={displayField}
+          render={({ field: displayController }) => (
+            <SuggestionInput
+              inputId={fieldId}
+              value={(displayController.value as string) ?? ""}
+              onValueChange={(nextValue) => {
+                displayController.onChange(nextValue);
+                // Clear the ID field when user types freely
+                form.setValue(fieldPath, "" as never);
+              }}
+              onSelect={(option) => {
+                form.setValue(fieldPath, option.id as never, { shouldValidate: true, shouldDirty: true });
+                displayController.onChange(option.label);
+              }}
+              options={field.suggestionOptions ?? []}
+              onFocusOpen={field.onFocusOpen}
+              placeholder={field.placeholder ?? "Digite para buscar..."}
+              preloadOnFocus
+            />
           )}
         />
         {field.helperText ? (

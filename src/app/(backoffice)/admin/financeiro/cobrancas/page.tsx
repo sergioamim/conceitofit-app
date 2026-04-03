@@ -37,6 +37,7 @@ import {
   createAdminCobranca,
 } from "@/lib/api/admin-billing";
 import { useAdminCobrancas, useAdminContratos } from "@/lib/query/admin";
+import { useAcademiaSuggestion } from "@/app/(backoffice)/admin/lib/use-academia-suggestion";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { formatBRL, formatDate } from "@/lib/formatters";
@@ -52,6 +53,7 @@ type StatusFilter = WithFilterAll<CobrancaStatus>;
 type CobrancaFormValues = {
   contratoId: string;
   academiaId: string;
+  academiaIdDisplay: string;
   valor: string;
   dataVencimento: string;
   multa?: string;
@@ -86,6 +88,7 @@ const FORMA_PAGAMENTO_OPTIONS: { value: TipoFormaPagamento; label: string }[] = 
 const cobrancaFormSchema = z.object({
   contratoId: requiredTrimmedString("Selecione o contrato."),
   academiaId: z.string().trim().optional().default(""),
+  academiaIdDisplay: z.string().optional().default(""),
   valor: z.string().trim().min(1, "Informe o valor da cobrança.").refine(
     (value) => Number.isFinite(Number(value.replace(",", "."))),
     { message: "Informe um valor válido." }
@@ -105,6 +108,7 @@ function ContratoCobrancaHint({ contratos }: { contratos: ContratoPlataforma[] }
   useEffect(() => {
     if (!contrato) return;
     setValue("academiaId", contrato.academiaId, { shouldDirty: true, shouldValidate: true });
+    setValue("academiaIdDisplay", contrato.academiaNome ?? "", { shouldDirty: true });
     if (!valor?.trim()) {
       setValue("valor", String(contrato.valorMensal), { shouldDirty: true });
     }
@@ -163,11 +167,12 @@ function toCobrancaStatus(cobranca: Cobranca, todayDate = ""): CobrancaStatus {
   return cobranca.status;
 }
 
-function toFormValues(contrato: ContratoPlataforma | null): CobrancaFormValues {
+function toFormValues(contrato: ContratoPlataforma | null, academiaIndex?: Map<string, string>): CobrancaFormValues {
   if (!contrato) {
     return {
       contratoId: "",
       academiaId: "",
+      academiaIdDisplay: "",
       valor: "",
       dataVencimento: "",
       multa: "",
@@ -179,6 +184,7 @@ function toFormValues(contrato: ContratoPlataforma | null): CobrancaFormValues {
   return {
     contratoId: contrato.id,
     academiaId: contrato.academiaId,
+    academiaIdDisplay: academiaIndex?.get(contrato.academiaId) ?? contrato.academiaNome ?? "",
     valor: String(contrato.valorMensal),
     dataVencimento: "",
     multa: "",
@@ -192,6 +198,7 @@ export default function AdminCobrancasPage() {
   const queryClient = useQueryClient();
   const cobrancasQuery = useAdminCobrancas();
   const contratosQuery = useAdminContratos();
+  const { academiaOptions: academiaSuggestionOptions, academiaIndex, onFocusOpen: onAcademiaFocusOpen } = useAcademiaSuggestion();
   const loading = cobrancasQuery.isLoading || contratosQuery.isLoading;
   const error = cobrancasQuery.error?.message ?? contratosQuery.error?.message ?? null;
   const cobrancas = cobrancasQuery.data ?? [];
@@ -237,14 +244,24 @@ export default function AdminCobrancasPage() {
 
   const cobrancaFields = useMemo<FormFieldConfig[]>(
     () => [
-      { name: "contratoId", label: "Contrato *", type: "select", options: contratoOptions, className: "md:col-span-3" },
+      { name: "contratoId", label: "Contrato *", type: "select", options: contratoOptions, className: "md:col-span-2" },
+      {
+        name: "academiaId",
+        label: "Academia",
+        type: "suggestion",
+        suggestionOptions: academiaSuggestionOptions,
+        suggestionDisplayField: "academiaIdDisplay",
+        onFocusOpen: onAcademiaFocusOpen,
+        placeholder: "Auto-preenchido pelo contrato",
+        helperText: "Preenchido automaticamente ao selecionar o contrato.",
+      },
       { name: "dataVencimento", label: "Vencimento *", type: "text", required: true, placeholder: "YYYY-MM-DD" },
       { name: "valor", label: "Valor *", type: "number", required: true, min: 0, step: "0.01" },
       { name: "multa", label: "Multa", type: "number", min: 0, step: "0.01" },
       { name: "juros", label: "Juros", type: "number", min: 0, step: "0.01" },
       { name: "observacoes", label: "Observações", type: "textarea", className: "md:col-span-3" },
     ],
-    [contratoOptions]
+    [academiaSuggestionOptions, contratoOptions, onAcademiaFocusOpen]
   );
 
   const filteredCobrancas = useMemo(() => {
