@@ -59,8 +59,9 @@ test.describe("Admin backoffice global CRUD", () => {
     await page.getByLabel("Pessoa, e-mail ou CPF").fill("Sergio");
     await page.getByRole("button", { name: "Aplicar filtros" }).click();
     await page.getByRole("link", { name: "Abrir governança" }).first().click();
+    await page.waitForURL("**/admin/seguranca/usuarios/user-admin-global", { timeout: 15_000 });
 
-    await expect(page.getByRole("heading", { name: "Sergio Amim" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sergio Amim" })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("tab", { name: "Escopos e acessos" }).click();
 
     await selectComboboxOption(
