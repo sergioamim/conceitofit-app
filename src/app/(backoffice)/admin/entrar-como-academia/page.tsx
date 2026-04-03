@@ -5,125 +5,206 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Building2, MapPin, ArrowRight, Loader2 } from "lucide-react";
+import {
+  Building2,
+  MapPin,
+  ArrowRight,
+  Loader2,
+  Clock,
+  Search,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { SuggestionInput } from "@/components/shared/suggestion-input";
+import type { SuggestionOption } from "@/components/shared/suggestion-input";
+import { useAcademiaSuggestion } from "@/backoffice/lib/use-academia-suggestion";
+import { useUnidadeSuggestion } from "../../lib/use-unidade-suggestion";
 import { setTenantContextApi } from "@/lib/api/contexto-unidades";
-import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/backoffice/api/backoffice";
 import { adminEntrarComoUnidadeApi } from "@/lib/api/auth";
-import { clearOperationalTenantScope, rememberOperationalTenantScope, setPreferredTenantId } from "@/lib/api/session";
+import {
+  clearOperationalTenantScope,
+  rememberOperationalTenantScope,
+  setPreferredTenantId,
+} from "@/lib/api/session";
+import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/backoffice/api/backoffice";
 import type { Academia, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+
+/* ------------------------------------------------------------------ */
+/*  Schema                                                             */
+/* ------------------------------------------------------------------ */
 
 const entrarComoSchema = z.object({
   justificativa: z.string().trim().max(400, "Máximo de 400 caracteres.").optional(),
 });
 
 type EntrarComoForm = z.infer<typeof entrarComoSchema>;
-type AcademiaComTenants = Academia & { tenants: Tenant[] };
+
+/* ------------------------------------------------------------------ */
+/*  Tipos locais                                                       */
+/* ------------------------------------------------------------------ */
+
+interface RecentEntry {
+  academiaId: string;
+  academiaNome: string;
+  tenantId: string;
+  tenantNome: string;
+  timestamp: number;
+}
+
+const STORAGE_KEY = "admin:entrar-como:recentes";
+const MAX_RECENTES = 5;
+
+function readRecentes(): RecentEntry[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as RecentEntry[];
+    return Array.isArray(parsed) ? parsed.slice(0, MAX_RECENTES) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecente(entry: Omit<RecentEntry, "timestamp">) {
+  try {
+    const current = readRecentes().filter(
+      (r) => !(r.academiaId === entry.academiaId && r.tenantId === entry.tenantId),
+    );
+    const next: RecentEntry[] = [
+      { ...entry, timestamp: Date.now() },
+      ...current,
+    ].slice(0, MAX_RECENTES);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // localStorage indisponível — ignore silenciosamente
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Componente principal                                               */
+/* ------------------------------------------------------------------ */
 
 export default function EntrarComoAcademiaPage() {
   const router = useRouter();
-  const [academias, setAcademias] = useState<AcademiaComTenants[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+
+  // --- busca de academia via SuggestionInput ---
+  const academiaSuggestion = useAcademiaSuggestion();
+  const [academiaSearch, setAcademiaSearch] = useState("");
+  const [selectedAcademia, setSelectedAcademia] = useState<{
+    id: string;
+    nome: string;
+  } | null>(null);
+
+  // --- unidades da academia selecionada ---
+  const unidadeSuggestion = useUnidadeSuggestion(selectedAcademia?.id);
+  const [unidadeSearch, setUnidadeSearch] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [selectedTenantNome, setSelectedTenantNome] = useState("");
+
+  // --- dados completos para impersonation ---
+  const [allTenants, setAllTenants] = useState<Tenant[]>([]);
+  const [loadingTenants, setLoadingTenants] = useState(true);
+
+  // --- recentes (SSR-safe: só lê após mount) ---
+  const [recentes, setRecentes] = useState<RecentEntry[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setRecentes(readRecentes());
+  }, []);
+
+  // Carregar todos os tenants uma vez (necessário para impersonation scope)
+  const loadAllTenants = useCallback(async () => {
+    setLoadingTenants(true);
+    try {
+      const tenants = await listBackofficeUnidadesApi();
+      setAllTenants(tenants.filter((t) => t.ativo !== false));
+    } catch {
+      // silencioso — os suggestion hooks já fazem fetch separado
+    } finally {
+      setLoadingTenants(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAllTenants();
+  }, [loadAllTenants]);
+
+  // Unidades da academia selecionada (para lista curta e scope)
+  const unidadesDaAcademia = useMemo(() => {
+    if (!selectedAcademia) return [];
+    return allTenants.filter(
+      (t) =>
+        t.academiaId === selectedAcademia.id ||
+        t.groupId === selectedAcademia.id,
+    );
+  }, [allTenants, selectedAcademia]);
+
+  // Auto-selecionar se academia tem apenas 1 unidade
+  useEffect(() => {
+    if (unidadesDaAcademia.length === 1) {
+      const unidade = unidadesDaAcademia[0];
+      setSelectedTenantId(unidade.id);
+      setSelectedTenantNome(unidade.nome);
+      setUnidadeSearch(unidade.nome);
+    }
+  }, [unidadesDaAcademia]);
+
+  // --- impersonation ---
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const form = useForm<EntrarComoForm>({
     resolver: zodResolver(entrarComoSchema),
     defaultValues: { justificativa: "" },
   });
 
-  const loadTenants = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [academiasDisponiveis, unidadesDisponiveis] = await Promise.all([
-        listBackofficeAcademiasApi(),
-        listBackofficeUnidadesApi(),
-      ]);
-      const activeAcademias = academiasDisponiveis.filter((academia) => academia.ativo !== false);
-      const activeTenants = unidadesDisponiveis.filter((tenant) => tenant.ativo !== false);
-      const academiasPorId = new Map(activeAcademias.map((academia) => [academia.id, academia] as const));
-      const grupos = new Map<string, AcademiaComTenants>();
-
-      for (const tenant of activeTenants) {
-        const academiaId = tenant.academiaId?.trim() || tenant.groupId?.trim() || tenant.id;
-        const academia = academiasPorId.get(academiaId);
-        if (!grupos.has(academiaId)) {
-          grupos.set(academiaId, {
-            id: academiaId,
-            nome: academia?.nome ?? tenant.academiaNome ?? "Academia sem nome",
-            razaoSocial: academia?.razaoSocial,
-            documento: academia?.documento,
-            email: academia?.email,
-            telefone: academia?.telefone,
-            endereco: academia?.endereco,
-            branding: academia?.branding,
-            ativo: academia?.ativo ?? true,
-            tenants: [],
-          });
-        }
-        grupos.get(academiaId)!.tenants.push(tenant);
-      }
-
-      const academiasComTenants = Array.from(grupos.values()).sort((left, right) =>
-        left.nome.localeCompare(right.nome, "pt-BR"),
-      );
-      academiasComTenants.forEach((academia) => {
-        academia.tenants.sort((left, right) => left.nome.localeCompare(right.nome, "pt-BR"));
-      });
-
-      setAcademias(academiasComTenants);
-      setTenants(activeTenants);
-      setSelectedTenantId((current) =>
-        activeTenants.some((tenant) => tenant.id === current)
-          ? current
-          : activeTenants.length === 1
-            ? activeTenants[0].id
-            : "",
-      );
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadTenants();
-  }, [loadTenants]);
-
-  const selectedTenant = tenants.find((t) => t.id === selectedTenantId);
-  const selectedAcademia = useMemo(() => {
-    if (!selectedTenant) return null;
-    const academiaId = selectedTenant.academiaId ?? selectedTenant.groupId ?? selectedTenant.id;
-    return academias.find((academia) => academia.id === academiaId) ?? null;
-  }, [academias, selectedTenant]);
-
   async function handleEntrar(values: EntrarComoForm) {
-    if (!selectedTenantId || !selectedTenant) return;
+    if (!selectedTenantId || !selectedAcademia) return;
     setSwitching(true);
     setError(null);
     try {
-      const academiaId = selectedTenant.academiaId ?? selectedTenant.groupId ?? selectedTenant.id;
-      const scopedTenantIds = tenants
-        .filter((tenant) => (tenant.academiaId ?? tenant.groupId ?? tenant.id) === academiaId)
-        .map((tenant) => tenant.id);
+      const academiaId = selectedAcademia.id;
+      const scopedTenantIds = allTenants
+        .filter(
+          (t) =>
+            (t.academiaId ?? t.groupId ?? t.id) === academiaId,
+        )
+        .map((t) => t.id);
+
       rememberOperationalTenantScope({
         academiaId,
         tenantIds: scopedTenantIds,
         defaultTenantId: selectedTenantId,
       });
+
       await adminEntrarComoUnidadeApi({
         academiaId,
         tenantId: selectedTenantId,
         justificativa: values.justificativa?.trim() || undefined,
       });
+
       setPreferredTenantId(selectedTenantId);
       await setTenantContextApi(selectedTenantId);
+
+      // Persistir nos recentes
+      saveRecente({
+        academiaId,
+        academiaNome: selectedAcademia.nome,
+        tenantId: selectedTenantId,
+        tenantNome: selectedTenantNome,
+      });
+
       window.location.assign("/dashboard");
     } catch (err) {
       clearOperationalTenantScope();
@@ -133,97 +214,239 @@ export default function EntrarComoAcademiaPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">
-        <Loader2 className="mr-2 size-4 animate-spin" />
-        Carregando academias e unidades...
-      </div>
-    );
+  function handleSelectAcademia(option: SuggestionOption) {
+    setSelectedAcademia({ id: option.id, nome: option.label });
+    setAcademiaSearch(option.label);
+    // Limpar seleção de unidade
+    setSelectedTenantId("");
+    setSelectedTenantNome("");
+    setUnidadeSearch("");
   }
 
+  function handleSelectUnidade(option: SuggestionOption) {
+    setSelectedTenantId(option.id);
+    setSelectedTenantNome(option.label);
+    setUnidadeSearch(option.label);
+  }
+
+  function handleClearAcademia() {
+    setSelectedAcademia(null);
+    setAcademiaSearch("");
+    setSelectedTenantId("");
+    setSelectedTenantNome("");
+    setUnidadeSearch("");
+  }
+
+  function handleRecenteClick(entry: RecentEntry) {
+    setSelectedAcademia({
+      id: entry.academiaId,
+      nome: entry.academiaNome,
+    });
+    setAcademiaSearch(entry.academiaNome);
+    setSelectedTenantId(entry.tenantId);
+    setSelectedTenantNome(entry.tenantNome);
+    setUnidadeSearch(entry.tenantNome);
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Render                                                           */
+  /* ---------------------------------------------------------------- */
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Entrar como academia</h1>
+    <div className="mx-auto max-w-2xl space-y-8 py-4">
+      {/* Cabeçalho */}
+      <div className="text-center">
+        <h1 className="font-display text-2xl font-bold tracking-tight">
+          Entrar como academia
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Selecione a academia e unidade para acessar a visão operacional.
+          Busque a academia e selecione a unidade para acessar a visão
+          operacional.
         </p>
       </div>
 
+      {/* Erro global */}
       {error ? (
         <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
           {error}
         </div>
       ) : null}
 
-      {tenants.length === 0 ? (
-        <Card className="border-border">
-          <CardContent className="px-6 py-10 text-center text-sm text-muted-foreground">
-            Nenhuma unidade disponível para o seu usuário.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Building2 className="size-4 text-gym-accent" />
-                Academias e unidades
-              </CardTitle>
-              <CardDescription>
-                {academias.length} academia{academias.length > 1 ? "s" : ""} · {tenants.length} unidade{tenants.length > 1 ? "s" : ""}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {academias.map((academia) => (
-                <div key={academia.id} className="rounded-xl border border-border bg-secondary/20 p-4">
-                  <p className="mb-3 text-sm font-semibold text-foreground">{academia.nome}</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {academia.tenants.map((tenant) => {
-                      const isSelected = tenant.id === selectedTenantId;
-                      return (
-                        <button
-                          key={tenant.id}
-                          type="button"
-                          onClick={() => setSelectedTenantId(tenant.id)}
-                          className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${
-                            isSelected
-                              ? "border-gym-accent bg-gym-accent/10 text-foreground shadow-sm"
-                              : "border-border bg-card text-muted-foreground hover:border-foreground/20 hover:bg-secondary/50"
-                          }`}
-                        >
-                          <MapPin className={`size-3.5 shrink-0 ${isSelected ? "text-gym-accent" : ""}`} />
-                          <span className="truncate">{tenant.nome}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+      {/* Busca de academia */}
+      <Card className="border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Search className="size-4 text-gym-accent" />
+            Buscar academia
+          </CardTitle>
+          <CardDescription>
+            Digite o nome, CNPJ ou cidade da academia.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <SuggestionInput
+              inputAriaLabel="Buscar academia"
+              value={academiaSearch}
+              onValueChange={(v) => {
+                setAcademiaSearch(v);
+                // Se o texto mudar após seleção, limpar seleção
+                if (selectedAcademia && v !== selectedAcademia.nome) {
+                  setSelectedAcademia(null);
+                  setSelectedTenantId("");
+                  setSelectedTenantNome("");
+                  setUnidadeSearch("");
+                }
+              }}
+              onSelect={handleSelectAcademia}
+              options={academiaSuggestion.options}
+              onFocusOpen={academiaSuggestion.onFocusOpen}
+              placeholder="Ex.: Academia Força Total, 12.345.678/0001-00..."
+              emptyText="Nenhuma academia encontrada"
+              preloadOnFocus
+            />
+            {selectedAcademia ? (
+              <button
+                type="button"
+                onClick={handleClearAcademia}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                aria-label="Limpar seleção"
+              >
+                <X className="size-3.5" />
+              </button>
+            ) : null}
+          </div>
+          {selectedAcademia ? (
+            <p className="mt-2 text-xs text-gym-accent">
+              <Building2 className="mr-1 inline-block size-3" />
+              {selectedAcademia.nome} selecionada
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
 
-          <div className="space-y-4">
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-base">Unidade selecionada</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedTenant ? (
-                  <div className="rounded-lg border border-gym-accent/30 bg-gym-accent/5 p-3">
-                    <p className="text-sm font-semibold text-foreground">{selectedTenant.nome}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {selectedAcademia?.nome ?? selectedTenant.academiaNome ?? selectedTenant.subdomain ?? selectedTenant.nome}
+      {/* Acessos recentes */}
+      {mounted && recentes.length > 0 && !selectedAcademia ? (
+        <Card className="border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="size-4 text-muted-foreground" />
+              Acessos recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2">
+              {recentes.map((entry) => (
+                <button
+                  key={`${entry.academiaId}-${entry.tenantId}`}
+                  type="button"
+                  onClick={() => handleRecenteClick(entry)}
+                  className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-all hover:border-gym-accent/40 hover:bg-secondary/50"
+                >
+                  <Building2 className="size-4 shrink-0 text-gym-accent" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {entry.academiaNome}
+                    </p>
+                    <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                      <MapPin className="size-3 shrink-0" />
+                      {entry.tenantNome}
                     </p>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Selecione uma unidade ao lado.</p>
-                )}
+                  <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
-                <form className="space-y-3" onSubmit={form.handleSubmit(handleEntrar)}>
+      {/* Seleção de unidade + formulário de entrada */}
+      {selectedAcademia ? (
+        <Card className="border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MapPin className="size-4 text-gym-accent" />
+              Selecionar unidade
+            </CardTitle>
+            <CardDescription>
+              {loadingTenants
+                ? "Carregando unidades..."
+                : unidadesDaAcademia.length === 1
+                  ? "Esta academia possui apenas 1 unidade (selecionada automaticamente)."
+                  : `${unidadesDaAcademia.length} unidade${unidadesDaAcademia.length !== 1 ? "s" : ""} disponíve${unidadesDaAcademia.length !== 1 ? "is" : "l"}.`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Lista curta (<= 5) ou SuggestionInput (> 5) */}
+            {unidadesDaAcademia.length <= 5 ? (
+              <div className="grid gap-2">
+                {unidadesDaAcademia.map((tenant) => {
+                  const isSelected = tenant.id === selectedTenantId;
+                  return (
+                    <button
+                      key={tenant.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTenantId(tenant.id);
+                        setSelectedTenantNome(tenant.nome);
+                        setUnidadeSearch(tenant.nome);
+                      }}
+                      className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-left text-sm transition-all ${
+                        isSelected
+                          ? "border-gym-accent bg-gym-accent/10 text-foreground shadow-sm"
+                          : "border-border bg-card text-muted-foreground hover:border-foreground/20 hover:bg-secondary/50"
+                      }`}
+                    >
+                      <MapPin
+                        className={`size-3.5 shrink-0 ${isSelected ? "text-gym-accent" : ""}`}
+                      />
+                      <span className="truncate">{tenant.nome}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <SuggestionInput
+                inputAriaLabel="Buscar unidade"
+                value={unidadeSearch}
+                onValueChange={(v) => {
+                  setUnidadeSearch(v);
+                  if (selectedTenantId && v !== selectedTenantNome) {
+                    setSelectedTenantId("");
+                    setSelectedTenantNome("");
+                  }
+                }}
+                onSelect={handleSelectUnidade}
+                options={unidadeSuggestion.options}
+                onFocusOpen={unidadeSuggestion.onFocusOpen}
+                placeholder="Buscar unidade por nome..."
+                emptyText="Nenhuma unidade encontrada"
+                preloadOnFocus
+              />
+            )}
+
+            {/* Unidade selecionada + justificativa + botão */}
+            {selectedTenantId ? (
+              <div className="space-y-4 pt-2">
+                <div className="rounded-lg border border-gym-accent/30 bg-gym-accent/5 p-3">
+                  <p className="text-sm font-semibold text-foreground">
+                    {selectedTenantNome}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {selectedAcademia.nome}
+                  </p>
+                </div>
+
+                <form
+                  className="space-y-3"
+                  onSubmit={form.handleSubmit(handleEntrar)}
+                >
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="justificativa">
+                    <label
+                      className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      htmlFor="justificativa"
+                    >
                       Justificativa (opcional)
                     </label>
                     <Textarea
@@ -234,7 +457,9 @@ export default function EntrarComoAcademiaPage() {
                       {...form.register("justificativa")}
                     />
                     {form.formState.errors.justificativa ? (
-                      <p className="text-xs text-gym-danger">{form.formState.errors.justificativa.message}</p>
+                      <p className="text-xs text-gym-danger">
+                        {form.formState.errors.justificativa.message}
+                      </p>
                     ) : null}
                   </div>
                   <Button
@@ -255,19 +480,22 @@ export default function EntrarComoAcademiaPage() {
                     )}
                   </Button>
                 </form>
-              </CardContent>
-            </Card>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
-            <Button
-              variant="outline"
-              className="w-full border-border"
-              onClick={() => router.push("/admin")}
-            >
-              Voltar ao backoffice
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Voltar */}
+      <div className="flex justify-center">
+        <Button
+          variant="outline"
+          className="border-border"
+          onClick={() => router.push("/admin")}
+        >
+          Voltar ao backoffice
+        </Button>
+      </div>
     </div>
   );
 }
