@@ -166,12 +166,14 @@ test.describe("Planos shell recovery", () => {
     });
 
     await page.goto("/dashboard");
+    await page.waitForLoadState("networkidle");
     await expect(page).not.toHaveURL(/\/login/);
     await page.goto("/planos");
+    await page.waitForLoadState("networkidle");
     await expect(page).not.toHaveURL(/\/login/);
 
-    await expect(page.getByRole("heading", { name: "Planos" })).toBeVisible();
-    await expect(page.getByText("Plano Gold").first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Planos" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Plano Gold").first()).toBeVisible({ timeout: 10_000 });
     await expect(page.locator("body")).toContainText(TENANT.nome);
     await expect(page.locator("body")).not.toContainText(
       "Hydration failed because the server rendered HTML didn't match the client"

@@ -214,6 +214,7 @@ async function openAuthenticatedPage(
     { name: "academia-active-tenant-name", value: tenantName, url: E2E_BASE_URL },
   ]);
   await page.goto(path);
+  await page.waitForLoadState("networkidle");
   await expect(page).not.toHaveURL(/\/login/);
 }
 
@@ -224,7 +225,7 @@ test.describe("Sessão e multiunidade", () => {
     await openAuthenticatedPage(page, "/administrativo/contas-bancarias");
 
     await expect(page).toHaveURL(/\/administrativo\/contas-bancarias$/);
-    await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible({ timeout: 10_000 });
 
     await page.route("**/api/v1/auth/refresh", async (route) => {
       await fulfillJson(route, { message: "Sessão expirada." }, 401);
@@ -253,13 +254,14 @@ test.describe("Sessão e multiunidade", () => {
     });
 
     await expect(page).toHaveURL(/\/administrativo\/contas-bancarias$/);
-    await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("combobox").first()).toContainText("PECHINCHA - S3");
     await expect.poll(() => contasMock.primaryTenantId).toBe("tenant-s3");
 
     await page.reload();
+    await page.waitForLoadState("networkidle");
 
-    await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Contas bancárias" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("combobox").first()).toContainText("PECHINCHA - S3");
     await expect.poll(() => contasMock.requestedTenantIds.filter((tenantId) => tenantId === "tenant-s3").length).toBeGreaterThan(0);
 

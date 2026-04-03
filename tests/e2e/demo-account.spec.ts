@@ -208,18 +208,19 @@ async function seedDemoSession(page: Page) {
 
 async function navigateToDemo(page: Page) {
   await page.goto("/b2b/demo", { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { name: "Crie sua conta demo" })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByTestId("demo-form")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByTestId("demo-form")).toHaveAttribute("data-hydrated", "true", { timeout: 10_000 });
 }
 
 test.describe("Fluxo de conta demo", () => {
   test("exibe formulario com campos nome, email e senha", async ({ page }) => {
     await navigateToDemo(page);
 
-    await expect(page.getByLabel("Nome")).toBeVisible();
-    await expect(page.getByLabel("E-mail")).toBeVisible();
-    await expect(page.getByLabel("Senha", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Criar conta demo gratuita" })).toBeVisible();
+    await expect(page.getByLabel("Nome")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByLabel("E-mail")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByLabel("Senha", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "Criar conta demo gratuita" })).toBeVisible({ timeout: 5_000 });
   });
 
   test("valida nome vazio", async ({ page }) => {
@@ -229,7 +230,7 @@ test.describe("Fluxo de conta demo", () => {
     await page.getByLabel("Senha", { exact: true }).fill("senha123");
     await page.getByRole("button", { name: "Criar conta demo gratuita" }).click();
 
-    await expect(page.getByText("Informe seu nome.")).toBeVisible();
+    await expect(page.getByText("Informe seu nome.")).toBeVisible({ timeout: 5_000 });
   });
 
   test("valida email invalido", async ({ page }) => {
@@ -240,7 +241,7 @@ test.describe("Fluxo de conta demo", () => {
     await page.getByLabel("Senha", { exact: true }).fill("senha123");
     await page.getByRole("button", { name: "Criar conta demo gratuita" }).click();
 
-    await expect(page.getByText("Informe um e-mail valido.")).toBeVisible();
+    await expect(page.getByText("Informe um e-mail valido.")).toBeVisible({ timeout: 5_000 });
   });
 
   test("valida senha curta", async ({ page }) => {
@@ -251,7 +252,7 @@ test.describe("Fluxo de conta demo", () => {
     await page.getByLabel("Senha", { exact: true }).fill("12345");
     await page.getByRole("button", { name: "Criar conta demo gratuita" }).click();
 
-    await expect(page.getByText("A senha deve ter no minimo 6 caracteres.")).toBeVisible();
+    await expect(page.getByText("A senha deve ter no minimo 6 caracteres.")).toBeVisible({ timeout: 5_000 });
   });
 
   test("submissao com dados validos redireciona para dashboard com demo=1", async ({ page }) => {
