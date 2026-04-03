@@ -38,10 +38,10 @@ export function buildNetworkAccessHref(mode: NetworkAccessRouteMode, networkSubd
 
   switch (mode) {
     case "forgot-password":
-      return `/app/${safeSubdomain}/forgot-password`;
+      return `/acesso/${safeSubdomain}/recuperar-senha`;
     case "first-access":
-      return `/app/${safeSubdomain}/first-access`;
+      return `/acesso/${safeSubdomain}/primeiro-acesso`;
     default:
-      return `/app/${safeSubdomain}/login`;
+      return `/acesso/${safeSubdomain}/autenticacao`;
   }
 }

@@ -14,8 +14,8 @@ test.describe("network subdomain helpers", () => {
   });
 
   test("monta links canônicos de autenticação por subdomínio", () => {
-    expect(buildNetworkAccessHref("login", "rede-norte")).toBe("/app/rede-norte/login");
-    expect(buildNetworkAccessHref("forgot-password", "rede-norte")).toBe("/app/rede-norte/forgot-password");
-    expect(buildNetworkAccessHref("first-access", "rede-norte")).toBe("/app/rede-norte/first-access");
+    expect(buildNetworkAccessHref("login", "rede-norte")).toBe("/acesso/rede-norte/autenticacao");
+    expect(buildNetworkAccessHref("forgot-password", "rede-norte")).toBe("/acesso/rede-norte/recuperar-senha");
+    expect(buildNetworkAccessHref("first-access", "rede-norte")).toBe("/acesso/rede-norte/primeiro-acesso");
   });
 });

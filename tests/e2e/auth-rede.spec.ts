@@ -20,7 +20,8 @@ function buildUnsignedE2EJwt(payload: Record<string, unknown> = {}): string {
 
 // Contrato atual de rede:
 // - Host/subdominio: /login lê x-forwarded-host (ou host) para resolver subdomínio.
-// - Rota explícita: /app/[rede]/(login|forgot-password|first-access).
+// - Rota canônica: /acesso/[rede]/(autenticacao|recuperar-senha|primeiro-acesso).
+// - Rota legada: /app/[rede]/(login|forgot-password|first-access) redireciona para a canônica.
 // - Query: /login?redeIdentifier=rede-alvo.
 // - Header na API: X-Rede-Identifier.
 
@@ -272,6 +273,7 @@ test.describe("acesso por rede", () => {
     await installAuthNetworkMocks(page, captured);
 
     await page.goto("/app/rede-norte/login?next=%2Fdashboard", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/acesso\/rede-norte\/autenticacao\?next=%2Fdashboard$/);
 
     await expect(page.getByRole("heading", { name: "Portal Rede Norte" })).toBeVisible();
     await expect(page.getByText("Suporte: suporte@redenorte.local")).toBeVisible();
@@ -315,11 +317,13 @@ test.describe("acesso por rede", () => {
     await installAuthNetworkMocks(page, captured);
 
     await page.goto("/app/rede-norte/forgot-password", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/acesso\/rede-norte\/recuperar-senha$/);
     await page.getByLabel("Identificador").fill("ana@qa.local");
     await page.getByRole("button", { name: "Enviar instruções" }).click();
     await expect(page.getByText("Instruções enviadas para a rede correta.")).toBeVisible();
 
     await page.goto("/app/rede-norte/first-access", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/acesso\/rede-norte\/primeiro-acesso$/);
     await page.getByLabel("Identificador").fill("111.222.333-44");
     await page.getByRole("button", { name: "Solicitar primeiro acesso" }).click();
     await expect(page.getByText("Convite de primeiro acesso emitido para esta rede.")).toBeVisible();
@@ -351,7 +355,7 @@ test.describe("acesso por rede", () => {
     await expect(page.getByRole("heading", { name: "Portal Rede Norte" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Recuperar senha" })).toHaveAttribute(
       "href",
-      "/app/rede-norte/forgot-password"
+      "/acesso/rede-norte/recuperar-senha"
     );
     await expect(captured.contextIdentifiers).toEqual(["rede-norte"]);
   });
@@ -372,6 +376,7 @@ test.describe("acesso por rede", () => {
     await installAuthNetworkMocks(page, captured);
 
     await page.goto("/app/rede-invalida/login", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/acesso\/rede-invalida\/autenticacao$/);
 
     await expect(
       page.getByText("Não foi possível carregar o contexto visual da rede agora. Você ainda pode continuar e validar o acesso no envio.")
@@ -400,6 +405,7 @@ test.describe("acesso por rede", () => {
     await installAuthNetworkMocks(page, captured, { forcePasswordChange: true });
 
     await page.goto("/app/rede-norte/login?next=%2Fdashboard", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/acesso\/rede-norte\/autenticacao\?next=%2Fdashboard$/);
     await page.getByLabel("Identificador").fill("ana@qa.local");
     await page.getByLabel("Senha").fill("12345678");
     await page.getByRole("button", { name: "Entrar" }).click();
