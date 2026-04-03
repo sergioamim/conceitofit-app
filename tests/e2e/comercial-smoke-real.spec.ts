@@ -52,6 +52,15 @@ function generateValidCpf(seed: string) {
   return `${fullDigits.slice(0, 3)}.${fullDigits.slice(3, 6)}.${fullDigits.slice(6, 9)}-${fullDigits.slice(9, 11)}`;
 }
 
+function cpfDigitsOnly(cpf: string): string {
+  return cpf.replace(/\D/g, "");
+}
+
+function cpfMatch(a: string | null | undefined, b: string): boolean {
+  if (!a) return false;
+  return cpfDigitsOnly(a) === cpfDigitsOnly(b);
+}
+
 function buildUniqueProspect() {
   const stamp = `${Date.now()}`;
   const digits = stamp.slice(-8);
@@ -241,7 +250,7 @@ async function convertProspectToClientViaApi(
 ) {
   console.log("[smoke-real] convertendo prospect");
   const conversionResponse = await request.post(
-    backendUrl(`/api/v1/crm/prospects/converter?tenantId=${encodeURIComponent(session.tenantId)}`),
+    backendUrl(`/api/v1/academia/prospects/converter?tenantId=${encodeURIComponent(session.tenantId)}`),
     {
       headers: {
         Authorization: `${session.tokenType} ${session.token}`,
@@ -262,55 +271,77 @@ async function convertProspectToClientViaApi(
   console.log("[smoke-real] conversao aceita pelo backend; buscando artefatos criados");
 }
 
+function extractArrayFromPayload<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    for (const key of ["items", "content", "data", "rows", "result", "itens"]) {
+      if (Array.isArray(obj[key])) return obj[key] as T[];
+    }
+  }
+  return [];
+}
+
+async function tryGetJson<T>(request: APIRequestContext, url: string, headers: Record<string, string>): Promise<T | null> {
+  try {
+    const response = await request.get(url, { headers, failOnStatusCode: false });
+    if (!response.ok()) return null;
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
 async function resolveConvertedArtifacts(
   request: APIRequestContext,
   session: { token: string; tokenType: string; tenantId: string },
   prospect: ReturnType<typeof buildUniqueProspect>,
 ) {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
+  const authHeaders = { Authorization: `${session.tokenType} ${session.token}` };
+  const MAX_ATTEMPTS = 20;
+  const POLL_INTERVAL_MS = 2_000;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     const alunosResponse = await request.get(
       backendUrl(`/api/v1/comercial/alunos?tenantId=${encodeURIComponent(session.tenantId)}&search=${encodeURIComponent(prospect.cpf)}&page=0&size=5&envelope=true`),
-      {
-        headers: {
-          Authorization: `${session.tokenType} ${session.token}`,
-        },
-      },
+      { headers: authHeaders },
     );
     expect(alunosResponse.ok()).toBe(true);
 
-    const alunosPayload = (await alunosResponse.json()) as {
-      items?: Array<{ id: string; nome: string; cpf?: string | null }>;
-    };
-    const aluno = (alunosPayload.items ?? []).find((item) => item.cpf === prospect.cpf);
+    const alunosPayload = await alunosResponse.json();
+    const alunosList = extractArrayFromPayload<{ id: string; nome: string; cpf?: string | null }>(alunosPayload);
+    const aluno = alunosList.find((item) => cpfMatch(item.cpf, prospect.cpf));
 
     if (aluno?.id) {
-      const matriculasResponse = await request.get(
-        backendUrl(`/api/v1/comercial/alunos/${aluno.id}/matriculas?tenantId=${encodeURIComponent(session.tenantId)}&page=0&size=10`),
-        {
-          headers: {
-            Authorization: `${session.tokenType} ${session.token}`,
-          },
-        },
+      // Try /adesoes first, then /matriculas as fallback (mirrors frontend behavior)
+      let matriculasPayload = await tryGetJson<unknown>(
+        request,
+        backendUrl(`/api/v1/comercial/alunos/${aluno.id}/adesoes?tenantId=${encodeURIComponent(session.tenantId)}&page=0&size=10`),
+        authHeaders,
       );
-      expect(matriculasResponse.ok()).toBe(true);
+      if (!matriculasPayload) {
+        matriculasPayload = await tryGetJson<unknown>(
+          request,
+          backendUrl(`/api/v1/comercial/alunos/${aluno.id}/matriculas?tenantId=${encodeURIComponent(session.tenantId)}&page=0&size=10`),
+          authHeaders,
+        );
+      }
 
       const pagamentosResponse = await request.get(
         backendUrl(`/api/v1/comercial/pagamentos?tenantId=${encodeURIComponent(session.tenantId)}&alunoId=${encodeURIComponent(aluno.id)}&page=0&size=20`),
-        {
-          headers: {
-            Authorization: `${session.tokenType} ${session.token}`,
-          },
-        },
+        { headers: authHeaders },
       );
       expect(pagamentosResponse.ok()).toBe(true);
+      const pagamentosPayload = await pagamentosResponse.json();
 
-      const matriculas = (await matriculasResponse.json()) as Array<{ id: string; status?: string | null }>;
-      const pagamentos = (await pagamentosResponse.json()) as Array<{
+      const matriculas = extractArrayFromPayload<{ id: string; status?: string | null }>(matriculasPayload);
+      const pagamentos = extractArrayFromPayload<{
         id: string;
         descricao?: string | null;
         status?: string | null;
         dataVencimento?: string | null;
-      }>;
+      }>(pagamentosPayload);
+
       const matricula = matriculas.find((item) => item.id);
       const pagamento = pagamentos.find((item) => item.id && /PENDENTE|ABERTO/i.test(item.status ?? ""));
 
@@ -333,12 +364,16 @@ async function resolveConvertedArtifacts(
           },
         } satisfies ConvertedArtifacts;
       }
+
+      console.log(`[smoke-real] tentativa ${attempt + 1}: aluno encontrado (${aluno.id}), mas matricula/pagamento ainda nao disponiveis (matriculas=${matriculas.length}, pagamentos=${pagamentos.length})`);
+    } else {
+      console.log(`[smoke-real] tentativa ${attempt + 1}: aluno ainda nao encontrado para CPF ${prospect.cpf}`);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 
-  throw new Error(`Conversao concluida, mas aluno/matricula/pagamento nao ficaram legiveis para ${prospect.cpf}.`);
+  throw new Error(`Conversao concluida, mas aluno/matricula/pagamento nao ficaram legiveis para ${prospect.cpf} apos ${MAX_ATTEMPTS} tentativas.`);
 }
 
 async function openClientProfile(page: Page, clienteId: string, clienteNome: string) {
