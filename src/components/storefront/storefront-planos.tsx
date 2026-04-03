@@ -1,5 +1,6 @@
 import type { Plano, Tenant } from "@/lib/types";
 import { formatBRL } from "@/lib/formatters";
+import { buildPublicJourneyHref } from "@/lib/public/services";
 
 function formatDuracao(dias: number): string {
   if (dias === 30 || dias === 31) return "/mês";
@@ -71,7 +72,10 @@ export function StorefrontPlanos({
           <div className="mt-6">
             {singleUnit ? (
               <a
-                href={`/storefront/adesao/cadastro?tenant=${singleUnit.id}&plan=${plano.id}`}
+                href={buildPublicJourneyHref("/adesao/cadastro", {
+                  tenantRef: singleUnit.id,
+                  planId: plano.id,
+                })}
                 className="block rounded-lg bg-gym-accent px-4 py-2.5 text-center text-sm font-semibold text-background transition-colors hover:bg-gym-accent/90"
               >
                 Assinar agora

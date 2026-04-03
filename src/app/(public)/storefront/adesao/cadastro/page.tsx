@@ -1,44 +1,18 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import { SuspenseFallback } from "@/components/shared/suspense-fallback";
+import { redirectStorefrontJourney } from "../redirect-to-public-journey";
 
 /**
  * Proxy page: rende a jornada /adesao/cadastro existente usando o tenantRef
  * do subdomínio da storefront. Evita duplicar a lógica do form.
  *
- * O middleware do storefront injeta x-tenant-id no header; aqui pegamos
- * ?tenant=... e ?plan=... da query string (vindos do redirect de /plano/[slug]
- * ou dos CTAs da página de unidade).
+ * O middleware do storefront injeta x-tenant-id no header; aqui apenas
+ * preservamos a query string recebida e redirecionamos no servidor
+ * para a jornada canônica em /adesao/cadastro.
  */
 
-function CadastroRedirect() {
-  const searchParams = useSearchParams();
-  const tenant = searchParams.get("tenant") ?? "";
-  const plan = searchParams.get("plan") ?? "";
-
-  // Redirect browser to the canonical /adesao/cadastro with params
-  if (typeof window !== "undefined") {
-    const query = new URLSearchParams();
-    if (tenant) query.set("tenant", tenant);
-    if (plan) query.set("plan", plan);
-    window.location.replace(`/adesao/cadastro?${query.toString()}`);
-  }
-
-  return (
-    <SuspenseFallback variant="page" message="Redirecionando para matrícula..." />
-  );
-}
-
-export default function StorefrontCadastroPage() {
-  return (
-    <Suspense
-      fallback={
-        <SuspenseFallback variant="page" message="Carregando..." />
-      }
-    >
-      <CadastroRedirect />
-    </Suspense>
-  );
+export default async function StorefrontCadastroPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return redirectStorefrontJourney("/adesao/cadastro", searchParams);
 }

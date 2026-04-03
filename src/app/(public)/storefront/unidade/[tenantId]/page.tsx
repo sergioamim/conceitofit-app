@@ -9,6 +9,7 @@ import {
 } from "@/lib/public/storefront-api";
 import type { Metadata } from "next";
 import { formatBRL } from "@/lib/formatters";
+import { buildPublicJourneyHref } from "@/lib/public/services";
 
 interface PageProps {
   params: Promise<{ tenantId: string }>;
@@ -299,7 +300,10 @@ export default async function UnidadePage({ params }: PageProps) {
 
                 <div className="mt-6 flex flex-col gap-2">
                   <a
-                    href={`/storefront/adesao/cadastro?tenant=${tenantId}&plan=${plano.id}`}
+                    href={buildPublicJourneyHref("/adesao/cadastro", {
+                      tenantRef: tenantId,
+                      planId: plano.id,
+                    })}
                     className="block rounded-lg bg-gym-accent px-4 py-2.5 text-center text-sm font-semibold text-background transition-colors hover:bg-gym-accent/90"
                   >
                     Assinar agora
