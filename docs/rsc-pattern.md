@@ -37,7 +37,7 @@ Use quando a página:
 Mantenha a **page** como Server Component e extraia a interatividade para **Client Components filhos**.
 
 ```
-app/(app)/exemplo/page.tsx        ← Server Component (fetch de dados)
+app/(portal)/exemplo/page.tsx        ← Server Component (fetch de dados)
   └─ components/exemplo-table.tsx ← Client Component (tabela interativa)
 ```
 
@@ -46,7 +46,7 @@ app/(app)/exemplo/page.tsx        ← Server Component (fetch de dados)
 #### 1. Page (Server Component)
 
 ```tsx
-// app/(app)/exemplo/page.tsx
+// app/(portal)/exemplo/page.tsx
 // SEM "use client" – é Server Component por padrão
 
 import { serverFetch } from "@/lib/shared/server-fetch";
@@ -72,7 +72,7 @@ export default async function ExemploPage() {
 #### 2. Client Island (Client Component)
 
 ```tsx
-// app/(app)/exemplo/components/exemplo-table.tsx
+// app/(portal)/exemplo/components/exemplo-table.tsx
 "use client";
 
 import { useState } from "react";

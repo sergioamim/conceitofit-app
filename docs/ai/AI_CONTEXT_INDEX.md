@@ -27,25 +27,25 @@
   - `docs/REDE_UNIDADE_FRONTEND_ROLLOUT.md`
 
 - Se for mexer em área operacional autenticada, leia:
-  - `src/app/(app)/layout.tsx`
+  - `src/app/(portal)/layout.tsx`
   - `src/components/layout/sidebar.tsx`
   - `src/components/layout/app-topbar.tsx`
   - `docs/ai/DOMAIN_MAP.md`
 
 - Se for mexer em clientes, leia:
-  - `src/app/(app)/clientes`
+  - `src/app/(portal)/clientes`
   - `src/lib/query/use-clientes.ts`
   - `src/lib/api/alunos.ts`
   - `src/lib/shared/types/aluno.ts`
 
 - Se for mexer em CRM/prospects, leia:
-  - `src/app/(app)/crm`
-  - `src/app/(app)/prospects`
+  - `src/app/(portal)/crm`
+  - `src/app/(portal)/prospects`
   - `src/lib/query/use-prospects.ts`
   - `src/lib/api/crm.ts`
 
 - Se for mexer em vendas/matrículas/pagamentos, leia:
-  - `src/app/(app)/vendas/nova/page.tsx`
+  - `src/app/(portal)/vendas/nova/page.tsx`
   - `src/lib/query/use-vendas.ts`
   - `src/lib/api/vendas.ts`
   - `src/lib/api/matriculas.ts`

@@ -28,7 +28,7 @@ Meta de negócio: reduzir tempo até o dashboard ficar utilizável e evitar múl
 
 1. Definir e versionar contrato único de resposta para o dashboard.
 2. Disponibilizar endpoint no backend para agregação dos dados usados pela UI.
-3. Migrar `src/app/(app)/dashboard/page.tsx` para consumir esse endpoint.
+3. Migrar `src/app/(portal)/dashboard/page.tsx` para consumir esse endpoint.
 4. Atualizar `src/lib/api/dashboard.ts` e tipos/normalização para suportar o payload novo/legacy.
 5. Cobrir a migração com testes e validação de regressão de chamadas de rede.
 

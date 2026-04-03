@@ -237,7 +237,7 @@
 - catálogo de `Servico` em `src/lib/types.ts`
 - APIs de serviços em `src/lib/api/comercial-catalogo.ts`
 - APIs de reservas em `src/lib/api/reservas.ts`
-- telas de reservas em `src/app/(app)/reservas/page.tsx`
+- telas de reservas em `src/app/(portal)/reservas/page.tsx`
 
 ## 14. Riscos
 - Misturar evento pago com aula recorrente no mesmo modelo pode gerar regressão operacional.

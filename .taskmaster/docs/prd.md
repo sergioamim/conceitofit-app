@@ -55,7 +55,7 @@ Este PRD existe para manter o backlog do Task Master alinhado ao estado real do 
 
 ## Complemento 2026-03-13 - Seguranca Global do Backoffice
 
-O backend passou a formalizar uma nova trilha administrativa de seguranca em `/api/v1/admin/seguranca/*`. No frontend, isso nao deve reaproveitar integralmente as paginas contextuais em `src/app/(app)/seguranca/*`, porque elas operam por tenant e nao cobrem a visao global de rede. A diretriz e criar telas novas no shell `/admin`, reaproveitando componentes, hooks e padroes visuais das telas atuais quando fizer sentido.
+O backend passou a formalizar uma nova trilha administrativa de seguranca em `/api/v1/admin/seguranca/*`. No frontend, isso nao deve reaproveitar integralmente as paginas contextuais em `src/app/(portal)/seguranca/*`, porque elas operam por tenant e nao cobrem a visao global de rede. A diretriz e criar telas novas no shell `/admin`, reaproveitando componentes, hooks e padroes visuais das telas atuais quando fizer sentido.
 
 ### 16. Criar area global de seguranca no backoffice administrativo
 - Adicionar navegacao, listagem global de usuarios administrativos e detalhe consolidado de acessos em `/admin/seguranca/*`.
@@ -68,4 +68,4 @@ O backend passou a formalizar uma nova trilha administrativa de seguranca em `/a
 
 ## Complemento 2026-03-19 - Perfil do cliente e aba NFS-e
 
-No detalhe do cliente em `src/app/(app)/clientes/[id]/page.tsx`, a aba `NFS-e` nao deve depender de `GET /api/v1/administrativo/nfse/configuracao-atual` no carregamento inicial da pagina. O comportamento esperado e carregar sob demanda apenas quando o usuario abrir a aba e priorizar a exibicao das NFS-e ja emitidas e dos estados fiscais refletidos nos pagamentos, sem introduzir fetch fiscal global desnecessario no perfil.
+No detalhe do cliente em `src/app/(portal)/clientes/[id]/page.tsx`, a aba `NFS-e` nao deve depender de `GET /api/v1/administrativo/nfse/configuracao-atual` no carregamento inicial da pagina. O comportamento esperado e carregar sob demanda apenas quando o usuario abrir a aba e priorizar a exibicao das NFS-e ja emitidas e dos estados fiscais refletidos nos pagamentos, sem introduzir fetch fiscal global desnecessario no perfil.

@@ -134,7 +134,7 @@
 - Exemplos documentados:
   - `src/app/(backoffice)/admin/importacao-evo-p0/hooks/useEvoImportPage.ts`
   - `src/components/treinos/treino-v2-editor.tsx`
-  - `src/app/(app)/reservas/page.tsx`
+  - `src/app/(portal)/reservas/page.tsx`
 - Fonte:
   - `docs/TEST_COVERAGE_BASELINE.md`
   - `docs/TEST_COVERAGE_CORE.md`

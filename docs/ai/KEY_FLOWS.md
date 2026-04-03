@@ -46,7 +46,7 @@
   5. o snapshot é sincronizado em `tenant-context.ts`
   6. sidebar/topbar/theme/sentry consomem o mesmo estado
 - Arquivos centrais:
-  - `src/app/(app)/layout.tsx`
+  - `src/app/(portal)/layout.tsx`
   - `src/app/(aluno)/layout.tsx`
   - `src/lib/tenant/hooks/use-session-context.tsx`
   - `src/lib/tenant/hooks/session-bootstrap.ts`
@@ -79,10 +79,10 @@
   - CRM usa React Query e normalização de runtime
   - mudança de status do prospect dispara cadências
 - Arquivos centrais:
-  - `src/app/(app)/clientes/page.tsx`
+  - `src/app/(portal)/clientes/page.tsx`
   - `src/lib/query/use-clientes.ts`
   - `src/lib/query/use-prospects.ts`
-  - `src/app/(app)/vendas/nova/page.tsx`
+  - `src/app/(portal)/vendas/nova/page.tsx`
   - `src/lib/query/use-vendas.ts`
 - Decisão embutida:
   - o frontend assume que a operação diária é unit-scoped; sem tenant resolvido, muitos hooks nem disparam.

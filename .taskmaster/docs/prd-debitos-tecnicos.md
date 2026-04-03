@@ -17,8 +17,8 @@ O arquivo `src/lib/tenant/auth-redirect.ts` exporta de `./shared/auth-redirect` 
 
 **Arquivos afetados:**
 - `src/lib/tenant/auth-redirect.ts` — importa módulo inexistente
-- `src/app/(app)/layout.tsx` — importa `buildLoginHref`
-- `src/app/(app)/conta/sair/page.tsx` — importa `buildLoginHref`
+- `src/app/(portal)/layout.tsx` — importa `buildLoginHref`
+- `src/app/(portal)/conta/sair/page.tsx` — importa `buildLoginHref`
 - `src/components/layout/sidebar.tsx` — importa de auth-redirect
 - `src/components/auth/legacy-login-flow.tsx` — importa de auth-redirect
 - `src/components/auth/network-access-flow.tsx` — importa `resolvePostLoginPath`
@@ -73,8 +73,8 @@ Três arquivos com erros de tipo nos formulários da jornada pública:
 Existem 4 instâncias de `as any` que comprometem type safety:
 
 1. `src/app/(backoffice)/admin/configuracoes/page.tsx:171` — `zodResolver(...) as any`
-2. `src/app/(app)/seguranca/acesso-unidade/page.tsx:75` — `as any`
-3. `src/app/(app)/seguranca/rbac/page.tsx:225` — `as any`
+2. `src/app/(portal)/seguranca/acesso-unidade/page.tsx:75` — `as any`
+3. `src/app/(portal)/seguranca/rbac/page.tsx:225` — `as any`
 4. `src/components/shared/crud-modal.tsx:101` — `useForm<any>`
 
 **Ação:** Substituir cada `as any` por tipos genéricos corretos. Se causado pelo zodResolver, resolver junto com a task de formulários. Para o `crud-modal.tsx`, usar generic type parameter adequado.
@@ -150,7 +150,7 @@ A acessibilidade está em 7/10. Gaps identificados:
 - Falta skip navigation link no layout principal
 - Inputs sem labels associados em alguns formulários
 
-**Ação:** Adicionar `aria-describedby` nos campos de formulários com erro. Adicionar `aria-live` em status badges e loading states. Implementar skip-to-content link no layout `(app)`. Auditar com axe-core ou Lighthouse Accessibility.
+**Ação:** Adicionar `aria-describedby` nos campos de formulários com erro. Adicionar `aria-live` em status badges e loading states. Implementar skip-to-content link no layout `(portal)`. Auditar com axe-core ou Lighthouse Accessibility.
 
 **Teste:** Lighthouse Accessibility score >= 90 nas páginas principais.
 

@@ -25,23 +25,23 @@
 | Módulo | Funcionalidades | Evidência |
 |--------|----------------|-----------|
 | **Autenticação** | Login JWT, refresh token, troca de unidade, impersonação admin | `src/lib/api/auth.ts` (423 linhas), `session.ts`, impersonation-banner |
-| **Dashboard** | KPIs (alunos ativos, prospects, matrículas, receita), tabs Clientes/Vendas/Financeiro | `src/app/(app)/dashboard/dashboard-content.tsx` |
-| **CRM** | Pipeline kanban, tarefas, playbooks, cadências, automações, campanhas, timeline | `src/app/(app)/crm/` (5 páginas), `src/lib/api/crm.ts` |
-| **Prospects** | CRUD, progressão de status, conversão para aluno | `src/app/(app)/prospects/` + wizard em `[id]/converter` |
-| **Clientes** | Cadastro, filtros, avatar, detalhe com abas (dados, pagamentos, cartões, NFS-e, presenças) | `src/app/(app)/clientes/` com dialogs e workspace hook |
-| **Matrículas** | Listagem, cancelamento, alerta de vencimento | `src/app/(app)/matriculas/` |
-| **Planos** | CRUD completo, grid de cards, formulário de criação/edição | `src/app/(app)/planos/` com `novo/`, `[id]/editar/` |
-| **Vendas** | Carrinho unificado (plano/serviço/produto), scanner código barras, recibo | `src/app/(app)/vendas/nova/` (7 componentes + hook) |
-| **Pagamentos** | Listagem, recebimento manual, emissão NFS-e em lote | `src/app/(app)/pagamentos/` |
-| **Financeiro gerencial** | Contas a pagar, DRE, projeções, recorrência | `src/app/(app)/gerencial/contas-a-pagar/` (5 componentes) |
-| **Treinos** | Templates, exercícios, grupos musculares, editor v2, atribuição a alunos | `src/app/(app)/treinos/` (6 páginas), `treinos-v2-editor` |
-| **Grade/Aulas** | Mural semanal, atividades, horários | `src/app/(app)/grade/`, `atividades/` |
-| **Administrativo** | 20+ páginas: unidades, funcionários, salas, atividades, formas de pagamento, bandeiras, vouchers, convênios, maquininhas, contas bancárias, tipos de conta, serviços, produtos, NFS-e, catraca, integrações, IA | `src/app/(app)/administrativo/` |
-| **Segurança/RBAC** | Perfis, grants, usuários, auditoria, acesso por unidade | `src/app/(app)/seguranca/rbac/` (5 arquivos) |
+| **Dashboard** | KPIs (alunos ativos, prospects, matrículas, receita), tabs Clientes/Vendas/Financeiro | `src/app/(portal)/dashboard/dashboard-content.tsx` |
+| **CRM** | Pipeline kanban, tarefas, playbooks, cadências, automações, campanhas, timeline | `src/app/(portal)/crm/` (5 páginas), `src/lib/api/crm.ts` |
+| **Prospects** | CRUD, progressão de status, conversão para aluno | `src/app/(portal)/prospects/` + wizard em `[id]/converter` |
+| **Clientes** | Cadastro, filtros, avatar, detalhe com abas (dados, pagamentos, cartões, NFS-e, presenças) | `src/app/(portal)/clientes/` com dialogs e workspace hook |
+| **Matrículas** | Listagem, cancelamento, alerta de vencimento | `src/app/(portal)/matriculas/` |
+| **Planos** | CRUD completo, grid de cards, formulário de criação/edição | `src/app/(portal)/planos/` com `novo/`, `[id]/editar/` |
+| **Vendas** | Carrinho unificado (plano/serviço/produto), scanner código barras, recibo | `src/app/(portal)/vendas/nova/` (7 componentes + hook) |
+| **Pagamentos** | Listagem, recebimento manual, emissão NFS-e em lote | `src/app/(portal)/pagamentos/` |
+| **Financeiro gerencial** | Contas a pagar, DRE, projeções, recorrência | `src/app/(portal)/gerencial/contas-a-pagar/` (5 componentes) |
+| **Treinos** | Templates, exercícios, grupos musculares, editor v2, atribuição a alunos | `src/app/(portal)/treinos/` (6 páginas), `treinos-v2-editor` |
+| **Grade/Aulas** | Mural semanal, atividades, horários | `src/app/(portal)/grade/`, `atividades/` |
+| **Administrativo** | 20+ páginas: unidades, funcionários, salas, atividades, formas de pagamento, bandeiras, vouchers, convênios, maquininhas, contas bancárias, tipos de conta, serviços, produtos, NFS-e, catraca, integrações, IA | `src/app/(portal)/administrativo/` |
+| **Segurança/RBAC** | Perfis, grants, usuários, auditoria, acesso por unidade | `src/app/(portal)/seguranca/rbac/` (5 arquivos) |
 | **Backoffice global** | Dashboard admin, academias, financeiro, segurança, compliance, audit log, importação EVO, saúde operacional | `src/app/(backoffice)/admin/` (8+ páginas) |
 | **Storefront público** | Landing page, planos, unidades, checkout, adesão/trial, cadastro, SEO/OpenGraph | `src/app/storefront/` (RSC com `serverFetch`) |
 | **Monitor** | Tela de boas-vindas para recepção/catraca | `src/app/monitor/boas-vindas/` |
-| **Conta do usuário** | Perfil, segurança, notificações, preferências, academia | `src/app/(app)/conta/` (6 páginas) |
+| **Conta do usuário** | Perfil, segurança, notificações, preferências, academia | `src/app/(portal)/conta/` (6 páginas) |
 
 ### Fluxos principais
 1. **Jornada comercial:** Prospect → follow-up → conversão → matrícula → pagamento
@@ -91,7 +91,7 @@ O sistema resolve a dor de gestão operacional, mas faltam capacidades que o mer
 ## 4. Diagnóstico Técnico Geral
 
 ### Arquitetura
-- **Padrão:** Next.js App Router com route groups (`(app)`, `(backoffice)`, `storefront`, `monitor`)
+- **Padrão:** Next.js App Router com route groups (`(portal)`, `(backoffice)`, `storefront`, `monitor`)
 - **Separação clara:** `src/lib/api/` (43 módulos HTTP), `src/lib/shared/types/` (tipagem por domínio), `src/components/` (110 componentes), `src/lib/backoffice/`, `src/lib/public/`
 - **RSC + Client Islands:** Storefront e 5 páginas administrativas migradas para Server Components; restante usa `"use client"`
 - **Multi-tenancy:** Bem implementada via X-Context-Id header, session storage, tenant eligibility, operational access gate
@@ -150,7 +150,7 @@ O sistema resolve a dor de gestão operacional, mas faltam capacidades que o mer
 | 5 | **Sem observabilidade** | `logger.ts` → `console.*` apenas | Zero visibilidade em produção; debugging por reprodução manual | **P1** |
 | 6 | **Testes de componente quase inexistentes** | 2 testes em `tests/components/`; 110 componentes | Regressão visual/funcional não detectada | **P1** |
 | 7 | **Prospect progression inconsistente** | PRD documenta divergência entre list, modal, kanban e conversão | UX confusa; dados de pipeline CRM não confiáveis | **P1** |
-| 8 | **Páginas de conta sem persistência** | `src/app/(app)/conta/*` — botões salvar sem backend | Expectativa falsa do usuário; experiência quebrada | **P2** |
+| 8 | **Páginas de conta sem persistência** | `src/app/(portal)/conta/*` — botões salvar sem backend | Expectativa falsa do usuário; experiência quebrada | **P2** |
 | 9 | **alert/confirm/prompt nativos** | PRD: "recurring use of alert, confirm, prompt in critical flows" | UX pobre, impossível automatizar em testes | **P2** |
 | 10 | **knip reports na raiz** | 4 arquivos `knip-report*.txt` commitados (38KB) | Poluição do repositório; artefatos de build no source | **P3** |
 
@@ -168,7 +168,7 @@ O sistema resolve a dor de gestão operacional, mas faltam capacidades que o mer
 | **Observabilidade** | Logger apenas console.* | `logger.ts`: 44 linhas, sem integração externa | Zero visibilidade em produção | Médio | **P1** |
 | **Testes** | 2/110 componentes testados | `tests/components/` tem apenas 2 arquivos | Regressões visuais/funcionais silenciosas | Alto | **P1** |
 | **Testes** | Sem cobertura para vendas, pagamentos, financeiro, catraca | Coverage governance: "No coverage for sales, payments..." | Fluxos críticos de receita sem rede de segurança | Alto | **P1** |
-| **Código** | Páginas de conta sem persistência | `src/app/(app)/conta/` — 6 páginas com save buttons inativos | UX quebrada, expectativa falsa | Baixo | **P2** |
+| **Código** | Páginas de conta sem persistência | `src/app/(portal)/conta/` — 6 páginas com save buttons inativos | UX quebrada, expectativa falsa | Baixo | **P2** |
 | **Código** | alert/confirm/prompt nativos | PRD documenta uso recorrente | UX pobre, intestável por automação | Médio | **P2** |
 | **Banco de dados** | Sem migrations no frontend (esperado) | N/A — backend Java controla schema | N/A | N/A | N/A |
 | **CI/CD** | Sem deploy automático no pipeline | `gcp-deploy.sh` é manual; nenhum workflow de deploy em `.github/workflows/` | Deploy manual = risco de erro, sem rollback automático | Médio | **P2** |

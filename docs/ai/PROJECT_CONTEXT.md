@@ -4,7 +4,7 @@
 
 - Fato observado: o repositório é um frontend `Next.js` App Router para operação de academias multiunidade, com áreas autenticadas operacionais, backoffice global, jornada pública de adesão, storefront pública e área do aluno. Fontes:
   - `README.md`
-  - `src/app/(app)`
+  - `src/app/(portal)`
   - `src/app/(backoffice)`
   - `src/app/(public)`
   - `src/app/storefront`
@@ -69,7 +69,7 @@
 - Fato observado: o projeto é sensível a SSR/hydration. Há guardrails explícitos contra `Date.now()`, `Math.random()`, `new Date()` e conteúdo client-only no primeiro render hidratável. Fonte:
   - `AGENTS.md`
 - Fato observado: o shell autenticado usa `TenantContextProvider` como centro de sessão/contexto/unidade. Fontes:
-  - `src/app/(app)/layout.tsx`
+  - `src/app/(portal)/layout.tsx`
   - `src/app/(aluno)/layout.tsx`
   - `src/lib/tenant/hooks/use-session-context.tsx`
 - Fato observado: há dois caminhos de fetch:
@@ -119,7 +119,7 @@
 ## Leitura rápida recomendada
 
 - Se precisar entender o shell autenticado:
-  - `src/app/(app)/layout.tsx`
+  - `src/app/(portal)/layout.tsx`
   - `src/lib/tenant/hooks/use-session-context.tsx`
   - `src/lib/api/http.ts`
 - Se precisar entender integração backend:

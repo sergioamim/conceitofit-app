@@ -107,7 +107,7 @@ Este PRD organiza as ações em 3 fases de 30 dias cada (Q2 2026).
 
 9. **Configurar TanStack Query provider e devtools**
    - Criar `src/lib/query/query-client.ts` com defaults (staleTime: 5min, retry: 2)
-   - Adicionar `QueryClientProvider` no layout `(app)/layout.tsx`
+   - Adicionar `QueryClientProvider` no layout `(portal)/layout.tsx`
    - Adicionar `ReactQueryDevtools` em modo dev
    - **Critério de aceite**: provider funciona, devtools visível em dev
 
