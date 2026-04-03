@@ -1,31 +1,9 @@
-"use client";
+import { redirectStorefrontJourney } from "../redirect-to-public-journey";
 
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import { SuspenseFallback } from "@/components/shared/suspense-fallback";
-
-function CheckoutRedirect() {
-  const searchParams = useSearchParams();
-  const params = new URLSearchParams();
-  searchParams.forEach((value, key) => params.set(key, value));
-
-  if (typeof window !== "undefined") {
-    window.location.replace(`/adesao/checkout?${params.toString()}`);
-  }
-
-  return (
-    <SuspenseFallback variant="page" message="Redirecionando para pagamento..." />
-  );
-}
-
-export default function StorefrontCheckoutPage() {
-  return (
-    <Suspense
-      fallback={
-        <SuspenseFallback variant="page" message="Carregando..." />
-      }
-    >
-      <CheckoutRedirect />
-    </Suspense>
-  );
+export default async function StorefrontCheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return redirectStorefrontJourney("/adesao/checkout", searchParams);
 }

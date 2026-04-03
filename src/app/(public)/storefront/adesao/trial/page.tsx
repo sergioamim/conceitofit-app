@@ -1,31 +1,9 @@
-"use client";
+import { redirectStorefrontJourney } from "../redirect-to-public-journey";
 
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import { SuspenseFallback } from "@/components/shared/suspense-fallback";
-
-function TrialRedirect() {
-  const searchParams = useSearchParams();
-  const params = new URLSearchParams();
-  searchParams.forEach((value, key) => params.set(key, value));
-
-  if (typeof window !== "undefined") {
-    window.location.replace(`/adesao/trial?${params.toString()}`);
-  }
-
-  return (
-    <SuspenseFallback variant="page" message="Redirecionando para aula experimental..." />
-  );
-}
-
-export default function StorefrontTrialPage() {
-  return (
-    <Suspense
-      fallback={
-        <SuspenseFallback variant="page" message="Carregando..." />
-      }
-    >
-      <TrialRedirect />
-    </Suspense>
-  );
+export default async function StorefrontTrialPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return redirectStorefrontJourney("/adesao/trial", searchParams);
 }

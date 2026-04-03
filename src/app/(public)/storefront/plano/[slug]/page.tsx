@@ -3,6 +3,7 @@ import { serverFetch } from "@/lib/shared/server-fetch";
 import { logger } from "@/lib/shared/logger";
 import type { Plano } from "@/lib/types";
 import type { Metadata } from "next";
+import { buildPublicJourneyHref } from "@/lib/public/services";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -50,7 +51,5 @@ export default async function PlanoSlugPage({ params }: PageProps) {
   if (!plano) return notFound();
 
   // Redirect to the signup flow with tenant + plan pre-selected
-  redirect(
-    `/storefront/adesao/cadastro?tenant=${tenantId}&plan=${plano.id}`,
-  );
+  redirect(buildPublicJourneyHref("/adesao/cadastro", { tenantRef: tenantId, planId: plano.id }));
 }
