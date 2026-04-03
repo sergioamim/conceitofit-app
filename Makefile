@@ -2,7 +2,7 @@
 
 NPM := npm
 
-.PHONY: help install dev dev-mock dev-api dev-api-scan build preview start start-prod prod lint audit-api test e2e e2e-admin-crud e2e-ui e2e-report coverage-clean coverage-unit coverage-smoke coverage-report coverage-report-full coverage-baseline coverage-baseline-full coverage-gate
+.PHONY: help install dev dev-mock dev-api dev-api-scan dev-api-devtools build preview start start-prod prod lint audit-api test e2e e2e-admin-crud e2e-ui e2e-report coverage-clean coverage-unit coverage-smoke coverage-report coverage-report-full coverage-baseline coverage-baseline-full coverage-gate
 
 help:
 	@printf "\nComandos disponíveis:\n\n"
@@ -11,6 +11,7 @@ help:
 	@printf "  make dev-mock                Sobe o app mockado em 127.0.0.1:3000\n"
 	@printf "  make dev-api                 Sobe o app apontando para backend local em 3001\n"
 	@printf "  make dev-api-scan            Sobe o app com React Scan + backend local\n"
+	@printf "  make dev-api-devtools        Sobe o app com React Scan + Query Devtools + Debug de sessão\n"
 	@printf "  make build                   Gera build de produção\n"
 	@printf "  make preview                 Gera build de preview\n"
 	@printf "  make start                   Inicia o app com next start\n"
@@ -46,6 +47,9 @@ dev-api:
 
 dev-api-scan:
 	$(NPM) run dev:api:scan
+
+dev-api-devtools:
+	$(NPM) run dev:api:devtools
 
 build:
 	$(NPM) run build

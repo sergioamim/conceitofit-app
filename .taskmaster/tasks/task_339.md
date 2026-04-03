@@ -2,7 +2,7 @@
 
 **Title:** Corrigir boundary server/client em /admin/importacao-evo
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 336 ✓
 

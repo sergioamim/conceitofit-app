@@ -10,6 +10,10 @@
 
 **Description:** Garantir que guards operacionais usem `activeTenantId` inicial do token enriquecido.
 
-**Implementação**
-- `src/lib/tenant/hooks/use-session-context.tsx`
-  - Quando o token muda e existe sessão válida, o tenant context é resetado e o estado passa a `loading` antes do refresh. Isso evita herdar tenant antigo após o handoff e força o bootstrap a usar o `activeTenantId` do token recém-emitido.
+**Details:**
+
+Escopo: ajustar bootstrap de contexto, guardas de navegação e redirecionamentos para respeitar o tenant ativo definido na sessão única. Verificar `useTenantContext`, `loadSessionBootstrapState` e guardas em layouts.
+
+**Test Strategy:**
+
+Simular sessão enriquecida e validar que o dashboard e páginas operacionais carregam diretamente no tenant correto.

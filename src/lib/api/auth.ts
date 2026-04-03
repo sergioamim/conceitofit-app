@@ -6,6 +6,8 @@ import {
   type OperationalAccessState,
 } from "@/lib/tenant/tenant-operational-access";
 import {
+  clearOperationalTenantScope,
+  filterTenantAccessByOperationalScope,
   getAvailableScopesFromSession,
   getAccessTokenType,
   getActiveTenantIdFromSession,
@@ -19,6 +21,7 @@ import {
   getNetworkSubdomainFromSession,
   getNetworkNameFromSession,
   getNetworkSlugFromSession,
+  getOperationalScopeDefaultTenantId,
   getSessionClaimsFromToken,
   getUserIdFromSession,
   getUserKindFromSession,
@@ -123,11 +126,14 @@ function normalizeSession(
 ): AuthSession {
   const tokenClaims = getSessionClaimsFromToken(response.token);
   const operationalAccess = normalizeOperationalAccess(response.operationalAccess);
-  const availableTenants = response.availableTenants?.map((item) => ({
-    tenantId: item.tenantId,
-    defaultTenant: item.defaultTenant,
-  })) ?? buildTenantAccessFromEligibility(operationalAccess?.eligibleTenants ?? []);
+  const availableTenants = filterTenantAccessByOperationalScope(
+    response.availableTenants?.map((item) => ({
+      tenantId: item.tenantId,
+      defaultTenant: item.defaultTenant,
+    })) ?? buildTenantAccessFromEligibility(operationalAccess?.eligibleTenants ?? [])
+  );
   const availableScopes = normalizeAvailableScopes(response.availableScopes);
+  const scopedBaseTenantId = getOperationalScopeDefaultTenantId();
 
   return {
     token: response.token,
@@ -179,6 +185,7 @@ function normalizeSession(
       options?.fallbackActiveTenantId ??
       (options?.preserveTenantContext ? getActiveTenantIdFromSession() : undefined),
     baseTenantId:
+      scopedBaseTenantId ??
       response.tenantBaseId ??
       tokenClaims.baseTenantId ??
       (options?.preserveTenantContext ? getBaseTenantIdFromSession() : undefined),
@@ -279,6 +286,7 @@ export async function loginApi(input: {
   redeIdentifier?: string;
   channel?: "APP" | "BACKOFFICE";
 }): Promise<AuthSession> {
+  clearOperationalTenantScope();
   const identifier = input.identifier?.trim();
   const email = input.email?.trim();
   const response = await apiRequest<LoginApiResponse>({
@@ -315,6 +323,7 @@ export async function adminLoginApi(input: {
   password: string;
 }): Promise<AuthSession> {
   // Fluxo administrativo é global e não participa da resolução por rede.
+  clearOperationalTenantScope();
   const response = await apiRequest<LoginApiResponse>({
     path: "/api/v1/admin/auth/login",
     method: "POST",
@@ -383,6 +392,11 @@ export async function meApi(): Promise<AuthUser> {
     path: "/api/v1/auth/me",
   });
   const operationalAccess = normalizeOperationalAccess(response.operationalAccess);
+  const availableTenants = filterTenantAccessByOperationalScope(
+    parseAvailableTenants(response.availableTenants).length > 0
+      ? parseAvailableTenants(response.availableTenants)
+      : buildTenantAccessFromEligibility(operationalAccess?.eligibleTenants ?? [])
+  );
   return {
     id: response.id ?? response.userId,
     userId: response.userId ?? response.id,
@@ -396,11 +410,8 @@ export async function meApi(): Promise<AuthUser> {
     networkSlug: response.redeSlug,
     networkName: response.redeNome,
     activeTenantId: response.activeTenantId,
-    baseTenantId: response.tenantBaseId,
-    availableTenants:
-      parseAvailableTenants(response.availableTenants).length > 0
-        ? parseAvailableTenants(response.availableTenants)
-        : buildTenantAccessFromEligibility(operationalAccess?.eligibleTenants ?? []),
+    baseTenantId: getOperationalScopeDefaultTenantId() ?? response.tenantBaseId,
+    availableTenants,
     availableScopes: normalizeAvailableScopes(response.availableScopes),
     broadAccess: response.broadAccess,
     operationalAccess,

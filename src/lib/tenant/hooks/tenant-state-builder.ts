@@ -1,4 +1,5 @@
 import { hasClientDeleteCapability, hasElevatedAccess } from "@/lib/access-control";
+import { getOperationalScopeDefaultTenantId } from "@/lib/api/session";
 import { isClientOperationalEligibilityEnabled } from "@/lib/feature-flags";
 import type { Academia, Tenant, TenantBranding, TenantOperationalEligibility } from "@/lib/types";
 import type { AuthUser } from "@/lib/api/auth";
@@ -72,8 +73,10 @@ export function resolveBaseTenant(
   authUser?: AuthUser | null,
   fallbackBaseTenant?: Tenant | null
 ): Tenant | null {
+  const scopedBaseTenantId = getOperationalScopeDefaultTenantId();
   const candidateId =
-    authUser?.baseTenantId?.trim()
+    scopedBaseTenantId?.trim()
+    || authUser?.baseTenantId?.trim()
     || authUser?.availableTenants.find((item) => item.defaultTenant)?.tenantId?.trim()
     || fallbackBaseTenant?.id?.trim()
     || "";
@@ -142,6 +145,7 @@ export function buildTenantContextState(
   const roles = input.roles ?? [];
   const currentAcademia = input.academia ?? null;
   const authUser = input.authUser ?? null;
+  const scopedBaseTenantId = getOperationalScopeDefaultTenantId();
   const baseTenant =
     input.baseTenant
     ?? resolveBaseTenant(snapshot, authUser, input.activeTenant ?? snapshot.tenant ?? null);
@@ -175,7 +179,7 @@ export function buildTenantContextState(
     canDeleteClient: input.canDeleteClient ?? hasClientDeleteCapability(roles),
     activeTenantId: input.activeTenantId ?? snapshot.tenantId,
     activeTenant: input.activeTenant ?? snapshot.tenant ?? null,
-    baseTenantId: input.baseTenantId ?? baseTenant?.id ?? "",
+    baseTenantId: scopedBaseTenantId ?? input.baseTenantId ?? baseTenant?.id ?? "",
     baseTenant,
     baseTenantName: input.baseTenantName ?? baseTenant?.nome ?? DEFAULT_BASE_TENANT_LABEL,
     availableTenants: input.availableTenants ?? eligibleTenants,

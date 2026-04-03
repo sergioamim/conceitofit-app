@@ -10,6 +10,10 @@
 
 **Description:** Consumir `POST /api/v1/admin/auth/entrar-como-unidade` e reemitir sessão enriquecida.
 
-**Implementação**
-- `src/lib/api/auth.ts`: adicionada `adminEntrarComoUnidadeApi` para consumir o endpoint oficial e salvar a sessão única.
-- `src/app/(backoffice)/admin/entrar-como-academia/page.tsx`: fluxo atualizado para usar o endpoint, com justificativa opcional e redirecionamento para `/dashboard` após atualizar a sessão.
+**Details:**
+
+Escopo: atualizar UI do backoffice para enviar `academiaId`, `tenantId` e justificativa opcional, persistir o token retornado e redirecionar para `/dashboard` com contexto ativo definido.
+
+**Test Strategy:**
+
+Testar manualmente no backoffice com mock/fixture e validar que o redirecionamento acontece com a sessão atualizada.

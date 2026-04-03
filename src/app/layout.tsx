@@ -53,7 +53,7 @@ export default function RootLayout({
 
   const isReactScanEnabled =
     process.env.NODE_ENV === "development" &&
-    process.env.NEXT_PUBLIC_REACT_SCAN === "true";
+    process.env.NEXT_PUBLIC_DEBUG_REACT_SCAN === "true";
 
   return (
     <html lang="pt-BR" suppressHydrationWarning>

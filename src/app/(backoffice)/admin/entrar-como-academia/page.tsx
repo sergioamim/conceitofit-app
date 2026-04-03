@@ -9,10 +9,11 @@ import { Building2, MapPin, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { getTenantContextApi } from "@/lib/api/contexto-unidades";
+import { setTenantContextApi } from "@/lib/api/contexto-unidades";
+import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/lib/api/backoffice";
 import { adminEntrarComoUnidadeApi } from "@/lib/api/auth";
-import { setPreferredTenantId } from "@/lib/api/session";
-import type { Tenant } from "@/lib/types";
+import { clearOperationalTenantScope, rememberOperationalTenantScope, setPreferredTenantId } from "@/lib/api/session";
+import type { Academia, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const entrarComoSchema = z.object({
@@ -20,9 +21,11 @@ const entrarComoSchema = z.object({
 });
 
 type EntrarComoForm = z.infer<typeof entrarComoSchema>;
+type AcademiaComTenants = Academia & { tenants: Tenant[] };
 
 export default function EntrarComoAcademiaPage() {
   const router = useRouter();
+  const [academias, setAcademias] = useState<AcademiaComTenants[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -37,10 +40,51 @@ export default function EntrarComoAcademiaPage() {
     setLoading(true);
     setError(null);
     try {
-      const context = await getTenantContextApi();
-      const available = context.unidadesDisponiveis.filter((t) => t.ativo !== false);
-      setTenants(available);
-      setSelectedTenantId(context.currentTenantId || available[0]?.id || "");
+      const [academiasDisponiveis, unidadesDisponiveis] = await Promise.all([
+        listBackofficeAcademiasApi(),
+        listBackofficeUnidadesApi(),
+      ]);
+      const activeAcademias = academiasDisponiveis.filter((academia) => academia.ativo !== false);
+      const activeTenants = unidadesDisponiveis.filter((tenant) => tenant.ativo !== false);
+      const academiasPorId = new Map(activeAcademias.map((academia) => [academia.id, academia] as const));
+      const grupos = new Map<string, AcademiaComTenants>();
+
+      for (const tenant of activeTenants) {
+        const academiaId = tenant.academiaId?.trim() || tenant.groupId?.trim() || tenant.id;
+        const academia = academiasPorId.get(academiaId);
+        if (!grupos.has(academiaId)) {
+          grupos.set(academiaId, {
+            id: academiaId,
+            nome: academia?.nome ?? tenant.academiaNome ?? "Academia sem nome",
+            razaoSocial: academia?.razaoSocial,
+            documento: academia?.documento,
+            email: academia?.email,
+            telefone: academia?.telefone,
+            endereco: academia?.endereco,
+            branding: academia?.branding,
+            ativo: academia?.ativo ?? true,
+            tenants: [],
+          });
+        }
+        grupos.get(academiaId)!.tenants.push(tenant);
+      }
+
+      const academiasComTenants = Array.from(grupos.values()).sort((left, right) =>
+        left.nome.localeCompare(right.nome, "pt-BR"),
+      );
+      academiasComTenants.forEach((academia) => {
+        academia.tenants.sort((left, right) => left.nome.localeCompare(right.nome, "pt-BR"));
+      });
+
+      setAcademias(academiasComTenants);
+      setTenants(activeTenants);
+      setSelectedTenantId((current) =>
+        activeTenants.some((tenant) => tenant.id === current)
+          ? current
+          : activeTenants.length === 1
+            ? activeTenants[0].id
+            : "",
+      );
     } catch (err) {
       setError(normalizeErrorMessage(err));
     } finally {
@@ -52,20 +96,12 @@ export default function EntrarComoAcademiaPage() {
     void loadTenants();
   }, [loadTenants]);
 
-  const academias = useMemo(() => {
-    const map = new Map<string, { id: string; nome: string; tenants: Tenant[] }>();
-    for (const t of tenants) {
-      const academiaId = t.academiaId ?? t.groupId ?? t.id;
-      const academiaNome = t.academiaNome ?? t.nome;
-      if (!map.has(academiaId)) {
-        map.set(academiaId, { id: academiaId, nome: academiaNome, tenants: [] });
-      }
-      map.get(academiaId)!.tenants.push(t);
-    }
-    return Array.from(map.values());
-  }, [tenants]);
-
   const selectedTenant = tenants.find((t) => t.id === selectedTenantId);
+  const selectedAcademia = useMemo(() => {
+    if (!selectedTenant) return null;
+    const academiaId = selectedTenant.academiaId ?? selectedTenant.groupId ?? selectedTenant.id;
+    return academias.find((academia) => academia.id === academiaId) ?? null;
+  }, [academias, selectedTenant]);
 
   async function handleEntrar(values: EntrarComoForm) {
     if (!selectedTenantId || !selectedTenant) return;
@@ -73,14 +109,24 @@ export default function EntrarComoAcademiaPage() {
     setError(null);
     try {
       const academiaId = selectedTenant.academiaId ?? selectedTenant.groupId ?? selectedTenant.id;
+      const scopedTenantIds = tenants
+        .filter((tenant) => (tenant.academiaId ?? tenant.groupId ?? tenant.id) === academiaId)
+        .map((tenant) => tenant.id);
+      rememberOperationalTenantScope({
+        academiaId,
+        tenantIds: scopedTenantIds,
+        defaultTenantId: selectedTenantId,
+      });
       await adminEntrarComoUnidadeApi({
         academiaId,
         tenantId: selectedTenantId,
         justificativa: values.justificativa?.trim() || undefined,
       });
       setPreferredTenantId(selectedTenantId);
+      await setTenantContextApi(selectedTenantId);
       window.location.assign("/dashboard");
     } catch (err) {
+      clearOperationalTenantScope();
       setError(normalizeErrorMessage(err));
     } finally {
       setSwitching(false);
@@ -168,7 +214,7 @@ export default function EntrarComoAcademiaPage() {
                   <div className="rounded-lg border border-gym-accent/30 bg-gym-accent/5 p-3">
                     <p className="text-sm font-semibold text-foreground">{selectedTenant.nome}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {selectedTenant.subdomain ?? selectedTenant.nome}
+                      {selectedAcademia?.nome ?? selectedTenant.academiaNome ?? selectedTenant.subdomain ?? selectedTenant.nome}
                     </p>
                   </div>
                 ) : (

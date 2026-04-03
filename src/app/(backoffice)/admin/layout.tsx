@@ -13,6 +13,7 @@ import {
   clearAuthSession,
   getNetworkSlugFromSession,
   getRolesFromSession,
+  hasGlobalBackofficeAccessFromSession,
   hasBackofficeReturnSession,
   hasActiveSession,
   restoreBackofficeReturnSession,
@@ -388,10 +389,14 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
   const access = useAuthAccess();
   const [hydrated, setHydrated] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
-  const sessionRoles = useMemo(() => getRolesFromSession(), [authenticated]);
+  const sessionRoles = getRolesFromSession();
+  const hasSessionBackofficeAccess = hasGlobalBackofficeAccessFromSession();
   const resolvedRoles = access.roles.length > 0 ? access.roles : sessionRoles;
   const accessLoading = access.loading && resolvedRoles.length === 0;
-  const canAccessElevated = access.canAccessElevatedModules || hasElevatedAccess(resolvedRoles);
+  const canAccessElevated =
+    access.canAccessElevatedModules
+    || hasElevatedAccess(resolvedRoles)
+    || hasSessionBackofficeAccess;
 
   useEffect(() => {
     function syncAuthenticated() {

@@ -2,7 +2,7 @@
 
 **Title:** Corrigir crashes reais em rotas globais do backoffice /admin
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 336 ✓
 

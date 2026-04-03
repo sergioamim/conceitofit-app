@@ -1,13 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const REAL_BACKEND_MODE = process.env.PLAYWRIGHT_REAL_BACKEND === "1";
-const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? (REAL_BACKEND_MODE ? "http://localhost:3001" : "http://localhost:3000");
-const WEB_SERVER_COMMAND =
+const DEFAULT_PORT = REAL_BACKEND_MODE ? "3001" : "3000";
+const PLAYWRIGHT_PORT = process.env.PLAYWRIGHT_PORT ?? DEFAULT_PORT;
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PLAYWRIGHT_PORT}`;
+const WEB_SERVER_COMMAND_BASE =
   process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ??
-  (REAL_BACKEND_MODE ? "npm run dev:3001:api" : "npm run dev:mock");
+  (REAL_BACKEND_MODE ? "npm run dev:3001:api" : `PORT=${PLAYWRIGHT_PORT} npm run dev:mock`);
+const WEB_SERVER_COMMAND = `PLAYWRIGHT_TEST=1 ${WEB_SERVER_COMMAND_BASE}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  globalSetup: "./tests/e2e/global-setup.ts",
   timeout: 90_000,
   workers: process.env.CI ? 2 : 3,
   expect: {

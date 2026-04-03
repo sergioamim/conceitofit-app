@@ -8,15 +8,12 @@
 
 **Priority:** high
 
-**Descrição:** Confirmar fluxo completo de seleção de unidade, sessão única e navegação operacional.
+**Description:** Confirmar fluxo completo de seleção de unidade, sessão única e navegação operacional.
 
-**Checklist de validação (manual)**
-1. Login administrativo em `/admin-login` com usuário global.
-2. Acessar `/admin/entrar-como-academia`.
-3. Selecionar academia/unidade e preencher justificativa opcional.
-4. Confirmar redirecionamento para `/dashboard` sem cair em `/login`.
-5. Validar unidade ativa exibida no shell operacional e no contexto.
-6. Navegar de volta ao backoffice (quando aplicável) e confirmar sessão ativa.
+**Details:**
 
-**Resultado**
-- Checklist registrado para execução manual.
+Escopo: verificação manual e testes dirigidos garantindo que o admin mantém acesso ao backoffice e consegue navegar no operacional com o contexto ativo correto.
+
+**Test Strategy:**
+
+Executar um fluxo completo com login admin, seleção de unidade e navegação no dashboard.

@@ -283,7 +283,7 @@ export function DevSessionPanel() {
                 </div>
                 <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                   <p>Este painel so renderiza fora de producao.</p>
-                  <p>Ative com `NEXT_PUBLIC_DEBUG_SESSION_PANEL=true`.</p>
+                  <p>Ative com `NEXT_PUBLIC_DEBUG_SESSION_DEVTOOLS=true`.</p>
                   {user.error ? <p className="text-gym-danger">authMe: {user.error}</p> : null}
                 </div>
               </div>

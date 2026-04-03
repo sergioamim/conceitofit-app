@@ -16,12 +16,20 @@ import {
   getForcePasswordChangeRequiredFromSession,
   getNetworkSubdomainFromSession,
   getNetworkSlugFromSession,
+  rememberBackofficeReturnSession,
+  rememberOperationalTenantScope,
   restoreBackofficeReturnSession,
   saveAuthSession,
 } from "../../src/lib/api/session";
 import { installMockBrowser, mockFetchWithSequence } from "./support/test-runtime";
 
 let browser: ReturnType<typeof installMockBrowser> | undefined;
+
+function buildJwt(payload: Record<string, unknown>): string {
+  const encode = (value: unknown) =>
+    Buffer.from(JSON.stringify(value), "utf-8").toString("base64url");
+  return `${encode({ alg: "HS256", typ: "JWT" })}.${encode(payload)}.signature`;
+}
 
 test.beforeEach(() => {
   browser = installMockBrowser();
@@ -148,6 +156,43 @@ test.describe("auth por rede", () => {
     }
   });
 
+  test("adminLoginApi infere escopo global a partir dos claims reais do JWT do backend", async () => {
+    const { restore } = mockFetchWithSequence([
+      {
+        body: {
+          token: buildJwt({
+            sub: "user-admin",
+            user_id: "user-admin",
+            tenant_id: "tenant-admin",
+            rede_id: "rede-global",
+            scope: "GLOBAL",
+            session_mode: "BACKOFFICE_ADMIN",
+            roles: ["SUPER_ADMIN"],
+          }),
+          refreshToken: "refresh-admin",
+          userId: "user-admin",
+          userKind: "ADMIN",
+          displayName: "Admin Master",
+          activeTenantId: "tenant-admin",
+          tenantBaseId: "tenant-admin",
+        },
+      },
+    ]);
+
+    try {
+      const session = await adminLoginApi({
+        email: "admin@qa.local",
+        password: "12345678",
+      });
+
+      expect(session.availableScopes).toEqual(["GLOBAL"]);
+      expect(session.activeTenantId).toBe("tenant-admin");
+      expect(getAvailableScopesFromSession()).toEqual(["GLOBAL"]);
+    } finally {
+      restore();
+    }
+  });
+
   test("adminEntrarComoUnidadeApi troca para a unidade via endpoint de contexto", async () => {
     saveAuthSession({
       token: "token-admin",
@@ -198,6 +243,84 @@ test.describe("auth por rede", () => {
     } finally {
       restore();
     }
+  });
+
+  test("adminEntrarComoUnidadeApi preserva retorno ao backoffice via claims do token", async () => {
+    saveAuthSession({
+      token: buildJwt({
+        sub: "user-admin",
+        scope: "GLOBAL",
+        session_mode: "BACKOFFICE_ADMIN",
+      }),
+      refreshToken: "refresh-admin",
+      userId: "user-admin",
+      userKind: "ADMIN",
+      displayName: "Admin Master",
+      activeTenantId: "tenant-admin",
+      tenantBaseId: "tenant-admin-base",
+    });
+    rememberOperationalTenantScope({
+      academiaId: "academia-mananciais",
+      tenantIds: ["tenant-mananciais-s1", "tenant-mananciais-s2"],
+      defaultTenantId: "tenant-mananciais-s1",
+    });
+
+    const { restore } = mockFetchWithSequence([
+      {
+        body: {
+          token: "token-admin-unidade",
+          refreshToken: "refresh-admin-unidade",
+          userId: "user-admin",
+          userKind: "ADMIN",
+          displayName: "Admin Master",
+          activeTenantId: "tenant-mananciais-s1",
+          tenantBaseId: "tenant-admin-base",
+        },
+      },
+    ]);
+
+    try {
+      await adminEntrarComoUnidadeApi({
+        academiaId: "academia-mananciais",
+        tenantId: "tenant-mananciais-s1",
+      });
+
+      expect(hasBackofficeReturnSession()).toBeTruthy();
+      const restored = restoreBackofficeReturnSession();
+      expect(restored?.originalSession.userId).toBe("user-admin");
+    } finally {
+      restore();
+    }
+  });
+
+  test("rememberBackofficeReturnSession substitui snapshot antigo ao reiniciar o fluxo", () => {
+    saveAuthSession({
+      token: buildJwt({
+        sub: "user-admin-antigo",
+        scope: "GLOBAL",
+        session_mode: "BACKOFFICE_ADMIN",
+      }),
+      refreshToken: "refresh-antigo",
+      userId: "user-admin-antigo",
+      activeTenantId: "tenant-antigo",
+    });
+    rememberBackofficeReturnSession();
+
+    saveAuthSession({
+      token: buildJwt({
+        sub: "user-admin-atual",
+        scope: "GLOBAL",
+        session_mode: "BACKOFFICE_ADMIN",
+      }),
+      refreshToken: "refresh-atual",
+      userId: "user-admin-atual",
+      activeTenantId: "tenant-atual",
+    });
+    rememberBackofficeReturnSession();
+
+    const restored = restoreBackofficeReturnSession();
+    expect(restored?.originalSession.userId).toBe("user-admin-atual");
+    expect(restored?.originalSession.activeTenantId).toBe("tenant-atual");
   });
 
   test("getSessionBootstrapApi normaliza rede, unidade-base e tenant ativo separados", async () => {

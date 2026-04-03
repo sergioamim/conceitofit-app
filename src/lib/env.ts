@@ -23,7 +23,9 @@ const appEnvSchema = z.object({
   BACKEND_PROXY_MAX_BODY_SIZE: z.coerce.number().int().positive().default(150),
   NEXT_PUBLIC_API_BASE_URL: optionalUrl,
   NEXT_PUBLIC_SENTRY_DSN: optionalUrl,
-  NEXT_PUBLIC_REACT_SCAN: z.enum(["true", "false"]).optional(),
+  NEXT_PUBLIC_DEBUG_REACT_SCAN: z.enum(["true", "false"]).optional(),
+  NEXT_PUBLIC_DEBUG_QUERY_DEVTOOLS: z.enum(["true", "false"]).optional(),
+  NEXT_PUBLIC_DEBUG_SESSION_DEVTOOLS: z.enum(["true", "false"]).optional(),
   STOREFRONT_ROOT_HOSTS: optionalString,
 });
 
@@ -57,4 +59,3 @@ export function getAppEnv(): AppEnv {
   cachedEnv = parseAppEnv();
   return cachedEnv;
 }
-

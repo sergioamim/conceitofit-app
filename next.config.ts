@@ -12,6 +12,27 @@ const backendProxyTarget = env.BACKEND_PROXY_TARGET;
 const backendProxyMaxBodySize = env.BACKEND_PROXY_MAX_BODY_SIZE;
 const isDev = process.env.NODE_ENV === "development";
 
+function normalizeOrigin(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+const connectSrc = Array.from(
+  new Set(
+    [
+      "'self'",
+      "https://*.ingest.sentry.io",
+      "https://*.ingest.us.sentry.io",
+      normalizeOrigin(backendProxyTarget),
+      normalizeOrigin(env.NEXT_PUBLIC_API_BASE_URL),
+    ].filter((value): value is string => Boolean(value)),
+  ),
+);
+
 const scriptSrc = isDev
   ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
   : "script-src 'self' 'unsafe-inline'";
@@ -25,7 +46,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
+      `connect-src ${connectSrc.join(" ")}`,
       "frame-ancestors 'none'",
     ].join("; "),
   },

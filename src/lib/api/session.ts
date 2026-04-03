@@ -37,6 +37,8 @@ export interface AuthSessionTokenClaims {
   baseTenantId?: string;
   availableScopes?: AuthSessionScope[];
   broadAccess?: boolean;
+  scope?: string;
+  sessionMode?: string;
 }
 
 export interface ImpersonationSessionState {
@@ -52,6 +54,13 @@ export interface ImpersonationSessionState {
 
 export interface BackofficeReturnSessionState {
   originalSession: AuthSession;
+  storedAt: string;
+}
+
+export interface OperationalTenantScopeState {
+  academiaId: string;
+  tenantIds: string[];
+  defaultTenantId?: string;
   storedAt: string;
 }
 
@@ -88,6 +97,7 @@ const IMPERSONATION_SESSION_KEY = "academia-impersonation-session";
 const BACKOFFICE_RETURN_SESSION_KEY = "academia-backoffice-return-session";
 const ACCESS_TOKEN_COOKIE_KEY = "academia-access-token";
 const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
+const OPERATIONAL_TENANT_SCOPE_KEY = "academia-operational-tenant-scope";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
 export const AUTH_SESSION_CLEARED_EVENT = "academia-session-cleared";
@@ -255,7 +265,7 @@ export function getAvailableTenantsFromSession(): TenantAccess[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed
+    const normalized = parsed
       .map((item) => {
         if (!item || typeof item !== "object") return null;
         const candidate = item as { tenantId?: unknown; defaultTenant?: unknown };
@@ -266,6 +276,7 @@ export function getAvailableTenantsFromSession(): TenantAccess[] {
         return { tenantId, defaultTenant };
       })
       .filter((item): item is TenantAccess => item !== null);
+    return filterTenantAccessByOperationalScope(normalized);
   } catch {
     return [];
   }
@@ -337,21 +348,149 @@ function readClaimString(payload: Record<string, unknown>, keys: string[]): stri
 }
 
 function normalizeScopesFromClaims(value: unknown): AuthSessionScope[] {
-  if (!Array.isArray(value)) return [];
-  return value
+  const rawValues = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+  return rawValues
     .map((item) => (typeof item === "string" ? item.trim().toUpperCase() : ""))
     .filter((item): item is AuthSessionScope => item === "UNIDADE" || item === "REDE" || item === "GLOBAL");
+}
+
+function normalizeTenantIds(values: string[]): string[] {
+  const seen = new Set<string>();
+  return values
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => {
+      if (!item || seen.has(item)) return false;
+      seen.add(item);
+      return true;
+    });
+}
+
+export function getOperationalTenantScope(): OperationalTenantScopeState | null {
+  if (!isBrowser()) return null;
+  const raw = window.sessionStorage?.getItem(OPERATIONAL_TENANT_SCOPE_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<OperationalTenantScopeState>;
+    const academiaId = typeof parsed.academiaId === "string" ? parsed.academiaId.trim() : "";
+    const tenantIds = normalizeTenantIds(Array.isArray(parsed.tenantIds) ? parsed.tenantIds : []);
+    const defaultTenantId =
+      typeof parsed.defaultTenantId === "string" && tenantIds.includes(parsed.defaultTenantId.trim())
+        ? parsed.defaultTenantId.trim()
+        : tenantIds[0];
+
+    if (!academiaId || tenantIds.length === 0) {
+      window.sessionStorage?.removeItem(OPERATIONAL_TENANT_SCOPE_KEY);
+      return null;
+    }
+
+    return {
+      academiaId,
+      tenantIds,
+      defaultTenantId,
+      storedAt: typeof parsed.storedAt === "string" ? parsed.storedAt : "",
+    };
+  } catch {
+    window.sessionStorage?.removeItem(OPERATIONAL_TENANT_SCOPE_KEY);
+    return null;
+  }
+}
+
+export function getOperationalScopeDefaultTenantId(): string | undefined {
+  const scope = getOperationalTenantScope();
+  if (!scope) return undefined;
+  return scope.defaultTenantId ?? scope.tenantIds[0];
+}
+
+export function filterTenantAccessByOperationalScope(items: TenantAccess[]): TenantAccess[] {
+  const scope = getOperationalTenantScope();
+  if (!scope) return items;
+
+  const allowedIds = new Set(scope.tenantIds);
+  const defaultTenantId = scope.defaultTenantId ?? scope.tenantIds[0];
+  const filtered = items
+    .filter((item) => allowedIds.has(item.tenantId))
+    .map((item) => ({
+      tenantId: item.tenantId,
+      defaultTenant: item.tenantId === defaultTenantId,
+    }));
+
+  if (filtered.length > 0) {
+    return filtered;
+  }
+
+  return scope.tenantIds.map((tenantId) => ({
+    tenantId,
+    defaultTenant: tenantId === defaultTenantId,
+  }));
+}
+
+export function rememberOperationalTenantScope(input: {
+  academiaId: string;
+  tenantIds: string[];
+  defaultTenantId?: string;
+}): void {
+  if (!isBrowser()) return;
+  const academiaId = input.academiaId.trim();
+  const tenantIds = normalizeTenantIds(input.tenantIds);
+  if (!academiaId || tenantIds.length === 0) return;
+
+  const defaultTenantId =
+    input.defaultTenantId && tenantIds.includes(input.defaultTenantId.trim())
+      ? input.defaultTenantId.trim()
+      : tenantIds[0];
+
+  window.sessionStorage?.setItem(
+    OPERATIONAL_TENANT_SCOPE_KEY,
+    JSON.stringify({
+      academiaId,
+      tenantIds,
+      defaultTenantId,
+      storedAt: new Date().toISOString(),
+    } satisfies OperationalTenantScopeState)
+  );
+  notifyAuthSessionUpdated();
+}
+
+export function clearOperationalTenantScope(): void {
+  if (!isBrowser()) return;
+  window.sessionStorage?.removeItem(OPERATIONAL_TENANT_SCOPE_KEY);
+  notifyAuthSessionUpdated();
+}
+
+export function hasGlobalBackofficeAccessFromSession(): boolean {
+  const scopes = getAvailableScopesFromSession();
+  if (scopes.includes("GLOBAL")) {
+    return true;
+  }
+
+  if (getBroadAccessFromSession()) {
+    return true;
+  }
+
+  const claims = getSessionClaimsFromToken(getAccessToken());
+  const sessionMode = claims.sessionMode?.trim().toUpperCase();
+  return sessionMode === "BACKOFFICE_ADMIN" || sessionMode === "BACKOFFICE_TO_OPERATIONAL";
 }
 
 function canReturnToBackofficeFromSession(session: AuthSession | null | undefined): boolean {
   if (!session) return false;
 
+  const claims = getSessionClaimsFromToken(session.token);
   const scopes =
     session.availableScopes?.length
       ? session.availableScopes
-      : getSessionClaimsFromToken(session.token).availableScopes ?? [];
+      : claims.availableScopes ?? [];
+  const sessionMode = claims.sessionMode?.trim().toUpperCase();
+  const scopeClaim = claims.scope?.trim().toUpperCase();
 
-  return scopes.includes("GLOBAL") || Boolean(session.broadAccess);
+  return (
+    scopes.includes("GLOBAL")
+    || scopeClaim === "GLOBAL"
+    || Boolean(session.broadAccess ?? claims.broadAccess)
+    || sessionMode === "BACKOFFICE_ADMIN"
+    || sessionMode === "BACKOFFICE_TO_OPERATIONAL"
+  );
 }
 
 export function getSessionClaimsFromToken(token?: string): AuthSessionTokenClaims {
@@ -359,23 +498,26 @@ export function getSessionClaimsFromToken(token?: string): AuthSessionTokenClaim
   const payload = decodeJwtPayload(token);
   if (!payload) return {};
 
-  const activeTenantId = readClaimString(payload, ["activeTenantId", "tenantId", "unidadeId"]);
-  const baseTenantId = readClaimString(payload, ["tenantBaseId", "baseTenantId"]);
-  const networkSubdomain = readClaimString(payload, ["redeSubdominio", "networkSubdomain"]);
-  const networkSlug = readClaimString(payload, ["redeSlug", "networkSlug"]);
+  const activeTenantId = readClaimString(payload, ["activeTenantId", "tenantId", "tenant_id", "unidadeId"]);
+  const baseTenantId = readClaimString(payload, ["tenantBaseId", "baseTenantId", "tenant_base_id", "base_tenant_id"]);
+  const networkSubdomain = readClaimString(payload, ["redeSubdominio", "rede_subdominio", "networkSubdomain"]);
+  const networkSlug = readClaimString(payload, ["redeSlug", "rede_slug", "networkSlug"]);
+  const scopeClaim = readClaimString(payload, ["scope"]);
 
   return {
-    userId: readClaimString(payload, ["userId", "sub", "id"]),
+    userId: readClaimString(payload, ["userId", "user_id", "sub", "id"]),
     userKind: readClaimString(payload, ["userKind", "tipoUsuario"]),
     displayName: readClaimString(payload, ["displayName", "nome"]),
-    networkId: readClaimString(payload, ["redeId", "networkId"]),
+    networkId: readClaimString(payload, ["redeId", "rede_id", "networkId"]),
     networkSubdomain,
     networkSlug,
-    networkName: readClaimString(payload, ["redeNome", "networkName"]),
+    networkName: readClaimString(payload, ["redeNome", "rede_nome", "networkName"]),
     activeTenantId,
     baseTenantId,
-    availableScopes: normalizeScopesFromClaims(payload.availableScopes ?? payload.scopes),
+    availableScopes: normalizeScopesFromClaims(payload.availableScopes ?? payload.scopes ?? scopeClaim),
     broadAccess: typeof payload.broadAccess === "boolean" ? payload.broadAccess : undefined,
+    scope: scopeClaim,
+    sessionMode: readClaimString(payload, ["session_mode", "sessionMode"]),
   };
 }
 
@@ -443,7 +585,6 @@ export function hasBackofficeReturnSession(): boolean {
 
 export function rememberBackofficeReturnSession(session?: AuthSession | null): void {
   if (!isBrowser()) return;
-  if (hasBackofficeReturnSession()) return;
 
   const originalSession = session ?? getAuthSessionSnapshot();
   if (!canReturnToBackofficeFromSession(originalSession)) {
@@ -471,6 +612,7 @@ export function restoreBackofficeReturnSession(): BackofficeReturnSessionState |
   const snapshot = getBackofficeReturnSession();
   if (!snapshot) return null;
   clearBackofficeReturnSession();
+  clearOperationalTenantScope();
   saveAuthSession(snapshot.originalSession);
   return snapshot;
 }
@@ -651,6 +793,7 @@ export function clearAuthSession(): void {
   clearTokens();
   clearServerSessionCookies();
   clearBackofficeReturnSession();
+  clearOperationalTenantScope();
   clearAuthStorageKeys([
     EXPIRES_IN_KEY,
     SESSION_ACTIVE_KEY,

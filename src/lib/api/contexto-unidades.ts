@@ -2,7 +2,14 @@ import type { Academia, HorarioFuncionamento, Tenant } from "@/lib/types";
 import { ApiRequestError, apiRequest } from "./http";
 import { isTenantContextError } from "@/lib/shared/utils/error-codes";
 import type { AuthUser } from "./auth";
-import { getActiveTenantIdFromSession, getAvailableTenantsFromSession, getPreferredTenantId } from "./session";
+import {
+  filterTenantAccessByOperationalScope,
+  getActiveTenantIdFromSession,
+  getAvailableTenantsFromSession,
+  getOperationalScopeDefaultTenantId,
+  getOperationalTenantScope,
+  getPreferredTenantId,
+} from "./session";
 import { buildTenantAccessFromEligibility, normalizeOperationalAccess } from "@/lib/tenant/tenant-operational-access";
 
 const BOOTSTRAP_ENDPOINT_ENABLED = new Set(["1", "true", "yes", "on"]).has(
@@ -239,6 +246,18 @@ function normalizeAcademia(input: AcademiaApiResponse): Academia {
   };
 }
 
+function filterTenantsByOperationalScope(items: Tenant[]): Tenant[] {
+  const scope = getOperationalTenantScope();
+  if (!scope) return items;
+
+  const byId = new Map(items.map((tenant) => [tenant.id, tenant] as const));
+  const filtered = scope.tenantIds
+    .map((tenantId) => byId.get(tenantId))
+    .filter((tenant): tenant is Tenant => tenant != null);
+
+  return filtered.length > 0 ? filtered : items;
+}
+
 function resolveTenantContextFallbackId(): string | undefined {
   const activeTenantId = getActiveTenantIdFromSession()?.trim();
   if (activeTenantId) return activeTenantId;
@@ -281,10 +300,13 @@ export async function getTenantContextApi(): Promise<{
   const response = await apiRequest<TenantContextApiResponse>({
     path: "/api/v1/context/unidade-ativa",
   });
+  const unidadesDisponiveis = filterTenantsByOperationalScope(
+    response.unidadesDisponiveis.map(normalizeTenant)
+  );
   return {
     currentTenantId: response.currentTenantId,
     tenantAtual: normalizeTenant(response.tenantAtual),
-    unidadesDisponiveis: response.unidadesDisponiveis.map(normalizeTenant),
+    unidadesDisponiveis,
   };
 }
 
@@ -308,13 +330,18 @@ export async function getSessionBootstrapApi(): Promise<{
   }
 
   const operationalAccess = normalizeOperationalAccess(response.user.operationalAccess);
-  const availableTenantsFromUser = parseAvailableTenantsFromBootstrap(response.user.availableTenants);
+  const availableTenantsFromUser = filterTenantAccessByOperationalScope(
+    parseAvailableTenantsFromBootstrap(response.user.availableTenants)
+  );
+  const unidadesDisponiveis = filterTenantsByOperationalScope(
+    response.tenantContext.unidadesDisponiveis.map(normalizeTenant)
+  );
 
   return {
     tenantContext: {
       currentTenantId: response.tenantContext.currentTenantId,
       tenantAtual: normalizeTenant(response.tenantContext.tenantAtual),
-      unidadesDisponiveis: response.tenantContext.unidadesDisponiveis.map(normalizeTenant),
+      unidadesDisponiveis,
     },
     user: {
       id: response.user.id ?? response.user.userId,
@@ -329,7 +356,7 @@ export async function getSessionBootstrapApi(): Promise<{
       networkSlug: response.user.redeSlug,
       networkName: response.user.redeNome,
       activeTenantId: response.user.activeTenantId,
-      baseTenantId: response.user.tenantBaseId,
+      baseTenantId: getOperationalScopeDefaultTenantId() ?? response.user.tenantBaseId,
       availableTenants:
         availableTenantsFromUser.length > 0
           ? availableTenantsFromUser
@@ -357,10 +384,13 @@ export async function setTenantContextApi(tenantId: string): Promise<{
     path: `/api/v1/context/unidade-ativa/${tenantId}`,
     method: "PUT",
   });
+  const unidadesDisponiveis = filterTenantsByOperationalScope(
+    response.unidadesDisponiveis.map(normalizeTenant)
+  );
   return {
     currentTenantId: response.currentTenantId,
     tenantAtual: normalizeTenant(response.tenantAtual),
-    unidadesDisponiveis: response.unidadesDisponiveis.map(normalizeTenant),
+    unidadesDisponiveis,
   };
 }
 
@@ -390,7 +420,7 @@ export async function listUnidadesApi(): Promise<Tenant[]> {
   const response = await apiRequest<TenantApiResponse[]>({
     path: "/api/v1/unidades",
   });
-  return response.map(normalizeTenant);
+  return filterTenantsByOperationalScope(response.map(normalizeTenant));
 }
 
 export async function createUnidadeApi(data: Omit<Tenant, "id">): Promise<Tenant> {
