@@ -335,11 +335,11 @@ export function FuncionarioFormPage({ mode, funcionarioId }: FuncionarioFormPage
 
               <TabsContent value="cadastro" className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Nome completo" error={form.formState.errors.nome?.message}>
-                    <Input aria-label="Nome do colaborador" {...form.register("nome")} className="border-border bg-secondary" />
+                  <Field label="Nome completo" htmlFor="field-nome-completo" error={form.formState.errors.nome?.message}>
+                    <Input id="field-nome-completo" {...form.register("nome")} className="border-border bg-secondary" />
                   </Field>
-                  <Field label="Nome de registro" error={form.formState.errors.nomeRegistro?.message}>
-                    <Input aria-label="Nome de registro" {...form.register("nomeRegistro")} className="border-border bg-secondary" />
+                  <Field label="Nome de registro" htmlFor="field-nome-registro" error={form.formState.errors.nomeRegistro?.message}>
+                    <Input id="field-nome-registro" {...form.register("nomeRegistro")} className="border-border bg-secondary" />
                   </Field>
                   <Field label="Apelido">
                     <Input {...form.register("apelido")} className="border-border bg-secondary" />
@@ -353,14 +353,14 @@ export function FuncionarioFormPage({ mode, funcionarioId }: FuncionarioFormPage
                   <Field label="RG">
                     <Input {...form.register("rg")} className="border-border bg-secondary" />
                   </Field>
-                  <Field label="E-mail profissional" error={form.formState.errors.emailProfissional?.message}>
-                    <Input aria-label="E-mail profissional do colaborador" type="email" {...form.register("emailProfissional")} className="border-border bg-secondary" />
+                  <Field label="E-mail profissional" htmlFor="field-email-profissional" error={form.formState.errors.emailProfissional?.message}>
+                    <Input id="field-email-profissional" type="email" {...form.register("emailProfissional")} className="border-border bg-secondary" />
                   </Field>
                   <Field label="E-mail pessoal">
                     <Input {...form.register("emailPessoal")} className="border-border bg-secondary" />
                   </Field>
-                  <Field label="Celular">
-                    <Input aria-label="Contato principal do colaborador" {...form.register("celular")} className="border-border bg-secondary" />
+                  <Field label="Celular" htmlFor="field-celular">
+                    <Input id="field-celular" {...form.register("celular")} className="border-border bg-secondary" />
                   </Field>
                   <Field label="Telefone">
                     <Input {...form.register("telefone")} className="border-border bg-secondary" />
@@ -877,14 +877,16 @@ function Field({
   label,
   error,
   children,
+  htmlFor,
 }: {
   label: string;
   error?: string;
   children: ReactNode;
+  htmlFor?: string;
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+      <label htmlFor={htmlFor} className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
       {children}
       {error ? <p className="text-xs text-gym-danger">{error}</p> : null}
     </div>
