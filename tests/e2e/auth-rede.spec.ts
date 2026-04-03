@@ -12,6 +12,12 @@ type CapturedRequests = {
   contextIdentifiers: string[];
 };
 
+function buildUnsignedE2EJwt(payload: Record<string, unknown> = {}): string {
+  const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
+  const body = Buffer.from(JSON.stringify({ sub: "user-ana", ...payload })).toString("base64url");
+  return `${header}.${body}.e2e`;
+}
+
 // Contrato atual de rede:
 // - Host/subdominio: /login lê x-forwarded-host (ou host) para resolver subdomínio.
 // - Rota explícita: /app/[rede]/(login|forgot-password|first-access).
@@ -78,10 +84,11 @@ async function installAuthNetworkMocks(
         body: parseBody(request.postData()),
         networkIdentifier,
       };
+      const jwtToken = buildUnsignedE2EJwt({ user_id: "user-ana", tenant_id: "tenant-centro" });
       await route.fulfill({
         status: 200,
         json: {
-          token: "token-rede",
+          token: jwtToken,
           refreshToken: "refresh-rede",
           type: "Bearer",
           userId: "user-ana",
