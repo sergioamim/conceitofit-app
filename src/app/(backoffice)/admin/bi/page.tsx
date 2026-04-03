@@ -7,8 +7,9 @@ import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { ListErrorState } from "@/components/shared/list-states";
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { useAdminBiExecutivo } from "@/lib/query/admin";
-import { useAcademiaSuggestion } from "@/app/(backoffice)/lib/use-academia-suggestion";
+import { useAdminBiExecutivo } from "@/backoffice/query";
+import { useAcademiaSuggestion } from "@/backoffice/lib/use-academia-suggestion";
+
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -46,7 +47,7 @@ export default function AdminBiPage() {
   const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
   const [academiaBusca, setAcademiaBusca] = useState("");
 
-  const { options: academiaOptions, onFocusOpen, isLoading: academiasLoading } = useAcademiaSuggestion();
+  const { options: academiaOptions, onFocusOpen } = useAcademiaSuggestion();
   const biQuery = useAdminBiExecutivo(selectedAcademiaId || null);
 
   const biData = biQuery.data ?? null;

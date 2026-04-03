@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Power, Shield } from "lucide-react";
 import { listGlobalAcademias, listGlobalUnidades } from "@/backoffice/lib/admin";
 import { createGlobalSecurityUser } from "@/backoffice/lib/seguranca";
+import type { BulkAction } from "@/components/shared/bulk-action-bar";
 import { globalUserCreateFormSchema } from "@/lib/tenant/forms/security-user-create-schemas";
 import { validateGlobalUserCreateDraft } from "@/lib/tenant/security-user-create";
 import type { Academia, GlobalAdminUserSummary, Tenant } from "@/lib/types";
@@ -31,6 +33,7 @@ export function useUsuariosWorkspace() {
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
   const [createFeedback, setCreateFeedback] = useState<string | null>(null);
@@ -69,11 +72,50 @@ export function useUsuariosWorkspace() {
     return [...new Set(allItems.map((item) => item.networkName).filter((value): value is string => Boolean(value)))];
   }, [allItems]);
 
+  const handleBulkDeactivate = useCallback(
+    async (ids: string[]) => {
+      // TODO: integrar com endpoint de desativacao em lote
+      // eslint-disable-next-line no-console
+      console.log("[bulk] Desativar usuários:", ids);
+      setSelectedIds([]);
+    },
+    [],
+  );
+
+  const handleBulkChangeProfile = useCallback(
+    async (ids: string[]) => {
+      // TODO: integrar com endpoint de alteracao de perfil em lote
+      // eslint-disable-next-line no-console
+      console.log("[bulk] Alterar perfil dos usuários:", ids);
+      setSelectedIds([]);
+    },
+    [],
+  );
+
+  const bulkActions: BulkAction[] = useMemo(
+    () => [
+      {
+        label: "Desativar selecionados",
+        icon: Power,
+        variant: "destructive" as const,
+        onClick: handleBulkDeactivate,
+      },
+      {
+        label: "Alterar perfil",
+        icon: Shield,
+        variant: "secondary" as const,
+        onClick: handleBulkChangeProfile,
+      },
+    ],
+    [handleBulkDeactivate, handleBulkChangeProfile],
+  );
+
   useEffect(() => {
     const next = buildInitialFilters(searchParams);
     setFilters(next);
     setAppliedFilters(next);
     setPage(0);
+    setSelectedIds([]);
   }, [searchParams]);
 
   useEffect(() => {
@@ -130,7 +172,8 @@ export function useUsuariosWorkspace() {
     }
   }, [allItems.length, page]);
 
-  function applyFilters() {
+  function applyFilters(): void {
+    setSelectedIds([]);
     const params = new URLSearchParams();
     if (filters.query.trim()) params.set("query", filters.query.trim());
     if (filters.academiaId) params.set("academiaId", filters.academiaId);
@@ -163,6 +206,7 @@ export function useUsuariosWorkspace() {
     setFilters(next);
     setAppliedFilters(next);
     setPage(0);
+    setSelectedIds([]);
     router.replace("/admin/seguranca/usuarios");
   }
 

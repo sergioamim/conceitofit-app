@@ -7,8 +7,9 @@ import {
   SecurityReviewBadge,
   SecurityRiskBadge,
 } from "@/components/security/security-badges";
+import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { PaginatedTable } from "@/components/shared/paginated-table";
-import { Button } from "@/components/ui/button";
+import type { BulkAction } from "@/components/shared/bulk-action-bar";
 import { TableCell } from "@/components/ui/table";
 import { formatCpf } from "@/lib/shared/formatters";
 import type { GlobalAdminUserSummary } from "@/lib/types";
@@ -22,6 +23,10 @@ interface UsuariosTableProps {
   hasNext: boolean;
   onPrevious: () => void;
   onNext: () => void;
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
+  bulkActions: BulkAction[];
+  isLoading?: boolean;
 }
 
 function formatLoginIdentifier(label: string, value: string) {
@@ -36,9 +41,13 @@ export function UsuariosTable({
   hasNext,
   onPrevious,
   onNext,
+  selectedIds,
+  onSelectionChange,
+  bulkActions,
+  isLoading = false,
 }: UsuariosTableProps) {
   return (
-    <PaginatedTable
+    <PaginatedTable<GlobalAdminUserSummary>
       columns={[
         { label: "Pessoa e login" },
         { label: "Rede e escopo" },
@@ -56,12 +65,18 @@ export function UsuariosTable({
       }
       getRowKey={(item) => item.id}
       itemLabel="pessoas"
+      tableAriaLabel="Tabela de usuários e acessos"
       page={page}
       pageSize={PAGE_SIZE}
       total={total}
       hasNext={hasNext}
       onPrevious={onPrevious}
       onNext={onNext}
+      isLoading={isLoading}
+      selectable
+      selectedIds={selectedIds}
+      onSelectionChange={onSelectionChange}
+      bulkActions={bulkActions}
       renderCells={(item) => (
         <>
           <TableCell className="px-4 py-3">
@@ -130,9 +145,20 @@ export function UsuariosTable({
             </div>
           </TableCell>
           <TableCell className="px-4 py-3 text-right">
-            <Button asChild size="sm" variant="outline" className="border-border">
-              <Link href={`/admin/seguranca/usuarios/${item.id}`}>Abrir governança</Link>
-            </Button>
+            <DataTableRowActions
+              actions={[
+                {
+                  label: "Abrir governança",
+                  kind: "open",
+                  href: `/admin/seguranca/usuarios/${item.id}`,
+                },
+                {
+                  label: item.active ? "Desativar" : "Ativar",
+                  kind: "toggle",
+                  title: item.active ? "Desativar usuário" : "Ativar usuário",
+                },
+              ]}
+            />
           </TableCell>
         </>
       )}

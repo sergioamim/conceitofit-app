@@ -13661,13 +13661,13 @@
         "description": "Substituir <Select> de academia em /admin/bi por SuggestionInput com busca async.",
         "details": "Em src/app/(backoffice)/admin/bi/page.tsx, localizar o <Select> usado para filtrar por academia. Substituir por SuggestionInput usando useAcademiaSuggestion. Manter comportamento de filtro de dados ao selecionar academia. Garantir que estado do filtro funcione com o restante da página.",
         "testStrategy": "Teste manual: abrir /admin/bi, verificar que SuggestionInput aparece, buscar academia por nome, selecionar e verificar que dados filtram corretamente.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "433"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-03T19:08:48.058Z"
+        "updatedAt": "2026-04-03T19:41:50.730Z"
       },
       {
         "id": "435",
@@ -13689,13 +13689,13 @@
         "description": "Substituir <Select> de filtro de academia em /admin/whatsapp por SuggestionInput.",
         "details": "Em src/app/(backoffice)/admin/whatsapp/page.tsx, substituir o <Select> de filtro de academia por SuggestionInput usando useAcademiaSuggestion. Manter lógica de filtragem de canais/mensagens por academia selecionada.",
         "testStrategy": "Teste manual: abrir /admin/whatsapp, verificar SuggestionInput de academia, buscar e selecionar, verificar filtragem funciona.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "433"
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-03T19:08:48.058Z"
+        "updatedAt": "2026-04-03T19:41:50.751Z"
       },
       {
         "id": "437",
@@ -13703,13 +13703,13 @@
         "description": "Substituir <Select> de academia nos filtros de /admin/seguranca/usuarios por SuggestionInput.",
         "details": "Em src/app/(backoffice)/admin/seguranca/usuarios/page.tsx, substituir todos os <Select> de academia nos filtros por SuggestionInput usando useAcademiaSuggestion. Foco apenas nos filtros — a migração da tabela customizada UsuariosTable para PaginatedTable será na Fase 3 (task separada).",
         "testStrategy": "Teste manual: abrir /admin/seguranca/usuarios, verificar filtros com SuggestionInput, buscar academia, verificar filtragem funciona.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "433"
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-03T19:08:48.058Z"
+        "updatedAt": "2026-04-03T19:41:50.764Z"
       },
       {
         "id": "438",
@@ -13717,14 +13717,14 @@
         "description": "Converter campos de academia nos CrudModals de /admin/financeiro/cobrancas e contratos para usar o novo tipo suggestion.",
         "details": "Em /admin/financeiro/cobrancas e /admin/financeiro/contratos, os CrudModals de criação/edição usam FormFieldConfig com type select para campo de academia. Migrar para type suggestion usando onFocusOpen do useAcademiaSuggestion. Garantir que validação Zod funcione (campo obrigatório, ID válido). Testar modo de edição (campo pre-preenchido com academia existente).",
         "testStrategy": "Testes unitários: renderizar CrudModal de cobrança com campo suggestion, verificar que SuggestionInput monta, que valor pre-preenchido funciona em modo edição, e que submit envia ID correto.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "431",
           "433"
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-03T19:08:48.058Z"
+        "updatedAt": "2026-04-03T19:41:50.779Z"
       },
       {
         "id": "439",
@@ -13732,13 +13732,13 @@
         "description": "Substituir tabela HTML raw em /admin/seguranca/compliance por PaginatedTable com filtros padronizados.",
         "details": "Em src/app/(backoffice)/admin/seguranca/compliance/page.tsx, substituir <table> manual por PaginatedTable. Definir colunas: regra (texto), categoria (badge), status (StatusBadge), última verificação (data formatada), ações (DataTableRowActions). Adicionar TableFilters com filtro por status (Select com valores fixos) e busca textual. Implementar paginação server-side via API existente.",
         "testStrategy": "Teste manual: abrir /admin/seguranca/compliance, verificar PaginatedTable renderiza com colunas corretas, filtros funcionam, paginação funciona, ações de row funcionam.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "432"
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-03T19:08:48.058Z"
+        "updatedAt": "2026-04-03T19:41:50.794Z"
       },
       {
         "id": "440",
@@ -13746,14 +13746,14 @@
         "description": "Substituir tabela HTML raw em /admin/operacional/alertas por PaginatedTable com filtros por severidade e academia.",
         "details": "Em src/app/(backoffice)/admin/operacional/alertas/page.tsx, substituir tabela raw por PaginatedTable. Colunas: tipo (badge), severidade (badge colorido — critical/warning/info), academia (texto), mensagem (texto truncado com tooltip), data/hora (formatada), ações (resolver/silenciar). Adicionar TableFilters com: severidade (Select), academia (SuggestionInput via useAcademiaSuggestion), período (date-range).",
         "testStrategy": "Teste manual: abrir /admin/operacional/alertas, verificar PaginatedTable com colunas e filtros, testar filtro por severidade e academia.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "432",
           "433"
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-03T19:08:48.058Z"
+        "updatedAt": "2026-04-03T19:45:05.680Z"
       },
       {
         "id": "441",
@@ -13791,14 +13791,14 @@
         "description": "Substituir layout sidebar com lista de botões (UnitsTableCard) por PaginatedTable com SuggestionInput para academia.",
         "details": "Em /admin/unidades, substituir o layout de sidebar com lista de botões de academias (UnitsTableCard) por: (1) SuggestionInput para selecionar academia no topo usando useAcademiaSuggestion, (2) PaginatedTable para listar unidades da academia selecionada com colunas: nome, CNPJ (formatado), cidade/UF, status (StatusBadge), alunos ativos (número), ações (DataTableRowActions: editar, desativar). Se nenhuma academia selecionada, mostrar TODAS as unidades com coluna \"Academia\" visível. Adicionar TableFilters com busca textual, status (Select), cidade (text). Eliminar componente UnitsTableCard. Paginação server-side.",
         "testStrategy": "Teste E2E: abrir /admin/unidades, verificar SuggestionInput no topo, selecionar academia, verificar que PaginatedTable filtra unidades, limpar filtro e verificar todas as unidades com coluna Academia visível.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "432",
           "433"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-03T19:08:48.058Z"
+        "updatedAt": "2026-04-03T19:41:50.806Z"
       },
       {
         "id": "444",
@@ -13820,13 +13820,13 @@
         "description": "Substituir tabelas de detalhamento em /admin/operacional/saude por PaginatedTable, mantendo cards de status.",
         "details": "Em src/app/(backoffice)/admin/operacional/saude/page.tsx, manter cards de status/resumo no topo. Substituir tabelas de detalhamento (métricas por academia) por PaginatedTable. Colunas: academia (texto), score de saúde (número com cor condicional), alunos ativos, taxa de churn (%), última sincronização (data relativa), ações. Adicionar TableFilters com busca textual e filtro por range de score.",
         "testStrategy": "Teste manual: abrir /admin/operacional/saude, verificar cards no topo, PaginatedTable abaixo com métricas por academia, filtros funcionam.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "432"
         ],
         "priority": "low",
         "subtasks": [],
-        "updatedAt": "2026-04-03T19:08:48.058Z"
+        "updatedAt": "2026-04-03T19:41:50.822Z"
       },
       {
         "id": "446",
@@ -13855,9 +13855,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-03T19:36:15.504Z",
+      "lastModified": "2026-04-03T19:45:05.680Z",
       "taskCount": 392,
-      "completedCount": 382,
+      "completedCount": 390,
       "tags": [
         "master"
       ]

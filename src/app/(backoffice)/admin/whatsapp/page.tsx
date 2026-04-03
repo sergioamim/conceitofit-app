@@ -10,11 +10,10 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -34,16 +33,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { useAcademiaSuggestion } from "@/app/(backoffice)/lib/use-academia-suggestion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { TableCell } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { PaginatedTable, type PaginatedTableColumn } from "@/components/shared/paginated-table";
+import { TableFilters, type ActiveFilters, type FilterConfig } from "@/components/shared/table-filters";
 import {
   getWhatsAppTemplatesApi,
   createWhatsAppTemplateApi,
@@ -82,6 +76,77 @@ const STATUS_COLORS: Record<string, string> = {
   LIDA: "border-gym-accent/30 bg-gym-accent/10 text-gym-accent",
   FALHA: "border-gym-danger/30 bg-gym-danger/10 text-gym-danger",
 };
+
+const PAGE_SIZE = 15;
+
+const TEMPLATES_TABLE_COLUMNS: PaginatedTableColumn[] = [
+  { label: "Nome" },
+  { label: "Slug", className: "hidden md:table-cell" },
+  { label: "Tipo", className: "w-[140px]" },
+  { label: "Status", className: "w-[100px]" },
+  { label: "Conteúdo" },
+  { label: "Variáveis", className: "hidden xl:table-cell" },
+  { label: "Ações", className: "w-[140px]" },
+];
+
+const LOGS_TABLE_COLUMNS: PaginatedTableColumn[] = [
+  { label: "Destinatário" },
+  { label: "Template" },
+  { label: "Status", className: "w-[120px]" },
+  { label: "Enviado em", className: "w-[160px]" },
+  { label: "Mensagem", className: "hidden xl:table-cell" },
+];
+
+const TEMPLATE_FILTER_CONFIGS: FilterConfig[] = [
+  {
+    type: "text",
+    key: "busca",
+    label: "Buscar",
+    placeholder: "Nome ou slug...",
+  },
+  {
+    type: "select",
+    key: "tipo",
+    label: "Tipo",
+    placeholder: "Todos os tipos",
+    options: [
+      { value: "WELCOME", label: "Boas-vindas" },
+      { value: "COBRANCA", label: "Cobrança" },
+      { value: "VENCIMENTO_MATRICULA", label: "Vencimento" },
+      { value: "FOLLOWUP_PROSPECT", label: "Follow-up" },
+      { value: "CUSTOM", label: "Personalizado" },
+    ],
+  },
+  {
+    type: "status-badge",
+    key: "ativo",
+    label: "Status",
+    options: [
+      { value: "true", label: "Ativo", className: "bg-gym-teal/15 text-gym-teal border-gym-teal/30" },
+      { value: "false", label: "Inativo", className: "bg-secondary text-muted-foreground border-border" },
+    ],
+  },
+];
+
+const LOG_FILTER_CONFIGS: FilterConfig[] = [
+  {
+    type: "text",
+    key: "busca_log",
+    label: "Buscar",
+    placeholder: "Destinatário ou template...",
+  },
+  {
+    type: "status-badge",
+    key: "status_log",
+    label: "Status",
+    options: [
+      { value: "ENVIADA", label: "Enviada", className: "bg-sky-500/15 text-sky-200 border-sky-500/30" },
+      { value: "ENTREGUE", label: "Entregue", className: "bg-gym-teal/15 text-gym-teal border-gym-teal/30" },
+      { value: "LIDA", label: "Lida", className: "bg-gym-accent/15 text-gym-accent border-gym-accent/30" },
+      { value: "FALHA", label: "Falha", className: "bg-gym-danger/15 text-gym-danger border-gym-danger/30" },
+    ],
+  },
+];
 
 function formatTimestamp(value?: string) {
   if (!value) return "—";
