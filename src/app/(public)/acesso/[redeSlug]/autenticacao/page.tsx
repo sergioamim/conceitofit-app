@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { buildNetworkAccessHref, normalizeNetworkSubdomain } from "@/lib/network-subdomain";
+import { NetworkAccessFlow } from "@/components/auth/network-access-flow";
+import { normalizeNetworkSubdomain } from "@/lib/network-subdomain";
 
 export default async function AccessNetworkLoginPage({
   params,
@@ -10,6 +10,12 @@ export default async function AccessNetworkLoginPage({
 }) {
   const { redeSlug } = await params;
   const { next } = await searchParams;
-  const targetPath = buildNetworkAccessHref("login", normalizeNetworkSubdomain(redeSlug) ?? redeSlug);
-  redirect(next ? `${targetPath}?next=${encodeURIComponent(next)}` : targetPath);
+
+  return (
+    <NetworkAccessFlow
+      networkSubdomain={normalizeNetworkSubdomain(redeSlug) ?? redeSlug}
+      nextPath={next}
+      mode="login"
+    />
+  );
 }

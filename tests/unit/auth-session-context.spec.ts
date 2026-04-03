@@ -30,9 +30,9 @@ test.describe("session context helpers", () => {
     expect(buildLoginHref("/dashboard")).toBe("/login");
     expect(buildLoginHref("https://malicioso.com")).toBe("/login");
     expect(buildLoginHref("/clientes", "rede-norte")).toBe(
-      "/app/rede-norte/login?next=%2Fclientes"
+      "/acesso/rede-norte/autenticacao?next=%2Fclientes"
     );
-    expect(buildLoginHref("/dashboard", "rede-norte")).toBe("/app/rede-norte/login");
+    expect(buildLoginHref("/dashboard", "rede-norte")).toBe("/acesso/rede-norte/autenticacao");
   });
 
   test("buildLoginHref volta para login legado quando a flag contextual estiver desligada", async () => {
