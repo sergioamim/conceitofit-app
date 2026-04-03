@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -33,14 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { TableCell } from "@/components/ui/table";
+import { PaginatedTable } from "@/components/shared/paginated-table";
 import {
   executarSolicitacaoExclusaoApi,
   rejeitarSolicitacaoExclusaoApi,
@@ -48,7 +42,6 @@ import {
 import { useAdminComplianceDashboard } from "@/lib/query/admin";
 import type {
   ComplianceAcademiaResumo,
-  ComplianceDashboard,
   SolicitacaoExclusao,
   SolicitacaoExclusaoStatus,
 } from "@/lib/types";
@@ -130,71 +123,86 @@ function AcademiasTable({
 }: {
   academias: ComplianceAcademiaResumo[];
 }) {
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return academias;
+    const q = search.toLowerCase();
+    return academias.filter((a) => a.academiaNome.toLowerCase().includes(q));
+  }, [academias, search]);
+
   return (
-    <div className="rounded-lg border border-border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Academia</TableHead>
-            <TableHead className="text-right">Alunos</TableHead>
-            <TableHead className="text-right">CPF</TableHead>
-            <TableHead className="text-right">Email</TableHead>
-            <TableHead className="text-right">Telefone</TableHead>
-            <TableHead className="text-right">Termos aceitos</TableHead>
-            <TableHead className="text-right">Termos pendentes</TableHead>
-            <TableHead>Última exclusão</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {academias.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={8}
-                className="py-8 text-center text-muted-foreground"
+    <div className="space-y-3">
+      <div className="flex items-end gap-3">
+        <div className="flex-1 min-w-[200px]">
+          <label className="mb-1 block text-xs text-muted-foreground">Buscar academia</label>
+          <Input
+            placeholder="Nome da academia..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        {search && (
+          <Button variant="ghost" size="sm" onClick={() => setSearch("")}>
+            Limpar
+          </Button>
+        )}
+      </div>
+
+      <PaginatedTable<ComplianceAcademiaResumo>
+        tableAriaLabel="Dados pessoais por academia"
+        columns={[
+          { label: "Academia" },
+          { label: "Alunos", className: "text-right" },
+          { label: "CPF", className: "text-right" },
+          { label: "Email", className: "text-right" },
+          { label: "Telefone", className: "text-right" },
+          { label: "Termos aceitos", className: "text-right" },
+          { label: "Termos pendentes", className: "text-right" },
+          { label: "Última exclusão" },
+        ]}
+        items={filtered}
+        emptyText="Nenhuma academia encontrada"
+        getRowKey={(a) => a.academiaId ?? a.academiaNome}
+        showPagination={false}
+        itemLabel="academias"
+        renderCells={(a) => (
+          <>
+            <TableCell className="font-medium">{a.academiaNome}</TableCell>
+            <TableCell className="text-right">
+              {formatNumber(a.totalAlunos)}
+            </TableCell>
+            <TableCell className="text-right">
+              {formatNumber(a.alunosComCpf)}
+            </TableCell>
+            <TableCell className="text-right">
+              {formatNumber(a.alunosComEmail)}
+            </TableCell>
+            <TableCell className="text-right">
+              {formatNumber(a.alunosComTelefone)}
+            </TableCell>
+            <TableCell className="text-right">
+              <span className="text-gym-teal">
+                {formatNumber(a.termosAceitos)}
+              </span>
+            </TableCell>
+            <TableCell className="text-right">
+              <span
+                className={
+                  a.termosPendentes > 0
+                    ? "text-gym-warning"
+                    : "text-muted-foreground"
+                }
               >
-                Nenhuma academia encontrada
-              </TableCell>
-            </TableRow>
-          ) : (
-            academias.map((a) => (
-              <TableRow key={a.academiaId}>
-                <TableCell className="font-medium">{a.academiaNome}</TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(a.totalAlunos)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(a.alunosComCpf)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(a.alunosComEmail)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(a.alunosComTelefone)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className="text-gym-teal">
-                    {formatNumber(a.termosAceitos)}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <span
-                    className={
-                      a.termosPendentes > 0
-                        ? "text-gym-warning"
-                        : "text-muted-foreground"
-                    }
-                  >
-                    {formatNumber(a.termosPendentes)}
-                  </span>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {a.ultimaSolicitacaoExclusao ? formatDate(a.ultimaSolicitacaoExclusao) : "—"}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+                {formatNumber(a.termosPendentes)}
+              </span>
+            </TableCell>
+            <TableCell className="text-xs text-muted-foreground">
+              {a.ultimaSolicitacaoExclusao ? formatDate(a.ultimaSolicitacaoExclusao) : "—"}
+            </TableCell>
+          </>
+        )}
+      />
     </div>
   );
 }
@@ -228,69 +236,57 @@ function ExposureReport({
       <p className="text-xs text-muted-foreground">
         Quais campos sensíveis cada academia coleta de seus titulares.
       </p>
-      <div className="rounded-lg border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Academia</TableHead>
-              {SENSITIVE_FIELDS.map((f) => (
-                <TableHead key={f.key} className="text-center">
-                  {f.label}
-                </TableHead>
-              ))}
-              <TableHead className="text-center">Campos coletados</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {academias.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={SENSITIVE_FIELDS.length + 2}
-                  className="py-8 text-center text-muted-foreground"
-                >
-                  Nenhuma academia encontrada
-                </TableCell>
-              </TableRow>
-            ) : (
-              academias.map((a) => {
-                const fields = {
-                  cpf: a.alunosComCpf > 0,
-                  email: a.alunosComEmail > 0,
-                  telefone: a.alunosComTelefone > 0,
-                };
-                const collectedCount = Object.values(fields).filter(Boolean).length;
+      <PaginatedTable<ComplianceAcademiaResumo>
+        tableAriaLabel="Relatório de exposição de campos sensíveis"
+        columns={[
+          { label: "Academia" },
+          ...SENSITIVE_FIELDS.map((f) => ({
+            label: f.label,
+            className: "text-center",
+          })),
+          { label: "Campos coletados", className: "text-center" },
+        ]}
+        items={academias}
+        emptyText="Nenhuma academia encontrada"
+        getRowKey={(a) => a.academiaId ?? a.academiaNome}
+        showPagination={false}
+        itemLabel="academias"
+        renderCells={(a) => {
+          const fields = {
+            cpf: a.alunosComCpf > 0,
+            email: a.alunosComEmail > 0,
+            telefone: a.alunosComTelefone > 0,
+          };
+          const collectedCount = Object.values(fields).filter(Boolean).length;
 
-                return (
-                  <TableRow key={a.academiaId}>
-                    <TableCell className="font-medium">
-                      {a.academiaNome}
-                    </TableCell>
-                    {SENSITIVE_FIELDS.map((f) => (
-                      <TableCell key={f.key} className="text-center">
-                        <FieldIndicator collected={fields[f.key]} />
-                      </TableCell>
-                    ))}
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="outline"
-                        className={
-                          collectedCount === SENSITIVE_FIELDS.length
-                            ? "bg-gym-warning/15 text-gym-warning border-gym-warning/30"
-                            : collectedCount > 0
-                              ? "bg-blue-500/15 text-blue-400 border-blue-500/30"
-                              : "bg-muted text-muted-foreground"
-                        }
-                      >
-                        {collectedCount}/{SENSITIVE_FIELDS.length}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+          return (
+            <>
+              <TableCell className="font-medium">
+                {a.academiaNome}
+              </TableCell>
+              {SENSITIVE_FIELDS.map((f) => (
+                <TableCell key={f.key} className="text-center">
+                  <FieldIndicator collected={fields[f.key]} />
+                </TableCell>
+              ))}
+              <TableCell className="text-center">
+                <Badge
+                  variant="outline"
+                  className={
+                    collectedCount === SENSITIVE_FIELDS.length
+                      ? "bg-gym-warning/15 text-gym-warning border-gym-warning/30"
+                      : collectedCount > 0
+                        ? "bg-blue-500/15 text-blue-400 border-blue-500/30"
+                        : "bg-muted text-muted-foreground"
+                  }
+                >
+                  {collectedCount}/{SENSITIVE_FIELDS.length}
+                </Badge>
+              </TableCell>
+            </>
+          );
+        }}
+      />
     </div>
   );
 }
@@ -315,9 +311,24 @@ function SolicitacoesExclusao({
   const [actionState, setActionState] = useState<ActionState>(null);
   const [rejectMotivo, setRejectMotivo] = useState("");
 
-  const filtered = filter
-    ? initialSolicitacoes.filter((s) => s.status === filter)
-    : initialSolicitacoes;
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    let result = initialSolicitacoes;
+    if (filter) {
+      result = result.filter((s) => s.status === filter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (s) =>
+          s.alunoNome.toLowerCase().includes(q) ||
+          (s.email && s.email.toLowerCase().includes(q)) ||
+          s.academiaNome.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [initialSolicitacoes, filter, search]);
 
   async function handleConfirmExecutar() {
     if (!actionState || actionState.type !== "executar") return;
@@ -360,11 +371,22 @@ function SolicitacoesExclusao({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold font-display">
-          Solicitações de Exclusão
-        </h2>
+      <h2 className="text-lg font-bold font-display">
+        Solicitações de Exclusão
+      </h2>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[200px]">
+          <label className="mb-1 block text-xs text-muted-foreground">Buscar</label>
+          <Input
+            placeholder="Solicitante, email, academia..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
         <div className="w-44">
+          <label className="mb-1 block text-xs text-muted-foreground">Status</label>
           <Select
             value={filter}
             onValueChange={(v) => setFilter(v === "__all__" ? "" : v)}
@@ -382,6 +404,18 @@ function SolicitacoesExclusao({
             </SelectContent>
           </Select>
         </div>
+        {(filter || search) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setFilter("");
+              setSearch("");
+            }}
+          >
+            Limpar filtros
+          </Button>
+        )}
       </div>
 
       {actionError && (
@@ -390,103 +424,92 @@ function SolicitacoesExclusao({
         </div>
       )}
 
-      <div className="rounded-lg border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Solicitante</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Academia</TableHead>
-              <TableHead>Data</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Motivo</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="py-8 text-center text-muted-foreground"
-                >
-                  Nenhuma solicitação encontrada
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">
-                    {s.alunoNome}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {s.email ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-sm">{s.academiaNome}</TableCell>
-                  <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                    {formatDate(s.solicitadoEm ?? "")}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={STATUS_COLORS[s.status] ?? ""}
-                    >
-                      {STATUS_LABELS[s.status] ?? s.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                    {s.motivo ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {s.status === "PENDENTE" && (
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={actionLoading}
-                          onClick={() =>
-                            setActionState({
-                              type: "executar",
-                              id: s.id,
-                              nome: s.alunoNome,
-                            })
-                          }
-                          className="text-gym-teal hover:text-gym-teal"
-                        >
-                          <CheckCircle2 className="mr-1 size-3.5" />
-                          Executar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={actionLoading}
-                          onClick={() => {
-                            setRejectMotivo("");
-                            setActionState({
-                              type: "rejeitar",
-                              id: s.id,
-                              nome: s.alunoNome,
-                            });
-                          }}
-                          className="text-gym-danger hover:text-gym-danger"
-                        >
-                          <XCircle className="mr-1 size-3.5" />
-                          Rejeitar
-                        </Button>
-                      </div>
-                    )}
-                    {s.status !== "PENDENTE" && (
-                      <span className="text-xs text-muted-foreground">
-                        {s.solicitadoPor ?? "—"}
-                      </span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <PaginatedTable<SolicitacaoExclusao>
+        tableAriaLabel="Solicitações de exclusão de dados"
+        columns={[
+          { label: "Solicitante" },
+          { label: "Email" },
+          { label: "Academia" },
+          { label: "Data" },
+          { label: "Status" },
+          { label: "Motivo" },
+          { label: "Ações", className: "text-right" },
+        ]}
+        items={filtered}
+        emptyText="Nenhuma solicitação encontrada"
+        getRowKey={(s) => s.id}
+        showPagination={false}
+        itemLabel="solicitações"
+        renderCells={(s) => (
+          <>
+            <TableCell className="font-medium">
+              {s.alunoNome}
+            </TableCell>
+            <TableCell className="text-xs text-muted-foreground">
+              {s.email ?? "—"}
+            </TableCell>
+            <TableCell className="text-sm">{s.academiaNome}</TableCell>
+            <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+              {formatDate(s.solicitadoEm ?? "")}
+            </TableCell>
+            <TableCell>
+              <Badge
+                variant="outline"
+                className={STATUS_COLORS[s.status] ?? ""}
+              >
+                {STATUS_LABELS[s.status] ?? s.status}
+              </Badge>
+            </TableCell>
+            <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+              {s.motivo ?? "—"}
+            </TableCell>
+            <TableCell className="text-right">
+              {s.status === "PENDENTE" && (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={actionLoading}
+                    onClick={() =>
+                      setActionState({
+                        type: "executar",
+                        id: s.id,
+                        nome: s.alunoNome,
+                      })
+                    }
+                    className="text-gym-teal hover:text-gym-teal"
+                  >
+                    <CheckCircle2 className="mr-1 size-3.5" />
+                    Executar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={actionLoading}
+                    onClick={() => {
+                      setRejectMotivo("");
+                      setActionState({
+                        type: "rejeitar",
+                        id: s.id,
+                        nome: s.alunoNome,
+                      });
+                    }}
+                    className="text-gym-danger hover:text-gym-danger"
+                  >
+                    <XCircle className="mr-1 size-3.5" />
+                    Rejeitar
+                  </Button>
+                </div>
+              )}
+              {s.status !== "PENDENTE" && (
+                <span className="text-xs text-muted-foreground">
+                  {s.solicitadoPor ?? "—"}
+                </span>
+              )}
+            </TableCell>
+          </>
+        )}
+      />
 
       {/* Dialog: Executar exclusão */}
       <AlertDialog
