@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { FileChartColumnIncreasing } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { ListErrorState } from "@/components/shared/list-states";
+import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { useAdminBiAcademias, useAdminBiExecutivo } from "@/lib/query/admin";
-import type { AdminBiExecutivoData } from "@/lib/api/admin-bi";
+import { useAdminBiExecutivo } from "@/lib/query/admin";
+import { useAcademiaSuggestion } from "@/app/(backoffice)/lib/use-academia-suggestion";
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -44,25 +44,27 @@ function LoadingSkeleton() {
 
 export default function AdminBiPage() {
   const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
+  const [academiaBusca, setAcademiaBusca] = useState("");
 
-  const academiasQuery = useAdminBiAcademias();
+  const { options: academiaOptions, onFocusOpen, isLoading: academiasLoading } = useAcademiaSuggestion();
   const biQuery = useAdminBiExecutivo(selectedAcademiaId || null);
 
-  const academias = academiasQuery.data ?? [];
   const biData = biQuery.data ?? null;
   const loading = biQuery.isLoading;
-  const error = academiasQuery.error || biQuery.error
-    ? normalizeErrorMessage(academiasQuery.error ?? biQuery.error)
+  const error = biQuery.error
+    ? normalizeErrorMessage(biQuery.error)
     : null;
 
-  // Auto-select first academia when data loads
+  // Auto-select first academia when options load
   useEffect(() => {
-    if (academiasQuery.data && academiasQuery.data.length > 0 && !selectedAcademiaId) {
-      setSelectedAcademiaId(academiasQuery.data[0].id);
+    if (academiaOptions.length > 0 && !selectedAcademiaId) {
+      const first = academiaOptions[0];
+      setSelectedAcademiaId(first.id);
+      setAcademiaBusca(first.label);
     }
-  }, [academiasQuery.data, selectedAcademiaId]);
+  }, [academiaOptions, selectedAcademiaId]);
 
-  const selectedAcademia = academias.find((a) => a.id === selectedAcademiaId);
+  const selectedAcademia = academiaOptions.find((a) => a.id === selectedAcademiaId);
 
   return (
     <div className="space-y-6">
@@ -71,7 +73,7 @@ export default function AdminBiPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Backoffice</p>
           <h1 className="font-display text-2xl font-bold tracking-tight">BI Executivo</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            KPIs executivos por academia{selectedAcademia ? ` — ${selectedAcademia.nome}` : ""}.
+            KPIs executivos por academia{selectedAcademia ? ` — ${selectedAcademia.label}` : ""}.
           </p>
         </div>
       </div>
@@ -80,18 +82,23 @@ export default function AdminBiPage() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Academia</label>
-            <Select value={selectedAcademiaId} onValueChange={setSelectedAcademiaId}>
-              <SelectTrigger aria-label="Selecione a academia" className="w-full border-border bg-secondary">
-                <SelectValue placeholder="Selecione a academia" />
-              </SelectTrigger>
-              <SelectContent className="border-border bg-card">
-                {academias.map((academia) => (
-                  <SelectItem key={academia.id} value={academia.id}>
-                    {academia.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SuggestionInput
+              inputAriaLabel="Selecione a academia"
+              value={academiaBusca}
+              onValueChange={(v) => {
+                setAcademiaBusca(v);
+                if (!v) setSelectedAcademiaId("");
+              }}
+              onSelect={(option) => {
+                setSelectedAcademiaId(option.id);
+                setAcademiaBusca(option.label);
+              }}
+              onFocusOpen={onFocusOpen}
+              options={academiaOptions}
+              placeholder="Buscar academia..."
+              preloadOnFocus
+              minCharsToSearch={0}
+            />
           </div>
         </div>
       </div>
