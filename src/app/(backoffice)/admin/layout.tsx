@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { Building2, ChevronRight, Command, Eye, Globe, LogOut } from "lucide-react";
+import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Building2, ChevronLeft, ChevronRight, Command, Eye, Globe, LogOut, Menu } from "lucide-react";
 import { Command as CmdkRoot, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "cmdk";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
@@ -28,6 +28,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const SIDEBAR_STORAGE_KEY = "backoffice-sidebar-collapsed";
 
 // ---------------------------------------------------------------------------
 // Breadcrumbs
@@ -181,6 +190,167 @@ function ModeBadge() {
 }
 
 // ---------------------------------------------------------------------------
+// Sidebar nav content (reused in desktop aside and mobile Sheet)
+// ---------------------------------------------------------------------------
+
+function SidebarNavContent({
+  pathname,
+  collapsed,
+  onOpenCmdk,
+  onOpenLogout,
+  onNavigate,
+}: {
+  pathname?: string;
+  collapsed: boolean;
+  onOpenCmdk: () => void;
+  onOpenLogout: () => void;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      {/* Logo / brand */}
+      <div className={cn("shrink-0", collapsed && "flex flex-col items-center")}>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-gym-accent">
+          {collapsed ? "CF" : "Conceito Fit"}
+        </p>
+        {!collapsed && <p className="text-sm font-bold">Backoffice</p>}
+      </div>
+
+      {/* Command palette trigger */}
+      {collapsed ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onOpenCmdk}
+              className="flex items-center justify-center rounded-md border border-border bg-secondary/50 p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <Command className="size-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>Buscar (⌘K)</TooltipContent>
+        </Tooltip>
+      ) : (
+        <button
+          onClick={onOpenCmdk}
+          className="flex items-center gap-2 rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <Command className="size-3" />
+          <span className="flex-1 text-left">Buscar...</span>
+          <kbd className="rounded border border-border bg-background px-1 py-0.5 text-[10px] font-mono">
+            ⌘K
+          </kbd>
+        </button>
+      )}
+
+      {/* Navigation */}
+      <nav aria-label="Menu backoffice" className="flex flex-col gap-3 text-sm overflow-y-auto flex-1 min-h-0">
+        {backofficeNavGroups.map((group) => (
+          <div key={group.title}>
+            {!collapsed && (
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
+                {group.title}
+              </p>
+            )}
+            <div className="flex flex-col gap-0.5">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active =
+                  pathname != null &&
+                  (pathname === item.href ||
+                    pathname.startsWith(item.href + "/"));
+
+                const linkContent = (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md px-3 py-2 motion-safe:transition-colors motion-safe:duration-200",
+                      collapsed && "justify-center px-2",
+                      active
+                        ? "border border-gym-accent/30 bg-gym-accent/10 text-foreground"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    {!collapsed && item.label}
+                  </Link>
+                );
+
+                if (collapsed) {
+                  return (
+                    <Tooltip key={item.href}>
+                      <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                      <TooltipContent side="right" sideOffset={8}>
+                        {item.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+
+                return linkContent;
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer actions */}
+      <div className="mt-auto shrink-0 space-y-1 border-t border-border/50 pt-3">
+        {collapsed ? (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/admin/entrar-como-academia"
+                  onClick={onNavigate}
+                  className="flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-gym-teal/10 hover:text-gym-teal"
+                >
+                  <Building2 className="size-4 shrink-0" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>Entrar como academia</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onOpenLogout}
+                  className="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-gym-danger/10 hover:text-gym-danger"
+                >
+                  <LogOut className="size-4 shrink-0" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>Sair</TooltipContent>
+            </Tooltip>
+          </>
+        ) : (
+          <>
+            <Link
+              href="/admin/entrar-como-academia"
+              onClick={onNavigate}
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-gym-teal/10 hover:text-gym-teal"
+            >
+              <Building2 className="size-4 shrink-0" />
+              Entrar como academia
+            </Link>
+            <button
+              type="button"
+              onClick={onOpenLogout}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-gym-danger/10 hover:text-gym-danger"
+            >
+              <LogOut className="size-4 shrink-0" />
+              Sair
+            </button>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Shell Frame
 // ---------------------------------------------------------------------------
 
@@ -195,6 +365,68 @@ function AdminShellFrame({
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Sidebar state: SSR default = expanded (false = not collapsed)
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Track whether user manually toggled (to avoid overriding with auto-collapse)
+  const userToggledRef = useRef(false);
+
+  // Hydrate sidebar preference from localStorage + detect breakpoint (SSR-safe)
+  useEffect(() => {
+    // Read persisted preference
+    try {
+      const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (stored === "true") {
+        setCollapsed(true);
+      }
+    } catch {
+      // localStorage unavailable — keep default
+    }
+
+    // Detect initial breakpoint
+    const mql = window.matchMedia("(max-width: 767px)");
+    const lgMql = window.matchMedia("(max-width: 1023px)");
+
+    function handleMobileChange() {
+      setIsMobile(mql.matches);
+    }
+
+    function handleLgChange() {
+      // Auto-collapse on < lg, but only if user hasn't manually toggled
+      if (!userToggledRef.current) {
+        setCollapsed(lgMql.matches);
+      }
+    }
+
+    handleMobileChange();
+    handleLgChange();
+
+    mql.addEventListener("change", handleMobileChange);
+    lgMql.addEventListener("change", handleLgChange);
+
+    return () => {
+      mql.removeEventListener("change", handleMobileChange);
+      lgMql.removeEventListener("change", handleLgChange);
+    };
+  }, []);
+
+  // Persist collapse preference when user manually toggles
+  function toggleCollapsed() {
+    userToggledRef.current = true;
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+      } catch {
+        // localStorage unavailable
+      }
+      return next;
+    });
+  }
+
+  // Cmd+K handler
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -223,126 +455,117 @@ function AdminShellFrame({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} />
+    <TooltipProvider delayDuration={150}>
+      <div className="min-h-screen bg-background">
+        <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} />
 
-      <div className="flex min-h-screen">
-        {/* Sidebar */}
-        <aside className="sticky top-0 flex h-screen w-72 shrink-0 flex-col gap-4 overflow-y-auto border-r border-border/80 bg-card/80 p-4 shadow-sm">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gym-accent">
-              Conceito Fit
-            </p>
-            <p className="text-sm font-bold">Backoffice</p>
-          </div>
-
-          <button
-            onClick={() => setCmdkOpen(true)}
-            className="flex items-center gap-2 rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        <div className="flex min-h-screen">
+          {/* Desktop sidebar */}
+          <aside
+            className={cn(
+              "sticky top-0 hidden h-screen shrink-0 flex-col gap-4 overflow-hidden border-r border-border/80 bg-card/80 p-4 shadow-sm md:flex",
+              "motion-safe:transition-all motion-safe:duration-200",
+              collapsed ? "w-16" : "w-72",
+            )}
           >
-            <Command className="size-3" />
-            <span className="flex-1 text-left">Buscar...</span>
-            <kbd className="rounded border border-border bg-background px-1 py-0.5 text-[10px] font-mono">
-              ⌘K
-            </kbd>
-          </button>
+            <SidebarNavContent
+              pathname={pathname}
+              collapsed={collapsed}
+              onOpenCmdk={() => setCmdkOpen(true)}
+              onOpenLogout={() => setLogoutOpen(true)}
+            />
 
-          <nav aria-label="Menu backoffice" className="flex flex-col gap-3 text-sm">
-            {backofficeNavGroups.map((group) => (
-              <div key={group.title}>
-                <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
-                  {group.title}
-                </p>
-                <div className="flex flex-col gap-0.5">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const active =
-                      pathname != null &&
-                      (pathname === item.href ||
-                        pathname.startsWith(item.href + "/"));
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "flex items-center gap-2 rounded-md px-3 py-2 transition-colors",
-                          active
-                            ? "border border-gym-accent/30 bg-gym-accent/10 text-foreground"
-                            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                        )}
-                      >
-                        <Icon className="size-4 shrink-0" />
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </nav>
-
-          <div className="mt-auto space-y-1 border-t border-border/50 pt-3">
-            <Link
-              href="/admin/entrar-como-academia"
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-gym-teal/10 hover:text-gym-teal"
-            >
-              <Building2 className="size-4 shrink-0" />
-              Entrar como academia
-            </Link>
+            {/* Toggle button */}
             <button
               type="button"
-              onClick={() => setLogoutOpen(true)}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-gym-danger/10 hover:text-gym-danger"
+              onClick={toggleCollapsed}
+              className="absolute -right-3 top-6 z-10 flex size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm motion-safe:transition-colors hover:bg-muted hover:text-foreground"
+              aria-label={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
             >
-              <LogOut className="size-4 shrink-0" />
-              Sair
+              <ChevronLeft className={cn("size-3 motion-safe:transition-transform motion-safe:duration-200", collapsed && "rotate-180")} />
             </button>
+          </aside>
+
+          {/* Mobile Sheet overlay */}
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetContent
+              side="left"
+              showCloseButton
+              className="flex w-72 flex-col gap-4 border-border/80 bg-card/80 p-4 md:hidden"
+            >
+              <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
+              <SidebarNavContent
+                pathname={pathname}
+                collapsed={false}
+                onOpenCmdk={() => {
+                  setMobileOpen(false);
+                  setCmdkOpen(true);
+                }}
+                onOpenLogout={() => {
+                  setMobileOpen(false);
+                  setLogoutOpen(true);
+                }}
+                onNavigate={() => setMobileOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+
+          {/* Main content */}
+          <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 md:px-6 md:py-6">
+            {/* Header */}
+            <header className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {/* Mobile hamburger */}
+                {isMobile && (
+                  <button
+                    type="button"
+                    onClick={() => setMobileOpen(true)}
+                    className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+                    aria-label="Abrir menu"
+                  >
+                    <Menu className="size-5" />
+                  </button>
+                )}
+                <Breadcrumbs pathname={pathname ?? null} />
+              </div>
+              <ModeBadge />
+            </header>
+
+            <main className="flex-1">{children}</main>
           </div>
-        </aside>
-
-        {/* Main content */}
-        <div className="flex min-w-0 flex-1 flex-col gap-4 px-6 py-6">
-          {/* Header */}
-          <header className="flex items-center justify-between">
-            <Breadcrumbs pathname={pathname ?? null} />
-            <ModeBadge />
-          </header>
-
-          <main className="flex-1">{children}</main>
         </div>
+        <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+          <DialogContent className="border-border bg-card">
+            <DialogHeader>
+              <DialogTitle>Encerrar sessão?</DialogTitle>
+              <DialogDescription>
+                Você será redirecionado para o login. Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-border"
+                onClick={() => setLogoutOpen(false)}
+                disabled={loggingOut}
+              >
+                Não, permanecer
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={loggingOut}
+                onClick={() => void handleLogout()}
+              >
+                {loggingOut ? "Saindo..." : "Sim, sair"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <DevSessionPanel />
       </div>
-      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
-        <DialogContent className="border-border bg-card">
-          <DialogHeader>
-            <DialogTitle>Encerrar sessão?</DialogTitle>
-            <DialogDescription>
-              Você será redirecionado para o login. Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              className="border-border"
-              onClick={() => setLogoutOpen(false)}
-              disabled={loggingOut}
-            >
-              Não, permanecer
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={loggingOut}
-              onClick={() => void handleLogout()}
-            >
-              {loggingOut ? "Saindo..." : "Sim, sair"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <DevSessionPanel />
-    </div>
+    </TooltipProvider>
   );
 }
 
