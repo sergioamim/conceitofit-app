@@ -30,8 +30,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SuggestionInput } from "@/components/shared/suggestion-input";
-import { useAcademiaSuggestion } from "@/app/(backoffice)/lib/use-academia-suggestion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TableCell } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,7 +46,6 @@ import {
 import type {
   WhatsAppMessageLog,
   WhatsAppTemplate,
-  WhatsAppTemplateType,
   WhatsAppTemplateEvent,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -111,7 +108,7 @@ const TEMPLATE_FILTER_CONFIGS: FilterConfig[] = [
     placeholder: "Todos os tipos",
     options: [
       { value: "WELCOME", label: "Boas-vindas" },
-      { value: "COBRANCA", label: "Cobrança" },
+      { value: "COBRANCA", label: "Cobranca" },
       { value: "VENCIMENTO_MATRICULA", label: "Vencimento" },
       { value: "FOLLOWUP_PROSPECT", label: "Follow-up" },
       { value: "CUSTOM", label: "Personalizado" },
@@ -133,7 +130,7 @@ const LOG_FILTER_CONFIGS: FilterConfig[] = [
     type: "text",
     key: "busca_log",
     label: "Buscar",
-    placeholder: "Destinatário ou template...",
+    placeholder: "Destinatario ou template...",
   },
   {
     type: "status-badge",
@@ -170,12 +167,13 @@ export default function AdminWhatsAppPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
-  const [academiaBusca, setAcademiaBusca] = useState("");
-  const {
-    options: academiaOptions,
-    onFocusOpen: academiaFocusOpen,
-  } = useAcademiaSuggestion();
+  // Filtros e paginacao — Templates
+  const [templateFilters, setTemplateFilters] = useState<ActiveFilters>({});
+  const [templatePage, setTemplatePage] = useState(0);
+
+  // Filtros e paginacao — Logs
+  const [logFilters, setLogFilters] = useState<ActiveFilters>({});
+  const [logPage, setLogPage] = useState(0);
 
   const form = useForm<WhatsAppTemplateFormValues>({
     resolver: zodResolver(whatsAppTemplateFormSchema),
@@ -185,10 +183,9 @@ export default function AdminWhatsAppPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const tenantId = selectedAcademiaId || undefined;
       const [templatesResult, logsResult] = await Promise.allSettled([
-        getWhatsAppTemplatesApi(tenantId),
-        getWhatsAppLogsApi({ size: 50, tenantId }),
+        getWhatsAppTemplatesApi(),
+        getWhatsAppLogsApi({ size: 50 }),
       ]);
       if (templatesResult.status === "fulfilled") {
         setTemplates(templatesResult.value);
@@ -199,16 +196,182 @@ export default function AdminWhatsAppPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedAcademiaId]);
+  }, []);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
-  function handleAcademiaLimpar() {
-    setSelectedAcademiaId("");
-    setAcademiaBusca("");
-  }
+  // --- Dados filtrados: Templates ---
+  const filteredTemplates = useMemo(() => {
+    const busca = (templateFilters.busca ?? "").toLowerCase();
+    const tipo = templateFilters.tipo ?? "";
+    const ativo = templateFilters.ativo ?? "";
+
+    return templates.filter((t) => {
+      if (busca) {
+        const match =
+          t.nome.toLowerCase().includes(busca) ||
+          (t.slug ?? "").toLowerCase().includes(busca);
+        if (!match) return false;
+      }
+      if (tipo && (t.tipo ?? t.evento) !== tipo) return false;
+      if (ativo === "true" && !t.ativo) return false;
+      if (ativo === "false" && t.ativo) return false;
+      return true;
+    });
+  }, [templates, templateFilters]);
+
+  const templatePageItems = useMemo(
+    () => filteredTemplates.slice(templatePage * PAGE_SIZE, (templatePage + 1) * PAGE_SIZE),
+    [filteredTemplates, templatePage],
+  );
+  const templateHasNext = (templatePage + 1) * PAGE_SIZE < filteredTemplates.length;
+
+  // --- Dados filtrados: Logs ---
+  const filteredLogs = useMemo(() => {
+    const busca = (logFilters.busca_log ?? "").toLowerCase();
+    const status = logFilters.status_log ?? "";
+
+    return logs.filter((l) => {
+      if (busca) {
+        const match =
+          (l.destinatarioNome ?? "").toLowerCase().includes(busca) ||
+          l.destinatario.toLowerCase().includes(busca) ||
+          (l.templateNome ?? "").toLowerCase().includes(busca);
+        if (!match) return false;
+      }
+      if (status && l.status !== status) return false;
+      return true;
+    });
+  }, [logs, logFilters]);
+
+  const logPageItems = useMemo(
+    () => filteredLogs.slice(logPage * PAGE_SIZE, (logPage + 1) * PAGE_SIZE),
+    [filteredLogs, logPage],
+  );
+  const logHasNext = (logPage + 1) * PAGE_SIZE < filteredLogs.length;
+
+  const handleTemplateFiltersChange = useCallback((filters: ActiveFilters) => {
+    setTemplateFilters(filters);
+    setTemplatePage(0);
+  }, []);
+
+  const handleLogFiltersChange = useCallback((filters: ActiveFilters) => {
+    setLogFilters(filters);
+    setLogPage(0);
+  }, []);
+
+  // --- Renderers ---
+  const renderTemplateCells = useCallback(
+    (template: WhatsAppTemplate) => (
+      <>
+        <TableCell className="px-4 py-3">
+          <p className="font-medium text-foreground">{template.nome}</p>
+        </TableCell>
+        <TableCell className="hidden px-4 py-3 text-sm text-muted-foreground md:table-cell">
+          {template.slug ?? "—"}
+        </TableCell>
+        <TableCell className="px-4 py-3">
+          <Badge className="border-border bg-secondary/50 text-muted-foreground">
+            {TIPO_LABELS[template.tipo ?? template.evento] ?? template.tipo ?? template.evento}
+          </Badge>
+        </TableCell>
+        <TableCell className="px-4 py-3">
+          <Badge
+            className={
+              template.ativo
+                ? "border-gym-teal/30 bg-gym-teal/10 text-gym-teal"
+                : "border-border bg-secondary/50 text-muted-foreground"
+            }
+          >
+            {template.ativo ? "Ativo" : "Inativo"}
+          </Badge>
+        </TableCell>
+        <TableCell className="max-w-[260px] px-4 py-3">
+          <p className="truncate text-sm text-muted-foreground">{template.conteudo}</p>
+        </TableCell>
+        <TableCell className="hidden px-4 py-3 xl:table-cell">
+          <div className="flex flex-wrap gap-1">
+            {(template.variables ?? template.variaveis ?? []).slice(0, 3).map((v) => (
+              <Badge key={v} variant="outline" className="text-xs">
+                {v}
+              </Badge>
+            ))}
+            {(template.variables ?? template.variaveis ?? []).length > 3 && (
+              <Badge variant="outline" className="text-xs text-muted-foreground">
+                +{(template.variables ?? template.variaveis ?? []).length - 3}
+              </Badge>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="px-4 py-3">
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                openEdit(template);
+              }}
+            >
+              <Pencil className="size-3.5" />
+              Editar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 text-xs text-gym-danger hover:text-gym-danger"
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleDelete(template.id);
+              }}
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          </div>
+        </TableCell>
+      </>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const renderLogCells = useCallback(
+    (log: WhatsAppMessageLog) => (
+      <>
+        <TableCell className="px-4 py-3">
+          <div>
+            <p className="font-medium text-foreground">{log.destinatarioNome}</p>
+            <p className="text-xs text-muted-foreground">{log.destinatario}</p>
+          </div>
+        </TableCell>
+        <TableCell className="px-4 py-3 text-sm text-foreground">
+          {log.templateNome}
+        </TableCell>
+        <TableCell className="px-4 py-3">
+          <Badge
+            className={
+              STATUS_COLORS[log.status] ??
+              "border-border bg-secondary/50 text-muted-foreground"
+            }
+          >
+            {log.status === "ENVIADA" && <CheckCircle2 className="mr-1 size-3" />}
+            {log.status === "FALHA" && <X className="mr-1 size-3" />}
+            {log.status}
+          </Badge>
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
+          {formatTimestamp(log.enviadoEm)}
+        </TableCell>
+        <TableCell className="hidden max-w-xs truncate px-4 py-3 text-sm text-muted-foreground xl:table-cell">
+          {log.conteudo}
+        </TableCell>
+      </>
+    ),
+    [],
+  );
 
   function openCreate() {
     setEditingId(null);
@@ -287,55 +450,17 @@ export default function AdminWhatsAppPage() {
           <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                Comunicação
+                Comunicacao
               </div>
               <div>
                 <h1 className="font-display text-3xl font-bold tracking-tight">
                   WhatsApp
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                  Gerencie templates de mensagens e acompanhe o histórico de
+                  Gerencie templates de mensagens e acompanhe o historico de
                   envios via WhatsApp.
                 </p>
               </div>
-            </div>
-            <div className="flex items-end gap-2">
-              <div className="w-72 space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Academia
-                </label>
-                <SuggestionInput
-                  inputId="whatsapp-academia-filter"
-                  inputAriaLabel="Filtrar por academia"
-                  value={academiaBusca}
-                  onValueChange={(v) => {
-                    setAcademiaBusca(v);
-                    if (!v) {
-                      setSelectedAcademiaId("");
-                    }
-                  }}
-                  onSelect={(option) => {
-                    setSelectedAcademiaId(option.id);
-                    setAcademiaBusca(option.label);
-                  }}
-                  onFocusOpen={academiaFocusOpen}
-                  options={academiaOptions}
-                  placeholder="Buscar academia..."
-                  emptyText="Nenhuma academia encontrada"
-                  preloadOnFocus
-                />
-              </div>
-              {selectedAcademiaId && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAcademiaLimpar}
-                  className="mb-0.5 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="mr-1 size-3.5" />
-                  Limpar
-                </Button>
-              )}
             </div>
           </div>
         </div>
@@ -358,7 +483,7 @@ export default function AdminWhatsAppPage() {
           <StatCard
             label="Mensagens enviadas"
             value={loading ? "…" : String(logs.length)}
-            helper="Total registrado no período"
+            helper="Total registrado no periodo"
           />
           <StatCard
             label="Falhas"
@@ -386,167 +511,58 @@ export default function AdminWhatsAppPage() {
 
             {/* --- Tab Templates --- */}
             <TabsContent value="templates" className="space-y-4">
-              <div className="flex justify-end">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <TableFilters
+                  filters={TEMPLATE_FILTER_CONFIGS}
+                  onFiltersChange={handleTemplateFiltersChange}
+                />
                 <Button onClick={openCreate}>
                   <Plus className="mr-2 size-4" />
                   Novo Template
                 </Button>
               </div>
 
-              <div className="grid gap-4 xl:grid-cols-2">
-                {templates.map((template) => (
-                  <Card
-                    key={template.id}
-                    className="border-border/80 bg-card/70"
-                  >
-                    <CardHeader className="space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg">
-                            {template.nome}
-                          </CardTitle>
-                          <p className="text-sm text-muted-foreground">
-                            {template.slug}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            className={
-                              template.ativo
-                                ? "border-gym-teal/30 bg-gym-teal/10 text-gym-teal"
-                                : "border-border bg-secondary/50 text-muted-foreground"
-                            }
-                          >
-                            {template.ativo ? "Ativo" : "Inativo"}
-                          </Badge>
-                          <Badge className="border-border bg-secondary/50 text-muted-foreground">
-                            {TIPO_LABELS[template.tipo ?? template.evento] ?? template.tipo ?? template.evento}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="rounded-xl border border-border/70 bg-secondary/40 px-4 py-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          Conteúdo
-                        </p>
-                        <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                          {template.conteudo}
-                        </p>
-                      </div>
-                      {(template.variables ?? template.variaveis ?? []).length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {(template.variables ?? template.variaveis ?? []).map((v) => (
-                            <Badge
-                              key={v}
-                              variant="outline"
-                              className="text-xs"
-                            >
-                              {v}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEdit(template)}
-                        >
-                          <Pencil className="mr-1 size-3.5" />
-                          Editar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-gym-danger hover:text-gym-danger"
-                          onClick={() => void handleDelete(template.id)}
-                        >
-                          <Trash2 className="mr-1 size-3.5" />
-                          Remover
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {!loading && templates.length === 0 && (
-                <div className="rounded-2xl border border-border bg-card/60 px-4 py-8 text-center text-sm text-muted-foreground">
-                  Nenhum template cadastrado. Crie o primeiro template para
-                  começar a enviar mensagens.
-                </div>
-              )}
+              <PaginatedTable
+                columns={TEMPLATES_TABLE_COLUMNS}
+                items={templatePageItems}
+                emptyText="Nenhum template encontrado."
+                renderCells={renderTemplateCells}
+                getRowKey={(t) => t.id}
+                isLoading={loading}
+                page={templatePage}
+                pageSize={PAGE_SIZE}
+                total={filteredTemplates.length}
+                hasNext={templateHasNext}
+                onPrevious={() => setTemplatePage((p) => Math.max(0, p - 1))}
+                onNext={() => setTemplatePage((p) => p + 1)}
+                itemLabel="templates"
+                tableAriaLabel="Tabela de templates de WhatsApp"
+              />
             </TabsContent>
 
             {/* --- Tab Logs --- */}
             <TabsContent value="logs" className="space-y-4">
-              <div className="overflow-hidden rounded-2xl border border-border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border bg-secondary/40">
-                      <TableHead>Destinatário</TableHead>
-                      <TableHead>Template</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Enviado em</TableHead>
-                      <TableHead className="hidden xl:table-cell">
-                        Mensagem
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {logs.map((log) => (
-                      <TableRow key={log.id} className="border-border">
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">
-                              {log.destinatarioNome}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {log.destinatario}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {log.templateNome}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              STATUS_COLORS[log.status] ??
-                              "border-border bg-secondary/50 text-muted-foreground"
-                            }
-                          >
-                            {log.status === "ENVIADA" && (
-                              <CheckCircle2 className="mr-1 size-3" />
-                            )}
-                            {log.status === "FALHA" && (
-                              <X className="mr-1 size-3" />
-                            )}
-                            {log.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatTimestamp(log.enviadoEm)}
-                        </TableCell>
-                        <TableCell className="hidden max-w-xs truncate text-sm text-muted-foreground xl:table-cell">
-                          {log.conteudo}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {!loading && logs.length === 0 && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={5}
-                          className="py-8 text-center text-sm text-muted-foreground"
-                        >
-                          Nenhuma mensagem enviada ainda.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              <TableFilters
+                filters={LOG_FILTER_CONFIGS}
+                onFiltersChange={handleLogFiltersChange}
+              />
+
+              <PaginatedTable
+                columns={LOGS_TABLE_COLUMNS}
+                items={logPageItems}
+                emptyText="Nenhuma mensagem enviada ainda."
+                renderCells={renderLogCells}
+                getRowKey={(l) => l.id}
+                isLoading={loading}
+                page={logPage}
+                pageSize={PAGE_SIZE}
+                total={filteredLogs.length}
+                hasNext={logHasNext}
+                onPrevious={() => setLogPage((p) => Math.max(0, p - 1))}
+                onNext={() => setLogPage((p) => p + 1)}
+                itemLabel="mensagens"
+                tableAriaLabel="Tabela de logs de envio WhatsApp"
+              />
             </TabsContent>
           </Tabs>
         </div>
@@ -598,7 +614,7 @@ export default function AdminWhatsAppPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="WELCOME">Boas-vindas</SelectItem>
-                        <SelectItem value="COBRANCA">Cobrança</SelectItem>
+                        <SelectItem value="COBRANCA">Cobranca</SelectItem>
                         <SelectItem value="VENCIMENTO_MATRICULA">
                           Vencimento
                         </SelectItem>
@@ -615,12 +631,12 @@ export default function AdminWhatsAppPage() {
 
             <div className="space-y-2">
               <Label htmlFor="tpl-conteudo">
-                Conteúdo (use {"{{VARIAVEL}}"} para placeholders)
+                Conteudo (use {"{{VARIAVEL}}"} para placeholders)
               </Label>
               <Textarea
                 id="tpl-conteudo"
                 className="min-h-28"
-                placeholder="Olá {{NOME}}, seja bem-vindo à {{ACADEMIA}}!"
+                placeholder="Ola {{NOME}}, seja bem-vindo a {{ACADEMIA}}!"
                 {...form.register("conteudo")}
               />
               {form.formState.errors.conteudo && (
@@ -632,7 +648,7 @@ export default function AdminWhatsAppPage() {
 
             <div className="space-y-2">
               <Label htmlFor="tpl-variables">
-                Variáveis (separadas por vírgula)
+                Variaveis (separadas por virgula)
               </Label>
               <Input
                 id="tpl-variables"
