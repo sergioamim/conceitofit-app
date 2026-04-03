@@ -4,19 +4,23 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AlertTriangle, ArrowUpRight, Building2, CreditCard, TrendingDown, Wallet } from "lucide-react";
 import { EmptyState, ListErrorState, ListLoadingSkeleton } from "@/components/shared/list-states";
+import { PaginatedTable } from "@/components/shared/paginated-table";
+import { TableFilters, type ActiveFilters } from "@/components/shared/table-filters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAdminFinanceiroDashboard } from "@/backoffice/query";
 import { formatBRL, formatDate, formatPercent } from "@/lib/formatters";
 import type {
   DashboardFinanceiroAgingItem,
+  DashboardFinanceiroInadimplente,
   DashboardFinanceiroPeriodo,
   DashboardFinanceiroPlanoComparativo,
 } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+
+const INADIMPLENTE_PAGE_SIZE = 5;
 
 const PERIODO_OPTIONS: Array<{ value: DashboardFinanceiroPeriodo; label: string }> = [
   { value: "3M", label: "Últimos 3 meses" },
@@ -104,6 +108,28 @@ export default function AdminFinanceiroDashboardPage() {
   const comparativoOrdenado = useMemo(() => {
     return [...(dashboard?.comparativoPlanos ?? [])].sort((left, right) => right.mrr - left.mrr);
   }, [dashboard?.comparativoPlanos]);
+
+  // ── Inadimplentes: filtro, paginação ──────────────────────────────────
+  const [inadimplenteFilters, setInadimplenteFilters] = useState<ActiveFilters>({});
+  const [inadPage, setInadPage] = useState(0);
+
+  const filteredInadimplentes = useMemo(() => {
+    const items = dashboard?.inadimplentes ?? [];
+    const query = (inadimplenteFilters.q_inadimplente ?? "").toLowerCase().trim();
+    if (!query) return items;
+    return items.filter(
+      (item) =>
+        item.academiaNome.toLowerCase().includes(query) ||
+        (item.planoNome ?? "").toLowerCase().includes(query),
+    );
+  }, [dashboard?.inadimplentes, inadimplenteFilters.q_inadimplente]);
+
+  const inadimplentePageItems = useMemo(() => {
+    const start = inadPage * INADIMPLENTE_PAGE_SIZE;
+    return filteredInadimplentes.slice(start, start + INADIMPLENTE_PAGE_SIZE);
+  }, [filteredInadimplentes, inadPage]);
+
+  const inadHasNext = (inadPage + 1) * INADIMPLENTE_PAGE_SIZE < filteredInadimplentes.length;
 
   return (
     <div className="space-y-6">
@@ -261,39 +287,74 @@ export default function AdminFinanceiroDashboardPage() {
                   Priorize contato e eventual suspensão a partir das maiores exposições financeiras.
                 </p>
               </CardHeader>
-              <CardContent>
-                {(dashboard?.inadimplentes ?? []).length === 0 ? (
-                  <EmptyState message="Nenhuma academia inadimplente no período selecionado." />
-                ) : (
-                  <div className="overflow-x-auto rounded-xl border border-border/80">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-secondary/40">
-                          <TableHead>Academia</TableHead>
-                          <TableHead>Plano</TableHead>
-                          <TableHead>Em aberto</TableHead>
-                          <TableHead>Atraso</TableHead>
-                          <TableHead>Último vencimento</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(dashboard?.inadimplentes ?? []).map((item) => (
-                          <TableRow key={`${item.academiaId ?? item.academiaNome}-${item.cobrancaId ?? item.contratoId ?? "item"}`}>
-                            <TableCell className="font-medium text-foreground">{item.academiaNome}</TableCell>
-                            <TableCell>{item.planoNome ?? "Plano não informado"}</TableCell>
-                            <TableCell>{formatBRL(item.valorEmAberto)}</TableCell>
-                            <TableCell>{item.diasEmAtraso} dia(s)</TableCell>
-                            <TableCell>{item.ultimaCobrancaVencida ? formatDate(item.ultimaCobrancaVencida) : "—"}</TableCell>
-                            <TableCell className="text-right">
-                              <QuickActions />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
+              <CardContent className="space-y-3">
+                <TableFilters
+                  filters={[
+                    {
+                      type: "text",
+                      key: "q_inadimplente",
+                      label: "Buscar",
+                      placeholder: "Academia ou plano...",
+                      debounceMs: 250,
+                    },
+                  ]}
+                  onFiltersChange={setInadimplenteFilters}
+                />
+                <PaginatedTable<DashboardFinanceiroInadimplente>
+                  columns={[
+                    { label: "Academia" },
+                    { label: "Plano" },
+                    { label: "Em aberto" },
+                    { label: "Atraso" },
+                    { label: "Último vencimento" },
+                    { label: "Ações", className: "text-right" },
+                  ]}
+                  items={inadimplentePageItems}
+                  emptyText="Nenhuma academia inadimplente no período selecionado."
+                  getRowKey={(item) =>
+                    `${item.academiaId ?? item.academiaNome}-${item.cobrancaId ?? item.contratoId ?? "row"}`
+                  }
+                  page={inadPage}
+                  pageSize={INADIMPLENTE_PAGE_SIZE}
+                  total={filteredInadimplentes.length}
+                  hasNext={inadHasNext}
+                  onPrevious={() => setInadPage((p) => Math.max(0, p - 1))}
+                  onNext={() => setInadPage((p) => p + 1)}
+                  itemLabel="inadimplentes"
+                  showPagination={filteredInadimplentes.length > INADIMPLENTE_PAGE_SIZE}
+                  tableAriaLabel="Tabela de academias inadimplentes"
+                  renderCells={(item) => (
+                    <>
+                      <td className="px-4 py-3 font-medium text-foreground">{item.academiaNome}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {item.planoNome ?? "Plano não informado"}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-foreground">
+                        {formatBRL(item.valorEmAberto)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        <Badge
+                          variant="outline"
+                          className={
+                            item.diasEmAtraso > 60
+                              ? "border-gym-danger/30 bg-gym-danger/10 text-gym-danger"
+                              : item.diasEmAtraso > 30
+                                ? "border-gym-warning/30 bg-gym-warning/10 text-gym-warning"
+                                : "border-border bg-secondary text-muted-foreground"
+                          }
+                        >
+                          {item.diasEmAtraso} dia(s)
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {item.ultimaCobrancaVencida ? formatDate(item.ultimaCobrancaVencida) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <QuickActions />
+                      </td>
+                    </>
+                  )}
+                />
               </CardContent>
             </Card>
 
