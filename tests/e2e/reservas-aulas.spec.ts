@@ -14,7 +14,8 @@ test.describe("Reservas e operação de aulas", () => {
 
   test("cria waitlist, cancela reserva, promove fila e registra check-in", async ({ page }) => {
     await page.goto("/reservas");
-    await expect(page.getByRole("heading", { name: "Reservas, vagas e aulas" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("heading", { name: "Reservas, vagas e aulas" })).toBeVisible({ timeout: 10_000 });
 
     const sessaoLotada = page
       .getByRole("button")
@@ -51,7 +52,8 @@ test.describe("Reservas e operação de aulas", () => {
 
   test("reflete sessões sem check-in na operação", async ({ page }) => {
     await page.goto("/reservas");
-    await expect(page.getByRole("heading", { name: "Reservas, vagas e aulas" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("heading", { name: "Reservas, vagas e aulas" })).toBeVisible({ timeout: 10_000 });
 
     const sessaoSemCheckin = page
       .getByRole("button")
@@ -74,7 +76,8 @@ test.describe("Reservas e operação de aulas", () => {
 
   test("destaca ocorrência avulsa vinda de grade sob demanda", async ({ page }) => {
     await page.goto("/reservas");
-    await expect(page.getByRole("heading", { name: "Reservas, vagas e aulas" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("heading", { name: "Reservas, vagas e aulas" })).toBeVisible({ timeout: 10_000 });
 
     await expect(page.getByText("1 ocorrência(s) avulsa(s)")).toBeVisible();
 
