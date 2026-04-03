@@ -16,6 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  SuggestionInput,
+  type SuggestionOption,
+} from "@/components/shared/suggestion-input";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -36,7 +40,7 @@ import {
 export type FormFieldConfig = {
   name: string;
   label: string;
-  type: "text" | "number" | "textarea" | "select" | "checkbox";
+  type: "text" | "number" | "textarea" | "select" | "checkbox" | "suggestion";
   required?: boolean;
   placeholder?: string;
   min?: number;
@@ -49,6 +53,10 @@ export type FormFieldConfig = {
   checkboxLabel?: string;
   /** For checkbox: helper text below */
   helperText?: string;
+  /** For suggestion: static options list */
+  suggestionOptions?: SuggestionOption[];
+  /** For suggestion: async loader called on focus/type to populate options */
+  onFocusOpen?: () => Promise<SuggestionOption[]> | void;
 };
 
 /* ---------- Props ---------- */
@@ -82,7 +90,9 @@ export type CrudModalProps<T extends FieldValues> = {
 function buildSchemaFromFields(fields: FormFieldConfig[]): ZodTypeAny {
   const shape: Record<string, ZodTypeAny> = {};
   for (const field of fields) {
-    if (field.required && (field.type === "text" || field.type === "textarea")) {
+    if (field.type === "suggestion") {
+      shape[field.name] = requiredTrimmedString(`Informe ${field.label.toLowerCase().replace(/\s*\*$/, "")}.`);
+    } else if (field.required && (field.type === "text" || field.type === "textarea")) {
       shape[field.name] = requiredTrimmedString(`Informe ${field.label.toLowerCase().replace(/\s*\*$/, "")}.`);
     } else if (field.type === "checkbox") {
       shape[field.name] = z.boolean();
@@ -138,6 +148,40 @@ function renderField<T extends FieldValues>(
             </label>
           ) : null}
         </div>
+        {field.helperText ? (
+          <p id={helperTextId} className="text-[11px] text-muted-foreground">
+            {field.helperText}
+          </p>
+        ) : null}
+        {error ? <p id={errorId} className="text-xs text-gym-danger">{String(error.message)}</p> : null}
+      </div>
+    );
+  }
+
+  if (field.type === "suggestion") {
+    return (
+      <div key={field.name} className={field.className ?? "space-y-1.5"}>
+        <label
+          htmlFor={fieldId}
+          className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          {field.label}
+        </label>
+        <Controller
+          control={control}
+          name={fieldPath}
+          render={({ field: controllerField }) => (
+            <SuggestionInput
+              inputId={fieldId}
+              value={(controllerField.value as string) ?? ""}
+              onValueChange={(v) => controllerField.onChange(v)}
+              onSelect={(option) => controllerField.onChange(option.label)}
+              options={field.suggestionOptions ?? []}
+              onFocusOpen={field.onFocusOpen ? () => { field.onFocusOpen!(); } : undefined}
+              placeholder={field.placeholder}
+            />
+          )}
+        />
         {field.helperText ? (
           <p id={helperTextId} className="text-[11px] text-muted-foreground">
             {field.helperText}
@@ -284,15 +328,21 @@ export function CrudModal<T extends FieldValues>({
   const descriptionId = `${modalId}-description`;
   const resolvedDescription = isEditing ? (editDescription ?? description) : description;
 
+  // Build stable defaults for suggestion fields (always need a string default)
+  const suggestionDefaults = fields.reduce<Record<string, string>>((acc, f) => {
+    if (f.type === "suggestion") acc[f.name] = "";
+    return acc;
+  }, {});
+
   const form = useForm<T>({
     resolver: zodResolver(resolvedSchema),
-    defaultValues: (initial ?? {}) as DefaultValues<T>,
+    defaultValues: { ...suggestionDefaults, ...(initial ?? {}) } as DefaultValues<T>,
   });
 
   const { handleSubmit, reset } = form;
 
   useEffect(() => {
-    reset((initial ?? {}) as DefaultValues<T>);
+    reset({ ...suggestionDefaults, ...(initial ?? {}) } as DefaultValues<T>);
   }, [initial, open, reset]);
 
   function onSubmit(values: T) {
