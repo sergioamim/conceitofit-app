@@ -287,6 +287,7 @@ test.describe("App multiunidade orientado por contrato", () => {
     await expect(page.getByRole("combobox", { name: "Selecionar unidade ativa" })).toContainText(TENANT_B.nome);
     await expect(page.getByText(/Indisponíveis no momento: Unidade Bloqueada: Contrato suspenso na unidade./)).toBeVisible();
 
+    await page.waitForLoadState("networkidle");
     await page.goto("/clientes");
     await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
     await expect(page.getByText("Cliente Unidade Beta")).toBeVisible();
