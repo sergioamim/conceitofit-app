@@ -1,11 +1,12 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
 import type { Academia, GlobalAdminReviewStatus, Tenant } from "@/lib/types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import type { Filters } from "./usuarios-types";
@@ -31,6 +32,41 @@ export function UsuariosFilters({
   onClear,
   loading,
 }: UsuariosFiltersProps) {
+  const [academiaBusca, setAcademiaBusca] = useState("");
+
+  // Sincronizar texto de busca quando academiaId é limpo externamente (ex: botão "Limpar")
+  useEffect(() => {
+    if (!filters.academiaId) {
+      setAcademiaBusca("");
+    }
+  }, [filters.academiaId]);
+
+  const academiaOptions = useMemo<SuggestionOption[]>(
+    () =>
+      academias.map((a) => ({
+        id: a.id,
+        label: a.nome,
+        searchText: `${a.nome} ${a.documento ?? ""} ${a.razaoSocial ?? ""}`,
+      })),
+    [academias],
+  );
+
+  function handleSelectAcademia(option: SuggestionOption) {
+    setAcademiaBusca(option.label);
+    setFilters((current) => ({
+      ...current,
+      academiaId: option.id,
+      tenantId: "",
+    }));
+  }
+
+  function handleClearAcademia(value: string) {
+    setAcademiaBusca(value);
+    if (!value.trim()) {
+      setFilters((current) => ({ ...current, academiaId: "" }));
+    }
+  }
+
   return (
     <>
       <Card>
@@ -50,28 +86,14 @@ export function UsuariosFilters({
 
           <div className="space-y-2">
             <Label>Academia</Label>
-            <Select
-              value={filters.academiaId || "__all__"}
-              onValueChange={(value) =>
-                setFilters((current) => ({
-                  ...current,
-                  academiaId: value === "__all__" ? "" : value,
-                  tenantId: value === "__all__" ? current.tenantId : "",
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todas</SelectItem>
-                {academias.map((academia) => (
-                  <SelectItem key={academia.id} value={academia.id}>
-                    {academia.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SuggestionInput
+              value={academiaBusca}
+              onValueChange={handleClearAcademia}
+              onSelect={handleSelectAcademia}
+              options={academiaOptions}
+              placeholder="Buscar academia…"
+              minCharsToSearch={1}
+            />
           </div>
 
           <div className="space-y-2">
