@@ -7,10 +7,10 @@
   - `src/app/(portal)`
   - `src/app/(backoffice)`
   - `src/app/(public)`
-  - `src/app/storefront`
+  - `src/app/(public)/storefront`
   - `src/app/(aluno)`
-- Fato observado: a home raiz redireciona para `/dashboard`, indicando que o shell autenticado é a entrada principal do produto. Fonte:
-  - `src/app/page.tsx`
+- Fato observado: a home raiz agora é uma landing institucional server-side e só redireciona para `/dashboard` quando já existe sessão válida via cookie. Fonte:
+  - `src/app/(public)/page.tsx`
 
 ## Stack principal
 
@@ -129,4 +129,4 @@
 - Se precisar entender a superfície pública:
   - `src/app/(public)/adesao/page.tsx`
   - `src/lib/public/services.ts`
-  - `src/app/storefront/[academiaSlug]/page.tsx`
+  - `src/app/(public)/storefront/[academiaSlug]/page.tsx`

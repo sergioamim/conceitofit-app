@@ -33,8 +33,8 @@ Consolidar no frontend o modelo contextual por rede com separação explícita e
 
 ### Login e sessão
 
-- a rota canônica de autenticação é `/app/[networkSubdomain]/login`, com `/app/[networkSubdomain]/forgot-password` e `/app/[networkSubdomain]/first-access` para fluxos auxiliares;
-- as rotas legadas `/acesso/[redeSlug]/*` redirecionam para o formato canônico;
+- a rota canônica de autenticação é `/acesso/[redeSlug]/autenticacao`, com `/acesso/[redeSlug]/recuperar-senha` e `/acesso/[redeSlug]/primeiro-acesso` para fluxos auxiliares;
+- as rotas legadas `/app/[networkSubdomain]/*` redirecionam para o formato canônico em português;
 - `/login` continua existindo como fallback legado, mas em ambiente local também resolve o contexto pelo host `[rede].localhost`;
 - os fluxos sem sessão (`rede-contexto`, login, recuperar senha e primeiro acesso) enviam `X-Rede-Identifier` e não carregam `tenantId` antes da sessão existir;
 - clientes com uma única unidade elegível entram direto, sem seletor redundante;
@@ -59,7 +59,7 @@ Consolidar no frontend o modelo contextual por rede com separação explícita e
 
 ## Setup local de autenticação por subdomínio
 
-- rota canônica local: `http://localhost:3000/app/rede-norte/login`
+- rota canônica local: `http://localhost:3000/acesso/rede-norte/autenticacao`
 - fallback por host local: `http://rede-norte.localhost:3000/login`
 - com backend real em `3001`, o mesmo fluxo fica disponível em `http://rede-norte.localhost:3001/login`
 - para QA, validar:

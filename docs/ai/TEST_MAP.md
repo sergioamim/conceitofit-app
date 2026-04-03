@@ -81,6 +81,7 @@
 - `tests/e2e/onboarding-fluxo-completo.spec.ts`
 - `tests/e2e/auth-rede.spec.ts`
 - `tests/e2e/adesao-publica.spec.ts`
+- `tests/e2e/route-taxonomy-smoke.spec.ts`
 
 ## Smoke pack e coverage governance
 
@@ -124,6 +125,7 @@
 - backoffice e segurança
 - jornada pública/storefront
 - health/status
+- taxonomia de rotas públicas, portal, backoffice e storefront
 
 ## Lacunas conhecidas
 

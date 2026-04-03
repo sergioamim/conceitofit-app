@@ -6,38 +6,39 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 
 ## Fontes de verdade usadas
 
-- `src/app/page.tsx`
 - `src/proxy.ts`
+- `src/app/(public)/page.tsx`
 - `src/app/login/page.tsx`
 - `src/app/admin-login/page.tsx`
-- `src/app/acesso/[redeSlug]/page.tsx`
+- `src/app/(public)/acesso/[redeSlug]/page.tsx`
 - `src/app/app/[networkSubdomain]/page.tsx`
 - `src/app/(portal)/layout.tsx`
 - `src/app/(backoffice)/layout.tsx`
 - `src/app/(backoffice)/admin/layout.tsx`
 - `src/app/(aluno)/layout.tsx`
 - `src/app/(public)/adesao/page.tsx`
-- `src/app/storefront/page.tsx`
-- `src/app/storefront/[academiaSlug]/layout.tsx`
-- `src/app/storefront/[academiaSlug]/page.tsx`
-- `src/app/storefront/adesao/cadastro/page.tsx`
-- `src/app/storefront/adesao/checkout/page.tsx`
-- `src/app/storefront/adesao/trial/page.tsx`
-- `src/app/storefront-not-found/page.tsx`
+- `src/app/(public)/storefront/page.tsx`
+- `src/app/(public)/storefront/[academiaSlug]/layout.tsx`
+- `src/app/(public)/storefront/[academiaSlug]/page.tsx`
+- `src/app/(public)/storefront/adesao/cadastro/page.tsx`
+- `src/app/(public)/storefront/adesao/checkout/page.tsx`
+- `src/app/(public)/storefront/adesao/trial/page.tsx`
+- `src/app/(public)/storefront-not-found/page.tsx`
 
 ## Fatos observados no codigo
 
 ### 1. Entrada raiz
 
-- A rota `/` hoje nao e landing institucional. `src/app/page.tsx` faz `redirect("/dashboard")`.
-- Isso significa que a homepage publica SaaS ainda nao esta materializada no App Router atual.
+- A rota `/` agora e uma landing institucional em `src/app/(public)/page.tsx`.
+- O redirect para `/dashboard` acontece apenas quando o cookie `academia-access-token` ja existe.
+- Isso separa a entrada publica da entrada operacional sem mudar a URL final.
 
 ### 2. Auth de rede
 
 - `src/app/login/page.tsx` decide entre dois fluxos:
   - `NetworkAccessFlow` quando consegue resolver `redeIdentifier` pela query ou pelo host/subdominio.
   - `LegacyLoginFlow` quando nao existe contexto de rede.
-- `src/app/acesso/[redeSlug]/page.tsx` nao implementa login proprio. Ela redireciona para `buildNetworkAccessHref("login", ...)`.
+- `src/app/(public)/acesso/[redeSlug]/page.tsx` nao implementa login proprio. Ela redireciona para `buildNetworkAccessHref("login", ...)`.
 - `src/app/app/[networkSubdomain]/page.tsx` tambem nao implementa login proprio. Ela redireciona para o mesmo `buildNetworkAccessHref("login", ...)`.
 - O grupo `/acesso/[redeSlug]` ja expoe superfice localizada em portugues:
   - `/acesso/[redeSlug]/autenticacao`
@@ -112,24 +113,24 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 
 - `src/proxy.ts` reescreve subdominios validos para `/storefront/${academiaSlug}`.
 - Se o subdominio nao existir, o proxy reescreve para `/storefront-not-found`.
-- O grupo `src/app/storefront` implementa a superfice de marketing/brand da academia:
+- O grupo `src/app/(public)/storefront` implementa a superfice de marketing/brand da academia:
   - `/storefront`
   - `/storefront/[academiaSlug]`
   - `/storefront/[academiaSlug]/unidades/[tenantId]`
   - `/storefront/plano/[slug]`
   - `/storefront/unidade/[tenantId]`
-- `src/app/storefront/page.tsx` resolve tenant via headers para suportar acesso por subdominio.
-- `src/app/storefront/[academiaSlug]/page.tsx` suporta acesso explicito por slug no path.
-- `src/app/storefront/[academiaSlug]/layout.tsx` aplica branding/tema da academia.
+- `src/app/(public)/storefront/page.tsx` resolve tenant via headers para suportar acesso por subdominio.
+- `src/app/(public)/storefront/[academiaSlug]/page.tsx` suporta acesso explicito por slug no path.
+- `src/app/(public)/storefront/[academiaSlug]/layout.tsx` aplica branding/tema da academia.
 
 ### 8. Storefront e adesao compartilham a mesma jornada
 
-- Existem rotas sob `src/app/storefront/adesao/*`, mas elas sao apenas proxies client-side.
+- Existem rotas sob `src/app/(public)/storefront/adesao/*`, mas elas sao bridges server-side de compatibilidade.
 - Os arquivos:
-  - `src/app/storefront/adesao/cadastro/page.tsx`
-  - `src/app/storefront/adesao/checkout/page.tsx`
-  - `src/app/storefront/adesao/trial/page.tsx`
-  redirecionam o navegador para as rotas canonicas `/adesao/*`.
+  - `src/app/(public)/storefront/adesao/cadastro/page.tsx`
+  - `src/app/(public)/storefront/adesao/checkout/page.tsx`
+  - `src/app/(public)/storefront/adesao/trial/page.tsx`
+  redirecionam server-side para as rotas canonicas `/adesao/*`.
 - Portanto, a regra observada hoje e:
   - `storefront/*` gera descoberta e CTA publico;
   - `/adesao/*` e a jornada transacional canonica.
@@ -163,7 +164,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 
 ### Decisoes congeladas
 
-- `/` deve deixar de redirecionar para `/dashboard` quando a landing institucional for implementada.
+- `/` ja e landing institucional; o redirect para `/dashboard` virou apenas atalho para sessao existente.
 - `/acesso/[redeSlug]` e a entrada canonica de auth por rede.
 - `/app/[networkSubdomain]` permanece como camada de compatibilidade legada.
 - `storefront` e `adesao` sao superfices publicas irmas:
@@ -175,7 +176,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 
 | Superficie atual | Papel observado | URL canonica alvo | Compatibilidade |
 | --- | --- | --- | --- |
-| `/` | entrada raiz que hoje manda para portal | `/` landing SaaS | mudar comportamento em task futura |
+| `/` | landing institucional com redirect condicional para sessao existente | `/` landing SaaS | implementado |
 | `/login` | resolvedor de login sem ou com contexto de rede | manter como resolvedor tecnico | manter |
 | `/admin-login` | login do backoffice global | `/admin-login` | manter |
 | `/acesso/[redeSlug]` | entrada canonica por rede | `/acesso/[redeSlug]` | manter e fortalecer |
@@ -186,7 +187,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 | `/app/[networkSubdomain]/login` | login legado em ingles | `/acesso/[redeSlug]/autenticacao` | manter com compatibilidade |
 | `/app/[networkSubdomain]/first-access` | primeiro acesso legado | `/acesso/[redeSlug]/primeiro-acesso` | manter com compatibilidade |
 | `/app/[networkSubdomain]/forgot-password` | reset legado | `/acesso/[redeSlug]/recuperar-senha` | manter com compatibilidade |
-| `src/app/(portal)/*` | portal operacional autenticado | `src/app/(portal)/*` | renomear grupo, sem trocar URLs publicas agora |
+| `src/app/(portal)/*` | portal operacional autenticado | `src/app/(portal)/*` | implementado |
 | `/dashboard` e afins | portal operacional | `/dashboard` e afins | manter URL; trocar so agrupamento interno |
 | `/admin/*` | backoffice global | `/admin/*` | manter |
 | `src/app/(aluno)/*` | portal do aluno | mesmas URLs atuais | manter |
@@ -199,7 +200,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 
 ### Publico vs autenticado
 
-- `src/app/(public)` e `src/app/storefront` nao dependem de sessao autenticada para renderizar a jornada principal.
+- `src/app/(public)` e `src/app/(public)/storefront` nao dependem de sessao autenticada para renderizar a jornada principal.
 - `src/app/(portal)`, `src/app/(backoffice)/admin` e `src/app/(aluno)` aplicam controle de sessao no shell.
 
 ### Contexto de rede vs contexto global
@@ -216,9 +217,8 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 
 ## Impacto esperado nas proximas tasks
 
-- Task de landing institucional: trocar o redirect de `/`.
-- Task de auth canonica: migrar chamadas e links para priorizar `/acesso/[redeSlug]`.
-- Task de reorganizacao interna: renomear `(portal)` para `(portal)` sem quebra de URL.
+- Task de auth canonica: manter `/acesso/[redeSlug]` como rota principal e `/app/[networkSubdomain]` como compatibilidade.
+- Task de rollout: validar as superficies `/`, `/b2b`, `/adesao`, `/storefront`, `/login`, `/dashboard` e `/admin`.
 - Task de limpeza legado: decidir se `/app/[networkSubdomain]` segue como redirect permanente ou se fica escondido apenas para compatibilidade.
 - Task de storefront: manter CTA apontando para `/adesao/*` como superficie transacional canonica.
 

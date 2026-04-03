@@ -34,7 +34,7 @@ const mockUnidades = [
   },
 ];
 
-vi.mock("@/lib/backoffice/admin", () => ({
+vi.mock("@/backoffice/lib/admin", () => ({
   listGlobalUnidades: vi.fn(() => Promise.resolve(mockUnidades)),
 }));
 
@@ -113,7 +113,7 @@ describe("useUnidadeSuggestion", () => {
   });
 
   it("limita resultados a 50 opções", async () => {
-    const { listGlobalUnidades } = await import("@/lib/backoffice/admin");
+    const { listGlobalUnidades } = await import("@/backoffice/lib/admin");
     const manyUnidades = Array.from({ length: 80 }, (_, i) => ({
       id: `uni-${i}`,
       nome: `Unidade ${i}`,

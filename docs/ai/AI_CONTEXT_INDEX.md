@@ -80,8 +80,10 @@
 - Se for mexer em storefront, leia:
   - `src/proxy.ts`
   - `src/lib/storefront/subdomain.ts`
-  - `src/app/storefront/[academiaSlug]/page.tsx`
-  - `src/app/storefront/[academiaSlug]/layout.tsx`
+  - `src/app/(public)/storefront/page.tsx`
+  - `src/app/(public)/storefront/[academiaSlug]/page.tsx`
+  - `src/app/(public)/storefront/[academiaSlug]/layout.tsx`
+  - `src/app/(public)/storefront-not-found/page.tsx`
   - `src/lib/public/storefront-api.ts`
   - `docs/API_AUDIT_BACKEND_VS_FRONTEND.md`
 
