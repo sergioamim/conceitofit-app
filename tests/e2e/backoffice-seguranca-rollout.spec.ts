@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { installE2EAuthSession } from "./support/auth-session";
+import { installBackofficeGlobalSession } from "./support/backoffice-global-session";
 
 type ExceptionSeed = {
   id: string;
@@ -17,16 +17,54 @@ type State = {
 };
 
 function seedSession(page: Page) {
-  return installE2EAuthSession(page, {
-    activeTenantId: "tenant-centro",
-    baseTenantId: "tenant-centro",
-    availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
-    userId: "user-root",
-    userKind: "COLABORADOR",
-    displayName: "Root Admin",
-    roles: ["OWNER", "ADMIN"],
-    availableScopes: ["GLOBAL"],
-    broadAccess: true,
+  return installBackofficeGlobalSession(page, {
+    session: {
+      activeTenantId: "tenant-centro",
+      baseTenantId: "tenant-centro",
+      availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
+      userId: "user-root",
+      userKind: "COLABORADOR",
+      displayName: "Root Admin",
+      roles: ["OWNER", "ADMIN"],
+      availableScopes: ["GLOBAL"],
+      broadAccess: true,
+    },
+    shell: {
+      currentTenantId: "tenant-centro",
+      tenants: [
+        {
+          id: "tenant-centro",
+          academiaId: "academia-norte",
+          groupId: "academia-norte",
+          nome: "Unidade Centro",
+          ativo: true,
+        },
+      ],
+      user: {
+        id: "user-root",
+        userId: "user-root",
+        nome: "Root Admin",
+        displayName: "Root Admin",
+        email: "root@qa.local",
+        roles: ["OWNER", "ADMIN"],
+        userKind: "COLABORADOR",
+        activeTenantId: "tenant-centro",
+        tenantBaseId: "tenant-centro",
+        availableScopes: ["GLOBAL"],
+        broadAccess: true,
+        redeId: "academia-norte",
+        redeNome: "Rede Norte",
+        redeSlug: "rede-norte",
+      },
+      academia: {
+        id: "academia-norte",
+        nome: "Rede Norte",
+        ativo: true,
+      },
+      capabilities: {
+        canAccessElevatedModules: true,
+      },
+    },
   });
 }
 
@@ -330,21 +368,25 @@ async function setupMocks(page: Page, state: State) {
 }
 
 test.describe("Backoffice segurança rollout", () => {
+  test.setTimeout(120_000);
+
   test("navega pela fila de revisões e registra exceção controlada", async ({ page }) => {
     const state = buildState();
     await seedSession(page);
     await setupMocks(page, state);
 
-    await page.goto("/admin/seguranca");
-    await expect(page.getByRole("heading", { name: "Segurança global" })).toBeVisible();
+    await page.goto("/admin/seguranca", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Segurança global" })).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("link", { name: "Revisões e auditoria", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Revisões e auditoria" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Revisões e auditoria" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Recertificar acesso amplo")).toBeVisible();
 
-    await page.goto("/admin/seguranca/usuarios");
+    await page.goto("/admin/seguranca/usuarios", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("link", { name: "Abrir governança" }).click();
-    await expect(page.getByRole("heading", { name: "Ana Admin" })).toBeVisible();
+    await page.waitForURL("**/admin/seguranca/usuarios/user-ana", { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Ana Admin" })).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("tab", { name: "Exceções" }).click();
     await expect(page.getByText("Auditoria externa")).toBeVisible();

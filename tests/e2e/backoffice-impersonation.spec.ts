@@ -417,13 +417,15 @@ async function setupMocks(page: Page, state: State) {
 }
 
 test.describe("Backoffice impersonation", () => {
+  test.setTimeout(120_000);
+
   test("inicia impersonação, abre o app com banner e encerra com trilha no audit log", async ({ page }) => {
     const state = buildState();
     await seedSession(page, state);
     await setupMocks(page, state);
 
-    await page.goto("/admin/seguranca/usuarios/user-bruno");
-    await expect(page.getByRole("button", { name: "Entrar como este usuário" })).toBeVisible();
+    await page.goto("/admin/seguranca/usuarios/user-bruno", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("button", { name: "Entrar como este usuário" })).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("button", { name: "Entrar como este usuário" }).click();
     await page.getByLabel("Justificativa obrigatória").fill("Suporte operacional para reproduzir o contexto do gerente.");

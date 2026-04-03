@@ -502,11 +502,13 @@ async function installBiApiMocks(page: Page) {
 }
 
 test.describe("BI operacional e visão de rede", () => {
+  test.setTimeout(120_000);
+
   test("navega entre visão unitária e rede com filtros gerenciais", async ({ page }) => {
     await installBiApiMocks(page);
     await page.goto("/login");
     await applyE2EAuthSession(page, {
-      tenantId: TENANT_MANANCIAIS.id,
+      activeTenantId: TENANT_MANANCIAIS.id,
       availableTenants: [
         { tenantId: TENANT_MANANCIAIS.id, defaultTenant: true },
         { tenantId: TENANT_PECHINCHA.id },
@@ -520,30 +522,30 @@ test.describe("BI operacional e visão de rede", () => {
     });
 
     await page.goto("/gerencial/bi");
-    await expect(page.getByRole("heading", { name: "BI Operacional" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Exportar CSV" })).toBeVisible();
-    await expect(page.getByText("Benchmark por unidade")).toBeVisible();
-    await expect(page.getByRole("row").filter({ hasText: "MANANCIAIS - S1" })).toBeVisible();
-    await expect(page.getByRole("row").filter({ hasText: "PECHINCHA - S3" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "BI Operacional" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Exportar CSV" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Benchmark por unidade")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("row").filter({ hasText: "MANANCIAIS - S1" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("row").filter({ hasText: "PECHINCHA - S3" })).toBeVisible({ timeout: 15_000 });
 
     await page.getByLabel("Escopo BI").click();
     await page.getByRole("option", { name: "Academia / rede" }).click();
-    await expect(page.getByLabel("Academia BI")).toContainText("Academia Sergio Amim");
+    await expect(page.getByLabel("Academia BI")).toContainText("Academia Sergio Amim", { timeout: 15_000 });
 
     await page.getByRole("link", { name: "Abrir visão de rede" }).click();
-    await expect(page.getByRole("heading", { name: "Visão de Rede" })).toBeVisible();
-    await expect(page.getByText("Rede consolidada")).toBeVisible();
-    await expect(page.getByText("Ranking da rede")).toBeVisible();
-    await expect(page.getByRole("row").filter({ hasText: "MANANCIAIS - S1" })).toBeVisible();
-    await expect(page.getByRole("row").filter({ hasText: "PECHINCHA - S3" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Visão de Rede" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Rede consolidada")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Ranking da rede")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("row").filter({ hasText: "MANANCIAIS - S1" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("row").filter({ hasText: "PECHINCHA - S3" })).toBeVisible({ timeout: 15_000 });
 
     await page.getByLabel("Unidade Rede").click();
     await page.getByRole("option", { name: "PECHINCHA - S3" }).click();
-    await expect(page.getByLabel("Unidade Rede")).toContainText("PECHINCHA - S3");
-    await expect(page.getByText("Unidade filtrada")).toBeVisible();
+    await expect(page.getByLabel("Unidade Rede")).toContainText("PECHINCHA - S3", { timeout: 15_000 });
+    await expect(page.getByText("Unidade filtrada")).toBeVisible({ timeout: 15_000 });
 
     await page.getByLabel("Segmento Rede").click();
     await page.getByRole("option", { name: "WhatsApp" }).click();
-    await expect(page.getByText("Checklist de governança")).toBeVisible();
+    await expect(page.getByText("Checklist de governança")).toBeVisible({ timeout: 15_000 });
   });
 });

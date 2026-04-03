@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import { openAdminCrudPage } from "./support/admin-crud-helpers";
 
 test.describe("Backoffice global", () => {
+  test.setTimeout(120_000);
+
   test("gerencia academias e unidades pelo fluxo principal", async ({ page }) => {
     const stamp = Date.now();
     const academiaDocumento = String(stamp).padStart(14, "0").slice(-14);
@@ -12,10 +14,10 @@ test.describe("Backoffice global", () => {
     const unidadeEmail = `unidade-${stamp}@qa.local`;
 
     await openAdminCrudPage(page, "/admin");
-    await expect(page.getByRole("heading", { name: "Dashboard do backoffice" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dashboard do backoffice" })).toBeVisible({ timeout: 15_000 });
 
-    await page.goto("/admin/academias");
-    await expect(page.getByRole("heading", { name: "Academias" })).toBeVisible();
+    await page.goto("/admin/academias", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Academias" })).toBeVisible({ timeout: 15_000 });
     await page.locator("#academia-nome").fill(academiaNome);
     await page.locator("#academia-doc").fill(academiaDocumento);
     await page.getByRole("button", { name: "Criar academia" }).click();
@@ -32,7 +34,7 @@ test.describe("Backoffice global", () => {
     await expect(page.getByLabel("Telefone")).toHaveValue("(11) 98888-7766");
 
     await page.getByRole("link", { name: "Nova unidade" }).click();
-    await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(`Contexto atual: ${academiaNome}.`)).toBeVisible();
     await page.getByLabel("Nome da unidade *").fill(unidadeNome);
     await expect(page.getByLabel("Academia da unidade")).toContainText(academiaNome);

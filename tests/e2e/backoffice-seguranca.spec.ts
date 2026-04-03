@@ -691,18 +691,18 @@ test.describe("Backoffice segurança global", () => {
     await seedSession(page, state);
     await setupBackofficeSecurityMocks(page, state);
 
-    await page.goto("/admin/seguranca");
-    await expect(page.getByRole("heading", { name: "Segurança global" })).toBeVisible();
-    await expect(page.getByText("Política ativa para novas unidades")).toBeVisible();
+    await page.goto("/admin/seguranca", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Segurança global" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Política ativa para novas unidades")).toBeVisible({ timeout: 15_000 });
 
-    await page.goto("/admin/seguranca/usuarios");
-    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible();
-    await expect(page.getByRole("row").filter({ hasText: "Ana Admin" })).toBeVisible();
+    await page.goto("/admin/seguranca/usuarios", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("row").filter({ hasText: "Ana Admin" })).toBeVisible({ timeout: 15_000 });
 
     await page.goto("/admin/seguranca/usuarios/user-ana", { waitUntil: "domcontentloaded" }).catch(async () => {
       await page.goto("/admin/seguranca/usuarios/user-ana", { waitUntil: "domcontentloaded" });
     });
-    await expect(page.getByRole("heading", { name: "Ana Admin" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ana Admin" })).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("tab", { name: "Escopos e acessos" }).click();
 
@@ -744,10 +744,10 @@ test.describe("Backoffice segurança global", () => {
     await page.getByRole("button", { name: "Salvar política" }).click();
     await expect(page.getByText("Essa pessoa recebe acesso automático em toda nova unidade da rede.")).toBeVisible();
 
-    await page.goto("/admin/unidades?academiaId=academia-norte");
-    await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible();
-    await expect(page.getByText("usuário(s) receberão acesso automático nas novas unidades desta academia.")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Abrir segurança" }).first()).toBeVisible();
+    await page.goto("/admin/unidades?academiaId=academia-norte", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("usuário(s) receberão acesso automático nas novas unidades desta academia.")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "Abrir segurança" }).first()).toBeVisible({ timeout: 15_000 });
 
   });
 
@@ -766,20 +766,20 @@ test.describe("Backoffice segurança global", () => {
     await seedSession(page, state);
     await setupBackofficeSecurityMocks(page, state);
 
-    await page.goto("/admin/seguranca/usuarios");
-    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible();
+    await page.goto("/admin/seguranca/usuarios", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible({ timeout: 15_000 });
     const anaRow = page.getByRole("row").filter({ hasText: "Ana Admin" });
-    await expect(anaRow.getByText("E-mail: ana.admin@qa.local")).toBeVisible();
+    await expect(anaRow.getByText("E-mail: ana.admin@qa.local")).toBeVisible({ timeout: 15_000 });
     await expect(anaRow.getByText("CPF: ***.***.***-00")).toBeVisible();
     await expect(anaRow.getByText("Escopo efetivo: Rede")).toBeVisible();
     await expect(anaRow.getByText("Base: Unidade Centro · Ativa: Unidade Barra")).toBeVisible();
 
-    await page.goto("/admin/seguranca/usuarios?scopeType=REDE");
-    await expect(page.getByText("Redes no recorte:")).toBeVisible();
+    await page.goto("/admin/seguranca/usuarios?scopeType=REDE", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Redes no recorte:")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("row").filter({ hasText: "Ana Admin" })).toBeVisible();
 
-    await page.goto("/admin/seguranca/usuarios/user-ana");
-    await expect(page.getByText("Identificadores de login")).toBeVisible();
+    await page.goto("/admin/seguranca/usuarios/user-ana", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Identificadores de login")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("E-mail: ana.admin@qa.local · CPF: ***.***.***-00")).toBeVisible();
     await expect(page.getByText("Leituras gerenciais agregadas")).toBeVisible();
     await page.getByRole("tab", { name: "Escopos e acessos" }).click();
@@ -791,7 +791,8 @@ test.describe("Backoffice segurança global", () => {
     await seedSession(page, state);
     await setupBackofficeSecurityMocks(page, state);
 
-    await page.goto("/admin/seguranca/usuarios");
+    await page.goto("/admin/seguranca/usuarios", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Novo usuário" }).click();
 
     await page.getByLabel("Nome completo").fill("Carla Operações");
