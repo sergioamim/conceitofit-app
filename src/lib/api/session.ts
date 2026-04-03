@@ -67,12 +67,11 @@ const SESSION_ACTIVE_KEY = "academia-auth-session-active";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
 const IMPERSONATION_SESSION_KEY = "academia-impersonation-session";
 const ACCESS_TOKEN_COOKIE_KEY = "academia-access-token";
+const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
 export const AUTH_SESSION_CLEARED_EVENT = "academia-session-cleared";
 export const IMPERSONATION_SESSION_UPDATED_EVENT = "academia-impersonation-updated";
-const ACCESS_TOKEN_COOKIE_KEY = "academia-access-token";
-const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
