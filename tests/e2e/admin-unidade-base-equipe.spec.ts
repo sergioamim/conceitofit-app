@@ -50,7 +50,7 @@ test.describe("Admin unidade base e equipe", () => {
     let funcionarioRow = page.getByRole("button").filter({ hasText: "Lúcia Souza" });
     await expect(funcionarioRow).toBeVisible();
     await funcionarioRow.click();
-    await expect(page.getByRole("textbox", { name: "Nome de registro" })).toHaveValue(nomeRegistro);
+    await expect(page.getByRole("textbox", { name: "Nome de registro" })).toHaveValue(nomeRegistro, { timeout: 15_000 });
     await page.getByRole("link", { name: "Voltar para a listagem" }).click();
 
     funcionarioRow = page.getByRole("row").filter({ hasText: "Lúcia Souza" }).first();

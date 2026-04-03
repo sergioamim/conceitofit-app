@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,6 +32,7 @@ export function ForcedPasswordChangeFlow({
 }) {
   const router = useRouter();
   const resolvedNextPath = useMemo(() => resolvePostLoginPath(nextPath), [nextPath]);
+  const passwordChangedRef = useRef(false);
   const [guardStatus, setGuardStatus] = useState<GuardStatus>("checking");
   const [guardError, setGuardError] = useState<string | null>(null);
   const [networkName, setNetworkName] = useState<string>("sua rede");
@@ -52,7 +53,7 @@ export function ForcedPasswordChangeFlow({
     let settled = false;
 
     const syncGuard = () => {
-      if (!mounted) return;
+      if (!mounted || passwordChangedRef.current) return;
 
       const nextNetworkSubdomain = getNetworkSubdomainFromSession() ?? null;
       setNetworkName(getNetworkNameFromSession() ?? "sua rede");
@@ -115,6 +116,7 @@ export function ForcedPasswordChangeFlow({
         newPassword: values.newPassword,
         confirmNewPassword: values.confirmNewPassword,
       });
+      passwordChangedRef.current = true;
       router.replace(resolvedNextPath);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Não foi possível atualizar a senha.");

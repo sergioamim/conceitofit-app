@@ -46,7 +46,7 @@ test.describe("onboarding completo da academia", () => {
     await installAdminCrudApiMocks(page);
     await gotoWithRetry(page, "/admin-login");
     await applyE2EAuthSession(page, {
-      tenantId: "tenant-centro",
+      activeTenantId: "tenant-centro",
       availableTenants: [
         { tenantId: "tenant-centro", defaultTenant: true },
         { tenantId: "tenant-barra", defaultTenant: false },
