@@ -250,7 +250,7 @@ async function convertProspectToClientViaApi(
 ) {
   console.log("[smoke-real] convertendo prospect");
   const conversionResponse = await request.post(
-    backendUrl(`/api/v1/academia/prospects/converter?tenantId=${encodeURIComponent(session.tenantId)}`),
+    backendUrl(`/api/v1/crm/prospects/converter?tenantId=${encodeURIComponent(session.tenantId)}`),
     {
       headers: {
         Authorization: `${session.tokenType} ${session.token}`,
@@ -267,6 +267,10 @@ async function convertProspectToClientViaApi(
     },
   );
 
+  if (!conversionResponse.ok()) {
+    const errorBody = await conversionResponse.text().catch(() => "");
+    console.error(`[smoke-real] conversao falhou: ${conversionResponse.status()} ${conversionResponse.statusText()} — ${errorBody}`);
+  }
   expect(conversionResponse.ok()).toBe(true);
   console.log("[smoke-real] conversao aceita pelo backend; buscando artefatos criados");
 }
