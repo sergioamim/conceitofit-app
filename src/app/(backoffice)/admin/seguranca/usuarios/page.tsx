@@ -80,6 +80,10 @@ export default function AdminSegurancaUsuariosPage() {
         hasNext={ws.hasNext}
         onPrevious={() => ws.setPage((current) => Math.max(0, current - 1))}
         onNext={() => ws.setPage((current) => current + 1)}
+        isLoading={ws.loading}
+        selectedIds={ws.selectedIds}
+        onSelectionChange={ws.setSelectedIds}
+        bulkActions={ws.bulkActions}
       />
     </GlobalSecurityShell>
   );
