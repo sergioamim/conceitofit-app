@@ -13675,13 +13675,13 @@
         "description": "Substituir grid de cards por SuggestionInput proeminente + seção de acessos recentes para escalar com centenas de academias.",
         "details": "A página /admin/entrar-como-academia exibe grid de cards com todas as academias — não escala. Redesenhar para: (1) SuggestionInput proeminente centralizado no topo para buscar academia usando useAcademiaSuggestion, (2) Seção \"Acessos recentes\" mostrando as 5 últimas academias acessadas — persistir IDs em localStorage, ler após mount via useEffect (SSR-safe), exibir como cards compactos com nome e botão \"Entrar\", (3) Ao selecionar academia no SuggestionInput, exibir unidades com SuggestionInput secundário (useUnidadeSuggestion) ou lista curta se poucas unidades, (4) Botão \"Entrar\" para executar impersonation. Manter audit trail existente.",
         "testStrategy": "Teste E2E: navegar para /admin/entrar-como-academia, verificar SuggestionInput presente, buscar academia, selecionar, verificar unidades carregadas, executar \"Entrar\" e verificar redirect correto.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "433"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-03T19:08:48.058Z"
+        "updatedAt": "2026-04-03T19:36:15.504Z"
       },
       {
         "id": "436",
@@ -13855,9 +13855,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-03T19:35:24.786Z",
+      "lastModified": "2026-04-03T19:36:15.504Z",
       "taskCount": 392,
-      "completedCount": 381,
+      "completedCount": 382,
       "tags": [
         "master"
       ]
