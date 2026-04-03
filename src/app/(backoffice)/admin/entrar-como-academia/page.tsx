@@ -25,17 +25,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import type { SuggestionOption } from "@/components/shared/suggestion-input";
-import { useAcademiaSuggestion } from "@/backoffice/lib/use-academia-suggestion";
-import { useUnidadeSuggestion } from "../../lib/use-unidade-suggestion";
-import { setTenantContextApi } from "@/lib/api/contexto-unidades";
-import { adminEntrarComoUnidadeApi } from "@/lib/api/auth";
-import {
-  clearOperationalTenantScope,
-  rememberOperationalTenantScope,
-  setPreferredTenantId,
-} from "@/lib/api/session";
-import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/backoffice/api/backoffice";
-import type { Academia, Tenant } from "@/lib/types";
+import { useQuery } from "@tanstack/react-query";
+import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
+import { queryKeys } from "@/lib/query/keys";
+import { setPreferredTenantId } from "@/lib/api/session";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import type { Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 /* ------------------------------------------------------------------ */
@@ -43,13 +38,17 @@ import { normalizeErrorMessage } from "@/lib/utils/api-error";
 /* ------------------------------------------------------------------ */
 
 const entrarComoSchema = z.object({
-  justificativa: z.string().trim().max(400, "Máximo de 400 caracteres.").optional(),
+  justificativa: z
+    .string()
+    .trim()
+    .max(400, "Máximo de 400 caracteres.")
+    .optional(),
 });
 
 type EntrarComoForm = z.infer<typeof entrarComoSchema>;
 
 /* ------------------------------------------------------------------ */
-/*  Tipos locais                                                       */
+/*  Tipos e constantes para recentes                                   */
 /* ------------------------------------------------------------------ */
 
 interface RecentEntry {
@@ -62,6 +61,7 @@ interface RecentEntry {
 
 const STORAGE_KEY = "admin:entrar-como:recentes";
 const MAX_RECENTES = 5;
+const SUGGESTION_STALE = 5 * 60 * 1000;
 
 function readRecentes(): RecentEntry[] {
   try {
@@ -77,7 +77,10 @@ function readRecentes(): RecentEntry[] {
 function saveRecente(entry: Omit<RecentEntry, "timestamp">) {
   try {
     const current = readRecentes().filter(
-      (r) => !(r.academiaId === entry.academiaId && r.tenantId === entry.tenantId),
+      (r) =>
+        !(
+          r.academiaId === entry.academiaId && r.tenantId === entry.tenantId
+        ),
     );
     const next: RecentEntry[] = [
       { ...entry, timestamp: Date.now() },
@@ -90,11 +93,79 @@ function saveRecente(entry: Omit<RecentEntry, "timestamp">) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Hooks de suggestion (inline)                                       */
+/* ------------------------------------------------------------------ */
+
+function useAcademiaSuggestion() {
+  const query = useQuery({
+    queryKey: queryKeys.admin.academias.list(),
+    queryFn: () => listGlobalAcademias(),
+    staleTime: SUGGESTION_STALE,
+  });
+
+  const options: SuggestionOption[] = useMemo(() => {
+    const academias = query.data ?? [];
+    return academias.slice(0, 50).map((academia) => ({
+      id: academia.id,
+      label: academia.nome,
+      searchText: [academia.documento, academia.endereco?.cidade]
+        .filter(Boolean)
+        .join(" "),
+    }));
+  }, [query.data]);
+
+  const onFocusOpen = useCallback(() => {
+    if (!query.data && !query.isFetching) {
+      void query.refetch();
+    }
+  }, [query]);
+
+  return { options, onFocusOpen, isLoading: query.isLoading };
+}
+
+function useUnidadeSuggestion(academiaId?: string) {
+  const query = useQuery({
+    queryKey: queryKeys.admin.unidades.list(),
+    queryFn: () => listGlobalUnidades(),
+    staleTime: SUGGESTION_STALE,
+  });
+
+  const options: SuggestionOption[] = useMemo(() => {
+    const unidades = query.data ?? [];
+    const filtered = academiaId
+      ? unidades.filter(
+          (u) => u.academiaId === academiaId || u.groupId === academiaId,
+        )
+      : unidades;
+    return filtered.slice(0, 50).map((unidade) => ({
+      id: unidade.id,
+      label: unidade.nome,
+      searchText: [unidade.documento, unidade.subdomain, unidade.endereco?.cidade]
+        .filter(Boolean)
+        .join(" "),
+    }));
+  }, [query.data, academiaId]);
+
+  const allTenants: Tenant[] = useMemo(() => {
+    return (query.data ?? []).filter((t) => t.ativo !== false);
+  }, [query.data]);
+
+  const onFocusOpen = useCallback(() => {
+    if (!query.data && !query.isFetching) {
+      void query.refetch();
+    }
+  }, [query]);
+
+  return { options, onFocusOpen, isLoading: query.isLoading, allTenants };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Componente principal                                               */
 /* ------------------------------------------------------------------ */
 
 export default function EntrarComoAcademiaPage() {
   const router = useRouter();
+  const { switchActiveTenant } = useTenantContext();
 
   // --- busca de academia via SuggestionInput ---
   const academiaSuggestion = useAcademiaSuggestion();
@@ -110,9 +181,15 @@ export default function EntrarComoAcademiaPage() {
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [selectedTenantNome, setSelectedTenantNome] = useState("");
 
-  // --- dados completos para impersonation ---
-  const [allTenants, setAllTenants] = useState<Tenant[]>([]);
-  const [loadingTenants, setLoadingTenants] = useState(true);
+  // Unidades da academia selecionada (para lista curta)
+  const unidadesDaAcademia = useMemo(() => {
+    if (!selectedAcademia) return [];
+    return unidadeSuggestion.allTenants.filter(
+      (t) =>
+        t.academiaId === selectedAcademia.id ||
+        t.groupId === selectedAcademia.id,
+    );
+  }, [unidadeSuggestion.allTenants, selectedAcademia]);
 
   // --- recentes (SSR-safe: só lê após mount) ---
   const [recentes, setRecentes] = useState<RecentEntry[]>([]);
@@ -122,33 +199,6 @@ export default function EntrarComoAcademiaPage() {
     setMounted(true);
     setRecentes(readRecentes());
   }, []);
-
-  // Carregar todos os tenants uma vez (necessário para impersonation scope)
-  const loadAllTenants = useCallback(async () => {
-    setLoadingTenants(true);
-    try {
-      const tenants = await listBackofficeUnidadesApi();
-      setAllTenants(tenants.filter((t) => t.ativo !== false));
-    } catch {
-      // silencioso — os suggestion hooks já fazem fetch separado
-    } finally {
-      setLoadingTenants(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadAllTenants();
-  }, [loadAllTenants]);
-
-  // Unidades da academia selecionada (para lista curta e scope)
-  const unidadesDaAcademia = useMemo(() => {
-    if (!selectedAcademia) return [];
-    return allTenants.filter(
-      (t) =>
-        t.academiaId === selectedAcademia.id ||
-        t.groupId === selectedAcademia.id,
-    );
-  }, [allTenants, selectedAcademia]);
 
   // Auto-selecionar se academia tem apenas 1 unidade
   useEffect(() => {
@@ -174,40 +224,19 @@ export default function EntrarComoAcademiaPage() {
     setSwitching(true);
     setError(null);
     try {
-      const academiaId = selectedAcademia.id;
-      const scopedTenantIds = allTenants
-        .filter(
-          (t) =>
-            (t.academiaId ?? t.groupId ?? t.id) === academiaId,
-        )
-        .map((t) => t.id);
-
-      rememberOperationalTenantScope({
-        academiaId,
-        tenantIds: scopedTenantIds,
-        defaultTenantId: selectedTenantId,
-      });
-
-      await adminEntrarComoUnidadeApi({
-        academiaId,
-        tenantId: selectedTenantId,
-        justificativa: values.justificativa?.trim() || undefined,
-      });
-
+      await switchActiveTenant(selectedTenantId);
       setPreferredTenantId(selectedTenantId);
-      await setTenantContextApi(selectedTenantId);
 
       // Persistir nos recentes
       saveRecente({
-        academiaId,
+        academiaId: selectedAcademia.id,
         academiaNome: selectedAcademia.nome,
         tenantId: selectedTenantId,
         tenantNome: selectedTenantNome,
       });
 
-      window.location.assign("/dashboard");
+      router.push("/dashboard");
     } catch (err) {
-      clearOperationalTenantScope();
       setError(normalizeErrorMessage(err));
     } finally {
       setSwitching(false);
@@ -217,10 +246,10 @@ export default function EntrarComoAcademiaPage() {
   function handleSelectAcademia(option: SuggestionOption) {
     setSelectedAcademia({ id: option.id, nome: option.label });
     setAcademiaSearch(option.label);
-    // Limpar seleção de unidade
     setSelectedTenantId("");
     setSelectedTenantNome("");
     setUnidadeSearch("");
+    setError(null);
   }
 
   function handleSelectUnidade(option: SuggestionOption) {
@@ -235,6 +264,7 @@ export default function EntrarComoAcademiaPage() {
     setSelectedTenantId("");
     setSelectedTenantNome("");
     setUnidadeSearch("");
+    setError(null);
   }
 
   function handleRecenteClick(entry: RecentEntry) {
@@ -246,6 +276,7 @@ export default function EntrarComoAcademiaPage() {
     setSelectedTenantId(entry.tenantId);
     setSelectedTenantNome(entry.tenantNome);
     setUnidadeSearch(entry.tenantNome);
+    setError(null);
   }
 
   /* ---------------------------------------------------------------- */
@@ -272,7 +303,7 @@ export default function EntrarComoAcademiaPage() {
         </div>
       ) : null}
 
-      {/* Busca de academia */}
+      {/* Busca de academia — SuggestionInput proeminente */}
       <Card className="border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -290,7 +321,6 @@ export default function EntrarComoAcademiaPage() {
               value={academiaSearch}
               onValueChange={(v) => {
                 setAcademiaSearch(v);
-                // Se o texto mudar após seleção, limpar seleção
                 if (selectedAcademia && v !== selectedAcademia.nome) {
                   setSelectedAcademia(null);
                   setSelectedTenantId("");
@@ -370,7 +400,7 @@ export default function EntrarComoAcademiaPage() {
               Selecionar unidade
             </CardTitle>
             <CardDescription>
-              {loadingTenants
+              {unidadeSuggestion.isLoading
                 ? "Carregando unidades..."
                 : unidadesDaAcademia.length === 1
                   ? "Esta academia possui apenas 1 unidade (selecionada automaticamente)."
