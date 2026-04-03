@@ -7,7 +7,7 @@ import {
   reprocessarIntegracaoOperacionalApi,
   salvarNfseConfiguracaoAtualApi,
   validarNfseConfiguracaoAtualApi,
-} from "../../src/lib/api/admin-financeiro";
+} from "../../src/backoffice/api/admin-financeiro";
 
 const envSnapshot = {
   devAutoLogin: process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN,

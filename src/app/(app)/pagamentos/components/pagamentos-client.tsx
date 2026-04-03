@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertTriangle, BadgeCheck, FileText, Mail } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
+import { getNfseConfiguracaoAtualApi } from "@/lib/api/financeiro-operacional";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { listConveniosApi } from "@/lib/api/beneficios";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
@@ -25,7 +25,7 @@ import {
   useImportarPagamentos,
 } from "@/lib/query/use-pagamentos";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
+import { getNfseBloqueioMensagem } from "@/lib/domain/financeiro";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";

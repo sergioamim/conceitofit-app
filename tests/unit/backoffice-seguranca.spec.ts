@@ -5,14 +5,14 @@ import {
   getGlobalAdminUserDetailApi,
   getGlobalAdminReviewBoardApi,
   listGlobalAdminUsersApi,
-} from "../../src/lib/api/backoffice-seguranca";
+} from "../../src/backoffice/api/backoffice-seguranca";
 import {
   createGlobalSecurityUser,
   createUserAccessException,
   listEligibleNewUnitAdminsPreview,
   removeUserAccessException,
   updateUserNewUnitsPolicy,
-} from "../../src/lib/backoffice/seguranca";
+} from "../../src/backoffice/lib/seguranca";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
 class MemoryStorage implements Storage {

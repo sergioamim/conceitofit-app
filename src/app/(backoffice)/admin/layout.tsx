@@ -7,7 +7,7 @@ import { Building2, ChevronRight, Command, Eye, Globe, LogOut } from "lucide-rea
 import { Command as CmdkRoot, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "cmdk";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
-import { BackofficeContextProvider, useBackofficeContext } from "@/lib/backoffice/backoffice-context";
+import { BackofficeContextProvider, useBackofficeContext } from "@/backoffice/lib/backoffice-context";
 import {
   AUTH_SESSION_UPDATED_EVENT,
   clearAuthSession,
@@ -20,8 +20,8 @@ import {
 } from "@/lib/api/session";
 import { logoutApi } from "@/lib/api/auth";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
-import { backofficeNavGroups, allBackofficeNavItems } from "@/lib/backoffice/nav-items";
-import type { BackofficeNavItem } from "@/lib/backoffice/nav-items";
+import { backofficeNavGroups, allBackofficeNavItems } from "@/backoffice/lib/nav-items";
+import type { BackofficeNavItem } from "@/backoffice/lib/nav-items";
 import { hasElevatedAccess } from "@/lib/access-control";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";

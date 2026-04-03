@@ -16,8 +16,8 @@ import {
   createAdminPlano,
   toggleAdminPlano,
   updateAdminPlano,
-} from "@/lib/api/admin-billing";
-import { useAdminPlanos } from "@/lib/query/admin";
+} from "@/backoffice/api/admin-billing";
+import { useAdminPlanos } from "@/backoffice/query";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { formatBRL } from "@/lib/formatters";

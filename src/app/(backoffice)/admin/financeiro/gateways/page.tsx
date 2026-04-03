@@ -17,8 +17,8 @@ import {
   updateAdminGateway,
   ativarAdminGateway,
   desativarAdminGateway,
-} from "@/lib/api/admin-gateways";
-import { useAdminGateways } from "@/lib/query/admin";
+} from "@/backoffice/api/admin-gateways";
+import { useAdminGateways } from "@/backoffice/query";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";

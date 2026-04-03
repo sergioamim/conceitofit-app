@@ -8,7 +8,7 @@ import { AppContentShell } from "@/components/layout/app-content-shell";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
 import { SentryContextSync } from "@/components/layout/sentry-context-sync";
-import { ImpersonationBanner } from "@/components/backoffice/impersonation-banner";
+import { ImpersonationBanner } from "@/backoffice/components/impersonation-banner";
 import { BackendStatusBanner } from "@/components/layout/backend-status-banner";
 import { Button } from "@/components/ui/button";
 import { DevSessionPanel } from "@/debug/dev-session-panel";

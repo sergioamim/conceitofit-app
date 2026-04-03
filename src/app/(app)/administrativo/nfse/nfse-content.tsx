@@ -9,7 +9,7 @@ import {
   getNfseConfiguracaoAtualApi,
   salvarNfseConfiguracaoAtualApi,
   validarNfseConfiguracaoAtualApi,
-} from "@/lib/api/admin-financeiro";
+} from "@/lib/api/financeiro-operacional";
 import {
   buildNfseChecklist,
   getNfseBloqueioMensagem,
@@ -17,7 +17,7 @@ import {
   NFSE_INDICADOR_OPERACAO_LABEL,
   NFSE_STATUS_LABEL,
   validateNfseConfiguracaoDraft,
-} from "@/lib/backoffice/admin-financeiro";
+} from "@/lib/domain/financeiro";
 import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type {
   NfseAmbiente,

@@ -6,7 +6,7 @@ import { CreditCard, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AGREGADOR_REPASSE_LABEL, summarizeAgregadorTransacoes } from "@/lib/backoffice/admin-financeiro";
+import { AGREGADOR_REPASSE_LABEL, summarizeAgregadorTransacoes } from "@/lib/domain/financeiro";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { AgregadorRepasseStatus } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";

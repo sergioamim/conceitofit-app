@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { GlobalSecurityShell } from "@/components/security/global-security-shell";
+import { GlobalSecurityShell } from "@/backoffice/components/security/global-security-shell";
 import { SecuritySectionFeedback } from "@/components/security/security-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

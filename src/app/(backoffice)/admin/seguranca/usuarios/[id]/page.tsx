@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   GlobalSecurityShell,
   formatSecurityDateTime,
-} from "@/components/security/global-security-shell";
+} from "@/backoffice/components/security/global-security-shell";
 import { SecuritySectionFeedback } from "@/components/security/security-feedback";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";

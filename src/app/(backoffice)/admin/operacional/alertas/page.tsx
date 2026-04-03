@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ListErrorState, ListLoadingSkeleton } from "@/components/shared/list-states";
-import { useAdminAlertasOperacionais } from "@/lib/query/admin";
+import { useAdminAlertasOperacionais } from "@/backoffice/query";
 import { formatDateTime, formatPercent } from "@/lib/formatters";
 import type {
   AlertaOperacionalSeveridade,

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
-import { getUnidadeOnboardingStatusLabel, getUnidadeOnboardingStrategyLabel } from "@/lib/backoffice/onboarding";
+import { getUnidadeOnboardingStatusLabel, getUnidadeOnboardingStrategyLabel } from "@/backoffice/lib/onboarding";
 import { Tenant } from "@/lib/types";
 import { UnidadesWorkspace, PageSize } from "../hooks/use-unidades-workspace";
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { GlobalSecurityShell } from "@/components/security/global-security-shell";
+import { GlobalSecurityShell } from "@/backoffice/components/security/global-security-shell";
 import { SecuritySectionFeedback } from "@/components/security/security-feedback";
 import { SecurityRiskBadge } from "@/components/security/security-badges";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { getFeatureFlagsMatrixApi, toggleFeatureForAcademiaApi } from "@/lib/api/admin-config";
-import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/lib/api/backoffice";
+import { getFeatureFlagsMatrixApi, toggleFeatureForAcademiaApi } from "@/backoffice/api/admin-config";
+import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/backoffice/api/backoffice";
 import { ApiRequestError } from "@/lib/api/http";
-import { buildSecurityFeatureCatalog } from "@/lib/backoffice/security-governance";
+import { buildSecurityFeatureCatalog } from "@/backoffice/lib/security-governance";
 import { useAuthAccess, useRbacTenant } from "@/lib/tenant/rbac/hooks";
 import {
   listFeaturesService,

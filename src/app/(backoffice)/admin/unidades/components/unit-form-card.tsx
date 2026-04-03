@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getUnidadeOnboardingStrategyLabel } from "@/lib/backoffice/onboarding";
+import { getUnidadeOnboardingStrategyLabel } from "@/backoffice/lib/onboarding";
 import { UnidadesWorkspace, UnitForm } from "../hooks/use-unidades-workspace";
 import { UnidadeOnboardingStrategy } from "@/lib/types";
 

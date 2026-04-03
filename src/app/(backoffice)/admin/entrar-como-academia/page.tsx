@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { setTenantContextApi } from "@/lib/api/contexto-unidades";
-import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/lib/api/backoffice";
+import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/backoffice/api/backoffice";
 import { adminEntrarComoUnidadeApi } from "@/lib/api/auth";
 import { clearOperationalTenantScope, rememberOperationalTenantScope, setPreferredTenantId } from "@/lib/api/session";
 import type { Academia, Tenant } from "@/lib/types";

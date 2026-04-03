@@ -4,7 +4,7 @@ import {
   listUnidadesOnboarding,
   registrarImportacaoOnboarding,
   saveUnidadeOnboarding,
-} from "../../src/lib/backoffice/onboarding";
+} from "../../src/backoffice/lib/onboarding";
 
 class MemoryStorage implements Storage {
   private readonly store = new Map<string, string>();

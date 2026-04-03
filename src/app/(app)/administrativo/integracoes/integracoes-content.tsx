@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   listIntegracoesOperacionaisApi,
   reprocessarIntegracaoOperacionalApi,
-} from "@/lib/api/admin-financeiro";
-import { INTEGRACAO_STATUS_LABEL, summarizeIntegracoesOperacionais } from "@/lib/backoffice/admin-financeiro";
+} from "@/lib/api/financeiro-operacional";
+import { INTEGRACAO_STATUS_LABEL, summarizeIntegracoesOperacionais } from "@/lib/domain/financeiro";
 import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { IntegracaoOperacional, IntegracaoOperacionalStatus } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";

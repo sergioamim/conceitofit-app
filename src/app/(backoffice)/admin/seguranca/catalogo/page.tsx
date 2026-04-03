@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { GlobalSecurityShell, formatSecurityDateTime } from "@/components/security/global-security-shell";
+import { GlobalSecurityShell, formatSecurityDateTime } from "@/backoffice/components/security/global-security-shell";
 import { SecurityRiskBadge } from "@/components/security/security-badges";
 import { SecuritySectionFeedback } from "@/components/security/security-feedback";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,8 @@ import {
   listPerfisPadrao,
   revisarExcecao,
   updateCatalogoFuncionalidade,
-} from "@/lib/api/admin-seguranca-avancada";
-import { getGlobalSecurityReviewBoard } from "@/lib/backoffice/seguranca";
+} from "@/backoffice/api/admin-seguranca-avancada";
+import { getGlobalSecurityReviewBoard } from "@/backoffice/lib/seguranca";
 import type {
   CatalogoFuncionalidade,
   CatalogoFuncionalidadePayload,

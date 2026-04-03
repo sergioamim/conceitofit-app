@@ -19,7 +19,7 @@ import type {
   SaasOnboardingResponse,
   SaasSeriesResponse,
   AcademiaOnboarding,
-} from "@/lib/api/admin-saas-metrics";
+} from "@/backoffice/api/admin-saas-metrics";
 import { formatBRL, formatPercent } from "@/lib/formatters";
 
 const fmtDate = (iso: string): string => {

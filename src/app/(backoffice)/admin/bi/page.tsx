@@ -7,8 +7,8 @@ import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { ListErrorState } from "@/components/shared/list-states";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import { useAdminBiAcademias, useAdminBiExecutivo } from "@/lib/query/admin";
-import type { AdminBiExecutivoData } from "@/lib/api/admin-bi";
+import { useAdminBiAcademias, useAdminBiExecutivo } from "@/backoffice/query";
+import type { AdminBiExecutivoData } from "@/backoffice/api/admin-bi";
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });

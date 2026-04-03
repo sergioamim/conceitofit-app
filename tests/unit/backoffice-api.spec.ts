@@ -3,7 +3,7 @@ import {
   createBackofficeAcademiaApi,
   createBackofficeUnidadeApi,
   listBackofficeAcademiasApi,
-} from "../../src/lib/api/backoffice";
+} from "../../src/backoffice/api/backoffice";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
 class MemoryStorage implements Storage {

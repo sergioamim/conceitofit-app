@@ -23,7 +23,7 @@ import {
   toggleSortState,
   type OperacionalSortKey,
   type OperacionalSortState,
-} from "@/lib/backoffice/admin-metrics";
+} from "@/backoffice/lib/admin-metrics";
 import { formatCurrency } from "@/lib/formatters";
 import type { MetricasOperacionaisGlobal } from "@/lib/types";
 import Link from "next/link";

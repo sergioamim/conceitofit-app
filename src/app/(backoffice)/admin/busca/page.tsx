@@ -6,7 +6,7 @@ import { Search, User, Briefcase, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAdminBusca } from "@/lib/query/admin";
+import { useAdminBusca } from "@/backoffice/query";
 import type { GlobalSearchPersonType, GlobalSearchResult } from "@/lib/types";
 import { ListErrorState, EmptyState } from "@/components/shared/list-states";
 import { formatCpf } from "@/lib/formatters";

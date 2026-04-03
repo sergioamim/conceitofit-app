@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { useAdminAcademiaDetail, useAdminUnidades, useUpdateAcademia } from "@/lib/query/admin";
+import { useAdminAcademiaDetail, useAdminUnidades, useUpdateAcademia } from "@/backoffice/query";
 import type { Academia } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 

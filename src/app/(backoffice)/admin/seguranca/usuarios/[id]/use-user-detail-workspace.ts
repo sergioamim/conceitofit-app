@@ -5,9 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/components/ui/use-toast";
-import { impersonateUserApi } from "@/lib/api/admin-audit";
+import { impersonateUserApi } from "@/backoffice/api/admin-audit";
 import { getAuthSessionSnapshot, startImpersonationSession } from "@/lib/api/session";
-import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
+import { listGlobalAcademias, listGlobalUnidades } from "@/backoffice/lib/admin";
 import {
   addUserMembership,
   assignUserMembershipProfile,
@@ -18,7 +18,7 @@ import {
   removeUserMembershipProfile,
   updateUserMembership,
   updateUserNewUnitsPolicy,
-} from "@/lib/backoffice/seguranca";
+} from "@/backoffice/lib/seguranca";
 import { impersonationDialogSchema, type ImpersonationDialogValues } from "@/lib/forms/admin-audit-schemas";
 import { listPerfisService } from "@/lib/tenant/rbac/services";
 import type {

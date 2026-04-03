@@ -6,7 +6,7 @@ import {
   listBackofficeEvoImportJobRejeicoes,
   normalizeUploadAnaliseArquivoHistorico,
   uploadBackofficeEvoP0Pacote,
-} from "../../src/lib/backoffice/importacao-evo";
+} from "../../src/backoffice/lib/importacao-evo";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
 class MemoryStorage implements Storage {

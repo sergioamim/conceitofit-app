@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
-import { useAdminAcademias, useAdminUnidades, useCreateAcademia } from "@/lib/query/admin";
+import { useAdminAcademias, useAdminUnidades, useCreateAcademia } from "@/backoffice/query";
 import type { Academia } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 

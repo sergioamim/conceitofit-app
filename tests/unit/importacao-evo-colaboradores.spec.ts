@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { normalizeEvoColaboradorDiagnostico } from "../../src/lib/backoffice/importacao-evo";
+import { normalizeEvoColaboradorDiagnostico } from "../../src/backoffice/lib/importacao-evo";
 
 function canonicalizeFile(value?: string | null): string | null {
   const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";

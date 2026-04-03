@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { listGlobalSecurityUsers } from "@/lib/backoffice/seguranca";
+import { listGlobalSecurityUsers } from "@/backoffice/lib/seguranca";
 import type { GlobalAdminReviewStatus, GlobalAdminUserSummary } from "@/lib/types";
 import type { GlobalAdminNewUnitsPolicyScope } from "@/lib/types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
+import { getNfseConfiguracaoAtualApi } from "@/lib/api/financeiro-operacional";
 import type { NfseConfiguracao } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 

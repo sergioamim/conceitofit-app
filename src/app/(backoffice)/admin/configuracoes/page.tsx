@@ -20,8 +20,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { updateGlobalConfigApi } from "@/lib/api/admin-config";
-import { useAdminIntegrations, useAdminGlobalConfig } from "@/lib/query/admin";
+import { updateGlobalConfigApi } from "@/backoffice/api/admin-config";
+import { useAdminIntegrations, useAdminGlobalConfig } from "@/backoffice/query";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import type { GlobalConfig, IntegrationHealthStatus, IntegrationStatus } from "@/lib/types";

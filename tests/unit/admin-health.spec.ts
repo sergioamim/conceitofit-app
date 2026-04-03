@@ -4,7 +4,7 @@ import {
   classifyAcademiaHealth,
   filterAcademiasHealthMap,
   normalizeAcademiaHealthStatus,
-} from "../../src/lib/backoffice/admin-health";
+} from "../../src/backoffice/lib/admin-health";
 
 test.describe("admin health helpers", () => {
   test("classifica academia com poucos alunos como crítica", () => {

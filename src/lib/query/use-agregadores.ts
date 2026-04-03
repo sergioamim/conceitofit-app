@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listAgregadorTransacoesApi,
   reprocessarAgregadorTransacaoApi,
-} from "@/lib/api/admin-financeiro";
+} from "@/lib/api/financeiro-operacional";
 import type { AgregadorTransacao } from "@/lib/types";
 import { queryKeys } from "./keys";
 

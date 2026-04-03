@@ -11,13 +11,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState, ListErrorState } from "@/components/shared/list-states";
-import { useAdminSaudeAcademias } from "@/lib/query/admin";
+import { useAdminSaudeAcademias } from "@/backoffice/query";
 import {
   filterAcademiasHealthMap,
   formatPercent,
   resolveContractBadgeClass,
   type HealthFilter,
-} from "@/lib/backoffice/admin-health";
+} from "@/backoffice/lib/admin-health";
 import { formatDateTime } from "@/lib/formatters";
 import type { AcademiaHealthLevel, AcademiaHealthStatus } from "@/lib/types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";

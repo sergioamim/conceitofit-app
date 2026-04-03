@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 import { SuggestionInput } from "@/components/shared/suggestion-input";
-import { MapeamentoAcademiaUnidadeSelector } from "@/components/admin/importacao-academia-unidade-selector";
+import { MapeamentoAcademiaUnidadeSelector } from "@/backoffice/components/admin/importacao-academia-unidade-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

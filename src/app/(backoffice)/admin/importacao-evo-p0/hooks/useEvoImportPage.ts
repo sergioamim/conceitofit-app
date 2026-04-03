@@ -17,7 +17,7 @@ import {
   type UploadAnaliseFilial,
   type UploadAnaliseResponse,
 } from "@/lib/api/importacao-evo";
-import { createGlobalUnidade, listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
+import { createGlobalUnidade, listGlobalAcademias, listGlobalUnidades } from "@/backoffice/lib/admin";
 import {
   createBackofficeEvoP0CsvJob,
   createBackofficeEvoP0PacoteJob,
@@ -28,7 +28,7 @@ import {
   normalizeEvoColaboradorDiagnostico,
   normalizeUploadAnaliseArquivoHistorico,
   uploadBackofficeEvoP0Pacote,
-} from "@/lib/backoffice/importacao-evo";
+} from "@/backoffice/lib/importacao-evo";
 import {
   atualizarImportacaoOnboardingStatus,
   getUnidadeOnboardingStatusLabel,
@@ -36,8 +36,8 @@ import {
   listUnidadesOnboarding,
   registrarImportacaoOnboarding,
   saveUnidadeOnboarding,
-} from "@/lib/backoffice/onboarding";
-import { listEligibleNewUnitAdminsPreview } from "@/lib/backoffice/seguranca";
+} from "@/backoffice/lib/onboarding";
+import { listEligibleNewUnitAdminsPreview } from "@/backoffice/lib/seguranca";
 import type { Academia, GlobalAdminUserSummary, Tenant, UnidadeOnboardingState } from "@/lib/types";
 import { formatCnpj, isValidCnpj } from "@/lib/utils/cnpj";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";

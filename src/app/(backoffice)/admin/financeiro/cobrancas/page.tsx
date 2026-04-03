@@ -35,8 +35,8 @@ import {
   baixarAdminCobranca,
   cancelarAdminCobranca,
   createAdminCobranca,
-} from "@/lib/api/admin-billing";
-import { useAdminCobrancas, useAdminContratos } from "@/lib/query/admin";
+} from "@/backoffice/api/admin-billing";
+import { useAdminCobrancas, useAdminContratos } from "@/backoffice/query";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { formatBRL, formatDate } from "@/lib/formatters";

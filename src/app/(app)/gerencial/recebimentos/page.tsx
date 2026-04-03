@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AGREGADOR_REPASSE_LABEL, getNfseBloqueioMensagem, summarizeRecebimentosOperacionais } from "@/lib/backoffice/admin-financeiro";
+import { AGREGADOR_REPASSE_LABEL, getNfseBloqueioMensagem, summarizeRecebimentosOperacionais } from "@/lib/domain/financeiro";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import type { PagamentoComAluno } from "@/lib/tenant/financeiro/recebimentos";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";

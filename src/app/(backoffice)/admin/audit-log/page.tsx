@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { TableCell } from "@/components/ui/table";
 import { PaginatedTable } from "@/components/shared/paginated-table";
-import { useAdminAuditLog } from "@/lib/query/admin";
+import { useAdminAuditLog } from "@/backoffice/query";
 import type {
   AuditLogAction,
   AuditLogEntityType,

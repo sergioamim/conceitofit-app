@@ -3,7 +3,7 @@ import {
   executarSolicitacaoExclusaoApi,
   getComplianceDashboardApi,
   rejeitarSolicitacaoExclusaoApi,
-} from "../../src/lib/api/admin-compliance";
+} from "../../src/backoffice/api/admin-compliance";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
 class MemoryStorage implements Storage {

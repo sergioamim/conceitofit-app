@@ -7,7 +7,7 @@ import {
   toggleGlobalUnidade,
   updateGlobalAcademia,
   updateGlobalUnidade,
-} from "../../src/lib/backoffice/admin";
+} from "../../src/backoffice/lib/admin";
 
 const envSnapshot = {
   devAutoLogin: process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN,

@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   formatSecurityDateTime,
   formatSecurityDateTimeInput,
-} from "@/components/security/global-security-shell";
+} from "@/backoffice/components/security/global-security-shell";
 import {
   SecurityAccessOriginBadge,
   SecurityActiveBadge,
@@ -30,7 +30,7 @@ import {
   removeUserMembership,
   removeUserMembershipProfile,
   updateUserMembership,
-} from "@/lib/backoffice/seguranca";
+} from "@/backoffice/lib/seguranca";
 import { formatCpf } from "@/lib/shared/formatters";
 import type {
   GlobalAdminAccessException,

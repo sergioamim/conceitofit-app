@@ -5,7 +5,7 @@ import {
   getIntegrationStatusApi,
   toggleFeatureForAcademiaApi,
   updateGlobalConfigApi,
-} from "../../src/lib/api/admin-config";
+} from "../../src/backoffice/api/admin-config";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
 class MemoryStorage implements Storage {

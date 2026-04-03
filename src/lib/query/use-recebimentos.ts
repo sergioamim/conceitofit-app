@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getNfseConfiguracaoAtualApi, listAgregadorTransacoesApi } from "@/lib/api/admin-financeiro";
+import { getNfseConfiguracaoAtualApi, listAgregadorTransacoesApi } from "@/lib/api/financeiro-operacional";
 import { emitirNfsePagamentoApi } from "@/lib/api/pagamentos";
 import {
   createRecebimentoAvulsoService,

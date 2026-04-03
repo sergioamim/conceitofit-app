@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { getAcademiasHealthMap } from "../../src/lib/api/admin-metrics";
+import { getAcademiasHealthMap } from "../../src/backoffice/api/admin-metrics";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
 class MemoryStorage implements Storage {

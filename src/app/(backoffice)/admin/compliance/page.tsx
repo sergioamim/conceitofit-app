@@ -44,8 +44,8 @@ import {
 import {
   executarSolicitacaoExclusaoApi,
   rejeitarSolicitacaoExclusaoApi,
-} from "@/lib/api/admin-compliance";
-import { useAdminComplianceDashboard } from "@/lib/query/admin";
+} from "@/backoffice/api/admin-compliance";
+import { useAdminComplianceDashboard } from "@/backoffice/query";
 import type {
   ComplianceAcademiaResumo,
   ComplianceDashboard,

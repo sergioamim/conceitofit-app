@@ -16,8 +16,8 @@ import {
   getAdminLead,
   updateAdminLeadNotas,
   updateAdminLeadStatus,
-} from "@/lib/api/admin-leads";
-import { useAdminLeads, useAdminLeadStats } from "@/lib/query/admin";
+} from "@/backoffice/api/admin-leads";
+import { useAdminLeads, useAdminLeadStats } from "@/backoffice/query";
 import { queryKeys } from "@/lib/query/keys";
 import type { LeadB2b, StatusLeadB2b } from "@/lib/shared/types/lead-b2b";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";

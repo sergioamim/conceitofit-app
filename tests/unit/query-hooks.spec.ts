@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import * as queryExports from "../../src/lib/query";
-import * as adminQueryExports from "../../src/lib/query/admin";
+import * as adminQueryExports from "../../src/backoffice/query";
 import { queryKeys } from "../../src/lib/query/keys";
 import { getQueryClient, makeQueryClient } from "../../src/lib/query/query-client";
 

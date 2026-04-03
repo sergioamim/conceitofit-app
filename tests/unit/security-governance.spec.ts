@@ -3,7 +3,7 @@ import {
   buildSecurityFeatureCatalog,
   buildStandardizedProfiles,
   estimateProfileImpact,
-} from "../../src/lib/backoffice/security-governance";
+} from "../../src/backoffice/lib/security-governance";
 
 test.describe("security governance helpers", () => {
   test("normaliza catálogo de funcionalidades com leitura de negócio", () => {

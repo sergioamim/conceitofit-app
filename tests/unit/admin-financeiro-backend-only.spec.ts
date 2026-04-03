@@ -7,7 +7,7 @@ import {
   reprocessarIntegracaoOperacionalApi,
   salvarNfseConfiguracaoAtualApi,
   validarNfseConfiguracaoAtualApi,
-} from "../../src/lib/api/admin-financeiro";
+} from "../../src/backoffice/api/admin-financeiro";
 import { emitirNfseEmLoteApi, emitirNfsePagamentoApi } from "../../src/lib/api/pagamentos";
 
 const TENANT_ID = "tn-admin-financeiro";

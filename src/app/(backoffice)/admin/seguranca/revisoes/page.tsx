@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { GlobalSecurityShell, formatSecurityDateTime } from "@/components/security/global-security-shell";
+import { GlobalSecurityShell, formatSecurityDateTime } from "@/backoffice/components/security/global-security-shell";
 import { SecurityRiskBadge } from "@/components/security/security-badges";
 import { SecurityEmptyState, SecuritySectionFeedback } from "@/components/security/security-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAdminSecurityOverview, useAdminSecurityReviewBoard } from "@/lib/query/admin";
+import { useAdminSecurityOverview, useAdminSecurityReviewBoard } from "@/backoffice/query";
 import type { GlobalAdminReviewBoard, GlobalAdminReviewBoardItem, GlobalAdminSecurityOverview } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 

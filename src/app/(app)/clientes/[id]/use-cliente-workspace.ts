@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { getNfseConfiguracaoAtualApi } from "@/lib/api/admin-financeiro";
+import { getNfseConfiguracaoAtualApi } from "@/lib/api/financeiro-operacional";
 import {
   createCartaoClienteService,
   deleteCartaoClienteService,
@@ -23,7 +23,7 @@ import {
   updateAlunoService,
 } from "@/lib/tenant/comercial/runtime";
 import { ApiRequestError } from "@/lib/api/http";
-import { getNfseBloqueioMensagem } from "@/lib/backoffice/admin-financeiro";
+import { getNfseBloqueioMensagem } from "@/lib/domain/financeiro";
 import { isClientMigrationEnabled } from "@/lib/feature-flags";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type {

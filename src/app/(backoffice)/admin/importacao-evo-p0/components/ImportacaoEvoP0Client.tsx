@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getUnidadeOnboardingStatusLabel,
   getUnidadeOnboardingStrategyLabel,
-} from "@/lib/backoffice/onboarding";
+} from "@/backoffice/lib/onboarding";
 import { EvoAcompanhamentoTab } from "./EvoAcompanhamentoTab";
 import { EvoPacoteTab } from "./EvoPacoteTab";
 import { EvoUploadTab } from "./EvoUploadTab";

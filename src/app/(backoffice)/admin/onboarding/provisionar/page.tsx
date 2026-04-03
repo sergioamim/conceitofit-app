@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   provisionAcademiaAdminApi,
   type AdminOnboardingProvisionResult,
-} from "@/lib/api/admin-onboarding-api";
+} from "@/backoffice/api/admin-onboarding-api";
 import {
   adminOnboardingProvisionFormSchema,
   normalizeProvisionPhone,

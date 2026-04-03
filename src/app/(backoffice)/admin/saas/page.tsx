@@ -5,7 +5,7 @@ import type {
   SaasMetricsResponse,
   SaasOnboardingResponse,
   SaasSeriesResponse,
-} from "@/lib/api/admin-saas-metrics";
+} from "@/backoffice/api/admin-saas-metrics";
 
 function SaasSkeleton() {
   return (

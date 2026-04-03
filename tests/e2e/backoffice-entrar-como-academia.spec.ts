@@ -166,6 +166,42 @@ test.describe("Backoffice entrar como academia", () => {
       });
     });
 
+    // Mock para listagem de academias e unidades (necessário para a página carregar)
+    await page.route("**/api/v1/admin/academias**", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "academia-norte",
+            nome: "Rede Norte",
+            ativo: true,
+          },
+        ]),
+      });
+    });
+
+    await page.route("**/api/v1/admin/unidades**", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          TENANTS.map((t) => ({
+            ...t,
+            academiaNome: "Rede Norte",
+          })),
+        ),
+      });
+    });
+
     // Navegar para a página "Entrar como academia"
     await page.goto("/admin/entrar-como-academia");
     await page.waitForLoadState("domcontentloaded");

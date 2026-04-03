@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { GlobalSecurityShell } from "@/components/security/global-security-shell";
+import { GlobalSecurityShell } from "@/backoffice/components/security/global-security-shell";
 import { SecurityEligibilityBadge } from "@/components/security/security-badges";
 import { SecurityEmptyState, SecuritySectionFeedback } from "@/components/security/security-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAdminSecurityOverview, useAdminSecurityEligiblePreview } from "@/lib/query/admin";
+import { useAdminSecurityOverview, useAdminSecurityEligiblePreview } from "@/backoffice/query";
 import type { GlobalAdminSecurityOverview } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 

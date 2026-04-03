@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { GlobalSecurityShell, formatSecurityDateTime } from "@/components/security/global-security-shell";
+import { GlobalSecurityShell, formatSecurityDateTime } from "@/backoffice/components/security/global-security-shell";
 import { SecuritySectionFeedback } from "@/components/security/security-feedback";
 import {
   SecurityActiveBadge,
@@ -15,8 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { buildSecurityFeatureCatalog, buildStandardizedProfiles } from "@/lib/backoffice/security-governance";
-import { listGlobalSecurityUsers } from "@/lib/backoffice/seguranca";
+import { buildSecurityFeatureCatalog, buildStandardizedProfiles } from "@/backoffice/lib/security-governance";
+import { listGlobalSecurityUsers } from "@/backoffice/lib/seguranca";
 import { useAuthAccess, useRbacTenant } from "@/lib/tenant/rbac/hooks";
 import {
   createPerfilService,

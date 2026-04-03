@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { endImpersonationApi, impersonateUserApi } from "../../src/lib/api/admin-audit";
+import { endImpersonationApi, impersonateUserApi } from "../../src/backoffice/api/admin-audit";
 import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
 
 class MemoryStorage implements Storage {

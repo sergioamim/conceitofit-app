@@ -9,15 +9,15 @@ import {
   listGlobalUnidades,
   toggleGlobalUnidade,
   updateGlobalUnidade,
-} from "@/lib/backoffice/admin";
+} from "@/backoffice/lib/admin";
 import {
   getUnidadeOnboarding,
   getUnidadeOnboardingStatusLabel,
   getUnidadeOnboardingStrategyLabel,
   listUnidadesOnboarding,
   saveUnidadeOnboarding,
-} from "@/lib/backoffice/onboarding";
-import { listEligibleNewUnitAdminsPreview } from "@/lib/backoffice/seguranca";
+} from "@/backoffice/lib/onboarding";
+import { listEligibleNewUnitAdminsPreview } from "@/backoffice/lib/seguranca";
 import type {
   Academia,
   GlobalAdminUserSummary,
