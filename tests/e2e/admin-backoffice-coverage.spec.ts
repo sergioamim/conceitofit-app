@@ -783,7 +783,8 @@ async function openBackofficePage(page: Page, path: string, heading: string | Re
   const state = buildState();
   await seedSession(page, state);
   await setupMocks(page, state);
-  await page.goto(path);
+  await page.goto(path, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("load");
   await expect(page.getByRole("heading", { name: heading })).toBeVisible();
   return state;
 }
@@ -848,7 +849,7 @@ test.describe("Admin backoffice coverage", () => {
     await expect(page.getByText("Rede Sul", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Growth", { exact: true }).first()).toBeVisible();
 
-    await page.goto("/admin/compliance");
+    await page.goto("/admin/compliance", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: /Compliance LGPD/i })).toBeVisible();
     await expect(page.getByText("Marina Lima")).toBeVisible();
     await page.getByRole("button", { name: "Executar" }).click();
@@ -857,7 +858,7 @@ test.describe("Admin backoffice coverage", () => {
       state.complianceSolicitacoes.find((item) => item.id === "solicitacao-1")?.status,
     ).toBe("EXECUTADA");
 
-    await page.goto("/admin/leads");
+    await page.goto("/admin/leads", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: /Gestão de Leads B2B/i })).toBeVisible();
     await page.getByRole("cell", { name: "Academia Coliseu" }).click();
     await expect(page.getByText("Primeiro contato pendente.")).toBeVisible();

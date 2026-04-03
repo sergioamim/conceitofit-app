@@ -672,7 +672,7 @@ test.describe("Admin financeiro e integrações", () => {
     await divergentRow.getByRole("button", { name: "Reprocessar" }).click();
     await expect(page.getByText("Transação 000984 reprocessada.")).toBeVisible();
 
-    await page.goto("/administrativo/integracoes");
+    await page.goto("/administrativo/integracoes", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Monitoramento de integrações" })).toBeVisible();
     const webhookCard = page.locator("div.rounded-xl.border").filter({ hasText: "Webhook comercial" }).first();
     await webhookCard.getByRole("button", { name: "Reprocessar" }).click();

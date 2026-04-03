@@ -29,7 +29,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await expect(page.getByRole("row").filter({ hasText: formaEditada })).toHaveCount(0);
 
     await page.waitForLoadState("networkidle");
-    await page.goto("/administrativo/tipos-conta");
+    await page.goto("/administrativo/tipos-conta", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Tipos de Conta" })).toBeVisible();
 
     await page.getByRole("button", { name: "Novo tipo" }).click();
@@ -82,7 +82,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await expect(contaRow.getByText("Inativa")).toBeVisible();
 
     await page.waitForLoadState("networkidle");
-    await page.goto("/administrativo/maquininhas");
+    await page.goto("/administrativo/maquininhas", { waitUntil: "domcontentloaded" });
 
     await page.getByRole("button", { name: "Nova maquininha" }).click();
     await page.getByRole("dialog").locator("input").nth(0).fill(maquininhaNome);
@@ -131,7 +131,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await expect(page.getByText("Check-in obrigatório", { exact: true })).toBeVisible();
 
     await page.waitForLoadState("networkidle");
-    await page.goto("/administrativo/atividades-grade");
+    await page.goto("/administrativo/atividades-grade", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "Nova Grade" }).click();
     await page.getByRole("combobox").first().click();
     await page.getByRole("option", { name: atividadeEditada }).click();
@@ -140,13 +140,13 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await page.getByRole("button", { name: "Cancelar" }).click();
 
     await page.waitForLoadState("networkidle");
-    await page.goto("/planos/novo");
+    await page.goto("/planos/novo", { waitUntil: "domcontentloaded" });
     await page.getByRole("tab", { name: "Atividades e benefícios" }).click();
     await expect(page.getByText(atividadeEditada, { exact: true })).toBeVisible();
     await expect(page.getByText("Check-in obrigatório", { exact: true })).toBeVisible();
 
     await page.waitForLoadState("networkidle");
-    await page.goto("/atividades");
+    await page.goto("/atividades", { waitUntil: "domcontentloaded" });
     const atividadeEditadaCard = getAtividadeCard(atividadeEditada);
     await atividadeEditadaCard.hover();
     await atividadeEditadaCard.getByRole("button").nth(1).click();

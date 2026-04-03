@@ -506,7 +506,7 @@ test.describe("BI operacional e visão de rede", () => {
 
   test("navega entre visão unitária e rede com filtros gerenciais", async ({ page }) => {
     await installBiApiMocks(page);
-    await page.goto("/login");
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
     await applyE2EAuthSession(page, {
       activeTenantId: TENANT_MANANCIAIS.id,
       availableTenants: [
@@ -521,7 +521,7 @@ test.describe("BI operacional e visão de rede", () => {
       broadAccess: false,
     });
 
-    await page.goto("/gerencial/bi");
+    await page.goto("/gerencial/bi", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "BI Operacional" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: "Exportar CSV" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Benchmark por unidade")).toBeVisible({ timeout: 30_000 });

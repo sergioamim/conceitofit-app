@@ -31,7 +31,7 @@ test.describe("Admin catálogo CRUD", () => {
     await expect(page.getByRole("row").filter({ hasText: servicoEditado })).toHaveCount(0);
 
     await page.waitForLoadState("networkidle");
-    await page.goto("/administrativo/produtos");
+    await page.goto("/administrativo/produtos", { waitUntil: "domcontentloaded" });
 
     await page.getByRole("button", { name: "Novo produto" }).click();
     await page.getByRole("dialog").locator("input").nth(0).fill(produtoNome);

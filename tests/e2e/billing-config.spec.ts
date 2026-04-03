@@ -167,7 +167,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     const statusCard = page.locator("div").filter({ hasText: /Status da conexão/ }).first();
     const providerCard = page.locator("div").filter({ hasText: /Provedor ativo/ }).first();
@@ -184,7 +184,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     await expect(page.locator("div").filter({ hasText: /Status da conexão/ }).first()).toContainText("Offline");
     await expect(page.locator("div").filter({ hasText: /Provedor ativo/ }).first()).toContainText("Asaas");
@@ -195,7 +195,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     await expect(page.locator("code").filter({ hasText: "/api/webhooks/billing/tenant-centro" })).toBeVisible();
   });
@@ -205,7 +205,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     const keyInput = page.locator('input[name="chaveApi"]');
     await expect(keyInput).toBeHidden();
@@ -223,7 +223,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     await page.getByRole("button", { name: /testar conexão/i }).click();
     await expect.poll(() => messages.some((message) => message.includes("Conexão OK — Gateway respondeu com sucesso."))).toBe(true);
@@ -235,7 +235,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     await page.getByRole("button", { name: "Exibir" }).click();
 
@@ -257,7 +257,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     await page.getByRole("button", { name: "Exibir" }).click();
     const keyInput = page.locator('input[name="chaveApi"]');
@@ -273,7 +273,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSessionNoPermission(page);
     await setupMocks(page, state, { elevated: false, session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     await expect(
       page.getByText(/apenas usuários com permissão elevada/i),
@@ -289,7 +289,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     const checkbox = page.getByRole("checkbox");
     await expect(checkbox).not.toBeChecked();
@@ -307,7 +307,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     await page.getByRole("button", { name: /copiar/i }).click();
     await expect.poll(() => messages.some((message) => message.includes("URL copiada"))).toBe(true);
@@ -318,7 +318,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByText(/último teste de conexão/i)).toBeVisible();
   });
@@ -335,7 +335,7 @@ test.describe("Billing Config Page", () => {
     const session = await seedSession(page);
     await setupMocks(page, state, { session });
 
-    await page.goto("/administrativo/billing");
+    await page.goto("/administrativo/billing", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByText(/não configurado/i)).toBeVisible();
   });

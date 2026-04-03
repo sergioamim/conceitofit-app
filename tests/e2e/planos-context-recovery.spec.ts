@@ -165,10 +165,10 @@ test.describe("Planos shell recovery", () => {
       availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
     });
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle");
     await expect(page).not.toHaveURL(/\/login/);
-    await page.goto("/planos");
+    await page.goto("/planos", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle");
     await expect(page).not.toHaveURL(/\/login/);
 

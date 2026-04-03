@@ -331,7 +331,7 @@ test.describe("Dashboard principal", () => {
   });
 
   test("renderiza cards, prospects, matrículas e pagamentos com dados mockados", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     await expect(page.getByTestId("alunos-ativos-card")).toContainText("128");
@@ -352,7 +352,7 @@ test.describe("Dashboard principal", () => {
   });
 
   test("navega para prospects e pagamentos a partir do dashboard", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByTestId("prospects-recentes-link")).toHaveAttribute("href", "/prospects");
     await page.goto("/prospects", { waitUntil: "domcontentloaded" });
@@ -360,7 +360,7 @@ test.describe("Dashboard principal", () => {
 
     await seedAuthenticatedSession(page);
     await installDashboardMocks(page);
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "Financeiro" }).click();
     await expect(page.getByText("Recebimentos do mês")).toBeVisible();
     await expect(page.getByRole("link", { name: "Ver todos" })).toHaveAttribute("href", "/pagamentos");

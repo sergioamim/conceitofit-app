@@ -211,7 +211,7 @@ test.describe("treinos web v2", () => {
     await seedSession(page);
     await installTreinosWebStubs(page);
 
-    await page.goto("/treinos/tpl-1");
+    await page.goto("/treinos/tpl-1", { waitUntil: "domcontentloaded" });
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page).toHaveURL(/\/treinos\/tpl-1$/);
     await expect(page.getByRole("heading", { name: "Template Base" })).toBeVisible();

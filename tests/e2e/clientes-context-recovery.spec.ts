@@ -149,7 +149,7 @@ test.describe("Clientes context recovery", () => {
       availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
     });
 
-    await page.goto("/clientes");
+    await page.goto("/clientes", { waitUntil: "domcontentloaded" });
 
     if (hasHydrationNoise()) {
       consoleErrors.length = 0;

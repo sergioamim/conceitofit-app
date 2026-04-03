@@ -275,7 +275,7 @@ test.describe("App multiunidade orientado por contrato", () => {
       ],
     });
 
-    await page.goto("/clientes");
+    await page.goto("/clientes", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
     await expect(page.getByText("Cliente Unidade Alpha")).toBeVisible();
     await expect(page.getByText(/Indisponíveis no momento: Unidade Bloqueada: Contrato suspenso na unidade./)).toBeVisible();
@@ -288,7 +288,7 @@ test.describe("App multiunidade orientado por contrato", () => {
     await expect(page.getByText(/Indisponíveis no momento: Unidade Bloqueada: Contrato suspenso na unidade./)).toBeVisible();
 
     await page.waitForLoadState("networkidle");
-    await page.goto("/clientes");
+    await page.goto("/clientes", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
     await expect(page.getByText("Cliente Unidade Beta")).toBeVisible();
     await expect(page.getByText("Cliente Unidade Alpha")).toHaveCount(0);
@@ -300,7 +300,7 @@ test.describe("App multiunidade orientado por contrato", () => {
       tenantId: TENANT_BLOCKED.id,
     });
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Nenhuma unidade elegível para operação" })).toBeVisible();
     await expect(page.getByText("Nenhum contrato vigente permite uso operacional nesta rede.")).toBeVisible();
     await expect(

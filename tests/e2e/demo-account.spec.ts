@@ -283,7 +283,7 @@ test.describe("Fluxo de conta demo", () => {
     await page.getByLabel("Senha", { exact: true }).fill("senha123");
     await page.getByRole("button", { name: "Criar conta demo gratuita" }).click();
 
-    await page.waitForURL("**/dashboard?demo=1", { timeout: 15_000 });
+    await page.waitForURL(/\/dashboard\?demo=1/, { timeout: 15_000 });
     await expect(page).toHaveURL(/\/dashboard\?demo=1/);
   });
 

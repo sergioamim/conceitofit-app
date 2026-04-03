@@ -143,7 +143,7 @@ async function openPageAsAuthenticated(
     roles: ["ADMIN"],
     availableScopes: ["UNIDADE"],
   });
-  await page.goto(input.path ?? "/seguranca/rbac");
+  await page.goto(input.path ?? "/seguranca/rbac", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: input.heading })).toBeVisible();
   await expect(page.getByRole("button", { name: input.readyControlName, exact: true })).toBeVisible();
 }
