@@ -1,32 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { BellRing, CircleAlert, Rocket, TriangleAlert } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { BellRing, CheckCircle2, CircleAlert, Rocket, TriangleAlert, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ListErrorState, ListLoadingSkeleton } from "@/components/shared/list-states";
+import { PaginatedTable, type PaginatedTableColumn } from "@/components/shared/paginated-table";
+import { TableFilters, type ActiveFilters, type FilterConfig } from "@/components/shared/table-filters";
 import { useAdminAlertasOperacionais } from "@/backoffice/query";
+import { useAcademiaSuggestion } from "@/backoffice/lib/use-academia-suggestion";
 import { formatDateTime, formatPercent } from "@/lib/formatters";
 import type {
+  AlertaOperacional,
   AlertaOperacionalSeveridade,
+  AlertaOperacionalTipo,
   FeatureUsageIndicator,
   FeatureUsageKey,
   FeatureUsageStatus,
 } from "@/lib/types";
-type SeverityFilter = "TODAS" | AlertaOperacionalSeveridade;
-type UsageFilter = "TODAS" | FeatureUsageStatus;
 
-const SEVERITY_OPTIONS: Array<{ value: SeverityFilter; label: string }> = [
-  { value: "TODAS", label: "Todas as severidades" },
-  { value: "CRITICAL", label: "Críticas" },
-  { value: "WARNING", label: "Atenção" },
-  { value: "INFO", label: "Informativas" },
-];
+type UsageFilter = "TODAS" | FeatureUsageStatus;
 
 const USAGE_OPTIONS: Array<{ value: UsageFilter; label: string }> = [
   { value: "TODAS", label: "Todas as features" },
@@ -42,6 +38,26 @@ const FEATURE_COLUMNS: Array<{ key: FeatureUsageKey; label: string }> = [
   { key: "vendasOnline", label: "Vendas online" },
   { key: "bi", label: "BI" },
 ];
+
+const PAGE_SIZE = 20;
+
+const ALERTAS_TABLE_COLUMNS: PaginatedTableColumn[] = [
+  { label: "Tipo" },
+  { label: "Severidade", className: "w-[120px]" },
+  { label: "Academia" },
+  { label: "Mensagem" },
+  { label: "Data/Hora", className: "w-[160px]" },
+  { label: "Ações", className: "w-[160px]" },
+];
+
+const TIPO_LABELS: Record<AlertaOperacionalTipo, string> = {
+  SEM_LOGIN_ADMIN: "Sem login",
+  SEM_MATRICULAS_ATIVAS: "Sem matrículas",
+  PICO_CANCELAMENTOS: "Cancelamentos",
+  CONTRATO_VENCENDO: "Contrato vencendo",
+  INADIMPLENCIA_ALTA: "Inadimplência",
+  OUTRO: "Outro",
+};
 
 function resolveSeverityConfig(severidade: AlertaOperacionalSeveridade) {
   switch (severidade) {
@@ -149,33 +165,88 @@ export default function AdminOperationalAlertsPage() {
   const loading = alertasQuery.isLoading;
   const error = alertasQuery.error ? alertasQuery.error.message : null;
 
-  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("TODAS");
+  const academiaSuggestion = useAcademiaSuggestion();
+
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+  const [page, setPage] = useState(0);
+
   const [usageFilter, setUsageFilter] = useState<UsageFilter>("TODAS");
-  const [search, setSearch] = useState("");
+  const [usageSearch, setUsageSearch] = useState("");
+
+  const handleFiltersChange = useCallback((filters: ActiveFilters) => {
+    setActiveFilters(filters);
+    setPage(0);
+  }, []);
+
+  const filterConfigs: FilterConfig[] = useMemo(
+    () => [
+      {
+        type: "select",
+        key: "severidade",
+        label: "Severidade",
+        placeholder: "Todas as severidades",
+        options: [
+          { value: "CRITICAL", label: "Críticas" },
+          { value: "WARNING", label: "Atenção" },
+          { value: "INFO", label: "Informativas" },
+        ],
+      },
+      {
+        type: "suggestion",
+        key: "academia",
+        label: "Academia",
+        placeholder: "Buscar academia...",
+        options: academiaSuggestion.options,
+        onFocusOpen: academiaSuggestion.onFocusOpen,
+        preloadOnFocus: true,
+      },
+      {
+        type: "date-range",
+        key: "periodo",
+        label: "Período",
+        placeholderStart: "Data início",
+        placeholderEnd: "Data fim",
+      },
+    ],
+    [academiaSuggestion.options, academiaSuggestion.onFocusOpen],
+  );
 
   const filteredAlertas = useMemo(() => {
-    const searchTerm = search.trim().toLocaleLowerCase("pt-BR");
+    const severidade = activeFilters.severidade ?? "";
+    const academiaId = activeFilters.academia ?? "";
+    const periodoStart = activeFilters.periodo_start ?? "";
+    const periodoEnd = activeFilters.periodo_end ?? "";
 
     return alertas.filter((alerta) => {
-      if (severityFilter !== "TODAS" && alerta.severidade !== severityFilter) {
+      if (severidade && alerta.severidade !== severidade) {
         return false;
       }
 
-      if (!searchTerm) {
-        return true;
+      if (academiaId && alerta.academiaId !== academiaId) {
+        // fallback: match by name if academiaId isn't present on alert
+        const matchedOption = academiaSuggestion.options.find((o) => o.id === academiaId);
+        if (matchedOption && !alerta.academiaNome.toLowerCase().includes(matchedOption.label.toLowerCase())) {
+          return false;
+        }
+        if (!matchedOption) return false;
       }
 
-      const searchable = [alerta.academiaNome, alerta.titulo, alerta.descricao, alerta.acaoSugerida, alerta.unidadeNome]
-        .filter(Boolean)
-        .join(" ")
-        .toLocaleLowerCase("pt-BR");
+      if (periodoStart) {
+        const alertDate = alerta.data.slice(0, 10);
+        if (alertDate < periodoStart) return false;
+      }
 
-      return searchable.includes(searchTerm);
+      if (periodoEnd) {
+        const alertDate = alerta.data.slice(0, 10);
+        if (alertDate > periodoEnd) return false;
+      }
+
+      return true;
     });
-  }, [alertas, search, severityFilter]);
+  }, [alertas, activeFilters, academiaSuggestion.options]);
 
   const filteredFeatureUsage = useMemo(() => {
-    const searchTerm = search.trim().toLocaleLowerCase("pt-BR");
+    const searchTerm = usageSearch.trim().toLocaleLowerCase("pt-BR");
 
     return featureUsage.filter((item) => {
       if (searchTerm && !item.academiaNome.toLocaleLowerCase("pt-BR").includes(searchTerm)) {
@@ -188,7 +259,7 @@ export default function AdminOperationalAlertsPage() {
 
       return FEATURE_COLUMNS.some(({ key }) => item[key].status === usageFilter);
     });
-  }, [featureUsage, search, usageFilter]);
+  }, [featureUsage, usageSearch, usageFilter]);
 
   const summary = useMemo(() => {
     const criticos = alertas.filter((item) => item.severidade === "CRITICAL").length;
@@ -209,6 +280,53 @@ export default function AdminOperationalAlertsPage() {
       ociosidadePercentual: totalFeatures > 0 ? (totalFeaturesAtivasSemUso / totalFeatures) * 100 : 0,
     };
   }, [alertas, featureUsage]);
+
+  const hasNext = (page + 1) * PAGE_SIZE < filteredAlertas.length;
+  const pageItems = useMemo(
+    () => filteredAlertas.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
+    [filteredAlertas, page],
+  );
+
+  const renderAlertaCells = useCallback(
+    (alerta: AlertaOperacional) => (
+      <>
+        <TableCell className="px-4 py-3">
+          <Badge variant="outline" className="border-border bg-secondary text-foreground">
+            {TIPO_LABELS[alerta.tipo] ?? alerta.tipo}
+          </Badge>
+        </TableCell>
+        <TableCell className="px-4 py-3">
+          <SeverityBadge severidade={alerta.severidade} />
+        </TableCell>
+        <TableCell className="px-4 py-3 text-sm text-foreground">
+          {alerta.academiaNome}
+          {alerta.unidadeNome ? (
+            <span className="ml-1 text-xs text-muted-foreground">({alerta.unidadeNome})</span>
+          ) : null}
+        </TableCell>
+        <TableCell className="max-w-[300px] px-4 py-3">
+          <p className="truncate text-sm font-medium text-foreground">{alerta.titulo}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">{alerta.descricao}</p>
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
+          {formatDateTime(alerta.data)}
+        </TableCell>
+        <TableCell className="px-4 py-3">
+          <div className="flex items-center gap-1">
+            <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs">
+              <CheckCircle2 className="size-3.5" />
+              Resolver
+            </Button>
+            <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground">
+              <VolumeX className="size-3.5" />
+              Silenciar
+            </Button>
+          </div>
+        </TableCell>
+      </>
+    ),
+    [],
+  );
 
   return (
     <div className="space-y-6">
@@ -247,184 +365,116 @@ export default function AdminOperationalAlertsPage() {
         />
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 lg:flex-row lg:items-end">
-        <div className="grid flex-1 gap-3 md:grid-cols-3 xl:grid-cols-[1.2fr_1fr_1fr_auto]">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Buscar academia ou alerta</label>
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Ex.: contrato vencendo, academia XPTO"
-              className="border-border bg-secondary"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Severidade</label>
-            <Select value={severityFilter} onValueChange={(value) => setSeverityFilter(value as SeverityFilter)}>
-              <SelectTrigger className="w-full border-border bg-secondary" aria-label="Filtrar alertas por severidade">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="border-border bg-card">
-                {SEVERITY_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status de uso</label>
-            <Select value={usageFilter} onValueChange={(value) => setUsageFilter(value as UsageFilter)}>
-              <SelectTrigger className="w-full border-border bg-secondary" aria-label="Filtrar tabela por status de uso">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="border-border bg-card">
-                {USAGE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Academias visíveis</label>
-            <Input
-              readOnly
-              value={`${filteredFeatureUsage.length} academia(s)`}
-              className="border-border bg-secondary text-muted-foreground"
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" className="border-border" onClick={() => void alertasQuery.refetch()}>
-            Atualizar
-          </Button>
-          <Link href="/admin">
-            <Button type="button" variant="ghost">Voltar ao dashboard</Button>
-          </Link>
-        </div>
-      </div>
-
       {error ? <ListErrorState error={error} onRetry={() => void alertasQuery.refetch()} /> : null}
 
+      <Card className="border-border/80 bg-card/90">
+        <CardHeader className="space-y-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BellRing className="size-4 text-gym-accent" />
+              <CardTitle>Alertas automáticos</CardTitle>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="border-border" onClick={() => void alertasQuery.refetch()}>
+                Atualizar
+              </Button>
+              <Link href="/admin">
+                <Button type="button" variant="ghost">Voltar ao dashboard</Button>
+              </Link>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Sem login admin, queda operacional, contrato vencendo e inadimplência acima do threshold.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <TableFilters
+            filters={filterConfigs}
+            onFiltersChange={handleFiltersChange}
+          />
+
+          <PaginatedTable<AlertaOperacional>
+            tableAriaLabel="Alertas operacionais automáticos"
+            columns={ALERTAS_TABLE_COLUMNS}
+            items={pageItems}
+            emptyText={
+              alertas.length === 0
+                ? "Nenhum alerta operacional foi retornado no momento."
+                : "Nenhum alerta corresponde aos filtros aplicados."
+            }
+            getRowKey={(alerta) => alerta.id ?? `${alerta.academiaNome}-${alerta.tipo}-${alerta.data}`}
+            renderCells={renderAlertaCells}
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={filteredAlertas.length}
+            hasNext={hasNext}
+            onPrevious={() => setPage(Math.max(0, page - 1))}
+            onNext={() => setPage(page + 1)}
+            disablePrevious={page === 0}
+            disableNext={!hasNext}
+            isLoading={loading}
+            itemLabel="alertas"
+          />
+        </CardContent>
+      </Card>
+
       {loading ? (
-        <div className="space-y-6">
-          <ListLoadingSkeleton rows={5} columns={4} />
-          <ListLoadingSkeleton rows={4} columns={6} />
-        </div>
+        <ListLoadingSkeleton rows={4} columns={6} />
       ) : (
-        <>
-          <Card className="border-border/80 bg-card/90">
-            <CardHeader className="space-y-1">
-              <div className="flex items-center gap-2">
-                <BellRing className="size-4 text-gym-accent" />
-                <CardTitle>Alertas automáticos</CardTitle>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Sem login admin, queda operacional, contrato vencendo e inadimplência acima do threshold.
-              </p>
-            </CardHeader>
-            <CardContent>
-              {filteredAlertas.length === 0 ? (
-                <EmptyState
-                  variant={alertas.length === 0 ? "list" : "search"}
-                  message={
-                    alertas.length === 0
-                      ? "Nenhum alerta operacional foi retornado no momento."
-                      : "Nenhum alerta corresponde aos filtros aplicados."
-                  }
-                />
-              ) : (
-                <div className="space-y-3">
-                  {filteredAlertas.map((alerta) => (
-                    <div key={alerta.id} className="rounded-xl border border-border/80 bg-secondary/20 p-4">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <SeverityBadge severidade={alerta.severidade} />
-                            <span className="text-sm font-semibold text-foreground">{alerta.titulo}</span>
+        <Card className="border-border/80 bg-card/90">
+          <CardHeader className="space-y-1">
+            <CardTitle>Painel de uso de features por academia</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Identifique features ativas sem uso real para upsell, onboarding ou intervenção operacional.
+            </p>
+          </CardHeader>
+          <CardContent>
+            {filteredFeatureUsage.length === 0 ? (
+              <EmptyState
+                variant={featureUsage.length === 0 ? "list" : "search"}
+                message={
+                  featureUsage.length === 0
+                    ? "Nenhum dado de uso de features foi retornado."
+                    : "Nenhuma academia corresponde aos filtros aplicados."
+                }
+              />
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-border/80">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-secondary/40">
+                      <TableHead className="min-w-56">Academia</TableHead>
+                      {FEATURE_COLUMNS.map((feature) => (
+                        <TableHead key={feature.key} className="min-w-40">
+                          {feature.label}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredFeatureUsage.map((item) => (
+                      <TableRow key={item.academiaId ?? item.academiaNome}>
+                        <TableCell className="align-top">
+                          <div className="space-y-1">
+                            <p className="font-semibold text-foreground">{item.academiaNome}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {FEATURE_COLUMNS.filter(({ key }) => item[key].status === "EM_USO").length} feature(s) em uso
+                            </p>
                           </div>
-                          <p className="text-sm text-muted-foreground">{alerta.descricao}</p>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            <span>Academia: {alerta.academiaNome}</span>
-                            <span>Data: {formatDateTime(alerta.data)}</span>
-                            {alerta.unidadeNome ? <span>Unidade: {alerta.unidadeNome}</span> : null}
-                          </div>
-                        </div>
-
-                        <div className="min-w-72 rounded-lg border border-border/80 bg-card/70 p-3 text-sm">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ação sugerida</p>
-                          <p className="mt-1 text-foreground">{alerta.acaoSugerida}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/80 bg-card/90">
-            <CardHeader className="space-y-1">
-              <CardTitle>Painel de uso de features por academia</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Identifique features ativas sem uso real para upsell, onboarding ou intervenção operacional.
-              </p>
-            </CardHeader>
-            <CardContent>
-              {filteredFeatureUsage.length === 0 ? (
-                <EmptyState
-                  variant={featureUsage.length === 0 ? "list" : "search"}
-                  message={
-                    featureUsage.length === 0
-                      ? "Nenhum dado de uso de features foi retornado."
-                      : "Nenhuma academia corresponde aos filtros aplicados."
-                  }
-                />
-              ) : (
-                <div className="overflow-x-auto rounded-xl border border-border/80">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-secondary/40">
-                        <TableHead className="min-w-56">Academia</TableHead>
+                        </TableCell>
                         {FEATURE_COLUMNS.map((feature) => (
-                          <TableHead key={feature.key} className="min-w-40">
-                            {feature.label}
-                          </TableHead>
+                          <TableCell key={feature.key} className="align-top">
+                            <FeatureUsageBadge indicator={item[feature.key]} />
+                          </TableCell>
                         ))}
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredFeatureUsage.map((item) => (
-                        <TableRow key={item.academiaId ?? item.academiaNome}>
-                          <TableCell className="align-top">
-                            <div className="space-y-1">
-                              <p className="font-semibold text-foreground">{item.academiaNome}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {FEATURE_COLUMNS.filter(({ key }) => item[key].status === "EM_USO").length} feature(s) em uso
-                              </p>
-                            </div>
-                          </TableCell>
-                          {FEATURE_COLUMNS.map((feature) => (
-                            <TableCell key={feature.key} className="align-top">
-                              <FeatureUsageBadge indicator={item[feature.key]} />
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );
