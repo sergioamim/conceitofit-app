@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AlertTriangle, ArrowUpRight, Building2, CreditCard, TrendingDown, Wallet } from "lucide-react";
 import { EmptyState, ListErrorState, ListLoadingSkeleton } from "@/components/shared/list-states";
 import { PaginatedTable } from "@/components/shared/paginated-table";
-import { TableFilters, type ActiveFilters } from "@/components/shared/table-filters";
+import { TableFilters, type FilterConfig, type ActiveFilters } from "@/components/shared/table-filters";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,23 +73,6 @@ function AgingBadge({ item }: { item: DashboardFinanceiroAgingItem }) {
   );
 }
 
-function QuickActions() {
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Link href="/admin/financeiro/cobrancas">
-        <Button type="button" variant="outline" size="sm" className="border-border">
-          Cobranças
-        </Button>
-      </Link>
-      <Link href="/admin/financeiro/contratos">
-        <Button type="button" variant="ghost" size="sm">
-          Suspender contrato
-        </Button>
-      </Link>
-    </div>
-  );
-}
-
 export default function AdminFinanceiroDashboardPage() {
   const [periodo, setPeriodo] = useState<DashboardFinanceiroPeriodo>("12M");
 
@@ -109,27 +93,65 @@ export default function AdminFinanceiroDashboardPage() {
     return [...(dashboard?.comparativoPlanos ?? [])].sort((left, right) => right.mrr - left.mrr);
   }, [dashboard?.comparativoPlanos]);
 
-  // ── Inadimplentes: filtro, paginação ──────────────────────────────────
-  const [inadimplenteFilters, setInadimplenteFilters] = useState<ActiveFilters>({});
-  const [inadPage, setInadPage] = useState(0);
+  // ── Transações recentes: filtro + paginação ──────────────────────────
+  const [txFilters, setTxFilters] = useState<ActiveFilters>({});
+  const [txPage, setTxPage] = useState(0);
 
-  const filteredInadimplentes = useMemo(() => {
-    const items = dashboard?.inadimplentes ?? [];
-    const query = (inadimplenteFilters.q_inadimplente ?? "").toLowerCase().trim();
-    if (!query) return items;
-    return items.filter(
-      (item) =>
-        item.academiaNome.toLowerCase().includes(query) ||
-        (item.planoNome ?? "").toLowerCase().includes(query),
-    );
-  }, [dashboard?.inadimplentes, inadimplenteFilters.q_inadimplente]);
+  const txFilterConfigs: FilterConfig[] = useMemo(
+    () => [
+      {
+        type: "date-range" as const,
+        key: "periodo_tx",
+        label: "Período",
+        placeholderStart: "Data início",
+        placeholderEnd: "Data fim",
+      },
+      {
+        type: "text" as const,
+        key: "q_tx",
+        label: "Buscar",
+        placeholder: "Academia ou plano...",
+        debounceMs: 250,
+      },
+    ],
+    [],
+  );
 
-  const inadimplentePageItems = useMemo(() => {
-    const start = inadPage * INADIMPLENTE_PAGE_SIZE;
-    return filteredInadimplentes.slice(start, start + INADIMPLENTE_PAGE_SIZE);
-  }, [filteredInadimplentes, inadPage]);
+  const handleTxFiltersChange = useCallback((filters: ActiveFilters) => {
+    setTxFilters(filters);
+    setTxPage(0);
+  }, []);
 
-  const inadHasNext = (inadPage + 1) * INADIMPLENTE_PAGE_SIZE < filteredInadimplentes.length;
+  const filteredTransacoes = useMemo(() => {
+    let items = dashboard?.inadimplentes ?? [];
+    const query = (txFilters.q_tx ?? "").toLowerCase().trim();
+    if (query) {
+      items = items.filter(
+        (item) =>
+          item.academiaNome.toLowerCase().includes(query) ||
+          (item.planoNome ?? "").toLowerCase().includes(query),
+      );
+    }
+    const startDate = txFilters.periodo_tx_start ?? "";
+    const endDate = txFilters.periodo_tx_end ?? "";
+    if (startDate || endDate) {
+      items = items.filter((item) => {
+        const venc = item.ultimaCobrancaVencida ?? "";
+        if (!venc) return true;
+        if (startDate && venc < startDate) return false;
+        if (endDate && venc > endDate) return false;
+        return true;
+      });
+    }
+    return items;
+  }, [dashboard?.inadimplentes, txFilters]);
+
+  const txPageItems = useMemo(() => {
+    const start = txPage * INADIMPLENTE_PAGE_SIZE;
+    return filteredTransacoes.slice(start, start + INADIMPLENTE_PAGE_SIZE);
+  }, [filteredTransacoes, txPage]);
+
+  const txHasNext = (txPage + 1) * INADIMPLENTE_PAGE_SIZE < filteredTransacoes.length;
 
   return (
     <div className="space-y-6">
@@ -282,75 +304,59 @@ export default function AdminFinanceiroDashboardPage() {
           <div className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
             <Card className="border-border/80 bg-card/90">
               <CardHeader className="space-y-1">
-                <CardTitle>Academias inadimplentes</CardTitle>
+                <CardTitle>Transações recentes</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Priorize contato e eventual suspensão a partir das maiores exposições financeiras.
                 </p>
               </CardHeader>
               <CardContent className="space-y-3">
                 <TableFilters
-                  filters={[
-                    {
-                      type: "text",
-                      key: "q_inadimplente",
-                      label: "Buscar",
-                      placeholder: "Academia ou plano...",
-                      debounceMs: 250,
-                    },
-                  ]}
-                  onFiltersChange={setInadimplenteFilters}
+                  filters={txFilterConfigs}
+                  onFiltersChange={handleTxFiltersChange}
                 />
                 <PaginatedTable<DashboardFinanceiroInadimplente>
                   columns={[
+                    { label: "Data" },
                     { label: "Academia" },
-                    { label: "Plano" },
-                    { label: "Em aberto" },
-                    { label: "Atraso" },
-                    { label: "Último vencimento" },
-                    { label: "Ações", className: "text-right" },
+                    { label: "Tipo" },
+                    { label: "Valor" },
+                    { label: "Status" },
                   ]}
-                  items={inadimplentePageItems}
-                  emptyText="Nenhuma academia inadimplente no período selecionado."
+                  items={txPageItems}
+                  emptyText="Nenhuma transação encontrada no período selecionado."
                   getRowKey={(item) =>
                     `${item.academiaId ?? item.academiaNome}-${item.cobrancaId ?? item.contratoId ?? "row"}`
                   }
-                  page={inadPage}
+                  page={txPage}
                   pageSize={INADIMPLENTE_PAGE_SIZE}
-                  total={filteredInadimplentes.length}
-                  hasNext={inadHasNext}
-                  onPrevious={() => setInadPage((p) => Math.max(0, p - 1))}
-                  onNext={() => setInadPage((p) => p + 1)}
-                  itemLabel="inadimplentes"
-                  showPagination={filteredInadimplentes.length > INADIMPLENTE_PAGE_SIZE}
-                  tableAriaLabel="Tabela de academias inadimplentes"
+                  total={filteredTransacoes.length}
+                  hasNext={txHasNext}
+                  onPrevious={() => setTxPage((p) => Math.max(0, p - 1))}
+                  onNext={() => setTxPage((p) => p + 1)}
+                  itemLabel="transações"
+                  showPagination={filteredTransacoes.length > INADIMPLENTE_PAGE_SIZE}
+                  tableAriaLabel="Tabela de transações recentes"
                   renderCells={(item) => (
                     <>
-                      <td className="px-4 py-3 font-medium text-foreground">{item.academiaNome}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">
-                        {item.planoNome ?? "Plano não informado"}
+                        {item.ultimaCobrancaVencida ? formatDate(item.ultimaCobrancaVencida) : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-foreground">{item.academiaNome}</span>
+                          <span className="text-xs text-muted-foreground">{item.planoNome ?? "Plano não informado"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className="border-border bg-secondary text-muted-foreground">
+                          Inadimplência
+                        </Badge>
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-foreground">
                         {formatBRL(item.valorEmAberto)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        <Badge
-                          variant="outline"
-                          className={
-                            item.diasEmAtraso > 60
-                              ? "border-gym-danger/30 bg-gym-danger/10 text-gym-danger"
-                              : item.diasEmAtraso > 30
-                                ? "border-gym-warning/30 bg-gym-warning/10 text-gym-warning"
-                                : "border-border bg-secondary text-muted-foreground"
-                          }
-                        >
-                          {item.diasEmAtraso} dia(s)
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        {item.ultimaCobrancaVencida ? formatDate(item.ultimaCobrancaVencida) : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <QuickActions />
+                      <td className="px-4 py-3">
+                        <StatusBadge status={item.diasEmAtraso > 0 ? "VENCIDO" : "PENDENTE"} />
                       </td>
                     </>
                   )}
