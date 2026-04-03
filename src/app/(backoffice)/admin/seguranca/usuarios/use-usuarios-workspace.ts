@@ -5,8 +5,8 @@ import { useForm, useWatch } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Power, Shield } from "lucide-react";
-import { listGlobalAcademias, listGlobalUnidades } from "@/backoffice/lib/admin";
-import { createGlobalSecurityUser } from "@/backoffice/lib/seguranca";
+import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
+import { createGlobalSecurityUser } from "@/lib/backoffice/seguranca";
 import type { BulkAction } from "@/components/shared/bulk-action-bar";
 import { globalUserCreateFormSchema } from "@/lib/tenant/forms/security-user-create-schemas";
 import { validateGlobalUserCreateDraft } from "@/lib/tenant/security-user-create";
@@ -73,7 +73,7 @@ export function useUsuariosWorkspace() {
   }, [allItems]);
 
   const handleBulkDeactivate = useCallback(
-    async (ids: string[]) => {
+    (ids: string[]) => {
       // TODO: integrar com endpoint de desativacao em lote
       // eslint-disable-next-line no-console
       console.log("[bulk] Desativar usuários:", ids);
@@ -83,7 +83,7 @@ export function useUsuariosWorkspace() {
   );
 
   const handleBulkChangeProfile = useCallback(
-    async (ids: string[]) => {
+    (ids: string[]) => {
       // TODO: integrar com endpoint de alteracao de perfil em lote
       // eslint-disable-next-line no-console
       console.log("[bulk] Alterar perfil dos usuários:", ids);
@@ -172,7 +172,7 @@ export function useUsuariosWorkspace() {
     }
   }, [allItems.length, page]);
 
-  function applyFilters(): void {
+  function applyFilters() {
     setSelectedIds([]);
     const params = new URLSearchParams();
     if (filters.query.trim()) params.set("query", filters.query.trim());
@@ -267,6 +267,9 @@ export function useUsuariosWorkspace() {
     loadingCatalog,
     loading,
     error,
+    selectedIds,
+    setSelectedIds,
+    bulkActions,
     showCreateForm,
     setShowCreateForm,
     creatingUser,
