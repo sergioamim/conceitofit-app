@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Building2, ChevronLeft, ChevronRight, Command, Eye, Globe, LogOut, Menu } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Clock, Command, Eye, Globe, LogOut, Menu, Plus, Rocket, Users, Wallet } from "lucide-react";
 import { Command as CmdkRoot, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "cmdk";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
@@ -20,7 +20,7 @@ import {
 } from "@/lib/api/session";
 import { logoutApi } from "@/lib/api/auth";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
-import { backofficeNavGroups, allBackofficeNavItems } from "@/backoffice/lib/nav-items";
+import { backofficeNavGroups, allBackofficeNavItems, sidebarBackofficeNavGroups } from "@/backoffice/lib/nav-items";
 import type { BackofficeNavItem } from "@/backoffice/lib/nav-items";
 import { hasElevatedAccess } from "@/lib/access-control";
 import { cn } from "@/lib/utils";
@@ -95,6 +95,101 @@ function Breadcrumbs({ pathname }: { pathname: string | null }) {
 }
 
 // ---------------------------------------------------------------------------
+// Command Palette — Acessos recentes (localStorage SSR-safe)
+// ---------------------------------------------------------------------------
+
+const RECENT_ROUTES_KEY = "backoffice-recent-routes";
+const MAX_RECENT_ROUTES = 5;
+
+type RecentRoute = { href: string; label: string; timestamp: number };
+
+function readRecentRoutes(): RecentRoute[] {
+  try {
+    const raw = localStorage.getItem(RECENT_ROUTES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(
+        (r): r is RecentRoute =>
+          typeof r === "object" &&
+          r !== null &&
+          typeof (r as RecentRoute).href === "string" &&
+          typeof (r as RecentRoute).label === "string" &&
+          typeof (r as RecentRoute).timestamp === "number",
+      )
+      .slice(0, MAX_RECENT_ROUTES);
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentRoute(href: string, label: string) {
+  try {
+    const existing = readRecentRoutes().filter((r) => r.href !== href);
+    const updated: RecentRoute[] = [
+      { href, label, timestamp: Date.now() },
+      ...existing,
+    ].slice(0, MAX_RECENT_ROUTES);
+    localStorage.setItem(RECENT_ROUTES_KEY, JSON.stringify(updated));
+  } catch {
+    // localStorage pode estar indisponivel
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Acoes rapidas do backoffice
+// ---------------------------------------------------------------------------
+
+type QuickAction = {
+  id: string;
+  label: string;
+  href: string;
+  icon: typeof Plus;
+  searchTags: string[];
+};
+
+const quickActions: QuickAction[] = [
+  {
+    id: "qa-provisionar",
+    label: "Provisionar Academia",
+    href: "/admin/onboarding/provisionar",
+    icon: Rocket,
+    searchTags: ["criar academia", "nova academia", "setup", "ativar"],
+  },
+  {
+    id: "qa-novo-lead",
+    label: "Novo Lead B2B",
+    href: "/admin/leads",
+    icon: Users,
+    searchTags: ["novo lead", "prospecto", "comercial", "adicionar lead"],
+  },
+  {
+    id: "qa-gerar-cobranca",
+    label: "Gerar Cobranca",
+    href: "/admin/financeiro/cobrancas",
+    icon: Wallet,
+    searchTags: ["nova cobranca", "billing", "fatura", "invoice", "boleto"],
+  },
+  {
+    id: "qa-entrar-academia",
+    label: "Entrar como Academia",
+    href: "/admin/entrar-como-academia",
+    icon: Building2,
+    searchTags: ["impersonar", "simular", "acessar como", "trocar"],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Command Palette — CSS constants
+// ---------------------------------------------------------------------------
+
+const ITEM_CLASS =
+  "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground aria-selected:bg-gym-accent/10 aria-selected:text-foreground";
+const GROUP_HEADING_CLASS =
+  "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground/60";
+
+// ---------------------------------------------------------------------------
 // Command Palette
 // ---------------------------------------------------------------------------
 
@@ -106,14 +201,31 @@ function CommandPalette({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const [recentRoutes, setRecentRoutes] = useState<RecentRoute[]>([]);
 
-  const handleSelect = useCallback(
-    (item: BackofficeNavItem) => {
+  // Carrega rotas recentes quando a palette abre (SSR-safe)
+  useEffect(() => {
+    if (open) {
+      setRecentRoutes(readRecentRoutes());
+    }
+  }, [open]);
+
+  const handleNavigate = useCallback(
+    (href: string, label: string) => {
+      saveRecentRoute(href, label);
       onClose();
-      router.push(item.href);
+      router.push(href);
     },
     [onClose, router],
   );
+
+  // Resolve icones para rotas recentes a partir do nav registry
+  const recentWithIcons = useMemo(() => {
+    return recentRoutes.map((r) => {
+      const navItem = allBackofficeNavItems.find((n) => n.href === r.href);
+      return { ...r, icon: navItem?.icon ?? Clock };
+    });
+  }, [recentRoutes]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -141,20 +253,65 @@ function CommandPalette({
             <CommandEmpty className="px-4 py-6 text-center text-sm text-muted-foreground">
               Nenhuma página encontrada.
             </CommandEmpty>
+
+            {/* Acoes rapidas */}
+            <CommandGroup heading="Ações Rápidas" className={GROUP_HEADING_CLASS}>
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <CommandItem
+                    key={action.id}
+                    value={[action.label, ...action.searchTags].join(" ")}
+                    onSelect={() => handleNavigate(action.href, action.label)}
+                    className={ITEM_CLASS}
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    {action.label}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+
+            {/* Rotas recentes */}
+            {recentWithIcons.length > 0 && (
+              <CommandGroup heading="Recentes" className={GROUP_HEADING_CLASS}>
+                {recentWithIcons.map((route) => {
+                  const Icon = route.icon;
+                  return (
+                    <CommandItem
+                      key={route.href}
+                      value={`recente ${route.label}`}
+                      onSelect={() => handleNavigate(route.href, route.label)}
+                      className={ITEM_CLASS}
+                    >
+                      <Icon className="size-4 shrink-0" />
+                      {route.label}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+
+            {/* Navegacao por grupo */}
             {backofficeNavGroups.map((group) => (
               <CommandGroup
                 key={group.title}
                 heading={group.title}
-                className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground/60"
+                className={GROUP_HEADING_CLASS}
               >
                 {group.items.map((item) => {
                   const Icon = item.icon;
+                  const searchValue = [
+                    group.title,
+                    item.label,
+                    ...(item.searchTags ?? []),
+                  ].join(" ");
                   return (
                     <CommandItem
                       key={item.href}
-                      value={`${group.title} ${item.label}`}
-                      onSelect={() => handleSelect(item)}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground aria-selected:bg-gym-accent/10 aria-selected:text-foreground"
+                      value={searchValue}
+                      onSelect={() => handleNavigate(item.href, item.label)}
+                      className={ITEM_CLASS}
                     >
                       <Icon className="size-4 shrink-0" />
                       {item.label}
@@ -164,6 +321,24 @@ function CommandPalette({
               </CommandGroup>
             ))}
           </CommandList>
+
+          {/* Footer com dicas de teclado */}
+          <div className="flex items-center justify-between border-t border-border px-4 py-2 text-[10px] text-muted-foreground/60">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1">
+                <kbd className="rounded border border-border bg-background px-1 py-0.5 font-mono">↑↓</kbd>
+                navegar
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="rounded border border-border bg-background px-1 py-0.5 font-mono">↵</kbd>
+                abrir
+              </span>
+            </div>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border border-border bg-background px-1 py-0.5 font-mono">esc</kbd>
+              fechar
+            </span>
+          </div>
         </CmdkRoot>
       </div>
     </div>
@@ -249,7 +424,7 @@ function SidebarNavContent({
 
       {/* Navigation */}
       <nav aria-label="Menu backoffice" className="flex flex-col gap-3 text-sm overflow-y-auto flex-1 min-h-0">
-        {backofficeNavGroups.map((group) => (
+        {sidebarBackofficeNavGroups.map((group) => (
           <div key={group.title}>
             {!collapsed && (
               <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
