@@ -49,6 +49,24 @@ function DialogOverlay({
   )
 }
 
+function hasDialogTitleChild(children: React.ReactNode): boolean {
+  let found = false
+  React.Children.forEach(children, (child) => {
+    if (found) return
+    if (!React.isValidElement(child)) return
+    if ((child.type as { displayName?: string })?.displayName === "DialogTitle") {
+      found = true
+      return
+    }
+    if (child.props && typeof child.props === "object" && "children" in child.props) {
+      if (hasDialogTitleChild((child.props as { children?: React.ReactNode }).children)) {
+        found = true
+      }
+    }
+  })
+  return found
+}
+
 function DialogContent({
   className,
   children,
@@ -57,6 +75,8 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const needsFallbackTitle = !hasDialogTitleChild(children)
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -68,9 +88,11 @@ function DialogContent({
         )}
         {...props}
       >
-        <VisuallyHidden.Root>
-          <DialogPrimitive.Title>{FALLBACK_DIALOG_TITLE}</DialogPrimitive.Title>
-        </VisuallyHidden.Root>
+        {needsFallbackTitle && (
+          <VisuallyHidden.Root>
+            <DialogPrimitive.Title>{FALLBACK_DIALOG_TITLE}</DialogPrimitive.Title>
+          </VisuallyHidden.Root>
+        )}
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
@@ -136,6 +158,7 @@ function DialogTitle({
     />
   )
 }
+DialogTitle.displayName = "DialogTitle"
 
 function DialogDescription({
   className,
