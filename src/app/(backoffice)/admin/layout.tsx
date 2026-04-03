@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { Building2, ChevronRight, Command, Eye, Globe, LogOut } from "lucide-react";
+import { Building2, ChevronRight, Clock, Command, Eye, Globe, LogOut, Plus, Rocket, Users, Wallet } from "lucide-react";
 import { Command as CmdkRoot, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "cmdk";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
@@ -16,8 +16,7 @@ import {
 } from "@/lib/api/session";
 import { logoutApi } from "@/lib/api/auth";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
-import { backofficeNavGroups, allBackofficeNavItems } from "@/lib/backoffice/nav-items";
-import type { BackofficeNavItem } from "@/lib/backoffice/nav-items";
+import { backofficeNavGroups, allBackofficeNavItems, sidebarBackofficeNavGroups } from "@/lib/backoffice/nav-items";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,8 +80,99 @@ function Breadcrumbs({ pathname }: { pathname: string | null }) {
 }
 
 // ---------------------------------------------------------------------------
+// Command Palette — Acessos recentes (localStorage SSR-safe)
+// ---------------------------------------------------------------------------
+
+const RECENT_ROUTES_KEY = "backoffice-recent-routes";
+const MAX_RECENT_ROUTES = 5;
+
+type RecentRoute = { href: string; label: string; timestamp: number };
+
+function readRecentRoutes(): RecentRoute[] {
+  try {
+    const raw = localStorage.getItem(RECENT_ROUTES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(
+        (r): r is RecentRoute =>
+          typeof r === "object" &&
+          r !== null &&
+          typeof (r as RecentRoute).href === "string" &&
+          typeof (r as RecentRoute).label === "string" &&
+          typeof (r as RecentRoute).timestamp === "number",
+      )
+      .slice(0, MAX_RECENT_ROUTES);
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentRoute(href: string, label: string) {
+  try {
+    const existing = readRecentRoutes().filter((r) => r.href !== href);
+    const updated: RecentRoute[] = [
+      { href, label, timestamp: Date.now() },
+      ...existing,
+    ].slice(0, MAX_RECENT_ROUTES);
+    localStorage.setItem(RECENT_ROUTES_KEY, JSON.stringify(updated));
+  } catch {
+    // localStorage pode estar indisponivel
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Acoes rapidas do backoffice
+// ---------------------------------------------------------------------------
+
+type QuickAction = {
+  id: string;
+  label: string;
+  href: string;
+  icon: typeof Plus;
+  searchTags: string[];
+};
+
+const quickActions: QuickAction[] = [
+  {
+    id: "qa-provisionar",
+    label: "Provisionar Academia",
+    href: "/admin/onboarding/provisionar",
+    icon: Rocket,
+    searchTags: ["criar academia", "nova academia", "setup", "ativar"],
+  },
+  {
+    id: "qa-novo-lead",
+    label: "Novo Lead B2B",
+    href: "/admin/leads",
+    icon: Users,
+    searchTags: ["novo lead", "prospecto", "comercial", "adicionar lead"],
+  },
+  {
+    id: "qa-gerar-cobranca",
+    label: "Gerar Cobranca",
+    href: "/admin/financeiro/cobrancas",
+    icon: Wallet,
+    searchTags: ["nova cobranca", "billing", "fatura", "invoice", "boleto"],
+  },
+  {
+    id: "qa-entrar-academia",
+    label: "Entrar como Academia",
+    href: "/admin/entrar-como-academia",
+    icon: Building2,
+    searchTags: ["impersonar", "simular", "acessar como", "trocar"],
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Command Palette
 // ---------------------------------------------------------------------------
+
+const ITEM_CLASS =
+  "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground aria-selected:bg-gym-accent/10 aria-selected:text-foreground";
+const GROUP_HEADING_CLASS =
+  "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground/60";
 
 function CommandPalette({
   open,
@@ -92,11 +182,20 @@ function CommandPalette({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const [recentRoutes, setRecentRoutes] = useState<RecentRoute[]>([]);
 
-  const handleSelect = useCallback(
-    (item: BackofficeNavItem) => {
+  // Carregar acessos recentes somente apos mount (SSR-safe)
+  useEffect(() => {
+    if (open) {
+      setRecentRoutes(readRecentRoutes());
+    }
+  }, [open]);
+
+  const handleNavigate = useCallback(
+    (href: string, label: string) => {
+      saveRecentRoute(href, label);
       onClose();
-      router.push(item.href);
+      router.push(href);
     },
     [onClose, router],
   );
@@ -111,6 +210,16 @@ function CommandPalette({
     }
   }, [open, onClose]);
 
+  // Resolver icone para acessos recentes a partir dos nav items
+  const recentWithIcons = useMemo(() => {
+    return recentRoutes
+      .map((r) => {
+        const navItem = allBackofficeNavItems.find((n) => n.href === r.href);
+        return navItem ? { ...r, icon: navItem.icon } : null;
+      })
+      .filter((r): r is RecentRoute & { icon: typeof Plus } => r !== null);
+  }, [recentRoutes]);
+
   if (!open) return null;
 
   return (
@@ -119,28 +228,76 @@ function CommandPalette({
       <div className="relative w-full max-w-lg rounded-xl border border-border bg-card shadow-2xl">
         <CmdkRoot label="Command palette" className="flex flex-col">
           <CommandInput
-            placeholder="Navegar para..."
+            placeholder="Buscar paginas, acoes, configuracoes..."
             className="border-b border-border bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
             autoFocus
           />
-          <CommandList className="max-h-72 overflow-y-auto p-2">
+          <CommandList className="max-h-[400px] overflow-y-auto p-2 scrollbar-thin">
             <CommandEmpty className="px-4 py-6 text-center text-sm text-muted-foreground">
-              Nenhuma página encontrada.
+              Nenhuma pagina encontrada.
             </CommandEmpty>
+
+            {/* Acoes Rapidas */}
+            <CommandGroup heading="Acoes Rapidas" className={GROUP_HEADING_CLASS}>
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <CommandItem
+                    key={action.id}
+                    value={`acao ${action.label} ${action.searchTags.join(" ")}`}
+                    onSelect={() => handleNavigate(action.href, action.label)}
+                    className={ITEM_CLASS}
+                  >
+                    <div className="flex size-5 items-center justify-center rounded bg-gym-accent/15">
+                      <Icon className="size-3 text-gym-accent" />
+                    </div>
+                    {action.label}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+
+            {/* Acessos Recentes */}
+            {recentWithIcons.length > 0 && (
+              <CommandGroup heading="Acessos Recentes" className={GROUP_HEADING_CLASS}>
+                {recentWithIcons.map((recent) => {
+                  const Icon = recent.icon;
+                  return (
+                    <CommandItem
+                      key={`recent-${recent.href}`}
+                      value={`recente ${recent.label}`}
+                      onSelect={() => handleNavigate(recent.href, recent.label)}
+                      className={ITEM_CLASS}
+                    >
+                      <Clock className="size-4 shrink-0 text-muted-foreground/50" />
+                      <Icon className="size-4 shrink-0" />
+                      {recent.label}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+
+            {/* Navegacao por grupo */}
             {backofficeNavGroups.map((group) => (
               <CommandGroup
                 key={group.title}
                 heading={group.title}
-                className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground/60"
+                className={GROUP_HEADING_CLASS}
               >
                 {group.items.map((item) => {
                   const Icon = item.icon;
+                  const searchValue = [
+                    group.title,
+                    item.label,
+                    ...(item.searchTags ?? []),
+                  ].join(" ");
                   return (
                     <CommandItem
                       key={item.href}
-                      value={`${group.title} ${item.label}`}
-                      onSelect={() => handleSelect(item)}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground aria-selected:bg-gym-accent/10 aria-selected:text-foreground"
+                      value={searchValue}
+                      onSelect={() => handleNavigate(item.href, item.label)}
+                      className={ITEM_CLASS}
                     >
                       <Icon className="size-4 shrink-0" />
                       {item.label}
@@ -150,6 +307,33 @@ function CommandPalette({
               </CommandGroup>
             ))}
           </CommandList>
+
+          {/* Footer com dicas de teclado */}
+          <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span className="rounded border border-border bg-card px-1 py-0.5">
+                  ↑↓
+                </span>{" "}
+                Navegar
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span className="rounded border border-border bg-card px-1 py-0.5">
+                  ↵
+                </span>{" "}
+                Selecionar
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span className="rounded border border-border bg-card px-1 py-0.5">
+                  esc
+                </span>{" "}
+                Fechar
+              </div>
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              Backoffice <span className="text-gym-accent">⌘K</span>
+            </div>
+          </div>
         </CmdkRoot>
       </div>
     </div>
@@ -248,7 +432,7 @@ function AdminShellFrame({
           </button>
 
           <nav aria-label="Menu backoffice" className="flex flex-col gap-3 text-sm">
-            {backofficeNavGroups.map((group) => (
+            {sidebarBackofficeNavGroups.map((group) => (
               <div key={group.title}>
                 <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
                   {group.title}
@@ -315,9 +499,9 @@ function AdminShellFrame({
       <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <DialogContent className="border-border bg-card">
           <DialogHeader>
-            <DialogTitle>Encerrar sessão?</DialogTitle>
+            <DialogTitle>Encerrar sessao?</DialogTitle>
             <DialogDescription>
-              Você será redirecionado para o login. Esta ação não pode ser desfeita.
+              Voce sera redirecionado para o login. Esta acao nao pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -328,7 +512,7 @@ function AdminShellFrame({
               onClick={() => setLogoutOpen(false)}
               disabled={loggingOut}
             >
-              Não, permanecer
+              Nao, permanecer
             </Button>
             <Button
               type="button"
@@ -409,7 +593,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     return (
       <AdminShellFrame pathname={pathname}>
         <AdminStatusPanel className="border-border text-muted-foreground">
-          Validando permissões do backoffice...
+          Validando permissoes do backoffice...
         </AdminStatusPanel>
       </AdminShellFrame>
     );
