@@ -28,6 +28,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await formaRow.getByRole("button", { name: "Remover" }).click();
     await expect(page.getByRole("row").filter({ hasText: formaEditada })).toHaveCount(0);
 
+    await page.waitForLoadState("networkidle");
     await page.goto("/administrativo/tipos-conta");
     await expect(page.getByRole("heading", { name: "Tipos de Conta" })).toBeVisible();
 
@@ -80,6 +81,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await contaRow.getByRole("button", { name: "Inativar" }).click();
     await expect(contaRow.getByText("Inativa")).toBeVisible();
 
+    await page.waitForLoadState("networkidle");
     await page.goto("/administrativo/maquininhas");
 
     await page.getByRole("button", { name: "Nova maquininha" }).click();
@@ -128,6 +130,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await expect(page.getByText(atividadeEditada, { exact: true })).toBeVisible();
     await expect(page.getByText("Check-in obrigatório", { exact: true })).toBeVisible();
 
+    await page.waitForLoadState("networkidle");
     await page.goto("/administrativo/atividades-grade");
     await page.getByRole("button", { name: "Nova Grade" }).click();
     await page.getByRole("combobox").first().click();
@@ -136,11 +139,13 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await expect(page.getByText("obrigatório")).toBeVisible();
     await page.getByRole("button", { name: "Cancelar" }).click();
 
+    await page.waitForLoadState("networkidle");
     await page.goto("/planos/novo");
     await page.getByRole("tab", { name: "Atividades e benefícios" }).click();
     await expect(page.getByText(atividadeEditada, { exact: true })).toBeVisible();
     await expect(page.getByText("Check-in obrigatório", { exact: true })).toBeVisible();
 
+    await page.waitForLoadState("networkidle");
     await page.goto("/atividades");
     const atividadeEditadaCard = getAtividadeCard(atividadeEditada);
     await atividadeEditadaCard.hover();

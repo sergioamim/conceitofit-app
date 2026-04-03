@@ -30,6 +30,7 @@ test.describe("Admin catálogo CRUD", () => {
     await servicoRow.getByRole("button", { name: "Remover" }).click();
     await expect(page.getByRole("row").filter({ hasText: servicoEditado })).toHaveCount(0);
 
+    await page.waitForLoadState("networkidle");
     await page.goto("/administrativo/produtos");
 
     await page.getByRole("button", { name: "Novo produto" }).click();
