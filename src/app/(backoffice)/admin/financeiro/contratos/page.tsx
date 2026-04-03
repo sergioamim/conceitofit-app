@@ -35,9 +35,10 @@ import {
   reativarAdminContrato,
   suspenderAdminContrato,
   updateAdminContrato,
-} from "@/backoffice/api/admin-billing";
-import { useAdminContratos, useAdminPlanos } from "@/backoffice/query";
-import { useAdminAcademias } from "@/backoffice/query";
+} from "@/lib/api/admin-billing";
+import { useAdminContratos, useAdminPlanos } from "@/lib/query/admin";
+import { useAdminAcademias } from "@/lib/query/admin";
+import { useAcademiaSuggestion } from "@/app/(backoffice)/admin/lib/use-academia-suggestion";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { formatBRL, formatDate } from "@/lib/formatters";
@@ -57,6 +58,7 @@ type StatusFilter = WithFilterAll<StatusContratoPlataforma>;
 
 type ContratoFormValues = {
   academiaId: string;
+  academiaIdDisplay: string;
   planoId: string;
   dataInicio: string;
   dataFim?: string;
@@ -81,6 +83,7 @@ const CICLO_OPTIONS: { value: CicloPlanoPlataforma; label: string }[] = [
 
 const contratoFormSchema = z.object({
   academiaId: requiredTrimmedString("Selecione a academia."),
+  academiaIdDisplay: z.string().optional().default(""),
   planoId: requiredTrimmedString("Selecione o plano."),
   dataInicio: requiredTrimmedString("Informe a data de início."),
   dataFim: z.string().trim().optional(),
@@ -132,11 +135,13 @@ function isContratoVencido(dataFim?: string, todayDate = "") {
 
 function toFormValues(
   contrato: ContratoPlataforma | null,
-  planosIndex: Map<string, PlanoPlataforma>
+  planosIndex: Map<string, PlanoPlataforma>,
+  academiaIndex: Map<string, string>,
 ): ContratoFormValues {
   if (!contrato) {
     return {
       academiaId: "",
+      academiaIdDisplay: "",
       planoId: "",
       dataInicio: "",
       dataFim: "",
@@ -148,6 +153,7 @@ function toFormValues(
 
   return {
     academiaId: contrato.academiaId,
+    academiaIdDisplay: academiaIndex.get(contrato.academiaId) ?? contrato.academiaNome ?? "",
     planoId: contrato.planoId,
     dataInicio: contrato.dataInicio,
     dataFim: contrato.dataFim ?? "",
@@ -163,6 +169,7 @@ export default function AdminContratosPage() {
   const contratosQuery = useAdminContratos();
   const academiasQuery = useAdminAcademias();
   const planosQuery = useAdminPlanos();
+  const { academiaOptions: academiaSuggestionOptions, academiaIndex, onFocusOpen: onAcademiaFocusOpen } = useAcademiaSuggestion();
   const loading = contratosQuery.isLoading || academiasQuery.isLoading || planosQuery.isLoading;
   const error = contratosQuery.error?.message ?? academiasQuery.error?.message ?? planosQuery.error?.message ?? null;
   const contratos = contratosQuery.data ?? [];
@@ -194,11 +201,6 @@ export default function AdminContratosPage() {
     [planos]
   );
 
-  const academiaOptions = useMemo(
-    () => academias.map((academia) => ({ value: academia.id, label: academia.nome })),
-    [academias]
-  );
-
   const planoOptions = useMemo(
     () => planos.map((plano) => ({ value: plano.id, label: plano.nome })),
     [planos]
@@ -206,7 +208,16 @@ export default function AdminContratosPage() {
 
   const fields = useMemo<FormFieldConfig[]>(
     () => [
-      { name: "academiaId", label: "Academia *", type: "select", options: academiaOptions, className: "md:col-span-2" },
+      {
+        name: "academiaId",
+        label: "Academia *",
+        type: "suggestion",
+        suggestionOptions: academiaSuggestionOptions,
+        suggestionDisplayField: "academiaIdDisplay",
+        onFocusOpen: onAcademiaFocusOpen,
+        placeholder: "Digite para buscar academia...",
+        className: "md:col-span-2",
+      },
       { name: "planoId", label: "Plano *", type: "select", options: planoOptions, className: "space-y-1.5" },
       { name: "dataInicio", label: "Data de início *", type: "text", required: true, placeholder: "YYYY-MM-DD" },
       { name: "dataFim", label: "Data de fim", type: "text", placeholder: "YYYY-MM-DD" },
@@ -214,7 +225,7 @@ export default function AdminContratosPage() {
       { name: "valorMensal", label: "Valor negociado *", type: "number", required: true, min: 0, step: "0.01" },
       { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, className: "md:col-span-3" },
     ],
-    [academiaOptions, planoOptions]
+    [academiaSuggestionOptions, onAcademiaFocusOpen, planoOptions]
   );
 
   const filteredContratos = useMemo(() => {
@@ -587,7 +598,7 @@ export default function AdminContratosPage() {
         onSave={(values, id) => {
           void handleSave(values, id);
         }}
-        initial={toFormValues(editing, planosIndex)}
+        initial={toFormValues(editing, planosIndex, academiaIndex)}
         initialId={editing?.id}
         title="Novo contrato"
         editTitle="Editar contrato"
