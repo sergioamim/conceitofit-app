@@ -2,7 +2,7 @@
  * API de operações financeiras operacionais (tenant-level).
  *
  * NFS-e, agregador de transações e integrações operacionais.
- * Usado tanto pelas páginas da academia (app) quanto pelo backoffice.
+ * Usado tanto pelas páginas da academia (portal) quanto pelo backoffice.
  */
 import type {
   AgregadorConciliacaoStatus,

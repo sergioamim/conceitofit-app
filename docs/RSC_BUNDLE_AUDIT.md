@@ -14,7 +14,7 @@
 | **B** | Interacao pesada — precisa ser 100% client |
 | **C** | Hibrida — RSC wrapper + client island viavel |
 
-## Paginas Principais (app)
+## Paginas Principais (portal)
 
 | Rota | Arquivo | Linhas | Tipo | Notas |
 |------|---------|--------|------|-------|
@@ -41,7 +41,7 @@
 
 ## Restricoes
 
-- Todas as paginas `(app)` usam `useTenantContext()` que depende de contexto client-side (session/cookie).
+- Todas as paginas `(portal)` usam `useTenantContext()` que depende de contexto client-side (session/cookie).
 - APIs sao chamadas via `apiRequest` que usa headers do browser (`X-Context-Id`).
 - RSC wrappers precisariam de uma camada de fetch server-compatible ou passar dados iniciais como props.
 

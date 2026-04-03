@@ -58,7 +58,7 @@ Leitura das telas atuais indica tres problemas principais.
 
 #### A. A tela de acesso por unidade concede acesso via perfil implicito
 
-Em [src/app/(app)/seguranca/acesso-unidade/page.tsx](/Users/sergioamim/dev/pessoal/academia-app/src/app/(app)/seguranca/acesso-unidade/page.tsx#L57) o acesso e concedido com um `defaultPerfil` inferido automaticamente. Isso simplifica tecnicamente, mas oculta a decisao mais importante para o operador: qual papel esta sendo dado ao usuario e com qual alcance.
+Em [src/app/(portal)/seguranca/acesso-unidade/page.tsx](/Users/sergioamim/dev/pessoal/academia-app/src/app/(portal)/seguranca/acesso-unidade/page.tsx#L57) o acesso e concedido com um `defaultPerfil` inferido automaticamente. Isso simplifica tecnicamente, mas oculta a decisao mais importante para o operador: qual papel esta sendo dado ao usuario e com qual alcance.
 
 Efeito pratico:
 
@@ -68,7 +68,7 @@ Efeito pratico:
 
 #### B. A tela de RBAC usa linguagem de implementacao, nao linguagem de produto
 
-Em [src/app/(app)/seguranca/rbac/page.tsx](/Users/sergioamim/dev/pessoal/academia-app/src/app/(app)/seguranca/rbac/page.tsx#L163) a navegacao principal esta dividida em `Perfis`, `Usuário x Perfis`, `Grants por Feature` e `Auditoria`.
+Em [src/app/(portal)/seguranca/rbac/page.tsx](/Users/sergioamim/dev/pessoal/academia-app/src/app/(portal)/seguranca/rbac/page.tsx#L163) a navegacao principal esta dividida em `Perfis`, `Usuário x Perfis`, `Grants por Feature` e `Auditoria`.
 
 E ainda expõe termos como:
 

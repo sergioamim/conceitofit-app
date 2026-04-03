@@ -107,7 +107,7 @@
 
 ### Shell da aplicação
 - Responsabilidade: autenticação de rota, sidebar, topbar, troca de unidade, busca global por cliente e tema.
-- Dependências principais: `src/app/(app)/layout.tsx`, `src/components/layout/*`, `src/lib/api/session.ts`, `src/lib/mock/store.ts`.
+- Dependências principais: `src/app/(portal)/layout.tsx`, `src/components/layout/*`, `src/lib/api/session.ts`, `src/lib/mock/store.ts`.
 - Observações arquiteturais: toda a navegação operacional depende do tenant ativo no navegador.
 
 ### Camada de domínio mock/fallback

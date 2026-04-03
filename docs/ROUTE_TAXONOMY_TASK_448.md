@@ -12,7 +12,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 - `src/app/admin-login/page.tsx`
 - `src/app/acesso/[redeSlug]/page.tsx`
 - `src/app/app/[networkSubdomain]/page.tsx`
-- `src/app/(app)/layout.tsx`
+- `src/app/(portal)/layout.tsx`
 - `src/app/(backoffice)/layout.tsx`
 - `src/app/(backoffice)/admin/layout.tsx`
 - `src/app/(aluno)/layout.tsx`
@@ -50,12 +50,12 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 
 ### 3. Portal operacional autenticado
 
-- O grupo `src/app/(app)` concentra o shell autenticado operacional.
-- `src/app/(app)/layout.tsx`:
+- O grupo `src/app/(portal)` concentra o shell autenticado operacional.
+- `src/app/(portal)/layout.tsx`:
   - sobe `TenantContextProvider`;
   - aplica gate de sessao e redireciona para `buildLoginHref(...)`;
   - monta sidebar, topbar, command palette, banners e `BottomNav`.
-- Rotas operacionais observadas dentro de `(app)` incluem:
+- Rotas operacionais observadas dentro de `(portal)` incluem:
   - `/dashboard`
   - `/clientes`
   - `/crm`
@@ -136,7 +136,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 
 ## Inferencia operacional consolidada
 
-- `(app)` funciona hoje como o portal operacional principal da academia.
+- `(portal)` funciona hoje como o portal operacional principal da academia.
 - `(backoffice)` funciona como a administracao global SaaS.
 - `(aluno)` ja e um bounded surface separado e nao deve ser misturado ao portal operacional comum.
 - `/acesso/[redeSlug]` ja tem semantica mais forte e vocabulario mais aderente ao produto que `/app/[networkSubdomain]`.
@@ -153,7 +153,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 - `(auth)`
   - alvo: autentificacao e recuperacao de acesso orientadas por rede.
 - `(portal)`
-  - alvo: shell operacional autenticado da unidade/rede; hoje vive em `(app)`.
+  - alvo: shell operacional autenticado da unidade/rede; hoje vive em `(portal)`.
 - `(backoffice)`
   - alvo: shell global administrativo; ja existe com este nome.
 - `(aluno)`
@@ -169,7 +169,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 - `storefront` e `adesao` sao superfices publicas irmas:
   - `storefront`: descoberta e branding.
   - `adesao`: conversao transacional.
-- `(app)` deve ser tratado como candidato direto a renomeacao para `(portal)` nas tasks seguintes.
+- `(portal)` deve ser tratado como candidato direto a renomeacao para `(portal)` nas tasks seguintes.
 
 ## Matriz de compatibilidade
 
@@ -186,7 +186,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 | `/app/[networkSubdomain]/login` | login legado em ingles | `/acesso/[redeSlug]/autenticacao` | manter com compatibilidade |
 | `/app/[networkSubdomain]/first-access` | primeiro acesso legado | `/acesso/[redeSlug]/primeiro-acesso` | manter com compatibilidade |
 | `/app/[networkSubdomain]/forgot-password` | reset legado | `/acesso/[redeSlug]/recuperar-senha` | manter com compatibilidade |
-| `src/app/(app)/*` | portal operacional autenticado | `src/app/(portal)/*` | renomear grupo, sem trocar URLs publicas agora |
+| `src/app/(portal)/*` | portal operacional autenticado | `src/app/(portal)/*` | renomear grupo, sem trocar URLs publicas agora |
 | `/dashboard` e afins | portal operacional | `/dashboard` e afins | manter URL; trocar so agrupamento interno |
 | `/admin/*` | backoffice global | `/admin/*` | manter |
 | `src/app/(aluno)/*` | portal do aluno | mesmas URLs atuais | manter |
@@ -200,7 +200,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 ### Publico vs autenticado
 
 - `src/app/(public)` e `src/app/storefront` nao dependem de sessao autenticada para renderizar a jornada principal.
-- `src/app/(app)`, `src/app/(backoffice)/admin` e `src/app/(aluno)` aplicam controle de sessao no shell.
+- `src/app/(portal)`, `src/app/(backoffice)/admin` e `src/app/(aluno)` aplicam controle de sessao no shell.
 
 ### Contexto de rede vs contexto global
 
@@ -218,7 +218,7 @@ Congelar a leitura atual da arvore de rotas do App Router e registrar a estrutur
 
 - Task de landing institucional: trocar o redirect de `/`.
 - Task de auth canonica: migrar chamadas e links para priorizar `/acesso/[redeSlug]`.
-- Task de reorganizacao interna: renomear `(app)` para `(portal)` sem quebra de URL.
+- Task de reorganizacao interna: renomear `(portal)` para `(portal)` sem quebra de URL.
 - Task de limpeza legado: decidir se `/app/[networkSubdomain]` segue como redirect permanente ou se fica escondido apenas para compatibilidade.
 - Task de storefront: manter CTA apontando para `/adesao/*` como superficie transacional canonica.
 

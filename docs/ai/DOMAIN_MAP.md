@@ -39,7 +39,7 @@
   - sincronização de branding e Sentry
   - gate de acesso operacional por unidade elegível
 - Arquivos centrais:
-  - `src/app/(app)/layout.tsx`
+  - `src/app/(portal)/layout.tsx`
   - `src/components/layout/sidebar.tsx`
   - `src/components/layout/app-topbar.tsx`
   - `src/components/layout/tenant-theme-sync.tsx`
@@ -51,11 +51,11 @@
 - Responsabilidade:
   - clientes, alunos, matrículas, pagamentos, vendas e catálogos comerciais
 - Arquivos centrais:
-  - `src/app/(app)/clientes`
-  - `src/app/(app)/vendas`
-  - `src/app/(app)/matriculas`
-  - `src/app/(app)/pagamentos`
-  - `src/app/(app)/planos`
+  - `src/app/(portal)/clientes`
+  - `src/app/(portal)/vendas`
+  - `src/app/(portal)/matriculas`
+  - `src/app/(portal)/pagamentos`
+  - `src/app/(portal)/planos`
   - `src/lib/query/use-clientes.ts`
   - `src/lib/query/use-vendas.ts`
   - `src/lib/api/alunos.ts`
@@ -73,8 +73,8 @@
 - Responsabilidade:
   - prospects, pipeline comercial, cadências e follow-up
 - Arquivos centrais:
-  - `src/app/(app)/crm`
-  - `src/app/(app)/prospects`
+  - `src/app/(portal)/crm`
+  - `src/app/(portal)/prospects`
   - `src/lib/query/use-prospects.ts`
   - `src/lib/api/crm.ts`
   - `src/lib/api/crm-cadencias.ts`
@@ -92,15 +92,15 @@
   - `src/lib/api/formas-pagamento.ts`
   - `src/lib/api/contas-bancarias.ts`
   - `src/lib/api/conciliacao-bancaria.ts`
-  - páginas em `src/app/(app)/administrativo/*` e `src/app/(app)/gerencial/*` quando presentes
+  - páginas em `src/app/(portal)/administrativo/*` e `src/app/(portal)/gerencial/*` quando presentes
 
 ### 6. Grade, aulas, reservas, catraca e monitor
 
 - Responsabilidade:
   - mural/grade, reservas de aulas, check-in/catraca e monitor de boas-vindas
 - Arquivos centrais:
-  - `src/app/(app)/grade`
-  - `src/app/(app)/reservas`
+  - `src/app/(portal)/grade`
+  - `src/app/(portal)/reservas`
   - `src/app/monitor/boas-vindas/page.tsx`
   - `src/lib/api/grade-mural.ts`
   - `src/lib/api/reservas.ts`
@@ -113,7 +113,7 @@
 - Responsabilidade:
   - templates, exercícios, atribuição e editor Treinos V2
 - Arquivos centrais:
-  - `src/app/(app)/treinos`
+  - `src/app/(portal)/treinos`
   - `src/components/treinos/treino-v2-editor.tsx`
   - `src/lib/api/treinos.ts`
   - `src/lib/api/treinos-v2.ts`

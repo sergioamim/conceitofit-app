@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { ClienteResumoDialog } from "@/app/(app)/clientes/components/cliente-resumo-dialog";
+import { ClienteResumoDialog } from "@/app/(portal)/clientes/components/cliente-resumo-dialog";
 
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children, open }: any) => (open ? <div>{children}</div> : null),

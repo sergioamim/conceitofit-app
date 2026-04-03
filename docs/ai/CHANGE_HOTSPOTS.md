@@ -21,7 +21,7 @@
 
 - Arquivos:
   - `src/app/layout.tsx`
-  - `src/app/(app)/layout.tsx`
+  - `src/app/(portal)/layout.tsx`
   - `src/app/(aluno)/layout.tsx`
   - `src/app/(backoffice)/layout.tsx`
 - Por que são sensíveis:

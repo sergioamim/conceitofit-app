@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { axe } from "vitest-axe";
-import { ClienteResumoDialog } from "@/app/(app)/clientes/components/cliente-resumo-dialog";
+import { ClienteResumoDialog } from "@/app/(portal)/clientes/components/cliente-resumo-dialog";
 
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children, open }: any) => (open ? <div role="dialog" aria-modal="true" aria-label="Resumo do Cliente">{children}</div> : null),
