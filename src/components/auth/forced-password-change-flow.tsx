@@ -115,10 +115,19 @@ export function ForcedPasswordChangeFlow({
         newPassword: values.newPassword,
         confirmNewPassword: values.confirmNewPassword,
       });
+
+      // Não chamar setSaving(false) no caminho de sucesso.
+      // router.replace() usa startTransition internamente e um setState
+      // de alta prioridade (setSaving) pode cancelar a transição de navegação.
       router.replace(resolvedNextPath);
+
+      // Fallback: se o router.replace não efetuar o redirect em 2s,
+      // forçar navegação via window.location como rede de segurança.
+      window.setTimeout(() => {
+        window.location.replace(resolvedNextPath);
+      }, 2000);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Não foi possível atualizar a senha.");
-    } finally {
       setSaving(false);
     }
   }
