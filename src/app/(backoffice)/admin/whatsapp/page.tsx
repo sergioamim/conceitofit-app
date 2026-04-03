@@ -31,6 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SuggestionInput } from "@/components/shared/suggestion-input";
+import { useAcademiaSuggestion } from "@/app/(backoffice)/lib/use-academia-suggestion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -103,6 +105,13 @@ export default function AdminWhatsAppPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
+  const [academiaBusca, setAcademiaBusca] = useState("");
+  const {
+    options: academiaOptions,
+    onFocusOpen: academiaFocusOpen,
+  } = useAcademiaSuggestion();
+
   const form = useForm<WhatsAppTemplateFormValues>({
     resolver: zodResolver(whatsAppTemplateFormSchema),
     defaultValues: EMPTY_FORM,
@@ -111,9 +120,10 @@ export default function AdminWhatsAppPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      const tenantId = selectedAcademiaId || undefined;
       const [templatesResult, logsResult] = await Promise.allSettled([
-        getWhatsAppTemplatesApi(),
-        getWhatsAppLogsApi({ size: 50 }),
+        getWhatsAppTemplatesApi(tenantId),
+        getWhatsAppLogsApi({ size: 50, tenantId }),
       ]);
       if (templatesResult.status === "fulfilled") {
         setTemplates(templatesResult.value);
@@ -124,11 +134,16 @@ export default function AdminWhatsAppPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedAcademiaId]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  function handleAcademiaLimpar() {
+    setSelectedAcademiaId("");
+    setAcademiaBusca("");
+  }
 
   function openCreate() {
     setEditingId(null);
@@ -218,6 +233,44 @@ export default function AdminWhatsAppPage() {
                   envios via WhatsApp.
                 </p>
               </div>
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="w-72 space-y-1">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Academia
+                </label>
+                <SuggestionInput
+                  inputId="whatsapp-academia-filter"
+                  inputAriaLabel="Filtrar por academia"
+                  value={academiaBusca}
+                  onValueChange={(v) => {
+                    setAcademiaBusca(v);
+                    if (!v) {
+                      setSelectedAcademiaId("");
+                    }
+                  }}
+                  onSelect={(option) => {
+                    setSelectedAcademiaId(option.id);
+                    setAcademiaBusca(option.label);
+                  }}
+                  onFocusOpen={academiaFocusOpen}
+                  options={academiaOptions}
+                  placeholder="Buscar academia..."
+                  emptyText="Nenhuma academia encontrada"
+                  preloadOnFocus
+                />
+              </div>
+              {selectedAcademiaId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAcademiaLimpar}
+                  className="mb-0.5 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="mr-1 size-3.5" />
+                  Limpar
+                </Button>
+              )}
             </div>
           </div>
         </div>
