@@ -1,5 +1,6 @@
 import type { Atividade, Plano, Produto, Servico, TipoPlano } from "@/lib/types";
 import { apiRequest } from "./http";
+import { withTenantContextRetry } from "./contexto-unidades";
 
 type PlanoApiResponse = {
   id?: string;
@@ -317,14 +318,16 @@ export async function listPlanosApi(input: {
   apenasAtivos?: boolean;
   tipo?: TipoPlano;
 }): Promise<Plano[]> {
-  const response = await apiRequest<PlanoListApiResponse>({
-    path: "/api/v1/comercial/planos",
-    query: {
-      tenantId: input.tenantId,
-      apenasAtivos: input.apenasAtivos ?? false,
-      tipo: input.tipo,
-    },
-  });
+  const response = await withTenantContextRetry(() =>
+    apiRequest<PlanoListApiResponse>({
+      path: "/api/v1/comercial/planos",
+      query: {
+        tenantId: input.tenantId,
+        apenasAtivos: input.apenasAtivos ?? false,
+        tipo: input.tipo,
+      },
+    })
+  );
 
   return extractPlanoItems(response).map((item) =>
     normalizePlanoApiResponse(item, {

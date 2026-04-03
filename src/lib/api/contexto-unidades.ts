@@ -255,7 +255,7 @@ function isMissingTenantContextError(error: unknown): boolean {
   return isTenantContextError(error);
 }
 
-async function withTenantContextRetry<T>(loader: () => Promise<T>): Promise<T> {
+export async function withTenantContextRetry<T>(loader: () => Promise<T>): Promise<T> {
   try {
     return await loader();
   } catch (error) {
