@@ -166,11 +166,9 @@ test.describe("Planos shell recovery", () => {
     });
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle");
-    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
     await page.goto("/planos", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle");
-    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
 
     await expect(page.getByRole("heading", { name: "Planos" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText("Plano Gold").first()).toBeVisible({ timeout: 10_000 });

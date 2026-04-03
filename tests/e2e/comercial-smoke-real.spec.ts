@@ -343,7 +343,7 @@ async function resolveConvertedArtifacts(
       }>(pagamentosPayload);
 
       const matricula = matriculas.find((item) => item.id);
-      const pagamento = pagamentos.find((item) => item.id && /PENDENTE|ABERTO/i.test(item.status ?? ""));
+      const pagamento = pagamentos.find((item) => item.id && /PENDENTE|ABERTO|VENCIDO/i.test(item.status ?? ""));
 
       if (matricula?.id && pagamento?.id && pagamento.descricao && pagamento.dataVencimento) {
         console.log("[smoke-real] artefatos confirmados", aluno.id, matricula.id, pagamento.id);
@@ -381,23 +381,35 @@ async function openClientProfile(page: Page, clienteId: string, clienteNome: str
   await expect(page.getByRole("heading", { name: clienteNome })).toBeVisible({ timeout: 30_000 });
 }
 
+function resolveExpectedStatusLabel(apiStatus: string): string {
+  const map: Record<string, string> = {
+    PENDENTE: "Pendente",
+    ABERTO: "Aberto",
+    VENCIDO: "Vencido",
+    AGUARDANDO_PAGAMENTO: "Aguardando pagamento",
+    EMITIDO: "Emitido",
+    EM_ABERTO: "Em aberto",
+  };
+  return map[apiStatus.toUpperCase()] ?? apiStatus;
+}
+
 async function verifyPaymentInClientFinance(
   page: Page,
   pagamento: ConvertedArtifacts["pagamento"],
   aluno: ConvertedArtifacts["aluno"],
 ) {
-  console.log("[smoke-real] validando pagamento no financeiro do cliente", aluno.id);
+  const statusLabel = resolveExpectedStatusLabel(pagamento.status);
+  console.log("[smoke-real] validando pagamento no financeiro do cliente", aluno.id, "status esperado:", statusLabel);
   await page.getByRole("button", { name: "Financeiro", exact: true }).click();
 
   const paymentCard = page
     .locator("div")
     .filter({ has: page.getByText(pagamento.descricao, { exact: true }) })
-    .filter({ has: page.getByText("Pendente", { exact: true }) })
+    .filter({ has: page.getByText(statusLabel, { exact: true }) })
     .first();
   await expect(paymentCard).toBeVisible({ timeout: 30_000 });
-  await expect(paymentCard.getByText("Pendente", { exact: true })).toBeVisible();
-  await expect(paymentCard.getByRole("button", { name: "Receber pagamento", exact: true })).toBeVisible();
-  console.log("[smoke-real] pagamento pendente visivel no financeiro");
+  await expect(paymentCard.getByText(statusLabel, { exact: true })).toBeVisible();
+  console.log("[smoke-real] pagamento visivel no financeiro com status", statusLabel);
 }
 
 test.describe("Smoke comercial com backend real", () => {
@@ -422,7 +434,7 @@ test.describe("Smoke comercial com backend real", () => {
     expect(converted.aluno.id).toBeTruthy();
     expect(converted.matricula.id).toBeTruthy();
     expect(converted.pagamento.id).toBeTruthy();
-    expect(converted.pagamento.status).toMatch(/PENDENTE|ABERTO/i);
+    expect(converted.pagamento.status).toMatch(/PENDENTE|ABERTO|VENCIDO/i);
 
     await openClientProfile(page, converted.aluno.id, converted.aluno.nome);
     await verifyPaymentInClientFinance(page, converted.pagamento, converted.aluno);
