@@ -13618,13 +13618,246 @@
         "priority": "medium",
         "subtasks": [],
         "updatedAt": "2026-04-03T17:39:03.484Z"
+      },
+      {
+        "id": "431",
+        "title": "Adicionar tipo suggestion ao FormFieldConfig do CrudModal",
+        "description": "Estender CrudModal para suportar campos com SuggestionInput, permitindo busca async de entidades como Academia/Rede/Unidade.",
+        "details": "O CrudModal (src/components/shared/crud-modal.tsx) usa FormFieldConfig com tipos text, number, select, textarea, date, checkbox. Adicionar tipo \"suggestion\" que renderiza SuggestionInput em vez de <Select>. Deve aceitar onFocusOpen (async loader) e options (SuggestionOption[]). Atualizar autoSchemaFromFields para gerar schema Zod correto para campos suggestion (string obrigatória representando o ID selecionado). Incluir testes unitários para o novo tipo de campo.",
+        "testStrategy": "Testes unitários: renderizar CrudModal com campo tipo suggestion, verificar que SuggestionInput é montado, que onFocusOpen é chamado, que seleção popula o form corretamente, e que validação Zod rejeita valor vazio.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:27:50.753Z"
+      },
+      {
+        "id": "432",
+        "title": "Criar componente TableFilters padronizado",
+        "description": "Componente declarativo de filtros inline para PaginatedTable, com sincronização de URL search params e suporte a text, suggestion, select, date-range e status-badge.",
+        "details": "Criar src/components/shared/table-filters.tsx. Aceita array de FilterConfig com tipos: text (busca textual com debounce 300ms), suggestion (SuggestionInput para entidades — usa onFocusOpen), select (para enums pequenos fixos como status com 3-5 opções), date-range (dois DatePicker start/end), status-badge (filtro visual com badges clicáveis). Sincronizar com URL search params via useSearchParams para deep-linking. Botão \"Limpar filtros\" visível quando há filtros ativos. Renderizar inline em row flexbox responsivo (wrap em mobile). Emitir onFiltersChange com objeto de filtros ativos. SSR-safe: sem valores dinâmicos no render inicial — filtros lidos de searchParams. Incluir testes unitários.",
+        "testStrategy": "Testes unitários: renderizar com diferentes FilterConfig, verificar que cada tipo monta o componente correto, que mudanças atualizam searchParams, que limpar filtros reseta tudo, e que onFiltersChange emite corretamente.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:27:50.769Z"
+      },
+      {
+        "id": "433",
+        "title": "Criar hooks de busca async para Academia e Unidade (SuggestionInput)",
+        "description": "Hooks useAcademiaSuggestion e useUnidadeSuggestion que retornam options/onFocusOpen compatíveis com SuggestionInput, usando TanStack Query.",
+        "details": "Criar src/backoffice/lib/use-academia-suggestion.ts e src/backoffice/lib/use-unidade-suggestion.ts. useAcademiaSuggestion: busca academias via API existente do backoffice (admin-academias.ts), retorna { options: SuggestionOption[], onFocusOpen: () => Promise<void>, isLoading }. useUnidadeSuggestion(academiaId?: string): busca unidades filtradas opcionalmente por academia. Ambos mapeiam resultado para SuggestionOption[] (id, label com nome da academia/unidade, searchText com CNPJ/cidade para busca secundária). Usar TanStack Query com staleTime de 5min. Caps de 50 resultados. Incluir testes unitários mockando as APIs.",
+        "testStrategy": "Testes unitários: mockando APIs com msw ou vi.fn, verificar que hooks retornam options mapeados corretamente, que onFocusOpen dispara a query, que isLoading reflete estado correto, e que useUnidadeSuggestion filtra por academiaId.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:27:50.789Z"
+      },
+      {
+        "id": "434",
+        "title": "Migrar seleção de academia na página de BI para SuggestionInput",
+        "description": "Substituir <Select> de academia em /admin/bi por SuggestionInput com busca async.",
+        "details": "Em src/app/(backoffice)/admin/bi/page.tsx, localizar o <Select> usado para filtrar por academia. Substituir por SuggestionInput usando useAcademiaSuggestion. Manter comportamento de filtro de dados ao selecionar academia. Garantir que estado do filtro funcione com o restante da página.",
+        "testStrategy": "Teste manual: abrir /admin/bi, verificar que SuggestionInput aparece, buscar academia por nome, selecionar e verificar que dados filtram corretamente.",
+        "status": "pending",
+        "dependencies": [
+          "433"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "435",
+        "title": "Redesenhar página Entrar como Academia com SuggestionInput e recentes",
+        "description": "Substituir grid de cards por SuggestionInput proeminente + seção de acessos recentes para escalar com centenas de academias.",
+        "details": "A página /admin/entrar-como-academia exibe grid de cards com todas as academias — não escala. Redesenhar para: (1) SuggestionInput proeminente centralizado no topo para buscar academia usando useAcademiaSuggestion, (2) Seção \"Acessos recentes\" mostrando as 5 últimas academias acessadas — persistir IDs em localStorage, ler após mount via useEffect (SSR-safe), exibir como cards compactos com nome e botão \"Entrar\", (3) Ao selecionar academia no SuggestionInput, exibir unidades com SuggestionInput secundário (useUnidadeSuggestion) ou lista curta se poucas unidades, (4) Botão \"Entrar\" para executar impersonation. Manter audit trail existente.",
+        "testStrategy": "Teste E2E: navegar para /admin/entrar-como-academia, verificar SuggestionInput presente, buscar academia, selecionar, verificar unidades carregadas, executar \"Entrar\" e verificar redirect correto.",
+        "status": "pending",
+        "dependencies": [
+          "433"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "436",
+        "title": "Migrar filtro de academia na página WhatsApp para SuggestionInput",
+        "description": "Substituir <Select> de filtro de academia em /admin/whatsapp por SuggestionInput.",
+        "details": "Em src/app/(backoffice)/admin/whatsapp/page.tsx, substituir o <Select> de filtro de academia por SuggestionInput usando useAcademiaSuggestion. Manter lógica de filtragem de canais/mensagens por academia selecionada.",
+        "testStrategy": "Teste manual: abrir /admin/whatsapp, verificar SuggestionInput de academia, buscar e selecionar, verificar filtragem funciona.",
+        "status": "pending",
+        "dependencies": [
+          "433"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "437",
+        "title": "Migrar filtros de academia em Segurança/Usuários para SuggestionInput",
+        "description": "Substituir <Select> de academia nos filtros de /admin/seguranca/usuarios por SuggestionInput.",
+        "details": "Em src/app/(backoffice)/admin/seguranca/usuarios/page.tsx, substituir todos os <Select> de academia nos filtros por SuggestionInput usando useAcademiaSuggestion. Foco apenas nos filtros — a migração da tabela customizada UsuariosTable para PaginatedTable será na Fase 3 (task separada).",
+        "testStrategy": "Teste manual: abrir /admin/seguranca/usuarios, verificar filtros com SuggestionInput, buscar academia, verificar filtragem funciona.",
+        "status": "pending",
+        "dependencies": [
+          "433"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "438",
+        "title": "Migrar campos de academia em CrudModal de Cobranças e Contratos para suggestion",
+        "description": "Converter campos de academia nos CrudModals de /admin/financeiro/cobrancas e contratos para usar o novo tipo suggestion.",
+        "details": "Em /admin/financeiro/cobrancas e /admin/financeiro/contratos, os CrudModals de criação/edição usam FormFieldConfig com type select para campo de academia. Migrar para type suggestion usando onFocusOpen do useAcademiaSuggestion. Garantir que validação Zod funcione (campo obrigatório, ID válido). Testar modo de edição (campo pre-preenchido com academia existente).",
+        "testStrategy": "Testes unitários: renderizar CrudModal de cobrança com campo suggestion, verificar que SuggestionInput monta, que valor pre-preenchido funciona em modo edição, e que submit envia ID correto.",
+        "status": "pending",
+        "dependencies": [
+          "431",
+          "433"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "439",
+        "title": "Migrar tabela de Compliance para PaginatedTable",
+        "description": "Substituir tabela HTML raw em /admin/seguranca/compliance por PaginatedTable com filtros padronizados.",
+        "details": "Em src/app/(backoffice)/admin/seguranca/compliance/page.tsx, substituir <table> manual por PaginatedTable. Definir colunas: regra (texto), categoria (badge), status (StatusBadge), última verificação (data formatada), ações (DataTableRowActions). Adicionar TableFilters com filtro por status (Select com valores fixos) e busca textual. Implementar paginação server-side via API existente.",
+        "testStrategy": "Teste manual: abrir /admin/seguranca/compliance, verificar PaginatedTable renderiza com colunas corretas, filtros funcionam, paginação funciona, ações de row funcionam.",
+        "status": "pending",
+        "dependencies": [
+          "432"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "440",
+        "title": "Migrar tabelas de Alertas Operacionais para PaginatedTable",
+        "description": "Substituir tabela HTML raw em /admin/operacional/alertas por PaginatedTable com filtros por severidade e academia.",
+        "details": "Em src/app/(backoffice)/admin/operacional/alertas/page.tsx, substituir tabela raw por PaginatedTable. Colunas: tipo (badge), severidade (badge colorido — critical/warning/info), academia (texto), mensagem (texto truncado com tooltip), data/hora (formatada), ações (resolver/silenciar). Adicionar TableFilters com: severidade (Select), academia (SuggestionInput via useAcademiaSuggestion), período (date-range).",
+        "testStrategy": "Teste manual: abrir /admin/operacional/alertas, verificar PaginatedTable com colunas e filtros, testar filtro por severidade e academia.",
+        "status": "pending",
+        "dependencies": [
+          "432",
+          "433"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "441",
+        "title": "Migrar tabelas de WhatsApp para PaginatedTable",
+        "description": "Substituir tabelas HTML raw de canais e mensagens em /admin/whatsapp por duas PaginatedTables.",
+        "details": "Em src/app/(backoffice)/admin/whatsapp/page.tsx, a página tem duas seções tabulares: (1) canais/instâncias WhatsApp e (2) mensagens recentes. Cada uma deve virar PaginatedTable independente. Canais: colunas nome, academia, telefone, status (badge), mensagens/dia, ações. Mensagens: colunas data, canal, destinatário, tipo, status, preview. Adicionar TableFilters integrado (já migrado para SuggestionInput na task 425).",
+        "testStrategy": "Teste manual: abrir /admin/whatsapp, verificar duas PaginatedTables, filtros funcionam, paginação funciona em ambas.",
+        "status": "pending",
+        "dependencies": [
+          "432",
+          "436"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "442",
+        "title": "Migrar UsuariosTable customizado para PaginatedTable com bulk actions",
+        "description": "Substituir componente customizado UsuariosTable em /admin/seguranca/usuarios por PaginatedTable com seleção múltipla e bulk actions.",
+        "details": "Em /admin/seguranca/usuarios, eliminar o componente customizado UsuariosTable e substituir por PaginatedTable. Colunas: nome (com avatar initials), email, academia(s) (badges), perfil, status (StatusBadge), último acesso (data relativa), ações (DataTableRowActions). Usar TableFilters com: busca textual, academia (SuggestionInput — já migrado na task 426), perfil (Select — enum pequeno), status (Select). Implementar seleção múltipla com checkbox e bulk actions via BulkActionBar: desativar selecionados, alterar perfil em lote. Remover componente UsuariosTable antigo.",
+        "testStrategy": "Teste manual: abrir /admin/seguranca/usuarios, verificar PaginatedTable com todas as colunas, filtros via SuggestionInput e Select, selecionar múltiplos usuários e executar bulk action.",
+        "status": "pending",
+        "dependencies": [
+          "432",
+          "437"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "443",
+        "title": "Redesenhar página de Unidades com PaginatedTable e SuggestionInput",
+        "description": "Substituir layout sidebar com lista de botões (UnitsTableCard) por PaginatedTable com SuggestionInput para academia.",
+        "details": "Em /admin/unidades, substituir o layout de sidebar com lista de botões de academias (UnitsTableCard) por: (1) SuggestionInput para selecionar academia no topo usando useAcademiaSuggestion, (2) PaginatedTable para listar unidades da academia selecionada com colunas: nome, CNPJ (formatado), cidade/UF, status (StatusBadge), alunos ativos (número), ações (DataTableRowActions: editar, desativar). Se nenhuma academia selecionada, mostrar TODAS as unidades com coluna \"Academia\" visível. Adicionar TableFilters com busca textual, status (Select), cidade (text). Eliminar componente UnitsTableCard. Paginação server-side.",
+        "testStrategy": "Teste E2E: abrir /admin/unidades, verificar SuggestionInput no topo, selecionar academia, verificar que PaginatedTable filtra unidades, limpar filtro e verificar todas as unidades com coluna Academia visível.",
+        "status": "pending",
+        "dependencies": [
+          "432",
+          "433"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "444",
+        "title": "Migrar tabela de transações do Dashboard Financeiro para PaginatedTable",
+        "description": "Substituir tabela raw de transações recentes em /admin/financeiro por PaginatedTable, mantendo cards de KPI.",
+        "details": "Em src/app/(backoffice)/admin/financeiro/page.tsx (dashboard), manter cards de KPI no topo intactos. Substituir apenas a seção de transações recentes (tabela raw) por PaginatedTable com colunas: data (formatada), academia, tipo (badge), valor (moeda BRL), status (StatusBadge). Adicionar filtros inline básicos: período e busca textual.",
+        "testStrategy": "Teste manual: abrir /admin/financeiro, verificar cards de KPI intactos no topo, PaginatedTable abaixo com transações, filtros e paginação.",
+        "status": "pending",
+        "dependencies": [
+          "432"
+        ],
+        "priority": "low",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "445",
+        "title": "Migrar tabela de Saúde Operacional para PaginatedTable",
+        "description": "Substituir tabelas de detalhamento em /admin/operacional/saude por PaginatedTable, mantendo cards de status.",
+        "details": "Em src/app/(backoffice)/admin/operacional/saude/page.tsx, manter cards de status/resumo no topo. Substituir tabelas de detalhamento (métricas por academia) por PaginatedTable. Colunas: academia (texto), score de saúde (número com cor condicional), alunos ativos, taxa de churn (%), última sincronização (data relativa), ações. Adicionar TableFilters com busca textual e filtro por range de score.",
+        "testStrategy": "Teste manual: abrir /admin/operacional/saude, verificar cards no topo, PaginatedTable abaixo com métricas por academia, filtros funcionam.",
+        "status": "pending",
+        "dependencies": [
+          "432"
+        ],
+        "priority": "low",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:08:48.058Z"
+      },
+      {
+        "id": "446",
+        "title": "Implementar sidebar colapsável no layout do backoffice",
+        "description": "Tornar a sidebar fixa w-72 em colapsável (w-16 ícones) com responsividade mobile via Drawer.",
+        "details": "Em src/app/(backoffice)/admin/layout.tsx, a sidebar é fixa w-72 sem responsividade. Implementar: (1) Toggle manual (botão chevron) para colapsar a w-16 (apenas ícones dos nav-items), (2) Auto-collapse em breakpoints < lg (1024px), (3) Em < md (768px), sidebar como Sheet/Drawer overlay com botão hamburger no header, (4) Persistir preferência de colapsado em localStorage via useEffect (SSR-safe — não ler no render), (5) Animação suave com transition-all duration-200 (respeitar prefers-reduced-motion via motion-safe:), (6) Tooltips nos ícones quando colapsada usando Tooltip do shadcn. Manter command palette (Cmd+K) e breadcrumbs funcionando em ambos estados. Manter mode badge (platform vs tenant) visível.",
+        "testStrategy": "Teste manual: redimensionar janela para verificar breakpoints, testar toggle manual, verificar tooltips, verificar persistência de preferência, testar Drawer mobile. Teste E2E: verificar que sidebar colapsada não quebra navegação.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:27:50.804Z"
+      },
+      {
+        "id": "447",
+        "title": "Melhorar command palette com indexação completa de rotas do backoffice",
+        "description": "Indexar todas as rotas /admin/* na command palette com títulos, ícones, tags de busca e seção de ações rápidas.",
+        "details": "A command palette (Cmd+K) já existe mas pode não cobrir todas as rotas. Garantir que cada página do /admin/* tenha entrada com: título legível em pt-BR, ícone consistente com sidebar, tags de busca (sinônimos — ex: \"cobrança\", \"billing\", \"fatura\" apontam para mesma rota). Adicionar seção \"Ações rápidas\" no topo: criar academia, novo lead, gerar cobrança, etc. (executam navegação para a página com modal aberto ou ação direta). Adicionar seção \"Acessos recentes\" — persistir em localStorage, ler após mount. Ordenar resultados: recentes primeiro, depois por relevância de busca.",
+        "testStrategy": "Teste manual: abrir Cmd+K, buscar por sinônimos (\"fatura\" → cobranças), verificar ações rápidas, verificar recentes após navegar por algumas páginas.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T19:27:50.816Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-03T18:20:28.950Z",
-      "taskCount": 375,
-      "completedCount": 375,
+      "lastModified": "2026-04-03T19:27:50.816Z",
+      "taskCount": 392,
+      "completedCount": 380,
       "tags": [
         "master"
       ]
