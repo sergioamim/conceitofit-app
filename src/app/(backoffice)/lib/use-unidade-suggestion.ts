@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { SuggestionOption } from "@/components/shared/suggestion-input";
-import { listGlobalUnidades } from "@/lib/backoffice/admin";
+import { listGlobalUnidades } from "@/backoffice/lib/admin";
 import { queryKeys } from "@/lib/query/keys";
 
 const MAX_RESULTS = 50;

@@ -25,7 +25,7 @@ const mockAcademias = [
   },
 ];
 
-vi.mock("@/lib/backoffice/admin", () => ({
+vi.mock("@/backoffice/lib/admin", () => ({
   listGlobalAcademias: vi.fn(() => Promise.resolve(mockAcademias)),
 }));
 
@@ -92,7 +92,7 @@ describe("useAcademiaSuggestion", () => {
   });
 
   it("limita resultados a 50 opções", async () => {
-    const { listGlobalAcademias } = await import("@/lib/backoffice/admin");
+    const { listGlobalAcademias } = await import("@/backoffice/lib/admin");
     const manyAcademias = Array.from({ length: 80 }, (_, i) => ({
       id: `acad-${i}`,
       nome: `Academia ${i}`,

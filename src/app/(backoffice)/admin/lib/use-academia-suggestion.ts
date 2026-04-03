@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback } from "react";
 import type { SuggestionOption } from "@/components/shared/suggestion-input";
-import { useAdminAcademias } from "@/lib/query/admin";
+import { useAdminAcademias } from "@/backoffice/query";
 
 /**
  * Hook que fornece options de academia formatadas para SuggestionInput

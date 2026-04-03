@@ -4,9 +4,13 @@ const REAL_BACKEND_MODE = process.env.PLAYWRIGHT_REAL_BACKEND === "1";
 const DEFAULT_PORT = REAL_BACKEND_MODE ? "3001" : "3000";
 const PLAYWRIGHT_PORT = process.env.PLAYWRIGHT_PORT ?? DEFAULT_PORT;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PLAYWRIGHT_PORT}`;
+const PLAYWRIGHT_BACKEND_PROXY_TARGET =
+  process.env.PLAYWRIGHT_BACKEND_PROXY_TARGET ?? "http://localhost:8080";
 const WEB_SERVER_COMMAND_BASE =
   process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ??
-  (REAL_BACKEND_MODE ? "npm run dev:3001:api" : `PORT=${PLAYWRIGHT_PORT} npm run dev:mock`);
+  (REAL_BACKEND_MODE
+    ? "npm run dev:3001:api"
+    : `BACKEND_PROXY_TARGET=${PLAYWRIGHT_BACKEND_PROXY_TARGET} ./node_modules/.bin/next dev --webpack -p ${PLAYWRIGHT_PORT} -H localhost`);
 const WEB_SERVER_COMMAND = `PLAYWRIGHT_TEST=1 ${WEB_SERVER_COMMAND_BASE}`;
 
 export default defineConfig({

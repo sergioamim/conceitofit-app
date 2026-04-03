@@ -127,16 +127,19 @@
   3. injeta headers `x-tenant-id`, `x-tenant-slug`, `x-academia-slug`
   4. reescreve a request para `/storefront/{academiaSlug}`
 - Fluxo por slug:
-  - `src/app/storefront/[academiaSlug]/page.tsx` chama `getStorefrontOverview()`
+  - `src/app/(public)/storefront/[academiaSlug]/page.tsx` chama `getStorefrontOverview()`
   - o layout chama `getStorefrontThemeBySlug()`
 - Arquivos centrais:
   - `src/proxy.ts`
   - `src/lib/storefront/subdomain.ts`
-  - `src/app/storefront/[academiaSlug]/page.tsx`
-  - `src/app/storefront/[academiaSlug]/layout.tsx`
+  - `src/app/(public)/storefront/page.tsx`
+  - `src/app/(public)/storefront/[academiaSlug]/page.tsx`
+  - `src/app/(public)/storefront/[academiaSlug]/layout.tsx`
+  - `src/app/(public)/storefront-not-found/page.tsx`
   - `src/lib/public/storefront-api.ts`
 - Decisão embutida:
   - subdomínio é uma conveniência de resolução; o formato canônico interno do app é `academiaSlug`.
+  - a superfície pública inteira fica sob `(public)`, sem prefixo adicional na URL final.
 
 ## 9. Backoffice global e onboarding de unidade
 

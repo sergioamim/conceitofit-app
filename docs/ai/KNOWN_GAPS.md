@@ -62,23 +62,33 @@
 - Impacto:
   - risco de misturar escopo de identidade, branding e operação
 
-## 8. Storefront possui duas superfícies coexistindo
+## 8. Storefront ainda combina múltiplos modos de entrada
 
 - Fato observado:
-  - existe rota legada `src/app/storefront/page.tsx`
-  - existe rota canônica por slug `src/app/storefront/[academiaSlug]/page.tsx`
+  - existe rota por headers/subdomínio em `src/app/(public)/storefront/page.tsx`
+  - existe rota canônica por slug em `src/app/(public)/storefront/[academiaSlug]/page.tsx`
   - existe proxy por subdomínio em `src/proxy.ts`
 - Impacto:
-  - fácil alterar uma superfície e esquecer a outra
+  - fácil alterar uma superfície e esquecer a outra, especialmente em metadata, SEO e fallback de headers
 
-## 9. Parte do comportamento é controlada por documentação operacional, não por convenção automática
+## 9. Observabilidade ainda não separa automaticamente tráfego público e operacional
+
+- Fato observado:
+  - existe página pública de status em `src/app/status/page.tsx`
+  - existe monitor operacional em `src/app/monitor/boas-vindas/page.tsx`
+  - `src/app/global-error.tsx` captura exceções via Sentry quando configurado
+  - `next.config.ts` expõe `tunnelRoute: "/monitoring"` quando `NEXT_PUBLIC_SENTRY_DSN` está habilitado
+- Impacto:
+  - a separação por superfície existe na taxonomia de rotas, mas não há tagging/documentação de analytics por superfície no código atual
+
+## 10. Parte do comportamento é controlada por documentação operacional, não por convenção automática
 
 - Fato observado:
   - smoke pack, coverage gate e diagnóstico de backend residual vivem em `docs/*.md`
 - Impacto:
   - IAs e devs novos precisam ler docs além do código para não inferir um fluxo simplificado demais
 
-## 10. Lacunas que não podem ser fechadas só neste repositório
+## 11. Lacunas que não podem ser fechadas só neste repositório
 
 - Lacuna conhecida:
   - compatibilidade real com backend Java atual

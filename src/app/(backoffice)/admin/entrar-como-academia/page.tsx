@@ -26,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import type { SuggestionOption } from "@/components/shared/suggestion-input";
 import { useQuery } from "@tanstack/react-query";
-import { listGlobalAcademias, listGlobalUnidades } from "@/lib/backoffice/admin";
+import { listGlobalAcademias, listGlobalUnidades } from "@/backoffice/lib/admin";
 import { queryKeys } from "@/lib/query/keys";
 import { setPreferredTenantId } from "@/lib/api/session";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";

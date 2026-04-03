@@ -163,8 +163,12 @@
   - `src/lib/public/adesao-api.ts`
   - `src/lib/public/demo-account-api.ts`
   - `src/lib/public/lead-b2b-api.ts`
-  - `src/app/storefront/[academiaSlug]/page.tsx`
-  - `src/app/storefront/[academiaSlug]/layout.tsx`
+  - `src/app/(public)/page.tsx`
+  - `src/app/(public)/b2b/page.tsx`
+  - `src/app/(public)/storefront/page.tsx`
+  - `src/app/(public)/storefront/[academiaSlug]/page.tsx`
+  - `src/app/(public)/storefront/[academiaSlug]/layout.tsx`
+  - `src/app/(public)/storefront-not-found/page.tsx`
   - `src/lib/public/storefront-api.ts`
   - `src/proxy.ts`
 

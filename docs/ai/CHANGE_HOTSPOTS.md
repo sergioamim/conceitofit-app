@@ -48,7 +48,8 @@
   - `src/lib/public/storefront-api.ts`
   - `src/lib/public/services.ts`
   - `src/lib/public/server-services.ts`
-  - `src/app/storefront/[academiaSlug]/*`
+  - `src/app/(public)/page.tsx`
+  - `src/app/(public)/storefront/*`
   - `src/app/(public)/adesao/*`
 - Riscos:
   - rewrites errados por host/subdomínio
