@@ -20,6 +20,7 @@ export function CheckoutPayment({
 }) {
   const [formaPagamento, setFormaPagamento] = useState<TipoFormaPagamento>("PIX");
   const [parcelas, setParcelas] = useState("1");
+  const [codigoTransacao, setCodigoTransacao] = useState("");
   const [observacoes, setObservacoes] = useState("");
 
   const totalPreview = useMemo(() => formatBRL(total || 0), [total]);
@@ -35,6 +36,10 @@ export function CheckoutPayment({
           ? Math.max(1, parseInt(parcelas, 10) || 1)
           : undefined,
       valorPago: Math.max(0, total),
+      codigoTransacao:
+        effectiveFormaPagamento === "CARTAO_CREDITO"
+          ? codigoTransacao.trim() || undefined
+          : undefined,
       observacoes: observacoes.trim() || undefined,
     });
   }
@@ -44,9 +49,9 @@ export function CheckoutPayment({
       <h3 className="font-display text-base font-bold">Pagamento</h3>
       <div className="mt-3 space-y-3">
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Forma de pagamento</label>
+          <label htmlFor="checkout-payment-forma" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Forma de pagamento</label>
           <Select value={effectiveFormaPagamento} onValueChange={(v) => setFormaPagamento(v as TipoFormaPagamento)}>
-            <SelectTrigger className="w-full bg-secondary border-border"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="checkout-payment-forma" aria-label="Forma de pagamento" className="w-full bg-secondary border-border"><SelectValue /></SelectTrigger>
             <SelectContent className="bg-card border-border">
               <SelectItem value="PIX">PIX</SelectItem>
               <SelectItem value="DINHEIRO">Dinheiro</SelectItem>
@@ -60,8 +65,9 @@ export function CheckoutPayment({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parcelas</label>
+            <label htmlFor="checkout-payment-parcelas" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parcelas</label>
             <Input
+              id="checkout-payment-parcelas"
               type="number"
               min={1}
               value={parcelas}
@@ -79,8 +85,25 @@ export function CheckoutPayment({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações</label>
+          <label htmlFor="checkout-payment-codigo-transacao" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Código da transação
+          </label>
           <Input
+            id="checkout-payment-codigo-transacao"
+            value={codigoTransacao}
+            onChange={(e) => setCodigoTransacao(e.target.value)}
+            className="bg-secondary border-border"
+            placeholder="Número do cupom ou identificador impresso para conciliação futura"
+          />
+          <p className="text-xs text-muted-foreground">
+            Número do cupom ou identificador impresso para conciliação futura
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="checkout-payment-observacoes" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações</label>
+          <Input
+            id="checkout-payment-observacoes"
             value={observacoes}
             onChange={(e) => setObservacoes(e.target.value)}
             className="bg-secondary border-border"

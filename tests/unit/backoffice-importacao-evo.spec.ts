@@ -302,7 +302,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
         status: "PROCESSANDO",
         dryRun: false,
         solicitadoEm: "2026-03-13T10:05:00Z",
-      }),
+      }, 202),
       jsonResponse({
         jobId: "job-pacote-1",
         tenantIds: ["tenant-pacote"],
@@ -333,7 +333,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
         maxRejeicoesRetorno: 50,
         arquivos: ["clientes", "contratos"],
         tenantId: "tenant-pacote",
-        evoUnidadeId: 321,
+        apelido: "Carga pacote unidade central",
       });
       const resumo = await getBackofficeEvoImportJobResumo({
         jobId: job.jobId,
@@ -347,16 +347,15 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(resumo.colaboradoresDetalhe?.funcoes?.mensagemParcial).toContain("funções");
 
       expect(calls).toHaveLength(2);
-      expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/upload-1/job");
+      expect(calls[0].url).toBe("/backend/api/v1/admin/unidades/tenant-pacote/importacao-evo/pacote/upload-1/job");
       expect(calls[0].method).toBe("POST");
       expect(calls[0].headers.get("Content-Type")).toBe("application/json");
-      expect(calls[0].headers.get("X-Tenant-Id")).toBe("tenant-pacote");
+      expect(calls[0].headers.get("X-Tenant-Id")).toBeNull();
       expect(JSON.parse(String(calls[0].body))).toEqual({
         dryRun: false,
         maxRejeicoesRetorno: 50,
-        tenantId: "tenant-pacote",
-        evoUnidadeId: 321,
         arquivos: ["clientes", "contratos"],
+        apelido: "Carga pacote unidade central",
       });
 
       expect(calls[1].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/jobs/job-pacote-1/p0?maxRejeicoesRetorno=200");
@@ -366,14 +365,14 @@ test.describe("backoffice importacao EVO api wrappers", () => {
     }
   });
 
-  test("envia flag de retry somente erros ao criar job de pacote por arquivo lógico", async () => {
+  test("mantem retry somente erros como semantica local sem enviar flag legada no create job", async () => {
     const { calls, restore } = mockFetchSequence([
       jsonResponse({
         jobId: "job-pacote-retry",
         status: "PROCESSANDO",
         dryRun: false,
         solicitadoEm: "2026-03-13T10:10:00Z",
-      }),
+      }, 202),
     ]);
 
     try {
@@ -387,12 +386,11 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       });
 
       expect(job.jobId).toBe("job-pacote-retry");
+      expect(calls[0].url).toBe("/backend/api/v1/admin/unidades/tenant-pacote/importacao-evo/pacote/upload-1/job");
       expect(JSON.parse(String(calls[0].body))).toEqual({
         dryRun: false,
         maxRejeicoesRetorno: 50,
-        tenantId: "tenant-pacote",
         arquivos: ["funcionarios"],
-        retrySomenteErros: true,
       });
     } finally {
       restore();

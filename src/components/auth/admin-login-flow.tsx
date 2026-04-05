@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,10 +20,15 @@ const backofficeLoginSchema = z.object({
 
 type BackofficeLoginForm = z.infer<typeof backofficeLoginSchema>;
 
-export default function AdminLoginPage() {
+export function AdminLoginFlow({
+  nextPath,
+}: {
+  nextPath?: string | null;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const resolvedNextPath = useMemo(() => nextPath || "/admin", [nextPath]);
 
   const form = useForm<BackofficeLoginForm>({
     resolver: zodResolver(backofficeLoginSchema),
@@ -32,14 +37,14 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     if (hasActiveSession()) {
-      router.replace("/admin");
+      router.replace(resolvedNextPath);
     }
-  }, [router]);
+  }, [router, resolvedNextPath]);
 
   useEffect(() => {
-    void router.prefetch("/admin");
-    void router.prefetch(buildForcedPasswordChangeHref("/admin"));
-  }, [router]);
+    void router.prefetch(resolvedNextPath);
+    void router.prefetch(buildForcedPasswordChangeHref(resolvedNextPath));
+  }, [router, resolvedNextPath]);
 
   async function onSubmit(values: BackofficeLoginForm) {
     setSaving(true);
@@ -50,10 +55,10 @@ export default function AdminLoginPage() {
         password: values.password,
       });
       if (session.forcePasswordChangeRequired) {
-        router.replace(buildForcedPasswordChangeHref("/admin"));
+        router.replace(buildForcedPasswordChangeHref(resolvedNextPath));
         return;
       }
-      router.replace("/admin");
+      router.replace(resolvedNextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao autenticar.");
     } finally {

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 // ---------------------------------------------------------------------------
 // server-fetch.ts – helper para data-fetching em React Server Components
@@ -55,9 +56,11 @@ function resolveUrl(
   return url.toString();
 }
 
-async function getAuthToken(): Promise<string | undefined> {
+async function getCookieHeader(): Promise<string | undefined> {
   const jar = await cookies();
-  return jar.get("academia-access-token")?.value;
+  const all = jar.getAll();
+  if (!all.length) return undefined;
+  return all.map((item) => `${item.name}=${encodeURIComponent(item.value)}`).join("; ");
 }
 
 // ---------------------------------------------------------------------------
@@ -106,7 +109,7 @@ export async function serverFetch<T>(
   }
 
   const url = resolveUrl(path, query);
-  const token = await getAuthToken();
+  const cookieHeader = await getCookieHeader();
 
   const reqHeaders: Record<string, string> = {
     "Content-Type": "application/json",
@@ -114,8 +117,8 @@ export async function serverFetch<T>(
     ...headers,
   };
 
-  if (token) {
-    reqHeaders.Authorization = `Bearer ${token}`;
+  if (cookieHeader) {
+    reqHeaders.Cookie = cookieHeader;
   }
 
   reqHeaders["X-Request-Id"] = randomUUID();
@@ -143,6 +146,11 @@ export async function serverFetch<T>(
         message: `HTTP ${res.status} ${res.statusText}`,
       };
     }
+
+    if (res.status === 401) {
+      redirect("/login");
+    }
+
     throw new ServerFetchRequestError(payload);
   }
 

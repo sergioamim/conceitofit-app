@@ -99,7 +99,9 @@ export function useEvoImportPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const preselectedTenantId = normalizeTenantId(searchParams.get("tenantId"));
-  const [activeTab, setActiveTab] = useState<"nova" | "pacote" | "acompanhamento">("nova");
+  // "nova" ficou como legado temporário depois da remoção do entrypoint de upload manual da UI.
+  // Se o fluxo manual não voltar, essa variante pode ser removida junto com o código CSV restante.
+  const [activeTab, setActiveTab] = useState<"nova" | "pacote" | "acompanhamento">("pacote");
   const [dryRun, setDryRun] = useState(false);
   const [maxRejeicoes, setMaxRejeicoes] = useState(200);
   const [academias, setAcademias] = useState<Academia[]>([]);
@@ -1659,16 +1661,6 @@ export function useEvoImportPage() {
         });
       }
       const evoUnidadeIdParaJob = parsePositiveInteger(analiseAtiva.evoUnidadeId) ?? pacoteEvoUnidadeResolvida;
-
-      const job = await createBackofficeEvoP0PacoteJob({
-        uploadId: analiseAtiva.uploadId,
-        dryRun: pacoteDryRun,
-        maxRejeicoesRetorno: pacoteMaxRejeicoes,
-        arquivos: arquivosParaImportar,
-        tenantId: pacoteMapeamento.tenantId,
-        evoUnidadeId: evoUnidadeIdParaJob,
-      });
-
       const tenant = normalizeTenantId(pacoteMapeamento.tenantId);
       const nomeAcademia = pacoteMapeamento.academiaNome || "Não informado";
       const nomeUnidade = pacoteMapeamento.unidadeNome || "Não informado";
@@ -1679,6 +1671,16 @@ export function useEvoImportPage() {
           academiaNome: nomeAcademia,
           criadoEm: new Date().toISOString(),
         });
+
+      const job = await createBackofficeEvoP0PacoteJob({
+        uploadId: analiseAtiva.uploadId,
+        dryRun: pacoteDryRun,
+        maxRejeicoesRetorno: pacoteMaxRejeicoes,
+        arquivos: arquivosParaImportar,
+        tenantId: tenant,
+        apelido: alias,
+      });
+
       await registrarOnboardingDoJob({
         tenantId: pacoteMapeamento.tenantId,
         academiaId: pacoteMapeamento.academiaId,
@@ -1782,7 +1784,7 @@ export function useEvoImportPage() {
         arquivos: [arquivo.chave],
         retrySomenteErros: true,
         tenantId: tenant,
-        evoUnidadeId: evoUnidadeIdParaJob,
+        apelido: alias,
       });
       await registrarOnboardingDoJob({
         tenantId: pacoteMapeamento.tenantId || tenant,
@@ -2518,7 +2520,7 @@ export function useEvoImportPage() {
     tenantFoco, onboardingFoco,
     resolveTenantLabel,
 
-    // CSV tab (nova)
+    // Fluxo legado de upload manual (nova), mantido fora da UI até remoção definitiva.
     dryRun, setDryRun,
     maxRejeicoes, setMaxRejeicoes,
     csvJobAlias, setCsvJobAlias, aliasSugestaoCsv,

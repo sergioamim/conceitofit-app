@@ -257,7 +257,7 @@ async function installImportacaoEvoJobStubs(page: Page) {
     });
   });
 
-  await page.route("**/admin/integracoes/importacao-terceiros/evo/p0/pacote/*/job", async (route) => {
+  await page.route("**/admin/unidades/*/importacao-evo/pacote/*/job", async (route) => {
     if (route.request().method() !== "POST") {
       await route.fallback();
       return;
@@ -265,11 +265,24 @@ async function installImportacaoEvoJobStubs(page: Page) {
 
     const body = route.request().postDataJSON() as {
       arquivos?: string[];
+      apelido?: string;
+      tenantId?: string;
+      evoUnidadeId?: number;
+      retrySomenteErros?: boolean;
     };
+    if ("tenantId" in body || "evoUnidadeId" in body || "retrySomenteErros" in body) {
+      await route.fulfill({
+        status: 400,
+        json: {
+          message: "Contrato legado detectado no create job do pacote EVO",
+        },
+      });
+      return;
+    }
     arquivosSelecionadosNoJob = Array.isArray(body.arquivos) && body.arquivos.length > 0 ? body.arquivos : arquivosSelecionadosNoJob;
 
     await route.fulfill({
-      status: 200,
+      status: 202,
       json: {
         jobId: "job-evo-777",
         status: "PROCESSANDO",

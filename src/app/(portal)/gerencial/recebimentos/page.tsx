@@ -28,6 +28,7 @@ type RecebimentoForm = {
   status: "PENDENTE" | "PAGO";
   dataPagamento: string;
   formaPagamento: TipoFormaPagamento;
+  codigoTransacao: string;
 };
 
 const RECEBIMENTO_FORM_DEFAULT: RecebimentoForm = {
@@ -38,6 +39,7 @@ const RECEBIMENTO_FORM_DEFAULT: RecebimentoForm = {
   status: "PENDENTE",
   dataPagamento: "",
   formaPagamento: "PIX",
+  codigoTransacao: "",
 };
 
 const fmtDate = (v?: string) => {
@@ -116,6 +118,7 @@ export default function RecebimentosPage() {
   async function handleCreateRecebimento() {
     if (!tenantId) return;
     if (!form.descricao.trim() || !form.valor || !form.dataVencimento) return;
+    if (form.status === "PAGO" && form.formaPagamento === "CARTAO_CREDITO" && !form.codigoTransacao.trim()) return;
 
     setSuccess(null);
     try {
@@ -127,6 +130,9 @@ export default function RecebimentosPage() {
         status: form.status,
         dataPagamento: form.status === "PAGO" ? form.dataPagamento : undefined,
         formaPagamento: form.status === "PAGO" ? form.formaPagamento : undefined,
+        codigoTransacao: form.status === "PAGO" && form.formaPagamento === "CARTAO_CREDITO"
+          ? form.codigoTransacao.trim()
+          : undefined,
       });
       setModalOpen(false);
       setForm({ ...RECEBIMENTO_FORM_DEFAULT, dataVencimento: endDate, dataPagamento: endDate });
@@ -433,6 +439,20 @@ export default function RecebimentosPage() {
                   value={form.dataPagamento}
                   onChange={(event) => setForm((prev) => ({ ...prev, dataPagamento: event.target.value }))}
                   className="border-border bg-secondary"
+                />
+              </div>
+            ) : null}
+            {form.status === "PAGO" && form.formaPagamento === "CARTAO_CREDITO" ? (
+              <div className="space-y-1 md:col-span-2">
+                <label htmlFor="recebimento-codigo-transacao" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Código da transação *
+                </label>
+                <Input
+                  id="recebimento-codigo-transacao"
+                  value={form.codigoTransacao}
+                  onChange={(event) => setForm((prev) => ({ ...prev, codigoTransacao: event.target.value }))}
+                  className="border-border bg-secondary"
+                  placeholder="Código impresso no cupom da maquininha"
                 />
               </div>
             ) : null}

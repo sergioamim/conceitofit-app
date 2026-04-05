@@ -155,7 +155,7 @@ test.afterEach(() => {
 });
 
 test.describe("http apiRequest", () => {
-  test("mantém tokens apenas em memória e usa flag de sessão ativa no navegador", async () => {
+  test("usa apenas a flag de sessão ativa no navegador e não expõe tokens ao cliente", async () => {
     saveAuthSession({
       token: "access-token",
       refreshToken: "refresh-token",
@@ -164,8 +164,8 @@ test.describe("http apiRequest", () => {
       displayName: "Usuário Teste",
     });
 
-    expect(getAccessToken()).toBe("access-token");
-    expect(getRefreshToken()).toBe("refresh-token");
+    expect(getAccessToken()).toBeUndefined();
+    expect(getRefreshToken()).toBeUndefined();
     expect(hasActiveSession()).toBeTruthy();
     expect(window.localStorage.getItem("academia-auth-token")).toBeNull();
     expect(window.localStorage.getItem("academia-auth-refresh-token")).toBeNull();
@@ -209,7 +209,7 @@ test.describe("http apiRequest", () => {
       expect(calls[0].url).not.toContain("tenantId=");
       expect(calls[0].url).toContain("status=ATIVA");
       expect(calls[0].headers.get("X-Context-Id")).toBeTruthy();
-      expect(calls[0].headers.get("Authorization")).toBe("Bearer access-token");
+      expect(calls[0].headers.get("Authorization")).toBeNull();
       expect(calls[0].credentials).toBe("include");
     } finally {
       restore();

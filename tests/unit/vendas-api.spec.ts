@@ -237,12 +237,8 @@ test.describe("vendas api", () => {
             formaPagamento: "CARTAO_CREDITO",
             parcelas: 12,
             valorPago: 899.9,
-            status: "PENDENTE",
-          },
-          planoContexto: {
-            planoId: "pl-42",
-            dataInicio: "2026-03-15",
-            descontoPlano: 100,
+            codigoTransacao: "123456",
+            observacoes: "parcelado",
           },
         },
       });
@@ -254,6 +250,9 @@ test.describe("vendas api", () => {
       const createdBody = calls[0].body ?? "";
       expect(createdBody).toContain("\"referenciaId\":\"pl-42\"");
       expect(createdBody).not.toContain("pl-42:legado");
+      expect(createdBody).toContain("\"codigoTransacao\":\"123456\"");
+      expect(createdBody).not.toContain("\"status\"");
+      expect(createdBody).not.toContain("\"planoContexto\"");
 
       const loaded = await getVendaApi({
         tenantId: "tenant-1",

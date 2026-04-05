@@ -36,7 +36,8 @@ import {
   suspenderAdminContrato,
   updateAdminContrato,
 } from "@/backoffice/api/admin-billing";
-import { useAdminAcademias, useAdminContratos, useAdminPlanos } from "@/backoffice/query";
+import { useAdminContratos, useAdminPlanos } from "@/backoffice/query/use-admin-financeiro";
+import { useAdminAcademias } from "@/backoffice/query/use-admin-academias";
 import { useAcademiaSuggestion } from "@/app/(backoffice)/admin/lib/use-academia-suggestion";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";

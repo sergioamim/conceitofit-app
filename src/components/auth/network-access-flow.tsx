@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   getAccessNetworkContextApi,
@@ -75,6 +76,7 @@ export function NetworkAccessFlow({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<LoginStep>("LOGIN");
   const [tenantOptions, setTenantOptions] = useState<Tenant[]>([]);
   const loginForm = useForm<LoginFormValues>({
@@ -165,7 +167,9 @@ export function NetworkAccessFlow({
   async function finalizeTenantStep(targetTenantId: string) {
     await setTenantContextApi(targetTenantId);
     setPreferredTenantId(targetTenantId);
+    queryClient.clear();
     router.replace(resolvedNextPath);
+    router.refresh();
   }
 
   async function handleLoginSubmit(values: LoginFormValues) {

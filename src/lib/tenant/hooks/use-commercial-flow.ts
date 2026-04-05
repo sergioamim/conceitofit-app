@@ -299,14 +299,13 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
           pagamento: {
             ...pagamento,
           },
-          planoContexto: dryRun?.planoContexto,
         },
       });
       return venda;
     } finally {
       setSaving(false);
     }
-  }, [tenantId, cart, clienteId, selectedConvenio?.id, cupomAppliedCode, descontoTotal, acrescimoGeral, dryRun?.planoContexto]);
+  }, [tenantId, cart, clienteId, selectedConvenio?.id, cupomAppliedCode, descontoTotal, acrescimoGeral]);
 
   return {
     alunos,

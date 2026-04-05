@@ -355,8 +355,13 @@ Ver secao C1 acima. Os schemas sao **completamente divergentes**.
 | `src/lib/api/financeiro-gerencial.ts` | 8 | OK |
 | `src/lib/api/formas-pagamento.ts` | 6 | OK |
 | `src/lib/api/grade-mural.ts` | 1 | OK |
-| `src/lib/api/importacao-evo.ts` | 6 | OK |
+| `src/lib/api/importacao-evo.ts` | 6 | Divergência conhecida no contrato publicado |
 | `src/lib/api/maquininhas.ts` | 4 | OK |
 | `src/lib/api/presencas.ts` | 1 | OK |
 | `src/lib/api/rbac.ts` | 10 | OK |
 | `src/lib/api/tipos-conta.ts` | 4 | OK |
+
+Observação específica de `importacao-evo`:
+- Fato observado no runtime atual do backend em `/Users/sergioamim/dev/pessoal/academia-java/modulo-app/src/main/java/fit/conceito/app/application/controller/admin/AdminUnidadeImportacaoController.java` e `/Users/sergioamim/dev/pessoal/academia-java/modulo-app/src/main/java/fit/conceito/app/application/dto/admin/AdminImportacaoEvoDtos.java`: a criação de job de pacote por unidade usa `POST /api/v1/admin/unidades/{tenantId}/importacao-evo/pacote/{uploadId}/job` e aceita no body apenas `dryRun`, `maxRejeicoesRetorno`, `arquivos` e `apelido`.
+- Fato observado: a rota alias `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/{uploadId}/job` resolve tenant por `tenantId` em query param ou `X-Context-Id`, não por `X-Tenant-Id`.
+- Pendência/lacuna: o `openapi.yaml` publicado em `/Users/sergioamim/dev/pessoal/academia-java/modulo-app/src/main/resources/static/openapi.yaml` ainda pode não refletir essa semântica de runtime. O frontend foi alinhado ao runtime real atual para evitar erro de `tenant_context ausente` e rejeição de campos legados como `evoUnidadeId`.

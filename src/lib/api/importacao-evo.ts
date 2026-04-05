@@ -207,6 +207,7 @@ export async function uploadEvoP0PacoteApi(input: {
     method: "POST",
     body: formData,
     headers: buildExplicitTenantHeaders(input.contextoTenantId || input.tenantId),
+    includeContextHeader: false,
   });
 }
 
@@ -218,6 +219,7 @@ export async function getEvoP0PacoteAnaliseApi(input: {
   return apiRequest<UploadAnaliseResponse>({
     path: `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/${input.uploadId}`,
     headers: buildExplicitTenantHeaders(input.tenantId ?? input.contextoTenantId),
+    includeContextHeader: false,
   });
 }
 
@@ -228,16 +230,14 @@ export async function createEvoP0PacoteJobApi(input: {
   arquivos?: string[] | null;
   retrySomenteErros?: boolean;
   tenantId?: string;
-  evoUnidadeId?: number | null;
+  apelido?: string | null;
   contextoTenantId?: string;
 }): Promise<PacoteJobAceitoResponse> {
   const body: {
     dryRun: boolean;
     maxRejeicoesRetorno: number;
     arquivos?: string[];
-    retrySomenteErros?: boolean;
-    tenantId?: string;
-    evoUnidadeId?: number;
+    apelido?: string;
   } = {
     dryRun: input.dryRun,
     maxRejeicoesRetorno: input.maxRejeicoesRetorno,
@@ -245,26 +245,21 @@ export async function createEvoP0PacoteJobApi(input: {
   if (Array.isArray(input.arquivos) && input.arquivos.length > 0) {
     body.arquivos = input.arquivos;
   }
-  if (input.retrySomenteErros) {
-    body.retrySomenteErros = true;
+  const apelido = typeof input.apelido === "string" ? input.apelido.trim() : "";
+  if (apelido) {
+    body.apelido = apelido;
   }
   const tenantId = normalizeTenantId(input.tenantId ?? input.contextoTenantId);
-  if (tenantId) {
-    body.tenantId = tenantId;
-  }
-  if (
-    typeof input.evoUnidadeId === "number" &&
-    Number.isFinite(input.evoUnidadeId) &&
-    input.evoUnidadeId > 0
-  ) {
-    body.evoUnidadeId = input.evoUnidadeId;
-  }
+
+  const scopedPath = tenantId
+    ? `/api/v1/admin/unidades/${tenantId}/importacao-evo/pacote/${input.uploadId}/job`
+    : `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/${input.uploadId}/job`;
 
   return apiRequest<PacoteJobAceitoResponse>({
-    path: `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/${input.uploadId}/job`,
+    path: scopedPath,
     method: "POST",
     body,
-    headers: buildExplicitTenantHeaders(tenantId),
+    includeContextHeader: false,
   });
 }
 
@@ -289,6 +284,7 @@ export async function createEvoP0CsvUploadApi(input: {
     method: "POST",
     body: formData,
     headers: buildTenantHeaders(input.tenantId ?? input.contextoTenantId),
+    includeContextHeader: false,
   });
 }
 
@@ -305,6 +301,7 @@ export async function getEvoImportJobResumoApi(input: {
       path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${input.jobId}/p0`,
       query,
       headers,
+      includeContextHeader: false,
     });
   } catch (error) {
     if (!(error instanceof ApiRequestError) || error.status !== 404) {
@@ -316,6 +313,7 @@ export async function getEvoImportJobResumoApi(input: {
     path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${input.jobId}`,
     query,
     headers,
+    includeContextHeader: false,
   });
 }
 
@@ -336,6 +334,7 @@ export async function listEvoImportJobRejeicoesApi(input: {
       path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${input.jobId}/rejeicoes`,
       query,
       headers,
+      includeContextHeader: false,
     });
   } catch (error) {
     if (!(error instanceof ApiRequestError) || error.status !== 404) {
@@ -347,5 +346,6 @@ export async function listEvoImportJobRejeicoesApi(input: {
     path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${input.jobId}/rejeicoes`,
     query: { ...query, legacy: true },
     headers,
+    includeContextHeader: false,
   });
 }

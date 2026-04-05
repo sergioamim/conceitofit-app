@@ -57,6 +57,7 @@ export function useCreateRecebimentoAvulso(tenantId: string | undefined) {
       status: "PENDENTE" | "PAGO";
       dataPagamento?: string;
       formaPagamento?: TipoFormaPagamento;
+      codigoTransacao?: string;
     }) => createRecebimentoAvulsoService({ tenantId: tenantId!, data }),
     onSuccess: async () => {
       if (tenantId) {

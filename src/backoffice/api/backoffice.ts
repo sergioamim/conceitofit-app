@@ -208,6 +208,7 @@ export function buildBackofficeUnidadePayload(data: Partial<Tenant>) {
 export async function listBackofficeAcademiasApi(): Promise<Academia[]> {
   const response = await apiRequest<AnyListResponse<BackofficeAcademiaApiResponse>>({
     path: "/api/v1/admin/academias",
+    includeContextHeader: false,
   });
   return extractItems(response).map((item) => normalizeBackofficeAcademia(item));
 }
@@ -215,6 +216,7 @@ export async function listBackofficeAcademiasApi(): Promise<Academia[]> {
 export async function getBackofficeAcademiaApi(id: string): Promise<Academia> {
   const response = await apiRequest<BackofficeAcademiaApiResponse>({
     path: `/api/v1/admin/academias/${id}`,
+    includeContextHeader: false,
   });
   return normalizeBackofficeAcademia(response);
 }
@@ -224,6 +226,7 @@ export async function createBackofficeAcademiaApi(data: Partial<Academia>): Prom
     path: "/api/v1/admin/academias",
     method: "POST",
     body: buildBackofficeAcademiaPayload(data),
+    includeContextHeader: false,
   });
   return normalizeBackofficeAcademia(response, data);
 }
@@ -233,6 +236,7 @@ export async function updateBackofficeAcademiaApi(id: string, data: Partial<Acad
     path: `/api/v1/admin/academias/${id}`,
     method: "PUT",
     body: buildBackofficeAcademiaPayload(data),
+    includeContextHeader: false,
   });
   return normalizeBackofficeAcademia(response, data);
 }
@@ -240,6 +244,7 @@ export async function updateBackofficeAcademiaApi(id: string, data: Partial<Acad
 export async function listBackofficeUnidadesApi(): Promise<Tenant[]> {
   const response = await apiRequest<AnyListResponse<BackofficeUnidadeApiResponse>>({
     path: "/api/v1/admin/unidades",
+    includeContextHeader: false,
   });
   return extractItems(response).map((item) => normalizeBackofficeUnidade(item));
 }
@@ -247,6 +252,7 @@ export async function listBackofficeUnidadesApi(): Promise<Tenant[]> {
 async function getBackofficeUnidadeApi(id: string): Promise<Tenant> {
   const response = await apiRequest<BackofficeUnidadeApiResponse>({
     path: `/api/v1/admin/unidades/${id}`,
+    includeContextHeader: false,
   });
   return normalizeBackofficeUnidade(response);
 }
@@ -256,6 +262,7 @@ export async function createBackofficeUnidadeApi(data: Partial<Tenant>): Promise
     path: "/api/v1/admin/unidades",
     method: "POST",
     body: buildBackofficeUnidadePayload(data),
+    includeContextHeader: false,
   });
   return normalizeBackofficeUnidade(response, data);
 }

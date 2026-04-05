@@ -62,6 +62,7 @@ export type UpdateContaReceberApiInput = Partial<CreateContaReceberApiInput>;
 export type ReceberContaReceberApiInput = {
   dataRecebimento: string;
   formaPagamento: TipoFormaPagamento;
+  codigoTransacao?: string;
   valorRecebido?: number;
   observacoes?: string;
 };

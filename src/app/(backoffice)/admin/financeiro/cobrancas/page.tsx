@@ -36,7 +36,7 @@ import {
   cancelarAdminCobranca,
   createAdminCobranca,
 } from "@/backoffice/api/admin-billing";
-import { useAdminCobrancas, useAdminContratos } from "@/backoffice/query";
+import { useAdminCobrancas, useAdminContratos } from "@/backoffice/query/use-admin-financeiro";
 import { useAcademiaSuggestion } from "@/app/(backoffice)/admin/lib/use-academia-suggestion";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";

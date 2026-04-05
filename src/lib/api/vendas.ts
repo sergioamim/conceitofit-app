@@ -24,6 +24,7 @@ type CreateVendaApiInput = {
   clienteId?: string;
   convenioId?: string;
   voucherCodigo?: string;
+  codigoTransacao?: string;
   itens: Array<{
     tipo: TipoVenda;
     referenciaId: string;
@@ -38,16 +39,8 @@ type CreateVendaApiInput = {
     formaPagamento: TipoFormaPagamento;
     parcelas?: number;
     valorPago: number;
-    status?: "PAGO" | "PENDENTE";
+    codigoTransacao?: string;
     observacoes?: string;
-  };
-  planoContexto?: {
-    planoId: string;
-    dataInicio: string;
-    descontoPlano?: number;
-    motivoDesconto?: string;
-    renovacaoAutomatica?: boolean;
-    convenioId?: string;
   };
 };
 
@@ -87,8 +80,13 @@ type VendaApiResponse = {
   dataCriacao: string;
 };
 
-function normalizeCreateVendaItems(input: CreateVendaApiInput["itens"], planoContexto?: CreateVendaApiInput["planoContexto"]) {
-  if (!planoContexto?.planoId) {
+function normalizeCreateVendaItems(input: CreateVendaApiInput["itens"]) {
+  const normalizedPlanoId = input
+    .find((item) => item.tipo === "PLANO")
+    ?.referenciaId.split(":")[0]
+    ?.trim();
+
+  if (!normalizedPlanoId) {
     return input.map((item) => ({
       tipo: item.tipo,
       referenciaId: item.referenciaId,
@@ -98,8 +96,6 @@ function normalizeCreateVendaItems(input: CreateVendaApiInput["itens"], planoCon
       desconto: item.desconto,
     }));
   }
-
-  const normalizedPlanoId = planoContexto.planoId.trim();
   const emittedPlanoIds = new Set<string>();
 
   return input
@@ -346,13 +342,25 @@ export async function createVendaApi(input: {
   tenantId: string;
   data: CreateVendaApiInput;
 }): Promise<Venda> {
-  const itens = normalizeCreateVendaItems(input.data.itens, input.data.planoContexto);
+  const itens = normalizeCreateVendaItems(input.data.itens);
   const response = await apiRequest<VendaApiResponse>({
     path: "/api/v1/comercial/vendas",
     method: "POST",
     query: { tenantId: input.tenantId },
     body: {
-      ...input.data,
+      tipo: input.data.tipo,
+      clienteId: input.data.clienteId,
+      convenioId: input.data.convenioId,
+      voucherCodigo: input.data.voucherCodigo,
+      descontoTotal: input.data.descontoTotal,
+      acrescimoTotal: input.data.acrescimoTotal,
+      codigoTransacao: input.data.codigoTransacao ?? input.data.pagamento.codigoTransacao,
+      pagamento: {
+        formaPagamento: input.data.pagamento.formaPagamento,
+        parcelas: input.data.pagamento.parcelas,
+        valorPago: input.data.pagamento.valorPago,
+        observacoes: input.data.pagamento.observacoes,
+      },
       itens,
     },
   });

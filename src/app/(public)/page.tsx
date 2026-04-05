@@ -127,7 +127,7 @@ const TRUST_POINTS = [
 
 async function hasServerSession(): Promise<boolean> {
   const jar = await cookies();
-  return Boolean(jar.get("academia-access-token")?.value);
+  return Boolean(jar.get("academia-active-tenant-id")?.value);
 }
 
 export default async function HomePage() {

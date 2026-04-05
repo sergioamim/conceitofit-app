@@ -17,8 +17,6 @@ function readSessionActiveFlag(): boolean {
   return storage?.getItem("academia-auth-session-active") === "true";
 }
 
-let accessTokenMemory: string | undefined;
-let refreshTokenMemory: string | undefined;
 let tokenTypeMemory: string | undefined;
 
 function normalizeToken(value: string | undefined): string | undefined {
@@ -31,14 +29,14 @@ export function getAccessToken(): string | undefined {
   if (isBrowser() && !readSessionActiveFlag()) {
     return undefined;
   }
-  return accessTokenMemory ?? readStorageToken("academia-auth-token");
+  return readStorageToken("academia-auth-token");
 }
 
 export function getRefreshToken(): string | undefined {
   if (isBrowser() && !readSessionActiveFlag()) {
     return undefined;
   }
-  return refreshTokenMemory ?? readStorageToken("academia-auth-refresh-token");
+  return readStorageToken("academia-auth-refresh-token");
 }
 
 export function getTokenType(): string | undefined {
@@ -53,14 +51,10 @@ export function saveTokens(input: {
   refreshToken?: string;
   type?: string;
 }): void {
-  accessTokenMemory = normalizeToken(input.token);
-  refreshTokenMemory = normalizeToken(input.refreshToken);
   tokenTypeMemory = normalizeToken(input.type) ?? "Bearer";
 }
 
 export function clearTokens(): void {
-  accessTokenMemory = undefined;
-  refreshTokenMemory = undefined;
   tokenTypeMemory = undefined;
 }
 
@@ -69,12 +63,12 @@ export function getFetchCredentials(): RequestCredentials {
 }
 
 export function shouldInjectAuthHeader(): boolean {
-  return Boolean(getAccessToken());
+  return false;
 }
 
 export function hasActiveSession(): boolean {
   if (isBrowser()) {
     return readSessionActiveFlag();
   }
-  return Boolean(accessTokenMemory || refreshTokenMemory);
+  return false;
 }

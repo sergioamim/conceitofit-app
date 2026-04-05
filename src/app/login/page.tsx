@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { NetworkAccessFlow } from "@/components/auth/network-access-flow";
-import { LegacyLoginFlow } from "@/components/auth/legacy-login-flow";
+import { AdminLoginFlow } from "@/components/auth/admin-login-flow";
 import { resolveNetworkSubdomain } from "@/lib/network-subdomain";
 
 export default async function LoginPage({
@@ -17,5 +17,5 @@ export default async function LoginPage({
     return <NetworkAccessFlow networkSubdomain={networkSubdomain} nextPath={next} mode="login" />;
   }
 
-  return <LegacyLoginFlow nextPath={next} />;
+  return <AdminLoginFlow nextPath={next} />;
 }

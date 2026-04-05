@@ -77,26 +77,31 @@ export const backofficeNavGroups: BackofficeNavGroup[] = [
     ],
   },
   {
-    title: "Seguranca",
+    title: "Gestão de Acessos",
     items: [
-      { href: "/admin/seguranca", label: "Seguranca", icon: ShieldCheck, searchTags: ["security", "protecao", "acesso", "permissoes"] },
-      { href: "/admin/seguranca/usuarios", label: "Usuarios do Backoffice", icon: UserCog, searchTags: ["admins", "operadores", "contas", "gerenciar usuarios"], paletteOnly: true },
-      { href: "/admin/seguranca/perfis", label: "Perfis de Acesso", icon: Key, searchTags: ["roles", "papeis", "niveis", "permissoes", "rbac"], paletteOnly: true },
-      { href: "/admin/seguranca/funcionalidades", label: "Funcionalidades", icon: Zap, searchTags: ["features", "recursos", "modulos", "capacidades", "feature flags"], paletteOnly: true },
-      { href: "/admin/seguranca/catalogo", label: "Catalogo de Permissoes", icon: BookOpen, searchTags: ["permissions", "acl", "lista permissoes", "catalogo"], paletteOnly: true },
-      { href: "/admin/seguranca/revisoes", label: "Revisoes de Acesso", icon: ListChecks, searchTags: ["audit", "review", "verificacao", "conformidade"], paletteOnly: true },
-      { href: "/admin/compliance", label: "Compliance LGPD", icon: Shield, searchTags: ["privacidade", "dados pessoais", "gdpr", "protecao dados", "regulamentacao"] },
-      { href: "/admin/audit-log", label: "Audit Log", icon: FileText, searchTags: ["historico", "log", "registro", "rastreamento", "auditoria", "trilha"] },
+      { href: "/admin/seguranca", label: "Central de Segurança", icon: ShieldCheck, searchTags: ["security", "protecao", "acesso", "permissoes"] },
+      { href: "/admin/seguranca/usuarios", label: "Gestão de Usuários", icon: UserCog, searchTags: ["admins", "operadores", "contas", "gerenciar usuarios"], paletteOnly: true },
+      { href: "/admin/seguranca/perfis", label: "Perfis e Regras", icon: Key, searchTags: ["roles", "papeis", "niveis", "permissoes", "rbac"], paletteOnly: true },
+      { href: "/admin/compliance", label: "Compliance LGPD", icon: Shield, searchTags: ["privacidade", "dados pessoais", "gdpr", "protecao dados", "regulamentacao"], paletteOnly: true },
+      { href: "/admin/audit-log", label: "Audit Log", icon: FileText, searchTags: ["historico", "log", "registro", "rastreamento", "auditoria", "trilha"], paletteOnly: true },
+      { href: "/admin/seguranca/revisoes", label: "Revisões de Acesso", icon: ListChecks, searchTags: ["audit", "review", "verificacao", "conformidade"], paletteOnly: true },
+      { href: "/admin/seguranca/catalogo", label: "Catálogo de Permissões", icon: BookOpen, searchTags: ["permissions", "acl", "lista permissoes", "catalogo"], paletteOnly: true },
     ],
   },
   {
-    title: "Comunicacao",
+    title: "Engenharia e Produto",
+    items: [
+      { href: "/admin/seguranca/funcionalidades", label: "Feature Flags", icon: Zap, searchTags: ["features", "recursos", "modulos", "capacidades", "feature flags"] },
+    ],
+  },
+  {
+    title: "Comunicação",
     items: [
       { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageSquare, searchTags: ["mensagens", "chat", "comunicacao", "notificacao", "zap"] },
     ],
   },
   {
-    title: "Configuracao",
+    title: "Configuração",
     items: [
       { href: "/admin/configuracoes", label: "Configuracoes", icon: Settings, searchTags: ["settings", "preferencias", "ajustes", "parametros", "opcoes"] },
       { href: "/admin/importacao-evo", label: "Importacao EVO", icon: Upload, searchTags: ["migrar", "importar", "evo", "dados", "csv", "upload"] },

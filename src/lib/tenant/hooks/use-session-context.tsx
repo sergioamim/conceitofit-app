@@ -5,6 +5,7 @@ import { hasElevatedAccess } from "@/lib/access-control";
 import type { Academia } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { setTenantContextApi } from "@/lib/api/contexto-unidades";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   getActiveTenantIdFromSession,
   getAvailableTenantsFromSession,
@@ -106,6 +107,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
   const stateRef = useRef(state);
   stateRef.current = state;
   const sessionTokenRef = useRef<string | undefined>(undefined);
+  const queryClient = useQueryClient();
 
   const syncFromStore = useCallback(() => {
     setState((current) => {
@@ -263,31 +265,28 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
     try {
       const bootstrapState = await runWithoutSessionEcho(async () => {
         const switchedContext = await setTenantContextApi(normalizedTenantId);
-        const nextBootstrapState = await loadSessionBootstrapState();
-        if (nextBootstrapState.snapshot.tenantId === normalizedTenantId) {
-          return nextBootstrapState;
-        }
-
+        
         const switchedTenant =
           switchedContext.unidadesDisponiveis.find((tenant) => tenant.id === normalizedTenantId)
           ?? (switchedContext.tenantAtual?.id === normalizedTenantId ? switchedContext.tenantAtual : null);
 
-        if (!switchedTenant) {
-          return nextBootstrapState;
-        }
-
         const correctedSnapshot = syncTenantContextInStore({
           currentTenantId: normalizedTenantId,
-          tenantAtual: switchedTenant,
+          tenantAtual: switchedTenant ?? switchedContext.tenantAtual, // fallback to current if strict find fails
           tenants: switchedContext.unidadesDisponiveis,
         });
 
+        const nextBootstrapState = await loadSessionBootstrapState();
+        
         return {
           ...nextBootstrapState,
           snapshot: correctedSnapshot,
         };
       });
       if (requestIdRef.current !== currentRequestId) return;
+
+      // Invalidate all standard API queries so any UI reading off the old tenant is forced to refresh
+      queryClient.clear();
 
       const now = Date.now();
       setState((current) => {

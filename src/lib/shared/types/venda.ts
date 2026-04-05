@@ -20,6 +20,7 @@ export interface PagamentoVenda {
   formaPagamento: TipoFormaPagamento;
   parcelas?: number;
   valorPago: number;
+  codigoTransacao?: string;
   status?: "PAGO" | "PENDENTE";
   observacoes?: string;
 }

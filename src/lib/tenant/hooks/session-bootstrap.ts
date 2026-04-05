@@ -9,6 +9,7 @@ import {
   setTenantContextApi,
 } from "@/lib/api/contexto-unidades";
 import { hasClientDeleteCapability, hasElevatedAccess, normalizeRoles } from "@/lib/access-control";
+import type { AuthSessionScope } from "@/lib/api/session";
 import type { Academia, TenantBranding } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import {
@@ -28,6 +29,22 @@ export type SessionBootstrapLoadResult = {
   brandingSnapshotOverride?: TenantBranding;
   error: string | null;
 };
+
+function hasBackofficeElevatedAccess(input: {
+  roles?: string[];
+  availableScopes?: AuthSessionScope[];
+  broadAccess?: boolean;
+}): boolean {
+  if (hasElevatedAccess(input.roles ?? [])) {
+    return true;
+  }
+
+  if (input.availableScopes?.includes("GLOBAL")) {
+    return true;
+  }
+
+  return Boolean(input.broadAccess);
+}
 
 async function loadTenantContextSnapshot(): Promise<TenantContextSnapshot> {
   const context = await getTenantContextApi();
@@ -81,7 +98,11 @@ async function loadAuthAndAcademiaState(): Promise<{
 
   if (meResult.status === "fulfilled") {
     roles = normalizeRoles(meResult.value.roles);
-    canAccessElevatedModules = hasElevatedAccess(roles);
+    canAccessElevatedModules = hasBackofficeElevatedAccess({
+      roles,
+      availableScopes: meResult.value.availableScopes,
+      broadAccess: meResult.value.broadAccess,
+    });
     canDeleteClient = hasClientDeleteCapability(roles);
     authUser = meResult.value;
   } else {

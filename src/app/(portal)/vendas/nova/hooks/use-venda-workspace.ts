@@ -169,7 +169,7 @@ export function useVendaWorkspace() {
       return;
     }
     try {
-      const venda = await processSale({ ...pagamento, status: "PAGO" });
+      const venda = await processSale(pagamento);
       const selectedCliente = alunos.find((a) => a.id === venda.clienteId) ?? null;
       const contratoAutoMsg =
         selectedPlano?.contratoTemplateHtml && selectedPlano.contratoEnviarAutomaticoEmail && selectedCliente?.email

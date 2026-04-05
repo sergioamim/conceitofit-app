@@ -22,6 +22,7 @@ export interface RecebimentoAvulsoInput {
   status?: "PENDENTE" | "PAGO";
   dataPagamento?: string;
   formaPagamento?: TipoFormaPagamento;
+  codigoTransacao?: string;
   observacoes?: string;
 }
 
@@ -44,6 +45,7 @@ export interface AjustarPagamentoInput {
   status?: Pagamento["status"];
   dataPagamento?: string;
   formaPagamento?: TipoFormaPagamento;
+  codigoTransacao?: string;
   observacoes?: string;
 }
 
@@ -65,6 +67,29 @@ function cleanString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim();
   return normalized || undefined;
+}
+
+function mergeObservacoesComCodigoTransacao(
+  observacoes: string | undefined,
+  codigoTransacao: string | undefined
+): string | undefined {
+  const cleanedObservacoes = cleanString(observacoes);
+  const cleanedCodigo = cleanString(codigoTransacao);
+
+  if (!cleanedCodigo) {
+    return cleanedObservacoes;
+  }
+
+  const linhaCodigo = `Código da transação: ${cleanedCodigo}`;
+  if (!cleanedObservacoes) {
+    return linhaCodigo;
+  }
+
+  if (cleanedObservacoes.includes(linhaCodigo)) {
+    return cleanedObservacoes;
+  }
+
+  return `${cleanedObservacoes}\n${linhaCodigo}`;
 }
 
 function toNumber(value: unknown, fallback = 0): number {
@@ -332,8 +357,9 @@ export async function createRecebimentoAvulsoService(input: {
       data: {
         dataRecebimento: input.data.dataPagamento ?? todayIso(),
         formaPagamento: input.data.formaPagamento ?? "PIX",
+        codigoTransacao: cleanString(input.data.codigoTransacao),
         valorRecebido: valorFinal,
-        observacoes: cleanString(input.data.observacoes),
+        observacoes: mergeObservacoesComCodigoTransacao(input.data.observacoes, input.data.codigoTransacao),
       },
     });
   }
@@ -429,6 +455,7 @@ export async function ajustarPagamentoService(input: {
     : await resolveClienteFromAlunoId(input.data.alunoId, input.tenantId);
   const descricao = input.data.descricao == null ? undefined : input.data.descricao.trim();
   const observacoes = input.data.observacoes === undefined ? undefined : cleanString(input.data.observacoes);
+  const codigoTransacao = cleanString(input.data.codigoTransacao);
   const valorOriginal = input.data.valor == null ? undefined : Math.max(0, Number(input.data.valor));
   const desconto = input.data.desconto == null ? undefined : Math.max(0, Number(input.data.desconto));
 
@@ -458,8 +485,9 @@ export async function ajustarPagamentoService(input: {
       data: {
         dataRecebimento: input.data.dataPagamento ?? current?.dataRecebimento ?? todayIso(),
         formaPagamento: input.data.formaPagamento ?? current?.formaPagamento ?? "PIX",
+        codigoTransacao,
         valorRecebido: Math.max(0, baseValor - baseDesconto + baseJuros),
-        observacoes,
+        observacoes: mergeObservacoesComCodigoTransacao(observacoes, codigoTransacao),
       },
     });
   } else if (alvoStatus === "CANCELADO") {

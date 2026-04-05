@@ -12,7 +12,7 @@
 
 **Details:**
 
-Escopo: identificar guardas, hooks e fluxos que diferenciam sessão administrativa vs operacional e mapear onde o `activeTenantId` e `redeId` precisam ser respeitados. Incluir `src/app/(backoffice)`, `src/app/(portal)` e a camada de sessão em `src/lib/api/session.ts`.
+Escopo: identificar guardas, hooks e fluxos que diferenciam sessão administrativa vs operacional e mapear onde o `activeTenantId` e `redeId` precisam ser respeitados. Incluir `src/app/(backoffice)`, `src/app/(app)` e a camada de sessão em `src/lib/api/session.ts`.
 
 **Test Strategy:**
 

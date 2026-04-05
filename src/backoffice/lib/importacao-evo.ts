@@ -180,7 +180,7 @@ type PacoteJobInput = {
   arquivos?: string[] | null;
   retrySomenteErros?: boolean;
   tenantId?: string;
-  evoUnidadeId?: number | null;
+  apelido?: string | null;
   contextoTenantId?: string;
 };
 

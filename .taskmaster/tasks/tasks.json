@@ -13851,13 +13851,130 @@
         "priority": "low",
         "subtasks": [],
         "updatedAt": "2026-04-03T19:27:50.816Z"
+      },
+      {
+        "id": "448",
+        "title": "Congelar taxonomia de rotas publicas, auth, portal e backoffice",
+        "description": "Formalizar a estrutura alvo do App Router e a matriz de compatibilidade entre rotas atuais e rotas canonicas.",
+        "details": "Mapear as superficies atuais em src/app/(public), src/app/storefront, src/app/acesso, src/app/app, src/app/(app), src/app/(backoffice) e src/app/(aluno). Registrar a matriz rota atual -> superficie alvo -> URL canonica -> estrategia de compatibilidade. Confirmar as decisoes base desta reorganizacao: / como landing institucional do SaaS, /acesso/[redeSlug] como entrada canonica por rede, /app/[networkSubdomain] como compatibilidade legada, storefront e adesao como superficies publicas, e o antigo route group (app) como candidato a (portal).",
+        "testStrategy": "Revisao manual: conferir que a matriz cobre todas as superficies relevantes de src/app e que cada decisao de compatibilidade esta documentada antes de mover arquivos.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T20:43:00.978Z"
+      },
+      {
+        "id": "449",
+        "title": "Consolidar superficies publicas sob o route group (public)",
+        "description": "Agrupar landing institucional, B2B e acesso de rede dentro de um boundary interno publico sem introduzir /public na URL.",
+        "details": "Reorganizar a estrutura fisica para que as experiencias publicas fiquem sob src/app/(public), preservando as URLs finais. Incluir a home publica, a landing B2B e a superficie /acesso. Revisar a necessidade de um layout publico compartilhado para metadata, SEO, analytics e schema.org. Validar que nenhum movimento de filesystem gera prefixo /public/* na navegacao.",
+        "testStrategy": "Teste manual: navegar por /, /b2b e /acesso/* apos a reorganizacao e validar que as URLs finais nao mudaram nem ganharam o prefixo /public.",
+        "status": "done",
+        "dependencies": [
+          "448"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T20:51:37.318Z"
+      },
+      {
+        "id": "450",
+        "title": "Mover storefront publico para (public) e alinhar rewrites de subdominio",
+        "description": "Migrar a arvore publica do storefront para o boundary (public) mantendo proxy, headers e URLs funcionando.",
+        "details": "Mover src/app/storefront/* para src/app/(public)/storefront/* e revisar src/proxy.ts, resolve-storefront-headers, loading.tsx, sitemap.ts e paginas de not-found relacionadas. Garantir que o storefront continue resolvendo tenant por subdominio e que a area administrativa de configuracao do storefront permaneça separada na superficie operacional. Validar acesso por subdominio valido, subdominio invalido e acesso direto por URL.",
+        "testStrategy": "Teste manual: abrir o storefront por subdominio e por URL direta, validar rewrite para a nova arvore, validar o not-found publico para subdominio invalido.",
+        "status": "done",
+        "dependencies": [
+          "448",
+          "449"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T20:57:18.756Z"
+      },
+      {
+        "id": "451",
+        "title": "Consolidar jornada publica de adesao e remover duplicacao com storefront",
+        "description": "Definir uma implementacao canonica para adesao publica e eliminar paginas proxy desnecessarias no storefront.",
+        "details": "Revisar a duplicacao entre src/app/(public)/adesao/* e src/app/storefront/adesao/*, com foco especial nas paginas que hoje apenas redirecionam client-side para /adesao/*. Manter a jornada de adesao sob a superficie publica, preservar tenant e plan na query string e substituir redirecionamentos client-side por abordagem mais previsivel, preferencialmente server-side ou por composicao de componentes compartilhados.",
+        "testStrategy": "Teste manual: validar landing, cadastro, checkout, trial e pendencias da jornada publica; validar tambem que o storefront continua abrindo a adesao com tenant e plano corretos.",
+        "status": "done",
+        "dependencies": [
+          "449",
+          "450"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T21:07:00.260Z"
+      },
+      {
+        "id": "452",
+        "title": "Canonicalizar acesso de rede em /acesso/[redeSlug] e depreciar /app/[networkSubdomain]",
+        "description": "Adotar /acesso/[redeSlug] como URL canonica de entrada por rede e manter /app/[networkSubdomain] apenas como compatibilidade legada.",
+        "details": "Revisar src/app/app/[networkSubdomain]/*, src/app/acesso/[redeSlug]/*, src/app/login/page.tsx e helpers como buildNetworkAccessHref e normalizeNetworkSubdomain. Criar redirects canonicos de /app/[networkSubdomain] para /acesso/[redeSlug], alinhar login, primeiro acesso e recuperacao de senha com a taxonomia final e revisar impactos em links internos, QA scripts e cenarios Playwright.",
+        "testStrategy": "Teste manual: validar entrada por host, por slug de rede e por URL legada /app/[networkSubdomain], confirmando o redirect para /acesso/[redeSlug] sem quebrar o fluxo de autenticacao.",
+        "status": "done",
+        "dependencies": [
+          "448",
+          "449"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T21:11:30.171Z"
+      },
+      {
+        "id": "453",
+        "title": "Renomear o route group (app) para (portal) sem alterar URLs operacionais",
+        "description": "Mover a area operacional da academia para um route group (portal), preservando caminhos finais, shell e guardas de sessao.",
+        "details": "Migrar src/app/(app)/* para src/app/(portal)/*, mantendo o layout, a shell operacional, os guards de autenticacao e os contextos de sessao. Revisar referencias em documentacao, testes, scripts e comentarios que citam o route group antigo. Confirmar que o rename nao conflita mais com a rota legada /app/* apos a canonicalizacao do acesso por rede.",
+        "testStrategy": "Smoke manual: abrir /dashboard, /vendas, /crm, /administrativo e /conta apos o rename e confirmar que as URLs finais nao mudaram.",
+        "status": "done",
+        "dependencies": [
+          "452"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T22:03:34.641Z"
+      },
+      {
+        "id": "454",
+        "title": "Transformar / em landing institucional do SaaS com transicao segura para usuarios autenticados",
+        "description": "Substituir o redirect bruto da home por uma landing institucional, definindo o comportamento ideal para usuarios autenticados.",
+        "details": "Trocar o redirect atual de src/app/page.tsx por uma home institucional focada em descoberta, captacao e auto-venda do produto. Integrar CTAs para demo, login e jornada comercial, preservando metadata, Open Graph, canonical e schema.org. Definir explicitamente se usuarios autenticados continuam vendo a landing ou se recebem redirect controlado para o portal, evitando regressao na entrada operacional.",
+        "testStrategy": "Teste manual: abrir / deslogado e logado, validar a estrategia definida para cada caso, revisar SEO basico da home e CTAs para demo e login.",
+        "status": "done",
+        "dependencies": [
+          "449"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T21:30:37.978Z"
+      },
+      {
+        "id": "455",
+        "title": "Fechar testes, documentacao e rollout da nova taxonomia de rotas",
+        "description": "Atualizar documentacao, cobrir as novas superficies com smoke tests e consolidar o plano de rollout e rollback.",
+        "details": "Atualizar docs de estrutura e navegacao do frontend para refletir a nova taxonomia de rotas. Criar ou ajustar uma matriz de testes cobrindo /, /b2b, /adesao, /storefront, /login, /dashboard e /admin, incluindo rewrites por subdominio e not-found do storefront. Revisar analytics, monitoramento e logs para nao misturar trafego publico e operacional. Registrar um checklist simples de rollout e rollback.",
+        "testStrategy": "Validacao final: executar a matriz de smoke das superficies publica, auth, portal, backoffice e subdominio do storefront; revisar documentacao e checklist de rollout antes de concluir a trilha.",
+        "status": "done",
+        "dependencies": [
+          "450",
+          "451",
+          "452",
+          "453",
+          "454"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-03T22:01:41.727Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-03T19:50:32.107Z",
-      "taskCount": 392,
-      "completedCount": 392,
+      "lastModified": "2026-04-03T22:03:34.641Z",
+      "taskCount": 400,
+      "completedCount": 400,
       "tags": [
         "master"
       ]

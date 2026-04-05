@@ -30,6 +30,7 @@ import { listGlobalAcademias, listGlobalUnidades } from "@/backoffice/lib/admin"
 import { queryKeys } from "@/lib/query/keys";
 import { setPreferredTenantId } from "@/lib/api/session";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { adminEntrarComoUnidadeApi } from "@/lib/api/auth";
 import type { Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
@@ -224,8 +225,11 @@ export default function EntrarComoAcademiaPage() {
     setSwitching(true);
     setError(null);
     try {
-      await switchActiveTenant(selectedTenantId);
-      setPreferredTenantId(selectedTenantId);
+      await adminEntrarComoUnidadeApi({
+        academiaId: selectedAcademia.id,
+        tenantId: selectedTenantId,
+        justificativa: values.justificativa,
+      });
 
       // Persistir nos recentes
       saveRecente({

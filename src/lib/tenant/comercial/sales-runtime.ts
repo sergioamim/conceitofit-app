@@ -121,14 +121,6 @@ export async function createVendaService(input: {
     descontoTotal?: number;
     acrescimoTotal?: number;
     pagamento: PagamentoVenda;
-    planoContexto?: {
-      planoId: string;
-      dataInicio: string;
-      descontoPlano?: number;
-      motivoDesconto?: string;
-      renovacaoAutomatica?: boolean;
-      convenioId?: string;
-    };
   };
 }): Promise<Venda> {
   return createVendaApi(input);

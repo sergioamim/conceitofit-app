@@ -25,7 +25,7 @@ export function EvoUploadTab({ state }: { state: EvoImportPageState }) {
   return (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Parâmetros</CardTitle>
+              <CardTitle className="text-lg">Configuração do Lote</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex flex-wrap gap-4">
@@ -36,10 +36,10 @@ export function EvoUploadTab({ state }: { state: EvoImportPageState }) {
                     onChange={(e) => setDryRun(e.target.checked)}
                     className="accent-gym-accent"
                   />
-                  Dry-run (não gravar)
+                  Modo de simulação (Apenas validar, não salvar)
                 </Label>
                 <div className="w-48 space-y-2">
-                  <Label htmlFor="maxRejeicoes">Max rejeições retorno</Label>
+                  <Label htmlFor="maxRejeicoes">Limite de Rejeições (Abortar)</Label>
                   <Input
                     id="maxRejeicoes"
                     type="number"
@@ -50,7 +50,7 @@ export function EvoUploadTab({ state }: { state: EvoImportPageState }) {
                   />
                 </div>
                 <div className="min-w-72 flex-1 space-y-2">
-                  <Label htmlFor="csvJobAlias">Alias do job</Label>
+                  <Label htmlFor="csvJobAlias">Nome de identificação deste lote</Label>
                   <Input
                     id="csvJobAlias"
                     value={csvJobAlias}
@@ -58,7 +58,7 @@ export function EvoUploadTab({ state }: { state: EvoImportPageState }) {
                     placeholder={aliasSugestaoCsv}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Opcional. Se vazio, a tela gera um nome automático para facilitar encontrar o job depois.
+                    Nome livre para facilitar a busca deste lote no histórico.
                   </p>
                 </div>
               </div>

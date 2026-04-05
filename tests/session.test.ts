@@ -23,10 +23,6 @@ function makeSession(overrides?: Partial<AuthSession>): AuthSession {
   };
 }
 
-function makeJwtLikeToken(): string {
-  return "header.payload.signature";
-}
-
 describe("session storage", () => {
   beforeEach(() => {
     clearAuthSession();
@@ -36,20 +32,9 @@ describe("session storage", () => {
     clearAuthSession();
   });
 
-  it("saves and retrieves access token", () => {
+  it("não expõe o access token no browser quando a sessão é persistida por cookie HttpOnly", () => {
     saveAuthSession(makeSession());
-    expect(getAccessToken()).toBe("test-token");
-  });
-
-  it("sincroniza apenas o cookie de tenant quando o token não é JWT real", () => {
-    saveAuthSession(makeSession());
-    expect(document.cookie).not.toContain("academia-access-token=");
-    expect(document.cookie).toContain("academia-active-tenant-id=tenant-1");
-  });
-
-  it("sincroniza cookie de access token para SSR quando o token parece JWT", () => {
-    saveAuthSession(makeSession({ token: makeJwtLikeToken() }));
-    expect(document.cookie).toContain("academia-access-token=header.payload.signature");
+    expect(getAccessToken()).toBeUndefined();
     expect(document.cookie).toContain("academia-active-tenant-id=tenant-1");
   });
 
@@ -89,7 +74,6 @@ describe("session storage", () => {
     expect(getDisplayNameFromSession()).toBeUndefined();
     expect(getActiveTenantIdFromSession()).toBeUndefined();
     expect(getForcePasswordChangeRequiredFromSession()).toBe(false);
-    expect(document.cookie).not.toContain("academia-access-token=");
     expect(document.cookie).not.toContain("academia-active-tenant-id=");
   });
 

@@ -1098,6 +1098,7 @@ export async function installPublicJourneyApiMocks(page: Page) {
       const tenant = getTenantFromRequest(url);
       const payload = parseBody<{
         clienteId?: string;
+        codigoTransacao?: string;
         itens?: Array<{
           tipo: "PLANO" | "SERVICO" | "PRODUTO";
           referenciaId: string;
@@ -1110,24 +1111,22 @@ export async function installPublicJourneyApiMocks(page: Page) {
           formaPagamento: FormaPagamentoSeed["tipo"];
           parcelas?: number;
           valorPago: number;
-          status?: "PAGO" | "PENDENTE";
           observacoes?: string;
-        };
-        planoContexto?: {
-          planoId: string;
-          dataInicio: string;
-          renovacaoAutomatica?: boolean;
         };
       }>(request);
 
       const aluno = alunos.find((item) => item.id === payload.clienteId);
-      const plano = findPlan(plansByTenant.get(tenant.id) ?? [], payload.planoContexto?.planoId ?? "");
+      const planoReferenciaId = payload.itens?.find((item) => item.tipo === "PLANO")?.referenciaId ?? "";
+      const plano = findPlan(plansByTenant.get(tenant.id) ?? [], planoReferenciaId.split(":")[0] ?? "");
       const createdAt = nowIso();
-      const dataInicio = payload.planoContexto?.dataInicio ?? todayIso();
+      const dataInicio = todayIso();
       const dataFim = addDays(dataInicio, plano.duracaoDias);
       const contractStatus = plano.contratoTemplateHtml?.trim()
         ? "PENDENTE_ASSINATURA"
         : "SEM_CONTRATO";
+      const pagamentoStatus = payload.pagamento.formaPagamento === "BOLETO" || payload.pagamento.formaPagamento === "RECORRENTE"
+        ? "PENDENTE"
+        : "PAGO";
       const subtotal = (payload.itens ?? []).reduce(
         (sum, item) => sum + item.valorUnitario * item.quantidade - (item.desconto ?? 0),
         0,
@@ -1144,12 +1143,12 @@ export async function installPublicJourneyApiMocks(page: Page) {
         planoId: plano.id,
         dataInicio,
         dataFim,
-        valorPago: payload.pagamento.status === "PAGO" ? valorFinal : 0,
+        valorPago: pagamentoStatus === "PAGO" ? valorFinal : 0,
         valorMatricula: plano.valorMatricula,
         desconto: 0,
         formaPagamento: payload.pagamento.formaPagamento,
         status: "ATIVA",
-        renovacaoAutomatica: Boolean(payload.planoContexto?.renovacaoAutomatica),
+        renovacaoAutomatica: false,
         contratoStatus: contractStatus,
         contratoModoAssinatura: plano.contratoAssinatura ?? "DIGITAL",
         dataCriacao: createdAt,
@@ -1166,10 +1165,12 @@ export async function installPublicJourneyApiMocks(page: Page) {
         desconto: 0,
         valorFinal,
         dataVencimento: dataInicio,
-        dataPagamento: payload.pagamento.status === "PAGO" ? dataInicio : undefined,
+        dataPagamento: pagamentoStatus === "PAGO" ? dataInicio : undefined,
         formaPagamento: payload.pagamento.formaPagamento,
-        status: payload.pagamento.status ?? "PENDENTE",
-        observacoes: payload.pagamento.observacoes,
+        status: pagamentoStatus,
+        observacoes: payload.codigoTransacao
+          ? [payload.pagamento.observacoes, `Código da transação: ${payload.codigoTransacao}`].filter(Boolean).join("\n")
+          : payload.pagamento.observacoes,
         nfseEmitida: false,
         dataCriacao: createdAt,
       };
@@ -1204,7 +1205,7 @@ export async function installPublicJourneyApiMocks(page: Page) {
           formaPagamento: payload.pagamento.formaPagamento,
           parcelas: payload.pagamento.parcelas,
           valorPago: payload.pagamento.valorPago,
-          status: payload.pagamento.status ?? "PENDENTE",
+          status: pagamentoStatus,
           observacoes: payload.pagamento.observacoes,
         },
         dataCriacao: createdAt,

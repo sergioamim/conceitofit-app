@@ -62,17 +62,13 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
 
   return (
     <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Importação por pacote</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-1">
-                <Label className="font-semibold">1. Analisar pacote</Label>
-                <p className="text-sm text-muted-foreground">
-                  Se quiser, já selecione a academia para contextualizar as sugestões. A EVO Unidade fica para depois da leitura do ZIP.
-                </p>
-              </div>
+      <div className="space-y-6 pb-12">
+      <Card>
+        <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
+          <CardTitle className="text-lg">Etapa 1: Analisar pacote ZIP</CardTitle>
+          <p className="text-sm text-muted-foreground">Se quiser, já selecione a academia para contextualizar as sugestões. A EVO Unidade fica para depois da leitura do ZIP.</p>
+        </CardHeader>
+        <CardContent className="space-y-6 pt-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Academia</Label>
@@ -113,10 +109,10 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                     onChange={(e) => setPacoteDryRun(e.target.checked)}
                     className="accent-gym-accent"
                   />
-                  Dry-run (não gravar)
+                  Modo de simulação (Apenas validar, não salvar)
                 </Label>
                 <div className="w-56 space-y-2">
-                  <Label htmlFor="pacoteMaxRejeicoes">Max rejeições retorno</Label>
+                  <Label htmlFor="pacoteMaxRejeicoes">Limite de Rejeições (Abortar)</Label>
                   <Input
                     id="pacoteMaxRejeicoes"
                     type="number"
@@ -127,7 +123,7 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                   />
                 </div>
                 <div className="min-w-72 flex-1 space-y-2">
-                  <Label htmlFor="pacoteJobAlias">Alias do job</Label>
+                  <Label htmlFor="pacoteJobAlias">Nome de identificação deste lote</Label>
                   <Input
                     id="pacoteJobAlias"
                     value={pacoteJobAlias}
@@ -135,7 +131,7 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                     placeholder={aliasSugestaoPacote}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Opcional. Use um nome curto para reencontrar este job sem depender do ID.
+                    Opcional. Nome livre para facilitar a busca deste lote no histórico.
                   </p>
                 </div>
               </div>
@@ -151,27 +147,24 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                   Arquivo selecionado: {pacoteArquivo.name} ({formatBytes(pacoteArquivo.size)})
                 </p>
               )}
+        </CardContent>
+      </Card>
 
-              {pacoteAnalise && (
-                <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
-                  <div className="flex flex-wrap gap-3 text-sm">
-                    <p>
-                      <span className="font-medium">Upload ID:</span> {pacoteAnalise.uploadId}
-                    </p>
-                    <p>
-                      <span className="font-medium">EVO Unidade:</span> {pacoteEvoUnidadeResolvida ?? "pendente"}
-                    </p>
-                    <p>
-                      <span className="font-medium">Expira em:</span> {formatDateTime(pacoteAnalise.expiraEm)}
-                    </p>
-                    <p>
-                      <span className="font-medium">Disponíveis:</span> {arquivosSelecionadosDaAnalise.length} / {pacoteAnalise.arquivos.length}
-                    </p>
-                  </div>
-
+      {pacoteAnalise && (
+        <>
+          <Card className="border-gym-accent/40 shadow-sm overflow-hidden">
+          <div className="bg-gym-accent/10 md:px-6 px-4 md:py-3 py-4 text-sm flex flex-wrap md:gap-x-8 gap-x-4 gap-y-2 text-muted-foreground border-b border-gym-accent/20">
+            <p><span className="font-medium text-foreground">Upload ID:</span> {pacoteAnalise.uploadId}</p>
+            <p><span className="font-medium text-foreground">EVO Unidade:</span> {pacoteEvoUnidadeResolvida ?? "pendente"}</p>
+            <p><span className="font-medium text-foreground">Expira em:</span> {formatDateTime(pacoteAnalise.expiraEm)}</p>
+            <p><span className="font-medium text-foreground">Arquivos Detectados:</span> {pacoteAnalise.arquivos.length}</p>
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Etapa 2: Validar Origem e Destino</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
                   {pacoteFilialResolvida && (
                     <>
-                      <Separator />
                       <div className="space-y-3 rounded-md border border-border bg-background p-3">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-semibold">Filial detectada no pacote</p>
@@ -274,15 +267,9 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                     </>
                   )}
 
-                  <Separator />
+                  <Separator className="my-2" />
 
                   <div className="space-y-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold">2. Confirmar EVO Unidade e unidade destino</p>
-                      <p className="text-xs text-muted-foreground">
-                        Com os metadados do pacote, informe a EVO Unidade se necessário e então escolha uma unidade existente ou crie uma nova.
-                      </p>
-                    </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
@@ -411,15 +398,15 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                       </div>
                     )}
                   </div>
+          </CardContent>
+        </Card>
 
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold">Arquivos reconhecidos</p>
-                    <p className="text-xs text-muted-foreground">
-                      A malha de colaboradores abaixo evidencia o que o backend reconheceu no pacote, para deixar explícitos blocos completos, parciais e não reconhecidos.
-                    </p>
-                  </div>
+        <Card>
+          <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
+            <CardTitle className="text-lg">Etapa 3: Revisar Malha de Dados</CardTitle>
+            <p className="text-sm text-muted-foreground">A malha de colaboradores evidencia o que o backend reconheceu no pacote (completo, parcial ou não reconhecido). Marque ou desmarque chaves individuais.</p>
+          </CardHeader>
+          <CardContent className="space-y-6 pt-6">
                   {pacoteArquivosDisponiveis.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Nenhum arquivo reconhecido neste pacote.</p>
                   ) : (
@@ -656,26 +643,22 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                     </div>
                   )}
 
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={criarJobPacote}
-                      disabled={pacoteCriandoJob || arquivosSelecionadosDaAnalise.length === 0}
-                    >
-                      {pacoteCriandoJob ? "Criando job..." : "Criar Job"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={atualizarAnalisePacote}
-                      disabled={pacoteAnalisando}
-                      className="ml-2"
-                    >
-                      {pacotePrecisaReanaliseManual ? "Reanalisar com EVO Unidade" : "Atualizar análise"}
-                    </Button>
+                  <div className="mt-6 flex flex-wrap gap-4 items-center justify-between border-t border-border pt-6">
+                    <p className="text-sm text-muted-foreground hidden sm:block">Revise os passos acima antes de confirmar a importação do lote.</p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={atualizarAnalisePacote} disabled={pacoteAnalisando}>
+                        {pacotePrecisaReanaliseManual ? "Reanalisar pacote" : "Atualizar análise"}
+                      </Button>
+                      <Button onClick={criarJobPacote} disabled={pacoteCriandoJob || arquivosSelecionadosDaAnalise.length === 0}>
+                        {pacoteCriandoJob ? "Criando job..." : "Criar Job"}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
+        </>
+      )}
+    </div>
       <Dialog
         open={novaUnidadePacoteAberta}
         onOpenChange={(open) => {

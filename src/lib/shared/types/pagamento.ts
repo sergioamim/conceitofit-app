@@ -382,6 +382,7 @@ export interface DREProjecao {
 export interface ReceberPagamentoInput {
   dataPagamento: LocalDate;
   formaPagamento: TipoFormaPagamento;
+  codigoTransacao?: string;
   observacoes?: string;
 }
 

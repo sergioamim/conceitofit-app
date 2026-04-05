@@ -366,12 +366,13 @@ export async function adminEntrarComoUnidadeApi(input: AdminEntrarComoUnidadeReq
   return session;
 }
 
-export async function refreshTokenApi(refreshToken: string): Promise<AuthSession> {
+export async function refreshTokenApi(refreshToken?: string): Promise<AuthSession> {
+  const normalizedRefreshToken = typeof refreshToken === "string" ? refreshToken.trim() : "";
   const response = await apiRequest<LoginApiResponse>({
     path: "/api/v1/auth/refresh",
     method: "POST",
     includeContextHeader: false,
-    body: { refreshToken },
+    body: normalizedRefreshToken ? { refreshToken: normalizedRefreshToken } : undefined,
   });
   const session = normalizeSession(response, { preserveTenantContext: true });
   saveAuthSession(session);

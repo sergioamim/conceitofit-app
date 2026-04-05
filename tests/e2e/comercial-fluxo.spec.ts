@@ -20,14 +20,18 @@ type CreateAlunoResponse = {
 type CreateVendaRequest = {
   tipo?: string;
   clienteId?: string;
+  codigoTransacao?: string;
+  pagamento?: {
+    formaPagamento?: string;
+    parcelas?: number;
+    valorPago?: number;
+    observacoes?: string;
+    status?: string;
+  };
   itens?: Array<{
     tipo?: string;
     referenciaId?: string;
   }>;
-  planoContexto?: {
-    planoId?: string;
-    dataInicio?: string;
-  };
 };
 
 async function abrirRota(page: Page, url: string, matcher: RegExp) {
@@ -123,6 +127,9 @@ test.describe("Fluxo comercial canônico", () => {
     await expect(cartSection).toContainText(/Plano Premium/i);
     await expect(cartSection.getByText("Nenhum item adicionado.")).toBeHidden();
     await expect(page.getByRole("button", { name: "Finalizar venda" })).toBeEnabled();
+    await page.getByLabel("Forma de pagamento").click();
+    await page.getByRole("option", { name: "Cartão crédito" }).click();
+    await page.getByLabel("Código da transação").fill("CUPOM-123456");
     const vendaRequestPromise = page.waitForRequest((request) =>
       request.method() === "POST"
       && /\/api\/v1\/comercial\/vendas(?:\?|$)/.test(request.url())
@@ -141,9 +148,10 @@ test.describe("Fluxo comercial canônico", () => {
     expect(venda.id ?? "").not.toBe("");
     expect(payloadVenda.tipo).toBe("PLANO");
     expect(payloadVenda.clienteId ?? "").not.toBe("");
+    expect(payloadVenda.codigoTransacao).toBe("CUPOM-123456");
+    expect(payloadVenda.pagamento?.formaPagamento).toBe("CARTAO_CREDITO");
+    expect(payloadVenda.pagamento?.status).toBeUndefined();
     expect(payloadVenda.itens?.some((item) => item.tipo === "PLANO")).toBe(true);
     expect(payloadVenda.itens?.some((item) => item.tipo === "SERVICO")).toBe(false);
-    expect(payloadVenda.planoContexto?.planoId ?? "").not.toBe("");
-    expect(payloadVenda.planoContexto?.dataInicio ?? "").not.toBe("");
   });
 });

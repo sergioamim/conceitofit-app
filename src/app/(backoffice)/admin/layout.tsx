@@ -12,13 +12,14 @@ import {
   AUTH_SESSION_UPDATED_EVENT,
   clearAuthSession,
   getNetworkSlugFromSession,
+  getRefreshToken,
   getRolesFromSession,
   hasGlobalBackofficeAccessFromSession,
   hasBackofficeReturnSession,
   hasActiveSession,
   restoreBackofficeReturnSession,
 } from "@/lib/api/session";
-import { logoutApi } from "@/lib/api/auth";
+import { logoutApi, refreshTokenApi } from "@/lib/api/auth";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { backofficeNavGroups, allBackofficeNavItems, sidebarBackofficeNavGroups } from "@/backoffice/lib/nav-items";
 import type { BackofficeNavItem } from "@/backoffice/lib/nav-items";
@@ -373,6 +374,14 @@ function ModeBadge() {
 // Sidebar nav content (reused in desktop aside and mobile Sheet)
 // ---------------------------------------------------------------------------
 
+function useIsMac() {
+  const [isMac, setIsMac] = useState<boolean | null>(null);
+  useEffect(() => {
+    setIsMac(navigator.platform.toUpperCase().indexOf("MAC") >= 0);
+  }, []);
+  return isMac;
+}
+
 function SidebarNavContent({
   pathname,
   collapsed,
@@ -386,6 +395,8 @@ function SidebarNavContent({
   onOpenLogout: () => void;
   onNavigate?: () => void;
 }) {
+  const isMac = useIsMac();
+  const cmdText = isMac === null ? "⌘K" : isMac ? "⌘K" : "Ctrl+K";
   return (
     <>
       {/* Logo / brand */}
@@ -407,7 +418,7 @@ function SidebarNavContent({
               <Command className="size-4" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>Buscar (⌘K)</TooltipContent>
+          <TooltipContent side="right" sideOffset={8}>Buscar ({cmdText})</TooltipContent>
         </Tooltip>
       ) : (
         <button
@@ -417,7 +428,7 @@ function SidebarNavContent({
           <Command className="size-3" />
           <span className="flex-1 text-left">Buscar...</span>
           <kbd className="rounded border border-border bg-background px-1 py-0.5 text-[10px] font-mono">
-            ⌘K
+            {cmdText}
           </kbd>
         </button>
       )}
@@ -446,11 +457,11 @@ function SidebarNavContent({
                     aria-current={active ? "page" : undefined}
                     onClick={onNavigate}
                     className={cn(
-                      "flex items-center gap-2 rounded-md px-3 py-2 motion-safe:transition-colors motion-safe:duration-200",
-                      collapsed && "justify-center px-2",
+                      "flex items-center gap-2 rounded-md px-3 py-2 motion-safe:transition-all motion-safe:duration-200",
+                      collapsed ? "justify-center px-2 hover:scale-105" : "hover:translate-x-1",
                       active
-                        ? "border border-gym-accent/30 bg-gym-accent/10 text-foreground"
-                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                        ? "border border-gym-accent/30 bg-gym-accent/10 text-foreground shadow-sm shadow-gym-accent/5"
+                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
                     )}
                   >
                     <Icon className="size-4 shrink-0" />
@@ -636,15 +647,18 @@ function AdminShellFrame({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="min-h-screen bg-background">
+      <div className="relative h-screen bg-background overflow-hidden flex flex-col">
+        {/* Soft premium background glow */}
+        <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[800px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gym-teal/5 opacity-50 blur-[120px]" />
+        
         <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} />
 
-        <div className="flex min-h-screen">
+        <div className="flex flex-1 overflow-hidden">
           {/* Desktop sidebar */}
           <aside
             className={cn(
-              "sticky top-0 hidden h-screen shrink-0 flex-col gap-4 overflow-hidden border-r border-border/80 bg-card/80 p-4 shadow-sm md:flex",
-              "motion-safe:transition-all motion-safe:duration-200",
+              "hidden h-screen shrink-0 flex-col gap-4 overflow-hidden border-r border-border/30 bg-card/60 backdrop-blur-md p-4 shadow-sm md:flex",
+              "motion-safe:transition-all motion-safe:duration-300",
               collapsed ? "w-16" : "w-72",
             )}
           >
@@ -691,7 +705,7 @@ function AdminShellFrame({
           </Sheet>
 
           {/* Main content */}
-          <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 md:px-6 md:py-6">
+          <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 md:px-6 md:py-6 overflow-y-auto">
             {/* Header */}
             <header className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -787,6 +801,8 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
   const access = useAuthAccess();
   const [hydrated, setHydrated] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [recoveringElevatedAccess, setRecoveringElevatedAccess] = useState(false);
+  const elevatedAccessRecoveryAttemptedRef = useRef(false);
   const sessionRoles = getRolesFromSession();
   const hasSessionBackofficeAccess = hasGlobalBackofficeAccessFromSession();
   const resolvedRoles = access.roles.length > 0 ? access.roles : sessionRoles;
@@ -813,7 +829,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated || authenticated) return;
-    router.replace("/admin-login");
+    router.replace("/login");
   }, [authenticated, hydrated, pathname, router, searchParams]);
 
   useEffect(() => {
@@ -830,11 +846,62 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     window.location.assign("/admin");
   }, [accessLoading, authenticated, canAccessElevated, hydrated]);
 
+  useEffect(() => {
+    if (!hydrated || !authenticated || accessLoading || canAccessElevated) {
+      if (canAccessElevated) {
+        elevatedAccessRecoveryAttemptedRef.current = false;
+        setRecoveringElevatedAccess(false);
+      }
+      return;
+    }
+    if (elevatedAccessRecoveryAttemptedRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    elevatedAccessRecoveryAttemptedRef.current = true;
+    setRecoveringElevatedAccess(true);
+
+    void (async () => {
+      try {
+        await access.refresh();
+
+        const stillMissingElevatedAccess =
+          !hasElevatedAccess(getRolesFromSession()) && !hasGlobalBackofficeAccessFromSession();
+
+        if (stillMissingElevatedAccess) {
+          await refreshTokenApi(getRefreshToken());
+          await access.refresh();
+        }
+      } catch {
+        // Se a recuperação falhar, deixamos o fluxo seguir para o fallback visual de acesso negado.
+      } finally {
+        if (!cancelled) {
+          setRecoveringElevatedAccess(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [access, accessLoading, authenticated, canAccessElevated, hydrated]);
+
   if (!hydrated || accessLoading) {
     return (
       <AdminShellFrame pathname={pathname}>
         <AdminStatusPanel className="border-border text-muted-foreground">
           Validando permissões do backoffice...
+        </AdminStatusPanel>
+      </AdminShellFrame>
+    );
+  }
+
+  if (recoveringElevatedAccess) {
+    return (
+      <AdminShellFrame pathname={pathname}>
+        <AdminStatusPanel className="border-border text-muted-foreground">
+          Restaurando sessão do backoffice...
         </AdminStatusPanel>
       </AdminShellFrame>
     );

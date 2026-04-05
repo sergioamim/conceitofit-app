@@ -95,7 +95,6 @@ const SESSION_ACTIVE_KEY = "academia-auth-session-active";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
 const IMPERSONATION_SESSION_KEY = "academia-impersonation-session";
 const BACKOFFICE_RETURN_SESSION_KEY = "academia-backoffice-return-session";
-const ACCESS_TOKEN_COOKIE_KEY = "academia-access-token";
 const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
 const OPERATIONAL_TENANT_SCOPE_KEY = "academia-operational-tenant-scope";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
@@ -145,21 +144,8 @@ function expireCookie(name: string): void {
   document.cookie = `${name}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`;
 }
 
-function isJwtLikeToken(value: string | undefined): boolean {
-  if (typeof value !== "string") return false;
-  const normalized = value.trim();
-  if (!normalized) return false;
-  return normalized.split(".").length === 3;
-}
-
 function syncServerSessionCookies(session: AuthSession): void {
   if (!isBrowser()) return;
-
-  if (isJwtLikeToken(session.token)) {
-    writeCookie(ACCESS_TOKEN_COOKIE_KEY, session.token!.trim());
-  } else {
-    expireCookie(ACCESS_TOKEN_COOKIE_KEY);
-  }
 
   if (session.activeTenantId?.trim()) {
     writeCookie(ACTIVE_TENANT_COOKIE_KEY, session.activeTenantId.trim());
@@ -169,7 +155,6 @@ function syncServerSessionCookies(session: AuthSession): void {
 }
 
 function clearServerSessionCookies(): void {
-  expireCookie(ACCESS_TOKEN_COOKIE_KEY);
   expireCookie(ACTIVE_TENANT_COOKIE_KEY);
 }
 

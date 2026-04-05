@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { requiredTrimmedString, optionalTrimmedString } from "@/lib/forms/zod-helpers";
@@ -18,7 +18,16 @@ const receberPagamentoSchema = z.object({
   formaPagamento: z.enum(["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "BOLETO", "RECORRENTE"], {
     message: "Selecione a forma de pagamento.",
   }).or(z.literal("")),
+  codigoTransacao: optionalTrimmedString().default(""),
   observacoes: optionalTrimmedString().default(""),
+}).superRefine((values, ctx) => {
+  if (values.formaPagamento === "CARTAO_CREDITO" && !values.codigoTransacao?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["codigoTransacao"],
+      message: "Informe o código da transação do cupom da maquininha.",
+    });
+  }
 });
 
 type ReceberPagamentoFormValues = z.infer<typeof receberPagamentoSchema>;
@@ -37,25 +46,36 @@ export function ReceberPagamentoModal({
   onConfirm: (data: {
     dataPagamento: string;
     formaPagamento: TipoFormaPagamento;
+    codigoTransacao?: string;
     observacoes?: string;
   }) => void;
 }) {
   const formasAtivas = useMemo(() => formasPagamento.filter((f) => f.ativo), [formasPagamento]);
-  const { register, control, handleSubmit, formState: { isValid } } = useForm<ReceberPagamentoFormValues>({
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<ReceberPagamentoFormValues>({
     resolver: zodResolver(receberPagamentoSchema),
     defaultValues: {
       dataPagamento: getBusinessTodayIso(),
       formaPagamento: "",
+      codigoTransacao: "",
       observacoes: "",
     },
     mode: "onChange",
   });
+  const formaPagamento = useWatch({ control, name: "formaPagamento" });
 
   function onSubmit(values: ReceberPagamentoFormValues) {
     if (!values.formaPagamento) return;
     onConfirm({
       dataPagamento: values.dataPagamento,
       formaPagamento: values.formaPagamento,
+      codigoTransacao: values.formaPagamento === "CARTAO_CREDITO"
+        ? values.codigoTransacao.trim() || undefined
+        : undefined,
       observacoes: values.observacoes.trim() || undefined,
     });
   }
@@ -115,6 +135,22 @@ export function ReceberPagamentoModal({
                 )}
               />
             </div>
+            {formaPagamento === "CARTAO_CREDITO" ? (
+              <div className="space-y-1.5">
+                <label htmlFor="receber-codigo-transacao" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Código da transação *
+                </label>
+                <Input
+                  id="receber-codigo-transacao"
+                  {...register("codigoTransacao")}
+                  className="border-border bg-secondary"
+                  placeholder="Código impresso no cupom da maquininha"
+                />
+                {errors.codigoTransacao ? (
+                  <p className="text-xs text-gym-danger">{errors.codigoTransacao.message}</p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <label htmlFor="receber-observacoes" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Observações</label>
               <Input id="receber-observacoes" {...register("observacoes")} className="border-border bg-secondary" />
