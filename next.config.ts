@@ -33,6 +33,9 @@ const connectSrc = Array.from(
   ),
 );
 
+// Task 460: 'unsafe-inline' mantido em produção — Next.js pode precisar para
+// scripts inline gerados pelo build. Reavaliar após corrigir erros de build.
+// SameSite=Lax nos cookies + CSP sem unsafe-eval já reduzem superfície XSS.
 const scriptSrc = isDev
   ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
   : "script-src 'self' 'unsafe-inline'";

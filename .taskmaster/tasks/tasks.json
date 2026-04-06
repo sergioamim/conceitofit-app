@@ -13983,11 +13983,11 @@
         "description": "Inventariar todas as chaves localStorage usadas para sessão, contexto e tenant, classificando por sensibilidade e impacto de segurança.",
         "details": "Mapear todas as chaves em session.ts (901 LOC) e token-store.ts: academia-auth-token, academia-auth-refresh-token, academia-auth-token-type, user-id, user-kind, display-name, network-id, network-subdomain, network-slug, network-name, active-tenant-id, base-tenant-id, available-tenants, available-scopes, broad-access, force-password-change-required, preferred-tenant-id, impersonation-state. Classificar cada chave como: (a) token/secreto, (b) dado sensível de negócio, (c) preferência UI. Gerar matriz de risco para cada chave.",
         "testStrategy": "Teste unitário que lê session.ts e token-store.ts e valida que nenhuma chave sensível nova é adicionada sem aprovação. Teste E2E que verifica conteúdo de localStorage após login.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-06T23:40:38.720Z",
         "complexity": 3
       },
       {
@@ -13996,13 +13996,13 @@
         "description": "Implementar no backend Java endpoints que retornam Set-Cookie HttpOnly + SameSite=Strict para access token, refresh token e claims de sessão.",
         "details": "Criar ou adaptar o endpoint de login para usar cookies HttpOnly ao invés de retornar tokens no body. Cookies necessários: access_token (HttpOnly, Secure, SameSite=Strict), refresh_token (HttpOnly, Secure, SameSite=Strict, path=/auth/refresh), session_claims (cookie não-httpOnly com userId, userKind, displayName, activeTenantId — apenas para leitura client-side sem dados sensíveis). Backend deve validar origem e CSRF para requests stateful.",
         "testStrategy": "Teste de integração backend: login retorna Set-Cookie, refresh funciona com cookie, claims expõem apenas dados não-sensíveis. Verificar headers de cookie com curl/httpie.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "456"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-06T23:43:40.227Z",
         "complexity": 6
       },
       {
@@ -14026,13 +14026,13 @@
         "description": "Implementar proteção CSRF quando a sessão usar cookies HttpOnly, já que requests se tornam stateful.",
         "details": "Adicionar header X-CSRF-Token nos requests fetch/axios. Backend deve gerar e validar CSRF token. Alternativa: SameSite=Strict + SameSite=Lax como fallback. Configurar next.config.ts para permitir cookies cross-origin no proxy /backend/*. Implementar double-submit cookie pattern se backend suportar.",
         "testStrategy": "Teste E2E: request sem CSRF token retorna 403, request com CSRF token válido retorna 200. Teste de segurança: CSRF de domínio externo é rejeitado.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "458"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-06T23:57:07.259Z",
         "complexity": 5
       },
       {
@@ -14041,13 +14041,13 @@
         "description": "Avaliar se Next.js 16.1.6 ainda requer 'unsafe-inline' no script-src e, se possível, remover. Auditoria geral de segurança.",
         "details": "Verificar se Next.js 16 com App Router e output standalone ainda precisa de 'unsafe-inline'. Testar com script-src 'self' apenas e validar que tudo funciona. Se não for possível, implementar nonce-based CSP. Auditoria completa: Permissions-Policy (câmera é necessária para foto de cliente e código de barras), CORS config, headers de segurança, validação de input em formulários, sanitização com DOMPurify.",
         "testStrategy": "Lighthouse CI com CSP restrito passa. Teste E2E: todas as páginas funcionam sem 'unsafe-inline'. Auditoria de security headers com Mozilla Observatory ou similar.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "458"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-06T23:58:24.485Z",
         "complexity": 4
       },
       {
@@ -14407,9 +14407,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-06T23:32:28.000Z",
+      "lastModified": "2026-04-06T23:58:24.485Z",
       "taskCount": 430,
-      "completedCount": 400,
+      "completedCount": 404,
       "tags": [
         "master"
       ]

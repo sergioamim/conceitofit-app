@@ -6,7 +6,6 @@ import boundaries from "eslint-plugin-boundaries";
 const runtimeFiles = ["src/**/*.{ts,tsx}"];
 const testFiles = ["tests/**/*.{ts,tsx}"];
 const localStorageAllowedFiles = [
-  "src/lib/api/session.ts",
   "src/lib/api/http.ts",
   "src/lib/public/storage.ts",
   "src/app/(backoffice)/admin/importacao-evo-p0/page.tsx",

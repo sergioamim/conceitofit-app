@@ -76,6 +76,7 @@ import {
   getTokenType as getTokenTypeFromStore,
   saveTokens,
   clearTokens,
+  getSessionClaims,
   getFetchCredentials,
   shouldInjectAuthHeader,
   hasActiveSession,
@@ -83,21 +84,11 @@ import {
 
 export { getFetchCredentials, shouldInjectAuthHeader, hasActiveSession };
 
-const EXPIRES_IN_KEY = "academia-auth-expires-in";
-const USER_ID_KEY = "academia-auth-user-id";
-const USER_KIND_KEY = "academia-auth-user-kind";
-const DISPLAY_NAME_KEY = "academia-auth-display-name";
-const NETWORK_ID_KEY = "academia-auth-network-id";
-const NETWORK_SUBDOMAIN_KEY = "academia-auth-network-subdomain";
-const NETWORK_SLUG_KEY = "academia-auth-network-slug";
-const NETWORK_NAME_KEY = "academia-auth-network-name";
-const ACTIVE_TENANT_ID_KEY = "academia-auth-active-tenant-id";
-const BASE_TENANT_ID_KEY = "academia-auth-base-tenant-id";
-const AVAILABLE_TENANTS_KEY = "academia-auth-available-tenants";
-const AVAILABLE_SCOPES_KEY = "academia-auth-available-scopes";
-const BROAD_ACCESS_KEY = "academia-auth-broad-access";
-const FORCE_PASSWORD_CHANGE_REQUIRED_KEY = "academia-auth-force-password-change-required";
-const SESSION_ACTIVE_KEY = "academia-auth-session-active";
+/**
+ * Task 458: Chaves de localStorage foram removidas.
+ * Tokens e claims vêm de cookies HttpOnly definidos pelo backend.
+ * Apenas preferências de UI e contexto volátil permanecem em storage local.
+ */
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
 const IMPERSONATION_SESSION_KEY = "academia-impersonation-session";
 const BACKOFFICE_RETURN_SESSION_KEY = "academia-backoffice-return-session";
@@ -132,19 +123,10 @@ function notifyImpersonationSessionUpdated(): void {
   window.dispatchEvent(new Event(IMPERSONATION_SESSION_UPDATED_EVENT));
 }
 
-function clearAuthStorageKeys(keys: string[]): void {
-  if (!isBrowser()) return;
-  for (const key of keys) {
-    window.localStorage.removeItem(key);
-  }
-}
-
-function writeCookie(name: string, value: string, maxAgeSeconds?: number): void {
-  if (!isBrowser()) return;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  const maxAge = typeof maxAgeSeconds === "number" ? `; Max-Age=${maxAgeSeconds}` : "";
-  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; SameSite=Lax${maxAge}${secure}`;
-}
+/**
+ * Task 458: writeCookie/expireCookie removidos — o backend gerencia cookies de sessão.
+ * Mantemos apenas o cookie de tenant ativo para compatibilidade com proxy/rewrites.
+ */
 
 function expireCookie(name: string): void {
   if (!isBrowser()) return;
@@ -152,16 +134,10 @@ function expireCookie(name: string): void {
   document.cookie = `${name}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`;
 }
 
-function syncServerSessionCookies(session: AuthSession): void {
-  if (!isBrowser()) return;
-
-  if (session.activeTenantId?.trim()) {
-    writeCookie(ACTIVE_TENANT_COOKIE_KEY, session.activeTenantId.trim());
-  } else {
-    expireCookie(ACTIVE_TENANT_COOKIE_KEY);
-  }
-}
-
+/**
+ * Task 458: syncServerSessionCookies removido — backend já define cookies via Set-Cookie.
+ * Mantemos apenas expiração do cookie de tenant ativo quando necessário.
+ */
 function clearServerSessionCookies(): void {
   expireCookie(ACTIVE_TENANT_COOKIE_KEY);
 }
@@ -178,34 +154,36 @@ export function getRefreshToken(): string | undefined {
   return getRefreshTokenFromStore();
 }
 
+/**
+ * Task 458: Claims vêm do cookie fc_session_claims, não de localStorage.
+ * Cada getter lê o claims cookie uma vez e extrai o campo necessário.
+ */
+function getClaims() {
+  return getSessionClaims();
+}
+
 export function getActiveTenantIdFromSession(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(ACTIVE_TENANT_ID_KEY) ?? undefined;
+  return getClaims()?.activeTenantId;
 }
 
 export function getBaseTenantIdFromSession(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(BASE_TENANT_ID_KEY) ?? undefined;
+  return getClaims()?.baseTenantId;
 }
 
 export function getUserIdFromSession(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(USER_ID_KEY) ?? undefined;
+  return getClaims()?.userId;
 }
 
 export function getUserKindFromSession(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(USER_KIND_KEY) ?? undefined;
+  return getClaims()?.userKind;
 }
 
 export function getDisplayNameFromSession(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(DISPLAY_NAME_KEY) ?? undefined;
+  return getClaims()?.displayName;
 }
 
 export function getNetworkIdFromSession(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(NETWORK_ID_KEY) ?? undefined;
+  return getClaims()?.networkId;
 }
 
 export function getNetworkSlugFromSession(): string | undefined {
@@ -213,66 +191,35 @@ export function getNetworkSlugFromSession(): string | undefined {
 }
 
 export function getNetworkSubdomainFromSession(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return (
-    window.localStorage.getItem(NETWORK_SUBDOMAIN_KEY)
-    ?? window.localStorage.getItem(NETWORK_SLUG_KEY)
-    ?? undefined
-  );
+  const claims = getClaims();
+  return claims?.networkSubdomain ?? claims?.networkSlug;
 }
 
 export function getNetworkNameFromSession(): string | undefined {
-  if (!isBrowser()) return undefined;
-  return window.localStorage.getItem(NETWORK_NAME_KEY) ?? undefined;
+  return getClaims()?.networkName;
 }
 
 export function getBroadAccessFromSession(): boolean {
-  if (!isBrowser()) return false;
-  return window.localStorage.getItem(BROAD_ACCESS_KEY) === "true";
+  return getClaims()?.broadAccess === true;
 }
 
 export function getForcePasswordChangeRequiredFromSession(): boolean {
-  if (!isBrowser()) return false;
-  return window.localStorage.getItem(FORCE_PASSWORD_CHANGE_REQUIRED_KEY) === "true";
+  return getClaims()?.forcePasswordChangeRequired === true;
 }
 
 export function getAvailableScopesFromSession(): AuthSessionScope[] {
-  if (!isBrowser()) return [];
-  const raw = window.localStorage.getItem(AVAILABLE_SCOPES_KEY);
+  const raw = getClaims()?.availableScopes;
   if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map((item) => (typeof item === "string" ? item.trim().toUpperCase() : ""))
-      .filter((item): item is AuthSessionScope => item === "UNIDADE" || item === "REDE" || item === "GLOBAL");
-  } catch {
-    return [];
-  }
+  return raw
+    .map((item) => (typeof item === "string" ? item.trim().toUpperCase() : ""))
+    .filter((item): item is AuthSessionScope => item === "UNIDADE" || item === "REDE" || item === "GLOBAL");
 }
 
 export function getAvailableTenantsFromSession(): TenantAccess[] {
-  if (!isBrowser()) return [];
-  const raw = window.localStorage.getItem(AVAILABLE_TENANTS_KEY);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    const normalized = parsed
-      .map((item) => {
-        if (!item || typeof item !== "object") return null;
-        const candidate = item as { tenantId?: unknown; defaultTenant?: unknown };
-        const tenantId = typeof candidate.tenantId === "string" ? candidate.tenantId.trim() : "";
-        const defaultTenant =
-          typeof candidate.defaultTenant === "boolean" ? candidate.defaultTenant : false;
-        if (!tenantId) return null;
-        return { tenantId, defaultTenant };
-      })
-      .filter((item): item is TenantAccess => item !== null);
-    return filterTenantAccessByOperationalScope(normalized);
-  } catch {
-    return [];
-  }
+  // Task 458: availableTenants não é mais armazenado localmente.
+  // Retorna array vazio — o backend resolve tenants via token claims.
+  // Se necessário, o frontend pode buscar via endpoint de contexto.
+  return [];
 }
 
 export function getAuthSessionSnapshot(): AuthSession | null {
@@ -281,27 +228,31 @@ export function getAuthSessionSnapshot(): AuthSession | null {
   const refreshToken = getRefreshToken();
   if (!hasActiveSession()) return null;
 
-  const rawExpiresIn = window.localStorage.getItem(EXPIRES_IN_KEY);
-  const expiresIn = rawExpiresIn ? Number(rawExpiresIn) : undefined;
+  const claims = getClaims();
 
   return {
     token,
     refreshToken,
     type: getAccessTokenType(),
-    expiresIn: Number.isFinite(expiresIn) ? expiresIn : undefined,
-    userId: getUserIdFromSession(),
-    userKind: getUserKindFromSession(),
-    displayName: getDisplayNameFromSession(),
-    networkId: getNetworkIdFromSession(),
-    networkSubdomain: getNetworkSubdomainFromSession(),
-    networkSlug: getNetworkSlugFromSession(),
-    networkName: getNetworkNameFromSession(),
-    activeTenantId: getActiveTenantIdFromSession(),
-    baseTenantId: getBaseTenantIdFromSession(),
-    availableTenants: getAvailableTenantsFromSession(),
-    availableScopes: getAvailableScopesFromSession(),
-    broadAccess: getBroadAccessFromSession(),
-    forcePasswordChangeRequired: getForcePasswordChangeRequiredFromSession(),
+    expiresIn: undefined,
+    userId: claims?.userId,
+    userKind: claims?.userKind,
+    displayName: claims?.displayName,
+    networkId: claims?.networkId,
+    networkSubdomain: claims?.networkSubdomain,
+    networkSlug: claims?.networkSlug,
+    networkName: claims?.networkName,
+    activeTenantId: claims?.activeTenantId,
+    baseTenantId: claims?.baseTenantId,
+    availableTenants: [],
+    availableScopes: claims?.availableScopes
+      ? (claims.availableScopes
+          .map((item) => (typeof item === "string" ? item.trim().toUpperCase() : ""))
+          .filter((item): item is AuthSessionScope => item === "UNIDADE" || item === "REDE" || item === "GLOBAL")
+        )
+      : [],
+    broadAccess: claims?.broadAccess,
+    forcePasswordChangeRequired: claims?.forcePasswordChangeRequired,
   };
 }
 
@@ -733,77 +684,14 @@ export function clearImpersonationSession(): void {
   notifyImpersonationSessionUpdated();
 }
 
-export function saveAuthSession(session: AuthSession): void {
-  if (!isBrowser()) return;
-  saveTokens({ token: session.token, refreshToken: session.refreshToken, type: session.type });
-  syncServerSessionCookies(session);
-  if (session.expiresIn != null) {
-    window.localStorage.setItem(EXPIRES_IN_KEY, String(session.expiresIn));
-  } else {
-    window.localStorage.removeItem(EXPIRES_IN_KEY);
-  }
-  window.localStorage.setItem(SESSION_ACTIVE_KEY, "true");
-  if (session.userId) {
-    window.localStorage.setItem(USER_ID_KEY, session.userId);
-  } else {
-    window.localStorage.removeItem(USER_ID_KEY);
-  }
-  if (session.userKind) {
-    window.localStorage.setItem(USER_KIND_KEY, session.userKind);
-  } else {
-    window.localStorage.removeItem(USER_KIND_KEY);
-  }
-  if (session.displayName) {
-    window.localStorage.setItem(DISPLAY_NAME_KEY, session.displayName);
-  } else {
-    window.localStorage.removeItem(DISPLAY_NAME_KEY);
-  }
-  if (session.networkId) {
-    window.localStorage.setItem(NETWORK_ID_KEY, session.networkId);
-  } else {
-    window.localStorage.removeItem(NETWORK_ID_KEY);
-  }
-  const networkSubdomain = session.networkSubdomain ?? session.networkSlug;
-  if (networkSubdomain) {
-    window.localStorage.setItem(NETWORK_SUBDOMAIN_KEY, networkSubdomain);
-    window.localStorage.setItem(NETWORK_SLUG_KEY, networkSubdomain);
-  } else {
-    window.localStorage.removeItem(NETWORK_SUBDOMAIN_KEY);
-    window.localStorage.removeItem(NETWORK_SLUG_KEY);
-  }
-  if (session.networkName) {
-    window.localStorage.setItem(NETWORK_NAME_KEY, session.networkName);
-  } else {
-    window.localStorage.removeItem(NETWORK_NAME_KEY);
-  }
-  if (session.activeTenantId) {
-    window.localStorage.setItem(ACTIVE_TENANT_ID_KEY, session.activeTenantId);
-  } else {
-    window.localStorage.removeItem(ACTIVE_TENANT_ID_KEY);
-  }
-  if (session.baseTenantId) {
-    window.localStorage.setItem(BASE_TENANT_ID_KEY, session.baseTenantId);
-  } else {
-    window.localStorage.removeItem(BASE_TENANT_ID_KEY);
-  }
-  if (session.availableTenants?.length) {
-    window.localStorage.setItem(
-      AVAILABLE_TENANTS_KEY,
-      JSON.stringify(session.availableTenants)
-    );
-  } else {
-    window.localStorage.removeItem(AVAILABLE_TENANTS_KEY);
-  }
-  if (session.availableScopes?.length) {
-    window.localStorage.setItem(AVAILABLE_SCOPES_KEY, JSON.stringify(session.availableScopes));
-  } else {
-    window.localStorage.removeItem(AVAILABLE_SCOPES_KEY);
-  }
-  window.localStorage.setItem(BROAD_ACCESS_KEY, session.broadAccess ? "true" : "false");
-  window.localStorage.setItem(
-    FORCE_PASSWORD_CHANGE_REQUIRED_KEY,
-    session.forcePasswordChangeRequired ? "true" : "false"
-  );
+/**
+ * Task 458: saveAuthSession não grava mais tokens ou claims em localStorage.
+ * Tokens e claims são gerenciados exclusivamente pelo backend via Set-Cookie.
+ * Esta função apenas notifica listeners de mudança de sessão.
+ */
+export function saveAuthSession(_session: AuthSession): void {
+  // Tokens e claims vêm do backend via cookies HttpOnly.
+  // Não gravamos nada localmente — apenas notificamos que a sessão mudou.
   notifyAuthSessionUpdated();
 }
 
@@ -811,51 +699,24 @@ export function setActiveTenantId(tenantId?: string): void {
   if (!isBrowser()) return;
   if (!tenantId) {
     expireCookie(ACTIVE_TENANT_COOKIE_KEY);
-    window.localStorage.removeItem(ACTIVE_TENANT_ID_KEY);
     notifyAuthSessionUpdated();
     return;
   }
-  writeCookie(ACTIVE_TENANT_COOKIE_KEY, tenantId);
-  window.localStorage.setItem(ACTIVE_TENANT_ID_KEY, tenantId);
+  // Task 458: Apenas define cookie para compatibilidade com proxy.
+  // O backend gerencia o tenant ativo via token de sessão.
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${ACTIVE_TENANT_COOKIE_KEY}=${encodeURIComponent(tenantId)}; Path=/; SameSite=Lax${secure}`;
   notifyAuthSessionUpdated();
 }
 
-export function setAvailableTenants(tenantIds: string[], defaultTenantId?: string): void {
-  if (!isBrowser()) return;
-  const normalizedIds = tenantIds
-    .map((tenantId) => (typeof tenantId === "string" ? tenantId.trim() : ""))
-    .filter(Boolean);
-
-  if (!normalizedIds.length) {
-    window.localStorage.removeItem(AVAILABLE_TENANTS_KEY);
-    notifyAuthSessionUpdated();
-    return;
-  }
-
-  const set = new Set<string>();
-  const dedupedIds = normalizedIds.filter((tenantId) => {
-    if (set.has(tenantId)) return false;
-    set.add(tenantId);
-    return true;
-  });
-
-  const orderedTenantIds = dedupedIds;
-  const defaultId =
-    defaultTenantId && orderedTenantIds.includes(defaultTenantId)
-      ? defaultTenantId
-      : orderedTenantIds[0] ?? "";
-
-  const payload = orderedTenantIds.map((tenantId, index) => ({
-    tenantId,
-    defaultTenant: tenantId === defaultId || (!defaultId && index === 0),
-  }));
-  window.localStorage.setItem(AVAILABLE_TENANTS_KEY, JSON.stringify(payload));
+export function setAvailableTenants(_tenantIds: string[], _defaultTenantId?: string): void {
+  // Task 458: availableTenants é resolvido pelo backend via token claims.
+  // Não armazenamos localmente.
   notifyAuthSessionUpdated();
 }
 
 export function clearAvailableTenants(): void {
-  if (!isBrowser()) return;
-  window.localStorage.removeItem(AVAILABLE_TENANTS_KEY);
+  // Task 458: NO-OP — tenants são resolvidos pelo backend.
   notifyAuthSessionUpdated();
 }
 
@@ -865,25 +726,21 @@ export function clearAuthSession(): void {
   clearBackofficeReturnSession();
   clearBackofficeRecoverySession();
   clearOperationalTenantScope();
-  clearAuthStorageKeys([
-    EXPIRES_IN_KEY,
-    SESSION_ACTIVE_KEY,
-    USER_ID_KEY,
-    USER_KIND_KEY,
-    DISPLAY_NAME_KEY,
-    NETWORK_ID_KEY,
-    NETWORK_SUBDOMAIN_KEY,
-    NETWORK_SLUG_KEY,
-    NETWORK_NAME_KEY,
-    ACTIVE_TENANT_ID_KEY,
-    BASE_TENANT_ID_KEY,
-    AVAILABLE_TENANTS_KEY,
-    AVAILABLE_SCOPES_KEY,
-    BROAD_ACCESS_KEY,
-    FORCE_PASSWORD_CHANGE_REQUIRED_KEY,
-    PREFERRED_TENANT_ID_KEY,
-    CONTEXT_STORAGE_KEY,
-  ]);
+  // Task 458: Expira cookies de sessão que o frontend pode limpar.
+  // Tokens e claims são gerenciados pelo backend (Set-Cookie).
+  if (isBrowser()) {
+    expireCookie("fc_session_active");
+    expireCookie("fc_session_claims");
+    // Remove chaves residuais de localStorage que possam existir
+    // em navegadores antigos. Novas sessões não gravam em localStorage.
+    const legacyKeys = [
+      PREFERRED_TENANT_ID_KEY,
+      CONTEXT_STORAGE_KEY,
+    ];
+    for (const key of legacyKeys) {
+      try { window.localStorage.removeItem(key); } catch { /* noop */ }
+    }
+  }
   notifyAuthSessionUpdated();
   notifyAuthSessionCleared();
 }

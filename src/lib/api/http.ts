@@ -139,6 +139,35 @@ function generateRequestId(): string | undefined {
   return undefined;
 }
 
+/**
+ * Task 459: CSRF Token (Double Submit Cookie pattern).
+ *
+ * Lê o cookie _csrf_token e retorna o valor. Se não existir, gera um novo.
+ * O backend pode validar este token quando CSRF for habilitado.
+ * Cookie nome: _csrf_token | Header: X-CSRF-Token
+ */
+const CSRF_COOKIE_NAME = "_csrf_token";
+
+function readCsrfToken(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    // Tenta ler do cookie existente
+    const match = document.cookie.match(
+      new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`),
+    );
+    if (match) return decodeURIComponent(match[1]);
+
+    // Gera um novo token e define o cookie
+    const token = crypto.randomUUID?.() ?? generateRequestId();
+    if (!token) return undefined;
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${CSRF_COOKIE_NAME}=${token}; Path=/; SameSite=Strict${secure}`;
+    return token;
+  } catch {
+    return undefined;
+  }
+}
+
 export function buildApiUrl(path: string, query?: Record<string, string | number | boolean | undefined>): string {
   const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
   const pathname = path.startsWith("/") ? path : `/${path}`;
@@ -547,6 +576,16 @@ async function performApiRequest<T>(input: {
   const requestId = generateRequestId();
   if (requestId) {
     headers["X-Request-Id"] = requestId;
+  }
+
+  // Task 459: CSRF token (Double Submit Cookie pattern).
+  // O backend ainda não valida CSRF (csrf.disable()), mas quando habilitar,
+  // este header já estará presente. SameSite=Lax nos cookies já mitiga CSRF
+  // de cross-site. O double-submit cookie adiciona proteção extra contra
+  // CSRF de subdomínios comprometidos.
+  const csrfToken = readCsrfToken();
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
   }
   const isAuthEndpoint = input.path.startsWith("/api/v1/auth/");
   const token = getAccessToken();
