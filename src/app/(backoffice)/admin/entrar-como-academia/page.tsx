@@ -31,6 +31,13 @@ import { queryKeys } from "@/lib/query/keys";
 import { setPreferredTenantId } from "@/lib/api/session";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { adminEntrarComoUnidadeApi } from "@/lib/api/auth";
+import {
+  clearAuthSession,
+  hasRestorableBackofficeReturnSession,
+  markBackofficeReauthRequired,
+  restoreBackofficeReturnSession,
+} from "@/lib/api/session";
+import { buildAdminLoginHref } from "@/lib/tenant/auth-redirect";
 import type { Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
@@ -525,7 +532,16 @@ export default function EntrarComoAcademiaPage() {
         <Button
           variant="outline"
           className="border-border"
-          onClick={() => router.push("/admin")}
+          onClick={() => {
+            if (hasRestorableBackofficeReturnSession()) {
+              restoreBackofficeReturnSession();
+              router.push("/admin");
+              return;
+            }
+            markBackofficeReauthRequired();
+            clearAuthSession();
+            router.push(buildAdminLoginHref("/admin", "backoffice-reauth"));
+          }}
         >
           Voltar ao backoffice
         </Button>

@@ -230,6 +230,7 @@ export async function createEvoP0PacoteJobApi(input: {
   arquivos?: string[] | null;
   retrySomenteErros?: boolean;
   tenantId?: string;
+  evoUnidadeId?: number | null;
   apelido?: string | null;
   contextoTenantId?: string;
 }): Promise<PacoteJobAceitoResponse> {
@@ -237,6 +238,8 @@ export async function createEvoP0PacoteJobApi(input: {
     dryRun: boolean;
     maxRejeicoesRetorno: number;
     arquivos?: string[];
+    tenantId?: string;
+    evoUnidadeId?: number;
     apelido?: string;
   } = {
     dryRun: input.dryRun,
@@ -250,16 +253,22 @@ export async function createEvoP0PacoteJobApi(input: {
     body.apelido = apelido;
   }
   const tenantId = normalizeTenantId(input.tenantId ?? input.contextoTenantId);
-
-  const scopedPath = tenantId
-    ? `/api/v1/admin/unidades/${tenantId}/importacao-evo/pacote/${input.uploadId}/job`
-    : `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/${input.uploadId}/job`;
+  if (tenantId) {
+    body.tenantId = tenantId;
+  }
+  if (
+    typeof input.evoUnidadeId === "number" &&
+    Number.isInteger(input.evoUnidadeId) &&
+    input.evoUnidadeId > 0
+  ) {
+    body.evoUnidadeId = input.evoUnidadeId;
+  }
 
   return apiRequest<PacoteJobAceitoResponse>({
-    path: scopedPath,
+    path: `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/${input.uploadId}/job`,
     method: "POST",
     body,
-    includeContextHeader: false,
+    headers: buildExplicitTenantHeaders(tenantId),
   });
 }
 

@@ -4,9 +4,13 @@ import {
   getAccessToken,
   getActiveTenantIdFromSession,
   getAvailableTenantsFromSession,
+  getBackofficeRecoverySession,
   getDisplayNameFromSession,
   getForcePasswordChangeRequiredFromSession,
+  hasRestorableBackofficeReturnSession,
   hasActiveSession,
+  rememberBackofficeReturnSession,
+  restoreBackofficeReturnSession,
   saveAuthSession,
   type AuthSession,
 } from "@/lib/api/session";
@@ -88,5 +92,41 @@ describe("session storage", () => {
 
     expect(hasActiveSession()).toBe(false);
     expect(getAccessToken()).toBeUndefined();
+  });
+
+  it("não considera restaurável o retorno para o backoffice quando a sessão veio do store cookie-first", () => {
+    saveAuthSession(
+      makeSession({
+        token: "token-backoffice",
+        refreshToken: "refresh-backoffice",
+        broadAccess: true,
+        availableScopes: ["GLOBAL"],
+      })
+    );
+    rememberBackofficeReturnSession();
+
+    expect(hasRestorableBackofficeReturnSession()).toBe(false);
+    const restored = restoreBackofficeReturnSession();
+
+    expect(restored).toBeNull();
+    expect(getBackofficeRecoverySession()).toBeNull();
+  });
+
+  it("considera restaurável o retorno para o backoffice quando o snapshot explícito contém refresh token", () => {
+    rememberBackofficeReturnSession(
+      makeSession({
+        token: "token-backoffice",
+        refreshToken: "refresh-backoffice",
+        broadAccess: true,
+        availableScopes: ["GLOBAL"],
+      })
+    );
+
+    expect(hasRestorableBackofficeReturnSession()).toBe(true);
+
+    const restored = restoreBackofficeReturnSession();
+
+    expect(restored?.originalSession.refreshToken).toBe("refresh-backoffice");
+    expect(getBackofficeRecoverySession()?.refreshToken).toBe("refresh-backoffice");
   });
 });

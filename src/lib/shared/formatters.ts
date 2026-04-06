@@ -12,16 +12,27 @@ export function formatBRL(value: number): string {
   return formatCurrency(value);
 }
 
-/** Converte "YYYY-MM-DD" → "dd/mm/yyyy". Retorna o valor original em caso de formato inválido. */
-export function formatDate(value: string): string {
-  const [year, month, day] = value.split("-");
-  if (!year || !month || !day) return value;
+/** Converte "YYYY-MM-DD" → "dd/mm/yyyy". Retorna string vazia para null/undefined e o valor original em caso de formato inválido. */
+export function formatDate(value?: string | null): string {
+  if (typeof value !== "string") return "";
+  const normalized = value.trim();
+  if (!normalized) return "";
+
+  const [year, month, day] = normalized.split("-");
+  if (!year || !month || !day) return normalized;
   return `${day}/${month}/${year}`;
 }
 
 /** Formata um datetime ISO para "dd/mm/yyyy HH:mm". */
-export function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString("pt-BR", {
+export function formatDateTime(value?: string | null): string {
+  if (typeof value !== "string") return "";
+  const normalized = value.trim();
+  if (!normalized) return "";
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return normalized;
+
+  return parsed.toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { adminLoginApi } from "@/lib/api/auth";
-import { hasActiveSession } from "@/lib/api/session";
+import { consumeBackofficeReauthRequired, hasActiveSession } from "@/lib/api/session";
 import { buildForcedPasswordChangeHref } from "@/lib/tenant/auth-redirect";
 
 const backofficeLoginSchema = z.object({
@@ -22,13 +22,22 @@ type BackofficeLoginForm = z.infer<typeof backofficeLoginSchema>;
 
 export function AdminLoginFlow({
   nextPath,
+  reason,
 }: {
   nextPath?: string | null;
+  reason?: string | null;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [storageReason, setStorageReason] = useState<string | null>(null);
   const resolvedNextPath = useMemo(() => nextPath || "/admin", [nextPath]);
+  const infoMessage = useMemo(() => {
+    if (reason !== "backoffice-reauth" && storageReason !== "backoffice-reauth") {
+      return null;
+    }
+    return "Sua sessão administrativa precisa ser autenticada novamente para voltar ao backoffice.";
+  }, [reason, storageReason]);
 
   const form = useForm<BackofficeLoginForm>({
     resolver: zodResolver(backofficeLoginSchema),
@@ -45,6 +54,12 @@ export function AdminLoginFlow({
     void router.prefetch(resolvedNextPath);
     void router.prefetch(buildForcedPasswordChangeHref(resolvedNextPath));
   }, [router, resolvedNextPath]);
+
+  useEffect(() => {
+    if (consumeBackofficeReauthRequired()) {
+      setStorageReason("backoffice-reauth");
+    }
+  }, []);
 
   async function onSubmit(values: BackofficeLoginForm) {
     setSaving(true);
@@ -81,6 +96,11 @@ export function AdminLoginFlow({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {infoMessage ? (
+            <div className="mb-4 rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground">
+              {infoMessage}
+            </div>
+          ) : null}
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="admin-email">E-mail</label>

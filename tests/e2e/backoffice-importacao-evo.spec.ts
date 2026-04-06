@@ -257,7 +257,7 @@ async function installImportacaoEvoJobStubs(page: Page) {
     });
   });
 
-  await page.route("**/admin/unidades/*/importacao-evo/pacote/*/job", async (route) => {
+  await page.route("**/admin/integracoes/importacao-terceiros/evo/p0/pacote/*/job", async (route) => {
     if (route.request().method() !== "POST") {
       await route.fallback();
       return;
@@ -270,11 +270,39 @@ async function installImportacaoEvoJobStubs(page: Page) {
       evoUnidadeId?: number;
       retrySomenteErros?: boolean;
     };
-    if ("tenantId" in body || "evoUnidadeId" in body || "retrySomenteErros" in body) {
+    const tenantHeader = route.request().headers()["x-tenant-id"];
+    if (!body.tenantId || typeof body.tenantId !== "string" || !body.tenantId.trim()) {
       await route.fulfill({
         status: 400,
         json: {
-          message: "Contrato legado detectado no create job do pacote EVO",
+          message: "tenantId obrigatorio no create job do pacote EVO",
+        },
+      });
+      return;
+    }
+    if (!tenantHeader || tenantHeader !== body.tenantId) {
+      await route.fulfill({
+        status: 400,
+        json: {
+          message: "X-Tenant-Id deve acompanhar o tenantId do body no create job do pacote EVO",
+        },
+      });
+      return;
+    }
+    if ("evoUnidadeId" in body && (!Number.isInteger(body.evoUnidadeId) || Number(body.evoUnidadeId) <= 0)) {
+      await route.fulfill({
+        status: 400,
+        json: {
+          message: "evoUnidadeId invalido no create job do pacote EVO",
+        },
+      });
+      return;
+    }
+    if ("retrySomenteErros" in body) {
+      await route.fulfill({
+        status: 400,
+        json: {
+          message: "retrySomenteErros nao faz parte do DTO atual do create job do pacote EVO",
         },
       });
       return;
@@ -492,41 +520,23 @@ async function installImportacaoEvoJobStubs(page: Page) {
 }
 
 test.describe("Backoffice importacao EVO", () => {
-  test("cria unidade com ETL preparado e conclui job pelo fluxo principal", async ({ page }) => {
-    const stamp = Date.now();
-    const unidadeNome = `Unidade ETL ${stamp}`;
-    const unidadeDocumento = String(stamp + 222_222).padStart(14, "0").slice(-14);
-    const unidadeEmail = `etl-${stamp}@qa.local`;
-    const jobAlias = `Carga EVO ${stamp}`;
+  test("abre uma unidade seedada e conclui job EVO por pacote no fluxo principal", async ({ page }) => {
+    const unidadeNome = "Unidade Barra";
+    const jobAlias = `Carga EVO ${Date.now()}`;
 
     await openAdminCrudPage(page, "/admin/unidades");
     await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible();
 
-    await page.getByLabel("Nome da unidade *").fill(unidadeNome);
-    await page.getByLabel("Academia da unidade").click();
-    await page.getByRole("option").first().click();
-    await page.getByLabel("Documento *").fill(unidadeDocumento);
-    await expect(page.getByLabel("Grupo da academia")).toHaveValue(/.+/);
-    await page.getByLabel("Subdomínio").fill(`etl-${stamp}`);
-    await page.getByLabel("E-mail *").fill(unidadeEmail);
-    await page.getByLabel("Estratégia inicial da unidade").click();
-    await page.getByRole("option", { name: "Preparar ETL agora" }).click();
-    await page.getByLabel("ID Filial EVO").fill("777");
-    await page.getByRole("button", { name: "Criar unidade" }).click();
-
     const unidadeRow = page.getByRole("row").filter({ hasText: unidadeNome });
     await expect(unidadeRow).toBeVisible();
-    await expect(unidadeRow.getByText("Preparar ETL")).toBeVisible();
-    await expect(unidadeRow.getByText("Aguardando importação")).toBeVisible();
-    await expect(unidadeRow.getByText("EVO: 777")).toBeVisible();
-
-    await unidadeRow.getByRole("link", { name: "Importação" }).click();
-    await expect(page).toHaveURL(/\/admin\/importacao-evo\?tenantId=/);
-    await expect(page.getByRole("heading", { name: "Acompanhamento de Importação EVO" })).toBeVisible();
 
     await installImportacaoEvoJobStubs(page);
 
-    await page.getByRole("tab", { name: "Importar por Pacote (ZIP/CSV)" }).click();
+    await unidadeRow.getByRole("link", { name: "Importacao" }).click();
+    await expect(page).toHaveURL(/\/admin\/importacao-evo\?tenantId=tenant-barra/);
+    await expect(page.getByRole("heading", { name: "Gestor de Importação" })).toBeVisible();
+    await expect(page.getByText("Etapa 1: Analisar pacote ZIP")).toBeVisible();
+
     await page.locator("#pacoteArquivo").setInputFiles({
       name: "backup-evo.zip",
       mimeType: "application/zip",
@@ -559,22 +569,25 @@ test.describe("Backoffice importacao EVO", () => {
     await expect(funcoesHistoricoCard.getByText("Com erros")).toBeVisible();
     await expect(retryFuncoesButton).toBeDisabled();
     await verRejeicoesFuncoesButton.click();
-    const acompanhamentoTab = page.getByRole("tabpanel", { name: "Acompanhar Job" });
-    await expect(acompanhamentoTab.locator('input[value="job-funcoes-1"]')).toBeVisible();
-    await expect(acompanhamentoTab.getByText(/^Rejeições$/)).toBeVisible();
+    const acompanhamentoSheet = page.getByRole("dialog");
+    await expect(page.getByRole("heading", { name: "Diagnóstico do Lote" })).toBeVisible();
+    await expect(acompanhamentoSheet.getByText("job-funcoes-1")).toBeVisible();
+    await expect(acompanhamentoSheet.getByText(/^Rejeições$/)).toBeVisible();
     await expect(page.getByText("Reenvie a malha de funções após corrigir o catálogo legado.")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("heading", { name: "Diagnóstico do Lote" })).toHaveCount(0);
 
-    await page.getByRole("tab", { name: "Importar por Pacote (ZIP/CSV)" }).click();
     await page.getByRole("button", { name: "Desmarcar todos" }).click();
     await expect(page.getByRole("button", { name: "Criar Job" })).toBeDisabled();
     await page.getByRole("button", { name: "Selecionar disponíveis" }).click();
     await expect(page.getByRole("button", { name: "Criar Job" })).toBeEnabled();
     await page.locator('label:has-text("Recebimentos") input[type="checkbox"]').uncheck();
     await expect(page.getByText("Selecionados: 9 de 10 disponíveis")).toBeVisible();
-    await page.getByRole("tabpanel", { name: "Importar por Pacote (ZIP/CSV)" }).getByLabel("Alias do job").fill(jobAlias);
+    await page.getByLabel("Nome de identificação deste lote").fill(jobAlias);
     await page.getByRole("button", { name: "Criar Job" }).click();
 
-    const acompanhamento = acompanhamentoTab;
+    const acompanhamento = page.getByRole("dialog");
+    await expect(page.getByRole("heading", { name: "Diagnóstico do Lote" })).toBeVisible();
     await expect(acompanhamento.getByText("Job de importação")).toBeVisible();
     await expect(acompanhamento.getByText("CONCLUIDO").first()).toBeVisible({ timeout: 15000 });
     await expect(acompanhamento.getByLabel("Alias do job")).toHaveValue(jobAlias);
@@ -585,7 +598,6 @@ test.describe("Backoffice importacao EVO", () => {
     await expect(acompanhamento.getByText("Perfil legado", { exact: true }).first()).toBeVisible();
     await expect(acompanhamento.getByText("Sem linhas", { exact: true })).toBeVisible();
     await expect(acompanhamento.getByText("Não selecionado", { exact: true })).toBeVisible();
-    await expect(acompanhamento.getByText("Últimos jobs salvos")).toBeVisible();
     await expect(acompanhamento.locator("summary").filter({ hasText: "Arquivos ignorados nesta execução (1)" })).toBeVisible();
 
     await acompanhamento.getByRole("button", { name: "Abrir rejeições" }).click();

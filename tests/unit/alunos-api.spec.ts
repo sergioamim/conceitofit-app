@@ -43,15 +43,36 @@ type FetchCall = {
 function installMockBrowser(): MockBrowser {
   const globalRef = globalThis as typeof globalThis & {
     window?: Window & typeof globalThis;
+    document?: Document;
   };
   const previousWindow = globalRef.window;
+  const previousDocument = globalRef.document;
   const storage = new MemoryStorage();
+  const sessionStorage = new MemoryStorage();
+  const target = new EventTarget();
+  const documentRef = {
+    cookie: "",
+  } as Document;
   globalRef.window = {
     localStorage: storage,
+    sessionStorage,
+    location: {
+      protocol: "http:",
+    } as Location,
+    document: documentRef,
+    addEventListener: target.addEventListener.bind(target),
+    removeEventListener: target.removeEventListener.bind(target),
+    dispatchEvent: target.dispatchEvent.bind(target),
   } as unknown as Window & typeof globalThis;
+  globalRef.document = documentRef;
 
   return {
     restore() {
+      if (previousDocument === undefined) {
+        Reflect.deleteProperty(globalRef, "document");
+      } else {
+        globalRef.document = previousDocument;
+      }
       if (previousWindow === undefined) {
         Reflect.deleteProperty(globalRef, "window");
         return;
@@ -181,8 +202,50 @@ test.describe("alunos api", () => {
       expect(calls[0].url).toContain("page=0");
       expect(calls[0].url).toContain("size=12");
       expect(calls[0].url).toContain("envelope=true");
-      expect(calls[0].headers.get("Authorization")).toBe("Bearer access-token");
+      expect(calls[0].headers.get("Authorization")).toBeNull();
       expect(calls[0].headers.get("X-Context-Id")).toBeTruthy();
+    } finally {
+      restore();
+    }
+  });
+
+  test("normaliza a foto do aluno para o endpoint servido pelo backend", async () => {
+    const { restore } = mockFetchSequence([
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: "7ef2d531-c2b8-4f67-93da-88e72b310163",
+              tenantId: "tenant-clientes",
+              nome: "Ana Cliente",
+              email: "ana@qa.local",
+              telefone: "11999999999",
+              cpf: "12345678900",
+              dataNascimento: "1990-01-01",
+              sexo: "F",
+              status: "ATIVO",
+              foto: "data:image/jpeg;base64,abc123",
+              dataCadastro: "2026-04-05T10:15:30",
+            },
+          ],
+          page: 0,
+          size: 1,
+          hasNext: false,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    ]);
+
+    try {
+      const response = await listAlunosApi({
+        tenantId: "tenant-clientes",
+        page: 0,
+        size: 1,
+      });
+
+      expect(response.items[0]?.foto).toBe(
+        "/api/v1/comercial/alunos/7ef2d531-c2b8-4f67-93da-88e72b310163/foto?v=2026-04-05T10%3A15%3A30",
+      );
     } finally {
       restore();
     }

@@ -184,6 +184,14 @@
     background-color: var(--gym-accent);
     color: #0e0f11;
   }
+
+  .glass-card {
+    @apply border-border/40 bg-card/40 backdrop-blur-md;
+  }
+
+  .bg-v2-gradient {
+    @apply bg-[radial-gradient(ellipse_at_top_right,var(--primary-foreground),transparent_50%)];
+  }
 }
 
 :where(.focus-ring-brand):focus-visible {

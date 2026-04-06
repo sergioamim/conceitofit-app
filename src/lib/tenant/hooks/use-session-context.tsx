@@ -47,6 +47,23 @@ export type { TenantContextSnapshot } from "@/lib/tenant/tenant-context";
 
 const TenantContextReact = createContext<TenantContextValue | null>(null);
 
+function buildSessionActivityMarker(): string | undefined {
+  const session = getAuthSessionSnapshot();
+  if (!session?.token) {
+    return hasActiveSession() ? "active" : undefined;
+  }
+
+  return JSON.stringify({
+    token: session.token,
+    refreshToken: session.refreshToken ?? "",
+    activeTenantId: session.activeTenantId ?? "",
+    baseTenantId: session.baseTenantId ?? "",
+    userId: session.userId ?? "",
+    availableScopes: session.availableScopes ?? [],
+    broadAccess: Boolean(session.broadAccess),
+  });
+}
+
 function buildUnprovidedTenantContextValue(): TenantContextValue {
   return {
     ...buildTenantContextState(EMPTY_TENANT_CONTEXT_SNAPSHOT, {
@@ -323,7 +340,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
       }));
       throw error;
     }
-  }, [runWithoutSessionEcho]);
+  }, [queryClient, runWithoutSessionEcho]);
 
   const setTenant = useCallback(async (tenantId: string) => {
     await switchActiveTenant(tenantId);
@@ -346,7 +363,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
       const hasSession = hasSessionContextState();
       setHydrated(true);
       syncFromStore();
-      sessionTokenRef.current = hasActiveSession() ? "active" : undefined;
+      sessionTokenRef.current = buildSessionActivityMarker();
 
       if (hasSession) {
         void refresh();
@@ -366,7 +383,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
     function handleSessionUpdate() {
       if (suppressSessionUpdateRef.current > 0) return;
 
-      const token = hasActiveSession() ? "active" : undefined;
+      const token = buildSessionActivityMarker();
       const tokenChanged = sessionTokenRef.current !== token;
       sessionTokenRef.current = token;
 

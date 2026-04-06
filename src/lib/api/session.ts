@@ -57,6 +57,12 @@ export interface BackofficeReturnSessionState {
   storedAt: string;
 }
 
+export interface BackofficeRecoverySessionState {
+  refreshToken: string;
+  userId?: string;
+  storedAt: string;
+}
+
 export interface OperationalTenantScopeState {
   academiaId: string;
   tenantIds: string[];
@@ -95,6 +101,8 @@ const SESSION_ACTIVE_KEY = "academia-auth-session-active";
 const PREFERRED_TENANT_ID_KEY = "academia-auth-preferred-tenant-id";
 const IMPERSONATION_SESSION_KEY = "academia-impersonation-session";
 const BACKOFFICE_RETURN_SESSION_KEY = "academia-backoffice-return-session";
+const BACKOFFICE_RECOVERY_SESSION_KEY = "academia-backoffice-recovery-session";
+const BACKOFFICE_REAUTH_REQUIRED_KEY = "academia-backoffice-reauth-required";
 const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
 const OPERATIONAL_TENANT_SCOPE_KEY = "academia-operational-tenant-scope";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
@@ -568,6 +576,15 @@ export function hasBackofficeReturnSession(): boolean {
   return Boolean(getBackofficeReturnSession());
 }
 
+export function hasRestorableBackofficeReturnSession(): boolean {
+  const snapshot = getBackofficeReturnSession();
+  const refreshToken =
+    typeof snapshot?.originalSession?.refreshToken === "string"
+      ? snapshot.originalSession.refreshToken.trim()
+      : "";
+  return Boolean(refreshToken);
+}
+
 export function rememberBackofficeReturnSession(session?: AuthSession | null): void {
   if (!isBrowser()) return;
 
@@ -593,11 +610,79 @@ export function clearBackofficeReturnSession(): void {
   window.sessionStorage.removeItem(BACKOFFICE_RETURN_SESSION_KEY);
 }
 
+export function getBackofficeRecoverySession(): BackofficeRecoverySessionState | null {
+  if (!isBrowser()) return null;
+  const raw = window.sessionStorage.getItem(BACKOFFICE_RECOVERY_SESSION_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<BackofficeRecoverySessionState>;
+    const refreshToken =
+      typeof parsed.refreshToken === "string" ? parsed.refreshToken.trim() : "";
+    if (!refreshToken) {
+      window.sessionStorage.removeItem(BACKOFFICE_RECOVERY_SESSION_KEY);
+      return null;
+    }
+
+    return {
+      refreshToken,
+      userId: typeof parsed.userId === "string" ? parsed.userId : undefined,
+      storedAt: typeof parsed.storedAt === "string" ? parsed.storedAt : "",
+    };
+  } catch {
+    window.sessionStorage.removeItem(BACKOFFICE_RECOVERY_SESSION_KEY);
+    return null;
+  }
+}
+
+export function rememberBackofficeRecoverySession(session?: AuthSession | null): void {
+  if (!isBrowser()) return;
+  const refreshToken =
+    typeof session?.refreshToken === "string" ? session.refreshToken.trim() : "";
+
+  if (!refreshToken) {
+    window.sessionStorage.removeItem(BACKOFFICE_RECOVERY_SESSION_KEY);
+    return;
+  }
+
+  window.sessionStorage.setItem(
+    BACKOFFICE_RECOVERY_SESSION_KEY,
+    JSON.stringify({
+      refreshToken,
+      userId: session?.userId,
+      storedAt: new Date().toISOString(),
+    } satisfies BackofficeRecoverySessionState)
+  );
+}
+
+export function clearBackofficeRecoverySession(): void {
+  if (!isBrowser()) return;
+  window.sessionStorage.removeItem(BACKOFFICE_RECOVERY_SESSION_KEY);
+}
+
+export function markBackofficeReauthRequired(): void {
+  if (!isBrowser()) return;
+  window.sessionStorage.setItem(BACKOFFICE_REAUTH_REQUIRED_KEY, "true");
+}
+
+export function consumeBackofficeReauthRequired(): boolean {
+  if (!isBrowser()) return false;
+  const required = window.sessionStorage.getItem(BACKOFFICE_REAUTH_REQUIRED_KEY) === "true";
+  window.sessionStorage.removeItem(BACKOFFICE_REAUTH_REQUIRED_KEY);
+  return required;
+}
+
 export function restoreBackofficeReturnSession(): BackofficeReturnSessionState | null {
   const snapshot = getBackofficeReturnSession();
   if (!snapshot) return null;
+  if (!hasRestorableBackofficeReturnSession()) {
+    clearBackofficeReturnSession();
+    clearOperationalTenantScope();
+    return null;
+  }
   clearBackofficeReturnSession();
   clearOperationalTenantScope();
+  rememberBackofficeRecoverySession(snapshot.originalSession);
   saveAuthSession(snapshot.originalSession);
   return snapshot;
 }
@@ -778,6 +863,7 @@ export function clearAuthSession(): void {
   clearTokens();
   clearServerSessionCookies();
   clearBackofficeReturnSession();
+  clearBackofficeRecoverySession();
   clearOperationalTenantScope();
   clearAuthStorageKeys([
     EXPIRES_IN_KEY,

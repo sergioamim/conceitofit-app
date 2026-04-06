@@ -1,23 +1,15 @@
 "use client";
 
 import { Suspense } from "react";
-import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableSkeleton } from "@/components/shared/table-skeleton";
+import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
 
 import { useClientesWorkspace } from "./use-clientes-workspace";
 import { ClientesFilterBar } from "./clientes-filter-bar";
 import { ClientesTable } from "./clientes-table";
 import { ClienteResumoDialog } from "./cliente-resumo-dialog";
-
-const NovoClienteWizard = dynamic(
-  () =>
-    import("@/components/shared/novo-cliente-wizard").then(
-      (mod) => mod.NovoClienteWizard,
-    ),
-  { ssr: false },
-);
 
 function ClientesPageContent() {
   const ws = useClientesWorkspace();

@@ -19,10 +19,6 @@ const TENANT_SUL = {
 
 const TENANTS = [TENANT_CENTRO, TENANT_SUL];
 
-function normalizedPath(path: string) {
-  return path.replace(/^\/backend/, "");
-}
-
 test.describe("Backoffice entrar como academia", () => {
   test("super user volta ao backoffice após visualizar uma unidade", async ({ page }) => {
     // Seed sessão de backoffice com dois tenants disponíveis
@@ -206,9 +202,10 @@ test.describe("Backoffice entrar como academia", () => {
     await page.goto("/admin/entrar-como-academia");
     await page.waitForLoadState("domcontentloaded");
 
-    // Aguardar que as unidades sejam carregadas e exibidas
-    await expect(page.getByText("Unidade Centro")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Unidade Sul")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: "Entrar como academia" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText("Busque a academia e selecione a unidade para acessar a visão operacional.")).toBeVisible();
 
     // Aguardar botão "Voltar ao backoffice" estar visível antes de clicar
     const voltarButton = page.getByRole("button", { name: "Voltar ao backoffice" });
@@ -217,7 +214,11 @@ test.describe("Backoffice entrar como academia", () => {
     // Clicar para voltar ao backoffice
     await voltarButton.click();
 
-    // Verificar redirecionamento para /admin
-    await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
+    // Sem um snapshot administrativo restaurável, o fluxo precisa pedir novo login em vez de travar.
+    await expect(page).toHaveURL(/\/login(?:\?|$)/, { timeout: 15_000 });
+    await expect(page.getByText("Restaurando sessão do backoffice...")).toHaveCount(0);
+    await expect(page.getByText("Sua sessão administrativa precisa ser autenticada novamente para voltar ao backoffice.")).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

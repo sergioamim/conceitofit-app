@@ -83,9 +83,27 @@ function normalizeAlunoStatus(value: unknown): StatusAluno {
   return "INATIVO";
 }
 
+function normalizeAlunoFotoUrl(input: Aluno): string | undefined {
+  const rawFoto = typeof input.foto === "string" ? input.foto.trim() : "";
+  if (!rawFoto) {
+    return undefined;
+  }
+
+  const version =
+    typeof input.dataAtualizacao === "string" && input.dataAtualizacao.trim()
+      ? input.dataAtualizacao.trim()
+      : typeof input.dataCadastro === "string" && input.dataCadastro.trim()
+        ? input.dataCadastro.trim()
+        : "";
+
+  const query = version ? `?v=${encodeURIComponent(version)}` : "";
+  return `/api/v1/comercial/alunos/${encodeURIComponent(input.id)}/foto${query}`;
+}
+
 function normalizeAluno(input: Aluno): Aluno {
   return {
     ...input,
+    foto: normalizeAlunoFotoUrl(input),
     status: normalizeAlunoStatus((input as Aluno & { status?: unknown }).status),
   };
 }
@@ -280,7 +298,7 @@ export async function listAlunosApi(input: {
   page?: number;
   size?: number;
 }): Promise<ClienteListEnvelopeResponse> {
-  return apiRequest<ClienteListEnvelopeResponse>({
+  const response = await apiRequest<ClienteListEnvelopeResponse>({
     path: "/api/v1/comercial/alunos",
     query: {
       tenantId: input.tenantId,
@@ -291,6 +309,11 @@ export async function listAlunosApi(input: {
       envelope: true,
     },
   });
+
+  return {
+    ...response,
+    items: toArray(response.items),
+  };
 }
 
 export async function searchAlunosApi(input: {

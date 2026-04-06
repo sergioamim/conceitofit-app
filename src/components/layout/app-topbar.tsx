@@ -40,18 +40,18 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
   }
 
   return (
-    <div className="border-b border-border px-3 py-3 md:px-7">
+    <div className="border-b border-border/40 px-4 py-4 md:px-10">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="h-9 w-9 md:hidden"
+            className="h-10 w-10 md:hidden rounded-xl"
             aria-label="Abrir menu principal"
             onClick={onOpenMenu}
           >
-            <Menu className="size-4" />
+            <Menu className="size-5" />
           </Button>
 
           <ActiveTenantSelector
@@ -69,25 +69,6 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
             onChange={handleChangeTenant}
           />
         </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            const event = new KeyboardEvent("keydown", {
-              key: "k",
-              metaKey: true,
-              bubbles: true,
-            });
-            document.dispatchEvent(event);
-          }}
-          className="focus-ring-brand group relative flex h-9 w-full max-w-[240px] items-center gap-2 rounded-md border border-input bg-secondary/50 px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:max-w-[320px]"
-        >
-          <Search className="size-4 shrink-0 transition-colors group-hover:text-gym-accent" />
-          <span className="flex-1 text-left">Buscar ou navegar...</span>
-          <div className="pointer-events-none hidden items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-            <span className="text-xs">⌘</span>K
-          </div>
-        </button>
       </div>
     </div>
   );

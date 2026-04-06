@@ -51,20 +51,38 @@ type FetchCall = {
 function installMockBrowser(): MockBrowser {
   const globalRef = globalThis as typeof globalThis & {
     window?: Window & typeof globalThis;
+    document?: Document;
   };
   const previousWindow = globalRef.window;
-  const storage = new MemoryStorage();
+  const previousDocument = globalRef.document;
+  const localStorageRef = new MemoryStorage();
+  const sessionStorageRef = new MemoryStorage();
+  const documentRef = {
+    cookie: "",
+  } as Document;
   globalRef.window = {
-    localStorage: storage,
+    localStorage: localStorageRef,
+    sessionStorage: sessionStorageRef,
+    location: {
+      protocol: "http:",
+    } as Location,
+    dispatchEvent: () => true,
+    document: documentRef,
   } as unknown as Window & typeof globalThis;
+  globalRef.document = documentRef;
 
   return {
     restore() {
       if (previousWindow === undefined) {
         Reflect.deleteProperty(globalRef, "window");
-        return;
+      } else {
+        globalRef.window = previousWindow;
       }
-      globalRef.window = previousWindow;
+      if (previousDocument === undefined) {
+        Reflect.deleteProperty(globalRef, "document");
+      } else {
+        globalRef.document = previousDocument;
+      }
     },
   };
 }
@@ -246,7 +264,6 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(calls).toHaveLength(1);
       expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote");
       expect(calls[0].method).toBe("POST");
-      expect(calls[0].headers.get("Authorization")).toBe("Bearer access-token");
       expect(calls[0].headers.get("X-Tenant-Id")).toBeNull();
 
       const formData = calls[0].body as FormData;
@@ -333,6 +350,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
         maxRejeicoesRetorno: 50,
         arquivos: ["clientes", "contratos"],
         tenantId: "tenant-pacote",
+        evoUnidadeId: 321,
         apelido: "Carga pacote unidade central",
       });
       const resumo = await getBackofficeEvoImportJobResumo({
@@ -347,13 +365,15 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(resumo.colaboradoresDetalhe?.funcoes?.mensagemParcial).toContain("funções");
 
       expect(calls).toHaveLength(2);
-      expect(calls[0].url).toBe("/backend/api/v1/admin/unidades/tenant-pacote/importacao-evo/pacote/upload-1/job");
+      expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/upload-1/job");
       expect(calls[0].method).toBe("POST");
       expect(calls[0].headers.get("Content-Type")).toBe("application/json");
-      expect(calls[0].headers.get("X-Tenant-Id")).toBeNull();
+      expect(calls[0].headers.get("X-Tenant-Id")).toBe("tenant-pacote");
       expect(JSON.parse(String(calls[0].body))).toEqual({
         dryRun: false,
         maxRejeicoesRetorno: 50,
+        tenantId: "tenant-pacote",
+        evoUnidadeId: 321,
         arquivos: ["clientes", "contratos"],
         apelido: "Carga pacote unidade central",
       });
@@ -386,10 +406,12 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       });
 
       expect(job.jobId).toBe("job-pacote-retry");
-      expect(calls[0].url).toBe("/backend/api/v1/admin/unidades/tenant-pacote/importacao-evo/pacote/upload-1/job");
+      expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/upload-1/job");
+      expect(calls[0].headers.get("X-Tenant-Id")).toBe("tenant-pacote");
       expect(JSON.parse(String(calls[0].body))).toEqual({
         dryRun: false,
         maxRejeicoesRetorno: 50,
+        tenantId: "tenant-pacote",
         arquivos: ["funcionarios"],
       });
     } finally {

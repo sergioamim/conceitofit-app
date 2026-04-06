@@ -6,9 +6,9 @@ import { resolveNetworkSubdomain } from "@/lib/network-subdomain";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; redeIdentifier?: string }>;
+  searchParams: Promise<{ next?: string; redeIdentifier?: string; reason?: string }>;
 }) {
-  const { next, redeIdentifier } = await searchParams;
+  const { next, redeIdentifier, reason } = await searchParams;
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
   const networkSubdomain = redeIdentifier?.trim() || resolveNetworkSubdomain({ host });
@@ -17,5 +17,5 @@ export default async function LoginPage({
     return <NetworkAccessFlow networkSubdomain={networkSubdomain} nextPath={next} mode="login" />;
   }
 
-  return <AdminLoginFlow nextPath={next} />;
+  return <AdminLoginFlow nextPath={next} reason={reason} />;
 }

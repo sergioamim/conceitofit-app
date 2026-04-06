@@ -30,6 +30,23 @@ export function buildLoginHref(nextPath?: string, networkSlug?: string | null): 
   return `${loginBasePath}?next=${encodeURIComponent(resolvedNext)}`;
 }
 
+export function buildAdminLoginHref(nextPath?: string, reason?: string | null): string {
+  const resolvedNext = resolvePostLoginPath(nextPath);
+  const params = new URLSearchParams();
+
+  if (resolvedNext !== DEFAULT_POST_LOGIN_PATH) {
+    params.set("next", resolvedNext);
+  }
+
+  const normalizedReason = reason?.trim();
+  if (normalizedReason) {
+    params.set("reason", normalizedReason);
+  }
+
+  const query = params.toString();
+  return query ? `${DEFAULT_LOGIN_PATH}?${query}` : DEFAULT_LOGIN_PATH;
+}
+
 export function buildForcedPasswordChangeHref(nextPath?: string): string {
   const resolvedNext = resolvePostLoginPath(nextPath);
   if (resolvedNext === DEFAULT_POST_LOGIN_PATH) {
