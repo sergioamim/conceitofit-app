@@ -13862,7 +13862,8 @@
         "dependencies": [],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-03T20:43:00.978Z"
+        "updatedAt": "2026-04-03T20:43:00.978Z",
+        "complexity": 3
       },
       {
         "id": "449",
@@ -13876,7 +13877,8 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-03T20:51:37.318Z"
+        "updatedAt": "2026-04-03T20:51:37.318Z",
+        "complexity": 5
       },
       {
         "id": "450",
@@ -13891,7 +13893,8 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-03T20:57:18.756Z"
+        "updatedAt": "2026-04-03T20:57:18.756Z",
+        "complexity": 7
       },
       {
         "id": "451",
@@ -13906,7 +13909,8 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-03T21:07:00.260Z"
+        "updatedAt": "2026-04-03T21:07:00.260Z",
+        "complexity": 6
       },
       {
         "id": "452",
@@ -13921,7 +13925,8 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-03T21:11:30.171Z"
+        "updatedAt": "2026-04-03T21:11:30.171Z",
+        "complexity": 7
       },
       {
         "id": "453",
@@ -13935,7 +13940,8 @@
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-03T22:03:34.641Z"
+        "updatedAt": "2026-04-03T22:03:34.641Z",
+        "complexity": 4
       },
       {
         "id": "454",
@@ -13949,7 +13955,8 @@
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-03T21:30:37.978Z"
+        "updatedAt": "2026-04-03T21:30:37.978Z",
+        "complexity": 5
       },
       {
         "id": "455",
@@ -13967,13 +13974,441 @@
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-03T22:01:41.727Z"
+        "updatedAt": "2026-04-03T22:01:41.727Z",
+        "complexity": 4
+      },
+      {
+        "id": "456",
+        "title": "Auditar e mapear todos os dados de sessão em localStorage",
+        "description": "Inventariar todas as chaves localStorage usadas para sessão, contexto e tenant, classificando por sensibilidade e impacto de segurança.",
+        "details": "Mapear todas as chaves em session.ts (901 LOC) e token-store.ts: academia-auth-token, academia-auth-refresh-token, academia-auth-token-type, user-id, user-kind, display-name, network-id, network-subdomain, network-slug, network-name, active-tenant-id, base-tenant-id, available-tenants, available-scopes, broad-access, force-password-change-required, preferred-tenant-id, impersonation-state. Classificar cada chave como: (a) token/secreto, (b) dado sensível de negócio, (c) preferência UI. Gerar matriz de risco para cada chave.",
+        "testStrategy": "Teste unitário que lê session.ts e token-store.ts e valida que nenhuma chave sensível nova é adicionada sem aprovação. Teste E2E que verifica conteúdo de localStorage após login.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 3
+      },
+      {
+        "id": "457",
+        "title": "Backend: Criar endpoints de sessão com cookies HttpOnly",
+        "description": "Implementar no backend Java endpoints que retornam Set-Cookie HttpOnly + SameSite=Strict para access token, refresh token e claims de sessão.",
+        "details": "Criar ou adaptar o endpoint de login para usar cookies HttpOnly ao invés de retornar tokens no body. Cookies necessários: access_token (HttpOnly, Secure, SameSite=Strict), refresh_token (HttpOnly, Secure, SameSite=Strict, path=/auth/refresh), session_claims (cookie não-httpOnly com userId, userKind, displayName, activeTenantId — apenas para leitura client-side sem dados sensíveis). Backend deve validar origem e CSRF para requests stateful.",
+        "testStrategy": "Teste de integração backend: login retorna Set-Cookie, refresh funciona com cookie, claims expõem apenas dados não-sensíveis. Verificar headers de cookie com curl/httpie.",
+        "status": "pending",
+        "dependencies": [
+          "456"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 6
+      },
+      {
+        "id": "458",
+        "title": "Frontend: Migrar leitura/escrita de sessão para cookies HttpOnly",
+        "description": "Refatorar session.ts e token-store.ts para ler tokens de cookies (não localStorage) e usar apenas cookie de claims para metadados client-side.",
+        "details": "Substituir readStorageToken('academia-auth-token') por leitura de cookie document.cookie. Modificar saveAuthSession() para não gravar tokens em localStorage — apenas claims seguros. Manter localStorage apenas para preferências de UI (tenant preferido, form-drafts). Atualizar http.ts para credentials: 'include'. Garantir que refresh token flow usa cookie. Remover progressivamente chaves sensíveis de localStorage: available-tenants, available-scopes, network-id, user-id.",
+        "testStrategy": "Testes unitários de session.ts verificando que saveAuthSession não grava tokens em localStorage. Teste E2E: login → verificar cookies HttpOnly → navegar → refresh → sessão mantida. Teste de segurança: XSS simulado não consegue ler access_token.",
+        "status": "pending",
+        "dependencies": [
+          "457"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 7
+      },
+      {
+        "id": "459",
+        "title": "Frontend: CSRF protection para requests stateful com cookies",
+        "description": "Implementar proteção CSRF quando a sessão usar cookies HttpOnly, já que requests se tornam stateful.",
+        "details": "Adicionar header X-CSRF-Token nos requests fetch/axios. Backend deve gerar e validar CSRF token. Alternativa: SameSite=Strict + SameSite=Lax como fallback. Configurar next.config.ts para permitir cookies cross-origin no proxy /backend/*. Implementar double-submit cookie pattern se backend suportar.",
+        "testStrategy": "Teste E2E: request sem CSRF token retorna 403, request com CSRF token válido retorna 200. Teste de segurança: CSRF de domínio externo é rejeitado.",
+        "status": "pending",
+        "dependencies": [
+          "458"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 5
+      },
+      {
+        "id": "460",
+        "title": "Remover 'unsafe-inline' do CSP se possível e auditar segurança",
+        "description": "Avaliar se Next.js 16.1.6 ainda requer 'unsafe-inline' no script-src e, se possível, remover. Auditoria geral de segurança.",
+        "details": "Verificar se Next.js 16 com App Router e output standalone ainda precisa de 'unsafe-inline'. Testar com script-src 'self' apenas e validar que tudo funciona. Se não for possível, implementar nonce-based CSP. Auditoria completa: Permissions-Policy (câmera é necessária para foto de cliente e código de barras), CORS config, headers de segurança, validação de input em formulários, sanitização com DOMPurify.",
+        "testStrategy": "Lighthouse CI com CSP restrito passa. Teste E2E: todas as páginas funcionam sem 'unsafe-inline'. Auditoria de security headers com Mozilla Observatory ou similar.",
+        "status": "pending",
+        "dependencies": [
+          "458"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 4
+      },
+      {
+        "id": "461",
+        "title": "Expandir portal do aluno: Check-in com QR Code e histórico",
+        "description": "Completar a página /aluno/check-in com geração de QR Code dinâmico, histórico de check-ins e status de matrícula em tempo real.",
+        "details": "A página (aluno)/check-in/page.tsx atual é mínima. Implementar: (1) QR Code dinâmico que refresh a cada 30s (usar qrcode.react já instalada), (2) status da matrícula ativa com badge visual (Ativo/Suspenso/Vencido), (3) histórico dos últimos 30 check-ins com data/hora/unidade, (4) botão de refresh manual, (5) proteção: QR Code só é exibido se matrícula está ATIVA e sem vencimentos. Usar TanStack Query para polling do status. Fallback: exibir mensagem estável no SSR até mount.",
+        "testStrategy": "Teste unitário do componente QR Code com diferentes estados de matrícula. Teste E2E: aluno com matrícula ativa vê QR Code, aluno suspenso vê bloqueio. Teste de acessibilidade (a11y) da página.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 5
+      },
+      {
+        "id": "462",
+        "title": "Expandir portal do aluno: Minhas Aulas com reserva e waitlist",
+        "description": "Completar /aluno/minhas-aulas com grade semanal, reserva online, cancelamento e waitlist em tempo real.",
+        "details": "A página (aluno)/minhas-aulas/page.tsx atual é mínima. Implementar: (1) Grade semanal com aulas da unidade do aluno, (2) Botão de reservar com confirmação, (3) Botão de cancelar reserva, (4) Indicador de posição na waitlist, (5) Contador de vagas restantes, (6) Filtro por semana, (7) Histórico de presenças. Reutilizar componentes de grade do portal (src/app/(portal)/grade/) adaptados para visão do aluno. Hydration safety: grade renderiza skeleton no SSR, dados reais após mount.",
+        "testStrategy": "Testes unitários dos componentes de grade e reserva. Teste E2E: reservar aula → aparece na grade → cancelar → vaga liberada. Teste de concorrência: waitlist funciona quando aula lota.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 7
+      },
+      {
+        "id": "463",
+        "title": "Expandir portal do aluno: Meus Treinos com visual detalhado",
+        "description": "Completar /aluno/meus-treinos com visualização detalhada do treino atribuído, séries, exercícios e marcação de conclusão.",
+        "details": "A página (aluno)/meus-treinos/page.tsx atual é mínima. Implementar: (1) Lista de treinos atribuídos ao aluno, (2) Visualização detalhada com séries, exercícios, reps, carga, intervalo, (3) Técnicas especiais (conjugado, drop-set, progressivo) com ícones, (4) Marcação de treino como concluído, (5) Histórico de treinos concluídos, (6) Indicador de aderência (% concluídos). Reutilizar componentes de treinos V2 do portal. Hydration safety: dados do treino vêm do backend, sem cálculo client-side no primeiro render.",
+        "testStrategy": "Testes unitários do componente de visualização de treino. Teste E2E: aluno vê treinos atribuídos → marca como concluído → histórico atualiza. Teste com treino vazio e sem treinos atribuídos.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 6
+      },
+      {
+        "id": "464",
+        "title": "Expandir portal do aluno: Meus Pagamentos com 2ª via e NFSe",
+        "description": "Completar /aluno/meus-pagamentos com lista de pagamentos, 2ª via de boletos, download de NFSe e status financeiro.",
+        "details": "A página (aluno)/meus-pagamentos/page.tsx atual é mínima. Implementar: (1) Lista de pagamentos com status (Pago/Pendente/Vencido), (2) Filtro por período e status, (3) 2ª via de boleto para pagamentos pendentes (link ou QR Code), (4) Download de NFSe emitida, (5) Resumo financeiro: total pago, total pendente, total vencido, (6) Alerta visual para pagamentos vencidos. Reutilizar componentes de pagamentos do portal. Hydration safety: valores vêm serializados do backend.",
+        "testStrategy": "Testes unitários de resumo financeiro e lista de pagamentos. Teste E2E: aluno com pagamento pendente gera 2ª via, aluno com NFSe faz download. Teste de acessibilidade.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 6
+      },
+      {
+        "id": "465",
+        "title": "Portal do aluno: PWA (manifest, service worker, install prompt)",
+        "description": "Configurar PWA para o portal do aluno com manifest.json, service worker para cache offline e prompt de instalação.",
+        "details": "Implementar: (1) manifest.json com nome, ícones, theme por academia (whitelabel), (2) Service worker com cache de rotas do aluno (check-in, treinos, aulas), (3) Install prompt usando componente existente em src/components/pwa/install-prompt.tsx, (4) Offline fallback: página básica com dados cacheados, (5) ícones PWA por tamanho (192x192, 512x512) usando branding da academia. Configurar next.config.ts para gerar manifest dinâmico por subdomínio.",
+        "testStrategy": "Teste E2E: Lighthouse PWA audit passa (installable, service worker, manifest). Teste offline: page carrega com dados cacheados. Teste em device real ou emulador mobile.",
+        "status": "pending",
+        "dependencies": [
+          "461",
+          "462",
+          "463",
+          "464"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 5
+      },
+      {
+        "id": "466",
+        "title": "Splitar pagamentos-client.tsx (1057 LOC) em sub-componentes",
+        "description": "Refatorar src/app/(portal)/pagamentos/components/pagamentos-client.tsx de 1057 LOC em 5-7 componentes coesos.",
+        "details": "O componente mistura: (1) Header e filtros de pagamentos, (2) Tabela de pagamentos com paginação, (3) Modal de recebimento, (4) Modal de NFSe em lote, (5) Barra de ações em massa, (6) Estado de loading/error/empty. Separar em: PagamentosHeader (filtros), PagamentosTable (tabela + paginação), PagamentoActions (ações em massa), ReceberPagamentoModal (já existente, extrair), NfseLoteModal (extrair), PagamentosEmptyState. Manter pagina.tsx com data fetching RSC e passar props.",
+        "testStrategy": "Testes unitários de cada sub-componente extraído. Teste E2E da página de pagamentos sem regressão funcional. Verificar coverage mantida.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 5
+      },
+      {
+        "id": "467",
+        "title": "Splitar treino-v2-editor.tsx (978 LOC) em sub-componentes",
+        "description": "Refatorar src/components/treinos/treino-v2-editor.tsx de 978 LOC em 5-6 componentes de editor de treino.",
+        "details": "O editor mistura: (1) Canvas de séries, (2) Drawer de exercícios (biblioteca lateral), (3) Editor inline de série (reps, carga, intervalo), (4) Toolbar de técnicas especiais (conjugado, drop-set, progressivo), (5) Header do treino (nome, frequência, semanas), (6) Ações (salvar, publicar, replicar). Separar em: EditorCanvas (séries), ExerciseDrawer (biblioteca), SeriesEditor (inline), TechniqueToolbar, EditorHeader. Usar pattern de compound components.",
+        "testStrategy": "Testes unitários de SeriesEditor e TechniqueToolbar. Teste E2E do editor completo sem regressão. Teste de acessibilidade do editor.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 6
+      },
+      {
+        "id": "468",
+        "title": "Splitar catálogo de segurança backoffice (985 LOC) e user-detail-tabs (938 LOC)",
+        "description": "Refatorar admin/seguranca/catalogo/page.tsx (985 LOC) e admin/seguranca/usuarios/[id]/user-detail-tabs.tsx (938 LOC).",
+        "details": "catalogo/page.tsx: separar em CatalogoHeader (filtros), CatalogoGrid (cards de features), CatalogoFormModal (edição de feature). user-detail-tabs.tsx: separar cada tab em componente próprio: UserProfileOverview, UserProfilePermissions, UserProfileAuditLog, UserProfileTenants, UserProfileImpersonations. Pattern: cada tab é lazy-loaded com dynamic import.",
+        "testStrategy": "Testes unitários de cada tab component. Teste E2E das páginas de segurança sem regressão.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 5
+      },
+      {
+        "id": "469",
+        "title": "Splitar funcionario-form-page.tsx (909 LOC) e importacao EvoPacoteTab (815 LOC)",
+        "description": "Refatorar funcionarios/funcionario-form-page.tsx (909 LOC) e importacao-evo-p0/components/EvoPacoteTab.tsx (815 LOC).",
+        "details": "funcionario-form: separar em FormDadosPessoais, FormCargoDepartamento, FormAcessosUnidades, FormDocumentos. EvoPacoteTab: separar em PacoteUpload (upload + validação), PacoteAnalise (resumo + stats), PacoteJobStatus (polling + progresso), PacoteRejeicoes (lista de erros). Cada sub-componente com responsabilidade única e <200 LOC.",
+        "testStrategy": "Testes unitários dos formulários com react-hook-form + zod. Teste E2E de criação de funcionário e importação EVO sem regressão.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 5
+      },
+      {
+        "id": "470",
+        "title": "Criar testes para componentes splitados e estabelecer padrão",
+        "description": "Criar testes unitários para todos os sub-componentes resultantes do split e documentar padrão de max 300 LOC por componente.",
+        "details": "Para cada componente splitado (tasks 466-469), criar: (1) Teste de renderização com dados válidos, (2) Teste de estados de loading/error/empty, (3) Teste de interações (cliques, submissão de form), (4) Teste de acessibilidade básico. Atualizar AGENTS.md com guideline de max 300 LOC para componentes, com exceções justificadas. Adicionar regra ESLint max-lines warning em 300.",
+        "testStrategy": "30+ novos testes de componentes cobrindo os sub-componentes splitados. Coverage de componentes sobe de ~14% para ~30%.",
+        "status": "pending",
+        "dependencies": [
+          "466",
+          "467",
+          "468",
+          "469"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 6
+      },
+      {
+        "id": "471",
+        "title": "Tornar Sentry DSN obrigatório em produção com health check",
+        "description": "Garantir que Sentry é obrigatório em produção, bloqueando boot sem DSN. Criar endpoint /api/health para health check do container.",
+        "details": "Atualmente Sentry é condicional (se NEXT_PUBLIC_SENTRY_DSN não existe, Sentry é desativado silenciosamente). Implementar: (1) Se NODE_ENV=production e sem SENTRY_DSN, logar error crítico e/ou permitir boot com warning severo. (2) Criar endpoint /api/health que retorna: status do Sentry (configurado/não), status do backend (conectado/não), uptime, version. (3) Adicionar contexto ao Sentry: tenantId, userKind, page, API latency. (4) Configurar alertas no Sentry para erros críticos.",
+        "testStrategy": "Teste unitário do endpoint /api/health. Teste de integração: app em prod sem DSN loga warning. Teste E2E: erro simulado é capturado pelo Sentry.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 3
+      },
+      {
+        "id": "472",
+        "title": "Implementar correlation ID para tracing frontend → backend",
+        "description": "Adicionar X-Correlation-Id em todos os requests HTTP para tracing distribuído entre frontend e backend Java.",
+        "details": "Implementar: (1) Gerar UUID v4 por request no http.ts interceptor, (2) Adicionar header X-Correlation-Id em todos os fetch para /backend/*, (3) Incluir correlationId no contexto do Sentry para cada error, (4) Log correlationId no console em dev mode, (5) Backend Java deve propagar correlationId nos logs e responses. Usar crypto.randomUUID() apenas em handlers/effects (não em SSR render).",
+        "testStrategy": "Teste unitário do interceptor http.ts verificando header X-Correlation-Id. Teste E2E: correlationId é único por request e aparece nos logs do Sentry.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 4
+      },
+      {
+        "id": "473",
+        "title": "Adicionar métricas de performance client-side (Web Vitals + custom)",
+        "description": "Instrumentar métricas de performance: Core Web Vitals, tempo de API calls, erros por página, tenant mais afetado.",
+        "details": "Implementar: (1) Capturar Web Vitals (LCP, FID, CLS) via next/web-vitals e enviar ao Sentry, (2) Métrica custom de tempo de resposta por endpoint (usando interceptor http.ts), (3) Métrica de erros por página (Sentry context), (4) Métrica de tenants mais afetados (tag no Sentry), (5) Dashboard interno no Sentry com essas métricas. Respeitar hydration safety: web-vitals só após mount.",
+        "testStrategy": "Teste unitário do collector de métricas. Verificar no Sentry que métricas aparecem corretamente. Lighthouse CI valida Web Vitals.",
+        "status": "pending",
+        "dependencies": [
+          "471"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 4
+      },
+      {
+        "id": "474",
+        "title": "Runbook de incidentes e alertas operacionais",
+        "description": "Criar runbook documentado para incidentes comuns e configurar alertas proativos no Sentry.",
+        "details": "Documentar em docs/RUNBOOK_INCIDENTES.md: (1) Erro 500 em produção — como investigar no Sentry, (2) Backend indisponível — como verificar e escalar, (3) Sessão inválida em massa — como diagnosticar e mitigar, (4) Tenant data leak — procedimento de emergência, (5) Degradação de performance — como identificar no Sentry. Configurar alertas no Sentry: (a) >10 errors/hour em uma página, (b) >50% de error rate em um endpoint, (c) LCP >4s em qualquer página, (d) Crash de JS em >5% de sessions.",
+        "testStrategy": "Revisão manual do runbook por tech lead. Simulação de incidente para validar procedimento.",
+        "status": "pending",
+        "dependencies": [
+          "471",
+          "473"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 3
+      },
+      {
+        "id": "475",
+        "title": "Backend: Criar endpoints de billing recorrente com gateway",
+        "description": "Implementar no backend Java endpoints para criar/gerenciar assinaturas recorrentes via gateway de pagamento (Pagar.me/Stripe).",
+        "details": "Endpoints necessários: (1) POST /api/v1/billing/assinaturas — criar assinatura recorrente para matrícula, (2) GET /api/v1/billing/assinaturas/{id} — detalhes da assinatura, (3) POST /api/v1/billing/assinaturas/{id}/cancelar — cancelar recorrência, (4) POST /api/v1/billing/webhook — receber eventos do gateway (cobrança criada, paga, falhou), (5) GET /api/v1/billing/academia/config — configuração de billing da academia, (6) POST /api/v1/billing/academia/config — atualizar configuração (gateway, API keys). Model: Assinatura com status (ATIVA, CANCELADA, SUSPENSA), gateway, externalId, matrículaId, valor, ciclo.",
+        "testStrategy": "Testes de integração backend para cada endpoint. Teste de webhook simulando eventos do gateway. Teste de idempotência para criação de assinatura.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 7
+      },
+      {
+        "id": "476",
+        "title": "Frontend: API client e tipos para billing recorrente",
+        "description": "Criar API client TypeScript para endpoints de billing, com tipos Zod e integração com TanStack Query.",
+        "details": "Criar src/lib/api/billing.ts com: createSubscription(), getSubscription(), cancelSubscription(), getAcademyBillingConfig(), updateAcademyBillingConfig(). Tipos Zod para request/response de cada endpoint. Hooks TanStack Query: useCreateSubscription(), useSubscription(id), useAcademyBillingConfig(). Tratar erros do gateway (cartão recusado, saldo insuficiente, etc).",
+        "testStrategy": "Testes unitários do API client com mocks de fetch. Testes unitários dos hooks com Testing Library.",
+        "status": "pending",
+        "dependencies": [
+          "475"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 4
+      },
+      {
+        "id": "477",
+        "title": "Frontend: Página de configuração de billing por academia",
+        "description": "Criar página administrativo/billing-config para configurar gateway, API keys, planos recorrentes e regras de cobrança.",
+        "details": "Implementar página com: (1) Seleção de gateway (Pagar.me, Stripe, outro), (2) Campos de API key (com mask), (3) Configuração de ciclo de cobrança (mensal, trimestral, anual), (4) Regras de retry para pagamento falho (3 tentativas em 7 dias), (5) Configuração de multa por atraso (%), (6) Toggle de billing automatizado on/off. Formulário com react-hook-form + zod. Salvar configuração via API. Exibir status atual do gateway (conectado/desconectado).",
+        "testStrategy": "Testes unitários do formulário com validação. Teste E2E: configurar billing → salvar → carrega configuração correta → toggle on/off.",
+        "status": "pending",
+        "dependencies": [
+          "476"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 5
+      },
+      {
+        "id": "478",
+        "title": "Frontend: Vincular matrícula a assinatura recorrente no fluxo de matrícula",
+        "description": "Integrar fluxo de criação/renovação de matrícula com criação de assinatura recorrente no gateway.",
+        "details": "No fluxo de matrícula (nova-matricula-modal e conversão de prospect): (1) Se billing automatizado está ON e plano permite recorrência, oferecer opção 'Cobrança automática', (2) Se selecionado, capturar dados de pagamento (cartão/boleto) e criar assinatura via API, (3) Exibir status da assinatura no detalhe da matrícula, (4) Permitir trocar forma de cobrança (manual vs automática) no detalhe do cliente, (5) Webhook do gateway atualiza status de pagamento automaticamente.",
+        "testStrategy": "Teste E2E: criar matrícula com cobrança automática → assinatura criada no gateway → webhook recebido → pagamento marcado. Teste de fallback: se gateway indisponível, matrícula é criada com cobrança manual.",
+        "status": "pending",
+        "dependencies": [
+          "476",
+          "477"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 7
+      },
+      {
+        "id": "479",
+        "title": "Backend: Implementar integração WhatsApp Business API",
+        "description": "Implementar no backend Java a integração com WhatsApp Business API para envio de mensagens do CRM.",
+        "details": "Implementar: (1) POST /api/v1/whatsapp/enviar — enviar mensagem para prospect/cliente, (2) POST /api/v1/whatsapp/webhook — receber mensagens/respostas, (3) GET /api/v1/whatsapp/status/{messageId} — status de envio, (4) Configuração de template de mensagem (boas-vindas, follow-up, lembrete de pagamento, aniversário), (5) Integração com provider (Twilio WhatsApp, Zenvia, ou similar), (6) Rate limiting e fila de envio. Model: WhatsAppMessage com templateId, recipientId, content, status (ENVIADA, ENTREGUE, LIDA, FALHOU).",
+        "testStrategy": "Testes de integração backend para cada endpoint. Teste de webhook simulando resposta do WhatsApp. Teste de rate limiting.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 7
+      },
+      {
+        "id": "480",
+        "title": "Frontend: API client e tipos para WhatsApp",
+        "description": "Criar API client TypeScript para WhatsApp e expandir hooks de cadências CRM para envio real.",
+        "details": "Expandir src/lib/api/whatsapp.ts (atual 49 LOC) com: sendWhatsAppMessage(), getWhatsAppStatus(), getWhatsAppTemplates(). Tipos Zod para request/response. Integrar com cadências CRM: quando cadência dispara ação 'WHATSAPP', chamar sendWhatsAppMessage ao invés de apenas registrar intenção. Atualizar useCrmCadences hook para suportar envio real.",
+        "testStrategy": "Testes unitários do API client expandido. Testes de integração do hook de cadências com mock de WhatsApp.",
+        "status": "pending",
+        "dependencies": [
+          "479"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 4
+      },
+      {
+        "id": "481",
+        "title": "Frontend: Página admin WhatsApp com configuração e monitoramento",
+        "description": "Completar /admin/whatsapp/page.tsx (715 LOC) com configuração real de provider, templates e monitoramento de envios.",
+        "details": "A página atual existe mas pode estar sem backend real. Completar com: (1) Configuração do provider (API key, phone number ID), (2) CRUD de templates de mensagem, (3) Monitoramento de envios (enviados, entregues, lidos, falhas), (4) Teste de envio (enviar mensagem de teste), (5) Split do componente em sub-componentes se >500 LOC. Hydration safety: dados de monitoramento vêm do backend.",
+        "testStrategy": "Teste E2E: configurar provider → criar template → enviar mensagem de teste → monitorar status. Teste unitário dos sub-componentes.",
+        "status": "pending",
+        "dependencies": [
+          "480"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 5
+      },
+      {
+        "id": "482",
+        "title": "Integrar WhatsApp nas cadências e automações do CRM",
+        "description": "Conectar envio real de WhatsApp nas cadências CRM, follow-ups automatizados e playbooks.",
+        "details": "Integrar: (1) Cadência com passo 'Enviar WhatsApp' dispara mensagem real via API, (2) Follow-up automatizado: se prospect não responde em X dias, enviar WhatsApp de follow-up, (3) Lembrete de pagamento: enviar WhatsApp se pagamento está pendente e próximo do vencimento, (4) Aniversário: enviar WhatsApp automático no dia, (5) Log de mensagens no timeline do prospect/cliente, (6) Métricas de efetividade (taxa de resposta por template).",
+        "testStrategy": "Teste E2E: cadência dispara WhatsApp → mensagem enviada → resposta registrada no timeline. Teste de fallback: se WhatsApp indisponível, cadência registra falha e continua.",
+        "status": "pending",
+        "dependencies": [
+          "480",
+          "481"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 6
+      },
+      {
+        "id": "483",
+        "title": "Configurar Cloud CDN para assets estáticos no GCP",
+        "description": "Configurar Cloud CDN do GCP na frente do Cloud Run para cache de assets estáticos (JS, CSS, imagens, fontes).",
+        "details": "Implementar: (1) Criar Cloud Storage bucket para assets estáticos do Next.js, (2) Configurar next.config.ts assetPrefix para apontar para CDN, (3) Configurar Cloud CDN no GCP com cache de 1 ano para assets versionados (/_next/static/*), (4) Invalidação automática no deploy via CDN invalidation, (5) Headers de cache corret: immutable para assets versionados, no-cache para HTML. Atualizar Dockerfile para copiar assets para GCS no build.",
+        "testStrategy": "Teste: assets são servidos via CDN com headers corret. Lighthouse coleta com CDN ativa e verifica performance score. Teste de invalidação após deploy.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 5
+      },
+      {
+        "id": "484",
+        "title": "Code splitting agressivo com dynamic imports para páginas pesadas",
+        "description": "Adicionar dynamic imports (next/dynamic) para páginas e componentes pesados do portal, reduzindo bundle inicial.",
+        "details": "Identificar e aplicar dynamic imports em: (1) Treino V2 Editor (978 LOC) — carregar sob demanda, (2) CRM Playbooks (806 LOC) — carregar sob demanda, (3) Importação EVO (815 LOC) — carregar sob demanda, (4) Grade de aulas — carregar sob demanda, (5) Componentes de modal pesados — lazy load, (6) Chart/BI components — lazy load. Configurar loading states com skeleton consistent. Manter componentes críticos (dashboard, sidebar) no bundle inicial.",
+        "testStrategy": "Lighthouse CI compara bundle size antes/depois. Teste E2E: páginas com dynamic import carregam corretamente com loading skeleton. Verificar que funcionalidade não é afetada.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 4
+      },
+      {
+        "id": "485",
+        "title": "Otimizar TanStack Query: staleTime, gcTime e prefetch em páginas críticas",
+        "description": "Configurar caching策略 do TanStack Query em páginas de alto tráfego para reduzir refetch desnecessário.",
+        "details": "Configurar em páginas críticas: (1) Dashboard: staleTime=30s, gcTime=5min, (2) Lista de clientes: staleTime=60s, gcTime=10min, (3) Lista de pagamentos: staleTime=30s, (4) CRM Prospects: staleTime=15s (dados mudam rápido), (5) Grade de aulas: staleTime=5min, (6) Portal do aluno: staleTime=60s para treinos/aulas. Implementar prefetch para navegação provável (ex: ao listar clientes, prefetch dados do primeiro cliente). Configurar background refetch com staleTime.",
+        "testStrategy": "Teste: navegar entre páginas e verificar no Network tab que requests são cacheados quando apropriado. Métrica de redução de API calls. Teste E2E de dados stale sendo refetchados em background.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "complexity": 4
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-03T22:03:34.641Z",
-      "taskCount": 400,
+      "lastModified": "2026-04-06T23:32:28.000Z",
+      "taskCount": 430,
       "completedCount": 400,
       "tags": [
         "master"
