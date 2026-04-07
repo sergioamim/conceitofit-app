@@ -12,6 +12,7 @@ import {
   shouldInjectAuthHeader,
 } from "./session";
 import { captureApiError } from "@/lib/shared/sentry";
+import { setSentryCorrelationId, recordSentryApiMetric } from "@/lib/shared/sentry-context";
 
 export interface ApiErrorPayload {
   timestamp?: string;
@@ -711,6 +712,48 @@ async function performApiRequest<T>(input: {
   return {
     data: parsedBody as T,
     headers: normalizeResponseHeaders(response.headers),
+  };
+}
+
+/**
+ * Wrapper com tracking de performance e correlation ID para Sentry.
+ * Task 472 + 473: correlation ID + métricas de API.
+ */
+async function performApiRequestWithMetrics<T>(
+  input: {
+    path: string;
+    method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+    query?: Record<string, string | number | boolean | undefined>;
+    body?: unknown;
+    includeContextHeader?: boolean;
+    headers?: Record<string, string>;
+    retryOnAuthFailure?: boolean;
+  },
+): Promise<{ data: T; headers: Record<string, string>; durationMs: number; correlationId?: string }> {
+  const startTime = performance.now();
+  const correlationId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : undefined;
+
+  if (correlationId) {
+    setSentryCorrelationId(correlationId);
+  }
+
+  const result = await performApiRequest<T>({
+    ...input,
+    headers: {
+      ...input.headers,
+      ...(correlationId ? { "X-Correlation-Id": correlationId } : {}),
+    },
+  });
+
+  const durationMs = Math.round(performance.now() - startTime);
+  recordSentryApiMetric(input.path, durationMs, 200);
+
+  return {
+    ...result,
+    durationMs,
+    correlationId,
   };
 }
 

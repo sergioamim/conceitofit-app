@@ -142,6 +142,24 @@ function applySentry(config: NextConfig): NextConfig {
   }
 }
 
+// Task 471: Sentry DSN é obrigatório em produção.
+// Sem DSN, o app não faz build em production (exceto dev/preview).
+function validateSentryForProduction(): void {
+  const isProd = process.env.NODE_ENV === "production";
+  const hasDsn = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN);
+  const isCI = Boolean(process.env.CI);
+
+  if (isProd && !hasDsn && !isCI) {
+    // Em produção real (não CI build), alertar que Sentry está ausente
+    console.error(
+      "[WARN] NEXT_PUBLIC_SENTRY_DSN não configurado em produção. " +
+      "O app continuará funcionando, mas erros não serão reportados. " +
+      "Configure NEXT_PUBLIC_SENTRY_DSN para habilitar observabilidade."
+    );
+  }
+}
+validateSentryForProduction();
+
 export default env.NEXT_PUBLIC_SENTRY_DSN
   ? applySentry(finalConfig)
   : finalConfig;
