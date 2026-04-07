@@ -14178,7 +14178,7 @@
         "description": "Criar testes unitários para todos os sub-componentes resultantes do split e documentar padrão de max 300 LOC por componente.",
         "details": "Para cada componente splitado (tasks 466-469), criar: (1) Teste de renderização com dados válidos, (2) Teste de estados de loading/error/empty, (3) Teste de interações (cliques, submissão de form), (4) Teste de acessibilidade básico. Atualizar AGENTS.md com guideline de max 300 LOC para componentes, com exceções justificadas. Adicionar regra ESLint max-lines warning em 300.",
         "testStrategy": "30+ novos testes de componentes cobrindo os sub-componentes splitados. Coverage de componentes sobe de ~14% para ~30%.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "466",
           "467",
@@ -14187,7 +14187,7 @@
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:23:00.988Z",
         "complexity": 6
       },
       {
@@ -14196,11 +14196,11 @@
         "description": "Garantir que Sentry é obrigatório em produção, bloqueando boot sem DSN. Criar endpoint /api/health para health check do container.",
         "details": "Atualmente Sentry é condicional (se NEXT_PUBLIC_SENTRY_DSN não existe, Sentry é desativado silenciosamente). Implementar: (1) Se NODE_ENV=production e sem SENTRY_DSN, logar error crítico e/ou permitir boot com warning severo. (2) Criar endpoint /api/health que retorna: status do Sentry (configurado/não), status do backend (conectado/não), uptime, version. (3) Adicionar contexto ao Sentry: tenantId, userKind, page, API latency. (4) Configurar alertas no Sentry para erros críticos.",
         "testStrategy": "Teste unitário do endpoint /api/health. Teste de integração: app em prod sem DSN loga warning. Teste E2E: erro simulado é capturado pelo Sentry.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:23:02.605Z",
         "complexity": 3
       },
       {
@@ -14209,11 +14209,11 @@
         "description": "Adicionar X-Correlation-Id em todos os requests HTTP para tracing distribuído entre frontend e backend Java.",
         "details": "Implementar: (1) Gerar UUID v4 por request no http.ts interceptor, (2) Adicionar header X-Correlation-Id em todos os fetch para /backend/*, (3) Incluir correlationId no contexto do Sentry para cada error, (4) Log correlationId no console em dev mode, (5) Backend Java deve propagar correlationId nos logs e responses. Usar crypto.randomUUID() apenas em handlers/effects (não em SSR render).",
         "testStrategy": "Teste unitário do interceptor http.ts verificando header X-Correlation-Id. Teste E2E: correlationId é único por request e aparece nos logs do Sentry.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:23:04.173Z",
         "complexity": 4
       },
       {
@@ -14222,13 +14222,13 @@
         "description": "Instrumentar métricas de performance: Core Web Vitals, tempo de API calls, erros por página, tenant mais afetado.",
         "details": "Implementar: (1) Capturar Web Vitals (LCP, FID, CLS) via next/web-vitals e enviar ao Sentry, (2) Métrica custom de tempo de resposta por endpoint (usando interceptor http.ts), (3) Métrica de erros por página (Sentry context), (4) Métrica de tenants mais afetados (tag no Sentry), (5) Dashboard interno no Sentry com essas métricas. Respeitar hydration safety: web-vitals só após mount.",
         "testStrategy": "Teste unitário do collector de métricas. Verificar no Sentry que métricas aparecem corretamente. Lighthouse CI valida Web Vitals.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "471"
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:23:05.754Z",
         "complexity": 4
       },
       {
@@ -14237,14 +14237,14 @@
         "description": "Criar runbook documentado para incidentes comuns e configurar alertas proativos no Sentry.",
         "details": "Documentar em docs/RUNBOOK_INCIDENTES.md: (1) Erro 500 em produção — como investigar no Sentry, (2) Backend indisponível — como verificar e escalar, (3) Sessão inválida em massa — como diagnosticar e mitigar, (4) Tenant data leak — procedimento de emergência, (5) Degradação de performance — como identificar no Sentry. Configurar alertas no Sentry: (a) >10 errors/hour em uma página, (b) >50% de error rate em um endpoint, (c) LCP >4s em qualquer página, (d) Crash de JS em >5% de sessions.",
         "testStrategy": "Revisão manual do runbook por tech lead. Simulação de incidente para validar procedimento.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "471",
           "473"
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:23:07.341Z",
         "complexity": 3
       },
       {
@@ -14253,11 +14253,11 @@
         "description": "Implementar no backend Java endpoints para criar/gerenciar assinaturas recorrentes via gateway de pagamento (Pagar.me/Stripe).",
         "details": "Endpoints necessários: (1) POST /api/v1/billing/assinaturas — criar assinatura recorrente para matrícula, (2) GET /api/v1/billing/assinaturas/{id} — detalhes da assinatura, (3) POST /api/v1/billing/assinaturas/{id}/cancelar — cancelar recorrência, (4) POST /api/v1/billing/webhook — receber eventos do gateway (cobrança criada, paga, falhou), (5) GET /api/v1/billing/academia/config — configuração de billing da academia, (6) POST /api/v1/billing/academia/config — atualizar configuração (gateway, API keys). Model: Assinatura com status (ATIVA, CANCELADA, SUSPENSA), gateway, externalId, matrículaId, valor, ciclo.",
         "testStrategy": "Testes de integração backend para cada endpoint. Teste de webhook simulando eventos do gateway. Teste de idempotência para criação de assinatura.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:23:08.917Z",
         "complexity": 7
       },
       {
@@ -14266,13 +14266,13 @@
         "description": "Criar API client TypeScript para endpoints de billing, com tipos Zod e integração com TanStack Query.",
         "details": "Criar src/lib/api/billing.ts com: createSubscription(), getSubscription(), cancelSubscription(), getAcademyBillingConfig(), updateAcademyBillingConfig(). Tipos Zod para request/response de cada endpoint. Hooks TanStack Query: useCreateSubscription(), useSubscription(id), useAcademyBillingConfig(). Tratar erros do gateway (cartão recusado, saldo insuficiente, etc).",
         "testStrategy": "Testes unitários do API client com mocks de fetch. Testes unitários dos hooks com Testing Library.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "475"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:23:10.579Z",
         "complexity": 4
       },
       {
@@ -14281,13 +14281,13 @@
         "description": "Criar página administrativo/billing-config para configurar gateway, API keys, planos recorrentes e regras de cobrança.",
         "details": "Implementar página com: (1) Seleção de gateway (Pagar.me, Stripe, outro), (2) Campos de API key (com mask), (3) Configuração de ciclo de cobrança (mensal, trimestral, anual), (4) Regras de retry para pagamento falho (3 tentativas em 7 dias), (5) Configuração de multa por atraso (%), (6) Toggle de billing automatizado on/off. Formulário com react-hook-form + zod. Salvar configuração via API. Exibir status atual do gateway (conectado/desconectado).",
         "testStrategy": "Testes unitários do formulário com validação. Teste E2E: configurar billing → salvar → carrega configuração correta → toggle on/off.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "476"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:23:12.184Z",
         "complexity": 5
       },
       {
@@ -14296,14 +14296,14 @@
         "description": "Integrar fluxo de criação/renovação de matrícula com criação de assinatura recorrente no gateway.",
         "details": "No fluxo de matrícula (nova-matricula-modal e conversão de prospect): (1) Se billing automatizado está ON e plano permite recorrência, oferecer opção 'Cobrança automática', (2) Se selecionado, capturar dados de pagamento (cartão/boleto) e criar assinatura via API, (3) Exibir status da assinatura no detalhe da matrícula, (4) Permitir trocar forma de cobrança (manual vs automática) no detalhe do cliente, (5) Webhook do gateway atualiza status de pagamento automaticamente.",
         "testStrategy": "Teste E2E: criar matrícula com cobrança automática → assinatura criada no gateway → webhook recebido → pagamento marcado. Teste de fallback: se gateway indisponível, matrícula é criada com cobrança manual.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "476",
           "477"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:23:13.767Z",
         "complexity": 7
       },
       {
@@ -14407,9 +14407,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-07T00:11:26.328Z",
+      "lastModified": "2026-04-07T00:23:13.767Z",
       "taskCount": 430,
-      "completedCount": 408,
+      "completedCount": 417,
       "tags": [
         "master"
       ]
