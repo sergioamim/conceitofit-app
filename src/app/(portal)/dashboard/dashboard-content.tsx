@@ -4,8 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowDownRight,
-  ArrowUpRight,
   Banknote,
   BarChart3,
   CalendarClock,
@@ -17,16 +15,22 @@ import {
   UserCheck,
   UserPlus,
   Users,
+  ChevronRight,
+  ArrowRight
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useDashboard } from "@/lib/query/use-dashboard";
 import { OnboardingChecklist } from "@/components/shared/onboarding/OnboardingChecklist";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { DashboardData, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { ListErrorState } from "@/components/shared/list-states";
+import { BiMetricCard } from "@/components/shared/bi-metric-card";
+import { cn } from "@/lib/utils";
 
 type DashboardTab = "CLIENTES" | "VENDAS" | "FINANCEIRO";
 const PROSPECTS_PAGE_SIZE = 10;
@@ -38,49 +42,6 @@ function deltaLabel(current: number, prev: number) {
     up,
     text: `${up ? "+" : ""}${diff.toLocaleString("pt-BR")}`,
   };
-}
-
-function MetricCard({
-  title,
-  value,
-  subtitle,
-  icon: Icon,
-  tone,
-  delta,
-  testId,
-}: {
-  title: string;
-  value: string;
-  subtitle?: string;
-  icon: React.ElementType;
-  tone: "accent" | "teal" | "warning" | "danger";
-  delta?: { up: boolean; text: string; label: string };
-  testId?: string;
-}) {
-  const toneClass = {
-    accent: "text-gym-accent border-gym-accent/20",
-    teal: "text-gym-teal border-gym-teal/20",
-    warning: "text-gym-warning border-gym-warning/20",
-    danger: "text-gym-danger border-gym-danger/20",
-  }[tone];
-
-  return (
-    <div className="rounded-xl border border-border bg-card p-4" data-testid={testId}>
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
-        <Icon className={`size-4 ${toneClass.split(" ")[0]}`} />
-      </div>
-      <p className={`mt-2 font-display text-3xl font-bold leading-none ${toneClass.split(" ")[0]}`}>{value}</p>
-      {subtitle && <p className="mt-1.5 text-xs text-muted-foreground">{subtitle}</p>}
-      {delta && (
-        <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
-          {delta.up ? <ArrowUpRight className="size-3.5 text-gym-teal" /> : <ArrowDownRight className="size-3.5 text-gym-danger" />}
-          <span className="font-semibold">{delta.text}</span>
-          <span>{delta.label}</span>
-        </p>
-      )}
-    </div>
-  );
 }
 
 export function DashboardContent({
@@ -129,15 +90,6 @@ export function DashboardContent({
     return ((dashboardData.matriculasDoMes / dashboardData.prospectsNovos) * 100).toFixed(1);
   }, [dashboardData]);
 
-  const previousConversionRate = useMemo(() => {
-    if (!dashboardData || dashboardData.prospectsNovosAnterior === 0) return "0.0";
-    return ((dashboardData.matriculasDoMesAnterior / dashboardData.prospectsNovosAnterior) * 100).toFixed(1);
-  }, [dashboardData]);
-
-  const conversionDelta = useMemo(() => {
-    return deltaLabel(Number(conversionRate), Number(previousConversionRate));
-  }, [conversionRate, previousConversionRate]);
-
   const metrics = useMemo(() => {
     if (!dashboardData) return null;
     const defaultStatusCount: Record<StatusAluno, number> = { ATIVO: 0, INATIVO: 0, SUSPENSO: 0, CANCELADO: 0 };
@@ -148,23 +100,22 @@ export function DashboardContent({
   }, [dashboardData]);
 
   if (!metrics) {
-    // Usar mesma mensagem no server e client para evitar hydration mismatch.
-    // O loading state real é gerenciado pelo Suspense boundary no page.tsx.
     if (loading && initialData !== null) {
-      return <div className="py-12 text-center text-sm text-muted-foreground">Carregando dashboard...</div>;
+      return <div className="py-12 text-center text-sm text-muted-foreground animate-pulse">Carregando dashboard...</div>;
     }
     return <div className="text-sm text-muted-foreground">Sem dados para o dashboard.</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Painel operacional com foco em decisão rápida</p>
+          <h1 className="font-display text-4xl font-extrabold tracking-tight">Dashboard</h1>
+          <p className="mt-2 text-muted-foreground text-lg">Visão estratégica da sua academia em tempo real.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-[170px]">
+        <div className="flex items-center gap-3">
+          <div className="relative group">
             <Input
               type="date"
               value={selectedDate}
@@ -176,21 +127,26 @@ export function DashboardContent({
                 setShowAllProspects(false);
                 setProspectsPageNumber(1);
               }}
-              className="bg-secondary border-border text-sm"
+              className="bg-muted/40 border-border/60 rounded-xl h-11 text-sm focus:ring-primary/20 w-[180px] transition-all"
             />
           </div>
         </div>
       </div>
 
-      <div className="inline-flex rounded-lg border border-border bg-card p-1">
-        {([["CLIENTES", "Clientes"], ["VENDAS", "Vendas"], ["FINANCEIRO", "Financeiro"]] as const).map(([key, label]) => (
+      {/* Tabs V2 */}
+      <div className="inline-flex p-1.5 bg-muted/30 border border-border/40 rounded-2xl backdrop-blur-md">
+        {([["CLIENTES", "Clientes", Users], ["VENDAS", "Vendas", CircleDollarSign], ["FINANCEIRO", "Financeiro", Banknote]] as const).map(([key, label, Icon]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === key ? "bg-gym-accent/10 text-gym-accent" : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={cn(
+              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
+              tab === key 
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            )}
           >
+            <Icon size={16} />
             {label}
           </button>
         ))}
@@ -202,148 +158,206 @@ export function DashboardContent({
 
       {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 
-      {tab === "CLIENTES" && (
-        <>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <MetricCard testId="alunos-ativos-card" title="Clientes ativos" value={String(metrics.statusAlunoCount.ATIVO)} subtitle={`${metrics.statusAlunoCount.SUSPENSO} suspensos · ${metrics.statusAlunoCount.INATIVO} inativos`} icon={Users} tone="teal" />
-            <MetricCard title="Novos prospects" value={String(metrics.prospectsNovos)} subtitle="entradas no mês" icon={UserPlus} tone="accent" delta={{ ...deltaLabel(metrics.prospectsNovos, metrics.prospectsNovosAnterior), label: "vs mês anterior" }} />
-            <MetricCard title="Visitas aguardando contato" value={String(metrics.visitasAguardandoRetorno)} subtitle="prioridade comercial" icon={CalendarClock} tone="warning" />
-            <MetricCard title="Follow-up pendente (48h+)" value={String(metrics.followupPendente)} subtitle="prospects sem contato recente" icon={AlertTriangle} tone="danger" />
-          </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-8"
+        >
+          {tab === "CLIENTES" && (
+            <>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                <BiMetricCard label="Clientes ativos" value={String(metrics.statusAlunoCount.ATIVO)} description={`${metrics.statusAlunoCount.SUSPENSO} suspensos · ${metrics.statusAlunoCount.INATIVO} inativos`} icon={Users} tone="teal" />
+                <BiMetricCard label="Novos prospects" value={String(metrics.prospectsNovos)} description="entradas no mês" icon={UserPlus} tone="accent" trend={deltaLabel(metrics.prospectsNovos, metrics.prospectsNovosAnterior).text} />
+                <BiMetricCard label="Visitas aguardando" value={String(metrics.visitasAguardandoRetorno)} description="prioridade comercial" icon={CalendarClock} tone="warning" />
+                <BiMetricCard label="Follow-up pendente" value={String(metrics.followupPendente)} description="prospects sem contato (48h+)" icon={AlertTriangle} tone="danger" />
+              </div>
 
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-display text-base font-bold">Prospects recentes</h2>
-                <div className="flex items-center gap-3">
-                  <Link href="/prospects" className="text-xs text-gym-accent hover:underline" data-testid="prospects-recentes-link">
-                    Ver pipeline
+              <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
+                <div className="glass-card rounded-2xl border border-border/40 overflow-hidden shadow-xl shadow-black/5">
+                  <div className="p-6 border-b border-border/40 bg-muted/10 flex items-center justify-between">
+                    <h2 className="font-display text-lg font-bold">Prospects recentes</h2>
+                    <div className="flex items-center gap-3">
+                      <Link href="/prospects">
+                        <Button variant="ghost" size="sm" className="text-xs font-bold text-primary hover:bg-primary/10 rounded-lg">
+                          Ver pipeline <ArrowRight size={14} className="ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <div className="space-y-4">
+                      {(showAllProspects ? prospectsPage : recentProspects).length === 0 ? (
+                        <p className="py-10 text-center text-sm text-muted-foreground opacity-50">Nenhum prospect ativo</p>
+                      ) : (
+                        (showAllProspects ? prospectsPage : recentProspects).map((p, i) => (
+                          <motion.div 
+                            initial={{ opacity: 0, x: -10 }} 
+                            animate={{ opacity: 1, x: 0 }} 
+                            transition={{ delay: i * 0.05 }}
+                            key={p.id} 
+                            className="flex items-center justify-between p-3 rounded-xl hover:bg-primary/5 transition-colors border border-transparent hover:border-border/40"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="size-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                                {p.nome.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold tracking-tight">{p.nome}</p>
+                                <p className="text-[11px] text-muted-foreground">{p.telefone}</p>
+                              </div>
+                            </div>
+                            <StatusBadge status={p.status} />
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass-card rounded-2xl border border-border/40 overflow-hidden shadow-xl shadow-black/5">
+                  <div className="p-6 border-b border-border/40 bg-muted/10 flex items-center justify-between">
+                    <h2 className="font-display text-lg font-bold">Matrículas vencendo</h2>
+                    <Link href="/matriculas">
+                      <Button variant="ghost" size="sm" className="text-xs font-bold text-primary hover:bg-primary/10 rounded-lg">
+                        Ver todas <ArrowRight size={14} className="ml-1" />
+                      </Button>
+                    </Link>
+                  </div>
+                  <div className="p-6">
+                    {metrics.matriculasVencendo.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted-foreground opacity-50">Nenhuma matrícula vencendo</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {metrics.matriculasVencendo.map((m, i) => (
+                          <motion.div 
+                            initial={{ opacity: 0, x: -10 }} 
+                            animate={{ opacity: 1, x: 0 }} 
+                            transition={{ delay: i * 0.05 }}
+                            key={m.id} 
+                            className="flex items-center justify-between p-3 rounded-xl hover:bg-primary/5 transition-colors border border-transparent hover:border-border/40"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="size-9 rounded-full bg-gym-teal/10 flex items-center justify-center text-xs font-bold text-gym-teal">
+                                {m.aluno?.nome?.charAt(0) || "—"}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold tracking-tight">{m.aluno?.nome ?? "—"}</p>
+                                <p className="text-[11px] text-muted-foreground">{m.plano?.nome} · vence {formatDate(m.dataFim)}</p>
+                              </div>
+                            </div>
+                            <StatusBadge status={m.status} />
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {tab === "VENDAS" && (
+            <>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                <BiMetricCard label="Contratos vendidos" value={String(metrics.matriculasDoMes)} description="matrículas criadas no mês" icon={BarChart3} tone="accent" trend={deltaLabel(metrics.matriculasDoMes, metrics.matriculasDoMesAnterior).text} />
+                <BiMetricCard label="Valor total vendido" value={formatBRL(metrics.receitaDoMes)} description="somatório dos contratos" icon={CircleDollarSign} tone="teal" trend={deltaLabel(metrics.receitaDoMes, metrics.receitaDoMesAnterior).text} />
+                <BiMetricCard label="Média por contrato" value={formatBRL(metrics.matriculasDoMes ? metrics.receitaDoMes / metrics.matriculasDoMes : 0)} description="ticket médio de contrato" icon={TrendingUp} tone="teal" />
+                <BiMetricCard label="Taxa de conversão" value={`${conversionRate}%`} description="matrículas / prospects novos" icon={UserCheck} tone="accent" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
+                <div className="glass-card rounded-2xl border border-border/40 p-6 shadow-xl shadow-black/5">
+                  <h2 className="mb-6 font-display text-lg font-bold">Mix de vendas no mês</h2>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-2xl border border-border/40 bg-muted/20 p-5 group hover:bg-muted/30 transition-colors">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70">Novas matrículas</p>
+                      <p className="mt-2 font-display text-3xl font-extrabold text-gym-accent group-hover:scale-105 transition-transform origin-left">{formatBRL(metrics.vendasNovas)}</p>
+                    </div>
+                    <div className="rounded-2xl border border-border/40 bg-muted/20 p-5 group hover:bg-muted/30 transition-colors">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70">Recorrente</p>
+                      <p className="mt-2 font-display text-3xl font-extrabold text-gym-teal group-hover:scale-105 transition-transform origin-left">{formatBRL(metrics.vendasRecorrentes)}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="glass-card rounded-2xl border border-border/40 p-6 shadow-xl shadow-black/5">
+                  <h2 className="mb-6 font-display text-lg font-bold">Risco comercial</h2>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/10 p-4 hover:bg-muted/20 transition-colors">
+                      <span className="text-sm font-medium text-muted-foreground">Prospects em aberto</span>
+                      <span className="font-extrabold text-lg">{metrics.prospectsEmAberto}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/10 p-4 hover:bg-muted/20 transition-colors">
+                      <span className="text-sm font-medium text-muted-foreground">Sem contato recente</span>
+                      <span className="font-extrabold text-lg text-gym-warning">{metrics.followupPendente}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/10 p-4 hover:bg-muted/20 transition-colors">
+                      <span className="text-sm font-medium text-muted-foreground">Visitaram e aguardam</span>
+                      <span className="font-extrabold text-lg text-gym-accent">{metrics.visitasAguardandoRetorno}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {tab === "FINANCEIRO" && (
+            <>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                <BiMetricCard label="Recebimentos" value={formatBRL(metrics.receitaDoMes)} description="pagamentos recebidos" icon={Banknote} tone="teal" trend={deltaLabel(metrics.receitaDoMes, metrics.receitaDoMesAnterior).text} />
+                <BiMetricCard label="Ticket médio" value={formatBRL(metrics.ticketMedio)} description="por pagamento recebido" icon={CreditCard} tone="accent" trend={deltaLabel(metrics.ticketMedio, metrics.ticketMedioAnterior).text} />
+                <BiMetricCard label="Inadimplência" value={formatBRL(metrics.inadimplencia)} description="valor vencido não recebido" icon={TrendingDown} tone="danger" />
+                <BiMetricCard label="A receber" value={formatBRL(metrics.aReceber)} description="pagamentos ainda em aberto" icon={HandCoins} tone="warning" />
+              </div>
+
+              <div className="glass-card rounded-2xl border border-border/40 overflow-hidden shadow-xl shadow-black/5">
+                <div className="p-6 border-b border-border/40 bg-muted/10 flex items-center justify-between">
+                  <h2 className="font-display text-lg font-bold">Pendentes e Vencidos</h2>
+                  <Link href="/pagamentos">
+                    <Button variant="ghost" size="sm" className="text-xs font-bold text-primary hover:bg-primary/10 rounded-lg">
+                      Ver todos <ArrowRight size={14} className="ml-1" />
+                    </Button>
                   </Link>
-                  {showAllProspects ? (
-                    <button type="button" onClick={() => setShowAllProspects(false)} className="text-xs text-gym-accent hover:underline">Ver recentes</button>
+                </div>
+                <div className="p-6">
+                  {metrics.pagamentosPendentes.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-muted-foreground opacity-50">Nenhum pagamento pendente</p>
                   ) : (
-                    <button type="button" onClick={() => { setShowAllProspects(true); setProspectsPageNumber(1); }} className="text-xs text-gym-accent hover:underline">Ver todos</button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {metrics.pagamentosPendentes.map((p, i) => (
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.98 }} 
+                          animate={{ opacity: 1, scale: 1 }} 
+                          transition={{ delay: i * 0.03 }}
+                          key={p.id} 
+                          className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/10 p-4 hover:bg-primary/5 transition-colors group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="size-9 rounded-full bg-gym-danger/10 flex items-center justify-center text-gym-danger group-hover:scale-110 transition-transform">
+                              <AlertTriangle size={16} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold tracking-tight">{p.aluno?.nome ?? "—"}</p>
+                              <p className="text-[11px] text-muted-foreground">Vence {formatDate(p.dataVencimento)}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-extrabold text-gym-accent">{formatBRL(p.valorFinal)}</p>
+                            <StatusBadge status={p.status} />
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
-              {showAllProspects ? (
-                prospectsPage.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">Nenhum prospect ativo</p>
-                ) : (
-                  <div className="space-y-3">
-                    {prospectsPage.map((p) => (
-                      <div key={p.id} className="flex items-center justify-between">
-                        <div><p className="text-sm font-medium">{p.nome}</p><p className="text-xs text-muted-foreground">{p.telefone}</p></div>
-                        <StatusBadge status={p.status} />
-                      </div>
-                    ))}
-                    <div className="flex items-center justify-end gap-2 pt-1">
-                      <button type="button" disabled={prospectsPageNumber <= 1} onClick={() => setProspectsPageNumber((current) => Math.max(1, current - 1))} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50">Anterior</button>
-                      <span className="text-xs text-muted-foreground">Página {prospectsPageNumber}</span>
-                      <button type="button" disabled={!prospectsPageHasNext} onClick={() => setProspectsPageNumber((current) => current + 1)} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50">Próxima</button>
-                    </div>
-                  </div>
-                )
-              ) : recentProspects.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">Nenhum prospect ativo</p>
-              ) : (
-                <div className="space-y-3">
-                  {recentProspects.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between">
-                      <div><p className="text-sm font-medium">{p.nome}</p><p className="text-xs text-muted-foreground">{p.telefone}</p></div>
-                      <StatusBadge status={p.status} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-display text-base font-bold">Matrículas vencendo em 7 dias</h2>
-                <Link href="/matriculas" className="text-xs text-gym-accent hover:underline">Ver todas</Link>
-              </div>
-              {metrics.matriculasVencendo.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma matrícula vencendo</p>
-              ) : (
-                <div className="divide-y divide-border">
-                  {metrics.matriculasVencendo.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between py-3">
-                      <div><p className="text-sm font-medium">{m.aluno?.nome ?? "—"}</p><p className="text-xs text-muted-foreground">{m.plano?.nome} · vence {formatDate(m.dataFim)}</p></div>
-                      <StatusBadge status={m.status} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {tab === "VENDAS" && (
-        <>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <MetricCard testId="matriculas-card" title="Contratos vendidos" value={String(metrics.matriculasDoMes)} subtitle="matrículas criadas no mês" icon={BarChart3} tone="accent" delta={{ ...deltaLabel(metrics.matriculasDoMes, metrics.matriculasDoMesAnterior), label: "vs mês anterior" }} />
-            <MetricCard testId="receita-card" title="Valor total vendido" value={formatBRL(metrics.receitaDoMes)} subtitle="somatório dos contratos" icon={CircleDollarSign} tone="teal" delta={{ ...deltaLabel(metrics.receitaDoMes, metrics.receitaDoMesAnterior), label: "vs mês anterior" }} />
-            <MetricCard title="Média por contrato" value={formatBRL(metrics.matriculasDoMes ? metrics.receitaDoMes / metrics.matriculasDoMes : 0)} subtitle="ticket médio de contrato" icon={TrendingUp} tone="teal" />
-            <MetricCard title="Taxa de conversão" value={`${conversionRate}%`} subtitle="matrículas / prospects novos" icon={UserCheck} tone="accent" delta={{ ...conversionDelta, label: "vs mês anterior" }} />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-4 font-display text-base font-bold">Mix de vendas no mês</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-border bg-secondary/30 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Novas matrículas</p>
-                  <p className="mt-1 font-display text-2xl font-bold text-gym-accent">{formatBRL(metrics.vendasNovas)}</p>
-                </div>
-                <div className="rounded-lg border border-border bg-secondary/30 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Recorrente (mensalidades)</p>
-                  <p className="mt-1 font-display text-2xl font-bold text-gym-teal">{formatBRL(metrics.vendasRecorrentes)}</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-4 font-display text-base font-bold">Risco comercial</h2>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3"><span className="text-sm text-muted-foreground">Prospects em aberto</span><span className="font-bold">{metrics.prospectsEmAberto}</span></div>
-                <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3"><span className="text-sm text-muted-foreground">Sem contato recente</span><span className="font-bold text-gym-warning">{metrics.followupPendente}</span></div>
-                <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3"><span className="text-sm text-muted-foreground">Visitaram e aguardam retorno</span><span className="font-bold text-gym-accent">{metrics.visitasAguardandoRetorno}</span></div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {tab === "FINANCEIRO" && (
-        <>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <MetricCard title="Recebimentos do mês" value={formatBRL(metrics.receitaDoMes)} subtitle="pagamentos efetivamente recebidos" icon={Banknote} tone="teal" delta={{ ...deltaLabel(metrics.receitaDoMes, metrics.receitaDoMesAnterior), label: "vs mês anterior" }} />
-            <MetricCard title="Ticket médio" value={formatBRL(metrics.ticketMedio)} subtitle="por pagamento recebido" icon={CreditCard} tone="accent" delta={{ ...deltaLabel(metrics.ticketMedio, metrics.ticketMedioAnterior), label: "vs mês anterior" }} />
-            <MetricCard title="Inadimplência (vencidos)" value={formatBRL(metrics.inadimplencia)} subtitle="valor vencido não recebido" icon={TrendingDown} tone="danger" />
-            <MetricCard title="A receber (pendente)" value={formatBRL(metrics.aReceber)} subtitle="pagamentos ainda em aberto" icon={HandCoins} tone="warning" />
-          </div>
-
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-base font-bold">Pagamentos pendentes e vencidos</h2>
-              <Link href="/pagamentos" className="text-xs text-gym-accent hover:underline">Ver todos</Link>
-            </div>
-            {metrics.pagamentosPendentes.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Nenhum pagamento pendente</p>
-            ) : (
-              <div className="space-y-3">
-                {metrics.pagamentosPendentes.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 p-3">
-                    <div><p className="text-sm font-medium">{p.aluno?.nome ?? "—"}</p><p className="text-xs text-muted-foreground">Vence {formatDate(p.dataVencimento)}</p></div>
-                    <div className="text-right"><p className="text-sm font-bold text-gym-accent">{formatBRL(p.valorFinal)}</p><StatusBadge status={p.status} /></div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </>
-      )}
+            </>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

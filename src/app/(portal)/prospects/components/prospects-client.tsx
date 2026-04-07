@@ -2,7 +2,8 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Plus, ChevronDown } from "lucide-react";
+import { Search, Plus, ChevronDown, Users, Target, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { checkProspectDuplicateApi } from "@/lib/api/crm";
 import { listFuncionariosApi } from "@/lib/api/administrativo";
 import { getBusinessCurrentMonthYear } from "@/lib/business-date";
@@ -19,6 +20,7 @@ import {
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { MonthYearPicker } from "@/components/shared/month-year-picker";
+import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,6 +44,7 @@ import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useDialogState } from "@/hooks/use-dialog-state";
 import { ListErrorState } from "@/components/shared/list-states";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
+import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS: { value: WithFilterAll<StatusProspect>; label: string }[] = [
   { value: FILTER_ALL, label: "Todos" },
@@ -53,13 +56,13 @@ const STATUS_OPTIONS: { value: WithFilterAll<StatusProspect>; label: string }[] 
   { value: "PERDIDO", label: "Perdido" },
 ];
 
-const STATUS_LABELS: { value: StatusProspect; label: string }[] = [
-  { value: "NOVO", label: "Novos" },
-  { value: "EM_CONTATO", label: "Em contato" },
-  { value: "AGENDOU_VISITA", label: "Agendou visita" },
-  { value: "VISITOU", label: "Visitou" },
-  { value: "CONVERTIDO", label: "Convertido" },
-  { value: "PERDIDO", label: "Perdido" },
+const STATUS_LABELS: { value: StatusProspect; label: string; tone: any }[] = [
+  { value: "NOVO", label: "Novos", tone: "accent" },
+  { value: "EM_CONTATO", label: "Em contato", tone: "warning" },
+  { value: "AGENDOU_VISITA", label: "Agendou visita", tone: "warning" },
+  { value: "VISITOU", label: "Visitou", tone: "teal" },
+  { value: "CONVERTIDO", label: "Convertidos", tone: "teal" },
+  { value: "PERDIDO", label: "Perdidos", tone: "danger" },
 ];
 
 const ORIGEM_LABELS: Record<OrigemProspect, string> = {
@@ -75,6 +78,7 @@ const ORIGEM_LABELS: Record<OrigemProspect, string> = {
 type ProspectRowProps = {
   prospect: Prospect;
   origemLabel: string;
+  index: number;
   onAdvance: (id: string, status: StatusProspect) => void;
   onEdit: (prospect: Prospect) => void;
   onTimeline: (prospect: Prospect) => void;
@@ -85,6 +89,7 @@ type ProspectRowProps = {
 const ProspectTableRow = memo(function ProspectTableRow({
   prospect,
   origemLabel,
+  index,
   onAdvance,
   onEdit,
   onTimeline,
@@ -105,65 +110,51 @@ const ProspectTableRow = memo(function ProspectTableRow({
   const handleDelete = useCallback(() => onDelete(prospect.id), [onDelete, prospect.id]);
 
   return (
-    <tr className="transition-colors hover:bg-secondary/40">
-      <td className="px-4 py-3">
-        <p className="text-sm font-medium">{prospect.nome}</p>
-        {prospect.email && <p className="text-xs text-muted-foreground">{prospect.email}</p>}
+    <motion.tr 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.03, 0.3) }}
+      className="group border-b border-border/20 transition-colors hover:bg-primary/5 cursor-pointer"
+    >
+      <td className="px-6 py-5">
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary group-hover:scale-110 transition-transform">
+            {prospect.nome.charAt(0)}
+          </div>
+          <div>
+            <p className="text-sm font-bold tracking-tight">{prospect.nome}</p>
+            {prospect.email && <p className="text-[11px] text-muted-foreground">{prospect.email}</p>}
+          </div>
+        </div>
       </td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">{prospect.telefone}</td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">{origemLabel}</td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">
+      <td className="px-4 py-5 text-sm font-medium text-foreground/80">{prospect.telefone}</td>
+      <td className="px-4 py-5 text-sm text-muted-foreground">{origemLabel}</td>
+      <td className="px-4 py-5 text-[11px] font-mono text-muted-foreground uppercase tracking-tighter">
         {new Date(prospect.dataCriacao).toLocaleDateString("pt-BR")}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-5">
         <StatusBadge status={prospect.status} />
       </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
+      <td className="px-6 py-5 text-right">
+        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {canAdvance && (
-            <button
-              onClick={handleAdvance}
-              className="rounded border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
-            >
-              <ChevronDown className="inline size-3" /> Avançar
-            </button>
+            <Button variant="outline" size="sm" onClick={handleAdvance} className="h-8 rounded-lg text-[10px] font-bold uppercase tracking-wider border-border/60">
+              <ChevronDown className="mr-1 size-3" /> Avançar
+            </Button>
           )}
           {canConvert && (
             <Link href={`/prospects/${prospect.id}/converter`}>
-              <Button size="sm" className="h-7 text-xs">
+              <Button size="sm" className="h-8 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-primary/10">
                 Converter
               </Button>
             </Link>
           )}
-          <button
-            onClick={handleEdit}
-            className="rounded border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
-          >
-            Editar
-          </button>
-          <button
-            onClick={handleTimeline}
-            className="rounded border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
-          >
-            Timeline
-          </button>
-          {canLose && (
-            <button
-              onClick={handleMarkLost}
-              className="rounded border border-gym-warning/40 px-2 py-1 text-[11px] text-gym-warning transition-colors hover:border-gym-warning/70"
-            >
-              Marcar perdido
-            </button>
-          )}
-          <button
-            onClick={handleDelete}
-            className="rounded border border-border px-2 py-1 text-[11px] text-gym-danger/70 transition-colors hover:border-gym-danger/50 hover:text-gym-danger"
-          >
-            Remover
-          </button>
+          <Button variant="ghost" size="icon" onClick={handleEdit} className="size-8 rounded-lg hover:bg-muted">
+            <Plus className="size-4" />
+          </Button>
         </div>
       </td>
-    </tr>
+    </motion.tr>
   );
 });
 
@@ -172,26 +163,22 @@ export function ProspectsClient() {
   const tenantContext = useTenantContext();
   const tenantId = tenantContext.tenantId ?? "";
 
-  // Data via TanStack Query
   const { data: prospects = [], isLoading: loading, error: queryError, refetch } = useProspects({
     tenantId: tenantId || undefined,
     tenantResolved: tenantContext.tenantResolved,
   });
 
-  // Funcionarios still loaded separately (different domain)
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   useEffect(() => {
     void listFuncionariosApi(true).then(setFuncionarios).catch(() => {});
   }, []);
 
-  // Mutations
   const createMutation = useCreateProspect(tenantId || undefined);
   const updateMutation = useUpdateProspect(tenantId || undefined);
   const statusMutation = useUpdateProspectStatus(tenantId || undefined);
   const lostMutation = useMarkProspectLost(tenantId || undefined);
   const deleteMutation = useDeleteProspect(tenantId || undefined);
 
-  // UI state (filters, modals, pagination — stays local)
   const [filtroStatus, setFiltroStatus] = useState<WithFilterAll<StatusProspect>>(FILTER_ALL);
   const [filtroOrigem, setFiltroOrigem] = useState<OrigemProspect | "TODAS">("TODAS");
   const [busca, setBusca] = useState("");
@@ -247,16 +234,6 @@ export function ProspectsClient() {
   const ativosCount = useMemo(
     () => prospectsByMonth.filter((p) => p.status !== "CONVERTIDO" && p.status !== "PERDIDO").length,
     [prospectsByMonth]
-  );
-
-  const statusButtonsData = useMemo(
-    () =>
-      STATUS_OPTIONS.map((s) => ({
-        ...s,
-        isActive: filtroStatus === s.value,
-        isAllButton: s.value === FILTER_ALL,
-      })),
-    [filtroStatus]
   );
 
   const handleSearchChange = useCallback((value: string) => {
@@ -367,11 +344,8 @@ export function ProspectsClient() {
     [confirm, tenantId, deleteMutation]
   );
 
-  const handlePreviousPage = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
-  const handleNextPage = useCallback(() => setPage((p) => p + 1), []);
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-10">
       {ConfirmDialog}
       <ProspectModal open={modal.isOpen} onClose={handleCloseNew} onSave={handleSave} funcionarios={funcionarios} />
       <ProspectModal
@@ -383,170 +357,172 @@ export function ProspectsClient() {
       />
       <ProspectTimelineModal prospect={timeline} onClose={handleCloseTimeline} />
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Prospects</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Gerencie leads e converta em clientes</p>
-        </div>
-        <Button onClick={handleOpenNew}>
-          <Plus className="size-4" />
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          <h1 className="font-display text-4xl font-extrabold tracking-tight">Prospects</h1>
+          <p className="mt-2 text-muted-foreground text-lg flex items-center gap-2">
+            <Target size={18} className="text-primary" />
+            {ativosCount} leads ativos no pipeline comercial
+          </p>
+        </motion.div>
+        <Button onClick={handleOpenNew} className="rounded-xl h-11 px-6 shadow-lg shadow-primary/20 font-bold">
+          <Plus className="mr-2 size-5" />
           Novo Prospect
         </Button>
       </div>
 
       {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 
-      <div className="grid grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {STATUS_LABELS.map((s) => (
-          <div key={s.value} className="rounded-lg border border-border bg-card p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{s.label}</p>
-            <p className="mt-1 font-display text-xl font-bold text-gym-accent">{statusTotals[s.value]}</p>
-          </div>
+          <BiMetricCard 
+            key={s.value} 
+            label={s.label} 
+            value={String(statusTotals[s.value])} 
+            tone={s.tone} 
+          />
         ))}
       </div>
 
-      <div className="relative w-60">
-        <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome ou telefone..."
-          value={busca}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full bg-secondary border-border pl-8 text-sm"
-        />
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="flex gap-1.5">
-          {statusButtonsData.map((s) => (
-            <button
-              key={s.value}
-              onClick={() => handleFiltroStatus(s.value)}
-              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                s.isActive
-                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-              }`}
-            >
-              {s.label}
-              {s.isAllButton && <span className="ml-1.5 text-muted-foreground">({ativosCount})</span>}
-            </button>
-          ))}
-        </div>
-
-        <div className="w-44">
-          <Select value={filtroOrigem} onValueChange={handleFiltroOrigem}>
-            <SelectTrigger className="w-full bg-secondary border-border text-xs">
-              <SelectValue placeholder="Origem" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border">
-              <SelectItem value="TODAS">Todas origens</SelectItem>
-              {Object.entries(ORIGEM_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="ml-auto w-44">
-          <Select value={String(pageSize)} onValueChange={handlePageSize}>
-            <SelectTrigger className="w-full bg-secondary border-border text-xs">
-              <SelectValue placeholder="Itens por página" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border">
-              <SelectItem value="20">20 por página</SelectItem>
-              <SelectItem value="50">50 por página</SelectItem>
-              <SelectItem value="100">100 por página</SelectItem>
-              <SelectItem value="200">200 por página</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <MonthYearPicker month={mes} year={ano} onChange={handleMesAno} />
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-border">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border bg-secondary">
-              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Prospect
-              </th>
-              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Telefone
-              </th>
-              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Origem
-              </th>
-              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Cadastro
-              </th>
-              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Status
-              </th>
-              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                  Carregando prospects...
-                </td>
-              </tr>
-            ) : displayed.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhum prospect encontrado
-                </td>
-              </tr>
-            ) : null}
-            {displayed.map((p) => (
-              <ProspectTableRow
-                key={p.id}
-                prospect={p}
-                origemLabel={ORIGEM_LABELS[p.origem]}
-                onAdvance={handleAdvance}
-                onEdit={handleOpenEdit}
-                onTimeline={handleOpenTimeline}
-                onMarkLost={handlePerdido}
-                onDelete={handleDelete}
+      <div className="glass-card rounded-2xl border border-border/40 overflow-hidden shadow-xl shadow-black/5">
+        <div className="p-6 border-b border-border/40 bg-muted/10 space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou telefone..."
+                value={busca}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full bg-background/50 border-border/60 pl-10 h-11 rounded-xl focus:ring-primary/20"
               />
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <MonthYearPicker month={mes} year={ano} onChange={handleMesAno} />
+              <Select value={String(pageSize)} onValueChange={handlePageSize}>
+                <SelectTrigger className="w-32 bg-background/50 border-border/60 h-11 rounded-xl text-xs">
+                  <SelectValue placeholder="Págs" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border/40">
+                  <SelectItem value="20">20 / pág</SelectItem>
+                  <SelectItem value="50">50 / pág</SelectItem>
+                  <SelectItem value="100">100 / pág</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-      <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
-        <p className="text-xs text-muted-foreground">
-          Mostrando <span className="font-semibold text-foreground">{filtered.length === 0 ? 0 : startIndex + 1}</span> até{' '}
-          <span className="font-semibold text-foreground">{endIndex}</span> · página{' '}
-          <span className="font-semibold text-foreground">{page}</span>
-        </p>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="border-border"
-            disabled={page <= 1}
-            onClick={handlePreviousPage}
-          >
-            Anterior
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="border-border"
-            disabled={!hasNextPage}
-            onClick={handleNextPage}
-          >
-            Próxima
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap gap-1.5 p-1 bg-muted/30 border border-border/40 rounded-xl">
+              {STATUS_OPTIONS.map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => handleFiltroStatus(s.value)}
+                  className={cn(
+                    "px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300",
+                    filtroStatus === s.value
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  )}
+                >
+                  {s.label}
+                  {s.value === FILTER_ALL && <span className="ml-1.5 opacity-60">({ativosCount})</span>}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-44">
+              <Select value={filtroOrigem} onValueChange={handleFiltroOrigem}>
+                <SelectTrigger className="w-full bg-muted/30 border-border/40 h-9 rounded-xl text-xs">
+                  <SelectValue placeholder="Origem" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border/40">
+                  <SelectItem value="TODAS">Todas origens</SelectItem>
+                  {Object.entries(ORIGEM_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-none bg-muted/40 hover:bg-muted/40">
+                <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Lead</th>
+                <th className="px-4 py-4 text-left text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Contato</th>
+                <th className="px-4 py-4 text-left text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Origem</th>
+                <th className="px-4 py-4 text-left text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Data</th>
+                <th className="px-4 py-4 text-left text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Status</th>
+                <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/10">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-20 text-center text-sm text-muted-foreground animate-pulse">Carregando leads...</td>
+                </tr>
+              ) : displayed.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center opacity-40">
+                      <Target size={48} className="mb-4" />
+                      <p className="text-lg font-medium">Nenhum lead encontrado</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                displayed.map((p, i) => (
+                  <ProspectTableRow
+                    key={p.id}
+                    prospect={p}
+                    index={i}
+                    origemLabel={ORIGEM_LABELS[p.origem]}
+                    onAdvance={handleAdvance}
+                    onEdit={handleOpenEdit}
+                    onTimeline={handleOpenTimeline}
+                    onMarkLost={handlePerdido}
+                    onDelete={handleDelete}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="p-4 border-t border-border/40 bg-muted/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-muted-foreground font-medium">
+            Exibindo <span className="text-foreground font-bold">{filtered.length === 0 ? 0 : startIndex + 1}-{endIndex}</span> de <span className="text-foreground font-bold">{filtered.length}</span> leads
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl border-border/60 hover:bg-background"
+              disabled={page <= 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+              Anterior
+            </Button>
+            <div className="flex items-center gap-1 mx-2">
+              <span className="size-8 flex items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xs shadow-md shadow-primary/20">
+                {page}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl border-border/60 hover:bg-background"
+              disabled={!hasNextPage}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Próxima
+              <ChevronDown size={16} className="ml-1 -rotate-90" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

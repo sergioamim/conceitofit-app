@@ -1,12 +1,14 @@
 "use client";
 
 import { ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkActionBar, type BulkAction } from "@/components/shared/bulk-action-bar";
 import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export type PaginatedTableColumn = {
   label: string;
@@ -123,8 +125,8 @@ export function PaginatedTable<T>({
   const resolvedTableAriaLabel = tableAriaLabel ?? `Tabela paginada de ${itemLabel}`;
 
   return (
-    <div className="space-y-2">
-      <div className="overflow-hidden rounded-xl border border-border">
+    <div className="space-y-4">
+      <div className="glass-card overflow-hidden rounded-2xl border shadow-lg shadow-black/5">
         <Table
           aria-label={resolvedTableAriaLabel}
           aria-rowcount={items.length}
@@ -132,9 +134,9 @@ export function PaginatedTable<T>({
           aria-multiselectable={selectable || undefined}
         >
           <TableHeader>
-            <TableRow className="border-b border-border bg-secondary">
+            <TableRow className="border-none bg-muted/40 hover:bg-muted/40 transition-none">
               {selectable && (
-                <TableHead className="w-[50px] px-4 py-3" scope="col" aria-label="Selecionar linhas">
+                <TableHead className="w-[50px] pl-6 py-4" scope="col" aria-label="Selecionar linhas">
                   <Checkbox 
                     checked={allSelectedOnPage}
                     indeterminate={someSelectedOnPage}
@@ -143,13 +145,17 @@ export function PaginatedTable<T>({
                   />
                 </TableHead>
               )}
-              {columns.map((column) => (
+              {columns.map((column, i) => (
                 <TableHead
                   key={column.label}
                   scope="col"
                   aria-label={column.ariaLabel ?? column.label}
                   aria-sort={column.sort ?? "none"}
-                  className={`px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ${column.className ?? ""}`}
+                  className={cn(
+                    "py-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70",
+                    !selectable && i === 0 && "pl-6",
+                    column.className
+                  )}
                 >
                   {column.label}
                 </TableHead>
@@ -157,90 +163,102 @@ export function PaginatedTable<T>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={columns.length + (selectable ? 1 : 0)} className="py-10 text-center text-sm text-muted-foreground">
-                  {emptyText}
+            {items.length === 0 ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={columns.length + (selectable ? 1 : 0)} className="py-20 text-center">
+                  <div className="flex flex-col items-center justify-center opacity-40">
+                    <p className="text-lg font-medium">{emptyText}</p>
+                  </div>
                 </TableCell>
               </TableRow>
+            ) : (
+              <AnimatePresence mode="popLayout">
+                {items.map((item, i) => {
+                  const key = getRowKey(item);
+                  const isSelected = selectedIds.includes(key);
+                  return (
+                    <motion.tr
+                      as="tr"
+                      key={key}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(i * 0.03, 0.3) }}
+                      className={cn(
+                        "group border-b border-border/20 transition-colors cursor-pointer hover:bg-primary/5",
+                        isSelected && "bg-primary/[0.03]",
+                        rowClassName(item)
+                      )}
+                      onClick={onRowClick ? () => onRowClick(item) : undefined}
+                      onKeyDown={
+                        onRowClick
+                          ? (event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                onRowClick(item);
+                              }
+                            }
+                          : undefined
+                      }
+                      tabIndex={onRowClick ? 0 : undefined}
+                      aria-selected={selectable ? isSelected : undefined}
+                    >
+                      {selectable && (
+                        <TableCell className="w-[50px] pl-6 py-5">
+                          <Checkbox 
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleRow(key)}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label={`Selecionar linha ${key}`}
+                          />
+                        </TableCell>
+                      )}
+                      {/* Note: renderCells needs to return TableCell components */}
+                      {renderCells(item)}
+                    </motion.tr>
+                  );
+                })}
+              </AnimatePresence>
             )}
-            {items.map((item) => {
-              const key = getRowKey(item);
-              const isSelected = selectedIds.includes(key);
-              return (
-                <TableRow
-                  key={key}
-                  className={cn(rowClassName(item), isSelected && "bg-muted/50")}
-                  onClick={onRowClick ? () => onRowClick(item) : undefined}
-                  onKeyDown={
-                    onRowClick
-                      ? (event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            onRowClick(item);
-                          }
-                        }
-                      : undefined
-                  }
-                  tabIndex={onRowClick ? 0 : undefined}
-                  aria-selected={selectable ? isSelected : undefined}
-                >
-                  {selectable && (
-                    <TableCell className="w-[50px] px-4 py-3">
-                      <Checkbox 
-                        checked={isSelected}
-                        onCheckedChange={() => handleToggleRow(key)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={`Selecionar linha ${key}`}
-                      />
-                    </TableCell>
-                  )}
-                  {renderCells(item)}
-                </TableRow>
-              );
-            })}
           </TableBody>
         </Table>
       </div>
 
-      {showPagination ? (
-        <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
-          <p className="text-xs text-muted-foreground">
-            Mostrando <span className="font-semibold text-foreground">{rangeStart}</span> até{" "}
-            <span className="font-semibold text-foreground">{rangeEnd}</span> de{" "}
-            <span className="font-semibold text-foreground">{totalCount}</span> {itemLabel} · página{" "}
-            <span className="font-semibold text-foreground">{page + 1}</span>
-            {typeof effectiveTotalPages === "number" ? (
-              <>
-                {" "}
-                de <span className="font-semibold text-foreground">{Math.max(1, effectiveTotalPages)}</span>
-              </>
-            ) : null}
+      {showPagination && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 rounded-2xl border border-border/40 bg-muted/5 backdrop-blur-sm shadow-sm">
+          <p className="text-xs text-muted-foreground font-medium">
+            Exibindo <span className="text-foreground font-bold">{rangeStart}-{rangeEnd}</span> de <span className="text-foreground font-bold">{totalCount}</span> {itemLabel}
           </p>
           <div className="flex items-center gap-2">
             <Button
               type="button"
               variant="outline"
-              className="border-border"
+              size="sm"
+              className="h-9 rounded-xl border-border/60 hover:bg-background"
               disabled={previousDisabled}
               onClick={onPrevious}
-              aria-label={`Ir para a página anterior. Página atual ${page + 1}.`}
             >
+              <ChevronLeft size={16} className="mr-1" />
               Anterior
             </Button>
+            <div className="flex items-center gap-1 mx-2">
+              <span className="size-8 flex items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xs shadow-md shadow-primary/20">
+                {page + 1}
+              </span>
+            </div>
             <Button
               type="button"
               variant="outline"
-              className="border-border"
+              size="sm"
+              className="h-9 rounded-xl border-border/60 hover:bg-background"
               disabled={nextDisabled}
               onClick={onNext}
-              aria-label={`Ir para a próxima página. Página atual ${page + 1}.`}
             >
               Próxima
+              <ChevronRight size={16} className="ml-1" />
             </Button>
           </div>
         </div>
-      ) : null}
+      )}
 
       {bulkActions && bulkActions.length > 0 && selectedIds.length > 0 && onSelectionChange && (
         <BulkActionBar

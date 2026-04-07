@@ -8,13 +8,18 @@ import {
   Building2,
   GraduationCap,
   LineChart,
-  type LucideIcon,
   ShoppingCart,
   Users,
+  Eye,
+  Globe,
+  ShieldCheck,
+  Upload,
+  Activity,
+  Shield,
+  ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   formatCompactNumber,
   formatSignedPercent,
@@ -35,38 +40,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { BiMetricCard } from "@/components/shared/bi-metric-card";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_SORT: OperacionalSortState = {
   key: "vendasMesValor",
   direction: "desc",
 };
-
-function OperationalMetricCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-}: {
-  title: string;
-  value: string;
-  description: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-card/60 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">{title}</p>
-          <p className="mt-3 font-display text-3xl font-bold leading-none text-foreground">{value}</p>
-        </div>
-        <div className="rounded-full border border-border bg-secondary p-2 text-muted-foreground">
-          <Icon className="size-4" />
-        </div>
-      </div>
-      <p className="mt-3 text-xs text-muted-foreground">{description}</p>
-    </div>
-  );
-}
 
 export function AdminDashboardContent({
   stats,
@@ -97,12 +78,14 @@ export function AdminDashboardContent({
   );
 
   const trendTone = resolveTrendTone(metricas?.tendenciaCrescimentoPercentual ?? 0);
-  const trendClassName =
-    trendTone === "positive"
-      ? "border-gym-teal/30 bg-gym-teal/10 text-gym-teal"
-      : trendTone === "negative"
-        ? "border-gym-danger/30 bg-gym-danger/10 text-gym-danger"
-        : "border-border bg-secondary text-muted-foreground";
+  
+  const toneMap = {
+    positive: "teal",
+    negative: "danger",
+    neutral: "accent"
+  } as const;
+
+  const currentTone = toneMap[trendTone as keyof typeof toneMap] || "accent";
 
   function handleSortChange(key: OperacionalSortKey) {
     setSortState((current) => toggleSortState(current, key));
@@ -110,209 +93,211 @@ export function AdminDashboardContent({
 
   function renderSortIcon(key: OperacionalSortKey) {
     if (sortState.key !== key) return <ArrowUpDown className="size-3.5 text-muted-foreground" />;
-    return sortState.direction === "asc" ? <ArrowUp className="size-3.5 text-foreground" /> : <ArrowDown className="size-3.5 text-foreground" />;
+    return sortState.direction === "asc" ? <ArrowUp className="size-3.5 text-gym-accent" /> : <ArrowDown className="size-3.5 text-gym-accent" />;
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="space-y-2">
-        <p className="text-sm font-medium text-gym-accent">Administração</p>
-        <h1 className="text-3xl font-display font-bold leading-tight">Dashboard do backoffice</h1>
-        <p className="text-sm text-muted-foreground">
-          Visão geral e atalhos para gestão de academias, unidades, segurança global e integrações.
-        </p>
+    <div className="flex flex-col gap-10 pb-20">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          <p className="text-sm font-bold uppercase tracking-widest text-gym-accent mb-2">Plataforma</p>
+          <h1 className="text-4xl font-extrabold tracking-tight font-display sm:text-5xl">Dashboard <span className="text-gym-accent">Admin</span></h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mt-2">
+            Visão consolidada do ecossistema Conceito.fit: gestão de academias, unidades e métricas SaaS.
+          </p>
+        </motion.div>
+        
+        <div className="flex gap-3">
+          <Link href="/admin/onboarding/provisionar">
+            <Button size="lg" className="rounded-xl shadow-lg shadow-gym-accent/20 bg-gym-accent text-black font-bold hover:bg-gym-accent/90">
+              <PlusIcon className="mr-2 size-5" /> Provisionar Academia
+            </Button>
+          </Link>
+        </div>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader><CardTitle className="text-base">Academias</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-display font-bold">{stats.totalAcademias}</p>
-              <p className="text-sm text-muted-foreground">Total cadastrado</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">Unidades (tenants)</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-display font-bold">{stats.totalUnidades}</p>
-              <p className="text-sm text-muted-foreground">Clientes únicos por unidade</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">Segurança global</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-display font-bold">{stats.totalAdmins}</p>
-              <p className="text-sm text-muted-foreground">{stats.elegiveisNovasUnidades} elegíveis para novas unidades</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Main SaaS Stats */}
+      <section className="grid gap-4 grid-cols-1 md:grid-cols-3">
+        <BiMetricCard label="Total de Academias" value={String(stats.totalAcademias)} icon={Building2} tone="accent" description="Academias parceiras ativas" />
+        <BiMetricCard label="Unidades Ativas" value={String(stats.totalUnidades)} icon={Globe} tone="teal" description="Tenants operando na plataforma" />
+        <BiMetricCard label="Usuários Admin" value={String(stats.totalAdmins)} icon={ShieldCheck} tone="warning" description={`${stats.elegiveisNovasUnidades} elegíveis para novas unidades`} />
+      </section>
 
-      <Separator />
-
-      <section className="space-y-4">
+      {/* Operational Metrics Section */}
+      <section className="space-y-6">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-sm font-medium text-gym-accent">Operação global</p>
-            <h2 className="text-2xl font-display font-bold leading-tight">Métricas consolidadas da rede</h2>
-            <p className="text-sm text-muted-foreground">
-              Acompanha alunos, matrículas e vendas agregadas de todas as academias em um único painel.
-            </p>
+          <div className="space-y-1">
+            <h2 className="text-2xl font-display font-extrabold tracking-tight">Operação Global</h2>
+            <p className="text-muted-foreground">Métricas agregadas de toda a rede em tempo real.</p>
           </div>
-          <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${trendClassName}`}>
-            <LineChart className="size-3.5" />
-            Crescimento mensal {formatSignedPercent(metricas?.tendenciaCrescimentoPercentual ?? 0)}
-          </div>
+          
+          {metricas && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-sm",
+                currentTone === "teal" ? "border-gym-teal/30 bg-gym-teal/10 text-gym-teal" : 
+                currentTone === "danger" ? "border-gym-danger/30 bg-gym-danger/10 text-gym-danger" : 
+                "border-border bg-muted text-muted-foreground"
+              )}
+            >
+              <LineChart className="size-4" />
+              Crescimento mensal {formatSignedPercent(metricas.tendenciaCrescimentoPercentual)}
+            </motion.div>
+          )}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <OperationalMetricCard title="Alunos ativos" value={formatCompactNumber(metricas?.totalAlunosAtivos ?? 0)} description="Base ativa somada entre todas as academias." icon={Users} />
-          <OperationalMetricCard title="Matrículas ativas" value={formatCompactNumber(metricas?.totalMatriculasAtivas ?? 0)} description="Contratos vigentes no recorte operacional global." icon={Building2} />
-          <OperationalMetricCard title="Vendas do mês" value={formatCurrency(metricas?.vendasMesValor ?? 0)} description={`${formatCompactNumber(metricas?.vendasMesQuantidade ?? 0)} vendas fechadas no mês corrente.`} icon={ShoppingCart} />
-          <OperationalMetricCard title="Ticket médio global" value={formatCurrency(metricas?.ticketMedioGlobal ?? 0)} description="Valor médio global por venda fechada no período." icon={LineChart} />
-          <OperationalMetricCard title="Novos alunos do mês" value={formatCompactNumber(metricas?.novosAlunosMes ?? 0)} description={`${formatCompactNumber(metricas?.novosAlunosMesAnterior ?? 0)} no mês anterior.`} icon={GraduationCap} />
+          <BiMetricCard label="Alunos Ativos" value={formatCompactNumber(metricas?.totalAlunosAtivos ?? 0)} icon={Users} tone="teal" description="Base total da rede" />
+          <BiMetricCard label="Matrículas" value={formatCompactNumber(metricas?.totalMatriculasAtivas ?? 0)} icon={Building2} tone="accent" description="Contratos vigentes" />
+          <BiMetricCard label="Receita do Mês" value={formatCurrency(metricas?.vendasMesValor ?? 0)} icon={ShoppingCart} tone="teal" description={`${formatCompactNumber(metricas?.vendasMesQuantidade ?? 0)} vendas totais`} />
+          <BiMetricCard label="Ticket Médio" value={formatCurrency(metricas?.ticketMedioGlobal ?? 0)} icon={LineChart} tone="accent" description="Valor médio por venda" />
+          <BiMetricCard label="Novos Alunos" value={formatCompactNumber(metricas?.novosAlunosMes ?? 0)} icon={GraduationCap} tone="warning" description={`${formatCompactNumber(metricas?.novosAlunosMesAnterior ?? 0)} no mês anterior`} />
         </div>
 
-        {operationalError ? (
-          <div className="rounded-xl border border-gym-warning/30 bg-gym-warning/10 px-4 py-3 text-sm text-gym-warning">
+        {operationalError && (
+          <div className="rounded-2xl border border-gym-warning/30 bg-gym-warning/10 p-4 text-sm text-gym-warning flex items-center gap-3">
+            <Activity className="size-5" />
             Não foi possível carregar as métricas operacionais globais: {operationalError}
           </div>
-        ) : null}
+        )}
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.4fr)]">
-          <Card>
-            <CardHeader className="space-y-2">
-              <CardTitle className="text-base">Evolução de novos alunos</CardTitle>
-              <p className="text-sm text-muted-foreground">Últimos 6 meses consolidados em toda a rede.</p>
-            </CardHeader>
-            <CardContent>
-              {evolucaoNovosAlunos.length ? (
-                <div className="space-y-3">
-                  {evolucaoNovosAlunos.map((item) => {
-                    const width = Math.max(8, Math.round((item.total / maxSerie) * 100));
-                    return (
-                      <div key={item.referencia} className="grid grid-cols-[74px_1fr_48px] items-center gap-3">
-                        <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
-                        <div className="h-2.5 rounded-full bg-secondary"><div className="h-2.5 rounded-full bg-gym-accent" style={{ width: `${width}%` }} /></div>
-                        <span className="text-right text-xs font-semibold text-foreground">{item.total}</span>
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.4fr)]">
+          {/* Charts / Progress */}
+          <div className="glass-card rounded-2xl border border-border/40 p-6 shadow-xl shadow-black/5">
+            <div className="mb-6">
+              <h3 className="font-display text-lg font-bold">Evolução de Novos Alunos</h3>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Últimos 6 meses consolidados</p>
+            </div>
+            
+            {evolucaoNovosAlunos.length ? (
+              <div className="space-y-5">
+                {evolucaoNovosAlunos.map((item, i) => {
+                  const width = Math.max(8, Math.round((item.total / maxSerie) * 100));
+                  return (
+                    <div key={item.referencia} className="space-y-1.5">
+                      <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+                        <span>{item.label}</span>
+                        <span className="text-foreground">{item.total}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Sem dados de evolução mensal disponíveis.</p>
-              )}
-            </CardContent>
-          </Card>
+                      <div className="h-2.5 rounded-full bg-muted/30 overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${width}%` }}
+                          transition={{ delay: i * 0.1, duration: 0.8 }}
+                          className="h-full bg-gradient-to-r from-gym-accent to-gym-teal" 
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="py-10 text-center text-sm text-muted-foreground opacity-50">Sem dados de evolução disponíveis.</p>
+            )}
+          </div>
 
-          <Card>
-            <CardHeader className="space-y-2">
-              <CardTitle className="text-base">Distribuição por academia</CardTitle>
-              <p className="text-sm text-muted-foreground">Ranking ordenável por academia, unidades, alunos, matrículas, vendas e ticket médio.</p>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-hidden rounded-xl border border-border">
-                <Table aria-label="Distribuição operacional por academia">
-                  <TableHeader>
-                    <TableRow className="bg-secondary">
-                      {([["academiaNome", "Academia"], ["unidades", "Unidades"], ["alunosAtivos", "Alunos"], ["matriculasAtivas", "Matrículas"], ["vendasMesQuantidade", "Vendas"], ["vendasMesValor", "Receita"], ["ticketMedio", "Ticket médio"]] as const).map(([key, label]) => (
-                        <TableHead key={key} className="px-4 py-3">
-                          <Button type="button" variant="ghost" className="h-auto px-0 py-0 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent" onClick={() => handleSortChange(key)}>
-                            {label} {renderSortIcon(key)}
-                          </Button>
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+          {/* Ranking Table */}
+          <div className="glass-card rounded-2xl border border-border/40 overflow-hidden shadow-xl shadow-black/5">
+            <div className="p-6 border-b border-border/40 bg-muted/10">
+              <h3 className="font-display text-lg font-bold">Distribuição por Academia</h3>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Ranking operacional ordenável</p>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-none bg-muted/40 hover:bg-muted/40">
+                    {([["academiaNome", "Academia"], ["unidades", "Unid."], ["alunosAtivos", "Alunos"], ["matriculasAtivas", "Matric."], ["vendasMesQuantidade", "Vendas"], ["vendasMesValor", "Receita"]] as const).map(([key, label], i) => (
+                      <TableHead key={key} className={cn("py-4", i === 0 && "pl-6")}>
+                        <button type="button" className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 hover:text-foreground transition-colors" onClick={() => handleSortChange(key)}>
+                          {label} {renderSortIcon(key)}
+                        </button>
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <AnimatePresence>
                     {distribuicaoOrdenada.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">Sem distribuição por academia disponível.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="py-20 text-center text-sm text-muted-foreground opacity-50">Sem dados disponíveis.</TableCell></TableRow>
                     ) : (
-                      distribuicaoOrdenada.map((item) => (
-                        <TableRow key={item.academiaId ?? item.academiaNome}>
-                          <TableCell className="px-4 py-3 font-medium text-foreground">{item.academiaNome}</TableCell>
-                          <TableCell className="px-4 py-3">{formatCompactNumber(item.unidades)}</TableCell>
-                          <TableCell className="px-4 py-3">{formatCompactNumber(item.alunosAtivos)}</TableCell>
-                          <TableCell className="px-4 py-3">{formatCompactNumber(item.matriculasAtivas)}</TableCell>
-                          <TableCell className="px-4 py-3">{formatCompactNumber(item.vendasMesQuantidade)}</TableCell>
-                          <TableCell className="px-4 py-3">{formatCurrency(item.vendasMesValor)}</TableCell>
-                          <TableCell className="px-4 py-3">{formatCurrency(item.ticketMedio)}</TableCell>
-                        </TableRow>
+                      distribuicaoOrdenada.map((item, i) => (
+                        <motion.tr 
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.02 }}
+                          key={item.academiaId ?? item.academiaNome}
+                          className="group border-b border-border/10 hover:bg-gym-accent/[0.03] transition-colors"
+                        >
+                          <TableCell className="py-4 pl-6 font-bold text-sm tracking-tight">{item.academiaNome}</TableCell>
+                          <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.unidades)}</TableCell>
+                          <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.alunosAtivos)}</TableCell>
+                          <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.matriculasAtivas)}</TableCell>
+                          <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.vendasMesQuantidade)}</TableCell>
+                          <TableCell className="py-4 text-xs font-extrabold text-gym-accent">{formatCurrency(item.vendasMesValor)}</TableCell>
+                        </motion.tr>
                       ))
                     )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                  </AnimatePresence>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </div>
       </section>
 
-      <Separator />
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader><CardTitle className="text-base">Academias</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div><p className="text-3xl font-display font-bold">{stats.totalAcademias}</p><p className="text-sm text-muted-foreground">Total cadastradas</p></div>
-            <Link href="/admin/academias"><Button variant="outline" size="sm">Gerir</Button></Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">Unidades (tenants)</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div><p className="text-3xl font-display font-bold">{stats.totalUnidades}</p><p className="text-sm text-muted-foreground">Clientes únicos</p></div>
-            <Link href="/admin/unidades"><Button variant="outline" size="sm">Gerir</Button></Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">Segurança global</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div><p className="text-3xl font-display font-bold">{stats.totalAdmins}</p><p className="text-sm text-muted-foreground">Usuários administrativos</p></div>
-            <Link href="/admin/seguranca"><Button variant="outline" size="sm">Abrir</Button></Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">Importação EVO</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div><p className="text-3xl font-display font-bold">EVO</p><p className="text-sm text-muted-foreground">Acompanhar jobs e onboarding</p></div>
-            <Link href="/admin/importacao-evo"><Button variant="outline" size="sm">Abrir</Button></Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">Saúde Operacional</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div><p className="text-3xl font-display font-bold">Mapa</p><p className="text-sm text-muted-foreground">Comparar risco e estabilidade por academia</p></div>
-            <Link href="/admin/operacional/saude"><Button variant="outline" size="sm">Abrir</Button></Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">Compliance LGPD</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div><p className="text-3xl font-display font-bold">LGPD</p><p className="text-sm text-muted-foreground">Controlar dados pessoais, termos e exclusões</p></div>
-            <Link href="/admin/compliance"><Button variant="outline" size="sm">Abrir</Button></Link>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Separator />
-
-      <Card>
-        <CardHeader><CardTitle className="text-base">Atalhos rápidos</CardTitle></CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Link href="/admin/academias"><Button size="sm">Cadastrar academia</Button></Link>
-          <Link href="/admin/unidades"><Button size="sm" variant="secondary">Cadastrar unidade</Button></Link>
-          <Link href="/admin/operacional/saude"><Button size="sm" variant="secondary">Saúde operacional</Button></Link>
-          <Link href="/admin/compliance"><Button size="sm" variant="secondary">Compliance LGPD</Button></Link>
-          <Link href="/admin/seguranca"><Button size="sm" variant="outline">Segurança global</Button></Link>
-          <Link href="/admin/importacao-evo"><Button size="sm" variant="outline">Importação EVO</Button></Link>
-        </CardContent>
-      </Card>
+      {/* Management Shortcuts */}
+      <section className="space-y-6">
+        <h2 className="text-2xl font-display font-extrabold tracking-tight">Gestão da Plataforma</h2>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <ManagementCard href="/admin/academias" label="Academias" description="Gerir parceiros" icon={Building2} value={stats.totalAcademias} />
+          <ManagementCard href="/admin/unidades" label="Unidades" description="Gerir tenants" icon={Globe} value={stats.totalUnidades} />
+          <ManagementCard href="/admin/seguranca" label="Segurança" description="Controle global" icon={ShieldCheck} value={stats.totalAdmins} />
+          <ManagementCard href="/admin/importacao-evo" label="EVO" description="Jobs Onboarding" icon={Upload} isSpecial />
+          <ManagementCard href="/admin/operacional/saude" label="Saúde Ops" description="Risco & Estabilidade" icon={Activity} isSpecial />
+          <ManagementCard href="/admin/compliance" label="LGPD" description="Dados Pessoais" icon={Shield} isSpecial />
+        </div>
+      </section>
     </div>
+  );
+}
+
+function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M5 12h14"/><path d="M12 5v14"/>
+    </svg>
+  );
+}
+
+function ManagementCard({ href, label, description, icon: Icon, value, isSpecial }: any) {
+  return (
+    <Link href={href}>
+      <motion.div 
+        whileHover={{ y: -4 }}
+        className="glass-card rounded-2xl border border-border/40 p-5 group hover:bg-gym-accent/[0.03] transition-all"
+      >
+        <div className="flex items-start justify-between">
+          <div className={cn(
+            "p-2 rounded-xl border border-border/40 text-muted-foreground group-hover:text-gym-accent group-hover:border-gym-accent/30 transition-colors",
+            isSpecial && "bg-gym-accent/5"
+          )}>
+            <Icon size={18} />
+          </div>
+          {value !== undefined && (
+            <span className="text-lg font-extrabold font-display">{value}</span>
+          )}
+        </div>
+        <div className="mt-4">
+          <p className="text-sm font-bold tracking-tight flex items-center gap-1 group-hover:text-gym-accent transition-colors">
+            {label}
+            <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+          </p>
+          <p className="text-[11px] text-muted-foreground uppercase tracking-widest mt-0.5">{description}</p>
+        </div>
+      </motion.div>
+    </Link>
   );
 }

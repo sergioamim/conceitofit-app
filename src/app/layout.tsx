@@ -6,6 +6,7 @@ import { AppQueryProvider } from "@/lib/query/query-provider";
 import { getAppEnv } from "@/lib/env";
 import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { CriticalThemeServer } from "@/components/layout/critical-theme-server";
 import "./globals.css";
 
 const display = Space_Grotesk({
@@ -59,6 +60,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#16181c" />
+        <CriticalThemeServer />
       </head>
       <body
         className={`${display.variable} ${body.variable} ${geistMono.variable} font-sans antialiased`}

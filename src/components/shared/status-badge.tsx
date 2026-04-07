@@ -25,31 +25,31 @@ const STATUS_MAP: Record<
   { label: string; className: string }
 > = {
   // Prospect
-  NOVO: { label: "Novo", className: "bg-blue-500/15 text-blue-400" },
-  EM_CONTATO: { label: "Em contato", className: "bg-yellow-500/15 text-yellow-400" },
-  AGENDOU_VISITA: { label: "Agendou visita", className: "bg-orange-500/15 text-orange-400" },
-  VISITOU: { label: "Visitou", className: "bg-purple-500/15 text-purple-400" },
-  CONVERTIDO: { label: "Convertido", className: "bg-gym-teal/15 text-gym-teal" },
-  PERDIDO: { label: "Perdido", className: "bg-gym-danger/15 text-gym-danger" },
+  NOVO: { label: "Novo", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+  EM_CONTATO: { label: "Em contato", className: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
+  AGENDOU_VISITA: { label: "Agendou visita", className: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
+  VISITOU: { label: "Visitou", className: "bg-violet-500/10 text-violet-500 border-violet-500/20" },
+  CONVERTIDO: { label: "Convertido", className: "bg-gym-teal/10 text-gym-teal border-gym-teal/20" },
+  PERDIDO: { label: "Perdido", className: "bg-gym-danger/10 text-gym-danger border-gym-danger/20" },
   // Aluno
-  ATIVO: { label: "Ativo", className: "bg-gym-teal/15 text-gym-teal" },
-  INATIVO: { label: "Inativo", className: "bg-muted text-muted-foreground" },
-  SUSPENSO: { label: "Suspenso", className: "bg-gym-warning/15 text-gym-warning" },
-  CANCELADO: { label: "Cancelado", className: "bg-muted text-muted-foreground" },
+  ATIVO: { label: "Ativo", className: "bg-gym-teal/10 text-gym-teal border-gym-teal/20" },
+  INATIVO: { label: "Inativo", className: "bg-muted/50 text-muted-foreground border-border/40" },
+  SUSPENSO: { label: "Suspenso", className: "bg-gym-warning/10 text-gym-warning border-gym-warning/20" },
+  CANCELADO: { label: "Cancelado", className: "bg-muted/50 text-muted-foreground border-border/40" },
   // Matrícula
-  ATIVA: { label: "Ativa", className: "bg-gym-teal/15 text-gym-teal" },
-  VENCIDA: { label: "Vencida", className: "bg-gym-danger/15 text-gym-danger" },
-  CANCELADA: { label: "Cancelada", className: "bg-muted text-muted-foreground" },
-  SUSPENSA: { label: "Suspensa", className: "bg-gym-warning/15 text-gym-warning" },
+  ATIVA: { label: "Ativa", className: "bg-gym-teal/10 text-gym-teal border-gym-teal/20" },
+  VENCIDA: { label: "Vencida", className: "bg-gym-danger/10 text-gym-danger border-gym-danger/20" },
+  CANCELADA: { label: "Cancelada", className: "bg-muted/50 text-muted-foreground border-border/40" },
+  SUSPENSA: { label: "Suspensa", className: "bg-gym-warning/10 text-gym-warning border-gym-warning/20" },
   // Pagamento
-  PENDENTE: { label: "Pendente", className: "bg-yellow-500/15 text-yellow-400" },
-  PAGO: { label: "Pago", className: "bg-gym-teal/15 text-gym-teal" },
-  PAGA: { label: "Paga", className: "bg-gym-teal/15 text-gym-teal" },
-  VENCIDO: { label: "Vencido", className: "bg-gym-danger/15 text-gym-danger" },
+  PENDENTE: { label: "Pendente", className: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
+  PAGO: { label: "Pago", className: "bg-gym-teal/10 text-gym-teal border-gym-teal/20" },
+  PAGA: { label: "Paga", className: "bg-gym-teal/10 text-gym-teal border-gym-teal/20" },
+  VENCIDO: { label: "Vencido", className: "bg-gym-danger/10 text-gym-danger border-gym-danger/20" },
   // Saúde operacional
-  SAUDAVEL: { label: "Saudável", className: "bg-gym-teal/15 text-gym-teal" },
-  RISCO: { label: "Risco", className: "bg-gym-warning/15 text-gym-warning" },
-  CRITICO: { label: "Crítico", className: "bg-gym-danger/15 text-gym-danger" },
+  SAUDAVEL: { label: "Saudável", className: "bg-gym-teal/10 text-gym-teal border-gym-teal/20" },
+  RISCO: { label: "Risco", className: "bg-gym-warning/10 text-gym-warning border-gym-warning/20" },
+  CRITICO: { label: "Crítico", className: "bg-gym-danger/10 text-gym-danger border-gym-danger/20" },
 };
 
 interface StatusBadgeProps {
@@ -61,7 +61,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   const motionProps = useStatusBadgeMotion();
   const config = STATUS_MAP[status] ?? {
     label: status,
-    className: "bg-muted text-muted-foreground",
+    className: "bg-muted text-muted-foreground border-border",
   };
   return (
     <motion.span
@@ -70,7 +70,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       aria-live="polite"
       aria-label={`Status: ${config.label}`}
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shadow-sm",
         config.className,
         className
       )}

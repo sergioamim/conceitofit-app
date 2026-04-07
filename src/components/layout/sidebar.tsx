@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, memo } from "react";
 import { 
+  ArrowLeft,
   ChevronRight, 
   Search, 
   Zap,
@@ -29,6 +30,8 @@ import { useUserPreferences } from "@/lib/tenant/hooks/use-user-preferences";
 import {
   clearAuthSession,
   getNetworkSlugFromSession,
+  hasBackofficeReturnSession,
+  restoreBackofficeReturnSession,
 } from "@/lib/api/session";
 import { logoutApi } from "@/lib/api/auth";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
@@ -210,6 +213,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const academiaName = academia?.nome || tenant?.nome || DEFAULT_ACADEMIA_LABEL;
   const userInitial = displayName?.trim().charAt(0).toUpperCase() || "U";
   const userName = displayName?.trim() || "Usuário";
+  const canReturnToBackoffice = hasBackofficeReturnSession();
 
   return (
     <>
@@ -323,14 +327,14 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
               </button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] sm:w-[320px] border-r border-border/40 p-0 bg-card/95 backdrop-blur-2xl">
-              <div className="p-6 space-y-6">
-                <SheetHeader className="text-left">
-                  <SheetTitle className="font-display text-xl font-bold flex items-center gap-2">
-                    <UserCircle className="size-5 text-primary" />
-                    Conta e Perfil
-                  </SheetTitle>
-                </SheetHeader>
-                
+              <SheetHeader className="p-6 text-left border-b border-border/40 bg-muted/10">
+                <SheetTitle className="font-display text-xl font-bold flex items-center gap-2">
+                  <UserCircle className="size-5 text-primary" />
+                  Conta e Perfil
+                </SheetTitle>
+              </SheetHeader>
+
+              <div className="p-6 space-y-6">                
                 <div className="grid gap-3 px-6">
                   <Link 
                     href="/conta/perfil"
@@ -359,6 +363,25 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
                     </div>
                     <ChevronRight size={14} className="text-muted-foreground/40 group-hover:translate-x-1 transition-transform" />
                   </Link>
+
+                  {canReturnToBackoffice && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        restoreBackofficeReturnSession();
+                        window.location.assign("/admin");
+                      }}
+                      className="flex items-center gap-4 w-full p-4 rounded-2xl bg-muted/30 border border-border/20 hover:bg-primary/10 hover:border-primary/30 transition-all group"
+                    >
+                      <div className="size-10 rounded-xl bg-background flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
+                        <ArrowLeft size={20} />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-bold">Voltar ao Backoffice</p>
+                        <p className="text-[11px] text-muted-foreground">Restaurar a sessão administrativa</p>
+                      </div>
+                    </button>
+                  )}
                   
                   <div className="pt-4 border-t border-border/40">
                     <button 

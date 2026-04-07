@@ -14126,11 +14126,11 @@
         "description": "Refatorar src/app/(portal)/pagamentos/components/pagamentos-client.tsx de 1057 LOC em 5-7 componentes coesos.",
         "details": "O componente mistura: (1) Header e filtros de pagamentos, (2) Tabela de pagamentos com paginação, (3) Modal de recebimento, (4) Modal de NFSe em lote, (5) Barra de ações em massa, (6) Estado de loading/error/empty. Separar em: PagamentosHeader (filtros), PagamentosTable (tabela + paginação), PagamentoActions (ações em massa), ReceberPagamentoModal (já existente, extrair), NfseLoteModal (extrair), PagamentosEmptyState. Manter pagina.tsx com data fetching RSC e passar props.",
         "testStrategy": "Testes unitários de cada sub-componente extraído. Teste E2E da página de pagamentos sem regressão funcional. Verificar coverage mantida.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:09:50.372Z",
         "complexity": 5
       },
       {
@@ -14139,11 +14139,11 @@
         "description": "Refatorar src/components/treinos/treino-v2-editor.tsx de 978 LOC em 5-6 componentes de editor de treino.",
         "details": "O editor mistura: (1) Canvas de séries, (2) Drawer de exercícios (biblioteca lateral), (3) Editor inline de série (reps, carga, intervalo), (4) Toolbar de técnicas especiais (conjugado, drop-set, progressivo), (5) Header do treino (nome, frequência, semanas), (6) Ações (salvar, publicar, replicar). Separar em: EditorCanvas (séries), ExerciseDrawer (biblioteca), SeriesEditor (inline), TechniqueToolbar, EditorHeader. Usar pattern de compound components.",
         "testStrategy": "Testes unitários de SeriesEditor e TechniqueToolbar. Teste E2E do editor completo sem regressão. Teste de acessibilidade do editor.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:11:03.574Z",
         "complexity": 6
       },
       {
@@ -14407,9 +14407,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-06T23:58:24.485Z",
+      "lastModified": "2026-04-07T00:11:03.574Z",
       "taskCount": 430,
-      "completedCount": 404,
+      "completedCount": 406,
       "tags": [
         "master"
       ]
