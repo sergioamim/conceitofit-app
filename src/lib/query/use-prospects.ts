@@ -26,6 +26,8 @@ export function useProspects(input: {
         .sort((a, b) => b.dataCriacao.localeCompare(a.dataCriacao));
     },
     enabled: Boolean(input.tenantId) && input.tenantResolved,
+    // Task 485: prospects mudam rápido — 15s staleTime
+    staleTime: 15_000,
   });
 }
 

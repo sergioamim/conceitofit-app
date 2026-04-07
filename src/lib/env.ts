@@ -27,6 +27,8 @@ const appEnvSchema = z.object({
   NEXT_PUBLIC_DEBUG_QUERY_DEVTOOLS: z.enum(["true", "false"]).optional(),
   NEXT_PUBLIC_DEBUG_SESSION_DEVTOOLS: z.enum(["true", "false"]).optional(),
   STOREFRONT_ROOT_HOSTS: optionalString,
+  // Task 483: CDN URL para assets estáticos (Cloud CDN / GCS)
+  NEXT_PUBLIC_CDN_URL: optionalUrl,
 });
 
 export type AppEnv = z.infer<typeof appEnvSchema>;

@@ -2,11 +2,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getWhatsAppConfigApi,
   saveWhatsAppConfigApi,
+  testWhatsAppConnectionApi,
   listWhatsAppTemplatesApi,
   createWhatsAppTemplateApi,
   updateWhatsAppTemplateApi,
   deleteWhatsAppTemplateApi,
   listWhatsAppLogsApi,
+  sendWhatsAppMessageApi,
+  getWhatsAppMessageStatusApi,
+  getWhatsAppStatsApi,
 } from "@/lib/api/whatsapp";
 import type {
   WhatsAppConfig,
@@ -125,5 +129,88 @@ export function useWhatsAppLogs(input: {
       (input.enabled ?? true),
     staleTime: 0,
     refetchInterval: 10_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Send Message (Task 480)
+// ---------------------------------------------------------------------------
+
+export function useSendWhatsAppMessage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: {
+      tenantId: string;
+      data: {
+        templateId?: string;
+        evento: string;
+        destinatario: string;
+        destinatarioNome?: string;
+        variaveis?: Record<string, string>;
+      };
+    }) => sendWhatsAppMessageApi(input),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.whatsapp.logs(variables.tenantId),
+      });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Message Status (Task 479)
+// ---------------------------------------------------------------------------
+
+export function useWhatsAppMessageStatus(input: {
+  tenantId: string | undefined;
+  messageId: string | undefined;
+  enabled?: boolean;
+}) {
+  return useQuery({
+    queryKey: ["whatsapp", "status", input.tenantId, input.messageId],
+    queryFn: () =>
+      getWhatsAppMessageStatusApi({
+        tenantId: input.tenantId!,
+        messageId: input.messageId!,
+      }),
+    enabled:
+      Boolean(input.tenantId) &&
+      Boolean(input.messageId) &&
+      (input.enabled ?? true),
+    staleTime: 5_000,
+    refetchInterval: 5_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Test Connection (Task 481)
+// ---------------------------------------------------------------------------
+
+export function useTestWhatsAppConnection() {
+  return useMutation({
+    mutationFn: (input: { tenantId: string }) =>
+      testWhatsAppConnectionApi(input),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Stats / Monitoring (Task 481)
+// ---------------------------------------------------------------------------
+
+export function useWhatsAppStats(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+  enabled?: boolean;
+}) {
+  return useQuery({
+    queryKey: ["whatsapp", "stats", input.tenantId],
+    queryFn: () => getWhatsAppStatsApi({ tenantId: input.tenantId! }),
+    enabled:
+      Boolean(input.tenantId) &&
+      input.tenantResolved &&
+      (input.enabled ?? true),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 }

@@ -44,7 +44,8 @@ export function useGrade(input: {
       return { grades, atividades, salas, funcionarios, horarios };
     },
     enabled: Boolean(input.tenantId) && input.tenantResolved,
-    staleTime: 10 * 60 * 1000,
+    // Task 485: grade muda raramente — 5min staleTime
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
   });
 }

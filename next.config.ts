@@ -75,9 +75,14 @@ const securityHeaders = [
   },
 ];
 
+// Task 483: CDN assetPrefix para Cloud CDN (GCS bucket)
+const cdnUrl = env.NEXT_PUBLIC_CDN_URL;
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   serverExternalPackages: ['@prisma/instrumentation', '@opentelemetry/instrumentation'],
+  // Task 483: apontar assets estáticos para CDN quando configurado
+  ...(cdnUrl ? { assetPrefix: cdnUrl } : {}),
   experimental: {
     // Needed for EVO backup uploads (~70MB) forwarded through /backend rewrite.
     proxyClientMaxBodySize: backendProxyMaxBodySize * 1024 * 1024,
@@ -87,6 +92,26 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: securityHeaders,
+      },
+      // Task 483: cache imutável para assets versionados do Next.js
+      {
+        source: "/_next/static/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      // Task 483: cache curto para HTML (não cachear agressivamente)
+      {
+        source: "/((?!_next/static|_next/image|favicon.ico).*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
       },
     ];
   },

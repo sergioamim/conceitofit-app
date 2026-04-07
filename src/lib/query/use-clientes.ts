@@ -26,6 +26,9 @@ export function useClientes(input: {
         size: input.size,
       }),
     enabled: Boolean(input.tenantId) && input.tenantResolved,
+    // Task 485: lista de clientes muda pouco — 60s staleTime, 10min gcTime
+    staleTime: 60_000,
+    gcTime: 10 * 60 * 1000,
   });
 }
 

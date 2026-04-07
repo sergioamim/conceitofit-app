@@ -43,6 +43,9 @@ export function usePagamentos(input: {
         endDate: input.endDate,
       }),
     enabled: Boolean(input.tenantId) && input.tenantResolved,
+    // Task 485: pagamentos — 30s staleTime, 5min gcTime
+    staleTime: 30_000,
+    gcTime: 5 * 60 * 1000,
   });
 }
 

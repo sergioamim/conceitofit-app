@@ -4,10 +4,41 @@ import {
   getTreinoWorkspace,
   registrarExecucaoTreinoWorkspace,
 } from "@/lib/tenant/treinos/workspace";
-import { listPresencasByAlunoApi } from "@/lib/api/presencas";
-import type { Treino } from "@/lib/types";
+import { listPresencasByAlunoApi, getClienteOperationalContextApi } from "@/lib/api/alunos";
+import {
+  listAulasAgendaApi,
+  listReservasAulaApi,
+  reservarAulaApi,
+  cancelarReservaAulaApi,
+} from "@/lib/api/reservas";
+import {
+  listPagamentosApi,
+} from "@/lib/api/pagamentos";
+import type { Treino, ClienteOperationalContext, AulaSessao, ReservaAula, Pagamento } from "@/lib/types";
 import type { Presenca } from "@/lib/shared/types/aluno";
 import { queryKeys } from "./keys";
+
+// ---------------------------------------------------------------------------
+// Contexto Operacional
+// ---------------------------------------------------------------------------
+
+export function useClienteOperationalContext(input: {
+  id: string | undefined;
+  tenantId?: string;
+  enabled?: boolean;
+}) {
+  return useQuery<ClienteOperationalContext>({
+    queryKey: ["clienteOperationalContext", input.id, input.tenantId],
+    queryFn: () =>
+      getClienteOperationalContextApi({
+        id: input.id!,
+        tenantId: input.tenantId,
+      }),
+    enabled: Boolean(input.id) && (input.enabled ?? true),
+    staleTime: 1 * 60 * 1000,
+    refetchInterval: 30 * 1000, // Polling a cada 30s
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Meus Treinos
@@ -41,7 +72,9 @@ export function useMeusTreinos(input: {
       Boolean(input.tenantId) &&
       input.tenantResolved &&
       Boolean(input.userId),
-    staleTime: 2 * 60 * 1000,
+    // Task 485: portal do aluno — 60s staleTime para treinos
+    staleTime: 60_000,
+    gcTime: 5 * 60 * 1000,
   });
 }
 
@@ -77,6 +110,117 @@ export function useCheckInPresencas(input: {
     ),
     queryFn: () =>
       listPresencasByAlunoApi({
+        tenantId: input.tenantId!,
+        alunoId: input.userId!,
+      }),
+    enabled:
+      Boolean(input.tenantId) &&
+      input.tenantResolved &&
+      Boolean(input.userId),
+    // Task 485: portal do aluno — 60s staleTime para check-in
+    staleTime: 60_000,
+    gcTime: 5 * 60 * 1000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Aulas e Reservas
+// ---------------------------------------------------------------------------
+
+export function useAulasAgenda(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+  dateFrom: string;
+  dateTo: string;
+}) {
+  return useQuery<AulaSessao[]>({
+    queryKey: ["aulasAgenda", input.tenantId, input.dateFrom, input.dateTo],
+    queryFn: () =>
+      listAulasAgendaApi({
+        tenantId: input.tenantId!,
+        dateFrom: input.dateFrom,
+        dateTo: input.dateTo,
+        apenasPortal: true,
+      }),
+    enabled:
+      Boolean(input.tenantId) &&
+      input.tenantResolved &&
+      Boolean(input.dateFrom) &&
+      Boolean(input.dateTo),
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useMinhasReservas(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+  userId: string | undefined;
+}) {
+  return useQuery<ReservaAula[]>({
+    queryKey: ["minhasReservas", input.tenantId, input.userId],
+    queryFn: () =>
+      listReservasAulaApi({
+        tenantId: input.tenantId!,
+        alunoId: input.userId!,
+      }),
+    enabled:
+      Boolean(input.tenantId) &&
+      input.tenantResolved &&
+      Boolean(input.userId),
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useReservarAula() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: {
+      tenantId: string;
+      atividadeGradeId: string;
+      data: string;
+      alunoId: string;
+    }) =>
+      reservarAulaApi({
+        tenantId: input.tenantId,
+        data: {
+          ...input,
+          origem: "PORTAL_ALUNO",
+        },
+      }),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["minhasReservas", variables.tenantId] });
+      void queryClient.invalidateQueries({ queryKey: ["aulasAgenda", variables.tenantId] });
+    },
+  });
+}
+
+export function useCancelarReserva() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { tenantId: string; id: string }) =>
+      cancelarReservaAulaApi(input),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["minhasReservas", variables.tenantId] });
+      void queryClient.invalidateQueries({ queryKey: ["aulasAgenda", variables.tenantId] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Financeiro Aluno
+// ---------------------------------------------------------------------------
+
+export function useMeusPagamentos(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+  userId: string | undefined;
+}) {
+  return useQuery<Pagamento[]>({
+    queryKey: ["meusPagamentos", input.tenantId, input.userId],
+    queryFn: () =>
+      listPagamentosApi({
         tenantId: input.tenantId!,
         alunoId: input.userId!,
       }),

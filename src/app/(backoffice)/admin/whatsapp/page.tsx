@@ -43,6 +43,12 @@ import {
   deleteWhatsAppTemplateApi,
   getWhatsAppLogsApi,
 } from "@/lib/api/whatsapp";
+import { WhatsAppProviderConfig } from "./whatsapp-provider-config";
+import {
+  useWhatsAppConfig,
+  useWhatsAppStats,
+} from "@/lib/query/use-whatsapp";
+import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type {
   WhatsAppMessageLog,
   WhatsAppTemplate,
@@ -161,6 +167,16 @@ const EMPTY_FORM: WhatsAppTemplateFormValues = {
 
 export default function AdminWhatsAppPage() {
   const { toast } = useToast();
+  const tenantContext = useTenantContext();
+  const tenantId = tenantContext.tenantId ?? "";
+  const { data: whatsAppConfig, isLoading: configLoading } = useWhatsAppConfig({
+    tenantId: tenantId || undefined,
+    tenantResolved: tenantContext.tenantResolved,
+  });
+  const { data: stats } = useWhatsAppStats({
+    tenantId: tenantId || undefined,
+    tenantResolved: tenantContext.tenantResolved,
+  });
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [logs, setLogs] = useState<WhatsAppMessageLog[]>([]);
@@ -465,32 +481,40 @@ export default function AdminWhatsAppPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 border-b border-border px-6 py-5 md:grid-cols-4">
+        <div className="grid gap-4 border-b border-border px-6 py-5 md:grid-cols-6">
           <StatCard
             label="Templates"
             value={loading ? "…" : String(templates.length)}
-            helper="Total de templates cadastrados"
+            helper="Total cadastrados"
           />
           <StatCard
             label="Ativos"
-            value={
-              loading
-                ? "…"
-                : String(templates.filter((t) => t.ativo).length)
-            }
-            helper="Templates habilitados para envio"
+            value={loading ? "…" : String(templates.filter((t) => t.ativo).length)}
+            helper="Habilitados para envio"
           />
           <StatCard
-            label="Mensagens enviadas"
-            value={loading ? "…" : String(logs.length)}
-            helper="Total registrado no periodo"
+            label="Enviadas"
+            value={stats ? String(stats.total) : loading ? "…" : String(logs.length)}
+            helper="Total de mensagens"
+          />
+          <StatCard
+            label="Entregues"
+            value={stats ? String(stats.entregues) : "…"}
+            helper={stats ? `${stats.taxaEntrega.toFixed(0)}% taxa entrega` : "Calculando..."}
+          />
+          <StatCard
+            label="Lidas"
+            value={stats ? String(stats.lidas) : "…"}
+            helper={stats ? `${stats.taxaLeitura.toFixed(0)}% taxa leitura` : "Calculando..."}
           />
           <StatCard
             label="Falhas"
             value={
-              loading
-                ? "…"
-                : String(logs.filter((l) => l.status === "FALHA").length)
+              stats
+                ? String(stats.falhas)
+                : loading
+                  ? "…"
+                  : String(logs.filter((l) => l.status === "FALHA").length)
             }
             helper="Mensagens com erro de envio"
           />
@@ -498,7 +522,7 @@ export default function AdminWhatsAppPage() {
 
         <div className="px-6 py-6">
           <Tabs defaultValue="templates" className="space-y-6">
-            <TabsList className="grid h-auto grid-cols-2 gap-1 rounded-2xl bg-secondary/50 p-1">
+            <TabsList className="grid h-auto grid-cols-3 gap-1 rounded-2xl bg-secondary/50 p-1">
               <TabsTrigger value="templates" className="rounded-xl">
                 <MessageSquare className="mr-2 size-4" />
                 Templates
@@ -506,6 +530,9 @@ export default function AdminWhatsAppPage() {
               <TabsTrigger value="logs" className="rounded-xl">
                 <ScrollText className="mr-2 size-4" />
                 Logs de Envio
+              </TabsTrigger>
+              <TabsTrigger value="config" className="rounded-xl">
+                Configuração
               </TabsTrigger>
             </TabsList>
 
@@ -562,6 +589,15 @@ export default function AdminWhatsAppPage() {
                 onNext={() => setLogPage((p) => p + 1)}
                 itemLabel="mensagens"
                 tableAriaLabel="Tabela de logs de envio WhatsApp"
+              />
+            </TabsContent>
+
+            {/* --- Tab Configuração (Task 481) --- */}
+            <TabsContent value="config" className="space-y-4">
+              <WhatsAppProviderConfig
+                config={whatsAppConfig}
+                tenantId={tenantId}
+                isLoading={configLoading}
               />
             </TabsContent>
           </Tabs>

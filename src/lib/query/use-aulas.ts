@@ -24,6 +24,8 @@ export function useAulasSessoes(input: {
         apenasPortal: true,
       }),
     enabled: Boolean(input.tenantId) && input.dateFrom.length > 0 && (input.enabled !== false),
+    // Task 485: sessões de aulas — 5min staleTime
+    staleTime: 5 * 60 * 1000,
   });
 }
 
