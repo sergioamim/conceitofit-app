@@ -14152,11 +14152,11 @@
         "description": "Refatorar admin/seguranca/catalogo/page.tsx (985 LOC) e admin/seguranca/usuarios/[id]/user-detail-tabs.tsx (938 LOC).",
         "details": "catalogo/page.tsx: separar em CatalogoHeader (filtros), CatalogoGrid (cards de features), CatalogoFormModal (edição de feature). user-detail-tabs.tsx: separar cada tab em componente próprio: UserProfileOverview, UserProfilePermissions, UserProfileAuditLog, UserProfileTenants, UserProfileImpersonations. Pattern: cada tab é lazy-loaded com dynamic import.",
         "testStrategy": "Testes unitários de cada tab component. Teste E2E das páginas de segurança sem regressão.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:11:24.589Z",
         "complexity": 5
       },
       {
@@ -14165,11 +14165,11 @@
         "description": "Refatorar funcionarios/funcionario-form-page.tsx (909 LOC) e importacao-evo-p0/components/EvoPacoteTab.tsx (815 LOC).",
         "details": "funcionario-form: separar em FormDadosPessoais, FormCargoDepartamento, FormAcessosUnidades, FormDocumentos. EvoPacoteTab: separar em PacoteUpload (upload + validação), PacoteAnalise (resumo + stats), PacoteJobStatus (polling + progresso), PacoteRejeicoes (lista de erros). Cada sub-componente com responsabilidade única e <200 LOC.",
         "testStrategy": "Testes unitários dos formulários com react-hook-form + zod. Teste E2E de criação de funcionário e importação EVO sem regressão.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:11:26.328Z",
         "complexity": 5
       },
       {
@@ -14407,9 +14407,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-07T00:11:03.574Z",
+      "lastModified": "2026-04-07T00:11:26.328Z",
       "taskCount": 430,
-      "completedCount": 406,
+      "completedCount": 408,
       "tags": [
         "master"
       ]
