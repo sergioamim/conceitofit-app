@@ -14011,13 +14011,13 @@
         "description": "Refatorar session.ts e token-store.ts para ler tokens de cookies (não localStorage) e usar apenas cookie de claims para metadados client-side.",
         "details": "Substituir readStorageToken('academia-auth-token') por leitura de cookie document.cookie. Modificar saveAuthSession() para não gravar tokens em localStorage — apenas claims seguros. Manter localStorage apenas para preferências de UI (tenant preferido, form-drafts). Atualizar http.ts para credentials: 'include'. Garantir que refresh token flow usa cookie. Remover progressivamente chaves sensíveis de localStorage: available-tenants, available-scopes, network-id, user-id.",
         "testStrategy": "Testes unitários de session.ts verificando que saveAuthSession não grava tokens em localStorage. Teste E2E: login → verificar cookies HttpOnly → navegar → refresh → sessão mantida. Teste de segurança: XSS simulado não consegue ler access_token.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "457"
         ],
         "priority": "high",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-07T00:39:07.479Z",
         "complexity": 7
       },
       {
@@ -14407,9 +14407,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-07T00:38:13.910Z",
+      "lastModified": "2026-04-07T00:39:07.479Z",
       "taskCount": 430,
-      "completedCount": 424,
+      "completedCount": 425,
       "tags": [
         "master"
       ]
