@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlunoBottomNav } from "@/components/layout/aluno-bottom-nav";
+import { ClienteBottomNav } from "@/components/layout/cliente-bottom-nav";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
 import { TenantContextProvider, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { logoutApi } from "@/lib/api/auth";
@@ -24,7 +24,7 @@ import {
 } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 
-function AlunoTopbar() {
+function ClienteTopbar() {
   const { displayName, networkName } = useTenantContext();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -46,38 +46,38 @@ function AlunoTopbar() {
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-border px-4 py-3">
+    <header className="flex items-center justify-between border-b border-border/40 bg-card/50 backdrop-blur-md px-4 py-3 sticky top-0 z-40">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-foreground">
-          {displayName ?? "Aluno"}
+        <p className="truncate text-sm font-bold text-foreground">
+          {displayName ?? "Cliente"}
         </p>
         {networkName ? (
-          <p className="truncate text-xs text-muted-foreground">{networkName}</p>
+          <p className="truncate text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{networkName}</p>
         ) : null}
       </div>
       <Button
         type="button"
         variant="ghost"
         size="icon"
-        className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+        className="h-9 w-9 shrink-0 text-muted-foreground hover:text-gym-danger transition-colors"
         aria-label="Sair"
         onClick={() => setLogoutOpen(true)}
       >
         <LogOut className="size-4" />
       </Button>
       <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
-        <DialogContent className="border-border bg-card">
+        <DialogContent className="border-border/40 bg-card/95 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle>Encerrar sessão?</DialogTitle>
+            <DialogTitle className="font-display text-xl font-bold">Encerrar sessão?</DialogTitle>
             <DialogDescription>
               Você será redirecionado para o login. Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex gap-3 pt-4">
             <Button
               type="button"
               variant="outline"
-              className="border-border"
+              className="border-border/60 rounded-xl flex-1"
               onClick={() => setLogoutOpen(false)}
               disabled={loggingOut}
             >
@@ -86,6 +86,7 @@ function AlunoTopbar() {
             <Button
               type="button"
               variant="destructive"
+              className="rounded-xl flex-1 font-bold shadow-lg shadow-gym-danger/20"
               disabled={loggingOut}
               onClick={() => void handleLogout()}
             >
@@ -98,9 +99,9 @@ function AlunoTopbar() {
   );
 }
 
-function AlunoShell({ children }: { children: React.ReactNode }) {
+function ClienteShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="flex h-screen flex-col overflow-hidden bg-v2-gradient">
       <a
         href="#main-content"
         className="focus-ring-brand sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:bg-gym-accent focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-[#0e0f11]"
@@ -108,19 +109,19 @@ function AlunoShell({ children }: { children: React.ReactNode }) {
         Saltar para o conteúdo
       </a>
       <TenantThemeSync />
-      <AlunoTopbar />
+      <ClienteTopbar />
       <main
         id="main-content"
         className="flex-1 overflow-y-auto px-4 pb-20 pt-4"
       >
         <div className="mx-auto w-full max-w-lg">{children}</div>
       </main>
-      <AlunoBottomNav />
+      <ClienteBottomNav />
     </div>
   );
 }
 
-function AlunoLayoutContent({ children }: { children: React.ReactNode }) {
+function ClienteLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -150,22 +151,22 @@ function AlunoLayoutContent({ children }: { children: React.ReactNode }) {
     router.replace(buildLoginHref(currentPath, getNetworkSlugFromSession()));
   }, [authenticated, hydrated, pathname, router, searchParams]);
 
-  return <AlunoShell>{children}</AlunoShell>;
+  return <ClienteShell>{children}</ClienteShell>;
 }
 
-function AlunoLayoutFallback({ children }: { children: React.ReactNode }) {
-  return <AlunoShell>{children}</AlunoShell>;
+function ClienteLayoutFallback({ children }: { children: React.ReactNode }) {
+  return <ClienteShell>{children}</ClienteShell>;
 }
 
-export default function AlunoLayout({
+export default function ClienteLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
     <TenantContextProvider>
-      <Suspense fallback={<AlunoLayoutFallback>{children}</AlunoLayoutFallback>}>
-        <AlunoLayoutContent>{children}</AlunoLayoutContent>
+      <Suspense fallback={<ClienteLayoutFallback>{children}</ClienteLayoutFallback>}>
+        <ClienteLayoutContent>{children}</ClienteLayoutContent>
       </Suspense>
     </TenantContextProvider>
   );

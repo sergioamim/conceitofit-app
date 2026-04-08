@@ -24,7 +24,7 @@ function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function AlunoBottomNavComponent() {
+function ClienteBottomNavComponent() {
   const pathname = usePathname();
 
   return (
@@ -61,4 +61,4 @@ function AlunoBottomNavComponent() {
   );
 }
 
-export const AlunoBottomNav = memo(AlunoBottomNavComponent);
+export const ClienteBottomNav = memo(ClienteBottomNavComponent);
