@@ -72,6 +72,9 @@ const CONTEXT_SCOPED_OPERATIONAL_PATTERNS = [
   // Só rotas administrativas operacionais já auditadas seguem o contexto ativo.
   /^\/api\/v1\/administrativo\/(?:cargos|funcionarios|salas|atividades(?:-grade)?)(?:\/|$)/,
   /^\/api\/v1\/gerencial\/financeiro\/(?!formas-pagamento(?:\/|$)|tipos-conta-pagar(?:\/|$))/,
+  // Atendimento / WhatsApp CRM
+  /^\/api\/v1\/conversas(?:\/|$)/,
+  /^\/api\/v1\/whatsapp\/credentials(?:\/|$)/,
 ];
 
 // Rotas globais e catálogos ainda exigem tenantId explícito mesmo com sessão carregada.

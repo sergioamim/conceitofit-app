@@ -20,3 +20,4 @@ export {
   type CancelAssinaturaInput,
 } from './billing';
 export * from './whatsapp';
+export * from './whatsapp-crm';
