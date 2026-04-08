@@ -2,7 +2,7 @@
 
 **Title:** Componente ConversationFilters
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 486
 

@@ -14612,7 +14612,7 @@
         "description": "Filtros de conversas usando TableFilters existente.",
         "details": "busca, status, queue, ownerUserId. URL search params sync. Usar TableFilters existente.",
         "testStrategy": "Teste manual: filtros aplicados e limpos. Teste unitário: config correto.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486"
         ],
@@ -14894,7 +14894,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-08T17:00:23.539Z",
+      "lastModified": "2026-04-08T17:01:09.894Z",
       "taskCount": 462,
       "completedCount": 439,
       "tags": [
