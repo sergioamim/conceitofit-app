@@ -85,7 +85,7 @@ export function useImportarPagamentos() {
   });
 }
 
-export function useCreateRecebimentoAvulso() {
+function useCreateRecebimentoAvulso() {
   const invalidate = useInvalidatePagamentos();
 
   return useMutation({

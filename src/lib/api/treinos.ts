@@ -528,7 +528,7 @@ export async function toggleExercicioApi(input: {
   });
 }
 
-export async function deleteExercicioApi(input: {
+async function deleteExercicioApi(input: {
   tenantId?: string;
   id: string;
 }): Promise<void> {

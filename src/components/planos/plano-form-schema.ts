@@ -22,4 +22,4 @@ export const planoFormSchema = z.object({
   ordem: z.string().optional().default(""),
 });
 
-export type PlanoFormSchemaValues = z.infer<typeof planoFormSchema>;
+type PlanoFormSchemaValues = z.infer<typeof planoFormSchema>;

@@ -48,7 +48,15 @@ export default async function AcademiaStorefrontLayout({ children, params }: Lay
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
             <a href={`/storefront/${academiaSlug}`} className="flex items-center gap-3">
               {theme?.logoUrl ? (
-                <img src={theme.logoUrl} alt={tenantSlug} className="h-8 w-auto object-contain" />
+                <Image
+                  src={theme.logoUrl}
+                  alt={tenantSlug}
+                  width={120}
+                  height={32}
+                  unoptimized
+                  className="h-8 w-auto object-contain"
+                  priority
+                />
               ) : (
                 <span className="font-display text-lg font-bold text-gym-accent">
                   {tenantSlug}

@@ -54,7 +54,7 @@ export function useAdminCobrancas() {
   });
 }
 
-export function useCreateAdminCobranca() {
+function useCreateAdminCobranca() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createAdminCobranca,
@@ -64,7 +64,7 @@ export function useCreateAdminCobranca() {
   });
 }
 
-export function useBaixarAdminCobranca() {
+function useBaixarAdminCobranca() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof baixarAdminCobranca>[1] }) =>
@@ -75,7 +75,7 @@ export function useBaixarAdminCobranca() {
   });
 }
 
-export function useCancelarAdminCobranca() {
+function useCancelarAdminCobranca() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => cancelarAdminCobranca(id),
@@ -94,14 +94,14 @@ export function useAdminContratos() {
   });
 }
 
-export function useAdminContratosAcademias() {
+function useAdminContratosAcademias() {
   return useQuery<Academia[]>({
     queryKey: queryKeys.admin.academias.list(),
     queryFn: () => listGlobalAcademias(),
   });
 }
 
-export function useCreateAdminContrato() {
+function useCreateAdminContrato() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createAdminContrato,
@@ -111,7 +111,7 @@ export function useCreateAdminContrato() {
   });
 }
 
-export function useUpdateAdminContrato() {
+function useUpdateAdminContrato() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateAdminContrato>[1] }) =>
@@ -122,7 +122,7 @@ export function useUpdateAdminContrato() {
   });
 }
 
-export function useSuspenderAdminContrato() {
+function useSuspenderAdminContrato() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, motivo }: { id: string; motivo?: string }) =>
@@ -133,7 +133,7 @@ export function useSuspenderAdminContrato() {
   });
 }
 
-export function useReativarAdminContrato() {
+function useReativarAdminContrato() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => reativarAdminContrato(id),
@@ -152,7 +152,7 @@ export function useAdminPlanos() {
   });
 }
 
-export function useCreateAdminPlano() {
+function useCreateAdminPlano() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createAdminPlano,
@@ -162,7 +162,7 @@ export function useCreateAdminPlano() {
   });
 }
 
-export function useUpdateAdminPlano() {
+function useUpdateAdminPlano() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateAdminPlano>[1] }) =>
@@ -173,7 +173,7 @@ export function useUpdateAdminPlano() {
   });
 }
 
-export function useToggleAdminPlano() {
+function useToggleAdminPlano() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => toggleAdminPlano(id),
@@ -192,7 +192,7 @@ export function useAdminGateways() {
   });
 }
 
-export function useCreateAdminGateway() {
+function useCreateAdminGateway() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createAdminGateway,
@@ -202,7 +202,7 @@ export function useCreateAdminGateway() {
   });
 }
 
-export function useUpdateAdminGateway() {
+function useUpdateAdminGateway() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateAdminGateway>[1] }) =>
@@ -213,7 +213,7 @@ export function useUpdateAdminGateway() {
   });
 }
 
-export function useToggleAdminGateway() {
+function useToggleAdminGateway() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (gateway: GatewayPagamento) =>

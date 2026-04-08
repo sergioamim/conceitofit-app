@@ -122,7 +122,7 @@ export async function deleteFormaPagamentoApi(input: {
   });
 }
 
-export async function getFormasPagamentoLabelsApi(): Promise<
+async function getFormasPagamentoLabelsApi(): Promise<
   Partial<Record<TipoFormaPagamento, string>>
 > {
   return apiRequest<Partial<Record<TipoFormaPagamento, string>>>({

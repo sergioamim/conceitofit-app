@@ -188,7 +188,7 @@ export async function getStorefrontThemeBySlug(
 }
 
 /** GET /{academiaSlug}/planos — planos agrupados por unidade */
-export async function getStorefrontPlanos(
+async function getStorefrontPlanos(
   academiaSlug: string,
 ): Promise<StorefrontPlanosResponse> {
   return serverFetch<StorefrontPlanosResponse>(
@@ -198,7 +198,7 @@ export async function getStorefrontPlanos(
 }
 
 /** GET /{academiaSlug}/atividades — atividades públicas */
-export async function getStorefrontAtividades(
+async function getStorefrontAtividades(
   academiaSlug: string,
 ): Promise<StorefrontAtividadesResponse> {
   return serverFetch<StorefrontAtividadesResponse>(
@@ -239,7 +239,7 @@ export async function getStorefrontUnidadeDetalhe(
 }
 
 /** GET /{academiaSlug}/unidades/{tenantId}/horarios-disponiveis */
-export async function getStorefrontHorariosDisponiveis(
+async function getStorefrontHorariosDisponiveis(
   academiaSlug: string,
   tenantId: string,
   atividadeId?: string,

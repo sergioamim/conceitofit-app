@@ -153,7 +153,7 @@ type SaveExercicioInput = {
   unidade?: string;
 };
 
-export function resetTreinosWorkspace(): void {
+function resetTreinosWorkspace(): void {
   // Mantido por compatibilidade com a suíte; o workspace agora é 100% API-only.
 }
 
@@ -639,11 +639,11 @@ export async function assignTreinoTemplate(input: AssignTemplateInput): Promise<
   );
 }
 
-export async function duplicateTreinoTemplate(input: { tenantId: string; id: string }): Promise<Treino> {
+async function duplicateTreinoTemplate(input: { tenantId: string; id: string }): Promise<Treino> {
   return mapTreinoApiToDomain(await duplicateTreinoTemplateApi(input));
 }
 
-export async function revisarTreinoWorkspace(input: {
+async function revisarTreinoWorkspace(input: {
   tenantId: string;
   id: string;
   observacao?: string;
@@ -663,7 +663,7 @@ export async function encerrarTreinoWorkspace(input: {
   );
 }
 
-export async function renovarTreinoWorkspace(input: {
+async function renovarTreinoWorkspace(input: {
   tenantId: string;
   id: string;
 }): Promise<Treino> {

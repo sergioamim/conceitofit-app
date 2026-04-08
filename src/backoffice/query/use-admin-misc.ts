@@ -28,7 +28,7 @@ export function useAdminBusca(query: string, size = 20) {
 
 // ── BI ────────────────────────────────────────────────────────────────
 
-export function useAdminBiAcademias() {
+function useAdminBiAcademias() {
   return useQuery<Academia[]>({
     queryKey: queryKeys.admin.bi.academias(),
     queryFn: () => listBackofficeAcademiasApi(),
@@ -59,7 +59,7 @@ export function useAdminGlobalConfig() {
   });
 }
 
-export function useUpdateAdminGlobalConfig() {
+function useUpdateAdminGlobalConfig() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (config: GlobalConfig) => updateGlobalConfigApi(config),

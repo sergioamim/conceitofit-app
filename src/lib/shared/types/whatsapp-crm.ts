@@ -50,7 +50,7 @@ export type WhatsAppMode = "UNIT_NUMBER" | "NETWORK_SHARED_NUMBER";
 
 export type TaskPriority = "BAIXA" | "MEDIA" | "ALTA";
 
-export type ProspectStatusStage =
+type ProspectStatusStage =
   | "NOVO"
   | "EM_CONTATO"
   | "AGENDOU_VISITA"
@@ -67,7 +67,7 @@ export type SSEEventType =
   | "conversa_encerrada"
   | "heartbeat";
 
-export interface SSEEvent {
+interface SSEEvent {
   type: SSEEventType;
   data: unknown;
 }
@@ -232,7 +232,7 @@ export interface CredentialHealthResponse {
 
 // ── Contato (contexto embutido na conversa) ─────────────────
 
-export interface ContatoOrigem {
+interface ContatoOrigem {
   valor: "WHATSAPP_INBOUND" | "CADASTRO_MANUAL" | "IMPORTACAO" | "FORMULARIO_WEB";
   label: string;
 }

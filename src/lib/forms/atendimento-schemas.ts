@@ -39,7 +39,7 @@ export const criarConversaSchema = z.object({
   ownerUserId: z.uuid().optional(),
 });
 
-export type CriarConversaFormValues = z.infer<typeof criarConversaSchema>;
+type CriarConversaFormValues = z.infer<typeof criarConversaSchema>;
 
 // ── Filtros de Conversa ─────────────────────────────────────
 
@@ -55,7 +55,7 @@ export const conversaFiltersSchema = z.object({
   periodoFim: z.string().datetime().optional(),
 });
 
-export type ConversaFiltersFormValues = z.infer<typeof conversaFiltersSchema>;
+type ConversaFiltersFormValues = z.infer<typeof conversaFiltersSchema>;
 
 // ── WhatsApp Credential ─────────────────────────────────────
 

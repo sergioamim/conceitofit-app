@@ -217,7 +217,7 @@ export function useUpdateConversaStatus() {
   });
 }
 
-export function useAssignConversaOwner() {
+function useAssignConversaOwner() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -242,7 +242,7 @@ export function useAssignConversaOwner() {
   });
 }
 
-export function useMoveConversaQueue() {
+function useMoveConversaQueue() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -267,7 +267,7 @@ export function useMoveConversaQueue() {
   });
 }
 
-export function useReattribuirConversaUnidade() {
+function useReattribuirConversaUnidade() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -292,7 +292,7 @@ export function useReattribuirConversaUnidade() {
   });
 }
 
-export function useCreateConversaTask() {
+function useCreateConversaTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -317,7 +317,7 @@ export function useCreateConversaTask() {
   });
 }
 
-export function useCreateConversa() {
+function useCreateConversa() {
   const queryClient = useQueryClient();
 
   return useMutation({

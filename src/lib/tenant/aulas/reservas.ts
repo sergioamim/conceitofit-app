@@ -61,7 +61,7 @@ export function listDatesBetween(dateFrom: string, dateTo: string): string[] {
   return dates;
 }
 
-export function getNextOccurrenceForDiasSemana(
+function getNextOccurrenceForDiasSemana(
   diasSemana: DiaSemana[],
   reference = new Date()
 ): string {
@@ -77,7 +77,7 @@ export function getNextOccurrenceForDiasSemana(
   return toIsoDate(base);
 }
 
-export function buildAulaSessao(input: {
+function buildAulaSessao(input: {
   grade: AtividadeGrade;
   atividade: Atividade;
   data: string;

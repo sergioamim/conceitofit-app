@@ -394,14 +394,14 @@ export async function setTenantContextApi(tenantId: string): Promise<{
   };
 }
 
-export async function getTenantAtualApi(): Promise<Tenant> {
+async function getTenantAtualApi(): Promise<Tenant> {
   const response = await apiRequest<TenantApiResponse>({
     path: "/api/v1/context/tenant-atual",
   });
   return normalizeTenant(response);
 }
 
-export async function updateTenantAtualApi(data: Partial<Tenant>): Promise<Tenant> {
+async function updateTenantAtualApi(data: Partial<Tenant>): Promise<Tenant> {
   const response = await apiRequest<TenantApiResponse>({
     path: "/api/v1/context/tenant-atual",
     method: "PUT",

@@ -14,7 +14,7 @@ export function formatPercent(value: number) {
   })}%`;
 }
 
-export function resolveContractBadgeClass(status: AcademiaContractStatus) {
+function resolveContractBadgeClass(status: AcademiaContractStatus) {
   switch (status) {
     case "ATIVO":
       return "border-gym-teal/30 bg-gym-teal/10 text-gym-teal";
@@ -117,7 +117,7 @@ export function normalizeAcademiaHealthStatus(item: AcademiaHealthStatus): Acade
   };
 }
 
-export function filterAcademiasHealthMap(
+function filterAcademiasHealthMap(
   items: AcademiaHealthStatus[],
   filters: {
     healthLevel: HealthFilter;

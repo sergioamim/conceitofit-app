@@ -83,9 +83,17 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@prisma/instrumentation', '@opentelemetry/instrumentation'],
   // Task 483: apontar assets estáticos para CDN quando configurado
   ...(cdnUrl ? { assetPrefix: cdnUrl } : {}),
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "*.amazonaws.com" },
+      { protocol: "https", hostname: "*.conceito.fit" },
+      { protocol: "https", hostname: "w12evostorage.w12app.com.br" },
+    ],
+  },
   experimental: {
     // Needed for EVO backup uploads (~70MB) forwarded through /backend rewrite.
     proxyClientMaxBodySize: backendProxyMaxBodySize * 1024 * 1024,
+    optimizePackageImports: ["lucide-react"],
   },
   async headers() {
     return [

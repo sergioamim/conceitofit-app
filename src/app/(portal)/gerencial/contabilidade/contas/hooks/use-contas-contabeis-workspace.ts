@@ -22,7 +22,7 @@ export const TIPO_LABEL: Record<FinancialAccountType, string> = {
   PATRIMONIO: "Patrimonio",
 };
 
-export type ContasContabeisWorkspace = ReturnType<typeof useContasContabeisWorkspace>;
+type ContasContabeisWorkspace = ReturnType<typeof useContasContabeisWorkspace>;
 
 export interface NovaContaForm {
   codigo: string;

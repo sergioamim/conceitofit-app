@@ -70,7 +70,7 @@ export async function receberPagamentoService(input: {
   return result;
 }
 
-export async function emitirNfsePagamentoService(input: {
+async function emitirNfsePagamentoService(input: {
   tenantId: string;
   id: string;
 }): Promise<Pagamento> {
@@ -134,11 +134,11 @@ export async function listProdutosService(apenasAtivos?: boolean): Promise<Produ
   return listProdutosApi(apenasAtivos);
 }
 
-export async function listVouchersService(): Promise<Voucher[]> {
+async function listVouchersService(): Promise<Voucher[]> {
   return listVouchersApi();
 }
 
-export async function listVoucherCodigosService(voucherId: string): Promise<VoucherCodigo[]> {
+async function listVoucherCodigosService(voucherId: string): Promise<VoucherCodigo[]> {
   return listVoucherCodigosApi(voucherId);
 }
 

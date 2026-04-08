@@ -170,7 +170,7 @@ export async function testBillingConnectionApi(input: {
 
 // ─── Assinaturas API ─────────────────────────────────────────────────────
 
-export async function listAssinaturasApi(input: {
+async function listAssinaturasApi(input: {
   tenantId: string;
   status?: StatusAssinatura;
   page?: number;
@@ -218,7 +218,7 @@ export async function cancelarAssinaturaApi(input: {
   return normalizeAssinatura(response);
 }
 
-export async function getAssinaturaApi(input: {
+async function getAssinaturaApi(input: {
   tenantId: string;
   id: string;
 }): Promise<Assinatura> {

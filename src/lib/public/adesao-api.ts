@@ -240,7 +240,7 @@ async function adesaoFetch<T>(
 // ---------------------------------------------------------------------------
 
 /** GET /catalogo — catálogo público de planos por unidade */
-export async function getCatalogoPublico(params: {
+async function getCatalogoPublico(params: {
   tenantId?: string;
   subdomain?: string;
 }): Promise<CatalogoPublicoResponse> {
@@ -270,7 +270,7 @@ export async function criarCadastroPublico(
 }
 
 /** PUT /{id}/cadastro — completar cadastro de uma adesão (trial → cadastro) */
-export async function completarCadastro(
+async function completarCadastro(
   id: string,
   token: string,
   data: CompletarCadastroRequest,
@@ -304,7 +304,7 @@ export async function getAdesaoStatus(
 }
 
 /** GET /{id}/pendencias — listar pendências */
-export async function getAdesaoPendencias(
+async function getAdesaoPendencias(
   id: string,
   token: string,
 ): Promise<AdesaoPendenciaResponse[]> {
@@ -312,7 +312,7 @@ export async function getAdesaoPendencias(
 }
 
 /** PATCH /{id}/pendencias/{codigo} — atualizar pendência */
-export async function atualizarPendencia(
+async function atualizarPendencia(
   id: string,
   token: string,
   codigo: AdesaoPendenciaCodigo,

@@ -11,7 +11,7 @@ export type ErrorPresentation = {
   details: ErrorSupportDetail[];
 };
 
-export function isRecord(input: unknown): input is Record<string, string> {
+function isRecord(input: unknown): input is Record<string, string> {
   return (
     typeof input === "object" && input !== null &&
     Object.entries(input as Record<string, unknown>).every(([, value]) => typeof value === "string")

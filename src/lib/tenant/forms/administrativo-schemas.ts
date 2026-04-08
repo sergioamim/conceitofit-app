@@ -6,7 +6,7 @@ export const cargoFormSchema = z.object({
   ativo: z.boolean(),
 });
 
-export const funcionarioFormSchema = z.object({
+const funcionarioFormSchema = z.object({
   nome: requiredTrimmedString("Informe o nome do funcionário."),
   cargoId: z.string(),
   ativo: z.boolean(),
@@ -21,7 +21,7 @@ export const convenioFormSchema = z.object({
   observacoes: z.string(),
 });
 
-export const quickCreateColaboradorFormSchema = z.object({
+const quickCreateColaboradorFormSchema = z.object({
   nome: requiredTrimmedString("Informe o nome do colaborador."),
   emailProfissional: z.string(),
   celular: z.string(),

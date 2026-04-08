@@ -27,7 +27,7 @@ export const whatsAppSendMessageSchema = z.object({
   variaveis: z.record(z.string()).optional(),
 });
 
-export type WhatsAppSendMessageInput = z.infer<typeof whatsAppSendMessageSchema>;
+type WhatsAppSendMessageInput = z.infer<typeof whatsAppSendMessageSchema>;
 
 export const whatsAppMessageStatusSchema = z.object({
   id: z.string().uuid(),
@@ -38,7 +38,7 @@ export const whatsAppMessageStatusSchema = z.object({
   erroMensagem: z.string().optional(),
 });
 
-export type WhatsAppMessageStatusResponse = z.infer<typeof whatsAppMessageStatusSchema>;
+type WhatsAppMessageStatusResponse = z.infer<typeof whatsAppMessageStatusSchema>;
 
 // ---------------------------------------------------------------------------
 // Provider config form (admin setup)

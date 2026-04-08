@@ -68,7 +68,7 @@ export async function listFinancialAccountsApi(opts?: {
   }));
 }
 
-export async function getFinancialAccountApi(id: string): Promise<FinancialAccount> {
+async function getFinancialAccountApi(id: string): Promise<FinancialAccount> {
   return apiRequest<FinancialAccount>({ path: `/api/v1/financial/accounts/${id}` });
 }
 
@@ -117,7 +117,7 @@ export async function listLedgersApi(opts?: {
   }));
 }
 
-export async function getLedgerApi(id: string): Promise<Ledger> {
+async function getLedgerApi(id: string): Promise<Ledger> {
   return apiRequest<Ledger>({ path: `/api/v1/financial/ledgers/${id}` });
 }
 
@@ -160,7 +160,7 @@ export async function listLedgerEntriesApi(ledgerId: string, opts?: {
   }));
 }
 
-export async function createLedgerEntryApi(ledgerId: string, data: {
+async function createLedgerEntryApi(ledgerId: string, data: {
   contaId: string;
   tipo: string;
   valor: number;
@@ -202,7 +202,7 @@ export async function listFinancialTransactionsApi(opts?: {
   }));
 }
 
-export async function getFinancialTransactionApi(id: string): Promise<FinancialTransaction> {
+async function getFinancialTransactionApi(id: string): Promise<FinancialTransaction> {
   return apiRequest<FinancialTransaction>({ path: `/api/v1/financial/transactions/${id}` });
 }
 
@@ -278,7 +278,7 @@ export async function getFluxoCaixaApi(opts?: {
   return extract(response);
 }
 
-export async function getExtratoContaApi(contaId: string, opts?: {
+async function getExtratoContaApi(contaId: string, opts?: {
   startDate?: string;
   endDate?: string;
 }): Promise<ExtratoConta> {

@@ -14,7 +14,7 @@ export function useAdminComplianceDashboard() {
   });
 }
 
-export function useExecutarExclusao() {
+function useExecutarExclusao() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => executarSolicitacaoExclusaoApi(id),
@@ -24,7 +24,7 @@ export function useExecutarExclusao() {
   });
 }
 
-export function useRejeitarExclusao() {
+function useRejeitarExclusao() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, motivo }: { id: string; motivo: string }) =>

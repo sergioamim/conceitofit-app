@@ -38,7 +38,7 @@ export interface TreinoV2CatalogExercise {
   updatedAt?: string;
 }
 
-export const TREINOS_V2_ENDPOINTS = {
+const TREINOS_V2_ENDPOINTS = {
   listTemplates: "/api/v2/treinos/templates",
   createTemplate: "/api/v2/treinos/templates",
   getTemplate: "/api/v2/treinos/templates/:templateId",
@@ -59,7 +59,7 @@ export const TREINOS_V2_ENDPOINTS = {
 
 export type TreinoV2TemplateListSort = "UPDATED_AT_DESC" | "UPDATED_AT_ASC" | "NOME_ASC" | "CRIADO_POR_ASC";
 
-export interface TreinoV2TemplateListQuery {
+type TreinoV2TemplateListQuery = {
   tenantId: string;
   search?: string;
   page: number;
@@ -81,7 +81,7 @@ export interface TreinoV2TemplateListItem {
   assignmentCount?: number;
 }
 
-export interface TreinoV2TemplateListResponse {
+interface TreinoV2TemplateListResponse {
   items: TreinoV2TemplateListItem[];
   total: number;
   page: number;
@@ -89,7 +89,7 @@ export interface TreinoV2TemplateListResponse {
   hasNext: boolean;
 }
 
-export interface UpsertTreinoV2TemplateRequest {
+interface UpsertTreinoV2TemplateRequest {
   tenantId: string;
   nome: string;
   frequenciaSemanal: number;
@@ -100,14 +100,14 @@ export interface UpsertTreinoV2TemplateRequest {
   blocos: TreinoV2Block[];
 }
 
-export interface TreinoV2EditorResponse {
+interface TreinoV2EditorResponse {
   template: TreinoV2Template;
   validationIssues: TreinoV2ValidationIssue[];
   allowedActions: Array<"SAVE_DRAFT" | "SUBMIT_REVIEW" | "PUBLISH" | "ARCHIVE" | "DUPLICATE" | "ASSIGN">;
   permissions: TreinoV2PermissionSet;
 }
 
-export interface TreinoV2CatalogExerciseListQuery {
+interface TreinoV2CatalogExerciseListQuery {
   tenantId: string;
   search?: string;
   grupoExercicioIds?: string[];
@@ -118,7 +118,7 @@ export interface TreinoV2CatalogExerciseListQuery {
   ativo?: boolean;
 }
 
-export interface UpsertTreinoV2CatalogExerciseRequest {
+interface UpsertTreinoV2CatalogExerciseRequest {
   tenantId: string;
   nome: string;
   codigo?: string;
@@ -135,7 +135,7 @@ export interface UpsertTreinoV2CatalogExerciseRequest {
   ativo?: boolean;
 }
 
-export interface TreinoV2AssignmentRequest {
+interface TreinoV2AssignmentRequest {
   tenantId: string;
   templateId: string;
   mode: TreinoV2AssignmentMode;
@@ -150,11 +150,11 @@ export interface TreinoV2AssignmentRequest {
   filtro?: TreinoV2AssignmentFilter;
 }
 
-export interface TreinoV2AssignmentResponse {
+interface TreinoV2AssignmentResponse {
   job: TreinoV2AssignmentJob;
 }
 
-export interface TreinoV2TemplateAssignmentHistoryItem {
+interface TreinoV2TemplateAssignmentHistoryItem {
   jobId: string;
   templateId: string;
   templateVersion: number;
@@ -168,7 +168,7 @@ export interface TreinoV2TemplateAssignmentHistoryItem {
   totalComErro: number;
 }
 
-export interface TreinoV2AssignedWorkoutListQuery {
+interface TreinoV2AssignedWorkoutListQuery {
   tenantId: string;
   alunoId?: string;
   professorResponsavelId?: string;
@@ -196,7 +196,7 @@ export interface TreinoV2AssignedWorkoutListItem {
   snapshotId: string;
 }
 
-export interface TreinoV2AssignedWorkoutListResponse {
+interface TreinoV2AssignedWorkoutListResponse {
   items: TreinoV2AssignedWorkoutListItem[];
   total: number;
   page: number;
@@ -204,12 +204,12 @@ export interface TreinoV2AssignedWorkoutListResponse {
   hasNext: boolean;
 }
 
-export interface PublishTreinoV2TemplateRequest {
+interface PublishTreinoV2TemplateRequest {
   tenantId: string;
   expectedVersion: number;
 }
 
-export interface TreinoV2TemplatePublishResponse {
+interface TreinoV2TemplatePublishResponse {
   templateId: string;
   status: TreinoV2TemplateStatus;
   versao: number;
@@ -218,7 +218,7 @@ export interface TreinoV2TemplatePublishResponse {
   snapshot?: TreinoV2TemplateSnapshot;
 }
 
-export interface TreinoV2PermissionContextResponse {
+interface TreinoV2PermissionContextResponse {
   tenantId: string;
   permissions: TreinoV2PermissionSet;
   finePermissions: TreinoV2FinePermissionKey[];

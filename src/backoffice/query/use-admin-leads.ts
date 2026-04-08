@@ -23,7 +23,7 @@ export function useAdminLeadStats() {
   });
 }
 
-export function useAdminLeadDetail(id: string | null) {
+function useAdminLeadDetail(id: string | null) {
   return useQuery<LeadB2b>({
     queryKey: queryKeys.admin.leads.detail(id ?? ""),
     queryFn: () => getAdminLead(id!),
@@ -31,7 +31,7 @@ export function useAdminLeadDetail(id: string | null) {
   });
 }
 
-export function useUpdateAdminLeadNotas() {
+function useUpdateAdminLeadNotas() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, notas }: { id: string; notas: string }) =>
@@ -42,7 +42,7 @@ export function useUpdateAdminLeadNotas() {
   });
 }
 
-export function useUpdateAdminLeadStatus() {
+function useUpdateAdminLeadStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: StatusLeadB2b }) =>

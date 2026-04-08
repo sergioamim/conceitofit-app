@@ -159,7 +159,7 @@ export async function getWhatsAppMessageStatusApi(opts: {
 // Webhook Registration (Task 479)
 // ---------------------------------------------------------------------------
 
-export async function registerWhatsAppWebhookApi(opts: {
+async function registerWhatsAppWebhookApi(opts: {
   tenantId: string;
   webhookUrl: string;
 }): Promise<{ success: boolean }> {

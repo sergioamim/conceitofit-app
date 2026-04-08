@@ -420,7 +420,7 @@ export async function togglePlanoDestaqueApi(input: {
   });
 }
 
-export async function deletePlanoApi(input: {
+async function deletePlanoApi(input: {
   tenantId: string;
   id: string;
 }): Promise<void> {

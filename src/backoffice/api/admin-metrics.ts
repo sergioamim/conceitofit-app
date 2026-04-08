@@ -470,7 +470,7 @@ function normalizeFeatureUsageByAcademia(
   };
 }
 
-export async function getMetricasOperacionaisGlobal(): Promise<MetricasOperacionaisGlobal> {
+async function getMetricasOperacionaisGlobal(): Promise<MetricasOperacionaisGlobal> {
   const response = await apiRequest<Envelope<MetricasOperacionaisGlobalApiResponse>>({
     path: "/api/v1/admin/metricas/operacionais/global",
   });

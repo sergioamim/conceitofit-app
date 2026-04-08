@@ -13,7 +13,7 @@ import { createAssinaturaApi, cancelarAssinaturaApi } from "@/lib/api/billing";
 import { logger } from "@/lib/shared/logger";
 import { type Contrato, contratoFromMatricula } from "./contratos";
 
-export async function listMatriculasService(input: {
+async function listMatriculasService(input: {
   tenantId: string;
   status?: string;
   page?: number;
@@ -22,7 +22,7 @@ export async function listMatriculasService(input: {
   return listMatriculasApi(input);
 }
 
-export async function listMatriculasPageService(input: {
+async function listMatriculasPageService(input: {
   tenantId: string;
   status?: string;
   page?: number;
@@ -49,7 +49,7 @@ export async function listMatriculasByAlunoService(input: {
   return listMatriculasByAlunoApi(input);
 }
 
-export async function createMatriculaService(input: {
+async function createMatriculaService(input: {
   tenantId: string;
   data: Parameters<typeof createMatriculaApi>[0]["data"];
   planoRecorrente?: boolean;
@@ -116,7 +116,7 @@ export async function renovarMatriculaService(input: {
   return renovarMatriculaApi(input);
 }
 
-export async function listContratosService(input: {
+async function listContratosService(input: {
   tenantId: string;
   status?: string;
   page?: number;
@@ -126,7 +126,7 @@ export async function listContratosService(input: {
   return matriculas.map(contratoFromMatricula);
 }
 
-export async function listContratosByAlunoService(input: {
+async function listContratosByAlunoService(input: {
   tenantId: string;
   alunoId: string;
   page?: number;

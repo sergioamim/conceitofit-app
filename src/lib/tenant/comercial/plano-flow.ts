@@ -161,7 +161,7 @@ export function planoDryRun(params: PlanoDryRunParams): PlanoDryRunResult {
   };
 }
 
-export function resolvePlanoIdFromVendaItems(
+function resolvePlanoIdFromVendaItems(
   items: Array<{ tipo: string; referenciaId: string }>
 ): string | undefined {
   const planoItem = items.find((item) => item.tipo === "PLANO");

@@ -69,7 +69,7 @@ export function formatDateLabel(value?: string) {
   return `${day}/${month}/${year}`;
 }
 
-export function listAvailableMonthKeys(rows: MatriculaInsightRow[], fallbackMonthKey?: string) {
+function listAvailableMonthKeys(rows: MatriculaInsightRow[], fallbackMonthKey?: string) {
   const keys = new Set<string>();
   if (fallbackMonthKey) {
     keys.add(fallbackMonthKey);
@@ -85,7 +85,7 @@ export function listAvailableMonthKeys(rows: MatriculaInsightRow[], fallbackMont
   return [...keys].sort((left, right) => right.localeCompare(left));
 }
 
-export function buildMatriculasMonthlySnapshot(
+function buildMatriculasMonthlySnapshot(
   rows: MatriculaInsightRow[],
   monthKey: string
 ): MatriculaMonthlySnapshot {

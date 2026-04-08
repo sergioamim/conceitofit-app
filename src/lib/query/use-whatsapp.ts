@@ -162,7 +162,7 @@ export function useSendWhatsAppMessage() {
 // Message Status (Task 479)
 // ---------------------------------------------------------------------------
 
-export function useWhatsAppMessageStatus(input: {
+function useWhatsAppMessageStatus(input: {
   tenantId: string | undefined;
   messageId: string | undefined;
   enabled?: boolean;

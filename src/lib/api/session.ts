@@ -369,7 +369,7 @@ export function filterTenantAccessByOperationalScope(items: TenantAccess[]): Ten
   }));
 }
 
-export function rememberOperationalTenantScope(input: {
+function rememberOperationalTenantScope(input: {
   academiaId: string;
   tenantIds: string[];
   defaultTenantId?: string;
@@ -715,7 +715,7 @@ export function setAvailableTenants(_tenantIds: string[], _defaultTenantId?: str
   notifyAuthSessionUpdated();
 }
 
-export function clearAvailableTenants(): void {
+function clearAvailableTenants(): void {
   // Task 458: NO-OP — tenants são resolvidos pelo backend.
   notifyAuthSessionUpdated();
 }

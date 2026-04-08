@@ -23,7 +23,7 @@ export interface WhatsAppConfig {
   updatedAt?: LocalDateTime;
 }
 
-export type WhatsAppTemplateType = WhatsAppTemplateEvent;
+type WhatsAppTemplateType = WhatsAppTemplateEvent;
 
 export interface WhatsAppTemplate {
   id: UUID;

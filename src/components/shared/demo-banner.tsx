@@ -1,18 +1,21 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { FlaskConical, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const DEMO_STORAGE_KEY = "academia-demo-banner-dismissed";
 
 export function DemoBanner() {
-  const searchParams = useSearchParams();
-  const isDemo = searchParams.get("demo") === "1";
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return sessionStorage.getItem(DEMO_STORAGE_KEY) === "1";
-  });
+  const [isDemo, setIsDemo] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const params = new URLSearchParams(window.location.search);
+    setIsDemo(params.get("demo") === "1");
+    setDismissed(sessionStorage.getItem(DEMO_STORAGE_KEY) === "1");
+  }, []);
 
   const dismiss = useCallback(() => {
     setDismissed(true);

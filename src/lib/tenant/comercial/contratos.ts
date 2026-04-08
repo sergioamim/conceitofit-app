@@ -80,7 +80,7 @@ export function contratoFromMatricula(
  * Normaliza uma Venda de tipo PLANO em Contrato.
  * Vendas de tipo SERVICO/PRODUTO não representam contratos.
  */
-export function contratoFromVenda(
+function contratoFromVenda(
   venda: Venda,
   aluno?: Aluno | null,
   plano?: Plano | null
@@ -129,6 +129,6 @@ export function contratoFromVenda(
 /**
  * Verifica se uma venda representa um contrato de plano.
  */
-export function isVendaContrato(venda: Venda): boolean {
+function isVendaContrato(venda: Venda): boolean {
   return venda.tipo === "PLANO";
 }

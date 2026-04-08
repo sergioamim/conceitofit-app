@@ -127,7 +127,7 @@ export interface TreinoV2TemplateSnapshot {
   validationIssues: TreinoV2ValidationIssue[];
 }
 
-export interface TreinoV2AssignedWorkout {
+interface TreinoV2AssignedWorkout {
   id: string;
   tenantId: string;
   alunoId: string;
@@ -210,7 +210,7 @@ export interface TreinoV2TemplateTransitionGuard {
   reason?: string;
 }
 
-export const TREINOS_V2_FINE_PERMISSION_LABELS: Record<TreinoV2FinePermissionKey, string> = {
+const TREINOS_V2_FINE_PERMISSION_LABELS: Record<TreinoV2FinePermissionKey, string> = {
   EXERCICIOS: "Exercicios",
   TREINO_PADRAO: "Treino padrao",
   TREINO_PADRAO_PRESCREVER: "Treino padrao - prescrever",
@@ -229,7 +229,7 @@ export const TREINOS_V2_TEMPLATE_STATUS_TRANSITIONS: Record<TreinoV2TemplateStat
   ARQUIVADO: [],
 };
 
-export const TREINOS_V2_DECISIONS = {
+const TREINOS_V2_DECISIONS = {
   allowsMultipleActiveAssignedWorkouts: false,
   batchAssignmentExecution: "ASSINCRONA",
   requiresStartDateForAssignment: true,
@@ -355,7 +355,7 @@ export function validateTreinoV2Template(template: TreinoV2Template): TreinoV2Va
   return issues;
 }
 
-export function isTreinoV2TemplatePublishable(template: TreinoV2Template): boolean {
+function isTreinoV2TemplatePublishable(template: TreinoV2Template): boolean {
   return validateTreinoV2Template(template).every((issue) => issue.severity !== "ERROR");
 }
 
@@ -576,6 +576,6 @@ export function resolveTreinoV2AssignmentConflict(input: {
   return "AGENDAR";
 }
 
-export function isTreinoV2AssignmentJobTerminal(status: TreinoV2AssignmentJobStatus): boolean {
+function isTreinoV2AssignmentJobTerminal(status: TreinoV2AssignmentJobStatus): boolean {
   return status === "CONCLUIDO" || status === "CONCLUIDO_PARCIAL" || status === "FALHOU" || status === "CANCELADO";
 }

@@ -647,7 +647,7 @@ export function buildTreinoV2SaveInput(input: {
   };
 }
 
-export function summarizeTreinoV2TemplateGovernance(treino: Treino): TreinoV2TemplateGovernanceSummary {
+function summarizeTreinoV2TemplateGovernance(treino: Treino): TreinoV2TemplateGovernanceSummary {
   const editor = buildTreinoV2EditorSeed(treino);
   const template = buildTreinoV2Template({
     treino,

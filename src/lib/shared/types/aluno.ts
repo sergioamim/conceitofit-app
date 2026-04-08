@@ -62,7 +62,7 @@ export interface Aluno {
   dataAtualizacao?: LocalDateTime;
 }
 
-export interface PaginatedAlunosResult extends PaginatedResult<Aluno> {
+interface PaginatedAlunosResult extends PaginatedResult<Aluno> {
   totaisStatus?: AlunoTotaisStatus;
 }
 

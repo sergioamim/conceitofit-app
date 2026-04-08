@@ -33,7 +33,7 @@ export function useWhatsAppCredentials(input: {
   });
 }
 
-export function useCredentialHealth(input: {
+function useCredentialHealth(input: {
   tenantId: string | undefined;
   id: string | undefined;
   tenantResolved: boolean;

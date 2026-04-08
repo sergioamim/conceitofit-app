@@ -161,7 +161,7 @@ export interface ContaBancaria {
   statusCadastro: "ATIVA" | "INATIVA";
 }
 
-export interface Maquininha {
+interface Maquininha {
   id: UUID;
   tenantId: UUID;
   nome: string;

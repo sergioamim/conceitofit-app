@@ -157,7 +157,7 @@ export async function getAdminBiSerieApi(academiaId: string): Promise<BiSeriePon
   return normalizeSerie(extractPayload(response));
 }
 
-export async function getAdminBiResumoGeralApi(academiaId: string): Promise<BiOperationalSnapshot> {
+async function getAdminBiResumoGeralApi(academiaId: string): Promise<BiOperationalSnapshot> {
   const response = await apiRequest<Envelope<AdminBiResumoGeralResponse>>({
     path: `/api/v1/admin/bi/academias/${academiaId}/resumo`,
   });

@@ -162,13 +162,13 @@ const STAGE_SEQUENCE: StatusProspect[] = [
   "CONVERTIDO",
 ];
 
-export function getNextStage(current: StatusProspect): StatusProspect | null {
+function getNextStage(current: StatusProspect): StatusProspect | null {
   const idx = STAGE_SEQUENCE.indexOf(current);
   if (idx === -1 || idx >= STAGE_SEQUENCE.length - 1) return null;
   return STAGE_SEQUENCE[idx + 1];
 }
 
-export function useAvancarStageProspect(tenantId: string | undefined) {
+function useAvancarStageProspect(tenantId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({

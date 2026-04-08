@@ -453,4 +453,4 @@ export function useUserDetailWorkspace() {
   };
 }
 
-export type UserDetailWorkspace = ReturnType<typeof useUserDetailWorkspace>;
+type UserDetailWorkspace = ReturnType<typeof useUserDetailWorkspace>;

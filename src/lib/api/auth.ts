@@ -419,7 +419,7 @@ export async function meApi(): Promise<AuthUser> {
   };
 }
 
-export async function switchTenantApi(tenantId: string): Promise<AuthSession> {
+async function switchTenantApi(tenantId: string): Promise<AuthSession> {
   const response = await apiRequest<LoginApiResponse>({
     path: "/api/v1/auth/context/tenant",
     method: "POST",

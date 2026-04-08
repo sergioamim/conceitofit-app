@@ -38,7 +38,7 @@ export function captureApiError(error: Error, extra?: Record<string, unknown>) {
   });
 }
 
-export function captureAppError(error: unknown, context?: string) {
+function captureAppError(error: unknown, context?: string) {
   if (!isSentryEnabled()) return;
 
   Sentry.captureException(error, {

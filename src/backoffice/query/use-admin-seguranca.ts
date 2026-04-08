@@ -19,7 +19,7 @@ export function useAdminSecurityOverview() {
   });
 }
 
-export function useAdminSecurityEligiblePreview(size = 5) {
+function useAdminSecurityEligiblePreview(size = 5) {
   return useQuery<RbacPaginatedResult<GlobalAdminUserSummary>>({
     queryKey: queryKeys.admin.seguranca.eligiblePreview(),
     queryFn: () => listEligibleNewUnitAdminsPreview({ size }),
@@ -33,7 +33,7 @@ export function useAdminSecurityReviewBoard() {
   });
 }
 
-export function useInvalidateAdminSeguranca() {
+function useInvalidateAdminSeguranca() {
   const qc = useQueryClient();
   return () => void qc.invalidateQueries({ queryKey: queryKeys.admin.seguranca.all() });
 }

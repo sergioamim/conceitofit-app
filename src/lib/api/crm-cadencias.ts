@@ -45,7 +45,7 @@ export async function listCrmCadenceExecutionsApi(input: {
   }
 }
 
-export async function getCrmCadenceExecutionApi(input: {
+async function getCrmCadenceExecutionApi(input: {
   tenantId: string;
   id: string;
 }): Promise<CrmCadenceExecution> {
@@ -114,7 +114,7 @@ export async function listCrmEscalationRulesApi(input: {
   }
 }
 
-export async function createCrmEscalationRuleApi(input: {
+async function createCrmEscalationRuleApi(input: {
   tenantId: string;
   data: Omit<CrmEscalationRule, "id" | "tenantId">;
 }): Promise<CrmEscalationRule> {
@@ -130,7 +130,7 @@ export async function createCrmEscalationRuleApi(input: {
   }
 }
 
-export async function updateCrmEscalationRuleApi(input: {
+async function updateCrmEscalationRuleApi(input: {
   tenantId: string;
   id: string;
   data: Partial<Omit<CrmEscalationRule, "id" | "tenantId">>;
@@ -147,7 +147,7 @@ export async function updateCrmEscalationRuleApi(input: {
   }
 }
 
-export async function deleteCrmEscalationRuleApi(input: {
+async function deleteCrmEscalationRuleApi(input: {
   tenantId: string;
   id: string;
 }): Promise<void> {
