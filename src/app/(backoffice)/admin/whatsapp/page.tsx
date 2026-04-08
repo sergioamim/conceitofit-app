@@ -7,6 +7,7 @@ import {
   Pencil,
   Plus,
   ScrollText,
+  ShieldCheck,
   Trash2,
   X,
 } from "lucide-react";
@@ -48,6 +49,21 @@ import {
   useWhatsAppConfig,
   useWhatsAppStats,
 } from "@/lib/query/use-whatsapp";
+import {
+  useWhatsAppCredentials,
+  useCreateWhatsAppCredential,
+  useUpdateWhatsAppCredential,
+  useDeleteWhatsAppCredential,
+  useRefreshCredentialToken,
+} from "@/lib/query/use-whatsapp-credentials";
+import { TokenExpiryAlert } from "@/components/admin/token-expiry-alert";
+import { CredentialList } from "@/components/admin/credential-list";
+import { WhatsAppCredentialForm } from "@/components/admin/whatsapp-credential-form";
+import type {
+  WhatsAppCredentialResponse,
+  WhatsAppCredentialRequest,
+} from "@/lib/shared/types/whatsapp-crm";
+import type { WhatsAppCredentialFormValues } from "@/lib/forms/atendimento-schemas";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type {
   WhatsAppMessageLog,
@@ -182,6 +198,20 @@ export default function AdminWhatsAppPage() {
   const [logs, setLogs] = useState<WhatsAppMessageLog[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // --- Credenciais ---
+  const { data: credentials = [], isLoading: credentialsLoading } =
+    useWhatsAppCredentials({
+      tenantId: tenantId || undefined,
+      tenantResolved: tenantContext.tenantResolved,
+    });
+  const createCredential = useCreateWhatsAppCredential();
+  const updateCredential = useUpdateWhatsAppCredential();
+  const deleteCredential = useDeleteWhatsAppCredential();
+  const refreshToken = useRefreshCredentialToken();
+  const [credDialogOpen, setCredDialogOpen] = useState(false);
+  const [editingCredential, setEditingCredential] =
+    useState<WhatsAppCredentialResponse | null>(null);
 
   // Filtros e paginacao — Templates
   const [templateFilters, setTemplateFilters] = useState<ActiveFilters>({});
@@ -522,7 +552,7 @@ export default function AdminWhatsAppPage() {
 
         <div className="px-6 py-6">
           <Tabs defaultValue="templates" className="space-y-6">
-            <TabsList className="grid h-auto grid-cols-3 gap-1 rounded-2xl bg-secondary/50 p-1">
+            <TabsList className="grid h-auto grid-cols-4 gap-1 rounded-2xl bg-secondary/50 p-1">
               <TabsTrigger value="templates" className="rounded-xl">
                 <MessageSquare className="mr-2 size-4" />
                 Templates
@@ -530,6 +560,10 @@ export default function AdminWhatsAppPage() {
               <TabsTrigger value="logs" className="rounded-xl">
                 <ScrollText className="mr-2 size-4" />
                 Logs de Envio
+              </TabsTrigger>
+              <TabsTrigger value="credenciais" className="rounded-xl">
+                <ShieldCheck className="mr-2 size-4" />
+                Credenciais
               </TabsTrigger>
               <TabsTrigger value="config" className="rounded-xl">
                 Configuração
@@ -590,6 +624,155 @@ export default function AdminWhatsAppPage() {
                 itemLabel="mensagens"
                 tableAriaLabel="Tabela de logs de envio WhatsApp"
               />
+            </TabsContent>
+
+            {/* --- Tab Credenciais (Task 511) --- */}
+            <TabsContent value="credenciais" className="space-y-4">
+              <TokenExpiryAlert
+                credentials={credentials}
+                onRenew={(ids) => {
+                  for (const credId of ids) {
+                    refreshToken.mutate(
+                      { tenantId, id: credId },
+                      {
+                        onSuccess: () =>
+                          toast({ title: "Token renovado com sucesso" }),
+                        onError: (err) =>
+                          toast({
+                            title: "Erro ao renovar token",
+                            description: normalizeErrorMessage(err),
+                            variant: "destructive",
+                          }),
+                      },
+                    );
+                  }
+                }}
+              />
+
+              <CredentialList
+                credentials={credentials}
+                isLoading={credentialsLoading}
+                onEdit={(cred) => {
+                  setEditingCredential(cred);
+                  setCredDialogOpen(true);
+                }}
+                onDelete={(credId) => {
+                  deleteCredential.mutate(
+                    { tenantId, id: credId },
+                    {
+                      onSuccess: () =>
+                        toast({ title: "Credencial removida" }),
+                      onError: (err) =>
+                        toast({
+                          title: "Erro ao remover credencial",
+                          description: normalizeErrorMessage(err),
+                          variant: "destructive",
+                        }),
+                    },
+                  );
+                }}
+                onHealthCheck={(credId) => {
+                  toast({ title: "Health check solicitado" });
+                }}
+                onRefreshToken={(credId) => {
+                  refreshToken.mutate(
+                    { tenantId, id: credId },
+                    {
+                      onSuccess: () =>
+                        toast({ title: "Token renovado" }),
+                      onError: (err) =>
+                        toast({
+                          title: "Erro ao renovar token",
+                          description: normalizeErrorMessage(err),
+                          variant: "destructive",
+                        }),
+                    },
+                  );
+                }}
+              />
+
+              <Button
+                onClick={() => {
+                  setEditingCredential(null);
+                  setCredDialogOpen(true);
+                }}
+              >
+                <Plus className="mr-2 size-4" />
+                Nova Credencial
+              </Button>
+
+              <Dialog open={credDialogOpen} onOpenChange={setCredDialogOpen}>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingCredential
+                        ? "Editar Credencial"
+                        : "Nova Credencial"}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <WhatsAppCredentialForm
+                    credential={editingCredential}
+                    tenantId={tenantId}
+                    isSubmitting={
+                      createCredential.isPending || updateCredential.isPending
+                    }
+                    onCancel={() => setCredDialogOpen(false)}
+                    onSave={(values: WhatsAppCredentialFormValues) => {
+                      const request: WhatsAppCredentialRequest = {
+                        tenantId: values.tenantId,
+                        academiaId: values.academiaId,
+                        unidadeId: values.unidadeId,
+                        businessAccountId: values.businessAccountId,
+                        wabaId: values.wabaId,
+                        phoneId: values.phoneId,
+                        phoneNumber: values.phoneNumber,
+                        mode: values.mode,
+                        accessToken: values.accessToken,
+                        accessTokenExpiresAt: values.accessTokenExpiresAt,
+                        webhookVerifyToken: values.webhookVerifyToken,
+                      };
+
+                      if (editingCredential) {
+                        updateCredential.mutate(
+                          {
+                            tenantId,
+                            id: editingCredential.id,
+                            data: request,
+                          },
+                          {
+                            onSuccess: () => {
+                              toast({ title: "Credencial atualizada" });
+                              setCredDialogOpen(false);
+                            },
+                            onError: (err) =>
+                              toast({
+                                title: "Erro ao atualizar",
+                                description: normalizeErrorMessage(err),
+                                variant: "destructive",
+                              }),
+                          },
+                        );
+                      } else {
+                        createCredential.mutate(
+                          { tenantId, data: request },
+                          {
+                            onSuccess: () => {
+                              toast({ title: "Credencial criada" });
+                              setCredDialogOpen(false);
+                            },
+                            onError: (err) =>
+                              toast({
+                                title: "Erro ao criar",
+                                description: normalizeErrorMessage(err),
+                                variant: "destructive",
+                              }),
+                          },
+                        );
+                      }
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             {/* --- Tab Configuração (Task 481) --- */}

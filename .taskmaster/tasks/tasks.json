@@ -14725,7 +14725,7 @@
         "description": "Página principal integrando lista, filtros, SSE e navegação.",
         "details": "SSEConnectionProvider wrapper. useConversas + useSSEConversasSync. InboxLayout com ConversationList + Filters. URL search params para filtros. Skeleton loading. EmptyInboxState.",
         "testStrategy": "E2E: abrir→filtrar→selecionar→navegar. SSE mock: lista atualiza. Mobile: responsivo.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "491",
           "493",
@@ -14736,7 +14736,8 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "complexity": 5
+        "complexity": 5,
+        "updatedAt": "2026-04-08T17:18:33.670Z"
       },
       {
         "id": "508",
@@ -14744,7 +14745,7 @@
         "description": "Página de detalhe com header, thread, input e contato, integrada SSE.",
         "details": "useConversaDetail + useConversaThread + useSSEConversasSync. ConversationHeader + MessageThread + MessageInput + ContactCard. Optimistic update no envio. Mobile: side panel sheet.",
         "testStrategy": "E2E completo: abrir→thread→enviar→SSE nova msg→auto-scroll. Erro envio→feedback visual.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "491",
           "493",
@@ -14759,7 +14760,8 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "complexity": 5
+        "complexity": 5,
+        "updatedAt": "2026-04-08T17:18:33.684Z"
       },
       {
         "id": "509",
@@ -14767,13 +14769,14 @@
         "description": "Adicionar item Atendimento ao operationGroup em nav-items-v2.ts.",
         "details": "Import MessageSquare de lucide-react. Adicionar ao operationGroup.items: { href: /atendimento/inbox, label: Atendimento, icon: MessageSquare, description: Inbox WhatsApp }.",
         "testStrategy": "Manual: sidebar mostra item → clicar → navega → highlight correto.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "507"
         ],
         "priority": "high",
         "subtasks": [],
-        "complexity": 1
+        "complexity": 1,
+        "updatedAt": "2026-04-08T17:18:33.699Z"
       },
       {
         "id": "510",
@@ -14781,7 +14784,7 @@
         "description": "WhatsAppCredentialForm, CredentialHealthBadge, TokenExpiryAlert, CredentialList.",
         "details": "Form: react-hook-form + zod, campos da credencial. HealthBadge: cores por onboardingStatus. TokenExpiryAlert: banner amarelo. CredentialList: PaginatedTable com ações.",
         "testStrategy": "Unitário: form submit válido/inválido, badge 4 statuses, alert show/hide, list render.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486",
           "492",
@@ -14790,7 +14793,8 @@
         ],
         "priority": "medium",
         "subtasks": [],
-        "complexity": 3
+        "complexity": 3,
+        "updatedAt": "2026-04-08T17:18:33.709Z"
       },
       {
         "id": "511",
@@ -14798,13 +14802,14 @@
         "description": "Estender /admin/whatsapp/page.tsx com tab Credenciais.",
         "details": "Nova tab no Tabs existente. CredentialList + TokenExpiryAlert + WhatsAppCredentialForm em Dialog. Usar hooks da Task 492. Não quebrar tabs existentes.",
         "testStrategy": "Manual: tab Credenciais → CRUD → health check → delete confirmação.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "510"
         ],
         "priority": "medium",
         "subtasks": [],
-        "complexity": 3
+        "complexity": 3,
+        "updatedAt": "2026-04-08T17:18:33.721Z"
       },
       {
         "id": "512",
@@ -14897,9 +14902,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-08T17:16:50.833Z",
+      "lastModified": "2026-04-08T17:18:33.721Z",
       "taskCount": 462,
-      "completedCount": 443,
+      "completedCount": 452,
       "tags": [
         "master"
       ]

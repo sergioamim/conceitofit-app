@@ -12,7 +12,7 @@ import {
   type EnviarMensagemFormValues,
 } from "@/lib/forms/atendimento-schemas";
 import type { EnviarMensagemRequest } from "@/lib/shared/types/whatsapp-crm";
-import { idempotencyKeyStore } from "@/lib/utils/idempotency";
+import { IdempotencyKeyStore } from "@/lib/utils/idempotency";
 
 /* ---------------------------------------------------------------------------
  * Props
@@ -87,7 +87,7 @@ export function MessageInput({
     async (values: EnviarMensagemFormValues) => {
       if (cooldownRef.current || isSending) return;
 
-      const idempotencyKey = idempotencyKeyStore.acquireKey(conversationId);
+      const idempotencyKey = IdempotencyKeyStore.acquireKey(conversationId);
       applyCooldown();
 
       const request: EnviarMensagemRequest = {
@@ -100,7 +100,7 @@ export function MessageInput({
 
       try {
         await onSend(request, idempotencyKey);
-        idempotencyKeyStore.releaseKey(conversationId);
+        IdempotencyKeyStore.releaseKey(conversationId);
         form.reset();
       } catch {
         // Erro tratado pelo caller — bubble com status de falha

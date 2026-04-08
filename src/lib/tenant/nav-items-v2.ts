@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LineChart,
   Megaphone,
+  MessageSquare,
   Settings,
   ShoppingCart,
   Users,
@@ -58,6 +59,7 @@ export const operationGroup: NavGroupV2 = {
   label: "Operação",
   icon: Layers,
   items: [
+    { href: "/atendimento/inbox", label: "Atendimento", icon: MessageSquare, description: "Inbox WhatsApp" },
     { href: "/clientes", label: "Clientes", icon: Users, description: "Base de alunos" },
     { href: "/matriculas", label: "Contratos", icon: ClipboardList },
     { href: "/grade", label: "Grade de Aulas", icon: CalendarDays },

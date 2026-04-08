@@ -79,3 +79,4 @@ class IdempotencyKeyStoreImpl {
 }
 
 export const IdempotencyKeyStore = IdempotencyKeyStoreImpl.getInstance();
+export const idempotencyKeyStore = IdempotencyKeyStore;
