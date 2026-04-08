@@ -2,7 +2,7 @@
 
 **Title:** E2E test — Fluxo completo de inbox de atendimento
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 508
 

@@ -14882,7 +14882,7 @@
         "description": "Playwright: abrir inbox→selecionar conversa→ver thread→enviar mensagem→verificar envio.",
         "details": "5 cenários: listar/selecionar, ver thread, enviar mensagem, mudar status, filtros. Backend real via BACKEND_PROXY_TARGET.",
         "testStrategy": "npx playwright test tests/e2e/atendimento-inbox.spec.ts --project=chromium.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "508"
         ],
@@ -14906,7 +14906,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-08T17:23:48.965Z",
+      "lastModified": "2026-04-08T17:25:45.619Z",
       "taskCount": 462,
       "completedCount": 456,
       "tags": [
