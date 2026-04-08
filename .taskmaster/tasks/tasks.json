@@ -14403,13 +14403,497 @@
         "subtasks": [],
         "updatedAt": "2026-04-07T00:38:13.910Z",
         "complexity": 4
+      },
+      {
+        "id": "486",
+        "title": "Tipos TypeScript para WhatsApp CRM (Atendimento)",
+        "description": "Criar arquivo de tipos TypeScript com todos os contratos do novo domínio de atendimento: Conversation, Message, ContactContext, WhatsAppCredential, enums de status/direção/tipo/conteúdo, e tipos de filtro/SSE baseados no OpenAPI oficial do backend.",
+        "details": "Criar src/lib/shared/types/whatsapp-crm.ts exportando: Enums: ConversationStatus (ABERTA, PENDENTE, EM_ATENDIMENTO, ENCERRADA, SPAM, BLOQUEADA), MessageDirection (INBOUND, OUTBOUND), MessageContentType (TEXTO, IMAGEM, AUDIO, DOCUMENTO, VIDEO, LOCALIZACAO, CONTATO, TEMPLATE), MessageDeliveryStatus (PENDENTE, ENTREGUE, LIDO, FALHOU, NAO_ENTREGUE), WhatsAppOnboardingStatus, WhatsAppOnboardingStep, WhatsAppMode. Interfaces: ConversaResponse, MensagemResponse, WhatsAppCredentialResponse, WhatsAppCredentialRequest, CriarConversaRequest, EnviarMensagemRequest, CriarTarefaConversaRequest, ConversaPageResponse, MensagemPageResponse, ConversaFilters, SSEEvent. Todos mapeados do OpenAPI openapi-atendimento-whatsapp.yaml.",
+        "testStrategy": "Compilação TypeScript limpa. Teste unitário simples: instanciar objetos com os tipos e verificar que enums aceitam apenas valores válidos.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 2
+      },
+      {
+        "id": "487",
+        "title": "API client TypeScript para Conversas (Atendimento)",
+        "description": "Criar src/lib/api/conversas.ts com todas as funções de chamada à API de conversas, mensagens, status, owner, fila, unidade e tarefas.",
+        "details": "Funções: listConversasApi, getConversaDetailApi, createConversaApi, updateConversaStatusApi, assignConversaOwnerApi, moveConversaQueueApi, reattribuirConversaUnidadeApi, getConversaThreadApi, sendMessageApi (com X-Idempotency-Key header), createConversaTaskApi. Todas usando apiRequest de ./http.",
+        "testStrategy": "Testes unitários mockando apiRequest para cada função, verificando path, method, query params e body. Testar especificamente que sendMessageApi injeta header X-Idempotency-Key.",
+        "status": "pending",
+        "dependencies": [
+          "486"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "488",
+        "title": "API client TypeScript para WhatsApp Credentials",
+        "description": "Criar src/lib/api/whatsapp-credentials.ts com funções CRUD + health check + refresh token para credenciais WABA.",
+        "details": "Funções: listCredentialsApi, createCredentialApi, updateCredentialApi, deleteCredentialApi, checkCredentialHealthApi, refreshCredentialTokenApi. Usar apiRequest de ./http.",
+        "testStrategy": "Testes unitários mockando apiRequest, verificando path, method, body de cada função.",
+        "status": "pending",
+        "dependencies": [
+          "486"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 2
+      },
+      {
+        "id": "489",
+        "title": "Adicionar rotas de atendimento ao contexto scropado do HTTP client",
+        "description": "Adicionar /api/v1/conversas/* e /api/v1/whatsapp/credentials/* ao array CONTEXT_SCOPED_OPERATIONAL_PATTERNS em http.ts.",
+        "details": "Em src/lib/api/http.ts, adicionar ao CONTEXT_SCOPED_OPERATIONAL_PATTERNS: /^/api/v1/conversas(?:/|$)/ e /^/api/v1/whatsapp/credentials(?:/|$)/.",
+        "testStrategy": "Verificar que apiRequest para essas rotas resulta em fetch com header X-Context-Id presente.",
+        "status": "pending",
+        "dependencies": [
+          "487",
+          "488"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 1
+      },
+      {
+        "id": "490",
+        "title": "Adicionar query keys para conversas e credenciais",
+        "description": "Adicionar entries conversas e credentials em src/lib/query/keys.ts.",
+        "details": "Adicionar conversas.all, conversas.list, conversas.detail, conversas.thread e credentials.all, credentials.health ao queryKeys.",
+        "testStrategy": "TypeScript compila sem erros. Keys únicas e consistentes.",
+        "status": "pending",
+        "dependencies": [
+          "486"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 1
+      },
+      {
+        "id": "491",
+        "title": "React Query hooks para Conversas (Atendimento)",
+        "description": "Criar src/lib/query/use-conversas.ts com hooks de query e mutation para todas as operações de conversas, mensagens e tarefas.",
+        "details": "Queries: useConversas (staleTime:0, refetchInterval:15s), useConversaDetail (staleTime:10s), useConversaThread (staleTime:0, refetchInterval:10s). Mutations: useSendMessage, useUpdateConversaStatus, useAssignConversaOwner, useMoveConversaQueue, useReattribuirConversaUnidade, useCreateConversaTask, useCreateConversa. Todas com invalidation no onSuccess.",
+        "testStrategy": "Testes unitários com queryClient mock. Verificar invalidateQueries com keys corretas.",
+        "status": "pending",
+        "dependencies": [
+          "487",
+          "489",
+          "490"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 4
+      },
+      {
+        "id": "492",
+        "title": "React Query hooks para WhatsApp Credentials",
+        "description": "Criar src/lib/query/use-whatsapp-credentials.ts com hooks CRUD, health check e refresh token.",
+        "details": "Queries: useWhatsAppCredentials (staleTime:5min), useCredentialHealth (staleTime:30s, refetchInterval:60s). Mutations: useCreateWhatsAppCredential, useUpdateWhatsAppCredential, useDeleteWhatsAppCredential, useRefreshCredentialToken.",
+        "testStrategy": "Testes unitários mockando queryClient. Verificar polling de health a cada 60s.",
+        "status": "pending",
+        "dependencies": [
+          "488",
+          "490"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "493",
+        "title": "SSE Provider para atualizações em tempo real",
+        "description": "Criar src/lib/sse/sse-provider.tsx com SSEConnectionProvider e hook useSSE.",
+        "details": "EventSource para /api/v1/conversas/stream?tenantId=X&timeout=300000. Eventos: connected, nova_mensagem, conversa_atualizada, conversa_encerrada, heartbeat. Reconexão com backoff exponencial (3s→6s→12s→30s). Hydration safety: typeof window check. Fallback via refetchInterval nos hooks.",
+        "testStrategy": "Teste unitário subscribe/unsubscribe. Mock de eventos SSE. Testar reconexão com erro mock.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 4,
+        "updatedAt": "2026-04-08T16:30:15.733Z"
+      },
+      {
+        "id": "494",
+        "title": "Hook de sync SSE com React Query invalidation",
+        "description": "Criar hook useSSEConversasSync que ouve eventos SSE e invalida queries correspondentes.",
+        "details": "Hook ouve nova_mensagem, conversa_atualizada, conversa_encerrada e invalida conversas.detail, conversas.thread, conversas.list. Cleanup no unmount.",
+        "testStrategy": "Mock do useSSE emitindo eventos, verificar invalidateQueries chamado corretamente.",
+        "status": "pending",
+        "dependencies": [
+          "491",
+          "493"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "495",
+        "title": "Utilitário de idempotência para envio de mensagens",
+        "description": "Criar src/lib/utils/idempotency.ts com geração de X-Idempotency-Key e store de deduplicação.",
+        "details": "generateIdempotencyKey() com crypto.randomUUID(). IdempotencyKeyStore com acquireKey/releaseKey/cleanup. Persistência sessionStorage com TTL 30s.",
+        "testStrategy": "Testes unitários: unicidade de keys, reuse dentro de 30s, expiração após 30s, sessionStorage mock.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 1,
+        "updatedAt": "2026-04-08T16:30:15.749Z"
+      },
+      {
+        "id": "496",
+        "title": "Schemas Zod para formulários de atendimento",
+        "description": "Criar src/lib/forms/atendimento-schemas.ts com schemas para mensagem, tarefa, conversa, filtros e credencial.",
+        "details": "Schemas: enviarMensagemSchema, criarTarefaSchema, criarConversaSchema, conversaFiltersSchema, whatsappCredentialSchema. Usar zod v4 + @hookform/resolvers/zod.",
+        "testStrategy": "Testes unitários: validar dados válidos e inválidos para cada schema.",
+        "status": "pending",
+        "dependencies": [
+          "486"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 2
+      },
+      {
+        "id": "497",
+        "title": "Utilitário de timestamps relativos (pt-BR)",
+        "description": "Criar src/lib/utils/time-format.ts com formatRelativeTime, formatDateTimeBR, formatDateBR.",
+        "details": "Usar date-fns com locale ptBR. formatRelativeTime: há 2 minutos. formatDateTimeBR: 07/04/2026 14:32.",
+        "testStrategy": "Testes unitários com datas fixas. Testar bordas: data futura, data antiga.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "complexity": 1,
+        "updatedAt": "2026-04-08T16:30:15.762Z"
+      },
+      {
+        "id": "498",
+        "title": "Componentes base de UI do atendimento",
+        "description": "Criar StatusBadge, MessageBubble, MessageMediaPreview, EmptyInboxState, RealTimeIndicator.",
+        "details": "StatusBadge: 6 statuses com cores. MessageBubble: inbound/outbound com timestamp e status. MessageMediaPreview: imagem, áudio, documento, vídeo, localização, contato. EmptyInboxState: ilustração + CTA. RealTimeIndicator: ponto pulsante verde/amarelo/cinza.",
+        "testStrategy": "Testes unitários: todos os 6 statuses, inbound vs outbound, snapshot EmptyInboxState.",
+        "status": "pending",
+        "dependencies": [
+          "486",
+          "497"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "499",
+        "title": "Componente ConversationList",
+        "description": "Lista lateral de conversas com avatar, preview, timestamp, badge e seleção.",
+        "details": "Avatar com iniciais, nome, preview truncado, timestamp relativo, badge status. Skeleton loading. role=listbox/option. ArrowUp/Down navegação.",
+        "testStrategy": "Teste unitário: ordenação, seleção, skeleton, navegação teclado.",
+        "status": "pending",
+        "dependencies": [
+          "486",
+          "497",
+          "498"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "500",
+        "title": "Componente ConversationFilters",
+        "description": "Filtros de conversas usando TableFilters existente.",
+        "details": "busca, status, queue, ownerUserId. URL search params sync. Usar TableFilters existente.",
+        "testStrategy": "Teste manual: filtros aplicados e limpos. Teste unitário: config correto.",
+        "status": "pending",
+        "dependencies": [
+          "486"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "complexity": 2
+      },
+      {
+        "id": "501",
+        "title": "Componente InboxLayout",
+        "description": "Layout split-screen: sidebar + main area, responsivo.",
+        "details": "Desktop: 320px sidebar colapsável + main. Mobile: mostrar UM OU outro. framer-motion transições. Botão voltar em mobile.",
+        "testStrategy": "Teste manual responsive: resize, colapso, mobile show/hide.",
+        "status": "pending",
+        "dependencies": [
+          "499"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "502",
+        "title": "Componente MessageThread",
+        "description": "Thread de mensagens com scroll, paginação load more, auto-scroll SSE, agrupamento por data.",
+        "details": "Ordenação createdAt DESC invertido. Botão carregar mais no topo. Auto-scroll ou badge nova mensagem. Agrupamento por data. Skeleton loading.",
+        "testStrategy": "Teste unitário: ordenação, paginação, agrupamento. E2E: scroll up + SSE nova msg = badge.",
+        "status": "pending",
+        "dependencies": [
+          "486",
+          "497",
+          "498",
+          "491"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 4
+      },
+      {
+        "id": "503",
+        "title": "Componente MessageInput",
+        "description": "Input de envio com textarea auto-resize, idempotência, mídia via upload, templates rápidos.",
+        "details": "Enter envia, Shift+Enter nova linha. IdempotencyKeyStore. Upload para /api/v1/storage/upload → mediaUrl. Templates rápidos. Debounce 2s. Validação zod.",
+        "testStrategy": "Unitário: Enter envia, Shift+Enter newline, debounce, validação, idempotência. E2E: digitar→enviar→feedback.",
+        "status": "pending",
+        "dependencies": [
+          "487",
+          "491",
+          "495",
+          "496",
+          "497",
+          "498"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 4
+      },
+      {
+        "id": "504",
+        "title": "Componente ContactCard",
+        "description": "Card com dados do contato: nome, telefone, origem, vínculos, consentimentos.",
+        "details": "Nome, telefone, badge origem. Se aluno: badge + link. Se prospect: badge + link + botão Avançar Stage. Consentimentos com checkmarks. Accordion colapsável.",
+        "testStrategy": "Unitário: contato completo, sem vínculos, links corretos, accordion.",
+        "status": "pending",
+        "dependencies": [
+          "486",
+          "497"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "505",
+        "title": "Componente ConversationHeader",
+        "description": "Header da conversa com status clicável e ações rápidas.",
+        "details": "Nome + telefone. StatusBadge dropdown. Ações: OwnerAssign, QueueSelector, UnitSelector, Encerrar. Mobile: menu ⋮ dropdown.",
+        "testStrategy": "Unitário: renderização, dropdown status, callbacks ações. E2E: mudar status → toast.",
+        "status": "pending",
+        "dependencies": [
+          "486",
+          "498",
+          "506"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "506",
+        "title": "Componentes de ação da conversa",
+        "description": "QueueSelector, OwnerAssign, UnitSelector, TaskCreateDialog.",
+        "details": "QueueSelector: select/filas livres. OwnerAssign: busca usuários. UnitSelector: GET /api/v1/unidades. TaskCreateDialog: form com zod, campos titulo/descricao/responsavel/prioridade/prazo.",
+        "testStrategy": "Unitário: cada componente com props variados. TaskCreateDialog validação.",
+        "status": "pending",
+        "dependencies": [
+          "486",
+          "496"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "507",
+        "title": "Página Inbox de Conversas — /atendimento/inbox",
+        "description": "Página principal integrando lista, filtros, SSE e navegação.",
+        "details": "SSEConnectionProvider wrapper. useConversas + useSSEConversasSync. InboxLayout com ConversationList + Filters. URL search params para filtros. Skeleton loading. EmptyInboxState.",
+        "testStrategy": "E2E: abrir→filtrar→selecionar→navegar. SSE mock: lista atualiza. Mobile: responsivo.",
+        "status": "pending",
+        "dependencies": [
+          "491",
+          "493",
+          "494",
+          "499",
+          "500",
+          "501"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 5
+      },
+      {
+        "id": "508",
+        "title": "Página Detalhe da Conversa — /atendimento/inbox/[id]",
+        "description": "Página de detalhe com header, thread, input e contato, integrada SSE.",
+        "details": "useConversaDetail + useConversaThread + useSSEConversasSync. ConversationHeader + MessageThread + MessageInput + ContactCard. Optimistic update no envio. Mobile: side panel sheet.",
+        "testStrategy": "E2E completo: abrir→thread→enviar→SSE nova msg→auto-scroll. Erro envio→feedback visual.",
+        "status": "pending",
+        "dependencies": [
+          "491",
+          "493",
+          "494",
+          "498",
+          "502",
+          "503",
+          "504",
+          "505",
+          "506",
+          "507"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 5
+      },
+      {
+        "id": "509",
+        "title": "Adicionar navegação Atendimento na sidebar",
+        "description": "Adicionar item Atendimento ao operationGroup em nav-items-v2.ts.",
+        "details": "Import MessageSquare de lucide-react. Adicionar ao operationGroup.items: { href: /atendimento/inbox, label: Atendimento, icon: MessageSquare, description: Inbox WhatsApp }.",
+        "testStrategy": "Manual: sidebar mostra item → clicar → navega → highlight correto.",
+        "status": "pending",
+        "dependencies": [
+          "507"
+        ],
+        "priority": "high",
+        "subtasks": [],
+        "complexity": 1
+      },
+      {
+        "id": "510",
+        "title": "Componentes de admin de credenciais WhatsApp",
+        "description": "WhatsAppCredentialForm, CredentialHealthBadge, TokenExpiryAlert, CredentialList.",
+        "details": "Form: react-hook-form + zod, campos da credencial. HealthBadge: cores por onboardingStatus. TokenExpiryAlert: banner amarelo. CredentialList: PaginatedTable com ações.",
+        "testStrategy": "Unitário: form submit válido/inválido, badge 4 statuses, alert show/hide, list render.",
+        "status": "pending",
+        "dependencies": [
+          "486",
+          "492",
+          "496",
+          "497"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "511",
+        "title": "Adicionar tab Credenciais na página Admin WhatsApp",
+        "description": "Estender /admin/whatsapp/page.tsx com tab Credenciais.",
+        "details": "Nova tab no Tabs existente. CredentialList + TokenExpiryAlert + WhatsAppCredentialForm em Dialog. Usar hooks da Task 492. Não quebrar tabs existentes.",
+        "testStrategy": "Manual: tab Credenciais → CRUD → health check → delete confirmação.",
+        "status": "pending",
+        "dependencies": [
+          "510"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "512",
+        "title": "Estender playbooks CRM com triggers de WhatsApp",
+        "description": "Adicionar triggers WhatsApp e passos de envio na página de playbooks.",
+        "details": "Novos triggers: CONVERSA_ABERTA, MENSAGEM_RECEBIDA, SEM_RESPOSTA_24H/48H/72H. Novo passo ação: Enviar WhatsApp com template. Link para conversa em execuções.",
+        "testStrategy": "Manual: criar playbook trigger WhatsApp → salvar → lista. Passo Enviar WhatsApp → persistir. Link conversa funciona.",
+        "status": "pending",
+        "dependencies": [
+          "486"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "complexity": 4
+      },
+      {
+        "id": "513",
+        "title": "Integrar avanço de stage do prospect com conversa",
+        "description": "Hook useAvancarStageProspect + botão no ContactCard.",
+        "details": "Mutation PATCH /api/v1/academia/prospects-legado/{id}/stage. Botão Avançar Stage no ContactCard se prospectId existe. Dialog confirmação. Toast feedback.",
+        "testStrategy": "E2E: conversa com prospect → avançar stage → toast → backend atualizado.",
+        "status": "pending",
+        "dependencies": [
+          "486"
+        ],
+        "priority": "low",
+        "subtasks": [],
+        "complexity": 2
+      },
+      {
+        "id": "514",
+        "title": "Dashboard WhatsApp — /atendimento/dashboard",
+        "description": "Dashboard com métricas: conversas por status, volume msgs, tempo resposta, saúde credenciais.",
+        "details": "Grid metric cards: Conversas Abertas, Pendentes, Mensagens Hoje, Tempo Médio Resposta, Credenciais Ativas, Credenciais com Alerta. Seção saúde credenciais. Polling 60s.",
+        "testStrategy": "Manual: métricas corretas, 0 credenciais → card 0, responsivo.",
+        "status": "pending",
+        "dependencies": [
+          "491",
+          "492"
+        ],
+        "priority": "low",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "515",
+        "title": "Testes unitários dos componentes críticos de atendimento",
+        "description": "Vitest para StatusBadge, MessageBubble, MessageInput, ConversationList, TaskCreateDialog.",
+        "details": "status-badge.test.tsx: 6 statuses. message-bubble.test.tsx: inbound/outbound/automated. message-input.test.tsx: Enter envia, debounce, validação. conversation-list.test.tsx: seleção, navegação. task-create-dialog.test.tsx: validação.",
+        "testStrategy": "npm run test: todos passam. Cobertura mínima 70% por componente.",
+        "status": "pending",
+        "dependencies": [
+          "498",
+          "499",
+          "502",
+          "503",
+          "506"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "complexity": 3
+      },
+      {
+        "id": "516",
+        "title": "E2E test — Fluxo completo de inbox",
+        "description": "Playwright: abrir inbox→selecionar conversa→ver thread→enviar mensagem→verificar envio.",
+        "details": "5 cenários: listar/selecionar, ver thread, enviar mensagem, mudar status, filtros. Backend real via BACKEND_PROXY_TARGET.",
+        "testStrategy": "npx playwright test tests/e2e/atendimento-inbox.spec.ts --project=chromium.",
+        "status": "pending",
+        "dependencies": [
+          "508"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "complexity": 4
+      },
+      {
+        "id": "517",
+        "title": "Utilitário de notificação sonora",
+        "description": "playNewMessageSound() com Web Audio API beep curto, sem arquivos externos.",
+        "details": "AudioContext oscillator: 880Hz→440Hz, 300ms. typeof window check. Integrar no handler SSE nova_mensagem. Hydration safety.",
+        "testStrategy": "Unitário: não lança erro. Manual: beep ao receber msg em conversa não selecionada.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [],
+        "complexity": 1,
+        "updatedAt": "2026-04-08T16:30:15.772Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-07T00:39:07.479Z",
-      "taskCount": 430,
-      "completedCount": 425,
+      "lastModified": "2026-04-08T16:30:15.772Z",
+      "taskCount": 462,
+      "completedCount": 429,
       "tags": [
         "master"
       ]
