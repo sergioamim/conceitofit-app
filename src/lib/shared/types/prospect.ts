@@ -121,12 +121,18 @@ export type CrmPlaybookAcao =
   | "SCRIPT_WHATSAPP"
   | "LIGACAO"
   | "PROPOSTA"
-  | "VISITA";
+  | "VISITA"
+  | "ENVIAR_WHATSAPP";
 export type CrmCadenciaGatilho =
   | "NOVO_PROSPECT"
   | "SEM_RESPOSTA"
   | "VISITA_REALIZADA"
-  | "MUDANCA_DE_ETAPA";
+  | "MUDANCA_DE_ETAPA"
+  | "CONVERSA_ABERTA"
+  | "MENSAGEM_RECEBIDA"
+  | "SEM_RESPOSTA_24H"
+  | "SEM_RESPOSTA_48H"
+  | "SEM_RESPOSTA_72H";
 export type CrmCadenciaAcao = "WHATSAPP" | "EMAIL" | "LIGACAO" | "TAREFA_INTERNA";
 export type CrmAutomationGatilho =
   | "PROSPECT_CRIADO"

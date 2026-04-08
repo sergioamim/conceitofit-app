@@ -14817,13 +14817,14 @@
         "description": "Adicionar triggers WhatsApp e passos de envio na página de playbooks.",
         "details": "Novos triggers: CONVERSA_ABERTA, MENSAGEM_RECEBIDA, SEM_RESPOSTA_24H/48H/72H. Novo passo ação: Enviar WhatsApp com template. Link para conversa em execuções.",
         "testStrategy": "Manual: criar playbook trigger WhatsApp → salvar → lista. Passo Enviar WhatsApp → persistir. Link conversa funciona.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486"
         ],
         "priority": "medium",
         "subtasks": [],
-        "complexity": 4
+        "complexity": 4,
+        "updatedAt": "2026-04-08T17:23:48.917Z"
       },
       {
         "id": "513",
@@ -14831,13 +14832,14 @@
         "description": "Hook useAvancarStageProspect + botão no ContactCard.",
         "details": "Mutation PATCH /api/v1/academia/prospects-legado/{id}/stage. Botão Avançar Stage no ContactCard se prospectId existe. Dialog confirmação. Toast feedback.",
         "testStrategy": "E2E: conversa com prospect → avançar stage → toast → backend atualizado.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486"
         ],
         "priority": "low",
         "subtasks": [],
-        "complexity": 2
+        "complexity": 2,
+        "updatedAt": "2026-04-08T17:23:48.936Z"
       },
       {
         "id": "514",
@@ -14845,14 +14847,15 @@
         "description": "Dashboard com métricas: conversas por status, volume msgs, tempo resposta, saúde credenciais.",
         "details": "Grid metric cards: Conversas Abertas, Pendentes, Mensagens Hoje, Tempo Médio Resposta, Credenciais Ativas, Credenciais com Alerta. Seção saúde credenciais. Polling 60s.",
         "testStrategy": "Manual: métricas corretas, 0 credenciais → card 0, responsivo.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "491",
           "492"
         ],
         "priority": "low",
         "subtasks": [],
-        "complexity": 3
+        "complexity": 3,
+        "updatedAt": "2026-04-08T17:23:48.951Z"
       },
       {
         "id": "515",
@@ -14860,7 +14863,7 @@
         "description": "Vitest para StatusBadge, MessageBubble, MessageInput, ConversationList, TaskCreateDialog.",
         "details": "status-badge.test.tsx: 6 statuses. message-bubble.test.tsx: inbound/outbound/automated. message-input.test.tsx: Enter envia, debounce, validação. conversation-list.test.tsx: seleção, navegação. task-create-dialog.test.tsx: validação.",
         "testStrategy": "npm run test: todos passam. Cobertura mínima 70% por componente.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "498",
           "499",
@@ -14870,7 +14873,8 @@
         ],
         "priority": "medium",
         "subtasks": [],
-        "complexity": 3
+        "complexity": 3,
+        "updatedAt": "2026-04-08T17:23:48.965Z"
       },
       {
         "id": "516",
@@ -14902,9 +14906,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-08T17:18:33.721Z",
+      "lastModified": "2026-04-08T17:23:48.965Z",
       "taskCount": 462,
-      "completedCount": 452,
+      "completedCount": 456,
       "tags": [
         "master"
       ]

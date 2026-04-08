@@ -154,6 +154,49 @@ export function useOptimisticProspectStatus(tenantId: string | undefined) {
   });
 }
 
+const STAGE_SEQUENCE: StatusProspect[] = [
+  "NOVO",
+  "EM_CONTATO",
+  "AGENDOU_VISITA",
+  "VISITOU",
+  "CONVERTIDO",
+];
+
+export function getNextStage(current: StatusProspect): StatusProspect | null {
+  const idx = STAGE_SEQUENCE.indexOf(current);
+  if (idx === -1 || idx >= STAGE_SEQUENCE.length - 1) return null;
+  return STAGE_SEQUENCE[idx + 1];
+}
+
+export function useAvancarStageProspect(tenantId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: {
+      prospectId: string;
+      novoStatus: StatusProspect;
+      conversationId?: string;
+    }) =>
+      updateProspectStatusApi({
+        tenantId: tenantId!,
+        id: input.prospectId,
+        status: input.novoStatus,
+      }),
+    onSuccess: (_data, variables) => {
+      if (tenantId) {
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.prospects.all(tenantId),
+        });
+        if (variables.conversationId) {
+          void queryClient.invalidateQueries({
+            queryKey: queryKeys.conversas.detail(tenantId, variables.conversationId),
+          });
+        }
+      }
+    },
+  });
+}
+
 export function useMarkProspectLost(tenantId: string | undefined) {
   const queryClient = useQueryClient();
 

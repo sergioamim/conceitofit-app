@@ -110,6 +110,7 @@ export const CRM_PLAYBOOK_ACTION_LABEL: Record<CrmPlaybookAcao, string> = {
   LIGACAO: "Ligação",
   PROPOSTA: "Proposta",
   VISITA: "Visita",
+  ENVIAR_WHATSAPP: "Enviar WhatsApp",
 };
 
 export const CRM_CADENCIA_TRIGGER_LABEL: Record<CrmCadenciaGatilho, string> = {
@@ -117,6 +118,11 @@ export const CRM_CADENCIA_TRIGGER_LABEL: Record<CrmCadenciaGatilho, string> = {
   SEM_RESPOSTA: "Sem resposta",
   VISITA_REALIZADA: "Visita realizada",
   MUDANCA_DE_ETAPA: "Mudança de etapa",
+  CONVERSA_ABERTA: "Conversa aberta (WhatsApp)",
+  MENSAGEM_RECEBIDA: "Mensagem recebida (WhatsApp)",
+  SEM_RESPOSTA_24H: "Sem resposta (24h)",
+  SEM_RESPOSTA_48H: "Sem resposta (48h)",
+  SEM_RESPOSTA_72H: "Sem resposta (72h)",
 };
 
 export const CRM_CADENCIA_ACTION_LABEL: Record<CrmCadenciaAcao, string> = {
