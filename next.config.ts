@@ -84,6 +84,8 @@ const nextConfig: NextConfig = {
   // Task 483: apontar assets estáticos para CDN quando configurado
   ...(cdnUrl ? { assetPrefix: cdnUrl } : {}),
   images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 86400, // 24h
     remotePatterns: [
       { protocol: "https", hostname: "*.amazonaws.com" },
       { protocol: "https", hostname: "*.conceito.fit" },
@@ -93,7 +95,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // Needed for EVO backup uploads (~70MB) forwarded through /backend rewrite.
     proxyClientMaxBodySize: backendProxyMaxBodySize * 1024 * 1024,
-    optimizePackageImports: ["lucide-react"],
+    optimizePackageImports: ["lucide-react", "date-fns", "@radix-ui/react-slot", "framer-motion"],
   },
   async headers() {
     return [

@@ -1,5 +1,3 @@
-"use client";
-
 export function validateCPF(value: string): { valid: boolean; message?: string } {
   if (process.env.NODE_ENV === "development") {
     return { valid: true };

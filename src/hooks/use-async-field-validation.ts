@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useRef, useState } from "react";
 import type { FieldAsyncFeedbackStatus } from "@/components/shared/field-async-feedback";
 import { logger } from "@/lib/shared/logger";

@@ -1,5 +1,3 @@
-"use client";
-
 import { Check } from "lucide-react";
 import type { Plano } from "@/lib/types";
 import { formatCurrency } from "@/lib/formatters";

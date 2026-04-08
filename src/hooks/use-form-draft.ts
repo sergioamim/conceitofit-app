@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect, useRef } from "react";
 import { logger } from "@/lib/shared/logger";
 import type { UseFormReturn, FieldValues } from "react-hook-form";
