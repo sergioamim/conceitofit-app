@@ -14596,7 +14596,7 @@
         "description": "Lista lateral de conversas com avatar, preview, timestamp, badge e seleção.",
         "details": "Avatar com iniciais, nome, preview truncado, timestamp relativo, badge status. Skeleton loading. role=listbox/option. ArrowUp/Down navegação.",
         "testStrategy": "Teste unitário: ordenação, seleção, skeleton, navegação teclado.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486",
           "497",
@@ -14604,7 +14604,8 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "complexity": 3
+        "complexity": 3,
+        "updatedAt": "2026-04-08T17:09:40.230Z"
       },
       {
         "id": "500",
@@ -14626,13 +14627,14 @@
         "description": "Layout split-screen: sidebar + main area, responsivo.",
         "details": "Desktop: 320px sidebar colapsável + main. Mobile: mostrar UM OU outro. framer-motion transições. Botão voltar em mobile.",
         "testStrategy": "Teste manual responsive: resize, colapso, mobile show/hide.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "499"
         ],
         "priority": "high",
         "subtasks": [],
-        "complexity": 3
+        "complexity": 3,
+        "updatedAt": "2026-04-08T17:09:40.251Z"
       },
       {
         "id": "502",
@@ -14640,7 +14642,7 @@
         "description": "Thread de mensagens com scroll, paginação load more, auto-scroll SSE, agrupamento por data.",
         "details": "Ordenação createdAt DESC invertido. Botão carregar mais no topo. Auto-scroll ou badge nova mensagem. Agrupamento por data. Skeleton loading.",
         "testStrategy": "Teste unitário: ordenação, paginação, agrupamento. E2E: scroll up + SSE nova msg = badge.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486",
           "497",
@@ -14649,7 +14651,8 @@
         ],
         "priority": "high",
         "subtasks": [],
-        "complexity": 4
+        "complexity": 4,
+        "updatedAt": "2026-04-08T17:09:40.266Z"
       },
       {
         "id": "503",
@@ -14894,9 +14897,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-08T17:01:09.894Z",
+      "lastModified": "2026-04-08T17:09:40.266Z",
       "taskCount": 462,
-      "completedCount": 439,
+      "completedCount": 443,
       "tags": [
         "master"
       ]
