@@ -14660,7 +14660,7 @@
         "description": "Input de envio com textarea auto-resize, idempotência, mídia via upload, templates rápidos.",
         "details": "Enter envia, Shift+Enter nova linha. IdempotencyKeyStore. Upload para /api/v1/storage/upload → mediaUrl. Templates rápidos. Debounce 2s. Validação zod.",
         "testStrategy": "Unitário: Enter envia, Shift+Enter newline, debounce, validação, idempotência. E2E: digitar→enviar→feedback.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "487",
           "491",
@@ -14679,7 +14679,7 @@
         "description": "Card com dados do contato: nome, telefone, origem, vínculos, consentimentos.",
         "details": "Nome, telefone, badge origem. Se aluno: badge + link. Se prospect: badge + link + botão Avançar Stage. Consentimentos com checkmarks. Accordion colapsável.",
         "testStrategy": "Unitário: contato completo, sem vínculos, links corretos, accordion.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486",
           "497"
@@ -14694,7 +14694,7 @@
         "description": "Header da conversa com status clicável e ações rápidas.",
         "details": "Nome + telefone. StatusBadge dropdown. Ações: OwnerAssign, QueueSelector, UnitSelector, Encerrar. Mobile: menu ⋮ dropdown.",
         "testStrategy": "Unitário: renderização, dropdown status, callbacks ações. E2E: mudar status → toast.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486",
           "498",
@@ -14710,7 +14710,7 @@
         "description": "QueueSelector, OwnerAssign, UnitSelector, TaskCreateDialog.",
         "details": "QueueSelector: select/filas livres. OwnerAssign: busca usuários. UnitSelector: GET /api/v1/unidades. TaskCreateDialog: form com zod, campos titulo/descricao/responsavel/prioridade/prazo.",
         "testStrategy": "Unitário: cada componente com props variados. TaskCreateDialog validação.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486",
           "496"
@@ -14897,7 +14897,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-08T17:09:40.266Z",
+      "lastModified": "2026-04-08T17:16:50.833Z",
       "taskCount": 462,
       "completedCount": 443,
       "tags": [

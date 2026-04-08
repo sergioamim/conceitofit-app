@@ -2,7 +2,7 @@
 
 **Title:** Componente MessageInput (envio de mensagens com idempotência)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 487, 491, 495, 496, 497, 498
 

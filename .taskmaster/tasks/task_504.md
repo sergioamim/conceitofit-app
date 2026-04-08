@@ -2,7 +2,7 @@
 
 **Title:** Componente ContactCard (informações do contato)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 486, 497
 

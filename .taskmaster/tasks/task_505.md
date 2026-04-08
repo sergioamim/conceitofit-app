@@ -2,7 +2,7 @@
 
 **Title:** Componente ConversationHeader (header da conversa com ações)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 486, 498, 506
 

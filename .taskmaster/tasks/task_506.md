@@ -2,7 +2,7 @@
 
 **Title:** Componentes de ação da conversa (QueueSelector, OwnerAssign, UnitSelector, TaskCreateDialog)
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 486, 496
 
