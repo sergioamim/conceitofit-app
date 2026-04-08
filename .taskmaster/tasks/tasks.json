@@ -14523,14 +14523,15 @@
         "description": "Criar hook useSSEConversasSync que ouve eventos SSE e invalida queries correspondentes.",
         "details": "Hook ouve nova_mensagem, conversa_atualizada, conversa_encerrada e invalida conversas.detail, conversas.thread, conversas.list. Cleanup no unmount.",
         "testStrategy": "Mock do useSSE emitindo eventos, verificar invalidateQueries chamado corretamente.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "491",
           "493"
         ],
         "priority": "high",
         "subtasks": [],
-        "complexity": 3
+        "complexity": 3,
+        "updatedAt": "2026-04-08T17:00:23.502Z"
       },
       {
         "id": "495",
@@ -14551,13 +14552,14 @@
         "description": "Criar src/lib/forms/atendimento-schemas.ts com schemas para mensagem, tarefa, conversa, filtros e credencial.",
         "details": "Schemas: enviarMensagemSchema, criarTarefaSchema, criarConversaSchema, conversaFiltersSchema, whatsappCredentialSchema. Usar zod v4 + @hookform/resolvers/zod.",
         "testStrategy": "Testes unitários: validar dados válidos e inválidos para cada schema.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486"
         ],
         "priority": "high",
         "subtasks": [],
-        "complexity": 2
+        "complexity": 2,
+        "updatedAt": "2026-04-08T17:00:23.519Z"
       },
       {
         "id": "497",
@@ -14578,14 +14580,15 @@
         "description": "Criar StatusBadge, MessageBubble, MessageMediaPreview, EmptyInboxState, RealTimeIndicator.",
         "details": "StatusBadge: 6 statuses com cores. MessageBubble: inbound/outbound com timestamp e status. MessageMediaPreview: imagem, áudio, documento, vídeo, localização, contato. EmptyInboxState: ilustração + CTA. RealTimeIndicator: ponto pulsante verde/amarelo/cinza.",
         "testStrategy": "Testes unitários: todos os 6 statuses, inbound vs outbound, snapshot EmptyInboxState.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "486",
           "497"
         ],
         "priority": "high",
         "subtasks": [],
-        "complexity": 3
+        "complexity": 3,
+        "updatedAt": "2026-04-08T17:00:23.539Z"
       },
       {
         "id": "499",
@@ -14891,9 +14894,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-08T16:57:08.897Z",
+      "lastModified": "2026-04-08T17:00:23.539Z",
       "taskCount": 462,
-      "completedCount": 429,
+      "completedCount": 439,
       "tags": [
         "master"
       ]
