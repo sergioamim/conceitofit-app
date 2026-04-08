@@ -1,35 +1,38 @@
 "use client";
 
-import { 
-  CircleUser, 
-  Mail, 
-  Phone, 
-  Calendar, 
-  ShieldCheck, 
-  MapPin, 
-  ChevronRight,
-  Camera,
-  CreditCard,
+import Link from "next/link";
+import {
   Bell,
-  LogOut
+  ChevronRight,
+  CircleUser,
+  CreditCard,
+  KeyRound,
+  Mail,
+  MapPin,
+  Calendar,
+  Phone,
+  ShieldCheck,
+  UserCog,
+  LogOut,
 } from "lucide-react";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useClienteOperationalContext } from "@/lib/query/use-portal-aluno";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { AvatarUpload } from "@/components/cliente/avatar-upload";
 import { formatDate } from "@/lib/formatters";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function MeuPerfilPage() {
   const { tenantId, userId, displayName, tenantResolved, networkName } = useTenantContext();
+  const queryClient = useQueryClient();
 
   const { data: context, isLoading } = useClienteOperationalContext({
     id: userId,
     tenantId,
-    enabled: tenantResolved && !!userId
+    enabled: tenantResolved && !!userId,
   });
 
   const aluno = context?.aluno;
@@ -38,24 +41,25 @@ export default function MeuPerfilPage() {
     <div className="space-y-8 py-6 pb-20">
       {/* Header / Avatar Section */}
       <section className="flex flex-col items-center gap-6">
-        <div className="relative">
-          <motion.div 
+        {tenantId && aluno ? (
+          <AvatarUpload
+            currentPhoto={aluno.foto}
+            alunoId={aluno.id}
+            tenantId={tenantId}
+            displayName={displayName ?? undefined}
+            onSuccess={() => queryClient.invalidateQueries()}
+          />
+        ) : (
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="size-32 rounded-full bg-gradient-to-br from-primary to-primary/60 p-1 shadow-2xl shadow-primary/20"
           >
             <div className="size-full rounded-full bg-background flex items-center justify-center overflow-hidden border-4 border-background">
-              {aluno?.foto ? (
-                <img src={aluno.foto} alt={displayName ?? ""} className="size-full object-cover" />
-              ) : (
-                <CircleUser className="size-20 text-muted-foreground/40" />
-              )}
+              <CircleUser className="size-20 text-muted-foreground/40" />
             </div>
           </motion.div>
-          <button className="absolute bottom-0 right-0 size-10 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-muted-foreground hover:text-primary transition-colors">
-            <Camera size={18} />
-          </button>
-        </div>
+        )}
 
         <div className="text-center space-y-1">
           <h1 className="font-display text-3xl font-extrabold tracking-tight">{displayName}</h1>
@@ -109,12 +113,13 @@ export default function MeuPerfilPage() {
           </CardContent>
         </Card>
 
-        {/* Quick Settings */}
+        {/* Configurações com navegação real */}
         <section className="space-y-3">
           <h3 className="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Configurações</h3>
           <div className="grid gap-2">
-            <SettingButton icon={Bell} label="Notificações" description="Alertas de treino e pagamentos" />
-            <SettingButton icon={ShieldCheck} label="Segurança" description="Alterar senha e acessos" />
+            <SettingLink href="/meu-perfil/editar" icon={UserCog} label="Editar Perfil" description="Alterar dados pessoais e endereço" />
+            <SettingLink href="/meu-perfil/senha" icon={KeyRound} label="Trocar Senha" description="Alterar senha de acesso" />
+            <SettingLink href="/meu-perfil/notificacoes" icon={Bell} label="Notificações" description="Alertas de treino e pagamentos" />
           </div>
         </section>
       </div>
@@ -129,7 +134,7 @@ export default function MeuPerfilPage() {
   );
 }
 
-function ProfileItem({ icon: Icon, label, value }: { icon: any, label: string, value: string }) {
+function ProfileItem({ icon: Icon, label, value }: { icon: React.ComponentType<{ size?: number }>; label: string; value: string }) {
   return (
     <div className="flex items-center gap-4 p-4">
       <div className="size-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground shrink-0">
@@ -143,9 +148,12 @@ function ProfileItem({ icon: Icon, label, value }: { icon: any, label: string, v
   );
 }
 
-function SettingButton({ icon: Icon, label, description }: { icon: any, label: string, description: string }) {
+function SettingLink({ href, icon: Icon, label, description }: { href: string; icon: React.ComponentType<{ size?: number }>; label: string; description: string }) {
   return (
-    <button className="flex items-center gap-4 p-4 rounded-3xl bg-muted/30 border border-border/20 hover:bg-muted/50 transition-all text-left group">
+    <Link
+      href={href}
+      className="flex items-center gap-4 p-4 rounded-3xl bg-muted/30 border border-border/20 hover:bg-muted/50 transition-all text-left group"
+    >
       <div className="size-10 rounded-xl bg-background flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
         <Icon size={18} />
       </div>
@@ -154,6 +162,6 @@ function SettingButton({ icon: Icon, label, description }: { icon: any, label: s
         <p className="text-[11px] text-muted-foreground font-medium">{description}</p>
       </div>
       <ChevronRight size={16} className="text-muted-foreground/40 group-hover:translate-x-1 transition-transform" />
-    </button>
+    </Link>
   );
 }

@@ -14909,13 +14909,14 @@
         "description": "Implementar a página de edição de perfil do aluno em /meu-perfil/editar, permitindo a atualização de dados pessoais via formulário react-hook-form e zod, com auto-preenchimento de CEP e integração com API de backend.",
         "details": "Criar a página em `src/app/meu-perfil/editar/page.tsx`. O formulário deve ser construído utilizando `react-hook-form` e `zod` para validação de entrada, seguindo os padrões estabelecidos em tarefas anteriores (79, 258). Os campos a serem editados incluem: nome, telefone, email, data de nascimento e endereço completo (CEP, logradouro, número, complemento, bairro, cidade, estado). Implementar a funcionalidade de auto-preenchimento de endereço baseada no CEP, utilizando a API do ViaCEP (e.g., `https://viacep.com.br/ws/{cep}/json/`) ao sair do campo CEP ou após a digitação de um CEP válido. Ao carregar a página, os campos do formulário devem ser pré-preenchidos com os dados atuais do aluno, obtidos através de uma requisição GET para `/api/v1/academia/alunos/{id}`. A submissão do formulário deve realizar uma mutation `PATCH` para o mesmo endpoint. Após o sucesso da operação, invalidar o cache relacionado aos dados do aluno (utilizando `queryClient.invalidateQueries(['aluno', alunoId])` se `react-query` for usado) e exibir uma mensagem de sucesso utilizando o componente de `Toast` da aplicação. Garantir que o layout seja responsivo (mobile-first) e consistente com o design da área do cliente, conforme estabelecido em tarefas de UI/UX.",
         "testStrategy": "1. Testes unitários para o esquema Zod, validando entradas válidas e inválidas para cada campo. 2. Testes de integração para o formulário, verificando o pré-preenchimento correto com dados mockados e o comportamento da integração com ViaCEP. 3. Testes E2E (Playwright, se aplicável): a. Navegar para `/meu-perfil/editar`. b. Preencher o formulário com dados válidos, incluindo testar o auto-preenchimento de CEP. c. Submeter o formulário e verificar se a requisição PATCH foi enviada corretamente (via interceptação de rede). d. Verificar se o Toast de sucesso é exibido e se os dados atualizados persistem após recarregar a página ou navegar de volta para o perfil. e. Testar cenários de submissão com dados inválidos e verificar as mensagens de erro. f. Validar a responsividade do layout em diferentes viewports (mobile, tablet, desktop).",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "79",
           "258"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-08T19:18:32.015Z"
       },
       {
         "id": "519",
@@ -14923,12 +14924,13 @@
         "description": "Cria um componente `AvatarUpload` em `src/components/cliente/avatar-upload.tsx` que permite ao aluno fazer upload e gerenciar sua foto de perfil, com preview, crop circular opcional, limite de tamanho e feedback visual, e integrar na página de perfil.",
         "details": "1.  **Criação do Componente:** Desenvolver o componente `AvatarUpload` em `src/components/cliente/avatar-upload.tsx`.\n2.  **Input de Arquivo:** Implementar um `input type=\"file\"` configurado para aceitar apenas imagens (`accept=\"image/*\"`).\n3.  **Pré-visualização e Crop:**\n    *   Ao selecionar uma imagem, exibir uma pré-visualização. \n    *   Integrar uma funcionalidade de crop circular opcional (sugerir a biblioteca `react-easy-crop` se não houver solução existente, garantindo a interface de usuário intuitiva para o redimensionamento).\n4.  **Validação e Limite de Tamanho:** Implementar validação no lado do cliente para garantir que o arquivo não exceda 2MB antes do upload.\n5.  **API de Upload:**\n    *   Utilizar o endpoint `POST /api/v1/storage/upload` para enviar o arquivo da imagem. Reutilizar os padrões de requisição e tratamento de resposta estabelecidos, conforme Task 503.\n    *   Obter a URL da imagem retornada pela API.\n6.  **Atualização do Perfil:**\n    *   Após o upload bem-sucedido, fazer uma requisição `PATCH` para a API de aluno (assumindo `/api/v1/alunos/{id}` ou `/api/v1/me/perfil` para o aluno logado) para atualizar o campo `fotoPerfilUrl` com a URL recebida.\n7.  **Feedback Visual:** Fornecer feedback visual claro ao usuário durante todo o processo (estado de carregamento, mensagens de sucesso/erro, barra de progresso opcional).\n8.  **Integração:** Integrar o componente `AvatarUpload` na página `/meu-perfil` ou equivalente, onde o aluno pode gerenciar seus dados.\n9.  **Tratamento de Erros:** Implementar tratamento robusto de erros para falhas no upload ou na atualização do perfil, com mensagens amigáveis ao usuário.\n10. **Acessibilidade:** Garantir que o componente seja acessível (ex: `aria-label` para o input de arquivo, foco adequado).",
         "testStrategy": "1.  **Testes Unitários:**\n    *   Verificar a renderização correta do `input type=\"file\"` e do elemento de pré-visualização.\n    *   Testar a lógica de validação do tamanho do arquivo (limite de 2MB) para entradas válidas e inválidas.\n    *   Mockar o componente de crop e verificar se ele é invocado corretamente com a imagem selecionada.\n    *   Simular o envio de um arquivo e verificar se a função de upload para `POST /api/v1/storage/upload` é chamada com os dados corretos (usar `jest.mock` ou MSW).\n    *   Simular uma resposta de sucesso do upload e verificar se a requisição `PATCH` para atualizar a `fotoPerfilUrl` do aluno é feita corretamente.\n    *   Testar os estados de carregamento, sucesso e erro, e a exibição das respectivas mensagens de feedback.\n2.  **Testes de Integração/E2E (Manual):**\n    *   Navegar até a página `/meu-perfil`.\n    *   Selecionar uma imagem válida, verificar a pré-visualização e a funcionalidade de crop (redimensionar, mover).\n    *   Confirmar o upload e observar a atualização imediata da foto de perfil na interface do usuário e a persistência no backend (verificar após recarregar a página).\n    *   Tentar fazer upload de um arquivo com mais de 2MB e verificar se a mensagem de erro apropriada é exibida e o upload é impedido.\n    *   Verificar o feedback visual durante o upload (ex: spinner ou barra de progresso).\n    *   Testar cenários de falha de rede ou API para garantir que as mensagens de erro sejam claras e informativas para o usuário.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "503"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-08T19:18:32.031Z"
       },
       {
         "id": "520",
@@ -14936,14 +14938,15 @@
         "description": "Criar a página '/meu-perfil/senha' com um formulário para troca de senha do aluno, incluindo validação Zod e integração com a API de autenticação.",
         "details": "A página '/meu-perfil/senha' deve ser criada com um formulário contendo os campos: 'Senha Atual', 'Nova Senha' e 'Confirmar Nova Senha'. Utilizar `react-hook-form` com `zod` e `zodResolver` para a gestão do formulário e validação. O schema Zod deve garantir que a 'Nova Senha' tenha no mínimo 8 caracteres e que a 'Confirmar Nova Senha' corresponda exatamente à 'Nova Senha'. Os campos de senha devem incluir um ícone de 'olho' para mostrar/ocultar a senha, seguindo o padrão de componentes já existentes. No submit, realizar uma requisição `POST` para `/api/v1/auth/change-password` com `currentPassword` e `newPassword`. Exibir mensagens `Toast` de sucesso ou erro (utilizar o componente de Toast já existente no projeto). Em caso de erro com status `401` (senha atual incorreta), a mensagem de erro deve ser exibida inline abaixo do campo 'Senha Atual'. Após uma troca de senha bem-sucedida, o usuário deve ser redirecionado para a página `/meu-perfil`. Consultar exemplos em `src/components/forms/AuthForm` ou `src/modules/lead/components/LeadForm.tsx` para padrões de implementação de formulários com `react-hook-form` e `zod`.",
         "testStrategy": "1. Acessar a página '/meu-perfil/senha' autenticado como aluno. 2. Tentar submeter o formulário com: a) 'Nova Senha' com menos de 8 caracteres; b) 'Confirmar Nova Senha' diferente da 'Nova Senha'. Validar as mensagens de erro Zod inline. 3. Tentar submeter com 'Senha Atual' incorreta. Validar a mensagem de erro inline para o campo 'Senha Atual'. 4. Submeter com dados válidos (senha atual correta, nova senha com no mínimo 8 caracteres e confirmada). Validar o Toast de sucesso e o redirecionamento automático para '/meu-perfil'. 5. Verificar a funcionalidade do ícone 'olho' para mostrar/ocultar senhas em todos os campos.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "79",
           "82",
           "258"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-08T19:18:32.045Z"
       },
       {
         "id": "521",
@@ -14991,17 +14994,18 @@
         "description": "Atualizar o layout da área do cliente (/meu-perfil) para incluir novos links de navegação para funcionalidades de perfil e acesso à seção de avaliações, além de garantir um botão 'Voltar' consistente nas sub-rotas.",
         "details": "Esta tarefa envolve aprimorar a experiência de navegação do usuário na área do cliente. As modificações serão focadas principalmente nos arquivos `src/app/(app)/meu-perfil/page.tsx` e, possivelmente, na criação ou ajuste de `src/app/(app)/meu-perfil/layout.tsx` para garantir consistência.\n\n1.  **Atualizar `src/app/(app)/meu-perfil/page.tsx`:**\n    *   Adicionar uma nova seção de navegação dentro desta página que conterá os links para 'Editar Perfil', 'Trocar Senha', 'Notificações' e 'Avaliações'.\n    *   Para cada link, utilize o componente `Link` do Next.js (import `next/link`). As `href` iniciais serão `/meu-perfil/editar`, `/meu-perfil/trocar-senha`, `/meu-perfil/notificacoes` e `/meu-perfil/avaliacoes`.\n    *   Estilize esses links como botões ou itens de lista clicáveis, utilizando componentes de UI existentes (ex: `Button` de `src/components/ui/button.tsx` ou similar).\n    *   Incorpore ícones da biblioteca `lucide-react` para cada link (sugestões: `UserCog` para Editar Perfil, `Key` para Trocar Senha, `Bell` para Notificações, `Star` para Avaliações). Adicione um ícone `ChevronRight` ou `ArrowRight` para indicar que são itens navegáveis.\n    *   Crie arquivos `page.tsx` básicos para as novas rotas (`/meu-perfil/editar/page.tsx`, `/meu-perfil/trocar-senha/page.tsx`, `/meu-perfil/notificacoes/page.tsx`, `/meu-perfil/avaliacoes/page.tsx`) com um conteúdo provisório como 'Página em construção' para que a navegação funcione.\n\n2.  **Consistência do Botão 'Voltar' para Sub-rotas (`/meu-perfil/*`):**\n    *   Crie o arquivo `src/app/(app)/meu-perfil/layout.tsx` se ele não existir. Este layout envolverá todas as sub-rotas de `/meu-perfil`.\n    *   Dentro deste layout, implemente um botão 'Voltar' que apareça de forma consistente no cabeçalho ou em uma posição proeminente para todas as sub-páginas (ex: `/meu-perfil/editar`).\n    *   Este botão deve ser um `Link` do Next.js navegando para `/meu-perfil` ou utilizar `router.back()` do `next/navigation` (considerar qual abordagem é mais robusta para a experiência do usuário).\n    *   Utilize o ícone `ArrowLeft` da `lucide-react` para o botão 'Voltar'.\n\n3.  **Atualizar Breadcrumbs (se aplicável):**\n    *   Identifique a lógica de geração de breadcrumbs do projeto (ex: `src/components/shared/breadcrumbs.tsx` ou um utilitário em um `layout.tsx` mais alto).\n    *   Garanta que a navegação expandida de `/meu-perfil` e suas sub-rotas sejam refletidas corretamente na trilha de navegação (ex: 'Meu Perfil > Editar Perfil'). Pode ser necessário ajustar o mapeamento de rotas para gerar os títulos corretos.",
         "testStrategy": "1.  Navegar até `/meu-perfil` e verificar se os botões 'Editar Perfil', 'Trocar Senha', 'Notificações' e 'Avaliações' são exibidos corretamente, cada um com seu respectivo ícone Lucide e o ícone de seta de navegação.\n2.  Clicar em cada um dos novos botões em `/meu-perfil` e verificar se a navegação ocorre para as rotas esperadas (ex: `/meu-perfil/editar`), mesmo que as páginas de destino exibam apenas 'Página em construção'.\n3.  Acessar uma das novas sub-rotas de perfil (ex: `/meu-perfil/editar`) e verificar se o botão 'Voltar' consistente é exibido na posição esperada.\n4.  Clicar no botão 'Voltar' de uma sub-rota e confirmar que o usuário é redirecionado corretamente para `/meu-perfil`.\n5.  Verificar a exibição dos breadcrumbs em `/meu-perfil` e em cada uma das novas sub-rotas, garantindo que a trilha de navegação esteja atualizada e seja semanticamente correta (ex: 'Início > Meu Perfil > Editar Perfil').\n6.  Testar a responsividade em diferentes tamanhos de tela (mobile, tablet, desktop) para garantir que os novos elementos de navegação e o botão 'Voltar' se adaptem bem sem quebras de layout.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-08T19:18:32.058Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-08T18:53:29.112Z",
+      "lastModified": "2026-04-08T19:18:32.058Z",
       "taskCount": 469,
-      "completedCount": 461,
+      "completedCount": 465,
       "tags": [
         "master"
       ]
