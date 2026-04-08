@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ClienteBottomNav } from "@/components/layout/cliente-bottom-nav";
+import { NotificationBell } from "@/components/cliente/notification-bell";
+import { useClienteOperationalContext } from "@/lib/query/use-portal-aluno";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
 import { TenantContextProvider, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { logoutApi } from "@/lib/api/auth";
@@ -25,7 +27,8 @@ import {
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 
 function ClienteTopbar() {
-  const { displayName, networkName } = useTenantContext();
+  const { displayName, networkName, tenantId, userId } = useTenantContext();
+  const { data: opCtx } = useClienteOperationalContext({ id: userId, tenantId, enabled: !!userId });
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -55,16 +58,19 @@ function ClienteTopbar() {
           <p className="truncate text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{networkName}</p>
         ) : null}
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 shrink-0 text-muted-foreground hover:text-gym-danger transition-colors"
-        aria-label="Sair"
-        onClick={() => setLogoutOpen(true)}
-      >
-        <LogOut className="size-4" />
-      </Button>
+      <div className="flex items-center gap-1 shrink-0">
+        <NotificationBell tenantId={tenantId} alunoId={opCtx?.aluno?.id} />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 text-muted-foreground hover:text-gym-danger transition-colors"
+          aria-label="Sair"
+          onClick={() => setLogoutOpen(true)}
+        >
+          <LogOut className="size-4" />
+        </Button>
+      </div>
       <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <DialogContent className="border-border/40 bg-card/95 backdrop-blur-xl">
           <DialogHeader>
