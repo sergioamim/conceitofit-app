@@ -60,7 +60,7 @@ export default function RootLayout({
     process.env.NEXT_PUBLIC_DEBUG_REACT_SCAN === "true";
 
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#16181c" />
         <CriticalThemeServer />
