@@ -1,13 +1,10 @@
 import {
   createBackofficeAcademiaApi,
   createBackofficeUnidadeApi,
-  deleteBackofficeUnidadeApi,
   getBackofficeAcademiaApi,
   listBackofficeAcademiasApi,
   listBackofficeUnidadesApi,
-  toggleBackofficeUnidadeApi,
   updateBackofficeAcademiaApi,
-  updateBackofficeUnidadeApi,
 } from "@/backoffice/api/backoffice";
 import type { Academia, Tenant } from "@/lib/types";
 
@@ -93,14 +90,3 @@ export async function createGlobalUnidade(data: Partial<Tenant>): Promise<Tenant
   return createBackofficeUnidadeApi(payload);
 }
 
-export async function updateGlobalUnidade(id: string, data: Partial<Tenant>): Promise<Tenant> {
-  return updateBackofficeUnidadeApi(id, normalizeUnidadeInput(data));
-}
-
-export async function toggleGlobalUnidade(id: string): Promise<Tenant> {
-  return toggleBackofficeUnidadeApi(id);
-}
-
-export async function deleteGlobalUnidade(id: string): Promise<void> {
-  await deleteBackofficeUnidadeApi(id);
-}

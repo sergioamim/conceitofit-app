@@ -24,8 +24,6 @@ export const criarTarefaSchema = z.object({
   prazoEm: z.string().datetime().optional(),
 });
 
-export type CriarTarefaFormValues = z.infer<typeof criarTarefaSchema>;
-
 // ── Criar Conversa ──────────────────────────────────────────
 
 export const criarConversaSchema = z.object({

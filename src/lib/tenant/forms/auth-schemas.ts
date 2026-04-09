@@ -14,15 +14,6 @@ export const tenantStepFormSchema = z.object({
   tenantId: requiredTrimmedString("Selecione a unidade ativa para continuar."),
 });
 
-export const legacyLoginFormSchema = z.object({
-  username: requiredTrimmedString("Informe o usuário."),
-  password: requiredTrimmedString("Informe a senha."),
-});
-
-export const legacyTenantStepFormSchema = z.object({
-  tenantId: requiredTrimmedString("Selecione a unidade prioritária."),
-});
-
 export const forcedPasswordChangeFormSchema = z
   .object({
     newPassword: requiredTrimmedString("Informe a nova senha.")

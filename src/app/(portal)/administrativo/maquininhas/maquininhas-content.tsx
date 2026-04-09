@@ -405,5 +405,3 @@ export function MaquininhasContent() {
   );
 }
 
-export default MaquininhasContent;
-

@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
+
+export const dynamic = "force-dynamic";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { TransacoesContent } from "./components/transacoes-content";
 import { logger } from "@/lib/shared/logger";

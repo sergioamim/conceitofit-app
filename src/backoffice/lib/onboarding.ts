@@ -85,19 +85,6 @@ export async function listUnidadesOnboarding(): Promise<UnidadeOnboardingState[]
   });
 }
 
-export async function getUnidadeOnboarding(tenantId: string): Promise<UnidadeOnboardingState | null> {
-  try {
-    return await apiRequest<UnidadeOnboardingState>({
-      path: `/api/v1/admin/unidades/${tenantId}/onboarding`,
-    });
-  } catch (error) {
-    if (error instanceof Error && /404/.test(error.message)) {
-      return null;
-    }
-    throw error;
-  }
-}
-
 export async function saveUnidadeOnboarding(input: SaveUnidadeOnboardingInput): Promise<UnidadeOnboardingState> {
   const tenantId = trimString(input.tenantId);
   if (!tenantId) {

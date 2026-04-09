@@ -132,29 +132,6 @@ export function summarizeIntegracoesOperacionais(integracoes: IntegracaoOperacio
 // NFS-e — Helpers de configuração (tenant-level)
 // ---------------------------------------------------------------------------
 
-export function createEmptyNfseConfiguracao(tenantId: string): NfseConfiguracao {
-  return {
-    id: `nfse-${tenantId}`,
-    tenantId,
-    ambiente: "HOMOLOGACAO",
-    provedor: "GINFES",
-    prefeitura: "",
-    inscricaoMunicipal: "",
-    cnaePrincipal: "",
-    codigoTributacaoNacional: "",
-    codigoNbs: "",
-    classificacaoTributaria: "SERVICO_TRIBUTAVEL",
-    consumidorFinal: true,
-    indicadorOperacao: "SERVICO_MUNICIPIO",
-    serieRps: "",
-    loteInicial: 1,
-    aliquotaPadrao: 2,
-    regimeTributario: "SIMPLES_NACIONAL",
-    emissaoAutomatica: true,
-    status: "PENDENTE",
-  };
-}
-
 export function validateNfseConfiguracaoDraft(input: Partial<NfseConfiguracao>): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!input.prefeitura?.trim()) errors.prefeitura = "Informe a prefeitura emissora.";
@@ -184,13 +161,6 @@ export function validateNfseConfiguracaoDraft(input: Partial<NfseConfiguracao>):
   }
 
   return errors;
-}
-
-export function getNfseConfiguracaoStatus(input: Partial<NfseConfiguracao>): NfseConfiguracaoStatus {
-  const errors = validateNfseConfiguracaoDraft(input);
-  if (Object.keys(errors).length > 0) return "PENDENTE";
-  if (input.ultimoErro?.trim()) return "ERRO";
-  return "CONFIGURADA";
 }
 
 export function buildNfseChecklist(input: Partial<NfseConfiguracao>) {

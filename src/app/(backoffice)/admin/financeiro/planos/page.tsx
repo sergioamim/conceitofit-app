@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { serverFetch } from "@/lib/shared/server-fetch";
+
+export const dynamic = "force-dynamic";
 import { logger } from "@/lib/shared/logger";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { PlanosContent } from "./components/planos-content";
