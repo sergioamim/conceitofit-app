@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { formatDateTimeBR } from "@/lib/utils/date-format";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -384,7 +385,7 @@ export function BillingConfigContent() {
 
       {config?.ultimoTesteEm ? (
         <p className="text-xs text-muted-foreground">
-          Último teste de conexão: {new Date(config.ultimoTesteEm).toLocaleString("pt-BR")}
+          Último teste de conexão: {formatDateTimeBR(config.ultimoTesteEm)}
         </p>
       ) : null}
     </div>

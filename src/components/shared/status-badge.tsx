@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useStatusBadgeMotion } from "@/lib/ui-motion";
@@ -57,7 +58,7 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export const StatusBadge = memo(function StatusBadge({ status, className }: StatusBadgeProps) {
   const motionProps = useStatusBadgeMotion();
   const config = STATUS_MAP[status] ?? {
     label: status,
@@ -78,4 +79,4 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       {config.label}
     </motion.span>
   );
-}
+});

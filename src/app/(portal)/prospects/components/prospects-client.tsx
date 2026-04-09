@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { formatDateBR } from "@/lib/utils/date-format";
 import Link from "next/link";
 import { Search, Plus, ChevronDown, Users, Target, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -130,7 +131,7 @@ const ProspectTableRow = memo(function ProspectTableRow({
       <td className="px-4 py-5 text-sm font-medium text-foreground/80">{prospect.telefone}</td>
       <td className="px-4 py-5 text-sm text-muted-foreground">{origemLabel}</td>
       <td className="px-4 py-5 text-[11px] font-mono text-muted-foreground uppercase tracking-tighter">
-        {new Date(prospect.dataCriacao).toLocaleDateString("pt-BR")}
+        {formatDateBR(prospect.dataCriacao)}
       </td>
       <td className="px-4 py-5">
         <StatusBadge status={prospect.status} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { getBusinessTodayDate, getBusinessTodayIso } from "@/lib/business-date";
 import type { Atividade, AtividadeGrade, DiaSemana } from "@/lib/types";
@@ -133,7 +133,12 @@ export function GradeContent() {
   }, [byDay]);
 
   const weekEnd = addDays(weekStart, 6);
-  const nowDate = new Date();
+  const [nowDate, setNowDate] = useState(() => new Date());
+  useEffect(() => {
+    // Atualiza a cada 60s — suficiente para logica de check-in window
+    const id = setInterval(() => setNowDate(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const todayIso = getBusinessTodayIso(nowDate);
   const weekDays = DIA_ORDER.map((dia, idx) => {
     const date = addDays(weekStart, idx);

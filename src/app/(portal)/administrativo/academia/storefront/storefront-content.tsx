@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { formatDateTimeBR } from "@/lib/utils/date-format";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
@@ -334,7 +335,7 @@ export function StorefrontConfigContent() {
           </Button>
           {existingTheme?.updatedAt && (
             <p className="text-xs text-muted-foreground">
-              Última atualização: {new Date(existingTheme.updatedAt).toLocaleString("pt-BR")}
+              Última atualização: {formatDateTimeBR(existingTheme.updatedAt)}
             </p>
           )}
         </div>
