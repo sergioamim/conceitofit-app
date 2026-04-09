@@ -3,9 +3,14 @@
  * NÃO cacheia dados de API para garantir dados sempre atualizados.
  */
 
-const CACHE_NAME = "conceito-fit-shell-v1";
+const CACHE_NAME = "conceito-fit-shell-v2";
 
-const SHELL_ASSETS = ["/icon.svg", "/pwa-icon-192.png", "/pwa-icon-512.png"];
+const SHELL_ASSETS = [
+  "/icon.svg",
+  "/pwa-icon-192.png",
+  "/pwa-icon-512.png",
+  "/offline.html",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -56,7 +61,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network-first for everything else (HTML, JS, CSS)
+  // Network-first for navigation (HTML pages) — offline fallback
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).catch(() => caches.match("/offline.html"))
+    );
+    return;
+  }
+
+  // Network-first for everything else (JS, CSS)
   event.respondWith(
     fetch(request).catch(() => caches.match(request))
   );
