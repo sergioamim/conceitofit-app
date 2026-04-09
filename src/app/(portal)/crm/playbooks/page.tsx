@@ -1,3 +1,5 @@
+"use client";
+
 import dynamic from "next/dynamic";
 
 // Task 484: code splitting — lazy load heavy playbooks content (806 LOC)

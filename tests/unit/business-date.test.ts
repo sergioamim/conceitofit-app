@@ -8,7 +8,7 @@ import {
   addDaysToIsoDate,
   parseIsoDateAtNoon,
   toIsoDate,
-} from "@/lib/shared/business-date";
+} from "@/lib/business-date";
 
 // ---------------------------------------------------------------------------
 // Helpers

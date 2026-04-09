@@ -6,7 +6,7 @@ import { DemoBanner } from "@/components/shared/demo-banner";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import type { DashboardData } from "@/lib/types";
-import { getBusinessTodayIso } from "@/lib/shared/business-date";
+import { getBusinessTodayIso } from "@/lib/business-date";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
 
 async function getActiveTenantId(): Promise<string | undefined> {

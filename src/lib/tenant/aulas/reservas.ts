@@ -47,6 +47,20 @@ export function addDays(date: Date, days: number): Date {
   return next;
 }
 
+export function startOfWeek(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  // Monday-based week: 0=Sun → offset 6, 1=Mon → 0, etc.
+  const diff = day === 0 ? 6 : day - 1;
+  d.setDate(d.getDate() - diff);
+  return d;
+}
+
+export function formatDayDate(date: Date): string {
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
 export function formatDiaSemana(date: Date): DiaSemana {
   return DAY_ORDER.find((day) => DAY_INDEX[day] === date.getDay()) ?? "SEG";
 }

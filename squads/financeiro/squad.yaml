@@ -1,0 +1,60 @@
+name: financeiro
+version: 1.0.0
+short-title: Financeiro Squad
+description: "Squad responsavel pelo modulo financeiro: pagamentos, cobrancas, contas a pagar/receber, DRE, contabilidade, conciliacao bancaria, billing e formas de pagamento."
+author: sergioamim
+license: MIT
+
+aiox:
+  minVersion: "2.1.0"
+  type: squad
+
+tags:
+  - financeiro
+  - pagamentos
+  - cobrancas
+  - contabilidade
+  - dre
+  - billing
+  - contas
+
+components:
+  agents:
+    - dev
+    - qa
+    - data-engineer
+  tasks: []
+  workflows: []
+  templates: []
+
+config:
+  extends: extend
+  scope:
+    routes:
+      - src/app/(portal)/pagamentos/**
+      - src/app/(portal)/gerencial/**
+      - src/app/(portal)/administrativo/conciliacao-bancaria/**
+      - src/app/(portal)/administrativo/contas-bancarias/**
+      - src/app/(portal)/administrativo/formas-pagamento/**
+      - src/app/(portal)/administrativo/maquininhas/**
+      - src/app/(portal)/administrativo/billing/**
+      - src/app/(portal)/administrativo/billing-config/**
+      - src/app/(portal)/administrativo/tipos-conta/**
+      - src/app/(backoffice)/admin/financeiro/**
+    libs:
+      - src/lib/api/pagamentos.ts
+      - src/lib/api/billing.ts
+      - src/lib/api/contas-bancarias.ts
+      - src/lib/api/contas-receber.ts
+      - src/lib/api/conciliacao-bancaria.ts
+      - src/lib/api/maquininhas.ts
+      - src/lib/api/formas-pagamento.ts
+      - src/lib/api/financeiro-gerencial.ts
+      - src/lib/api/financeiro-operacional.ts
+      - src/lib/api/financial.ts
+      - src/lib/api/tipos-conta.ts
+      - src/lib/shared/types/financial.ts
+    components:
+      - src/components/shared/nova-conta-pagar-modal/**
+      - src/components/shared/forma-pagamento-modal.tsx
+      - src/components/shared/pagar-conta-schema.ts

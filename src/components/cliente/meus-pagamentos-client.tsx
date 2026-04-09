@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   Calendar,
   DollarSign,
-  ChevronDown
+  ChevronDown,
+  Info
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
@@ -40,7 +41,7 @@ export function MeusPagamentosClient() {
 
   const summary = useMemo(() => {
     return pagamentos.reduce((acc, p) => {
-      if (p.status === "PAGO" || p.status === "PAGA") acc.totalPago += p.valorFinal;
+      if (p.status === "PAGO") acc.totalPago += p.valorFinal;
       if (p.status === "PENDENTE") acc.totalPendente += p.valorFinal;
       if (p.status === "VENCIDO") acc.totalVencido += p.valorFinal;
       return acc;
@@ -170,7 +171,7 @@ export function MeusPagamentosClient() {
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "size-12 rounded-2xl flex items-center justify-center shrink-0",
-                      (p.status === "PAGO" || p.status === "PAGA") ? "bg-gym-teal/10 text-gym-teal" : 
+                      (p.status === "PAGO") ? "bg-gym-teal/10 text-gym-teal" : 
                       p.status === "VENCIDO" ? "bg-gym-danger/10 text-gym-danger" : "bg-amber-500/10 text-amber-500"
                     )}>
                       <DollarSign size={24} />

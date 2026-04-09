@@ -6,7 +6,7 @@ import {
 } from "@/lib/tenant/comercial/runtime";
 import type { MatriculaDashboardMensalResult } from "@/lib/api/matriculas";
 import { ApiRequestError } from "@/lib/api/http";
-import { isTenantContextErrorMessage } from "@/lib/shared/utils/error-codes";
+import { isTenantContextErrorMessage } from "@/lib/utils/error-codes";
 import { queryKeys } from "./keys";
 
 const PAGE_SIZE = 20;

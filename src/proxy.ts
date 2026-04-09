@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { extractSubdomain } from "@/lib/storefront/subdomain";
 
 // ---------------------------------------------------------------------------
-// Storefront subdomain middleware
+// proxy.ts – Auth guard + Storefront subdomain resolution (Next.js 16)
 // ---------------------------------------------------------------------------
-// Detecta subdomínio do host, resolve o tenant via API pública e injeta
-// headers x-tenant-id / x-tenant-slug para consumo em Server Components.
+// 1. Auth guard: verifica presença de cookies de sessão HttpOnly em rotas
+//    protegidas. Redireciona para login se ausente (antes de qualquer render).
+// 2. Storefront: detecta subdomínio do host, resolve tenant via API pública
+//    e injeta headers x-tenant-id / x-tenant-slug para Server Components.
 // ---------------------------------------------------------------------------
 
 const BACKEND_BASE =
@@ -92,14 +94,107 @@ async function resolveTenant(
 }
 
 // ---------------------------------------------------------------------------
-// Proxy (Next.js 16 — substitui middleware)
+// Auth: session detection
+// ---------------------------------------------------------------------------
+
+function hasSession(request: NextRequest): boolean {
+  const flag = request.cookies.get("fc_session_active")?.value;
+  if (flag === "true") return true;
+
+  const token = request.cookies.get("fc_access_token")?.value;
+  if (token && token.length > 10) return true;
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Auth: login URL resolution
+// ---------------------------------------------------------------------------
+
+const DEFAULT_LOGIN_PATH = "/login";
+
+/** Rotas que não requerem autenticação. */
+const PUBLIC_ROUTE_PREFIXES = [
+  "/login",
+  "/acesso/",
+  "/adesao",
+  "/storefront",
+  "/b2b",
+  "/primeiro-acesso",
+  "/monitor",
+  "/grade",
+  "/status",
+];
+
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+    || pathname === "/"
+    || /^\/app\/[^/]+\/login/.test(pathname);
+}
+
+function resolveLoginUrl(request: NextRequest): string {
+  const claimsRaw = request.cookies.get("fc_session_claims")?.value;
+  if (claimsRaw) {
+    try {
+      const claims = JSON.parse(decodeURIComponent(claimsRaw));
+      const networkSubdomain = claims.networkSubdomain || claims.networkSlug;
+      if (typeof networkSubdomain === "string" && networkSubdomain.trim()) {
+        const safe = encodeURIComponent(networkSubdomain.trim().toLowerCase());
+        return `/acesso/${safe}/autenticacao`;
+      }
+    } catch {
+      // Malformed claims — fall through to default
+    }
+  }
+  return DEFAULT_LOGIN_PATH;
+}
+
+function sanitizeCallbackPath(pathname: string, search: string): string | null {
+  const raw = pathname + search;
+  if (!raw || raw === "/" || raw === "/dashboard") return null;
+  if (!raw.startsWith("/")) return null;
+  if (raw.startsWith("//")) return null;
+  if (raw.startsWith("/login")) return null;
+  if (/^\/app\/[^/]+\/login(?:[/?#]|$)/.test(raw)) return null;
+  if (/^\/acesso\/[^/]+\/autenticacao(?:[/?#]|$)/.test(raw)) return null;
+  return raw;
+}
+
+/**
+ * Verifica autenticação para rotas protegidas.
+ * Retorna NextResponse.redirect se não autenticado, ou null para prosseguir.
+ */
+function checkAuth(request: NextRequest): NextResponse | null {
+  const { pathname } = request.nextUrl;
+
+  if (isPublicRoute(pathname)) return null;
+  if (hasSession(request)) return null;
+
+  // Sem sessão em rota protegida → redirect para login
+  const loginPath = resolveLoginUrl(request);
+  const callbackPath = sanitizeCallbackPath(pathname, request.nextUrl.search);
+
+  const loginUrl = callbackPath
+    ? `${loginPath}?next=${encodeURIComponent(callbackPath)}`
+    : loginPath;
+
+  return NextResponse.redirect(new URL(loginUrl, request.url));
+}
+
+// ---------------------------------------------------------------------------
+// Proxy (Next.js 16)
 // ---------------------------------------------------------------------------
 
 export async function proxy(request: NextRequest) {
+  // Step 1: Auth guard (runs first, before storefront resolution)
+  const authRedirect = checkAuth(request);
+  if (authRedirect) return authRedirect;
+
+  // Step 2: Storefront subdomain resolution
   const host = request.headers.get("host") ?? "";
   const subdomain = extractSubdomain(host, ROOT_HOSTS);
 
-  // Sem subdomínio → fluxo normal da aplicação
+  // Sem subdomínio → fluxo normal da aplicação (já autenticado)
   if (!subdomain) {
     return NextResponse.next();
   }

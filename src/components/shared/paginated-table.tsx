@@ -178,7 +178,6 @@ export function PaginatedTable<T>({
                   const isSelected = selectedIds.includes(key);
                   return (
                     <motion.tr
-                      as="tr"
                       key={key}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}

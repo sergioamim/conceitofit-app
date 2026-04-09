@@ -1,0 +1,66 @@
+name: backoffice
+version: 1.0.0
+short-title: Backoffice & Infra Squad
+description: "Squad responsavel pelo backoffice SaaS: gestao de academias, onboarding, importacao EVO, seguranca (usuarios, perfis, RBAC), compliance, audit log, operacional e BI."
+author: sergioamim
+license: MIT
+
+aiox:
+  minVersion: "2.1.0"
+  type: squad
+
+tags:
+  - backoffice
+  - saas
+  - admin
+  - seguranca
+  - rbac
+  - onboarding
+  - importacao
+  - bi
+  - compliance
+
+components:
+  agents:
+    - dev
+    - qa
+    - devops
+    - data-engineer
+  tasks: []
+  workflows: []
+  templates: []
+
+config:
+  extends: extend
+  scope:
+    routes:
+      - src/app/(backoffice)/**
+      - src/app/(portal)/seguranca/**
+      - src/app/(portal)/administrativo/**
+      - src/app/(portal)/conta/**
+      - src/app/(public)/**
+      - src/app/app/**
+      - src/app/status/**
+      - src/app/api/**
+    libs:
+      - src/lib/api/rbac.ts
+      - src/lib/api/auth.ts
+      - src/lib/api/auth-http.ts
+      - src/lib/api/session.ts
+      - src/lib/api/csrf.ts
+      - src/lib/api/onboarding-api.ts
+      - src/lib/api/importacao-evo.ts
+      - src/lib/api/administrativo.ts
+      - src/lib/api/bi.ts
+      - src/lib/api/tenant.ts
+      - src/lib/api/backend-capability.ts
+      - src/lib/tenant/**
+      - src/backoffice/**
+    components:
+      - src/components/layout/**
+      - src/components/security/**
+      - src/components/auth/**
+      - src/components/public/**
+      - src/components/pwa/**
+      - src/components/monitor/**
+      - src/components/storefront/**

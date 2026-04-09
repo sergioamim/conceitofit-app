@@ -21,9 +21,10 @@ import {
   type NavGroupV2, 
   type NavItemV2 
 } from "@/backoffice/lib/nav-items-v2";
-import { 
-  useAuthAccess, 
+import {
+  useAuthAccess,
 } from "@/lib/tenant/hooks/use-session-context";
+import { getAuthSessionSnapshot } from "@/lib/api/session";
 import { useBackofficeContext } from "@/backoffice/lib/backoffice-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,6 +136,7 @@ export function SidebarBackoffice({ mobileOpen = false, onMobileClose, onOpenCmd
   const router = useRouter();
   const { mode, inspectedTenant } = useBackofficeContext();
   const access = useAuthAccess();
+  const sessionUser = getAuthSessionSnapshot();
   const isMac = useIsMac();
   const cmdText = isMac === null ? "" : isMac ? "⌘K" : "Ctrl+K";
 
@@ -232,11 +234,11 @@ export function SidebarBackoffice({ mobileOpen = false, onMobileClose, onOpenCmd
             collapsed && "justify-center"
           )}>
             <div className="size-9 rounded-full bg-gradient-to-br from-gym-accent to-gym-accent/60 flex items-center justify-center text-xs font-bold text-black">
-              {access.user?.name?.[0] || "A"}
+              {sessionUser?.displayName?.[0] || "A"}
             </div>
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold truncate">{access.user?.name || "Administrador"}</p>
+                <p className="text-xs font-bold truncate">{sessionUser?.displayName || "Administrador"}</p>
                 <p className="text-[10px] text-muted-foreground truncate uppercase font-medium">SaaS Admin</p>
               </div>
             )}

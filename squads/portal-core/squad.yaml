@@ -1,0 +1,61 @@
+name: portal-core
+version: 1.0.0
+short-title: Portal Core Squad
+description: "Squad responsavel pelo nucleo do portal da academia: dashboard, alunos/clientes, matriculas, planos, treinos, grade e area do cliente."
+author: sergioamim
+license: MIT
+
+aiox:
+  minVersion: "2.1.0"
+  type: squad
+
+tags:
+  - portal
+  - core
+  - alunos
+  - matriculas
+  - planos
+  - treinos
+  - grade
+  - cliente
+
+components:
+  agents:
+    - dev
+    - qa
+    - architect
+    - ux-design-expert
+  tasks: []
+  workflows: []
+  templates: []
+
+config:
+  extends: extend
+  scope:
+    routes:
+      - src/app/(portal)/dashboard/**
+      - src/app/(portal)/alunos/**
+      - src/app/(portal)/clientes/**
+      - src/app/(portal)/clientes-v2/**
+      - src/app/(portal)/matriculas/**
+      - src/app/(portal)/planos/**
+      - src/app/(portal)/treinos/**
+      - src/app/(portal)/grade/**
+      - src/app/(portal)/reservas/**
+      - src/app/(portal)/prospects/**
+      - src/app/(portal)/atividades/**
+      - src/app/(cliente)/**
+    libs:
+      - src/lib/api/alunos.ts
+      - src/lib/api/matriculas.ts
+      - src/lib/api/pagamentos.ts
+      - src/lib/api/presencas.ts
+      - src/lib/api/reservas.ts
+      - src/lib/api/dashboard.ts
+      - src/lib/api/grade-mural.ts
+      - src/lib/query/**
+    components:
+      - src/components/shared/**
+      - src/components/treinos/**
+      - src/components/grade/**
+      - src/components/cliente/**

@@ -17,7 +17,7 @@ import {
   useReservarAula,
   useCancelarReserva,
 } from "@/lib/query/use-aulas";
-import { getBusinessTodayIso, addDaysToIsoDate } from "@/lib/shared/business-date";
+import { getBusinessTodayIso, addDaysToIsoDate } from "@/lib/business-date";
 import { RESERVA_AULA_STATUS_LABEL } from "@/lib/tenant/aulas/reservas";
 import type { AulaSessao, ReservaAula } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";

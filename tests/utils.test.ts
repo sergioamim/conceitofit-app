@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cn, maskCPF, maskPhone, maskCEP, validateCardExpiry } from "@/lib/shared/utils";
+import { cn, maskCPF, maskPhone, maskCEP, validateCardExpiry } from "@/lib/utils";
 
 describe("cn", () => {
   it("merges class names", () => {

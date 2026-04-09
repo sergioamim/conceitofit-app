@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatDayDate, toIsoDate, addDays, startOfWeek } from "@/lib/utils/date";
+import { formatDayDate, toIsoDate, addDays, startOfWeek } from "@/lib/tenant/aulas/reservas";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 const DIA_ORDER: DiaSemana[] = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];

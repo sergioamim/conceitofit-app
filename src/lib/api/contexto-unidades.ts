@@ -1,6 +1,6 @@
 import type { Academia, HorarioFuncionamento, Tenant } from "@/lib/types";
 import { ApiRequestError, apiRequest } from "./http";
-import { isTenantContextError } from "@/lib/shared/utils/error-codes";
+import { isTenantContextError } from "@/lib/utils/error-codes";
 import type { AuthUser } from "./auth";
 import {
   filterTenantAccessByOperationalScope,

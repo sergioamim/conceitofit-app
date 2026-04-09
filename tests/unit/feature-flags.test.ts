@@ -4,7 +4,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 async function loadFlags() {
   // Clear module cache to re-evaluate with new env vars
   vi.resetModules();
-  return import("@/lib/shared/feature-flags");
+  return import("@/lib/feature-flags");
 }
 
 describe("feature-flags", () => {

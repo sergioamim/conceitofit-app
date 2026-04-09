@@ -1,0 +1,53 @@
+name: crm-comercial
+version: 1.0.0
+short-title: CRM & Comercial Squad
+description: "Squad responsavel por CRM (prospects, cadencias, campanhas, playbooks, tarefas), vendas, atendimento/inbox e integracao WhatsApp."
+author: sergioamim
+license: MIT
+
+aiox:
+  minVersion: "2.1.0"
+  type: squad
+
+tags:
+  - crm
+  - comercial
+  - vendas
+  - prospects
+  - whatsapp
+  - atendimento
+  - inbox
+
+components:
+  agents:
+    - dev
+    - qa
+    - analyst
+    - ux-design-expert
+  tasks: []
+  workflows: []
+  templates: []
+
+config:
+  extends: extend
+  scope:
+    routes:
+      - src/app/(portal)/crm/**
+      - src/app/(portal)/vendas/**
+      - src/app/(portal)/atendimento/**
+      - src/app/(portal)/administrativo/whatsapp/**
+      - src/app/(backoffice)/admin/whatsapp/**
+      - src/app/(backoffice)/admin/leads/**
+    libs:
+      - src/lib/api/crm.ts
+      - src/lib/api/crm-cadencias.ts
+      - src/lib/api/comercial-catalogo.ts
+      - src/lib/api/conversas.ts
+      - src/lib/api/whatsapp.ts
+      - src/lib/api/whatsapp-credentials.ts
+      - src/lib/api/bot.ts
+      - src/lib/tenant/crm/**
+      - src/lib/tenant/comercial/**
+    components:
+      - src/components/shared/prospect-*
+      - src/components/atendimento/**

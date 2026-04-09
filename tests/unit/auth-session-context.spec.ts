@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { buildLoginHref, resolvePostLoginPath } from "../../src/lib/shared/auth-redirect";
-import { hasClientDeleteCapability, hasElevatedAccess, normalizeRoles } from "../../src/lib/shared/access-control";
+import { hasClientDeleteCapability, hasElevatedAccess, normalizeRoles } from "../../src/lib/access-control";
 
 const envSnapshot = {
   contextualNetworkAccess: process.env.NEXT_PUBLIC_CONTEXTUAL_NETWORK_ACCESS_ENABLED,

@@ -24,7 +24,7 @@ export const whatsAppSendMessageSchema = z.object({
   evento: z.string().min(1, "Evento é obrigatório"),
   destinatario: z.string().min(8, "Número do destinatário é obrigatório"),
   destinatarioNome: z.string().optional(),
-  variaveis: z.record(z.string()).optional(),
+  variaveis: z.record(z.string(), z.string()).optional(),
 });
 
 type WhatsAppSendMessageInput = z.infer<typeof whatsAppSendMessageSchema>;

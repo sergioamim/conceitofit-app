@@ -4,7 +4,8 @@ import {
   getTreinoWorkspace,
   registrarExecucaoTreinoWorkspace,
 } from "@/lib/tenant/treinos/workspace";
-import { listPresencasByAlunoApi, getClienteOperationalContextApi } from "@/lib/api/alunos";
+import { getClienteOperationalContextApi } from "@/lib/api/alunos";
+import { listPresencasByAlunoApi } from "@/lib/api/presencas";
 import {
   listAulasAgendaApi,
   listReservasAulaApi,

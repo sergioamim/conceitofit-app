@@ -174,7 +174,7 @@ export type ReservaAulaStatus =
   | "LISTA_ESPERA"
   | "CANCELADA"
   | "CHECKIN";
-export type ReservaAulaOrigem = "PORTAL_CLIENTE" | "BACKOFFICE";
+export type ReservaAulaOrigem = "PORTAL_CLIENTE" | "PORTAL_ALUNO" | "BACKOFFICE";
 
 export interface AulaSessao {
   id: UUID;
