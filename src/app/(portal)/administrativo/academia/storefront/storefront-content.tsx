@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatDateTimeBR } from "@/lib/utils/date-format";
+import { formatDateTimeBR } from "@/lib/formatters";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";

@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/lib/shared/formatters";
+import { formatCurrency, formatDateBR } from "@/lib/shared/formatters";
 import { logger } from "@/lib/shared/logger";
 import {
   buildPlanoVendaItems,
@@ -320,7 +320,7 @@ function renderContractTemplate(params: {
     "{{RAZAO_SOCIAL_UNIDADE}}": params.tenant.razaoSocial ?? params.academia.razaoSocial ?? params.tenant.nome,
     "{{CNPJ_UNIDADE}}": params.tenant.documento ?? params.academia.documento ?? "",
     "{{VALOR_PLANO}}": formatCurrency(params.plano.valor),
-    "{{DATA_ASSINATURA}}": new Date(`${assinatura}T00:00:00`).toLocaleDateString("pt-BR"),
+    "{{DATA_ASSINATURA}}": formatDateBR(`${assinatura}T00:00:00`),
   };
 
   return Object.entries(replacements).reduce(

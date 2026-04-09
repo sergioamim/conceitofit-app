@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { formatDateBR } from "@/lib/utils/date-format";
+import { formatDateBR } from "@/lib/formatters";
 import Link from "next/link";
 import { Search, Plus, ChevronDown, Users, Target, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -150,7 +150,7 @@ const ProspectTableRow = memo(function ProspectTableRow({
               </Button>
             </Link>
           )}
-          <Button variant="ghost" size="icon" onClick={handleEdit} className="size-8 rounded-lg hover:bg-muted">
+          <Button variant="ghost" size="icon" aria-label="Editar prospect" onClick={handleEdit} className="size-8 rounded-lg hover:bg-muted">
             <Plus className="size-4" />
           </Button>
         </div>

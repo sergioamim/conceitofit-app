@@ -3,6 +3,9 @@
  * Centraliza as funções duplicadas em 10+ páginas.
  */
 
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
 export function formatCurrency(value: number, currency = "BRL"): string {
   const safe = Number.isFinite(value) ? value : 0;
   return safe.toLocaleString("pt-BR", { style: "currency", currency });
@@ -63,4 +66,40 @@ export function formatPercent(value: number): string {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   })}%`;
+}
+
+/**
+ * Formata Date/string/number em "DD/MM/AAAA" — determinístico para SSR.
+ * Diferente de `formatDate` (que aceita só string "YYYY-MM-DD"), aceita objetos Date.
+ */
+export function formatDateBR(value: string | number | Date): string {
+  const date = typeof value === "string" || typeof value === "number" ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Formata Date/string/number em "DD/MM/AAAA HH:mm" — determinístico para SSR.
+ * Diferente de `formatDateTime` (que usa toLocaleString), usa cálculo manual.
+ */
+export function formatDateTimeBR(value: string | number | Date): string {
+  const date = typeof value === "string" || typeof value === "number" ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
+/** Formata distância relativa: "há 5 minutos", "há 2 dias", etc. */
+export function formatRelativeTime(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return formatDistanceToNow(d, { addSuffix: true, locale: ptBR });
 }

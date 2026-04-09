@@ -1,15 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { listCrmTasksApi } from "@/lib/api/crm";
-import { listFuncionariosApi } from "@/lib/api/administrativo";
 import { canTransitionProspectStatus } from "@/lib/tenant/crm/prospect-status";
-import type { CrmPipelineStage, Funcionario, Prospect, StatusProspect } from "@/lib/types";
+import type { CrmPipelineStage, Prospect, StatusProspect } from "@/lib/types";
 import { buildDefaultCrmPipelineStages } from "@/lib/tenant/crm/workspace";
-import { enrichCrmTasksRuntime } from "@/lib/tenant/crm/runtime";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useProspects, useOptimisticProspectStatus } from "@/lib/query/use-prospects";
+import { useCrmTasksQuery } from "@/lib/query/use-crm-tasks";
 import { StatusBadge } from "@/components/shared/status-badge";
 const ProspectDetailModal = dynamic(
   () => import("@/components/shared/prospect-detail-modal").then((mod) => mod.ProspectDetailModal),
@@ -35,41 +33,28 @@ export function ProspectsKanbanContent() {
   const tenantId = tenantContext.tenantId ?? "";
 
   // Server state via TanStack Query
-  const { data: prospects = [], isLoading: prospectsLoading, error: prospectsError, refetch } = useProspects({
+  const { data: prospects = [], isLoading: prospectsLoading, refetch } = useProspects({
     tenantId: tenantId || undefined,
     tenantResolved: tenantContext.tenantResolved,
   });
   const statusMutation = useOptimisticProspectStatus(tenantId || undefined);
 
-  // Auxiliary data (funcionarios + tasks for stage counts)
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
-  const [openTasksByStage, setOpenTasksByStage] = useState<Record<string, number>>({});
-  const [auxLoading, setAuxLoading] = useState(true);
-
-  const loadAux = useCallback(async () => {
-    if (!tenantId) return;
-    setAuxLoading(true);
-    try {
-      const [funcs, crmTaskRows] = await Promise.all([
-        listFuncionariosApi(true),
-        listCrmTasksApi({ tenantId }),
-      ]);
-      setFuncionarios(funcs);
-      const enrichedTasks = enrichCrmTasksRuntime({ tasks: crmTaskRows, prospects, funcionarios: funcs });
-      const pipelineStages = buildDefaultCrmPipelineStages(tenantId);
-      const taskMap = pipelineStages.reduce<Record<string, number>>((acc, stage) => {
-        acc[stage.status] = enrichedTasks.filter(
-          (t) => t.stageStatus === stage.status && !["CONCLUIDA", "CANCELADA"].includes(t.status),
-        ).length;
-        return acc;
-      }, {});
-      setOpenTasksByStage(taskMap);
-    } catch {} finally {
-      setAuxLoading(false);
-    }
-  }, [tenantId, prospects]);
-
-  useEffect(() => { if (prospects.length > 0) void loadAux(); }, [loadAux, prospects.length]);
+  // Auxiliary data (funcionarios + tasks for stage counts) via TanStack Query
+  const { data: crmTasksData, isLoading: crmTasksLoading } = useCrmTasksQuery({
+    tenantId,
+    enabled: tenantContext.tenantResolved && Boolean(tenantId),
+  });
+  const funcionarios = crmTasksData?.funcionarios ?? [];
+  const openTasksByStage = useMemo(() => {
+    if (!crmTasksData?.tasks || !tenantId) return {} as Record<string, number>;
+    const pipelineStages = buildDefaultCrmPipelineStages(tenantId);
+    return pipelineStages.reduce<Record<string, number>>((acc, stage) => {
+      acc[stage.status] = crmTasksData.tasks.filter(
+        (t) => t.stageStatus === stage.status && !["CONCLUIDA", "CANCELADA"].includes(t.status),
+      ).length;
+      return acc;
+    }, {});
+  }, [crmTasksData?.tasks, tenantId]);
 
   // UI state
   const [filtroStatus, setFiltroStatus] = useState<StatusProspect | typeof FILTER_ALL>(FILTER_ALL);
@@ -78,7 +63,7 @@ export function ProspectsKanbanContent() {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [error, setError] = useState("");
 
-  const loading = prospectsLoading || auxLoading;
+  const loading = prospectsLoading || crmTasksLoading;
   const stages = useMemo(() => buildDefaultCrmPipelineStages(tenantId || "tenant-runtime"), [tenantId]);
 
   useEffect(() => {

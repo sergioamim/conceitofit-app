@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatDate } from "@/lib/formatters";
 import { listVouchersApi } from "@/lib/api/beneficios";
 import { normalizeCapabilityError } from "@/lib/api/backend-capability";
 import { getBusinessTodayIso } from "@/lib/business-date";
@@ -435,7 +436,7 @@ export default function CampanhasCrmPage() {
                 <td className="px-4 py-3">
                   <p className="text-sm font-semibold">{row.nome}</p>
                   <p className="text-xs text-muted-foreground">{row.descricao || "Sem descrição"}</p>
-                  <p className="text-xs text-muted-foreground">Início: {new Date(`${row.dataInicio}T00:00:00`).toLocaleDateString("pt-BR")}</p>
+                  <p className="text-xs text-muted-foreground">Início: {formatDate(row.dataInicio)}</p>
                 </td>
                 <td className="px-4 py-3">
                   <p className="text-sm">{PUBLICO_OPTIONS.find((item) => item.value === row.publicoAlvo)?.label}</p>

@@ -153,6 +153,7 @@ export function MessageInput({
           size="icon"
           className="h-9 w-9 shrink-0 text-muted-foreground"
           title="Anexar arquivo"
+          aria-label="Anexar arquivo"
           disabled
         >
           <Paperclip className="size-4" />

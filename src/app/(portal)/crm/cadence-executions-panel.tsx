@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { Play, Square, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,7 @@ export function CadenceExecutionsPanel({ tenantId }: { tenantId: string }) {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const load = useCallback(async () => {
     if (!tenantId) return;
@@ -62,17 +64,19 @@ export function CadenceExecutionsPanel({ tenantId }: { tenantId: string }) {
     }
   }
 
-  async function handleCancel(executionId: string) {
-    if (!tenantId || !confirm("Cancelar esta execução de cadência?")) return;
-    setCancellingId(executionId);
-    try {
-      await cancelCrmCadenceExecutionApi({ tenantId, id: executionId });
-      await load();
-    } catch {
-      alert("Não foi possível cancelar a execução.");
-    } finally {
-      setCancellingId(null);
-    }
+  function handleCancel(executionId: string) {
+    if (!tenantId) return;
+    confirm("Cancelar esta execução de cadência?", async () => {
+      setCancellingId(executionId);
+      try {
+        await cancelCrmCadenceExecutionApi({ tenantId, id: executionId });
+        await load();
+      } catch {
+        alert("Não foi possível cancelar a execução.");
+      } finally {
+        setCancellingId(null);
+      }
+    }, { title: "Confirmar cancelamento", variant: "destructive" });
   }
 
   const active = executions.filter((e) => e.status === "EM_ANDAMENTO");
@@ -93,6 +97,7 @@ export function CadenceExecutionsPanel({ tenantId }: { tenantId: string }) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+      {ConfirmDialog}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-base font-semibold">Cadências em execução</h2>

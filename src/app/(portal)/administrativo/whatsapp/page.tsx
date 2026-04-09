@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { MessageSquare, Plus, Send, Settings, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ export default function WhatsAppPage() {
   const { tenantId, tenantResolved } = useTenantContext();
   const [tab, setTab] = useState<Tab>("config");
   const [error, setError] = useState<string | null>(null);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   // Config query + form state
   const { data: config, isLoading: configLoading, isError: configError, error: configErrorObj } = useWhatsAppConfig({
@@ -176,17 +178,20 @@ export default function WhatsAppPage() {
     }
   }
 
-  async function handleDeleteTemplate(id: string) {
-    if (!tenantId || !confirm("Remover este template?")) return;
-    try {
-      await deleteTemplateMutation.mutateAsync({ tenantId, id });
-    } catch (err) {
-      setError(normalizeErrorMessage(err));
-    }
+  function handleDeleteTemplate(id: string) {
+    if (!tenantId) return;
+    confirm("Remover este template?", async () => {
+      try {
+        await deleteTemplateMutation.mutateAsync({ tenantId, id });
+      } catch (err) {
+        setError(normalizeErrorMessage(err));
+      }
+    }, { title: "Confirmar remoção", variant: "destructive" });
   }
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Administrativo</p>
         <h1 className="font-display text-2xl font-bold tracking-tight">WhatsApp</h1>

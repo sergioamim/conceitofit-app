@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatDateTimeBR } from "@/lib/utils/date-format";
+import { formatDateTimeBR } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";

@@ -203,12 +203,12 @@ export function MeusPagamentosClient() {
                     
                     <div className="flex gap-2">
                       {p.nfseEmitida && (
-                        <Button variant="outline" size="icon" className="size-10 rounded-xl border-border/60 hover:bg-primary/10 hover:text-primary" title="Baixar Nota Fiscal">
+                        <Button variant="outline" size="icon" className="size-10 rounded-xl border-border/60 hover:bg-primary/10 hover:text-primary" title="Baixar Nota Fiscal" aria-label="Baixar Nota Fiscal">
                           <FileText size={18} />
                         </Button>
                       )}
                       {(p.status === "PENDENTE" || p.status === "VENCIDO") && (
-                        <Button variant="outline" size="icon" className="size-10 rounded-xl border-border/60 hover:bg-primary/10 hover:text-primary" title="Gerar 2ª Via">
+                        <Button variant="outline" size="icon" className="size-10 rounded-xl border-border/60 hover:bg-primary/10 hover:text-primary" title="Gerar 2ª Via" aria-label="Gerar 2ª Via do boleto">
                           <Download size={18} />
                         </Button>
                       )}

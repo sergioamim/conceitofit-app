@@ -1,16 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Download, Printer, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { getBiOperacionalSnapshotApi } from "@/lib/api/bi";
-import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { buildBiExportCsv } from "@/lib/tenant/bi/analytics";
 import { getBusinessMonthRange } from "@/lib/business-date";
-import type { Academia, BiEscopo, BiOperationalSnapshot, BiSegmento, Tenant } from "@/lib/types";
+import type { BiEscopo, BiSegmento } from "@/lib/types";
+import { useBiFilters, useBiSnapshot } from "@/lib/query/use-bi";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -50,75 +49,49 @@ export default function BiRedePage() {
   const access = useAuthAccess();
   const tenantContext = useTenantContext();
   const { start, end } = monthRangeFromNow();
-  const [academias, setAcademias] = useState<Academia[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState(ALL_TENANTS);
   const [segmento, setSegmento] = useState<BiSegmento>(FILTER_ALL);
   const [startDate, setStartDate] = useState(start);
   const [endDate, setEndDate] = useState(end);
-  const [snapshot, setSnapshot] = useState<BiOperationalSnapshot | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadFilters = useCallback(async () => {
-    const [academiasResponse, tenantsResponse] = await Promise.all([listAcademiasApi(), listUnidadesApi()]);
-    setAcademias(academiasResponse);
-    setTenants(tenantsResponse);
-    setSelectedAcademiaId((current) => {
-      if (current) return current;
-      const currentTenant = tenantsResponse.find((item) => item.id === tenantContext.tenantId);
-      return currentTenant?.academiaId ?? currentTenant?.groupId ?? academiasResponse[0]?.id ?? "";
-    });
-  }, [tenantContext.tenantId]);
+  // Server state via TanStack Query — filters
+  const { data: filtersData } = useBiFilters();
+  const academias = filtersData?.academias ?? [];
+  const tenants = filtersData?.tenants ?? [];
 
-  const loadSnapshot = useCallback(async () => {
-    if (!access.canAccessElevatedModules || !tenantContext.tenantResolved) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const scope: BiEscopo = selectedTenantId === ALL_TENANTS ? "ACADEMIA" : "UNIDADE";
-      const nextSnapshot = await getBiOperacionalSnapshotApi({
-        scope,
-        tenantId: selectedTenantId === ALL_TENANTS ? tenantContext.tenantId : selectedTenantId,
-        academiaId: selectedAcademiaId,
-        startDate,
-        endDate,
-        segmento,
-        canViewNetwork: true,
-      });
-      setSnapshot(nextSnapshot);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    access.canAccessElevatedModules,
+  // Resolve defaults from filters data
+  const effectiveAcademiaId = useMemo(() => {
+    if (selectedAcademiaId) return selectedAcademiaId;
+    const currentTenant = tenants.find((item) => item.id === tenantContext.tenantId);
+    return currentTenant?.academiaId ?? currentTenant?.groupId ?? academias[0]?.id ?? "";
+  }, [selectedAcademiaId, tenants, tenantContext.tenantId, academias]);
+
+  const resolvedScope: BiEscopo = selectedTenantId === ALL_TENANTS ? "ACADEMIA" : "UNIDADE";
+  const resolvedTenantId = selectedTenantId === ALL_TENANTS ? tenantContext.tenantId : selectedTenantId;
+
+  // Server state via TanStack Query — snapshot
+  const {
+    data: snapshot = null,
+    isLoading: loading,
+    error: snapshotError,
+    refetch,
+  } = useBiSnapshot({
+    scope: resolvedScope,
+    tenantId: resolvedTenantId ?? undefined,
+    academiaId: effectiveAcademiaId,
+    startDate,
     endDate,
     segmento,
-    selectedAcademiaId,
-    selectedTenantId,
-    startDate,
-    tenantContext.tenantId,
-    tenantContext.tenantResolved,
-  ]);
+    canViewNetwork: true,
+    enabled: access.canAccessElevatedModules && tenantContext.tenantResolved,
+  });
 
-  useEffect(() => {
-    if (access.canAccessElevatedModules) {
-      void loadFilters();
-    }
-  }, [access.canAccessElevatedModules, loadFilters]);
-
-  useEffect(() => {
-    if (access.canAccessElevatedModules && tenantContext.tenantResolved) {
-      void loadSnapshot();
-    }
-  }, [access.canAccessElevatedModules, loadSnapshot, tenantContext.tenantResolved]);
+  const error = snapshotError ? normalizeErrorMessage(snapshotError) : null;
 
   const filteredTenants = useMemo(
-    () => tenants.filter((tenant) => (tenant.academiaId ?? tenant.groupId) === selectedAcademiaId),
-    [selectedAcademiaId, tenants]
+    () => tenants.filter((tenant) => (tenant.academiaId ?? tenant.groupId) === effectiveAcademiaId),
+    [effectiveAcademiaId, tenants]
   );
 
   const bestReceita = snapshot?.benchmark[0];
@@ -164,7 +137,7 @@ export default function BiRedePage() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Academia</label>
-            <Select value={selectedAcademiaId} onValueChange={setSelectedAcademiaId}>
+            <Select value={effectiveAcademiaId} onValueChange={setSelectedAcademiaId}>
               <SelectTrigger aria-label="Academia Rede" className="w-full border-border bg-secondary">
                 <SelectValue placeholder="Selecione a academia" />
               </SelectTrigger>
@@ -236,7 +209,7 @@ export default function BiRedePage() {
       </div>
 
       {error ? (
-        <ListErrorState error={error} onRetry={() => void loadFilters()} />
+        <ListErrorState error={error} onRetry={() => void refetch()} />
       ) : null}
 
       {loading || !snapshot ? (

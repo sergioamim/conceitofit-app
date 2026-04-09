@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { formatDateBR } from "@/lib/formatters";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { getBusinessTodayDate, getBusinessTodayIso } from "@/lib/business-date";
 import type { Atividade, AtividadeGrade, DiaSemana } from "@/lib/types";
@@ -169,13 +170,13 @@ export function GradeContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="border-border" onClick={() => setWeekStart((d) => addDays(d, -7))}>
+          <Button variant="outline" size="icon" className="border-border" aria-label="Semana anterior" onClick={() => setWeekStart((d) => addDays(d, -7))}>
             <ChevronLeft className="size-4" />
           </Button>
           <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground">
-            {weekStart.toLocaleDateString("pt-BR")} - {weekEnd.toLocaleDateString("pt-BR")}
+            {formatDateBR(weekStart)} - {formatDateBR(weekEnd)}
           </div>
-          <Button variant="outline" size="icon" className="border-border" onClick={() => setWeekStart((d) => addDays(d, 7))}>
+          <Button variant="outline" size="icon" className="border-border" aria-label="Próxima semana" onClick={() => setWeekStart((d) => addDays(d, 7))}>
             <ChevronRight className="size-4" />
           </Button>
         </div>

@@ -229,12 +229,13 @@ function ExerciseGrid({
                     <td className="px-3 py-2 align-top">
                       <div className="flex items-center gap-1">
                         <GripVertical className="size-4 text-muted-foreground" />
-                        <Button variant="ghost" size="icon" onClick={() => onMoveItem(item.id, -1)} disabled={index === 0}>
+                        <Button variant="ghost" size="icon" aria-label="Mover item para esquerda" onClick={() => onMoveItem(item.id, -1)} disabled={index === 0}>
                           <ChevronLeft className="size-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label="Mover item para direita"
                           onClick={() => onMoveItem(item.id, 1)}
                           disabled={index === block.itens.length - 1}
                         >

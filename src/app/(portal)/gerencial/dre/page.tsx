@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { ListErrorState } from "@/components/shared/list-states";
-import { formatBRL } from "@/lib/formatters";
+import { formatBRL, formatDate } from "@/lib/formatters";
 
 const CATEGORIA_LABEL: Record<CategoriaContaPagar, string> = {
   FOLHA: "Folha",
@@ -207,7 +207,7 @@ export default function DrePage() {
           <div className="border-b border-border px-4 py-3">
             <h2 className="font-display text-base font-semibold text-foreground">Estrutura DRE</h2>
             <p className="text-xs text-muted-foreground">
-              Período: {dre ? `${new Date(`${dre.periodoInicio}T00:00:00`).toLocaleDateString("pt-BR")} até ${new Date(`${dre.periodoFim}T00:00:00`).toLocaleDateString("pt-BR")}` : "—"}
+              Período: {dre ? `${formatDate(dre.periodoInicio)} até ${formatDate(dre.periodoFim)}` : "—"}
             </p>
           </div>
           <div className="p-2 md:p-4">

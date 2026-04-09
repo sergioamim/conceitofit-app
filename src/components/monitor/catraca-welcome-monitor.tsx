@@ -7,7 +7,7 @@ import { getAlunoApi } from "@/lib/api/alunos";
 import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { cn } from "@/lib/utils";
-import { formatDateTime } from "@/lib/formatters";
+import { formatDateBR, formatDateTime } from "@/lib/formatters";
 import { ClienteThumbnail } from "@/components/shared/cliente-thumbnail";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -117,10 +117,10 @@ function formatPlanExpiryLabel(value?: string): string {
   const target = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
   const diffDays = Math.round((target.getTime() - current.getTime()) / 86400000);
 
-  if (diffDays < 0) return `Plano vencido desde ${target.toLocaleDateString("pt-BR")}`;
+  if (diffDays < 0) return `Plano vencido desde ${formatDateBR(target)}`;
   if (diffDays === 0) return "Plano vence hoje";
-  if (diffDays === 1) return `Plano vence amanha (${target.toLocaleDateString("pt-BR")})`;
-  return `Plano vence em ${diffDays} dias (${target.toLocaleDateString("pt-BR")})`;
+  if (diffDays === 1) return `Plano vence amanha (${formatDateBR(target)})`;
+  return `Plano vence em ${diffDays} dias (${formatDateBR(target)})`;
 }
 
 function resolvePlanExpiryFromAcesso(acesso: CatracaAcesso): string | undefined {

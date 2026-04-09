@@ -19,7 +19,7 @@ import {
   useAvaliacoesAluno,
   type AvaliacaoFisica,
 } from "@/lib/query/use-avaliacoes-aluno";
-import { formatDateBR } from "@/lib/utils/time-format";
+import { formatDateBR } from "@/lib/formatters";
 
 export default function MinhasAvaliacoesPage() {
   const { tenantId, userId, tenantResolved } = useTenantContext();

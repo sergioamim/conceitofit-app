@@ -251,7 +251,7 @@ function ClientesV2PageContent() {
                       </TableCell>
                       <TableCell className="py-5 pr-6 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="size-9 rounded-xl hover:bg-primary/10 hover:text-primary">
+                          <Button variant="ghost" size="icon" aria-label="Ver detalhes do aluno" className="size-9 rounded-xl hover:bg-primary/10 hover:text-primary">
                             <ArrowRight size={18} />
                           </Button>
                         </div>

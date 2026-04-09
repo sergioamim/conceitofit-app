@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { BandeiraCartao, CartaoCliente } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { NovoCartaoModal } from "@/components/shared/novo-cartao-modal";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 function maskCard(ultimos4: string) {
   return `•••• •••• •••• ${ultimos4}`;
@@ -43,9 +44,11 @@ export function ClienteCartoesPanel({
   onSetDefault: (id: string) => Promise<void>;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
+      {ConfirmDialog}
       <NovoCartaoModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -130,10 +133,11 @@ export function ClienteCartoesPanel({
                     variant="outline"
                     size="sm"
                     className="border-border text-gym-danger hover:text-gym-danger"
-                    onClick={async () => {
-                      if (!confirm("Remover este cartão?")) return;
-                      await onDelete(cartao.id);
-                      await onReload();
+                    onClick={() => {
+                      confirm("Remover este cartão?", async () => {
+                        await onDelete(cartao.id);
+                        await onReload();
+                      }, { title: "Confirmar remoção", variant: "destructive" });
                     }}
                   >
                     Remover

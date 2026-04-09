@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,11 +24,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import {
-  getBillingConfigApi,
-  saveBillingConfigApi,
-  testBillingConnectionApi,
-} from "@/lib/api/billing";
-import type { BillingConfig, ProvedorGateway } from "@/lib/types";
+  useBillingConfig,
+  useSaveBillingConfig,
+  useTestBillingConnection,
+} from "@/lib/query/use-billing-config";
+import type { ProvedorGateway } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const billingConfigSchema = z.object({
@@ -55,10 +55,17 @@ const PROVEDOR_LABELS: Record<ProvedorGateway, string> = {
 export default function BillingConfigPage() {
   const { tenantId } = useTenantContext();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [testing, setTesting] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [configExistente, setConfigExistente] = useState(false);
+
+  // Server state via TanStack Query
+  const { data: configData, isLoading: loading } = useBillingConfig({
+    tenantId: tenantId ?? undefined,
+  });
+  const saveMutation = useSaveBillingConfig(tenantId ?? undefined);
+  const testMutation = useTestBillingConnection(tenantId ?? undefined);
+
+  const saving = saveMutation.isPending;
+  const testing = testMutation.isPending;
 
   const form = useForm<BillingConfigForm>({
     resolver: zodResolver(billingConfigSchema),
@@ -73,86 +80,64 @@ export default function BillingConfigPage() {
     },
   });
 
-  const loadConfig = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    try {
-      const config = await getBillingConfigApi({ tenantId });
-      if (config) {
-        setConfigExistente(true);
-        const provedorValido = ["PAGARME", "STRIPE", "MERCADO_PAGO", "ASAAS", "OUTRO", "CIELO_ECOMMERCE"]
-          .includes(config.provedorAtivo)
-          ? (config.provedorAtivo as BillingConfigForm["provedorAtivo"])
-          : "OUTRO";
-        form.reset({
-          provedorAtivo: provedorValido,
-          chaveApi: config.chaveApi || "",
-          ambiente: config.ambiente as "SANDBOX" | "PRODUCAO" || "SANDBOX",
-          ativo: config.ativo,
-          cicloCobranca: "MENSAL",
-          maxTentativas: 3,
-          multaAtraso: 2,
-        });
-      }
-    } catch {
-      toast({ title: "Erro ao carregar configuração", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId, form, toast]);
-
+  // Populate form when config loads from server
   useEffect(() => {
-    void loadConfig();
-  }, [loadConfig]);
+    if (configData) {
+      setConfigExistente(true);
+      const provedorValido = ["PAGARME", "STRIPE", "MERCADO_PAGO", "ASAAS", "OUTRO", "CIELO_ECOMMERCE"]
+        .includes(configData.provedorAtivo)
+        ? (configData.provedorAtivo as BillingConfigForm["provedorAtivo"])
+        : "OUTRO";
+      form.reset({
+        provedorAtivo: provedorValido,
+        chaveApi: configData.chaveApi || "",
+        ambiente: configData.ambiente as "SANDBOX" | "PRODUCAO" || "SANDBOX",
+        ativo: configData.ativo,
+        cicloCobranca: "MENSAL",
+        maxTentativas: 3,
+        multaAtraso: 2,
+      });
+    }
+  }, [configData, form]);
 
   async function onSubmit(data: BillingConfigForm) {
     if (!tenantId) return;
-    setSaving(true);
     try {
-      await saveBillingConfigApi({
-        tenantId,
-        data: {
-          provedorAtivo: data.provedorAtivo,
-          chaveApi: data.chaveApi,
-          ambiente: data.ambiente,
-          ativo: data.ativo,
-        },
+      await saveMutation.mutateAsync({
+        provedorAtivo: data.provedorAtivo,
+        chaveApi: data.chaveApi,
+        ambiente: data.ambiente,
+        ativo: data.ativo,
       });
       toast({
         title: configExistente ? "Configuração atualizada" : "Configuração criada",
         description: `Gateway ${PROVEDOR_LABELS[data.provedorAtivo]} configurado com sucesso.`,
       });
       setConfigExistente(true);
-      void loadConfig();
-    } catch (error) {
+    } catch (submitError) {
       toast({
         title: "Erro ao salvar configuração",
-        description: normalizeErrorMessage(error),
+        description: normalizeErrorMessage(submitError),
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
     }
   }
 
   async function handleTestConnection() {
     if (!tenantId) return;
-    setTesting(true);
     try {
-      const result = await testBillingConnectionApi({ tenantId });
+      const result = await testMutation.mutateAsync();
       toast({
         title: result.success ? "Conexão bem-sucedida" : "Falha na conexão",
         description: result.message,
         variant: result.success ? "default" : "destructive",
       });
-    } catch (error) {
+    } catch (testError) {
       toast({
         title: "Erro ao testar conexão",
-        description: normalizeErrorMessage(error),
+        description: normalizeErrorMessage(testError),
         variant: "destructive",
       });
-    } finally {
-      setTesting(false);
     }
   }
 

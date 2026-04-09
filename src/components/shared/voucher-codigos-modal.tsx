@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { formatDateBR } from "@/lib/formatters";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,8 +78,7 @@ function AlunoCell({ aluno, onClick }: { aluno: Aluno; onClick: () => void }) {
 }
 
 function formatPeriodo(voucher: Voucher): string {
-  const fmt = (d: string) =>
-    new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+  const fmt = (d: string) => formatDateBR(d + "T00:00:00");
   if (!voucher.prazoDeterminado) return `A partir de ${fmt(voucher.periodoInicio)}`;
   const fim = voucher.periodoFim ? fmt(voucher.periodoFim) : "—";
   return `${fmt(voucher.periodoInicio)} → ${fim}`;
@@ -298,7 +298,7 @@ export function VoucherCodigosModal({
                           )}
                           <td className="px-4 py-3 text-xs text-muted-foreground">
                             {cod.dataUso
-                              ? new Date(cod.dataUso).toLocaleDateString("pt-BR")
+                              ? formatDateBR(cod.dataUso)
                               : "—"}
                           </td>
                         </tr>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatDateTimeBR } from "@/lib/utils/date-format";
+import { formatDateTimeBR } from "@/lib/formatters";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   createUnidadeApi,

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Aluno, Plano, Tenant, Venda } from "@/lib/types";
-import { formatBRL, formatDateTime } from "@/lib/formatters";
+import { formatBRL, formatDateBR, formatDateTime } from "@/lib/formatters";
 
 function escapeHtml(value: string) {
   return value
@@ -81,7 +81,7 @@ export function SaleReceiptModal({
       NOME_UNIDADE: tenant?.nome ?? "",
       RAZAO_SOCIAL_UNIDADE: tenant?.razaoSocial ?? tenant?.nome ?? "",
       CNPJ_UNIDADE: formatDocumento(tenant?.documento),
-      DATA_ASSINATURA: new Date().toLocaleDateString("pt-BR"),
+      DATA_ASSINATURA: formatDateBR(new Date()),
       NUMERO_RECIBO: venda?.id ?? "",
       DATA_PAGAMENTO: venda ? formatDateTime(venda.dataCriacao) : "",
     };

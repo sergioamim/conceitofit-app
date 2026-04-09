@@ -20,12 +20,7 @@ import type {
   SaasSeriesResponse,
   AcademiaOnboarding,
 } from "@/backoffice/api/admin-saas-metrics";
-import { formatBRL, formatPercent } from "@/lib/formatters";
-
-const fmtDate = (iso: string): string => {
-  if (!iso) return "\u2014";
-  return new Date(iso).toLocaleDateString("pt-BR");
-};
+import { formatBRL, formatDateBR, formatPercent } from "@/lib/formatters";
 
 function formatNumber(n: number): string {
   return n.toLocaleString("pt-BR");
@@ -247,10 +242,10 @@ export function SaasDashboardContent({
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {fmtDate(a.dataCriacao)}
+                      {formatDateBR(a.dataCriacao)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {fmtDate(a.dataOnboarding)}
+                      {formatDateBR(a.dataOnboarding)}
                     </td>
                   </tr>
                 ))}

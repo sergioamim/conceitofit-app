@@ -11,7 +11,7 @@ import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { AgregadorRepasseStatus } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
-import { formatBRL, formatDateTime } from "@/lib/formatters";
+import { formatBRL, formatDate, formatDateTime } from "@/lib/formatters";
 import { useAgregadores, useReprocessarAgregador } from "@/lib/query/use-agregadores";
 
 type RepasseFiltro = WithFilterAll<AgregadorRepasseStatus>;
@@ -200,7 +200,7 @@ export function AgregadoresContent() {
                       {AGREGADOR_REPASSE_LABEL[item.statusRepasse]}
                     </span>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Previsto: {new Date(`${item.dataPrevistaRepasse}T00:00:00`).toLocaleDateString("pt-BR")}
+                      Previsto: {formatDate(item.dataPrevistaRepasse)}
                     </p>
                   </td>
                   <td className="px-4 py-3">

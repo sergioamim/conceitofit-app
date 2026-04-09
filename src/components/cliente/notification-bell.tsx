@@ -21,7 +21,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { formatRelativeTime } from "@/lib/utils/time-format";
+import { formatRelativeTime } from "@/lib/formatters";
 import {
   useNotificacoesAluno,
   useMarcarNotificacaoLida,
@@ -130,12 +130,16 @@ export function NotificationBell({ tenantId, alunoId }: NotificationBellProps) {
               const content = (
                 <div
                   key={notificacao.id}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleMarkRead(notificacao); } }}
                   className={cn(
                     "flex gap-3 px-4 py-3 border-b border-border/20 transition-colors cursor-pointer",
                     !notificacao.lida
                       ? "bg-primary/5 hover:bg-primary/10"
                       : "hover:bg-muted/20",
                   )}
+                  aria-label={`${notificacao.lida ? "" : "Marcar como lida: "}${notificacao.titulo}`}
                   onClick={() => handleMarkRead(notificacao)}
                 >
                   <div

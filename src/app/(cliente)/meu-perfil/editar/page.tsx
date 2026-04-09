@@ -143,6 +143,7 @@ export default function EditarPerfilPage() {
           variant="ghost"
           size="icon"
           className="h-9 w-9 shrink-0"
+          aria-label="Voltar para meu perfil"
           onClick={() => router.push("/meu-perfil")}
         >
           <ArrowLeft className="h-4 w-4" />

@@ -58,7 +58,8 @@ export function ExportMenu<T>({
       {open && (
         <>
           {/* backdrop to close */}
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden="true" />
           <div className="absolute right-0 z-50 mt-1 w-40 rounded-md border border-border bg-card shadow-lg">
             <button
               type="button"

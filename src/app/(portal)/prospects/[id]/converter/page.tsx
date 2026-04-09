@@ -687,6 +687,7 @@ export default function ConverterPage() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Voltar"
             onClick={() => (step > 1 ? setStep(step - 1) : router.back())}
             className="shrink-0"
           >

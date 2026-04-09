@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { formatRelativeTime } from "@/lib/utils/time-format";
+import { formatRelativeTime } from "@/lib/formatters";
 import type { MensagemResponse } from "@/lib/shared/types/whatsapp-crm";
 import { MessageMediaPreview } from "./message-media-preview";
 

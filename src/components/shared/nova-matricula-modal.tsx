@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 const novaMatriculaSchema = z.object({
   alunoId: requiredTrimmedString("Selecione o cliente."),
@@ -71,6 +72,7 @@ export function NovaMatriculaModal({
   } = commercial;
 
   const [error, setError] = useState("");
+  const { confirm, ConfirmDialog: ConfirmPendente } = useConfirmDialog();
   const formMethods = useForm<NovaMatriculaFormValues>({
     resolver: zodResolver(novaMatriculaSchema),
     defaultValues: {
@@ -123,13 +125,7 @@ export function NovaMatriculaModal({
     clearCart();
   }
 
-  async function onSubmit(values: NovaMatriculaFormValues) {
-    if (!tenantId || !values.alunoId || !values.planoId || !values.dataInicio || !values.formaPagamento || !dryRun) return;
-    
-    if (values.pagamentoPendente) {
-      const ok = confirm("Confirmar venda com pagamento pendente?");
-      if (!ok) return;
-    }
+  async function executeSubmit(values: NovaMatriculaFormValues) {
     setError("");
     try {
       await processSale({
@@ -147,6 +143,19 @@ export function NovaMatriculaModal({
     }
   }
 
+  function onSubmit(values: NovaMatriculaFormValues) {
+    if (!tenantId || !values.alunoId || !values.planoId || !values.dataInicio || !values.formaPagamento || !dryRun) return;
+
+    if (values.pagamentoPendente) {
+      confirm("Confirmar venda com pagamento pendente?", () => executeSubmit(values), {
+        title: "Pagamento pendente",
+        confirmLabel: "Confirmar venda",
+      });
+      return;
+    }
+    void executeSubmit(values);
+  }
+
   return (
     <Dialog
       open={open}
@@ -157,6 +166,7 @@ export function NovaMatriculaModal({
         }
       }}
     >
+      {ConfirmPendente}
       <RestoreDraftModal
         hasDraft={hasDraft && open}
         onRestore={restoreDraft}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,7 @@ export function FuncionariosListPage() {
   const [cargosModalOpen, setCargosModalOpen] = useState(false);
   const [editingCargo, setEditingCargo] = useState<Cargo | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   useEffect(() => {
     setHasMounted(true);
@@ -109,20 +111,21 @@ export function FuncionariosListPage() {
     }
   }
 
-  async function handleDeleteCargo(id: string) {
-    if (!confirm("Remover este cargo?")) return;
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      await deleteCargoApi(id);
-      setSuccess("Cargo removido.");
-      await loadWorkspace();
-    } catch (deleteError) {
-      setError(normalizeErrorMessage(deleteError));
-    } finally {
-      setSaving(false);
-    }
+  function handleDeleteCargo(id: string) {
+    confirm("Remover este cargo?", async () => {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+      try {
+        await deleteCargoApi(id);
+        setSuccess("Cargo removido.");
+        await loadWorkspace();
+      } catch (deleteError) {
+        setError(normalizeErrorMessage(deleteError));
+      } finally {
+        setSaving(false);
+      }
+    }, { title: "Confirmar remoção", variant: "destructive" });
   }
 
   async function handleToggleColaborador(id: string) {
@@ -140,20 +143,21 @@ export function FuncionariosListPage() {
     }
   }
 
-  async function handleDeleteColaborador(id: string) {
-    if (!confirm("Remover este colaborador?")) return;
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      await deleteFuncionarioApi(id);
-      setFuncionarios((current) => current.filter((item) => item.id !== id));
-      setSuccess("Colaborador removido.");
-    } catch (deleteError) {
-      setError(normalizeErrorMessage(deleteError));
-    } finally {
-      setSaving(false);
-    }
+  function handleDeleteColaborador(id: string) {
+    confirm("Remover este colaborador?", async () => {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+      try {
+        await deleteFuncionarioApi(id);
+        setFuncionarios((current) => current.filter((item) => item.id !== id));
+        setSuccess("Colaborador removido.");
+      } catch (deleteError) {
+        setError(normalizeErrorMessage(deleteError));
+      } finally {
+        setSaving(false);
+      }
+    }, { title: "Confirmar remoção", variant: "destructive" });
   }
 
   if (!hasMounted) {
@@ -166,6 +170,7 @@ export function FuncionariosListPage() {
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       {cargoFormOpen ? (
         <CargoModal
           open={cargoFormOpen}

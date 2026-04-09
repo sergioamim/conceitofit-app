@@ -4,7 +4,7 @@ import { useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConversaStatusBadge } from "./status-badge";
-import { formatRelativeTime } from "@/lib/utils/time-format";
+import { formatRelativeTime } from "@/lib/formatters";
 import type { ConversaResponse } from "@/lib/shared/types/whatsapp-crm";
 
 interface ConversationListProps {

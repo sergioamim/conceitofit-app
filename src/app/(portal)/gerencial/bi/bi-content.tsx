@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Download, FileChartColumnIncreasing, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { BI_KPI_CATALOG, buildBiExportCsv, resolveBiScopeAccess } from "@/lib/tenant/bi/analytics";
 import { getBusinessMonthRange } from "@/lib/business-date";
-import { getBiOperacionalSnapshotApi } from "@/lib/api/bi";
-import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
-import type { Academia, BiEscopo, BiOperationalSnapshot, BiSegmento, Tenant } from "@/lib/types";
+import type { BiEscopo, BiSegmento } from "@/lib/types";
+import { useBiFilters, useBiSnapshot } from "@/lib/query/use-bi";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -78,90 +77,56 @@ export default function BiOperacionalContent() {
   const tenantContext = useTenantContext();
   const { start, end } = monthRangeFromNow();
   const scopeAccess = resolveBiScopeAccess(access.canAccessElevatedModules);
-  const [mounted, setMounted] = useState(false);
 
-  const [academias, setAcademias] = useState<Academia[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [scope, setScope] = useState<BiEscopo>(scopeAccess.defaultScope);
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
   const [segmento, setSegmento] = useState<BiSegmento>(FILTER_ALL);
   const [startDate, setStartDate] = useState(start);
   const [endDate, setEndDate] = useState(end);
-  const [snapshot, setSnapshot] = useState<BiOperationalSnapshot | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadFilters = useCallback(async () => {
-    const [academiasResponse, tenantsResponse] = await Promise.all([listAcademiasApi(), listUnidadesApi()]);
-    setAcademias(academiasResponse);
-    setTenants(tenantsResponse);
-    setSelectedTenantId((current) => current || tenantContext.tenantId || tenantsResponse[0]?.id || "");
-    setSelectedAcademiaId((current) => {
-      if (current) return current;
-      const tenant = tenantsResponse.find((item) => item.id === (tenantContext.tenantId || tenantsResponse[0]?.id));
-      return tenant?.academiaId ?? tenant?.groupId ?? academiasResponse[0]?.id ?? "";
-    });
-  }, [tenantContext.tenantId]);
+  // Server state via TanStack Query — filters
+  const { data: filtersData } = useBiFilters();
+  const academias = filtersData?.academias ?? [];
+  const tenants = filtersData?.tenants ?? [];
 
-  const loadSnapshot = useCallback(async () => {
-    if (!tenantContext.tenantResolved) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const nextSnapshot = await getBiOperacionalSnapshotApi({
-        scope,
-        tenantId: selectedTenantId || tenantContext.tenantId,
-        academiaId: selectedAcademiaId,
-        startDate,
-        endDate,
-        segmento,
-        canViewNetwork: access.canAccessElevatedModules,
-      });
-      setSnapshot(nextSnapshot);
-    } catch (loadError) {
-      setError(normalizeErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    access.canAccessElevatedModules,
-    endDate,
+  // Resolve defaults from filters data
+  const effectiveTenantId = selectedTenantId || tenantContext.tenantId || tenants[0]?.id || "";
+  const effectiveAcademiaId = useMemo(() => {
+    if (selectedAcademiaId) return selectedAcademiaId;
+    const tenant = tenants.find((item) => item.id === (tenantContext.tenantId || tenants[0]?.id));
+    return tenant?.academiaId ?? tenant?.groupId ?? academias[0]?.id ?? "";
+  }, [selectedAcademiaId, tenants, tenantContext.tenantId, academias]);
+
+  // Server state via TanStack Query — snapshot
+  const {
+    data: snapshot = null,
+    isLoading: loading,
+    error: snapshotError,
+    refetch,
+  } = useBiSnapshot({
     scope,
-    segmento,
-    selectedAcademiaId,
-    selectedTenantId,
+    tenantId: effectiveTenantId || undefined,
+    academiaId: effectiveAcademiaId,
     startDate,
-    tenantContext.tenantId,
-    tenantContext.tenantResolved,
-  ]);
+    endDate,
+    segmento,
+    canViewNetwork: access.canAccessElevatedModules,
+    enabled: tenantContext.tenantResolved,
+  });
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    void loadFilters();
-  }, [loadFilters]);
-
-  useEffect(() => {
-    if (tenantContext.tenantResolved) {
-      void loadSnapshot();
-    }
-  }, [loadSnapshot, tenantContext.tenantResolved]);
+  const error = snapshotError ? normalizeErrorMessage(snapshotError) : null;
 
   const visibleTenantOptions = useMemo(() => {
     if (scope === "UNIDADE") {
       return tenants;
     }
-    return tenants.filter((tenant) => (tenant.academiaId ?? tenant.groupId) === selectedAcademiaId);
-  }, [scope, selectedAcademiaId, tenants]);
+    return tenants.filter((tenant) => (tenant.academiaId ?? tenant.groupId) === effectiveAcademiaId);
+  }, [scope, effectiveAcademiaId, tenants]);
 
-  const activeLabel = !mounted
-    ? "Unidade ativa"
-    : snapshot?.scope === "ACADEMIA"
-      ? snapshot.academiaNome ?? "Rede"
-      : snapshot?.tenantNome ?? tenantContext.tenantName;
+  const activeLabel = snapshot?.scope === "ACADEMIA"
+    ? snapshot.academiaNome ?? "Rede"
+    : snapshot?.tenantNome ?? tenantContext.tenantName;
 
   return (
     <div className="space-y-6">
@@ -218,7 +183,7 @@ export default function BiOperacionalContent() {
           {access.canAccessElevatedModules ? (
             <div className="space-y-1">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Academia</label>
-              <Select value={selectedAcademiaId} onValueChange={setSelectedAcademiaId}>
+              <Select value={effectiveAcademiaId} onValueChange={setSelectedAcademiaId}>
                 <SelectTrigger aria-label="Academia BI" className="w-full border-border bg-secondary">
                   <SelectValue placeholder="Selecione a academia" />
                 </SelectTrigger>
@@ -236,7 +201,7 @@ export default function BiOperacionalContent() {
           {scope === "UNIDADE" ? (
             <div className="space-y-1">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Unidade</label>
-              <Select value={selectedTenantId} onValueChange={setSelectedTenantId}>
+              <Select value={effectiveTenantId} onValueChange={setSelectedTenantId}>
                 <SelectTrigger aria-label="Unidade BI" className="w-full border-border bg-secondary">
                   <SelectValue placeholder="Selecione a unidade" />
                 </SelectTrigger>
@@ -292,7 +257,7 @@ export default function BiOperacionalContent() {
       </div>
 
       {error ? (
-        <ListErrorState error={error} onRetry={() => void loadFilters()} />
+        <ListErrorState error={error} onRetry={() => void refetch()} />
       ) : null}
 
       {loading || !snapshot ? (

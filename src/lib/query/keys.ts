@@ -204,4 +204,26 @@ export const queryKeys = {
   funcionarios: {
     all: () => ["funcionarios"] as const,
   },
+
+  bi: {
+    filters: () => ["bi", "filters"] as const,
+    snapshot: (
+      scope: string,
+      tenantId: string,
+      academiaId: string,
+      startDate: string,
+      endDate: string,
+      segmento: string,
+    ) =>
+      [
+        "bi",
+        "snapshot",
+        scope,
+        tenantId,
+        academiaId,
+        startDate,
+        endDate,
+        segmento,
+      ] as const,
+  },
 } as const;

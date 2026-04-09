@@ -138,13 +138,13 @@ export function MinhasAulasClient() {
         </motion.div>
 
         <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-xl border border-border/40 backdrop-blur-sm">
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" onClick={() => setWeekStart(d => addDays(d, -7))}>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Semana anterior" onClick={() => setWeekStart(d => addDays(d, -7))}>
             <ChevronLeft size={18} />
           </Button>
           <div className="px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground min-w-[180px] text-center">
             {formatDayDate(weekDays[0].date)} - {formatDayDate(weekDays[6].date)}
           </div>
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" onClick={() => setWeekStart(d => addDays(d, 7))}>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Próxima semana" onClick={() => setWeekStart(d => addDays(d, 7))}>
             <ChevronRight size={18} />
           </Button>
         </div>

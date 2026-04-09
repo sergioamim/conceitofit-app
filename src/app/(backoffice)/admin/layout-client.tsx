@@ -164,7 +164,8 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh]">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div className="relative w-full max-w-lg rounded-xl border border-border/40 bg-card/80 backdrop-blur-xl shadow-2xl overflow-hidden">
         <CmdkRoot label="Command palette" className="flex flex-col">
           <CommandInput
