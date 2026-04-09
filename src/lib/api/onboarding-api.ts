@@ -112,7 +112,7 @@ function normalizeOnboardingStatus(input: OnboardingStatusApiResponse): Onboardi
 }
 
 export function isOnboardingStatusEndpointUnavailable(error: unknown): boolean {
-  return error instanceof ApiRequestError && (error.status === 404 || error.status === 405 || error.status === 501);
+  return error instanceof ApiRequestError && (error.status === 400 || error.status === 404 || error.status === 405 || error.status === 501);
 }
 
 export async function getOnboardingStatus(): Promise<OnboardingStatus | null> {
