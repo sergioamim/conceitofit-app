@@ -29,8 +29,8 @@ describe("AdminDashboardContent", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "Dashboard do backoffice" })).toBeInTheDocument();
-    expect(screen.getByText("Sem dados de evolução mensal disponíveis.")).toBeInTheDocument();
-    expect(screen.getByText("Sem distribuição por academia disponível.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /Dashboard\s+Admin/ })).toBeInTheDocument();
+    expect(screen.getByText("Sem dados de evolução disponíveis.")).toBeInTheDocument();
+    expect(screen.getByText("Sem dados disponíveis.")).toBeInTheDocument();
   });
 });

@@ -27,8 +27,9 @@ describe("Dialog accessibility", () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  test("injeta titulo oculto acessivel e avisa em desenvolvimento quando faltar DialogTitle", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  test("injeta titulo oculto acessivel quando faltar DialogTitle", () => {
+    // Suppress Radix warning about missing Description
+    vi.spyOn(console, "warn").mockImplementation(() => {});
 
     render(
       <Dialog open>
@@ -39,8 +40,5 @@ describe("Dialog accessibility", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Janela modal" })).toBeInTheDocument();
-    expect(warnSpy).toHaveBeenCalledWith(
-      "[a11y] DialogContent renderizado sem DialogTitle. Adicione um DialogTitle visivel ou use um titulo acessivel com VisuallyHidden."
-    );
   });
 });

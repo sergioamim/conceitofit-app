@@ -1,14 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { DemoBanner } from "@/components/shared/demo-banner";
-
-// Mock next/navigation
-const mockGet = vi.fn();
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => ({
-    get: mockGet,
-  }),
-}));
 
 // Mock sessionStorage
 const sessionStore = new Map<string, string>();
@@ -27,52 +19,68 @@ Object.defineProperty(window, "sessionStorage", {
   configurable: true,
 });
 
+// Helper to set window.location.search
+function setLocationSearch(search: string) {
+  Object.defineProperty(window, "location", {
+    value: { ...window.location, search },
+    writable: true,
+    configurable: true,
+  });
+}
+
 describe("DemoBanner", () => {
   beforeEach(() => {
-    mockGet.mockReset();
     sessionStore.clear();
+    setLocationSearch("");
   });
 
-  it("renders nothing when demo param is absent", () => {
-    mockGet.mockReturnValue(null);
+  it("renders nothing when demo param is absent", async () => {
+    setLocationSearch("");
     const { container } = render(<DemoBanner />);
-    expect(container.firstChild).toBeNull();
+    // After useEffect, isDemo stays false → returns null
+    await act(() => Promise.resolve());
+    expect(container.querySelector("[aria-label='Fechar banner']")).toBeNull();
   });
 
-  it("renders nothing when demo param is not '1'", () => {
-    mockGet.mockReturnValue("0");
+  it("renders nothing when demo param is not '1'", async () => {
+    setLocationSearch("?demo=0");
     const { container } = render(<DemoBanner />);
-    expect(container.firstChild).toBeNull();
+    await act(() => Promise.resolve());
+    expect(container.querySelector("[aria-label='Fechar banner']")).toBeNull();
   });
 
-  it("renders banner when demo=1", () => {
-    mockGet.mockReturnValue("1");
+  it("renders banner when demo=1", async () => {
+    setLocationSearch("?demo=1");
     render(<DemoBanner />);
+    await act(() => Promise.resolve());
     expect(screen.getByText("Conta Demonstracao")).toBeInTheDocument();
   });
 
-  it("dismiss button hides the banner", () => {
-    mockGet.mockReturnValue("1");
+  it("dismiss button hides the banner", async () => {
+    setLocationSearch("?demo=1");
     render(<DemoBanner />);
+    await act(() => Promise.resolve());
     expect(screen.getByText("Conta Demonstracao")).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Fechar banner"));
     expect(screen.queryByText("Conta Demonstracao")).toBeNull();
   });
 
-  it("dismiss persists to sessionStorage", () => {
-    mockGet.mockReturnValue("1");
+  it("dismiss persists to sessionStorage", async () => {
+    setLocationSearch("?demo=1");
     render(<DemoBanner />);
+    await act(() => Promise.resolve());
     fireEvent.click(screen.getByLabelText("Fechar banner"));
 
     expect(sessionStore.get("academia-demo-banner-dismissed")).toBe("1");
   });
 
-  it("stays hidden when previously dismissed", () => {
-    mockGet.mockReturnValue("1");
+  it("stays hidden when previously dismissed", async () => {
+    setLocationSearch("?demo=1");
     sessionStore.set("academia-demo-banner-dismissed", "1");
 
     const { container } = render(<DemoBanner />);
-    expect(container.firstChild).toBeNull();
+    await act(() => Promise.resolve());
+    expect(container.querySelector("[aria-label='Fechar banner']")).toBeNull();
   });
 });

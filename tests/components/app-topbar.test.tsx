@@ -32,21 +32,9 @@ describe("AppTopbar", () => {
     expect(screen.getByTestId("tenant-selector")).toBeInTheDocument();
   });
 
-  it("renders search button", () => {
+  it("renders mobile menu button", () => {
     render(<AppTopbar />);
-    expect(screen.getByText("Buscar ou navegar...")).toBeInTheDocument();
-  });
-
-  it("dispatches keyboard event when search button is clicked", () => {
-    const dispatchSpy = vi.spyOn(document, "dispatchEvent");
-    render(<AppTopbar />);
-    const searchBtn = screen.getByText("Buscar ou navegar...").closest("button");
-    if (searchBtn) fireEvent.click(searchBtn);
-    
-    expect(dispatchSpy).toHaveBeenCalled();
-    const event = dispatchSpy.mock.calls.find(call => call[0] instanceof KeyboardEvent && (call[0] as KeyboardEvent).key === "k")?.[0] as KeyboardEvent;
-    expect(event).toBeDefined();
-    expect(event.metaKey).toBe(true);
+    expect(screen.getByLabelText("Abrir menu principal")).toBeInTheDocument();
   });
 
   it("calls onOpenMenu when mobile menu button is clicked", () => {
