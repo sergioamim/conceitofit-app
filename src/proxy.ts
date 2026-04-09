@@ -124,6 +124,13 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/monitor",
   "/grade",
   "/status",
+  "/manifest",
+  "/sw.js",
+  "/icons",
+  "/health",
+  "/termos",
+  "/privacidade",
+  "/lgpd",
 ];
 
 function isPublicRoute(pathname: string): boolean {

@@ -57,7 +57,7 @@ export function LeadB2bForm() {
         <CheckCircle2 className="h-10 w-10 text-gym-teal" />
         <h3 className="font-display text-xl font-bold">Recebemos seu contato!</h3>
         <p className="text-sm text-muted-foreground">
-          Nosso time entrara em contato em breve para agendar sua demonstracao.
+          Nosso time entrará em contato em breve para agendar sua demonstração.
         </p>
       </div>
     );
@@ -69,7 +69,7 @@ export function LeadB2bForm() {
       className="mx-auto w-full max-w-lg space-y-4 rounded-2xl border border-border/60 bg-card p-6 text-left sm:p-8"
     >
       <div className="text-center">
-        <h3 className="font-display text-lg font-bold">Agendar demonstracao</h3>
+        <h3 className="font-display text-lg font-bold">Agendar demonstração</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Preencha seus dados e entraremos em contato.
         </p>
@@ -176,12 +176,12 @@ export function LeadB2bForm() {
             Enviando...
           </>
         ) : (
-          "Agendar demonstracao"
+          "Agendar demonstração"
         )}
       </button>
 
       <p className="text-center text-xs text-muted-foreground">
-        Sem compromisso. Seus dados estao protegidos conforme nossa politica de privacidade.
+        Sem compromisso. Seus dados estão protegidos conforme nossa política de privacidade.
       </p>
     </form>
   );

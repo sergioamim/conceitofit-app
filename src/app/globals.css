@@ -194,6 +194,17 @@
   }
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 :where(.focus-ring-brand):focus-visible {
   outline: none;
   @apply ring-2 ring-gym-accent/60 ring-offset-2 ring-offset-background;

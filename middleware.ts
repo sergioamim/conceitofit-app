@@ -11,6 +11,7 @@ const PUBLIC_PREFIXES = [
   "/primeiro-acesso",
   "/adesao",
   "/storefront",
+  "/b2b",
   "/api",
   "/_next",
   "/favicon",
