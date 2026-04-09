@@ -95,6 +95,15 @@ export const queryKeys = {
     all: (tenantId: string) => ["prospects", tenantId] as const,
   },
 
+  dunning: {
+    dashboard: (tenantId: string) =>
+      ["dunning", "dashboard", tenantId] as const,
+    intervencoes: (tenantId: string, filters: Record<string, unknown>) =>
+      ["dunning", "intervencoes", tenantId, filters] as const,
+    templates: (tenantId: string) =>
+      ["dunning", "templates", tenantId] as const,
+  },
+
   contasReceber: {
     list: (tenantId: string, filters: Record<string, unknown>) =>
       ["contasReceber", "list", tenantId, filters] as const,

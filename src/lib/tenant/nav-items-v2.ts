@@ -1,5 +1,6 @@
 import {
   Activity,
+  AlertTriangle,
   BriefcaseBusiness,
   CalendarDays,
   ClipboardList,
@@ -10,6 +11,7 @@ import {
   LineChart,
   Megaphone,
   MessageSquare,
+  QrCode,
   Settings,
   ShieldAlert,
   ShoppingCart,
@@ -79,12 +81,14 @@ export const financeGroup: NavGroupV2 = {
   icon: Wallet,
   items: [
     { href: "/pagamentos", label: "Recebimentos", icon: DollarSign },
+    { href: "/financeiro/pix", label: "PIX", icon: QrCode, description: "Cobranças PIX com QR Code" },
     { href: "/gerencial/recebimentos", label: "Baixas Bancárias", icon: HandCoins },
     { href: "/gerencial/contas-a-receber", label: "Contas a Receber", icon: TrendingUp },
     { href: "/gerencial/contas-a-pagar", label: "Contas a Pagar", icon: DollarSign },
     { href: "/administrativo/nfse", label: "Fiscal & NFSe", icon: Settings },
     { href: "/administrativo/billing", label: "Faturamento Recorrente", icon: CreditCard },
     { href: "/gerencial/contabilidade", label: "Contabilidade", icon: BookOpen },
+    { href: "/financeiro/dunning", label: "Cobranca", icon: AlertTriangle, description: "Dunning e inadimplencia" },
   ]
 };
 
