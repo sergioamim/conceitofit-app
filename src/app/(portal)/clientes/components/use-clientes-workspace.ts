@@ -174,6 +174,7 @@ export function useClientesWorkspace() {
     filtered,
     isSearchFiltered,
     metrics,
+    tenantId,
 
     // Filter / search / sort
     filtro,
