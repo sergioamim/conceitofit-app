@@ -72,7 +72,8 @@ export function formatPercent(value: number): string {
  * Formata Date/string/number em "DD/MM/AAAA" — determinístico para SSR.
  * Diferente de `formatDate` (que aceita só string "YYYY-MM-DD"), aceita objetos Date.
  */
-export function formatDateBR(value: string | number | Date): string {
+export function formatDateBR(value: string | number | Date | null | undefined): string {
+  if (value == null) return "—";
   const date = typeof value === "string" || typeof value === "number" ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return "—";
 
@@ -86,7 +87,8 @@ export function formatDateBR(value: string | number | Date): string {
  * Formata Date/string/number em "DD/MM/AAAA HH:mm" — determinístico para SSR.
  * Diferente de `formatDateTime` (que usa toLocaleString), usa cálculo manual.
  */
-export function formatDateTimeBR(value: string | number | Date): string {
+export function formatDateTimeBR(value: string | number | Date | null | undefined): string {
+  if (value == null) return "—";
   const date = typeof value === "string" || typeof value === "number" ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return "—";
 
