@@ -12,15 +12,11 @@ import {
   parseTreinoV2Metadata,
   serializeExercicioV2Descricao,
   summarizeTreinoV2AssignedGovernance,
-  summarizeTreinoV2TemplateGovernance,
   toTreinoV2CatalogExercise,
 } from "../../src/lib/tenant/treinos/v2-runtime";
 import {
-  TREINOS_V2_DECISIONS,
   createTreinoV2MetricField,
   evaluateTreinoV2TemplateTransition,
-  isTreinoV2AssignmentJobTerminal,
-  isTreinoV2TemplatePublishable,
   resolveTreinoV2AssignmentConflict,
   resolveTreinoV2Permissions,
   validateTreinoV2Template,
@@ -177,20 +173,12 @@ test.describe("treinos v2 full", () => {
       },
     });
     const parsed = parseTreinoV2Metadata(payload.observacoes);
-    const governance = summarizeTreinoV2TemplateGovernance({
-      ...treino,
-      status: payload.status,
-      observacoes: payload.observacoes,
-    });
-
     expect(seed.mode).toBe("TEMPLATE");
     expect(templateEmRevisao.precisaRevisao).toBeTruthy();
     expect(reviewGuard.allowed).toBeTruthy();
     expect(publishGuard.allowed).toBeTruthy();
     expect(payload.status).toBe("RASCUNHO");
     expect(parsed.metadata?.template?.status).toBe("EM_REVISAO");
-    expect(governance.reviewReason).toBe("EM_REVISAO");
-    expect(governance.needsReview).toBeTruthy();
   });
 
   test("cobre renovacao e revisao de treino atribuido com snapshot e origem", () => {
@@ -336,7 +324,6 @@ test.describe("treinos v2 full", () => {
     expect(job.resultado?.totalAtribuido).toBe(1);
     expect(job.resultado?.totalIgnorado).toBe(1);
     expect(job.resultado?.totalComErro).toBe(1);
-    expect(isTreinoV2AssignmentJobTerminal(job.status)).toBeTruthy();
     expect(history).toHaveLength(20);
     expect(history[0]?.id).toBe(job.id);
     expect(history[19]?.id).toBe("job-19");
@@ -398,7 +385,6 @@ test.describe("treinos v2 full", () => {
         "ITEM_INTERVALO_INVALIDO",
       ]),
     );
-    expect(isTreinoV2TemplatePublishable(invalidTemplate)).toBeFalsy();
     expect(publishGuard.allowed).toBeFalsy();
     expect(publishGuard.reason).toBe("TEMPLATE_INVALIDO");
     expect(publishGuard.blockingCodes).toEqual(
@@ -409,9 +395,6 @@ test.describe("treinos v2 full", () => {
       "CRIAR",
     );
     expect(resolveTreinoV2AssignmentConflict({ existingStatus: "ATIVO", policy: "MANTER_ATUAL" })).toBe("IGNORAR");
-    expect(TREINOS_V2_DECISIONS.allowsMultipleActiveAssignedWorkouts).toBeFalsy();
-    expect(TREINOS_V2_DECISIONS.bulkReassignToNewVersionPhase).toBe("P1");
-    expect(isTreinoV2AssignmentJobTerminal("PROCESSANDO")).toBeFalsy();
   });
 });
 

@@ -17,7 +17,6 @@ import {
   getNetworkSubdomainFromSession,
   getNetworkSlugFromSession,
   rememberBackofficeReturnSession,
-  rememberOperationalTenantScope,
   restoreBackofficeReturnSession,
   saveAuthSession,
 } from "../../src/lib/api/session";
@@ -54,7 +53,7 @@ test.describe("auth por rede", () => {
           redeSlug: "rede-norte",
           redeNome: "Rede Norte",
           activeTenantId: "tenant-centro",
-          tenantBaseId: "tenant-base",
+          baseTenantId: "tenant-base",
           availableScopes: ["REDE"],
           broadAccess: true,
           availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
@@ -126,7 +125,7 @@ test.describe("auth por rede", () => {
           userKind: "ADMIN",
           displayName: "Admin Master",
           activeTenantId: "tenant-admin",
-          tenantBaseId: "tenant-admin-base",
+          baseTenantId: "tenant-admin-base",
           availableScopes: ["GLOBAL"],
           broadAccess: true,
         },
@@ -174,7 +173,7 @@ test.describe("auth por rede", () => {
           userKind: "ADMIN",
           displayName: "Admin Master",
           activeTenantId: "tenant-admin",
-          tenantBaseId: "tenant-admin",
+          baseTenantId: "tenant-admin",
         },
       },
     ]);
@@ -201,7 +200,7 @@ test.describe("auth por rede", () => {
       userKind: "ADMIN",
       displayName: "Admin Master",
       activeTenantId: "tenant-admin",
-      tenantBaseId: "tenant-admin-base",
+      baseTenantId: "tenant-admin-base",
       availableScopes: ["GLOBAL"],
       broadAccess: true,
     });
@@ -215,7 +214,7 @@ test.describe("auth por rede", () => {
           userKind: "ADMIN",
           displayName: "Admin Master",
           activeTenantId: "tenant-centro",
-          tenantBaseId: "tenant-admin-base",
+          baseTenantId: "tenant-admin-base",
           availableScopes: ["GLOBAL"],
           broadAccess: true,
         },
@@ -257,14 +256,8 @@ test.describe("auth por rede", () => {
       userKind: "ADMIN",
       displayName: "Admin Master",
       activeTenantId: "tenant-admin",
-      tenantBaseId: "tenant-admin-base",
+      baseTenantId: "tenant-admin-base",
     });
-    rememberOperationalTenantScope({
-      academiaId: "academia-mananciais",
-      tenantIds: ["tenant-mananciais-s1", "tenant-mananciais-s2"],
-      defaultTenantId: "tenant-mananciais-s1",
-    });
-
     const { restore } = mockFetchWithSequence([
       {
         body: {
@@ -274,7 +267,7 @@ test.describe("auth por rede", () => {
           userKind: "ADMIN",
           displayName: "Admin Master",
           activeTenantId: "tenant-mananciais-s1",
-          tenantBaseId: "tenant-admin-base",
+          baseTenantId: "tenant-admin-base",
         },
       },
     ]);
@@ -345,7 +338,7 @@ test.describe("auth por rede", () => {
             redeSlug: "rede-norte",
             redeNome: "Rede Norte",
             activeTenantId: "tenant-centro",
-            tenantBaseId: "tenant-base",
+            baseTenantId: "tenant-base",
             availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
             availableScopes: ["UNIDADE", "REDE"],
             broadAccess: false,

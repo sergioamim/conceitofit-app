@@ -5,17 +5,19 @@ import { StatusBadge } from "@/components/shared/status-badge";
 // Mock framer-motion to avoid animation issues in tests
 vi.mock("framer-motion", () => ({
   motion: {
-    span: ({
-      children,
-      className,
-      role,
-      "aria-label": ariaLabel,
-      "aria-live": ariaLive,
-    }: Record<string, unknown>) => (
-      <span className={className as string} role={role as string} aria-label={ariaLabel as string} aria-live={ariaLive as string}>
-        {children as React.ReactNode}
-      </span>
-    ),
+    span: (props: Record<string, unknown>) => {
+      const { children, className, role, "aria-label": ariaLabel, "aria-live": ariaLive, ...rest } = props;
+      return (
+        <span
+          className={className as string}
+          role={role as string}
+          aria-label={ariaLabel as string}
+          aria-live={ariaLive as React.AriaAttributes["aria-live"]}
+        >
+          {children as React.ReactNode}
+        </span>
+      );
+    },
   },
   useReducedMotion: () => false,
 }));

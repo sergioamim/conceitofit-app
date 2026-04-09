@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { PlanoForm } from "@/components/planos/plano-form";
-import type { Atividade, PlanoFormValues } from "@/lib/types";
-import { getDefaultPlanoFormValues } from "@/lib/tenant/planos/form";
+import type { Atividade } from "@/lib/types";
+import { getDefaultPlanoFormValues, type PlanoFormValues } from "@/lib/tenant/planos/form";
 
 // Mock Radix Dialog (RestoreDraftModal uses it)
 vi.mock("@/components/ui/dialog", () => ({
@@ -70,7 +70,7 @@ const MOCK_ATIVIDADES: Atividade[] = [
     id: "at-2",
     tenantId: "t1",
     nome: "Yoga",
-    categoria: "AULA_COLETIVA",
+    categoria: "COLETIVA",
     permiteCheckin: true,
     checkinObrigatorio: true,
     ativo: true,
@@ -79,7 +79,7 @@ const MOCK_ATIVIDADES: Atividade[] = [
     id: "at-3",
     tenantId: "t1",
     nome: "Natacao",
-    categoria: "AULA_COLETIVA",
+    categoria: "COLETIVA",
     permiteCheckin: false,
     checkinObrigatorio: false,
     ativo: false,

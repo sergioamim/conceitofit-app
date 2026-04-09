@@ -9,7 +9,7 @@ vi.mock("@/lib/export/table-export", () => ({
 }));
 
 const columns = [
-  { key: "nome" as const, header: "Nome", accessor: (r: { nome: string }) => r.nome },
+  { label: "Nome", accessor: (r: { nome: string }) => r.nome },
 ];
 const data = [{ nome: "Teste" }];
 

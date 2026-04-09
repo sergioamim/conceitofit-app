@@ -16,7 +16,7 @@ test.afterEach(() => {
 
 test.describe("vendas api", () => {
   test("deduplica requests em voo e normaliza envelopes com totais por forma de pagamento", async () => {
-    let resolveFirstRequest = () => undefined;
+    let resolveFirstRequest: () => void = () => undefined;
     const firstResponse = new Promise<Response>((resolve) => {
       resolveFirstRequest = () =>
         resolve(

@@ -152,7 +152,7 @@ async function loginAsOperationalUser(page: Page, request: APIRequestContext) {
     activeTenantId: targetTenantId,
     baseTenantId: session.baseTenantId ?? targetTenantId,
     preferredTenantId: targetTenantId,
-    availableTenants: session.availableTenants ?? [{ tenantId: targetTenantId, defaultTenant: true }],
+    availableTenants: session.availableTenants ?? [{ tenantId: targetTenantId!, defaultTenant: true }],
     availableScopes: session.availableScopes ?? ["UNIDADE"],
     broadAccess: session.broadAccess ?? false,
     forcePasswordChangeRequired: session.forcePasswordChange ?? false,
@@ -167,7 +167,7 @@ async function loginAsOperationalUser(page: Page, request: APIRequestContext) {
   return {
     token: session.token,
     tokenType: session.type ?? "Bearer",
-    tenantId: targetTenantId,
+    tenantId: targetTenantId!,
   };
 }
 

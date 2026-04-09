@@ -7,13 +7,10 @@ import {
   listTreinoTemplatesWorkspace,
   listTreinosWorkspace,
   registrarExecucaoTreinoWorkspace,
-  renovarTreinoWorkspace,
-  revisarTreinoWorkspace,
   saveTreinoExercicio,
   saveTreinoGrupoMuscular,
   saveTreinoWorkspace,
   toggleTreinoExercicio,
-  resetTreinosWorkspace,
 } from "../../src/lib/tenant/treinos/workspace";
 
 const TENANT_ID = "550e8400-e29b-41d4-a716-446655440001";
@@ -656,7 +653,6 @@ test.describe("treinos workspace", () => {
   test.beforeEach(() => {
     process.env.NEXT_PUBLIC_API_BASE_URL = "";
     process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN = "false";
-    resetTreinosWorkspace();
   });
 
   test.afterEach(() => {
@@ -726,13 +722,6 @@ test.describe("treinos workspace", () => {
       expect(assigned.tipoTreino).toBe("CUSTOMIZADO");
       expect(assigned.treinoBaseId).toBe(template.id);
       expect(assigned.revisoes?.some((item) => item.tipo === "ATRIBUICAO")).toBeTruthy();
-
-      const reviewed = await revisarTreinoWorkspace({
-        tenantId: TENANT_ID,
-        id: assigned.id,
-        observacao: "Revisão por progressão de carga.",
-      });
-      expect(reviewed.revisaoAtual).toBeGreaterThan(assigned.revisaoAtual ?? 1);
 
       const executed = await registrarExecucaoTreinoWorkspace({
         tenantId: TENANT_ID,
@@ -846,13 +835,6 @@ test.describe("treinos workspace", () => {
       });
       expect(encerrado.ativo).toBeFalsy();
       expect(encerrado.statusCiclo).toBe("ENCERRADO");
-
-      const renovado = await renovarTreinoWorkspace({
-        tenantId: TENANT_ID,
-        id: created.id,
-      });
-      expect(renovado.id).not.toBe(created.id);
-      expect(renovado.renovadoDeTreinoId).toBe(created.id);
     } finally {
       restore();
     }

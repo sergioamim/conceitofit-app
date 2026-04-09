@@ -36,8 +36,8 @@ const mockAluno: Aluno = {
     cep: "01001-000",
   },
   status: "ATIVO",
-  createdAt: "2023-01-01T00:00:00Z",
-  updatedAt: "2023-01-01T00:00:00Z",
+  dataCadastro: "2023-01-01T00:00:00Z",
+  dataAtualizacao: "2023-01-01T00:00:00Z",
   tenantId: "tenant-1",
 };
 

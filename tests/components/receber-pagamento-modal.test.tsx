@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
+import type { Pagamento, FormaPagamento } from "@/lib/types";
 
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children, open }: any) => (open ? <div>{children}</div> : null),
@@ -31,22 +32,22 @@ const basePagamento = {
   tenantId: "t1",
   matriculaId: "m1",
   alunoId: "a1",
-  alunoNome: "Ana Costa",
-  planoNome: "Mensal",
+  tipo: "MENSALIDADE" as const,
   descricao: "Mensalidade Junho",
   valor: 150,
+  desconto: 0,
   valorFinal: 150,
   status: "PENDENTE" as const,
   dataVencimento: "2024-06-20",
   formaPagamento: "PIX" as const,
-  origem: "MATRICULA" as const,
-};
+  dataCriacao: "2024-06-01T00:00:00",
+} as Pagamento;
 
 const formasPagamento = [
   { id: "fp1", tipo: "PIX" as const, nome: "PIX", ativo: true },
   { id: "fp2", tipo: "CARTAO_CREDITO" as const, nome: "Cartão de crédito", ativo: true },
   { id: "fp3", tipo: "DINHEIRO" as const, nome: "Dinheiro", ativo: false },
-];
+] as FormaPagamento[];
 
 describe("ReceberPagamentoModal", () => {
   const defaultProps = {

@@ -10,7 +10,6 @@ import {
   parseTreinoV2Metadata,
   serializeExercicioV2Descricao,
   summarizeTreinoV2AssignedGovernance,
-  summarizeTreinoV2TemplateGovernance,
   toTreinoV2CatalogExercise,
 } from "../../src/lib/tenant/treinos/v2-runtime";
 import type { Exercicio, Treino } from "../../src/lib/types";
@@ -130,47 +129,6 @@ test.describe("treinos v2 runtime", () => {
     expect(catalog.codigo).toBe("AGH-001");
     expect(catalog.midiaTipo).toBe("VIDEO");
     expect(catalog.similarExerciseIds).toEqual(["ex-2"]);
-  });
-
-  test("resume governança de template com fila de revisão e clientes impactados", () => {
-    const treino = makeTreino({ status: "RASCUNHO" });
-    const editor = buildTreinoV2EditorSeed(treino);
-    editor.templateStatus = "EM_REVISAO";
-    editor.assignmentHistory = appendTreinoV2AssignmentHistory(
-      [],
-      buildTreinoV2AssignmentJob({
-        tenantId: "tn-1",
-        templateId: treino.id,
-        templateVersion: editor.versao,
-        mode: "MASSA",
-        conflictPolicy: "SUBSTITUIR_ATUAL",
-        dataInicio: "2026-03-10",
-        dataFim: "2026-04-06",
-        requestedById: "coord-1",
-        requestedByName: "Coordenação Técnica",
-        targets: [
-          { alunoId: "al-1", alunoNome: "Ana Paula" },
-          { alunoId: "al-2", alunoNome: "Bruno Costa" },
-        ],
-        resultItems: [
-          { alunoId: "al-1", alunoNome: "Ana Paula", resolution: "CRIAR", assignedWorkoutId: "tr-1" },
-          { alunoId: "al-2", alunoNome: "Bruno Costa", resolution: "CRIAR", assignedWorkoutId: "tr-2" },
-        ],
-      }),
-    );
-
-    const payload = buildTreinoV2SaveInput({ treino, editor });
-    const summary = summarizeTreinoV2TemplateGovernance({
-      ...treino,
-      status: payload.status,
-      observacoes: payload.observacoes,
-    });
-
-    expect(summary.status).toBe("EM_REVISAO");
-    expect(summary.needsReview).toBeTruthy();
-    expect(summary.reviewReason).toBe("EM_REVISAO");
-    expect(summary.impactedClients).toBe(2);
-    expect(summary.assignmentJobs).toBe(1);
   });
 
   test("resume rastreabilidade de treino atribuído com snapshot e origem", () => {

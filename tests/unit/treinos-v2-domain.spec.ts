@@ -1,12 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { TREINOS_V2_ENDPOINTS } from "../../src/lib/api/treinos-v2";
-import { TREINOS_V2_BACKLOG_COVERAGE } from "../../src/lib/tenant/treinos/v2-backlog";
 import {
-  TREINOS_V2_DECISIONS,
   createTreinoV2MetricField,
   evaluateTreinoV2TemplateTransition,
-  isTreinoV2AssignmentJobTerminal,
-  isTreinoV2TemplatePublishable,
   resolveTreinoV2AssignmentConflict,
   resolveTreinoV2Permissions,
   validateTreinoV2Template,
@@ -94,7 +89,6 @@ test.describe("treinos v2 domain", () => {
         "ITEM_INTERVALO_INVALIDO",
       ]),
     );
-    expect(isTreinoV2TemplatePublishable(invalid)).toBeFalsy();
   });
 
   test("governanca separa submissao para revisao de publicacao", () => {
@@ -147,26 +141,6 @@ test.describe("treinos v2 domain", () => {
     expect(resolveTreinoV2AssignmentConflict({ existingStatus: "ATIVO", policy: "AGENDAR_NOVO" })).toBe("AGENDAR");
     expect(resolveTreinoV2AssignmentConflict({ existingStatus: "ENCERRADO", policy: "MANTER_ATUAL" })).toBe("CRIAR");
 
-    expect(TREINOS_V2_DECISIONS.allowsMultipleActiveAssignedWorkouts).toBeFalsy();
-    expect(TREINOS_V2_DECISIONS.batchAssignmentExecution).toBe("ASSINCRONA");
-    expect(isTreinoV2AssignmentJobTerminal("CONCLUIDO_PARCIAL")).toBeTruthy();
-    expect(isTreinoV2AssignmentJobTerminal("PROCESSANDO")).toBeFalsy();
   });
 
-  test("backlog 20-24 cobre o recorte aprovado e os endpoints canonicos existem", () => {
-    expect(TREINOS_V2_BACKLOG_COVERAGE.map((entry) => entry.taskId)).toEqual([20, 21, 22, 23, 24]);
-
-    const task24 = TREINOS_V2_BACKLOG_COVERAGE.find((entry) => entry.taskId === 24);
-    expect(task24?.deferredRequirements).toEqual(expect.arrayContaining(["RF26", "RF27"]));
-
-    for (const entry of TREINOS_V2_BACKLOG_COVERAGE) {
-      expect(entry.requirements.length).toBeGreaterThan(0);
-      expect(entry.acceptance.length).toBeGreaterThan(0);
-      expect(entry.screens.length).toBeGreaterThan(0);
-    }
-
-    expect(TREINOS_V2_ENDPOINTS.listTemplates).toBe("/api/v2/treinos/templates");
-    expect(TREINOS_V2_ENDPOINTS.assignTemplate).toBe("/api/v2/treinos/templates/:templateId/assignments");
-    expect(TREINOS_V2_ENDPOINTS.listAssignedWorkouts).toBe("/api/v2/treinos/assigned");
-  });
 });

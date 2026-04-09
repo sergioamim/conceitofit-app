@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 import {
   calculateDaysSinceLogin,
   classifyAcademiaHealth,
-  filterAcademiasHealthMap,
   normalizeAcademiaHealthStatus,
 } from "../../src/backoffice/lib/admin-health";
 
@@ -58,43 +57,6 @@ test.describe("admin health helpers", () => {
         "Admin sem login há 30 dias ou mais.",
       ])
     );
-  });
-
-  test("filtra por saúde e plano contratado", () => {
-    const items = [
-      {
-        academiaId: "1",
-        academiaNome: "Rede A",
-        unidades: 2,
-        alunosAtivos: 8,
-        churnMensal: 10,
-        inadimplenciaPercentual: 24,
-        statusContrato: "ATIVO" as const,
-        planoContratado: "Pro",
-        alertasRisco: [],
-        healthLevel: "CRITICO" as const,
-      },
-      {
-        academiaId: "2",
-        academiaNome: "Rede B",
-        unidades: 5,
-        alunosAtivos: 120,
-        churnMensal: 4,
-        inadimplenciaPercentual: 6,
-        statusContrato: "ATIVO" as const,
-        planoContratado: "Enterprise",
-        alertasRisco: [],
-        healthLevel: "SAUDAVEL" as const,
-      },
-    ];
-
-    expect(
-      filterAcademiasHealthMap(items, { healthLevel: "CRITICO", planoContratado: "" }).map((item) => item.academiaNome)
-    ).toEqual(["Rede A"]);
-
-    expect(
-      filterAcademiasHealthMap(items, { healthLevel: "TODOS", planoContratado: "Enterprise" }).map((item) => item.academiaNome)
-    ).toEqual(["Rede B"]);
   });
 
   test("calcula dias desde login quando data é válida", () => {

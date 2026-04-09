@@ -47,7 +47,7 @@ function installMockDom() {
     });
   };
 
-  assign("window", windowInstance);
+  assign("window", windowInstance as typeof globalRef.window);
   assign("document", windowInstance.document);
   assign("navigator", windowInstance.navigator);
   assign("HTMLElement", windowInstance.HTMLElement);

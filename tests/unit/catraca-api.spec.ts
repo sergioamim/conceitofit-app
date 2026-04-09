@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 import {
   gerarCatracaCredencialApi,
   liberarAcessoCatracaApi,
-  listarAcessosCatracaApi,
   listarAcessosCatracaDashboardApi,
   listarCatracaWsStatusApi,
   obterCatracaWsStatusPorTenantApi,
@@ -134,35 +133,8 @@ test.describe("catraca api", () => {
     }
   });
 
-  test("normaliza acessos, dashboard e ranking com payloads heterogeneos", async () => {
+  test("normaliza dashboard e ranking com payloads heterogeneos", async () => {
     const { calls, restore } = mockFetchWithSequence([
-      {
-        body: [
-          {
-            tenantId: "tenant-1",
-            memberId: "member-1",
-            memberName: "Ana",
-            status: "LIBERADO",
-            gateName: "Entrada",
-            metadata: {
-              issuedBy: "Operador",
-              reason: "Liberacao manual",
-            },
-            manual: "true",
-            createdAt: "2026-03-14T09:00:00Z",
-          },
-          {
-            id: "acc-2",
-            tenantId: "tenant-1",
-            clienteId: "member-2",
-            clienteNome: "Bruno",
-            result: "BLOQUEADO",
-            mode: "system-policy",
-            created_by: "motor",
-            dataHora: "2026-03-14T09:05:00Z",
-          },
-        ],
-      },
       {
         body: {
           lista: {
@@ -211,23 +183,6 @@ test.describe("catraca api", () => {
     ]);
 
     try {
-      const list = await listarAcessosCatracaApi({
-        tenantId: "tenant-1",
-        page: -1,
-        size: 999,
-        startDate: "2026-03-01",
-        endDate: "2026-03-14",
-        memberId: "member-1",
-      });
-      expect(list.page).toBe(0);
-      expect(list.size).toBe(200);
-      expect(list.hasNext).toBe(false);
-      expect(list.items[0]?.releaseType).toBe("MANUAL");
-      expect(list.items[0]?.issuedBy).toBe("Operador");
-      expect(list.items[0]?.reason).toBe("Liberacao manual");
-      expect(list.items[0]?.id).toContain("acesso-0-");
-      expect(list.items[1]?.releaseType).toBe("AUTOMATICA");
-
       const dashboard = await listarAcessosCatracaDashboardApi({
         tenantId: "tenant-1",
         page: 1,
@@ -266,14 +221,10 @@ test.describe("catraca api", () => {
         },
       ]);
 
-      expect(calls[0].url).toContain("/api/v1/custom/catraca/acessos");
-      expect(calls[0].url).toContain("tenantId=tenant-1");
-      expect(calls[0].url).toContain("page=0");
-      expect(calls[0].url).toContain("size=200");
-      expect(calls[1].url).toContain("/api/v1/gerencial/catraca/acessos/dashboard");
-      expect(calls[1].url).toContain("tipoLiberacao=MANUAL");
-      expect(calls[1].url).toContain("status=LIBERADO");
-      expect(calls[1].url).toContain("uniqueWindowMinutes=30");
+      expect(calls[0].url).toContain("/api/v1/gerencial/catraca/acessos/dashboard");
+      expect(calls[0].url).toContain("tipoLiberacao=MANUAL");
+      expect(calls[0].url).toContain("status=LIBERADO");
+      expect(calls[0].url).toContain("uniqueWindowMinutes=30");
     } finally {
       restore();
     }

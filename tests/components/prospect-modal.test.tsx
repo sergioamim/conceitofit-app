@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ProspectModal } from "@/components/shared/prospect-modal";
+import type { Funcionario, Prospect } from "@/lib/types";
 
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children, open }: any) => (open ? <div>{children}</div> : null),
@@ -51,9 +52,9 @@ describe("ProspectModal", () => {
     onClose: vi.fn(),
     onSave: vi.fn(),
     funcionarios: [
-      { id: "f1", nome: "João", cargo: "Consultor", status: "ATIVO" as const, email: "", telefone: "", role: "" as any, horarioTrabalho: "" as any, notificacoesAtivas: false },
-    ],
-    initial: null,
+      { id: "f1", nome: "João", cargo: "Consultor", statusOperacional: "ATIVO", podeMinistrarAulas: false } as Funcionario,
+    ] as Funcionario[],
+    initial: null as Prospect | null,
   };
 
   it("renders title for new prospect", () => {

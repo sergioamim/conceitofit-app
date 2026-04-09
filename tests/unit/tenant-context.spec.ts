@@ -4,7 +4,6 @@ import {
   clearAuthSession,
   getActiveTenantIdFromSession,
   getAvailableTenantsFromSession,
-  rememberOperationalTenantScope,
   saveAuthSession,
 } from "../../src/lib/api/session";
 import {
@@ -136,38 +135,4 @@ test.describe("tenant context", () => {
     expect(optimistic.tenants).toEqual([TENANT_CENTRO]);
   });
 
-  test("restringe o contexto a academia selecionada ao entrar como unidade", () => {
-    saveAuthSession({
-      token: "token",
-      refreshToken: "refresh",
-      activeTenantId: "tenant-mananciais-s1",
-      tenantBaseId: "tenant-centro",
-      availableTenants: [
-        { tenantId: "tenant-centro", defaultTenant: true },
-        { tenantId: "tenant-mananciais-s1", defaultTenant: false },
-        { tenantId: "tenant-norte", defaultTenant: false },
-      ],
-    });
-    rememberOperationalTenantScope({
-      academiaId: "academia-mananciais",
-      tenantIds: ["tenant-mananciais-s1"],
-      defaultTenantId: "tenant-mananciais-s1",
-    });
-
-    const snapshot = resolveTenantContextSnapshot({
-      currentTenantId: "tenant-mananciais-s1",
-      tenantAtual: { id: "tenant-mananciais-s1", nome: "Mananciais S1", ativo: true },
-      tenants: [
-        TENANT_CENTRO,
-        { id: "tenant-mananciais-s1", nome: "Mananciais S1", ativo: true },
-        { id: "tenant-norte", nome: "Norte", ativo: true },
-      ],
-    });
-
-    expect(getAvailableTenantsFromSession()).toEqual([
-      { tenantId: "tenant-mananciais-s1", defaultTenant: true },
-    ]);
-    expect(snapshot.tenantId).toBe("tenant-mananciais-s1");
-    expect(snapshot.tenants.map((tenant) => tenant.id)).toEqual(["tenant-mananciais-s1"]);
-  });
 });

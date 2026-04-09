@@ -13,7 +13,7 @@ describe("parseAppEnv", () => {
       BACKEND_PROXY_TARGET: "http://localhost:8080",
       BACKEND_PROXY_MAX_BODY_SIZE: "200",
       NEXT_PUBLIC_SENTRY_DSN: "",
-    });
+    } as unknown as NodeJS.ProcessEnv);
 
     expect(env.BACKEND_PROXY_TARGET).toBe("http://localhost:8080");
     expect(env.BACKEND_PROXY_MAX_BODY_SIZE).toBe(200);
@@ -21,7 +21,7 @@ describe("parseAppEnv", () => {
   });
 
   it("falha com mensagem clara quando BACKEND_PROXY_TARGET não está definido", () => {
-    expect(() => parseAppEnv({})).toThrow(
+    expect(() => parseAppEnv({} as unknown as NodeJS.ProcessEnv)).toThrow(
       "Variáveis de ambiente inválidas. Revise o log acima antes de subir o Next.js."
     );
     expect(errorSpy).toHaveBeenCalledWith("[env] Falha na validação das variáveis de ambiente:");

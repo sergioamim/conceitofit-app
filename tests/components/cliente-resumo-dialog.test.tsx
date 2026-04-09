@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ClienteResumoDialog } from "@/app/(portal)/clientes/components/cliente-resumo-dialog";
+import type { Aluno } from "@/lib/types";
 
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children, open }: any) => (open ? <div>{children}</div> : null),
@@ -38,8 +39,8 @@ const mockAluno = {
   dataNascimento: "1990-01-01",
   sexo: "M" as const,
   status: "ATIVO" as const,
-  dataCriacao: "2024-01-01T00:00:00",
-};
+  dataCadastro: "2024-01-01T00:00:00",
+} as Aluno;
 
 describe("ClienteResumoDialog", () => {
   const defaultProps = {

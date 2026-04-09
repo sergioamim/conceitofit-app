@@ -22,8 +22,8 @@ vi.mock("@/lib/api/auth", () => ({
 // Mock session functions used by the component's guard
 const mockHasActiveSession = vi.fn(() => false);
 const mockGetForcePasswordChangeRequired = vi.fn(() => false);
-const mockGetNetworkName = vi.fn(() => undefined);
-const mockGetNetworkSubdomain = vi.fn(() => undefined);
+const mockGetNetworkName = vi.fn((): string | undefined => undefined);
+const mockGetNetworkSubdomain = vi.fn((): string | undefined => undefined);
 
 vi.mock("@/lib/api/session", () => ({
   AUTH_SESSION_CLEARED_EVENT: "auth-session-cleared",

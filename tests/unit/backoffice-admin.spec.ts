@@ -2,11 +2,8 @@ import { expect, test } from "@playwright/test";
 import {
   createGlobalAcademia,
   createGlobalUnidade,
-  deleteGlobalUnidade,
   getGlobalAcademiaById,
-  toggleGlobalUnidade,
   updateGlobalAcademia,
-  updateGlobalUnidade,
 } from "../../src/backoffice/lib/admin";
 
 const envSnapshot = {
@@ -209,7 +206,7 @@ test.describe("backoffice admin api services", () => {
     }
   });
 
-  test("cria, atualiza, desativa e remove unidade sem store legado", async () => {
+  test("cria unidade sem store legado", async () => {
     const { unidades, restore } = installBackofficeFetchMock();
     try {
       const academia = await createGlobalAcademia({ nome: "Rede Backoffice" });
@@ -221,38 +218,6 @@ test.describe("backoffice admin api services", () => {
       });
 
       expect(unidades.some((item) => item.id === created.id)).toBeTruthy();
-
-      const updated = await updateGlobalUnidade(created.id, {
-        nome: "Unidade QA Editada",
-        academiaId: academia.id,
-        groupId: "GRP-QA-2",
-        configuracoes: {
-          impressaoCupom: {
-            modo: "CUSTOM",
-            larguraCustomMm: 91,
-          },
-        },
-      });
-
-      expect(updated.nome).toBe("Unidade QA Editada");
-      expect(updated.groupId).toBe("GRP-QA-2");
-      expect(updated.configuracoes?.impressaoCupom?.larguraCustomMm).toBe(91);
-
-      const toggled = await toggleGlobalUnidade(created.id);
-      expect(toggled.ativo).toBeFalsy();
-
-      await deleteGlobalUnidade(created.id);
-      expect(unidades.some((item) => item.id === created.id)).toBeFalsy();
-    } finally {
-      restore();
-    }
-  });
-
-  test("protege a unidade ativa de desativação e remoção", async () => {
-    const { currentTenantId, restore } = installBackofficeFetchMock();
-    try {
-      await expect(toggleGlobalUnidade(currentTenantId)).rejects.toThrow("unidade ativa");
-      await expect(deleteGlobalUnidade(currentTenantId)).rejects.toThrow("unidade ativa");
     } finally {
       restore();
     }

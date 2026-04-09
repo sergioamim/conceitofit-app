@@ -43,7 +43,7 @@ test.describe("zod resolver forms", () => {
       },
       {},
       {} as never
-    )).rejects.toMatchObject<Partial<ZodError>>({
+    )).rejects.toMatchObject({
       issues: expect.arrayContaining([
         expect.objectContaining({
           path: ["planId"],

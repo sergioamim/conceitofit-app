@@ -291,7 +291,7 @@ test.describe("integration guide contracts", () => {
           parcelasMaxAnuidade: 12,
           permiteRenovacaoAutomatica: true,
           permiteCobrancaRecorrente: true,
-          diaCobrancaPadrao: 5,
+          diaCobrancaPadrao: [5],
           contratoTemplateHtml: "<p>Contrato</p>",
           contratoAssinatura: "AMBAS",
           contratoEnviarAutomaticoEmail: true,

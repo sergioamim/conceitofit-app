@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { axe } from "vitest-axe";
 import { ProspectModal } from "@/components/shared/prospect-modal";
+import type { Funcionario, Prospect } from "@/lib/types";
 
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children, open }: any) => (open ? <div role="dialog" aria-modal="true" aria-label="Prospect">{children}</div> : null),
@@ -59,8 +60,8 @@ describe("ProspectModal a11y", () => {
     open: true,
     onClose: vi.fn(),
     onSave: vi.fn(),
-    funcionarios: [],
-    initial: null,
+    funcionarios: [] as Funcionario[],
+    initial: null as Prospect | null,
   };
 
   it("has no accessibility violations when open", async () => {

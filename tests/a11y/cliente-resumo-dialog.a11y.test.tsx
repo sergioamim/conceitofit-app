@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { axe } from "vitest-axe";
 import { ClienteResumoDialog } from "@/app/(portal)/clientes/components/cliente-resumo-dialog";
+import type { Aluno } from "@/lib/types";
 
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children, open }: any) => (open ? <div role="dialog" aria-modal="true" aria-label="Resumo do Cliente">{children}</div> : null),
@@ -43,8 +44,8 @@ describe("ClienteResumoDialog a11y", () => {
       dataNascimento: "1990-01-01",
       sexo: "M" as const,
       status: "ATIVO" as const,
-      dataCriacao: "2024-01-01T00:00:00",
-    },
+      dataCadastro: "2024-01-01T00:00:00",
+    } as Aluno,
     clienteResumoPlano: { nome: "Plano Mensal", dataFim: "2024-12-31" },
     clienteResumoBaseHref: "/clientes",
     liberandoSuspensao: false,

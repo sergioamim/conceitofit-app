@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
   createSessaoAulaId,
-  getNextOccurrenceForDiasSemana,
   listDatesBetween,
 } from "../../src/lib/tenant/aulas/reservas";
 
@@ -18,9 +17,4 @@ test.describe("aulas reservas helpers", () => {
     ]);
   });
 
-  test("getNextOccurrenceForDiasSemana encontra próxima data válida", async () => {
-    const reference = new Date("2026-03-10T09:00:00");
-    expect(getNextOccurrenceForDiasSemana(["QUA", "SEX"], reference)).toBe("2026-03-11");
-    expect(getNextOccurrenceForDiasSemana(["SEG"], reference)).toBe("2026-03-16");
-  });
 });

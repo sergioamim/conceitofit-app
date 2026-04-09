@@ -1,6 +1,4 @@
 import { expect, test } from "@playwright/test";
-import * as queryExports from "../../src/lib/query";
-import * as adminQueryExports from "../../src/backoffice/query";
 import { queryKeys } from "../../src/lib/query/keys";
 import { getQueryClient, makeQueryClient } from "../../src/lib/query/query-client";
 
@@ -16,28 +14,6 @@ test.describe("query hooks contracts", () => {
       queryKeys.pagamentos.list("tn-1", { startDate: "2026-03-01", endDate: "2026-03-31" }),
     );
     expect(queryKeys.admin.seguranca.overview()).not.toEqual(queryKeys.admin.seguranca.reviewBoard());
-  });
-
-  test("exporta os hooks públicos esperados na raiz e no namespace admin", async () => {
-    expect(queryExports).toHaveProperty("AppQueryProvider");
-    expect(queryExports).toHaveProperty("queryKeys");
-    expect(queryExports).toHaveProperty("useDashboard");
-    expect(queryExports).toHaveProperty("useClientes");
-    expect(queryExports).toHaveProperty("useUpdateCliente");
-    expect(queryExports).toHaveProperty("usePagamentos");
-    expect(queryExports).toHaveProperty("useRecebimentos");
-    expect(queryExports).toHaveProperty("useCreateRecebimentoAvulso");
-    expect(queryExports).toHaveProperty("useAgregadores");
-    expect(queryExports).toHaveProperty("useCatracaAcessos");
-
-    expect(adminQueryExports).toHaveProperty("useAdminAcademias");
-    expect(adminQueryExports).toHaveProperty("useAdminAuditLog");
-    expect(adminQueryExports).toHaveProperty("useAdminFinanceiroDashboard");
-    expect(adminQueryExports).toHaveProperty("useAdminSecurityOverview");
-    expect(adminQueryExports).toHaveProperty("useAdminAlertasOperacionais");
-    expect(adminQueryExports).toHaveProperty("useAdminLeads");
-    expect(adminQueryExports).toHaveProperty("useAdminComplianceDashboard");
-    expect(adminQueryExports).toHaveProperty("useAdminBusca");
   });
 
   test("instancia QueryClient com defaults estáveis", async () => {

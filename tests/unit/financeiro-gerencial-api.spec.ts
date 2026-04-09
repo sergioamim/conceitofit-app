@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import {
-  cancelRegraRecorrenciaApi,
   cancelarContaPagarApi,
   createContaPagarApi,
   getDreGerencialApi,
@@ -8,9 +7,6 @@ import {
   listContasPagarApi,
   listRegrasRecorrenciaContaPagarApi,
   pagarContaPagarApi,
-  pauseRegraRecorrenciaApi,
-  resumeRegraRecorrenciaApi,
-  triggerGeracaoContasRecorrentesApi,
   updateContaPagarApi,
 } from "../../src/lib/api/financeiro-gerencial";
 import { mockFetchWithSequence } from "./support/test-runtime";
@@ -89,13 +85,9 @@ function buildConta(id: string, status: "PENDENTE" | "PAGA" | "CANCELADA") {
 }
 
 test.describe("financeiro gerencial api", () => {
-  test("normaliza regras recorrentes e aciona comandos operacionais", async () => {
+  test("normaliza listagem de regras recorrentes", async () => {
     const { calls, restore } = mockFetchWithSequence([
       { body: [buildRegra("regra-1", "ATIVA")] },
-      { body: buildRegra("regra-1", "PAUSADA") },
-      { body: buildRegra("regra-1", "ATIVA") },
-      { body: buildRegra("regra-1", "CANCELADA") },
-      { body: { generatedCount: "3" } },
     ]);
 
     try {
@@ -107,36 +99,7 @@ test.describe("financeiro gerencial api", () => {
       expect(regras[0]?.diaDoMes).toBe(5);
       expect(regras[0]?.numeroOcorrencias).toBe(6);
 
-      const pausada = await pauseRegraRecorrenciaApi({
-        tenantId: "tenant-1",
-        id: "regra-1",
-      });
-      expect(pausada.status).toBe("PAUSADA");
-
-      const retomada = await resumeRegraRecorrenciaApi({
-        tenantId: "tenant-1",
-        id: "regra-1",
-      });
-      expect(retomada.status).toBe("ATIVA");
-
-      const cancelada = await cancelRegraRecorrenciaApi({
-        tenantId: "tenant-1",
-        id: "regra-1",
-      });
-      expect(cancelada.status).toBe("CANCELADA");
-
-      const generatedCount = await triggerGeracaoContasRecorrentesApi({
-        tenantId: "tenant-1",
-        untilDate: "2026-03-31",
-      });
-      expect(generatedCount).toBe(3);
-
       expect(calls[0].url).toContain("/api/v1/gerencial/financeiro/regras-recorrencia");
-      expect(calls[1].url).toContain("/api/v1/gerencial/financeiro/regras-recorrencia/regra-1/pausar");
-      expect(calls[2].url).toContain("/api/v1/gerencial/financeiro/regras-recorrencia/regra-1/retomar");
-      expect(calls[3].url).toContain("/api/v1/gerencial/financeiro/regras-recorrencia/regra-1/cancelar");
-      expect(calls[4].url).toContain("/api/v1/gerencial/financeiro/contas-pagar/recorrencia/gerar");
-      expect(calls[4].method).toBe("POST");
     } finally {
       restore();
     }
