@@ -7,12 +7,19 @@ import { exportToCSV, exportToPDF, type ExportColumn } from "@/lib/export/table-
 
 export type { ExportColumn } from "@/lib/export/table-export";
 
+export interface ServerExportAction {
+  label: string;
+  onClick: () => Promise<void>;
+}
+
 export interface ExportMenuProps<T> {
   data: T[];
   columns: ExportColumn<T>[];
   filename: string;
   title?: string;
   disabled?: boolean;
+  /** Opcoes de exportacao server-side (download via API). */
+  serverActions?: ServerExportAction[];
 }
 
 export function ExportMenu<T>({
@@ -21,9 +28,11 @@ export function ExportMenu<T>({
   filename,
   title,
   disabled = false,
+  serverActions,
 }: ExportMenuProps<T>) {
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [serverExporting, setServerExporting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleCSV = useCallback(() => {
@@ -76,6 +85,33 @@ export function ExportMenu<T>({
             >
               {exporting ? "Gerando PDF..." : "Exportar PDF"}
             </button>
+            {serverActions && serverActions.length > 0 && (
+              <>
+                <div className="my-1 border-t border-border" />
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Exportar do servidor
+                </p>
+                {serverActions.map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary"
+                    disabled={serverExporting}
+                    onClick={async () => {
+                      setServerExporting(true);
+                      try {
+                        await action.onClick();
+                      } finally {
+                        setServerExporting(false);
+                        setOpen(false);
+                      }
+                    }}
+                  >
+                    {serverExporting ? "Exportando..." : action.label}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         </>
       )}

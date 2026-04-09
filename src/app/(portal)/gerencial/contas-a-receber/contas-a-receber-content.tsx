@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
+import { ExportMenu, type ExportColumn, type ServerExportAction } from "@/components/shared/export-menu";
 import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
+import { exportarContasReceberApi } from "@/lib/api/exportacao";
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 import type { PagamentoComAluno } from "@/lib/tenant/financeiro/recebimentos";
@@ -70,6 +71,35 @@ export function ContasAReceberContent() {
     return { planejado, recebido, aberto };
   }, [filtered]);
 
+  const serverExportActions = useMemo<ServerExportAction[]>(() => {
+    const statusParam =
+      status === "EM_ABERTO" ? undefined : status === FILTER_ALL ? undefined : status;
+    return [
+      {
+        label: "Servidor CSV",
+        onClick: () =>
+          exportarContasReceberApi({
+            tenantId: tenantId!,
+            formato: "csv",
+            status: statusParam,
+            dataInicio: startDate,
+            dataFim: endDate,
+          }),
+      },
+      {
+        label: "Servidor XLSX",
+        onClick: () =>
+          exportarContasReceberApi({
+            tenantId: tenantId!,
+            formato: "xlsx",
+            status: statusParam,
+            dataInicio: startDate,
+            dataFim: endDate,
+          }),
+      },
+    ];
+  }, [tenantId, status, startDate, endDate]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
@@ -91,6 +121,7 @@ export function ContasAReceberContent() {
           ] satisfies ExportColumn<(typeof filtered)[number]>[]}
           filename="contas-a-receber"
           title="Contas a Receber"
+          serverActions={serverExportActions}
         />
       </div>
 

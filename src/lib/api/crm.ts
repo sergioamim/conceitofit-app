@@ -732,3 +732,37 @@ export async function encerrarCrmCampanhaApi(input: {
     mapUnavailableCapability(error, "Backend ainda não expõe encerramento de campanhas CRM neste ambiente.");
   }
 }
+
+// ---------------------------------------------------------------------------
+// Dashboard de Retenção
+// ---------------------------------------------------------------------------
+
+export interface DashboardRetencao {
+  leadsEmAberto: number;
+  conversoes30Dias: number;
+  matriculasVencendo7Dias: number;
+  alunosInadimplentes: number;
+  tarefasPendentes: number;
+  tarefasAtrasadas: number;
+  automacoesAtivas: number;
+  playbooksAtivos: number;
+  eventos30Dias: number;
+  permissoes: {
+    podeGerirAutomacoes: boolean;
+    podeGerirTarefas: boolean;
+    podeVerDashboard: boolean;
+  };
+}
+
+export async function getCrmDashboardRetencaoApi(input: {
+  tenantId: string;
+}): Promise<DashboardRetencao> {
+  try {
+    return await apiRequest<DashboardRetencao>({
+      path: "/api/v1/crm/dashboard/retencao",
+      query: { tenantId: input.tenantId },
+    });
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe dashboard de retenção CRM neste ambiente.");
+  }
+}

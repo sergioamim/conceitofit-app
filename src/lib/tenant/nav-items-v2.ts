@@ -11,6 +11,7 @@ import {
   Megaphone,
   MessageSquare,
   Settings,
+  ShieldAlert,
   ShoppingCart,
   Users,
   TrendingUp,
@@ -50,6 +51,7 @@ export const growthGroup: NavGroupV2 = {
     { href: "/crm/tarefas", label: "Tarefas Comerciais", icon: ClipboardList },
     { href: "/vendas/nova", label: "Nova Venda", icon: ShoppingCart },
     { href: "/crm/campanhas", label: "Campanhas", icon: Megaphone },
+    { href: "/crm/retencao", label: "Retenção", icon: ShieldAlert, description: "Dashboard de retenção" },
     { href: "/administrativo/vouchers", label: "Vouchers", icon: CreditCard },
   ]
 };

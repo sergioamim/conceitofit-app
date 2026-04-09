@@ -1,11 +1,13 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { Plus, Users, UserPlus, TrendingUp, CreditCard, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
+import { ExportMenu, type ExportColumn, type ServerExportAction } from "@/components/shared/export-menu";
+import { exportarAlunosApi } from "@/lib/api/exportacao";
 import { motion } from "framer-motion";
 
 import { useClientesWorkspace } from "./use-clientes-workspace";
@@ -13,8 +15,32 @@ import { ClientesFilterBar } from "./clientes-filter-bar";
 import { ClientesTable } from "./clientes-table";
 import { ClienteResumoDialog } from "./cliente-resumo-dialog";
 
+const EXPORT_COLUMNS: ExportColumn<import("@/lib/types").Aluno>[] = [
+  { label: "Nome", accessor: "nome" },
+  { label: "CPF", accessor: "cpf" },
+  { label: "Telefone", accessor: "telefone" },
+  { label: "Email", accessor: "email" },
+  { label: "Status", accessor: "status" },
+];
+
 function ClientesPageContent() {
   const ws = useClientesWorkspace();
+
+  const serverExportActions = useMemo<ServerExportAction[]>(() => {
+    const statusParam = ws.filtro === "TODOS" ? undefined : ws.filtro;
+    return [
+      {
+        label: "Servidor CSV",
+        onClick: () =>
+          exportarAlunosApi({ tenantId: ws.tenantId, formato: "csv", status: statusParam }),
+      },
+      {
+        label: "Servidor XLSX",
+        onClick: () =>
+          exportarAlunosApi({ tenantId: ws.tenantId, formato: "xlsx", status: statusParam }),
+      },
+    ];
+  }, [ws.tenantId, ws.filtro]);
 
   return (
     <div className="space-y-8 pb-10">
@@ -48,10 +74,19 @@ function ClientesPageContent() {
             {ws.statusTotals.TODOS} alunos cadastrados no sistema
           </p>
         </motion.div>
-        <Button onClick={ws.wizard.open} className="rounded-xl h-11 px-6 shadow-lg shadow-primary/20 font-bold">
-          <Plus className="mr-2 size-5" />
-          Novo Cliente
-        </Button>
+        <div className="flex items-center gap-3">
+          <ExportMenu
+            data={ws.filtered}
+            columns={EXPORT_COLUMNS}
+            filename="clientes"
+            title="Clientes"
+            serverActions={serverExportActions}
+          />
+          <Button onClick={ws.wizard.open} className="rounded-xl h-11 px-6 shadow-lg shadow-primary/20 font-bold">
+            <Plus className="mr-2 size-5" />
+            Novo Cliente
+          </Button>
+        </div>
       </div>
 
       {ws.loadError ? (
