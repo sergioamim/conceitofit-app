@@ -210,6 +210,25 @@ export const queryKeys = {
       ["checkIn", "presencas", tenantId, userId] as const,
   },
 
+  appCliente: {
+    contexto: (tenantId: string) =>
+      ["appCliente", "contexto", tenantId] as const,
+    homeSnapshot: (tenantId: string) =>
+      ["appCliente", "homeSnapshot", tenantId] as const,
+    carteirinha: (tenantId: string) =>
+      ["appCliente", "carteirinha", tenantId] as const,
+    contratos: (tenantId: string) =>
+      ["appCliente", "contratos", tenantId] as const,
+    contratoDetalhe: (tenantId: string, id: string) =>
+      ["appCliente", "contratos", tenantId, id] as const,
+    cobrancas: (tenantId: string) =>
+      ["appCliente", "cobrancas", tenantId] as const,
+    cobrancaDetalhe: (tenantId: string, id: string) =>
+      ["appCliente", "cobrancas", tenantId, id] as const,
+    inadimplencia: (tenantId: string) =>
+      ["appCliente", "inadimplencia", tenantId] as const,
+  },
+
   funcionarios: {
     all: () => ["funcionarios"] as const,
   },

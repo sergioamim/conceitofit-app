@@ -15,6 +15,26 @@ import {
 import {
   listPagamentosApi,
 } from "@/lib/api/pagamentos";
+import {
+  getHomeSnapshotApi,
+  getCarteirinhaDigitalApi,
+  rotacionarCarteirinhaApi,
+  listContratosClienteApi,
+  getContratoClienteApi,
+  enviarContratoOtpApi,
+  assinarContratoApi,
+  listCobrancasClienteApi,
+  getCobrancaClienteApi,
+  solicitarSegundaViaApi,
+  getInadimplenciaClienteApi,
+  type HomeSnapshot,
+  type CarteirinhaDigital,
+  type ContratoResumo,
+  type ContratoDetalhe,
+  type CobrancaCliente,
+  type CobrancaDetalhe,
+  type FinanceiroInadimplencia,
+} from "@/lib/api/app-cliente";
 import type { Treino, ClienteOperationalContext, AulaSessao, ReservaAula, Pagamento } from "@/lib/types";
 import type { Presenca } from "@/lib/shared/types/aluno";
 import { queryKeys } from "./keys";
@@ -230,5 +250,188 @@ export function useMeusPagamentos(input: {
       input.tenantResolved &&
       Boolean(input.userId),
     staleTime: 2 * 60 * 1000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Home Snapshot (App Cliente)
+// ---------------------------------------------------------------------------
+
+export function useHomeSnapshot(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+}) {
+  return useQuery<HomeSnapshot>({
+    queryKey: queryKeys.appCliente.homeSnapshot(input.tenantId ?? ""),
+    queryFn: () =>
+      getHomeSnapshotApi({ tenantId: input.tenantId! }),
+    enabled: Boolean(input.tenantId) && input.tenantResolved,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Carteirinha Digital (App Cliente)
+// ---------------------------------------------------------------------------
+
+export function useCarteirinhaDigital(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+}) {
+  return useQuery<CarteirinhaDigital>({
+    queryKey: queryKeys.appCliente.carteirinha(input.tenantId ?? ""),
+    queryFn: () =>
+      getCarteirinhaDigitalApi({ tenantId: input.tenantId! }),
+    enabled: Boolean(input.tenantId) && input.tenantResolved,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useRotacionarCarteirinha() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { tenantId: string }) =>
+      rotacionarCarteirinhaApi(input),
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData(
+        queryKeys.appCliente.carteirinha(variables.tenantId),
+        data,
+      );
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Contratos (App Cliente)
+// ---------------------------------------------------------------------------
+
+export function useMeusContratos(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+}) {
+  return useQuery<ContratoResumo[]>({
+    queryKey: queryKeys.appCliente.contratos(input.tenantId ?? ""),
+    queryFn: () =>
+      listContratosClienteApi({ tenantId: input.tenantId! }),
+    enabled: Boolean(input.tenantId) && input.tenantResolved,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useContratoDetalhe(input: {
+  id: string | undefined;
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+}) {
+  return useQuery<ContratoDetalhe>({
+    queryKey: queryKeys.appCliente.contratoDetalhe(
+      input.tenantId ?? "",
+      input.id ?? "",
+    ),
+    queryFn: () =>
+      getContratoClienteApi({ id: input.id!, tenantId: input.tenantId! }),
+    enabled:
+      Boolean(input.id) &&
+      Boolean(input.tenantId) &&
+      input.tenantResolved,
+    staleTime: 60_000,
+  });
+}
+
+export function useEnviarContratoOtp() {
+  return useMutation({
+    mutationFn: (input: { id: string; tenantId: string }) =>
+      enviarContratoOtpApi(input),
+  });
+}
+
+export function useAssinarContrato() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { id: string; tenantId: string; codigoOtp: string }) =>
+      assinarContratoApi(input),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.appCliente.contratos(variables.tenantId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.appCliente.contratoDetalhe(
+          variables.tenantId,
+          variables.id,
+        ),
+      });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Cobrancas (App Cliente)
+// ---------------------------------------------------------------------------
+
+export function useMinhasCobrancas(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+}) {
+  return useQuery<CobrancaCliente[]>({
+    queryKey: queryKeys.appCliente.cobrancas(input.tenantId ?? ""),
+    queryFn: () =>
+      listCobrancasClienteApi({ tenantId: input.tenantId! }),
+    enabled: Boolean(input.tenantId) && input.tenantResolved,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useCobrancaDetalhe(input: {
+  id: string | undefined;
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+}) {
+  return useQuery<CobrancaDetalhe>({
+    queryKey: queryKeys.appCliente.cobrancaDetalhe(
+      input.tenantId ?? "",
+      input.id ?? "",
+    ),
+    queryFn: () =>
+      getCobrancaClienteApi({ id: input.id!, tenantId: input.tenantId! }),
+    enabled:
+      Boolean(input.id) &&
+      Boolean(input.tenantId) &&
+      input.tenantResolved,
+    staleTime: 60_000,
+  });
+}
+
+export function useSolicitarSegundaVia() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { id: string; tenantId: string; formaPagamento?: string }) =>
+      solicitarSegundaViaApi(input),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.appCliente.cobrancas(variables.tenantId),
+      });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Inadimplencia (App Cliente)
+// ---------------------------------------------------------------------------
+
+export function useInadimplenciaCliente(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+}) {
+  return useQuery<FinanceiroInadimplencia>({
+    queryKey: queryKeys.appCliente.inadimplencia(input.tenantId ?? ""),
+    queryFn: () =>
+      getInadimplenciaClienteApi({ tenantId: input.tenantId! }),
+    enabled: Boolean(input.tenantId) && input.tenantResolved,
+    staleTime: 5 * 60 * 1000,
   });
 }

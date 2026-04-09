@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { ClienteBottomNav } from "@/components/layout/cliente-bottom-nav";
 import { NotificationBell } from "@/components/cliente/notification-bell";
+import { InadimplenciaBanner } from "@/components/cliente/inadimplencia-banner";
 import { useClienteOperationalContext } from "@/lib/query/use-portal-aluno";
 import { TenantThemeSync } from "@/components/layout/tenant-theme-sync";
 import { TenantContextProvider, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
@@ -25,6 +26,10 @@ import {
   clearAuthSession,
 } from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
+import {
+  registerPushToken,
+  unregisterPushToken,
+} from "@/lib/cliente/push-registration";
 
 function ClienteTopbar() {
   const { displayName, networkName, tenantId, userId } = useTenantContext();
@@ -116,6 +121,7 @@ function ClienteShell({ children }: { children: React.ReactNode }) {
       </a>
       <TenantThemeSync />
       <ClienteTopbar />
+      <InadimplenciaBanner />
       <main
         id="main-content"
         className="flex-1 overflow-y-auto px-4 pb-20 pt-4"
@@ -162,6 +168,19 @@ function ClienteLayoutContent({
     const currentPath = `${pathname}${queryString ? `?${queryString}` : ""}`;
     router.replace(buildLoginHref(currentPath, getNetworkSlugFromSession()));
   }, [authenticated, hydrated, pathname, router, searchParams]);
+
+  // Push notification registration (silencioso)
+  const { tenantId } = useTenantContext();
+
+  useEffect(() => {
+    if (!authenticated || !tenantId) return;
+
+    void registerPushToken(tenantId);
+
+    return () => {
+      void unregisterPushToken(tenantId);
+    };
+  }, [authenticated, tenantId]);
 
   return <ClienteShell>{children}</ClienteShell>;
 }

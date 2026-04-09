@@ -1,15 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Activity,
+  Camera,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
+  ImagePlus,
   Loader2,
   Ruler,
   Scale,
   TrendingUp,
+  Upload,
   User,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,6 +25,10 @@ import {
   type AvaliacaoFisica,
 } from "@/lib/query/use-avaliacoes-aluno";
 import { formatDateBR } from "@/lib/formatters";
+import {
+  uploadAvaliacaoFotoApi,
+  type AvaliacaoFoto,
+} from "@/lib/api/app-cliente";
 
 export default function MinhasAvaliacoesPage() {
   const { tenantId, userId, tenantResolved } = useTenantContext();
@@ -144,7 +153,7 @@ export default function MinhasAvaliacoesPage() {
       ) : (
         <div className="space-y-3">
           {sorted.map((avaliacao) => (
-            <AvaliacaoCard key={avaliacao.id} avaliacao={avaliacao} />
+            <AvaliacaoCard key={avaliacao.id} avaliacao={avaliacao} tenantId={tenantId} />
           ))}
         </div>
       )}
@@ -152,8 +161,51 @@ export default function MinhasAvaliacoesPage() {
   );
 }
 
-function AvaliacaoCard({ avaliacao }: { avaliacao: AvaliacaoFisica }) {
+function AvaliacaoCard({
+  avaliacao,
+  tenantId,
+}: {
+  avaliacao: AvaliacaoFisica;
+  tenantId: string | undefined;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadedPhotos, setUploadedPhotos] = useState<AvaliacaoFoto[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !tenantId) return;
+
+      setUploading(true);
+      setUploadError(null);
+      setUploadSuccess(false);
+
+      try {
+        const foto = await uploadAvaliacaoFotoApi({
+          tenantId,
+          file,
+          tipo: "evolucao",
+          avaliacaoId: avaliacao.id,
+        });
+        setUploadedPhotos((prev) => [...prev, foto]);
+        setUploadSuccess(true);
+        setTimeout(() => setUploadSuccess(false), 3000);
+      } catch (err) {
+        setUploadError(
+          err instanceof Error ? err.message : "Erro ao enviar foto.",
+        );
+      } finally {
+        setUploading(false);
+        // Reset input para permitir re-upload do mesmo arquivo
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    },
+    [tenantId, avaliacao.id],
+  );
 
   return (
     <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
@@ -256,6 +308,75 @@ function AvaliacaoCard({ avaliacao }: { avaliacao: AvaliacaoFisica }) {
               </div>
             </div>
           )}
+
+          {/* Fotos enviadas (upload) */}
+          {uploadedPhotos.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                Fotos enviadas
+              </p>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {uploadedPhotos.map((foto) => (
+                  <a
+                    key={foto.id}
+                    href={foto.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={foto.url}
+                      alt={`Foto ${foto.tipo}`}
+                      className="h-24 w-20 rounded-lg object-cover border border-gym-teal/40"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Upload de foto */}
+          <div className="space-y-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleUpload}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full rounded-xl border-border/60 gap-2"
+              disabled={uploading || !tenantId}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : uploadSuccess ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-gym-teal" />
+                  Foto enviada!
+                </>
+              ) : (
+                <>
+                  <Camera className="h-4 w-4" />
+                  Enviar foto
+                </>
+              )}
+            </Button>
+            {uploadError && (
+              <p className="text-[11px] text-gym-danger text-center">
+                {uploadError}
+              </p>
+            )}
+          </div>
 
           {/* Observações */}
           {avaliacao.observacoes && (
