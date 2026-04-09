@@ -10,7 +10,7 @@
     "dev:api:devtools": "NEXT_PUBLIC_DEBUG_REACT_SCAN=true NEXT_PUBLIC_DEBUG_QUERY_DEVTOOLS=true NEXT_PUBLIC_DEBUG_SESSION_DEVTOOLS=true NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 BACKEND_PROXY_TARGET=http://localhost:8080 next dev --webpack -p 3001 -H localhost",
     "dev:3001:api": "NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 BACKEND_PROXY_TARGET=http://localhost:8080 next dev --webpack -p 3001 -H localhost",
     "dev:3001:api:scan": "NEXT_PUBLIC_DEBUG_REACT_SCAN=true NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 BACKEND_PROXY_TARGET=http://localhost:8080 next dev --webpack -p 3001 -H localhost",
-    "build": "next build",
+    "build": "node scripts/fix-standalone-proxy.mjs",
     "build:preview": "next build",
     "start": "next start",
     "start:prod": "next start -p 3000 -H 0.0.0.0",
