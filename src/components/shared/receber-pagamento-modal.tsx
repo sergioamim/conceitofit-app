@@ -21,11 +21,11 @@ const receberPagamentoSchema = z.object({
   codigoTransacao: optionalTrimmedString().default(""),
   observacoes: optionalTrimmedString().default(""),
 }).superRefine((values, ctx) => {
-  if (values.formaPagamento === "CARTAO_CREDITO" && !values.codigoTransacao?.trim()) {
+  if ((values.formaPagamento === "CARTAO_CREDITO" || values.formaPagamento === "CARTAO_DEBITO") && !values.codigoTransacao?.trim()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["codigoTransacao"],
-      message: "Informe o código da transação do cupom da maquininha.",
+      message: "Informe o código de autorização da maquininha.",
     });
   }
 });
@@ -73,7 +73,7 @@ export function ReceberPagamentoModal({
     onConfirm({
       dataPagamento: values.dataPagamento,
       formaPagamento: values.formaPagamento,
-      codigoTransacao: values.formaPagamento === "CARTAO_CREDITO"
+      codigoTransacao: (values.formaPagamento === "CARTAO_CREDITO" || values.formaPagamento === "CARTAO_DEBITO")
         ? values.codigoTransacao.trim() || undefined
         : undefined,
       observacoes: values.observacoes.trim() || undefined,
@@ -135,10 +135,10 @@ export function ReceberPagamentoModal({
                 )}
               />
             </div>
-            {formaPagamento === "CARTAO_CREDITO" ? (
+            {(formaPagamento === "CARTAO_CREDITO" || formaPagamento === "CARTAO_DEBITO") ? (
               <div className="space-y-1.5">
                 <label htmlFor="receber-codigo-transacao" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Código da transação *
+                  Código de autorização *
                 </label>
                 <Input
                   id="receber-codigo-transacao"
