@@ -12,14 +12,16 @@ async function Loader() {
   let stats: LeadB2bStats | null = null;
 
   try {
-    [leads, stats] = await Promise.all([
-      serverFetch<LeadB2b[]>("/api/v1/admin/leads", {
+    const [leadsRes, statsRes] = await Promise.all([
+      serverFetch<LeadB2b[] | { content: LeadB2b[] }>("/api/v1/admin/leads", {
         next: { revalidate: 0 },
       }),
       serverFetch<LeadB2bStats>("/api/v1/admin/leads/stats", {
         next: { revalidate: 0 },
       }),
     ]);
+    leads = Array.isArray(leadsRes) ? leadsRes : (leadsRes?.content ?? []);
+    stats = statsRes;
   } catch (error) {
     logger.warn("[AdminLeadsPage] SSR fetch failed, falling back to client", {
       module: "AdminLeadsPage",
