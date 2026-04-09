@@ -16,11 +16,103 @@ import type {
 import { extractAlunosFromListResponse, listAlunosApi } from "./alunos";
 import { listAtividadeGradesApi } from "./administrativo";
 import { getActiveTenantIdFromSession, getAvailableTenantsFromSession, getPreferredTenantId } from "./session";
-import { ApiRequestError } from "./http";
+import { ApiRequestError, apiRequest } from "./http";
 import { listAcademiasApi, listUnidadesApi, setTenantContextApi } from "./contexto-unidades";
 import { listProspectsApi } from "./crm";
 import { listMatriculasApi } from "./matriculas";
 import { listReservasAulaApi } from "./reservas";
+
+// ---------------------------------------------------------------------------
+// BI Analytics — Receita por Plano
+// ---------------------------------------------------------------------------
+
+export interface ReceitaPorPlano {
+  tenantId: string;
+  inicio: string;
+  fim: string;
+  totalReceita: number;
+  totalMatriculas: number;
+  planos: Array<{
+    plano: string;
+    matriculasAtivas: number;
+    receita: number;
+    ticketMedio: number;
+  }>;
+}
+
+export async function getBiReceitaApi(input: {
+  tenantId: string;
+  inicio?: string;
+  fim?: string;
+}): Promise<ReceitaPorPlano> {
+  return apiRequest<ReceitaPorPlano>({
+    path: "/api/v1/bi/receita",
+    query: {
+      tenantId: input.tenantId,
+      inicio: input.inicio,
+      fim: input.fim,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// BI Analytics — Retencao Cohort
+// ---------------------------------------------------------------------------
+
+export interface RetencaoCohort {
+  tenantId: string;
+  mesesAnalisados: number;
+  cohorts: Array<{
+    cohort: string;
+    totalMatriculas: number;
+    ativasAtualmente: number;
+    retencaoPercentual: number;
+    mesesDesdeIngresso: number;
+  }>;
+}
+
+export async function getBiRetencaoApi(input: {
+  tenantId: string;
+  meses?: number;
+}): Promise<RetencaoCohort> {
+  return apiRequest<RetencaoCohort>({
+    path: "/api/v1/bi/retencao",
+    query: {
+      tenantId: input.tenantId,
+      meses: input.meses,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// BI Analytics — Inadimplencia
+// ---------------------------------------------------------------------------
+
+export interface Inadimplencia {
+  tenantId: string;
+  contasPendentes: number;
+  contasVencidas: number;
+  valorPendente: number;
+  valorVencido: number;
+  taxaInadimplencia: number;
+  aging: {
+    de0a30dias: number;
+    de31a60dias: number;
+    de61a90dias: number;
+    maisDe90dias: number;
+  };
+}
+
+export async function getBiInadimplenciaApi(input: {
+  tenantId: string;
+}): Promise<Inadimplencia> {
+  return apiRequest<Inadimplencia>({
+    path: "/api/v1/bi/inadimplencia",
+    query: {
+      tenantId: input.tenantId,
+    },
+  });
+}
 
 type GetBiOperacionalSnapshotInput = {
   scope?: BiEscopo;

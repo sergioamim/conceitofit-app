@@ -234,5 +234,11 @@ export const queryKeys = {
         endDate,
         segmento,
       ] as const,
+    receita: (tenantId: string, inicio?: string, fim?: string) =>
+      ["bi", "receita", tenantId, inicio, fim] as const,
+    retencao: (tenantId: string, meses?: number) =>
+      ["bi", "retencao", tenantId, meses] as const,
+    inadimplencia: (tenantId: string) =>
+      ["bi", "inadimplencia", tenantId] as const,
   },
 } as const;

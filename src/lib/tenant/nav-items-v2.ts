@@ -11,6 +11,7 @@ import {
   LineChart,
   Megaphone,
   MessageSquare,
+  MessageSquareHeart,
   QrCode,
   Settings,
   ShieldAlert,
@@ -24,7 +25,8 @@ import {
   BookOpen,
   HandCoins,
   Dumbbell,
-  UserPlus
+  UserPlus,
+  Gift
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -54,7 +56,9 @@ export const growthGroup: NavGroupV2 = {
     { href: "/vendas/nova", label: "Nova Venda", icon: ShoppingCart },
     { href: "/crm/campanhas", label: "Campanhas", icon: Megaphone },
     { href: "/crm/retencao", label: "Retenção", icon: ShieldAlert, description: "Dashboard de retenção" },
+    { href: "/retencao/nps", label: "NPS", icon: MessageSquareHeart, description: "Pesquisa relacional" },
     { href: "/administrativo/vouchers", label: "Vouchers", icon: CreditCard },
+    { href: "/comercial/fidelizacao", label: "Fidelização", icon: Gift, description: "Indicações e recompensas" },
   ]
 };
 
@@ -98,7 +102,10 @@ export const strategyGroup: NavGroupV2 = {
   icon: LineChart,
   items: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/gerencial/bi", label: "BI Operacional", icon: LineChart },
+    { href: "/gerencial/bi", label: "BI Operacional", icon: LineChart, exact: true },
+    { href: "/gerencial/bi/receita", label: "BI Receita", icon: TrendingUp },
+    { href: "/gerencial/bi/retencao-cohort", label: "BI Retencao Cohort", icon: Users },
+    { href: "/gerencial/bi/inadimplencia", label: "BI Inadimplencia", icon: AlertTriangle },
     { href: "/gerencial/dre", label: "DRE Mensal", icon: TrendingUp },
     { href: "/administrativo/academia", label: "Dados da Academia", icon: Settings },
     { href: "/administrativo/unidades", label: "Unidades", icon: Settings },

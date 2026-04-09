@@ -1,5 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { getBiOperacionalSnapshotApi } from "@/lib/api/bi";
+import {
+  getBiOperacionalSnapshotApi,
+  getBiReceitaApi,
+  getBiRetencaoApi,
+  getBiInadimplenciaApi,
+  type ReceitaPorPlano,
+  type RetencaoCohort,
+  type Inadimplencia,
+} from "@/lib/api/bi";
 import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
 import type { Academia, BiEscopo, BiOperationalSnapshot, BiSegmento, Tenant } from "@/lib/types";
 import { queryKeys } from "./keys";
@@ -64,6 +72,48 @@ export function useBiSnapshot(input: UseBiSnapshotInput) {
         canViewNetwork: input.canViewNetwork,
       }),
     enabled: input.enabled && Boolean(input.tenantId),
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Receita por Plano
+// ---------------------------------------------------------------------------
+
+export function useBiReceita(tenantId: string, inicio?: string, fim?: string) {
+  return useQuery<ReceitaPorPlano>({
+    queryKey: queryKeys.bi.receita(tenantId, inicio, fim),
+    queryFn: () => getBiReceitaApi({ tenantId, inicio, fim }),
+    enabled: Boolean(tenantId),
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Retencao Cohort
+// ---------------------------------------------------------------------------
+
+export function useBiRetencao(tenantId: string, meses?: number) {
+  return useQuery<RetencaoCohort>({
+    queryKey: queryKeys.bi.retencao(tenantId, meses),
+    queryFn: () => getBiRetencaoApi({ tenantId, meses }),
+    enabled: Boolean(tenantId),
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Inadimplencia
+// ---------------------------------------------------------------------------
+
+export function useBiInadimplencia(tenantId: string) {
+  return useQuery<Inadimplencia>({
+    queryKey: queryKeys.bi.inadimplencia(tenantId),
+    queryFn: () => getBiInadimplenciaApi({ tenantId }),
+    enabled: Boolean(tenantId),
     staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
   });
