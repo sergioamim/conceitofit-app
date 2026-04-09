@@ -14108,7 +14108,7 @@
         "description": "Configurar PWA para o portal do aluno com manifest.json, service worker para cache offline e prompt de instalação.",
         "details": "Implementar: (1) manifest.json com nome, ícones, theme por academia (whitelabel), (2) Service worker com cache de rotas do aluno (check-in, treinos, aulas), (3) Install prompt usando componente existente em src/components/pwa/install-prompt.tsx, (4) Offline fallback: página básica com dados cacheados, (5) ícones PWA por tamanho (192x192, 512x512) usando branding da academia. Configurar next.config.ts para gerar manifest dinâmico por subdomínio.",
         "testStrategy": "Teste E2E: Lighthouse PWA audit passa (installable, service worker, manifest). Teste offline: page carrega com dados cacheados. Teste em device real ou emulador mobile.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "461",
           "462",
@@ -14117,7 +14117,7 @@
         ],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-06T23:32:28.000Z",
+        "updatedAt": "2026-04-09T12:50:19.065Z",
         "complexity": 5
       },
       {
@@ -15006,9 +15006,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-08T19:22:22.432Z",
+      "lastModified": "2026-04-09T12:50:19.066Z",
       "taskCount": 469,
-      "completedCount": 468,
+      "completedCount": 469,
       "tags": [
         "master"
       ]
