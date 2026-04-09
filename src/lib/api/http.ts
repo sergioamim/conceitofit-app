@@ -258,7 +258,7 @@ async function performApiRequest<T>(input: {
   if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
 
   // Auth
-  const isAuthEndpoint = input.path.startsWith("/api/v1/auth/");
+  const isAuthEndpoint = input.path.startsWith("/api/v1/auth/") || input.path.startsWith("/api/v1/admin/auth/");
   const token = getAccessToken();
   if (shouldInjectAuthHeader() && token) {
     headers["Authorization"] = `${getAccessTokenType() ?? "Bearer"} ${token}`;
