@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { formatDateTimeBR } from "@/lib/utils/date-format";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   createUnidadeApi,
@@ -487,7 +488,7 @@ export function UnidadesContent() {
                 </div>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Emitida em: {new Date(credentialResult.createdAt).toLocaleString("pt-BR")}</p>
+            <p className="text-xs text-muted-foreground">Emitida em: {formatDateTimeBR(credentialResult.createdAt)}</p>
           </div>
         ) : null}
       </div>

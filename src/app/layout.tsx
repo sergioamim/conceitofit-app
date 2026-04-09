@@ -13,17 +13,20 @@ const display = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-display-face",
   weight: ["500", "600", "700"],
+  display: "swap",
 });
 
 const body = IBM_Plex_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "700"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -57,7 +60,7 @@ export default function RootLayout({
     process.env.NEXT_PUBLIC_DEBUG_REACT_SCAN === "true";
 
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR">
       <head>
         <meta name="theme-color" content="#16181c" />
         <CriticalThemeServer />
