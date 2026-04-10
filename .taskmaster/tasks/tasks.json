@@ -15231,12 +15231,13 @@
         "description": "Expor no portal do professor: /treinos/{id}/prescricao (GET/POST), /treinos/{id}/encerrar-ciclo, /treinos/{id}/clonar-para-cliente. Permite professor gerir ciclos de treino e reutilizar treinos entre alunos.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "552"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T18:44:05.433Z"
       },
       {
         "id": "541",
@@ -15423,9 +15424,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-10T18:40:03.987Z",
+      "lastModified": "2026-04-10T18:44:05.433Z",
       "taskCount": 500,
-      "completedCount": 490,
+      "completedCount": 491,
       "tags": [
         "master"
       ]

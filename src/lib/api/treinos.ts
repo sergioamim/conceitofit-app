@@ -729,6 +729,58 @@ export async function registrarExecucaoTreinoApi(input: {
   });
 }
 
+// ─── Prescrição / Ciclo de Treino (Task #540) ────────────────────────────
+
+/**
+ * Consulta a prescrição/ciclo atual do treino.
+ * GET /api/v1/treinos/{id}/prescricao — TreinoCicloService.TreinoCicloResponse.
+ */
+export async function getPrescricaoTreinoApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<import("@/lib/types").TreinoCicloResponse | null> {
+  try {
+    return await apiRequest<import("@/lib/types").TreinoCicloResponse>({
+      path: `/api/v1/treinos/${input.id}/prescricao`,
+      query: { tenantId: input.tenantId },
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cria ou atualiza a prescrição inicial do treino.
+ * POST /api/v1/treinos/{id}/prescricao — PrescricaoTreinoRequest.
+ */
+export async function criarPrescricaoTreinoApi(input: {
+  tenantId: string;
+  id: string;
+  data: import("@/lib/types").PrescricaoTreinoPayload;
+}): Promise<import("@/lib/types").TreinoCicloResponse> {
+  return apiRequest<import("@/lib/types").TreinoCicloResponse>({
+    path: `/api/v1/treinos/${input.id}/prescricao`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+}
+
+/**
+ * Encerra o ciclo/prescrição ativa do treino.
+ * POST /api/v1/treinos/{id}/encerrar-ciclo.
+ */
+export async function encerrarCicloTreinoApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<import("@/lib/types").TreinoCicloResponse> {
+  return apiRequest<import("@/lib/types").TreinoCicloResponse>({
+    path: `/api/v1/treinos/${input.id}/encerrar-ciclo`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+  });
+}
+
 /**
  * Dashboard de aderência de treinos (visão do professor).
  * GET /api/v1/treinos/aderencia — TreinoCicloService.AderenciaTreinoResponse.

@@ -234,6 +234,59 @@ export type TreinoCicloStatus =
   | "PAUSADO"
   | "CANCELADO";
 
+/**
+ * Motivos de prescrição de treino — espelha enum TreinoMotivoPrescricao do BE.
+ * Task #540.
+ */
+export type TreinoMotivoPrescricao =
+  | "INICIAL"
+  | "RENOVACAO"
+  | "AJUSTE_OBJETIVO"
+  | "POS_AVALIACAO"
+  | "IMPORTACAO"
+  | "OUTRO";
+
+/**
+ * Payload de prescrição enviado no POST /api/v1/treinos/{id}/prescricao.
+ * Espelha PrescricaoTreinoRequest do BE. Task #540.
+ */
+export interface PrescricaoTreinoPayload {
+  professorId?: UUID;
+  frequenciaPlanejadaSemana?: number;
+  quantidadePrevistaExecucoes?: number;
+  motivoPrescricao?: TreinoMotivoPrescricao;
+  observacoesPrescricao?: string;
+  dataInicio?: LocalDate;
+  dataFim?: LocalDate;
+}
+
+/**
+ * Resposta completa de ciclo/prescrição de treino.
+ * Espelha TreinoCicloResponse do BE. Task #540.
+ */
+export interface TreinoCicloResponse {
+  cicloId: UUID;
+  treinoId: UUID;
+  clienteId?: UUID;
+  professorId?: UUID;
+  templateId?: UUID;
+  templateVersaoSnapshot?: number;
+  status: TreinoCicloStatus;
+  revisaoNumero?: number;
+  frequenciaPlanejadaSemana?: number;
+  quantidadePrevistaExecucoes?: number;
+  execucoesConcluidas?: number;
+  aderenciaPercentual?: number;
+  motivoPrescricao?: TreinoMotivoPrescricao;
+  observacoesPrescricao?: string;
+  dataInicio?: LocalDate;
+  dataFim?: LocalDate;
+  cicloAnteriorId?: UUID;
+  createdAt?: LocalDateTime;
+  updatedAt?: LocalDateTime;
+  encerradoEm?: LocalDateTime;
+}
+
 export interface AderenciaTreino {
   cicloId: UUID;
   treinoId: UUID;
