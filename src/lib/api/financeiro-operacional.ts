@@ -248,13 +248,34 @@ function normalizeIntegracaoOperacional(input: IntegracaoOperacionalApiResponse)
 // Endpoints NFS-e
 // ---------------------------------------------------------------------------
 
+/**
+ * Consulta a configuração de NFS-e da unidade.
+ *
+ * ⚠️ MIGRAÇÃO EM ANDAMENTO (Task #556): O path legado
+ * `/api/v1/administrativo/nfse/configuracao-atual` não existe no backend
+ * Java atual — o BE só expõe `/api/v1/nfse/configuracoes/base` exigindo
+ * tenantId E unidadeId.
+ *
+ * Estratégia incremental: se o caller passar `unidadeId`, a função usa o
+ * path novo. Caso contrário, mantém o path legado e tolera o 404 via
+ * fallback para configuração vazia (comportamento preservado).
+ *
+ * Próxima iteração: refatorar os 5 callers para passar unidadeId e
+ * remover a rota legada. Ver docs/adr/ADR-001 seção financial (similar).
+ */
 export async function getNfseConfiguracaoAtualApi(input: {
   tenantId: string;
+  unidadeId?: string;
 }): Promise<NfseConfiguracao> {
   try {
+    const usarPathNovo = Boolean(input.unidadeId);
     const response = await apiRequest<NfseConfiguracaoApiResponse | null>({
-      path: "/api/v1/administrativo/nfse/configuracao-atual",
-      query: { tenantId: input.tenantId },
+      path: usarPathNovo
+        ? "/api/v1/nfse/configuracoes/base"
+        : "/api/v1/administrativo/nfse/configuracao-atual",
+      query: usarPathNovo
+        ? { tenantId: input.tenantId, unidadeId: input.unidadeId }
+        : { tenantId: input.tenantId },
     });
     return normalizeNfseConfiguracao(input.tenantId, response);
   } catch (error) {
