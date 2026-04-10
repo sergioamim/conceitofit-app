@@ -6,11 +6,11 @@
 
 ## Sumário
 
-- Total de endpoints extraídos (via AST): `378`
-- Apenas GET estáticos executáveis: `98`
-- Paths dinâmicos (com path params): `186` — reportados mas não executados
+- Total de endpoints extraídos (via AST): `403`
+- Apenas GET estáticos executáveis: `100`
+- Paths dinâmicos (com path params): `204` — reportados mas não executados
 - Endpoints em módulos fantasmas (ADR-001): `35` — pulados
-- Endpoints em módulos parciais: `22`
+- Endpoints em módulos parciais: `20`
 
 ## Como rodar
 
@@ -100,6 +100,11 @@ Antes de iniciar qualquer task das Waves 1-4, rodar este script com filtro dos e
 | ⏸️ skipped | GET | `/api/v1/app-cliente/referral` | `app-cliente.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/app-cliente/referral` | `app-cliente.ts` | - |  |
 | ⏸️ skipped | GET | `/api/v1/app-cliente/rewards` | `app-cliente.ts` | - |  |
+| ⏸️ skipped | POST | `{param}/classificar-intencao` | `atendimento-ai.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `{param}/proxima-acao` | `atendimento-ai.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `{param}/resumir` | `atendimento-ai.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `{param}/sugerir-resposta` | `atendimento-ai.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `{param}/sugerir-roteamento` | `atendimento-ai.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | POST | `/api/v1/admin/auth/login` | `auth.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/auth/change-password` | `auth.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/auth/context/tenant` | `auth.ts` | - |  |
@@ -146,6 +151,7 @@ Antes de iniciar qualquer task das Waves 1-4, rodar este script com filtro dos e
 | ⏸️ skipped | PATCH | `/api/v1/comercial/cartoes/{param}/padrao` | `cartoes.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | GET | `/api/v1/gerencial/catraca/acessos/dashboard` | `catraca.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/integracoes/catraca/credenciais` | `catraca.ts` | - |  |
+| ⏸️ skipped | POST | `/api/v1/integracoes/catraca/faces/sync` | `catraca.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/integracoes/catraca/ws/commands/grant` | `catraca.ts` | - |  |
 | ⏸️ skipped | GET | `/api/v1/integracoes/catraca/ws/status` | `catraca.ts` | - |  |
 | ⏸️ skipped | GET | `/api/v1/integracoes/catraca/ws/status/{param}` | `catraca.ts` | - | path dinâmico (skip runtime) |
@@ -166,6 +172,8 @@ Antes de iniciar qualquer task das Waves 1-4, rodar este script com filtro dos e
 | ⏸️ skipped | PUT | `/api/v1/comercial/servicos/{param}` | `comercial-catalogo.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | DELETE | `/api/v1/comercial/servicos/{param}` | `comercial-catalogo.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | PATCH | `/api/v1/comercial/servicos/{param}/toggle` | `comercial-catalogo.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | GET | `/api/v1/gerencial/financeiro/conciliacao-bancaria/dashboard` | `conciliacao-bancaria.ts` | - |  |
+| ⏸️ skipped | POST | `/api/v1/gerencial/financeiro/conciliacao-bancaria/importar-ofx` | `conciliacao-bancaria.ts` | - |  |
 | ⏸️ skipped | GET | `/api/v1/gerencial/financeiro/conciliacao-bancaria/linhas` | `conciliacao-bancaria.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/gerencial/financeiro/conciliacao-bancaria/linhas` | `conciliacao-bancaria.ts` | - |  |
 | ⏸️ skipped | PATCH | `/api/v1/gerencial/financeiro/conciliacao-bancaria/linhas/{param}/conciliar` | `conciliacao-bancaria.ts` | - | path dinâmico (skip runtime) |
@@ -292,20 +300,18 @@ Antes de iniciar qualquer task das Waves 1-4, rodar este script com filtro dos e
 | ⚠️ partial | POST | `/api/v1/financial/ledgers` | `financial.ts` | - |  |
 | ⚠️ partial | GET | `/api/v1/financial/ledgers/{param}` | `financial.ts` | - | path dinâmico (skip runtime) |
 | ⚠️ partial | PATCH | `/api/v1/financial/ledgers/{param}/close` | `financial.ts` | - | path dinâmico (skip runtime) |
-| ⚠️ partial | GET | `/api/v1/financial/ledgers/{param}/entries` | `financial.ts` | - | path dinâmico (skip runtime) |
 | ⚠️ partial | POST | `/api/v1/financial/ledgers/{param}/entries` | `financial.ts` | - | path dinâmico (skip runtime) |
-| ⚠️ partial | GET | `/api/v1/financial/monitoring/high-frequency` | `financial.ts` | - |  |
-| ⚠️ partial | GET | `/api/v1/financial/monitoring/patterns` | `financial.ts` | - |  |
-| ⚠️ partial | GET | `/api/v1/financial/monitoring/suspicious` | `financial.ts` | - |  |
-| ⚠️ partial | GET | `/api/v1/financial/reports/balanco` | `financial.ts` | - |  |
-| ⚠️ partial | GET | `/api/v1/financial/reports/extrato/{param}` | `financial.ts` | - | path dinâmico (skip runtime) |
-| ⚠️ partial | GET | `/api/v1/financial/reports/fluxo-caixa` | `financial.ts` | - |  |
+| ⚠️ partial | GET | `/api/v1/financial/monitoring/high-frequency/{param}` | `financial.ts` | - | path dinâmico (skip runtime) |
+| ⚠️ partial | GET | `/api/v1/financial/monitoring/high-value/{param}` | `financial.ts` | - | path dinâmico (skip runtime) |
+| ⚠️ partial | GET | `/api/v1/financial/monitoring/suspicious-transactions` | `financial.ts` | - |  |
+| ⚠️ partial | GET | `/api/v1/financial/monitoring/unusual-patterns/{param}` | `financial.ts` | - | path dinâmico (skip runtime) |
 | ⚠️ partial | GET | `/api/v1/financial/transactions` | `financial.ts` | - |  |
 | ⚠️ partial | POST | `/api/v1/financial/transactions` | `financial.ts` | - |  |
 | ⚠️ partial | GET | `/api/v1/financial/transactions/{param}` | `financial.ts` | - | path dinâmico (skip runtime) |
 | ⚠️ partial | PATCH | `/api/v1/financial/transactions/{param}/cancel` | `financial.ts` | - | path dinâmico (skip runtime) |
 | ⚠️ partial | PATCH | `/api/v1/financial/transactions/{param}/confirm` | `financial.ts` | - | path dinâmico (skip runtime) |
 | ⚠️ partial | POST | `/api/v1/financial/transactions/{param}/reverse` | `financial.ts` | - | path dinâmico (skip runtime) |
+| ⚠️ partial | GET | `/api/v1/relatorios/fluxo-caixa` | `financial.ts` | - |  |
 | ⏸️ skipped | GET | `/api/v1/gerencial/financeiro/formas-pagamento` | `formas-pagamento.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/gerencial/financeiro/formas-pagamento` | `formas-pagamento.ts` | - |  |
 | ⏸️ skipped | PUT | `/api/v1/gerencial/financeiro/formas-pagamento/{param}` | `formas-pagamento.ts` | - | path dinâmico (skip runtime) |
@@ -321,6 +327,11 @@ Antes de iniciar qualquer task das Waves 1-4, rodar este script com filtro dos e
 | ⏸️ skipped | GET | `/api/v1/admin/integracoes/importacao-terceiros/jobs/{param}/p0` | `importacao-evo.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | GET | `/api/v1/admin/integracoes/importacao-terceiros/jobs/{param}/rejeicoes` | `importacao-evo.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | GET | `/api/v1/admin/integracoes/importacao-terceiros/jobs/{param}/rejeicoes` | `importacao-evo.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `/api/v1/integracoes/agregadores/{param}/booking/classes/publicar` | `integracoes-agregadores.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `/api/v1/integracoes/agregadores/{param}/booking/slots/publicar` | `integracoes-agregadores.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | GET | `/api/v1/integracoes/agregadores/{param}/status` | `integracoes-agregadores.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `/api/v1/integracoes/agregadores/{param}/validate` | `integracoes-agregadores.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `/api/v1/integracoes/agregadores/{param}/webhooks/{param}/reprocessar` | `integracoes-agregadores.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | GET | `/api/v1/gerencial/financeiro/maquininhas` | `maquininhas.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/gerencial/financeiro/maquininhas` | `maquininhas.ts` | - |  |
 | ⏸️ skipped | PUT | `/api/v1/gerencial/financeiro/maquininhas/{param}` | `maquininhas.ts` | - | path dinâmico (skip runtime) |
@@ -330,6 +341,11 @@ Antes de iniciar qualquer task das Waves 1-4, rodar este script com filtro dos e
 | ⏸️ skipped | POST | `/api/v1/comercial/matriculas/{param}/contrato/assinar` | `matriculas.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | POST | `/api/v1/comercial/matriculas/{param}/renovar` | `matriculas.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | GET | `/api/v1/comercial/matriculas/dashboard-mensal` | `matriculas.ts` | - |  |
+| ⏸️ skipped | GET | `/api/v1/nfse/resumo` | `nfse.ts` | - |  |
+| ⏸️ skipped | GET | `/api/v1/nfse/solicitacoes` | `nfse.ts` | - |  |
+| ⏸️ skipped | POST | `/api/v1/nfse/solicitacoes/{param}/cancelar` | `nfse.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | GET | `/api/v1/nfse/solicitacoes/{param}/eventos` | `nfse.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `/api/v1/nfse/solicitacoes/{param}/retry` | `nfse.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | GET | `/api/v1/notificacoes/eventos` | `notificacoes.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/notificacoes/outbox/{param}/reenviar` | `notificacoes.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | GET | `/api/v1/notificacoes/preferencias` | `notificacoes.ts` | - |  |
@@ -393,13 +409,22 @@ Antes de iniciar qualquer task das Waves 1-4, rodar este script com filtro dos e
 | ⏸️ skipped | PUT | `/api/v1/treinos/{param}` | `treinos.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | POST | `/api/v1/treinos/{param}/duplicar-template` | `treinos.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | POST | `/api/v1/treinos/{param}/encerrar-ciclo` | `treinos.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `/api/v1/treinos/{param}/encerrar-ciclo` | `treinos.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | POST | `/api/v1/treinos/{param}/execucoes` | `treinos.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | GET | `/api/v1/treinos/{param}/prescricao` | `treinos.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `/api/v1/treinos/{param}/prescricao` | `treinos.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | PATCH | `/api/v1/treinos/{param}/renovar` | `treinos.ts` | - | path dinâmico (skip runtime) |
 | ⏸️ skipped | POST | `/api/v1/treinos/{param}/revisar` | `treinos.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | GET | `/api/v1/treinos/aderencia` | `treinos.ts` | - |  |
 | ⏸️ skipped | GET | `/api/v1/treinos/templates` | `treinos.ts` | - |  |
 | ⏸️ skipped | GET | `/api/v1/comercial/vendas` | `vendas.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/comercial/vendas` | `vendas.ts` | - |  |
 | ⏸️ skipped | GET | `/api/v1/comercial/vendas/{param}` | `vendas.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | GET | `/api/v1/visitantes` | `visitantes.ts` | - |  |
+| ⏸️ skipped | POST | `/api/v1/visitantes` | `visitantes.ts` | - |  |
+| ⏸️ skipped | DELETE | `/api/v1/visitantes/{param}` | `visitantes.ts` | - | path dinâmico (skip runtime) |
+| ⏸️ skipped | POST | `/api/v1/visitantes/entrada` | `visitantes.ts` | - |  |
+| ⏸️ skipped | POST | `/api/v1/visitantes/validar` | `visitantes.ts` | - |  |
 | ⏸️ skipped | GET | `/api/v1/whatsapp/credentials` | `whatsapp-credentials.ts` | - |  |
 | ⏸️ skipped | POST | `/api/v1/whatsapp/credentials` | `whatsapp-credentials.ts` | - |  |
 | ⏸️ skipped | PUT | `/api/v1/whatsapp/credentials/{param}` | `whatsapp-credentials.ts` | - | path dinâmico (skip runtime) |
