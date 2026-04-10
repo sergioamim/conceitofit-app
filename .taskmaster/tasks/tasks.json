@@ -15376,17 +15376,18 @@
         "description": "Wave 0.3 saneamento. Criar runbook automatizado que valida todos os ~227 paths consumidos por src/lib/api/ contra o backend em staging. Transforma 'BE done' em evidencia mensuravel. Vira exit-gate das Waves 1-4.",
         "details": "Contexto: Tasks atuais afirmam BE done sem evidencia de runtime validado end-to-end. Audit (2026-03-28) mapeou ~227 paths consumidos pelo FE, mas nao ha validacao de que respondem 2xx em staging. Escopo: (1) Script scripts/smoke-test-be-fe.ts que itera sobre src/lib/api/*.ts e extrai (path, metodo HTTP) de cada chamada. (2) Executor que bate cada endpoint contra BACKEND_PROXY_TARGET (staging) com usuario+tenant de teste, capturando status HTTP, tempo e payload de erro. (3) Relatorio docs/SMOKE_TEST_BE_FE_MATRIX.md com colunas: endpoint | metodo | status | tempo_ms | nota. (4) Workflow GitHub Actions opcional que roda contra staging (nao bloqueia PR, so reporta). (5) Documentar exit criteria nas Waves 1-4: nenhum endpoint da wave pode estar 5xx ou 404 antes de comecar. Exclusao: nao cobrir os modulos fantasma da task 551 (ja sao conhecidos 404). Referencia de padrao: tests/e2e/atendimento-inbox.spec.ts (task 516) ja usa BACKEND_PROXY_TARGET. Deliverables: script + matriz inicial versionada + workflow CI + exit criteria documentado em cada Wave.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T15:20:54.622Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-10T15:17:17.914Z",
+      "lastModified": "2026-04-10T15:20:54.623Z",
       "taskCount": 497,
-      "completedCount": 484,
+      "completedCount": 485,
       "tags": [
         "master"
       ]
