@@ -15245,12 +15245,13 @@
         "description": "Criar pagina /administrativo/visitantes consumindo /api/v1/visitantes: cadastro (POST), lista (GET), validar documento (POST /validar), registrar entrada (POST /entrada), remover (DELETE). Integrar com catraca via CatracaFaceSyncController (/api/v1/integracoes/catraca/faces/sync) para sincronizar foto do visitante.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "552"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T18:53:36.851Z"
       },
       {
         "id": "542",
@@ -15269,10 +15270,11 @@
         "description": "Criar /administrativo/nfse/operacao consumindo endpoints ja existentes: GET /solicitacoes (lista com filtros), POST /solicitacoes/{id}/retry (retry manual), GET /solicitacoes/{id}/eventos (timeline), POST /solicitacoes/{id}/cancelar, GET /resumo (metricas mensais). Hoje so ha pagina de configuracao, sem operacao.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T18:56:09.053Z"
       },
       {
         "id": "544",
@@ -15426,9 +15428,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-10T18:50:40.314Z",
+      "lastModified": "2026-04-10T18:56:09.053Z",
       "taskCount": 500,
-      "completedCount": 493,
+      "completedCount": 495,
       "tags": [
         "master"
       ]
