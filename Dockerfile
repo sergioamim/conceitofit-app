@@ -49,10 +49,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
-EXPOSE 8080
+EXPOSE 3000
 
+# Usa 127.0.0.1 (IPv4) em vez de localhost para evitar resolucao IPv6 ([::1])
+# que falha com "Connection refused" porque Next.js standalone bind apenas IPv4.
+# Porta 3000 alinhada com PORT env var padrao do Next.js.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
 # O standalone server do Next.js é iniciado via node server.js
 CMD ["node", "server.js"]
