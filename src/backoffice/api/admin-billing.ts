@@ -180,10 +180,35 @@ function extractItems<T>(response: AnyListResponse<T>): T[] {
 }
 
 function normalizeFeatures(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => cleanString(item))
-    .filter((item): item is string => Boolean(item));
+  // Backend persiste como String (JSON serializado). Pode vir como:
+  // - String JSON: '["feat1","feat2"]'
+  // - String separada por \n ou ,
+  // - Array direto (compat)
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => cleanString(item))
+      .filter((item): item is string => Boolean(item));
+  }
+  if (typeof value === "string" && value.trim()) {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map((item) => cleanString(item))
+            .filter((item): item is string => Boolean(item));
+        }
+      } catch {
+        // ignora, cai para split
+      }
+    }
+    return trimmed
+      .split(/[\n,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
 }
 
 function normalizeIds(value: unknown): string[] {
@@ -226,6 +251,11 @@ function normalizePlanoPlataforma(
 }
 
 function buildPlanoPayload(data: PlanoPlataformaPayload): Record<string, unknown> {
+  // Backend espera featuresIncluidas como String (nao array).
+  // Serializamos como JSON para persistencia e parse bidirecional.
+  const featuresAsString = Array.isArray(data.featuresIncluidas)
+    ? JSON.stringify(data.featuresIncluidas)
+    : (data.featuresIncluidas ?? "[]");
   return {
     nome: cleanString(data.nome) ?? "",
     descricao: cleanString(data.descricao),
@@ -234,7 +264,7 @@ function buildPlanoPayload(data: PlanoPlataformaPayload): Record<string, unknown
     ciclo: data.ciclo,
     maxUnidades: data.maxUnidades,
     maxAlunos: data.maxAlunos,
-    featuresIncluidas: data.featuresIncluidas,
+    featuresIncluidas: featuresAsString,
     ativo: data.ativo,
   };
 }
