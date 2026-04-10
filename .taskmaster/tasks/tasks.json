@@ -15217,12 +15217,13 @@
         "description": "Expor endpoints /treinos/{id}/execucoes para o aluno marcar series/reps/carga realizados na area /meus-treinos. Adicionar dashboard de aderencia (/treinos/aderencia) para o professor acompanhar. Ja existe backend completo; FE precisa consumir.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "552"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T18:40:03.986Z"
       },
       {
         "id": "540",
@@ -15339,12 +15340,13 @@
         "description": "Criar /gerencial/monitoramento consumindo /api/v1/financial/monitoring: suspicious-transactions, high-value/{tenantId}, high-frequency/{tenantId}, unusual-patterns/{tenantId}. Exibir alertas em tempo real com filtros por severidade e acoes (investigar, marcar OK, escalar).",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "552"
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T18:34:48.883Z"
       },
       {
         "id": "550",
@@ -15421,9 +15423,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-10T18:30:34.194Z",
+      "lastModified": "2026-04-10T18:40:03.987Z",
       "taskCount": 500,
-      "completedCount": 488,
+      "completedCount": 490,
       "tags": [
         "master"
       ]

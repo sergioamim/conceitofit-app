@@ -88,7 +88,7 @@ export interface TreinoExecucaoApiResponse {
   treinoId: string;
   alunoId?: string | null;
   data: string;
-  status: "CONCLUIDA" | "PARCIAL" | "PULADA";
+  status: "INICIADA" | "CONCLUIDA" | "PARCIAL" | "ABANDONADA" | "CANCELADA";
   observacao?: string | null;
   cargaMedia?: number | null;
   createdAt?: string | null;
@@ -716,7 +716,9 @@ export async function registrarExecucaoTreinoApi(input: {
     data?: string;
     observacao?: string;
     cargaMedia?: number;
-    status?: "CONCLUIDA" | "PARCIAL" | "PULADA";
+    status?: "INICIADA" | "CONCLUIDA" | "PARCIAL" | "ABANDONADA" | "CANCELADA";
+    iniciadaEm?: string;
+    finalizadaEm?: string;
   };
 }): Promise<TreinoApiResponse> {
   return apiRequest<TreinoApiResponse>({
@@ -725,4 +727,34 @@ export async function registrarExecucaoTreinoApi(input: {
     query: { tenantId: input.tenantId },
     body: input.data,
   });
+}
+
+/**
+ * Dashboard de aderência de treinos (visão do professor).
+ * GET /api/v1/treinos/aderencia — TreinoCicloService.AderenciaTreinoResponse.
+ * Task #539.
+ */
+export async function listAderenciaTreinosApi(input: {
+  tenantId: string;
+  clienteId?: string;
+  professorId?: string;
+  status?: "ATIVO" | "ENCERRADO" | "PAUSADO" | "CANCELADO";
+}): Promise<import("@/lib/types").AderenciaTreino[]> {
+  const response = await apiRequest<unknown>({
+    path: "/api/v1/treinos/aderencia",
+    query: {
+      tenantId: input.tenantId,
+      clienteId: input.clienteId,
+      professorId: input.professorId,
+      status: input.status,
+    },
+  });
+  if (Array.isArray(response)) {
+    return response as import("@/lib/types").AderenciaTreino[];
+  }
+  const list = (response as { items?: unknown; data?: unknown; content?: unknown })?.items ??
+    (response as { data?: unknown })?.data ??
+    (response as { content?: unknown })?.content ??
+    [];
+  return (Array.isArray(list) ? list : []) as import("@/lib/types").AderenciaTreino[];
 }

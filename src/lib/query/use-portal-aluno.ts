@@ -106,7 +106,8 @@ export function useRegistrarExecucaoTreino() {
     mutationFn: (input: {
       tenantId: string;
       id: string;
-      status: "CONCLUIDA" | "PARCIAL" | "PULADA";
+      // Task #539: alinhado com TreinoExecucaoStatus do BE
+      status: "INICIADA" | "CONCLUIDA" | "PARCIAL" | "ABANDONADA" | "CANCELADA";
       observacao?: string;
     }) => registrarExecucaoTreinoWorkspace(input),
     onSuccess: () => {

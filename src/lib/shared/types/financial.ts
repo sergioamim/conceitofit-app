@@ -181,3 +181,20 @@ export interface AltaFrequencia {
   valorTotal: number;
   severidade: MonitorAlertSeverity;
 }
+
+/**
+ * Transacao individual de alto valor detectada pelo BE
+ * (GET /api/v1/financial/monitoring/high-value/{tenantId}).
+ * Usada no painel anti-fraude (Task #549).
+ */
+export interface AltoValor {
+  id: UUID;
+  transacaoId: UUID;
+  descricao: string;
+  valor: number;
+  data: LocalDate;
+  tipo?: string;
+  contaCodigo?: string;
+  contaNome?: string;
+  severidade: MonitorAlertSeverity;
+}

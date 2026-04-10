@@ -24,6 +24,7 @@
  */
 import type {
   AltaFrequencia,
+  AltoValor,
   BalancoPatrimonial,
   ExtratoConta,
   FinancialAccount,
@@ -378,4 +379,17 @@ export async function listAltaFrequenciaApi(opts: {
     path: `/api/v1/financial/monitoring/high-frequency/${opts.tenantId}`,
   });
   return extractList<AltaFrequencia>(response);
+}
+
+/**
+ * Lista transacoes de alto valor detectadas pelo monitoramento anti-fraude.
+ * Adicionado na Task #549.
+ */
+export async function listAltoValorApi(opts: {
+  tenantId: string;
+}): Promise<AltoValor[]> {
+  const response = await apiRequest<unknown>({
+    path: `/api/v1/financial/monitoring/high-value/${opts.tenantId}`,
+  });
+  return extractList<AltoValor>(response);
 }

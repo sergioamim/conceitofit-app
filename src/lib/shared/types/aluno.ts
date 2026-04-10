@@ -202,13 +202,52 @@ export interface TreinoRevisao {
   criadoEm: LocalDateTime;
 }
 
+// Task #539: alinhado ao enum TreinoExecucaoStatus do backend Java
+// (INICIADA, CONCLUIDA, PARCIAL, ABANDONADA, CANCELADA). PULADA foi
+// renomeada para ABANDONADA para bater com o DTO.
+export type TreinoExecucaoStatus =
+  | "INICIADA"
+  | "CONCLUIDA"
+  | "PARCIAL"
+  | "ABANDONADA"
+  | "CANCELADA";
+
 export interface TreinoExecucao {
   id: UUID;
   treinoId: UUID;
   alunoId?: UUID;
   data: LocalDate;
-  status: "CONCLUIDA" | "PARCIAL" | "PULADA";
+  status: TreinoExecucaoStatus;
   observacao?: string;
   cargaMedia?: number;
   criadoEm: LocalDateTime;
+}
+
+/**
+ * Resposta do endpoint GET /api/v1/treinos/aderencia (dashboard de aderência
+ * para professor). Espelha TreinoCicloService.AderenciaTreinoResponse do BE.
+ * Task #539.
+ */
+export type TreinoCicloStatus =
+  | "ATIVO"
+  | "ENCERRADO"
+  | "PAUSADO"
+  | "CANCELADO";
+
+export interface AderenciaTreino {
+  cicloId: UUID;
+  treinoId: UUID;
+  treinoNome?: string;
+  clienteId: UUID;
+  clienteNome?: string;
+  professorId?: UUID;
+  professorNome?: string;
+  status: TreinoCicloStatus;
+  revisaoNumero?: number;
+  frequenciaPlanejadaSemana?: number;
+  quantidadePrevistaExecucoes?: number;
+  execucoesConcluidas: number;
+  aderenciaPercentual?: number;
+  dataInicio?: LocalDate;
+  dataFim?: LocalDate;
 }
