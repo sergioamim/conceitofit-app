@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
+const YAML = require("yaml");
 
 const repoRoot = process.cwd();
 const apiDir = path.join(repoRoot, "src/lib/api");
@@ -42,66 +43,49 @@ function readSourceFiles(directory) {
 }
 
 function parseOpenApiSpec(content) {
-  const lines = content.split(/\r?\n/);
+  // Usa lib yaml em vez de regex linha-a-linha. O parser antigo assumia
+  // indentacao 2-spaces e nao casava com o formato atual do openapi.yaml
+  // do backend (Task #555).
+  //
+  // uniqueKeys: false tolera chaves duplicadas (o openapi.yaml do backend
+  // tem uma duplicacao conhecida em /api/v1/admin/onboarding/provision -
+  // bug do spec a ser reportado, mas nao deve quebrar o audit).
+  const doc = YAML.parse(content, { uniqueKeys: false, logLevel: "silent" });
+  if (!doc || typeof doc !== "object" || !doc.paths) {
+    return [];
+  }
+
   const operations = [];
-  let inPaths = false;
-  let currentPath = null;
-  let currentMethod = null;
-  let currentHasTenantQuery = false;
-  let currentBlock = [];
+  const HTTP_METHODS = new Set(["get", "post", "put", "patch", "delete"]);
 
-  const flushOperation = () => {
-    if (currentPath && currentMethod) {
-      operations.push({
-        method: currentMethod,
-        path: currentPath,
-        normalizedPath: normalizePath(currentPath),
-        hasTenantQuery: currentHasTenantQuery,
-        block: currentBlock.join("\n"),
+  for (const [pathname, pathItem] of Object.entries(doc.paths)) {
+    if (!pathItem || typeof pathItem !== "object") continue;
+
+    for (const [method, operation] of Object.entries(pathItem)) {
+      if (!HTTP_METHODS.has(method.toLowerCase())) continue;
+      if (!operation || typeof operation !== "object") continue;
+
+      const parameters = Array.isArray(operation.parameters) ? operation.parameters : [];
+      const hasTenantQuery = parameters.some((param) => {
+        if (!param || typeof param !== "object") return false;
+        // Ref parameter: { $ref: '#/components/parameters/TenantIdQuery' }
+        if (typeof param.$ref === "string" && param.$ref.includes("TenantIdQuery")) {
+          return true;
+        }
+        // Inline parameter: { name: 'tenantId', in: 'query' }
+        return param.name === "tenantId" && param.in === "query";
       });
-    }
-    currentMethod = null;
-    currentHasTenantQuery = false;
-    currentBlock = [];
-  };
 
-  for (const line of lines) {
-    if (/^paths:\s*$/.test(line)) {
-      inPaths = true;
-      continue;
-    }
-
-    if (/^components:\s*$/.test(line)) {
-      flushOperation();
-      inPaths = false;
-      currentPath = null;
-      continue;
-    }
-
-    if (!inPaths) continue;
-
-    const pathMatch = line.match(/^  (\/[^:]+):\s*$/);
-    if (pathMatch) {
-      flushOperation();
-      currentPath = pathMatch[1];
-      continue;
-    }
-
-    const methodMatch = line.match(/^    (get|post|put|patch|delete):\s*$/);
-    if (methodMatch) {
-      flushOperation();
-      currentMethod = methodMatch[1].toUpperCase();
-      continue;
-    }
-
-    if (!currentMethod) continue;
-    currentBlock.push(line);
-    if (line.includes("#/components/parameters/TenantIdQuery")) {
-      currentHasTenantQuery = true;
+      operations.push({
+        method: method.toUpperCase(),
+        path: pathname,
+        normalizedPath: normalizePath(pathname),
+        hasTenantQuery,
+        block: "",
+      });
     }
   }
 
-  flushOperation();
   return operations;
 }
 

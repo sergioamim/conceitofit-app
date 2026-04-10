@@ -1,28 +1,26 @@
 /**
- * ⚠️ MÓDULO PARCIALMENTE DESALINHADO — Financial (contas contábeis)
+ * Financial (contas contábeis) — reconciliado com backend real (Task #553).
  *
- * Em 2026-04-10, o backend Java implementa AccountApi/TransactionApi/LedgerApi/
- * ReportApi/MonitoringController em `/api/v1/financial/*`, mas vários paths
- * divergem do que este arquivo chama:
+ * Paths alinhados com o backend Java em 2026-04-10:
  *
- *   FE                                    →  BE real
- *   ─────────────────────────────────────────────────────────────────
- *   /ledgers/{id}/entries                 →  /ledger-entries?ledgerId=
- *   /monitoring/suspicious                →  /monitoring/suspicious-transactions
- *   /monitoring/patterns                  →  /monitoring/unusual-patterns/{id}
- *   /monitoring/high-frequency            →  /monitoring/high-frequency/{id}
- *   /reports/balanco                      →  (não existe)
- *   /reports/fluxo-caixa                  →  (não existe)
- *   /reports/extrato/{contaId}            →  (não existe)
+ *   FE                                           →  BE real
+ *   ────────────────────────────────────────────────────────────────────────
+ *   /financial/accounts                          →  AccountApi                 ✅
+ *   /financial/transactions                      →  TransactionApi             ✅
+ *   /financial/ledgers                           →  LedgerApi                  ✅
+ *   /financial/ledger-entries?tenantId=          →  LedgerEntryApi.list        ✅ (Task #553)
+ *   /financial/monitoring/suspicious-transactions →  MonitoringController      ✅ (Task #553)
+ *   /financial/monitoring/unusual-patterns/{id}  →  MonitoringController      ✅ (Task #553)
+ *   /financial/monitoring/high-frequency/{id}    →  MonitoringController      ✅ (Task #553)
+ *   /api/v1/relatorios/fluxo-caixa               →  RelatorioFinanceiroCtrl    ✅ (Task #553)
  *
- * Os demais paths (accounts, transactions, ledgers list, reports roi/category)
- * estão alinhados e funcionam.
+ * Endpoints ainda não implementados no BE (retornam estrutura vazia com warning):
+ *   ❌ BalancoPatrimonial  — BE não expõe; getBalancoPatrimonialApi retorna vazio
+ *   ❌ ExtratoConta        — BE não expõe; getExtratoContaApi retorna vazio
  *
- * Status formalizado em ADR-001: **não deletar**. Task futura reconciliará os
- * paths divergentes e decidirá o destino dos reports missing.
+ * Para validar: `node scripts/smoke-test-be-fe.mjs --filter=financial`
  *
- * @see docs/adr/ADR-001-modulos-fe-fantasma.md
- * @see docs/API_AUDIT_BACKEND_VS_FRONTEND.md seção A e B
+ * @see docs/adr/ADR-001-modulos-fe-fantasma.md seção 2
  */
 import type {
   AltaFrequencia,
@@ -173,12 +171,26 @@ export async function closeLedgerApi(id: string): Promise<Ledger> {
 // Ledger Entries
 // ---------------------------------------------------------------------------
 
-export async function listLedgerEntriesApi(ledgerId: string, opts?: {
+/**
+ * Lista entradas de ledger. BE não expõe "entradas por ledger" — só por tenant,
+ * conta ou transação. A filtragem por ledger (via data do lançamento) é feita
+ * client-side no componente consumidor.
+ *
+ * Assinatura mudou em Task #553: agora requer tenantId. O ledgerId opcional
+ * é mantido apenas para compatibilidade semântica (o caller pode filtrar
+ * client-side se precisar).
+ */
+export async function listLedgerEntriesApi(opts: {
+  tenantId: string;
   contaId?: string;
 }): Promise<LedgerEntry[]> {
+  // Se contaId for informado, usa endpoint by-account (mais eficiente)
+  const path = opts.contaId
+    ? `/api/v1/financial/ledger-entries/by-account/${opts.contaId}`
+    : "/api/v1/financial/ledger-entries";
   const response = await apiRequest<unknown>({
-    path: `/api/v1/financial/ledgers/${ledgerId}/entries`,
-    query: { contaId: opts?.contaId },
+    path,
+    query: { tenantId: opts.tenantId },
   });
   return extractList<LedgerEntry>(response).map((item) => ({
     ...item,
@@ -281,38 +293,53 @@ export async function cancelTransactionApi(id: string, data?: {
 // Reports
 // ---------------------------------------------------------------------------
 
-export async function getBalancoPatrimonialApi(opts?: {
+/**
+ * BE ainda não expõe balanço patrimonial. Retorna estrutura vazia + warning
+ * para que a UI possa renderizar estado "sem dados" sem quebrar.
+ *
+ * Acompanha ADR-001 e Task #553. Ativar quando o endpoint for implementado.
+ */
+export async function getBalancoPatrimonialApi(_opts?: {
   tenantId?: string;
   dataBase?: string;
 }): Promise<BalancoPatrimonial> {
-  const response = await apiRequest<Envelope<BalancoPatrimonial>>({
-    path: "/api/v1/financial/reports/balanco",
-    query: { tenantId: opts?.tenantId, dataBase: opts?.dataBase },
-  });
-  return extract(response);
+  if (typeof console !== "undefined") {
+    console.warn(
+      "[financial.getBalancoPatrimonialApi] Endpoint não implementado no backend. Retornando estrutura vazia."
+    );
+  }
+  return {} as BalancoPatrimonial;
 }
 
+/**
+ * Fluxo de caixa consome `/api/v1/relatorios/fluxo-caixa` (RelatorioFinanceiroController),
+ * prefixo diferente do resto do módulo financeiro. Migrado em Task #553.
+ */
 export async function getFluxoCaixaApi(opts?: {
   tenantId?: string;
   startDate?: string;
   endDate?: string;
 }): Promise<FluxoCaixa> {
   const response = await apiRequest<Envelope<FluxoCaixa>>({
-    path: "/api/v1/financial/reports/fluxo-caixa",
+    path: "/api/v1/relatorios/fluxo-caixa",
     query: { tenantId: opts?.tenantId, startDate: opts?.startDate, endDate: opts?.endDate },
   });
   return extract(response);
 }
 
-async function getExtratoContaApi(contaId: string, opts?: {
+/**
+ * BE ainda não expõe extrato por conta. Retorna estrutura vazia + warning.
+ */
+async function getExtratoContaApi(_contaId: string, _opts?: {
   startDate?: string;
   endDate?: string;
 }): Promise<ExtratoConta> {
-  const response = await apiRequest<Envelope<ExtratoConta>>({
-    path: `/api/v1/financial/reports/extrato/${contaId}`,
-    query: { startDate: opts?.startDate, endDate: opts?.endDate },
-  });
-  return extract(response);
+  if (typeof console !== "undefined") {
+    console.warn(
+      "[financial.getExtratoContaApi] Endpoint não implementado no backend. Retornando estrutura vazia."
+    );
+  }
+  return {} as ExtratoConta;
 }
 
 // ---------------------------------------------------------------------------
@@ -324,7 +351,7 @@ export async function listTransacoesSuspeitasApi(opts?: {
   revisada?: boolean;
 }): Promise<TransacaoSuspeita[]> {
   const response = await apiRequest<unknown>({
-    path: "/api/v1/financial/monitoring/suspicious",
+    path: "/api/v1/financial/monitoring/suspicious-transactions",
     query: {
       tenantId: opts?.tenantId,
       revisada: opts?.revisada != null ? String(opts.revisada) : undefined,
@@ -333,22 +360,22 @@ export async function listTransacoesSuspeitasApi(opts?: {
   return extractList<TransacaoSuspeita>(response);
 }
 
-export async function listPadroesIncomunsApi(opts?: {
-  tenantId?: string;
+export async function listPadroesIncomunsApi(opts: {
+  tenantId: string;
 }): Promise<PadraoIncomum[]> {
+  // BE usa path param (UUID), não query param.
   const response = await apiRequest<unknown>({
-    path: "/api/v1/financial/monitoring/patterns",
-    query: { tenantId: opts?.tenantId },
+    path: `/api/v1/financial/monitoring/unusual-patterns/${opts.tenantId}`,
   });
   return extractList<PadraoIncomum>(response);
 }
 
-export async function listAltaFrequenciaApi(opts?: {
-  tenantId?: string;
+export async function listAltaFrequenciaApi(opts: {
+  tenantId: string;
 }): Promise<AltaFrequencia[]> {
+  // BE usa path param (UUID), não query param.
   const response = await apiRequest<unknown>({
-    path: "/api/v1/financial/monitoring/high-frequency",
-    query: { tenantId: opts?.tenantId },
+    path: `/api/v1/financial/monitoring/high-frequency/${opts.tenantId}`,
   });
   return extractList<AltaFrequencia>(response);
 }

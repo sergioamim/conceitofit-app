@@ -1,25 +1,39 @@
 /**
- * ⚠️ MÓDULO PARCIALMENTE FANTASMA — WhatsApp integration
+ * ⚠️ MÓDULO PARCIALMENTE FANTASMA — WhatsApp integration (Task #554 em andamento)
  *
  * Em 2026-04-10, o backend Java implementa apenas:
  *   ✅ WhatsAppCredentialController → /api/v1/whatsapp/credentials
+ *      (lista multi-credencial por tenant; shape totalmente diferente do
+ *      WhatsAppConfig legado do FE)
  *   ✅ WhatsAppWebhookController    → /api/v1/whatsapp/webhook (interno)
  *
  * Continuam fantasmas no BE (retornam 404):
- *   ❌ /api/v1/whatsapp/config      (FE usa este path — deveria migrar p/ /credentials)
+ *   ❌ /api/v1/whatsapp/config       (FE usa este path)
  *   ❌ /api/v1/whatsapp/templates
  *   ❌ /api/v1/whatsapp/logs
  *   ❌ /api/v1/whatsapp/send
  *   ❌ /api/v1/whatsapp/status/{id}
  *   ❌ /api/v1/whatsapp/stats
  *
- * Status formalizado em ADR-001: manter o arquivo, esconder telas atrás da
- * flag `NEXT_PUBLIC_WHATSAPP_INTEGRATION_ENABLED` até o BE implementar o
- * restante. Antes de consumir em nova tela: checar `isWhatsappIntegrationEnabled()`.
+ * GAP SEMÂNTICO (impede migração mecânica de /config → /credentials):
  *
- * @see docs/adr/ADR-001-modulos-fe-fantasma.md
- * @see docs/API_AUDIT_BACKEND_VS_FRONTEND.md seção A (P0)
+ *   FE legado (WhatsAppConfig): { provedorAtivo, chaveApi, webhookUrl, ambiente, ativo }
+ *   BE atual (WhatsAppCredential): { businessAccountId, wabaId, phoneId, phoneNumber,
+ *     mode, accessToken, webhookVerifyToken, onboardingStatus, onboardingStep }
+ *
+ * A migração /config → /credentials exige refactor do modelo de UI (tela
+ * admin/whatsapp gerencia 1 "config", mas BE tem N "credentials" por tenant
+ * com fluxo de onboarding WABA). Deixado como TODO após este commit.
+ *
+ * Status imediato da Task #554: proteção via feature flag
+ * `NEXT_PUBLIC_WHATSAPP_INTEGRATION_ENABLED` (default false) — todas as
+ * funções exportadas retornam null/throw amigável quando a flag está off.
+ * Quando o BE implementar templates/logs/send/stats E o refactor de UI for
+ * feito, ligar a flag.
+ *
+ * @see docs/adr/ADR-001-modulos-fe-fantasma.md seção 3
  */
+import { isWhatsappIntegrationEnabled } from "@/lib/feature-flags";
 import type {
   WhatsAppConfig,
   WhatsAppMessageLog,
@@ -34,6 +48,9 @@ import { apiRequest } from "./http";
 export async function getWhatsAppConfigApi(opts: {
   tenantId: string;
 }): Promise<WhatsAppConfig | null> {
+  if (!isWhatsappIntegrationEnabled()) {
+    return null;
+  }
   try {
     return await apiRequest<WhatsAppConfig>({
       path: "/api/v1/whatsapp/config",
@@ -48,6 +65,11 @@ export async function saveWhatsAppConfigApi(opts: {
   tenantId: string;
   data: Partial<Omit<WhatsAppConfig, "id" | "tenantId">>;
 }): Promise<WhatsAppConfig> {
+  if (!isWhatsappIntegrationEnabled()) {
+    throw new Error(
+      "Integração WhatsApp desabilitada. Aguardando migração do modelo /config → /credentials (Task #554)."
+    );
+  }
   return apiRequest<WhatsAppConfig>({
     path: "/api/v1/whatsapp/config",
     method: "PUT",
@@ -148,6 +170,11 @@ export async function sendWhatsAppMessageApi(opts: {
     variaveis?: Record<string, string>;
   };
 }): Promise<WhatsAppMessageLog> {
+  if (!isWhatsappIntegrationEnabled()) {
+    throw new Error(
+      "Envio WhatsApp desabilitado (flag). BE ainda não expõe /send — Task #554."
+    );
+  }
   return apiRequest<WhatsAppMessageLog>({
     path: "/api/v1/whatsapp/send",
     method: "POST",

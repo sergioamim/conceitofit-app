@@ -50,10 +50,27 @@ export function LivrosRazaoContent({ initialData }: LivrosRazaoContentProps) {
     onSuccess: () => void refetch(),
   });
 
+  // Backend não tem endpoint "entradas por ledger" (Task #553). Buscamos
+  // todas as entradas do tenant e filtramos client-side pelo range de datas
+  // do ledger expandido.
+  const expandedLedger = useMemo(
+    () => ledgers.find((l) => l.id === expandedId),
+    [ledgers, expandedId],
+  );
+
   const entriesQuery = useQuery<LedgerEntry[]>({
-    queryKey: ["admin", "contabilidade-ledger-entries", expandedId],
-    queryFn: () => listLedgerEntriesApi(expandedId!),
-    enabled: Boolean(expandedId),
+    queryKey: ["admin", "contabilidade-ledger-entries", tenantContext.tenantId, expandedId],
+    queryFn: async () => {
+      const all = await listLedgerEntriesApi({ tenantId: tenantContext.tenantId });
+      if (!expandedLedger) return all;
+      // Filtra por data do lançamento dentro do range do ledger
+      return all.filter((e) => {
+        const d = e.dataLancamento;
+        if (!d) return false;
+        return d >= expandedLedger.dataInicio && d <= expandedLedger.dataFim;
+      });
+    },
+    enabled: Boolean(expandedId) && Boolean(tenantContext.tenantId),
     staleTime: 2 * 60_000,
   });
 
