@@ -15435,18 +15435,18 @@
         "description": "Debito descoberto no smoke runtime de 2026-04-10. O FE chama GET /api/v1/administrativo/nfse/configuracao-atual mas o BE so expoe GET /api/v1/nfse/configuracoes/base (exige tenantId E unidadeId).",
         "details": "Descoberto na validacao runtime do smoke test (commit ee89578). Endpoints FE em financeiro-operacional.ts: getNfseConfiguracaoAtualApi, salvarNfseConfiguracaoAtualApi, validarNfseConfiguracaoAtualApi. Problema: BE tem GET /nfse/configuracoes/base e POST /nfse/configuracoes (create/update) mas usa modelo por unidade, nao por tenant. O endpoint /validar nao existe no BE. Gap de modelo: o FE tem conceito 'configuracao atual do tenant' mas o BE tem 'configuracao por unidade'. Escopo: (1) Refatorar NfseConfiguracao type para incluir unidadeId; (2) Atualizar os 5 callers (nfse-content.tsx, pagamentos-client.tsx, use-cliente-workspace.ts, emitir-em-lote, use-recebimentos) para passar unidadeId - alguns podem derivar do tenantContext, outros precisam de seletor; (3) Migrar getNfseConfiguracaoAtualApi para /configuracoes/base?tenantId&unidadeId; (4) Migrar salvarNfseConfiguracaoAtualApi para POST /configuracoes com shape NfseConfiguracaoUnidadeRequest; (5) Decidir se /validar fica como futuro ou e implementado no BE. Nao bloqueia produto hoje porque o FE ja tem try/catch com fallback para config vazia em caso de 404. Implementacao minima inicial ja feita: financeiro-operacional.ts aceita unidadeId opcional e migra path quando fornecido, mantendo fallback legado.",
         "testStrategy": "",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [],
-        "updatedAt": "2026-04-10T23:04:09.907Z"
+        "updatedAt": "2026-04-10T23:25:22.859Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-10T23:04:09.907Z",
+      "lastModified": "2026-04-10T23:25:22.860Z",
       "taskCount": 501,
-      "completedCount": 499,
+      "completedCount": 500,
       "tags": [
         "master"
       ]

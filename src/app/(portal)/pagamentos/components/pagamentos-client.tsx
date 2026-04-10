@@ -96,7 +96,10 @@ function PagamentosPageContent() {
       listAlunosApi({ tenantId, page: 0, size: 500 }),
       listMatriculasApi({ tenantId, page: 0, size: 500 }),
       listConveniosApi(),
-      getNfseConfiguracaoAtualApi({ tenantId }).catch(() => null),
+      // Task #556: unidadeId = tenantId (modelo AIOX)
+      getNfseConfiguracaoAtualApi({ tenantId, unidadeId: tenantId }).catch(
+        () => null,
+      ),
     ]);
     setFormasPagamento(fps);
     setClientes(extractAlunosFromListResponse(cls));

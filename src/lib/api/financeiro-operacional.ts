@@ -267,8 +267,8 @@ export async function getNfseConfiguracaoAtualApi(input: {
   tenantId: string;
   unidadeId?: string;
 }): Promise<NfseConfiguracao> {
+  const usarPathNovo = Boolean(input.unidadeId);
   try {
-    const usarPathNovo = Boolean(input.unidadeId);
     const response = await apiRequest<NfseConfiguracaoApiResponse | null>({
       path: usarPathNovo
         ? "/api/v1/nfse/configuracoes/base"
@@ -279,8 +279,18 @@ export async function getNfseConfiguracaoAtualApi(input: {
     });
     return normalizeNfseConfiguracao(input.tenantId, response);
   } catch (error) {
-    if (error instanceof ApiRequestError && error.status === 404) {
-      return normalizeNfseConfiguracao(input.tenantId, null);
+    if (error instanceof ApiRequestError) {
+      // 404: legado sem a rota OU novo sem config encontrada.
+      // 500 no path novo: o BE lança exceção "Nenhuma configuração ativa
+      // de NFSe encontrada" que o Spring converte em 500 — comportamento
+      // do endpoint, não bug de integração. Tratamos como "sem config".
+      // Path legado retornando 500 mantém o throw (não é esperado).
+      if (
+        error.status === 404 ||
+        (usarPathNovo && error.status === 500)
+      ) {
+        return normalizeNfseConfiguracao(input.tenantId, null);
+      }
     }
     throw error;
   }

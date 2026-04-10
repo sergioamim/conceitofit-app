@@ -35,7 +35,11 @@ export function useRecebimentos(input: UseRecebimentosInput) {
           endDate: input.endDate,
         }),
         listAgregadorTransacoesApi({ tenantId: input.tenantId! }),
-        getNfseConfiguracaoAtualApi({ tenantId: input.tenantId! }).catch(() => null),
+        // Task #556: passar unidadeId = tenantId (modelo AIOX usa 1 tenant por unidade)
+        getNfseConfiguracaoAtualApi({
+          tenantId: input.tenantId!,
+          unidadeId: input.tenantId!,
+        }).catch(() => null),
       ]);
       return { pagamentos, transacoes, nfseConfiguracao: nfseConfig };
     },

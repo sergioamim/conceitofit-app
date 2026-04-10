@@ -177,7 +177,11 @@ export function useClienteWorkspace() {
     });
 
     try {
-      const configuracao = await getNfseConfiguracaoAtualApi({ tenantId: currentTenantId });
+      // Task #556: unidadeId = tenantId (modelo AIOX)
+      const configuracao = await getNfseConfiguracaoAtualApi({
+        tenantId: currentTenantId,
+        unidadeId: currentTenantId,
+      });
       setNfseTabState((current) => {
         if (current.tenantId !== currentTenantId) return current;
         return {

@@ -35,7 +35,10 @@ export default function EmitirNfseEmLotePage() {
     try {
       const [list, nfseConfig] = await Promise.all([
         listContasReceberOperacionais({ tenantId }),
-        getNfseConfiguracaoAtualApi({ tenantId }).catch(() => null),
+        // Task #556: unidadeId = tenantId (1 tenant = 1 unidade no modelo AIOX)
+        getNfseConfiguracaoAtualApi({ tenantId, unidadeId: tenantId }).catch(
+          () => null,
+        ),
       ]);
       setPagamentos(list);
       setNfseConfiguracao(nfseConfig);

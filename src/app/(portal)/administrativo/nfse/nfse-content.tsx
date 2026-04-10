@@ -71,7 +71,11 @@ export function NfseContent() {
     tenantId,
     enabled: tenantResolved && !access.loading && access.canAccessElevatedModules,
     listFn: async (tid) => {
-      const config = await getNfseConfiguracaoAtualApi({ tenantId: tid });
+      // Task #556: unidadeId = tenantId (modelo AIOX)
+      const config = await getNfseConfiguracaoAtualApi({
+        tenantId: tid,
+        unidadeId: tid,
+      });
       return config ? [config] : [];
     },
   });
