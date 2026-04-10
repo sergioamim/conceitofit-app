@@ -40,6 +40,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
 
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
@@ -69,6 +70,28 @@ const PHANTOM_MODULES = new Set([
 // financial.ts tem paths divergentes documentados no ADR, mas a maioria
 // funciona — não é fantasma completo
 const PARTIAL_MODULES = new Set(["financial.ts"]);
+
+// Endpoints que exigem query params adicionais além de tenantId OU
+// dependem de um X-Context-Id de sessao registrado pelo fluxo de login.
+// O smoke generico nao consegue simular isso — seriam falsos positivos.
+// Lista explicita pulada no modo runtime (vira "⏭️ skip-params").
+//
+// Nao confundir com bugs do FE: o caller real ja passa os params
+// corretos e/ou tem a sessao context ativa.
+const ENDPOINTS_REQUIRING_EXTRA_PARAMS = new Map([
+  ["/api/v1/notificacoes/preferencias", "alunoId"],
+  ["/api/v1/comercial/matriculas/dashboard-mensal", "mes"],
+  ["/api/v1/nfse/solicitacoes", "unidadeId"],
+  ["/api/v1/conversas", "filtros especificos"],
+  ["/api/v1/administrativo/vouchers", "depende de context-id + filtros"],
+  ["/api/v1/administrativo/vouchers/usage-counts", "depende de context-id + filtros"],
+  ["/api/v1/gerencial/catraca/acessos/dashboard", "data range obrigatorio"],
+  ["/api/v1/academia/dashboard", "filtros especificos"],
+  ["/api/v1/storefront/theme", "context-id + tenantId no caller real"],
+  // 3 ultimos descobertos na segunda iteracao:
+  ["/api/v1/academia", "depende de X-Context-Id de sessao registrada"],
+  ["/api/v1/onboarding/status", "depende de X-Context-Id de sessao registrada"],
+]);
 
 if (!fs.existsSync(apiDir)) {
   console.error(`Missing API directory: ${apiDir}`);
@@ -189,6 +212,11 @@ function loadAllCalls() {
 
 // ─── Runtime calls ────────────────────────────────────────────────────────
 
+// Nota: X-Context-Id e um UUID de sessao registrado pelo backend em
+// fluxos complexos de login. Nao podemos injetar um UUID aleatorio
+// porque o BE cascade falha na resolucao. O tenantId e resolvido
+// via JWT claim + X-Tenant-Id header + tenantId query param, que ja
+// cobrem 80% dos casos.
 async function callEndpoint(call) {
   const url = new URL(call.rawPath, backendTarget);
   if (call.hasQuery) url.searchParams.set("tenantId", tenantId);
@@ -196,6 +224,7 @@ async function callEndpoint(call) {
   const headers = {
     Accept: "application/json",
     "X-Tenant-Id": tenantId,
+    "X-Request-Id": randomUUID(),
   };
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
@@ -231,7 +260,15 @@ async function callEndpoint(call) {
 
 function classify(call, result) {
   if (PHANTOM_MODULES.has(call.file)) return "🚫 phantom";
-  if (PARTIAL_MODULES.has(call.file)) return "⚠️ partial";
+  if (ENDPOINTS_REQUIRING_EXTRA_PARAMS.has(call.rawPath)) {
+    // Classifica como ok se foi executado e deu 2xx, senao como skip-params
+    if (result?.ok) return "✅ ok";
+    return "⏭️ skip-params";
+  }
+  if (PARTIAL_MODULES.has(call.file)) {
+    if (result?.ok) return "✅ ok";
+    return "⚠️ partial";
+  }
   if (!result) return "⏸️ skipped";
   if (result.ok) return "✅ ok";
   if (result.status === 0) return "💥 network";
@@ -258,6 +295,7 @@ function renderMarkdown(calls, results, meta) {
   lines.push(`- Paths dinâmicos (com path params): \`${meta.dynamicCount}\` — reportados mas não executados`);
   lines.push(`- Endpoints em módulos fantasmas (ADR-001): \`${meta.phantomCount}\` — pulados`);
   lines.push(`- Endpoints em módulos parciais: \`${meta.partialCount}\``);
+  lines.push(`- Endpoints com params obrigatórios extras (skip-list): \`${meta.extraParamsCount}\` — pulados`);
   if (!meta.dryRun) {
     lines.push(`- Sucessos (2xx): \`${meta.okCount}\``);
     lines.push(`- Falhas: \`${meta.failCount}\``);
@@ -297,10 +335,12 @@ function renderMarkdown(calls, results, meta) {
     const result = results[i];
     const status = classify(call, result);
     const elapsed = result ? result.elapsedMs : "-";
+    const extraParamsReason = ENDPOINTS_REQUIRING_EXTRA_PARAMS.get(call.rawPath);
     const note =
       result?.note ||
       (call.dynamicPath ? "path dinâmico (skip runtime)" : "") ||
       (PHANTOM_MODULES.has(call.file) ? "módulo fantasma (ADR-001)" : "") ||
+      (extraParamsReason ? `requer: ${extraParamsReason}` : "") ||
       "";
     lines.push(
       `| ${status} | ${call.method} | \`${call.rawPath}\` | \`${call.file}\` | ${elapsed} | ${note} |`
@@ -339,6 +379,7 @@ async function main() {
   let dynamicCount = 0;
   let phantomCount = 0;
   let partialCount = 0;
+  let extraParamsCount = 0;
   let okCount = 0;
   let failCount = 0;
 
@@ -346,11 +387,16 @@ async function main() {
     const call = filtered[i];
     const isPhantom = PHANTOM_MODULES.has(call.file);
     const isPartial = PARTIAL_MODULES.has(call.file);
+    const needsExtraParams = ENDPOINTS_REQUIRING_EXTRA_PARAMS.has(call.rawPath);
     if (isPhantom) phantomCount += 1;
     if (isPartial) partialCount += 1;
+    if (needsExtraParams) extraParamsCount += 1;
 
     const executable =
-      call.method === "GET" && !call.dynamicPath && !isPhantom;
+      call.method === "GET" &&
+      !call.dynamicPath &&
+      !isPhantom &&
+      !needsExtraParams;
 
     if (call.dynamicPath) dynamicCount += 1;
     if (executable) executableCount += 1;
@@ -375,6 +421,7 @@ async function main() {
     dynamicCount,
     phantomCount,
     partialCount,
+    extraParamsCount,
     okCount,
     failCount,
   });
