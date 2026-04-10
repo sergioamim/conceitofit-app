@@ -14901,7 +14901,7 @@
         "priority": "low",
         "subtasks": [],
         "complexity": 1,
-        "updatedAt": "2026-04-08T16:30:15.772Z"
+        "updatedAt": "2026-04-10T22:20:45.678Z"
       },
       {
         "id": "518",
@@ -15259,10 +15259,11 @@
         "description": "Consumir servicos de IA ja existentes no backend (AiConversationService, OpenAI): adicionar painel lateral na inbox /atendimento/inbox/[id] com botoes para resumir conversa, sugerir resposta (3 opcoes), classificar intencao automaticamente, e recomendar proxima acao. Requer endpoints REST no backend (services existem como Spring services mas nao estao expostos como REST controllers ainda).",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T22:25:52.942Z"
       },
       {
         "id": "543",
@@ -15296,12 +15297,13 @@
         "description": "Adicionar aba 'Execucoes' na pagina de cada playbook (/crm/playbooks) consumindo GET /api/v1/crm/playbooks/{id}/execucoes. Mostrar timeline com data, status, prospect afetado e acoes disparadas.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "551"
         ],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T22:17:31.901Z"
       },
       {
         "id": "546",
@@ -15309,10 +15311,11 @@
         "description": "Estender /administrativo/catraca-status para consumir WebSocket (/api/v1/integracoes/catraca/ws/status/{tenantId}) mostrando catracas conectadas/desconectadas em tempo real. Adicionar botao 'Sincronizar fotos' (POST /catraca/faces/sync) por unidade. Adicionar liberacao manual via WS (POST /ws/commands/grant).",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T22:23:15.118Z"
       },
       {
         "id": "547",
@@ -15429,9 +15432,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-10T22:10:42.369Z",
+      "lastModified": "2026-04-10T22:25:52.942Z",
       "taskCount": 500,
-      "completedCount": 496,
+      "completedCount": 499,
       "tags": [
         "master"
       ]

@@ -63,6 +63,7 @@ import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatDateTime } from "@/lib/formatters";
 import { getCrmStageName } from "@/lib/tenant/crm/workspace";
+import { isCrmCadenciasEnabled } from "@/lib/feature-flags";
 
 const EXECUTION_STATUS_COLORS: Record<CrmCadenceExecutionStatus, string> = {
   EM_ANDAMENTO: "border-sky-500/30 bg-sky-500/10 text-sky-200",
@@ -78,7 +79,48 @@ const STEP_STATUS_COLORS: Record<string, string> = {
   FALHA: "border-gym-danger/30 bg-gym-danger/10 text-gym-danger",
 };
 
+// Task #545: módulo CRM cadências desabilitado por padrão até o BE expor
+// /api/v1/crm/cadencias/* (ver ADR-001 seção 5 e src/lib/api/crm-cadencias.ts).
+// Quando o BE implementar, habilitar via NEXT_PUBLIC_CRM_CADENCIAS_ENABLED.
+// Como isCrmCadenciasEnabled() lê uma env var (estável durante o render),
+// avaliamos ANTES do componente para satisfazer Rules of Hooks via early
+// return de componentes distintos.
+function CrmCadenciasEmPreparacao() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">CRM</p>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Cadências</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Automação de follow-up de prospects com triggers, templates e escalação.
+        </p>
+      </div>
+      <div className="rounded-xl border border-border bg-card p-8 text-center">
+        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-gym-warning/10 text-gym-warning">
+          <Settings2 className="size-7" />
+        </div>
+        <h2 className="font-display text-lg font-bold">Módulo em preparação</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Os endpoints de cadências CRM estão sendo preparados no backend. Esta
+          tela será liberada automaticamente quando a feature estiver disponível.
+        </p>
+        <p className="mt-4 text-[11px] text-muted-foreground">
+          Ref: ADR-001 / Task #545 · Flag:{" "}
+          <code className="font-mono">NEXT_PUBLIC_CRM_CADENCIAS_ENABLED</code>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function CrmCadenciasPage() {
+  if (!isCrmCadenciasEnabled()) {
+    return <CrmCadenciasEmPreparacao />;
+  }
+  return <CrmCadenciasPageActive />;
+}
+
+function CrmCadenciasPageActive() {
   const { toast } = useToast();
   const tenantContext = useTenantContext();
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";

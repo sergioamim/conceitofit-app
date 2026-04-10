@@ -265,6 +265,29 @@ export async function liberarAcessoCatracaApi(
   });
 }
 
+// ─── Task #546: sync de faces ───────────────────────────────────────────
+
+export interface SyncFacesResponse {
+  sincronizados?: number;
+  total?: number;
+  status?: string;
+  mensagem?: string;
+}
+
+/**
+ * Sincroniza fotos dos alunos para a catraca da unidade (face recognition).
+ * POST /api/v1/integracoes/catraca/faces/sync
+ */
+export async function syncCatracaFacesApi(input: {
+  tenantId: string;
+}): Promise<SyncFacesResponse> {
+  return apiRequest<SyncFacesResponse>({
+    path: "/api/v1/integracoes/catraca/faces/sync",
+    method: "POST",
+    query: { tenantId: input.tenantId },
+  });
+}
+
 function toRecord(value: unknown): Record<string, unknown> | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;

@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Camera, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { listarCatracaWsStatusApi } from "@/lib/api/catraca";
+import { listarCatracaWsStatusApi, syncCatracaFacesApi } from "@/lib/api/catraca";
 import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { Tenant } from "@/lib/types";
@@ -106,8 +106,24 @@ export function CatracaStatusContent() {
       return { rows, totalConnectedAgents: status.totalConnectedAgents };
     },
     enabled: access.canAccessElevatedModules && !access.loading,
-    staleTime: 30_000,
+    // Task #546: polling "tempo real" (a cada 15s)
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
+  });
+
+  // Task #546: sync de faces por unidade
+  const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
+  const syncFacesMutation = useMutation({
+    mutationFn: (tenantId: string) => syncCatracaFacesApi({ tenantId }),
+    onSuccess: (result, tenantId) => {
+      const nome = getTenantName(tenantMap, tenantId);
+      setSyncSuccess(
+        `Sync iniciado para ${nome}: ${result.sincronizados ?? "?"}/${result.total ?? "?"} fotos. ${result.mensagem ?? ""}`.trim(),
+      );
+      setTimeout(() => setSyncSuccess(null), 5000);
+    },
   });
 
   const rows = statusQuery.data?.rows ?? [];
@@ -221,12 +237,15 @@ export function CatracaStatusContent() {
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Status
               </th>
+              <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {filteredRows.length === 0 ? (
               <tr>
-                <td className="px-4 py-10 text-center text-sm text-muted-foreground" colSpan={4}>
+                <td className="px-4 py-10 text-center text-sm text-muted-foreground" colSpan={5}>
                   Nenhuma conexão encontrada para os filtros atuais.
                 </td>
               </tr>
@@ -250,12 +269,41 @@ export function CatracaStatusContent() {
                       {getTenantStatusLabel(row.connectedAgents)}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => syncFacesMutation.mutate(row.tenantId)}
+                      disabled={
+                        syncFacesMutation.isPending &&
+                        syncFacesMutation.variables === row.tenantId
+                      }
+                      title="Sincronizar fotos dos alunos"
+                    >
+                      <Camera className="size-4" />
+                      {syncFacesMutation.isPending &&
+                      syncFacesMutation.variables === row.tenantId
+                        ? "..."
+                        : "Sync fotos"}
+                    </Button>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {syncSuccess ? (
+        <div className="rounded-xl border border-gym-teal/30 bg-gym-teal/10 px-4 py-3 text-sm text-gym-teal">
+          {syncSuccess}
+        </div>
+      ) : null}
+      {syncFacesMutation.error ? (
+        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {normalizeErrorMessage(syncFacesMutation.error)}
+        </div>
+      ) : null}
     </div>
   );
 }

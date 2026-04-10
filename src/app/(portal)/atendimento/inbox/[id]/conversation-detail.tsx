@@ -18,6 +18,7 @@ import { ConversationHeader } from "@/components/atendimento/conversation-header
 import { MessageThread } from "@/components/atendimento/message-thread";
 import { MessageInput } from "@/components/atendimento/message-input";
 import { ContactCard } from "@/components/atendimento/contact-card";
+import { AiAssistantPanel } from "@/components/atendimento/ai-assistant-panel";
 import type {
   ConversationStatus,
   EnviarMensagemRequest,
@@ -188,10 +189,16 @@ export function ConversationDetail({
         />
       </div>
 
-      {/* Side panel: contact card (desktop) */}
+      {/* Side panel: contact card + AI assistant (desktop) */}
       {showContact && (
-        <aside className="hidden xl:flex w-72 flex-col border-l border-border/40 overflow-y-auto p-4">
+        <aside className="hidden xl:flex w-80 flex-col border-l border-border/40 overflow-y-auto p-4 space-y-4">
           <ContactCard conversation={conversation} />
+          <AiAssistantPanel
+            conversationId={id}
+            ultimaMensagem={
+              threadData?.content?.[threadData.content.length - 1]?.content ?? undefined
+            }
+          />
         </aside>
       )}
     </div>
