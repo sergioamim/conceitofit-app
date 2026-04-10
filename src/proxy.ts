@@ -116,6 +116,8 @@ const DEFAULT_LOGIN_PATH = "/login";
 /** Rotas que não requerem autenticação. */
 const PUBLIC_ROUTE_PREFIXES = [
   "/login",
+  "/backend/",
+  "/api/",
   "/acesso/",
   "/adesao",
   "/storefront",
