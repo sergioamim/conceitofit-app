@@ -1,5 +1,7 @@
 # Validação de Integração Frontend x Backend Real
 
+> ⚠️ **SUPERSEDED (2026-04-10)** — Este documento reflete o estado de 2026-02-23, quando o FE ainda consumia `@/lib/mock/services` e o BE tinha build quebrada. **Ambos os cenários já foram resolvidos.** Para o estado atual do contrato FE↔BE, consultar `docs/API_AUDIT_BACKEND_VS_FRONTEND.md` (2026-03-28), que mapeia os 755 endpoints backend, os ~227 consumidos pelo frontend em `src/lib/api/`, os 61 paths fantasma e as 8 incompatibilidades de schema. Mantido como referência histórica apenas.
+
 Data: 2026-02-23
 
 ## Escopo validado

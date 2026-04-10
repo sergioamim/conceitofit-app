@@ -15218,7 +15218,9 @@
         "details": "",
         "testStrategy": "",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          "552"
+        ],
         "priority": "high",
         "subtasks": []
       },
@@ -15229,7 +15231,9 @@
         "details": "",
         "testStrategy": "",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          "552"
+        ],
         "priority": "high",
         "subtasks": []
       },
@@ -15240,7 +15244,9 @@
         "details": "",
         "testStrategy": "",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          "552"
+        ],
         "priority": "high",
         "subtasks": []
       },
@@ -15273,7 +15279,9 @@
         "details": "",
         "testStrategy": "",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          "549"
+        ],
         "priority": "medium",
         "subtasks": []
       },
@@ -15284,7 +15292,9 @@
         "details": "",
         "testStrategy": "",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          "551"
+        ],
         "priority": "low",
         "subtasks": []
       },
@@ -15317,7 +15327,9 @@
         "details": "",
         "testStrategy": "",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": [
+          "547"
+        ],
         "priority": "medium",
         "subtasks": []
       },
@@ -15326,6 +15338,41 @@
         "title": "Monitoramento financeiro: painel anti-fraude",
         "description": "Criar /gerencial/monitoramento consumindo /api/v1/financial/monitoring: suspicious-transactions, high-value/{tenantId}, high-frequency/{tenantId}, unusual-patterns/{tenantId}. Exibir alertas em tempo real com filtros por severidade e acoes (investigar, marcar OK, escalar).",
         "details": "",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "552"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 550,
+        "title": "P0: Reconciliar schema StorefrontTheme FE <-> BE",
+        "description": "Wave 0.1 saneamento. Schema do formulario de tema da storefront e totalmente divergente entre FE e BE. FE envia campos que BE ignora e nao envia os que BE espera. Nenhum dado do formulario e salvo atualmente. Referencia: docs/API_AUDIT_BACKEND_VS_FRONTEND.md secoes C1 e C3.",
+        "details": "Contexto: Audit identificou divergencia total. FE envia heroTitle, heroSubtitle, heroImageUrl, colors.primary, themePreset, useCustomColors, footerText, socialLinks.instagram/facebook/whatsapp. BE espera corPrimaria, corSecundaria, corFundo, corTexto, titulo, subtitulo, descricao, bannerUrl, galeriaUrls, redesSociais (map), customCssVars, ativo. Impacto: nenhum dado do form de tema e persistido. Escopo: (1) Decidir entre 3 opcoes: (a) FE adota campos BE, (b) BE estende para aceitar FE, (c) camada de traducao no FE. (2) Implementar opcao escolhida. (3) Alinhar tipo StorefrontTheme em src/lib/shared/types/tenant.ts (tenantId vs academiaId, heroImageUrl vs bannerUrl etc). (4) Teste e2e que salva tema e recupera os mesmos campos. Arquivos: src/lib/api/storefront-theme.ts, src/lib/forms/storefront-theme-schema.ts, src/lib/shared/types/tenant.ts, pagina admin/storefront. Deliverables: ADR da decisao + PR com implementacao + teste e2e verde.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 551,
+        "title": "Decisao formal sobre modulos FE 100% fantasmas",
+        "description": "Wave 0.2 saneamento. 5 arquivos em src/lib/api/ chamam exclusivamente endpoints que nao existem no backend (billing.ts, financial.ts, whatsapp.ts, reservas.ts, crm-cadencias.ts). Produzir ADR com verdict por modulo e aplicar (delete ou feature-flag). Referencia: docs/API_AUDIT_BACKEND_VS_FRONTEND.md secao A P0.",
+        "details": "Contexto: Audit identificou 5 modulos FE 100% fantasmas: billing.ts (5 paths), financial.ts (18 paths), whatsapp.ts (6 paths), reservas.ts (6 paths), crm-cadencias.ts (7 paths). Total 42 paths. Qualquer tela que importe hoje retorna 404. Escopo: (1) ADR docs/adr/ADR-XXX-modulos-fe-fantasma.md com verdict por modulo: (a) DELETAR arquivo + telas dependentes, (b) FEATURE-FLAG escondendo telas ate BE implementar, (c) IMPLEMENTAR endpoints no BE. (2) Criterios de decisao: feature esta no roadmap Q2? ha tela dependente ativa? volume de retrabalho? (3) PR de implementacao com os deletes + feature flags + migracao de telas. CONFLITO CRITICO: PRD Q2 Epico 3.2 (Billing Recorrente, task 29 do PRD) preve CRIAR src/lib/api/billing.ts do zero, mas arquivo ja existe fantasma. Resolver com (a) deletar billing.ts atual antes do Epico 3.2, ou (b) novo modulo com nome diferente (ex: billing-recurring.ts). Bloqueia task 545 (CRM cadencias) que depende de crm-cadencias.ts. Deliverables: ADR assinado + PR de saneamento + lista de telas afetadas + plano de comunicacao com time de backend sobre modulos 'implementar no BE'.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 552,
+        "title": "Smoke test BE<->FE em staging: matriz endpoint->status",
+        "description": "Wave 0.3 saneamento. Criar runbook automatizado que valida todos os ~227 paths consumidos por src/lib/api/ contra o backend em staging. Transforma 'BE done' em evidencia mensuravel. Vira exit-gate das Waves 1-4.",
+        "details": "Contexto: Tasks atuais afirmam BE done sem evidencia de runtime validado end-to-end. Audit (2026-03-28) mapeou ~227 paths consumidos pelo FE, mas nao ha validacao de que respondem 2xx em staging. Escopo: (1) Script scripts/smoke-test-be-fe.ts que itera sobre src/lib/api/*.ts e extrai (path, metodo HTTP) de cada chamada. (2) Executor que bate cada endpoint contra BACKEND_PROXY_TARGET (staging) com usuario+tenant de teste, capturando status HTTP, tempo e payload de erro. (3) Relatorio docs/SMOKE_TEST_BE_FE_MATRIX.md com colunas: endpoint | metodo | status | tempo_ms | nota. (4) Workflow GitHub Actions opcional que roda contra staging (nao bloqueia PR, so reporta). (5) Documentar exit criteria nas Waves 1-4: nenhum endpoint da wave pode estar 5xx ou 404 antes de comecar. Exclusao: nao cobrir os modulos fantasma da task 551 (ja sao conhecidos 404). Referencia de padrao: tests/e2e/atendimento-inbox.spec.ts (task 516) ja usa BACKEND_PROXY_TARGET. Deliverables: script + matriz inicial versionada + workflow CI + exit criteria documentado em cada Wave.",
         "testStrategy": "",
         "status": "pending",
         "dependencies": [],
@@ -15343,7 +15390,7 @@
       ],
       "created": "2026-04-10T14:37:11.777Z",
       "description": "Tasks for master context",
-      "updated": "2026-04-10T14:38:11.975Z"
+      "updated": "2026-04-10T14:52:54.163Z"
     }
   }
 }
