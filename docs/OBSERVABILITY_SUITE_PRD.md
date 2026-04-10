@@ -7,8 +7,8 @@
 |---|---|
 | **Autor** | Morgan (PM) |
 | **Data** | 2026-04-10 |
-| **Versão** | 1.1 (Draft — pós calibragem de hardware) |
-| **Status** | Draft — pronto para executar Wave 0 |
+| **Versão** | **2.0** (pós Wave -1, Wave 0 e Wave 0.5 executadas) |
+| **Status** | **In Progress** — waves -1, 0 e 0.5 entregues; próximas waves documentadas |
 | **Tipo** | Brownfield / Cross-cutting |
 | **Stakeholders** | Sergio (founder + dev + devops + ops — equipe única) |
 | **Ambiente alvo** | **Pre-Prod / Homologação** (produção real virá em VPS separada no futuro) |
@@ -16,9 +16,67 @@
 
 ## Changelog
 
-- **v2.0 (2026-04-10):** Reformulação pós-gap-analysis. Descoberto que o projeto já tem Caddy+Prometheus+Grafana+Jaeger rodando, 7 dashboards, 7 alerting rules, 3 métricas custom de negócio, Sentry instrumentado. Plano colapsou para 4 waves enxutas focadas em **completar e corrigir** em vez de criar do zero. Jaeger → Tempo (backend S3/MinIO) decidido.
+- **v2.0 (2026-04-10 — após sessão de execução):**
+  - **Wave -1 (Audit + Fix Fundacional)** executada e validada: 5 bugs críticos descobertos e corrigidos (mount paths broken no compose, datasource sem UID, Spring Security bloqueando `/actuator/prometheus`, `WhatsAppHealthIndicator` NPE, Caddy over-blocking).
+  - **Wave 0 (Telegram + Exporters)** executada e validada: 3 exporters rodando (node-exporter, cAdvisor, postgres-exporter), contact points Telegram provisionados, notification policies por severity, primeiro alerta real (`http-error-rate`) disparando no Telegram.
+  - **Wave 0.5 (GHCR Pipeline)** executada e validada: backend e frontend publicados em `ghcr.io/sergioamim/*`, deploy via pull+force-recreate em ~3min (vs ~8min anteriores), rollback via tag disponível.
+  - **Grafana upgrade 10.4.1 → 12.4.2** executado: env var interpolation nativo em alerting, plugins monitoring pre-installed (pyroscope, exploretraces, metricsdrilldown, lokiexplore), API redaction de tokens.
+  - **Frontend unhealthy fix**: Dockerfile + compose healthcheck trocado de `localhost:8080` → `127.0.0.1:3000` (IPv6 vs IPv4 + port mismatch). Container agora healthy.
+  - **Volumes antigos `conceito-fit_*`** removidos (orphaned por inconsistência de volume names). Volumes atuais são `conceito-prod-*`.
+  - **Wave 3 (customer-facing multi-tenant)** continua deferred para pós-produção.
+  - **Waves ajustadas:** Wave 1 agora é Loki (logs), Wave 2 infra dashboards, Wave 3 Tempo migration, Wave 4 frontend observability (Sentry DSN), Wave 5 business metrics expansion.
+
 - **v1.1 (2026-04-10):** Calibrado para VPS 8GB RAM compartilhada, ambiente pre-prod, equipe de 1 pessoa. Tempo (tracing) movido para Wave 4. Wave 3 deferred para pós-produção. Scrape interval 30s. Retenção inicial 30d.
 - **v1.0 (2026-04-10):** Draft inicial com 4 waves.
+
+## ✅ Estado Atual (v2.0)
+
+```
+═══════════════════════════════════════════════════════════════
+ PIPELINE DE OBSERVABILITY — FUNCIONAL END-TO-END
+═══════════════════════════════════════════════════════════════
+
+ PROMETHEUS (v2.51.0) — 5 targets UP
+  ✅ academia-java        (Spring Boot Actuator)
+  ✅ prometheus           (self-monitoring)
+  ✅ node-exporter        (VPS host metrics)
+  ✅ cadvisor             (Docker container metrics)
+  ✅ postgres-exporter    (PostgreSQL metrics)
+  → 1057+ metric series coletadas, retention 30d
+
+ GRAFANA (v12.4.2 — upgraded from 10.4.1)
+  ✅ Prometheus datasource (uid: prometheus)
+  ✅ 7 dashboards provisionados
+  ✅ 7 alerting rules provisionados
+  ✅ 2 contact points Telegram (critical + warning)
+  ✅ Notification policies com routing por severity label
+  ✅ Plugins: pyroscope, exploretraces, metricsdrilldown, lokiexplore
+
+ DEPLOY PIPELINE (Wave 0.5 — GHCR)
+  ✅ ghcr.io/sergioamim/conceito-backend:latest
+  ✅ ghcr.io/sergioamim/conceito-frontend:latest
+  ✅ deploy-ghcr.sh: build+push local + pull+recreate remoto
+  ✅ Tempo de deploy reduzido de ~8min para ~3min
+  ✅ Rollback instantâneo via tag version
+
+ CONTAINERS (12 rodando na VPS 8GB)
+  backend     (healthy)   863 MiB  ghcr.io image
+  frontend    (healthy)    83 MiB  ghcr.io image
+  db          (healthy)    41 MiB  postgres:16-alpine
+  minio       (healthy)    85 MiB
+  caddy       (running)    13 MiB  TLS + reverse proxy
+  grafana     (running)    50 MiB  v12.4.2
+  prometheus  (running)    72 MiB  30d retention
+  jaeger      (running)     9 MiB  (será migrado para Tempo)
+  node-exp    (running)     8 MiB
+  cadvisor    (running)    23 MiB
+  postgres-exp(running)    12 MiB
+  backup      (running)    <1 MiB  cron postgres dump
+
+ RESOURCE USAGE: ~1.3 GB / 8 GB (16%)
+ LIVRE: ~6.7 GB para próximas waves
+═══════════════════════════════════════════════════════════════
+```
 
 ## ⚡ Infraestrutura Pré-Existente Descoberta
 
@@ -252,9 +310,114 @@ Donos de academia têm acesso a dashboards embedados **filtrados pelo seu tenant
 
 ## 6. Escopo por Waves (Milestones)
 
-Suite completa organizada em **4 waves sequenciais**, com Wave 4 opcional.
+### Estado pós-execução (v2.0)
 
-### 🌊 Wave 0 — Fundação (Infra + Instrumentação)
+| Wave | Nome | Status | Descrição |
+|---|---|---|---|
+| **Wave -1** | Audit + Fix Fundacional | ✅ **Entregue** | 5 bugs críticos corrigidos, pipeline end-to-end funcional |
+| **Wave 0** | Telegram + Exporters | ✅ **Entregue** | node-exporter, cAdvisor, postgres-exporter rodando, Telegram alerting validado |
+| **Wave 0.5** | GHCR Deploy Pipeline | ✅ **Entregue** | Build+push local, pull+recreate na VPS, deploy 3x mais rápido |
+| **Wave 0.7** | Grafana Upgrade 10 → 12 | ✅ **Entregue** | Env var interpolation nativo, plugins pre-installed |
+| **Wave 1** | Loki + Logs Aggregation | ⏭ Próxima | Loki + Grafana Alloy, deep-link métrica ↔ log |
+| **Wave 2** | Infra Dashboards | Pendente | Dashboards VPS/containers/DB (baseados nos exporters) |
+| **Wave 3** | Jaeger → Tempo Migration | Pendente | Tempo com MinIO backend, exemplars, TraceQL |
+| **Wave 4** | Frontend Observability | Pendente | Ativar Sentry (DSN), Web Vitals, RUM |
+| **Wave 5** | Business Metrics Expansion | Pendente | MRR, ARR, churn, NRR no dashboard business-kpi |
+| **Wave 6** | Multi-tenant Customer-Facing | **DEFERRED** | Só faz sentido pós-produção real |
+
+### Wave -1 — Audit + Fix Fundacional (✅ ENTREGUE)
+
+**Objetivo:** Confrontar o estado real do ambiente vs o acreditado. Corrigir bugs que impediam o pipeline de funcionar.
+
+**Descobertas e fixes:**
+
+1. **Deploy drift silencioso** — O `deploy.sh` nunca sincronizava a pasta `infra/` para a VPS. Os arquivos de provisioning eram enviados **manualmente por rsync** em momentos passados (evidência: owner `501 staff` nos arquivos do VPS = UID do Mac) e ficavam stale. Além disso, o compose na VPS era uma versão **mais antiga** do que o do repo, sem os volume mounts necessários.
+   - **Fix:** sincronizei compose + infra/ manualmente para VPS + force-recreate. Plano para automação: `deploy-ghcr.sh` agora inclui rsync de infra/ + render-provisioning + restart em cada deploy.
+
+2. **Datasource Prometheus sem UID explícito** — Os 7 alerting rules referenciavam `datasourceUid: prometheus` mas o arquivo provisioning do datasource não tinha `uid:` declarado. Grafana gerava UUID aleatório, alerts falhavam com `data source not found`.
+   - **Fix:** adicionei `uid: prometheus` em `infra/grafana/provisioning/datasources/prometheus.yml`. Alerts agora acham o datasource.
+
+3. **Spring Security bloqueando `/actuator/prometheus`** — O `ModuleConfig.java` tinha permitAll para `/actuator/health` e `/actuator/info` mas não para `/actuator/prometheus`. Prometheus scrape retornava HTTP 401.
+   - **Fix:** adicionei `/actuator/prometheus`, `/actuator/metrics` e `/actuator/metrics/**` ao permitAll.
+
+4. **`WhatsAppHealthIndicator` NPE derrubando `/actuator/health`** — Em ambientes sem credenciais WhatsApp configuradas, passar `LocalDateTime null` para `.withDetail()` lançava NPE, caindo no catch que retornava `Health.down()`. Isso derrubava o status agregado do app (HTTP 503) mesmo com tudo funcionando.
+   - **Fix:** null-safe conversion de `lastWebhook` e `earliestExpiry` para string (fallback "never"). `NO_CREDENTIALS` agora retorna `Health.unknown()` (não derruba agregado). Catch final também vira UNKNOWN.
+
+5. **Caddy over-blocking `/actuator/*`** — Primeira tentativa de hardening bloqueou todos os endpoints de actuator externamente, incluindo `/actuator/health` que é usado pelos healthchecks do deploy.sh.
+   - **Fix:** matcher com exceção para `/actuator/health`, `/actuator/health/**` e `/actuator/info` (públicos para healthcheck); demais (`/actuator/prometheus`, `/actuator/metrics`) retornam 404 externamente.
+
+6. **Network `internal: true` bloqueando Telegram** — Quando sincronizei o compose do repo para a VPS, trouxe o `internal: true` na network que impedia qualquer container de alcançar a internet. Grafana não conseguia enviar alertas para `api.telegram.org`.
+   - **Fix:** removido `internal: true`. Containers agora têm acesso externo quando necessário.
+
+**Entregável:** 5 targets Prometheus UP, 7 dashboards visíveis no Grafana, datasource funcionando, alerts carregados, backend healthy.
+
+### Wave 0 — Telegram + Exporters (✅ ENTREGUE)
+
+**Objetivo:** Fechar o loop de notificação (alertas realmente chegam ao operador) e expandir cobertura de métricas para VPS + containers + DB.
+
+**Entregas:**
+
+**Exporters:**
+- `prom/node-exporter:v1.8.1` — métricas da VPS (CPU, memória, disco, rede, load)
+- `gcr.io/cadvisor/cadvisor:v0.49.1` — métricas por container Docker (incluindo healthy state)
+- `prometheuscommunity/postgres-exporter:v0.15.0` — métricas do PostgreSQL (connections, queries, cache hit, replication, locks, size)
+- `prometheus.yml` atualizado com 3 novos scrape_configs
+
+**Telegram Alerting:**
+- Bot `@CfitAlertingBot` criado e testado
+- Contact points `telegram-critical` e `telegram-warning` provisionados via `contact-points.yml`
+- Notification policies em `policies.yml` roteando por severity label (critical → telegram-critical, warning → telegram-warning, default → telegram-warning)
+- Templates de mensagem com severity, team, summary, description e timestamp
+- **Limitação descoberta:** Grafana 10.4.1 não suporta env var interpolation nativa em alerting provisioning (feature só chegou em 11.0+). **Workaround:** `render-provisioning.sh` roda `envsubst` antes do Grafana ler os arquivos.
+- **Resolução permanente:** Grafana upgraded para 12.4.2 (Wave 0.7) onde env var interpolation é nativa. Script envsubst fica como fallback.
+
+**Validação:**
+- Test alert enviado via API → `status: ok, notified_at: 22:07:40` → mensagem recebida no Telegram ✅
+- Primeiro alerta real (`http-error-rate`) observado disparando nos logs após Grafana 12 upgrade
+
+### Wave 0.5 — GHCR Deploy Pipeline (✅ ENTREGUE)
+
+**Objetivo:** Modernizar o pipeline de deploy. Resolver fricção do `deploy.sh` legado (save/load/rsync instável com SSH da Hetzner) e habilitar versionamento + rollback.
+
+**Entregas:**
+
+- `ghcr.io/sergioamim/conceito-backend:latest` — imagem Spring Boot publicada
+- `ghcr.io/sergioamim/conceito-frontend:latest` — imagem Next.js publicada
+- `docker-compose.prod.yml` atualizado para referenciar `ghcr.io/sergioamim/conceito-*:${BACKEND_TAG:-latest}`
+- `deploy-ghcr.sh` novo script (coexistindo com `deploy.sh` legado durante período de validação)
+- `render-provisioning.sh` helper para envsubst de templates (fallback pre-Grafana-11)
+- Tag versionamento: semver (v1.2.3) ou git-sha (main-abc1234) ou `latest` (dev)
+
+**Pipeline comparison:**
+
+| Fase | Antes (deploy.sh) | Depois (deploy-ghcr.sh) |
+|---|---|---|
+| Build | Local (Mac) | Local (Mac) |
+| Save/Upload | `docker save` → gzip → rsync (176 MB via SSH Hetzner flakey) | `docker push` via HTTPS (só layers modificadas, ~5-20 MB típico) |
+| Load/Pull | `docker load` remoto | `docker pull` remoto |
+| Versionamento | `latest` hard-coded | Qualquer tag (semver, sha, latest) |
+| Rollback | Rebuildar versão antiga | `deploy-ghcr.sh host v1.1 --skip-build` |
+| Tempo total | ~8 min | **~3 min** |
+| Estabilidade | Frágil (rsync timeouts) | Robusto (HTTPS com retry nativo) |
+
+### Wave 0.7 — Grafana Upgrade 10 → 12 (✅ ENTREGUE)
+
+**Objetivo:** Obter env var interpolation nativa em alerting provisioning + features modernas de observabilidade.
+
+**Mudanças:**
+- `grafana/grafana:10.4.1` → `grafana/grafana:12.4.2`
+- Upgrade de 2 major versions num único step, validado sem downtime significativo
+- Provisioning files (`apiVersion: 1`) mantidos compatíveis — backward compatibility honrada pelo Grafana
+
+**Benefícios obtidos:**
+- **Env var interpolation nativa** em alerting provisioning (antes precisava de `envsubst` externo)
+- **Plugins monitoring pre-installed**: `grafana-pyroscope-app` (profiling), `grafana-exploretraces-app` (tracing UI), `grafana-metricsdrilldown-app` (metrics exploration), `grafana-lokiexplore-app` (**este será usado na Wave 1**)
+- **Security improvement**: API responses agora REDACT tokens sensíveis (antes o `bottoken` vazava em plaintext na resposta de `/api/v1/provisioning/contact-points`)
+- **UI improvements**: novo home dashboard, melhorias de performance no painel de alertas
+
+---
+
+### Wave 1 — Fundação (Infra + Instrumentação)
 
 **Objetivo:** Telemetria fluindo ponta-a-ponta. Pré-requisito para tudo.
 
