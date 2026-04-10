@@ -179,23 +179,75 @@ export interface TenantBranding {
   colors?: Partial<TenantThemeColors>;
 }
 
+/**
+ * StorefrontTheme — reflete o contrato real do backend (StorefrontThemeResponse Java).
+ *
+ * O BE aceita e retorna AMBOS os formatos: os campos "legado" do FE (heroImageUrl,
+ * heroTitle, heroSubtitle, colors map) E os campos do schema oficial (corPrimaria,
+ * titulo, bannerUrl, redesSociais). Ver StorefrontThemeService.applyRequest()
+ * no modulo-academia para a lógica de merge.
+ *
+ * Ao editar o formulário admin, preferir os campos flat (instagram/facebook/whatsapp)
+ * sobre socialLinks — o BE não aceita socialLinks aninhado (é ignorado pelo Jackson).
+ */
 export interface StorefrontTheme {
   id?: string;
-  tenantId: string;
+  academiaId?: string;
+  /** @deprecated BE usa academiaId; mantido para compatibilidade com código legado */
+  tenantId?: string;
+
+  // Identidade visual
   logoUrl?: string;
   faviconUrl?: string;
+
+  // Hero (campos legado — BE preserva)
   heroImageUrl?: string;
   heroTitle?: string;
   heroSubtitle?: string;
+
+  // Tema de cores (campos legado — BE preserva)
   themePreset?: TenantThemePreset;
   useCustomColors?: boolean;
   colors?: Partial<TenantThemeColors>;
   footerText?: string;
+
+  // Cores oficiais do schema BE (flat)
+  corPrimaria?: string;
+  corSecundaria?: string;
+  corFundo?: string;
+  corTexto?: string;
+
+  // Conteúdo textual oficial do schema BE
+  titulo?: string;
+  subtitulo?: string;
+  descricao?: string;
+  bannerUrl?: string;
+
+  // Galeria e CSS customizado
+  galeriaUrls?: string[];
+  customCssVars?: Record<string, string>;
+
+  // Redes sociais — BE retorna flat + map
+  instagram?: string;
+  facebook?: string;
+  whatsapp?: string;
+  redesSociais?: Record<string, string>;
+  /**
+   * @deprecated Use os campos flat (`instagram`, `facebook`, `whatsapp`) ou `redesSociais`.
+   * Mantido para compatibilidade com storefront-jsonld.tsx e páginas públicas que
+   * adaptam manualmente `redesSociais` (map) → `socialLinks` antes de consumir.
+   */
   socialLinks?: {
     instagram?: string;
     facebook?: string;
     whatsapp?: string;
   };
+
+  // Estado e timestamps
+  ativo?: boolean;
+  dataCriacao?: string;
+  dataAtualizacao?: string;
+  /** @deprecated Use `dataAtualizacao` (nome oficial do BE). */
   updatedAt?: string;
 }
 

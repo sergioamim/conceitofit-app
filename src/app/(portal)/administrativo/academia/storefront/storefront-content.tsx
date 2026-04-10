@@ -104,27 +104,45 @@ export function StorefrontConfigContent() {
       const theme = await getStorefrontTheme(tenantId);
       setExistingTheme(theme);
       if (theme) {
+        // BE retorna redes sociais como campos flat (instagram/facebook/whatsapp)
+        // e também como mapa (redesSociais). Preferimos os campos flat, com fallback
+        // para o mapa e depois para o antigo socialLinks aninhado (temas salvos antes do fix).
+        const social = {
+          instagram:
+            theme.instagram ??
+            theme.redesSociais?.instagram ??
+            theme.socialLinks?.instagram ??
+            "",
+          facebook:
+            theme.facebook ??
+            theme.redesSociais?.facebook ??
+            theme.socialLinks?.facebook ??
+            "",
+          whatsapp:
+            theme.whatsapp ??
+            theme.redesSociais?.whatsapp ??
+            theme.socialLinks?.whatsapp ??
+            "",
+        };
         form.reset({
           logoUrl: theme.logoUrl ?? "",
           faviconUrl: theme.faviconUrl ?? "",
-          heroImageUrl: theme.heroImageUrl ?? "",
-          heroTitle: theme.heroTitle ?? "",
-          heroSubtitle: theme.heroSubtitle ?? "",
+          heroImageUrl: theme.heroImageUrl ?? theme.bannerUrl ?? "",
+          heroTitle: theme.heroTitle ?? theme.titulo ?? "",
+          heroSubtitle: theme.heroSubtitle ?? theme.subtitulo ?? "",
           themePreset: theme.themePreset ?? "",
           useCustomColors: theme.useCustomColors ?? false,
           colors: {
             accent: theme.colors?.accent ?? "",
-            primary: theme.colors?.primary ?? "",
-            background: theme.colors?.background ?? "",
-            surface: theme.colors?.surface ?? "",
-            foreground: theme.colors?.foreground ?? "",
+            primary: theme.colors?.primary ?? theme.corPrimaria ?? "",
+            background: theme.colors?.background ?? theme.corFundo ?? "",
+            surface: theme.colors?.surface ?? theme.corSecundaria ?? "",
+            foreground: theme.colors?.foreground ?? theme.corTexto ?? "",
             mutedForeground: theme.colors?.mutedForeground ?? "",
             border: theme.colors?.border ?? "",
           },
           footerText: theme.footerText ?? "",
-          instagram: theme.socialLinks?.instagram ?? "",
-          facebook: theme.socialLinks?.facebook ?? "",
-          whatsapp: theme.socialLinks?.whatsapp ?? "",
+          ...social,
         });
       }
     } catch (e) {
@@ -144,6 +162,9 @@ export function StorefrontConfigContent() {
     setError(null);
     setSuccess(false);
     try {
+      // IMPORTANTE: enviar redes sociais como campos FLAT (instagram/facebook/whatsapp).
+      // O DTO Java StorefrontThemeRequest ignora `socialLinks` aninhado — isso era o
+      // bug silencioso onde nada era salvo. Ver docs/API_AUDIT_BACKEND_VS_FRONTEND.md C1.
       const payload = {
         logoUrl: values.logoUrl || undefined,
         faviconUrl: values.faviconUrl || undefined,
@@ -158,11 +179,9 @@ export function StorefrontConfigContent() {
             )
           : undefined,
         footerText: values.footerText || undefined,
-        socialLinks: {
-          instagram: values.instagram || undefined,
-          facebook: values.facebook || undefined,
-          whatsapp: values.whatsapp || undefined,
-        },
+        instagram: values.instagram || undefined,
+        facebook: values.facebook || undefined,
+        whatsapp: values.whatsapp || undefined,
       };
       const saved = await saveStorefrontTheme(tenantId, payload);
       setExistingTheme(saved);
@@ -333,9 +352,12 @@ export function StorefrontConfigContent() {
           <Button type="submit" disabled={saving}>
             {saving ? "Salvando..." : existingTheme ? "Atualizar tema" : "Salvar tema"}
           </Button>
-          {existingTheme?.updatedAt && (
+          {(existingTheme?.dataAtualizacao ?? existingTheme?.updatedAt) && (
             <p className="text-xs text-muted-foreground">
-              Última atualização: {formatDateTimeBR(existingTheme.updatedAt)}
+              Última atualização:{" "}
+              {formatDateTimeBR(
+                (existingTheme?.dataAtualizacao ?? existingTheme?.updatedAt) as string,
+              )}
             </p>
           )}
         </div>
