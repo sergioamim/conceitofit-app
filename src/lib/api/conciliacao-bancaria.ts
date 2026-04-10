@@ -125,6 +125,58 @@ export async function conciliarLinhaApi(input: {
   return normalizeConciliacaoLinha(response);
 }
 
+// ─── Task #548: OFX import + dashboard ─────────────────────────────────
+
+export interface OfxImportResult {
+  importados: number;
+  duplicados: number;
+  totalArquivo: number;
+}
+
+export interface ConciliacaoDashboard {
+  total: number;
+  pendentes: number;
+  conciliadas: number;
+}
+
+/**
+ * Importa arquivo OFX (extrato bancario) e cria linhas de conciliacao.
+ * POST /api/v1/gerencial/financeiro/conciliacao-bancaria/importar-ofx
+ * multipart/form-data com campo 'arquivo' + query contaBancariaId.
+ */
+export async function importarOfxConciliacaoApi(input: {
+  tenantId?: string;
+  contaBancariaId: string;
+  arquivo: File;
+}): Promise<OfxImportResult> {
+  const form = new FormData();
+  form.append("arquivo", input.arquivo);
+
+  const response = await apiRequest<OfxImportResult>({
+    path: "/api/v1/gerencial/financeiro/conciliacao-bancaria/importar-ofx",
+    method: "POST",
+    query: {
+      tenantId: input.tenantId,
+      contaBancariaId: input.contaBancariaId,
+    },
+    body: form,
+  });
+  return response;
+}
+
+/**
+ * Dashboard de metricas da conciliacao bancaria.
+ * GET /api/v1/gerencial/financeiro/conciliacao-bancaria/dashboard
+ */
+export async function getConciliacaoDashboardApi(input: {
+  tenantId?: string;
+}): Promise<ConciliacaoDashboard> {
+  return apiRequest<ConciliacaoDashboard>({
+    path: "/api/v1/gerencial/financeiro/conciliacao-bancaria/dashboard",
+    query: { tenantId: input.tenantId },
+  });
+}
+
 export async function ignorarLinhaApi(input: {
   tenantId?: string;
   id: string;

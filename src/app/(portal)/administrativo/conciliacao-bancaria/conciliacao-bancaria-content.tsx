@@ -6,12 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { Upload } from "lucide-react";
 import {
   ImportarLinhasApiInput,
   conciliarLinhaApi,
   ignorarLinhaApi,
   importarLinhasConciliacaoApi,
+  importarOfxConciliacaoApi,
   listarConciliacaoLinhasApi,
+  getConciliacaoDashboardApi,
+  type ConciliacaoDashboard,
 } from "@/lib/api/conciliacao-bancaria";
 import { getBusinessMonthRange } from "@/lib/business-date";
 import type {
@@ -105,7 +110,23 @@ export function ConciliacaoBancariaContent() {
     contaPagarId: NONE_OPTION,
     observacao: "",
   });
+
+  // Task #548: upload OFX
+  const [ofxOpen, setOfxOpen] = useState(false);
+  const [ofxContaId, setOfxContaId] = useState("");
+  const [ofxFile, setOfxFile] = useState<File | null>(null);
+  const [ofxSaving, setOfxSaving] = useState(false);
+
   const { tenantId, tenantName, tenantResolved, loading: tenantLoading, error: tenantError } = useTenantContext();
+
+  // Task #548: dashboard de conciliação
+  const dashboardQuery = useQuery<ConciliacaoDashboard>({
+    queryKey: ["conciliacao", "dashboard", tenantId],
+    queryFn: () => getConciliacaoDashboardApi({ tenantId }),
+    enabled: tenantResolved && Boolean(tenantId),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
 
   // Capture filter state in refs for stable closure in listFn
   const filterKey = `${filtroStatus}|${filtroConta}|${startDate}|${endDate}`;
@@ -372,6 +393,38 @@ export function ConciliacaoBancariaContent() {
       ? "Não foi possível carregar os lançamentos."
       : "Nenhum lançamento para o filtro selecionado.";
 
+  // Task #548: upload OFX handler
+  async function handleOfxUpload() {
+    if (!ofxContaId || !ofxFile) {
+      setError("Selecione a conta bancária e o arquivo OFX.");
+      return;
+    }
+    setOfxSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const result = await importarOfxConciliacaoApi({
+        tenantId,
+        contaBancariaId: ofxContaId,
+        arquivo: ofxFile,
+      });
+      setSuccess(
+        `OFX importado: ${result.importados} novos, ${result.duplicados} duplicados (${result.totalArquivo} no arquivo).`
+      );
+      setOfxOpen(false);
+      setOfxFile(null);
+      setOfxContaId("");
+      void load();
+      void dashboardQuery.refetch();
+    } catch (e) {
+      setError(normalizeErrorMessage(e));
+    } finally {
+      setOfxSaving(false);
+    }
+  }
+
+  const dashboard = dashboardQuery.data;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
@@ -385,7 +438,32 @@ export function ConciliacaoBancariaContent() {
             </span>
           </p>
         </div>
+        <Button
+          onClick={() => setOfxOpen(true)}
+          disabled={contasBancarias.length === 0}
+        >
+          <Upload className="size-4" />
+          Importar OFX
+        </Button>
       </div>
+
+      {/* Dashboard de metricas (Task #548) */}
+      {dashboard ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total</p>
+            <p className="mt-2 font-display text-2xl font-extrabold">{dashboard.total}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pendentes</p>
+            <p className="mt-2 font-display text-2xl font-extrabold text-gym-warning">{dashboard.pendentes}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Conciliadas</p>
+            <p className="mt-2 font-display text-2xl font-extrabold text-gym-teal">{dashboard.conciliadas}</p>
+          </div>
+        </div>
+      ) : null}
 
       <PageError error={loadError} onRetry={load} />
 
@@ -592,6 +670,62 @@ export function ConciliacaoBancariaContent() {
             </Button>
             <Button onClick={handleConciliar} disabled={saving}>
               {saving ? "Salvando..." : "Salvar conciliação"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload OFX Dialog (Task #548) */}
+      <Dialog open={ofxOpen} onOpenChange={setOfxOpen}>
+        <DialogContent className="border-border bg-card sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">Importar extrato OFX</DialogTitle>
+            <DialogDescription>
+              Selecione a conta bancária e envie o arquivo .ofx do extrato.
+              Linhas duplicadas (mesma chave) são ignoradas automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Conta bancária
+              </label>
+              <Select value={ofxContaId} onValueChange={setOfxContaId}>
+                <SelectTrigger className="w-full bg-secondary border-border">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {contasBancarias.map((conta) => (
+                    <SelectItem key={conta.id} value={conta.id}>
+                      {conta.apelido} ({conta.banco})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Arquivo OFX
+              </label>
+              <Input
+                type="file"
+                accept=".ofx,application/x-ofx,text/plain"
+                onChange={(e) => setOfxFile(e.target.files?.[0] ?? null)}
+                className="border-border bg-secondary"
+              />
+              {ofxFile ? (
+                <p className="text-[11px] text-muted-foreground">
+                  {ofxFile.name} ({(ofxFile.size / 1024).toFixed(1)} KB)
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOfxOpen(false)} className="border-border">
+              Cancelar
+            </Button>
+            <Button onClick={handleOfxUpload} disabled={ofxSaving || !ofxFile || !ofxContaId}>
+              {ofxSaving ? "Importando..." : "Importar"}
             </Button>
           </DialogFooter>
         </DialogContent>

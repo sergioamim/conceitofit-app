@@ -15317,10 +15317,11 @@
         "description": "Adicionar acoes na pagina /gerencial/agregadores: botao 'Publicar aulas' (POST /integracoes/agregadores/{tipo}/booking/classes/publicar) e 'Publicar slots' (/booking/slots/publicar). Painel de webhooks falhos com reprocessamento (POST /webhooks/{eventId}/reprocessar). Adicionar validacao de credencial (POST /{tipo}/validate).",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T18:50:40.313Z"
       },
       {
         "id": "548",
@@ -15328,12 +15329,13 @@
         "description": "Estender /gerencial/conciliacao-bancaria com: upload de arquivo OFX (POST /conciliacao-bancaria/importar-ofx) e dashboard de metricas (GET /conciliacao-bancaria/dashboard). Backend ja expoe endpoints.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "547"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T18:47:14.000Z"
       },
       {
         "id": "549",
@@ -15424,9 +15426,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-10T18:44:05.433Z",
+      "lastModified": "2026-04-10T18:50:40.314Z",
       "taskCount": 500,
-      "completedCount": 491,
+      "completedCount": 493,
       "tags": [
         "master"
       ]

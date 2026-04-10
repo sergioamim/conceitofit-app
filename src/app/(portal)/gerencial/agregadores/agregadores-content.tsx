@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { CreditCard, RefreshCw } from "lucide-react";
+import { CheckCircle2, CreditCard, PlayCircle, RefreshCw, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +13,13 @@ import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 import { formatBRL, formatDate, formatDateTime } from "@/lib/formatters";
 import { useAgregadores, useReprocessarAgregador } from "@/lib/query/use-agregadores";
+import {
+  type AgregadorResult,
+  type AgregadorTipo,
+  getStatusAgregadorApi,
+  publicarClasseBookingApi,
+  reprocessarWebhookAgregadorApi,
+} from "@/lib/api/integracoes-agregadores";
 
 type RepasseFiltro = WithFilterAll<AgregadorRepasseStatus>;
 
@@ -37,8 +44,76 @@ export function AgregadoresContent() {
   const [search, setSearch] = useState("");
   const [repasse, setRepasse] = useState<RepasseFiltro>(FILTER_ALL);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Task #547: painel de integrações agregadores
+  const [integracaoTipo, setIntegracaoTipo] = useState<AgregadorTipo>("WELLHUB");
+  const [atividadeGradeId, setAtividadeGradeId] = useState("");
+  const [webhookEventId, setWebhookEventId] = useState("");
+  const [integracaoBusy, setIntegracaoBusy] = useState<null | "status" | "publish" | "reprocess">(null);
+  const [integracaoResult, setIntegracaoResult] = useState<AgregadorResult | null>(null);
+  const [integracaoError, setIntegracaoError] = useState<string | null>(null);
+
   const error = queryError ? normalizeErrorMessage(queryError) : reprocessMutation.error ? normalizeErrorMessage(reprocessMutation.error) : null;
   const actionId = reprocessMutation.isPending ? (reprocessMutation.variables as string) : null;
+
+  async function handleIntegracaoStatus() {
+    if (!tenantId) return;
+    setIntegracaoBusy("status");
+    setIntegracaoError(null);
+    setIntegracaoResult(null);
+    try {
+      const result = await getStatusAgregadorApi({ tipo: integracaoTipo, tenantId });
+      setIntegracaoResult(result);
+    } catch (e) {
+      setIntegracaoError(normalizeErrorMessage(e));
+    } finally {
+      setIntegracaoBusy(null);
+    }
+  }
+
+  async function handlePublicarClasse() {
+    if (!tenantId || !atividadeGradeId.trim()) {
+      setIntegracaoError("Informe o ID da atividade grade para publicar.");
+      return;
+    }
+    setIntegracaoBusy("publish");
+    setIntegracaoError(null);
+    setIntegracaoResult(null);
+    try {
+      const result = await publicarClasseBookingApi({
+        tipo: integracaoTipo,
+        tenantId,
+        atividadeGradeId: atividadeGradeId.trim(),
+      });
+      setIntegracaoResult(result);
+    } catch (e) {
+      setIntegracaoError(normalizeErrorMessage(e));
+    } finally {
+      setIntegracaoBusy(null);
+    }
+  }
+
+  async function handleReprocessarWebhook() {
+    if (!tenantId || !webhookEventId.trim()) {
+      setIntegracaoError("Informe o eventId do webhook para reprocessar.");
+      return;
+    }
+    setIntegracaoBusy("reprocess");
+    setIntegracaoError(null);
+    setIntegracaoResult(null);
+    try {
+      const result = await reprocessarWebhookAgregadorApi({
+        tipo: integracaoTipo,
+        tenantId,
+        eventId: webhookEventId.trim(),
+      });
+      setIntegracaoResult(result);
+    } catch (e) {
+      setIntegracaoError(normalizeErrorMessage(e));
+    } finally {
+      setIntegracaoBusy(null);
+    }
+  }
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -122,6 +197,125 @@ export function AgregadoresContent() {
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Divergências</p>
           <p className="mt-2 font-display text-2xl font-extrabold text-gym-danger">{resumo.divergencias}</p>
         </div>
+      </div>
+
+      {/* Painel de integrações (Task #547) */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Rocket className="size-4 text-gym-accent" />
+          <h2 className="font-display text-lg font-bold">Integrações Booking API</h2>
+          <span className="text-xs text-muted-foreground">
+            Publicar aulas, validar credenciais e reprocessar webhooks
+          </span>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[200px_1fr_auto]">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Agregador
+            </label>
+            <Select
+              value={integracaoTipo}
+              onValueChange={(v) => setIntegracaoTipo(v as AgregadorTipo)}
+            >
+              <SelectTrigger className="w-full bg-secondary border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="WELLHUB">Wellhub (GymPass)</SelectItem>
+                <SelectItem value="GYMPASS">GymPass</SelectItem>
+                <SelectItem value="TOTALPASS">TotalPass</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 w-full border-border"
+              onClick={handleIntegracaoStatus}
+              disabled={integracaoBusy !== null || !tenantId}
+            >
+              <CheckCircle2 className="size-4" />
+              {integracaoBusy === "status" ? "Consultando..." : "Status"}
+            </Button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Atividade Grade ID (publicar aula)
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="uuid da atividade grade..."
+                  value={atividadeGradeId}
+                  onChange={(e) => setAtividadeGradeId(e.target.value)}
+                  className="border-border bg-secondary"
+                />
+                <Button
+                  size="sm"
+                  onClick={handlePublicarClasse}
+                  disabled={integracaoBusy !== null || !atividadeGradeId.trim()}
+                >
+                  <PlayCircle className="size-4" />
+                  {integracaoBusy === "publish" ? "..." : "Publicar"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Event ID (reprocessar webhook)
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="event id..."
+                  value={webhookEventId}
+                  onChange={(e) => setWebhookEventId(e.target.value)}
+                  className="border-border bg-secondary"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-border"
+                  onClick={handleReprocessarWebhook}
+                  disabled={integracaoBusy !== null || !webhookEventId.trim()}
+                >
+                  <RefreshCw className="size-4" />
+                  {integracaoBusy === "reprocess" ? "..." : "Reprocessar"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {integracaoError ? (
+          <div className="mt-3 rounded-md border border-gym-danger/30 bg-gym-danger/10 px-3 py-2 text-xs text-gym-danger">
+            {integracaoError}
+          </div>
+        ) : null}
+        {integracaoResult ? (
+          <div className="mt-3 rounded-md border border-border bg-secondary px-3 py-2 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Resultado:</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  integracaoResult.status === "APROVADO"
+                    ? "bg-gym-teal/15 text-gym-teal"
+                    : integracaoResult.status === "NEGADO"
+                      ? "bg-gym-danger/15 text-gym-danger"
+                      : "bg-gym-warning/15 text-gym-warning"
+                }`}
+              >
+                {integracaoResult.status}
+              </span>
+              {integracaoResult.codigo ? (
+                <span className="font-mono text-[10px]">{integracaoResult.codigo}</span>
+              ) : null}
+            </div>
+            {integracaoResult.mensagem ? (
+              <p className="mt-1 text-muted-foreground">{integracaoResult.mensagem}</p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
