@@ -79,7 +79,7 @@ const securityHeaders = [
 const cdnUrl = env.NEXT_PUBLIC_CDN_URL;
 
 const nextConfig: NextConfig = {
-  ...(process.env.SKIP_STANDALONE === "true" ? {} : { output: 'standalone' as const }),
+  output: 'standalone',
   serverExternalPackages: ['@prisma/instrumentation', '@opentelemetry/instrumentation'],
   // Task 483: apontar assets estáticos para CDN quando configurado
   ...(cdnUrl ? { assetPrefix: cdnUrl } : {}),
@@ -95,7 +95,34 @@ const nextConfig: NextConfig = {
   experimental: {
     // Needed for EVO backup uploads (~70MB) forwarded through /backend rewrite.
     proxyClientMaxBodySize: backendProxyMaxBodySize * 1024 * 1024,
-    optimizePackageImports: ["lucide-react", "date-fns", "@radix-ui/react-slot", "framer-motion"],
+    optimizePackageImports: [
+      "lucide-react",
+      "date-fns",
+      "framer-motion",
+      "cmdk",
+      "react-hook-form",
+      "@hookform/resolvers",
+      "zod",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-tooltip",
+      "@radix-ui/react-tabs",
+      "@radix-ui/react-select",
+      "@radix-ui/react-checkbox",
+      "@radix-ui/react-switch",
+      "@radix-ui/react-toast",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-separator",
+      "@radix-ui/react-scroll-area",
+      "@radix-ui/react-label",
+      "@radix-ui/react-progress",
+      "@radix-ui/react-accordion",
+      "@radix-ui/react-alert-dialog",
+      "@tanstack/react-query",
+      "recharts",
+    ],
   },
   async headers() {
     return [

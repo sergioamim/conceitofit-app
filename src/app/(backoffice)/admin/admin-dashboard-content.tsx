@@ -41,7 +41,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_SORT: OperacionalSortState = {
@@ -99,13 +98,13 @@ export function AdminDashboardContent({
   return (
     <div className="flex flex-col gap-10 pb-20">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+        <div className="animate-[slideInLeft_0.4s_ease-out]">
           <p className="text-sm font-bold uppercase tracking-widest text-gym-accent mb-2">Plataforma</p>
           <h1 className="text-4xl font-extrabold tracking-tight font-display sm:text-5xl">Dashboard <span className="text-gym-accent">Admin</span></h1>
           <p className="text-lg text-muted-foreground max-w-2xl mt-2">
             Visão consolidada do ecossistema Conceito.fit: gestão de academias, unidades e métricas SaaS.
           </p>
-        </motion.div>
+        </div>
         
         <div className="flex gap-3">
           <Link href="/admin/onboarding/provisionar">
@@ -132,19 +131,17 @@ export function AdminDashboardContent({
           </div>
           
           {metricas && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
+            <div
               className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-sm",
-                currentTone === "teal" ? "border-gym-teal/30 bg-gym-teal/10 text-gym-teal" : 
-                currentTone === "danger" ? "border-gym-danger/30 bg-gym-danger/10 text-gym-danger" : 
+                "inline-flex animate-[fadeInScale_0.4s_ease-out] items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-sm",
+                currentTone === "teal" ? "border-gym-teal/30 bg-gym-teal/10 text-gym-teal" :
+                currentTone === "danger" ? "border-gym-danger/30 bg-gym-danger/10 text-gym-danger" :
                 "border-border bg-muted text-muted-foreground"
               )}
             >
               <LineChart className="size-4" />
               Crescimento mensal {formatSignedPercent(metricas.tendenciaCrescimentoPercentual)}
-            </motion.div>
+            </div>
           )}
         </div>
 
@@ -182,11 +179,9 @@ export function AdminDashboardContent({
                         <span className="text-foreground">{item.total}</span>
                       </div>
                       <div className="h-2.5 rounded-full bg-muted/30 overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${width}%` }}
-                          transition={{ delay: i * 0.1, duration: 0.8 }}
-                          className="h-full bg-gradient-to-r from-gym-accent to-gym-teal" 
+                        <div
+                          className="h-full bg-gradient-to-r from-gym-accent to-gym-teal transition-[width] duration-700 ease-out"
+                          style={{ width: `${width}%`, transitionDelay: `${i * 100}ms` }}
                         />
                       </div>
                     </div>
@@ -209,38 +204,50 @@ export function AdminDashboardContent({
               <Table>
                 <TableHeader>
                   <TableRow className="border-none bg-muted/40 hover:bg-muted/40">
-                    {([["academiaNome", "Academia"], ["unidades", "Unid."], ["alunosAtivos", "Alunos"], ["matriculasAtivas", "Matric."], ["vendasMesQuantidade", "Vendas"], ["vendasMesValor", "Receita"]] as const).map(([key, label], i) => (
-                      <TableHead key={key} className={cn("py-4", i === 0 && "pl-6")}>
-                        <button type="button" className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 hover:text-foreground transition-colors" onClick={() => handleSortChange(key)}>
-                          {label} {renderSortIcon(key)}
-                        </button>
-                      </TableHead>
-                    ))}
+                    {([["academiaNome", "Academia"], ["unidades", "Unid."], ["alunosAtivos", "Alunos"], ["matriculasAtivas", "Matric."], ["vendasMesQuantidade", "Vendas"], ["vendasMesValor", "Receita"]] as const).map(([key, label], i) => {
+                      const isActive = sortState.key === key;
+                      const ariaSort = isActive
+                        ? sortState.direction === "asc" ? "ascending" : "descending"
+                        : "none";
+                      return (
+                        <TableHead
+                          key={key}
+                          scope="col"
+                          aria-sort={ariaSort}
+                          className={cn("py-4", i === 0 && "pl-6")}
+                        >
+                          <button
+                            type="button"
+                            aria-label={`Ordenar por ${label}${isActive ? `, atualmente ${ariaSort === "ascending" ? "crescente" : "decrescente"}` : ""}`}
+                            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+                            onClick={() => handleSortChange(key)}
+                          >
+                            {label} {renderSortIcon(key)}
+                          </button>
+                        </TableHead>
+                      );
+                    })}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <AnimatePresence>
-                    {distribuicaoOrdenada.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="py-20 text-center text-sm text-muted-foreground opacity-50">Sem dados disponíveis.</TableCell></TableRow>
-                    ) : (
-                      distribuicaoOrdenada.map((item, i) => (
-                        <motion.tr 
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.02 }}
-                          key={item.academiaId ?? item.academiaNome}
-                          className="group border-b border-border/10 hover:bg-gym-accent/[0.03] transition-colors"
-                        >
-                          <TableCell className="py-4 pl-6 font-bold text-sm tracking-tight">{item.academiaNome}</TableCell>
-                          <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.unidades)}</TableCell>
-                          <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.alunosAtivos)}</TableCell>
-                          <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.matriculasAtivas)}</TableCell>
-                          <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.vendasMesQuantidade)}</TableCell>
-                          <TableCell className="py-4 text-xs font-extrabold text-gym-accent">{formatCurrency(item.vendasMesValor)}</TableCell>
-                        </motion.tr>
-                      ))
-                    )}
-                  </AnimatePresence>
+                  {distribuicaoOrdenada.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="py-20 text-center text-sm text-muted-foreground opacity-50">Sem dados disponíveis.</TableCell></TableRow>
+                  ) : (
+                    distribuicaoOrdenada.map((item, i) => (
+                      <TableRow
+                        key={item.academiaId ?? item.academiaNome}
+                        className="group animate-[fadeInUp_0.3s_ease-out_both] border-b border-border/10 hover:bg-gym-accent/[0.03] transition-colors"
+                        style={{ animationDelay: `${i * 20}ms` }}
+                      >
+                        <TableCell className="py-4 pl-6 font-bold text-sm tracking-tight">{item.academiaNome}</TableCell>
+                        <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.unidades)}</TableCell>
+                        <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.alunosAtivos)}</TableCell>
+                        <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.matriculasAtivas)}</TableCell>
+                        <TableCell className="py-4 text-xs font-medium">{formatCompactNumber(item.vendasMesQuantidade)}</TableCell>
+                        <TableCell className="py-4 text-xs font-extrabold text-gym-accent">{formatCurrency(item.vendasMesValor)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -275,9 +282,8 @@ function PlusIcon({ className }: { className?: string }) {
 function ManagementCard({ href, label, description, icon: Icon, value, isSpecial }: any) {
   return (
     <Link href={href}>
-      <motion.div 
-        whileHover={{ y: -4 }}
-        className="glass-card rounded-2xl border border-border/40 p-5 group hover:bg-gym-accent/[0.03] transition-all"
+      <div
+        className="glass-card rounded-2xl border border-border/40 p-5 group hover:-translate-y-1 hover:bg-gym-accent/[0.03] transition-all duration-200"
       >
         <div className="flex items-start justify-between">
           <div className={cn(
@@ -297,7 +303,7 @@ function ManagementCard({ href, label, description, icon: Icon, value, isSpecial
           </p>
           <p className="text-[11px] text-muted-foreground uppercase tracking-widest mt-0.5">{description}</p>
         </div>
-      </motion.div>
+      </div>
     </Link>
   );
 }

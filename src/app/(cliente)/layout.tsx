@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { ClienteLayoutClient } from "./layout-client";
+
+export const metadata: Metadata = {
+  title: {
+    default: "Minha área — Conceito Fit",
+    template: "%s — Conceito Fit",
+  },
+  description: "Área do aluno no Conceito Fit — treinos, pagamentos, agenda.",
+  robots: { index: false, follow: false, nocache: true },
+};
 
 export default async function ClienteLayout({
   children,

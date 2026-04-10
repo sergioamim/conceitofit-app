@@ -17,7 +17,7 @@
  *       Testar com: npm run build (deve funcionar sem este script).
  */
 
-import { existsSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, writeFileSync, mkdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 
@@ -28,6 +28,7 @@ const mjsFile = join(serverDir, "middleware.js");
 
 const NFT_STUB = JSON.stringify({ version: 1, files: [] });
 const MJS_STUB = "// stub — see scripts/fix-standalone-proxy.mjs\n";
+const STUB_SIZE = MJS_STUB.length;
 
 let stopped = false;
 
@@ -36,7 +37,11 @@ function ensureStubs() {
   try {
     if (!existsSync(serverDir)) mkdirSync(serverDir, { recursive: true });
     if (!existsSync(nftFile)) writeFileSync(nftFile, NFT_STUB);
-    if (!existsSync(mjsFile)) writeFileSync(mjsFile, MJS_STUB);
+    // Only write stub if middleware.js doesn't exist — NEVER overwrite real middleware
+    // Next.js compiles proxy.ts into middleware.js, so if it's larger than stub, it's the real one
+    if (!existsSync(mjsFile)) {
+      writeFileSync(mjsFile, MJS_STUB);
+    }
   } catch {
     // ignore
   }

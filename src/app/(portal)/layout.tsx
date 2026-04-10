@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { PortalLayoutClient } from "./layout-client";
+
+export const metadata: Metadata = {
+  title: {
+    default: "Portal — Conceito Fit",
+    template: "%s — Portal Conceito Fit",
+  },
+  description: "Portal operacional do Conceito Fit — gestão da sua academia.",
+  robots: { index: false, follow: false, nocache: true },
+};
 
 export default async function PortalLayout({
   children,

@@ -54,7 +54,7 @@ export function BiMetricCard({
             "flex h-10 w-10 items-center justify-center rounded-xl border transition-transform group-hover:scale-110",
             tones[tone]
           )}>
-            {Icon ? <Icon size={20} /> : <TrendingUp size={20} />}
+            {Icon ? <Icon size={20} aria-hidden="true" /> : <TrendingUp size={20} aria-hidden="true" />}
           </div>
           {(trend || delta) && (
             <div className={cn(
