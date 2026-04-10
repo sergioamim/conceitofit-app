@@ -57,7 +57,8 @@ export const metadata: Metadata = {
       "Plataforma completa para gestão de academias. Agende uma demonstração gratuita.",
   },
   robots: { index: true, follow: true },
-  alternates: { canonical: "/b2b" },
+  metadataBase: new URL("https://conceito.fit"),
+  alternates: { canonical: "https://conceito.fit/b2b" },
 };
 
 // ---------------------------------------------------------------------------
@@ -459,10 +460,13 @@ export default function B2BLandingPage() {
             Mais de <span className="font-bold text-foreground">500 academias</span> já
             transformaram sua gestão com o Conceito Fit
           </p>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-8 opacity-40">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
             {["Power Gym", "Studio Forma", "FitLife", "Iron Works", "BodyTech", "CrossBox"].map(
               (name) => (
-                <span key={name} className="font-display text-sm font-semibold tracking-wide text-foreground">
+                <span
+                  key={name}
+                  className="font-display text-sm font-semibold tracking-wide text-muted-foreground"
+                >
                   {name}
                 </span>
               ),
@@ -613,13 +617,18 @@ export default function B2BLandingPage() {
           <AnimateOnScroll delay={200}>
             <div className="mt-12 overflow-hidden rounded-2xl border border-border/60">
               <table className="w-full text-left text-sm">
+                <caption className="sr-only">
+                  Comparativo entre operar sem sistema e com o Conceito Fit
+                </caption>
                 <thead>
                   <tr className="border-b border-border/40 bg-secondary/50">
-                    <th className="px-4 py-3 font-display font-semibold sm:px-6">&nbsp;</th>
-                    <th className="px-4 py-3 font-display font-semibold text-gym-danger sm:px-6">
+                    <th scope="col" className="px-4 py-3 font-display font-semibold sm:px-6">
+                      Categoria
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-display font-semibold text-gym-danger sm:px-6">
                       Sem sistema
                     </th>
-                    <th className="px-4 py-3 font-display font-semibold text-gym-teal sm:px-6">
+                    <th scope="col" className="px-4 py-3 font-display font-semibold text-gym-teal sm:px-6">
                       Com Conceito Fit
                     </th>
                   </tr>
@@ -627,7 +636,9 @@ export default function B2BLandingPage() {
                 <tbody className="divide-y divide-border/40">
                   {COMPARISON.map((row) => (
                     <tr key={row.label} className="bg-card">
-                      <td className="px-4 py-3 font-medium sm:px-6">{row.label}</td>
+                      <th scope="row" className="px-4 py-3 text-left font-medium sm:px-6">
+                        {row.label}
+                      </th>
                       <td className="px-4 py-3 text-muted-foreground sm:px-6">{row.before}</td>
                       <td className="px-4 py-3 text-gym-teal sm:px-6">{row.after}</td>
                     </tr>

@@ -79,7 +79,7 @@ const securityHeaders = [
 const cdnUrl = env.NEXT_PUBLIC_CDN_URL;
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  ...(process.env.SKIP_STANDALONE === "true" ? {} : { output: 'standalone' as const }),
   serverExternalPackages: ['@prisma/instrumentation', '@opentelemetry/instrumentation'],
   // Task 483: apontar assets estáticos para CDN quando configurado
   ...(cdnUrl ? { assetPrefix: cdnUrl } : {}),
@@ -104,12 +104,15 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       // Task 483: cache imutável para assets versionados do Next.js
+      // Em dev, desabilitar cache para evitar stale chunks via Cloudflare Tunnel
       {
         source: "/_next/static/:path*",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
+            value: isDev
+              ? "no-store, must-revalidate"
+              : "public, max-age=31536000, immutable",
           },
         ],
       },
