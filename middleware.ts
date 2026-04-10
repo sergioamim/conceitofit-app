@@ -13,6 +13,7 @@ const PUBLIC_PREFIXES = [
   "/storefront",
   "/b2b",
   "/api",
+  "/backend",
   "/_next",
   "/favicon",
   "/manifest",
