@@ -1,3 +1,19 @@
+/**
+ * ⚠️ MÓDULO FANTASMA — Reservas de aulas (sessões, waitlist, check-in)
+ *
+ * Todos os endpoints `/api/v1/agenda/aulas/*` **ainda não existem no backend
+ * Java** em 2026-04-10. Consumir este módulo hoje retorna 404.
+ *
+ * Status formalizado em ADR-001: manter o arquivo como "pronto para ligar".
+ * Roadmap: PRD Q2 Épico 3.1 task 26 (portal do aluno "Minhas Aulas").
+ *
+ * Antes de consumir em nova tela: checar `isReservasAulasEnabled()` e esconder
+ * o fluxo quando `false`. Normalizers, tipos e ordenação estão prontos — quando
+ * o BE entregar, basta ligar a flag.
+ *
+ * @see docs/adr/ADR-001-modulos-fe-fantasma.md
+ * @see docs/API_AUDIT_BACKEND_VS_FRONTEND.md seção A (P0)
+ */
 import { createSessaoAulaId, sortReservasAula, sortSessoesAula } from "@/lib/tenant/aulas/reservas";
 import type {
   AulaOcupacao,

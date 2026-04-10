@@ -1,3 +1,29 @@
+/**
+ * ⚠️ MÓDULO PARCIALMENTE DESALINHADO — Financial (contas contábeis)
+ *
+ * Em 2026-04-10, o backend Java implementa AccountApi/TransactionApi/LedgerApi/
+ * ReportApi/MonitoringController em `/api/v1/financial/*`, mas vários paths
+ * divergem do que este arquivo chama:
+ *
+ *   FE                                    →  BE real
+ *   ─────────────────────────────────────────────────────────────────
+ *   /ledgers/{id}/entries                 →  /ledger-entries?ledgerId=
+ *   /monitoring/suspicious                →  /monitoring/suspicious-transactions
+ *   /monitoring/patterns                  →  /monitoring/unusual-patterns/{id}
+ *   /monitoring/high-frequency            →  /monitoring/high-frequency/{id}
+ *   /reports/balanco                      →  (não existe)
+ *   /reports/fluxo-caixa                  →  (não existe)
+ *   /reports/extrato/{contaId}            →  (não existe)
+ *
+ * Os demais paths (accounts, transactions, ledgers list, reports roi/category)
+ * estão alinhados e funcionam.
+ *
+ * Status formalizado em ADR-001: **não deletar**. Task futura reconciliará os
+ * paths divergentes e decidirá o destino dos reports missing.
+ *
+ * @see docs/adr/ADR-001-modulos-fe-fantasma.md
+ * @see docs/API_AUDIT_BACKEND_VS_FRONTEND.md seção A e B
+ */
 import type {
   AltaFrequencia,
   BalancoPatrimonial,

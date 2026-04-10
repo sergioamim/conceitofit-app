@@ -1,3 +1,23 @@
+/**
+ * ⚠️ MÓDULO FANTASMA CONSCIENTE — CRM cadências (execuções, escalation, trigger)
+ *
+ * Todos os endpoints `/api/v1/crm/cadencias/*` **ainda não existem no backend
+ * Java** em 2026-04-10. Este arquivo **já foi projetado** para tolerar a
+ * ausência: cada chamada está envolta em `mapUnavailableCapability` que
+ * converte 404/405/501 em mensagem amigável ("Backend ainda não expõe ...
+ * neste ambiente"). Graceful degradation já é o default.
+ *
+ * Status formalizado em ADR-001: **manter sem alterações** — o tratamento de
+ * indisponibilidade já está adequado. Task #545 (CRM cadências - low) espera
+ * o BE e está com `depends_on=#551` no task-master.
+ *
+ * A tela `/crm/cadencias` pode ser escondida proativamente via flag
+ * `NEXT_PUBLIC_CRM_CADENCIAS_ENABLED` se preferir UX de "em preparação"
+ * em vez de mostrar a mensagem de erro amigável.
+ *
+ * @see docs/adr/ADR-001-modulos-fe-fantasma.md
+ * @see docs/API_AUDIT_BACKEND_VS_FRONTEND.md seção A (P0)
+ */
 import type {
   CrmCadenceExecution,
   CrmCadenceExecutionStatus,

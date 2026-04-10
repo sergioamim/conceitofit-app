@@ -1,3 +1,20 @@
+/**
+ * ⚠️ MÓDULO FANTASMA — Billing recorrente
+ *
+ * Todos os endpoints abaixo (`/api/v1/billing/config`, `/api/v1/billing/assinaturas`)
+ * **ainda não existem no backend Java** em 2026-04-10. Consumir este módulo hoje
+ * retorna 404.
+ *
+ * Status formalizado em ADR-001: manter o arquivo como "pronto para ligar".
+ * Roadmap: PRD Q2 Épico 3.2 (tasks 29-32). Quando o BE estiver pronto, ligar a
+ * flag `NEXT_PUBLIC_BILLING_RECORRENTE_ENABLED`.
+ *
+ * Antes de consumir em nova tela: checar `isBillingRecurrenteEnabled()` e
+ * esconder o fluxo quando `false`.
+ *
+ * @see docs/adr/ADR-001-modulos-fe-fantasma.md
+ * @see docs/API_AUDIT_BACKEND_VS_FRONTEND.md seção A (P0)
+ */
 import type {
   Assinatura,
   BillingConfig,

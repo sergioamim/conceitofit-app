@@ -15364,10 +15364,11 @@
         "description": "Wave 0.2 saneamento. 5 arquivos em src/lib/api/ chamam exclusivamente endpoints que nao existem no backend (billing.ts, financial.ts, whatsapp.ts, reservas.ts, crm-cadencias.ts). Produzir ADR com verdict por modulo e aplicar (delete ou feature-flag). Referencia: docs/API_AUDIT_BACKEND_VS_FRONTEND.md secao A P0.",
         "details": "Contexto: Audit identificou 5 modulos FE 100% fantasmas: billing.ts (5 paths), financial.ts (18 paths), whatsapp.ts (6 paths), reservas.ts (6 paths), crm-cadencias.ts (7 paths). Total 42 paths. Qualquer tela que importe hoje retorna 404. Escopo: (1) ADR docs/adr/ADR-XXX-modulos-fe-fantasma.md com verdict por modulo: (a) DELETAR arquivo + telas dependentes, (b) FEATURE-FLAG escondendo telas ate BE implementar, (c) IMPLEMENTAR endpoints no BE. (2) Criterios de decisao: feature esta no roadmap Q2? ha tela dependente ativa? volume de retrabalho? (3) PR de implementacao com os deletes + feature flags + migracao de telas. CONFLITO CRITICO: PRD Q2 Epico 3.2 (Billing Recorrente, task 29 do PRD) preve CRIAR src/lib/api/billing.ts do zero, mas arquivo ja existe fantasma. Resolver com (a) deletar billing.ts atual antes do Epico 3.2, ou (b) novo modulo com nome diferente (ex: billing-recurring.ts). Bloqueia task 545 (CRM cadencias) que depende de crm-cadencias.ts. Deliverables: ADR assinado + PR de saneamento + lista de telas afetadas + plano de comunicacao com time de backend sobre modulos 'implementar no BE'.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T15:17:17.914Z"
       },
       {
         "id": "552",
@@ -15383,9 +15384,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-10T15:10:29.365Z",
+      "lastModified": "2026-04-10T15:17:17.914Z",
       "taskCount": 497,
-      "completedCount": 483,
+      "completedCount": 484,
       "tags": [
         "master"
       ]

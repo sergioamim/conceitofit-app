@@ -1,3 +1,25 @@
+/**
+ * ⚠️ MÓDULO PARCIALMENTE FANTASMA — WhatsApp integration
+ *
+ * Em 2026-04-10, o backend Java implementa apenas:
+ *   ✅ WhatsAppCredentialController → /api/v1/whatsapp/credentials
+ *   ✅ WhatsAppWebhookController    → /api/v1/whatsapp/webhook (interno)
+ *
+ * Continuam fantasmas no BE (retornam 404):
+ *   ❌ /api/v1/whatsapp/config      (FE usa este path — deveria migrar p/ /credentials)
+ *   ❌ /api/v1/whatsapp/templates
+ *   ❌ /api/v1/whatsapp/logs
+ *   ❌ /api/v1/whatsapp/send
+ *   ❌ /api/v1/whatsapp/status/{id}
+ *   ❌ /api/v1/whatsapp/stats
+ *
+ * Status formalizado em ADR-001: manter o arquivo, esconder telas atrás da
+ * flag `NEXT_PUBLIC_WHATSAPP_INTEGRATION_ENABLED` até o BE implementar o
+ * restante. Antes de consumir em nova tela: checar `isWhatsappIntegrationEnabled()`.
+ *
+ * @see docs/adr/ADR-001-modulos-fe-fantasma.md
+ * @see docs/API_AUDIT_BACKEND_VS_FRONTEND.md seção A (P0)
+ */
 import type {
   WhatsAppConfig,
   WhatsAppMessageLog,
