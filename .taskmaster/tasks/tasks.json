@@ -15282,12 +15282,13 @@
         "description": "Estender /gerencial/dunning (ou criar pagina dedicada) para expor: CRUD de templates (/financeiro/dunning/templates/{evento}/{canal}), regularizacao em lote (POST /intervencao/lote/regularizar), historico de tentativas por conta. Backend ja expoe todos os endpoints.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "549"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-04-10T22:10:42.369Z"
       },
       {
         "id": "545",
@@ -15428,9 +15429,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-04-10T18:56:09.053Z",
+      "lastModified": "2026-04-10T22:10:42.369Z",
       "taskCount": 500,
-      "completedCount": 495,
+      "completedCount": 496,
       "tags": [
         "master"
       ]
