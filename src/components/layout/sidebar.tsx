@@ -16,12 +16,12 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { 
-  allGroupsV2, 
-  type NavGroupV2, 
-  type NavItemV2 
-} from "@/lib/tenant/nav-items-v2";
-import { allNavItems } from "@/lib/tenant/nav-items";
+import {
+  allGroups,
+  allNavItems,
+  type NavGroup,
+  type NavItem,
+} from "@/lib/tenant/nav-items";
 import { 
   useTenantContext,
   DEFAULT_ACADEMIA_LABEL
@@ -31,6 +31,7 @@ import {
   clearAuthSession,
   getNetworkSlugFromSession,
   hasBackofficeReturnSession,
+  hasGlobalBackofficeAccessFromSession,
   restoreBackofficeReturnSession,
 } from "@/lib/api/session";
 import { logoutApi } from "@/lib/api/auth";
@@ -45,7 +46,7 @@ import {
 import { useIsMac } from "@/hooks/use-is-mac";
 import { LogoutDialog } from "@/components/shared/logout-dialog";
 
-type SidebarFavoriteItem = NavItemV2 | (typeof allNavItems)[number];
+type SidebarFavoriteItem = NavItem;
 
 function hasNestedMenuEntry(
   item: SidebarFavoriteItem,
@@ -70,7 +71,7 @@ function isSidebarItemActive(
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
-function NavLinkV2({ item, active, collapsed }: { item: NavItemV2, active: boolean, collapsed: boolean }) {
+function NavLink({ item, active, collapsed }: { item: NavItem; active: boolean; collapsed: boolean }) {
   const Icon = item.icon;
   const { isFavorite, toggleFavorite } = useUserPreferences();
   const favorited = isFavorite(item.href);
@@ -125,7 +126,7 @@ function NavLinkV2({ item, active, collapsed }: { item: NavItemV2, active: boole
   );
 }
 
-function SidebarGroup({ group, collapsed, pathname }: { group: NavGroupV2, collapsed: boolean, pathname: string }) {
+function SidebarGroup({ group, collapsed, pathname }: { group: NavGroup; collapsed: boolean; pathname: string }) {
   const hasActiveItem = group.items.some((item) => isSidebarItemActive(pathname, item, group.items));
   const [isOpen, setIsOpen] = useState(false);
   const Icon = group.icon;
@@ -157,11 +158,11 @@ function SidebarGroup({ group, collapsed, pathname }: { group: NavGroupV2, colla
             className="overflow-hidden flex flex-col gap-1 px-2"
           >
             {group.items.map((item) => (
-              <NavLinkV2 
-                key={item.href} 
-                item={item} 
-                active={isSidebarItemActive(pathname, item, group.items)} 
-                collapsed={collapsed} 
+              <NavLink
+                key={item.href}
+                item={item}
+                active={isSidebarItemActive(pathname, item, group.items)}
+                collapsed={collapsed}
               />
             ))}
           </motion.div>
@@ -187,13 +188,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const cmdText = isMac === null ? "" : isMac ? "⌘K" : "Ctrl+K";
 
   const favoriteItems = favorites
-    .map((href) => {
-      for (const group of allGroupsV2) {
-        const item = group.items.find(i => i.href === href);
-        if (item) return item;
-      }
-      return allNavItems.find((i) => i.href === href);
-    })
+    .map((href) => allNavItems.find((i) => i.href === href))
     .filter((item): item is SidebarFavoriteItem => Boolean(item));
 
   useEffect(() => {
@@ -214,7 +209,12 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const academiaName = academia?.nome || tenant?.nome || DEFAULT_ACADEMIA_LABEL;
   const userInitial = displayName?.trim().charAt(0).toUpperCase() || "U";
   const userName = displayName?.trim() || "Usuário";
-  const canReturnToBackoffice = hasBackofficeReturnSession();
+  // Permite acessar o backoffice se:
+  // 1. Ha uma sessao guardada (usuario entrou como academia via backoffice) - restaura e volta
+  // 2. Usuario tem acesso global ao backoffice (admin/super_user) - navega direto para /admin
+  const hasReturnSession = hasBackofficeReturnSession();
+  const hasBackofficeAccess = hasGlobalBackofficeAccessFromSession();
+  const canReturnToBackoffice = hasReturnSession || hasBackofficeAccess;
 
   return (
     <>
@@ -289,18 +289,18 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
               )}
               <div className="flex flex-col gap-1 px-2">
                 {favoriteItems.map((item) => (
-                  <NavLinkV2 
-                    key={`fav-${item.href}`} 
-                    item={item} 
-                    active={isSidebarItemActive(pathname, item, favoriteItems)} 
-                    collapsed={collapsed} 
+                  <NavLink
+                    key={`fav-${item.href}`}
+                    item={item}
+                    active={isSidebarItemActive(pathname, item, favoriteItems)}
+                    collapsed={collapsed}
                   />
                 ))}
               </div>
             </div>
           )}
 
-          {allGroupsV2.map((group) => {
+          {allGroups.map((group) => {
             const filteredItems = group.items.filter(item => !favorites.includes(item.href));
             if (filteredItems.length === 0) return null;
             return (
@@ -374,7 +374,11 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
                     <button
                       type="button"
                       onClick={() => {
-                        restoreBackofficeReturnSession();
+                        // Se ha uma session guardada (entrou como academia via backoffice),
+                        // restaura a sessao original. Caso contrario, apenas navega para /admin.
+                        if (hasReturnSession) {
+                          restoreBackofficeReturnSession();
+                        }
                         window.location.assign("/admin");
                       }}
                       className="flex items-center gap-4 w-full p-4 rounded-2xl bg-muted/30 border border-border/20 hover:bg-primary/10 hover:border-primary/30 transition-colors group"
@@ -383,8 +387,12 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
                         <ArrowLeft size={20} />
                       </div>
                       <div className="flex-1 text-left">
-                        <p className="text-sm font-bold">Voltar ao Backoffice</p>
-                        <p className="text-[11px] text-muted-foreground">Restaurar a sessão administrativa</p>
+                        <p className="text-sm font-bold">
+                          {hasReturnSession ? "Voltar ao Backoffice" : "Ir para o Backoffice"}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {hasReturnSession ? "Restaurar a sessão administrativa" : "Acessar a área administrativa"}
+                        </p>
                       </div>
                     </button>
                   )}
