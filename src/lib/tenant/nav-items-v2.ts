@@ -91,6 +91,7 @@ export const financeGroup: NavGroupV2 = {
     { href: "/gerencial/contas-a-pagar", label: "Contas a Pagar", icon: DollarSign },
     { href: "/administrativo/nfse", label: "Fiscal & NFSe", icon: Settings },
     { href: "/administrativo/billing", label: "Faturamento Recorrente", icon: CreditCard },
+    { href: "/administrativo/billing/dashboard", label: "Dashboard Cobranças", icon: CreditCard, description: "MRR, churn e inadimplência" },
     { href: "/gerencial/contabilidade", label: "Contabilidade", icon: BookOpen },
     { href: "/financeiro/dunning", label: "Cobranca", icon: AlertTriangle, description: "Dunning e inadimplencia" },
   ]

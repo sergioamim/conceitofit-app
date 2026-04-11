@@ -240,7 +240,7 @@ describe("api/alunos", () => {
           telefone: "11",
           cpf: "123",
           dataNascimento: "2000-01-01",
-          sexo: "MASCULINO",
+          sexo: "M",
         },
       });
       expect(spy.mock.calls[0][0].method).toBe("POST");
@@ -280,7 +280,7 @@ describe("api/alunos", () => {
           telefone: "11",
           cpf: "123",
           dataNascimento: "2000-01-01",
-          sexo: "MASCULINO",
+          sexo: "M",
           planoId: "p1",
           dataInicio: "2026-04-10",
           formaPagamento: "PIX",

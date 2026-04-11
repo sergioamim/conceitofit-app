@@ -5,6 +5,12 @@ export const queryKeys = {
   billingConfig: (tenantId: string) =>
     ["billingConfig", tenantId] as const,
 
+  assinaturas: {
+    all: (tenantId: string) => ["assinaturas", tenantId] as const,
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["assinaturas", "list", tenantId, filters] as const,
+  },
+
   clientes: {
     all: (tenantId: string) => ["clientes", tenantId] as const,
     list: (tenantId: string, filters: Record<string, unknown>) =>

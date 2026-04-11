@@ -187,7 +187,7 @@ export async function testBillingConnectionApi(input: {
 
 // ─── Assinaturas API ─────────────────────────────────────────────────────
 
-async function listAssinaturasApi(input: {
+export async function listAssinaturasApi(input: {
   tenantId: string;
   status?: StatusAssinatura;
   page?: number;
