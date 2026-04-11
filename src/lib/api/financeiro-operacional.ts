@@ -17,6 +17,7 @@ import type {
   NfseAmbiente,
   NfseClassificacaoTributaria,
   NfseConfiguracao,
+  NfseConfiguracaoPayload,
   NfseConfiguracaoStatus,
   NfseIndicadorOperacao,
   NfseProvider,
@@ -31,16 +32,30 @@ import { ApiRequestError, apiRequest } from "@/lib/api/http";
 type NfseConfiguracaoApiResponse = Partial<NfseConfiguracao> & {
   id?: string | null;
   tenantId?: string | null;
+  // Task #557: campos novos do BE NfseConfiguracaoUnidadeResponse
+  unidadeId?: string | null;
+  municipioCodigoIbge?: string | null;
+  municipioUf?: string | null;
+  endpointBase?: string | null;
+  integracaoAtiva?: unknown;
+  simulacao?: unknown;
+  clienteId?: string | null;
+  ativo?: unknown;
+  criadoEm?: string | null;
+  atualizadoEm?: string | null;
+
   ambiente?: NfseAmbiente | null;
   provedor?: NfseProvider | null;
-  prefeitura?: string | null;
-  inscricaoMunicipal?: string | null;
-  cnaePrincipal?: string | null;
   codigoTributacaoNacional?: string | null;
   codigoNbs?: string | null;
   classificacaoTributaria?: NfseClassificacaoTributaria | null;
   consumidorFinal?: unknown;
   indicadorOperacao?: NfseIndicadorOperacao | null;
+
+  // Legado (ainda aceito pelo normalizer por compat, mas não vem do BE novo)
+  prefeitura?: string | null;
+  inscricaoMunicipal?: string | null;
+  cnaePrincipal?: string | null;
   serieRps?: string | null;
   loteInicial?: unknown;
   aliquotaPadrao?: unknown;
@@ -154,19 +169,36 @@ function normalizeNfseConfiguracao(
   tenantId: string,
   input?: NfseConfiguracaoApiResponse | null
 ): NfseConfiguracao {
+  const resolvedTenant = cleanString(input?.tenantId) ?? tenantId;
   return {
     id: cleanString(input?.id) ?? `nfse-${tenantId}`,
-    tenantId: cleanString(input?.tenantId) ?? tenantId,
+    tenantId: resolvedTenant,
+    // Task #557: novos campos do BE
+    unidadeId: cleanString(input?.unidadeId) ?? resolvedTenant,
+    municipioCodigoIbge: cleanString(input?.municipioCodigoIbge),
+    municipioUf: cleanString(input?.municipioUf),
+    endpointBase: cleanString(input?.endpointBase),
+    integracaoAtiva: toBoolean(input?.integracaoAtiva, false),
+    simulacao: toBoolean(input?.simulacao, true),
+    clienteId: cleanString(input?.clienteId),
+    ativo: toBoolean(input?.ativo, false),
+    criadoEm: cleanString(input?.criadoEm),
+    atualizadoEm: cleanString(input?.atualizadoEm),
+
     ambiente: input?.ambiente ?? "HOMOLOGACAO",
-    provedor: input?.provedor ?? "GINFES",
-    prefeitura: cleanString(input?.prefeitura) ?? "",
-    inscricaoMunicipal: cleanString(input?.inscricaoMunicipal) ?? "",
-    cnaePrincipal: cleanString(input?.cnaePrincipal) ?? "",
+    // Task #557: defaults alinhados com enums do BE
+    provedor: input?.provedor ?? "SEFIN_NACIONAL",
     codigoTributacaoNacional: cleanString(input?.codigoTributacaoNacional) ?? "",
     codigoNbs: cleanString(input?.codigoNbs) ?? "",
     classificacaoTributaria: input?.classificacaoTributaria ?? "SERVICO_TRIBUTAVEL",
     consumidorFinal: toBoolean(input?.consumidorFinal, true),
-    indicadorOperacao: input?.indicadorOperacao ?? "SERVICO_MUNICIPIO",
+    indicadorOperacao: input?.indicadorOperacao ?? "PRESENCIAL",
+
+    // Campos legado — preservados se vierem do BE (retro-compat), mas
+    // nao enviados no salvar novo (Task #557).
+    prefeitura: cleanString(input?.prefeitura) ?? "",
+    inscricaoMunicipal: cleanString(input?.inscricaoMunicipal) ?? "",
+    cnaePrincipal: cleanString(input?.cnaePrincipal) ?? "",
     serieRps: cleanString(input?.serieRps) ?? "",
     loteInicial: Math.max(1, toNumber(input?.loteInicial, 1)),
     aliquotaPadrao: Math.max(0, toNumber(input?.aliquotaPadrao, 0)),
@@ -175,6 +207,7 @@ function normalizeNfseConfiguracao(
     emailCopiaFinanceiro: cleanString(input?.emailCopiaFinanceiro),
     certificadoAlias: cleanString(input?.certificadoAlias),
     webhookFiscalUrl: cleanString(input?.webhookFiscalUrl),
+
     status: input?.status ?? "PENDENTE",
     ultimaValidacaoEm: cleanString(input?.ultimaValidacaoEm),
     ultimaSincronizacaoEm: cleanString(input?.ultimaSincronizacaoEm),
@@ -297,80 +330,56 @@ export async function getNfseConfiguracaoAtualApi(input: {
 }
 
 /**
- * Salva configuração de NFS-e.
+ * Salva configuração de NFS-e (cria ou atualiza).
  *
- * 🔴 STATUS: PARCIALMENTE QUEBRADO — Aguardando refactor de modelo (Task #557)
+ * Task #557: migrado de `PUT /administrativo/nfse/configuracao-atual`
+ * (path legado inexistente no BE) para `POST /api/v1/nfse/configuracoes`
+ * consumindo `NfseConfiguracaoUnidadeRequest` do backend.
  *
- * O FE chama `PUT /api/v1/administrativo/nfse/configuracao-atual` que NÃO
- * existe no backend atual. O endpoint correto seria `POST /api/v1/nfse/
- * configuracoes` com `NfseConfiguracaoUnidadeRequest`, MAS o shape do body
- * é totalmente diferente:
+ * Mapeamento de campos:
+ * - Obrigatórios no BE: tenantId, unidadeId, municipioCodigoIbge (7 chars),
+ *   municipioUf (2 chars), provedor, ambiente, endpointBase,
+ *   codigoTributacaoNacional, codigoNbs, classificacaoTributaria,
+ *   consumidorFinal, indicadorOperacao
+ * - Opcionais no BE: id (para update), integracaoAtiva, simulacao,
+ *   clienteId, clienteSecret, certificadoBase64, credenciaisJson, ativo
  *
- * ┌─────────────────────────────────────┬───────────────────────────────────┐
- * │ FE atual (NfseConfiguracao)         │ BE atual (NfseConfiguracaoUnidade │
- * │                                     │  Request)                          │
- * ├─────────────────────────────────────┼───────────────────────────────────┤
- * │ ambiente, provedor                  │ ambiente, provedor      ✅       │
- * │ codigoTributacaoNacional            │ codigoTributacaoNacional ✅       │
- * │ codigoNbs                           │ codigoNbs                ✅       │
- * │ classificacaoTributaria             │ classificacaoTributaria  ✅       │
- * │ consumidorFinal                     │ consumidorFinal          ✅       │
- * │ indicadorOperacao                   │ indicadorOperacao        ✅       │
- * │ ─                                   │ municipioCodigoIbge      🆕       │
- * │ ─                                   │ municipioUf              🆕       │
- * │ ─                                   │ endpointBase             🆕       │
- * │ ─                                   │ clienteId, clienteSecret 🆕       │
- * │ ─                                   │ certificadoBase64        🆕       │
- * │ ─                                   │ credenciaisJson          🆕       │
- * │ ─                                   │ integracaoAtiva          🆕       │
- * │ ─                                   │ simulacao                🆕       │
- * │ prefeitura                          │ ─                        ❌       │
- * │ inscricaoMunicipal                  │ ─                        ❌       │
- * │ cnaePrincipal                       │ ─                        ❌       │
- * │ serieRps, loteInicial               │ ─                        ❌       │
- * │ aliquotaPadrao, regimeTributario    │ ─                        ❌       │
- * │ emissaoAutomatica                   │ ─                        ❌       │
- * │ emailCopiaFinanceiro                │ ─                        ❌       │
- * │ certificadoAlias, webhookFiscalUrl  │ ─                        ❌       │
- * └─────────────────────────────────────┴───────────────────────────────────┘
- *
- * Comportamento atual: a chamada retorna 404 (BE rejeita o path antigo).
- * O try/catch da UI captura e mostra erro. **Nenhum dado é persistido.**
- *
- * Resolução requer (Task #557):
- * 1. Refactor do form em `nfse-content.tsx` para coletar os campos novos
- * 2. Refactor do tipo `NfseConfiguracao` em `pagamento.ts`
- * 3. Migração do path PUT `/administrativo/...` → POST `/nfse/configuracoes`
- * 4. Decisão de produto: o que fazer com os campos antigos
- *    (`prefeitura`, `serieRps`, `aliquotaPadrao`, etc.) — descartar ou
- *    pedir BE para suportar?
+ * Campos legado do FE (prefeitura, inscricaoMunicipal, cnaePrincipal,
+ * serieRps, loteInicial, aliquotaPadrao, regimeTributario,
+ * emissaoAutomatica, emailCopiaFinanceiro, certificadoAlias,
+ * webhookFiscalUrl) **NÃO são enviados** ao BE — foram descartados do
+ * contrato porque não existem no novo DTO. Ficam preservados no tipo
+ * `NfseConfiguracao` como `@deprecated` apenas para retrocompatibilidade
+ * com código antigo que ainda leia desses campos (que sempre serão
+ * valores default após este commit).
  */
 export async function salvarNfseConfiguracaoAtualApi(
-  input: NfseConfiguracao
+  input: NfseConfiguracaoPayload
 ): Promise<NfseConfiguracao> {
   const response = await apiRequest<NfseConfiguracaoApiResponse>({
-    path: "/api/v1/administrativo/nfse/configuracao-atual",
-    method: "PUT",
-    query: { tenantId: input.tenantId },
+    path: "/api/v1/nfse/configuracoes",
+    method: "POST",
     body: {
-      ambiente: input.ambiente,
+      id: input.id,
+      tenantId: input.tenantId,
+      unidadeId: input.unidadeId,
+      municipioCodigoIbge: input.municipioCodigoIbge,
+      municipioUf: input.municipioUf,
       provedor: input.provedor,
-      prefeitura: input.prefeitura,
-      inscricaoMunicipal: input.inscricaoMunicipal,
-      cnaePrincipal: input.cnaePrincipal,
+      ambiente: input.ambiente,
+      endpointBase: input.endpointBase,
+      integracaoAtiva: input.integracaoAtiva,
+      simulacao: input.simulacao,
+      clienteId: input.clienteId,
+      clienteSecret: input.clienteSecret,
+      certificadoBase64: input.certificadoBase64,
+      credenciaisJson: input.credenciaisJson,
       codigoTributacaoNacional: input.codigoTributacaoNacional,
       codigoNbs: input.codigoNbs,
       classificacaoTributaria: input.classificacaoTributaria,
       consumidorFinal: input.consumidorFinal,
       indicadorOperacao: input.indicadorOperacao,
-      serieRps: input.serieRps,
-      loteInicial: input.loteInicial,
-      aliquotaPadrao: input.aliquotaPadrao,
-      regimeTributario: input.regimeTributario,
-      emissaoAutomatica: input.emissaoAutomatica,
-      emailCopiaFinanceiro: input.emailCopiaFinanceiro,
-      certificadoAlias: input.certificadoAlias,
-      webhookFiscalUrl: input.webhookFiscalUrl,
+      ativo: input.ativo,
     },
   });
   return normalizeNfseConfiguracao(input.tenantId, response);

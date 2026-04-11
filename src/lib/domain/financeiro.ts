@@ -40,9 +40,9 @@ export const NFSE_CLASSIFICACAO_TRIBUTARIA_LABEL: Record<NfseClassificacaoTribut
 };
 
 export const NFSE_INDICADOR_OPERACAO_LABEL: Record<NfseIndicadorOperacao, string> = {
-  SERVICO_MUNICIPIO: "Serviço no município",
-  SERVICO_FORA_MUNICIPIO: "Serviço fora do município",
-  EXPORTACAO: "Exportação",
+  // Task #557: alinhado com enum NfseIndicadorOperacao.java do BE
+  PRESENCIAL: "Presencial",
+  NAO_PRESENCIAL: "Não presencial",
 };
 
 export function getNfseBloqueioMensagem(input?: Partial<NfseConfiguracao> | null) {

@@ -23,6 +23,7 @@ import type {
   NfseAmbiente,
   NfseClassificacaoTributaria,
   NfseConfiguracao,
+  NfseConfiguracaoPayload,
   NfseIndicadorOperacao,
   NfseProvider,
   NfseRegimeTributario,
@@ -37,12 +38,10 @@ const AMBIENTE_OPTIONS: Array<{ value: NfseAmbiente; label: string }> = [
   { value: "PRODUCAO", label: "Produção" },
 ];
 
+// Task #557: alinhado com NfseProvedor.java do BE
 const PROVEDOR_OPTIONS: Array<{ value: NfseProvider; label: string }> = [
-  { value: "GINFES", label: "GINFES" },
-  { value: "ABRASF", label: "ABRASF" },
-  { value: "BETHA", label: "Betha" },
-  { value: "ISSNET", label: "ISSNet" },
-  { value: "IPM", label: "IPM" },
+  { value: "SEFIN_NACIONAL", label: "SEFIN Nacional" },
+  { value: "ENOTAS", label: "eNotas" },
 ];
 
 const REGIME_OPTIONS: Array<{ value: NfseRegimeTributario; label: string }> = [
@@ -100,17 +99,58 @@ export function NfseContent() {
 
   async function handleSave() {
     if (!tenantId || !form) return;
+
+    // Task #557: validação específica dos campos obrigatórios do novo
+    // DTO NfseConfiguracaoUnidadeRequest (BE).
+    const novosErros: string[] = [];
+    if (!form.municipioCodigoIbge || form.municipioCodigoIbge.length !== 7) {
+      novosErros.push("Informe o código IBGE do município (7 dígitos).");
+    }
+    if (!form.municipioUf || form.municipioUf.length !== 2) {
+      novosErros.push("Informe a UF do município (2 letras).");
+    }
+    if (!form.endpointBase?.trim()) {
+      novosErros.push("Informe o endpoint base do provedor.");
+    }
+
     const firstLocalError = Object.values(localErrors)[0];
     if (firstLocalError) {
       setError(firstLocalError);
       setSuccess(null);
       return;
     }
+    if (novosErros.length > 0) {
+      setError(novosErros[0]);
+      setSuccess(null);
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setSuccess(null);
     try {
-      const saved = await salvarNfseConfiguracaoAtualApi(form);
+      // Task #557: monta o payload no formato novo do BE.
+      // tenantId = unidadeId no modelo AIOX (1 tenant = 1 unidade).
+      const payload: NfseConfiguracaoPayload = {
+        id: form.id?.startsWith("nfse-") ? undefined : form.id,
+        tenantId: form.tenantId,
+        unidadeId: form.unidadeId ?? form.tenantId,
+        municipioCodigoIbge: form.municipioCodigoIbge!,
+        municipioUf: form.municipioUf!.toUpperCase(),
+        provedor: form.provedor,
+        ambiente: form.ambiente,
+        endpointBase: form.endpointBase!,
+        integracaoAtiva: form.integracaoAtiva ?? true,
+        simulacao: form.simulacao ?? form.ambiente === "HOMOLOGACAO",
+        clienteId: form.clienteId,
+        codigoTributacaoNacional: form.codigoTributacaoNacional,
+        codigoNbs: form.codigoNbs,
+        classificacaoTributaria: String(form.classificacaoTributaria),
+        consumidorFinal: form.consumidorFinal,
+        indicadorOperacao: form.indicadorOperacao,
+        ativo: form.ativo ?? true,
+      };
+      const saved = await salvarNfseConfiguracaoAtualApi(payload);
       setForm(saved);
       setSuccess("Configuração fiscal atualizada.");
       void load();
@@ -165,8 +205,12 @@ export function NfseContent() {
             <RefreshCw className="mr-2 size-4" />
             Atualizar
           </Button>
-          <Button onClick={handleValidate} disabled={saving || loading || accessDenied || !tenantId}>
-            Validar configuração
+          <Button
+            onClick={handleValidate}
+            disabled
+            title="Endpoint /validar ainda não implementado no backend (débito residual Task #556/#557)"
+          >
+            Validar (indisponível)
           </Button>
         </div>
       </div>
@@ -176,19 +220,6 @@ export function NfseContent() {
           Apenas usuários com permissão elevada podem alterar configurações fiscais.
         </div>
       ) : null}
-
-      {/* Task #557: aviso temporário até refactor do form */}
-      <div className="rounded-xl border border-gym-warning/30 bg-gym-warning/10 p-4 text-sm">
-        <p className="font-semibold text-gym-warning">⚠️ Formulário em modo legado</p>
-        <p className="mt-1 text-muted-foreground">
-          O backend foi refatorado para um novo modelo de configuração de NFS-e
-          que exige campos diferentes (município IBGE, endpoint do provedor,
-          credenciais OAuth). O salvamento abaixo <strong>não persiste</strong> os
-          dados no backend atual. Aguardando refactor do formulário (Task #557).
-          Para emitir notas hoje, configure direto no painel do provedor (ou
-          aguarde a entrega da migração).
-        </p>
-      </div>
 
       <PageError error={loadError} onRetry={load} />
 
@@ -210,7 +241,7 @@ export function NfseContent() {
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</p>
               <span className={`mt-3 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusClass(form.status)}`}>
-                {NFSE_STATUS_LABEL[form.status]}
+                {NFSE_STATUS_LABEL[form.status ?? "PENDENTE"]}
               </span>
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
@@ -230,31 +261,137 @@ export function NfseContent() {
             </div>
           </div>
 
+          {/* Task #557: seção nova alinhada com o BE NfseConfiguracaoUnidadeRequest */}
+          <div className="rounded-xl border border-gym-teal/30 bg-gym-teal/5 p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="font-display text-base font-bold">Integração do provedor</h2>
+              <span className="rounded-full bg-gym-teal/15 px-2 py-0.5 text-[10px] font-semibold text-gym-teal">
+                Obrigatório
+              </span>
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Dados que o backend exige para emitir NFS-e contra o provedor real (município, endpoint e credenciais).
+            </p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Código IBGE do município *
+                </label>
+                <Input
+                  maxLength={7}
+                  value={form.municipioCodigoIbge ?? ""}
+                  onChange={(event) =>
+                    setForm((prev) =>
+                      prev ? { ...prev, municipioCodigoIbge: event.target.value.replace(/\D/g, "") } : prev,
+                    )
+                  }
+                  className="border-border bg-secondary font-mono"
+                  placeholder="Ex.: 3304557"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">UF *</label>
+                <Input
+                  maxLength={2}
+                  value={form.municipioUf ?? ""}
+                  onChange={(event) =>
+                    setForm((prev) =>
+                      prev ? { ...prev, municipioUf: event.target.value.toUpperCase().replace(/[^A-Z]/g, "") } : prev,
+                    )
+                  }
+                  className="border-border bg-secondary font-mono"
+                  placeholder="Ex.: RJ"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Endpoint base *
+                </label>
+                <Input
+                  value={form.endpointBase ?? ""}
+                  onChange={(event) => setForm((prev) => (prev ? { ...prev, endpointBase: event.target.value } : prev))}
+                  className="border-border bg-secondary"
+                  placeholder="https://nfse.provedor.com.br/api"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cliente ID</label>
+                <Input
+                  value={form.clienteId ?? ""}
+                  onChange={(event) => setForm((prev) => (prev ? { ...prev, clienteId: event.target.value } : prev))}
+                  className="border-border bg-secondary"
+                  placeholder="Client ID OAuth do provedor"
+                />
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary px-3 py-3">
+                <input
+                  id="integracao-ativa"
+                  type="checkbox"
+                  checked={form.integracaoAtiva ?? false}
+                  onChange={(event) =>
+                    setForm((prev) => (prev ? { ...prev, integracaoAtiva: event.target.checked } : prev))
+                  }
+                  className="size-4 rounded border-border"
+                />
+                <label htmlFor="integracao-ativa" className="text-xs font-semibold text-foreground">
+                  Integração ativa
+                </label>
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary px-3 py-3">
+                <input
+                  id="simulacao"
+                  type="checkbox"
+                  checked={form.simulacao ?? true}
+                  onChange={(event) =>
+                    setForm((prev) => (prev ? { ...prev, simulacao: event.target.checked } : prev))
+                  }
+                  className="size-4 rounded border-border"
+                />
+                <label htmlFor="simulacao" className="text-xs font-semibold text-foreground">
+                  Modo simulação (não emite de verdade)
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-6 xl:grid-cols-[1.6fr_0.9fr]">
             <div className="rounded-xl border border-border bg-card p-5">
+              <div className="mb-3">
+                <h2 className="font-display text-base font-bold">Tributação e emissão</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Campos com <span className="text-gym-warning">*</span> são obrigatórios no backend. Campos marcados
+                  como <span className="italic">(legado)</span> não são persistidos no backend atual — ver Task #557.
+                </p>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Prefeitura *</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Prefeitura <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Input
-                    value={form.prefeitura}
+                    value={form.prefeitura ?? ""}
                     onChange={(event) => setForm((prev) => (prev ? { ...prev, prefeitura: event.target.value } : prev))}
                     className="border-border bg-secondary"
                     placeholder="Ex.: Rio de Janeiro"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Inscrição municipal *</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Inscrição municipal <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Input
-                    value={form.inscricaoMunicipal}
+                    value={form.inscricaoMunicipal ?? ""}
                     onChange={(event) => setForm((prev) => (prev ? { ...prev, inscricaoMunicipal: event.target.value } : prev))}
                     className="border-border bg-secondary"
                     placeholder="Número municipal"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CNAE principal *</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    CNAE principal <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Input
-                    value={form.cnaePrincipal}
+                    value={form.cnaePrincipal ?? ""}
                     onChange={(event) => setForm((prev) => (prev ? { ...prev, cnaePrincipal: event.target.value } : prev))}
                     className="border-border bg-secondary"
                     placeholder="Ex.: 9313-1/00"
@@ -283,9 +420,11 @@ export function NfseContent() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Série RPS *</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Série RPS <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Input
-                    value={form.serieRps}
+                    value={form.serieRps ?? ""}
                     onChange={(event) => setForm((prev) => (prev ? { ...prev, serieRps: event.target.value } : prev))}
                     className="border-border bg-secondary"
                     placeholder="Ex.: S1"
@@ -352,9 +491,11 @@ export function NfseContent() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Regime tributário</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Regime tributário <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Select
-                    value={form.regimeTributario}
+                    value={form.regimeTributario ?? "SIMPLES_NACIONAL"}
                     onValueChange={(value) =>
                       setForm((prev) => (prev ? { ...prev, regimeTributario: value as NfseRegimeTributario } : prev))
                     }
@@ -394,7 +535,9 @@ export function NfseContent() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Emissão</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Emissão <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Select
                     value={form.emissaoAutomatica ? "AUTOMATICA" : "MANUAL"}
                     onValueChange={(value) =>
@@ -411,22 +554,26 @@ export function NfseContent() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Lote inicial *</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Lote inicial <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Input
                     type="number"
                     min={1}
-                    value={String(form.loteInicial)}
+                    value={String(form.loteInicial ?? 1)}
                     onChange={(event) => setForm((prev) => (prev ? { ...prev, loteInicial: Number(event.target.value) } : prev))}
                     className="border-border bg-secondary"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Alíquota padrão *</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Alíquota padrão <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Input
                     type="number"
                     min={0}
                     step="0.01"
-                    value={String(form.aliquotaPadrao)}
+                    value={String(form.aliquotaPadrao ?? 0)}
                     onChange={(event) =>
                       setForm((prev) => (prev ? { ...prev, aliquotaPadrao: Number(event.target.value) } : prev))
                     }
@@ -456,7 +603,9 @@ export function NfseContent() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Certificado</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Certificado <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Input
                     value={form.certificadoAlias ?? ""}
                     onChange={(event) => setForm((prev) => (prev ? { ...prev, certificadoAlias: event.target.value } : prev))}
@@ -465,7 +614,9 @@ export function NfseContent() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Webhook fiscal</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Webhook fiscal <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Input
                     value={form.webhookFiscalUrl ?? ""}
                     onChange={(event) => setForm((prev) => (prev ? { ...prev, webhookFiscalUrl: event.target.value } : prev))}
@@ -474,7 +625,9 @@ export function NfseContent() {
                   />
                 </div>
                 <div className="space-y-1 md:col-span-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cópia do financeiro</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Cópia do financeiro <span className="italic text-muted-foreground">(legado)</span>
+                  </label>
                   <Input
                     value={form.emailCopiaFinanceiro ?? ""}
                     onChange={(event) =>

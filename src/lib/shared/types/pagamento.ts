@@ -172,7 +172,14 @@ interface Maquininha {
 }
 
 export type NfseAmbiente = "HOMOLOGACAO" | "PRODUCAO";
-export type NfseProvider = "GINFES" | "ABRASF" | "BETHA" | "ISSNET" | "IPM";
+
+/**
+ * Provedores NFS-e suportados pelo backend (Task #557).
+ * Alinhado com `NfseProvedor.java`. Valores antigos (GINFES, ABRASF, BETHA,
+ * ISSNET, IPM) foram removidos — o BE atual só reconhece SEFIN_NACIONAL
+ * (padrão nacional) e ENOTAS (gateway).
+ */
+export type NfseProvider = "SEFIN_NACIONAL" | "ENOTAS";
 export type NfseRegimeTributario = "SIMPLES_NACIONAL" | "LUCRO_PRESUMIDO" | "LUCRO_REAL";
 export type NfseClassificacaoTributaria =
   | "SERVICO_TRIBUTAVEL"
@@ -181,38 +188,103 @@ export type NfseClassificacaoTributaria =
   | "IMUNE"
   | "NAO_INCIDENTE"
   | (string & {});
-export type NfseIndicadorOperacao =
-  | "SERVICO_MUNICIPIO"
-  | "SERVICO_FORA_MUNICIPIO"
-  | "EXPORTACAO"
-  | (string & {});
+/**
+ * Indicador de operação NFS-e (Task #557). Alinhado com
+ * `NfseIndicadorOperacao.java` (enum PRESENCIAL/NAO_PRESENCIAL). Valores
+ * antigos (SERVICO_MUNICIPIO, SERVICO_FORA_MUNICIPIO, EXPORTACAO) eram
+ * incorretos — eles representam outro conceito fiscal.
+ */
+export type NfseIndicadorOperacao = "PRESENCIAL" | "NAO_PRESENCIAL";
 export type NfseConfiguracaoStatus = "PENDENTE" | "CONFIGURADA" | "ERRO";
 
+/**
+ * Configuração de NFS-e por unidade.
+ *
+ * Alinhado em Task #557 com o DTO do BE `NfseConfiguracaoUnidadeResponse`
+ * (ver modulo-nfse). Os campos oficiais são os obrigatórios pelo backend;
+ * os campos marcados `@deprecated` eram do modelo anterior do FE e não
+ * são persistidos pelo BE atual (permanecem apenas para evitar quebras
+ * de código legado — não devem ser usados em novas features).
+ */
 export interface NfseConfiguracao {
   id: UUID;
   tenantId: UUID;
+  // Task #557: novos campos do BE (NfseConfiguracaoUnidadeResponse)
+  unidadeId?: UUID;
+  municipioCodigoIbge?: string;
+  municipioUf?: string;
+  endpointBase?: string;
+  integracaoAtiva?: boolean;
+  simulacao?: boolean;
+  clienteId?: string;
+  ativo?: boolean;
+  criadoEm?: LocalDateTime;
+  atualizadoEm?: LocalDateTime;
+
+  // Campos compartilhados (existem em ambos os modelos)
   ambiente: NfseAmbiente;
   provedor: NfseProvider;
-  prefeitura: string;
-  inscricaoMunicipal: string;
-  cnaePrincipal: string;
   codigoTributacaoNacional: string;
   codigoNbs: string;
   classificacaoTributaria: NfseClassificacaoTributaria;
   consumidorFinal: boolean;
   indicadorOperacao: NfseIndicadorOperacao;
-  serieRps: string;
-  loteInicial: number;
-  aliquotaPadrao: number;
-  regimeTributario: NfseRegimeTributario;
-  emissaoAutomatica: boolean;
+
+  /** @deprecated Não persistido no BE atual (Task #557) */
+  prefeitura?: string;
+  /** @deprecated Não persistido no BE atual (Task #557) */
+  inscricaoMunicipal?: string;
+  /** @deprecated Não persistido no BE atual (Task #557) */
+  cnaePrincipal?: string;
+  /** @deprecated Não persistido no BE atual (Task #557) */
+  serieRps?: string;
+  /** @deprecated Não persistido no BE atual (Task #557) */
+  loteInicial?: number;
+  /** @deprecated Não persistido no BE atual (Task #557) */
+  aliquotaPadrao?: number;
+  /** @deprecated Não persistido no BE atual (Task #557) */
+  regimeTributario?: NfseRegimeTributario;
+  /** @deprecated Não persistido no BE atual (Task #557) */
+  emissaoAutomatica?: boolean;
+  /** @deprecated Não persistido no BE atual (Task #557) */
   emailCopiaFinanceiro?: string;
+  /** @deprecated Não persistido no BE atual (Task #557) */
   certificadoAlias?: string;
+  /** @deprecated Não persistido no BE atual (Task #557) */
   webhookFiscalUrl?: string;
-  status: NfseConfiguracaoStatus;
+
+  // Campos derivados (não enviados em requests)
+  status?: NfseConfiguracaoStatus;
   ultimaValidacaoEm?: LocalDateTime;
   ultimaSincronizacaoEm?: LocalDateTime;
   ultimoErro?: string;
+}
+
+/**
+ * Payload para POST /api/v1/nfse/configuracoes (NfseConfiguracaoUnidadeRequest
+ * do BE). Usado pela Task #557 para persistir configuração real.
+ */
+export interface NfseConfiguracaoPayload {
+  id?: UUID;
+  tenantId: UUID;
+  unidadeId: UUID;
+  municipioCodigoIbge: string; // 7 chars
+  municipioUf: string; // 2 chars
+  provedor: string;
+  ambiente: NfseAmbiente;
+  endpointBase: string;
+  integracaoAtiva?: boolean;
+  simulacao?: boolean;
+  clienteId?: string;
+  clienteSecret?: string;
+  certificadoBase64?: string;
+  credenciaisJson?: string;
+  codigoTributacaoNacional: string;
+  codigoNbs: string;
+  classificacaoTributaria: string;
+  consumidorFinal: boolean;
+  indicadorOperacao: NfseIndicadorOperacao;
+  ativo?: boolean;
 }
 
 export type AgregadorMeioCaptura = "POS" | "TEF" | "LINK_PAGAMENTO";
