@@ -25,6 +25,7 @@ describe("AdminDashboardContent", () => {
           elegiveisNovasUnidades: 2,
         }}
         metricas={metricasParciais}
+        error={null}
         operationalError={null}
       />,
     );

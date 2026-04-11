@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { serverFetch } from "@/lib/shared/server-fetch";
+import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
 import { AdminDashboardContent } from "./admin-dashboard-content";
 import type {
   Academia,
@@ -44,12 +45,17 @@ function extractData<T>(envelope: AdminEnvelope<T> | T): T {
 }
 
 async function fetchAdminData() {
+  const shouldRecoverOnClient = shouldBypassAuthenticatedSSRFetch();
   let academias: Academia[] = [];
   let unidades: Tenant[] = [];
   let seguranca: GlobalAdminSecurityOverview = { totalUsers: 0, activeMemberships: 0, defaultUnitsConfigured: 0, eligibleForNewUnits: 0 };
   let metricas: MetricasOperacionaisGlobal | null = null;
   let error: string | null = null;
   let operationalError: string | null = null;
+
+  if (shouldRecoverOnClient) {
+    return { academias, unidades, seguranca, metricas, error, operationalError, shouldRecoverOnClient };
+  }
 
   try {
     const [academiasRes, unidadesRes, segurancaRes] = await Promise.all([
@@ -93,11 +99,11 @@ async function fetchAdminData() {
     operationalError = e instanceof Error ? e.message : "Erro ao carregar métricas operacionais";
   }
 
-  return { academias, unidades, seguranca, metricas, error, operationalError };
+  return { academias, unidades, seguranca, metricas, error, operationalError, shouldRecoverOnClient };
 }
 
 async function AdminDashboardLoader() {
-  const { academias, unidades, seguranca, metricas, error, operationalError } = await fetchAdminData();
+  const { academias, unidades, seguranca, metricas, error, operationalError, shouldRecoverOnClient } = await fetchAdminData();
 
   const stats = {
     totalAcademias: academias.length,
@@ -106,25 +112,13 @@ async function AdminDashboardLoader() {
     elegiveisNovasUnidades: seguranca.eligibleForNewUnits,
   };
 
-  if (error) {
-    return (
-      <div className="flex flex-col gap-6">
-        <header className="space-y-2">
-          <p className="text-sm font-medium text-gym-accent">Administração</p>
-          <h1 className="text-3xl font-display font-bold leading-tight">Dashboard do backoffice</h1>
-        </header>
-        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <AdminDashboardContent
       stats={stats}
       metricas={metricas}
+      error={error}
       operationalError={operationalError}
+      shouldRecoverOnClient={shouldRecoverOnClient}
     />
   );
 }

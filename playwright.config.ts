@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const REAL_BACKEND_MODE = process.env.PLAYWRIGHT_REAL_BACKEND === "1";
-const DEFAULT_PORT = REAL_BACKEND_MODE ? "3001" : "3000";
+const DEFAULT_PORT = REAL_BACKEND_MODE ? "3001" : "3400";
 const PLAYWRIGHT_PORT = process.env.PLAYWRIGHT_PORT ?? DEFAULT_PORT;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PLAYWRIGHT_PORT}`;
 const PLAYWRIGHT_BACKEND_PROXY_TARGET =
@@ -11,7 +11,7 @@ const WEB_SERVER_COMMAND_BASE =
   (REAL_BACKEND_MODE
     ? "npm run dev:3001:api"
     : `BACKEND_PROXY_TARGET=${PLAYWRIGHT_BACKEND_PROXY_TARGET} ./node_modules/.bin/next dev --webpack -p ${PLAYWRIGHT_PORT} -H localhost`);
-const WEB_SERVER_COMMAND = `PLAYWRIGHT_TEST=1 ${WEB_SERVER_COMMAND_BASE}`;
+const WEB_SERVER_COMMAND = `PLAYWRIGHT_TEST=1 NEXT_PUBLIC_WHATSAPP_INTEGRATION_ENABLED=1 ${WEB_SERVER_COMMAND_BASE}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",

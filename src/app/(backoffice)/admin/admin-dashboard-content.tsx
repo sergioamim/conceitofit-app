@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -10,16 +10,15 @@ import {
   LineChart,
   ShoppingCart,
   Users,
-  Eye,
   Globe,
   ShieldCheck,
   Upload,
   Activity,
   Shield,
-  ArrowRight
+  ArrowRight,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatCompactNumber,
   formatSignedPercent,
@@ -29,6 +28,9 @@ import {
   type OperacionalSortKey,
   type OperacionalSortState,
 } from "@/backoffice/lib/admin-metrics";
+import { listBackofficeAcademiasApi, listBackofficeUnidadesApi } from "@/backoffice/api/backoffice";
+import { getMetricasOperacionaisGlobal } from "@/backoffice/api/admin-metrics";
+import { getGlobalSecurityOverview } from "@/backoffice/lib/seguranca";
 import { formatCurrency } from "@/lib/formatters";
 import type { MetricasOperacionaisGlobal } from "@/lib/types";
 import Link from "next/link";
@@ -42,29 +44,94 @@ import {
 } from "@/components/ui/table";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { cn } from "@/lib/utils";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const DEFAULT_SORT: OperacionalSortState = {
   key: "vendasMesValor",
   direction: "desc",
 };
 
+type AdminDashboardStats = {
+  totalAcademias: number;
+  totalUnidades: number;
+  totalAdmins: number;
+  elegiveisNovasUnidades: number;
+};
+
+type DashboardRecoveryState = {
+  stats: AdminDashboardStats;
+  metricas: MetricasOperacionaisGlobal;
+};
+
 export function AdminDashboardContent({
   stats,
   metricas,
+  error,
   operationalError,
+  shouldRecoverOnClient = false,
 }: {
-  stats: {
-    totalAcademias: number;
-    totalUnidades: number;
-    totalAdmins: number;
-    elegiveisNovasUnidades: number;
-  };
+  stats: AdminDashboardStats;
   metricas: MetricasOperacionaisGlobal | null;
+  error: string | null;
   operationalError: string | null;
+  shouldRecoverOnClient?: boolean;
 }) {
+  const [clientRecovery, setClientRecovery] = useState<DashboardRecoveryState | null>(null);
+  const [clientRecoveryError, setClientRecoveryError] = useState<string | null>(null);
   const [sortState, setSortState] = useState<OperacionalSortState>(DEFAULT_SORT);
-  const evolucaoNovosAlunos = metricas?.evolucaoNovosAlunos ?? [];
-  const distribuicaoAcademias = metricas?.distribuicaoAcademias ?? [];
+  const loadingFallback = shouldRecoverOnClient && clientRecovery === null && clientRecoveryError === null;
+
+  useEffect(() => {
+    if (!shouldRecoverOnClient) return;
+
+    let active = true;
+
+    void Promise.all([
+      listBackofficeAcademiasApi(),
+      listBackofficeUnidadesApi(),
+      getGlobalSecurityOverview(),
+      getMetricasOperacionaisGlobal(),
+    ])
+      .then(([academias, unidades, seguranca, metricasGlobais]) => {
+        if (!active) return;
+        setClientRecovery({
+          stats: {
+            totalAcademias: academias.length,
+            totalUnidades: unidades.length,
+            totalAdmins: seguranca.totalUsers,
+            elegiveisNovasUnidades: seguranca.eligibleForNewUnits,
+          },
+          metricas: metricasGlobais,
+        });
+        setClientRecoveryError(null);
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        setClientRecoveryError(normalizeErrorMessage(loadError));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [shouldRecoverOnClient]);
+
+  const dashboardStats = clientRecovery?.stats ?? stats;
+  const dashboardMetricas = clientRecovery?.metricas ?? metricas;
+  const resolvedError = clientRecoveryError ?? (clientRecovery ? null : error);
+  const resolvedOperationalError = clientRecovery ? null : operationalError;
+  const hasResolvedData =
+    Boolean(dashboardMetricas) ||
+    dashboardStats.totalAcademias > 0 ||
+    dashboardStats.totalUnidades > 0 ||
+    dashboardStats.totalAdmins > 0;
+  const evolucaoNovosAlunos = useMemo(
+    () => dashboardMetricas?.evolucaoNovosAlunos ?? [],
+    [dashboardMetricas]
+  );
+  const distribuicaoAcademias = useMemo(
+    () => dashboardMetricas?.distribuicaoAcademias ?? [],
+    [dashboardMetricas]
+  );
 
   const maxSerie = useMemo(
     () => Math.max(1, ...evolucaoNovosAlunos.map((item) => item.total)),
@@ -76,7 +143,7 @@ export function AdminDashboardContent({
     [distribuicaoAcademias, sortState]
   );
 
-  const trendTone = resolveTrendTone(metricas?.tendenciaCrescimentoPercentual ?? 0);
+  const trendTone = resolveTrendTone(dashboardMetricas?.tendenciaCrescimentoPercentual ?? 0);
   
   const toneMap = {
     positive: "teal",
@@ -93,6 +160,20 @@ export function AdminDashboardContent({
   function renderSortIcon(key: OperacionalSortKey) {
     if (sortState.key !== key) return <ArrowUpDown className="size-3.5 text-muted-foreground" />;
     return sortState.direction === "asc" ? <ArrowUp className="size-3.5 text-gym-accent" /> : <ArrowDown className="size-3.5 text-gym-accent" />;
+  }
+
+  if (resolvedError && !loadingFallback && !hasResolvedData) {
+    return (
+      <div className="flex flex-col gap-6">
+        <header className="space-y-2">
+          <p className="text-sm font-medium text-gym-accent">Administração</p>
+          <h1 className="text-3xl font-display font-bold leading-tight">Dashboard do backoffice</h1>
+        </header>
+        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          {resolvedError}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -117,9 +198,9 @@ export function AdminDashboardContent({
 
       {/* Main SaaS Stats */}
       <section className="grid gap-4 grid-cols-1 md:grid-cols-3">
-        <BiMetricCard label="Total de Academias" value={String(stats.totalAcademias)} icon={Building2} tone="accent" description="Academias parceiras ativas" />
-        <BiMetricCard label="Unidades Ativas" value={String(stats.totalUnidades)} icon={Globe} tone="teal" description="Tenants operando na plataforma" />
-        <BiMetricCard label="Usuários Admin" value={String(stats.totalAdmins)} icon={ShieldCheck} tone="warning" description={`${stats.elegiveisNovasUnidades} elegíveis para novas unidades`} />
+        <BiMetricCard label="Total de Academias" value={String(dashboardStats.totalAcademias)} icon={Building2} tone="accent" description="Academias parceiras ativas" />
+        <BiMetricCard label="Unidades Ativas" value={String(dashboardStats.totalUnidades)} icon={Globe} tone="teal" description="Tenants operando na plataforma" />
+        <BiMetricCard label="Usuários Admin" value={String(dashboardStats.totalAdmins)} icon={ShieldCheck} tone="warning" description={`${dashboardStats.elegiveisNovasUnidades} elegíveis para novas unidades`} />
       </section>
 
       {/* Operational Metrics Section */}
@@ -130,7 +211,7 @@ export function AdminDashboardContent({
             <p className="text-muted-foreground">Métricas agregadas de toda a rede em tempo real.</p>
           </div>
           
-          {metricas && (
+          {dashboardMetricas && (
             <div
               className={cn(
                 "inline-flex animate-[fadeInScale_0.4s_ease-out] items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-sm",
@@ -140,23 +221,31 @@ export function AdminDashboardContent({
               )}
             >
               <LineChart className="size-4" />
-              Crescimento mensal {formatSignedPercent(metricas.tendenciaCrescimentoPercentual)}
+              Crescimento mensal {formatSignedPercent(dashboardMetricas.tendenciaCrescimentoPercentual)}
             </div>
           )}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <BiMetricCard label="Alunos Ativos" value={formatCompactNumber(metricas?.totalAlunosAtivos ?? 0)} icon={Users} tone="teal" description="Base total da rede" />
-          <BiMetricCard label="Matrículas" value={formatCompactNumber(metricas?.totalMatriculasAtivas ?? 0)} icon={Building2} tone="accent" description="Contratos vigentes" />
-          <BiMetricCard label="Receita do Mês" value={formatCurrency(metricas?.vendasMesValor ?? 0)} icon={ShoppingCart} tone="teal" description={`${formatCompactNumber(metricas?.vendasMesQuantidade ?? 0)} vendas totais`} />
-          <BiMetricCard label="Ticket Médio" value={formatCurrency(metricas?.ticketMedioGlobal ?? 0)} icon={LineChart} tone="accent" description="Valor médio por venda" />
-          <BiMetricCard label="Novos Alunos" value={formatCompactNumber(metricas?.novosAlunosMes ?? 0)} icon={GraduationCap} tone="warning" description={`${formatCompactNumber(metricas?.novosAlunosMesAnterior ?? 0)} no mês anterior`} />
-        </div>
+        {loadingFallback && !hasResolvedData ? (
+          <div className="rounded-2xl border border-border bg-card/80 p-4 text-sm text-muted-foreground">
+            Carregando dashboard do backoffice...
+          </div>
+        ) : null}
 
-        {operationalError && (
+        {dashboardMetricas ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <BiMetricCard label="Alunos Ativos" value={formatCompactNumber(dashboardMetricas.totalAlunosAtivos ?? 0)} icon={Users} tone="teal" description="Base total da rede" />
+            <BiMetricCard label="Matrículas" value={formatCompactNumber(dashboardMetricas.totalMatriculasAtivas ?? 0)} icon={Building2} tone="accent" description="Contratos vigentes" />
+            <BiMetricCard label="Receita do Mês" value={formatCurrency(dashboardMetricas.vendasMesValor ?? 0)} icon={ShoppingCart} tone="teal" description={`${formatCompactNumber(dashboardMetricas.vendasMesQuantidade ?? 0)} vendas totais`} />
+            <BiMetricCard label="Ticket Médio" value={formatCurrency(dashboardMetricas.ticketMedioGlobal ?? 0)} icon={LineChart} tone="accent" description="Valor médio por venda" />
+            <BiMetricCard label="Novos Alunos" value={formatCompactNumber(dashboardMetricas.novosAlunosMes ?? 0)} icon={GraduationCap} tone="warning" description={`${formatCompactNumber(dashboardMetricas.novosAlunosMesAnterior ?? 0)} no mês anterior`} />
+          </div>
+        ) : null}
+
+        {resolvedOperationalError && (
           <div className="rounded-2xl border border-gym-warning/30 bg-gym-warning/10 p-4 text-sm text-gym-warning flex items-center gap-3">
             <Activity className="size-5" />
-            Não foi possível carregar as métricas operacionais globais: {operationalError}
+            Não foi possível carregar as métricas operacionais globais: {resolvedOperationalError}
           </div>
         )}
 
@@ -259,9 +348,9 @@ export function AdminDashboardContent({
       <section className="space-y-6">
         <h2 className="text-2xl font-display font-extrabold tracking-tight">Gestão da Plataforma</h2>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <ManagementCard href="/admin/academias" label="Academias" description="Gerir parceiros" icon={Building2} value={stats.totalAcademias} />
-          <ManagementCard href="/admin/unidades" label="Unidades" description="Gerir tenants" icon={Globe} value={stats.totalUnidades} />
-          <ManagementCard href="/admin/seguranca" label="Segurança" description="Controle global" icon={ShieldCheck} value={stats.totalAdmins} />
+          <ManagementCard href="/admin/academias" label="Academias" description="Gerir parceiros" icon={Building2} value={dashboardStats.totalAcademias} />
+          <ManagementCard href="/admin/unidades" label="Unidades" description="Gerir tenants" icon={Globe} value={dashboardStats.totalUnidades} />
+          <ManagementCard href="/admin/seguranca" label="Segurança" description="Controle global" icon={ShieldCheck} value={dashboardStats.totalAdmins} />
           <ManagementCard href="/admin/importacao-evo" label="EVO" description="Jobs Onboarding" icon={Upload} isSpecial />
           <ManagementCard href="/admin/operacional/saude" label="Saúde Ops" description="Risco & Estabilidade" icon={Activity} isSpecial />
           <ManagementCard href="/admin/compliance" label="LGPD" description="Dados Pessoais" icon={Shield} isSpecial />
@@ -279,7 +368,16 @@ function PlusIcon({ className }: { className?: string }) {
   );
 }
 
-function ManagementCard({ href, label, description, icon: Icon, value, isSpecial }: any) {
+type ManagementCardProps = {
+  href: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  value?: number;
+  isSpecial?: boolean;
+};
+
+function ManagementCard({ href, label, description, icon: Icon, value, isSpecial }: ManagementCardProps) {
   return (
     <Link href={href}>
       <div

@@ -227,11 +227,15 @@ export default function AdminWhatsAppPage() {
   });
 
   const loadData = useCallback(async () => {
+    if (!tenantContext.tenantResolved || !tenantId) {
+      return;
+    }
+
     setLoading(true);
     try {
       const [templatesResult, logsResult] = await Promise.allSettled([
-        getWhatsAppTemplatesApi(),
-        getWhatsAppLogsApi({ size: 50 }),
+        getWhatsAppTemplatesApi(tenantId),
+        getWhatsAppLogsApi({ size: 50, tenantId }),
       ]);
       if (templatesResult.status === "fulfilled") {
         setTemplates(templatesResult.value);
@@ -242,7 +246,7 @@ export default function AdminWhatsAppPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantContext.tenantResolved, tenantId]);
 
   useEffect(() => {
     void loadData();

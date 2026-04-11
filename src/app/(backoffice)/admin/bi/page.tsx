@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FileChartColumnIncreasing } from "lucide-react";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
+import { ExportMenu, type ExportColumn } from "@/components/shared/export-menu";
 import { BiTrendBars } from "@/components/shared/bi-trend-bars";
 import { ListErrorState } from "@/components/shared/list-states";
 import { SuggestionInput } from "@/components/shared/suggestion-input";
@@ -43,29 +44,51 @@ function LoadingSkeleton() {
   );
 }
 
+type BiExportRow = {
+  academia: string;
+  periodo: string;
+  receita: string;
+  conversao: string;
+  ocupacao: string;
+  inadimplencia: string;
+  retencao: string;
+};
+
+const BI_EXPORT_COLUMNS: ExportColumn<BiExportRow>[] = [
+  { label: "Academia", accessor: "academia" },
+  { label: "Período", accessor: "periodo" },
+  { label: "Receita", accessor: "receita" },
+  { label: "Conversão", accessor: "conversao" },
+  { label: "Ocupação", accessor: "ocupacao" },
+  { label: "Inadimplência", accessor: "inadimplencia" },
+  { label: "Retenção", accessor: "retencao" },
+];
+
 export default function AdminBiPage() {
   const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
   const [academiaBusca, setAcademiaBusca] = useState("");
 
   const { options: academiaOptions, onFocusOpen } = useAcademiaSuggestion();
-  const biQuery = useAdminBiExecutivo(selectedAcademiaId || null);
+  const effectiveSelectedAcademiaId = selectedAcademiaId || academiaOptions[0]?.id || "";
+  const selectedAcademia =
+    academiaOptions.find((academia) => academia.id === effectiveSelectedAcademiaId) ?? academiaOptions[0];
+  const biQuery = useAdminBiExecutivo(effectiveSelectedAcademiaId || null);
 
   const biData = biQuery.data ?? null;
   const loading = biQuery.isLoading;
   const error = biQuery.error
     ? normalizeErrorMessage(biQuery.error)
     : null;
-
-  // Auto-select first academia when options load
-  useEffect(() => {
-    if (academiaOptions.length > 0 && !selectedAcademiaId) {
-      const first = academiaOptions[0];
-      setSelectedAcademiaId(first.id);
-      setAcademiaBusca(first.label);
-    }
-  }, [academiaOptions, selectedAcademiaId]);
-
-  const selectedAcademia = academiaOptions.find((a) => a.id === selectedAcademiaId);
+  const academiaBuscaValue = academiaBusca || selectedAcademia?.label || "";
+  const exportRows: BiExportRow[] = (biData?.series ?? []).map((point) => ({
+    academia: selectedAcademia?.label ?? "Academia não selecionada",
+    periodo: point.label,
+    receita: formatBRL(point.receita),
+    conversao: formatPercent(point.conversaoPct),
+    ocupacao: formatPercent(point.ocupacaoPct),
+    inadimplencia: formatPercent(point.inadimplenciaPct),
+    retencao: formatPercent(point.retencaoPct),
+  }));
 
   return (
     <div className="space-y-6">
@@ -77,6 +100,13 @@ export default function AdminBiPage() {
             KPIs executivos por academia{selectedAcademia ? ` — ${selectedAcademia.label}` : ""}.
           </p>
         </div>
+        <ExportMenu
+          data={exportRows}
+          columns={BI_EXPORT_COLUMNS}
+          filename={`bi-executivo-${effectiveSelectedAcademiaId || "backoffice"}`}
+          title="BI Executivo"
+          disabled={exportRows.length === 0}
+        />
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
@@ -85,7 +115,7 @@ export default function AdminBiPage() {
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Academia</label>
             <SuggestionInput
               inputAriaLabel="Selecione a academia"
-              value={academiaBusca}
+              value={academiaBuscaValue}
               onValueChange={(v) => {
                 setAcademiaBusca(v);
                 if (!v) setSelectedAcademiaId("");

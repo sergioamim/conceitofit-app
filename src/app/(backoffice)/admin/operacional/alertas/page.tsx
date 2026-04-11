@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 import { EmptyState, ListErrorState, ListLoadingSkeleton } from "@/components/shared/list-states";
 import { PaginatedTable, type PaginatedTableColumn } from "@/components/shared/paginated-table";
 import { TableFilters, type ActiveFilters, type FilterConfig } from "@/components/shared/table-filters";
@@ -159,6 +160,7 @@ function FeatureUsageBadge({ indicator }: { indicator: FeatureUsageIndicator }) 
 }
 
 export default function AdminOperationalAlertsPage() {
+  const { toast } = useToast();
   const alertasQuery = useAdminAlertasOperacionais();
   const alertas = alertasQuery.data?.alertas.items ?? [];
   const featureUsage = alertasQuery.data?.featureUsage.items ?? [];
@@ -169,6 +171,7 @@ export default function AdminOperationalAlertsPage() {
 
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [page, setPage] = useState(0);
+  const [resolvedAlertIds, setResolvedAlertIds] = useState<string[]>([]);
 
   const [usageFilter, setUsageFilter] = useState<UsageFilter>("TODAS");
   const [usageSearch, setUsageSearch] = useState("");
@@ -211,13 +214,18 @@ export default function AdminOperationalAlertsPage() {
     [academiaSuggestion.options, academiaSuggestion.onFocusOpen],
   );
 
+  const visibleAlertas = useMemo(
+    () => alertas.filter((alerta) => !alerta.id || !resolvedAlertIds.includes(alerta.id)),
+    [alertas, resolvedAlertIds],
+  );
+
   const filteredAlertas = useMemo(() => {
     const severidade = activeFilters.severidade ?? "";
     const academiaId = activeFilters.academia ?? "";
     const periodoStart = activeFilters.periodo_start ?? "";
     const periodoEnd = activeFilters.periodo_end ?? "";
 
-    return alertas.filter((alerta) => {
+    return visibleAlertas.filter((alerta) => {
       if (severidade && alerta.severidade !== severidade) {
         return false;
       }
@@ -243,7 +251,7 @@ export default function AdminOperationalAlertsPage() {
 
       return true;
     });
-  }, [alertas, activeFilters, academiaSuggestion.options]);
+  }, [visibleAlertas, activeFilters, academiaSuggestion.options]);
 
   const filteredFeatureUsage = useMemo(() => {
     const searchTerm = usageSearch.trim().toLocaleLowerCase("pt-BR");
@@ -262,8 +270,8 @@ export default function AdminOperationalAlertsPage() {
   }, [featureUsage, usageSearch, usageFilter]);
 
   const summary = useMemo(() => {
-    const criticos = alertas.filter((item) => item.severidade === "CRITICAL").length;
-    const warnings = alertas.filter((item) => item.severidade === "WARNING").length;
+    const criticos = visibleAlertas.filter((item) => item.severidade === "CRITICAL").length;
+    const warnings = visibleAlertas.filter((item) => item.severidade === "WARNING").length;
     const academiasComFeaturesEmUso = featureUsage.filter((item) =>
       FEATURE_COLUMNS.some(({ key }) => item[key].status === "EM_USO")
     ).length;
@@ -279,7 +287,19 @@ export default function AdminOperationalAlertsPage() {
       academiasComFeaturesEmUso,
       ociosidadePercentual: totalFeatures > 0 ? (totalFeaturesAtivasSemUso / totalFeatures) * 100 : 0,
     };
-  }, [alertas, featureUsage]);
+  }, [visibleAlertas, featureUsage]);
+
+  const handleResolveAlert = useCallback((alerta: AlertaOperacional) => {
+    if (!alerta.id) return;
+    setResolvedAlertIds((current) => {
+      if (current.includes(alerta.id!)) return current;
+      return [...current, alerta.id!];
+    });
+    toast({
+      title: "Alerta resolvido",
+      description: `${alerta.academiaNome} saiu da fila de acompanhamento.`,
+    });
+  }, [toast]);
 
   const hasNext = (page + 1) * PAGE_SIZE < filteredAlertas.length;
   const pageItems = useMemo(
@@ -313,7 +333,13 @@ export default function AdminOperationalAlertsPage() {
         </TableCell>
         <TableCell className="px-4 py-3">
           <div className="flex items-center gap-1">
-            <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              onClick={() => handleResolveAlert(alerta)}
+            >
               <CheckCircle2 className="size-3.5" />
               Resolver
             </Button>
@@ -325,7 +351,7 @@ export default function AdminOperationalAlertsPage() {
         </TableCell>
       </>
     ),
-    [],
+    [handleResolveAlert],
   );
 
   return (
@@ -398,7 +424,7 @@ export default function AdminOperationalAlertsPage() {
             columns={ALERTAS_TABLE_COLUMNS}
             items={pageItems}
             emptyText={
-              alertas.length === 0
+              visibleAlertas.length === 0
                 ? "Nenhum alerta operacional foi retornado no momento."
                 : "Nenhum alerta corresponde aos filtros aplicados."
             }
