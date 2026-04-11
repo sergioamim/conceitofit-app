@@ -18,7 +18,7 @@ export default function AdminSegurancaPage() {
       <div className="grid gap-6 md:grid-cols-2 mt-6">
         {/* Gestão de Usuários */}
         <Link href="/admin/seguranca/usuarios" className="group">
-          <Card className="h-full border-border/50 bg-card/60 backdrop-blur-md transition-all hover:border-gym-accent/50 hover:shadow-md hover:shadow-gym-accent/10">
+          <Card className="h-full border-border/50 bg-card transition-colors duration-150 hover:border-gym-accent/50">
             <CardHeader>
               <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-gym-accent/10 text-gym-accent group-hover:scale-110 transition-transform">
                 <Users className="size-6" />
@@ -56,7 +56,7 @@ export default function AdminSegurancaPage() {
 
         {/* Gestão de Perfis (Roles) */}
         <Link href="/admin/seguranca/perfis" className="group">
-          <Card className="h-full border-border/50 bg-card/60 backdrop-blur-md transition-all hover:border-gym-accent/50 hover:shadow-md hover:shadow-gym-accent/10">
+          <Card className="h-full border-border/50 bg-card transition-colors duration-150 hover:border-gym-accent/50">
             <CardHeader>
               <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-gym-accent/10 text-gym-accent group-hover:scale-110 transition-transform">
                 <Key className="size-6" />

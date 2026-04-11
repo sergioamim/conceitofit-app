@@ -80,9 +80,10 @@ function NavLinkV2({ item, active, collapsed }: { item: NavItemV2, active: boole
       <Link
         href={item.href}
         className={cn(
-          // Escopamos a transição só para colors+shadow — `transition-all` em
-          // listas grandes causa repaints em cascata no hover.
-          "flex flex-1 items-center gap-3 px-3 py-2.5 rounded-xl transition-[color,background-color,box-shadow] duration-300",
+          // Transição instantânea (150ms) — o feedback de hover precisa ser
+          // responsivo. 300ms ficava perceptivelmente lento ao mover o cursor
+          // entre itens do menu.
+          "flex flex-1 items-center gap-3 px-3 py-2.5 rounded-xl transition-[color,background-color] duration-150",
           active
             ? "bg-primary/10 text-primary font-bold shadow-[inset_0_0_15px_rgba(200,241,53,0.05)]"
             : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -227,12 +228,12 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
       )}
 
       <aside className={cn(
-        // `transition-all` + `backdrop-filter` causa repaint visível no Chrome
-        // quando o cursor atravessa o limite sidebar↔main porque o browser
-        // anima TODAS as propriedades (incluindo backdrop-filter) por 500ms.
-        // Escopamos a transição apenas para width e transform (o que realmente
-        // muda quando collapsed/mobileOpen alteram).
-        "fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-sidebar-border bg-card/40 backdrop-blur-2xl transition-[width,transform] duration-500 md:static md:h-screen",
+        // `backdrop-filter` (antes `backdrop-blur-2xl`) causa repaint visível
+        // no Chrome quando cards vizinhos com shadow/hover disparam eventos
+        // de mouse — o compositor reavalia a camada de blur. Trocamos por
+        // bg-card sólido (visualmente próximo do frosted em dark theme).
+        // Também escopamos a transição só para width/transform.
+        "fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-sidebar-border bg-card transition-[width,transform] duration-500 md:static md:h-screen",
         collapsed ? "md:w-20" : "md:w-[240px]",
         mobileOpen ? "translate-x-0 w-[280px]" : "-translate-x-full md:translate-x-0"
       )}>

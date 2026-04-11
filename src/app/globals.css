@@ -185,8 +185,16 @@
     color: #0e0f11;
   }
 
+  /*
+   * Hover flicker fix: removido `backdrop-blur-md`.
+   * `backdrop-filter` força compositing layer e, combinado com shadow/transform
+   * em hovers vizinhos (BiMetricCards, cards com hover:shadow-xl), causa
+   * repaints visíveis no Chrome/Safari ao mover o cursor sobre os cards.
+   * Usamos bg-card sólido — visualmente próximo do frosted em dark theme
+   * e sem o custo de recomposição.
+   */
   .glass-card {
-    @apply border-border/40 bg-card/40 backdrop-blur-md;
+    @apply border-border/40 bg-card;
   }
 
   .bg-v2-gradient {

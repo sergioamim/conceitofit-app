@@ -53,9 +53,9 @@ function MetricCardV2({ label, value, icon: Icon, tone, description }: any) {
       animate={{ opacity: 1, y: 0 }}
       className="flex-1"
     >
-      {/* Hover jitter fix: removido whileHover y:-4 — subir o card tirava
-          o cursor da área, disparando loop hover↔unhover visível como piscar. */}
-      <Card className="border-border/40 bg-card/40 backdrop-blur-md overflow-hidden hover:shadow-lg hover:shadow-primary/5 transition-shadow">
+      {/* Hover flicker fix: removido whileHover y:-4 + backdrop-filter.
+          Ambos interagiam com o hover:shadow e causavam repaints visíveis. */}
+      <Card className="border-border/40 bg-card overflow-hidden">
         <CardContent className="p-5">
           <div className="flex justify-between items-start">
             <div className={cn("p-2 rounded-lg border", tones[tone as keyof typeof tones] || tones.accent)}>
@@ -142,7 +142,7 @@ function ClientesV2PageContent() {
       </div>
 
       {/* Main Container */}
-      <Card className="border-border/40 bg-card/30 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/5">
+      <Card className="border-border/40 bg-card overflow-hidden shadow-xl shadow-black/5">
         <div className="p-6 border-b border-border/40 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/10">
           <div className="flex items-center gap-4 flex-1 max-w-md">
             <div className="relative w-full">
