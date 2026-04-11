@@ -11,7 +11,6 @@ export const dynamic = "force-dynamic";
 async function Loader() {
   let catalogo: CatalogoFuncionalidade[] = [];
   let perfis: PerfilPadrao[] = [];
-  let board: GlobalAdminReviewBoard | null = null;
 
   try {
     const [catalogoRes, perfisRes] = await Promise.all([
@@ -34,18 +33,20 @@ async function Loader() {
   }
 
   // Review board can fail independently — non-critical
+  let board: GlobalAdminReviewBoard = {
+    pendingReviews: [],
+    expiringExceptions: [],
+    recentChanges: [],
+    broadAccess: [],
+    orphanProfiles: [],
+  };
   try {
-    board = await serverFetch<GlobalAdminReviewBoard>("/api/v1/admin/seguranca/review-board", {
+    const boardRes = await serverFetch<GlobalAdminReviewBoard>("/api/v1/admin/seguranca/review-board", {
       next: { revalidate: 60 },
     });
+    if (boardRes) board = boardRes;
   } catch {
-    board = {
-      pendingReviews: [],
-      expiringExceptions: [],
-      recentChanges: [],
-      broadAccess: [],
-      orphanProfiles: [],
-    };
+    // Use empty board as fallback
   }
 
   return (

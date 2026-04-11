@@ -15,27 +15,16 @@ import { Button } from "@/components/ui/button";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import {
   createCatalogoFuncionalidade,
-  createExcecao,
-  getPerfilPadraoVersoes,
-  listCatalogoFuncionalidades,
-  listPerfisPadrao,
-  revisarExcecao,
   updateCatalogoFuncionalidade,
+  listCatalogoFuncionalidades,
 } from "@/backoffice/api/admin-seguranca-avancada";
 import type {
-  CatalogoFuncionalidade,
+  CatalogoFuncionalidade as CatalogoFuncionalidadeType,
   CatalogoFuncionalidadePayload,
-  ExcecaoRevisaoDecisao,
-  GlobalAdminReviewBoard,
-  GlobalAdminReviewBoardItem,
   GlobalAdminRiskLevel,
-  PerfilPadrao,
-  PerfilPadraoVersao,
-  SecurityBusinessScope,
 } from "@/lib/types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import type { CatalogoFuncionalidade as CatalogoFuncionalidadeType } from "@/lib/types";
 
 const RISK_OPTIONS: { value: GlobalAdminRiskLevel; label: string }[] = [
   { value: "BAIXO", label: "Baixo" },

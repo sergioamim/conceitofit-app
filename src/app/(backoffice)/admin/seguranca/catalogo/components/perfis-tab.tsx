@@ -4,12 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { PaginatedTable } from "@/components/shared/paginated-table";
-import { listPerfisPadrao } from "@/backoffice/api/admin-seguranca-avancada";
-import type { PerfilPadrao, SecurityBusinessScope } from "@/lib/types";
+import { listPerfisPadrao, getPerfilPadraoVersoes } from "@/backoffice/api/admin-seguranca-avancada";
+import type { PerfilPadrao, SecurityBusinessScope, PerfilPadraoVersao } from "@/lib/types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
@@ -30,6 +28,9 @@ export function PerfisPadraoTab({ initialPerfis }: PerfisTabProps) {
   const [error, setError] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [scopeFilter, setScopeFilter] = useState<SecurityBusinessScope | typeof FILTER_ALL>(FILTER_ALL);
+  const [selectedPerfil, setSelectedPerfil] = useState<PerfilPadrao | null>(null);
+  const [versions, setVersions] = useState<PerfilPadraoVersao[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,8 +56,17 @@ export function PerfisPadraoTab({ initialPerfis }: PerfisTabProps) {
     return true;
   });
 
-  async function handleCreate() {
-    toast({ title: "Criacao de perfis via formulario avancado — use a aba de edicao", variant: "default" });
+  async function handleSelectPerfil(perfil: PerfilPadrao) {
+    setSelectedPerfil(perfil);
+    setLoadingVersions(true);
+    try {
+      const versoes = await getPerfilPadraoVersoes(perfil.key);
+      setVersions(versoes);
+    } catch (err) {
+      toast({ title: "Erro ao carregar versoes", description: normalizeErrorMessage(err), variant: "destructive" });
+    } finally {
+      setLoadingVersions(false);
+    }
   }
 
   return (
@@ -66,37 +76,6 @@ export function PerfisPadraoTab({ initialPerfis }: PerfisTabProps) {
           {error}
         </div>
       )}
-
-      {/* Create Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Novo perfil padrao</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Chave *</Label>
-              <Input value={formKey} onChange={(e) => setFormKey(e.target.value)} placeholder="gerente_loja" disabled={saving} />
-            </div>
-            <div className="space-y-2">
-              <Label>Rotulo *</Label>
-              <Input value={formLabel} onChange={(e) => setFormLabel(e.target.value)} placeholder="Gerente de Loja" disabled={saving} />
-            </div>
-            <div className="space-y-2">
-              <Label>Escopo</Label>
-              <Select value={formScopes[0]} onValueChange={(v) => setFormScopes([v as SecurityBusinessScope])} disabled={saving}>
-                <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  {SCOPE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <Button onClick={handleCreate} disabled={saving}>{saving ? "Salvando..." : "Criar perfil"}</Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* List */}
       <Card>
@@ -116,16 +95,24 @@ export function PerfisPadraoTab({ initialPerfis }: PerfisTabProps) {
           </div>
 
           <PaginatedTable<PerfilPadrao>
-            columns={[{ label: "Chave" }, { label: "Display Name" }, { label: "Escopo" }, { label: "Versoes" }]}
+            columns={[{ label: "Chave" }, { label: "Display Name" }, { label: "Escopo" }, { label: "Risco" }, { label: "Versoes" }]}
             items={filtered}
             emptyText={loading ? "Carregando perfis..." : "Nenhum perfil encontrado."}
             getRowKey={(p) => p.key}
             renderCells={(p) => (
               <>
-                <td className="px-4 py-3 font-mono text-sm">{p.key}</td>
+                <td className="px-4 py-3 font-mono text-sm cursor-pointer hover:text-gym-teal" onClick={() => handleSelectPerfil(p)}>{p.key}</td>
                 <td className="px-4 py-3 text-sm">{p.displayName}</td>
                 <td className="px-4 py-3">
                   <span className="rounded bg-secondary px-1.5 py-0.5 text-xs">{p.recommendedScope}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    p.riskLevel === "CRITICO" ? "bg-red-500/20 text-red-400" :
+                    p.riskLevel === "ALTO" ? "bg-orange-500/20 text-orange-400" :
+                    p.riskLevel === "MEDIO" ? "bg-yellow-500/20 text-yellow-400" :
+                    "bg-green-500/20 text-green-400"
+                  }`}>{p.riskLevel}</span>
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">{p.versaoAtual}</td>
               </>
@@ -133,6 +120,34 @@ export function PerfisPadraoTab({ initialPerfis }: PerfisTabProps) {
           />
         </CardContent>
       </Card>
+
+      {/* Version History */}
+      {selectedPerfil && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Versoes — {selectedPerfil.displayName} ({selectedPerfil.key})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingVersions ? (
+              <p className="text-sm text-muted-foreground">Carregando versoes...</p>
+            ) : versions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma versao registrada.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {versions.map((v) => (
+                  <li key={v.versao} className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+                    <div>
+                      <span className="font-mono text-xs">v{v.versao}</span>
+                      <span className="ml-2 text-muted-foreground">{v.descricao ?? "—"}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{v.criadoEm ?? "—"}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

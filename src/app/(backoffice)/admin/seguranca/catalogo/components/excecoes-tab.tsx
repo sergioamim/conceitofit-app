@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { PaginatedTable } from "@/components/shared/paginated-table";
-import { revisarExcecao } from "@/backoffice/api/admin-seguranca-avancada";
+import { revisarExcecao, createExcecao } from "@/backoffice/api/admin-seguranca-avancada";
 import type { GlobalAdminReviewBoard, ExcecaoRevisaoDecisao } from "@/lib/types";
 import type { GlobalAdminReviewBoardItem } from "@/lib/shared/types/tenant";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -30,7 +31,15 @@ export function ExcecoesTab({ initialBoard }: ExcecoesTabProps) {
   const [selectedReview, setSelectedReview] = useState<GlobalAdminReviewBoardItem | null>(null);
   const [decisao, setDecisao] = useState<ExcecaoRevisaoDecisao>("APROVADA");
   const [justificativa, setJustificativa] = useState("");
+  const [novaExpiracao, setNovaExpiracao] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Create exception form
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createTitle, setCreateTitle] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
+  const [createExpiresAt, setCreateExpiresAt] = useState("");
+  const [createSaving, setCreateSaving] = useState(false);
 
   async function handleRevisar() {
     if (!selectedReview) return;
@@ -38,20 +47,50 @@ export function ExcecoesTab({ initialBoard }: ExcecoesTabProps) {
       toast({ title: "Informe a justificativa", variant: "destructive" });
       return;
     }
+    if (decisao === "RENOVADA" && !novaExpiracao.trim()) {
+      toast({ title: "Informe a nova data de expiracao para renovacao", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
-      await revisarExcecao(selectedReview.id, { decisao, comentario: justificativa });
+      await revisarExcecao(selectedReview.id, { decisao, comentario: justificativa, novaExpiracao: decisao === "RENOVADA" ? novaExpiracao : undefined });
       setBoard((prev) => ({
         ...prev,
         pendingReviews: prev.pendingReviews.filter((r) => r.id !== selectedReview.id),
       }));
       setSelectedReview(null);
       setJustificativa("");
+      setNovaExpiracao("");
       toast({ title: `Excecao ${decisao.toLowerCase()} com sucesso` });
     } catch (err) {
       toast({ title: "Erro ao revisar excecao", description: normalizeErrorMessage(err), variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCreateException() {
+    if (!createTitle.trim()) {
+      toast({ title: "Informe o titulo da excecao", variant: "destructive" });
+      return;
+    }
+    setCreateSaving(true);
+    try {
+      await createExcecao({
+        userId: "system", // Will be resolved by backend from session
+        title: createTitle,
+        justification: createDescription || createTitle,
+        expiresAt: createExpiresAt || undefined,
+      });
+      setCreateTitle("");
+      setCreateDescription("");
+      setCreateExpiresAt("");
+      setShowCreateForm(false);
+      toast({ title: "Excecao criada com sucesso" });
+    } catch (err) {
+      toast({ title: "Erro ao criar excecao", description: normalizeErrorMessage(err), variant: "destructive" });
+    } finally {
+      setCreateSaving(false);
     }
   }
 
@@ -61,6 +100,39 @@ export function ExcecoesTab({ initialBoard }: ExcecoesTabProps) {
         <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
           {error}
         </div>
+      )}
+
+      {/* Create Exception Button */}
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={() => setShowCreateForm(!showCreateForm)}>
+          {showCreateForm ? "Cancelar" : "Nova excecao"}
+        </Button>
+      </div>
+
+      {/* Create Exception Form */}
+      {showCreateForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Nova excecao</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Titulo *</Label>
+              <Input value={createTitle} onChange={(e) => setCreateTitle(e.target.value)} placeholder="Excecao para acesso especial" disabled={createSaving} />
+            </div>
+            <div className="space-y-2">
+              <Label>Descricao</Label>
+              <Textarea value={createDescription} onChange={(e) => setCreateDescription(e.target.value)} disabled={createSaving} rows={2} className="bg-secondary border-border" placeholder="Motivo da excecao..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Expira em</Label>
+              <Input type="datetime-local" value={createExpiresAt} onChange={(e) => setCreateExpiresAt(e.target.value)} disabled={createSaving} className="bg-secondary border-border" />
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleCreateException} disabled={createSaving}>{createSaving ? "Salvando..." : "Criar excecao"}</Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Pending Reviews */}
@@ -73,7 +145,7 @@ export function ExcecoesTab({ initialBoard }: ExcecoesTabProps) {
             <p className="text-sm text-muted-foreground py-4">Nenhuma revisao pendente.</p>
           ) : (
             <PaginatedTable<GlobalAdminReviewBoardItem>
-              columns={[{ label: "Item" }, { label: "Risco" }, { label: "Solicitante" }, { label: "" }]}
+              columns={[{ label: "Item" }, { label: "Severidade" }, { label: "Solicitante" }, { label: "" }]}
               items={board.pendingReviews}
               emptyText="Nenhuma revisao pendente."
               getRowKey={(r) => r.id}
@@ -114,6 +186,12 @@ export function ExcecoesTab({ initialBoard }: ExcecoesTabProps) {
                 </SelectContent>
               </Select>
             </div>
+            {decisao === "RENOVADA" && (
+              <div className="space-y-2">
+                <Label>Nova expiracao *</Label>
+                <Input type="datetime-local" value={novaExpiracao} onChange={(e) => setNovaExpiracao(e.target.value)} disabled={saving} className="bg-secondary border-border" />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Justificativa *</Label>
               <Textarea
