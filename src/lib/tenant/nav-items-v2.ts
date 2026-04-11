@@ -69,6 +69,7 @@ export const operationGroup: NavGroupV2 = {
   items: [
     { href: "/atendimento/inbox", label: "Atendimento", icon: MessageSquare, description: "Inbox WhatsApp" },
     { href: "/clientes", label: "Clientes", icon: Users, description: "Base de alunos" },
+    { href: "/planos", label: "Planos", icon: CreditCard, description: "Catálogo de mensalidades" },
     { href: "/matriculas", label: "Contratos", icon: ClipboardList },
     { href: "/grade", label: "Grade de Aulas", icon: CalendarDays },
     { href: "/reservas", label: "Reservas", icon: CalendarDays },
