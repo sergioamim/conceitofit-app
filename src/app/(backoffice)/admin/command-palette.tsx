@@ -12,9 +12,9 @@ import {
   CommandItem,
 } from "cmdk";
 import {
-  adminGroupsV2 as backofficeNavGroups,
-  allAdminNavItemsV2 as allBackofficeNavItems,
-} from "@/backoffice/lib/nav-items-v2";
+  adminGroups as backofficeNavGroups,
+  allAdminNavItems as allBackofficeNavItems,
+} from "@/backoffice/lib/nav-items";
 
 const RECENT_ROUTES_KEY = "backoffice-recent-routes";
 const MAX_RECENT_ROUTES = 5;

@@ -37,8 +37,11 @@ import {
 } from "@/lib/api/session";
 import { logoutApi, refreshTokenApi } from "@/lib/api/auth";
 import { buildAdminLoginHref, buildLoginHref } from "@/lib/tenant/auth-redirect";
-import { adminGroupsV2 as backofficeNavGroups, allAdminNavItemsV2 as allBackofficeNavItems } from "@/backoffice/lib/nav-items-v2";
-import type { NavItemV2 as BackofficeNavItem } from "@/backoffice/lib/nav-items-v2";
+import {
+  adminGroups as backofficeNavGroups,
+  allAdminNavItems as allBackofficeNavItems,
+  type NavItem as BackofficeNavItem,
+} from "@/backoffice/lib/nav-items";
 import { hasElevatedAccess } from "@/lib/access-control";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";

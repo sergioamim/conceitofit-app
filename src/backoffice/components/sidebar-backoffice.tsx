@@ -16,11 +16,11 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { 
-  adminGroupsV2, 
-  type NavGroupV2, 
-  type NavItemV2 
-} from "@/backoffice/lib/nav-items-v2";
+import {
+  adminGroups,
+  type NavGroup,
+  type NavItem,
+} from "@/backoffice/lib/nav-items";
 import {
   useAuthAccess,
 } from "@/lib/tenant/hooks/use-session-context";
@@ -36,7 +36,7 @@ import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { useIsMac } from "@/hooks/use-is-mac";
 import { LogoutDialog } from "@/components/shared/logout-dialog";
 
-function NavLinkV2({ item, active, collapsed }: { item: NavItemV2, active: boolean, collapsed: boolean }) {
+function NavLink({ item, active, collapsed }: { item: NavItem; active: boolean; collapsed: boolean }) {
   const Icon = item.icon;
   
   if (item.paletteOnly) return null;
@@ -76,7 +76,7 @@ function NavLinkV2({ item, active, collapsed }: { item: NavItemV2, active: boole
   );
 }
 
-function SidebarGroup({ group, collapsed, pathname }: { group: NavGroupV2, collapsed: boolean, pathname: string }) {
+function SidebarGroup({ group, collapsed, pathname }: { group: NavGroup; collapsed: boolean; pathname: string }) {
   const [isOpen, setIsOpen] = useState(true);
   const Icon = group.icon;
   
@@ -109,11 +109,11 @@ function SidebarGroup({ group, collapsed, pathname }: { group: NavGroupV2, colla
             className="overflow-hidden flex flex-col gap-1 px-2"
           >
             {visibleItems.map((item) => (
-              <NavLinkV2 
-                key={item.href} 
-                item={item} 
-                active={pathname === item.href || (item.href !== '/admin' && pathname.startsWith(`${item.href}/`))} 
-                collapsed={collapsed} 
+              <NavLink
+                key={item.href}
+                item={item}
+                active={pathname === item.href || (item.href !== '/admin' && pathname.startsWith(`${item.href}/`))}
+                collapsed={collapsed}
               />
             ))}
           </motion.div>
@@ -208,7 +208,7 @@ export function SidebarBackoffice({ mobileOpen = false, onMobileClose, onOpenCmd
 
         {/* Navigation Groups */}
         <nav className="flex-1 overflow-y-auto px-2 scrollbar-none">
-          {adminGroupsV2.map((group) => (
+          {adminGroups.map((group) => (
             <SidebarGroup 
               key={group.label} 
               group={group} 
