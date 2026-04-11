@@ -16,6 +16,15 @@
 
 ## Changelog
 
+- **v2.1 (2026-04-10 — rajada Wave 1/2/3):**
+  - **Wave 1 (Loki + Logs Aggregation)** ✅ entregue. Loki 3.3.2 + Grafana Alloy v1.5.1 rodando. 13 services shipando logs. Logs Explorer dashboard customizado. derivedFields Loki→Tempo para correlação trace_id configurada. Retenção 14d.
+  - **Wave 2 (Infra Dashboards)** ✅ entregue. 3 dashboards da comunidade importados + processados: Node Exporter Full (1860 rev44), Docker cAdvisor (893 rev5), PostgreSQL (9628 rev8). Datasource UID normalizado para "prometheus".
+  - **Wave 3 (Jaeger → Tempo Migration)** ✅ entregue. Tempo 2.6.1 com backend S3 via MinIO (bucket conceito-traces). metrics_generator gerando RED + service_graphs automaticamente no Prometheus via remote_write + exemplar-storage. Backend migrado para OTLP endpoint Tempo. 5 spans recebidos em <10min. Tags reais de Spring Boot detectadas (service.name, http.url, spring.security.*). Datasource Grafana com tracesToLogsV2 + tracesToMetrics + serviceMap. Jaeger mantido temporariamente como fallback.
+  - **Reordenação de waves finais** (decisão Sergio 2026-04-10):
+    - Wave 4 (Frontend Observability / Sentry DSN) → **MOVIDA PARA O FIM**
+    - Nova ordem: Wave 5 (Business Metrics) → Wave 7 (Alerts wire) → Wave 8 (Blue/Green Deploy) → Wave 4 (Sentry) → Wave 6 deferred
+  - **Nova Wave 8 — Blue/Green Deploy** adicionada ao backlog (decisão Sergio 2026-04-10). Implementação recomendada quando tiver clientes beta; evolução para canary quando tiver tráfego real pagante.
+
 - **v2.0 (2026-04-10 — após sessão de execução):**
   - **Wave -1 (Audit + Fix Fundacional)** executada e validada: 5 bugs críticos descobertos e corrigidos (mount paths broken no compose, datasource sem UID, Spring Security bloqueando `/actuator/prometheus`, `WhatsAppHealthIndicator` NPE, Caddy over-blocking).
   - **Wave 0 (Telegram + Exporters)** executada e validada: 3 exporters rodando (node-exporter, cAdvisor, postgres-exporter), contact points Telegram provisionados, notification policies por severity, primeiro alerta real (`http-error-rate`) disparando no Telegram.
