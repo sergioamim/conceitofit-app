@@ -80,10 +80,8 @@ function NavLinkV2({ item, active, collapsed }: { item: NavItemV2, active: boole
       <Link
         href={item.href}
         className={cn(
-          // Transição instantânea (150ms) — o feedback de hover precisa ser
-          // responsivo. 300ms ficava perceptivelmente lento ao mover o cursor
-          // entre itens do menu.
-          "flex flex-1 items-center gap-3 px-3 py-2.5 rounded-xl transition-[color,background-color] duration-150",
+          // Transição snappy (100ms) — hover precisa ser imediato.
+          "flex flex-1 items-center gap-3 px-3 py-2.5 rounded-xl transition-[color,background-color] duration-100",
           active
             ? "bg-primary/10 text-primary font-bold shadow-[inset_0_0_15px_rgba(200,241,53,0.05)]"
             : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"

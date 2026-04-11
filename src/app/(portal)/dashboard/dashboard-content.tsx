@@ -140,7 +140,7 @@ export function DashboardContent({
             key={key}
             onClick={() => setTab(key)}
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-[color,background-color] duration-150",
+              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-[color,background-color] duration-100",
               tab === key
                 ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
