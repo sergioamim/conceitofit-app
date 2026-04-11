@@ -4,7 +4,7 @@ import { MessageBubble } from "@/components/atendimento/message-bubble";
 import type { MensagemResponse } from "@/lib/shared/types/whatsapp-crm";
 
 // Mock formatRelativeTime to return a stable string
-vi.mock("@/lib/utils/time-format", () => ({
+vi.mock("@/lib/formatters", () => ({
   formatRelativeTime: () => "há 2 minutos",
 }));
 

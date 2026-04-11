@@ -1,9 +1,12 @@
 import { Buffer } from "node:buffer";
 import { expect, test } from "@playwright/test";
+import { createBrowserErrorGuard } from "./support/browser-errors";
 import { openBackofficeWaveCPage } from "./support/stubs/backoffice-wave-c";
 
 test.describe("Backoffice importação EVO P0", () => {
   test("carrega o wizard, faz upload do pacote, revisa a prévia e confirma a importação", async ({ page }) => {
+    const browserErrors = createBrowserErrorGuard(page);
+
     await openBackofficeWaveCPage(
       page,
       "/admin/importacao-evo-p0?tenantId=tenant-barra",
@@ -27,12 +30,10 @@ test.describe("Backoffice importação EVO P0", () => {
     await page.getByLabel("Nome de identificação deste lote").fill("Carga Wave C");
     await page.getByRole("button", { name: "Criar Job" }).click();
 
-    const loteCriado = page.locator("button").filter({ hasText: "Carga Wave C" }).first();
-    await expect(loteCriado).toBeVisible({ timeout: 15_000 });
-    await loteCriado.click();
-
     await expect(page.getByRole("heading", { name: "Diagnóstico do Lote" })).toBeVisible();
+    await expect(page.getByText("Carga Wave C")).toBeVisible();
     await expect(page.getByText("Job de importação")).toBeVisible();
     await expect(page.getByRole("button", { name: "Abrir rejeições" })).toBeVisible();
+    await browserErrors.assertNoUnexpectedErrors("Happy path da importação EVO P0 emitiu erro no browser");
   });
 });

@@ -6,11 +6,12 @@ import type { ContaBancaria } from "@/lib/types";
 import { ContasBancariasContent } from "./contas-bancarias-content";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
+import { getServerActiveTenantId } from "@/lib/shared/server-session";
 
 async function getTenantData(): Promise<{ id: string; name: string }> {
   const jar = await cookies();
   return {
-    id: jar.get("academia-active-tenant-id")?.value || "",
+    id: (await getServerActiveTenantId()) || "",
     name: jar.get("academia-active-tenant-name")?.value || "",
   };
 }
@@ -20,7 +21,7 @@ async function Loader() {
   let data: ContaBancaria[] = [];
 
   try {
-    if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
+    if (tenantId && !(await shouldBypassAuthenticatedSSRFetch())) {
       data = await serverFetch<ContaBancaria[]>("/api/v1/administrativo/contas-bancarias", {
         query: { tenantId },
         next: { revalidate: 0 },

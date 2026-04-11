@@ -295,6 +295,20 @@ function writeE2EAuthSessionInBrowser(session: ResolvedE2EAuthSession): void {
   const sessionActiveCookieKey = "fc_session_active";
   const sessionClaimsCookieKey = "fc_session_claims";
   const middlewareAccessTokenCookieKey = "fc_access_token";
+  const sessionClaims = {
+    userId: session.userId,
+    userKind: session.userKind,
+    displayName: session.displayName,
+    networkId: session.networkId,
+    networkSubdomain: session.networkSubdomain ?? session.networkSlug,
+    networkSlug: session.networkSlug ?? session.networkSubdomain,
+    networkName: session.networkName,
+    activeTenantId: session.activeTenantId,
+    baseTenantId: session.baseTenantId,
+    availableScopes: session.availableScopes,
+    broadAccess: session.broadAccess,
+    forcePasswordChangeRequired: session.forcePasswordChangeRequired,
+  };
   const storage = window.localStorage;
   const setStorageValue = (key: string, value?: string) => {
     if (!value) {
@@ -341,7 +355,7 @@ function writeE2EAuthSessionInBrowser(session: ResolvedE2EAuthSession): void {
   writeCookie(accessTokenCookieKey, session.token);
   writeCookie(sessionActiveCookieKey, session.sessionActive ? "true" : undefined);
   writeCookie(middlewareAccessTokenCookieKey, session.token);
-  writeCookie(sessionClaimsCookieKey, JSON.stringify(buildSessionClaims(session)));
+  writeCookie(sessionClaimsCookieKey, JSON.stringify(sessionClaims));
   setStorageValue("academia-auth-preferred-tenant-id", session.preferredTenantId);
   setStorageValue("academia-auth-base-tenant-id", session.baseTenantId);
   setStorageValue(

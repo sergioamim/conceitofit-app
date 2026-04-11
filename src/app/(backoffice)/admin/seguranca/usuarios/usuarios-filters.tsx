@@ -37,6 +37,8 @@ export function UsuariosFilters({
   // Sincronizar texto de busca quando academiaId é limpo externamente (ex: botão "Limpar")
   useEffect(() => {
     if (!filters.academiaId) {
+      // O texto livre do autocomplete precisa ser limpo quando o filtro externo zera.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAcademiaBusca("");
     }
   }, [filters.academiaId]);

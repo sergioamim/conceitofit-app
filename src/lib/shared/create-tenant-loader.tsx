@@ -1,13 +1,12 @@
 import { Suspense, type ComponentType } from "react";
-import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { logger } from "@/lib/shared/logger";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
+import { getServerActiveTenantId } from "@/lib/shared/server-session";
 
 async function getActiveTenantId(): Promise<string | undefined> {
-  const jar = await cookies();
-  return jar.get("academia-active-tenant-id")?.value;
+  return getServerActiveTenantId();
 }
 
 const DEFAULT_FALLBACK = <SuspenseFallback variant="section" />;
@@ -70,7 +69,7 @@ export function createTenantLoader<T>(
     let data: T = empty;
 
     try {
-      if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
+      if (tenantId && !(await shouldBypassAuthenticatedSSRFetch())) {
         data = await serverFetch<T>(url, {
           query: { tenantId, ...query },
           next: { revalidate: 0 },

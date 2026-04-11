@@ -65,7 +65,11 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const [recentRoutes, setRecentRoutes] = useState<RecentRoute[]>([]);
 
   useEffect(() => {
-    if (open) setRecentRoutes(readRecentRoutes());
+    if (open) {
+      // A paleta precisa refletir as rotas recentes só quando abre.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRecentRoutes(readRecentRoutes());
+    }
   }, [open]);
 
   const handleNavigate = useCallback(

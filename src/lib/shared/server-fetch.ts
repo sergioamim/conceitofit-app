@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { isPlaywrightTestRuntime } from "./e2e-runtime";
 
 // ---------------------------------------------------------------------------
 // server-fetch.ts – helper para data-fetching em React Server Components
@@ -9,8 +10,9 @@ import { redirect } from "next/navigation";
 // e encaminha o token de sessão a partir dos cookies do request.
 // ---------------------------------------------------------------------------
 
-const BACKEND_BASE =
+const DEFAULT_BACKEND_BASE =
   process.env.BACKEND_PROXY_TARGET ?? "http://localhost:8080";
+const PLAYWRIGHT_BACKEND_BASE_COOKIE = "academia-e2e-backend-base-url";
 
 /** Payload de erro compatível com o backend Java. */
 export interface ServerFetchError {
@@ -38,12 +40,33 @@ export class ServerFetchRequestError extends Error {
 // Helpers internos
 // ---------------------------------------------------------------------------
 
-function resolveUrl(
+async function resolveBackendBase(): Promise<string> {
+  if (!isPlaywrightTestRuntime()) {
+    return DEFAULT_BACKEND_BASE;
+  }
+
+  const jar = await cookies();
+  const rawOverride = jar.get(PLAYWRIGHT_BACKEND_BASE_COOKIE)?.value;
+  const decodedOverride = rawOverride ? decodeURIComponent(rawOverride).trim() : "";
+
+  if (!decodedOverride) {
+    return DEFAULT_BACKEND_BASE;
+  }
+
+  try {
+    return new URL(decodedOverride).toString().replace(/\/$/, "");
+  } catch {
+    return DEFAULT_BACKEND_BASE;
+  }
+}
+
+async function resolveUrl(
   path: string,
   query?: Record<string, string | number | boolean | undefined>,
-): string {
+): Promise<string> {
   const pathname = path.startsWith("/") ? path : `/${path}`;
-  const url = new URL(`${BACKEND_BASE}${pathname}`);
+  const backendBase = await resolveBackendBase();
+  const url = new URL(`${backendBase}${pathname}`);
 
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -108,7 +131,7 @@ export async function serverFetch<T>(
     query.tenantId = tenantId;
   }
 
-  const url = resolveUrl(path, query);
+  const url = await resolveUrl(path, query);
   const cookieHeader = await getCookieHeader();
 
   const reqHeaders: Record<string, string> = {

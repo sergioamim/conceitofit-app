@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActiveTenantSelector } from "@/components/layout/active-tenant-selector";
+import { OnboardingStatusBadge } from "@/components/layout/onboarding-status-badge";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 
 type AppTopbarProps = {
@@ -68,6 +69,10 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
             disabled={savingTenant || tenantLoading}
             onChange={handleChangeTenant}
           />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <OnboardingStatusBadge />
         </div>
       </div>
     </div>

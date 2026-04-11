@@ -1,20 +1,19 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
 import { logger } from "@/lib/shared/logger";
+import { getServerActiveTenantId } from "@/lib/shared/server-session";
 import type { DashboardRetencao } from "@/lib/api/crm";
 import { RetencaoContent } from "./retencao-content";
 
 export const dynamic = "force-dynamic";
 
 async function RetencaoLoader() {
-  const jar = await cookies();
-  const tenantId = jar.get("academia-active-tenant-id")?.value;
+  const tenantId = await getServerActiveTenantId();
 
   let data: DashboardRetencao | null = null;
 
-  if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
+  if (tenantId && !(await shouldBypassAuthenticatedSSRFetch())) {
     try {
       data = await serverFetch<DashboardRetencao>(
         "/api/v1/crm/dashboard/retencao",

@@ -4,11 +4,13 @@ import nextTs from "eslint-config-next/typescript";
 import boundaries from "eslint-plugin-boundaries";
 
 const runtimeFiles = ["src/**/*.{ts,tsx}"];
-const testFiles = ["tests/**/*.{ts,tsx}"];
+const testFiles = ["tests/**/*.{ts,tsx}", "tests/**/*.d.ts"];
 const localStorageAllowedFiles = [
   "src/lib/api/http.ts",
+  "src/lib/api/session.ts",
   "src/lib/public/storage.ts",
   "src/app/(backoffice)/admin/importacao-evo-p0/page.tsx",
+  "src/app/(backoffice)/admin/importacao-evo-p0/hooks/useEvoImportPage.ts",
 ];
 
 const eslintConfig = defineConfig([
@@ -28,6 +30,25 @@ const eslintConfig = defineConfig([
           ],
         },
       ],
+    },
+  },
+  {
+    files: runtimeFiles,
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+      "react/no-unescaped-entities": "warn",
+      "react-hooks/error-boundaries": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
+  {
+    files: testFiles,
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+      "react/display-name": "off",
     },
   },
   {

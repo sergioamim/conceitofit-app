@@ -1,20 +1,19 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
 import { logger } from "@/lib/shared/logger";
+import { getServerActiveTenantId } from "@/lib/shared/server-session";
 import type { NpsDashboard } from "@/lib/api/nps";
 import { NpsDashboardContent } from "./nps-content";
 
 export const dynamic = "force-dynamic";
 
 async function NpsDashboardLoader() {
-  const jar = await cookies();
-  const tenantId = jar.get("academia-active-tenant-id")?.value;
+  const tenantId = await getServerActiveTenantId();
 
   let data: NpsDashboard | null = null;
 
-  if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
+  if (tenantId && !(await shouldBypassAuthenticatedSSRFetch())) {
     const hoje = new Date();
     const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
       .toISOString()

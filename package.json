@@ -1,6 +1,6 @@
 {
   "name": "academia-app",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "lint": "eslint",
+    "lint": "eslint src tests",
+    "typecheck": "tsc --noEmit",
     "audit:api": "node scripts/audit-api-clients.mjs",
     "coverage:clean": "node scripts/playwright-coverage.mjs clean",
     "coverage:unit": "node scripts/playwright-coverage.mjs unit",

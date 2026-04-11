@@ -412,8 +412,10 @@ export function useEvoImportPage() {
     return {
       status: error.status,
       path: error.path,
+      requestId: error.requestId,
+      contextId: error.contextId,
       message: error.message,
-      error: error.error,
+      apiError: error.error,
       fieldErrors: error.fieldErrors,
       responseBody: body || undefined,
     };
@@ -1534,9 +1536,8 @@ export function useEvoImportPage() {
       if (error instanceof ApiRequestError) {
         logger.error(`Erro ao analisar pacote EVO — HTTP ${error.status}: ${error.message}`, {
           module: "evo-import",
-          status: error.status,
-          path: error.path,
-          responseBody: error.responseBody?.slice(0, 500),
+          handled: true,
+          ...formatApiErrorForLog(error),
         });
         toast({
           title: "Erro ao analisar pacote",
@@ -1719,7 +1720,11 @@ export function useEvoImportPage() {
       });
     } catch (error: unknown) {
       if (error instanceof ApiRequestError) {
-        logger.error("Erro ao criar job do pacote EVO", { module: "evo-import", error: formatApiErrorForLog(error) });
+        logger.error("Erro ao criar job do pacote EVO", {
+          module: "evo-import",
+          handled: true,
+          ...formatApiErrorForLog(error),
+        });
         toast({
           title: "Erro ao criar job",
           description: extractErrorMessage(error),
@@ -1952,11 +1957,10 @@ export function useEvoImportPage() {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ApiRequestError) {
-        const trimmedBody = formatErrorBody(error.responseBody);
-        logger.error("Erro na importação EVO", { module: "evo-import",
-          status: error.status,
-          path: error.path,
-          body: trimmedBody,
+        logger.error("Erro na importação EVO", {
+          module: "evo-import",
+          handled: true,
+          ...formatApiErrorForLog(error),
         });
         toast({
           title: "Erro ao enviar importação",

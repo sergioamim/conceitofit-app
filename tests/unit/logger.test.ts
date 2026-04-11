@@ -95,7 +95,8 @@ describe("logger", () => {
       expect(Sentry.captureException).toHaveBeenCalledWith(
         err,
         expect.objectContaining({
-          tags: { module: "auth" },
+          tags: expect.objectContaining({ module: "auth", handled: "false" }),
+          extra: expect.objectContaining({ error: err }),
         }),
       );
     });
@@ -104,7 +105,9 @@ describe("logger", () => {
       logger.error("mensagem sem Error", { module: "billing" });
       expect(Sentry.captureException).toHaveBeenCalledWith(
         expect.any(Error),
-        expect.objectContaining({ tags: { module: "billing" } }),
+        expect.objectContaining({
+          tags: expect.objectContaining({ module: "billing", handled: "false" }),
+        }),
       );
       const [errArg] = (Sentry.captureException as ReturnType<typeof vi.fn>).mock.calls[0];
       expect(errArg.message).toBe("mensagem sem Error");

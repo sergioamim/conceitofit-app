@@ -45,19 +45,18 @@ export function SaasDashboardContent({
   onboarding,
   error,
 }: SaasDashboardContentProps) {
+  const shouldClientRecover = !metrics || !series || !onboarding;
   const [resolvedMetrics, setResolvedMetrics] = useState<SaasMetricsResponse | null>(metrics);
   const [resolvedSeries, setResolvedSeries] = useState<SaasSeriesResponse | null>(series);
   const [resolvedOnboarding, setResolvedOnboarding] = useState<SaasOnboardingResponse | null>(onboarding);
   const [resolvedError, setResolvedError] = useState<string | null>(error);
-  const [loadingFallback, setLoadingFallback] = useState(false);
+  const [loadingFallback, setLoadingFallback] = useState(shouldClientRecover);
   const [onboardingFilter, setOnboardingFilter] = useState<OnboardingFilter>("all");
-  const shouldClientRecover = !metrics || !series || !onboarding;
 
   useEffect(() => {
     if (!shouldClientRecover) return;
 
     let active = true;
-    setLoadingFallback(true);
 
     void Promise.all([getSaasMetrics(), getSaasSeries(), getSaasOnboarding()])
       .then(([nextMetrics, nextSeries, nextOnboarding]) => {

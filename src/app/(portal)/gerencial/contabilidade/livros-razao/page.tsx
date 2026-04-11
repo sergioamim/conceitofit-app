@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
 
 export const dynamic = "force-dynamic";
@@ -7,15 +6,15 @@ import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { LivrosRazaoContent } from "./components/livros-razao-content";
 import { logger } from "@/lib/shared/logger";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
+import { getServerActiveTenantId } from "@/lib/shared/server-session";
 import type { Ledger } from "@/lib/types";
 
 async function Loader() {
-  const jar = await cookies();
-  const tenantId = jar.get("academia-active-tenant-id")?.value;
+  const tenantId = await getServerActiveTenantId();
   let ledgers: Ledger[] = [];
 
   try {
-    if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
+    if (tenantId && !(await shouldBypassAuthenticatedSSRFetch())) {
       ledgers = await serverFetch<Ledger[]>("/api/v1/financial/ledgers", {
         query: { tenantId },
         next: { revalidate: 0 },

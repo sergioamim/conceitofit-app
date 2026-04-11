@@ -1,20 +1,19 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
 import { logger } from "@/lib/shared/logger";
+import { getServerActiveTenantId } from "@/lib/shared/server-session";
 import type { NpsEnvio } from "@/lib/api/nps";
 import { EnviosContent } from "./envios-content";
 
 export const dynamic = "force-dynamic";
 
 async function EnviosLoader() {
-  const jar = await cookies();
-  const tenantId = jar.get("academia-active-tenant-id")?.value;
+  const tenantId = await getServerActiveTenantId();
 
   let data: NpsEnvio[] | null = null;
 
-  if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
+  if (tenantId && !(await shouldBypassAuthenticatedSSRFetch())) {
     try {
       data = await serverFetch<NpsEnvio[]>(
         "/api/v1/retencao/nps/envios",

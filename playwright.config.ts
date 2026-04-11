@@ -13,6 +13,10 @@ const WEB_SERVER_COMMAND_BASE =
     : `BACKEND_PROXY_TARGET=${PLAYWRIGHT_BACKEND_PROXY_TARGET} ./node_modules/.bin/next dev --webpack -p ${PLAYWRIGHT_PORT} -H localhost`);
 const WEB_SERVER_COMMAND = `PLAYWRIGHT_TEST=1 NEXT_PUBLIC_WHATSAPP_INTEGRATION_ENABLED=1 ${WEB_SERVER_COMMAND_BASE}`;
 
+process.env.PLAYWRIGHT_PORT = PLAYWRIGHT_PORT;
+process.env.PLAYWRIGHT_BASE_URL = BASE_URL;
+process.env.PLAYWRIGHT_BACKEND_PROXY_TARGET = PLAYWRIGHT_BACKEND_PROXY_TARGET;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   globalSetup: "./tests/e2e/global-setup.ts",

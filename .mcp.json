@@ -1,33 +1,42 @@
 {
-	"mcpServers": {
-		"postgres-academia": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"-y",
-				"@modelcontextprotocol/server-postgres",
-				"postgresql://academia:academia@localhost:5432/academia"
-			]
-		},
-		"task-master-ai": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"-y",
-				"task-master-ai"
-			],
-			"env": {
-				"TASK_MASTER_TOOLS": "core",
-				"ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
-				"PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
-				"OPENAI_API_KEY": "YOUR_OPENAI_API_KEY_HERE",
-				"GOOGLE_API_KEY": "AIzaSyDT5HyM5p9MkWtfDQlmsM8AcE1oc8EX30k",
-				"XAI_API_KEY": "YOUR_XAI_KEY_HERE",
-				"OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
-				"MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
-				"AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE",
-				"OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE"
-			}
-		}
-	}
+  "mcpServers": {
+    "postgres-academia": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://academia:academia@localhost:5432/academia"
+      ]
+    },
+    "task-master-ai": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "task-master-ai"
+      ],
+      "env": {
+        "TASK_MASTER_TOOLS": "core",
+        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
+        "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
+        "OPENAI_API_KEY": "YOUR_OPENAI_API_KEY_HERE",
+        "GOOGLE_API_KEY": "AIzaSyDT5HyM5p9MkWtfDQlmsM8AcE1oc8EX30k",
+        "XAI_API_KEY": "YOUR_XAI_KEY_HERE",
+        "OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
+        "MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
+        "AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE",
+        "OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE"
+      }
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
+      "env": {}
+    }
+  }
 }

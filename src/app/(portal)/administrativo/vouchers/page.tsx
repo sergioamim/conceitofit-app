@@ -1,15 +1,14 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
 import { logger } from "@/lib/shared/logger";
 import type { Voucher } from "@/lib/types";
 import { VouchersContent } from "./vouchers-content";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
+import { getServerActiveTenantId } from "@/lib/shared/server-session";
 
 async function getActiveTenantId(): Promise<string | undefined> {
-  const jar = await cookies();
-  return jar.get("academia-active-tenant-id")?.value;
+  return getServerActiveTenantId();
 }
 
 async function Loader() {
@@ -18,7 +17,7 @@ async function Loader() {
   let usageCounts: Record<string, number> = {};
 
   try {
-    if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
+    if (tenantId && !(await shouldBypassAuthenticatedSSRFetch())) {
       const [vouchersData, countsData] = await Promise.all([
         serverFetch<Voucher[]>("/api/v1/administrativo/vouchers", {
           query: { tenantId },

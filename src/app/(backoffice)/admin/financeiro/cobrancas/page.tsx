@@ -13,7 +13,7 @@ async function Loader() {
   let contratos: ContratoPlataforma[] = [];
 
   try {
-    if (!shouldBypassAuthenticatedSSRFetch()) {
+    if (!(await shouldBypassAuthenticatedSSRFetch())) {
       [cobrancas, contratos] = await Promise.all([
         serverFetch<Cobranca[]>("/api/v1/admin/financeiro/cobrancas", {
           next: { revalidate: 0 },

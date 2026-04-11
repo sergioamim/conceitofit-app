@@ -1,6 +1,11 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { installE2EAuthSession } from "./support/auth-session";
+import { createBrowserErrorGuard } from "./support/browser-errors";
 import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
+import {
+  enableAuthenticatedSSRForPlaywright,
+  overrideLegacyActiveTenantCookie,
+} from "./support/ssr-runtime";
 
 const TENANT = {
   id: "tenant-centro",
@@ -224,7 +229,9 @@ async function seedAuthenticatedSession(page: Page) {
   });
 }
 
-async function installDashboardMocks(page: Page) {
+async function installDashboardMocks(page: Page, options: { mockDashboardApi?: boolean } = {}) {
+  const mockDashboardApi = options.mockDashboardApi ?? true;
+
   await installOperationalAppShellMocks(page, {
     currentTenantId: TENANT.id,
     tenants: [
@@ -263,7 +270,7 @@ async function installDashboardMocks(page: Page) {
     const url = new URL(request.url());
     const path = normalizedPath(url.pathname);
 
-    if (path === "/api/v1/academia/dashboard" && method === "GET") {
+    if (mockDashboardApi && path === "/api/v1/academia/dashboard" && method === "GET") {
       await fulfillJson(route, DASHBOARD_RESPONSE);
       return;
     }
@@ -327,44 +334,81 @@ async function installDashboardMocks(page: Page) {
 test.describe("Dashboard principal", () => {
   test.beforeEach(async ({ page }) => {
     await seedAuthenticatedSession(page);
-    await installDashboardMocks(page);
   });
 
   test("renderiza cards, prospects, matrículas e pagamentos com dados mockados", async ({ page }) => {
+    const browserErrors = createBrowserErrorGuard(page);
+    const main = page.locator("main");
+
+    await installDashboardMocks(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-    await expect(page.getByTestId("alunos-ativos-card")).toContainText("128");
+    await expect(main.getByText("Clientes ativos")).toBeVisible();
+    await expect(main.getByRole("heading", { level: 3, name: "128" })).toBeVisible();
 
-    await expect(page.getByRole("heading", { name: "Prospects recentes" })).toBeVisible();
-    await expect(page.getByText("Ana Prospect")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Matrículas vencendo em 7 dias" })).toBeVisible();
-    await expect(page.getByText("Carlos Ativo")).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Prospects recentes" })).toBeVisible();
+    await expect(main.getByText("Ana Prospect")).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Matrículas vencendo" })).toBeVisible();
+    await expect(main.getByText("Carlos Ativo")).toBeVisible();
 
-    await page.getByRole("button", { name: "Vendas" }).click();
-    await expect(page.getByTestId("matriculas-card")).toContainText("9");
-    await expect(page.getByTestId("receita-card")).toContainText("R$");
+    await main.getByRole("button", { name: "Vendas" }).click();
+    await expect(main.getByText("Contratos vendidos")).toBeVisible();
+    await expect(main.getByRole("heading", { level: 3, name: "9" })).toBeVisible();
+    await expect(main.getByText("Valor total vendido")).toBeVisible();
 
-    await page.getByRole("button", { name: "Financeiro" }).click();
-    await expect(page.getByText("Recebimentos do mês")).toBeVisible();
-    await expect(page.locator("h2", { hasText: "Pagamentos pendentes e vencidos" })).toBeVisible();
-    await expect(page.getByText("R$ 299,90")).toBeVisible();
+    await main.getByRole("button", { name: "Financeiro" }).click();
+    await expect(main.getByText("Recebimentos")).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Pendentes e Vencidos" })).toBeVisible();
+    await expect(main.getByText("R$ 299,90")).toBeVisible();
+    await browserErrors.assertNoUnexpectedErrors("Happy path do dashboard emitiu erro no browser");
   });
 
   test("navega para prospects e pagamentos a partir do dashboard", async ({ page }) => {
+    const browserErrors = createBrowserErrorGuard(page);
+    const main = page.locator("main");
+
+    await installDashboardMocks(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByTestId("prospects-recentes-link")).toHaveAttribute("href", "/prospects");
+    await expect(main.getByRole("link", { name: /Ver pipeline/i })).toHaveAttribute("href", "/prospects");
     await page.goto("/prospects", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/prospects$/);
 
     await seedAuthenticatedSession(page);
     await installDashboardMocks(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: "Financeiro" }).click();
-    await expect(page.getByText("Recebimentos do mês")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Ver todos" })).toHaveAttribute("href", "/pagamentos");
+    await main.getByRole("button", { name: "Financeiro" }).click();
+    await expect(main.getByText("Recebimentos")).toBeVisible();
+    await expect(main.locator('a[href="/pagamentos"]').filter({ hasText: "Ver todos" })).toHaveAttribute("href", "/pagamentos");
     await page.goto("/pagamentos", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/pagamentos$/);
+    await browserErrors.assertNoUnexpectedErrors("Navegação happy path do dashboard emitiu erro no browser");
+  });
+
+  test("usa SSR autenticado com claims canônicas mesmo quando o cookie legado está stale", async ({ page }) => {
+    const browserErrors = createBrowserErrorGuard(page);
+    const main = page.locator("main");
+    let dashboardClientRequests = 0;
+
+    await installDashboardMocks(page, { mockDashboardApi: false });
+    await enableAuthenticatedSSRForPlaywright(page);
+    await overrideLegacyActiveTenantCookie(page, "tenant-legado-stale");
+
+    await page.route("**/api/v1/academia/dashboard**", async (route) => {
+      dashboardClientRequests += 1;
+      await fulfillJson(route, DASHBOARD_RESPONSE);
+    });
+
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(main.getByText("Clientes ativos")).toBeVisible();
+    await expect(main.getByRole("heading", { level: 3, name: "77" })).toBeVisible();
+    await expect(main.getByText("Prospect SSR")).toBeVisible();
+
+    await page.waitForTimeout(500);
+    expect(dashboardClientRequests).toBe(0);
+    await browserErrors.assertNoUnexpectedErrors("Dashboard SSR happy path emitiu erro no browser");
   });
 });

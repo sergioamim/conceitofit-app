@@ -45,7 +45,6 @@ function extractData<T>(envelope: AdminEnvelope<T> | T): T {
 }
 
 async function fetchAdminData() {
-  const shouldRecoverOnClient = shouldBypassAuthenticatedSSRFetch();
   let academias: Academia[] = [];
   let unidades: Tenant[] = [];
   let seguranca: GlobalAdminSecurityOverview = { totalUsers: 0, activeMemberships: 0, defaultUnitsConfigured: 0, eligibleForNewUnits: 0 };
@@ -53,6 +52,8 @@ async function fetchAdminData() {
   let error: string | null = null;
   let operationalError: string | null = null;
 
+  const shouldRecoverOnClient = await shouldBypassAuthenticatedSSRFetch();
+  
   if (shouldRecoverOnClient) {
     return { academias, unidades, seguranca, metricas, error, operationalError, shouldRecoverOnClient };
   }

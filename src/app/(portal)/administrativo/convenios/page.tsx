@@ -1,15 +1,14 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
 import { logger } from "@/lib/shared/logger";
 import type { Convenio, Plano } from "@/lib/types";
 import { ConveniosContent } from "./convenios-content";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
+import { getServerActiveTenantId } from "@/lib/shared/server-session";
 
 async function getActiveTenantId(): Promise<string | undefined> {
-  const jar = await cookies();
-  return jar.get("academia-active-tenant-id")?.value;
+  return getServerActiveTenantId();
 }
 
 async function Loader() {
@@ -18,7 +17,7 @@ async function Loader() {
   let planos: Plano[] = [];
 
   try {
-    if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
+    if (tenantId && !(await shouldBypassAuthenticatedSSRFetch())) {
       const [cvs, pls] = await Promise.all([
         serverFetch<Convenio[]>("/api/v1/administrativo/convenios", {
           query: { tenantId, apenasAtivos: false },

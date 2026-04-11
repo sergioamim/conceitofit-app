@@ -14,7 +14,7 @@ async function Loader() {
   let planos: PlanoPlataforma[] = [];
 
   try {
-    if (!shouldBypassAuthenticatedSSRFetch()) {
+    if (!(await shouldBypassAuthenticatedSSRFetch())) {
       [contratos, academias, planos] = await Promise.all([
         serverFetch<ContratoPlataforma[]>("/api/v1/admin/financeiro/contratos", {
           next: { revalidate: 0 },

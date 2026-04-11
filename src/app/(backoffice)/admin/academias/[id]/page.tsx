@@ -58,6 +58,8 @@ export default function AcademiaDetalhePage() {
 
   useEffect(() => {
     if (academiaQuery.data) {
+      // Mantem o form editavel sincronizado quando a carga assíncrona muda de academia.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(buildForm(academiaQuery.data));
     }
   }, [academiaQuery.data]);

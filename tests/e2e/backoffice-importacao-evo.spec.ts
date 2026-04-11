@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { openAdminCrudPage } from "./support/admin-crud-helpers";
+import { createBrowserErrorGuard } from "./support/browser-errors";
 
 async function installImportacaoEvoJobStubs(page: Page) {
   let arquivosSelecionadosNoJob = [
@@ -521,6 +522,7 @@ async function installImportacaoEvoJobStubs(page: Page) {
 
 test.describe("Backoffice importacao EVO", () => {
   test("abre uma unidade seedada e conclui job EVO por pacote no fluxo principal", async ({ page }) => {
+    const browserErrors = createBrowserErrorGuard(page);
     const unidadeNome = "Unidade Barra";
     const jobAlias = `Carga EVO ${Date.now()}`;
 
@@ -532,7 +534,7 @@ test.describe("Backoffice importacao EVO", () => {
 
     await installImportacaoEvoJobStubs(page);
 
-    await unidadeRow.getByRole("link", { name: "Importacao" }).click();
+    await unidadeRow.getByRole("link", { name: "Importação EVO" }).click();
     await expect(page).toHaveURL(/\/admin\/importacao-evo\?tenantId=tenant-barra/);
     await expect(page.getByRole("heading", { name: "Gestor de Importação" })).toBeVisible();
     await expect(page.getByText("Etapa 1: Analisar pacote ZIP")).toBeVisible();
@@ -613,5 +615,6 @@ test.describe("Backoffice importacao EVO", () => {
     await page.goto("/admin/unidades", { waitUntil: "domcontentloaded" });
     const unidadeAtualizada = page.getByRole("row").filter({ hasText: unidadeNome });
     await expect(unidadeAtualizada).toBeVisible();
+    await browserErrors.assertNoUnexpectedErrors("Happy path da importação EVO emitiu erro no browser");
   });
 });

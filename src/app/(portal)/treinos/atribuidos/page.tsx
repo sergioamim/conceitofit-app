@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import { serverFetch } from "@/lib/shared/server-fetch";
 
 export const dynamic = "force-dynamic";
@@ -7,6 +6,7 @@ import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 import { TreinosAtribuidosContent } from "./components/treinos-atribuidos-content";
 import { logger } from "@/lib/shared/logger";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
+import { getServerActiveTenantId } from "@/lib/shared/server-session";
 import type { Treino } from "@/lib/types";
 
 type TreinosApiResponse =
@@ -19,12 +19,11 @@ function extractItems(response: TreinosApiResponse): Treino[] {
 }
 
 async function Loader() {
-  const jar = await cookies();
-  const tenantId = jar.get("academia-active-tenant-id")?.value;
+  const tenantId = await getServerActiveTenantId();
   let treinos: Treino[] = [];
 
   try {
-    if (tenantId && !shouldBypassAuthenticatedSSRFetch()) {
+    if (tenantId && !(await shouldBypassAuthenticatedSSRFetch())) {
       const response = await serverFetch<TreinosApiResponse>(
         "/api/v1/treinos",
         {

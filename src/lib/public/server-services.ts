@@ -265,7 +265,7 @@ export async function getPublicJourneyContextServer(
   const resolved = resolveTenantFromRef(tenants, tenantRef);
 
   // Set tenant context + fetch academia
-  let tenant = resolved;
+  const tenant = resolved;
   let academia: Academia;
 
   try {

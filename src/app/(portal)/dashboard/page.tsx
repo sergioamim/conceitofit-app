@@ -4,14 +4,13 @@ import { DashboardContent } from "./dashboard-content";
 import { DashboardSkeleton } from "@/components/shared/dashboard-skeleton";
 import { DemoBanner } from "@/components/shared/demo-banner";
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import type { DashboardData } from "@/lib/types";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { shouldBypassAuthenticatedSSRFetch } from "@/lib/shared/e2e-runtime";
+import { getServerActiveTenantId } from "@/lib/shared/server-session";
 
 async function getActiveTenantId(): Promise<string | undefined> {
-  const jar = await cookies();
-  return jar.get("academia-active-tenant-id")?.value;
+  return getServerActiveTenantId();
 }
 
 async function fetchDashboard(tenantId: string, referenceDate: string): Promise<DashboardData | null> {
@@ -30,7 +29,7 @@ async function DashboardLoader() {
   const date = getBusinessTodayIso();
   const tenantId = await getActiveTenantId();
   const data =
-    tenantId && !shouldBypassAuthenticatedSSRFetch()
+    tenantId && !(await shouldBypassAuthenticatedSSRFetch())
       ? await fetchDashboard(tenantId, date)
       : null;
 
