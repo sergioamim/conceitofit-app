@@ -48,7 +48,7 @@ export function BiMetricCard({
       transition={{ type: "spring", stiffness: 400, damping: 10 }}
       className="flex-1 min-w-[240px]"
     >
-      <div className="glass-card group relative overflow-hidden rounded-2xl border p-6 transition-all hover:shadow-xl hover:shadow-primary/5">
+      <div className="glass-card group relative overflow-hidden rounded-2xl border p-6 transition-shadow hover:shadow-xl hover:shadow-primary/5">
         <div className="flex items-center justify-between">
           <div className={cn(
             "flex h-10 w-10 items-center justify-center rounded-xl border transition-transform group-hover:scale-110",

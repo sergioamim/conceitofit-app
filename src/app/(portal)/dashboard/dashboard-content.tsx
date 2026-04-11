@@ -127,7 +127,7 @@ export function DashboardContent({
                 setShowAllProspects(false);
                 setProspectsPageNumber(1);
               }}
-              className="bg-muted/40 border-border/60 rounded-xl h-11 text-sm focus:ring-primary/20 w-[180px] transition-all"
+              className="bg-muted/40 border-border/60 rounded-xl h-11 text-sm focus:ring-primary/20 w-[180px] transition-colors"
             />
           </div>
         </div>
@@ -140,9 +140,9 @@ export function DashboardContent({
             key={key}
             onClick={() => setTab(key)}
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
-              tab === key 
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-[color,background-color,box-shadow] duration-300",
+              tab === key
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             )}
           >

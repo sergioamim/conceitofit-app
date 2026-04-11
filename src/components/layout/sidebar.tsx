@@ -80,9 +80,11 @@ function NavLinkV2({ item, active, collapsed }: { item: NavItemV2, active: boole
       <Link
         href={item.href}
         className={cn(
-          "flex flex-1 items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300",
-          active 
-            ? "bg-primary/10 text-primary font-bold shadow-[inset_0_0_15px_rgba(200,241,53,0.05)]" 
+          // Escopamos a transição só para colors+shadow — `transition-all` em
+          // listas grandes causa repaints em cascata no hover.
+          "flex flex-1 items-center gap-3 px-3 py-2.5 rounded-xl transition-[color,background-color,box-shadow] duration-300",
+          active
+            ? "bg-primary/10 text-primary font-bold shadow-[inset_0_0_15px_rgba(200,241,53,0.05)]"
             : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
         )}
       >
@@ -112,7 +114,7 @@ function NavLinkV2({ item, active, collapsed }: { item: NavItemV2, active: boole
             toggleFavorite(item.href);
           }}
           className={cn(
-            "absolute right-3 p-1 transition-all opacity-0 group-hover:opacity-100 hover:text-primary",
+            "absolute right-3 p-1 transition-[opacity,color] opacity-0 group-hover:opacity-100 hover:text-primary",
             favorited ? "opacity-100 text-primary" : "text-muted-foreground"
           )}
           aria-label={favorited ? "Remover dos favoritos" : "Adicionar aos favoritos"}
@@ -225,7 +227,12 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
       )}
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-sidebar-border bg-card/40 backdrop-blur-2xl transition-all duration-500 md:static md:h-screen",
+        // `transition-all` + `backdrop-filter` causa repaint visível no Chrome
+        // quando o cursor atravessa o limite sidebar↔main porque o browser
+        // anima TODAS as propriedades (incluindo backdrop-filter) por 500ms.
+        // Escopamos a transição apenas para width e transform (o que realmente
+        // muda quando collapsed/mobileOpen alteram).
+        "fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-sidebar-border bg-card/40 backdrop-blur-2xl transition-[width,transform] duration-500 md:static md:h-screen",
         collapsed ? "md:w-20" : "md:w-[240px]",
         mobileOpen ? "translate-x-0 w-[280px]" : "-translate-x-full md:translate-x-0"
       )}>
@@ -259,7 +266,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
           <button 
             onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
             className={cn(
-              "flex items-center gap-3 w-full h-11 px-3 rounded-xl bg-muted/40 border border-border/40 text-muted-foreground hover:bg-muted/60 transition-all group",
+              "flex items-center gap-3 w-full h-11 px-3 rounded-xl bg-muted/40 border border-border/40 text-muted-foreground hover:bg-muted/60 transition-colors group",
               collapsed && "justify-center"
             )}
           >
@@ -312,7 +319,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
           <Sheet>
             <SheetTrigger asChild>
               <button className={cn(
-                "flex items-center gap-3 w-full p-2 rounded-2xl bg-muted/30 border border-border/20 hover:bg-muted/50 transition-all",
+                "flex items-center gap-3 w-full p-2 rounded-2xl bg-muted/30 border border-border/20 hover:bg-muted/50 transition-colors",
                 collapsed && "justify-center"
               )}>
                 <div className="size-9 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-xs font-bold text-primary-foreground shrink-0">
@@ -338,7 +345,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
                 <div className="grid gap-3 px-6">
                   <Link 
                     href="/conta/perfil"
-                    className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 border border-border/20 hover:bg-primary/10 hover:border-primary/30 transition-all group"
+                    className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 border border-border/20 hover:bg-primary/10 hover:border-primary/30 transition-colors group"
                   >
                     <div className="size-10 rounded-xl bg-background flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
                       <CircleUser size={20} />
@@ -352,7 +359,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
 
                   <Link 
                     href="/seguranca/acesso-unidade"
-                    className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 border border-border/20 hover:bg-primary/10 hover:border-primary/30 transition-all group"
+                    className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 border border-border/20 hover:bg-primary/10 hover:border-primary/30 transition-colors group"
                   >
                     <div className="size-10 rounded-xl bg-background flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
                       <ShieldCheck size={20} />
@@ -371,7 +378,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
                         restoreBackofficeReturnSession();
                         window.location.assign("/admin");
                       }}
-                      className="flex items-center gap-4 w-full p-4 rounded-2xl bg-muted/30 border border-border/20 hover:bg-primary/10 hover:border-primary/30 transition-all group"
+                      className="flex items-center gap-4 w-full p-4 rounded-2xl bg-muted/30 border border-border/20 hover:bg-primary/10 hover:border-primary/30 transition-colors group"
                     >
                       <div className="size-10 rounded-xl bg-background flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
                         <ArrowLeft size={20} />
@@ -386,7 +393,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
                   <div className="pt-4 border-t border-border/40">
                     <button 
                       onClick={() => setLogoutOpen(true)}
-                      className="flex items-center gap-4 w-full p-4 rounded-2xl bg-gym-danger/5 border border-gym-danger/10 hover:bg-gym-danger/10 transition-all group"
+                      className="flex items-center gap-4 w-full p-4 rounded-2xl bg-gym-danger/5 border border-gym-danger/10 hover:bg-gym-danger/10 transition-colors group"
                     >
                       <div className="size-10 rounded-xl bg-background flex items-center justify-center text-gym-danger transition-colors">
                         <LogOut size={20} />
@@ -411,7 +418,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
         
         <button 
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-10 size-6 rounded-full bg-border/80 backdrop-blur-md border border-sidebar-border flex items-center justify-center hover:bg-primary hover:border-primary hover:text-primary-foreground transition-all shadow-md z-50"
+          className="absolute -right-3 top-10 size-6 rounded-full bg-border/80 backdrop-blur-md border border-sidebar-border flex items-center justify-center hover:bg-primary hover:border-primary hover:text-primary-foreground transition-colors shadow-md z-50"
         >
           <motion.div animate={{ rotate: collapsed ? 180 : 0 }}>
             <ChevronRight size={14} />

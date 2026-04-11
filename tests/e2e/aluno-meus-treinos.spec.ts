@@ -111,10 +111,7 @@ async function installMeusTreinosMocks(
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        ...treinos[0],
-        execucoesConcluidas: (treinos[0].execucoesConcluidas ?? 0) + 1,
-      }),
+      body: JSON.stringify(treinos[0]),
     });
   });
 }
