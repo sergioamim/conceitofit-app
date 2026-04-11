@@ -4,6 +4,7 @@ import {
   seedGerencialSession,
 } from "./support/gerencial-auth";
 import { installGerencialCatchAll } from "./support/gerencial-smoke-mocks";
+import { navigateAndWaitForHeading } from "./support/interactions";
 
 /**
  * Smoke tests das 10 rotas que foram migradas do nav-items legacy para o
@@ -27,27 +28,13 @@ async function setupSmokePage(page: Page) {
   await seedGerencialSession(page, { tenantId: TENANT_ID });
 }
 
-async function visitAndExpectHeading(
-  page: Page,
-  path: string,
-  headingPattern: RegExp | string,
-) {
-  await page.goto(path, { waitUntil: "domcontentloaded" });
-  const heading = page
-    .getByRole("heading", {
-      name: typeof headingPattern === "string" ? headingPattern : headingPattern,
-    })
-    .first();
-  await expect(heading).toBeVisible({ timeout: 10_000 });
-}
-
 test.describe("Smoke — rotas migradas do nav-items legacy", () => {
   test.beforeEach(async ({ page }) => {
     await setupSmokePage(page);
   });
 
   test("/vendas — listagem geral de vendas renderiza", async ({ page }) => {
-    await visitAndExpectHeading(page, "/vendas", /^Vendas$/);
+    await navigateAndWaitForHeading(page, "/vendas", /^Vendas$/);
   });
 
   test("/vendas — com dados mockados exibe itens na tabela", async ({
@@ -339,19 +326,19 @@ test.describe("Smoke — rotas migradas do nav-items legacy", () => {
   test("/administrativo/whatsapp — configuração WhatsApp renderiza", async ({
     page,
   }) => {
-    await visitAndExpectHeading(page, "/administrativo/whatsapp", /WhatsApp/);
+    await navigateAndWaitForHeading(page, "/administrativo/whatsapp", /WhatsApp/);
   });
 
   test("/gerencial/bi/rede — visão de rede do BI renderiza", async ({
     page,
   }) => {
-    await visitAndExpectHeading(page, "/gerencial/bi/rede", /Visão de Rede/);
+    await navigateAndWaitForHeading(page, "/gerencial/bi/rede", /Visão de Rede/);
   });
 
   test("/gerencial/catraca-acessos — dashboard de acessos renderiza", async ({
     page,
   }) => {
-    await visitAndExpectHeading(
+    await navigateAndWaitForHeading(
       page,
       "/gerencial/catraca-acessos",
       /Acessos na Catraca/,
@@ -413,7 +400,7 @@ test.describe("Smoke — rotas migradas do nav-items legacy", () => {
   }) => {
     // Esta tela carrega usuários sob demanda (via botão), então o smoke
     // test valida só que o shell da página renderiza com o heading.
-    await visitAndExpectHeading(
+    await navigateAndWaitForHeading(
       page,
       "/seguranca/acesso-unidade",
       /Usuários e Acessos/,

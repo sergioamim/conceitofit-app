@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { openAdminCrudPage, uniqueSuffix } from "./support/admin-crud-helpers";
+import {
+  clickTabAndWaitSelected,
+  clickToOpenDialog,
+  navigateAndWaitForHeading,
+} from "./support/interactions";
 
 test.describe("Admin financeiro e operacional CRUD", () => {
   test("cobre formas de pagamento e tipos de conta", async ({ page }) => {
@@ -11,19 +16,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
 
     await openAdminCrudPage(page, "/administrativo/formas-pagamento");
 
-    const dialog = page.getByRole("dialog");
-
-    // Retry até o dialog abrir — a 1ª interação pós-navegação é flaky
-    // em dev mode se o React ainda não hidratou os handlers do botão.
-    await expect
-      .poll(
-        async () => {
-          await page.getByRole("button", { name: "Nova forma" }).click();
-          return dialog.isVisible();
-        },
-        { timeout: 10_000, intervals: [500, 1_000] },
-      )
-      .toBe(true);
+    const dialog = await clickToOpenDialog(page, "Nova forma");
     await dialog.locator("input").first().fill(formaNome);
     await dialog.getByRole("button", { name: /Criar|Salvar/ }).click();
 
@@ -42,19 +35,8 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await expect(page.getByRole("row").filter({ hasText: formaEditada })).toHaveCount(0);
 
     await page.waitForLoadState("networkidle");
-    await page.goto("/administrativo/tipos-conta", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Tipos de Conta" })).toBeVisible();
-
-    // Retry até o dialog abrir (mesma flakiness pós-navegação).
-    await expect
-      .poll(
-        async () => {
-          await page.getByRole("button", { name: "Novo tipo" }).click();
-          return dialog.isVisible();
-        },
-        { timeout: 10_000, intervals: [500, 1_000] },
-      )
-      .toBe(true);
+    await navigateAndWaitForHeading(page, "/administrativo/tipos-conta", "Tipos de Conta");
+    await clickToOpenDialog(page, "Novo tipo");
     await dialog.locator("input").first().fill(tipoContaNome);
     await dialog.getByRole("button", { name: "Salvar tipo" }).click();
 
@@ -84,17 +66,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
 
     await openAdminCrudPage(page, "/administrativo/contas-bancarias");
 
-    const dialog = page.getByRole("dialog");
-
-    await expect
-      .poll(
-        async () => {
-          await page.getByRole("button", { name: "Nova conta bancária" }).click();
-          return dialog.isVisible();
-        },
-        { timeout: 10_000, intervals: [500, 1_000] },
-      )
-      .toBe(true);
+    const dialog = await clickToOpenDialog(page, "Nova conta bancária");
     await dialog.locator("input").nth(0).fill(contaNome);
     await dialog.locator("input").nth(1).fill("Banco QA");
     await dialog.locator("input").nth(2).fill("1234");
@@ -118,15 +90,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await page.waitForLoadState("networkidle");
     await page.goto("/administrativo/maquininhas", { waitUntil: "domcontentloaded" });
 
-    await expect
-      .poll(
-        async () => {
-          await page.getByRole("button", { name: "Nova maquininha" }).click();
-          return dialog.isVisible();
-        },
-        { timeout: 10_000, intervals: [500, 1_000] },
-      )
-      .toBe(true);
+    await clickToOpenDialog(page, "Nova maquininha");
     await dialog.locator("input").nth(0).fill(maquininhaNome);
     await dialog.locator("input").nth(1).fill(`TERM-${suffix}`);
     await dialog.getByRole("button", { name: "Salvar" }).click();
@@ -155,16 +119,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
 
     await openAdminCrudPage(page, "/atividades");
 
-    const dialog = page.getByRole("dialog");
-    await expect
-      .poll(
-        async () => {
-          await page.getByRole("button", { name: "Nova Atividade" }).click();
-          return dialog.isVisible();
-        },
-        { timeout: 10_000, intervals: [500, 1_000] },
-      )
-      .toBe(true);
+    const dialog = await clickToOpenDialog(page, "Nova Atividade");
     await page.getByPlaceholder("Ex: Musculação").fill(atividadeNome);
     await page.getByLabel("Permitir check-in para clientes").uncheck();
     await page.getByRole("dialog").getByRole("button", { name: "Criar" }).click();
@@ -201,13 +156,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await dialog.getByRole("button", { name: "Cancelar" }).click();
 
     await page.waitForLoadState("networkidle");
-    await page.goto("/planos/novo", { waitUntil: "domcontentloaded" });
-    // Aguarda o formulário renderizar antes de trocar de tab — se a tab
-    // for clicada antes do <PlanoForm /> estar hidratado, o onClick não
-    // propaga e activeTab fica como "CONFIG".
-    await expect(
-      page.getByRole("heading", { name: "Dados do plano" }),
-    ).toBeVisible({ timeout: 10_000 });
+    await navigateAndWaitForHeading(page, "/planos/novo", "Dados do plano");
     const beneficiosTab = page.getByRole("tab", {
       name: "Atividades e benefícios",
     });
@@ -216,16 +165,7 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     // primeiro click antes da hidratação completar. Aguardar a tab
     // estar realmente clicável e tentar algumas vezes até o state do
     // React refletir, tolerando o timing inconsistente.
-    await expect(beneficiosTab).toBeEnabled();
-    await expect
-      .poll(
-        async () => {
-          await beneficiosTab.click();
-          return beneficiosTab.getAttribute("aria-selected");
-        },
-        { timeout: 15_000, intervals: [500, 1_000, 1_500] },
-      )
-      .toBe("true");
+    await clickTabAndWaitSelected(beneficiosTab);
     await expect(page.getByText(atividadeEditada, { exact: true })).toBeVisible();
     await expect(page.getByText("Check-in obrigatório", { exact: true })).toBeVisible();
 

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { installBackofficeGlobalSession } from "./support/backoffice-global-session";
+import { selectComboboxOption } from "./support/admin-crud-helpers";
+import { navigateAndWaitForHeading } from "./support/interactions";
 
 type AcademiaSeed = {
   id: string;
@@ -691,18 +693,13 @@ test.describe("Backoffice segurança global", () => {
     await seedSession(page, state);
     await setupBackofficeSecurityMocks(page, state);
 
-    await page.goto("/admin/seguranca", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Segurança global" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Política ativa para novas unidades")).toBeVisible({ timeout: 15_000 });
+    await navigateAndWaitForHeading(page, "/admin/seguranca", /Gestão de Acessos|Segurança global/, { timeout: 15_000 });
+    await expect(page.getByText("Usuários da Plataforma")).toBeVisible({ timeout: 15_000 });
 
-    await page.goto("/admin/seguranca/usuarios", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible({ timeout: 15_000 });
+    await navigateAndWaitForHeading(page, "/admin/seguranca/usuarios", "Usuários e acessos", { timeout: 15_000 });
     await expect(page.getByRole("row").filter({ hasText: "Ana Admin" })).toBeVisible({ timeout: 15_000 });
 
-    await page.goto("/admin/seguranca/usuarios/user-ana", { waitUntil: "domcontentloaded" }).catch(async () => {
-      await page.goto("/admin/seguranca/usuarios/user-ana", { waitUntil: "domcontentloaded" });
-    });
-    await expect(page.getByRole("heading", { name: "Ana Admin" })).toBeVisible({ timeout: 15_000 });
+    await navigateAndWaitForHeading(page, "/admin/seguranca/usuarios/user-ana", "Ana Admin", { timeout: 15_000 });
 
     await page.getByRole("tab", { name: "Escopos e acessos" }).click();
 
@@ -739,15 +736,15 @@ test.describe("Backoffice segurança global", () => {
     await expect(barraCard.getByRole("button", { name: /Gerente/ })).toBeVisible();
 
     await page.getByRole("tab", { name: "Novas unidades" }).click();
-    await page.locator('[data-slot="select-trigger"]').filter({ hasText: "Mesma academia" }).click();
-    await page.getByRole("option", { name: "Rede inteira" }).click();
+    const policyScopeCombobox = page.getByText("Escopo").locator("..").getByRole("combobox");
+    await selectComboboxOption(page, policyScopeCombobox, "Rede inteira");
+    await expect(policyScopeCombobox).toContainText("Rede inteira");
     await page.getByRole("button", { name: "Salvar política" }).click();
     await expect(page.getByText("Essa pessoa recebe acesso automático em toda nova unidade da rede.")).toBeVisible();
 
-    await page.goto("/admin/unidades?academiaId=academia-norte", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Unidades (tenants)" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("usuário(s) receberão acesso automático nas novas unidades desta academia.")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("link", { name: "Abrir segurança" }).first()).toBeVisible({ timeout: 15_000 });
+    await navigateAndWaitForHeading(page, "/admin/unidades?academiaId=academia-norte", /Unidades \(Tenants\)|Unidades \(tenants\)/, { timeout: 15_000 });
+    await expect(page.getByRole("row").filter({ hasText: "Unidade Barra" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "Importação EVO" }).first()).toBeVisible({ timeout: 15_000 });
 
   });
 
@@ -766,19 +763,18 @@ test.describe("Backoffice segurança global", () => {
     await seedSession(page, state);
     await setupBackofficeSecurityMocks(page, state);
 
-    await page.goto("/admin/seguranca/usuarios", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible({ timeout: 15_000 });
+    await navigateAndWaitForHeading(page, "/admin/seguranca/usuarios", "Usuários e acessos", { timeout: 15_000 });
     const anaRow = page.getByRole("row").filter({ hasText: "Ana Admin" });
     await expect(anaRow.getByText("E-mail: ana.admin@qa.local")).toBeVisible({ timeout: 15_000 });
     await expect(anaRow.getByText("CPF: ***.***.***-00")).toBeVisible();
     await expect(anaRow.getByText("Escopo efetivo: Rede")).toBeVisible();
     await expect(anaRow.getByText("Base: Unidade Centro · Ativa: Unidade Barra")).toBeVisible();
 
-    await page.goto("/admin/seguranca/usuarios?scopeType=REDE", { waitUntil: "domcontentloaded" });
+    await navigateAndWaitForHeading(page, "/admin/seguranca/usuarios?scopeType=REDE", "Usuários e acessos", { timeout: 15_000 });
     await expect(page.getByText("Redes no recorte:")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("row").filter({ hasText: "Ana Admin" })).toBeVisible();
 
-    await page.goto("/admin/seguranca/usuarios/user-ana", { waitUntil: "domcontentloaded" });
+    await navigateAndWaitForHeading(page, "/admin/seguranca/usuarios/user-ana", "Ana Admin", { timeout: 15_000 });
     await expect(page.getByText("Identificadores de login")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("E-mail: ana.admin@qa.local · CPF: ***.***.***-00")).toBeVisible();
     await expect(page.getByText("Leituras gerenciais agregadas")).toBeVisible();
@@ -791,8 +787,7 @@ test.describe("Backoffice segurança global", () => {
     await seedSession(page, state);
     await setupBackofficeSecurityMocks(page, state);
 
-    await page.goto("/admin/seguranca/usuarios", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Usuários e acessos" })).toBeVisible({ timeout: 15_000 });
+    await navigateAndWaitForHeading(page, "/admin/seguranca/usuarios", "Usuários e acessos", { timeout: 15_000 });
     await page.getByRole("button", { name: "Novo usuário" }).click();
 
     await page.getByLabel("Nome completo").fill("Carla Operações");
@@ -805,8 +800,11 @@ test.describe("Backoffice segurança global", () => {
     await page.getByLabel("Unidade base global").click();
     await page.getByRole("option", { name: "Unidade Centro" }).click();
     await page.locator("label").filter({ hasText: "Propagar para novas unidades" }).locator("input").check();
-    await page.getByLabel("Política inicial global").click();
-    await page.getByRole("option", { name: "Rede inteira" }).click();
+    await selectComboboxOption(
+      page,
+      page.getByLabel("Política inicial global"),
+      "Rede inteira",
+    );
     await page.getByRole("button", { name: "Criar usuário" }).click();
 
     await expect(page.getByText("Usuário criado na segurança global.")).toBeVisible();

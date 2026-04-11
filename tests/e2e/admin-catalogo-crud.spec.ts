@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openAdminCrudPage, selectComboboxOption, uniqueSuffix } from "./support/admin-crud-helpers";
+import { clickToOpenDialog, navigateAndWaitForHeading } from "./support/interactions";
 
 test.describe("Admin catálogo CRUD", () => {
   test("cobre serviços e produtos", async ({ page }) => {
@@ -11,18 +12,7 @@ test.describe("Admin catálogo CRUD", () => {
 
     await openAdminCrudPage(page, "/administrativo/servicos");
 
-    const dialog = page.getByRole("dialog");
-
-    // Retry até o dialog abrir — flakiness de hidratação no 1º click.
-    await expect
-      .poll(
-        async () => {
-          await page.getByRole("button", { name: "Novo serviço" }).click();
-          return dialog.isVisible();
-        },
-        { timeout: 10_000, intervals: [500, 1_000] },
-      )
-      .toBe(true);
+    const dialog = await clickToOpenDialog(page, "Novo serviço");
     await dialog.locator("input").first().fill(servicoNome);
     const criarServicoButton = dialog.getByRole("button", { name: "Criar" });
     await criarServicoButton.scrollIntoViewIfNeeded();
@@ -43,23 +33,8 @@ test.describe("Admin catálogo CRUD", () => {
     await expect(page.getByRole("row").filter({ hasText: servicoEditado })).toHaveCount(0);
 
     await page.waitForLoadState("networkidle");
-    await page.goto("/administrativo/produtos", { waitUntil: "domcontentloaded" });
-    // Aguarda heading hidratar antes de interagir — a primeira interação
-    // pós-navegação é flaky em dev mode se o React ainda não hidratou
-    // handlers.
-    await expect(page.getByRole("heading", { name: "Produtos" })).toBeVisible();
-
-    // Retry até o dialog efetivamente abrir (click pode ser "perdido"
-    // durante hidratação inicial do botão).
-    await expect
-      .poll(
-        async () => {
-          await page.getByRole("button", { name: "Novo produto" }).click();
-          return dialog.isVisible();
-        },
-        { timeout: 10_000, intervals: [500, 1_000] },
-      )
-      .toBe(true);
+    await navigateAndWaitForHeading(page, "/administrativo/produtos", "Produtos");
+    await clickToOpenDialog(page, "Novo produto");
     await dialog.locator("input").nth(0).fill(produtoNome);
     await dialog.locator("input").nth(1).fill(`SKU${suffix}`);
     await dialog.getByRole("button", { name: "Criar" }).click();
@@ -86,16 +61,7 @@ test.describe("Admin catálogo CRUD", () => {
 
     await openAdminCrudPage(page, "/administrativo/convenios");
 
-    const dialog = page.getByRole("dialog");
-    await expect
-      .poll(
-        async () => {
-          await page.getByRole("button", { name: "Novo convênio" }).click();
-          return dialog.isVisible();
-        },
-        { timeout: 10_000, intervals: [500, 1_000] },
-      )
-      .toBe(true);
+    const dialog = await clickToOpenDialog(page, "Novo convênio");
     await dialog.locator("input").first().fill(convenioNome);
     await dialog.locator('button[type="submit"]').click();
 
@@ -120,16 +86,7 @@ test.describe("Admin catálogo CRUD", () => {
 
     await openAdminCrudPage(page, "/administrativo/vouchers");
 
-    const dialog = page.getByRole("dialog");
-    await expect
-      .poll(
-        async () => {
-          await page.getByRole("button", { name: "Novo voucher" }).click();
-          return dialog.isVisible();
-        },
-        { timeout: 10_000, intervals: [500, 1_000] },
-      )
-      .toBe(true);
+    const dialog = await clickToOpenDialog(page, "Novo voucher");
     await selectComboboxOption(page, dialog.getByRole("combobox").nth(1), "Desconto");
     await dialog.getByPlaceholder("Digite o nome do voucher").fill(voucherNome);
     await dialog.locator('input[type="date"]').first().fill("2026-03-17");

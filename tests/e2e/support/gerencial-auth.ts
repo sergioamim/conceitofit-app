@@ -5,21 +5,9 @@ import { installE2EAuthSession } from "./auth-session";
  * Helper de sessão para jornadas do portal gerencial `(portal)/*`.
  *
  * Equivalente ao `seedAlunoSession` mas com userKind=OPERADOR e perfis
- * elevados. O layout RSC de `(portal)` valida cookies `fc_session_active`
- * e `fc_access_token` antes de liberar a navegação, e o hook
- * `useTenantContext` depende de `fc_session_claims` para resolver o
- * userId/displayName.
+ * elevados. A escrita dos cookies `fc_*` fica centralizada em
+ * `installE2EAuthSession`.
  */
-
-const E2E_BASE_URL = "http://localhost:3000";
-const SESSION_ACTIVE_COOKIE = "fc_session_active";
-const ACCESS_TOKEN_COOKIE = "fc_access_token";
-const SESSION_CLAIMS_COOKIE = "fc_session_claims";
-
-function resolveE2EBaseUrl() {
-  const configured = process.env.PLAYWRIGHT_BASE_URL?.trim();
-  return configured && /^https?:\/\//.test(configured) ? configured : E2E_BASE_URL;
-}
 
 export type GerencialSessionOptions = {
   tenantId: string;
@@ -37,34 +25,9 @@ export async function seedGerencialSession(
   page: Page,
   options: GerencialSessionOptions,
 ): Promise<void> {
-  const baseUrl = resolveE2EBaseUrl();
   const userId = options.userId ?? "operador-e2e";
   const roles = options.roles ?? ["OPERADOR", "ADMIN"];
   const availableScopes = options.availableScopes ?? ["UNIDADE", "REDE"];
-
-  const claims = {
-    userId,
-    userKind: options.userKind ?? "OPERADOR",
-    displayName: options.displayName ?? "Operador E2E",
-    activeTenantId: options.tenantId,
-    baseTenantId: options.tenantId,
-    networkSubdomain: options.networkSlug ?? "academia-e2e",
-    networkSlug: options.networkSlug ?? "academia-e2e",
-    networkName: options.networkName ?? "Academia E2E",
-    availableScopes,
-    broadAccess: options.broadAccess ?? false,
-    forcePasswordChangeRequired: false,
-  };
-
-  await page.context().addCookies([
-    { name: SESSION_ACTIVE_COOKIE, value: "true", url: baseUrl },
-    { name: ACCESS_TOKEN_COOKIE, value: "token-gerencial-e2e", url: baseUrl },
-    {
-      name: SESSION_CLAIMS_COOKIE,
-      value: encodeURIComponent(JSON.stringify(claims)),
-      url: baseUrl,
-    },
-  ]);
 
   await installE2EAuthSession(page, {
     activeTenantId: options.tenantId,
