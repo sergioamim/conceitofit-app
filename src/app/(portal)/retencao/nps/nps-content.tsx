@@ -111,10 +111,10 @@ function MetricCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 400, damping: 10 }}
     >
-      <div className="glass-card group relative overflow-hidden rounded-2xl border p-5 transition-all hover:shadow-xl hover:shadow-primary/5">
+      {/* Hover jitter fix: removido whileHover y:-4 (ver bi-metric-card). */}
+      <div className="glass-card group relative overflow-hidden rounded-2xl border p-5 transition-shadow hover:shadow-xl hover:shadow-primary/5">
         <div className="flex items-center gap-3">
           <div
             className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-transform group-hover:scale-110 ${tones[tone]}`}

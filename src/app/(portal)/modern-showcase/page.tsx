@@ -71,11 +71,11 @@ const STATUS_CONFIG = {
 
 function MetricCardV2({ label, value, trend, icon: Icon, tone }: any) {
   return (
-    <motion.div 
-      whileHover={{ y: -4 }}
+    <motion.div
       transition={{ type: "spring", stiffness: 400, damping: 10 }}
     >
-      <Card className="overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm">
+      {/* Hover jitter fix: removido whileHover y:-4 (ver bi-metric-card). */}
+      <Card className="overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-shadow hover:shadow-lg">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">

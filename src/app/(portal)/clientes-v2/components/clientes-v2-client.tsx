@@ -48,13 +48,14 @@ function MetricCardV2({ label, value, icon: Icon, tone, description }: any) {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
       className="flex-1"
     >
-      <Card className="border-border/40 bg-card/40 backdrop-blur-md overflow-hidden hover:shadow-lg hover:shadow-primary/5 transition-all">
+      {/* Hover jitter fix: removido whileHover y:-4 — subir o card tirava
+          o cursor da área, disparando loop hover↔unhover visível como piscar. */}
+      <Card className="border-border/40 bg-card/40 backdrop-blur-md overflow-hidden hover:shadow-lg hover:shadow-primary/5 transition-shadow">
         <CardContent className="p-5">
           <div className="flex justify-between items-start">
             <div className={cn("p-2 rounded-lg border", tones[tone as keyof typeof tones] || tones.accent)}>

@@ -44,10 +44,16 @@ export function BiMetricCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 400, damping: 10 }}
       className="flex-1 min-w-[240px]"
     >
+      {/*
+        Hover jitter fix: removido `whileHover={{ y: -4 }}` do motion.div pai.
+        O transform subia o card 4px, o que tirava o cursor da área hoverada
+        (especialmente perto da borda inferior), disparando o unhover → o card
+        descia → cursor voltava pra cima → loop infinito visto como "piscar".
+        Mantemos só o efeito de shadow no hover, que não altera layout.
+      */}
       <div className="glass-card group relative overflow-hidden rounded-2xl border p-6 transition-shadow hover:shadow-xl hover:shadow-primary/5">
         <div className="flex items-center justify-between">
           <div className={cn(
