@@ -1,0 +1,53 @@
+# Handoff: Architect → Dev
+# Story: 1.1 RSC Migration Wave 1
+# Generated: 2026-04-11T19:00:00Z
+
+from_agent: architect
+to_agent: dev
+last_command: audit-codebase
+story: 1.1-rsc-migration-wave-1
+consumed: false
+
+analysis:
+  file: .aiox/handoffs/architect-analysis-story-1.1.md
+  pages_analyzed: 2
+  pages_approved_for_migration:
+    - portal/gerencial/contabilidade/relatorios/page.tsx (220 lines → Server + 3 islands)
+    - backoffice/admin/seguranca/catalogo/page.tsx (986 lines → Server + 4 islands)
+  total_new_files: 7
+  total_modified_files: 2
+
+implementation_plan:
+  wave_1a:
+    name: Relatorios Contabeis
+    estimated_time: 1 day
+    steps:
+      - 1. Create components/balanco-table.tsx
+      - 2. Create components/fluxo-table.tsx
+      - 3. Create components/relatorios-content.tsx
+      - 4. Rewrite page.tsx as Server Component
+      - 5. Test + quality gates
+  wave_1b:
+    name: Catalogo de Seguranca
+    estimated_time: 1.5 days
+    steps:
+      - 1. Extract components/catalogo-tab.tsx
+      - 2. Extract components/perfis-tab.tsx
+      - 3. Extract components/excecoes-tab.tsx
+      - 4. Create components/catalogo-content.tsx
+      - 5. Rewrite page.tsx as Server Component
+      - 6. Test each tab + quality gates
+
+risks:
+  - R1: Balanco API retorna dados vazios (mitigated: non-blocking)
+  - R4: useTenantContext só funciona em Client Components (mitigated: pass tenantId as prop)
+  - R5: GlobalSecurityShell pode precisar de adaptações
+
+boundaries_validated: true
+api_compatibility: true
+pattern_reference: src/app/(backoffice)/admin/leads/page.tsx
+
+next_agent:
+  agent: qa
+  command: apply-qa-fixes
+  args: story-1.1-rsc-migration-wave-1

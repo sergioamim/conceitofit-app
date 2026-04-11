@@ -1,0 +1,34 @@
+# Handoff: PM → Architect → Dev → QA
+# Story: 1.1 RSC Migration Wave 1
+# Generated: 2026-04-11T14:46:00Z
+
+from_agent: pm
+to_agent: architect
+last_command: create-story
+story: 1.1-rsc-migration-wave-1
+consumed: true
+
+context:
+  project: academia-app
+  story_file: docs/stories/1.1-rsc-migration-wave-1.md
+  pages_to_migrate:
+    - src/app/(portal)/gerencial/contabilidade/relatorios/page.tsx (220 lines, client)
+    - src/app/(backoffice)/admin/seguranca/catalogo/page.tsx (986 lines, client)
+  reference_page: src/app/(backoffice)/admin/leads/page.tsx (already migrated)
+  server_fetch_helper: src/lib/shared/server-fetch.ts
+  rsc_pattern: docs/rsc-pattern.md
+
+expected_output:
+  - Arquitetura detalhada de Client Islands para cada página
+  - Lista exata de componentes a criar com props interfaces
+  - Validação de endpoints de API disponíveis
+  - Diagrama de dependências entre componentes
+  - Identificação de riscos técnicosicos
+
+next_agents:
+  - agent: dev
+    command: dev-develop-story
+    args: 1.1-rsc-migration-wave-1
+  - agent: qa
+    command: apply-qa-fixes
+    args: story-1.1-rsc-migration-wave-1

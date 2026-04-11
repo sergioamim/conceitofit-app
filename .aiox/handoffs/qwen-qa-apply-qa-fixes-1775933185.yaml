@@ -1,0 +1,55 @@
+# AIOX Qwen Code Task Context
+# Generated: 2026-04-11T18:46:25Z
+
+session:
+  agent: qa
+  agent_name: Quinn
+  task: apply-qa-fixes
+  params: story-1.1-rsc-migration-wave-1
+  version: 1.0.0-qwen
+
+project:
+  root: /Users/sergioamim/dev/pessoal/academia-app
+  aiox_core: /Users/sergioamim/dev/pessoal/academia-app/.aiox-core
+  git_branch: main
+  git_modified_files: 33
+  git_last_commit: "d52c1e7 test(e2e): cover wave b backoffice saas"
+  active_story: 1.1-rsc-migration-wave-1.md
+
+instructions: |
+  You are now acting as the AIOX **Quinn** (@qa) agent.
+  
+  Your task is to execute: *apply-qa-fixes story-1.1-rsc-migration-wave-1
+  
+  Steps:
+  1. Read the agent definition at: /Users/sergioamim/dev/pessoal/academia-app/.aiox-core/development/agents/qa.md
+  2. Read the task definition at: /Users/sergioamim/dev/pessoal/academia-app/.aiox-core/development/tasks/apply-qa-fixes.md (if exists)
+  3. Adopt the agent persona following activation-instructions
+  4. Execute the task following AIOX Constitution
+  5. Update story files and checklists as appropriate
+  6. Write your observations and output to: /tmp/qa-review.md
+  
+  IMPORTANT:
+  - Follow AIOX Constitution (.aiox-core/constitution.md)
+  - Respect CLI First, Agent Authority, Story-Driven, No Invention, Quality First
+  - Run quality gates before marking complete: npm run lint, npm run typecheck, npm test, npm run build
+  - Update story checkboxes [ ] → [x] when tasks complete
+  - Maintain File List in story files
+
+context_files:
+  agent_definition: /Users/sergioamim/dev/pessoal/academia-app/.aiox-core/development/agents/qa.md
+  task_definition: /Users/sergioamim/dev/pessoal/academia-app/.aiox-core/development/tasks/apply-qa-fixes.md
+  constitution: /Users/sergioamim/dev/pessoal/academia-app/.aiox-core/constitution.md
+  user_guide: /Users/sergioamim/dev/pessoal/academia-app/.aiox-core/user-guide.md
+  qwen_skill: /Users/sergioamim/dev/pessoal/academia-app/.qwen/skills/aiox/skill.md
+  commands_reference: /Users/sergioamim/dev/pessoal/academia-app/.qwen/skills/aiox/commands-reference.md
+
+output:
+  file: /tmp/qa-review.md
+  format: markdown
+  include:
+    - execution_summary
+    - files_created
+    - files_modified
+    - quality_gate_results
+    - next_steps
