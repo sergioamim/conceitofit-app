@@ -17,6 +17,20 @@ const DEFAULT_TENANTS = [
   },
 ];
 
+// Cookies lidos pelo middleware.ts para decidir se a rota protegida libera
+// ou redireciona para /login. Precisam ser setados em paralelo aos cookies
+// `academia-*` usados pelo installE2EAuthSession.
+const MIDDLEWARE_SESSION_ACTIVE_COOKIE = "fc_session_active";
+const MIDDLEWARE_ACCESS_TOKEN_COOKIE = "fc_access_token";
+const MIDDLEWARE_SESSION_CLAIMS_COOKIE = "fc_session_claims";
+
+function resolveE2EBaseUrl() {
+  const configured = process.env.PLAYWRIGHT_BASE_URL?.trim();
+  return configured && /^https?:\/\//.test(configured)
+    ? configured
+    : "http://localhost:3000";
+}
+
 export async function installBackofficeGlobalSession(
   page: Page,
   options: InstallBackofficeGlobalSessionOptions = {},
@@ -38,6 +52,37 @@ export async function installBackofficeGlobalSession(
   const firstTenant = tenants.find((tenant) => tenant.id === currentTenantId) ?? tenants[0] ?? DEFAULT_TENANTS[0];
   const academiaId = options.shell?.academia?.id ?? firstTenant.academiaId ?? firstTenant.groupId ?? "academia-e2e";
   const academiaNome = options.shell?.academia?.nome ?? "Academia E2E";
+
+  // Middleware protege rotas não-públicas verificando cookies fc_*.
+  // Sem eles, qualquer `/administrativo/*` é redirecionado para /login,
+  // mesmo com `academia-*` storage/cookies populados.
+  const baseUrl = resolveE2EBaseUrl();
+  const claims = {
+    userId: options.session?.userId ?? options.shell?.user?.userId ?? options.shell?.user?.id ?? "user-root",
+    userKind: options.session?.userKind ?? options.shell?.user?.userKind ?? "COLABORADOR",
+    displayName:
+      options.session?.displayName
+      ?? options.shell?.user?.displayName
+      ?? options.shell?.user?.nome
+      ?? "Root Admin",
+    activeTenantId: currentTenantId,
+    baseTenantId: options.session?.baseTenantId ?? currentTenantId,
+    networkSubdomain: options.session?.networkSubdomain ?? options.session?.networkSlug ?? "rede-e2e",
+    networkSlug: options.session?.networkSlug ?? options.session?.networkSubdomain ?? "rede-e2e",
+    networkName: options.session?.networkName ?? options.shell?.user?.redeNome ?? "Rede E2E",
+    availableScopes: options.session?.availableScopes ?? options.shell?.user?.availableScopes ?? ["GLOBAL"],
+    broadAccess: options.session?.broadAccess ?? options.shell?.user?.broadAccess ?? true,
+    forcePasswordChangeRequired: false,
+  };
+  await page.context().addCookies([
+    { name: MIDDLEWARE_SESSION_ACTIVE_COOKIE, value: "true", url: baseUrl },
+    { name: MIDDLEWARE_ACCESS_TOKEN_COOKIE, value: "token-backoffice-e2e", url: baseUrl },
+    {
+      name: MIDDLEWARE_SESSION_CLAIMS_COOKIE,
+      value: encodeURIComponent(JSON.stringify(claims)),
+      url: baseUrl,
+    },
+  ]);
 
   await installE2EAuthSession(page, {
     activeTenantId: currentTenantId,

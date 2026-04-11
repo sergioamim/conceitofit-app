@@ -11,17 +11,29 @@ test.describe("Admin catálogo CRUD", () => {
 
     await openAdminCrudPage(page, "/administrativo/servicos");
 
-    await page.getByRole("button", { name: "Novo serviço" }).click();
-    await page.getByRole("dialog").locator("input").first().fill(servicoNome);
-    const criarServicoButton = page.getByRole("dialog").getByRole("button", { name: "Criar" });
+    const dialog = page.getByRole("dialog");
+
+    // Retry até o dialog abrir — flakiness de hidratação no 1º click.
+    await expect
+      .poll(
+        async () => {
+          await page.getByRole("button", { name: "Novo serviço" }).click();
+          return dialog.isVisible();
+        },
+        { timeout: 10_000, intervals: [500, 1_000] },
+      )
+      .toBe(true);
+    await dialog.locator("input").first().fill(servicoNome);
+    const criarServicoButton = dialog.getByRole("button", { name: "Criar" });
     await criarServicoButton.scrollIntoViewIfNeeded();
     await criarServicoButton.click();
 
     let servicoRow = page.getByRole("row").filter({ hasText: servicoNome });
     await expect(servicoRow).toBeVisible();
     await servicoRow.getByRole("button", { name: "Editar" }).click();
-    await page.getByRole("dialog").locator("input").first().fill(servicoEditado);
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar" }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.locator("input").first().fill(servicoEditado);
+    await dialog.getByRole("button", { name: "Salvar" }).click();
 
     servicoRow = page.getByRole("row").filter({ hasText: servicoEditado });
     await expect(servicoRow).toBeVisible();
@@ -32,17 +44,32 @@ test.describe("Admin catálogo CRUD", () => {
 
     await page.waitForLoadState("networkidle");
     await page.goto("/administrativo/produtos", { waitUntil: "domcontentloaded" });
+    // Aguarda heading hidratar antes de interagir — a primeira interação
+    // pós-navegação é flaky em dev mode se o React ainda não hidratou
+    // handlers.
+    await expect(page.getByRole("heading", { name: "Produtos" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Novo produto" }).click();
-    await page.getByRole("dialog").locator("input").nth(0).fill(produtoNome);
-    await page.getByRole("dialog").locator("input").nth(1).fill(`SKU${suffix}`);
-    await page.getByRole("dialog").getByRole("button", { name: "Criar" }).click();
+    // Retry até o dialog efetivamente abrir (click pode ser "perdido"
+    // durante hidratação inicial do botão).
+    await expect
+      .poll(
+        async () => {
+          await page.getByRole("button", { name: "Novo produto" }).click();
+          return dialog.isVisible();
+        },
+        { timeout: 10_000, intervals: [500, 1_000] },
+      )
+      .toBe(true);
+    await dialog.locator("input").nth(0).fill(produtoNome);
+    await dialog.locator("input").nth(1).fill(`SKU${suffix}`);
+    await dialog.getByRole("button", { name: "Criar" }).click();
 
     let produtoRow = page.getByRole("row").filter({ hasText: produtoNome });
     await expect(produtoRow).toBeVisible();
     await produtoRow.getByRole("button", { name: "Editar" }).click();
-    await page.getByRole("dialog").locator("input").nth(0).fill(produtoEditado);
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar" }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.locator("input").nth(0).fill(produtoEditado);
+    await dialog.getByRole("button", { name: "Salvar" }).click();
 
     produtoRow = page.getByRole("row").filter({ hasText: produtoEditado });
     await expect(produtoRow).toBeVisible();
@@ -60,8 +87,15 @@ test.describe("Admin catálogo CRUD", () => {
     await openAdminCrudPage(page, "/administrativo/convenios");
 
     const dialog = page.getByRole("dialog");
-    await page.getByRole("button", { name: "Novo convênio" }).click();
-    await expect(dialog).toBeVisible();
+    await expect
+      .poll(
+        async () => {
+          await page.getByRole("button", { name: "Novo convênio" }).click();
+          return dialog.isVisible();
+        },
+        { timeout: 10_000, intervals: [500, 1_000] },
+      )
+      .toBe(true);
     await dialog.locator("input").first().fill(convenioNome);
     await dialog.locator('button[type="submit"]').click();
 
@@ -87,8 +121,15 @@ test.describe("Admin catálogo CRUD", () => {
     await openAdminCrudPage(page, "/administrativo/vouchers");
 
     const dialog = page.getByRole("dialog");
-    await page.getByRole("button", { name: "Novo voucher" }).click();
-    await expect(dialog).toBeVisible();
+    await expect
+      .poll(
+        async () => {
+          await page.getByRole("button", { name: "Novo voucher" }).click();
+          return dialog.isVisible();
+        },
+        { timeout: 10_000, intervals: [500, 1_000] },
+      )
+      .toBe(true);
     await selectComboboxOption(page, dialog.getByRole("combobox").nth(1), "Desconto");
     await dialog.getByPlaceholder("Digite o nome do voucher").fill(voucherNome);
     await dialog.locator('input[type="date"]').first().fill("2026-03-17");

@@ -11,15 +11,28 @@ test.describe("Admin financeiro e operacional CRUD", () => {
 
     await openAdminCrudPage(page, "/administrativo/formas-pagamento");
 
-    await page.getByRole("button", { name: "Nova forma" }).click();
-    await page.getByRole("dialog").locator("input").first().fill(formaNome);
-    await page.getByRole("dialog").getByRole("button", { name: /Criar|Salvar/ }).click();
+    const dialog = page.getByRole("dialog");
+
+    // Retry até o dialog abrir — a 1ª interação pós-navegação é flaky
+    // em dev mode se o React ainda não hidratou os handlers do botão.
+    await expect
+      .poll(
+        async () => {
+          await page.getByRole("button", { name: "Nova forma" }).click();
+          return dialog.isVisible();
+        },
+        { timeout: 10_000, intervals: [500, 1_000] },
+      )
+      .toBe(true);
+    await dialog.locator("input").first().fill(formaNome);
+    await dialog.getByRole("button", { name: /Criar|Salvar/ }).click();
 
     let formaRow = page.getByRole("row").filter({ hasText: formaNome });
     await expect(formaRow).toBeVisible();
     await formaRow.getByRole("button", { name: "Editar" }).click();
-    await page.getByRole("dialog").locator("input").first().fill(formaEditada);
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar" }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.locator("input").first().fill(formaEditada);
+    await dialog.getByRole("button", { name: "Salvar" }).click();
 
     formaRow = page.getByRole("row").filter({ hasText: formaEditada });
     await expect(formaRow).toBeVisible();
@@ -32,15 +45,25 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await page.goto("/administrativo/tipos-conta", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Tipos de Conta" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Novo tipo" }).click();
-    await page.getByRole("dialog").locator("input").first().fill(tipoContaNome);
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar tipo" }).click();
+    // Retry até o dialog abrir (mesma flakiness pós-navegação).
+    await expect
+      .poll(
+        async () => {
+          await page.getByRole("button", { name: "Novo tipo" }).click();
+          return dialog.isVisible();
+        },
+        { timeout: 10_000, intervals: [500, 1_000] },
+      )
+      .toBe(true);
+    await dialog.locator("input").first().fill(tipoContaNome);
+    await dialog.getByRole("button", { name: "Salvar tipo" }).click();
 
     let tipoRow = page.getByRole("row").filter({ hasText: tipoContaNome });
     await expect(tipoRow).toBeVisible();
     await tipoRow.getByRole("button", { name: "Editar" }).click();
-    await page.getByRole("dialog").locator("input").first().fill(tipoContaEditado);
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar alterações" }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.locator("input").first().fill(tipoContaEditado);
+    await dialog.getByRole("button", { name: "Salvar alterações" }).click();
 
     tipoRow = page.getByRole("row").filter({ hasText: tipoContaEditado });
     await expect(tipoRow).toBeVisible();
@@ -61,20 +84,31 @@ test.describe("Admin financeiro e operacional CRUD", () => {
 
     await openAdminCrudPage(page, "/administrativo/contas-bancarias");
 
-    await page.getByRole("button", { name: "Nova conta bancária" }).click();
-    await page.getByRole("dialog").locator("input").nth(0).fill(contaNome);
-    await page.getByRole("dialog").locator("input").nth(1).fill("Banco QA");
-    await page.getByRole("dialog").locator("input").nth(2).fill("1234");
-    await page.getByRole("dialog").locator("input").nth(3).fill("98765");
-    await page.getByRole("dialog").locator("input").nth(4).fill("0");
-    await page.getByRole("dialog").locator("input").nth(5).fill("Conceito Fit QA");
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar" }).click();
+    const dialog = page.getByRole("dialog");
+
+    await expect
+      .poll(
+        async () => {
+          await page.getByRole("button", { name: "Nova conta bancária" }).click();
+          return dialog.isVisible();
+        },
+        { timeout: 10_000, intervals: [500, 1_000] },
+      )
+      .toBe(true);
+    await dialog.locator("input").nth(0).fill(contaNome);
+    await dialog.locator("input").nth(1).fill("Banco QA");
+    await dialog.locator("input").nth(2).fill("1234");
+    await dialog.locator("input").nth(3).fill("98765");
+    await dialog.locator("input").nth(4).fill("0");
+    await dialog.locator("input").nth(5).fill("Conceito Fit QA");
+    await dialog.getByRole("button", { name: "Salvar" }).click();
 
     let contaRow = page.getByRole("row").filter({ hasText: contaNome });
     await expect(contaRow).toBeVisible();
     await contaRow.getByRole("button", { name: "Editar" }).click();
-    await page.getByRole("dialog").locator("input").nth(0).fill(contaEditada);
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar alterações" }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.locator("input").nth(0).fill(contaEditada);
+    await dialog.getByRole("button", { name: "Salvar alterações" }).click();
 
     contaRow = page.getByRole("row").filter({ hasText: contaEditada });
     await expect(contaRow).toBeVisible();
@@ -84,16 +118,25 @@ test.describe("Admin financeiro e operacional CRUD", () => {
     await page.waitForLoadState("networkidle");
     await page.goto("/administrativo/maquininhas", { waitUntil: "domcontentloaded" });
 
-    await page.getByRole("button", { name: "Nova maquininha" }).click();
-    await page.getByRole("dialog").locator("input").nth(0).fill(maquininhaNome);
-    await page.getByRole("dialog").locator("input").nth(1).fill(`TERM-${suffix}`);
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar" }).click();
+    await expect
+      .poll(
+        async () => {
+          await page.getByRole("button", { name: "Nova maquininha" }).click();
+          return dialog.isVisible();
+        },
+        { timeout: 10_000, intervals: [500, 1_000] },
+      )
+      .toBe(true);
+    await dialog.locator("input").nth(0).fill(maquininhaNome);
+    await dialog.locator("input").nth(1).fill(`TERM-${suffix}`);
+    await dialog.getByRole("button", { name: "Salvar" }).click();
 
     let maquininhaRow = page.getByRole("row").filter({ hasText: maquininhaNome });
     await expect(maquininhaRow).toBeVisible();
     await maquininhaRow.getByRole("button", { name: "Editar" }).click();
-    await page.getByRole("dialog").locator("input").nth(0).fill(maquininhaEditada);
-    await page.getByRole("dialog").getByRole("button", { name: "Salvar alterações" }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.locator("input").nth(0).fill(maquininhaEditada);
+    await dialog.getByRole("button", { name: "Salvar alterações" }).click();
 
     maquininhaRow = page.getByRole("row").filter({ hasText: maquininhaEditada });
     await expect(maquininhaRow).toBeVisible();
@@ -112,7 +155,16 @@ test.describe("Admin financeiro e operacional CRUD", () => {
 
     await openAdminCrudPage(page, "/atividades");
 
-    await page.getByRole("button", { name: "Nova Atividade" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect
+      .poll(
+        async () => {
+          await page.getByRole("button", { name: "Nova Atividade" }).click();
+          return dialog.isVisible();
+        },
+        { timeout: 10_000, intervals: [500, 1_000] },
+      )
+      .toBe(true);
     await page.getByPlaceholder("Ex: Musculação").fill(atividadeNome);
     await page.getByLabel("Permitir check-in para clientes").uncheck();
     await page.getByRole("dialog").getByRole("button", { name: "Criar" }).click();
@@ -132,16 +184,48 @@ test.describe("Admin financeiro e operacional CRUD", () => {
 
     await page.waitForLoadState("networkidle");
     await page.goto("/administrativo/atividades-grade", { waitUntil: "domcontentloaded" });
+    // Aguarda a página carregar a linha seed ("Musculação") antes de
+    // clicar "Nova Grade" — garante que o useAdminCrud já populou o
+    // state com atividades, senão o modal abriria vazio/não-interativo.
+    await expect(page.getByText("Musculação").first()).toBeVisible({
+      timeout: 10_000,
+    });
     await page.getByRole("button", { name: "Nova Grade" }).click();
-    await page.getByRole("combobox").first().click();
+    // `.first()` global pegaria o seletor de unidade do sidebar. Escopar
+    // ao dialog garante que o primeiro combobox é o de atividade do form.
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("combobox").first().click();
     await page.getByRole("option", { name: atividadeEditada }).click();
-    await expect(page.getByText("Check-in da atividade:")).toBeVisible();
-    await expect(page.getByText("obrigatório")).toBeVisible();
-    await page.getByRole("button", { name: "Cancelar" }).click();
+    await expect(dialog.getByText("Check-in da atividade:")).toBeVisible();
+    await expect(dialog.getByText("obrigatório")).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancelar" }).click();
 
     await page.waitForLoadState("networkidle");
     await page.goto("/planos/novo", { waitUntil: "domcontentloaded" });
-    await page.getByRole("tab", { name: "Atividades e benefícios" }).click();
+    // Aguarda o formulário renderizar antes de trocar de tab — se a tab
+    // for clicada antes do <PlanoForm /> estar hidratado, o onClick não
+    // propaga e activeTab fica como "CONFIG".
+    await expect(
+      page.getByRole("heading", { name: "Dados do plano" }),
+    ).toBeVisible({ timeout: 10_000 });
+    const beneficiosTab = page.getByRole("tab", {
+      name: "Atividades e benefícios",
+    });
+    // O botão tem onClick={() => setActiveTab("BENEFICIOS")}. Em dev
+    // mode, o Next dev overlay e o Turbopack HMR podem interceptar o
+    // primeiro click antes da hidratação completar. Aguardar a tab
+    // estar realmente clicável e tentar algumas vezes até o state do
+    // React refletir, tolerando o timing inconsistente.
+    await expect(beneficiosTab).toBeEnabled();
+    await expect
+      .poll(
+        async () => {
+          await beneficiosTab.click();
+          return beneficiosTab.getAttribute("aria-selected");
+        },
+        { timeout: 15_000, intervals: [500, 1_000, 1_500] },
+      )
+      .toBe("true");
     await expect(page.getByText(atividadeEditada, { exact: true })).toBeVisible();
     await expect(page.getByText("Check-in obrigatório", { exact: true })).toBeVisible();
 
