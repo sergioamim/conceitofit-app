@@ -1,3 +1,26 @@
+/**
+ * CRM API client.
+ *
+ * ⚠️ DÉBITOS CONHECIDOS (smoke test 2026-04-10, audit P1 2026-03-28):
+ *
+ * Os endpoints abaixo NÃO existem no backend Java atual e retornam 404.
+ * Todas as funções consumidoras já estão protegidas com
+ * `mapUnavailableCapability` que converte 404/405/501 em mensagem amigável
+ * "Backend ainda não expõe ... neste ambiente". O FE não quebra — apenas
+ * a feature fica em estado "indisponível":
+ *
+ *   - GET  /api/v1/crm/pipeline-stages    → listCrmPipelineStagesApi
+ *   - GET  /api/v1/crm/cadencias          → listCrmCadenciasApi
+ *   - POST /api/v1/crm/cadencias          → createCrmCadenciaApi
+ *   - PUT  /api/v1/crm/cadencias/{id}     → updateCrmCadenciaApi
+ *   - GET  /api/v1/crm/atividades         → listCrmActivitiesApi
+ *
+ * Quando o BE implementar, basta nenhum trabalho FE — funções continuam
+ * como estão e param de retornar erro amigável.
+ *
+ * Ver tambem: src/lib/api/crm-cadencias.ts (modulo separado, mesma
+ * estrategia) e ADR-001 secao 5.
+ */
 import type {
   CampanhaCRM,
   CampanhaStatus,

@@ -451,6 +451,19 @@ function buildDefaultAccessNetworkContext(networkSubdomain: string): AccessNetwo
   };
 }
 
+/**
+ * Consulta contexto visual de uma rede pelo identifier.
+ *
+ * ⚠️ ENDPOINT NÃO IMPLEMENTADO NO BACKEND (debito conhecido — smoke
+ * test 2026-04-10). O `AuthController.java` não expõe `/auth/rede-contexto`.
+ * Esta função tem **fallback completo via `buildDefaultAccessNetworkContext`**:
+ * em caso de 404 (qualquer erro com `allowDefaultFallback != false`) retorna
+ * um contexto padrão derivado do identifier. O fluxo de login funciona,
+ * apenas perde branding customizado da rede (logo, supportText, etc).
+ *
+ * Quando o BE implementar, basta marcar o endpoint disponível — nenhuma
+ * mudança no FE necessária.
+ */
 export async function getAccessNetworkContextApi(
   redeIdentifier: string,
   options?: {

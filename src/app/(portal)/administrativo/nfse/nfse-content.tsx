@@ -177,6 +177,19 @@ export function NfseContent() {
         </div>
       ) : null}
 
+      {/* Task #557: aviso temporário até refactor do form */}
+      <div className="rounded-xl border border-gym-warning/30 bg-gym-warning/10 p-4 text-sm">
+        <p className="font-semibold text-gym-warning">⚠️ Formulário em modo legado</p>
+        <p className="mt-1 text-muted-foreground">
+          O backend foi refatorado para um novo modelo de configuração de NFS-e
+          que exige campos diferentes (município IBGE, endpoint do provedor,
+          credenciais OAuth). O salvamento abaixo <strong>não persiste</strong> os
+          dados no backend atual. Aguardando refactor do formulário (Task #557).
+          Para emitir notas hoje, configure direto no painel do provedor (ou
+          aguarde a entrega da migração).
+        </p>
+      </div>
+
       <PageError error={loadError} onRetry={load} />
 
       {(error || success) && (

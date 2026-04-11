@@ -110,7 +110,82 @@ function normalizePath(value) {
   return value.replace(/\{[^}]+\}/g, "{param}").replace(/\$\{[^}]+\}/g, "{param}");
 }
 
-function renderPathLiteral(node, sourceFile) {
+/**
+ * Coleta helpers locais que retornam string literals/templates simples.
+ * Ex.: `function basePath(conversationId: string): string { return
+ * `/api/v1/atendimento/conversas/${conversationId}/ai`; }`
+ *
+ * Isso permite que renderPathLiteral resolva chamadas como
+ * `${basePath(id)}/resumir` para o path completo em vez de "{param}/resumir".
+ */
+function collectStringHelpers(sourceFile) {
+  const helpers = new Map();
+
+  function visit(node) {
+    // function declaration: function name(...) { return ...; }
+    if (ts.isFunctionDeclaration(node) && node.name && node.body) {
+      const ret = findReturnStringLiteral(node.body);
+      if (ret) helpers.set(node.name.text, ret);
+    }
+    // const name = (...) => ...; OR const name = function(...) { return ... }
+    if (ts.isVariableStatement(node)) {
+      for (const decl of node.declarationList.declarations) {
+        if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
+        if (
+          ts.isArrowFunction(decl.initializer) ||
+          ts.isFunctionExpression(decl.initializer)
+        ) {
+          const body = decl.initializer.body;
+          if (!body) continue;
+          if (ts.isBlock(body)) {
+            const ret = findReturnStringLiteral(body);
+            if (ret) helpers.set(decl.name.text, ret);
+          } else {
+            // arrow concise body
+            const ret = stringLiteralFromExpression(body);
+            if (ret) helpers.set(decl.name.text, ret);
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  function findReturnStringLiteral(block) {
+    let result;
+    function walk(n) {
+      if (result) return;
+      if (ts.isReturnStatement(n) && n.expression) {
+        const lit = stringLiteralFromExpression(n.expression);
+        if (lit) result = lit;
+      } else {
+        ts.forEachChild(n, walk);
+      }
+    }
+    walk(block);
+    return result;
+  }
+
+  function stringLiteralFromExpression(expr) {
+    if (ts.isStringLiteral(expr) || ts.isNoSubstitutionTemplateLiteral(expr)) {
+      return { value: expr.text, dynamic: false };
+    }
+    if (ts.isTemplateExpression(expr)) {
+      let value = expr.head.text;
+      for (const span of expr.templateSpans) {
+        value += "{param}";
+        value += span.literal.text;
+      }
+      return { value, dynamic: true };
+    }
+    return undefined;
+  }
+
+  visit(sourceFile);
+  return helpers;
+}
+
+function renderPathLiteral(node, sourceFile, helpers = new Map()) {
   if (!node) return { value: undefined, dynamic: false };
 
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
@@ -119,15 +194,34 @@ function renderPathLiteral(node, sourceFile) {
 
   if (ts.isTemplateExpression(node)) {
     let value = node.head.text;
+    let dynamic = false;
     for (const span of node.templateSpans) {
-      value += "{param}";
+      const expr = span.expression;
+      // Tenta resolver chamada de helper local: ${basePath(arg)}/resumir
+      if (
+        ts.isCallExpression(expr) &&
+        ts.isIdentifier(expr.expression) &&
+        helpers.has(expr.expression.text)
+      ) {
+        const helperResolved = helpers.get(expr.expression.text);
+        value += helperResolved.value;
+        dynamic = dynamic || helperResolved.dynamic;
+      } else {
+        value += "{param}";
+        dynamic = true;
+      }
       value += span.literal.text;
     }
-    return { value, dynamic: true };
+    return { value, dynamic };
   }
 
   if (ts.isParenthesizedExpression(node)) {
-    return renderPathLiteral(node.expression, sourceFile);
+    return renderPathLiteral(node.expression, sourceFile, helpers);
+  }
+
+  // Identificador simples que aponta para um helper que retorna string
+  if (ts.isIdentifier(node) && helpers.has(node.text)) {
+    return helpers.get(node.text);
   }
 
   return { value: undefined, dynamic: true };
@@ -141,6 +235,10 @@ function extractCallsFromFile(source) {
     true,
     ts.ScriptKind.TS
   );
+
+  // Coleta helpers locais antes de visitar — permite resolver
+  // basePath() em template literals (ver atendimento-ai.ts).
+  const helpers = collectStringHelpers(sourceFile);
 
   const calls = [];
 
@@ -165,11 +263,11 @@ function extractCallsFromFile(source) {
           if (!name) continue;
 
           if (name === "method") {
-            const rendered = renderPathLiteral(property.initializer, sourceFile);
+            const rendered = renderPathLiteral(property.initializer, sourceFile, helpers);
             if (rendered.value) method = rendered.value.toUpperCase();
           }
           if (name === "path") {
-            pathInfo = renderPathLiteral(property.initializer, sourceFile);
+            pathInfo = renderPathLiteral(property.initializer, sourceFile, helpers);
           }
           if (name === "query") {
             hasQuery = true;

@@ -230,6 +230,28 @@ export async function gerarCatracaCredencialApi(input: GenerateCatracaCredential
   });
 }
 
+/**
+ * ⚠️ ENDPOINTS S2S — exigem credencial de integração (não admin)
+ *
+ * `TurnstileWebSocketStatusController` no backend exige autenticação S2S
+ * via `IntegrationAuthorizationService` com scope `turnstile:ws`. Quando
+ * chamado com Bearer token de admin (sessão de usuário), o BE retorna
+ * 500 com `AccessDeniedException` em vez de 401/403 (bug do BE — Spring
+ * traduz como erro interno).
+ *
+ * Status atual:
+ * - O painel `/administrativo/catraca-status` chama estas funções e
+ *   captura o erro graciosamente, mostrando "0 conexões" em vez de
+ *   quebrar a tela.
+ * - Para o painel funcionar de fato, precisa de uma das soluções:
+ *   1. BE expor versão admin de `/ws/status` que aceite Bearer token
+ *      de usuário com role apropriada
+ *   2. BFF/proxy no FE injetar credencial S2S (X-Integration-Key)
+ *      antes de proxiar
+ *
+ * Validado no smoke test 2026-04-10 (commit ee89578) e documentado em
+ * ADR-001 + comentário inline em `liberarAcessoCatracaApi`.
+ */
 export async function listarCatracaWsStatusApi(input?: { tenantId?: string }): Promise<CatracaWsStatusResponse> {
   const response = await apiRequest<CatracaWsStatusApiResponse>({
     path: "/api/v1/integracoes/catraca/ws/status",
@@ -249,6 +271,11 @@ export async function obterCatracaWsStatusPorTenantApi(input: {
   return normalizeCatracaWsStatus(response);
 }
 
+/**
+ * Liberação manual de catraca via WebSocket command. Mesmo problema das
+ * funções `listarCatracaWsStatusApi` acima: endpoint S2S, retorna 500
+ * quando chamado com auth admin. Mantida para futuro fluxo BFF/proxy.
+ */
 export async function liberarAcessoCatracaApi(
   input: LiberarAcessoCatracaInput
 ): Promise<LiberarAcessoCatracaResponse> {

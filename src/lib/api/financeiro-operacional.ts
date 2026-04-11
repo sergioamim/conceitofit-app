@@ -296,6 +296,55 @@ export async function getNfseConfiguracaoAtualApi(input: {
   }
 }
 
+/**
+ * Salva configuração de NFS-e.
+ *
+ * 🔴 STATUS: PARCIALMENTE QUEBRADO — Aguardando refactor de modelo (Task #557)
+ *
+ * O FE chama `PUT /api/v1/administrativo/nfse/configuracao-atual` que NÃO
+ * existe no backend atual. O endpoint correto seria `POST /api/v1/nfse/
+ * configuracoes` com `NfseConfiguracaoUnidadeRequest`, MAS o shape do body
+ * é totalmente diferente:
+ *
+ * ┌─────────────────────────────────────┬───────────────────────────────────┐
+ * │ FE atual (NfseConfiguracao)         │ BE atual (NfseConfiguracaoUnidade │
+ * │                                     │  Request)                          │
+ * ├─────────────────────────────────────┼───────────────────────────────────┤
+ * │ ambiente, provedor                  │ ambiente, provedor      ✅       │
+ * │ codigoTributacaoNacional            │ codigoTributacaoNacional ✅       │
+ * │ codigoNbs                           │ codigoNbs                ✅       │
+ * │ classificacaoTributaria             │ classificacaoTributaria  ✅       │
+ * │ consumidorFinal                     │ consumidorFinal          ✅       │
+ * │ indicadorOperacao                   │ indicadorOperacao        ✅       │
+ * │ ─                                   │ municipioCodigoIbge      🆕       │
+ * │ ─                                   │ municipioUf              🆕       │
+ * │ ─                                   │ endpointBase             🆕       │
+ * │ ─                                   │ clienteId, clienteSecret 🆕       │
+ * │ ─                                   │ certificadoBase64        🆕       │
+ * │ ─                                   │ credenciaisJson          🆕       │
+ * │ ─                                   │ integracaoAtiva          🆕       │
+ * │ ─                                   │ simulacao                🆕       │
+ * │ prefeitura                          │ ─                        ❌       │
+ * │ inscricaoMunicipal                  │ ─                        ❌       │
+ * │ cnaePrincipal                       │ ─                        ❌       │
+ * │ serieRps, loteInicial               │ ─                        ❌       │
+ * │ aliquotaPadrao, regimeTributario    │ ─                        ❌       │
+ * │ emissaoAutomatica                   │ ─                        ❌       │
+ * │ emailCopiaFinanceiro                │ ─                        ❌       │
+ * │ certificadoAlias, webhookFiscalUrl  │ ─                        ❌       │
+ * └─────────────────────────────────────┴───────────────────────────────────┘
+ *
+ * Comportamento atual: a chamada retorna 404 (BE rejeita o path antigo).
+ * O try/catch da UI captura e mostra erro. **Nenhum dado é persistido.**
+ *
+ * Resolução requer (Task #557):
+ * 1. Refactor do form em `nfse-content.tsx` para coletar os campos novos
+ * 2. Refactor do tipo `NfseConfiguracao` em `pagamento.ts`
+ * 3. Migração do path PUT `/administrativo/...` → POST `/nfse/configuracoes`
+ * 4. Decisão de produto: o que fazer com os campos antigos
+ *    (`prefeitura`, `serieRps`, `aliquotaPadrao`, etc.) — descartar ou
+ *    pedir BE para suportar?
+ */
 export async function salvarNfseConfiguracaoAtualApi(
   input: NfseConfiguracao
 ): Promise<NfseConfiguracao> {
@@ -327,6 +376,18 @@ export async function salvarNfseConfiguracaoAtualApi(
   return normalizeNfseConfiguracao(input.tenantId, response);
 }
 
+/**
+ * Valida a configuração de NFS-e contra o provedor real (testa certificado,
+ * endpoint, credenciais).
+ *
+ * ⚠️ ENDPOINT NÃO IMPLEMENTADO NO BACKEND (debito conhecido — Task #556):
+ * `NfseController` não expõe `/configuracao-atual/validar`. A função sempre
+ * lança erro até o BE implementar. A UI em `/administrativo/nfse` captura o
+ * erro via try/catch e exibe mensagem amigável ao usuário.
+ *
+ * Decisão de produto pendente: o BE pode implementar como `POST /nfse/
+ * configuracoes/{id}/validar` ou similar.
+ */
 export async function validarNfseConfiguracaoAtualApi(input: {
   tenantId: string;
 }): Promise<NfseConfiguracao> {
