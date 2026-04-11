@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { CrudModal, type FormFieldConfig } from "@/components/shared/crud-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
@@ -38,7 +38,6 @@ import {
 } from "@/backoffice/api/admin-billing";
 import { useAdminContratos, useAdminPlanos } from "@/backoffice/query/use-admin-financeiro";
 import { useAdminAcademias } from "@/backoffice/query/use-admin-academias";
-import { useAcademiaSuggestion } from "@/app/(backoffice)/admin/lib/use-academia-suggestion";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { formatBRL, formatDate } from "@/lib/formatters";
@@ -175,7 +174,6 @@ export function ContratosContent({ initialContratos, initialAcademias, initialPl
   const contratosQuery = useAdminContratos();
   const academiasQuery = useAdminAcademias();
   const planosQuery = useAdminPlanos();
-  const { academiaOptions: academiaSuggestionOptions, academiaIndex, onFocusOpen: onAcademiaFocusOpen } = useAcademiaSuggestion();
   const loading = contratosQuery.isLoading || academiasQuery.isLoading || planosQuery.isLoading;
   const error = contratosQuery.error?.message ?? academiasQuery.error?.message ?? planosQuery.error?.message ?? null;
   const contratos = contratosQuery.data ?? initialContratos;
@@ -206,6 +204,27 @@ export function ContratosContent({ initialContratos, initialAcademias, initialPl
     () => new Map(planos.map((plano) => [plano.id, plano] as const)),
     [planos]
   );
+
+  const academiaSuggestionOptions = useMemo(
+    () =>
+      academias.map((academia) => ({
+        id: academia.id,
+        label: academia.nome,
+        searchText: academia.documento ?? "",
+      })),
+    [academias],
+  );
+
+  const academiaIndex = useMemo(
+    () => new Map(academias.map((academia) => [academia.id, academia.nome] as const)),
+    [academias],
+  );
+
+  const onAcademiaFocusOpen = useCallback(() => {
+    if (!academiasQuery.data && !academiasQuery.isFetching) {
+      void academiasQuery.refetch();
+    }
+  }, [academiasQuery]);
 
   const planoOptions = useMemo(
     () => planos.map((plano) => ({ value: plano.id, label: plano.nome })),

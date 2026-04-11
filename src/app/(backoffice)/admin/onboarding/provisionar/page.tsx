@@ -152,7 +152,17 @@ export default function AdminProvisionarAcademiaPage() {
     defaultValues: DEFAULT_VALUES,
   });
 
-  const values = form.watch();
+  const {
+    control,
+    handleSubmit,
+    register,
+    reset,
+    setError,
+    watch,
+    formState: { errors },
+  } = form;
+
+  const values = watch();
   const credentialsText = useMemo(
     () => (credentials ? buildCredentialsText(credentials, values) : ""),
     [credentials, values],
@@ -162,7 +172,7 @@ export default function AdminProvisionarAcademiaPage() {
     [credentials, values],
   );
 
-  async function handleSubmit(values: AdminOnboardingProvisionFormValues) {
+  async function submitProvision(values: AdminOnboardingProvisionFormValues) {
     setSubmitting(true);
     setSubmitError("");
     setCredentials(null);
@@ -186,7 +196,7 @@ export default function AdminProvisionarAcademiaPage() {
         Object.entries(error.fieldErrors ?? {}).forEach(([field, message]) => {
           const mappedField = mapFieldError(field);
           if (mappedField) {
-            form.setError(mappedField, { type: "server", message });
+            setError(mappedField, { type: "server", message });
           }
         });
       }
@@ -247,17 +257,17 @@ export default function AdminProvisionarAcademiaPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="space-y-5" onSubmit={form.handleSubmit(handleSubmit)}>
+              <form className="space-y-5" onSubmit={handleSubmit(submitProvision)}>
                 <div className="space-y-1.5">
                   <Label htmlFor="provision-academia-nome">Nome da academia</Label>
                   <Input
                     id="provision-academia-nome"
-                    {...form.register("academiaNome")}
+                    {...register("academiaNome")}
                     className="border-border bg-secondary"
                     placeholder="Ex: Academia Conceito Fit Copacabana"
                   />
-                  {form.formState.errors.academiaNome ? (
-                    <p className="text-xs text-gym-danger">{form.formState.errors.academiaNome.message}</p>
+                  {errors.academiaNome ? (
+                    <p className="text-xs text-gym-danger">{errors.academiaNome.message}</p>
                   ) : null}
                 </div>
 
@@ -265,7 +275,7 @@ export default function AdminProvisionarAcademiaPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="provision-cnpj">CNPJ</Label>
                     <Controller
-                      control={form.control}
+                      control={control}
                       name="cnpj"
                       render={({ field }) => (
                         <Input
@@ -277,15 +287,15 @@ export default function AdminProvisionarAcademiaPage() {
                         />
                       )}
                     />
-                    {form.formState.errors.cnpj ? (
-                      <p className="text-xs text-gym-danger">{form.formState.errors.cnpj.message}</p>
+                    {errors.cnpj ? (
+                      <p className="text-xs text-gym-danger">{errors.cnpj.message}</p>
                     ) : null}
                   </div>
 
                   <div className="space-y-1.5">
                     <Label htmlFor="provision-telefone">Telefone</Label>
                     <Controller
-                      control={form.control}
+                      control={control}
                       name="telefone"
                       render={({ field }) => (
                         <PhoneInput
@@ -297,8 +307,8 @@ export default function AdminProvisionarAcademiaPage() {
                         />
                       )}
                     />
-                    {form.formState.errors.telefone ? (
-                      <p className="text-xs text-gym-danger">{form.formState.errors.telefone.message}</p>
+                    {errors.telefone ? (
+                      <p className="text-xs text-gym-danger">{errors.telefone.message}</p>
                     ) : null}
                   </div>
                 </div>
@@ -307,12 +317,12 @@ export default function AdminProvisionarAcademiaPage() {
                   <Label htmlFor="provision-unidade-principal">Nome da unidade principal</Label>
                   <Input
                     id="provision-unidade-principal"
-                    {...form.register("unidadePrincipalNome")}
+                    {...register("unidadePrincipalNome")}
                     className="border-border bg-secondary"
                     placeholder="Ex: Copacabana Matriz"
                   />
-                  {form.formState.errors.unidadePrincipalNome ? (
-                    <p className="text-xs text-gym-danger">{form.formState.errors.unidadePrincipalNome.message}</p>
+                  {errors.unidadePrincipalNome ? (
+                    <p className="text-xs text-gym-danger">{errors.unidadePrincipalNome.message}</p>
                   ) : null}
                 </div>
 
@@ -321,12 +331,12 @@ export default function AdminProvisionarAcademiaPage() {
                     <Label htmlFor="provision-admin-nome">Nome do administrador</Label>
                     <Input
                       id="provision-admin-nome"
-                      {...form.register("adminNome")}
+                      {...register("adminNome")}
                       className="border-border bg-secondary"
                       placeholder="Ex: Mariana Costa"
                     />
-                    {form.formState.errors.adminNome ? (
-                      <p className="text-xs text-gym-danger">{form.formState.errors.adminNome.message}</p>
+                    {errors.adminNome ? (
+                      <p className="text-xs text-gym-danger">{errors.adminNome.message}</p>
                     ) : null}
                   </div>
 
@@ -335,12 +345,12 @@ export default function AdminProvisionarAcademiaPage() {
                     <Input
                       id="provision-admin-email"
                       type="email"
-                      {...form.register("adminEmail")}
+                      {...register("adminEmail")}
                       className="border-border bg-secondary"
                       placeholder="mariana@academia.com"
                     />
-                    {form.formState.errors.adminEmail ? (
-                      <p className="text-xs text-gym-danger">{form.formState.errors.adminEmail.message}</p>
+                    {errors.adminEmail ? (
+                      <p className="text-xs text-gym-danger">{errors.adminEmail.message}</p>
                     ) : null}
                   </div>
                 </div>
@@ -360,7 +370,7 @@ export default function AdminProvisionarAcademiaPage() {
                     variant="outline"
                     className="border-border"
                     onClick={() => {
-                      form.reset(DEFAULT_VALUES);
+                      reset(DEFAULT_VALUES);
                       setSubmitError("");
                       setCredentials(null);
                     }}

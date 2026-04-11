@@ -55,6 +55,8 @@ export type FormFieldConfig = {
   helperText?: string;
   /** For suggestion: static options list */
   suggestionOptions?: SuggestionOption[];
+  /** For suggestion: campo auxiliar para exibir o label enquanto o valor salvo mantém o id */
+  suggestionDisplayField?: string;
   /** For suggestion: async loader called on focus/type to populate options */
   onFocusOpen?: () => Promise<SuggestionOption[]> | void;
 };
@@ -114,6 +116,9 @@ function renderField<T extends FieldValues>(
 ) {
   const { register, control, formState: { errors } } = form;
   const fieldPath = field.name as Path<T>;
+  const displayFieldPath = field.suggestionDisplayField
+    ? (field.suggestionDisplayField as Path<T>)
+    : undefined;
   const error = errors[field.name];
   const errorId = `${fieldId}-error`;
   const helperTextId = `${fieldId}-helper`;
@@ -173,9 +178,32 @@ function renderField<T extends FieldValues>(
           render={({ field: controllerField }) => (
             <SuggestionInput
               inputId={fieldId}
-              value={(controllerField.value as string) ?? ""}
-              onValueChange={(v) => controllerField.onChange(v)}
-              onSelect={(option) => controllerField.onChange(option.label)}
+              value={
+                displayFieldPath
+                  ? ((form.watch(displayFieldPath) as string) ?? "")
+                  : ((controllerField.value as string) ?? "")
+              }
+              onValueChange={(value) => {
+                if (displayFieldPath) {
+                  controllerField.onChange("");
+                  form.setValue(displayFieldPath, value as never, {
+                    shouldDirty: true,
+                    shouldValidate: false,
+                  });
+                  return;
+                }
+
+                controllerField.onChange(value);
+              }}
+              onSelect={(option) => {
+                controllerField.onChange(option.id);
+                if (displayFieldPath) {
+                  form.setValue(displayFieldPath, option.label as never, {
+                    shouldDirty: true,
+                    shouldValidate: false,
+                  });
+                }
+              }}
               options={field.suggestionOptions ?? []}
               onFocusOpen={field.onFocusOpen ? () => { field.onFocusOpen!(); } : undefined}
               placeholder={field.placeholder}
@@ -321,7 +349,7 @@ export function CrudModal<T extends FieldValues>({
   submitLabel,
   editSubmitLabel,
 }: CrudModalProps<T>) {
-  const isEditing = !!initial;
+  const isEditing = Boolean(initialId);
   const resolvedSchema = schema ?? buildSchemaFromFields(fields);
   const modalId = useId();
   const titleId = `${modalId}-title`;

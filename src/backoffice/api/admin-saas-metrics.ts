@@ -53,14 +53,14 @@ export interface SaasOnboardingResponse {
 // ---------------------------------------------------------------------------
 
 /** GET /api/v1/admin/metrics/saas — métricas SaaS consolidadas */
-async function getSaasMetrics(): Promise<SaasMetricsResponse> {
+export async function getSaasMetrics(): Promise<SaasMetricsResponse> {
   return apiRequest<SaasMetricsResponse>({
     path: "/api/v1/admin/metrics/saas",
   });
 }
 
 /** GET /api/v1/admin/metrics/saas/series — série temporal de métricas */
-async function getSaasSeries(params?: {
+export async function getSaasSeries(params?: {
   metrica?: string;
   periodo?: string;
 }): Promise<SaasSeriesResponse> {
@@ -71,7 +71,7 @@ async function getSaasSeries(params?: {
 }
 
 /** GET /api/v1/admin/metrics/saas/onboarding — academias em onboarding */
-async function getSaasOnboarding(): Promise<SaasOnboardingResponse> {
+export async function getSaasOnboarding(): Promise<SaasOnboardingResponse> {
   return apiRequest<SaasOnboardingResponse>({
     path: "/api/v1/admin/metrics/saas/onboarding",
   });

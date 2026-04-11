@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -14,13 +14,17 @@ import {
 } from "lucide-react";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { StatusBadge } from "@/components/shared/status-badge";
-import type {
+import {
+  getSaasMetrics,
+  getSaasOnboarding,
+  getSaasSeries,
+  type AcademiaOnboarding,
   SaasMetricsResponse,
   SaasOnboardingResponse,
   SaasSeriesResponse,
-  AcademiaOnboarding,
 } from "@/backoffice/api/admin-saas-metrics";
 import { formatBRL, formatDateBR, formatPercent } from "@/lib/formatters";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 function formatNumber(n: number): string {
   return n.toLocaleString("pt-BR");
@@ -41,25 +45,68 @@ export function SaasDashboardContent({
   onboarding,
   error,
 }: SaasDashboardContentProps) {
+  const [resolvedMetrics, setResolvedMetrics] = useState<SaasMetricsResponse | null>(metrics);
+  const [resolvedSeries, setResolvedSeries] = useState<SaasSeriesResponse | null>(series);
+  const [resolvedOnboarding, setResolvedOnboarding] = useState<SaasOnboardingResponse | null>(onboarding);
+  const [resolvedError, setResolvedError] = useState<string | null>(error);
+  const [loadingFallback, setLoadingFallback] = useState(false);
   const [onboardingFilter, setOnboardingFilter] = useState<OnboardingFilter>("all");
+  const shouldClientRecover = !metrics || !series || !onboarding;
 
-  if (error) {
+  useEffect(() => {
+    if (!shouldClientRecover) return;
+
+    let active = true;
+    setLoadingFallback(true);
+
+    void Promise.all([getSaasMetrics(), getSaasSeries(), getSaasOnboarding()])
+      .then(([nextMetrics, nextSeries, nextOnboarding]) => {
+        if (!active) return;
+        setResolvedMetrics(nextMetrics);
+        setResolvedSeries(nextSeries);
+        setResolvedOnboarding(nextOnboarding);
+        setResolvedError(null);
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        setResolvedError(normalizeErrorMessage(loadError));
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingFallback(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [shouldClientRecover]);
+
+  const m = resolvedMetrics;
+  const seriesData = resolvedSeries;
+  const onboardingData = resolvedOnboarding;
+  const filteredOnboarding = filterOnboarding(onboardingData?.academias ?? [], onboardingFilter);
+
+  if (resolvedError && !loadingFallback && !m && !seriesData && !onboardingData) {
     return (
       <div className="flex flex-col gap-6">
         <Header />
         <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {error}
+          {resolvedError}
         </div>
       </div>
     );
   }
 
-  const m = metrics;
-  const filteredOnboarding = filterOnboarding(onboarding?.academias ?? [], onboardingFilter);
-
   return (
     <div className="flex flex-col gap-8">
       <Header />
+
+      {loadingFallback && !m && !seriesData && !onboardingData ? (
+        <div className="rounded-xl border border-border bg-card px-5 py-8 text-sm text-muted-foreground">
+          Carregando métricas SaaS...
+        </div>
+      ) : null}
 
       {/* KPIs principais */}
       {m && (
@@ -138,15 +185,15 @@ export function SaasDashboardContent({
       )}
 
       {/* Serie temporal */}
-      {series && series.pontos && series.pontos.length > 0 && (
+      {seriesData && seriesData.pontos && seriesData.pontos.length > 0 && (
         <section>
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Evolucao — {series.metrica ?? "MRR"}
+            Evolucao — {seriesData.metrica ?? "MRR"}
           </h2>
           <div className="rounded-xl border border-border bg-card p-5">
             <div className="flex items-end gap-1" style={{ height: 120 }}>
-              {series.pontos.map((ponto, i) => {
-                const maxVal = Math.max(...series.pontos.map((p) => p.valor), 1);
+              {seriesData.pontos.map((ponto, i) => {
+                const maxVal = Math.max(...seriesData.pontos.map((p) => p.valor), 1);
                 const height = Math.max(4, (ponto.valor / maxVal) * 100);
                 return (
                   <div key={`${ponto.data}-${i}`} className="group relative flex-1">
@@ -162,8 +209,8 @@ export function SaasDashboardContent({
               })}
             </div>
             <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
-              <span>{series.pontos[0]?.data}</span>
-              <span>{series.pontos[series.pontos.length - 1]?.data}</span>
+              <span>{seriesData.pontos[0]?.data}</span>
+              <span>{seriesData.pontos[seriesData.pontos.length - 1]?.data}</span>
             </div>
           </div>
         </section>
@@ -173,7 +220,7 @@ export function SaasDashboardContent({
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Pipeline de Onboarding ({onboarding?.total ?? 0})
+            Pipeline de Onboarding ({onboardingData?.total ?? 0})
           </h2>
           <div className="flex gap-1.5">
             {(["all", "ativa", "demo", "inativa"] as OnboardingFilter[]).map((f) => (
