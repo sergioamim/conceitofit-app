@@ -1,12 +1,26 @@
 import type { StatusProspect } from "@/lib/types";
 
-const PROSPECT_STATUS_FLOW: StatusProspect[] = [
+/**
+ * Ordem canônica do funil de vendas do CRM.
+ *
+ * Deve refletir a ordem apresentada pelas colunas do kanban
+ * (CRM_STAGE_PRESETS em @/lib/tenant/crm/workspace.ts). Esta lista
+ * é o ÚNICO source of truth das transições válidas: quem precisa da
+ * sequência deve importar as funções daqui, nunca duplicar o array.
+ *
+ * Fluxo comercial:
+ *   NOVO → EM_CONTATO → AGENDOU_VISITA → VISITOU → CONVERTIDO
+ *
+ * PERDIDO é um terminal permitido a partir de qualquer estado ativo
+ * (tratado separadamente em `canTransitionProspectStatus`).
+ */
+export const PROSPECT_STATUS_FLOW: readonly StatusProspect[] = [
   "NOVO",
+  "EM_CONTATO",
   "AGENDOU_VISITA",
   "VISITOU",
-  "EM_CONTATO",
   "CONVERTIDO",
-];
+] as const;
 
 export function getNextProspectStatus(status: StatusProspect): StatusProspect | null {
   const index = PROSPECT_STATUS_FLOW.indexOf(status);

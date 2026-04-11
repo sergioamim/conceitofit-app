@@ -2,9 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { canTransitionProspectStatus } from "@/lib/tenant/crm/prospect-status";
+import {
+  canTransitionProspectStatus,
+  getNextProspectStatus,
+} from "@/lib/tenant/crm/prospect-status";
 import type { CrmPipelineStage, Prospect, StatusProspect } from "@/lib/types";
-import { buildDefaultCrmPipelineStages } from "@/lib/tenant/crm/workspace";
+import {
+  buildDefaultCrmPipelineStages,
+  getCrmStageName,
+} from "@/lib/tenant/crm/workspace";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useProspects, useOptimisticProspectStatus } from "@/lib/query/use-prospects";
 import { useCrmTasksQuery } from "@/lib/query/use-crm-tasks";
@@ -99,18 +105,37 @@ export function ProspectsKanbanContent() {
     if (!tenantId) return;
     const current = prospects.find((item) => item.id === id);
     if (!current) return;
-    if (!canTransitionProspectStatus(current.status, status)) {
-      setError("Mova o prospect apenas para a proxima etapa valida do funil.");
+
+    // Soltou no mesmo lugar → no-op, não gera erro nem rede.
+    if (current.status === status) {
+      setError("");
       return;
     }
-    const motivo = status === "PERDIDO" ? prompt("Motivo da perda (opcional):") : undefined;
+
+    if (!canTransitionProspectStatus(current.status, status)) {
+      const next = getNextProspectStatus(current.status);
+      const sugestao = next
+        ? ` A próxima etapa válida é "${getCrmStageName(next)}" (ou mover para Perdido).`
+        : "";
+      setError(
+        `Não é possível mover de "${getCrmStageName(current.status)}" para "${getCrmStageName(status)}".${sugestao}`,
+      );
+      return;
+    }
+
+    const motivo =
+      status === "PERDIDO" ? prompt("Motivo da perda (opcional):") : undefined;
     if (status === "PERDIDO" && motivo === null) return;
 
     try {
       setError("");
       await statusMutation.mutateAsync({ id, status, motivo: motivo ?? undefined });
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Falha ao atualizar etapa do prospect.");
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Falha ao atualizar etapa do prospect.",
+      );
     }
   }
 
@@ -143,7 +168,11 @@ export function ProspectsKanbanContent() {
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+        <div
+          role="alert"
+          data-testid="kanban-error"
+          className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100"
+        >
           {error}
         </div>
       ) : null}
@@ -220,12 +249,16 @@ export function ProspectsKanbanContent() {
                 "rounded-xl border border-border bg-card transition-colors",
                 draggingId && "ring-1 ring-gym-accent/30"
               )}
+              data-testid={`kanban-column-${col.status}`}
+              data-kanban-status={col.status}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
-                const id = e.dataTransfer.getData("text/plain");
-                if (id) handleSetStatus(id, col.status);
+                // Sempre limpar o dragging state primeiro — mesmo que o handler
+                // falhe, o card não deve ficar preso em estado visual opacity-40.
                 setDraggingId(null);
+                const id = e.dataTransfer.getData("text/plain");
+                if (id) void handleSetStatus(id, col.status);
               }}
             >
               {/* Column header */}
@@ -254,6 +287,9 @@ export function ProspectsKanbanContent() {
                 {col.items.map((p) => (
                   <div
                     key={p.id}
+                    data-testid={`kanban-card-${p.id}`}
+                    data-prospect-id={p.id}
+                    data-prospect-status={p.status}
                     draggable
                     onDragStart={(e) => {
                       e.dataTransfer.setData("text/plain", p.id);
@@ -262,7 +298,7 @@ export function ProspectsKanbanContent() {
                     onDragEnd={() => setDraggingId(null)}
                     onClick={() => handleCardClick(p)}
                     className={cn(
-                      "cursor-pointer rounded-lg border border-border bg-secondary/40 p-3 transition-all",
+                      "cursor-pointer rounded-lg border border-border bg-secondary/40 p-3 transition-colors",
                       "hover:border-gym-accent/40 hover:bg-secondary/70 hover:shadow-sm",
                       draggingId === p.id && "opacity-40"
                     )}
