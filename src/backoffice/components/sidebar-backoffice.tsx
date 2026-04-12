@@ -1,18 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { useState, useSyncExternalStore } from "react";
 import { 
   ChevronRight, 
-  Search, 
   Zap,
   LogOut,
   Command,
   Building2,
   Globe,
   Eye,
-  Users
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -35,6 +33,10 @@ import { logoutApi } from "@/lib/api/auth";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { useIsMac } from "@/hooks/use-is-mac";
 import { LogoutDialog } from "@/components/shared/logout-dialog";
+
+function subscribeNoop() {
+  return () => undefined;
+}
 
 function NavLink({ item, active, collapsed }: { item: NavItem; active: boolean; collapsed: boolean }) {
   const Icon = item.icon;
@@ -133,10 +135,10 @@ export function SidebarBackoffice({ mobileOpen = false, onMobileClose, onOpenCmd
   const [collapsed, setCollapsed] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
   const { mode, inspectedTenant } = useBackofficeContext();
-  const access = useAuthAccess();
-  const sessionUser = getAuthSessionSnapshot();
+  useAuthAccess();
+  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const sessionUser = mounted ? getAuthSessionSnapshot() : null;
   const isMac = useIsMac();
   const cmdText = isMac === null ? "" : isMac ? "⌘K" : "Ctrl+K";
 
@@ -146,7 +148,7 @@ export function SidebarBackoffice({ mobileOpen = false, onMobileClose, onOpenCmd
       try { await logoutApi(); } catch {}
       clearAuthSession();
       window.location.assign(redirectHref);
-    } catch (e) {}
+    } catch {}
   };
 
   return (

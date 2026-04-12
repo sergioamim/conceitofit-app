@@ -17,7 +17,13 @@ export async function enableAuthenticatedSSRForPlaywright(
   options: { backendBaseUrl?: string } = {},
 ) {
   const appBaseUrl = resolveE2EBaseUrl();
-  const backendBaseUrl = options.backendBaseUrl?.trim() || `${appBaseUrl}/api/__e2e/backend`;
+  const backendBaseUrl = options.backendBaseUrl?.trim();
+
+  if (!backendBaseUrl || !/^https?:\/\//.test(backendBaseUrl)) {
+    throw new Error(
+      "enableAuthenticatedSSRForPlaywright exige backendBaseUrl explicito para evitar deadlock de SSR contra a propria app Next.",
+    );
+  }
 
   await page.context().addCookies([
     {

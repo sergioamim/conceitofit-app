@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 import { openBackofficeWaveCPage } from "./support/stubs/backoffice-wave-c";
 
 test.describe("Backoffice operacional saúde", () => {

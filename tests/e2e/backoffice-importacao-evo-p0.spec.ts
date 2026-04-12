@@ -1,11 +1,10 @@
 import { Buffer } from "node:buffer";
-import { expect, test } from "@playwright/test";
-import { createBrowserErrorGuard } from "./support/browser-errors";
+import { expect, test } from "./support/test";
 import { openBackofficeWaveCPage } from "./support/stubs/backoffice-wave-c";
 
 test.describe("Backoffice importação EVO P0", () => {
   test("carrega o wizard, faz upload do pacote, revisa a prévia e confirma a importação", async ({ page }) => {
-    const browserErrors = createBrowserErrorGuard(page);
+    const diagnosticoDialog = page.getByRole("dialog");
 
     await openBackofficeWaveCPage(
       page,
@@ -31,9 +30,12 @@ test.describe("Backoffice importação EVO P0", () => {
     await page.getByRole("button", { name: "Criar Job" }).click();
 
     await expect(page.getByRole("heading", { name: "Diagnóstico do Lote" })).toBeVisible();
-    await expect(page.getByText("Carga Wave C")).toBeVisible();
-    await expect(page.getByText("Job de importação")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Abrir rejeições" })).toBeVisible();
-    await browserErrors.assertNoUnexpectedErrors("Happy path da importação EVO P0 emitiu erro no browser");
+    await expect(diagnosticoDialog.getByText("Job de importação")).toBeVisible();
+    await expect(
+      diagnosticoDialog.locator(".text-sm.font-semibold.text-foreground").filter({
+        hasText: "Carga Wave C",
+      }),
+    ).toBeVisible();
+    await expect(diagnosticoDialog.getByRole("button", { name: "Abrir rejeições" })).toBeVisible();
   });
 });

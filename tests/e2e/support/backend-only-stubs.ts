@@ -3731,6 +3731,34 @@ export async function installAdminCrudApiMocks(page: Page) {
       return;
     }
 
+    if (path === "/api/v1/admin/unidades/onboarding" && method === "GET") {
+      await fulfillJson(route, onboarding);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/unidades\/[^/]+\/onboarding$/.test(path) && method === "GET") {
+      const tenantId = path.split("/").at(-2) ?? "";
+      const state = getOnboardingState(tenantId);
+      await fulfillJson(route, state ?? { message: "Onboarding não encontrado" }, state ? 200 : 404);
+      return;
+    }
+
+    if (/^\/api\/v1\/admin\/unidades\/[^/]+\/onboarding$/.test(path) && method === "PUT") {
+      const tenantId = path.split("/").at(-2) ?? "";
+      const payload = parseBody<Partial<AdminOnboardingSeed>>(request);
+      const tenant = getTenant(tenantId);
+      const saved = mergeOnboardingState({
+        tenantId,
+        academiaId: payload.academiaId?.trim() || tenant?.academiaId,
+        estrategia: payload.estrategia ?? "IMPORTAR_DEPOIS",
+        status: payload.status ?? "AGUARDANDO_IMPORTACAO",
+        evoFilialId: payload.evoFilialId?.trim() || undefined,
+        ultimaMensagem: payload.ultimaMensagem?.trim() || undefined,
+      });
+      await fulfillJson(route, saved);
+      return;
+    }
+
     if (/^\/api\/v1\/admin\/unidades\/[^/]+$/.test(path) && method === "GET") {
       const tenantId = path.split("/").at(-1) ?? "";
       const tenant = getTenant(tenantId);
@@ -3772,34 +3800,6 @@ export async function installAdminCrudApiMocks(page: Page) {
           : item,
       );
       await fulfillJson(route, getTenant(tenantId));
-      return;
-    }
-
-    if (path === "/api/v1/admin/unidades/onboarding" && method === "GET") {
-      await fulfillJson(route, onboarding);
-      return;
-    }
-
-    if (/^\/api\/v1\/admin\/unidades\/[^/]+\/onboarding$/.test(path) && method === "GET") {
-      const tenantId = path.split("/").at(-2) ?? "";
-      const state = getOnboardingState(tenantId);
-      await fulfillJson(route, state ?? { message: "Onboarding não encontrado" }, state ? 200 : 404);
-      return;
-    }
-
-    if (/^\/api\/v1\/admin\/unidades\/[^/]+\/onboarding$/.test(path) && method === "PUT") {
-      const tenantId = path.split("/").at(-2) ?? "";
-      const payload = parseBody<Partial<AdminOnboardingSeed>>(request);
-      const tenant = getTenant(tenantId);
-      const saved = mergeOnboardingState({
-        tenantId,
-        academiaId: payload.academiaId?.trim() || tenant?.academiaId,
-        estrategia: payload.estrategia ?? "IMPORTAR_DEPOIS",
-        status: payload.status ?? "AGUARDANDO_IMPORTACAO",
-        evoFilialId: payload.evoFilialId?.trim() || undefined,
-        ultimaMensagem: payload.ultimaMensagem?.trim() || undefined,
-      });
-      await fulfillJson(route, saved);
       return;
     }
 

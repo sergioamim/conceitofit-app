@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
 
-type MessageMatcher = RegExp | string;
+export type MessageMatcher = RegExp | string;
 
-type BrowserErrorGuardOptions = {
+export type BrowserErrorGuardOptions = {
   allowConsoleErrors?: MessageMatcher[];
   allowPageErrors?: MessageMatcher[];
 };

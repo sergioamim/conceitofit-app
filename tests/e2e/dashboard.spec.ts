@@ -1,7 +1,14 @@
+import type { Server } from "node:http";
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { installE2EAuthSession } from "./support/auth-session";
 import { createBrowserErrorGuard } from "./support/browser-errors";
 import { installOperationalAppShellMocks } from "./support/protected-shell-mocks";
+import {
+  resolveSsrBackendMockBaseUrl,
+  resolveSsrBackendMockPort,
+  startSsrBackendMock,
+  stopSsrBackendMock,
+} from "./support/ssr-backend-mock";
 import {
   enableAuthenticatedSSRForPlaywright,
   overrideLegacyActiveTenantCookie,
@@ -195,6 +202,18 @@ const PAGAMENTOS_RESPONSE = [
     dataAtualizacao: "2026-03-01T10:00:00",
   },
 ];
+
+let ssrBackendMock: Server;
+let ssrBackendBaseUrl = "";
+
+test.beforeAll(async () => {
+  ssrBackendMock = await startSsrBackendMock(resolveSsrBackendMockPort());
+  ssrBackendBaseUrl = resolveSsrBackendMockBaseUrl(ssrBackendMock);
+});
+
+test.afterAll(async () => {
+  await stopSsrBackendMock(ssrBackendMock);
+});
 
 const PROSPECTS_RESPONSE = {
   content: DASHBOARD_RESPONSE.prospectsRecentes,
@@ -392,7 +411,9 @@ test.describe("Dashboard principal", () => {
     let dashboardClientRequests = 0;
 
     await installDashboardMocks(page, { mockDashboardApi: false });
-    await enableAuthenticatedSSRForPlaywright(page);
+    await enableAuthenticatedSSRForPlaywright(page, {
+      backendBaseUrl: ssrBackendBaseUrl,
+    });
     await overrideLegacyActiveTenantCookie(page, "tenant-legado-stale");
 
     await page.route("**/api/v1/academia/dashboard**", async (route) => {

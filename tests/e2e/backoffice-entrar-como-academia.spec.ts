@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 import { installBackofficeGlobalSession } from "./support/backoffice-global-session";
 
 const TENANT_CENTRO = {

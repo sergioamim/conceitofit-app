@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./support/test";
 import { uniqueSuffix, selectComboboxOption } from "./support/admin-crud-helpers";
 import { clickToOpenDialog, navigateAndWaitForHeading } from "./support/interactions";
 import { installBackofficeFinanceiroMocks } from "./support/stubs/backoffice-financeiro";

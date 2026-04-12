@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./support/test";
 import { navigateAndWaitForHeading } from "./support/interactions";
 import { installBackofficeFinanceiroMocks } from "./support/stubs/backoffice-financeiro";
 

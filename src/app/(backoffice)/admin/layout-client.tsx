@@ -216,7 +216,7 @@ function AdminLayoutContent({
   const pathname = usePathname();
   const router = useRouter();
   const access = useAuthAccess();
-  const [hydrated, setHydrated] = useState(initialAuthenticated ?? false);
+  const [hydrated, setHydrated] = useState(false);
   const [authenticated, setAuthenticated] = useState(initialAuthenticated ?? false);
   const [recoveringElevatedAccess, setRecoveringElevatedAccess] = useState(false);
   const sessionRoles = getRolesFromSession();

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 import { openAdminCrudPage } from "./support/admin-crud-helpers";
 
 test.describe("Backoffice global", () => {
