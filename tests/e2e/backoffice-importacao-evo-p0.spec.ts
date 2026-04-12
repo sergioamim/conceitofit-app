@@ -3,7 +3,7 @@ import { expect, test } from "./support/test";
 import { openBackofficeWaveCPage } from "./support/stubs/backoffice-wave-c";
 
 test.describe("Backoffice importação EVO P0", () => {
-  test("carrega o wizard, faz upload do pacote, revisa a prévia e confirma a importação", async ({ page }) => {
+  test("carrega o wizard, faz upload do pacote, revisa a prévia e cria o job sem reenviar evoUnidadeId", async ({ page }) => {
     const diagnosticoDialog = page.getByRole("dialog");
 
     await openBackofficeWaveCPage(
@@ -27,7 +27,17 @@ test.describe("Backoffice importação EVO P0", () => {
     await expect(page.getByText(/Selecionados:\s+\d+\s+de\s+\d+\s+disponíveis/i)).toBeVisible();
 
     await page.getByLabel("Nome de identificação deste lote").fill("Carga Wave C");
+    const jobRequestPromise = page.waitForRequest((request) => {
+      return (
+        request.method() === "POST" &&
+        /\/admin\/integracoes\/importacao-terceiros\/evo\/p0\/pacote\/[^/]+\/job$/.test(
+          new URL(request.url()).pathname,
+        )
+      );
+    });
     await page.getByRole("button", { name: "Criar Job" }).click();
+    const jobRequest = await jobRequestPromise;
+    expect(jobRequest.postDataJSON()).not.toHaveProperty("evoUnidadeId");
 
     await expect(page.getByRole("heading", { name: "Diagnóstico do Lote" })).toBeVisible();
     await expect(diagnosticoDialog.getByText("Job de importação")).toBeVisible();

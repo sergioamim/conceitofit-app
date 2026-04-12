@@ -1211,7 +1211,17 @@ async function installImportacaoMocks(page: Page) {
     const body = route.request().postDataJSON() as {
       arquivos?: string[];
       apelido?: string;
+      evoUnidadeId?: number;
     };
+    if ("evoUnidadeId" in body) {
+      await route.fulfill({
+        status: 400,
+        json: {
+          message: "evoUnidadeId nao faz parte do DTO atual do create job do pacote EVO",
+        },
+      });
+      return;
+    }
     arquivosSelecionadosNoJob = body.arquivos ?? arquivosSelecionadosNoJob;
 
     await route.fulfill({

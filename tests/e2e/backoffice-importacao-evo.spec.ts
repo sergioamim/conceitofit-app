@@ -267,7 +267,6 @@ async function installImportacaoEvoJobStubs(page: Page) {
       arquivos?: string[];
       apelido?: string;
       tenantId?: string;
-      evoUnidadeId?: number;
       retrySomenteErros?: boolean;
     };
     const tenantHeader = route.request().headers()["x-tenant-id"];
@@ -289,11 +288,11 @@ async function installImportacaoEvoJobStubs(page: Page) {
       });
       return;
     }
-    if ("evoUnidadeId" in body && (!Number.isInteger(body.evoUnidadeId) || Number(body.evoUnidadeId) <= 0)) {
+    if ("evoUnidadeId" in body) {
       await route.fulfill({
         status: 400,
         json: {
-          message: "evoUnidadeId invalido no create job do pacote EVO",
+          message: "evoUnidadeId nao faz parte do DTO atual do create job do pacote EVO",
         },
       });
       return;

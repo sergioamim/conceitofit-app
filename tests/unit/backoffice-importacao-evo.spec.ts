@@ -350,7 +350,6 @@ test.describe("backoffice importacao EVO api wrappers", () => {
         maxRejeicoesRetorno: 50,
         arquivos: ["clientes", "contratos"],
         tenantId: "tenant-pacote",
-        evoUnidadeId: 321,
         apelido: "Carga pacote unidade central",
       });
       const resumo = await getBackofficeEvoImportJobResumo({
@@ -373,7 +372,6 @@ test.describe("backoffice importacao EVO api wrappers", () => {
         dryRun: false,
         maxRejeicoesRetorno: 50,
         tenantId: "tenant-pacote",
-        evoUnidadeId: 321,
         arquivos: ["clientes", "contratos"],
         apelido: "Carga pacote unidade central",
       });

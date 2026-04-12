@@ -230,7 +230,6 @@ export async function createEvoP0PacoteJobApi(input: {
   arquivos?: string[] | null;
   retrySomenteErros?: boolean;
   tenantId?: string;
-  evoUnidadeId?: number | null;
   apelido?: string | null;
   contextoTenantId?: string;
 }): Promise<PacoteJobAceitoResponse> {
@@ -239,7 +238,6 @@ export async function createEvoP0PacoteJobApi(input: {
     maxRejeicoesRetorno: number;
     arquivos?: string[];
     tenantId?: string;
-    evoUnidadeId?: number;
     apelido?: string;
   } = {
     dryRun: input.dryRun,
@@ -255,13 +253,6 @@ export async function createEvoP0PacoteJobApi(input: {
   const tenantId = normalizeTenantId(input.tenantId ?? input.contextoTenantId);
   if (tenantId) {
     body.tenantId = tenantId;
-  }
-  if (
-    typeof input.evoUnidadeId === "number" &&
-    Number.isInteger(input.evoUnidadeId) &&
-    input.evoUnidadeId > 0
-  ) {
-    body.evoUnidadeId = input.evoUnidadeId;
   }
 
   return apiRequest<PacoteJobAceitoResponse>({

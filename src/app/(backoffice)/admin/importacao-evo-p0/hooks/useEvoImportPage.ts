@@ -1679,7 +1679,6 @@ export function useEvoImportPage() {
         maxRejeicoesRetorno: pacoteMaxRejeicoes,
         arquivos: arquivosParaImportar,
         tenantId: tenant,
-        evoUnidadeId: evoUnidadeIdParaJob,
         apelido: alias,
       });
 
@@ -1790,7 +1789,6 @@ export function useEvoImportPage() {
         arquivos: [arquivo.chave],
         retrySomenteErros: true,
         tenantId: tenant,
-        evoUnidadeId: evoUnidadeIdParaJob,
         apelido: alias,
       });
       await registrarOnboardingDoJob({
