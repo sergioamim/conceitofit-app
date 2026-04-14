@@ -9,9 +9,10 @@ import { Shield } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { adminLoginApi } from "@/lib/api/auth";
-import { consumeBackofficeReauthRequired, hasActiveSession } from "@/lib/api/session";
-import { buildForcedPasswordChangeHref } from "@/lib/tenant/auth-redirect";
+import { adminLoginApi, logoutApi } from "@/lib/api/auth";
+import { clearAuthSession, consumeBackofficeReauthRequired, hasActiveSession } from "@/lib/api/session";
+import { buildForcedPasswordChangeHref, resolveHomeForSession } from "@/lib/tenant/auth-redirect";
+import { isPlatformUser } from "@/lib/shared/user-kind";
 
 const backofficeLoginSchema = z.object({
   email: z.string().min(1, "Informe o e-mail."),
@@ -73,7 +74,13 @@ export function AdminLoginFlow({
         router.replace(buildForcedPasswordChangeHref(resolvedNextPath));
         return;
       }
-      router.replace(resolvedNextPath);
+      if (!isPlatformUser(session)) {
+        await logoutApi().catch(() => undefined);
+        clearAuthSession();
+        setError("Esta conta não tem acesso administrativo à plataforma.");
+        return;
+      }
+      router.replace(resolveHomeForSession(session));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao autenticar.");
     } finally {

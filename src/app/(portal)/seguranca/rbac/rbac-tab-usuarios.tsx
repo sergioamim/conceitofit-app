@@ -148,25 +148,6 @@ export function RbacTabUsuarios({
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo</label>
-                <Controller
-                  control={tenantUserForm.control}
-                  name="userKind"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger aria-label="Tipo do usuário da rede" className="border-border bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="COLABORADOR">Colaborador</SelectItem>
-                        <SelectItem value="SUPORTE">Suporte</SelectItem>
-                        <SelectItem value="PRESTADOR">Prestador</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
 
               <div className="space-y-2 md:col-span-2">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unidades da rede</label>
@@ -248,7 +229,7 @@ export function RbacTabUsuarios({
                     name: "",
                     email: "",
                     cpf: "",
-                    userKind: "COLABORADOR",
+                    userKind: "OPERADOR",
                     tenantIds: [],
                     defaultTenantId: "",
                     initialPerfilIds: [],

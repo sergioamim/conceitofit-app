@@ -1,9 +1,21 @@
 import { isContextualNetworkAccessEnabled } from "@/lib/feature-flags";
 import { buildNetworkAccessHref, normalizeNetworkSubdomain } from "@/lib/network-subdomain";
+import {
+  resolveUserKindFromSession,
+  type UserKind,
+  type UserKindSessionInput,
+} from "@/lib/shared/user-kind";
 
 const DEFAULT_POST_LOGIN_PATH = "/dashboard";
+const BACKOFFICE_HOME_PATH = "/admin";
 const DEFAULT_LOGIN_PATH = "/login";
 const FORCE_PASSWORD_CHANGE_PATH = "/primeiro-acesso/trocar-senha";
+
+const HOME_BY_KIND: Record<UserKind, string> = {
+  PLATAFORMA: BACKOFFICE_HOME_PATH,
+  OPERADOR: DEFAULT_POST_LOGIN_PATH,
+  CLIENTE: DEFAULT_POST_LOGIN_PATH,
+};
 
 export function resolvePostLoginPath(rawValue?: string | null): string {
   const candidate = rawValue?.trim();
@@ -53,4 +65,35 @@ export function buildForcedPasswordChangeHref(nextPath?: string): string {
     return FORCE_PASSWORD_CHANGE_PATH;
   }
   return `${FORCE_PASSWORD_CHANGE_PATH}?next=${encodeURIComponent(resolvedNext)}`;
+}
+
+export function resolveHomeForSession(session: UserKindSessionInput): string {
+  const kind = resolveUserKindFromSession(session);
+  if (!kind) return DEFAULT_POST_LOGIN_PATH;
+  return HOME_BY_KIND[kind];
+}
+
+export function resolvePostLoginPathForSession(
+  rawValue: string | null | undefined,
+  session: UserKindSessionInput,
+): string {
+  const home = resolveHomeForSession(session);
+  const sanitizedNext = resolvePostLoginPath(rawValue);
+  const kind = resolveUserKindFromSession(session);
+
+  if (sanitizedNext === DEFAULT_POST_LOGIN_PATH) {
+    return home;
+  }
+
+  const wantsBackoffice = sanitizedNext.startsWith(BACKOFFICE_HOME_PATH);
+
+  if (kind === "CLIENTE" && wantsBackoffice) {
+    return home;
+  }
+
+  if (kind === "PLATAFORMA" && !wantsBackoffice) {
+    return home;
+  }
+
+  return sanitizedNext;
 }

@@ -30,7 +30,7 @@ const TENANT_USER_DEFAULT: CreateTenantUserFormState = {
   name: "",
   email: "",
   cpf: "",
-  userKind: "COLABORADOR",
+  userKind: "OPERADOR",
   tenantIds: [],
   defaultTenantId: "",
   initialPerfilIds: [],

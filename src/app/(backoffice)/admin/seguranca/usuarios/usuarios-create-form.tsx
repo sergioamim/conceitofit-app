@@ -102,9 +102,8 @@ export function UsuariosCreateForm({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="COLABORADOR">Colaborador</SelectItem>
-                    <SelectItem value="SUPORTE">Suporte</SelectItem>
-                    <SelectItem value="PRESTADOR">Prestador</SelectItem>
+                    <SelectItem value="OPERADOR">Operador</SelectItem>
+                    <SelectItem value="PLATAFORMA">Plataforma</SelectItem>
                   </SelectContent>
                 </Select>
               )}

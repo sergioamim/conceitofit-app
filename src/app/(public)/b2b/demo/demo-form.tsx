@@ -98,7 +98,7 @@ export function DemoForm() {
         type: response.type ?? "Bearer",
         expiresIn: response.expiresIn,
         userId: response.userId,
-        userKind: response.userKind ?? "DEMO",
+        userKind: response.userKind ?? "OPERADOR",
         displayName: response.displayName ?? normalizedValues.nome,
         networkId: response.redeId,
         networkSubdomain: response.redeSubdominio ?? response.redeSlug,

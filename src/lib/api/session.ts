@@ -450,7 +450,7 @@ export function getSessionClaimsFromToken(token?: string): AuthSessionTokenClaim
 
   return {
     userId: readClaimString(payload, ["userId", "user_id", "sub", "id"]),
-    userKind: readClaimString(payload, ["userKind", "tipoUsuario"]),
+    userKind: readClaimString(payload, ["user_kind", "userKind", "tipoUsuario"]),
     displayName: readClaimString(payload, ["displayName", "nome"]),
     networkId: readClaimString(payload, ["redeId", "rede_id", "networkId"]),
     networkSubdomain,

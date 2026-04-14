@@ -14,13 +14,18 @@ import { Button } from "@/components/ui/button";
 import { DevSessionPanel } from "@/debug/dev-session-panel";
 import { TenantContextProvider, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useUserPreferences } from "@/lib/tenant/hooks/use-user-preferences";
-import { AUTH_SESSION_UPDATED_EVENT, getNetworkSlugFromSession, hasActiveSession } from "@/lib/api/session";
+import {
+  AUTH_SESSION_UPDATED_EVENT,
+  getNetworkSlugFromSession,
+  getUserKindFromSession,
+  hasActiveSession,
+} from "@/lib/api/session";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { isClientOperationalEligibilityEnabled } from "@/lib/feature-flags";
+import { normalizeUserKind } from "@/lib/shared/user-kind";
 
 function isClientScopedUser(userKind?: string): boolean {
-  const normalized = userKind?.trim().toUpperCase() ?? "";
-  return normalized === "CLIENTE" || normalized === "ALUNO";
+  return normalizeUserKind(userKind) === "CLIENTE";
 }
 
 function AppOperationalAccessGate({
@@ -215,6 +220,13 @@ function AppLayoutContent({
       router.replace(buildLoginHref(currentPath, getNetworkSlugFromSession()));
     }
   }, [authenticated, hydrated, pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (!hydrated || !authenticated) return;
+    if (normalizeUserKind(getUserKindFromSession()) === "PLATAFORMA") {
+      router.replace("/admin");
+    }
+  }, [authenticated, hydrated, router]);
 
   return (
     <AppShellFrame

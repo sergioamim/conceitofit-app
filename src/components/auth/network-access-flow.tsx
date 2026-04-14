@@ -14,8 +14,19 @@ import {
   type AccessNetworkContext,
 } from "@/lib/api/auth";
 import { getTenantContextApi, setTenantContextApi } from "@/lib/api/contexto-unidades";
-import { getPreferredTenantId, hasActiveSession, setPreferredTenantId } from "@/lib/api/session";
-import { buildForcedPasswordChangeHref, resolvePostLoginPath } from "@/lib/tenant/auth-redirect";
+import {
+  getAuthSessionSnapshot,
+  getPreferredTenantId,
+  hasActiveSession,
+  setPreferredTenantId,
+} from "@/lib/api/session";
+import {
+  buildForcedPasswordChangeHref,
+  resolveHomeForSession,
+  resolvePostLoginPath,
+  resolvePostLoginPathForSession,
+} from "@/lib/tenant/auth-redirect";
+import { isPlatformUser } from "@/lib/shared/user-kind";
 import { buildNetworkAccessHref } from "@/lib/network-subdomain";
 import {
   networkCredentialFormSchema,
@@ -136,9 +147,12 @@ export function NetworkAccessFlow({
   }, [networkSubdomain]);
 
   useEffect(() => {
-    if (mode === "login" && hasActiveSession()) {
-      router.replace(resolvedNextPath);
-    }
+    if (mode !== "login" || !hasActiveSession()) return;
+    const snapshot = getAuthSessionSnapshot();
+    const target = snapshot
+      ? resolvePostLoginPathForSession(resolvedNextPath, snapshot)
+      : resolvedNextPath;
+    router.replace(target);
   }, [mode, resolvedNextPath, router]);
 
   useEffect(() => {
@@ -187,6 +201,11 @@ export function NetworkAccessFlow({
 
       if (session.forcePasswordChangeRequired) {
         router.replace(buildForcedPasswordChangeHref(resolvedNextPath));
+        return;
+      }
+
+      if (isPlatformUser(session)) {
+        router.replace(resolveHomeForSession(session));
         return;
       }
 

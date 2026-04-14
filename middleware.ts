@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { normalizeUserKind, type UserKind } from "@/lib/shared/user-kind";
 
 // ---------------------------------------------------------------------------
 // Rotas públicas — não exigem sessão ativa
@@ -83,6 +84,56 @@ function buildLoginUrl(request: NextRequest): string {
 }
 
 // ---------------------------------------------------------------------------
+// Kind-aware guards
+// ---------------------------------------------------------------------------
+
+const BACKOFFICE_PREFIX = "/admin";
+const CLIENT_HOME_PATH = "/dashboard";
+
+function resolveKindFromSession(request: NextRequest): UserKind | null {
+  const claimsRaw = request.cookies.get(SESSION_CLAIMS_COOKIE)?.value;
+  if (!claimsRaw) return null;
+  try {
+    const parsed = JSON.parse(claimsRaw) as {
+      userKind?: unknown;
+      broadAccess?: unknown;
+      availableScopes?: unknown;
+    };
+    const direct = normalizeUserKind(
+      typeof parsed.userKind === "string" ? parsed.userKind : undefined,
+    );
+    if (direct) return direct;
+
+    const scopes = Array.isArray(parsed.availableScopes)
+      ? parsed.availableScopes
+          .map((item) => (typeof item === "string" ? item.trim().toUpperCase() : ""))
+          .filter(Boolean)
+      : [];
+    if (scopes.includes("GLOBAL") || parsed.broadAccess === true) {
+      return "PLATAFORMA";
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function isBackofficePath(pathname: string): boolean {
+  return pathname === BACKOFFICE_PREFIX || pathname.startsWith(`${BACKOFFICE_PREFIX}/`);
+}
+
+function isClientHomePath(pathname: string): boolean {
+  return pathname === CLIENT_HOME_PATH || pathname.startsWith(`${CLIENT_HOME_PATH}/`);
+}
+
+function redirectTo(request: NextRequest, path: string): NextResponse {
+  const url = request.nextUrl.clone();
+  url.pathname = path;
+  url.search = "";
+  return NextResponse.redirect(url);
+}
+
+// ---------------------------------------------------------------------------
 // Middleware
 // ---------------------------------------------------------------------------
 
@@ -101,6 +152,15 @@ export function middleware(request: NextRequest) {
     url.pathname = loginUrl.split("?")[0];
     url.search = loginUrl.includes("?") ? `?${loginUrl.split("?")[1]}` : "";
     return NextResponse.redirect(url);
+  }
+
+  // Kind guards — impede cross-area entre backoffice e área do cliente
+  const kind = resolveKindFromSession(request);
+  if (kind === "CLIENTE" && isBackofficePath(pathname)) {
+    return redirectTo(request, CLIENT_HOME_PATH);
+  }
+  if (kind === "PLATAFORMA" && isClientHomePath(pathname)) {
+    return redirectTo(request, BACKOFFICE_PREFIX);
   }
 
   return NextResponse.next();

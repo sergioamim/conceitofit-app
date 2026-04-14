@@ -39,7 +39,7 @@ export const CREATE_USER_DEFAULT: CreateGlobalUserForm = {
   name: "",
   email: "",
   cpf: "",
-  userKind: "COLABORADOR",
+  userKind: "OPERADOR",
   scopeType: "REDE",
   academiaId: "",
   tenantIds: [],
