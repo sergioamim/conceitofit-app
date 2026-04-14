@@ -49,6 +49,7 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { SidebarBackoffice } from "@/backoffice/components/sidebar-backoffice";
+import { SandboxBanner } from "@/components/layout/sandbox-banner";
 
 function isBackofficeNavItemActive(pathname: string, item: BackofficeNavItem) {
   return pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + "/"));
@@ -152,6 +153,8 @@ function AdminShellFrame({ children, pathname }: { children: ReactNode; pathname
     <TooltipProvider delayDuration={150}>
       <div className="relative h-screen bg-background overflow-hidden flex flex-col">
         <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[800px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gym-accent/5 opacity-50 blur-[120px]" />
+
+        <SandboxBanner />
 
         <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} />
 

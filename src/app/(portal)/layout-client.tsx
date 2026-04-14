@@ -17,9 +17,11 @@ import { useUserPreferences } from "@/lib/tenant/hooks/use-user-preferences";
 import {
   AUTH_SESSION_UPDATED_EVENT,
   getNetworkSlugFromSession,
+  getSandboxModeFromSession,
   getUserKindFromSession,
   hasActiveSession,
 } from "@/lib/api/session";
+import { SandboxBanner } from "@/components/layout/sandbox-banner";
 import { buildLoginHref } from "@/lib/tenant/auth-redirect";
 import { isClientOperationalEligibilityEnabled } from "@/lib/feature-flags";
 import { normalizeUserKind } from "@/lib/shared/user-kind";
@@ -145,6 +147,7 @@ function AppShellFrame({
       <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={onCloseMenu} shellReady={shellReady} />
       <main className="flex flex-1 flex-col overflow-hidden relative">
         <BackendStatusBanner />
+        <SandboxBanner />
         <ImpersonationBanner />
         <AppTopbar onOpenMenu={onOpenMenu} shellReady={shellReady} />
         <AppContentShell>{children}</AppContentShell>
@@ -223,7 +226,10 @@ function AppLayoutContent({
 
   useEffect(() => {
     if (!hydrated || !authenticated) return;
-    if (normalizeUserKind(getUserKindFromSession()) === "PLATAFORMA") {
+    if (
+      normalizeUserKind(getUserKindFromSession()) === "PLATAFORMA" &&
+      !getSandboxModeFromSession()
+    ) {
       router.replace("/admin");
     }
   }, [authenticated, hydrated, router]);

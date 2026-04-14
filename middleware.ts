@@ -159,11 +159,26 @@ export function middleware(request: NextRequest) {
   if (kind === "CLIENTE" && isBackofficePath(pathname)) {
     return redirectTo(request, CLIENT_HOME_PATH);
   }
-  if (kind === "PLATAFORMA" && isClientHomePath(pathname)) {
+  if (
+    kind === "PLATAFORMA"
+    && isClientHomePath(pathname)
+    && !isSandboxActive(request)
+  ) {
     return redirectTo(request, BACKOFFICE_PREFIX);
   }
 
   return NextResponse.next();
+}
+
+function isSandboxActive(request: NextRequest): boolean {
+  const raw = request.cookies.get(SESSION_CLAIMS_COOKIE)?.value;
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as { sandbox_mode?: unknown };
+    return parsed.sandbox_mode === true;
+  } catch {
+    return false;
+  }
 }
 
 export const config = {

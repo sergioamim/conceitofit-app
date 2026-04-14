@@ -71,6 +71,10 @@ interface LoginApiResponse {
   broadAccess?: boolean;
   operationalAccess?: OperationalAccessApiResponse;
   forcePasswordChange?: boolean;
+  sandboxMode?: boolean;
+  sandboxRedeId?: string;
+  sandboxUnidadeId?: string;
+  sandboxExpiresAt?: string;
 }
 
 export interface AdminEntrarComoUnidadeRequest {
@@ -214,6 +218,10 @@ function normalizeSession(
         : options?.preserveTenantContext
           ? getForcePasswordChangeRequiredFromSession()
           : false,
+    sandboxMode: response.sandboxMode ?? false,
+    sandboxRedeId: response.sandboxRedeId,
+    sandboxUnidadeId: response.sandboxUnidadeId,
+    sandboxExpiresAt: response.sandboxExpiresAt,
   };
 }
 

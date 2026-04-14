@@ -70,7 +70,16 @@ export function buildForcedPasswordChangeHref(nextPath?: string): string {
 export function resolveHomeForSession(session: UserKindSessionInput): string {
   const kind = resolveUserKindFromSession(session);
   if (!kind) return DEFAULT_POST_LOGIN_PATH;
+  if (kind === "PLATAFORMA" && isSandboxActive(session)) {
+    return DEFAULT_POST_LOGIN_PATH;
+  }
   return HOME_BY_KIND[kind];
+}
+
+function isSandboxActive(session: UserKindSessionInput): boolean {
+  if (!session || typeof session !== "object") return false;
+  const candidate = session as { sandboxMode?: unknown };
+  return candidate.sandboxMode === true;
 }
 
 export function resolvePostLoginPathForSession(
@@ -91,7 +100,7 @@ export function resolvePostLoginPathForSession(
     return home;
   }
 
-  if (kind === "PLATAFORMA" && !wantsBackoffice) {
+  if (kind === "PLATAFORMA" && !wantsBackoffice && !isSandboxActive(session)) {
     return home;
   }
 

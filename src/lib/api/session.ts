@@ -23,6 +23,10 @@ export interface AuthSession {
   availableScopes?: AuthSessionScope[];
   broadAccess?: boolean;
   forcePasswordChangeRequired?: boolean;
+  sandboxMode?: boolean;
+  sandboxRedeId?: string;
+  sandboxUnidadeId?: string;
+  sandboxExpiresAt?: string;
 }
 
 export interface AuthSessionTokenClaims {
@@ -39,6 +43,10 @@ export interface AuthSessionTokenClaims {
   broadAccess?: boolean;
   scope?: string;
   sessionMode?: string;
+  sandboxMode?: boolean;
+  sandboxRedeId?: string;
+  sandboxUnidadeId?: string;
+  sandboxExpiresAt?: string;
 }
 
 export interface ImpersonationSessionState {
@@ -253,6 +261,10 @@ export function getAuthSessionSnapshot(): AuthSession | null {
       : [],
     broadAccess: claims?.broadAccess,
     forcePasswordChangeRequired: claims?.forcePasswordChangeRequired,
+    sandboxMode: getSandboxModeFromSession(),
+    sandboxRedeId: getSandboxRedeIdFromSession(),
+    sandboxUnidadeId: getSandboxUnidadeIdFromSession(),
+    sandboxExpiresAt: getSandboxExpiresAtFromSession(),
   };
 }
 
@@ -462,7 +474,32 @@ export function getSessionClaimsFromToken(token?: string): AuthSessionTokenClaim
     broadAccess: typeof payload.broadAccess === "boolean" ? payload.broadAccess : undefined,
     scope: scopeClaim,
     sessionMode: readClaimString(payload, ["session_mode", "sessionMode"]),
+    sandboxMode:
+      typeof payload.sandbox_mode === "boolean"
+        ? (payload.sandbox_mode as boolean)
+        : typeof payload.sandboxMode === "boolean"
+          ? (payload.sandboxMode as boolean)
+          : undefined,
+    sandboxRedeId: readClaimString(payload, ["sandbox_rede_id", "sandboxRedeId"]),
+    sandboxUnidadeId: readClaimString(payload, ["sandbox_unidade_id", "sandboxUnidadeId"]),
+    sandboxExpiresAt: readClaimString(payload, ["sandbox_expires_at", "sandboxExpiresAt"]),
   };
+}
+
+export function getSandboxModeFromSession(): boolean {
+  return getSessionClaimsFromToken(getAccessToken()).sandboxMode === true;
+}
+
+export function getSandboxRedeIdFromSession(): string | undefined {
+  return getSessionClaimsFromToken(getAccessToken()).sandboxRedeId;
+}
+
+export function getSandboxUnidadeIdFromSession(): string | undefined {
+  return getSessionClaimsFromToken(getAccessToken()).sandboxUnidadeId;
+}
+
+export function getSandboxExpiresAtFromSession(): string | undefined {
+  return getSessionClaimsFromToken(getAccessToken()).sandboxExpiresAt;
 }
 
 export function getRolesFromSession(): string[] {
