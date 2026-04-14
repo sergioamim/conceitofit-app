@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, FileText } from "lucide-react";
 import { SuggestionInput } from "@/components/shared/suggestion-input";
 import { MapeamentoAcademiaUnidadeSelector } from "@/backoffice/components/admin/importacao-academia-unidade-selector";
+import { ColunasMapeadasModal } from "@/components/admin/colunas-mapeadas-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,12 +19,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatCnpj, isValidCnpj } from "@/lib/utils/cnpj";
 import { normalizeSubdomain } from "@/lib/utils/subdomain";
 import { formatDateTime } from "../date-time-format";
+import { getTargetTable } from "../lib/csv-to-table";
 import { formatResumoCount, resolveArquivoHistoricoBadge } from "../shared";
 import type { EvoImportPageState } from "../hooks/useEvoImportPage";
+import { ReutilizarLoteCard } from "./ReutilizarLoteCard";
 
 export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
   const {
@@ -44,6 +61,7 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
     pacoteArquivosSelecionadosSet,
     arquivosSelecionadosDaAnalise,
     eligibleAdminsPreview, pacoteResumoAcessoAutomatico, tenantFocoAcademiaId,
+    tenantFoco, setActiveTab,
     academiaOptions, getUnidadesOptions, loadingMapeamento,
     analisarArquivoPacote, atualizarAnalisePacote,
     criarJobPacote, tentarSomenteErrosDoArquivo,
@@ -60,10 +78,73 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
     salvarNovaUnidadePacote,
   } = state;
 
+  const arquivosDisponiveisCount = pacoteArquivosDisponiveis.filter((a) => a.disponivel).length;
+  const arquivosSelecionadosCount = arquivosSelecionadosDaAnalise.length;
+  const temClientesSelecionado = pacoteArquivosSelecionadosSet.has("clientes");
+  const temFuncionariosSelecionado = pacoteArquivosSelecionadosSet.has("funcionarios");
+  const mostrarAvisoAcessos = temClientesSelecionado || temFuncionariosSelecionado;
+
+  async function retryErrosSelecionados() {
+    const alvos = pacoteArquivosDisponiveis.filter((arquivo) => {
+      if (!pacoteArquivosSelecionadosSet.has(arquivo.chave)) return false;
+      if (!arquivo.historico.retrySomenteErrosSuportado) return false;
+      const status = arquivo.historico.status;
+      if (status !== "comErros" && status !== "parcial") return false;
+      return true;
+    });
+    for (const arquivo of alvos) {
+      await tentarSomenteErrosDoArquivo(arquivo);
+    }
+  }
+
+  const podeRetryErrosSelecionados = pacoteArquivosDisponiveis.some((arquivo) => {
+    if (!pacoteArquivosSelecionadosSet.has(arquivo.chave)) return false;
+    if (!arquivo.historico.retrySomenteErrosSuportado) return false;
+    const status = arquivo.historico.status;
+    return status === "comErros" || status === "parcial";
+  });
+
+  function scrollToUploadSection() {
+    if (typeof document === "undefined") return;
+    const el = document.getElementById("evo-pacote-upload");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
   return (
     <>
       <div className="space-y-6 pb-12">
-      <Card>
+      {tenantFoco ? (
+        <ReutilizarLoteCard
+          tenantId={tenantFoco}
+          onReutilizado={() => {
+            setActiveTab("acompanhamento");
+          }}
+          onSubirNovo={scrollToUploadSection}
+        />
+      ) : null}
+
+      {pacoteAnalise ? (
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border py-3 -mx-1 px-1 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Novo lote</p>
+            <p className="text-sm text-muted-foreground truncate">
+              {arquivosSelecionadosCount} {arquivosSelecionadosCount === 1 ? "arquivo selecionado" : "arquivos selecionados"} de {arquivosDisponiveisCount} {arquivosDisponiveisCount === 1 ? "disponível" : "disponíveis"}
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={criarJobPacote}
+            disabled={pacoteCriandoJob || arquivosSelecionadosCount === 0}
+          >
+            {pacoteCriandoJob ? "Criando job..." : "Criar job"}
+          </Button>
+        </div>
+      ) : null}
+
+      <Card id="evo-pacote-upload">
         <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
           <CardTitle className="text-lg">Etapa 1: Analisar pacote ZIP</CardTitle>
           <p className="text-sm text-muted-foreground">Se quiser, já selecione a academia para contextualizar as sugestões. A EVO Unidade fica para depois da leitura do ZIP.</p>
@@ -136,7 +217,11 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-3">
+                <ColunasMapeadasModal
+                  arquivoSelecionado={null}
+                  arquivosDisponiveis={pacoteArquivosDisponiveis}
+                />
                 <Button onClick={analisarArquivoPacote} disabled={pacoteAnalisando || !pacoteArquivo}>
                   {pacoteAnalisando ? "Analisando pacote..." : "Analisar pacote"}
                 </Button>
@@ -488,7 +573,9 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                             variant="outline"
                             onClick={() =>
                               setPacoteArquivosSelecionados(
-                                pacoteArquivosDisponiveis.filter((arquivo) => arquivo.disponivel).map((arquivo) => arquivo.chave)
+                                pacoteArquivosDisponiveis
+                                  .filter((arquivo) => arquivo.disponivel && getTargetTable(arquivo.chave) !== null)
+                                  .map((arquivo) => arquivo.chave)
                               )
                             }
                           >
@@ -502,144 +589,166 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                           >
                             Desmarcar todos
                           </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={!podeRetryErrosSelecionados || pacoteCriandoJob}
+                            onClick={() => {
+                              void retryErrosSelecionados();
+                            }}
+                          >
+                            Retry erros selecionados
+                          </Button>
                         </div>
                       </div>
-                      <div className="grid gap-2">
-                        {pacoteArquivosDisponiveis.map((arquivo) => {
-                          const selecionado = pacoteArquivosSelecionadosSet.has(arquivo.chave);
-                          const badgeHistorico = resolveArquivoHistoricoBadge(arquivo.historico);
-                          const podeAbrirRejeicoes = Boolean(arquivo.blocoFiltro || arquivo.entidadeFiltro)
-                            && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial");
-                          const podeRetrySomenteErros = arquivo.historico.retrySomenteErrosSuportado
-                            && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial")
-                            && (arquivo.historico.status as string) !== "processando";
-                          const labelRetrySomenteErros = arquivo.historico.retrySomenteErrosSuportado
-                            ? "Tentar somente erros"
-                            : "Tentar somente erros (aguardando backend)";
-                          return (
-                            <label
-                              key={arquivo.chave}
-                              className={cn(
-                                "grid grid-cols-[1fr_auto] gap-2 rounded-md border border-border px-3 py-2 text-sm",
-                                arquivo.disponivel ? "bg-background" : "bg-muted/40"
-                              )}
+
+                      {mostrarAvisoAcessos ? (
+                        <div className="rounded-md border border-border bg-secondary/20 px-3 py-2 text-xs text-muted-foreground">
+                          <p className="font-medium text-foreground">
+                            Propagação automática de acessos
+                          </p>
+                          <p className="mt-1">
+                            {eligibleAdminsPreview.loading
+                              ? "Consultando propagação automática de acessos..."
+                              : pacoteResumoAcessoAutomatico ?? "Nenhum usuário administrativo está elegível para propagação automática nesta academia."}
+                          </p>
+                          {tenantFocoAcademiaId ? (
+                            <Link
+                              href={`/admin/seguranca/usuarios?academiaId=${tenantFocoAcademiaId}&eligible=1`}
+                              className="mt-2 inline-flex text-xs font-medium text-gym-accent hover:underline"
                             >
-                              <div className="space-y-1">
-                                <p className="font-medium">{arquivo.rotulo || arquivo.chave}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {arquivo.arquivoEsperado} | enviado: {arquivo.nomeArquivoEnviado ?? "—"} | {formatBytes(arquivo.tamanhoBytes)}
-                                </p>
-                                <p className="text-xs text-muted-foreground">Chave: {arquivo.chave}</p>
-                                <div className="rounded-md border border-border bg-secondary/20 px-2.5 py-2">
-                                  <div className="flex flex-wrap items-center gap-2">
+                              Abrir segurança
+                            </Link>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      <TooltipProvider delayDuration={100}>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-8" />
+                              <TableHead>Arquivo CSV</TableHead>
+                              <TableHead>Tabela destino</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Processadas</TableHead>
+                              <TableHead className="text-right">Rejeitadas</TableHead>
+                              <TableHead>Ações</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {pacoteArquivosDisponiveis.map((arquivo) => {
+                              const selecionado = pacoteArquivosSelecionadosSet.has(arquivo.chave);
+                              const badgeHistorico = resolveArquivoHistoricoBadge(arquivo.historico);
+                              const targetTable = getTargetTable(arquivo.chave);
+                              const semTabela = targetTable === null;
+                              const podeAbrirRejeicoes = Boolean(arquivo.blocoFiltro || arquivo.entidadeFiltro)
+                                && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial");
+                              const podeRetrySomenteErros = arquivo.historico.retrySomenteErrosSuportado
+                                && (arquivo.historico.status === "comErros" || arquivo.historico.status === "parcial")
+                                && (arquivo.historico.status as string) !== "processando";
+                              const labelRetrySomenteErros = arquivo.historico.retrySomenteErrosSuportado
+                                ? "Tentar somente erros"
+                                : "Tentar somente erros (aguardando backend)";
+                              const rejeitadas = arquivo.historico.resumo?.rejeitadas ?? null;
+                              const checkboxDisabled = !arquivo.disponivel || semTabela;
+                              const linhaMuted = semTabela;
+                              const retryButton = (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7"
+                                  disabled={!podeRetrySomenteErros || pacoteCriandoJob}
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    void tentarSomenteErrosDoArquivo(arquivo);
+                                  }}
+                                >
+                                  Retry erros
+                                </Button>
+                              );
+                              return (
+                                <TableRow
+                                  key={arquivo.chave}
+                                  className={cn(linhaMuted && "text-muted-foreground opacity-60")}
+                                >
+                                  <TableCell>
+                                    <input
+                                      type="checkbox"
+                                      aria-label={`Selecionar ${arquivo.rotulo || arquivo.chave}`}
+                                      disabled={checkboxDisabled}
+                                      checked={selecionado}
+                                      onChange={(e) => togglePacoteArquivo(arquivo.chave, e.target.checked)}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="max-w-[240px]">
+                                    <p className="font-medium truncate">{arquivo.rotulo || arquivo.chave}</p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {arquivo.arquivoEsperado} · {formatBytes(arquivo.tamanhoBytes)}
+                                    </p>
+                                    {!arquivo.disponivel ? (
+                                      <p className="text-[11px] text-destructive">
+                                        {arquivo.catalogadoPeloBackend ? "Não enviado" : "Não reconhecido"}
+                                      </p>
+                                    ) : null}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs">
+                                    {targetTable ?? "—"}
+                                  </TableCell>
+                                  <TableCell>
                                     <Badge variant="outline" className={cn("text-[11px]", badgeHistorico.className)}>
                                       {badgeHistorico.label}
                                     </Badge>
-                                    <span className="text-[11px] text-muted-foreground">
-                                      {arquivo.historico.aliasResolvido || arquivo.historico.jobIdExibicao || "Sem job anterior"}
-                                    </span>
-                                  </div>
-                                  <div className="mt-2 grid gap-1 text-[11px] text-muted-foreground md:grid-cols-2">
-                                    <p>
-                                      <span className="font-medium text-foreground">Job:</span> {arquivo.historico.jobIdExibicao ?? "—"}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium text-foreground">Processado em:</span>{" "}
-                                      {arquivo.historico.processadoEmExibicao ? formatDateTime(arquivo.historico.processadoEmExibicao) : "—"}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium text-foreground">Processadas:</span>{" "}
-                                      {formatResumoCount(arquivo.historico.resumo?.processadas ?? null)}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium text-foreground">Criadas:</span>{" "}
-                                      {formatResumoCount(arquivo.historico.resumo?.criadas ?? null)}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium text-foreground">Atualizadas:</span>{" "}
-                                      {formatResumoCount(arquivo.historico.resumo?.atualizadas ?? null)}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium text-foreground">Rejeitadas:</span>{" "}
-                                      {formatResumoCount(arquivo.historico.resumo?.rejeitadas ?? null)}
-                                    </p>
-                                  </div>
-                                  {arquivo.historico.mensagemParcial ? (
-                                    <p className="mt-2 text-[11px] text-muted-foreground">{arquivo.historico.mensagemParcial}</p>
-                                  ) : null}
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    {podeAbrirRejeicoes ? (
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-7"
-                                        onClick={(event) => {
-                                          event.preventDefault();
-                                          event.stopPropagation();
-                                          abrirRejeicoesDoHistoricoArquivo(arquivo);
-                                        }}
-                                      >
-                                        Ver rejeições
-                                      </Button>
-                                    ) : null}
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7"
-                                      disabled={!podeRetrySomenteErros || pacoteCriandoJob}
-                                      onClick={(event) => {
-                                        event.preventDefault();
-                                        event.stopPropagation();
-                                        void tentarSomenteErrosDoArquivo(arquivo);
-                                      }}
-                                    >
-                                      {labelRetrySomenteErros}
-                                    </Button>
-                                  </div>
-                                </div>
-                                {selecionado && (arquivo.chave === "clientes" || arquivo.chave === "funcionarios") ? (
-                                  <div className="rounded-md border border-border bg-secondary/20 px-2.5 py-2 text-xs text-muted-foreground">
-                                    <p className="font-medium text-foreground">
-                                      {eligibleAdminsPreview.loading
-                                        ? "Consultando propagação automática de acessos..."
-                                        : pacoteResumoAcessoAutomatico ?? "Nenhum usuário administrativo está elegível para propagação automática nesta academia."}
-                                    </p>
-                                    {tenantFocoAcademiaId ? (
-                                      <Link
-                                        href={`/admin/seguranca/usuarios?academiaId=${tenantFocoAcademiaId}&eligible=1`}
-                                        className="mt-2 inline-flex text-xs font-medium text-gym-accent hover:underline"
-                                      >
-                                        Abrir segurança
-                                      </Link>
-                                    ) : null}
-                                  </div>
-                                ) : null}
-                                {arquivo.descricao ? (
-                                  <p className="text-xs text-muted-foreground">{arquivo.descricao}</p>
-                                ) : null}
-                                {!arquivo.disponivel && arquivo.impactoAusencia ? (
-                                  <p className="text-xs text-muted-foreground">{arquivo.impactoAusencia}</p>
-                                ) : null}
-                              </div>
-                              <div className="flex items-center">
-                                <input
-                                  type="checkbox"
-                                  disabled={!arquivo.disponivel}
-                                  checked={selecionado}
-                                  onChange={(e) => togglePacoteArquivo(arquivo.chave, e.target.checked)}
-                                />
-                                {!arquivo.disponivel && (
-                                  <span className="ml-2 text-xs text-destructive">
-                                    {arquivo.catalogadoPeloBackend ? "Não enviado" : "Não reconhecido"}
-                                  </span>
-                                )}
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
+                                  </TableCell>
+                                  <TableCell className="text-right tabular-nums">
+                                    {formatResumoCount(arquivo.historico.resumo?.processadas ?? null)}
+                                  </TableCell>
+                                  <TableCell
+                                    className={cn(
+                                      "text-right tabular-nums",
+                                      typeof rejeitadas === "number" && rejeitadas > 0 ? "text-destructive font-medium" : undefined
+                                    )}
+                                  >
+                                    {formatResumoCount(rejeitadas)}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                      {podeAbrirRejeicoes ? (
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7"
+                                          onClick={(event) => {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            abrirRejeicoesDoHistoricoArquivo(arquivo);
+                                          }}
+                                        >
+                                          Rejeições
+                                        </Button>
+                                      ) : null}
+                                      {podeRetrySomenteErros ? (
+                                        retryButton
+                                      ) : (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="inline-flex">{retryButton}</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent>{labelRetrySomenteErros}</TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </TooltipProvider>
                     </div>
                   )}
 

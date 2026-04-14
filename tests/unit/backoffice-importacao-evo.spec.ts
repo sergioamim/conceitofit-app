@@ -368,6 +368,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(calls[0].method).toBe("POST");
       expect(calls[0].headers.get("Content-Type")).toBe("application/json");
       expect(calls[0].headers.get("X-Tenant-Id")).toBe("tenant-pacote");
+      expect(calls[0].headers.get("X-Context-Id")).toBeNull();
       expect(JSON.parse(String(calls[0].body))).toEqual({
         dryRun: false,
         maxRejeicoesRetorno: 50,
@@ -406,6 +407,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(job.jobId).toBe("job-pacote-retry");
       expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/upload-1/job");
       expect(calls[0].headers.get("X-Tenant-Id")).toBe("tenant-pacote");
+      expect(calls[0].headers.get("X-Context-Id")).toBeNull();
       expect(JSON.parse(String(calls[0].body))).toEqual({
         dryRun: false,
         maxRejeicoesRetorno: 50,

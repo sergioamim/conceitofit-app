@@ -2083,7 +2083,7 @@ export function useEvoImportPage() {
     if (resetTimer) setPollStartedAt(Date.now());
     setPolling(true);
     pollOnce(id, tenantIds, origem, tenant);
-    pollTimer.current = setInterval(() => pollOnce(id, tenantIds, origem, tenant), 3000);
+    pollTimer.current = setInterval(() => pollOnce(id, tenantIds, origem, tenant), 20000);
   }, [pollOnce, resolveCurrentTenantIdRaw]);
 
   useEffect(() => {

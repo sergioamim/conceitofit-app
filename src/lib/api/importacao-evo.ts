@@ -260,6 +260,7 @@ export async function createEvoP0PacoteJobApi(input: {
     method: "POST",
     body,
     headers: buildExplicitTenantHeaders(tenantId),
+    includeContextHeader: false,
   });
 }
 
@@ -313,6 +314,72 @@ export async function getEvoImportJobResumoApi(input: {
     path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${input.jobId}`,
     query,
     headers,
+    includeContextHeader: false,
+  });
+}
+
+export interface UltimoLoteResponse {
+  jobId: string;
+  apelido: string;
+  status: string;
+  arquivosDisponiveis: string[];
+  arquivosSelecionados: string[];
+  criadoEm: string;
+}
+
+export async function getUltimoLoteApi(input: {
+  tenantId: string;
+}): Promise<UltimoLoteResponse | null> {
+  const tenantId = normalizeTenantId(input.tenantId);
+  if (!tenantId) return null;
+  try {
+    const response = await apiRequest<UltimoLoteResponse | null | undefined>({
+      path: "/api/v1/admin/integracoes/importacao-terceiros/jobs/last-for-tenant",
+      query: { tenantId },
+      headers: buildTenantHeaders(tenantId),
+      includeContextHeader: false,
+    });
+    if (!response || typeof response !== "object") return null;
+    // Backend pode retornar 204 (body vazio -> parsedBody undefined) ou objeto sem jobId.
+    if (typeof (response as UltimoLoteResponse).jobId !== "string") return null;
+    return response as UltimoLoteResponse;
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 204) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export interface FromSourceInput {
+  sourceJobId: string;
+  apelido?: string;
+  arquivosSelecionados?: string[];
+}
+
+export interface FromSourceResponse {
+  jobId: string;
+  apelido: string;
+  status: string;
+}
+
+export async function fromSourceApi(input: FromSourceInput): Promise<FromSourceResponse> {
+  const body: {
+    sourceJobId: string;
+    apelido?: string;
+    arquivosSelecionados?: string[];
+  } = { sourceJobId: input.sourceJobId };
+  if (typeof input.apelido === "string" && input.apelido.trim().length > 0) {
+    body.apelido = input.apelido.trim();
+  }
+  if (Array.isArray(input.arquivosSelecionados) && input.arquivosSelecionados.length > 0) {
+    body.arquivosSelecionados = input.arquivosSelecionados;
+  }
+  return apiRequest<FromSourceResponse>({
+    path: "/api/v1/admin/integracoes/importacao-terceiros/jobs/from-source",
+    method: "POST",
+    body,
+    headers: buildTenantHeaders(),
     includeContextHeader: false,
   });
 }
