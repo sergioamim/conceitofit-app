@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   BarChart3,
   Building2,
+  Coins,
   CreditCard,
   Eye,
   FileText,
@@ -55,6 +56,12 @@ export const monitorGroup: NavGroup = {
     { href: "/admin/bi", label: "BI Executivo", icon: BarChart3 },
     { href: "/admin/operacional/saude", label: "Saúde do Sistema", icon: Activity },
     { href: "/admin/operacional/alertas", label: "Alertas Ativos", icon: AlertTriangle },
+    {
+      href: "/admin/caixas",
+      label: "Caixas",
+      icon: Coins,
+      description: "Dashboard, listagem e diferenças (CXO-203)",
+    },
   ],
 };
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   hasClientDeleteCapability,
   hasElevatedAccess,
+  hasGerenteAccess,
   normalizeRoles,
 } from "@/lib/access-control";
 
@@ -36,6 +37,31 @@ describe("hasElevatedAccess", () => {
   it("returns false for null/undefined", () => {
     expect(hasElevatedAccess(null)).toBe(false);
     expect(hasElevatedAccess(undefined)).toBe(false);
+  });
+});
+
+describe("hasGerenteAccess", () => {
+  it("returns true for GERENTE role", () => {
+    expect(hasGerenteAccess(["GERENTE"])).toBe(true);
+  });
+
+  it("returns true for COORDENADOR role", () => {
+    expect(hasGerenteAccess(["COORDENADOR"])).toBe(true);
+  });
+
+  it("returns true for ADMIN-like roles", () => {
+    expect(hasGerenteAccess(["ADMIN"])).toBe(true);
+    expect(hasGerenteAccess(["SUPER_ADMIN"])).toBe(true);
+  });
+
+  it("returns false for OPERADOR/ATENDENTE", () => {
+    expect(hasGerenteAccess(["OPERADOR"])).toBe(false);
+    expect(hasGerenteAccess(["ATENDENTE"])).toBe(false);
+  });
+
+  it("returns false for null/undefined", () => {
+    expect(hasGerenteAccess(null)).toBe(false);
+    expect(hasGerenteAccess(undefined)).toBe(false);
   });
 });
 
