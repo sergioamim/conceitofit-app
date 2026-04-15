@@ -115,15 +115,13 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
   return (
     <>
       <div className="space-y-6 pb-12">
-      {tenantFoco ? (
-        <ReutilizarLoteCard
-          tenantId={tenantFoco}
-          onReutilizado={() => {
-            setActiveTab("acompanhamento");
-          }}
-          onSubirNovo={scrollToUploadSection}
-        />
-      ) : null}
+      <ReutilizarLoteCard
+        tenantId={tenantFoco || undefined}
+        onReutilizado={() => {
+          setActiveTab("acompanhamento");
+        }}
+        onSubirNovo={scrollToUploadSection}
+      />
 
       {pacoteAnalise ? (
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border py-3 -mx-1 px-1 flex items-center justify-between gap-3">
