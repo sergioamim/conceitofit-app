@@ -57,7 +57,10 @@ export function ReutilizarLoteCard({
     if (!ultimoLote) return;
     setReutilizando(true);
     try {
-      const novo = await fromSourceApi({ sourceJobId: ultimoLote.jobId });
+      const novo = await fromSourceApi({
+        sourceJobId: ultimoLote.jobId,
+        tenantId: ultimoLote.tenantId ?? tenantId,
+      });
       onReutilizado(novo.jobId);
       toast({
         title: "Lote reutilizado",

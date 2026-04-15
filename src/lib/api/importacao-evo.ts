@@ -325,6 +325,7 @@ export interface UltimoLoteResponse {
   arquivosDisponiveis: string[];
   arquivosSelecionados: string[];
   criadoEm: string;
+  tenantId?: string;
 }
 
 export async function getUltimoLoteApi(input: {
@@ -355,6 +356,7 @@ export interface FromSourceInput {
   sourceJobId: string;
   apelido?: string;
   arquivosSelecionados?: string[];
+  tenantId?: string;
 }
 
 export interface FromSourceResponse {
@@ -379,7 +381,7 @@ export async function fromSourceApi(input: FromSourceInput): Promise<FromSourceR
     path: "/api/v1/admin/integracoes/importacao-terceiros/jobs/from-source",
     method: "POST",
     body,
-    headers: buildTenantHeaders(),
+    headers: buildTenantHeaders(input.tenantId),
     includeContextHeader: false,
   });
 }
