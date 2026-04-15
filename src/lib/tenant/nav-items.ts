@@ -114,6 +114,7 @@ export const financeGroup: NavGroup = {
   label: "Financeiro",
   icon: Wallet,
   items: [
+    { href: "/caixa", label: "Meu Caixa", icon: Wallet, description: "Operação diária (PDV)" },
     { href: "/pagamentos", label: "Recebimentos", icon: DollarSign },
     { href: "/financeiro/pix", label: "PIX", icon: QrCode, description: "Cobranças PIX com QR Code" },
     { href: "/gerencial/recebimentos", label: "Baixas Bancárias", icon: HandCoins },
