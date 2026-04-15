@@ -130,14 +130,18 @@ export function normalizeUploadAnaliseArquivoHistorico(
   const temHistorico = Boolean(jobId || alias || processadoEm || statusJob || resumo);
 
   let status: EvoArquivoHistoricoStatus = "nuncaImportado";
+  const rejeitadasArquivo = Number(resumo?.rejeitadas ?? 0);
+  const processadasArquivo = Number(resumo?.processadas ?? 0);
   if (statusJob === "PROCESSANDO") {
     status = "processando";
-  } else if (statusJob === "FALHA" || Number(resumo?.rejeitadas ?? 0) > 0) {
+  } else if (rejeitadasArquivo > 0) {
     status = "comErros";
-  } else if (parcial || statusJob === "CONCLUIDO_COM_REJEICOES") {
+  } else if (parcial) {
     status = "parcial";
-  } else if (statusJob === "CONCLUIDO" || Number(resumo?.processadas ?? 0) > 0) {
+  } else if (processadasArquivo > 0 || statusJob === "CONCLUIDO" || statusJob === "CONCLUIDO_COM_REJEICOES") {
     status = "sucesso";
+  } else if (statusJob === "FALHA") {
+    status = "comErros";
   }
 
   return {
