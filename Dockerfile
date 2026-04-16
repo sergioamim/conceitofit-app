@@ -19,7 +19,7 @@ ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
 # BACKEND_PROXY_TARGET e obrigatorio pelo env.ts no build-time
 # Em runtime, e sobrescrito pelo docker-compose via env
-ARG BACKEND_PROXY_TARGET="http://backend:8080"
+ARG BACKEND_PROXY_TARGET="http://backend-blue:8080"
 ENV BACKEND_PROXY_TARGET=${BACKEND_PROXY_TARGET}
 
 RUN npm run build
