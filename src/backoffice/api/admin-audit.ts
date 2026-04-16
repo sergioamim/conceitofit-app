@@ -202,6 +202,7 @@ export interface ListAuditLogsInput {
 
 export interface StartImpersonationInput {
   userId: string;
+  tenantId: string;
   justification: string;
 }
 
@@ -257,8 +258,11 @@ export async function impersonateUserApi(input: StartImpersonationInput): Promis
   const response = await apiRequest<RawImpersonationResponse>({
     path: `/api/v1/administrativo/audit-log/usuarios/${encodeURIComponent(input.userId)}/impersonate`,
     method: "POST",
+    query: {
+      tenantId: input.tenantId,
+    },
     body: {
-      justification: input.justification,
+      justificativa: input.justification,
     },
   });
 

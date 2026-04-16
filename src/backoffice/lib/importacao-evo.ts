@@ -1,11 +1,17 @@
 import {
   type EvoImportColaboradoresBlocoResumo,
+  createEvoPacoteFotoImportJobApi,
   createEvoP0CsvUploadApi,
   createEvoP0PacoteJobApi,
+  getEvoFotoImportEstadoApi,
+  getEvoFotoImportJobStatusApi,
   getEvoImportJobResumoApi,
   getEvoP0PacoteAnaliseApi,
   listEvoImportJobRejeicoesApi,
   uploadEvoP0PacoteApi,
+  type EvoFotoImportEstadoResponse,
+  type EvoFotoImportJobResponse,
+  type EvoFotoImportJobStatusResponse,
   type EvoImportEntidadeResumo,
   type EvoImportJobResumo,
   type EvoImportJobStatus,
@@ -170,7 +176,6 @@ export type BackofficeEvoJobAceitoResponse = {
 
 type CsvJobInput = {
   dryRun: boolean;
-  maxRejeicoesRetorno: number;
   mapeamentoFiliais: Array<{ idFilialEvo: number; tenantId: string }>;
   arquivos: Array<{ field: string; file: File }>;
   tenantId?: string;
@@ -180,7 +185,6 @@ type CsvJobInput = {
 type PacoteJobInput = {
   uploadId: string;
   dryRun: boolean;
-  maxRejeicoesRetorno: number;
   arquivos?: string[] | null;
   retrySomenteErros?: boolean;
   tenantId?: string;
@@ -203,7 +207,6 @@ type PackageAnaliseInput = {
 
 type JobResumoInput = {
   jobId: string;
-  maxRejeicoesRetorno?: number;
   tenantId?: string;
   contextoTenantId?: string;
 };
@@ -228,6 +231,31 @@ export async function createBackofficeEvoP0PacoteJob(input: PacoteJobInput): Pro
   return createEvoP0PacoteJobApi(input);
 }
 
+export async function getBackofficeEvoFotoImportEstado(input: {
+  tenantId?: string;
+  contextoTenantId?: string;
+}): Promise<EvoFotoImportEstadoResponse> {
+  return getEvoFotoImportEstadoApi(input);
+}
+
+export async function createBackofficeEvoPacoteFotoImportJob(input: {
+  uploadId: string;
+  tenantId?: string;
+  contextoTenantId?: string;
+  dryRun?: boolean;
+  force?: boolean;
+}): Promise<EvoFotoImportJobResponse> {
+  return createEvoPacoteFotoImportJobApi(input);
+}
+
+export async function getBackofficeEvoFotoImportJobStatus(input: {
+  jobId: string;
+  tenantId?: string;
+  contextoTenantId?: string;
+}): Promise<EvoFotoImportJobStatusResponse> {
+  return getEvoFotoImportJobStatusApi(input);
+}
+
 export async function createBackofficeEvoP0CsvJob(input: CsvJobInput): Promise<BackofficeEvoJobAceitoResponse> {
   return createEvoP0CsvUploadApi(input);
 }
@@ -241,6 +269,9 @@ export async function listBackofficeEvoImportJobRejeicoes(input: RejeicoesInput)
 }
 
 export type {
+  EvoFotoImportEstadoResponse,
+  EvoFotoImportJobResponse,
+  EvoFotoImportJobStatusResponse,
   EvoImportColaboradoresBlocoResumo,
   EvoImportEntidadeResumo,
   EvoImportJobResumo,

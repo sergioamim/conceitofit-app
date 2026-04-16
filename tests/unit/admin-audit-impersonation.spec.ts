@@ -181,13 +181,15 @@ test.describe("admin audit impersonation api", () => {
     try {
       const response = await impersonateUserApi({
         userId: "user-bruno",
+        tenantId: "tenant-centro",
         justification: "Diagnóstico remoto",
       });
 
       expect(calls).toHaveLength(1);
       expect(calls[0].method).toBe("POST");
       expect(calls[0].url).toContain("/api/v1/administrativo/audit-log/usuarios/user-bruno/impersonate");
-      expect(JSON.parse(calls[0].body ?? "{}")).toEqual({ justification: "Diagnóstico remoto" });
+      expect(calls[0].url).toContain("tenantId=tenant-centro");
+      expect(JSON.parse(calls[0].body ?? "{}")).toEqual({ justificativa: "Diagnóstico remoto" });
       expect(response).toEqual({
         auditContextId: "audit-imp-1",
         targetUserId: "user-bruno",

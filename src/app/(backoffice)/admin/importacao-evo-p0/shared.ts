@@ -14,8 +14,9 @@ import type {
 } from "@/lib/api/importacao-evo";
 import type { EvoArquivoHistoricoNormalizado } from "@/backoffice/lib/importacao-evo";
 import type { Tenant } from "@/lib/types";
-import { formatCnpj } from "@/lib/utils/cnpj";
+import { formatCnpj, isValidCnpj } from "@/lib/utils/cnpj";
 import { normalizeSubdomain } from "@/lib/utils/subdomain";
+import { z } from "zod";
 import { formatJobAliasDate } from "./date-time-format";
 
 
@@ -357,6 +358,7 @@ export type PacoteArquivoDisponivel = UploadAnaliseArquivo & {
 
 export type RejeicaoClassificada = Rejeicao & {
   idNormalizado: string;
+  ocorrenciasAgrupadas: number;
   blocoClassificado: ColaboradorBlocoKey | null;
   blocoLabel: string | null;
   diagnostico: string | null;
@@ -684,6 +686,31 @@ export type NovaUnidadePacoteForm = {
   cidade: string;
 };
 
+export type NovaUnidadePacoteFieldErrors = Partial<Record<keyof NovaUnidadePacoteForm, string>>;
+
+const novaUnidadePacoteSchema = z.object({
+  nomeOriginal: z.string(),
+  nome: z.string().trim().min(1, "Informe o nome da unidade."),
+  subdomain: z
+    .string()
+    .trim()
+    .min(1, "Informe um subdominio valido para a nova unidade.")
+    .regex(/^[a-z0-9-]+$/, "Use apenas letras minusculas, numeros e hifens no subdominio."),
+  documento: z
+    .string()
+    .trim()
+    .min(1, "Informe um CNPJ valido para a nova unidade.")
+    .refine((value) => isValidCnpj(value), "Informe um CNPJ valido para a nova unidade."),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Informe o email da unidade.")
+    .email("Informe um email valido."),
+  telefone: z.string(),
+  bairro: z.string(),
+  cidade: z.string(),
+});
+
 export function resolvePacoteNomeFilial(rawName?: string | null, academiaName?: string | null) {
   const nomeOriginal = typeof rawName === "string" ? rawName.trim() : "";
   const academiaSelecionada = typeof academiaName === "string" ? academiaName.trim() : "";
@@ -740,6 +767,23 @@ export function buildNovaUnidadePacoteForm(filial: UploadAnaliseFilial | null, a
     bairro: filial?.bairro?.trim() || "",
     cidade: filial?.cidade?.trim() || "",
   };
+}
+
+export function validateNovaUnidadePacoteForm(form: NovaUnidadePacoteForm): NovaUnidadePacoteFieldErrors {
+  const parsed = novaUnidadePacoteSchema.safeParse(form);
+  if (parsed.success) {
+    return {};
+  }
+
+  const fieldErrors: NovaUnidadePacoteFieldErrors = {};
+  parsed.error.issues.forEach((issue) => {
+    const field = issue.path[0];
+    if (typeof field !== "string" || field in fieldErrors) {
+      return;
+    }
+    fieldErrors[field as keyof NovaUnidadePacoteForm] = issue.message;
+  });
+  return fieldErrors;
 }
 
 export function resolveUnidadeAcademiaId(unidade?: Tenant | null): string {

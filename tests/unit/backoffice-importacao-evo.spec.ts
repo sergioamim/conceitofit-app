@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 import {
+  createBackofficeEvoPacoteFotoImportJob,
   createBackofficeEvoP0CsvJob,
   createBackofficeEvoP0PacoteJob,
+  getBackofficeEvoFotoImportEstado,
+  getBackofficeEvoFotoImportJobStatus,
   getBackofficeEvoImportJobResumo,
   listBackofficeEvoImportJobRejeicoes,
   normalizeUploadAnaliseArquivoHistorico,
@@ -347,7 +350,6 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       const job = await createBackofficeEvoP0PacoteJob({
         uploadId: "upload-1",
         dryRun: false,
-        maxRejeicoesRetorno: 50,
         arquivos: ["clientes", "contratos"],
         tenantId: "tenant-pacote",
         apelido: "Carga pacote unidade central",
@@ -371,13 +373,12 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(calls[0].headers.get("X-Context-Id")).toBeNull();
       expect(JSON.parse(String(calls[0].body))).toEqual({
         dryRun: false,
-        maxRejeicoesRetorno: 50,
         tenantId: "tenant-pacote",
         arquivos: ["clientes", "contratos"],
         apelido: "Carga pacote unidade central",
       });
 
-      expect(calls[1].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/jobs/job-pacote-1/p0?maxRejeicoesRetorno=200");
+      expect(calls[1].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/jobs/job-pacote-1/p0");
       expect(calls[1].method).toBe("GET");
     } finally {
       restore();
@@ -398,7 +399,6 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       const job = await createBackofficeEvoP0PacoteJob({
         uploadId: "upload-1",
         dryRun: false,
-        maxRejeicoesRetorno: 50,
         arquivos: ["funcionarios"],
         retrySomenteErros: true,
         tenantId: "tenant-pacote",
@@ -410,10 +410,89 @@ test.describe("backoffice importacao EVO api wrappers", () => {
       expect(calls[0].headers.get("X-Context-Id")).toBeNull();
       expect(JSON.parse(String(calls[0].body))).toEqual({
         dryRun: false,
-        maxRejeicoesRetorno: 50,
         tenantId: "tenant-pacote",
         arquivos: ["funcionarios"],
       });
+    } finally {
+      restore();
+    }
+  });
+
+  test("consulta estado da importação de fotos por unidade", async () => {
+    const { calls, restore } = mockFetchSequence([
+      jsonResponse({
+        tenantId: "tenant-pacote",
+        bucket: "conceito-fit-fotos",
+        storagePrefix: "tenant-pacote/alunos/",
+        totalAlunos: 20,
+        vinculosEvoClientes: 18,
+        alunosComFoto: 9,
+        alunosComFotoImportada: 7,
+        importado: true,
+      }),
+    ]);
+
+    try {
+      const estado = await getBackofficeEvoFotoImportEstado({
+        tenantId: "tenant-pacote",
+      });
+
+      expect(estado.importado).toBe(true);
+      expect(estado.alunosComFotoImportada).toBe(7);
+      expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/fotos/estado?tenantId=tenant-pacote");
+      expect(calls[0].method).toBe("GET");
+      expect(calls[0].headers.get("X-Tenant-Id")).toBe("tenant-pacote");
+    } finally {
+      restore();
+    }
+  });
+
+  test("dispara e acompanha job de importação de fotos do pacote", async () => {
+    const { calls, restore } = mockFetchSequence([
+      jsonResponse({
+        jobId: "job-fotos-1",
+        tenantId: "tenant-pacote",
+        uploadId: "upload-1",
+        status: "PROCESSANDO",
+        dryRun: false,
+        force: true,
+        solicitadoEm: "2026-04-15T15:00:00Z",
+      }, 202),
+      jsonResponse({
+        jobId: "job-fotos-1",
+        tenantId: "tenant-pacote",
+        uploadId: "upload-1",
+        status: "CONCLUIDO",
+        dryRun: false,
+        force: true,
+        solicitadoEm: "2026-04-15T15:00:00Z",
+        finalizadoEm: "2026-04-15T15:03:00Z",
+        total: 12,
+        uploaded: 10,
+        skipped: 2,
+        errors: 0,
+        detalhes: [],
+      }),
+    ]);
+
+    try {
+      const job = await createBackofficeEvoPacoteFotoImportJob({
+        uploadId: "upload-1",
+        tenantId: "tenant-pacote",
+        force: true,
+      });
+      const status = await getBackofficeEvoFotoImportJobStatus({
+        jobId: job.jobId,
+        tenantId: "tenant-pacote",
+      });
+
+      expect(job.status).toBe("PROCESSANDO");
+      expect(status.status).toBe("CONCLUIDO");
+      expect(status.uploaded).toBe(10);
+      expect(calls[0].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/upload-1/fotos/importar?tenantId=tenant-pacote&force=true");
+      expect(calls[0].method).toBe("POST");
+      expect(calls[1].url).toBe("/backend/api/v1/admin/integracoes/importacao-terceiros/evo/p0/fotos/jobs/job-fotos-1?tenantId=tenant-pacote");
+      expect(calls[1].method).toBe("GET");
     } finally {
       restore();
     }
@@ -433,7 +512,6 @@ test.describe("backoffice importacao EVO api wrappers", () => {
     try {
       const created = await createBackofficeEvoP0CsvJob({
         dryRun: true,
-        maxRejeicoesRetorno: 10,
         mapeamentoFiliais: [{ idFilialEvo: 123, tenantId: "tenant-csv" }],
         arquivos: [
           { field: "clientesFile", file: csvFile },
@@ -451,7 +529,7 @@ test.describe("backoffice importacao EVO api wrappers", () => {
 
       const formData = calls[0].body as FormData;
       expect(formData.get("dryRun")).toBe("true");
-      expect(formData.get("maxRejeicoesRetorno")).toBe("10");
+      expect(formData.get("maxRejeicoesRetorno")).toBeNull();
       expect(formData.get("mapeamentoFiliais")).toBe(JSON.stringify([{ idFilialEvo: 123, tenantId: "tenant-csv" }]));
       expect(formData.get("clientesFile")).toBeTruthy();
       expect(formData.get("funcionariosHorariosFile")).toBeTruthy();

@@ -7,13 +7,13 @@ import type { Academia, Tenant } from '@/lib/types';
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const headerList = await headers();
   const host = headerList.get("host") || "";
-  const subdomain = host.split(".")[0];
   
   let academia: Academia | undefined;
   let appName = "Conceito.fit";
 
   try {
-    const tenantRes = await serverFetch<Tenant>(`/api/v1/tenants/by-domain/${subdomain}`, {
+    const tenantRes = await serverFetch<Tenant>("/api/v1/tenants/by-domain", {
+      query: { domain: host },
       next: { revalidate: 3600 } 
     });
 

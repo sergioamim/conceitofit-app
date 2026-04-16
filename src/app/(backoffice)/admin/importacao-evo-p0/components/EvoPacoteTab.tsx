@@ -47,10 +47,11 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
     pacoteMapeamento, setPacoteMapeamento,
     pacoteArquivo, escolherArquivoPacote,
     pacoteDryRun, setPacoteDryRun,
-    pacoteMaxRejeicoes, setPacoteMaxRejeicoes,
     pacoteJobAlias, setPacoteJobAlias, aliasSugestaoPacote,
     pacoteEvoUnidadeId, setPacoteEvoUnidadeId,
     pacoteAnalisando, pacoteCriandoJob,
+    fotoImportEstado, fotoImportEstadoLoading,
+    fotoImportJobStatus, fotoImportExecutando,
     pacoteAnalise, pacoteEvoUnidadeResolvida,
     pacoteFilialResolvida, pacoteFiliaisEncontradas,
     pacoteFilialReferencia, pacoteNomeFilialReferencia,
@@ -59,22 +60,24 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
     pacoteArquivosDisponiveis, pacoteColaboradoresBlocos,
     pacoteArquivosSelecionados, setPacoteArquivosSelecionados,
     pacoteArquivosSelecionadosSet,
-    arquivosSelecionadosDaAnalise,
+    arquivosSelecionadosDaAnalise, clientesCsvDisponivelNoPacote,
+    handleLoteReutilizado,
     eligibleAdminsPreview, pacoteResumoAcessoAutomatico, tenantFocoAcademiaId,
     tenantFoco, setActiveTab,
     academiaOptions, getUnidadesOptions, loadingMapeamento,
     analisarArquivoPacote, atualizarAnalisePacote,
-    criarJobPacote, tentarSomenteErrosDoArquivo,
+    criarJobPacote, importarFotosDoPacote, tentarSomenteErrosDoArquivo,
     togglePacoteArquivo,
     aplicarDestinoPacotePorTenantId,
-    abrirNovaUnidadePacote, abrirRejeicoesDoHistoricoArquivo,
+    abrirNovaUnidadePacote, abrirDiagnosticoDoHistoricoArquivo, abrirRejeicoesDoHistoricoArquivo,
     handlePacoteAcademiaNomeChange, handlePacoteUnidadeNomeChange,
     handlePacoteSelecionarAcademia, handlePacoteSelecionarUnidade,
     formatBytes, carregarMapeamentoData,
     novaUnidadePacoteAberta, setNovaUnidadePacoteAberta,
     novaUnidadePacoteSalvando,
     novaUnidadePacoteErro, setNovaUnidadePacoteErro,
-    novaUnidadePacoteForm, setNovaUnidadePacoteForm,
+    novaUnidadePacoteFieldErrors,
+    novaUnidadePacoteForm, updateNovaUnidadePacoteField,
     salvarNovaUnidadePacote,
   } = state;
 
@@ -104,23 +107,12 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
     return status === "comErros" || status === "parcial";
   });
 
-  function scrollToUploadSection() {
-    if (typeof document === "undefined") return;
-    const el = document.getElementById("evo-pacote-upload");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }
-
   return (
     <>
       <div className="space-y-6 pb-12">
       <ReutilizarLoteCard
         tenantId={tenantFoco || undefined}
-        onReutilizado={() => {
-          setActiveTab("acompanhamento");
-        }}
-        onSubirNovo={scrollToUploadSection}
+        onReutilizado={handleLoteReutilizado}
       />
 
       {pacoteAnalise ? (
@@ -190,17 +182,6 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                   />
                   Modo de simulação (Apenas validar, não salvar)
                 </Label>
-                <div className="w-56 space-y-2">
-                  <Label htmlFor="pacoteMaxRejeicoes">Limite de Rejeições (Abortar)</Label>
-                  <Input
-                    id="pacoteMaxRejeicoes"
-                    type="number"
-                    min={0}
-                    max={10000}
-                    value={pacoteMaxRejeicoes}
-                    onChange={(e) => setPacoteMaxRejeicoes(Number(e.target.value))}
-                  />
-                </div>
                 <div className="min-w-72 flex-1 space-y-2">
                   <Label htmlFor="pacoteJobAlias">Nome de identificação deste lote</Label>
                   <Input
@@ -235,7 +216,7 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
 
       {pacoteAnalise && (
         <>
-          <Card className="border-gym-accent/40 shadow-sm overflow-hidden">
+        <Card className="relative z-10 overflow-visible border-gym-accent/40 shadow-sm">
           <div className="bg-gym-accent/10 md:px-6 px-4 md:py-3 py-4 text-sm flex flex-wrap md:gap-x-8 gap-x-4 gap-y-2 text-muted-foreground border-b border-gym-accent/20">
             <p><span className="font-medium text-foreground">Upload ID:</span> {pacoteAnalise.uploadId}</p>
             <p><span className="font-medium text-foreground">EVO Unidade:</span> {pacoteEvoUnidadeResolvida ?? "pendente"}</p>
@@ -480,6 +461,132 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                         </div>
                       </div>
                     )}
+
+                    {pacoteMapeamento.tenantId ? (
+                      <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">Fotos dos clientes</p>
+                            <p className="text-xs text-muted-foreground">
+                              Baixa as imagens referenciadas no <span className="font-medium">CLIENTES.csv</span> e grava no MinIO da unidade.
+                            </p>
+                          </div>
+                          <Badge variant={fotoImportEstado?.importado ? "secondary" : "outline"}>
+                            {fotoImportEstadoLoading
+                              ? "Consultando estado..."
+                              : fotoImportEstado?.importado
+                                ? "Já importado"
+                                : "Pendente"}
+                          </Badge>
+                        </div>
+
+                        {fotoImportEstado ? (
+                          <div className="grid gap-3 text-sm md:grid-cols-2">
+                            <div className="rounded-md border border-border bg-background px-3 py-2">
+                              <p className="font-medium">Alunos na unidade</p>
+                              <p className="text-muted-foreground">{fotoImportEstado.totalAlunos}</p>
+                            </div>
+                            <div className="rounded-md border border-border bg-background px-3 py-2">
+                              <p className="font-medium">Vínculos EVO cliente</p>
+                              <p className="text-muted-foreground">{fotoImportEstado.vinculosEvoClientes}</p>
+                            </div>
+                            <div className="rounded-md border border-border bg-background px-3 py-2">
+                              <p className="font-medium">Alunos com foto</p>
+                              <p className="text-muted-foreground">{fotoImportEstado.alunosComFoto}</p>
+                            </div>
+                            <div className="rounded-md border border-border bg-background px-3 py-2">
+                              <p className="font-medium">Fotos importadas via EVO</p>
+                              <p className="text-muted-foreground">{fotoImportEstado.alunosComFotoImportada}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            O estado da importação de fotos será exibido assim que a unidade for consultada.
+                          </p>
+                        )}
+
+                        <div className="rounded-md border border-border bg-background px-3 py-2 text-xs text-muted-foreground">
+                          Bucket: <span className="font-mono text-foreground">{fotoImportEstado?.bucket || "conceito-fit-fotos"}</span>
+                          {" · "}
+                          Prefixo: <span className="font-mono text-foreground">{fotoImportEstado?.storagePrefix || "—"}</span>
+                        </div>
+
+                        {!pacoteAnalise?.uploadId ? (
+                          <div className="flex items-start gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+                            <AlertCircle className="mt-0.5 size-4" />
+                            <p>Analise um pacote EVO para habilitar a importação das imagens.</p>
+                          </div>
+                        ) : !clientesCsvDisponivelNoPacote ? (
+                          <div className="flex items-start gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+                            <AlertCircle className="mt-0.5 size-4" />
+                            <p>O pacote atual não possui CLIENTES.csv disponível para baixar as fotos.</p>
+                          </div>
+                        ) : null}
+
+                        {fotoImportJobStatus ? (
+                          <div className="rounded-md border border-border bg-background px-3 py-2 text-sm">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-medium">Job de fotos</p>
+                              <Badge variant={fotoImportJobStatus.status === "CONCLUIDO" ? "secondary" : fotoImportJobStatus.status === "PROCESSANDO" ? "outline" : "destructive"}>
+                                {fotoImportJobStatus.status}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {fotoImportJobStatus.jobId}
+                            </p>
+                            {typeof fotoImportJobStatus.total === "number" ? (
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                Total {fotoImportJobStatus.total} · Importadas {fotoImportJobStatus.uploaded ?? 0} · Ignoradas {fotoImportJobStatus.skipped ?? 0} · Erros {fotoImportJobStatus.errors ?? 0}
+                              </p>
+                            ) : null}
+                            {fotoImportJobStatus.erro ? (
+                              <p className="mt-2 text-xs text-destructive">{fotoImportJobStatus.erro}</p>
+                            ) : null}
+                          </div>
+                        ) : null}
+
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-xs text-muted-foreground">
+                            {pacoteDryRun
+                              ? "Modo de simulação ativo: o job valida e baixa as imagens, mas não grava no storage."
+                              : fotoImportEstado?.importado
+                                ? "A unidade já possui fotos importadas. Você pode rodar uma nova importação manual ou forçar uma reimportação completa."
+                                : "A ação usa o pacote analisado e atualiza as fotos dos alunos diretamente no storage da unidade."}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              type="button"
+                              onClick={() => void importarFotosDoPacote(false)}
+                              disabled={
+                                fotoImportExecutando ||
+                                fotoImportJobStatus?.status === "PROCESSANDO" ||
+                                !pacoteAnalise?.uploadId ||
+                                !clientesCsvDisponivelNoPacote
+                              }
+                            >
+                              {fotoImportExecutando || fotoImportJobStatus?.status === "PROCESSANDO"
+                                ? "Importando fotos..."
+                                : "Importar fotos"}
+                            </Button>
+                            {fotoImportEstado?.importado ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => void importarFotosDoPacote(true)}
+                                disabled={
+                                  fotoImportExecutando ||
+                                  fotoImportJobStatus?.status === "PROCESSANDO" ||
+                                  !pacoteAnalise?.uploadId ||
+                                  !clientesCsvDisponivelNoPacote
+                                }
+                              >
+                                Reimportar tudo
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
           </CardContent>
         </Card>
@@ -652,6 +759,7 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                               const rejeitadas = arquivo.historico.resumo?.rejeitadas ?? null;
                               const checkboxDisabled = !arquivo.disponivel || semTabela;
                               const linhaMuted = semTabela;
+                              const podeAbrirDiagnostico = Boolean(arquivo.historico.jobIdExibicao);
                               const retryButton = (
                                 <Button
                                   type="button"
@@ -697,9 +805,27 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                                     {targetTable ?? "—"}
                                   </TableCell>
                                   <TableCell>
-                                    <Badge variant="outline" className={cn("text-[11px]", badgeHistorico.className)}>
-                                      {badgeHistorico.label}
-                                    </Badge>
+                                    {podeAbrirDiagnostico ? (
+                                      <button
+                                        type="button"
+                                        className={cn(
+                                          "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition hover:opacity-90 focus-ring-brand",
+                                          badgeHistorico.className,
+                                        )}
+                                        onClick={(event) => {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          abrirDiagnosticoDoHistoricoArquivo(arquivo);
+                                        }}
+                                        title="Abrir diagnóstico deste processamento"
+                                      >
+                                        {badgeHistorico.label}
+                                      </button>
+                                    ) : (
+                                      <Badge variant="outline" className={cn("text-[11px]", badgeHistorico.className)}>
+                                        {badgeHistorico.label}
+                                      </Badge>
+                                    )}
                                   </TableCell>
                                   <TableCell className="text-right tabular-nums">
                                     {formatResumoCount(arquivo.historico.resumo?.processadas ?? null)}
@@ -786,7 +912,16 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
           <div className="space-y-4">
             <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">
               <p className="font-medium">{pacoteMapeamento.academiaNome || "Academia nao informada"}</p>
-              <p className="text-xs text-muted-foreground">A nova unidade sera criada dentro desta academia.</p>
+              <p className="text-xs text-muted-foreground">
+                A nova unidade sera criada dentro desta academia. O groupId e herdado automaticamente dela.
+              </p>
+            </div>
+
+            <div className="rounded-md border border-gym-accent/30 bg-gym-accent/5 px-3 py-2 text-sm">
+              <p className="font-medium text-foreground">Campos obrigatorios desta criacao</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Nome da unidade, subdominio, CNPJ e email. Os campos marcados com * precisam ser preenchidos antes de salvar.
+              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -795,9 +930,7 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                 <Input
                   id="nova-unidade-pacote-nome-original"
                   value={novaUnidadePacoteForm.nomeOriginal}
-                  onChange={(event) =>
-                    setNovaUnidadePacoteForm((current) => ({ ...current, nomeOriginal: event.target.value }))
-                  }
+                  onChange={(event) => updateNovaUnidadePacoteField("nomeOriginal", event.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
                   Exemplo deste pacote: academia + unidade/filial, como `Academia Sergio Amim - S6`.
@@ -805,49 +938,52 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nova-unidade-pacote-nome">Nome da unidade</Label>
+                <Label htmlFor="nova-unidade-pacote-nome">Nome da unidade *</Label>
                 <Input
                   id="nova-unidade-pacote-nome"
+                  required
+                  aria-invalid={Boolean(novaUnidadePacoteFieldErrors.nome)}
                   value={novaUnidadePacoteForm.nome}
-                  onChange={(event) =>
-                    setNovaUnidadePacoteForm((current) => ({ ...current, nome: event.target.value }))
-                  }
+                  onChange={(event) => updateNovaUnidadePacoteField("nome", event.target.value)}
                 />
+                {novaUnidadePacoteFieldErrors.nome ? (
+                  <p className="text-xs text-destructive">{novaUnidadePacoteFieldErrors.nome}</p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nova-unidade-pacote-subdomain">Subdominio</Label>
+                <Label htmlFor="nova-unidade-pacote-subdomain">Subdominio *</Label>
                 <Input
                   id="nova-unidade-pacote-subdomain"
+                  required
+                  aria-invalid={Boolean(novaUnidadePacoteFieldErrors.subdomain)}
                   placeholder="academia-sergio-amim-s6"
                   value={novaUnidadePacoteForm.subdomain}
-                  onChange={(event) =>
-                    setNovaUnidadePacoteForm((current) => ({
-                      ...current,
-                      subdomain: normalizeSubdomain(event.target.value),
-                    }))
-                  }
+                  onChange={(event) => updateNovaUnidadePacoteField("subdomain", normalizeSubdomain(event.target.value))}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Obrigatorio. O valor e normalizado para letras minusculas, numeros e hifens.
-                </p>
+                {novaUnidadePacoteFieldErrors.subdomain ? (
+                  <p className="text-xs text-destructive">{novaUnidadePacoteFieldErrors.subdomain}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Obrigatorio. O valor e normalizado para letras minusculas, numeros e hifens.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nova-unidade-pacote-documento">CNPJ</Label>
+                <Label htmlFor="nova-unidade-pacote-documento">CNPJ *</Label>
                 <Input
                   id="nova-unidade-pacote-documento"
                   inputMode="numeric"
+                  required
+                  aria-invalid={Boolean(novaUnidadePacoteFieldErrors.documento)}
                   placeholder="00.000.000/0000-00"
                   value={novaUnidadePacoteForm.documento}
-                  onChange={(event) =>
-                    setNovaUnidadePacoteForm((current) => ({
-                      ...current,
-                      documento: formatCnpj(event.target.value),
-                    }))
-                  }
+                  onChange={(event) => updateNovaUnidadePacoteField("documento", formatCnpj(event.target.value))}
                 />
-                {novaUnidadePacoteForm.documento && !isValidCnpj(novaUnidadePacoteForm.documento) ? (
+                {novaUnidadePacoteFieldErrors.documento ? (
+                  <p className="text-xs text-destructive">{novaUnidadePacoteFieldErrors.documento}</p>
+                ) : novaUnidadePacoteForm.documento && !isValidCnpj(novaUnidadePacoteForm.documento) ? (
                   <p className="text-xs text-destructive">Informe um CNPJ valido no padrao 00.000.000/0000-00.</p>
                 ) : (
                   <p className="text-xs text-muted-foreground">O CNPJ e padronizado e validado antes de salvar.</p>
@@ -855,15 +991,22 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nova-unidade-pacote-email">Email</Label>
+                <Label htmlFor="nova-unidade-pacote-email">Email *</Label>
                 <Input
                   id="nova-unidade-pacote-email"
                   type="email"
+                  required
+                  aria-invalid={Boolean(novaUnidadePacoteFieldErrors.email)}
                   value={novaUnidadePacoteForm.email}
-                  onChange={(event) =>
-                    setNovaUnidadePacoteForm((current) => ({ ...current, email: event.target.value }))
-                  }
+                  onChange={(event) => updateNovaUnidadePacoteField("email", event.target.value)}
                 />
+                {novaUnidadePacoteFieldErrors.email ? (
+                  <p className="text-xs text-destructive">{novaUnidadePacoteFieldErrors.email}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Obrigatorio. Este email sera salvo como contato principal e precisa ser valido.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -871,9 +1014,7 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                 <Input
                   id="nova-unidade-pacote-telefone"
                   value={novaUnidadePacoteForm.telefone}
-                  onChange={(event) =>
-                    setNovaUnidadePacoteForm((current) => ({ ...current, telefone: event.target.value }))
-                  }
+                  onChange={(event) => updateNovaUnidadePacoteField("telefone", event.target.value)}
                 />
               </div>
 
@@ -882,9 +1023,7 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                 <Input
                   id="nova-unidade-pacote-bairro"
                   value={novaUnidadePacoteForm.bairro}
-                  onChange={(event) =>
-                    setNovaUnidadePacoteForm((current) => ({ ...current, bairro: event.target.value }))
-                  }
+                  onChange={(event) => updateNovaUnidadePacoteField("bairro", event.target.value)}
                 />
               </div>
 
@@ -893,9 +1032,7 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                 <Input
                   id="nova-unidade-pacote-cidade"
                   value={novaUnidadePacoteForm.cidade}
-                  onChange={(event) =>
-                    setNovaUnidadePacoteForm((current) => ({ ...current, cidade: event.target.value }))
-                  }
+                  onChange={(event) => updateNovaUnidadePacoteField("cidade", event.target.value)}
                 />
               </div>
             </div>

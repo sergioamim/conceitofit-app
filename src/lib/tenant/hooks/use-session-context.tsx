@@ -11,6 +11,7 @@ import {
   getAvailableTenantsFromSession,
   getAuthSessionSnapshot,
   getRolesFromSession,
+  setPreferredTenantId,
   AUTH_SESSION_CLEARED_EVENT,
   AUTH_SESSION_UPDATED_EVENT,
   hasActiveSession,
@@ -280,6 +281,7 @@ export function TenantContextProvider({ children }: { children: React.ReactNode 
     }));
 
     try {
+      setPreferredTenantId(normalizedTenantId);
       const bootstrapState = await runWithoutSessionEcho(async () => {
         const switchedContext = await setTenantContextApi(normalizedTenantId);
         

@@ -229,10 +229,12 @@ test.describe("auth por rede", () => {
       });
 
       expect(calls).toHaveLength(1);
-      expect(calls[0]?.url).toContain("/api/v1/auth/context/tenant");
+      expect(calls[0]?.url).toContain("/api/v1/admin/auth/entrar-como-unidade");
       expect(calls[0]?.method).toBe("POST");
       expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        academiaId: "academia-norte",
         tenantId: "tenant-centro",
+        justificativa: "auditoria",
       });
       expect(hasBackofficeReturnSession()).toBeTruthy();
       expect(session.activeTenantId).toBe("tenant-centro");

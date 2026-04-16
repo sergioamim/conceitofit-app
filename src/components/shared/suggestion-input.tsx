@@ -23,6 +23,7 @@ export function SuggestionInput({
   className,
   minCharsToSearch = 0,
   preloadOnFocus = false,
+  showAllOnFocus = false,
 }: {
   inputId?: string;
   inputAriaLabel?: string;
@@ -36,16 +37,18 @@ export function SuggestionInput({
   className?: string;
   minCharsToSearch?: number;
   preloadOnFocus?: boolean;
+  showAllOnFocus?: boolean;
 }) {
   const generatedId = useId();
   const resolvedInputId = inputId ?? `suggestion-input-${generatedId}`;
   const listboxId = `${resolvedInputId}-listbox`;
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [previewAll, setPreviewAll] = useState(false);
 
   const filtered = useMemo(() => {
-    const term = value.trim().toLowerCase();
-    if (term.length < minCharsToSearch) return [];
+    const term = previewAll ? "" : value.trim().toLowerCase();
+    if (!previewAll && term.length < minCharsToSearch) return [];
     if (!term) return options.slice(0, 10);
     return options
       .filter((option) => {
@@ -53,7 +56,7 @@ export function SuggestionInput({
         return hay.includes(term);
       })
       .slice(0, 12);
-  }, [minCharsToSearch, options, value]);
+  }, [minCharsToSearch, options, previewAll, value]);
 
   const normalizedActiveIndex =
     open && filtered.length > 0
@@ -66,6 +69,7 @@ export function SuggestionInput({
     onSelect(option);
     setOpen(false);
     setActiveIndex(-1);
+    setPreviewAll(false);
   }
 
   const activeOptionId =
@@ -87,20 +91,23 @@ export function SuggestionInput({
         autoComplete="off"
         value={value}
         onFocus={() => {
-          const shouldOpen = value.trim().length >= minCharsToSearch;
+          const shouldOpen = showAllOnFocus || value.trim().length >= minCharsToSearch;
           if (shouldOpen && preloadOnFocus && onFocusOpen) onFocusOpen();
+          setPreviewAll(showAllOnFocus);
           setOpen(shouldOpen);
           setActiveIndex(shouldOpen && filtered.length > 0 ? 0 : -1);
         }}
         onBlur={() => window.setTimeout(() => {
           setOpen(false);
           setActiveIndex(-1);
+          setPreviewAll(false);
         }, 120)}
         onChange={(e) => {
           const nextValue = e.target.value;
           onValueChange(nextValue);
           const shouldOpen = nextValue.trim().length >= minCharsToSearch;
           if (shouldOpen && onFocusOpen) onFocusOpen();
+          setPreviewAll(false);
           setOpen(shouldOpen);
           setActiveIndex(shouldOpen ? 0 : -1);
         }}
@@ -108,9 +115,10 @@ export function SuggestionInput({
           if (
             !open &&
             (e.key === "ArrowDown" || e.key === "ArrowUp") &&
-            value.trim().length >= minCharsToSearch
+            (showAllOnFocus || value.trim().length >= minCharsToSearch)
           ) {
             e.preventDefault();
+            setPreviewAll(showAllOnFocus);
             setOpen(true);
             setActiveIndex(0);
             return;
@@ -140,6 +148,7 @@ export function SuggestionInput({
             e.preventDefault();
             setOpen(false);
             setActiveIndex(-1);
+            setPreviewAll(false);
             return;
           }
 

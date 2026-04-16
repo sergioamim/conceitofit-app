@@ -349,6 +349,19 @@ export function useUserDetailWorkspace() {
 
   async function handleStartImpersonation(values: ImpersonationDialogValues) {
     if (!detail) return;
+    const impersonationTenantId =
+      detail.activeTenantId ||
+      detail.defaultTenantId ||
+      detail.memberships.find((membership) => membership.defaultTenant)?.tenantId ||
+      detail.memberships[0]?.tenantId;
+    if (!impersonationTenantId) {
+      toast({
+        title: "Usuário sem unidade operacional",
+        description: "A impersonação exige um tenant ativo ou padrão para carregar a visão do cliente.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setImpersonating(true);
     try {
@@ -364,6 +377,7 @@ export function useUserDetailWorkspace() {
 
       const response = await impersonateUserApi({
         userId,
+        tenantId: impersonationTenantId,
         justification: values.justification,
       });
 

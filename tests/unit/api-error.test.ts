@@ -48,6 +48,20 @@ describe("api-error utilities", () => {
       expect(normalizeErrorMessage(payload)).toBe("NOT_FOUND");
     });
 
+    it("trata ProblemDetail com detail e fieldErrors em properties", () => {
+      const payload = {
+        title: "Erro de validacao",
+        detail: "email já cadastrado",
+        properties: {
+          fieldErrors: [
+            { field: "email", message: "já cadastrado" },
+          ],
+        },
+      };
+
+      expect(normalizeErrorMessage(payload)).toBe("email: já cadastrado");
+    });
+
     it("usa fallback padrão quando o valor não é reconhecido", () => {
       expect(normalizeErrorMessage(null)).toBe(
         "Não foi possível completar a operação.",

@@ -119,15 +119,15 @@ test.describe("onboarding checklist api", () => {
           progressPercent: 50,
           steps: [
             {
-              id: "dados-academia",
-              title: "Dados da Academia",
-              status: "COMPLETED",
+              key: "dados-academia",
+              label: "Dados da Academia",
+              completed: true,
               route: "/administrativo/academia",
             },
             {
-              chave: "criar-plano",
-              titulo: "Criar Plano",
-              status: "PENDENTE",
+              key: "criar-plano",
+              label: "Criar Plano",
+              completed: false,
               rotaConfiguracao: "/planos/novo",
             },
           ],

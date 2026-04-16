@@ -22,7 +22,7 @@ export function useClientesWorkspace() {
   const router = useRouter();
   const { tenantId, tenantResolved, setTenant } = useTenantContext();
   const {
-    q, status: filtro, page, size: pageSize,
+    q, rawStatus, status: filtro, page, size: pageSize,
     setParams, clearParams, hasActiveFilters,
   } = useTableSearchParams();
 
@@ -54,6 +54,12 @@ export function useClientesWorkspace() {
 
   // Sync search input with URL param
   useEffect(() => { setBuscaInput(q); }, [q]);
+
+  // Remove status filters no longer supported on the page.
+  useEffect(() => {
+    if (!rawStatus || rawStatus === filtro) return;
+    setParams({ status: null });
+  }, [rawStatus, filtro, setParams]);
 
   // Debounce search input → URL
   useEffect(() => {

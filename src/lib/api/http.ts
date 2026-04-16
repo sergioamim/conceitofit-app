@@ -196,28 +196,58 @@ function normalizeFieldErrors(input: unknown): Record<string, string> | null | u
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
+function asRecord(input: unknown): Record<string, unknown> | undefined {
+  return typeof input === "object" && input !== null && !Array.isArray(input)
+    ? (input as Record<string, unknown>)
+    : undefined;
+}
+
+function pickString(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim() !== "") {
+      return value;
+    }
+  }
+  return undefined;
+}
+
 function normalizeApiErrorPayload(input: unknown): ApiErrorPayload | undefined {
   if (!input || typeof input !== "object" || Array.isArray(input)) return undefined;
   const candidate = input as Record<string, unknown>;
-  const message =
-    typeof candidate.message === "string" ? candidate.message
-      : typeof candidate.details === "string" ? candidate.details
-      : undefined;
-  const error =
-    typeof candidate.error === "string" ? candidate.error
-      : typeof candidate.code === "string" ? candidate.code
-      : undefined;
+  const properties = asRecord(candidate.properties);
+  const message = pickString(
+    candidate.message,
+    candidate.detail,
+    candidate.details,
+    properties?.detail,
+    properties?.message,
+  );
+  const error = pickString(
+    candidate.error,
+    candidate.title,
+    candidate.code,
+    properties?.code,
+    properties?.title,
+  );
   const status = typeof candidate.status === "number" ? candidate.status : undefined;
-  const path = typeof candidate.path === "string" ? candidate.path : undefined;
-  const timestamp = typeof candidate.timestamp === "string" ? candidate.timestamp : undefined;
-  const responseBody = typeof candidate.responseBody === "string" ? candidate.responseBody : undefined;
-  const fieldErrors = normalizeFieldErrors(candidate.fieldErrors);
+  const path = pickString(candidate.path, candidate.instance, properties?.instance, properties?.path);
+  const timestamp = pickString(candidate.timestamp, properties?.timestamp);
+  const responseBody = pickString(candidate.responseBody, properties?.responseBody);
+  const fieldErrors = normalizeFieldErrors(candidate.fieldErrors ?? properties?.fieldErrors);
+  const contextId = pickString(candidate.contextId, properties?.contextId);
+  const requestId = pickString(
+    candidate.requestId,
+    candidate.correlationId,
+    properties?.requestId,
+    properties?.correlationId,
+  );
 
   if (message == null && error == null && status == null && path == null &&
-      timestamp == null && fieldErrors == null && responseBody == null) {
+      timestamp == null && fieldErrors == null && responseBody == null &&
+      contextId == null && requestId == null) {
     return undefined;
   }
-  return { timestamp, status, error, message, path, fieldErrors, responseBody };
+  return { timestamp, status, error, message, path, fieldErrors, responseBody, contextId, requestId };
 }
 
 function normalizeResponseHeaders(headers: Headers): Record<string, string> {
@@ -338,8 +368,8 @@ async function performApiRequest<T>(input: {
       path: payload?.path ?? input.path,
       responseBody: rawBody ?? payload?.responseBody,
       fieldErrors: payload?.fieldErrors,
-      contextId: response.headers.get("X-Context-Id") ?? headers["X-Context-Id"],
-      requestId: response.headers.get("X-Request-Id") ?? headers["X-Request-Id"],
+      contextId: response.headers.get("X-Context-Id") ?? headers["X-Context-Id"] ?? payload?.contextId,
+      requestId: response.headers.get("X-Request-Id") ?? headers["X-Request-Id"] ?? payload?.requestId,
     };
     const apiError = new ApiRequestError(details);
 

@@ -9,6 +9,7 @@ import {
   getOperationalScopeDefaultTenantId,
   getOperationalTenantScope,
   getPreferredTenantId,
+  setActiveTenantId,
 } from "./session";
 import { buildTenantAccessFromEligibility, normalizeOperationalAccess } from "@/lib/tenant/tenant-operational-access";
 
@@ -384,6 +385,7 @@ export async function setTenantContextApi(tenantId: string): Promise<{
     path: `/api/v1/context/unidade-ativa/${tenantId}`,
     method: "PUT",
   });
+  setActiveTenantId(response.currentTenantId || tenantId);
   const unidadesDisponiveis = filterTenantsByOperationalScope(
     response.unidadesDisponiveis.map(normalizeTenant)
   );

@@ -4,8 +4,10 @@ import type { OnboardingChecklistStep, OnboardingChecklistStepStatus, Onboarding
 type OnboardingChecklistStepApiResponse = Partial<OnboardingChecklistStep> & {
   id?: unknown;
   chave?: unknown;
+  key?: unknown;
   titulo?: unknown;
   title?: unknown;
+  label?: unknown;
   descricao?: unknown;
   description?: unknown;
   status?: unknown;
@@ -81,8 +83,8 @@ function normalizeStep(
   const status = normalizeStepStatus(input.status, completed);
 
   return {
-    id: cleanString(input.id) ?? cleanString(input.chave) ?? `etapa-${index + 1}`,
-    titulo: cleanString(input.titulo) ?? cleanString(input.title) ?? `Etapa ${index + 1}`,
+    id: cleanString(input.id) ?? cleanString(input.chave) ?? cleanString(input.key) ?? `etapa-${index + 1}`,
+    titulo: cleanString(input.titulo) ?? cleanString(input.title) ?? cleanString(input.label) ?? `Etapa ${index + 1}`,
     descricao: cleanString(input.descricao) ?? cleanString(input.description),
     status,
     rotaConfiguracao: cleanString(input.rotaConfiguracao) ?? cleanString(input.route) ?? cleanString(input.href),

@@ -12,6 +12,7 @@ import {
   rememberBackofficeReturnSession,
   restoreBackofficeReturnSession,
   saveAuthSession,
+  setActiveTenantId,
   type AuthSession,
 } from "@/lib/api/session";
 
@@ -84,6 +85,16 @@ describe("session storage (cookie-based — Task 458)", () => {
     mockSessionActive("true");
     mockSessionClaims({ activeTenantId: "tenant-42" });
     expect(getActiveTenantIdFromSession()).toBe("tenant-42");
+  });
+
+  it("sincroniza o cookie de claims quando a unidade ativa muda no frontend", () => {
+    mockSessionActive("true");
+    mockSessionClaims({ activeTenantId: "tenant-antigo", sessionMode: "BACKOFFICE_TO_OPERATIONAL" });
+
+    setActiveTenantId("tenant-novo");
+
+    expect(getActiveTenantIdFromSession()).toBe("tenant-novo");
+    expect(document.cookie).toContain("academia-active-tenant-id=tenant-novo");
   });
 
   it("availableTenants retorna array vazio (resolvido pelo backend)", () => {

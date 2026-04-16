@@ -18,6 +18,7 @@ import {
   AUTH_SESSION_UPDATED_EVENT,
   getNetworkSlugFromSession,
   getSandboxModeFromSession,
+  getSessionModeFromSession,
   getUserKindFromSession,
   hasActiveSession,
 } from "@/lib/api/session";
@@ -226,9 +227,11 @@ function AppLayoutContent({
 
   useEffect(() => {
     if (!hydrated || !authenticated) return;
+    const sessionMode = getSessionModeFromSession();
     if (
       normalizeUserKind(getUserKindFromSession()) === "PLATAFORMA" &&
-      !getSandboxModeFromSession()
+      !getSandboxModeFromSession() &&
+      sessionMode !== "BACKOFFICE_TO_OPERATIONAL"
     ) {
       router.replace("/admin");
     }

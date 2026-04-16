@@ -24,7 +24,7 @@ export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
     resumoCards, resumoCardsVisiveis, resumoCardsOcultos, resumoEntidadeMap,
     colaboradoresResumoCards, colaboradoresResumoAlertas, jobTemMalhaColaboradores,
     showRejeicoes, rejeicoesLoading,
-    rejeicoesFiltradas, rejPage, setRejPage, rejHasNext,
+    rejeicoesFiltradas,
     entidadeFiltro, setEntidadeFiltro, blocoFiltro, setBlocoFiltro,
     entidadesDisponiveis, blocosDisponiveis,
     retrySelecao, retryRejeicoesSelecionadas, retryPayload,
@@ -137,7 +137,7 @@ export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
                       <XCircle className="mt-0.5 size-4" />
                       <div>
                         <p className="font-semibold">Job falhou</p>
-                        <p>{jobResumo?.rejeicoes?.mensagem ?? "Verifique as rejeições para detalhes."}</p>
+                        <p>{jobResumo?.detalheErro ?? "Verifique as rejeições para detalhes."}</p>
                       </div>
                     </div>
                   )}
@@ -372,7 +372,9 @@ export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-lg">Rejeições</CardTitle>
-                  <p className="text-sm text-muted-foreground">Página {rejPage + 1}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {rejeicoesFiltradas.length} caso(s) exibido(s), sem paginação.
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <div className="min-w-56">
@@ -383,7 +385,6 @@ export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
                       value={entidadeFiltro}
                       onValueChange={(value) => {
                         setEntidadeFiltro(value);
-                        setRejPage(0);
                       }}
                     >
                       <SelectTrigger className="mt-1 h-9 w-full" id="filtro-entidade">
@@ -407,7 +408,6 @@ export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
                       value={blocoFiltro}
                       onValueChange={(value) => {
                         setBlocoFiltro(value);
-                        setRejPage(0);
                       }}
                     >
                       <SelectTrigger className="mt-1 h-9 w-full" id="filtro-bloco">
@@ -423,22 +423,14 @@ export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" disabled={rejPage === 0 || rejeicoesLoading} onClick={() => loadRejeicoes(rejPage - 1)}>
-                      Anterior
-                    </Button>
-                    <Button size="sm" variant="outline" disabled={!rejHasNext || rejeicoesLoading} onClick={() => loadRejeicoes(rejPage + 1)}>
-                      Próxima
-                    </Button>
-                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {rejeicoesLoading && <p className="text-sm text-muted-foreground">Carregando rejeições…</p>}
+                {rejeicoesLoading && <p className="text-sm text-muted-foreground">Carregando todas as rejeições…</p>}
                 {!rejeicoesLoading && rejeicoesFiltradas.length === 0 && (
                   <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
                     <AlertCircle className="mt-0.5 size-4" />
-                    Nenhuma rejeição encontrada nesta página.
+                    Nenhum erro encontrado com os filtros atuais.
                   </div>
                 )}
                 {!rejeicoesLoading && retryRejeicoesSelecionadas.length > 0 ? (
@@ -487,6 +479,11 @@ export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
                               {rejeicao.diagnostico ? (
                                 <p className="text-xs text-muted-foreground">{rejeicao.diagnostico}</p>
                               ) : null}
+                              {rejeicao.ocorrenciasAgrupadas > 1 ? (
+                                <p className="text-xs text-muted-foreground">
+                                  Este mesmo erro apareceu {rejeicao.ocorrenciasAgrupadas} vezes nos retries. A tela mostra só uma ocorrência.
+                                </p>
+                              ) : null}
                             </div>
                             {rejeicao.retryConfig ? (
                               <Label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -510,7 +507,7 @@ export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
                               <span className="font-medium text-foreground">Linha:</span> {rejeicao.linhaArquivo}
                             </p>
                             <p>
-                              <span className="font-medium text-foreground">Source ID:</span> {rejeicao.sourceId ?? "—"}
+                              <span className="font-medium text-foreground">ID de origem:</span> {rejeicao.sourceId ?? "—"}
                             </p>
                             <p>
                               <span className="font-medium text-foreground">Criado em:</span> {formatDateTime(rejeicao.criadoEm)}
@@ -525,7 +522,7 @@ export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
 
                           {rejeicao.payloadFormatado ? (
                             <div className="mt-3 space-y-2">
-                              <p className="text-xs font-medium text-foreground">Payload útil para correção</p>
+                              <p className="text-xs font-medium text-foreground">Dados da linha</p>
                               <pre className="overflow-auto rounded-md border border-border bg-muted/20 p-3 text-[11px] text-muted-foreground">
                                 {rejeicao.payloadFormatado}
                               </pre>

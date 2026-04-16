@@ -69,6 +69,41 @@ export type PacoteJobAceitoResponse = {
   solicitadoEm: string;
 };
 
+export type EvoFotoImportEstadoResponse = {
+  tenantId: string;
+  bucket: string;
+  storagePrefix: string;
+  totalAlunos: number;
+  vinculosEvoClientes: number;
+  alunosComFoto: number;
+  alunosComFotoImportada: number;
+  importado: boolean;
+};
+
+export type EvoFotoImportJobResponse = {
+  jobId: string;
+  tenantId: string;
+  uploadId: string;
+  status: string;
+  dryRun: boolean;
+  force: boolean;
+  solicitadoEm: string;
+};
+
+export type EvoFotoImportJobStatusResponse = EvoFotoImportJobResponse & {
+  finalizadoEm?: string | null;
+  total?: number | null;
+  uploaded?: number | null;
+  skipped?: number | null;
+  errors?: number | null;
+  erro?: string | null;
+  detalhes?: Array<{
+    filename?: string | null;
+    idClienteEvo?: string | null;
+    motivo?: string | null;
+  }> | null;
+};
+
 export type EvoImportJobStatus = "PROCESSANDO" | "CONCLUIDO" | "CONCLUIDO_COM_REJEICOES" | "FALHA";
 
 export type EvoImportEntidadeResumo = {
@@ -139,6 +174,7 @@ export type EvoImportJobResumo = {
   funcionarios?: EvoImportEntidadeResumo;
   colaboradoresDetalhe?: EvoImportColaboradoresResumo;
   maquininhas?: EvoImportEntidadeResumo;
+  detalheErro?: string | null;
   rejeicoes?: { mensagem?: string };
 };
 
@@ -155,6 +191,7 @@ export type EvoImportRejeicao = {
   subdominio?: string;
   payload?: unknown;
   mensagemAcionavel?: string;
+  ocorrenciasAgrupadas?: number;
   reprocessamento?: {
     suportado?: boolean;
     escopo?: string | null;
@@ -226,7 +263,6 @@ export async function getEvoP0PacoteAnaliseApi(input: {
 export async function createEvoP0PacoteJobApi(input: {
   uploadId: string;
   dryRun: boolean;
-  maxRejeicoesRetorno: number;
   arquivos?: string[] | null;
   retrySomenteErros?: boolean;
   tenantId?: string;
@@ -235,13 +271,11 @@ export async function createEvoP0PacoteJobApi(input: {
 }): Promise<PacoteJobAceitoResponse> {
   const body: {
     dryRun: boolean;
-    maxRejeicoesRetorno: number;
     arquivos?: string[];
     tenantId?: string;
     apelido?: string;
   } = {
     dryRun: input.dryRun,
-    maxRejeicoesRetorno: input.maxRejeicoesRetorno,
   };
   if (Array.isArray(input.arquivos) && input.arquivos.length > 0) {
     body.arquivos = input.arquivos;
@@ -264,9 +298,63 @@ export async function createEvoP0PacoteJobApi(input: {
   });
 }
 
+export async function getEvoFotoImportEstadoApi(input: {
+  tenantId?: string;
+  contextoTenantId?: string;
+}): Promise<EvoFotoImportEstadoResponse> {
+  const tenantId = normalizeTenantId(input.tenantId ?? input.contextoTenantId);
+  return apiRequest<EvoFotoImportEstadoResponse>({
+    path: "/api/v1/admin/integracoes/importacao-terceiros/evo/p0/fotos/estado",
+    query: tenantId ? { tenantId } : undefined,
+    headers: buildExplicitTenantHeaders(tenantId),
+    includeContextHeader: false,
+  });
+}
+
+export async function createEvoPacoteFotoImportJobApi(input: {
+  uploadId: string;
+  tenantId?: string;
+  contextoTenantId?: string;
+  dryRun?: boolean;
+  force?: boolean;
+}): Promise<EvoFotoImportJobResponse> {
+  const tenantId = normalizeTenantId(input.tenantId ?? input.contextoTenantId);
+  const query: Record<string, string> = {};
+  if (tenantId) {
+    query.tenantId = tenantId;
+  }
+  if (input.dryRun) {
+    query.dryRun = "true";
+  }
+  if (input.force) {
+    query.force = "true";
+  }
+
+  return apiRequest<EvoFotoImportJobResponse>({
+    path: `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/${input.uploadId}/fotos/importar`,
+    method: "POST",
+    query,
+    headers: buildExplicitTenantHeaders(tenantId),
+    includeContextHeader: false,
+  });
+}
+
+export async function getEvoFotoImportJobStatusApi(input: {
+  jobId: string;
+  tenantId?: string;
+  contextoTenantId?: string;
+}): Promise<EvoFotoImportJobStatusResponse> {
+  const tenantId = normalizeTenantId(input.tenantId ?? input.contextoTenantId);
+  return apiRequest<EvoFotoImportJobStatusResponse>({
+    path: `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/fotos/jobs/${input.jobId}`,
+    query: tenantId ? { tenantId } : undefined,
+    headers: buildExplicitTenantHeaders(tenantId),
+    includeContextHeader: false,
+  });
+}
+
 export async function createEvoP0CsvUploadApi(input: {
   dryRun: boolean;
-  maxRejeicoesRetorno: number;
   mapeamentoFiliais: Array<{ idFilialEvo: number; tenantId: string }>;
   arquivos: Array<{ field: string; file: File }>;
   tenantId?: string;
@@ -275,7 +363,6 @@ export async function createEvoP0CsvUploadApi(input: {
   const formData = new FormData();
   formData.append("dryRun", String(input.dryRun));
   formData.append("mapeamentoFiliais", JSON.stringify(input.mapeamentoFiliais));
-  formData.append("maxRejeicoesRetorno", String(input.maxRejeicoesRetorno));
   input.arquivos.forEach(({ field, file }) => {
     formData.append(field, file, file.name);
   });
@@ -291,16 +378,13 @@ export async function createEvoP0CsvUploadApi(input: {
 
 export async function getEvoImportJobResumoApi(input: {
   jobId: string;
-  maxRejeicoesRetorno?: number;
   tenantId?: string;
   contextoTenantId?: string;
 }): Promise<EvoImportJobResumo> {
-  const query = { maxRejeicoesRetorno: input.maxRejeicoesRetorno ?? 200 };
   const headers = buildTenantHeaders(input.tenantId ?? input.contextoTenantId);
   try {
     return await apiRequest<EvoImportJobResumo>({
       path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${input.jobId}/p0`,
-      query,
       headers,
       includeContextHeader: false,
     });
@@ -312,7 +396,6 @@ export async function getEvoImportJobResumoApi(input: {
 
   return apiRequest<EvoImportJobResumo>({
     path: `/api/v1/admin/integracoes/importacao-terceiros/jobs/${input.jobId}`,
-    query,
     headers,
     includeContextHeader: false,
   });

@@ -974,6 +974,15 @@ async function installImportacaoMocks(page: Page) {
     "funcionarios_horarios",
     "permissoes",
   ];
+  const ultimoLote = {
+    jobId: "job-pacote-barra-001",
+    apelido: "Pacote · BARRA · 13/03, 10:00",
+    status: "CONCLUIDO_COM_REJEICOES",
+    arquivosDisponiveis: [...arquivosSelecionadosNoJob],
+    arquivosSelecionados: [...arquivosSelecionadosNoJob],
+    criadoEm: "2026-03-13T10:00:00Z",
+    tenantId: "tenant-barra",
+  };
   const pollingCountByJob = new Map<string, number>();
 
   await page.route("**/admin/unidades/*/onboarding/job-status", async (route) => {
@@ -1237,6 +1246,93 @@ async function installImportacaoMocks(page: Page) {
     });
   });
 
+  await page.route("**/admin/integracoes/importacao-terceiros/evo/p0/fotos/estado**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        tenantId: "tenant-barra",
+        bucket: "conceito-fit-fotos",
+        storagePrefix: "tenant-barra/alunos/",
+        totalAlunos: 20,
+        vinculosEvoClientes: 18,
+        alunosComFoto: 9,
+        alunosComFotoImportada: 7,
+        importado: true,
+      },
+    });
+  });
+
+  await page.route("**/admin/integracoes/importacao-terceiros/evo/p0/pacote/*/fotos/importar**", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 202,
+      json: {
+        jobId: "job-fotos-evo-777",
+        tenantId: "tenant-barra",
+        uploadId: "upload-evo-777",
+        status: "PROCESSANDO",
+        dryRun: false,
+        force: true,
+        solicitadoEm: "2026-04-15T15:00:00Z",
+      },
+    });
+  });
+
+  await page.route("**/admin/integracoes/importacao-terceiros/evo/p0/fotos/jobs/*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        jobId: "job-fotos-evo-777",
+        tenantId: "tenant-barra",
+        uploadId: "upload-evo-777",
+        status: "CONCLUIDO",
+        dryRun: false,
+        force: true,
+        solicitadoEm: "2026-04-15T15:00:00Z",
+        finalizadoEm: "2026-04-15T15:02:00Z",
+        total: 12,
+        uploaded: 10,
+        skipped: 2,
+        errors: 0,
+        detalhes: [],
+      },
+    });
+  });
+
+  await page.route("**/admin/integracoes/importacao-terceiros/jobs/last-for-tenant**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: ultimoLote,
+    });
+  });
+
+  await page.route("**/admin/integracoes/importacao-terceiros/jobs/from-source", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
+
+    const body = route.request().postDataJSON() as {
+      sourceJobId?: string;
+      arquivosSelecionados?: string[];
+    };
+    arquivosSelecionadosNoJob = body.arquivosSelecionados ?? ultimoLote.arquivosSelecionados;
+
+    await route.fulfill({
+      status: 202,
+      json: {
+        jobId: "job-reprocess-barra-002",
+        apelido: "Pacote · BARRA · 13/03, 10:00 (reprocess)",
+        status: "PROCESSANDO",
+        sourceJobId: body.sourceJobId ?? ultimoLote.jobId,
+      },
+    });
+  });
+
   await page.route("**/admin/integracoes/importacao-terceiros/jobs/*/p0**", async (route) => {
     const jobId = route.request().url().split("/jobs/")[1]?.split("/")[0] ?? "job-evo-777";
     const pollingCount = (pollingCountByJob.get(jobId) ?? 0) + 1;
@@ -1248,7 +1344,7 @@ async function installImportacaoMocks(page: Page) {
       json: {
         jobId,
         status,
-        alias: "Carga EVO Barra",
+        alias: jobId === "job-reprocess-barra-002" ? "Pacote · BARRA · 13/03, 10:00 (reprocess)" : "Carga EVO Barra",
         resumo: {
           total: 114,
           processadas: status === "CONCLUIDO" ? 114 : 68,

@@ -1,15 +1,170 @@
 /** @jsxImportSource react */
 "use client";
 
-import { memo, useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { memo, useEffect, useState, useSyncExternalStore } from "react";
+import { AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getOnboardingStatus } from "@/lib/api/onboarding-api";
 import type { OnboardingStatus } from "@/lib/shared/types/tenant";
 import { cn } from "@/lib/utils";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
+
+const ONBOARDING_HELPER_STORAGE_KEY = "academia-onboarding-flow-helper";
+const ONBOARDING_HELPER_UPDATED_EVENT = "academia-onboarding-flow-helper-updated";
+const ONBOARDING_HELPER_SNOOZE_MS = 24 * 60 * 60 * 1000;
+const ONBOARDING_HELPER_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+
+type OnboardingHelperState = Record<
+  string,
+  {
+    understood?: boolean;
+    snoozedUntil?: number;
+  }
+>;
+
+function readOnboardingHelperState(): OnboardingHelperState {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const match = document.cookie.match(
+      new RegExp(`(?:^|; )${ONBOARDING_HELPER_STORAGE_KEY}=([^;]*)`),
+    );
+    const raw = match?.[1] ? decodeURIComponent(match[1]) : undefined;
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as OnboardingHelperState;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeOnboardingHelperState(next: OnboardingHelperState) {
+  if (typeof window === "undefined") return;
+
+  try {
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${ONBOARDING_HELPER_STORAGE_KEY}=${encodeURIComponent(JSON.stringify(next))}; Path=/; Max-Age=${ONBOARDING_HELPER_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
+    window.dispatchEvent(new Event(ONBOARDING_HELPER_UPDATED_EVENT));
+  } catch {
+    // noop
+  }
+}
+
+function shouldShowOnboardingHelper(stepId: string) {
+  const current = readOnboardingHelperState()[stepId];
+  if (!current) return true;
+  if (current.understood) return false;
+  if (typeof current.snoozedUntil === "number" && current.snoozedUntil > Date.now()) {
+    return false;
+  }
+  return true;
+}
+
+function markOnboardingHelperUnderstood(stepId: string) {
+  const current = readOnboardingHelperState();
+  writeOnboardingHelperState({
+    ...current,
+    [stepId]: {
+      understood: true,
+    },
+  });
+}
+
+function snoozeOnboardingHelper(stepId: string) {
+  const current = readOnboardingHelperState();
+  writeOnboardingHelperState({
+    ...current,
+    [stepId]: {
+      understood: false,
+      snoozedUntil: Date.now() + ONBOARDING_HELPER_SNOOZE_MS,
+    },
+  });
+}
+
+function subscribeOnboardingHelper(listener: () => void) {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+
+  const notify = () => listener();
+
+  window.addEventListener(ONBOARDING_HELPER_UPDATED_EVENT, notify);
+  window.addEventListener("focus", notify);
+  document.addEventListener("visibilitychange", notify);
+
+  return () => {
+    window.removeEventListener(ONBOARDING_HELPER_UPDATED_EVENT, notify);
+    window.removeEventListener("focus", notify);
+    document.removeEventListener("visibilitychange", notify);
+  };
+}
+
+function useOnboardingHelperVisibility(stepId?: string) {
+  return useSyncExternalStore(
+    subscribeOnboardingHelper,
+    () => (stepId ? shouldShowOnboardingHelper(stepId) : false),
+    () => false,
+  );
+}
+
+function OnboardingFlowHelper({
+  stepId,
+  stepTitle,
+  visible,
+  onAcknowledge,
+}: {
+  stepId: string;
+  stepTitle: string;
+  visible: boolean;
+  onAcknowledge: () => void;
+}) {
+
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <div className="hidden w-[28rem] max-w-[28rem] items-center gap-4 rounded-lg border border-gym-accent/30 bg-gym-accent/10 px-4 py-3 text-left lg:flex xl:w-[34rem] xl:max-w-[34rem]">
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gym-accent">
+          Helper de fluxo
+        </p>
+        <p className="mt-1 text-sm font-semibold text-foreground">
+          {stepTitle}
+        </p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Clique no alerta ao lado para abrir o checklist.
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          className="h-8 rounded-md"
+          onClick={() => {
+            markOnboardingHelperUnderstood(stepId);
+            onAcknowledge();
+          }}
+        >
+          Entendi
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-8 rounded-md text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            snoozeOnboardingHelper(stepId);
+            onAcknowledge();
+          }}
+        >
+          Lembrar depois
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function OnboardingChecklistContent({ status }: { status: OnboardingStatus }) {
   const pendingCount = status.totalEtapas - status.etapasConcluidas;
@@ -46,12 +201,14 @@ function OnboardingChecklistContent({ status }: { status: OnboardingStatus }) {
                 <p className="text-xs text-muted-foreground">{step.descricao}</p>
               )}
               {step.status !== "CONCLUIDA" && step.rotaConfiguracao && (
-                <a
-                  href={step.rotaConfiguracao}
-                  className="mt-2 inline-flex items-center text-xs font-medium text-gym-teal hover:underline"
-                >
-                  Configurar agora →
-                </a>
+                <div className="mt-2">
+                  <a
+                    href={step.rotaConfiguracao}
+                    className="inline-flex items-center text-xs font-medium text-gym-teal hover:underline"
+                  >
+                    Configurar agora →
+                  </a>
+                </div>
               )}
               {step.status === "CONCLUIDA" && (
                 <span className="mt-2 inline-block text-xs font-medium text-muted-foreground">
@@ -85,6 +242,10 @@ function OnboardingStatusBadgeComponent() {
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const firstPendingStep = status?.etapas.find(
+    (step) => step.status !== "CONCLUIDA" && step.rotaConfiguracao,
+  );
+  const helperVisible = useOnboardingHelperVisibility(firstPendingStep?.id);
 
   useEffect(() => {
     let active = true;
@@ -117,25 +278,41 @@ function OnboardingStatusBadgeComponent() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative size-10"
-          aria-label={`${pendingCount} pendências de configuração`}
-        >
-          <AlertCircle className="size-5 text-gym-accent" />
-          <Badge
-            variant="destructive"
+      <div className="flex items-center gap-2">
+        {firstPendingStep ? (
+          <OnboardingFlowHelper
+            stepId={firstPendingStep.id}
+            stepTitle={firstPendingStep.titulo}
+            visible={helperVisible}
+            onAcknowledge={() => undefined}
+          />
+        ) : null}
+        {helperVisible ? (
+          <ArrowRight className="hidden size-4 shrink-0 text-gym-accent md:block" />
+        ) : null}
+        <SheetTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
             className={cn(
-              "absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full p-0 text-[10px]",
-              "min-w-5"
+              "relative size-10",
+              helperVisible ? "ring-2 ring-gym-accent/30 ring-offset-2 ring-offset-background" : undefined,
             )}
+            aria-label={`${pendingCount} pendências de configuração`}
           >
-            {pendingCount}
-          </Badge>
-        </Button>
-      </SheetTrigger>
+            <AlertCircle className="size-5 text-gym-accent" />
+            <Badge
+              variant="destructive"
+              className={cn(
+                "absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full p-0 text-[10px]",
+                "min-w-5"
+              )}
+            >
+              {pendingCount}
+            </Badge>
+          </Button>
+        </SheetTrigger>
+      </div>
       <SheetContent side="right" className="w-full sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">

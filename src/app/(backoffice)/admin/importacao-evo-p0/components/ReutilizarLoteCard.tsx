@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import {
+  type FromSourceResponse,
   fromSourceApi,
   getUltimoLoteApi,
   type UltimoLoteResponse,
@@ -25,14 +26,16 @@ import { formatDateTime } from "../date-time-format";
 
 interface ReutilizarLoteCardProps {
   tenantId?: string;
-  onReutilizado: (novoJobId: string) => void;
-  onSubirNovo: () => void;
+  onReutilizado: (input: {
+    novoJob: FromSourceResponse;
+    loteOrigem: UltimoLoteResponse;
+    tenantId?: string;
+  }) => void;
 }
 
 export function ReutilizarLoteCard({
   tenantId,
   onReutilizado,
-  onSubirNovo,
 }: ReutilizarLoteCardProps) {
   const { toast } = useToast();
   const [tree, setTree] = useState<TenantsTreeResponse | null>(null);
@@ -124,7 +127,11 @@ export function ReutilizarLoteCard({
         sourceJobId: ultimoLote.jobId,
         tenantId: ultimoLote.tenantId ?? unidadeSelecionada,
       });
-      onReutilizado(novo.jobId);
+      onReutilizado({
+        novoJob: novo,
+        loteOrigem: ultimoLote,
+        tenantId: ultimoLote.tenantId ?? unidadeSelecionada,
+      });
       toast({
         title: "Lote reutilizado",
         description: `Novo job criado a partir de ${ultimoLote.apelido || ultimoLote.jobId}.`,
@@ -253,15 +260,6 @@ export function ReutilizarLoteCard({
             disabled={!ultimoLote || reutilizando}
           >
             {reutilizando ? "Criando novo job..." : "Reutilizar esses arquivos"}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={onSubirNovo}
-            disabled={reutilizando}
-          >
-            Subir novo ZIP
           </Button>
         </div>
       </CardContent>

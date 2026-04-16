@@ -354,11 +354,13 @@ export async function adminLoginApi(input: {
 export async function adminEntrarComoUnidadeApi(input: AdminEntrarComoUnidadeRequest): Promise<AuthSession> {
   rememberBackofficeReturnSession(getAuthSessionSnapshot());
   const response = await apiRequest<LoginApiResponse>({
-    path: "/api/v1/auth/context/tenant",
+    path: "/api/v1/admin/auth/entrar-como-unidade",
     method: "POST",
     includeContextHeader: false,
     body: {
+      academiaId: input.academiaId,
       tenantId: input.tenantId,
+      justificativa: input.justificativa,
     },
   });
   const session = normalizeSession(response, {

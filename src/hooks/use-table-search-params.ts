@@ -3,13 +3,23 @@ import { usePathname, useSearchParams } from "next/navigation";
 import type { StatusAluno } from "@/lib/types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
+const ALLOWED_STATUS_FILTERS = new Set<StatusAluno | typeof FILTER_ALL>([
+  FILTER_ALL,
+  "ATIVO",
+  "SUSPENSO",
+  "INATIVO",
+]);
+
 export function useTableSearchParams() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentQueryString = searchParams.toString();
 
   const q = searchParams.get("q") ?? "";
-  const status = (searchParams.get("status") ?? FILTER_ALL) as StatusAluno | typeof FILTER_ALL;
+  const rawStatus = searchParams.get("status") as StatusAluno | null;
+  const status = ALLOWED_STATUS_FILTERS.has(rawStatus ?? FILTER_ALL)
+    ? (rawStatus ?? FILTER_ALL)
+    : FILTER_ALL;
   const page = parseInt(searchParams.get("page") ?? "0", 10);
   const size = parseInt(searchParams.get("size") ?? "20", 10) as 20 | 50 | 100 | 200;
 
@@ -50,6 +60,7 @@ export function useTableSearchParams() {
 
   return {
     q,
+    rawStatus,
     status,
     page,
     size,

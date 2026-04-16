@@ -103,6 +103,7 @@ const BACKOFFICE_RETURN_SESSION_KEY = "academia-backoffice-return-session";
 const BACKOFFICE_RECOVERY_SESSION_KEY = "academia-backoffice-recovery-session";
 const BACKOFFICE_REAUTH_REQUIRED_KEY = "academia-backoffice-reauth-required";
 const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
+const SESSION_CLAIMS_COOKIE_KEY = "fc_session_claims";
 const OPERATIONAL_TENANT_SCOPE_KEY = "academia-operational-tenant-scope";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
@@ -140,6 +141,25 @@ function expireCookie(name: string): void {
   if (!isBrowser()) return;
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
   document.cookie = `${name}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`;
+}
+
+function syncSessionClaimsActiveTenantId(tenantId?: string): void {
+  if (!isBrowser()) return;
+
+  const claims = getSessionClaims();
+  if (!claims) return;
+
+  const normalizedTenantId = typeof tenantId === "string" ? tenantId.trim() : "";
+  const nextClaims: Record<string, unknown> = { ...claims };
+
+  if (normalizedTenantId) {
+    nextClaims.activeTenantId = normalizedTenantId;
+  } else {
+    delete nextClaims.activeTenantId;
+  }
+
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${SESSION_CLAIMS_COOKIE_KEY}=${encodeURIComponent(JSON.stringify(nextClaims))}; Path=/; SameSite=Lax${secure}`;
 }
 
 /**
@@ -424,9 +444,19 @@ export function hasGlobalBackofficeAccessFromSession(): boolean {
     return true;
   }
 
-  const claims = getSessionClaimsFromToken(getAccessToken());
-  const sessionMode = claims.sessionMode?.trim().toUpperCase();
+  const sessionMode = getSessionModeFromSession();
   return sessionMode === "BACKOFFICE_ADMIN" || sessionMode === "BACKOFFICE_TO_OPERATIONAL";
+}
+
+export function getSessionModeFromSession(): string | undefined {
+  const claimsMode =
+    typeof getClaims()?.sessionMode === "string"
+      ? getClaims()?.sessionMode?.trim().toUpperCase()
+      : undefined;
+  if (claimsMode) {
+    return claimsMode;
+  }
+  return getSessionClaimsFromToken(getAccessToken()).sessionMode?.trim().toUpperCase();
 }
 
 function canReturnToBackofficeFromSession(session: AuthSession | null | undefined): boolean {
@@ -734,15 +764,20 @@ export function saveAuthSession(_session: AuthSession): void {
 
 export function setActiveTenantId(tenantId?: string): void {
   if (!isBrowser()) return;
-  if (!tenantId) {
+  const normalizedTenantId = typeof tenantId === "string" ? tenantId.trim() : "";
+
+  if (!normalizedTenantId) {
     expireCookie(ACTIVE_TENANT_COOKIE_KEY);
+    syncSessionClaimsActiveTenantId();
     notifyAuthSessionUpdated();
     return;
   }
+
   // Task 458: Apenas define cookie para compatibilidade com proxy.
   // O backend gerencia o tenant ativo via token de sessão.
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${ACTIVE_TENANT_COOKIE_KEY}=${encodeURIComponent(tenantId)}; Path=/; SameSite=Lax${secure}`;
+  document.cookie = `${ACTIVE_TENANT_COOKIE_KEY}=${encodeURIComponent(normalizedTenantId)}; Path=/; SameSite=Lax${secure}`;
+  syncSessionClaimsActiveTenantId(normalizedTenantId);
   notifyAuthSessionUpdated();
 }
 

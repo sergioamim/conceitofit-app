@@ -19,7 +19,6 @@ const STATUS_FILTERS: { value: WithFilterAll<StatusAluno>; label: string }[] = [
   { value: "ATIVO", label: "Ativos" },
   { value: "SUSPENSO", label: "Suspensos" },
   { value: "INATIVO", label: "Inativos" },
-  { value: "CANCELADO", label: "Cancelados" },
 ];
 
 interface ClientesFilterBarProps {

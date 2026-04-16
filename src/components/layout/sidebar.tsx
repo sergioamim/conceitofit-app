@@ -178,7 +178,7 @@ type SidebarProps = {
   shellReady?: boolean;
 };
 
-function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
+function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = false }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const pathname = usePathname();
@@ -206,9 +206,12 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
     } catch {}
   };
 
-  const academiaName = academia?.nome || tenant?.nome || DEFAULT_ACADEMIA_LABEL;
-  const userInitial = displayName?.trim().charAt(0).toUpperCase() || "U";
-  const userName = displayName?.trim() || "Usuário";
+  const appName = shellReady ? (brandingSnapshot?.appName || "Conceito.fit") : "Conceito.fit";
+  const academiaName = shellReady
+    ? (academia?.nome || tenant?.nome || DEFAULT_ACADEMIA_LABEL)
+    : DEFAULT_ACADEMIA_LABEL;
+  const userInitial = shellReady ? (displayName?.trim().charAt(0).toUpperCase() || "U") : "U";
+  const userName = shellReady ? (displayName?.trim() || "Usuário") : "Usuário";
   // Permite acessar o backoffice se:
   // 1. Ha uma sessao guardada (usuario entrou como academia via backoffice) - restaura e volta
   // 2. Usuario tem acesso global ao backoffice (admin/super_user) - navega direto para /admin
@@ -244,7 +247,7 @@ function SidebarComponent({ mobileOpen = false, onMobileClose }: SidebarProps) {
                     <Zap size={18} className="text-primary-foreground fill-current" />
                   </div>
                   <span className="font-display text-xl font-extrabold tracking-tighter">
-                    {(brandingSnapshot?.appName || "Conceito.fit").replace(".fit", "")}
+                    {appName.replace(".fit", "")}
                     <span className="text-primary">.fit</span>
                   </span>
                 </div>

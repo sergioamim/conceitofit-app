@@ -15,13 +15,11 @@ import {
   UserCheck,
   UserPlus,
   Users,
-  ChevronRight,
   ArrowRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useDashboard } from "@/lib/query/use-dashboard";
-import { OnboardingChecklist } from "@/components/shared/onboarding/OnboardingChecklist";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { DashboardData, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -56,7 +54,6 @@ export function DashboardContent({
   const [prospectsPageNumber, setProspectsPageNumber] = useState(1);
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
-  const [checklistDismissed, setChecklistDismissed] = useState(false);
 
   const { data: dashboardData, isLoading: loading, error: queryError, refetch } = useDashboard({
     tenantId: tenantContext.tenantId,
@@ -78,10 +75,6 @@ export function DashboardContent({
     const startIndex = Math.max(0, (prospectsPageNumber - 1) * PROSPECTS_PAGE_SIZE);
     return openProspects.slice(startIndex, startIndex + PROSPECTS_PAGE_SIZE);
   }, [openProspects, prospectsPageNumber]);
-
-  const prospectsPageHasNext = useMemo(() => {
-    return prospectsPageNumber * PROSPECTS_PAGE_SIZE < openProspects.length;
-  }, [openProspects.length, prospectsPageNumber]);
 
   const recentProspects = useMemo(() => openProspects.slice(0, 5), [openProspects]);
 
@@ -151,10 +144,6 @@ export function DashboardContent({
           </button>
         ))}
       </div>
-
-      {!checklistDismissed ? (
-        <OnboardingChecklist hideWhenComplete onDismiss={() => setChecklistDismissed(true)} />
-      ) : null}
 
       {error ? <ListErrorState error={error} onRetry={() => void refetch()} /> : null}
 

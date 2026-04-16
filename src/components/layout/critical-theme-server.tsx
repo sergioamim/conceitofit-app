@@ -18,7 +18,6 @@ export async function CriticalThemeServer() {
   const headerList = await headers();
   const cookieJar = await cookies();
   const host = headerList.get("host") || "";
-  const subdomain = host.split(".")[0];
 
   // Fast-path: se o tenant theme ja esta cacheado em cookie, usar direto
   const cachedTheme = cookieJar.get(THEME_COOKIE_NAME);
@@ -34,7 +33,8 @@ export async function CriticalThemeServer() {
   try {
     // Fetch unico: buscar tenant com academia embeddada se disponivel
     // Usa Promise.allSettled para evitar que um fetch lento bloqueie o outro
-    const tenantRes = await serverFetch<Tenant>(`/api/v1/tenants/by-domain/${subdomain}`, {
+    const tenantRes = await serverFetch<Tenant>("/api/v1/tenants/by-domain", {
+      query: { domain: host },
       next: { revalidate: 30 }, // cache curto para critical path
     });
 

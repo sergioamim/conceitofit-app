@@ -19,6 +19,7 @@ export interface UserKindSessionInput {
   userKind?: string | null;
   broadAccess?: boolean | null;
   availableScopes?: readonly AuthSessionScope[] | null;
+  sessionMode?: string | null;
 }
 
 export function resolveUserKindFromSession(input: UserKindSessionInput): UserKind | null {

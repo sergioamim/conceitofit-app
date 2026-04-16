@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActiveTenantSelector } from "@/components/layout/active-tenant-selector";
@@ -15,6 +15,7 @@ type AppTopbarProps = {
 
 function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [savingTenant, setSavingTenant] = useState(false);
   const {
     tenantId,
@@ -34,7 +35,11 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
     setSavingTenant(true);
     try {
       await setTenant(nextId);
-      router.push("/dashboard");
+      if (pathname === "/dashboard") {
+        router.refresh();
+      } else {
+        router.replace("/dashboard");
+      }
     } finally {
       setSavingTenant(false);
     }

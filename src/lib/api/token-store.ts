@@ -52,6 +52,8 @@ interface SessionClaims {
   availableScopes?: string[];
   broadAccess?: boolean;
   forcePasswordChangeRequired?: boolean;
+  sessionMode?: string;
+  contextOrigin?: string;
 }
 
 function readSessionClaims(): SessionClaims | null {

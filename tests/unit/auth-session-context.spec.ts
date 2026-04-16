@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { buildLoginHref, resolvePostLoginPath } from "../../src/lib/shared/auth-redirect";
+import {
+  buildLoginHref,
+  resolveHomeForSession,
+  resolvePostLoginPath,
+  resolvePostLoginPathForSession,
+} from "../../src/lib/shared/auth-redirect";
 import { hasClientDeleteCapability, hasElevatedAccess, normalizeRoles } from "../../src/lib/access-control";
 
 const envSnapshot = {
@@ -38,6 +43,26 @@ test.describe("session context helpers", () => {
   test("buildLoginHref volta para login legado quando a flag contextual estiver desligada", async () => {
     process.env.NEXT_PUBLIC_CONTEXTUAL_NETWORK_ACCESS_ENABLED = "false";
     expect(buildLoginHref("/clientes", "rede-norte")).toBe("/login?next=%2Fclientes");
+  });
+
+  test("resolveHomeForSession envia handoff backoffice-operacional para dashboard", async () => {
+    expect(
+      resolveHomeForSession({
+        userKind: "PLATAFORMA",
+        availableScopes: ["GLOBAL"],
+        sessionMode: "BACKOFFICE_TO_OPERATIONAL",
+      })
+    ).toBe("/dashboard");
+  });
+
+  test("resolvePostLoginPathForSession preserva rota operacional durante handoff", async () => {
+    expect(
+      resolvePostLoginPathForSession("/clientes", {
+        userKind: "PLATAFORMA",
+        availableScopes: ["GLOBAL"],
+        sessionMode: "BACKOFFICE_TO_OPERATIONAL",
+      })
+    ).toBe("/clientes");
   });
 
   test("normalizeRoles e hasElevatedAccess tratam perfis administrativos", async () => {

@@ -38,4 +38,14 @@ test.describe("Sincronização de Estado na URL - Clientes", () => {
     expect(page.url()).not.toContain("status=INATIVO");
     expect(page.url()).not.toContain("q=Teste");
   });
+
+  test("deve remover status cancelado legado da URL e da barra de filtros", async ({ page }) => {
+    await abrirClientesComSessao(page);
+    await page.goto("/clientes?status=CANCELADO", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cancelados" })).toHaveCount(0);
+    await page.waitForURL(/\/clientes$/, { timeout: 10_000 });
+    expect(page.url()).not.toContain("status=CANCELADO");
+  });
 });

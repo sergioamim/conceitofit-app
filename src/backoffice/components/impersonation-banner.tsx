@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { endImpersonationApi } from "@/backoffice/api/admin-audit";
+import { refreshTokenApi } from "@/lib/api/auth";
 import {
   AUTH_SESSION_UPDATED_EVENT,
   IMPERSONATION_SESSION_UPDATED_EVENT,
@@ -43,7 +44,6 @@ export function ImpersonationBanner() {
     if (!currentSnapshot) return;
 
     setEnding(true);
-    const restored = restoreOriginalSessionFromImpersonation();
 
     try {
       await endImpersonationApi({
@@ -51,9 +51,14 @@ export function ImpersonationBanner() {
         targetUserId: currentSnapshot.targetUserId,
         targetUserName: currentSnapshot.targetUserName,
       });
+      if (currentSnapshot.originalSession.refreshToken) {
+        await refreshTokenApi(currentSnapshot.originalSession.refreshToken);
+      } else {
+        restoreOriginalSessionFromImpersonation();
+      }
       toast({
         title: "Impersonação encerrada",
-        description: `Sessão original restaurada${restored?.actorDisplayName ? ` para ${restored.actorDisplayName}` : ""}.`,
+        description: `Sessão original restaurada${currentSnapshot.actorDisplayName ? ` para ${currentSnapshot.actorDisplayName}` : ""}.`,
       });
     } catch (error) {
       toast({

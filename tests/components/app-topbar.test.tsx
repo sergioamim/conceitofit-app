@@ -1,29 +1,45 @@
-
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AppTopbar } from "@/components/layout/app-topbar";
 
-// Mock next/navigation
+const mockReplace = vi.fn();
+const mockRefresh = vi.fn();
+const mockSetTenant = vi.fn().mockResolvedValue(undefined);
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    replace: mockReplace,
+    refresh: mockRefresh,
   }),
+  usePathname: () => "/dashboard",
 }));
 
-// Mock useTenantContext
 vi.mock("@/lib/tenant/hooks/use-session-context", () => ({
   useTenantContext: () => ({
     tenantId: "t1",
     tenantName: "Academia Teste",
-    eligibleTenants: [],
-    setTenant: vi.fn(),
+    eligibleTenants: [{ id: "t2", nome: "Unidade 2", ativo: true }],
+    baseTenantId: "t1",
+    baseTenantName: "Academia Teste",
+    blockedTenants: [],
+    networkName: "Rede Teste",
+    availableScopes: ["UNIDADE"],
+    broadAccess: false,
+    setTenant: mockSetTenant,
     loading: false,
   }),
 }));
 
-// Mock ActiveTenantSelector to simplify
 vi.mock("@/components/layout/active-tenant-selector", () => ({
-  ActiveTenantSelector: () => <div data-testid="tenant-selector">Tenant Selector</div>,
+  ActiveTenantSelector: ({ onChange }: { onChange: (tenantId: string) => void | Promise<void> }) => (
+    <button data-testid="tenant-selector" onClick={() => void onChange("t2")}>
+      Tenant Selector
+    </button>
+  ),
+}));
+
+vi.mock("@/components/layout/onboarding-status-badge", () => ({
+  OnboardingStatusBadge: () => <div data-testid="onboarding-badge" />,
 }));
 
 describe("AppTopbar", () => {
@@ -43,5 +59,17 @@ describe("AppTopbar", () => {
     const menuBtn = screen.getByLabelText("Abrir menu principal");
     fireEvent.click(menuBtn);
     expect(onOpenMenu).toHaveBeenCalled();
+  });
+
+  it("atualiza o tenant e força refresh quando a troca acontece no dashboard", async () => {
+    render(<AppTopbar />);
+
+    fireEvent.click(screen.getByTestId("tenant-selector"));
+
+    await waitFor(() => {
+      expect(mockSetTenant).toHaveBeenCalledWith("t2");
+      expect(mockRefresh).toHaveBeenCalled();
+    });
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

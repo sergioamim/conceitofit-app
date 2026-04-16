@@ -1039,4 +1039,46 @@ test.describe("http apiRequest", () => {
       restore();
     }
   });
+
+  test("normaliza ProblemDetail com detail, correlationId e fieldErrors aninhados", async () => {
+    const { restore } = mockFetchSequence([
+      new Response(
+        JSON.stringify({
+          type: "https://api.academia.fit/errors/VALIDATION_ERROR",
+          title: "Erro de validacao",
+          status: 400,
+          detail: "email já cadastrado",
+          instance: "/api/v1/admin/unidades",
+          properties: {
+            correlationId: "corr-123",
+            fieldErrors: [
+              { field: "email", message: "já cadastrado" },
+            ],
+          },
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/problem+json" },
+        }
+      ),
+    ]);
+
+    try {
+      await expect(
+        apiRequest({
+          path: "/api/v1/admin/unidades",
+          method: "POST",
+          body: { nome: "Teste" },
+        })
+      ).rejects.toMatchObject({
+        status: 400,
+        message: "email já cadastrado",
+        path: "/api/v1/admin/unidades",
+        requestId: "corr-123",
+        fieldErrors: { email: "já cadastrado" },
+      });
+    } finally {
+      restore();
+    }
+  });
 });

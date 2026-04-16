@@ -239,6 +239,8 @@ export function EntrarContent() {
         tenantId: selectedTenantId,
         justificativa: values.justificativa,
       });
+      setPreferredTenantId(selectedTenantId);
+      await switchActiveTenant(selectedTenantId);
 
       // Persistir nos recentes
       saveRecente({

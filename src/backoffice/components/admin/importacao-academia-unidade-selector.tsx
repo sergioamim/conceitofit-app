@@ -61,6 +61,7 @@ export function MapeamentoAcademiaUnidadeSelector({
             onSelect={onAcademiaSelect}
             options={academiaOptions}
             minCharsToSearch={0}
+            showAllOnFocus
             placeholder="Pesquise por nome da academia"
             emptyText={loadingAcademias ? "Carregando academias..." : "Nenhuma academia encontrada"}
           />
@@ -73,6 +74,7 @@ export function MapeamentoAcademiaUnidadeSelector({
             onSelect={onUnidadeSelect}
             options={unidadesOptions}
             minCharsToSearch={0}
+            showAllOnFocus
             placeholder={academiaId ? "Pesquise a unidade" : "Selecione uma academia"}
             emptyText={
               academiaId

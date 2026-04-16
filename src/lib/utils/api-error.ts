@@ -18,6 +18,37 @@ function isRecord(input: unknown): input is Record<string, string> {
   );
 }
 
+function pickFirstString(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function normalizeFieldErrors(input: unknown): Record<string, string> | undefined {
+  if (!input) {
+    return undefined;
+  }
+  if (Array.isArray(input)) {
+    const entries = input
+      .map((item) => {
+        if (!item || typeof item !== "object") {
+          return null;
+        }
+        const candidate = item as { field?: unknown; message?: unknown };
+        if (typeof candidate.field !== "string" || typeof candidate.message !== "string") {
+          return null;
+        }
+        return [candidate.field, candidate.message] as const;
+      })
+      .filter((entry): entry is readonly [string, string] => entry !== null);
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+  }
+  return isRecord(input) ? input : undefined;
+}
+
 export function normalizeErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
     const details =
@@ -32,14 +63,32 @@ export function normalizeErrorMessage(error: unknown): string {
   }
 
   if (isApiErrorPayload(error)) {
-    const fieldErrors =
-      Object.entries(error.fieldErrors ?? {})
+    const payload = error as ApiErrorPayload & {
+      detail?: unknown;
+      title?: unknown;
+      properties?: {
+        fieldErrors?: unknown;
+        detail?: unknown;
+        message?: unknown;
+        title?: unknown;
+      } | null;
+    };
+    const normalizedFieldErrors = normalizeFieldErrors(payload.fieldErrors ?? payload.properties?.fieldErrors);
+    const message =
+      Object.entries(normalizedFieldErrors ?? {})
         .map(([field, message]) => `${field}: ${message}`)
         .join(" ") ||
-      error.message ||
-      error.error ||
+      pickFirstString(
+        payload.message,
+        payload.detail,
+        payload.properties?.detail,
+        payload.properties?.message,
+        payload.error,
+        payload.title,
+        payload.properties?.title,
+      ) ||
       "Não foi possível completar a operação.";
-    return fieldErrors;
+    return message;
   }
 
   return "Não foi possível completar a operação.";
@@ -118,13 +167,27 @@ export function describeErrorForUi(
 
 function isApiErrorPayload(error: unknown): error is ApiErrorPayload {
   if (typeof error !== "object" || error === null) return false;
-  const candidate = error as ApiErrorPayload;
+  const candidate = error as ApiErrorPayload & {
+    detail?: unknown;
+    title?: unknown;
+    instance?: unknown;
+    properties?: {
+      fieldErrors?: unknown;
+      detail?: unknown;
+      message?: unknown;
+      title?: unknown;
+    } | null;
+  };
   return (
     typeof candidate.message === "string" ||
+    typeof candidate.detail === "string" ||
     typeof candidate.error === "string" ||
+    typeof candidate.title === "string" ||
     typeof candidate.status === "number" ||
     typeof candidate.path === "string" ||
-    candidate.fieldErrors != null
+    typeof candidate.instance === "string" ||
+    candidate.fieldErrors != null ||
+    candidate.properties?.fieldErrors != null
   );
 }
 

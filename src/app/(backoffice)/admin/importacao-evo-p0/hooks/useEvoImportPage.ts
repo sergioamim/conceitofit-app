@@ -7,21 +7,28 @@ import { useToast } from "@/components/ui/use-toast";
 import { ApiRequestError } from "@/lib/api/http";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import {
+  type EvoFotoImportEstadoResponse,
+  type EvoFotoImportJobStatusResponse,
+  type FromSourceResponse,
   type EvoImportColaboradoresBlocoResumo,
   type EvoImportColaboradoresResumo,
   type EvoImportEntidadeResumo as EntidadeResumo,
   type EvoImportJobResumo as JobResumo,
   type EvoImportJobStatus as EvoStatus,
   type EvoImportRejeicao as Rejeicao,
+  type UltimoLoteResponse,
   type UploadAnaliseArquivo,
   type UploadAnaliseFilial,
   type UploadAnaliseResponse,
 } from "@/lib/api/importacao-evo";
 import { createGlobalUnidade, listGlobalAcademias, listGlobalUnidades } from "@/backoffice/lib/admin";
 import {
+  createBackofficeEvoPacoteFotoImportJob,
   createBackofficeEvoP0CsvJob,
   createBackofficeEvoP0PacoteJob,
   type EvoArquivoHistoricoNormalizado,
+  getBackofficeEvoFotoImportEstado,
+  getBackofficeEvoFotoImportJobStatus,
   getBackofficeEvoImportJobResumo,
   getBackofficeEvoP0PacoteAnalise,
   listBackofficeEvoImportJobRejeicoes,
@@ -39,7 +46,7 @@ import {
 } from "@/backoffice/lib/onboarding";
 import { listEligibleNewUnitAdminsPreview } from "@/backoffice/lib/seguranca";
 import type { Academia, GlobalAdminUserSummary, Tenant, UnidadeOnboardingState } from "@/lib/types";
-import { formatCnpj, isValidCnpj } from "@/lib/utils/cnpj";
+import { formatCnpj } from "@/lib/utils/cnpj";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { normalizeSubdomain } from "@/lib/utils/subdomain";
 import { formatDateTime, formatJobAliasDate } from "../date-time-format";
@@ -56,6 +63,7 @@ import {
   type FileMap,
   type MapeamentoFilial,
   type NovaUnidadePacoteForm,
+  type NovaUnidadePacoteFieldErrors,
   PACOTE_CHAVES_DISPONIVEIS,
   COLABORADOR_ARQUIVOS_CONFIG,
   COLABORADOR_BLOCO_CONFIG,
@@ -91,6 +99,7 @@ import {
   getColaboradorResumoBloco,
   resolvePacoteNomeFilial,
   buildNovaUnidadePacoteForm,
+  validateNovaUnidadePacoteForm,
   resolveUnidadeAcademiaId,
   buildEligibleAdminsResumo,
 } from "../shared";
@@ -103,7 +112,6 @@ export function useEvoImportPage() {
   // Se o fluxo manual não voltar, essa variante pode ser removida junto com o código CSV restante.
   const [activeTab, setActiveTab] = useState<"nova" | "pacote" | "acompanhamento">("pacote");
   const [dryRun, setDryRun] = useState(false);
-  const [maxRejeicoes, setMaxRejeicoes] = useState(200);
   const [academias, setAcademias] = useState<Academia[]>([]);
   const [unidades, setUnidades] = useState<Tenant[]>([]);
   const [unidadesOnboarding, setUnidadesOnboarding] = useState<UnidadeOnboardingState[]>([]);
@@ -124,9 +132,9 @@ export function useEvoImportPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [pacoteEvoUnidadeId, setPacoteEvoUnidadeId] = useState("");
+  const [pacoteEvoUnidadeManual, setPacoteEvoUnidadeManual] = useState(false);
   const [pacoteArquivo, setPacoteArquivo] = useState<File | null>(null);
   const [pacoteDryRun, setPacoteDryRun] = useState(false);
-  const [pacoteMaxRejeicoes, setPacoteMaxRejeicoes] = useState(200);
   const [pacoteMapeamento, setPacoteMapeamento] = useState<MapeamentoFilial>({
     idFilialEvo: "",
     academiaId: "",
@@ -139,9 +147,14 @@ export function useEvoImportPage() {
   const [pacoteJobAlias, setPacoteJobAlias] = useState("");
   const [pacoteAnalisando, setPacoteAnalisando] = useState(false);
   const [pacoteCriandoJob, setPacoteCriandoJob] = useState(false);
+  const [fotoImportEstado, setFotoImportEstado] = useState<EvoFotoImportEstadoResponse | null>(null);
+  const [fotoImportEstadoLoading, setFotoImportEstadoLoading] = useState(false);
+  const [fotoImportJobStatus, setFotoImportJobStatus] = useState<EvoFotoImportJobStatusResponse | null>(null);
+  const [fotoImportExecutando, setFotoImportExecutando] = useState(false);
   const [novaUnidadePacoteAberta, setNovaUnidadePacoteAberta] = useState(false);
   const [novaUnidadePacoteSalvando, setNovaUnidadePacoteSalvando] = useState(false);
   const [novaUnidadePacoteErro, setNovaUnidadePacoteErro] = useState<string | null>(null);
+  const [novaUnidadePacoteFieldErrors, setNovaUnidadePacoteFieldErrors] = useState<NovaUnidadePacoteFieldErrors>({});
   const [novaUnidadePacoteForm, setNovaUnidadePacoteForm] = useState<NovaUnidadePacoteForm>(() =>
     buildNovaUnidadePacoteForm(null)
   );
@@ -154,11 +167,27 @@ export function useEvoImportPage() {
     academiaNome: "Não informado",
     unidadeNome: "Não informado",
   });
+  const syncPacoteEvoUnidadeId = useCallback((
+    value: string | number | null | undefined,
+    source: "manual" | "automatic" | "preserve" = "automatic"
+  ) => {
+    const normalized = value == null ? "" : String(value).trim();
+    setPacoteEvoUnidadeId(normalized);
+    if (source === "manual") {
+      setPacoteEvoUnidadeManual(Boolean(normalized));
+      return;
+    }
+    if (source === "automatic") {
+      setPacoteEvoUnidadeManual(false);
+    }
+  }, []);
   const [jobResumo, setJobResumo] = useState<JobResumo | null>(null);
   const [polling, setPolling] = useState(false);
   const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
   const [jobsHistorico, setJobsHistorico] = useState<JobHistoryMeta[]>([]);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fotoImportPollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pacotePresetAplicadoRef = useRef<string | null>(null);
 
   const [rejeicoes, setRejeicoes] = useState<Rejeicao[]>([]);
   const [rejPage, setRejPage] = useState(0);
@@ -389,8 +418,100 @@ export function useEvoImportPage() {
     subdominio: rejeicao.subdominio,
     payload: rejeicao.payload,
     mensagemAcionavel: rejeicao.mensagemAcionavel,
+    ocorrenciasAgrupadas: Math.max(Number(rejeicao.ocorrenciasAgrupadas ?? 1), 1),
     reprocessamento: rejeicao.reprocessamento ?? null,
   }), []);
+
+  const getPayloadValue = useCallback((payload: unknown, ...keys: string[]) => {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+    const record = payload as Record<string, unknown>;
+    for (const key of keys) {
+      const raw = record[key];
+      if (raw === undefined || raw === null) continue;
+      const text = String(raw).trim();
+      if (text && text.toLowerCase() !== "null") {
+        return text;
+      }
+    }
+    return null;
+  }, []);
+
+  const explainRejeicao = useCallback((rejeicao: Rejeicao) => {
+    const nome = getPayloadValue(rejeicao.payload, "nome_completo", "nome");
+    const cpf = getPayloadValue(rejeicao.payload, "cpf", "cpf_sn");
+    const idCliente = getPayloadValue(rejeicao.payload, "id_cliente");
+    const motivoOriginal = rejeicao.motivo?.trim() || "Erro de importação";
+
+    switch (motivoOriginal) {
+      case "CPF duplicado no lote":
+        return {
+          motivo: "CPF repetido no arquivo",
+          diagnostico: `${nome ?? "Este cadastro"} usa o CPF ${cpf ?? "informado"} mais de uma vez no mesmo CSV. Deixe só uma linha com esse CPF.`,
+        };
+      case "ID_CONTRATO obrigatorio":
+        return {
+          motivo: "Contrato sem ID_CONTRATO",
+          diagnostico: `A linha ${rejeicao.linhaArquivo} não informa o ID do contrato${idCliente ? ` do cliente ${idCliente}` : ""}. Preencha a coluna ID_CONTRATO ou remova a linha.`,
+        };
+      case "ID_CLIENTE obrigatorio":
+        return {
+          motivo: "Cliente não informado",
+          diagnostico: `${nome ?? "Esta linha"} não aponta para nenhum cliente. Preencha ID_CLIENTE ou remova a linha.`,
+        };
+      case "Valor de contato ausente":
+        return {
+          motivo: "Contato sem telefone",
+          diagnostico: "A linha foi enviada sem número de telefone. Preencha o telefone ou remova o contato.",
+        };
+      case "Foto ausente":
+        return {
+          motivo: "Foto sem arquivo",
+          diagnostico: "Existe referência à foto, mas a imagem não foi encontrada no pacote da importação.",
+        };
+      case "Ator de destino ausente (ID_CLIENTE ou ID_PROSPECT ou ID_FUNCIONARIO)":
+        return {
+          motivo: "Biometria sem dono",
+          diagnostico: "A biometria não informa se pertence a cliente, prospect ou funcionário. Preencha um desses IDs.",
+        };
+      default:
+        return {
+          motivo: motivoOriginal,
+          diagnostico: rejeicao.mensagemAcionavel ?? null,
+        };
+    }
+  }, [getPayloadValue]);
+
+  const collapseRejeicoes = useCallback((items: Rejeicao[]) => {
+    const grouped = new Map<string, Rejeicao>();
+    const counts = new Map<string, number>();
+
+    items.forEach((item) => {
+      const key = [
+        item.entidade ?? "",
+        item.arquivo ?? "",
+        String(item.linhaArquivo ?? 0),
+        item.sourceId ?? "",
+        item.motivo ?? "",
+      ].join("|");
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+      if (!grouped.has(key)) {
+        grouped.set(key, item);
+      }
+    });
+
+    return Array.from(grouped.entries())
+      .map(([key, item]) => ({
+        ...item,
+        ocorrenciasAgrupadas: counts.get(key) ?? 1,
+      }))
+      .sort((a, b) => {
+        const arquivoCompare = (a.arquivo ?? "").localeCompare(b.arquivo ?? "", "pt-BR");
+        if (arquivoCompare !== 0) return arquivoCompare;
+        const linhaCompare = Number(a.linhaArquivo ?? 0) - Number(b.linhaArquivo ?? 0);
+        if (linhaCompare !== 0) return linhaCompare;
+        return (a.entidade ?? "").localeCompare(b.entidade ?? "", "pt-BR");
+      });
+  }, []);
 
   const formatErrorBody = useCallback((value: unknown) => {
     if (typeof value !== "string") {
@@ -557,9 +678,9 @@ export function useEvoImportPage() {
       unidadeNome,
     });
     if (evoFilialId) {
-      setPacoteEvoUnidadeId(evoFilialId);
+      syncPacoteEvoUnidadeId(evoFilialId, "automatic");
     }
-  }, [academiaIndex, onboardingIndex, tenantIndex]);
+  }, [academiaIndex, onboardingIndex, syncPacoteEvoUnidadeId, tenantIndex]);
 
   const setJobLabelFromContext = useCallback(
     (tenantId: string, academiaNome?: string, unidadeNome?: string) => {
@@ -922,10 +1043,11 @@ export function useEvoImportPage() {
   const pacotePrecisaReanaliseManual = useMemo(() => {
     return Boolean(
       pacoteArquivo &&
+      pacoteEvoUnidadeManual &&
       pacoteEvoUnidadeInformada &&
       pacoteEvoUnidadeInformada !== pacoteEvoUnidadeResolvida
     );
-  }, [pacoteArquivo, pacoteEvoUnidadeInformada, pacoteEvoUnidadeResolvida]);
+  }, [pacoteArquivo, pacoteEvoUnidadeInformada, pacoteEvoUnidadeManual, pacoteEvoUnidadeResolvida]);
 
   const formatBytes = useCallback((value?: number | null) => {
     if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "—";
@@ -986,7 +1108,9 @@ export function useEvoImportPage() {
   useEffect(() => {
     if (!preselectedTenantId) return;
     if (tenantIndex.size === 0) return;
+    if (pacotePresetAplicadoRef.current === preselectedTenantId) return;
     aplicarPresetTenant(preselectedTenantId);
+    pacotePresetAplicadoRef.current = preselectedTenantId;
   }, [aplicarPresetTenant, preselectedTenantId, tenantIndex.size]);
 
   useEffect(() => {
@@ -1219,9 +1343,12 @@ export function useEvoImportPage() {
     });
 
     if (nextEvoFilialId) {
-      setPacoteEvoUnidadeId(nextEvoFilialId);
+      syncPacoteEvoUnidadeId(
+        nextEvoFilialId,
+        overrides?.evoFilialId || onboarding?.evoFilialId ? "automatic" : "preserve"
+      );
     }
-  }, [academiaIndex, onboardingIndex, pacoteEvoUnidadeId, pacoteEvoUnidadeResolvida]);
+  }, [academiaIndex, onboardingIndex, pacoteEvoUnidadeId, pacoteEvoUnidadeResolvida, syncPacoteEvoUnidadeId]);
 
   const aplicarDestinoPacotePorTenantId = useCallback((tenantId: string) => {
     const normalizedTenant = normalizeTenantId(tenantId);
@@ -1250,30 +1377,46 @@ export function useEvoImportPage() {
     }
     setNovaUnidadePacoteForm(buildNovaUnidadePacoteForm(pacoteFilialReferencia, pacoteMapeamento.academiaNome));
     setNovaUnidadePacoteErro(null);
+    setNovaUnidadePacoteFieldErrors({});
     setNovaUnidadePacoteAberta(true);
   }, [pacoteFilialReferencia, pacoteMapeamento.academiaId, pacoteMapeamento.academiaNome, toast]);
+
+  function updateNovaUnidadePacoteField<K extends keyof NovaUnidadePacoteForm>(
+    field: K,
+    value: NovaUnidadePacoteForm[K],
+  ) {
+    setNovaUnidadePacoteForm((current) => ({ ...current, [field]: value }));
+    setNovaUnidadePacoteFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
 
   const salvarNovaUnidadePacote = useCallback(async () => {
     if (!pacoteMapeamento.academiaId) {
       setNovaUnidadePacoteErro("Selecione a academia antes de criar a unidade.");
       return;
     }
-    if (!novaUnidadePacoteForm.nome.trim()) {
-      setNovaUnidadePacoteErro("Informe o nome da unidade.");
-      return;
-    }
     const normalizedSubdomain = normalizeSubdomain(novaUnidadePacoteForm.subdomain);
-    if (!normalizedSubdomain) {
-      setNovaUnidadePacoteErro("Informe um subdominio valido para a nova unidade.");
-      return;
-    }
-    if (!isValidCnpj(novaUnidadePacoteForm.documento)) {
-      setNovaUnidadePacoteErro("Informe um CNPJ valido para a nova unidade.");
+    const fieldErrors = validateNovaUnidadePacoteForm({
+      ...novaUnidadePacoteForm,
+      nome: novaUnidadePacoteForm.nome.trim(),
+      subdomain: normalizedSubdomain,
+      email: novaUnidadePacoteForm.email.trim(),
+    });
+    if (Object.keys(fieldErrors).length > 0) {
+      setNovaUnidadePacoteFieldErrors(fieldErrors);
+      setNovaUnidadePacoteErro("Revise os campos obrigatorios da nova unidade.");
       return;
     }
 
     setNovaUnidadePacoteSalvando(true);
     setNovaUnidadePacoteErro(null);
+    setNovaUnidadePacoteFieldErrors({});
     try {
       const persisted = await createGlobalUnidade({
         nome: novaUnidadePacoteForm.nome.trim(),
@@ -1319,6 +1462,18 @@ export function useEvoImportPage() {
         description: `${persisted.nome} foi criada e selecionada como destino da importacao.`,
       });
     } catch (saveError) {
+      if (saveError instanceof ApiRequestError && saveError.fieldErrors) {
+        const apiFieldErrors: NovaUnidadePacoteFieldErrors = {};
+        Object.entries(saveError.fieldErrors).forEach(([field, message]) => {
+          if (field in novaUnidadePacoteForm) {
+            apiFieldErrors[field as keyof NovaUnidadePacoteForm] = message;
+          }
+        });
+        setNovaUnidadePacoteFieldErrors((current) => ({
+          ...current,
+          ...apiFieldErrors,
+        }));
+      }
       setNovaUnidadePacoteErro(normalizeErrorMessage(saveError));
     } finally {
       setNovaUnidadePacoteSalvando(false);
@@ -1385,7 +1540,7 @@ export function useEvoImportPage() {
         tenantId: unidadeUnica?.id ?? "",
       });
       if (onboarding?.evoFilialId) {
-        setPacoteEvoUnidadeId(onboarding.evoFilialId);
+        syncPacoteEvoUnidadeId(onboarding.evoFilialId, "automatic");
       }
       return;
     }
@@ -1408,7 +1563,7 @@ export function useEvoImportPage() {
       tenantId: option.id,
     });
     if (onboarding?.evoFilialId) {
-      setPacoteEvoUnidadeId(onboarding.evoFilialId);
+      syncPacoteEvoUnidadeId(onboarding.evoFilialId, "automatic");
     }
   }
 
@@ -1458,10 +1613,13 @@ export function useEvoImportPage() {
   function escolherArquivoPacote(event: ChangeEvent<HTMLInputElement>) {
     const arquivo = event.target.files?.[0] ?? null;
     setPacoteArquivo(arquivo);
-    if (!arquivo) {
-      setPacoteAnalise(null);
-      setPacoteArquivosSelecionados([]);
-    }
+    setPacoteAnalise(null);
+    setPacoteArquivosSelecionados([]);
+    syncPacoteEvoUnidadeId("", "automatic");
+    setPacoteMapeamento((current) => ({
+      ...current,
+      idFilialEvo: "",
+    }));
   }
 
   const validarFormPacote = useCallback((): string | null => {
@@ -1471,11 +1629,8 @@ export function useEvoImportPage() {
     if (!pacoteArquivo) {
       return "Selecione o arquivo de pacote (.zip ou .csv).";
     }
-    if (Number.isNaN(pacoteMaxRejeicoes) || pacoteMaxRejeicoes < 0 || pacoteMaxRejeicoes > 10000) {
-      return "maxRejeicoesRetorno deve estar entre 0 e 10000.";
-    }
     return null;
-  }, [pacoteArquivo, pacoteEvoUnidadeId, pacoteMaxRejeicoes]);
+  }, [pacoteArquivo, pacoteEvoUnidadeId]);
 
   const aplicarAnalisePacote = useCallback((analise: UploadAnaliseResponse, preserveSelection = false) => {
     setPacoteAnalise(analise);
@@ -1490,10 +1645,10 @@ export function useEvoImportPage() {
     const evoUnidadeId = parsePositiveInteger(analise.evoUnidadeId);
     if (evoUnidadeId) {
       const normalizedId = String(evoUnidadeId);
-      setPacoteEvoUnidadeId(normalizedId);
+      syncPacoteEvoUnidadeId(normalizedId, "automatic");
       setPacoteMapeamento((current) => ({ ...current, idFilialEvo: normalizedId }));
     }
-  }, []);
+  }, [syncPacoteEvoUnidadeId]);
 
   const arquivosSelecionadosDaAnalise = useMemo(() => {
     if (!pacoteAnalise) return [];
@@ -1502,6 +1657,11 @@ export function useEvoImportPage() {
       return Boolean(encontrado?.disponivel);
     });
   }, [pacoteAnalise, pacoteArquivosSelecionados]);
+
+  const clientesCsvDisponivelNoPacote = useMemo(() => {
+    if (!pacoteAnalise) return false;
+    return pacoteAnalise.arquivos.some((arquivo) => arquivo.chave === "clientes" && arquivo.disponivel);
+  }, [pacoteAnalise]);
 
   async function analisarArquivoPacote() {
     const validation = validarFormPacote();
@@ -1518,7 +1678,9 @@ export function useEvoImportPage() {
 
     setPacoteAnalisando(true);
     try {
-      const evoUnidadeId = parsePositiveInteger(pacoteEvoUnidadeId);
+      const evoUnidadeId = pacoteEvoUnidadeManual
+        ? parsePositiveInteger(pacoteEvoUnidadeId)
+        : undefined;
       const analise = await uploadBackofficeEvoP0Pacote({
         tenantId: pacoteMapeamento.tenantId || undefined,
         evoUnidadeId,
@@ -1676,7 +1838,6 @@ export function useEvoImportPage() {
       const job = await createBackofficeEvoP0PacoteJob({
         uploadId: analiseAtiva.uploadId,
         dryRun: pacoteDryRun,
-        maxRejeicoesRetorno: pacoteMaxRejeicoes,
         arquivos: arquivosParaImportar,
         tenantId: tenant,
         apelido: alias,
@@ -1742,6 +1903,156 @@ export function useEvoImportPage() {
     }
   }
 
+  const stopFotoImportPolling = useCallback(() => {
+    if (fotoImportPollTimer.current) {
+      clearInterval(fotoImportPollTimer.current);
+    }
+    fotoImportPollTimer.current = null;
+  }, []);
+
+  const carregarEstadoImportacaoFotos = useCallback(async (tenantIdParam?: string | null) => {
+    const tenantId = normalizeTenantId(tenantIdParam);
+    if (!tenantId) {
+      setFotoImportEstado(null);
+      return;
+    }
+
+    setFotoImportEstadoLoading(true);
+    try {
+      const estado = await getBackofficeEvoFotoImportEstado({ tenantId, contextoTenantId: tenantId });
+      setFotoImportEstado(estado);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      setFotoImportEstado(null);
+      logger.error(`Erro ao consultar estado da importação de fotos — ${message}`, {
+        module: "evo-import",
+        handled: true,
+      });
+    } finally {
+      setFotoImportEstadoLoading(false);
+    }
+  }, []);
+
+  const pollFotoImportJobOnce = useCallback(async (jobIdParam: string, tenantIdParam: string) => {
+    const tenantId = normalizeTenantId(tenantIdParam);
+    if (!tenantId || !jobIdParam) return;
+
+    try {
+      const status = await getBackofficeEvoFotoImportJobStatus({
+        jobId: jobIdParam,
+        tenantId,
+        contextoTenantId: tenantId,
+      });
+      setFotoImportJobStatus(status);
+
+      if (status.status !== "PROCESSANDO") {
+        stopFotoImportPolling();
+        await carregarEstadoImportacaoFotos(tenantId);
+        if (status.status === "CONCLUIDO") {
+          toast({
+            title: "Importação de fotos concluída",
+            description: `${status.uploaded ?? 0} foto(s) importada(s) e ${status.skipped ?? 0} item(ns) ignorado(s).`,
+          });
+        } else {
+          toast({
+            title: "Falha na importação de fotos",
+            description: status.erro || "O job de fotos foi encerrado com falha.",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error: unknown) {
+      stopFotoImportPolling();
+      const message = error instanceof Error ? error.message : String(error);
+      toast({
+        title: "Erro ao acompanhar importação de fotos",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  }, [carregarEstadoImportacaoFotos, stopFotoImportPolling, toast]);
+
+  const startFotoImportPolling = useCallback((jobIdParam: string, tenantIdParam: string) => {
+    stopFotoImportPolling();
+    void pollFotoImportJobOnce(jobIdParam, tenantIdParam);
+    fotoImportPollTimer.current = setInterval(() => {
+      void pollFotoImportJobOnce(jobIdParam, tenantIdParam);
+    }, 5000);
+  }, [pollFotoImportJobOnce, stopFotoImportPolling]);
+
+  async function importarFotosDoPacote(force = false) {
+    const tenantId = normalizeTenantId(pacoteMapeamento.tenantId);
+    if (!tenantId) {
+      toast({
+        title: "Destino pendente",
+        description: "Escolha a unidade antes de importar as fotos do pacote.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!pacoteAnalise?.uploadId) {
+      toast({
+        title: "Analise o pacote primeiro",
+        description: "A importação de fotos depende do pacote EVO já analisado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!clientesCsvDisponivelNoPacote) {
+      toast({
+        title: "CLIENTES.csv ausente",
+        description: "O pacote analisado não possui CLIENTES.csv disponível para importar as imagens.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFotoImportExecutando(true);
+    try {
+      const job = await createBackofficeEvoPacoteFotoImportJob({
+        uploadId: pacoteAnalise.uploadId,
+        tenantId,
+        contextoTenantId: tenantId,
+        dryRun: pacoteDryRun,
+        force,
+      });
+      setFotoImportJobStatus(job);
+      startFotoImportPolling(job.jobId, tenantId);
+      toast({
+        title: force ? "Reimportação de fotos iniciada" : "Importação de fotos iniciada",
+        description: `Job ${job.jobId} disparado para a unidade selecionada.`,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({
+        title: "Erro ao importar fotos",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setFotoImportExecutando(false);
+    }
+  }
+
+  useEffect(() => {
+    const tenantId = normalizeTenantId(pacoteMapeamento.tenantId);
+    setFotoImportJobStatus(null);
+    stopFotoImportPolling();
+    if (!tenantId) {
+      setFotoImportEstado(null);
+      return;
+    }
+    void carregarEstadoImportacaoFotos(tenantId);
+  }, [carregarEstadoImportacaoFotos, pacoteMapeamento.tenantId, stopFotoImportPolling]);
+
+  useEffect(() => {
+    return () => {
+      stopFotoImportPolling();
+    };
+  }, [stopFotoImportPolling]);
+
   async function tentarSomenteErrosDoArquivo(arquivo: PacoteArquivoDisponivel) {
     const analiseAtiva = pacoteAnalise;
     if (!analiseAtiva?.uploadId) {
@@ -1785,7 +2096,6 @@ export function useEvoImportPage() {
       const job = await createBackofficeEvoP0PacoteJob({
         uploadId: analiseAtiva.uploadId,
         dryRun: pacoteDryRun,
-        maxRejeicoesRetorno: pacoteMaxRejeicoes,
         arquivos: [arquivo.chave],
         retrySomenteErros: true,
         tenantId: tenant,
@@ -1848,9 +2158,6 @@ export function useEvoImportPage() {
     if (hasInvalidIdFilial) {
       return "ID Filial EVO inválido. Informe um número inteiro válido para cada mapeamento.";
     }
-    if (Number.isNaN(maxRejeicoes) || maxRejeicoes < 0 || maxRejeicoes > 10000) {
-      return "maxRejeicoesRetorno deve estar entre 0 e 10000.";
-    }
     if (!mapeamentos.length || mapeamentos.some((m) => !m.idFilialEvo || !m.academiaId || !m.tenantId)) {
       return "Informe ao menos um mapeamento com idFilialEvo, academia e unidade.";
     }
@@ -1859,7 +2166,7 @@ export function useEvoImportPage() {
       return "Envie pelo menos um arquivo CSV (idealmente todos).";
     }
     return null;
-  }, [files, mapeamentos, maxRejeicoes]);
+  }, [files, mapeamentos]);
 
   async function handleSubmit() {
     const validation = validarForm();
@@ -1875,7 +2182,6 @@ export function useEvoImportPage() {
     try {
       const body = await createBackofficeEvoP0CsvJob({
         dryRun,
-        maxRejeicoesRetorno: maxRejeicoes,
         mapeamentoFiliais: payloadMapeamentos,
         arquivos: FILE_FIELDS.flatMap(({ key, field }) => {
           const file = files[key];
@@ -2024,15 +2330,20 @@ export function useEvoImportPage() {
         | "CSV"
         | "PACOTE";
       const tenantsParaOnboarding = tenantIds.length > 0 ? tenantIds : tenantParaConsulta ? [tenantParaConsulta] : [];
+      const detalheErro = data.detalheErro?.trim() || data.rejeicoes?.mensagem?.trim() || undefined;
       await atualizarStatusOnboardingDoJob({
         tenantIds: tenantsParaOnboarding,
         jobId: id,
         status: data.status,
         origem,
-        mensagem: data.rejeicoes?.mensagem,
+        mensagem: detalheErro,
       });
       if (data.status === "FALHA") {
-        toast({ title: "Job falhou", description: data?.rejeicoes?.mensagem, variant: "destructive" });
+        toast({
+          title: "Job falhou",
+          description: detalheErro ?? "Abra as rejeições para ver os detalhes.",
+          variant: "destructive",
+        });
       }
       if (data.status === "CONCLUIDO" || data.status === "CONCLUIDO_COM_REJEICOES" || data.status === "FALHA") {
         stopPolling();
@@ -2173,6 +2484,49 @@ export function useEvoImportPage() {
     selecionarJobDoHistorico(job);
   }
 
+  function handleLoteReutilizado(input: {
+    novoJob: FromSourceResponse;
+    loteOrigem: UltimoLoteResponse;
+    tenantId?: string;
+  }) {
+    const tenant = normalizeTenantId(input.tenantId ?? input.loteOrigem.tenantId);
+    if (!tenant) {
+      toast({
+        title: "Unidade do lote não identificada",
+        description: "O novo job foi criado, mas a UI não conseguiu identificar a unidade para abrir o diagnóstico.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const labels = resolveTenantLabel(tenant);
+    const alias =
+      normalizeJobAlias(input.novoJob.apelido) ??
+      normalizeJobAlias(input.loteOrigem.apelido) ??
+      buildDefaultJobAlias({
+        origem: "pacote",
+        unidadeNome: labels.unidadeNome,
+        academiaNome: labels.academiaNome,
+        criadoEm: new Date().toISOString(),
+      });
+
+    const historico: JobHistoryMeta = {
+      tenantId: tenant,
+      jobId: input.novoJob.jobId,
+      alias,
+      academiaNome: labels.academiaNome,
+      unidadeNome: labels.unidadeNome,
+      origem: "pacote",
+      criadoEm: new Date().toISOString(),
+      status: (input.novoJob.status as EvoStatus | undefined) ?? "PROCESSANDO",
+      arquivosSelecionados: input.loteOrigem.arquivosSelecionados,
+      arquivosDisponiveis: input.loteOrigem.arquivosDisponiveis,
+    };
+
+    upsertJobHistorico(historico);
+    selecionarJobDoHistorico(historico);
+  }
+
   function salvarAliasJobAtual() {
     if (!jobId) {
       toast({ title: "Selecione um job", description: "Escolha um job para salvar o alias.", variant: "destructive" });
@@ -2251,31 +2605,82 @@ export function useEvoImportPage() {
     startPolling(jobId, true, tenantParaConsulta ? [tenantParaConsulta] : [], selecionado?.origem ?? jobOrigem, tenantParaConsulta);
   }
 
-  async function loadRejeicoes(page = 0, jobIdOverride?: string, tenantIdOverride?: string) {
+  async function loadRejeicoes(_page = 0, jobIdOverride?: string, tenantIdOverride?: string) {
     const targetJobId = jobIdOverride ?? jobId;
     if (!targetJobId) return;
     setRejeicoesLoading(true);
     try {
-      const data = await listBackofficeEvoImportJobRejeicoes({
-        jobId: targetJobId,
-        page,
-        size: 50,
-        tenantId: tenantIdOverride ?? jobTenantId,
-      });
-      const items = (data.items ?? data.content ?? []) as Rejeicao[];
-      const mapped = items.map((r) => resolveRejeicao(r));
-      const hasNext = data.hasNext ?? (Array.isArray(mapped) && mapped.length === 50);
+      const acumuladas: Rejeicao[] = [];
+      let currentPage = 0;
+      let hasNext = false;
+      let pagesLidas = 0;
+
+      do {
+        const data = await listBackofficeEvoImportJobRejeicoes({
+          jobId: targetJobId,
+          page: currentPage,
+          size: 200,
+          tenantId: tenantIdOverride ?? jobTenantId,
+        });
+        const items = (data.items ?? data.content ?? []) as Rejeicao[];
+        acumuladas.push(...items.map((r) => resolveRejeicao(r)));
+        hasNext = Boolean(data.hasNext);
+        currentPage += 1;
+        pagesLidas += 1;
+      } while (hasNext && pagesLidas < 100);
+
+      const mapped = collapseRejeicoes(acumuladas);
       setRejeicoes(mapped);
       setRetrySelecao({});
-      setRejPage(page);
-      setRejHasNext(hasNext);
+      setRejPage(0);
+      setRejHasNext(false);
       setShowRejeicoes(true);
+
+      if (hasNext) {
+        toast({
+          title: "Lista de rejeições muito grande",
+          description: "A tela carregou os primeiros blocos de erro. Se precisar, eu amplio esse limite interno também.",
+          variant: "destructive",
+        });
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       toast({ title: "Erro ao carregar rejeições", description: message, variant: "destructive" });
     } finally {
       setRejeicoesLoading(false);
     }
+  }
+
+  function abrirDiagnosticoDoHistoricoArquivo(arquivo: PacoteArquivoDisponivel) {
+    const targetJobId = arquivo.historico.jobIdExibicao;
+    const targetTenant = normalizeTenantId(arquivo.historico.jobRelacionado?.tenantId)
+      || normalizeTenantId(pacoteMapeamento.tenantId)
+      || resolveCurrentTenantIdRaw();
+    if (!targetJobId) {
+      toast({
+        title: "Sem job relacionado",
+        description: "Este arquivo ainda não possui um processamento disponível para consulta.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setJobId(targetJobId);
+    if (targetTenant) {
+      setJobTenantId(targetTenant);
+      setJobTenantIds([targetTenant]);
+      setStoredJobId(targetTenant, targetJobId);
+      setJobLabelFromContext(
+        targetTenant,
+        pacoteMapeamento.academiaNome || jobContextoLabel.academiaNome,
+        pacoteMapeamento.unidadeNome || jobContextoLabel.unidadeNome
+      );
+    }
+    if (arquivo.historico.aliasResolvido) {
+      setJobAliasDraft(arquivo.historico.aliasResolvido);
+    }
+    setActiveTab("acompanhamento");
+    lastJobStatusRef.current = null;
+    startPolling(targetJobId, true, targetTenant ? [targetTenant] : [], "pacote", targetTenant);
   }
 
   function abrirRejeicoesDoHistoricoArquivo(arquivo: PacoteArquivoDisponivel) {
@@ -2369,6 +2774,7 @@ export function useEvoImportPage() {
 
   const rejeicoesClassificadas = useMemo<RejeicaoClassificada[]>(() => {
     return rejeicoes.map((rejeicao, index) => {
+      const explicacao = explainRejeicao(rejeicao);
       const blocoClassificado = resolveColaboradorBlocoFromRejeicao(rejeicao);
       const blocoMeta = blocoClassificado ? colaboradorBlocoMetaIndex.get(blocoClassificado) : null;
       const retry = rejeicao.reprocessamento
@@ -2395,17 +2801,19 @@ export function useEvoImportPage() {
           : null;
       return {
         ...rejeicao,
+        motivo: explicacao.motivo,
         idNormalizado:
           rejeicao.id?.trim() ||
           [rejeicao.entidade, rejeicao.arquivo, rejeicao.linhaArquivo, rejeicao.sourceId, String(index)].join(":"),
+        ocorrenciasAgrupadas: Math.max(Number(rejeicao.ocorrenciasAgrupadas ?? 1), 1),
         blocoClassificado,
         blocoLabel: blocoMeta?.label ?? null,
-        diagnostico: rejeicao.mensagemAcionavel ?? blocoMeta?.impactoAusencia ?? null,
+        diagnostico: explicacao.diagnostico ?? blocoMeta?.impactoAusencia ?? null,
         retryConfig: retry,
         payloadFormatado: formatPayloadForDisplay(rejeicao.payload),
       };
     });
-  }, [rejeicoes]);
+  }, [explainRejeicao, rejeicoes]);
 
   const entidadesDisponiveis = useMemo(() => {
     const mapa = new Set<string>();
@@ -2526,7 +2934,6 @@ export function useEvoImportPage() {
 
     // Fluxo legado de upload manual (nova), mantido fora da UI até remoção definitiva.
     dryRun, setDryRun,
-    maxRejeicoes, setMaxRejeicoes,
     csvJobAlias, setCsvJobAlias, aliasSugestaoCsv,
     mapeamentos, setMapeamentos,
     files, setFile,
@@ -2539,10 +2946,12 @@ export function useEvoImportPage() {
     pacoteMapeamento, setPacoteMapeamento,
     pacoteArquivo, escolherArquivoPacote,
     pacoteDryRun, setPacoteDryRun,
-    pacoteMaxRejeicoes, setPacoteMaxRejeicoes,
     pacoteJobAlias, setPacoteJobAlias, aliasSugestaoPacote,
-    pacoteEvoUnidadeId, setPacoteEvoUnidadeId,
+    pacoteEvoUnidadeId,
+    setPacoteEvoUnidadeId: (value: string) => syncPacoteEvoUnidadeId(value, "manual"),
     pacoteAnalisando, pacoteCriandoJob,
+    fotoImportEstado, fotoImportEstadoLoading,
+    fotoImportJobStatus, fotoImportExecutando,
     pacoteAnalise, pacoteEvoUnidadeResolvida,
     pacoteFilialResolvida, pacoteFiliaisEncontradas,
     pacoteFilialReferencia, pacoteNomeFilialReferencia,
@@ -2551,13 +2960,14 @@ export function useEvoImportPage() {
     pacoteArquivosDisponiveis, pacoteColaboradoresBlocos,
     pacoteArquivosSelecionados, setPacoteArquivosSelecionados,
     pacoteArquivosSelecionadosSet,
-    arquivosSelecionadosDaAnalise,
+    arquivosSelecionadosDaAnalise, clientesCsvDisponivelNoPacote,
+    handleLoteReutilizado,
     eligibleAdminsPreview, pacoteResumoAcessoAutomatico, tenantFocoAcademiaId,
     analisarArquivoPacote, atualizarAnalisePacote,
-    criarJobPacote, tentarSomenteErrosDoArquivo,
+    criarJobPacote, importarFotosDoPacote, tentarSomenteErrosDoArquivo,
     togglePacoteArquivo,
     aplicarDestinoPacotePorTenantId,
-    abrirNovaUnidadePacote, abrirRejeicoesDoHistoricoArquivo,
+    abrirNovaUnidadePacote, abrirDiagnosticoDoHistoricoArquivo, abrirRejeicoesDoHistoricoArquivo,
     handlePacoteAcademiaNomeChange, handlePacoteUnidadeNomeChange,
     handlePacoteSelecionarAcademia, handlePacoteSelecionarUnidade,
     formatBytes,
@@ -2566,7 +2976,9 @@ export function useEvoImportPage() {
     novaUnidadePacoteAberta, setNovaUnidadePacoteAberta,
     novaUnidadePacoteSalvando,
     novaUnidadePacoteErro, setNovaUnidadePacoteErro,
-    novaUnidadePacoteForm, setNovaUnidadePacoteForm,
+    novaUnidadePacoteFieldErrors,
+    novaUnidadePacoteForm,
+    updateNovaUnidadePacoteField,
     salvarNovaUnidadePacote,
 
     // Acompanhamento tab
