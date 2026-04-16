@@ -244,7 +244,7 @@ test.describe("alunos api", () => {
       });
 
       expect(response.items[0]?.foto).toBe(
-        "/api/v1/comercial/alunos/7ef2d531-c2b8-4f67-93da-88e72b310163/foto?v=2026-04-05T10%3A15%3A30",
+        "/backend/api/v1/comercial/alunos/7ef2d531-c2b8-4f67-93da-88e72b310163/foto?tenantId=tenant-clientes&v=2026-04-05T10%3A15%3A30",
       );
     } finally {
       restore();

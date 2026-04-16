@@ -206,13 +206,15 @@ describe("api/alunos", () => {
     it("normaliza foto para URL proxy", async () => {
       vi.spyOn(http, "apiRequest").mockResolvedValue({
         id: "a1",
+        tenantId: "t1",
         status: "ATIVO",
         foto: "original.jpg",
         dataAtualizacao: "2026-04-10",
       } as never);
       const result = await getAlunoApi({ tenantId: "t1", id: "a1" });
-      expect(result.foto).toContain("/api/v1/comercial/alunos/a1/foto");
-      expect(result.foto).toContain("?v=");
+      expect(result.foto).toContain("/backend/api/v1/comercial/alunos/a1/foto");
+      expect(result.foto).toContain("tenantId=t1");
+      expect(result.foto).toContain("v=2026-04-10");
     });
 
     it("foto vazia → undefined", async () => {

@@ -89,6 +89,11 @@ function normalizeAlunoFotoUrl(input: Aluno): string | undefined {
     return undefined;
   }
 
+  const params = new URLSearchParams();
+  if (typeof input.tenantId === "string" && input.tenantId.trim()) {
+    params.set("tenantId", input.tenantId.trim());
+  }
+
   const version =
     typeof input.dataAtualizacao === "string" && input.dataAtualizacao.trim()
       ? input.dataAtualizacao.trim()
@@ -96,8 +101,12 @@ function normalizeAlunoFotoUrl(input: Aluno): string | undefined {
         ? input.dataCadastro.trim()
         : "";
 
-  const query = version ? `?v=${encodeURIComponent(version)}` : "";
-  return `/api/v1/comercial/alunos/${encodeURIComponent(input.id)}/foto${query}`;
+  if (version) {
+    params.set("v", version);
+  }
+
+  const query = params.size > 0 ? `?${params.toString()}` : "";
+  return `/backend/api/v1/comercial/alunos/${encodeURIComponent(input.id)}/foto${query}`;
 }
 
 function normalizeAluno(input: Aluno): Aluno {
