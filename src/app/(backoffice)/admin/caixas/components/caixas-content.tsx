@@ -8,11 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { ListErrorState } from "@/components/shared/list-states";
-import { hasGerenteAccess } from "@/lib/access-control";
+import { hasAdminAccess, hasGerenteAccess } from "@/lib/access-control";
 import { getRolesFromSession } from "@/lib/api/session";
 import { getDashboard, listarCaixas } from "@/lib/api/caixa";
 import { isCaixaApiError, mapCaixaError } from "@/lib/api/caixa-error-handler";
 import { ApiRequestError } from "@/lib/api/http";
+import { formatDateTime } from "@/lib/formatters";
 import type { CaixaResponse, DashboardDiarioResponse } from "@/lib/api/caixa.types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { DashboardCard } from "./dashboard-card";
@@ -21,6 +22,7 @@ import {
   type CaixasFilterValues,
 } from "./lista-caixas-table";
 import { DiferencasTab } from "./diferencas-tab";
+import { AjusteModal } from "./ajuste-modal";
 
 const TAB_DASHBOARD = "dashboard";
 const TAB_CAIXAS = "caixas";
@@ -61,6 +63,10 @@ export function CaixasContent() {
 
   const [hydrated, setHydrated] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Estado do modal de ajuste admin (CXO-302)
+  const [ajusteTarget, setAjusteTarget] = useState<CaixaResponse | null>(null);
 
   // Hidratação client-only — evita render SSR de roles/data
   useEffect(() => {
@@ -68,6 +74,7 @@ export function CaixasContent() {
     setDataDashboard(todayIso());
     const roles = getRolesFromSession();
     setHasAccess(hasGerenteAccess(roles));
+    setIsAdmin(hasAdminAccess(roles));
   }, []);
 
   const fetchDashboard = useCallback(
@@ -154,6 +161,21 @@ export function CaixasContent() {
   const handleListaFilters = useCallback((values: CaixasFilterValues) => {
     setListaFilters(values);
   }, []);
+
+  const handleAjustar = useCallback((caixa: CaixaResponse) => {
+    setAjusteTarget(caixa);
+  }, []);
+
+  const handleAjusteSuccess = useCallback(() => {
+    setAjusteTarget(null);
+    void fetchCaixas(listaFilters);
+  }, [fetchCaixas, listaFilters]);
+
+  const ajusteCaixaLabel = useMemo(() => {
+    if (!ajusteTarget) return undefined;
+    const nome = ajusteTarget.operadorNome || ajusteTarget.operadorId;
+    return `${nome} — ${formatDateTime(ajusteTarget.abertoEm)}`;
+  }, [ajusteTarget]);
 
   const handleVerDiferencas = useCallback(() => {
     setTab(TAB_DIFERENCAS);
@@ -288,6 +310,8 @@ export function CaixasContent() {
               loading={caixasLoading}
               initialFilters={listaFilters}
               onFiltersChange={handleListaFilters}
+              onAjustar={isAdmin ? handleAjustar : undefined}
+              isAdmin={isAdmin}
             />
           )}
         </TabsContent>
@@ -296,6 +320,18 @@ export function CaixasContent() {
           <DiferencasTab />
         </TabsContent>
       </Tabs>
+
+      {isAdmin && ajusteTarget ? (
+        <AjusteModal
+          open={Boolean(ajusteTarget)}
+          onOpenChange={(next) => {
+            if (!next) setAjusteTarget(null);
+          }}
+          caixaId={ajusteTarget.id}
+          caixaLabel={ajusteCaixaLabel}
+          onSuccess={handleAjusteSuccess}
+        />
+      ) : null}
     </div>
   );
 }

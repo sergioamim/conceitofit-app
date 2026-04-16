@@ -32,3 +32,13 @@ export function hasGerenteAccess(input?: string[] | null): boolean {
       role.includes("GERENTE"),
   );
 }
+
+/**
+ * Apenas roles administrativos (ADMIN, SUPER_ADMIN). Usado para liberar
+ * ações críticas como ajuste em caixa fechado (CXO-302). GERENTE comum
+ * NÃO passa — o BE (CXO-102) valida novamente via `@PreAuthorize`.
+ */
+export function hasAdminAccess(input?: string[] | null): boolean {
+  const roles = normalizeRoles(input);
+  return roles.some((role) => role === "ADMIN" || role.includes("ADMIN"));
+}

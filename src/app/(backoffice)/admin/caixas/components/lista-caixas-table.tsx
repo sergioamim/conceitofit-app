@@ -81,7 +81,15 @@ export interface ListaCaixasTableProps {
   initialFilters?: Partial<CaixasFilterValues>;
   onFiltersChange: (values: CaixasFilterValues) => void;
   onAjustar?: (caixa: CaixaResponse) => void;
+  /**
+   * Quando true, exibe o botão "Ajustar" apenas em caixas encerrados
+   * (FECHADO / FECHADO_COM_DIFERENCA). BE (CXO-102) valida novamente via
+   * @PreAuthorize — este guard FE é defensivo.
+   */
+  isAdmin?: boolean;
 }
+
+const AJUSTAVEIS_STATUS = new Set(["FECHADO", "FECHADO_COM_DIFERENCA"]);
 
 export function ListaCaixasTable({
   caixas,
@@ -89,6 +97,7 @@ export function ListaCaixasTable({
   initialFilters,
   onFiltersChange,
   onAjustar,
+  isAdmin,
 }: ListaCaixasTableProps) {
   const { toast } = useToast();
 
@@ -161,32 +170,35 @@ export function ListaCaixasTable({
               <Eye className="size-3.5" />
               Ver
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1.5"
-              onClick={() => {
-                if (onAjustar) {
-                  onAjustar(item);
-                  return;
-                }
-                toast({
-                  title: "Ajuste administrativo",
-                  description:
-                    "Disponível em CXO-302. O backend já aceita lançamentos via /movimentos/ajuste-admin.",
-                });
-              }}
-              aria-label={`Lançar ajuste administrativo no caixa de ${item.operadorNome || item.operadorId}`}
-            >
-              <Pencil className="size-3.5" />
-              Ajustar
-            </Button>
+            {isAdmin && AJUSTAVEIS_STATUS.has(item.status) ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5"
+                onClick={() => {
+                  if (onAjustar) {
+                    onAjustar(item);
+                    return;
+                  }
+                  toast({
+                    title: "Ajuste administrativo",
+                    description:
+                      "Modal de ajuste indisponível no contexto atual.",
+                  });
+                }}
+                aria-label={`Lançar ajuste administrativo no caixa de ${item.operadorNome || item.operadorId}`}
+                data-testid={`ajustar-caixa-${item.id}`}
+              >
+                <Pencil className="size-3.5" />
+                Ajustar
+              </Button>
+            ) : null}
           </div>
         </TableCell>
       </>
     ),
-    [onAjustar, toast],
+    [isAdmin, onAjustar, toast],
   );
 
   return (
