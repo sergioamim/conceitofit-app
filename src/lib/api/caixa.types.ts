@@ -88,3 +88,14 @@ export interface MovimentoResumoResponse {
   formaPagamento: string | null;
   dataMovimento: string;
 }
+
+/** Projecao de ajuste administrativo (CXO-302). */
+export interface CaixaAjusteResponse {
+  id: string;
+  tipo: string;
+  valor: number;
+  formaPagamento: string | null;
+  motivo: string | null;
+  adminNome: string | null;
+  criadoEm: string;
+}

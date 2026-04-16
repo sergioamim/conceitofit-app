@@ -9,6 +9,11 @@ import { ApiRequestError } from "@/lib/api/http";
 
 const toastMock = vi.fn();
 const ajusteAdminMock = vi.fn();
+const routerPushMock = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: routerPushMock, replace: vi.fn(), refresh: vi.fn() }),
+}));
 
 vi.mock("@/lib/api/caixa", () => ({
   ajusteAdmin: (...args: unknown[]) => ajusteAdminMock(...args),

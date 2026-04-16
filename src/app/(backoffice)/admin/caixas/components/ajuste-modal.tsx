@@ -10,13 +10,12 @@
  *  - Confirmação dupla via Radix AlertDialog ("Tem certeza?").
  *  - Erros mapeados via `mapCaixaError` + toast destrutivo.
  *
- * Tab "Histórico de ajustes": endpoint dedicado ainda não existe (CXO-102
- * apenas expõe o POST). Deixamos placeholder e TODO documentado até que
- * um `GET /api/caixas/{id}/ajustes` seja criado (ou o backend de
- * movimentos suporte filtro `tipo LIKE 'AJUSTE_%'`).
+ * Tab "Histórico de ajustes": consome `GET /api/caixas/{id}/ajustes`
+ * (CXO-302) para listar movimentos AJUSTE_ENTRADA / AJUSTE_SAIDA.
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -53,7 +52,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { ajusteAdmin } from "@/lib/api/caixa";
+import { ajusteAdmin, listarAjustes } from "@/lib/api/caixa";
+import type { CaixaAjusteResponse } from "@/lib/api/caixa.types";
 import {
   isCaixaApiError,
   mapCaixaError,
@@ -117,12 +117,45 @@ export function AjusteModal({
   onSuccess,
 }: AjusteModalProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [tab, setTab] = useState<string>("ajuste");
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingData, setPendingData] = useState<AjusteAdminFormData | null>(
     null,
   );
+
+  // -- Historico state --
+  const [ajustes, setAjustes] = useState<CaixaAjusteResponse[]>([]);
+  const [historicoLoading, setHistoricoLoading] = useState(false);
+  const [historicoError, setHistoricoError] = useState<string | null>(null);
+
+  const fetchAjustes = useCallback(async () => {
+    setHistoricoLoading(true);
+    setHistoricoError(null);
+    try {
+      const data = await listarAjustes(caixaId);
+      setAjustes(data);
+    } catch (err) {
+      if (isCaixaApiError(err)) {
+        const mapped = mapCaixaError(err);
+        setHistoricoError(mapped.mensagem);
+      } else {
+        setHistoricoError(
+          err instanceof Error ? err.message : "Erro ao carregar histórico.",
+        );
+      }
+    } finally {
+      setHistoricoLoading(false);
+    }
+  }, [caixaId]);
+
+  // Fetch when tab switches to historico or modal opens on historico
+  useEffect(() => {
+    if (open && tab === "historico") {
+      void fetchAjustes();
+    }
+  }, [open, tab, fetchAjustes]);
 
   const form = useForm<AjusteAdminFormData>({
     resolver: zodResolver(AjusteAdminSchema),
@@ -198,6 +231,8 @@ export function AjusteModal({
           title: "Sem permissão",
           description: "Apenas administradores podem registrar ajustes em caixa fechado.",
         });
+        onOpenChange(false);
+        router.push("/admin/caixas");
       } else if (isCaixaApiError(err)) {
         const mapped = mapCaixaError(err);
         toast({
@@ -424,22 +459,89 @@ export function AjusteModal({
             </TabsContent>
 
             <TabsContent value="historico" className="space-y-3">
-              {/*
-                TODO (CXO-302 / bloqueio FE): endpoint dedicado de histórico
-                de ajustes ainda não existe. Opções:
-                  (a) CXO-102 expor GET /api/caixas/{id}/ajustes
-                  (b) extender o endpoint de movimentos com filtro
-                      `tipo LIKE 'AJUSTE_%'`
-                Enquanto não existe, mostramos placeholder.
-              */}
-              <div className="rounded-md border border-dashed border-border bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-                <p className="font-medium text-foreground">Histórico em breve</p>
-                <p className="mt-1">
-                  O endpoint de listagem de ajustes será disponibilizado em
-                  uma iteração futura. Os lançamentos já ficam persistidos e
-                  auditáveis no backend.
-                </p>
-              </div>
+              {historicoLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    Carregando ajustes...
+                  </span>
+                </div>
+              ) : historicoError ? (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-center text-sm text-destructive">
+                  {historicoError}
+                </div>
+              ) : ajustes.length === 0 ? (
+                <div className="rounded-md border border-dashed border-border bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">
+                    Nenhum ajuste registrado
+                  </p>
+                  <p className="mt-1">
+                    Este caixa ainda não possui ajustes administrativos.
+                  </p>
+                </div>
+              ) : (
+                <div className="max-h-72 overflow-auto rounded-md border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-muted text-left text-xs text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2">Tipo</th>
+                        <th className="px-3 py-2 text-right">Valor</th>
+                        <th className="px-3 py-2">Forma</th>
+                        <th className="px-3 py-2">Motivo</th>
+                        <th className="px-3 py-2">Admin</th>
+                        <th className="px-3 py-2">Data</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {ajustes.map((aj) => (
+                        <tr key={aj.id} className="hover:bg-muted/40">
+                          <td className="whitespace-nowrap px-3 py-2">
+                            <span
+                              className={cn(
+                                "inline-block rounded px-1.5 py-0.5 text-xs font-medium",
+                                aj.tipo === "AJUSTE_ENTRADA"
+                                  ? "bg-gym-teal/20 text-gym-teal"
+                                  : "bg-gym-danger/20 text-gym-danger",
+                              )}
+                            >
+                              {aj.tipo === "AJUSTE_ENTRADA"
+                                ? "Entrada"
+                                : "Saída"}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
+                            {Math.abs(aj.valor).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {aj.formaPagamento ?? "-"}
+                          </td>
+                          <td
+                            className="max-w-[160px] truncate px-3 py-2"
+                            title={aj.motivo ?? undefined}
+                          >
+                            {aj.motivo ?? "-"}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {aj.adminNome ?? "-"}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 tabular-nums">
+                            {new Date(aj.criadoEm).toLocaleString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </DialogContent>

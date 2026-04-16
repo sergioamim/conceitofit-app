@@ -15,6 +15,7 @@
 import type {
   AbrirCaixaRequest,
   AjusteAdminRequest,
+  CaixaAjusteResponse,
   CaixaResponse,
   DashboardDiarioResponse,
   DiferencaItemResponse,
@@ -236,6 +237,18 @@ export async function ajusteAdmin(
       path: `/api/caixas/${encodeURIComponent(id)}/movimentos/ajuste-admin`,
       method: "POST",
       body: req,
+    }),
+  );
+}
+
+/** `GET /api/caixas/{id}/ajustes` -- lista ajustes administrativos (CXO-302). */
+export async function listarAjustes(
+  id: string,
+): Promise<CaixaAjusteResponse[]> {
+  return withCaixaErrorMapping(() =>
+    apiRequest<CaixaAjusteResponse[]>({
+      path: `/api/caixas/${encodeURIComponent(id)}/ajustes`,
+      method: "GET",
     }),
   );
 }
