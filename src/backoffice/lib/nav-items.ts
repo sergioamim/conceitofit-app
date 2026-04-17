@@ -8,9 +8,11 @@ import {
   Eye,
   FileText,
   Globe,
+  KeyRound,
   LayoutDashboard,
   LineChart,
   MessageSquare,
+  Package,
   Rocket,
   Search,
   Settings,
@@ -91,7 +93,28 @@ export const billingGroup: NavGroup = {
   ],
 };
 
-/** 4. Governança & Engenharia */
+/** 4. Gestão de Acessos — perfis e operadores da academia */
+export const gestaoAcessosGroup: NavGroup = {
+  label: "Gestão de Acessos",
+  icon: KeyRound,
+  items: [
+    { href: "/admin/gestao-acessos/perfis", label: "Perfis", icon: Shield, description: "Perfis de acesso e capacidades" },
+    { href: "/admin/gestao-acessos/operadores", label: "Operadores", icon: Users, description: "Atribuição de perfis a operadores" },
+  ],
+};
+
+/** 5. Plataforma — gestão SaaS de features, planos e grupos */
+export const plataformaGroup: NavGroup = {
+  label: "Plataforma",
+  icon: Package,
+  items: [
+    { href: "/admin/plataforma/features", label: "Feature Modules", icon: Zap, description: "Habilitar/desabilitar add-ons por tenant" },
+    { href: "/admin/plataforma/planos", label: "Planos SaaS", icon: CreditCard, description: "Gerenciar planos e features incluídas" },
+    { href: "/admin/plataforma/grupos", label: "Grupos", icon: Users, description: "Grupos de tenants (beta testers, parceiros)" },
+  ],
+};
+
+/** 6. Governança & Engenharia */
 export const governanceGroup: NavGroup = {
   label: "Governança",
   icon: ShieldCheck,
@@ -103,7 +126,7 @@ export const governanceGroup: NavGroup = {
   ],
 };
 
-/** 5. Configurações & Ferramentas */
+/** 7. Configurações & Ferramentas */
 export const configGroup: NavGroup = {
   label: "Configurações",
   icon: Settings,
@@ -122,6 +145,8 @@ export const adminGroups: NavGroup[] = [
   monitorGroup,
   ecosystemGroup,
   billingGroup,
+  gestaoAcessosGroup,
+  plataformaGroup,
   governanceGroup,
   configGroup,
 ];
