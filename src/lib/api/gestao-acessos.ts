@@ -251,6 +251,24 @@ export async function desabilitarFeature(tenantId: string, featureKey: string): 
   });
 }
 
+/** `POST /api/v1/auth/gestao-acessos/features/global/{key}/habilitar` */
+export async function habilitarFeatureGlobal(featureKey: string): Promise<void> {
+  await apiRequest<void>({
+    ...GA_API_OPTIONS,
+    path: `/api/v1/auth/gestao-acessos/features/global/${encodeURIComponent(featureKey)}/habilitar`,
+    method: "POST",
+  });
+}
+
+/** `POST /api/v1/auth/gestao-acessos/features/global/{key}/desabilitar` */
+export async function desabilitarFeatureGlobal(featureKey: string): Promise<void> {
+  await apiRequest<void>({
+    ...GA_API_OPTIONS,
+    path: `/api/v1/auth/gestao-acessos/features/global/${encodeURIComponent(featureKey)}/desabilitar`,
+    method: "POST",
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Planos SaaS
 // ---------------------------------------------------------------------------

@@ -19,6 +19,8 @@ import {
   listarFeaturesTenant,
   habilitarFeature,
   desabilitarFeature,
+  habilitarFeatureGlobal,
+  desabilitarFeatureGlobal,
 } from "@/lib/api/gestao-acessos";
 import { listUnidadesApi } from "@/lib/api/contexto-unidades";
 import type { FeatureModule } from "@/lib/api/gestao-acessos.types";
@@ -40,6 +42,7 @@ export function FeaturesContent() {
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [togglingGlobal, setTogglingGlobal] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => setHydrated(true), []);
@@ -112,6 +115,37 @@ export function FeaturesContent() {
     if (selectedTenantId) void reload();
   }, [reload, selectedTenantId]);
 
+  async function handleToggleGlobal(featureKey: string, enable: boolean) {
+    setTogglingGlobal(featureKey);
+    try {
+      if (enable) {
+        await habilitarFeatureGlobal(featureKey);
+      } else {
+        await desabilitarFeatureGlobal(featureKey);
+      }
+      // Atualizar lista local
+      setAllModules((prev) =>
+        prev.map((m) => (m.key === featureKey ? { ...m, ativo: enable } : m))
+      );
+      toast({
+        title: enable
+          ? `${featureKey} habilitado globalmente`
+          : `${featureKey} desabilitado globalmente`,
+        description: enable
+          ? "Tenants com toggle individual ON terão acesso."
+          : "NENHUM tenant terá acesso, mesmo com toggle individual.",
+      });
+    } catch (err) {
+      toast({
+        title: "Erro ao alterar feature global",
+        description: normalizeErrorMessage(err),
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingGlobal(null);
+    }
+  }
+
   async function handleToggle(featureKey: string, enable: boolean) {
     if (!selectedTenantId) return;
     setToggling(featureKey);
@@ -157,6 +191,47 @@ export function FeaturesContent() {
         </p>
       </div>
 
+      {/* ===== CONTROLE GLOBAL ===== */}
+      {allModules.length > 0 && (
+        <Card>
+          <CardContent className="px-5 py-5">
+            <h2 className="text-sm font-semibold mb-1">Controle Global</h2>
+            <p className="text-xs text-muted-foreground mb-4">
+              Desabilitar globalmente impede acesso em TODOS os tenants, mesmo que
+              o toggle individual esteja ON. Use para features não terminadas ou em manutenção.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {allModules
+                .filter((m) => m.tipo === "ADDON")
+                .map((mod) => (
+                  <div
+                    key={mod.key}
+                    className={`flex items-center justify-between rounded-lg border px-4 py-3 ${
+                      mod.ativo ? "" : "border-destructive/30 bg-destructive/5"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Package className="size-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-sm font-medium truncate">{mod.nome}</span>
+                      {!mod.ativo && (
+                        <Badge variant="destructive" className="text-[10px] shrink-0">
+                          DESABILITADO GLOBAL
+                        </Badge>
+                      )}
+                    </div>
+                    <Switch
+                      checked={mod.ativo}
+                      onCheckedChange={(val) => handleToggleGlobal(mod.key, val)}
+                      disabled={togglingGlobal === mod.key}
+                    />
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ===== POR TENANT: Academia → Unidade ===== */}
       {/* Seletores: Academia → Unidade */}
       <Card>
         <CardContent className="px-5 py-5">
