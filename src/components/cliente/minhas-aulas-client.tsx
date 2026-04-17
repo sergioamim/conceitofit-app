@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { 
   CalendarDays, 
   ChevronLeft, 
@@ -42,11 +42,18 @@ const DIA_LABEL: Record<DiaSemana, string> = {
 
 export function MinhasAulasClient() {
   const { tenantId, userId, tenantResolved } = useTenantContext();
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(getBusinessTodayDate()));
+  const [weekStart, setWeekStart] = useState<Date | null>(null);
+  const [todayIso, setTodayIso] = useState<string | null>(null);
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
-  const dateFrom = useMemo(() => toIsoDate(weekStart), [weekStart]);
-  const dateTo = useMemo(() => toIsoDate(addDays(weekStart, 6)), [weekStart]);
+  useEffect(() => {
+    const today = getBusinessTodayDate();
+    setWeekStart(startOfWeek(today));
+    setTodayIso(getBusinessTodayIso(today));
+  }, []);
+
+  const dateFrom = useMemo(() => (weekStart ? toIsoDate(weekStart) : ""), [weekStart]);
+  const dateTo = useMemo(() => (weekStart ? toIsoDate(addDays(weekStart, 6)) : ""), [weekStart]);
 
   const { 
     data: aulas = [], 
@@ -71,8 +78,6 @@ export function MinhasAulasClient() {
   const reservarMutation = useReservarAula();
   const cancelarMutation = useCancelarReserva();
 
-  const todayIso = getBusinessTodayIso(new Date());
-
   const aulasByDay = useMemo(() => {
     const grouped: Record<string, AulaSessao[]> = {};
     aulas.forEach(aula => {
@@ -83,6 +88,8 @@ export function MinhasAulasClient() {
   }, [aulas]);
 
   const weekDays = useMemo(() => {
+    if (!weekStart || !todayIso) return [];
+
     return Array.from({ length: 7 }).map((_, idx) => {
       const date = addDays(weekStart, idx);
       const iso = toIsoDate(date);
@@ -121,6 +128,17 @@ export function MinhasAulasClient() {
 
   const isPending = reservarMutation.isPending || cancelarMutation.isPending;
 
+  if (!weekStart || !todayIso || weekDays.length === 0) {
+    return (
+      <div className="space-y-8 py-6">
+        {ConfirmDialog}
+        <div className="rounded-2xl border border-border/40 bg-card p-8 text-center text-sm text-muted-foreground">
+          Carregando agenda semanal...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 py-6">
       {ConfirmDialog}
@@ -138,13 +156,13 @@ export function MinhasAulasClient() {
         </motion.div>
 
         <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-xl border border-border/40 backdrop-blur-sm">
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Semana anterior" onClick={() => setWeekStart(d => addDays(d, -7))}>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Semana anterior" onClick={() => setWeekStart(addDays(weekStart, -7))}>
             <ChevronLeft size={18} />
           </Button>
           <div className="px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground min-w-[180px] text-center">
             {formatDayDate(weekDays[0].date)} - {formatDayDate(weekDays[6].date)}
           </div>
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Próxima semana" onClick={() => setWeekStart(d => addDays(d, 7))}>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Próxima semana" onClick={() => setWeekStart(addDays(weekStart, 7))}>
             <ChevronRight size={18} />
           </Button>
         </div>

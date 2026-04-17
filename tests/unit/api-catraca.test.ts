@@ -4,7 +4,10 @@ import {
   liberarAcessoCatracaApi,
   listarAcessosCatracaDashboardApi,
   listarCatracaWsStatusApi,
+  obterAdminCatracaIntegracaoApi,
   obterCatracaWsStatusPorTenantApi,
+  salvarAdminCatracaDispositivoApi,
+  sincronizarAdminCatracaFacesApi,
   syncCatracaFacesApi,
 } from "@/lib/api/catraca";
 import * as http from "@/lib/api/http";
@@ -165,6 +168,75 @@ describe("api/catraca", () => {
       );
       expect(spy.mock.calls[0][0].method).toBe("POST");
       expect(spy.mock.calls[0][0].query?.tenantId).toBe("t1");
+    });
+  });
+
+  describe("integração administrativa de catraca", () => {
+    it("GET /admin/unidades/{tenantId}/catraca/integracao", async () => {
+      const spy = vi.spyOn(http, "apiRequest").mockResolvedValue({
+        tenantId: "t1",
+        activeMembers: 12,
+        membersWithPhoto: 10,
+        devices: [],
+        agents: [],
+      } as never);
+      await obterAdminCatracaIntegracaoApi({ tenantId: "t1" });
+      expect(spy.mock.calls[0][0].path).toBe(
+        "/api/v1/admin/unidades/t1/catraca/integracao",
+      );
+    });
+
+    it("POST /admin/unidades/{tenantId}/catraca/dispositivos", async () => {
+      const spy = vi.spyOn(http, "apiRequest").mockResolvedValue({
+        deviceId: "idface-1",
+        fabricante: "CONTROL_ID_IDFACE",
+        ativo: true,
+        operationMode: "EMBEDDED_FACE",
+        supportsEmbeddedFace: true,
+        supportsEdgeFace: false,
+        supportsFingerprint: false,
+        supportsQrCode: false,
+        supportsFaceTemplateSync: true,
+      } as never);
+      await salvarAdminCatracaDispositivoApi({
+        tenantId: "t1",
+        data: {
+          deviceId: "idface-1",
+          agentId: "agent-1",
+          fabricante: "CONTROL_ID_IDFACE",
+          maxFaces: 3000,
+          reservedFacesStaff: 100,
+        },
+      });
+      expect(spy.mock.calls[0][0].path).toBe(
+        "/api/v1/admin/unidades/t1/catraca/dispositivos",
+      );
+      expect(spy.mock.calls[0][0].method).toBe("POST");
+      expect(spy.mock.calls[0][0].body).toMatchObject({
+        deviceId: "idface-1",
+        agentId: "agent-1",
+        maxFaces: 3000,
+        reservedFacesStaff: 100,
+      });
+    });
+
+    it("POST /admin/unidades/{tenantId}/catraca/dispositivos/{deviceId}/sync-faces", async () => {
+      const spy = vi.spyOn(http, "apiRequest").mockResolvedValue({
+        tenantId: "t1",
+        deviceId: "idface-1",
+        queuedPreloads: 10,
+        queuedInvalidations: 1,
+      } as never);
+      await sincronizarAdminCatracaFacesApi({
+        tenantId: "t1",
+        deviceId: "idface-1",
+        agentId: "agent-1",
+      });
+      expect(spy.mock.calls[0][0].path).toBe(
+        "/api/v1/admin/unidades/t1/catraca/dispositivos/idface-1/sync-faces",
+      );
+      expect(spy.mock.calls[0][0].method).toBe("POST");
+      expect(spy.mock.calls[0][0].body).toEqual({ agentId: "agent-1" });
     });
   });
 

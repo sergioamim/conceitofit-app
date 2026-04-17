@@ -1,5 +1,7 @@
 import type { Academia, TenantBranding, TenantThemeColors, TenantThemePreset } from "../shared/types";
 
+export const TENANT_THEME_COOKIE_NAME = "academia-tenant-theme";
+
 export const TENANT_THEME_PRESETS: Record<TenantThemePreset, TenantThemeColors> = {
   CONCEITO_DARK: {
     accent: "#c8f135",
@@ -188,6 +190,115 @@ export const TENANT_THEME_OPTIONS: Array<{ id: TenantThemePreset; nome: string; 
 
 export const DEFAULT_THEME_PRESET: TenantThemePreset = "CONCEITO_DARK";
 export const DEFAULT_TENANT_APP_NAME = "Conceito Fit";
+
+export type TenantThemeCookiePayload = {
+  scopeKey?: string;
+  appName?: string;
+  theme: TenantThemeColors;
+};
+
+export function getTenantThemeCssVarEntries(theme: TenantThemeColors): Array<[string, string]> {
+  return [
+    ["--primary", theme.primary],
+    ["--primary-foreground", theme.background],
+    ["--ring", theme.ring],
+    ["--secondary", theme.secondary],
+    ["--background", theme.background],
+    ["--card", theme.surface],
+    ["--popover", theme.surface],
+    ["--muted", theme.secondary],
+    ["--accent", theme.secondary],
+    ["--input", theme.secondary],
+    ["--border", theme.border],
+    ["--foreground", theme.foreground],
+    ["--card-foreground", theme.foreground],
+    ["--popover-foreground", theme.foreground],
+    ["--secondary-foreground", theme.foreground],
+    ["--accent-foreground", theme.foreground],
+    ["--muted-foreground", theme.mutedForeground],
+    ["--destructive", theme.danger],
+    ["--chart-1", theme.primary],
+    ["--chart-2", theme.teal],
+    ["--chart-3", theme.warning],
+    ["--chart-4", theme.danger],
+    ["--chart-5", theme.accent],
+    ["--sidebar", theme.surface],
+    ["--sidebar-border", theme.border],
+    ["--sidebar-ring", theme.ring],
+    ["--sidebar-foreground", theme.foreground],
+    ["--sidebar-primary", theme.primary],
+    ["--sidebar-primary-foreground", theme.background],
+    ["--sidebar-accent", theme.secondary],
+    ["--sidebar-accent-foreground", theme.foreground],
+    ["--gym-accent", theme.accent],
+    ["--gym-danger", theme.danger],
+    ["--gym-warning", theme.warning],
+    ["--gym-teal", theme.teal],
+    ["--surface", theme.surface],
+    ["--surface-2", theme.secondary],
+  ];
+}
+
+export function buildTenantThemeCssVars(theme: TenantThemeColors): string {
+  const declarations = getTenantThemeCssVarEntries(theme)
+    .map(([name, value]) => `${name}:${value};`)
+    .join("");
+  return `:root{${declarations}}`;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isTenantThemeColors(value: unknown): value is TenantThemeColors {
+  if (!value || typeof value !== "object") return false;
+  const source = value as Record<string, unknown>;
+  return (
+    isNonEmptyString(source.accent)
+    && isNonEmptyString(source.primary)
+    && isNonEmptyString(source.ring)
+    && isNonEmptyString(source.secondary)
+    && isNonEmptyString(source.background)
+    && isNonEmptyString(source.surface)
+    && isNonEmptyString(source.border)
+    && isNonEmptyString(source.foreground)
+    && isNonEmptyString(source.mutedForeground)
+    && isNonEmptyString(source.danger)
+    && isNonEmptyString(source.warning)
+    && isNonEmptyString(source.teal)
+  );
+}
+
+export function parseTenantThemeCookiePayload(rawValue?: string | null): TenantThemeCookiePayload | null {
+  if (!isNonEmptyString(rawValue)) return null;
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(rawValue));
+    if (isTenantThemeColors(parsed)) {
+      return { theme: parsed };
+    }
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    const payload = parsed as Record<string, unknown>;
+    if (!isTenantThemeColors(payload.theme)) {
+      return null;
+    }
+
+    return {
+      scopeKey: isNonEmptyString(payload.scopeKey) ? payload.scopeKey : undefined,
+      appName: isNonEmptyString(payload.appName) ? payload.appName : undefined,
+      theme: payload.theme,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function serializeTenantThemeCookiePayload(payload: TenantThemeCookiePayload): string {
+  return encodeURIComponent(JSON.stringify(payload));
+}
 
 export function resolveTenantTheme(academia?: Academia): TenantThemeColors {
   const preset = academia?.branding?.themePreset ?? DEFAULT_THEME_PRESET;

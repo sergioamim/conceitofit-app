@@ -1,10 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, FileText } from "lucide-react";
-import { SuggestionInput } from "@/components/shared/suggestion-input";
-import { MapeamentoAcademiaUnidadeSelector } from "@/backoffice/components/admin/importacao-academia-unidade-selector";
-import { ColunasMapeadasModal } from "@/components/admin/colunas-mapeadas-modal";
+import { AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,39 +37,30 @@ import { formatDateTime } from "../date-time-format";
 import { getTargetTable } from "../lib/csv-to-table";
 import { formatResumoCount, resolveArquivoHistoricoBadge } from "../shared";
 import type { EvoImportPageState } from "../hooks/useEvoImportPage";
-import { ReutilizarLoteCard } from "./ReutilizarLoteCard";
 
 export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
   const {
     pacoteMapeamento, setPacoteMapeamento,
-    pacoteArquivo, escolherArquivoPacote,
-    pacoteDryRun, setPacoteDryRun,
-    pacoteJobAlias, setPacoteJobAlias, aliasSugestaoPacote,
     pacoteEvoUnidadeId, setPacoteEvoUnidadeId,
     pacoteAnalisando, pacoteCriandoJob,
-    fotoImportEstado, fotoImportEstadoLoading,
-    fotoImportJobStatus, fotoImportExecutando,
     pacoteAnalise, pacoteEvoUnidadeResolvida,
     pacoteFilialResolvida, pacoteFiliaisEncontradas,
     pacoteFilialReferencia, pacoteNomeFilialReferencia,
     pacoteUnidadesSugeridas, pacoteSelecaoFilialPendente,
     pacotePrecisaVincularTenant, pacotePrecisaReanaliseManual,
     pacoteArquivosDisponiveis, pacoteColaboradoresBlocos,
-    pacoteArquivosSelecionados, setPacoteArquivosSelecionados,
+    setPacoteArquivosSelecionados,
     pacoteArquivosSelecionadosSet,
-    arquivosSelecionadosDaAnalise, clientesCsvDisponivelNoPacote,
-    handleLoteReutilizado,
+    arquivosSelecionadosDaAnalise,
     eligibleAdminsPreview, pacoteResumoAcessoAutomatico, tenantFocoAcademiaId,
-    tenantFoco, setActiveTab,
-    academiaOptions, getUnidadesOptions, loadingMapeamento,
-    analisarArquivoPacote, atualizarAnalisePacote,
-    criarJobPacote, importarFotosDoPacote, tentarSomenteErrosDoArquivo,
+    loadingMapeamento,
+    atualizarAnalisePacote,
+    criarJobPacote, tentarSomenteErrosDoArquivo,
     togglePacoteArquivo,
     aplicarDestinoPacotePorTenantId,
     abrirNovaUnidadePacote, abrirDiagnosticoDoHistoricoArquivo, abrirRejeicoesDoHistoricoArquivo,
-    handlePacoteAcademiaNomeChange, handlePacoteUnidadeNomeChange,
-    handlePacoteSelecionarAcademia, handlePacoteSelecionarUnidade,
-    formatBytes, carregarMapeamentoData,
+    formatBytes,
+    carregarMapeamentoData,
     novaUnidadePacoteAberta, setNovaUnidadePacoteAberta,
     novaUnidadePacoteSalvando,
     novaUnidadePacoteErro, setNovaUnidadePacoteErro,
@@ -109,122 +97,37 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
 
   return (
     <>
-      <div className="space-y-6 pb-12">
-      <ReutilizarLoteCard
-        tenantId={tenantFoco || undefined}
-        onReutilizado={handleLoteReutilizado}
-      />
-
       {pacoteAnalise ? (
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border py-3 -mx-1 px-1 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Novo lote</p>
-            <p className="text-sm text-muted-foreground truncate">
-              {arquivosSelecionadosCount} {arquivosSelecionadosCount === 1 ? "arquivo selecionado" : "arquivos selecionados"} de {arquivosDisponiveisCount} {arquivosDisponiveisCount === 1 ? "disponível" : "disponíveis"}
-            </p>
+        <div className="space-y-6 pb-12">
+          <div className="sticky top-0 z-10 -mx-1 flex items-center justify-between gap-3 border-b border-border bg-background/95 px-1 py-3 backdrop-blur">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lote analisado</p>
+              <p className="truncate text-sm text-muted-foreground">
+                {arquivosSelecionadosCount} {arquivosSelecionadosCount === 1 ? "arquivo selecionado" : "arquivos selecionados"} de {arquivosDisponiveisCount} {arquivosDisponiveisCount === 1 ? "disponível" : "disponíveis"}
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={criarJobPacote}
+              disabled={pacoteCriandoJob || arquivosSelecionadosCount === 0}
+            >
+              {pacoteCriandoJob ? "Criando job..." : "Criar job"}
+            </Button>
           </div>
-          <Button
-            type="button"
-            size="sm"
-            onClick={criarJobPacote}
-            disabled={pacoteCriandoJob || arquivosSelecionadosCount === 0}
-          >
-            {pacoteCriandoJob ? "Criando job..." : "Criar job"}
-          </Button>
-        </div>
-      ) : null}
 
-      <Card id="evo-pacote-upload">
-        <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
-          <CardTitle className="text-lg">Etapa 1: Analisar pacote ZIP</CardTitle>
-          <p className="text-sm text-muted-foreground">Se quiser, já selecione a academia para contextualizar as sugestões. A EVO Unidade fica para depois da leitura do ZIP.</p>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Academia</Label>
-                  <SuggestionInput
-                    value={pacoteMapeamento.academiaNome}
-                    onValueChange={handlePacoteAcademiaNomeChange}
-                    onSelect={handlePacoteSelecionarAcademia}
-                    options={academiaOptions}
-                    minCharsToSearch={0}
-                    placeholder="Pesquise por nome da academia"
-                    emptyText={loadingMapeamento ? "Carregando academias..." : "Nenhuma academia encontrada"}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Opcional nesta etapa. Ajuda a filtrar sugestões e a abertura do cadastro de nova unidade.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pacoteArquivo">Arquivo</Label>
-                  <Input
-                    id="pacoteArquivo"
-                    type="file"
-                    accept=".zip,.csv,application/zip,text/csv"
-                    onChange={escolherArquivoPacote}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Arquivo .zip contendo exportação EVO ou CSV unitário.
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="flex flex-wrap items-center gap-4">
-                <Label className="flex items-center gap-2 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={pacoteDryRun}
-                    onChange={(e) => setPacoteDryRun(e.target.checked)}
-                    className="accent-gym-accent"
-                  />
-                  Modo de simulação (Apenas validar, não salvar)
-                </Label>
-                <div className="min-w-72 flex-1 space-y-2">
-                  <Label htmlFor="pacoteJobAlias">Nome de identificação deste lote</Label>
-                  <Input
-                    id="pacoteJobAlias"
-                    value={pacoteJobAlias}
-                    onChange={(e) => setPacoteJobAlias(e.target.value)}
-                    placeholder={aliasSugestaoPacote}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Opcional. Nome livre para facilitar a busca deste lote no histórico.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <ColunasMapeadasModal
-                  arquivoSelecionado={null}
-                  arquivosDisponiveis={pacoteArquivosDisponiveis}
-                />
-                <Button onClick={analisarArquivoPacote} disabled={pacoteAnalisando || !pacoteArquivo}>
-                  {pacoteAnalisando ? "Analisando pacote..." : "Analisar pacote"}
-                </Button>
-              </div>
-
-              {pacoteArquivo && (
-                <p className="text-xs text-muted-foreground">
-                  Arquivo selecionado: {pacoteArquivo.name} ({formatBytes(pacoteArquivo.size)})
-                </p>
-              )}
-        </CardContent>
-      </Card>
-
-      {pacoteAnalise && (
-        <>
-        <Card className="relative z-10 overflow-visible border-gym-accent/40 shadow-sm">
+          <Card className="relative z-10 overflow-visible border-gym-accent/40 shadow-sm">
           <div className="bg-gym-accent/10 md:px-6 px-4 md:py-3 py-4 text-sm flex flex-wrap md:gap-x-8 gap-x-4 gap-y-2 text-muted-foreground border-b border-gym-accent/20">
             <p><span className="font-medium text-foreground">Upload ID:</span> {pacoteAnalise.uploadId}</p>
             <p><span className="font-medium text-foreground">EVO Unidade:</span> {pacoteEvoUnidadeResolvida ?? "pendente"}</p>
             <p><span className="font-medium text-foreground">Expira em:</span> {formatDateTime(pacoteAnalise.expiraEm)}</p>
             <p><span className="font-medium text-foreground">Arquivos Detectados:</span> {pacoteAnalise.arquivos.length}</p>
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Etapa 2: Validar Origem e Destino</CardTitle>
+          <CardHeader className="space-y-2 pb-2">
+            <CardTitle className="text-lg">Origem detectada e destino</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Confira a filial identificada no pacote, ajuste a EVO Unidade se necessário e confirme o destino que receberá o job.
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
                   {pacoteFilialResolvida && (
@@ -351,19 +254,8 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                         />
                         <p className="text-xs text-muted-foreground">
                           Se você informar manualmente uma EVO Unidade depois da análise, use{" "}
-                          {pacotePrecisaReanaliseManual ? '"Atualizar análise"' : '"Analisar pacote"'} para reprocessar o ZIP com esse valor.
+                          {pacotePrecisaReanaliseManual ? '"Reanalisar pacote"' : '"Atualizar análise"'} para reprocessar o ZIP com esse valor.
                         </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Academia selecionada</Label>
-                        <div className="rounded-md border border-border bg-background px-3 py-2 text-sm">
-                          <p className="font-medium">{pacoteMapeamento.academiaNome || "Nenhuma academia selecionada"}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {pacoteMapeamento.academiaId
-                              ? "Você pode ajustar a academia e a unidade logo abaixo, se necessário."
-                              : "Selecione uma academia no passo 1 ou ajuste abaixo antes de criar o job."}
-                          </p>
-                        </div>
                       </div>
                     </div>
 
@@ -427,19 +319,6 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                       </Button>
                     </div>
 
-                    <MapeamentoAcademiaUnidadeSelector
-                      academiaNome={pacoteMapeamento.academiaNome}
-                      unidadeNome={pacoteMapeamento.unidadeNome}
-                      academiaId={pacoteMapeamento.academiaId}
-                      academiaOptions={academiaOptions}
-                      unidadesOptions={getUnidadesOptions(pacoteMapeamento.academiaId)}
-                      loadingAcademias={loadingMapeamento}
-                      onAcademiaNomeChange={handlePacoteAcademiaNomeChange}
-                      onUnidadeNomeChange={handlePacoteUnidadeNomeChange}
-                      onAcademiaSelect={handlePacoteSelecionarAcademia}
-                      onUnidadeSelect={handlePacoteSelecionarUnidade}
-                    />
-
                     {pacoteMapeamento.academiaId && pacoteMapeamento.tenantId ? (
                       <div className="rounded-md border border-border bg-background px-3 py-2 text-sm">
                         <p className="font-medium">Destino selecionado</p>
@@ -457,143 +336,17 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                         <AlertCircle className="mt-0.5 size-4" />
                         <div>
                           <p className="font-semibold">Destino ainda não selecionado</p>
-                          <p>Escolha uma unidade existente ou crie uma nova unidade antes de criar o job.</p>
+                          <p>Escolha a unidade no topo da página ou crie uma nova unidade a partir deste pacote antes de criar o job.</p>
                         </div>
                       </div>
                     )}
-
-                    {pacoteMapeamento.tenantId ? (
-                      <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold">Fotos dos clientes</p>
-                            <p className="text-xs text-muted-foreground">
-                              Baixa as imagens referenciadas no <span className="font-medium">CLIENTES.csv</span> e grava no MinIO da unidade.
-                            </p>
-                          </div>
-                          <Badge variant={fotoImportEstado?.importado ? "secondary" : "outline"}>
-                            {fotoImportEstadoLoading
-                              ? "Consultando estado..."
-                              : fotoImportEstado?.importado
-                                ? "Já importado"
-                                : "Pendente"}
-                          </Badge>
-                        </div>
-
-                        {fotoImportEstado ? (
-                          <div className="grid gap-3 text-sm md:grid-cols-2">
-                            <div className="rounded-md border border-border bg-background px-3 py-2">
-                              <p className="font-medium">Alunos na unidade</p>
-                              <p className="text-muted-foreground">{fotoImportEstado.totalAlunos}</p>
-                            </div>
-                            <div className="rounded-md border border-border bg-background px-3 py-2">
-                              <p className="font-medium">Vínculos EVO cliente</p>
-                              <p className="text-muted-foreground">{fotoImportEstado.vinculosEvoClientes}</p>
-                            </div>
-                            <div className="rounded-md border border-border bg-background px-3 py-2">
-                              <p className="font-medium">Alunos com foto</p>
-                              <p className="text-muted-foreground">{fotoImportEstado.alunosComFoto}</p>
-                            </div>
-                            <div className="rounded-md border border-border bg-background px-3 py-2">
-                              <p className="font-medium">Fotos importadas via EVO</p>
-                              <p className="text-muted-foreground">{fotoImportEstado.alunosComFotoImportada}</p>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            O estado da importação de fotos será exibido assim que a unidade for consultada.
-                          </p>
-                        )}
-
-                        <div className="rounded-md border border-border bg-background px-3 py-2 text-xs text-muted-foreground">
-                          Bucket: <span className="font-mono text-foreground">{fotoImportEstado?.bucket || "conceito-fit-fotos"}</span>
-                          {" · "}
-                          Prefixo: <span className="font-mono text-foreground">{fotoImportEstado?.storagePrefix || "—"}</span>
-                        </div>
-
-                        {!pacoteAnalise?.uploadId ? (
-                          <div className="flex items-start gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-                            <AlertCircle className="mt-0.5 size-4" />
-                            <p>Analise um pacote EVO para habilitar a importação das imagens.</p>
-                          </div>
-                        ) : !clientesCsvDisponivelNoPacote ? (
-                          <div className="flex items-start gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-                            <AlertCircle className="mt-0.5 size-4" />
-                            <p>O pacote atual não possui CLIENTES.csv disponível para baixar as fotos.</p>
-                          </div>
-                        ) : null}
-
-                        {fotoImportJobStatus ? (
-                          <div className="rounded-md border border-border bg-background px-3 py-2 text-sm">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <p className="font-medium">Job de fotos</p>
-                              <Badge variant={fotoImportJobStatus.status === "CONCLUIDO" ? "secondary" : fotoImportJobStatus.status === "PROCESSANDO" ? "outline" : "destructive"}>
-                                {fotoImportJobStatus.status}
-                              </Badge>
-                            </div>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {fotoImportJobStatus.jobId}
-                            </p>
-                            {typeof fotoImportJobStatus.total === "number" ? (
-                              <p className="mt-2 text-xs text-muted-foreground">
-                                Total {fotoImportJobStatus.total} · Importadas {fotoImportJobStatus.uploaded ?? 0} · Ignoradas {fotoImportJobStatus.skipped ?? 0} · Erros {fotoImportJobStatus.errors ?? 0}
-                              </p>
-                            ) : null}
-                            {fotoImportJobStatus.erro ? (
-                              <p className="mt-2 text-xs text-destructive">{fotoImportJobStatus.erro}</p>
-                            ) : null}
-                          </div>
-                        ) : null}
-
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <p className="text-xs text-muted-foreground">
-                            {pacoteDryRun
-                              ? "Modo de simulação ativo: o job valida e baixa as imagens, mas não grava no storage."
-                              : fotoImportEstado?.importado
-                                ? "A unidade já possui fotos importadas. Você pode rodar uma nova importação manual ou forçar uma reimportação completa."
-                                : "A ação usa o pacote analisado e atualiza as fotos dos alunos diretamente no storage da unidade."}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Button
-                              type="button"
-                              onClick={() => void importarFotosDoPacote(false)}
-                              disabled={
-                                fotoImportExecutando ||
-                                fotoImportJobStatus?.status === "PROCESSANDO" ||
-                                !pacoteAnalise?.uploadId ||
-                                !clientesCsvDisponivelNoPacote
-                              }
-                            >
-                              {fotoImportExecutando || fotoImportJobStatus?.status === "PROCESSANDO"
-                                ? "Importando fotos..."
-                                : "Importar fotos"}
-                            </Button>
-                            {fotoImportEstado?.importado ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => void importarFotosDoPacote(true)}
-                                disabled={
-                                  fotoImportExecutando ||
-                                  fotoImportJobStatus?.status === "PROCESSANDO" ||
-                                  !pacoteAnalise?.uploadId ||
-                                  !clientesCsvDisponivelNoPacote
-                                }
-                              >
-                                Reimportar tudo
-                              </Button>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
                   </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
-            <CardTitle className="text-lg">Etapa 3: Revisar Malha de Dados</CardTitle>
+            <CardTitle className="text-lg">Arquivos e malha de dados</CardTitle>
             <p className="text-sm text-muted-foreground">A malha de colaboradores evidencia o que o backend reconheceu no pacote (completo, parcial ou não reconhecido). Marque ou desmarque chaves individuais.</p>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
@@ -889,9 +642,8 @@ export function EvoPacoteTab({ state }: { state: EvoImportPageState }) {
                   </div>
           </CardContent>
         </Card>
-        </>
-      )}
-    </div>
+        </div>
+      ) : null}
       <Dialog
         open={novaUnidadePacoteAberta}
         onOpenChange={(open) => {

@@ -45,13 +45,19 @@ test.describe("Backoffice importação EVO P0", () => {
   test("carrega o wizard, faz upload do pacote, revisa a prévia e cria o job sem reenviar evoUnidadeId", async ({ page, browserErrors }) => {
     browserErrors.allowConsoleErrors(/401 \(Unauthorized\)/);
     const diagnosticoDialog = page.getByRole("dialog");
+    const importAgainButton = page.getByRole("button", { name: "Importar novamente" });
+    const forceReimportButton = page.getByRole("button", { name: "Reimportar tudo" });
 
     await openBackofficeWaveCPage(
       page,
       "/admin/importacao-evo-p0?tenantId=tenant-barra",
       /Gestor de Importação/i,
     );
-    await expect(page.getByText("Etapa 1: Analisar pacote ZIP")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Início da importação" })).toBeVisible();
+    await expect(page.getByText("Último lote disponível para fotos")).toBeVisible();
+    await expect(importAgainButton).toBeEnabled();
+    await expect(forceReimportButton).toBeEnabled();
+    await expect(page.getByText("Analisar novo pacote")).toBeVisible();
 
     await page.locator("#pacoteArquivo").setInputFiles({
       name: "backup-evo.zip",
@@ -69,6 +75,10 @@ test.describe("Backoffice importação EVO P0", () => {
     const analyzeBody = analyzeRequest.postDataBuffer()?.toString("utf8") ?? "";
     expect(analyzeBody).not.toContain('name="evoUnidadeId"');
 
+    await expect(page.getByText("Pacote atual pronto para fotos")).toBeVisible();
+    await expect(importAgainButton).toBeEnabled();
+    await expect(forceReimportButton).toBeEnabled();
+    await expect(page.getByText("Origem detectada e destino")).toBeVisible();
     await expect(page.getByText("Upload ID:")).toBeVisible();
     await expect(page.getByText("Clientes", { exact: true })).toBeVisible();
     await expect(page.getByText("Contratos", { exact: true })).toBeVisible();

@@ -1282,6 +1282,26 @@ async function installImportacaoMocks(page: Page) {
     });
   });
 
+  await page.route("**/admin/integracoes/importacao-terceiros/evo/p0/fotos/importar**", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 202,
+      json: {
+        jobId: "job-fotos-evo-ult-lote-001",
+        tenantId: "tenant-barra",
+        uploadId: null,
+        status: "PROCESSANDO",
+        dryRun: false,
+        force: false,
+        solicitadoEm: "2026-04-15T15:05:00Z",
+      },
+    });
+  });
+
   await page.route("**/admin/integracoes/importacao-terceiros/evo/p0/fotos/jobs/*", async (route) => {
     await route.fulfill({
       status: 200,

@@ -1,6 +1,8 @@
-
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { act } from "react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 
 const mockColumns = [
@@ -81,5 +83,49 @@ describe("PaginatedTable", () => {
     );
     const prevBtn = screen.getByText("Anterior");
     expect(prevBtn).toBeDisabled();
+  });
+
+  it("avoids hydration mismatch when loading changes during bootstrap", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const container = document.createElement("div");
+
+    document.body.appendChild(container);
+    container.innerHTML = renderToString(
+      <PaginatedTable
+        columns={mockColumns}
+        items={[]}
+        emptyText="Nenhum item encontrado"
+        getRowKey={(i) => i.id}
+        renderCells={renderCells}
+        isLoading={false}
+      />
+    );
+
+    try {
+      await act(async () => {
+        hydrateRoot(
+          container,
+          <PaginatedTable
+            columns={mockColumns}
+            items={[]}
+            emptyText="Nenhum item encontrado"
+            getRowKey={(i) => i.id}
+            renderCells={renderCells}
+            isLoading
+          />
+        );
+        await Promise.resolve();
+      });
+
+      const hydrationMessages = errorSpy.mock.calls
+        .flatMap((args) => args.map((arg) => String(arg)))
+        .filter((message) => message.includes("Hydration failed") || message.includes("didn't match the client"));
+
+      expect(hydrationMessages).toHaveLength(0);
+      expect(container.querySelector('[role="status"]')).not.toBeNull();
+    } finally {
+      container.remove();
+      errorSpy.mockRestore();
+    }
   });
 });

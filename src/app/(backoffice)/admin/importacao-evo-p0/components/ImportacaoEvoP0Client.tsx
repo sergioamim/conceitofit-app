@@ -1,12 +1,15 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { MapeamentoAcademiaUnidadeSelector } from "@/backoffice/components/admin/importacao-academia-unidade-selector";
 import {
   getUnidadeOnboardingStatusLabel,
   getUnidadeOnboardingStrategyLabel,
 } from "@/backoffice/lib/onboarding";
 import { EvoAcompanhamentoTab } from "./EvoAcompanhamentoTab";
+import { EvoDestinoFotosCard } from "./EvoDestinoFotosCard";
 import { EvoPacoteTab } from "./EvoPacoteTab";
 import { useEvoImportPage } from "../hooks/useEvoImportPage";
 import { cn } from "@/lib/utils";
@@ -16,8 +19,14 @@ export function ImportacaoEvoP0Client() {
   const state = useEvoImportPage();
   const { 
     activeTab, setActiveTab, tenantFoco, onboardingFoco, resolveTenantLabel,
-    jobsRecentes, jobId, selecionarJobDoHistorico, resolveJobAlias, statusVariant
+    jobsRecentes, jobId, selecionarJobDoHistorico, resolveJobAlias, statusVariant,
+    pacoteMapeamento, academiaOptions, getUnidadesOptions, loadingMapeamento,
+    handlePacoteAcademiaNomeChange, handlePacoteUnidadeNomeChange,
+    handlePacoteSelecionarAcademia, handlePacoteSelecionarUnidade,
+    carregarMapeamentoData,
   } = state;
+  const destinoSelecionado = Boolean(pacoteMapeamento.academiaId && pacoteMapeamento.tenantId);
+  const tenantLabel = resolveTenantLabel(tenantFoco);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 md:flex-row p-6">
@@ -33,22 +42,71 @@ export function ImportacaoEvoP0Client() {
           </p>
         </div>
 
-        {tenantFoco && onboardingFoco ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm">
-            <Badge variant="secondary">
-              {getUnidadeOnboardingStrategyLabel(onboardingFoco.estrategia)}
-            </Badge>
-            <Badge variant="outline">
-              {getUnidadeOnboardingStatusLabel(onboardingFoco.status)}
-            </Badge>
-            <span className="text-muted-foreground">
-              Unidade foco: {resolveTenantLabel(tenantFoco).unidadeNome} · EVO{" "}
-              {onboardingFoco.evoFilialId || "não vinculado"}
-            </span>
+        <section className="space-y-4 rounded-xl border border-gym-accent/25 bg-card px-4 py-4 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold">Unidade de referência</p>
+              <p className="text-sm text-muted-foreground">
+                A academia e a unidade escolhidas aqui passam a valer para reaproveitamento de lote, análise do pacote, importação e fotos.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={destinoSelecionado ? "secondary" : "outline"}>
+                {destinoSelecionado ? "Unidade selecionada" : "Selecione a unidade"}
+              </Badge>
+              {tenantFoco && onboardingFoco ? (
+                <>
+                  <Badge variant="secondary">
+                    {getUnidadeOnboardingStrategyLabel(onboardingFoco.estrategia)}
+                  </Badge>
+                  <Badge variant="outline">
+                    {getUnidadeOnboardingStatusLabel(onboardingFoco.status)}
+                  </Badge>
+                </>
+              ) : null}
+            </div>
           </div>
-        ) : null}
+
+          <MapeamentoAcademiaUnidadeSelector
+            academiaNome={pacoteMapeamento.academiaNome}
+            unidadeNome={pacoteMapeamento.unidadeNome}
+            academiaId={pacoteMapeamento.academiaId}
+            academiaOptions={academiaOptions}
+            unidadesOptions={getUnidadesOptions(pacoteMapeamento.academiaId)}
+            loadingAcademias={loadingMapeamento}
+            onAcademiaNomeChange={handlePacoteAcademiaNomeChange}
+            onUnidadeNomeChange={handlePacoteUnidadeNomeChange}
+            onAcademiaSelect={handlePacoteSelecionarAcademia}
+            onUnidadeSelect={handlePacoteSelecionarUnidade}
+          />
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 text-sm">
+            <div className="space-y-1">
+              <p className="font-medium">Destino atual</p>
+              <p className="text-muted-foreground">
+                {destinoSelecionado
+                  ? `${pacoteMapeamento.academiaNome || tenantLabel.academiaNome} · ${pacoteMapeamento.unidadeNome || tenantLabel.unidadeNome}`
+                  : "Nenhuma unidade selecionada"}
+              </p>
+              {tenantFoco && onboardingFoco ? (
+                <p className="text-xs text-muted-foreground">
+                  EVO {onboardingFoco.evoFilialId || "não vinculado"}
+                </p>
+              ) : null}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void carregarMapeamentoData()}
+              disabled={loadingMapeamento}
+            >
+              {loadingMapeamento ? "Atualizando unidades..." : "Atualizar unidades"}
+            </Button>
+          </div>
+        </section>
 
         <div className="space-y-6">
+          <EvoDestinoFotosCard state={state} />
           <EvoPacoteTab state={state} />
         </div>
       </div>

@@ -1,309 +1,703 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import {
+  Camera,
+  Cpu,
+  ImageIcon,
+  Network,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+  Users,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { listarCatracaWsStatusApi, syncCatracaFacesApi } from "@/lib/api/catraca";
-import { listUnidadesApi } from "@/lib/api/contexto-unidades";
+import { Switch } from "@/components/ui/switch";
+import {
+  obterAdminCatracaIntegracaoApi,
+  salvarAdminCatracaDispositivoApi,
+  sincronizarAdminCatracaFacesApi,
+  type AdminCatracaDeviceResponse,
+  type AdminCatracaSyncFacesResponse,
+  type AdminCatracaUpsertDeviceInput,
+} from "@/lib/api/catraca";
+import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import type { Tenant } from "@/lib/types";
+import type { Academia, Tenant } from "@/lib/types";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import { PageError } from "@/components/shared/page-error";
 
-const TODOS_TENANTS_VALUE = "__TODOS_TENANTS__";
+type DeviceFormState = AdminCatracaUpsertDeviceInput;
 
-type TenantStatusRow = {
-  tenantId: string;
-  nome: string;
-  connectedAgents: number;
-};
-
-function formatError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  const normalized = normalizeErrorMessage(error);
-  return normalized || "Não foi possível carregar o status.";
+function createEmptyDeviceForm(): DeviceFormState {
+  return {
+    deviceId: "",
+    agentId: "",
+    nome: "",
+    fabricante: "CONTROL_ID_IDFACE",
+    ipLocal: "",
+    portaControle: 80,
+    portaBiometria: 80,
+    maxFaces: 3000,
+    reservedFacesStaff: 0,
+    ativo: true,
+    operationMode: "EMBEDDED_FACE",
+    supportsEmbeddedFace: true,
+    supportsEdgeFace: false,
+    supportsFingerprint: false,
+    supportsQrCode: false,
+    supportsFaceTemplateSync: true,
+  };
 }
 
-function getTenantName(map: Map<string, string>, tenantId: string): string {
-  return map.get(tenantId) ?? tenantId;
+function createFormFromDevice(device: AdminCatracaDeviceResponse): DeviceFormState {
+  return {
+    deviceId: device.deviceId,
+    agentId: device.agentId ?? "",
+    nome: device.nome ?? "",
+    fabricante: device.fabricante,
+    ipLocal: device.ipLocal ?? "",
+    portaControle: device.portaControle,
+    portaBiometria: device.portaBiometria,
+    maxFaces: device.maxFaces,
+    reservedFacesStaff: device.reservedFacesStaff,
+    ativo: device.ativo,
+    operationMode: device.operationMode,
+    supportsEmbeddedFace: device.supportsEmbeddedFace,
+    supportsEdgeFace: device.supportsEdgeFace,
+    supportsFingerprint: device.supportsFingerprint,
+    supportsQrCode: device.supportsQrCode,
+    supportsFaceTemplateSync: device.supportsFaceTemplateSync,
+  };
 }
 
-function getTenantStatusClass(connected: number): string {
-  return connected > 0
-    ? "bg-gym-teal/15 text-gym-teal border-gym-teal/25"
-    : "bg-muted text-muted-foreground border-border";
+function toOptionalNumber(value: string): number | undefined {
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function getTenantStatusLabel(connected: number): string {
-  return connected > 0 ? "Online" : "Sem conexão";
+function formatMutationError(error: unknown): string {
+  return normalizeErrorMessage(error) || "Não foi possível concluir a operação.";
 }
 
 export function CatracaStatusContent() {
   const access = useAuthAccess();
   const queryClient = useQueryClient();
-  const [selectedTenantId, setSelectedTenantId] = useState(TODOS_TENANTS_VALUE);
-  const [search, setSearch] = useState("");
+  const [selectedAcademiaId, setSelectedAcademiaId] = useState("");
+  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [selectedDeviceId, setSelectedDeviceId] = useState("");
+  const [deviceForm, setDeviceForm] = useState<DeviceFormState>(createEmptyDeviceForm());
+  const [lastSyncResult, setLastSyncResult] = useState<AdminCatracaSyncFacesResponse | null>(null);
+
+  const academiasQuery = useQuery<Academia[]>({
+    queryKey: ["admin", "catraca-integracao", "academias"],
+    queryFn: () => listAcademiasApi(),
+    enabled: access.canAccessElevatedModules && !access.loading,
+    staleTime: 5 * 60_000,
+  });
 
   const tenantsQuery = useQuery<Tenant[]>({
-    queryKey: ["admin", "catraca-tenants"],
+    queryKey: ["admin", "catraca-integracao", "tenants"],
     queryFn: () => listUnidadesApi(),
     enabled: access.canAccessElevatedModules && !access.loading,
     staleTime: 5 * 60_000,
   });
+
+  const academias = academiasQuery.data ?? [];
   const tenants = tenantsQuery.data ?? [];
 
-  const tenantMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const tenant of tenants) {
-      map.set(tenant.id, tenant.nome);
+  useEffect(() => {
+    if (!selectedAcademiaId && academias.length > 0) {
+      setSelectedAcademiaId(academias[0].id);
     }
-    return map;
-  }, [tenants]);
+  }, [academias, selectedAcademiaId]);
 
-  const statusQuery = useQuery({
-    queryKey: ["admin", "catraca-status", selectedTenantId],
-    queryFn: async () => {
-      const status = await listarCatracaWsStatusApi({
-        tenantId: selectedTenantId === TODOS_TENANTS_VALUE ? undefined : selectedTenantId,
-      });
+  const filteredTenants = useMemo(() => {
+    if (!selectedAcademiaId) return tenants;
+    return tenants.filter((tenant) => tenant.academiaId === selectedAcademiaId);
+  }, [selectedAcademiaId, tenants]);
 
-      const statusByTenant = new Map<string, number>(
-        status.tenants.map((item) => [item.tenantId, item.connectedAgents])
-      );
+  useEffect(() => {
+    if (!selectedTenantId && filteredTenants.length > 0) {
+      setSelectedTenantId(filteredTenants[0].id);
+      return;
+    }
+    if (selectedTenantId && !filteredTenants.some((tenant) => tenant.id === selectedTenantId)) {
+      setSelectedTenantId(filteredTenants[0]?.id ?? "");
+    }
+  }, [filteredTenants, selectedTenantId]);
 
-      let rows: TenantStatusRow[];
-
-      if (selectedTenantId === TODOS_TENANTS_VALUE) {
-        if (tenants.length > 0) {
-          rows = tenants
-            .map((tenant) => ({
-              tenantId: tenant.id,
-              nome: tenant.nome,
-              connectedAgents: statusByTenant.get(tenant.id) ?? 0,
-            }))
-            .sort((a, b) => a.nome.localeCompare(b.nome));
-        } else {
-          rows = status.tenants.map((item) => ({
-            tenantId: item.tenantId,
-            nome: getTenantName(tenantMap, item.tenantId),
-            connectedAgents: item.connectedAgents,
-          }));
-        }
-      } else {
-        const item = status.tenants.find((entry) => entry.tenantId === selectedTenantId);
-        rows = [
-          {
-            tenantId: selectedTenantId,
-            nome: getTenantName(tenantMap, selectedTenantId),
-            connectedAgents: item?.connectedAgents ?? 0,
-          },
-        ];
-      }
-
-      return { rows, totalConnectedAgents: status.totalConnectedAgents };
-    },
-    enabled: access.canAccessElevatedModules && !access.loading,
-    // Task #546: polling "tempo real" (a cada 15s)
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
+  const integrationQuery = useQuery({
+    queryKey: ["admin", "catraca-integracao", selectedTenantId],
+    queryFn: () => obterAdminCatracaIntegracaoApi({ tenantId: selectedTenantId }),
+    enabled: access.canAccessElevatedModules && !access.loading && !!selectedTenantId,
+    staleTime: 30_000,
   });
 
-  // Task #546: sync de faces por unidade
-  const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
-  const syncFacesMutation = useMutation({
-    mutationFn: (tenantId: string) => syncCatracaFacesApi({ tenantId }),
-    onSuccess: (result, tenantId) => {
-      const nome = getTenantName(tenantMap, tenantId);
-      setSyncSuccess(
-        `Sync iniciado para ${nome}: ${result.sincronizados ?? "?"}/${result.total ?? "?"} fotos. ${result.mensagem ?? ""}`.trim(),
-      );
-      setTimeout(() => setSyncSuccess(null), 5000);
-    },
-  });
+  const integration = integrationQuery.data;
+  const devices = integration?.devices ?? [];
+  const agents = integration?.agents ?? [];
 
-  const rows = statusQuery.data?.rows ?? [];
-  const totalConnectedAgents = statusQuery.data?.totalConnectedAgents ?? 0;
-  const loading = statusQuery.isLoading || statusQuery.isFetching;
-  const error = statusQuery.error ? formatError(statusQuery.error) : "";
+  useEffect(() => {
+    if (!selectedTenantId) {
+      setSelectedDeviceId("");
+      setDeviceForm(createEmptyDeviceForm());
+      setLastSyncResult(null);
+      return;
+    }
 
-  const load = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["admin", "catraca-status"] });
-  }, [queryClient]);
+    if (devices.length === 0) {
+      setSelectedDeviceId("__new__");
+      setDeviceForm((current) => ({
+        ...createEmptyDeviceForm(),
+        agentId: current.agentId,
+      }));
+      return;
+    }
 
-  const filteredRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return rows;
-    return rows.filter((row) => [row.nome, row.tenantId].join(" ").toLowerCase().includes(term));
-  }, [rows, search]);
+    if (selectedDeviceId === "__new__") {
+      return;
+    }
 
-  const tenantsOptions = useMemo(
-    () => [
-      { id: TODOS_TENANTS_VALUE, label: "Todas as unidades" },
-      ...tenants.map((tenant) => ({ id: tenant.id, label: tenant.nome })),
-    ],
-    [tenants]
+    const hasCurrentDevice = devices.some((device) => device.deviceId === selectedDeviceId);
+    if (!hasCurrentDevice) {
+      const firstDevice = devices[0];
+      setSelectedDeviceId(firstDevice.deviceId);
+      setDeviceForm(createFormFromDevice(firstDevice));
+      return;
+    }
+
+    const currentDevice = devices.find((device) => device.deviceId === selectedDeviceId);
+    if (currentDevice) {
+      setDeviceForm(createFormFromDevice(currentDevice));
+    }
+  }, [devices, selectedDeviceId, selectedTenantId]);
+
+  const selectedAcademia = academias.find((item) => item.id === selectedAcademiaId);
+  const selectedTenant = filteredTenants.find((item) => item.id === selectedTenantId);
+
+  const effectiveCapacityPreview = Math.max(
+    0,
+    (deviceForm.maxFaces ?? 0) - (deviceForm.reservedFacesStaff ?? 0),
   );
+  const capacityGap = integration
+    ? Math.max(0, integration.membersWithPhoto - effectiveCapacityPreview)
+    : 0;
+
+  const reload = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin", "catraca-integracao", selectedTenantId] }),
+      queryClient.invalidateQueries({ queryKey: ["admin", "catraca-integracao", "tenants"] }),
+    ]);
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: DeviceFormState) =>
+      salvarAdminCatracaDispositivoApi({
+        tenantId: selectedTenantId,
+        data: payload,
+      }),
+    onSuccess: async (device) => {
+      setSelectedDeviceId(device.deviceId);
+      setDeviceForm(createFormFromDevice(device));
+      await queryClient.invalidateQueries({ queryKey: ["admin", "catraca-integracao", selectedTenantId] });
+    },
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: (payload: { deviceId: string; agentId?: string }) =>
+      sincronizarAdminCatracaFacesApi({
+        tenantId: selectedTenantId,
+        deviceId: payload.deviceId,
+        agentId: payload.agentId,
+      }),
+    onSuccess: async (result) => {
+      setLastSyncResult(result);
+      await queryClient.invalidateQueries({ queryKey: ["admin", "catraca-integracao", selectedTenantId] });
+    },
+  });
+
+  const saveDisabled =
+    !selectedTenantId
+    || !deviceForm.deviceId.trim()
+    || !deviceForm.fabricante
+    || saveMutation.isPending;
+
+  const syncDisabled =
+    !selectedTenantId
+    || !deviceForm.deviceId.trim()
+    || !deviceForm.agentId?.trim()
+    || syncMutation.isPending
+    || saveMutation.isPending;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Administrativo</p>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Status de conexões Catraca</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Monitore conexões WebSocket ativas por unidade (tenant).
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            Administrativo
+          </p>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Integração facial da catraca</h1>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Configure a comunicação via gestão de acesso, limite de capacidade do leitor e a sincronização remota de imagens para clientes com contrato ativo.
           </p>
         </div>
-        <Button onClick={load} disabled={!access.canAccessElevatedModules || loading}>
+        <Button
+          onClick={() => void reload()}
+          disabled={!access.canAccessElevatedModules || integrationQuery.isFetching}
+          variant="outline"
+        >
           <RefreshCw className="mr-2 size-4" />
-          {loading ? "Atualizando..." : "Atualizar"}
+          {integrationQuery.isFetching ? "Atualizando..." : "Atualizar contexto"}
         </Button>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-          <Select value={selectedTenantId} onValueChange={setSelectedTenantId} disabled={!access.canAccessElevatedModules || access.loading}>
-            <SelectTrigger className="w-full bg-secondary border-border">
-              <SelectValue placeholder="Selecionar unidade" />
-            </SelectTrigger>
-            <SelectContent>
-              {tenantsOptions.map((tenant) => (
-                <SelectItem key={tenant.id} value={tenant.id}>
-                  {tenant.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Filtrar por nome do tenant"
-            className="bg-secondary border-border lg:col-span-1"
-          />
-          <Input
-            value={`Total conectado: ${totalConnectedAgents}`}
-            readOnly
-            disabled
-            className="bg-secondary border-border text-sm text-muted-foreground"
-          />
+      <div className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Academia</p>
+                <Select
+                  value={selectedAcademiaId}
+                  onValueChange={setSelectedAcademiaId}
+                  disabled={!access.canAccessElevatedModules || access.loading || academias.length === 0}
+                >
+                  <SelectTrigger className="bg-secondary/60">
+                    <SelectValue placeholder="Selecionar academia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {academias.map((academia) => (
+                      <SelectItem key={academia.id} value={academia.id}>
+                        {academia.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Unidade</p>
+                <Select
+                  value={selectedTenantId}
+                  onValueChange={setSelectedTenantId}
+                  disabled={!access.canAccessElevatedModules || access.loading || filteredTenants.length === 0}
+                >
+                  <SelectTrigger className="bg-secondary/60">
+                    <SelectValue placeholder="Selecionar unidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredTenants.map((tenant) => (
+                      <SelectItem key={tenant.id} value={tenant.id}>
+                        {tenant.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border/80 bg-secondary/25 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">{selectedAcademia?.nome ?? "Sem academia"}</Badge>
+                <Badge variant="outline">{selectedTenant?.nome ?? "Sem unidade"}</Badge>
+                <Badge variant="outline">{selectedTenantId || "Tenant não selecionado"}</Badge>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                A sincronização envia todos os clientes ativos com foto até o limite configurado para o dispositivo. Reservas de staff são descontadas antes do envio.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Clientes ativos</p>
+                <Users className="size-4 text-muted-foreground" />
+              </div>
+              <p className="mt-3 text-3xl font-semibold">{integration?.activeMembers ?? 0}</p>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Com foto elegível</p>
+                <ImageIcon className="size-4 text-muted-foreground" />
+              </div>
+              <p className="mt-3 text-3xl font-semibold">{integration?.membersWithPhoto ?? 0}</p>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Agentes online</p>
+                {(agents.length ?? 0) > 0 ? (
+                  <Wifi className="size-4 text-emerald-500" />
+                ) : (
+                  <WifiOff className="size-4 text-muted-foreground" />
+                )}
+              </div>
+              <p className="mt-3 text-3xl font-semibold">{agents.length}</p>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Capacidade útil</p>
+                <ShieldCheck className="size-4 text-muted-foreground" />
+              </div>
+              <p className="mt-3 text-3xl font-semibold">{effectiveCapacityPreview}</p>
+            </div>
+          </div>
         </div>
 
         {access.loading ? (
-          <p className="text-xs text-muted-foreground">Validando permissão...</p>
+          <p className="mt-4 text-xs text-muted-foreground">Validando permissão...</p>
         ) : !access.canAccessElevatedModules ? (
-          <p className="text-sm text-gym-danger">
-            Acesso negado. Apenas usuários com permissão alta podem visualizar esta página.
+          <p className="mt-4 text-sm text-destructive">
+            Acesso negado. Apenas perfis com permissão alta podem configurar a integração da catraca.
           </p>
         ) : null}
 
-        <PageError error={error} onRetry={load} />
+        <PageError error={academiasQuery.error || tenantsQuery.error || integrationQuery.error} onRetry={() => void reload()} />
+      </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-border bg-secondary/20 p-3">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">Total de agentes conectados</p>
-            <p className="mt-2 text-2xl font-bold text-gym-accent">{totalConnectedAgents}</p>
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <section className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-border pb-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Dispositivo</p>
+              <h2 className="mt-1 text-lg font-semibold">Comunicação com o leitor facial</h2>
+            </div>
+
+            <Select
+              value={selectedDeviceId}
+              onValueChange={(value) => {
+                setSelectedDeviceId(value);
+                if (value === "__new__") {
+                  setDeviceForm(createEmptyDeviceForm());
+                }
+              }}
+              disabled={!selectedTenantId}
+            >
+              <SelectTrigger className="w-full md:max-w-sm bg-secondary/60">
+                <SelectValue placeholder="Selecionar dispositivo" />
+              </SelectTrigger>
+              <SelectContent>
+                {devices.map((device) => (
+                  <SelectItem key={device.deviceId} value={device.deviceId}>
+                    {device.nome?.trim() || device.deviceId}
+                  </SelectItem>
+                ))}
+                <SelectItem value="__new__">Novo dispositivo</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="rounded-lg border border-border bg-secondary/20 p-3">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">Conexões monitoradas</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">{filteredRows.length}</p>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Device ID</label>
+              <Input
+                value={deviceForm.deviceId}
+                onChange={(event) => setDeviceForm((current) => ({ ...current, deviceId: event.target.value }))}
+                placeholder="idface-entrada"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Nome operacional</label>
+              <Input
+                value={deviceForm.nome ?? ""}
+                onChange={(event) => setDeviceForm((current) => ({ ...current, nome: event.target.value }))}
+                placeholder="Leitor entrada principal"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Fabricante</label>
+              <Select
+                value={deviceForm.fabricante}
+                onValueChange={(value) =>
+                  setDeviceForm((current) => ({ ...current, fabricante: value as DeviceFormState["fabricante"] }))
+                }
+              >
+                <SelectTrigger className="bg-secondary/60">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CONTROL_ID_IDFACE">Control iD iDFace</SelectItem>
+                  <SelectItem value="TOLETUS_LITENET2">Toletus LiteNet2</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Operation mode</label>
+              <Select
+                value={deviceForm.operationMode ?? "EMBEDDED_FACE"}
+                onValueChange={(value) =>
+                  setDeviceForm((current) => ({
+                    ...current,
+                    operationMode: value as NonNullable<DeviceFormState["operationMode"]>,
+                  }))
+                }
+              >
+                <SelectTrigger className="bg-secondary/60">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EMBEDDED_FACE">Face embarcada</SelectItem>
+                  <SelectItem value="EDGE_FACE">Face processada na borda</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">IP local</label>
+              <Input
+                value={deviceForm.ipLocal ?? ""}
+                onChange={(event) => setDeviceForm((current) => ({ ...current, ipLocal: event.target.value }))}
+                placeholder="192.168.0.25"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Agent ID da gestão de acesso</label>
+              <Input
+                value={deviceForm.agentId ?? ""}
+                onChange={(event) => setDeviceForm((current) => ({ ...current, agentId: event.target.value }))}
+                placeholder="agent-idface-entrada"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Porta controle</label>
+              <Input
+                value={deviceForm.portaControle ?? ""}
+                onChange={(event) =>
+                  setDeviceForm((current) => ({ ...current, portaControle: toOptionalNumber(event.target.value) }))
+                }
+                inputMode="numeric"
+                placeholder="80"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Porta biometria</label>
+              <Input
+                value={deviceForm.portaBiometria ?? ""}
+                onChange={(event) =>
+                  setDeviceForm((current) => ({ ...current, portaBiometria: toOptionalNumber(event.target.value) }))
+                }
+                inputMode="numeric"
+                placeholder="80"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Capacidade máxima de faces</label>
+              <Input
+                value={deviceForm.maxFaces ?? ""}
+                onChange={(event) =>
+                  setDeviceForm((current) => ({ ...current, maxFaces: toOptionalNumber(event.target.value) }))
+                }
+                inputMode="numeric"
+                placeholder="3000"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Reserva para equipe</label>
+              <Input
+                value={deviceForm.reservedFacesStaff ?? ""}
+                onChange={(event) =>
+                  setDeviceForm((current) => ({
+                    ...current,
+                    reservedFacesStaff: toOptionalNumber(event.target.value),
+                  }))
+                }
+                inputMode="numeric"
+                placeholder="100"
+              />
+            </div>
           </div>
-          <div className="rounded-lg border border-border bg-secondary/20 p-3">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">Filtro ativo</p>
-            <p className="mt-2 truncate text-sm font-medium text-foreground">
-              {selectedTenantId === TODOS_TENANTS_VALUE ? "Todas as unidades" : getTenantName(tenantMap, selectedTenantId)}
+
+          <div className="mt-5 grid gap-3 rounded-2xl border border-border/80 bg-secondary/20 p-4 md:grid-cols-2">
+            {[
+              {
+                key: "ativo" as const,
+                label: "Dispositivo ativo",
+                description: "Habilita este leitor para sincronização e uso operacional.",
+              },
+              {
+                key: "supportsEmbeddedFace" as const,
+                label: "Suporta face embarcada",
+                description: "Permite envio de imagem para geração biométrica dentro do equipamento.",
+              },
+              {
+                key: "supportsFaceTemplateSync" as const,
+                label: "Permite sync de face",
+                description: "Habilita o fluxo remoto de preload e invalidação de imagens.",
+              },
+              {
+                key: "supportsEdgeFace" as const,
+                label: "Suporta face na borda",
+                description: "Usado quando o reconhecimento não fica 100% embarcado no leitor.",
+              },
+              {
+                key: "supportsFingerprint" as const,
+                label: "Suporta digital",
+                description: "Mantém o dispositivo elegível para cenários mistos.",
+              },
+              {
+                key: "supportsQrCode" as const,
+                label: "Suporta QR Code",
+                description: "Usado para fallback operacional ou acesso eventual.",
+              },
+            ].map((item) => (
+              <div key={item.key} className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-background/70 p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{item.label}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.description}</p>
+                </div>
+                <Switch
+                  checked={Boolean(deviceForm[item.key])}
+                  onCheckedChange={(checked) =>
+                    setDeviceForm((current) => ({ ...current, [item.key]: checked }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="text-sm text-muted-foreground">
+              Capacidade útil prevista: <span className="font-semibold text-foreground">{effectiveCapacityPreview}</span>
+              {capacityGap > 0 ? (
+                <span className="ml-2 text-amber-500">
+                  {capacityGap} clientes com foto ficarão fora do lote por limite de capacidade.
+                </span>
+              ) : null}
+            </div>
+
+            <Button onClick={() => saveMutation.mutate(deviceForm)} disabled={saveDisabled}>
+              <Save className="mr-2 size-4" />
+              {saveMutation.isPending ? "Salvando..." : "Salvar configuração"}
+            </Button>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+          <div className="border-b border-border pb-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Execução remota</p>
+            <h2 className="mt-1 text-lg font-semibold">Sincronização de imagens</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              O comando sai do backoffice, passa pela API administrativa e é entregue ao agente conectado da gestão de acesso.
             </p>
           </div>
-        </div>
-      </div>
 
-      <div className="overflow-hidden rounded-xl border border-border">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border bg-secondary">
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Tenant
-              </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Tenant ID
-              </th>
-              <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Agentes conectados
-              </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Status
-              </th>
-              <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filteredRows.length === 0 ? (
-              <tr>
-                <td className="px-4 py-10 text-center text-sm text-muted-foreground" colSpan={5}>
-                  Nenhuma conexão encontrada para os filtros atuais.
-                </td>
-              </tr>
-            ) : (
-              filteredRows.map((row) => (
-                <tr key={row.tenantId} className="transition-colors hover:bg-secondary/40">
-                  <td className="px-4 py-3">
-                    <p className="text-sm font-semibold text-foreground">{row.nome}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-sm text-muted-foreground">{row.tenantId}</p>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <p className="text-sm font-medium text-foreground">{row.connectedAgents}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTenantStatusClass(row.connectedAgents)}`}
-                    >
-                      {row.connectedAgents > 0 ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
-                      {getTenantStatusLabel(row.connectedAgents)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => syncFacesMutation.mutate(row.tenantId)}
-                      disabled={
-                        syncFacesMutation.isPending &&
-                        syncFacesMutation.variables === row.tenantId
-                      }
-                      title="Sincronizar fotos dos alunos"
-                    >
-                      <Camera className="size-4" />
-                      {syncFacesMutation.isPending &&
-                      syncFacesMutation.variables === row.tenantId
-                        ? "..."
-                        : "Sync fotos"}
-                    </Button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+          <div className="mt-5 space-y-4">
+            <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">Agentes conectados na unidade</p>
+                <Network className="size-4 text-muted-foreground" />
+              </div>
 
-      {syncSuccess ? (
-        <div className="rounded-xl border border-gym-teal/30 bg-gym-teal/10 px-4 py-3 text-sm text-gym-teal">
-          {syncSuccess}
-        </div>
-      ) : null}
-      {syncFacesMutation.error ? (
-        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
-          {normalizeErrorMessage(syncFacesMutation.error)}
-        </div>
-      ) : null}
+              {agents.length === 0 ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Nenhum agente online para esta unidade. Você ainda pode salvar a configuração, mas o sync remoto exige um agent conectado.
+                </p>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  {agents.map((agent) => (
+                    <div key={agent.agentId} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/70 p-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{agent.agentId}</p>
+                          <Badge variant={agent.awaitingPingAck ? "outline" : "secondary"}>
+                            {agent.awaitingPingAck ? `${agent.pendingCommands} pendente(s)` : "pronto"}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {agent.lastCommandStatus
+                            ? `${agent.lastCommandStatus}${agent.lastCommandMessage ? ` • ${agent.lastCommandMessage}` : ""}`
+                            : "Sem comando recente"}
+                        </p>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeviceForm((current) => ({ ...current, agentId: agent.agentId }))}
+                      >
+                        Usar agent
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">Resumo do lote a sincronizar</p>
+                <Cpu className="size-4 text-muted-foreground" />
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border/70 bg-background/70 p-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Membros com foto</p>
+                  <p className="mt-2 text-2xl font-semibold">{integration?.membersWithPhoto ?? 0}</p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/70 p-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Capacidade útil</p>
+                  <p className="mt-2 text-2xl font-semibold">{effectiveCapacityPreview}</p>
+                </div>
+              </div>
+              <Button
+                className="mt-4 w-full"
+                onClick={() =>
+                  syncMutation.mutate({
+                    deviceId: deviceForm.deviceId.trim(),
+                    agentId: deviceForm.agentId?.trim() || undefined,
+                  })
+                }
+                disabled={syncDisabled}
+              >
+                <Camera className="mr-2 size-4" />
+                {syncMutation.isPending ? "Enfileirando sync..." : "Sincronizar clientes ativos"}
+              </Button>
+            </div>
+
+            {lastSyncResult ? (
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                <p className="text-sm font-semibold text-emerald-300">Sync enfileirado</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Preloads</p>
+                    <p className="mt-1 text-xl font-semibold text-emerald-50">{lastSyncResult.queuedPreloads}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Invalidações</p>
+                    <p className="mt-1 text-xl font-semibold text-emerald-50">{lastSyncResult.queuedInvalidations}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Ignorados por capacidade</p>
+                    <p className="mt-1 text-xl font-semibold text-emerald-50">{lastSyncResult.skippedByCapacity}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Modo</p>
+                    <p className="mt-1 text-xl font-semibold text-emerald-50">{lastSyncResult.mode}</p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {saveMutation.error ? (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {formatMutationError(saveMutation.error)}
+              </div>
+            ) : null}
+            {syncMutation.error ? (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {formatMutationError(syncMutation.error)}
+              </div>
+            ) : null}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

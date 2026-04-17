@@ -58,7 +58,8 @@ function formatMinutes(totalMinutes: number) {
 
 export function GradeContent() {
   const { tenantId } = useTenantContext();
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(getBusinessTodayDate()));
+  const [weekStart, setWeekStart] = useState<Date | null>(null);
+  const [nowDate, setNowDate] = useState<Date | null>(null);
 
   const { data: gradeData, isLoading: loading, isError, error } = useGrade({
     tenantId,
@@ -133,13 +134,34 @@ export function GradeContent() {
     return matrix;
   }, [byDay]);
 
-  const weekEnd = addDays(weekStart, 6);
-  const [nowDate, setNowDate] = useState(() => new Date());
   useEffect(() => {
+    const initialNow = new Date();
+    setWeekStart(startOfWeek(getBusinessTodayDate(initialNow)));
+    setNowDate(initialNow);
+
     // Atualiza a cada 60s — suficiente para logica de check-in window
     const id = setInterval(() => setNowDate(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
+  if (!weekStart || !nowDate) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight">Grade</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Calendário semanal das atividades configuradas na Grade
+            </p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-dashed border-border/70 bg-card p-8 text-center text-sm text-muted-foreground">
+          Carregando grade semanal...
+        </div>
+      </div>
+    );
+  }
+
+  const weekEnd = addDays(weekStart, 6);
   const todayIso = getBusinessTodayIso(nowDate);
   const weekDays = DIA_ORDER.map((dia, idx) => {
     const date = addDays(weekStart, idx);
@@ -152,7 +174,7 @@ export function GradeContent() {
   });
 
   function isCheckinWindowOpen(item: AtividadeGrade, date: Date) {
-    if (item.definicaoHorario !== "PREVIAMENTE") return false;
+    if (item.definicaoHorario !== "PREVIAMENTE" || !nowDate) return false;
     const [hh, mm] = item.horaInicio.split(":").map(Number);
     const start = new Date(date);
     start.setHours(hh || 0, mm || 0, 0, 0);
@@ -170,13 +192,13 @@ export function GradeContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="border-border" aria-label="Semana anterior" onClick={() => setWeekStart((d) => addDays(d, -7))}>
+          <Button variant="outline" size="icon" className="border-border" aria-label="Semana anterior" onClick={() => setWeekStart(addDays(weekStart, -7))}>
             <ChevronLeft className="size-4" />
           </Button>
           <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground">
             {formatDateBR(weekStart)} - {formatDateBR(weekEnd)}
           </div>
-          <Button variant="outline" size="icon" className="border-border" aria-label="Próxima semana" onClick={() => setWeekStart((d) => addDays(d, 7))}>
+          <Button variant="outline" size="icon" className="border-border" aria-label="Próxima semana" onClick={() => setWeekStart(addDays(weekStart, 7))}>
             <ChevronRight className="size-4" />
           </Button>
         </div>

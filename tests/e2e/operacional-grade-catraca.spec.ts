@@ -252,6 +252,56 @@ async function installOperacionalGradeCatracaApi(page: Page) {
       ],
     });
   });
+
+  await page.route("**/api/v1/admin/unidades/*/catraca/integracao", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = normalizePath(url.pathname);
+
+    if (request.method() !== "GET" || !path.startsWith("/api/v1/admin/unidades/") || !path.endsWith("/catraca/integracao")) {
+      await route.fallback();
+      return;
+    }
+
+    const segments = path.split("/");
+    const tenantId = segments[5] || "tenant-centro";
+
+    await fulfillJson(route, {
+      tenantId,
+      activeMembers: tenantId === "tenant-zona-sul" ? 87 : 146,
+      membersWithPhoto: tenantId === "tenant-zona-sul" ? 74 : 131,
+      devices: [
+        {
+          tenantId,
+          deviceId: "idface-entrada",
+          agentId: tenantId === "tenant-zona-sul" ? "agent-zs-1" : "agent-centro-1",
+          nome: "iDFace Entrada",
+          fabricante: "CONTROL_ID_IDFACE",
+          ipLocal: "192.168.0.25",
+          portaControle: 80,
+          portaBiometria: 80,
+          maxFaces: 3000,
+          reservedFacesStaff: 100,
+          ativo: true,
+          operationMode: "EMBEDDED_FACE",
+          supportsEmbeddedFace: true,
+          supportsEdgeFace: false,
+          supportsFingerprint: false,
+          supportsQrCode: false,
+          supportsFaceTemplateSync: true,
+        },
+      ],
+      agents: [
+        {
+          agentId: tenantId === "tenant-zona-sul" ? "agent-zs-1" : "agent-centro-1",
+          sessionId: "sess-1",
+          pendingCommands: 0,
+          awaitingPingAck: false,
+          lastCommandStatus: "ACK_OK",
+        },
+      ],
+    });
+  });
 }
 
 async function abrirComSessaoMock(page: Page) {
@@ -288,8 +338,8 @@ test.describe("Operacional grade e catraca", () => {
     await expect(page.getByText("Studio Bike")).toBeVisible();
 
     await page.goto("/administrativo/catraca-status", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Status de conexões Catraca" })).toBeVisible();
-    await expect(page.getByText("Total de agentes conectados")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Integração facial da catraca" })).toBeVisible();
+    await expect(page.getByText("Clientes ativos")).toBeVisible();
     await expect(page.getByText("Unidade Centro").first()).toBeVisible();
   });
 });

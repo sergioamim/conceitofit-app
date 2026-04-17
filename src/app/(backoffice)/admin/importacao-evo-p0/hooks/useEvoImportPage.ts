@@ -20,10 +20,12 @@ import {
   type UploadAnaliseArquivo,
   type UploadAnaliseFilial,
   type UploadAnaliseResponse,
+  getUltimoLoteApi,
 } from "@/lib/api/importacao-evo";
 import { createGlobalUnidade, listGlobalAcademias, listGlobalUnidades } from "@/backoffice/lib/admin";
 import {
   createBackofficeEvoPacoteFotoImportJob,
+  createBackofficeEvoUltimoLoteFotoImportJob,
   createBackofficeEvoP0CsvJob,
   createBackofficeEvoP0PacoteJob,
   type EvoArquivoHistoricoNormalizado,
@@ -151,6 +153,9 @@ export function useEvoImportPage() {
   const [fotoImportEstadoLoading, setFotoImportEstadoLoading] = useState(false);
   const [fotoImportJobStatus, setFotoImportJobStatus] = useState<EvoFotoImportJobStatusResponse | null>(null);
   const [fotoImportExecutando, setFotoImportExecutando] = useState(false);
+  const [fotoImportUltimoLote, setFotoImportUltimoLote] = useState<UltimoLoteResponse | null>(null);
+  const [fotoImportUltimoLoteLoading, setFotoImportUltimoLoteLoading] = useState(false);
+  const [fotoImportUltimoLoteErro, setFotoImportUltimoLoteErro] = useState<string | null>(null);
   const [novaUnidadePacoteAberta, setNovaUnidadePacoteAberta] = useState(false);
   const [novaUnidadePacoteSalvando, setNovaUnidadePacoteSalvando] = useState(false);
   const [novaUnidadePacoteErro, setNovaUnidadePacoteErro] = useState<string | null>(null);
@@ -1663,6 +1668,18 @@ export function useEvoImportPage() {
     return pacoteAnalise.arquivos.some((arquivo) => arquivo.chave === "clientes" && arquivo.disponivel);
   }, [pacoteAnalise]);
 
+  const fotoImportUltimoLoteTemClientesCsv = useMemo(() => {
+    if (!fotoImportUltimoLote) return false;
+    const arquivos = [
+      ...(fotoImportUltimoLote.arquivosDisponiveis ?? []),
+      ...(fotoImportUltimoLote.arquivosSelecionados ?? []),
+    ];
+    return arquivos.some((value) => {
+      const canonical = normalizeSearchKey(value).replace(/[^a-z0-9]/g, "");
+      return canonical === "clientes" || canonical === "clientescsv";
+    });
+  }, [fotoImportUltimoLote]);
+
   async function analisarArquivoPacote() {
     const validation = validarFormPacote();
     if (validation) {
@@ -1933,6 +1950,33 @@ export function useEvoImportPage() {
     }
   }, []);
 
+  const carregarUltimoLoteFotos = useCallback(async (tenantIdParam?: string | null) => {
+    const tenantId = normalizeTenantId(tenantIdParam);
+    if (!tenantId) {
+      setFotoImportUltimoLote(null);
+      setFotoImportUltimoLoteLoading(false);
+      setFotoImportUltimoLoteErro(null);
+      return;
+    }
+
+    setFotoImportUltimoLoteLoading(true);
+    setFotoImportUltimoLoteErro(null);
+    try {
+      const lote = await getUltimoLoteApi({ tenantId });
+      setFotoImportUltimoLote(lote);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      setFotoImportUltimoLote(null);
+      setFotoImportUltimoLoteErro(message || "Não foi possível consultar o último lote da unidade.");
+      logger.error(`Erro ao consultar último lote reutilizável — ${message}`, {
+        module: "evo-import",
+        handled: true,
+      });
+    } finally {
+      setFotoImportUltimoLoteLoading(false);
+    }
+  }, []);
+
   const pollFotoImportJobOnce = useCallback(async (jobIdParam: string, tenantIdParam: string) => {
     const tenantId = normalizeTenantId(tenantIdParam);
     if (!tenantId || !jobIdParam) return;
@@ -1991,19 +2035,13 @@ export function useEvoImportPage() {
       return;
     }
 
-    if (!pacoteAnalise?.uploadId) {
-      toast({
-        title: "Analise o pacote primeiro",
-        description: "A importação de fotos depende do pacote EVO já analisado.",
-        variant: "destructive",
-      });
-      return;
-    }
+    const usarPacoteAtual = Boolean(pacoteAnalise?.uploadId && clientesCsvDisponivelNoPacote);
+    const usarUltimoLote = !usarPacoteAtual && fotoImportUltimoLoteTemClientesCsv;
 
-    if (!clientesCsvDisponivelNoPacote) {
+    if (!usarPacoteAtual && !usarUltimoLote) {
       toast({
-        title: "CLIENTES.csv ausente",
-        description: "O pacote analisado não possui CLIENTES.csv disponível para importar as imagens.",
+        title: "CLIENTES.csv indisponível",
+        description: "Nenhum pacote atual ou último lote reutilizável com CLIENTES.csv está disponível para baixar as fotos da unidade.",
         variant: "destructive",
       });
       return;
@@ -2011,18 +2049,27 @@ export function useEvoImportPage() {
 
     setFotoImportExecutando(true);
     try {
-      const job = await createBackofficeEvoPacoteFotoImportJob({
-        uploadId: pacoteAnalise.uploadId,
-        tenantId,
-        contextoTenantId: tenantId,
-        dryRun: pacoteDryRun,
-        force,
-      });
+      const job = usarPacoteAtual && pacoteAnalise?.uploadId
+        ? await createBackofficeEvoPacoteFotoImportJob({
+            uploadId: pacoteAnalise.uploadId,
+            tenantId,
+            contextoTenantId: tenantId,
+            dryRun: pacoteDryRun,
+            force,
+          })
+        : await createBackofficeEvoUltimoLoteFotoImportJob({
+            tenantId,
+            contextoTenantId: tenantId,
+            dryRun: pacoteDryRun,
+            force,
+          });
       setFotoImportJobStatus(job);
       startFotoImportPolling(job.jobId, tenantId);
       toast({
         title: force ? "Reimportação de fotos iniciada" : "Importação de fotos iniciada",
-        description: `Job ${job.jobId} disparado para a unidade selecionada.`,
+        description: usarPacoteAtual
+          ? `Job ${job.jobId} disparado a partir do pacote analisado.`
+          : `Job ${job.jobId} disparado a partir do último lote EVO reutilizável.`,
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2042,10 +2089,14 @@ export function useEvoImportPage() {
     stopFotoImportPolling();
     if (!tenantId) {
       setFotoImportEstado(null);
+      setFotoImportUltimoLote(null);
+      setFotoImportUltimoLoteLoading(false);
+      setFotoImportUltimoLoteErro(null);
       return;
     }
     void carregarEstadoImportacaoFotos(tenantId);
-  }, [carregarEstadoImportacaoFotos, pacoteMapeamento.tenantId, stopFotoImportPolling]);
+    void carregarUltimoLoteFotos(tenantId);
+  }, [carregarEstadoImportacaoFotos, carregarUltimoLoteFotos, pacoteMapeamento.tenantId, stopFotoImportPolling]);
 
   useEffect(() => {
     return () => {
@@ -2952,6 +3003,7 @@ export function useEvoImportPage() {
     pacoteAnalisando, pacoteCriandoJob,
     fotoImportEstado, fotoImportEstadoLoading,
     fotoImportJobStatus, fotoImportExecutando,
+    fotoImportUltimoLote, fotoImportUltimoLoteLoading, fotoImportUltimoLoteErro, fotoImportUltimoLoteTemClientesCsv,
     pacoteAnalise, pacoteEvoUnidadeResolvida,
     pacoteFilialResolvida, pacoteFiliaisEncontradas,
     pacoteFilialReferencia, pacoteNomeFilialReferencia,

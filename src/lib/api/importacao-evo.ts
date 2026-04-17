@@ -83,7 +83,7 @@ export type EvoFotoImportEstadoResponse = {
 export type EvoFotoImportJobResponse = {
   jobId: string;
   tenantId: string;
-  uploadId: string;
+  uploadId?: string | null;
   status: string;
   dryRun: boolean;
   force: boolean;
@@ -332,6 +332,33 @@ export async function createEvoPacoteFotoImportJobApi(input: {
 
   return apiRequest<EvoFotoImportJobResponse>({
     path: `/api/v1/admin/integracoes/importacao-terceiros/evo/p0/pacote/${input.uploadId}/fotos/importar`,
+    method: "POST",
+    query,
+    headers: buildExplicitTenantHeaders(tenantId),
+    includeContextHeader: false,
+  });
+}
+
+export async function createEvoUltimoLoteFotoImportJobApi(input: {
+  tenantId?: string;
+  contextoTenantId?: string;
+  dryRun?: boolean;
+  force?: boolean;
+}): Promise<EvoFotoImportJobResponse> {
+  const tenantId = normalizeTenantId(input.tenantId ?? input.contextoTenantId);
+  const query: Record<string, string> = {};
+  if (tenantId) {
+    query.tenantId = tenantId;
+  }
+  if (input.dryRun) {
+    query.dryRun = "true";
+  }
+  if (input.force) {
+    query.force = "true";
+  }
+
+  return apiRequest<EvoFotoImportJobResponse>({
+    path: "/api/v1/admin/integracoes/importacao-terceiros/evo/p0/fotos/importar",
     method: "POST",
     query,
     headers: buildExplicitTenantHeaders(tenantId),

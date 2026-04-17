@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkActionBar, type BulkAction } from "@/components/shared/bulk-action-bar";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -70,14 +71,17 @@ export function PaginatedTable<T>({
   onSelectionChange,
   bulkActions,
 }: PaginatedTableProps<T>) {
+  const hydrated = useHydrated();
   const totalCount = total ?? items.length;
   const currentPage = Math.max(0, page);
   const effectiveSize = pageSize > 0 ? pageSize : items.length;
+  const skeletonRowCount = effectiveSize > 0 ? Math.min(effectiveSize, 10) : 5;
   const startIndex = effectiveSize > 0 ? currentPage * effectiveSize : 0;
   const rangeStart = items.length > 0 ? startIndex + 1 : 0;
   const rangeEnd = items.length > 0 ? startIndex + items.length : 0;
   const hasNextPage = Boolean(hasNext);
   const hasPreviousPage = currentPage > 0;
+  const shouldShowSkeleton = hydrated ? isLoading : items.length === 0;
   const effectiveTotalPages =
     typeof totalPages === "number"
       ? Math.max(0, totalPages)
@@ -111,11 +115,11 @@ export function PaginatedTable<T>({
     }
   };
 
-  if (isLoading) {
+  if (shouldShowSkeleton) {
     return (
       <TableSkeleton
         columns={columns.map((col) => ({ label: col.label, className: col.className }))}
-        rowCount={effectiveSize > 0 ? Math.min(effectiveSize, 10) : 5}
+        rowCount={skeletonRowCount}
         showPagination={showPagination}
         selectable={selectable}
       />

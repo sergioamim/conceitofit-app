@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { normalizeCapabilityError } from "@/lib/api/backend-capability";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
@@ -53,7 +53,6 @@ type FormState = {
   vencimentoHora: string;
 };
 
-const TODAY = getBusinessTodayIso();
 const EMPTY_FORM: FormState = {
   titulo: "",
   descricao: "",
@@ -63,13 +62,20 @@ const EMPTY_FORM: FormState = {
   tipo: "LIGACAO",
   prioridade: "MEDIA",
   status: "PENDENTE",
-  vencimentoData: TODAY,
+  vencimentoData: "",
   vencimentoHora: "09:00",
 };
 
-function toForm(task?: CrmTask | null): FormState {
-  if (!task) return EMPTY_FORM;
-  const [date = TODAY, time = "09:00"] = task.vencimentoEm.split("T");
+function buildEmptyForm(todayIso: string): FormState {
+  return {
+    ...EMPTY_FORM,
+    vencimentoData: todayIso,
+  };
+}
+
+function toForm(task?: CrmTask | null, todayIso = ""): FormState {
+  if (!task) return buildEmptyForm(todayIso);
+  const [date = todayIso, time = "09:00"] = task.vencimentoEm.split("T");
   return {
     titulo: task.titulo,
     descricao: task.descricao ?? "",
@@ -116,6 +122,10 @@ export default function CrmTarefasPage() {
     defaultValues: EMPTY_FORM,
   });
 
+  useEffect(() => {
+    reset(buildEmptyForm(getBusinessTodayIso()));
+  }, [reset]);
+
   const stages = useMemo<CrmPipelineStage[]>(
     () => buildDefaultCrmPipelineStages(tenantId || "tenant-runtime"),
     [tenantId],
@@ -143,7 +153,7 @@ export default function CrmTarefasPage() {
 
   function resetForm(task?: CrmTask | null) {
     setEditing(task ?? null);
-    reset(toForm(task));
+    reset(toForm(task, getBusinessTodayIso()));
   }
 
   async function onSubmit(form: FormState) {

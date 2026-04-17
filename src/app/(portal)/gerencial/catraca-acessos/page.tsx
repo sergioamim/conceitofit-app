@@ -204,10 +204,10 @@ export default function CatracaAcessosPage() {
   const [page, setPage] = useState(0);
   const size = 20;
 
-  const [periodStartDraft, setPeriodStartDraft] = useState(() => getTodayDate());
-  const [periodEndDraft, setPeriodEndDraft] = useState(() => getTodayDate());
-  const [periodStart, setPeriodStart] = useState(() => getTodayDate());
-  const [periodEnd, setPeriodEnd] = useState(() => getTodayDate());
+  const [periodStartDraft, setPeriodStartDraft] = useState("");
+  const [periodEndDraft, setPeriodEndDraft] = useState("");
+  const [periodStart, setPeriodStart] = useState("");
+  const [periodEnd, setPeriodEnd] = useState("");
 
   const [clienteQuery, setClienteQuery] = useState("");
   const [clienteSelecionado, setClienteSelecionado] = useState<SuggestionOption | null>(null);
@@ -224,11 +224,20 @@ export default function CatracaAcessosPage() {
 
   const [tipoLiberacaoFiltro, setTipoLiberacaoFiltro] = useState<TipoLiberacaoFiltro>(FILTER_ALL);
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>(FILTER_ALL);
+  const filtersReady = Boolean(periodStart) && Boolean(periodEnd);
+
+  useEffect(() => {
+    const today = getTodayDate();
+    setPeriodStartDraft(today);
+    setPeriodEndDraft(today);
+    setPeriodStart(today);
+    setPeriodEnd(today);
+  }, []);
 
   // Server state via TanStack Query
   const { data: response, isLoading: loading, error: queryError, refetch } = useCatracaAcessos({
     tenantId: tenantId ?? undefined,
-    tenantResolved,
+    tenantResolved: tenantResolved && filtersReady,
     page,
     size,
     startDate: periodStart,
@@ -422,7 +431,7 @@ export default function CatracaAcessosPage() {
             Visualize indicadores e eventos de acesso da unidade com filtros globais.
           </p>
         </div>
-        <Button type="button" onClick={() => void refetch()} disabled={loading}>
+        <Button type="button" onClick={() => void refetch()} disabled={loading || !filtersReady}>
           <RefreshCw className="mr-2 size-4" />
           {loading ? "Atualizando..." : "Atualizar"}
         </Button>
@@ -501,17 +510,23 @@ export default function CatracaAcessosPage() {
             onChange={(event) => setPeriodEndDraft(event.target.value)}
             className="bg-secondary border-border"
           />
-          <Button type="button" variant="outline" className="border-border" onClick={applyPeriodFilter}>
+          <Button
+            type="button"
+            variant="outline"
+            className="border-border"
+            disabled={!periodStartDraft || !periodEndDraft || periodStartDraft > periodEndDraft}
+            onClick={applyPeriodFilter}
+          >
             Aplicar período
           </Button>
-          <Button type="button" variant="outline" className="border-border" onClick={resetTodayPeriod}>
+          <Button type="button" variant="outline" className="border-border" disabled={!filtersReady} onClick={resetTodayPeriod}>
             Hoje
           </Button>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Período ativo: <span className="font-semibold text-foreground">{periodStart}</span> até{" "}
-          <span className="font-semibold text-foreground">{periodEnd}</span>
+          Período ativo: <span className="font-semibold text-foreground">{periodStart || "—"}</span> até{" "}
+          <span className="font-semibold text-foreground">{periodEnd || "—"}</span>
         </p>
 
         {error ? <p className="text-sm text-gym-danger">{error}</p> : null}

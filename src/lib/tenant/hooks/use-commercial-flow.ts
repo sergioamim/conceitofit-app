@@ -50,7 +50,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
   // Plano specific state
   const [selectedPlanoId, setSelectedPlanoId] = useState("");
   const [parcelasAnuidade, setParcelasAnuidade] = useState("1");
-  const [dataInicioPlano, setDataInicioPlano] = useState(() => getBusinessTodayIso());
+  const [dataInicioPlano, setDataInicioPlano] = useState("");
   const [renovacaoAutomaticaPlano, setRenovacaoAutomaticaPlano] = useState(false);
   const [convenioPlanoId, setConvenioPlanoId] = useState("__SEM_CONVENIO__");
 
@@ -99,6 +99,10 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
+
+  useEffect(() => {
+    setDataInicioPlano((current) => current || getBusinessTodayIso());
+  }, []);
 
   const selectedPlano = useMemo(
     () => planos.find((plano) => plano.id === selectedPlanoId),

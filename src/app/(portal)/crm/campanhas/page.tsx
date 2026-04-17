@@ -49,18 +49,23 @@ type FormState = {
   status: CampanhaStatus;
 };
 
-const todayIso = getBusinessTodayIso();
-
 const EMPTY_FORM: FormState = {
   nome: "",
   descricao: "",
   publicoAlvo: "EVADIDOS_ULTIMOS_3_MESES",
   canais: ["WHATSAPP"],
   voucherId: "none",
-  dataInicio: todayIso,
+  dataInicio: "",
   dataFim: "",
   status: "RASCUNHO",
 };
+
+function buildEmptyForm(todayIso: string): FormState {
+  return {
+    ...EMPTY_FORM,
+    dataInicio: todayIso,
+  };
+}
 
 function statusStyle(status: CampanhaStatus): string {
   if (status === "ATIVA") return "bg-gym-teal/15 text-gym-teal";
@@ -75,7 +80,7 @@ export default function CampanhasCrmPage() {
   const [statusFilter, setStatusFilter] = useState<"TODAS" | CampanhaStatus>("TODAS");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CampanhaCRM | null>(null);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [form, setForm] = useState<FormState>(() => buildEmptyForm(""));
   const [error, setError] = useState("");
   const [campaignsUnavailable, setCampaignsUnavailable] = useState(false);
   const [writeUnavailable, setWriteUnavailable] = useState(false);
@@ -106,6 +111,10 @@ export default function CampanhasCrmPage() {
     }
   }, [queryError, queryErrorObj]);
 
+  useEffect(() => {
+    setForm((current) => (current.dataInicio ? current : buildEmptyForm(getBusinessTodayIso())));
+  }, []);
+
   const loadVouchers = useCallback(async () => {
     try {
       const result = await listVouchersApi();
@@ -133,10 +142,7 @@ export default function CampanhasCrmPage() {
     if (campaignsUnavailable || writeUnavailable) return;
     setEditing(null);
     setError("");
-    setForm({
-      ...EMPTY_FORM,
-      dataInicio: getBusinessTodayIso(),
-    });
+    setForm(buildEmptyForm(getBusinessTodayIso()));
     setModalOpen(true);
   }
 
@@ -186,7 +192,7 @@ export default function CampanhasCrmPage() {
       }
       setModalOpen(false);
       setEditing(null);
-      setForm(EMPTY_FORM);
+      setForm(buildEmptyForm(getBusinessTodayIso()));
     } catch (submitError) {
       const message = normalizeCapabilityError(submitError, "Falha ao salvar campanha CRM.");
       setError(message);

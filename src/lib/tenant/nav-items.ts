@@ -102,7 +102,7 @@ export const operationGroup: NavGroup = {
     { href: "/treinos/grupos-musculares", label: "Grupos Musculares", icon: ListTree },
     { href: "/administrativo/salas", label: "Salas", icon: Settings },
     { href: "/administrativo/horarios", label: "Horários", icon: Settings },
-    { href: "/administrativo/catraca-status", label: "Status da Catraca", icon: Settings },
+    { href: "/administrativo/catraca-status", label: "Integração Catraca", icon: Settings },
     { href: "/gerencial/catraca-acessos", label: "Acessos Catraca", icon: ClipboardList },
   ],
 };

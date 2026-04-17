@@ -1,6 +1,7 @@
 import {
   type EvoImportColaboradoresBlocoResumo,
   createEvoPacoteFotoImportJobApi,
+  createEvoUltimoLoteFotoImportJobApi,
   createEvoP0CsvUploadApi,
   createEvoP0PacoteJobApi,
   getEvoFotoImportEstadoApi,
@@ -246,6 +247,15 @@ export async function createBackofficeEvoPacoteFotoImportJob(input: {
   force?: boolean;
 }): Promise<EvoFotoImportJobResponse> {
   return createEvoPacoteFotoImportJobApi(input);
+}
+
+export async function createBackofficeEvoUltimoLoteFotoImportJob(input: {
+  tenantId?: string;
+  contextoTenantId?: string;
+  dryRun?: boolean;
+  force?: boolean;
+}): Promise<EvoFotoImportJobResponse> {
+  return createEvoUltimoLoteFotoImportJobApi(input);
 }
 
 export async function getBackofficeEvoFotoImportJobStatus(input: {

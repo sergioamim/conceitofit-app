@@ -301,6 +301,79 @@ export interface SyncFacesResponse {
   mensagem?: string;
 }
 
+export interface AdminCatracaAgentResponse {
+  agentId: string;
+  sessionId?: string;
+  lastAckAt?: string;
+  pendingCommands: number;
+  awaitingPingAck: boolean;
+  lastCommandRequestId?: string;
+  lastCommandStatus?: string;
+  lastCommandMessage?: string;
+  lastCommandAt?: string;
+}
+
+export interface AdminCatracaDeviceResponse {
+  id?: string;
+  tenantId?: string;
+  deviceId: string;
+  agentId?: string;
+  nome?: string;
+  fabricante: "TOLETUS_LITENET2" | "CONTROL_ID_IDFACE";
+  ipLocal?: string;
+  portaControle?: number;
+  portaBiometria?: number;
+  maxFaces?: number;
+  reservedFacesStaff?: number;
+  ativo: boolean;
+  operationMode: "EMBEDDED_FACE" | "EDGE_FACE";
+  supportsEmbeddedFace: boolean;
+  supportsEdgeFace: boolean;
+  supportsFingerprint: boolean;
+  supportsQrCode: boolean;
+  supportsFaceTemplateSync: boolean;
+}
+
+export interface AdminCatracaIntegracaoContextResponse {
+  tenantId: string;
+  activeMembers: number;
+  membersWithPhoto: number;
+  devices: AdminCatracaDeviceResponse[];
+  agents: AdminCatracaAgentResponse[];
+}
+
+export interface AdminCatracaUpsertDeviceInput {
+  deviceId: string;
+  agentId?: string;
+  nome?: string;
+  fabricante: "TOLETUS_LITENET2" | "CONTROL_ID_IDFACE";
+  ipLocal?: string;
+  portaControle?: number;
+  portaBiometria?: number;
+  maxFaces?: number;
+  reservedFacesStaff?: number;
+  ativo?: boolean;
+  operationMode?: "EMBEDDED_FACE" | "EDGE_FACE";
+  supportsEmbeddedFace?: boolean;
+  supportsEdgeFace?: boolean;
+  supportsFingerprint?: boolean;
+  supportsQrCode?: boolean;
+  supportsFaceTemplateSync?: boolean;
+}
+
+export interface AdminCatracaSyncFacesResponse {
+  tenantId: string;
+  deviceId: string;
+  agentId?: string;
+  activeMembers: number;
+  membersWithPhoto: number;
+  queuedPreloads: number;
+  queuedInvalidations: number;
+  skippedByCapacity: number;
+  effectiveCapacity: number;
+  mode: string;
+}
+
 /**
  * Sincroniza fotos dos alunos para a catraca da unidade (face recognition).
  * POST /api/v1/integracoes/catraca/faces/sync
@@ -312,6 +385,54 @@ export async function syncCatracaFacesApi(input: {
     path: "/api/v1/integracoes/catraca/faces/sync",
     method: "POST",
     query: { tenantId: input.tenantId },
+  });
+}
+
+export async function obterAdminCatracaIntegracaoApi(input: {
+  tenantId: string;
+}): Promise<AdminCatracaIntegracaoContextResponse> {
+  return apiRequest<AdminCatracaIntegracaoContextResponse>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/integracao`,
+  });
+}
+
+export async function salvarAdminCatracaDispositivoApi(input: {
+  tenantId: string;
+  data: AdminCatracaUpsertDeviceInput;
+}): Promise<AdminCatracaDeviceResponse> {
+  return apiRequest<AdminCatracaDeviceResponse>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/dispositivos`,
+    method: "POST",
+    body: input.data,
+  });
+}
+
+export async function sincronizarAdminCatracaFacesApi(input: {
+  tenantId: string;
+  deviceId: string;
+  agentId?: string;
+}): Promise<AdminCatracaSyncFacesResponse> {
+  return apiRequest<AdminCatracaSyncFacesResponse>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/dispositivos/${input.deviceId}/sync-faces`,
+    method: "POST",
+    body: {
+      agentId: input.agentId,
+    },
+  });
+}
+
+export async function sincronizarAdminCatracaClienteApi(input: {
+  tenantId: string;
+  deviceId: string;
+  pessoaId: string;
+  agentId?: string;
+}): Promise<AdminCatracaSyncFacesResponse> {
+  return apiRequest<AdminCatracaSyncFacesResponse>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/dispositivos/${input.deviceId}/clientes/${input.pessoaId}/sync-face`,
+    method: "POST",
+    body: {
+      agentId: input.agentId,
+    },
   });
 }
 

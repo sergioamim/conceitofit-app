@@ -18,6 +18,7 @@ import {
   useSaveBillingConfig,
   useTestBillingConnection,
 } from "@/lib/query/use-billing-config";
+import { useHydrated } from "@/hooks/use-hydrated";
 import type { BillingConfig, ProvedorGateway } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
@@ -89,6 +90,7 @@ export function BillingConfigContent() {
   const { toast } = useToast();
   const { tenantId } = useTenantContext();
   const access = useAuthAccess();
+  const hydrated = useHydrated();
 
   const [showKey, setShowKey] = useState(false);
 
@@ -117,10 +119,9 @@ export function BillingConfigContent() {
   }, [config, form]);
 
   const webhookUrl = useMemo(() => {
-    if (!tenantId) return "";
-    const base = typeof window !== "undefined" ? window.location.origin : "";
-    return `${base}/api/webhooks/billing/${tenantId}`;
-  }, [tenantId]);
+    if (!hydrated || !tenantId) return "";
+    return `${window.location.origin}/api/webhooks/billing/${tenantId}`;
+  }, [hydrated, tenantId]);
 
   async function handleSave(values: BillingFormValues) {
     if (!tenantId) return;
@@ -342,6 +343,7 @@ export function BillingConfigContent() {
                     type="button"
                     variant="outline"
                     size="sm"
+                    disabled={!webhookUrl}
                     onClick={() => {
                       void navigator.clipboard.writeText(webhookUrl);
                       toast({ title: "URL copiada" });
