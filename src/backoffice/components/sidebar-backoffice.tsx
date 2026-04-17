@@ -23,6 +23,7 @@ import {
   useAuthAccess,
 } from "@/lib/tenant/hooks/use-session-context";
 import { getAuthSessionSnapshot } from "@/lib/api/session";
+import { useAcesso } from "@/backoffice/hooks/use-acesso";
 import { useBackofficeContext } from "@/backoffice/lib/backoffice-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,11 +79,11 @@ function NavLink({ item, active, collapsed }: { item: NavItem; active: boolean; 
   );
 }
 
-function SidebarGroup({ group, collapsed, pathname }: { group: NavGroup; collapsed: boolean; pathname: string }) {
+function SidebarGroup({ group, collapsed, pathname, podeVerRota }: { group: NavGroup; collapsed: boolean; pathname: string; podeVerRota: (href: string) => boolean }) {
   const [isOpen, setIsOpen] = useState(true);
   const Icon = group.icon;
-  
-  const visibleItems = group.items.filter(i => !i.paletteOnly);
+
+  const visibleItems = group.items.filter(i => !i.paletteOnly && podeVerRota(i.href));
   if (visibleItems.length === 0) return null;
 
   return (
@@ -137,6 +138,7 @@ export function SidebarBackoffice({ mobileOpen = false, onMobileClose, onOpenCmd
   const pathname = usePathname();
   const { mode, inspectedTenant } = useBackofficeContext();
   useAuthAccess();
+  const acesso = useAcesso();
   const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
   const sessionUser = mounted ? getAuthSessionSnapshot() : null;
   const isMac = useIsMac();
@@ -208,14 +210,15 @@ export function SidebarBackoffice({ mobileOpen = false, onMobileClose, onOpenCmd
           </button>
         </div>
 
-        {/* Navigation Groups */}
+        {/* Navigation Groups — filtrado por capacidades/features do user */}
         <nav className="flex-1 overflow-y-auto px-2 scrollbar-none">
           {adminGroups.map((group) => (
-            <SidebarGroup 
-              key={group.label} 
-              group={group} 
-              collapsed={collapsed} 
-              pathname={pathname} 
+            <SidebarGroup
+              key={group.label}
+              group={group}
+              collapsed={collapsed}
+              pathname={pathname}
+              podeVerRota={acesso.podeVerRota}
             />
           ))}
         </nav>

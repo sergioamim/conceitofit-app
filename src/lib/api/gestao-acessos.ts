@@ -251,6 +251,27 @@ export async function desabilitarFeature(tenantId: string, featureKey: string): 
   });
 }
 
+// ---------------------------------------------------------------------------
+// Meu Acesso (para filtrar menu dinamicamente)
+// ---------------------------------------------------------------------------
+
+export interface MeuAcessoResponse {
+  bypass: boolean;
+  userKind: string;
+  capacidades: string[];
+  featuresHabilitadas: string[];
+  featuresDesabilitadasGlobal: string[];
+  perfilNome: string | null;
+}
+
+/** `GET /api/v1/auth/gestao-acessos/meu-acesso` */
+export async function obterMeuAcesso(): Promise<MeuAcessoResponse> {
+  return apiRequest<MeuAcessoResponse>({
+    ...GA_API_OPTIONS,
+    path: "/api/v1/auth/gestao-acessos/meu-acesso",
+  });
+}
+
 /** `POST /api/v1/auth/gestao-acessos/features/global/{key}/habilitar` */
 export async function habilitarFeatureGlobal(featureKey: string): Promise<void> {
   await apiRequest<void>({
