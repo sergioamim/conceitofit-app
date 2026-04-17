@@ -2,12 +2,12 @@
  * Cliente HTTP tipado para o domínio Gestão de Acessos v2.
  *
  * Espelha os endpoints dos controllers em `modulo-auth/`:
- * - PerfilAcessoController:     /api/v1/auth/perfis
- * - CapacidadeController:       /api/v1/auth/capacidades
- * - FeatureModuleController:    /api/v1/auth/features
- * - UsuarioPerfilController:    /api/v1/auth/usuarios-perfil
- * - PlanoSaasController:        /api/v1/auth/planos
- * - GrupoTenantController:      /api/v1/auth/grupos
+ * - PerfilAcessoController:     /api/v1/auth/gestao-acessos/perfis
+ * - CapacidadeController:       /api/v1/auth/gestao-acessos/capacidades
+ * - FeatureModuleController:    /api/v1/auth/gestao-acessos/features
+ * - UsuarioPerfilController:    /api/v1/auth/gestao-acessos/usuarios-perfil
+ * - PlanoSaasController:        /api/v1/auth/gestao-acessos/planos
+ * - GrupoTenantController:      /api/v1/auth/gestao-acessos/grupos
  */
 
 import { apiRequest } from "./http";
@@ -31,33 +31,33 @@ const GA_API_OPTIONS = {
 // Perfis de Acesso
 // ---------------------------------------------------------------------------
 
-/** `GET /api/v1/auth/perfis?dominio=&tenantId=` */
+/** `GET /api/v1/auth/gestao-acessos/perfis?dominio=&tenantId=` */
 export async function listarPerfis(dominio: string, tenantId: string): Promise<PerfilAcesso[]> {
   return apiRequest<PerfilAcesso[]>({
     ...GA_API_OPTIONS,
-    path: "/api/v1/auth/perfis",
+    path: "/api/v1/auth/gestao-acessos/perfis",
     query: { dominio, tenantId },
   });
 }
 
-/** `GET /api/v1/auth/perfis/templates?dominio=` */
+/** `GET /api/v1/auth/gestao-acessos/perfis/templates?dominio=` */
 export async function listarPerfilTemplates(dominio: string): Promise<PerfilAcesso[]> {
   return apiRequest<PerfilAcesso[]>({
     ...GA_API_OPTIONS,
-    path: "/api/v1/auth/perfis/templates",
+    path: "/api/v1/auth/gestao-acessos/perfis/templates",
     query: { dominio },
   });
 }
 
-/** `GET /api/v1/auth/perfis/{id}` */
+/** `GET /api/v1/auth/gestao-acessos/perfis/{id}` */
 export async function obterPerfil(id: string): Promise<PerfilAcessoDetalhe> {
   return apiRequest<PerfilAcessoDetalhe>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/perfis/${encodeURIComponent(id)}`,
+    path: `/api/v1/auth/gestao-acessos/perfis/${encodeURIComponent(id)}`,
   });
 }
 
-/** `POST /api/v1/auth/perfis` */
+/** `POST /api/v1/auth/gestao-acessos/perfis` */
 export async function criarPerfil(data: {
   dominio: string;
   tenantId: string;
@@ -66,48 +66,48 @@ export async function criarPerfil(data: {
 }): Promise<PerfilAcesso> {
   return apiRequest<PerfilAcesso>({
     ...GA_API_OPTIONS,
-    path: "/api/v1/auth/perfis",
+    path: "/api/v1/auth/gestao-acessos/perfis",
     method: "POST",
     body: data,
   });
 }
 
-/** `PUT /api/v1/auth/perfis/{id}` */
+/** `PUT /api/v1/auth/gestao-acessos/perfis/{id}` */
 export async function atualizarPerfil(
   id: string,
   data: { nome?: string; descricao?: string },
 ): Promise<PerfilAcesso> {
   return apiRequest<PerfilAcesso>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/perfis/${encodeURIComponent(id)}`,
+    path: `/api/v1/auth/gestao-acessos/perfis/${encodeURIComponent(id)}`,
     method: "PUT",
     body: data,
   });
 }
 
-/** `DELETE /api/v1/auth/perfis/{id}` (soft delete) */
+/** `DELETE /api/v1/auth/gestao-acessos/perfis/{id}` (soft delete) */
 export async function desativarPerfil(id: string): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/perfis/${encodeURIComponent(id)}`,
+    path: `/api/v1/auth/gestao-acessos/perfis/${encodeURIComponent(id)}`,
     method: "DELETE",
   });
 }
 
-/** `PUT /api/v1/auth/perfis/{id}/capacidades` (bulk replace) */
+/** `PUT /api/v1/auth/gestao-acessos/perfis/{id}/capacidades` (bulk replace) */
 export async function atualizarCapacidadesPerfil(
   perfilId: string,
   capacidadeKeys: string[],
 ): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/perfis/${encodeURIComponent(perfilId)}/capacidades`,
+    path: `/api/v1/auth/gestao-acessos/perfis/${encodeURIComponent(perfilId)}/capacidades`,
     method: "PUT",
     body: { capacidadeKeys },
   });
 }
 
-/** `POST /api/v1/auth/perfis/importar` */
+/** `POST /api/v1/auth/gestao-acessos/perfis/importar` */
 export async function importarPerfil(
   perfilOrigemId: string,
   tenantDestinoId: string,
@@ -115,7 +115,7 @@ export async function importarPerfil(
 ): Promise<PerfilAcesso> {
   return apiRequest<PerfilAcesso>({
     ...GA_API_OPTIONS,
-    path: "/api/v1/auth/perfis/importar",
+    path: "/api/v1/auth/gestao-acessos/perfis/importar",
     method: "POST",
     body: { perfilOrigemId, tenantDestinoId, novoNome },
   });
@@ -125,11 +125,11 @@ export async function importarPerfil(
 // Capacidades
 // ---------------------------------------------------------------------------
 
-/** `GET /api/v1/auth/capacidades?dominio=` — retorna agrupado por grupo */
+/** `GET /api/v1/auth/gestao-acessos/capacidades?dominio=` — retorna agrupado por grupo */
 export async function listarCapacidades(dominio: string): Promise<CapacidadesPorGrupo> {
   return apiRequest<CapacidadesPorGrupo>({
     ...GA_API_OPTIONS,
-    path: "/api/v1/auth/capacidades",
+    path: "/api/v1/auth/gestao-acessos/capacidades",
     query: { dominio },
   });
 }
@@ -138,37 +138,37 @@ export async function listarCapacidades(dominio: string): Promise<CapacidadesPor
 // Usuário ↔ Perfil
 // ---------------------------------------------------------------------------
 
-/** `GET /api/v1/auth/usuarios-perfil/{userId}` */
+/** `GET /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}` */
 export async function listarPerfisUsuario(userId: number): Promise<UsuarioPerfil[]> {
   return apiRequest<UsuarioPerfil[]>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/usuarios-perfil/${userId}`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}`,
   });
 }
 
-/** `GET /api/v1/auth/usuarios-perfil/{userId}/tenant/{tenantId}` */
+/** `GET /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}` */
 export async function obterPerfilUsuarioTenant(
   userId: number,
   tenantId: string,
 ): Promise<UsuarioPerfilDetalhe> {
   return apiRequest<UsuarioPerfilDetalhe>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}`,
   });
 }
 
-/** `GET /api/v1/auth/usuarios-perfil/{userId}/tenant/{tenantId}/capacidades` */
+/** `GET /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}/capacidades` */
 export async function obterCapacidadesEfetivas(
   userId: number,
   tenantId: string,
 ): Promise<string[]> {
   return apiRequest<string[]>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/capacidades`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/capacidades`,
   });
 }
 
-/** `POST /api/v1/auth/usuarios-perfil/{userId}/tenant/{tenantId}/atribuir` */
+/** `POST /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}/atribuir` */
 export async function atribuirPerfil(
   userId: number,
   tenantId: string,
@@ -176,13 +176,13 @@ export async function atribuirPerfil(
 ): Promise<UsuarioPerfil> {
   return apiRequest<UsuarioPerfil>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/atribuir`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/atribuir`,
     method: "POST",
     body: { perfilId },
   });
 }
 
-/** `POST /api/v1/auth/usuarios-perfil/{userId}/tenant/{tenantId}/override` */
+/** `POST /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}/override` */
 export async function adicionarOverride(
   userId: number,
   tenantId: string,
@@ -192,13 +192,13 @@ export async function adicionarOverride(
 ): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/override`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/override`,
     method: "POST",
     body: { capacidadeKey, tipo, motivo },
   });
 }
 
-/** `DELETE /api/v1/auth/usuarios-perfil/{userId}/tenant/{tenantId}/override/{capacidadeKey}` */
+/** `DELETE /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}/override/{capacidadeKey}` */
 export async function removerOverride(
   userId: number,
   tenantId: string,
@@ -206,7 +206,7 @@ export async function removerOverride(
 ): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/override/${encodeURIComponent(capacidadeKey)}`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/override/${encodeURIComponent(capacidadeKey)}`,
     method: "DELETE",
   });
 }
@@ -215,37 +215,37 @@ export async function removerOverride(
 // Feature Modules
 // ---------------------------------------------------------------------------
 
-/** `GET /api/v1/auth/features/modulos` — catalogo completo */
+/** `GET /api/v1/auth/gestao-acessos/features/modulos` — catalogo completo */
 export async function listarModulos(): Promise<FeatureModule[]> {
   return apiRequest<FeatureModule[]>({
     ...GA_API_OPTIONS,
-    path: "/api/v1/auth/features/modulos",
+    path: "/api/v1/auth/gestao-acessos/features/modulos",
   });
 }
 
-/** `GET /api/v1/auth/features/tenant/{tenantId}` */
+/** `GET /api/v1/auth/gestao-acessos/features/tenant/{tenantId}` */
 export async function listarFeaturesTenant(tenantId: string): Promise<FeatureModule[]> {
   return apiRequest<FeatureModule[]>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/features/tenant/${encodeURIComponent(tenantId)}`,
+    path: `/api/v1/auth/gestao-acessos/features/tenant/${encodeURIComponent(tenantId)}`,
   });
 }
 
-/** `POST /api/v1/auth/features/tenant/{tenantId}/habilitar` */
+/** `POST /api/v1/auth/gestao-acessos/features/tenant/{tenantId}/habilitar` */
 export async function habilitarFeature(tenantId: string, featureKey: string): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/features/tenant/${encodeURIComponent(tenantId)}/habilitar`,
+    path: `/api/v1/auth/gestao-acessos/features/tenant/${encodeURIComponent(tenantId)}/habilitar`,
     method: "POST",
     body: { featureKey },
   });
 }
 
-/** `POST /api/v1/auth/features/tenant/{tenantId}/desabilitar` */
+/** `POST /api/v1/auth/gestao-acessos/features/tenant/{tenantId}/desabilitar` */
 export async function desabilitarFeature(tenantId: string, featureKey: string): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/features/tenant/${encodeURIComponent(tenantId)}/desabilitar`,
+    path: `/api/v1/auth/gestao-acessos/features/tenant/${encodeURIComponent(tenantId)}/desabilitar`,
     method: "POST",
     body: { featureKey },
   });
@@ -255,23 +255,23 @@ export async function desabilitarFeature(tenantId: string, featureKey: string): 
 // Planos SaaS
 // ---------------------------------------------------------------------------
 
-/** `GET /api/v1/auth/planos` */
+/** `GET /api/v1/auth/gestao-acessos/planos` */
 export async function listarPlanos(): Promise<PlanoSaas[]> {
   return apiRequest<PlanoSaas[]>({
     ...GA_API_OPTIONS,
-    path: "/api/v1/auth/planos",
+    path: "/api/v1/auth/gestao-acessos/planos",
   });
 }
 
-/** `GET /api/v1/auth/planos/{id}` */
+/** `GET /api/v1/auth/gestao-acessos/planos/{id}` */
 export async function obterPlano(id: string): Promise<PlanoSaasDetalhe> {
   return apiRequest<PlanoSaasDetalhe>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/planos/${encodeURIComponent(id)}`,
+    path: `/api/v1/auth/gestao-acessos/planos/${encodeURIComponent(id)}`,
   });
 }
 
-/** `POST /api/v1/auth/planos` */
+/** `POST /api/v1/auth/gestao-acessos/planos` */
 export async function criarPlano(data: {
   id: string;
   nome: string;
@@ -279,20 +279,20 @@ export async function criarPlano(data: {
 }): Promise<PlanoSaas> {
   return apiRequest<PlanoSaas>({
     ...GA_API_OPTIONS,
-    path: "/api/v1/auth/planos",
+    path: "/api/v1/auth/gestao-acessos/planos",
     method: "POST",
     body: data,
   });
 }
 
-/** `PUT /api/v1/auth/planos/{id}/features` (bulk replace) */
+/** `PUT /api/v1/auth/gestao-acessos/planos/{id}/features` (bulk replace) */
 export async function atualizarFeaturesPlano(
   planoId: string,
   featureKeys: string[],
 ): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/planos/${encodeURIComponent(planoId)}/features`,
+    path: `/api/v1/auth/gestao-acessos/planos/${encodeURIComponent(planoId)}/features`,
     method: "PUT",
     body: { featureKeys },
   });
@@ -302,54 +302,54 @@ export async function atualizarFeaturesPlano(
 // Grupos de Tenants
 // ---------------------------------------------------------------------------
 
-/** `GET /api/v1/auth/grupos` */
+/** `GET /api/v1/auth/gestao-acessos/grupos` */
 export async function listarGrupos(): Promise<GrupoTenant[]> {
   return apiRequest<GrupoTenant[]>({
     ...GA_API_OPTIONS,
-    path: "/api/v1/auth/grupos",
+    path: "/api/v1/auth/gestao-acessos/grupos",
   });
 }
 
-/** `POST /api/v1/auth/grupos` */
+/** `POST /api/v1/auth/gestao-acessos/grupos` */
 export async function criarGrupo(data: {
   nome: string;
   descricao?: string;
 }): Promise<GrupoTenant> {
   return apiRequest<GrupoTenant>({
     ...GA_API_OPTIONS,
-    path: "/api/v1/auth/grupos",
+    path: "/api/v1/auth/gestao-acessos/grupos",
     method: "POST",
     body: data,
   });
 }
 
-/** `POST /api/v1/auth/grupos/{id}/membros` */
+/** `POST /api/v1/auth/gestao-acessos/grupos/{id}/membros` */
 export async function adicionarMembroGrupo(grupoId: string, tenantId: string): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/grupos/${encodeURIComponent(grupoId)}/membros`,
+    path: `/api/v1/auth/gestao-acessos/grupos/${encodeURIComponent(grupoId)}/membros`,
     method: "POST",
     body: { tenantId },
   });
 }
 
-/** `DELETE /api/v1/auth/grupos/{id}/membros/{tenantId}` */
+/** `DELETE /api/v1/auth/gestao-acessos/grupos/{id}/membros/{tenantId}` */
 export async function removerMembroGrupo(grupoId: string, tenantId: string): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/grupos/${encodeURIComponent(grupoId)}/membros/${encodeURIComponent(tenantId)}`,
+    path: `/api/v1/auth/gestao-acessos/grupos/${encodeURIComponent(grupoId)}/membros/${encodeURIComponent(tenantId)}`,
     method: "DELETE",
   });
 }
 
-/** `PUT /api/v1/auth/grupos/{id}/features` (bulk replace) */
+/** `PUT /api/v1/auth/gestao-acessos/grupos/{id}/features` (bulk replace) */
 export async function atualizarFeaturesGrupo(
   grupoId: string,
   featureKeys: string[],
 ): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/grupos/${encodeURIComponent(grupoId)}/features`,
+    path: `/api/v1/auth/gestao-acessos/grupos/${encodeURIComponent(grupoId)}/features`,
     method: "PUT",
     body: { featureKeys },
   });
