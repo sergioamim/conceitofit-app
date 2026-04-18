@@ -339,7 +339,7 @@ export function CatalogoTab({ initialCatalogo }: CatalogoTabProps) {
             ]}
             items={paginaItens}
             emptyText={loading ? "Carregando catalogo..." : "Nenhuma funcionalidade encontrada."}
-            getRowKey={(i) => i.id}
+            getRowKey={(i) => i.id || `${i.featureKey}:${i.moduleKey ?? ""}`}
             renderCells={(i) => (
               <>
                 <td className="px-4 py-3">
