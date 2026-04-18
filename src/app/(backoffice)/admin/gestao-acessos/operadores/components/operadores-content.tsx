@@ -22,6 +22,7 @@ import {
   listarPerfis,
   atribuirPerfil,
   obterCapacidadesEfetivas,
+  obterPerfilUsuarioTenant,
 } from "@/lib/api/gestao-acessos";
 import type { RbacUser } from "@/lib/types";
 import type { PerfilAcesso } from "@/lib/api/gestao-acessos.types";
@@ -79,12 +80,30 @@ export function OperadoresContent() {
       ]);
       setPerfis(Array.isArray(perfisData) ? perfisData : []);
 
-      // TODO: enrich with perfil info from backend when endpoint returns it in user list
-      const rows: OperadorRow[] = usersData.map((u) => ({
-        user: u,
-        perfilId: null,
-        perfilNome: null,
-      }));
+      // Filtrar apenas operadores (excluir clientes/alunos)
+      // Clientes geralmente não têm role ou têm role CUSTOMER
+      const operadoresOnly = usersData.filter((u) => {
+        const raw = u as unknown as { userKind?: string; roles?: string[] };
+        // Se tem userKind definido, filtrar
+        if (raw.userKind === "CLIENTE") return false;
+        return true;
+      });
+
+      // Enriquecer com perfil atribuído (em paralelo)
+      const rows: OperadorRow[] = await Promise.all(
+        operadoresOnly.map(async (u) => {
+          try {
+            const perfilData = await obterPerfilUsuarioTenant(Number(u.id), tenant.tenantId!);
+            return {
+              user: u,
+              perfilId: perfilData?.perfilId ?? null,
+              perfilNome: perfilData?.perfilNome ?? null,
+            };
+          } catch {
+            return { user: u, perfilId: null, perfilNome: null };
+          }
+        }),
+      );
       setOperadores(rows);
     } catch {
       // silent
