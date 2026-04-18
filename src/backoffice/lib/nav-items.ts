@@ -121,6 +121,10 @@ export const governanceGroup: NavGroup = {
   items: [
     { href: "/admin/seguranca", label: "Central de Segurança", icon: ShieldCheck },
     { href: "/admin/seguranca/funcionalidades", label: "Feature Flags", icon: Zap },
+    { href: "/admin/seguranca/usuarios", label: "Usuários", icon: Users },
+    { href: "/admin/seguranca/perfis", label: "Perfis (legado)", icon: Shield },
+    { href: "/admin/seguranca/catalogo", label: "Catálogo", icon: FileText },
+    { href: "/admin/seguranca/revisoes", label: "Revisões", icon: Eye },
     { href: "/admin/compliance", label: "Compliance LGPD", icon: Shield, paletteOnly: true },
     { href: "/admin/audit-log", label: "Audit Log", icon: FileText, paletteOnly: true },
   ],
@@ -134,6 +138,8 @@ export const configGroup: NavGroup = {
     { href: "/admin/configuracoes", label: "Ajustes Gerais", icon: Settings },
     { href: "/admin/whatsapp", label: "WhatsApp API", icon: MessageSquare },
     { href: "/admin/importacao-evo", label: "Importação EVO", icon: Upload },
+    { href: "/admin/importacao-evo-p0", label: "Importação EVO P0", icon: Upload, description: "Importação com DAG paralelo" },
+    { href: "/admin/entrar-como-academia", label: "Acessar Unidade", icon: Building2, paletteOnly: true },
   ],
 };
 

@@ -92,8 +92,8 @@ export function useAcesso() {
    * - Rota sem requisito: sempre visível
    */
   function podeVerRota(href: string): boolean {
-    if (!state.loaded) return false; // não renderiza antes de carregar
-    if (state.bypass) return true;   // PLATAFORMA vê tudo
+    if (!state.loaded) return true;  // antes de carregar: mostra tudo (não esconder menu enquanto loading)
+    if (state.bypass) return true;   // PLATAFORMA/SUPER_ADMIN vê tudo
 
     const req = ROUTE_REQUIREMENTS[href];
     if (!req) return true; // sem requisito = visível pra todos
