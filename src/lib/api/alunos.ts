@@ -511,3 +511,54 @@ export async function mesclarClientesApi(input: {
     },
   });
 }
+
+export async function bloquearAcessoApi(input: {
+  tenantId: string;
+  id: string;
+  justificativa: string;
+}): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>({
+    path: `/api/v1/comercial/clientes/${input.id}/bloquear-acesso`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: { justificativa: input.justificativa },
+  });
+}
+
+export async function desbloquearAcessoApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>({
+    path: `/api/v1/comercial/clientes/${input.id}/desbloquear-acesso`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: {},
+  });
+}
+
+export async function excluirDadosPessoaisApi(input: {
+  tenantId: string;
+  id: string;
+  justificativa: string;
+}): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>({
+    path: `/api/v1/comercial/clientes/${input.id}/lgpd/excluir-dados-pessoais`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: { justificativa: input.justificativa },
+  });
+}
+
+export async function excluirDadosSensiveisApi(input: {
+  tenantId: string;
+  id: string;
+  justificativa: string;
+}): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>({
+    path: `/api/v1/comercial/clientes/${input.id}/lgpd/excluir-dados-sensiveis`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: { justificativa: input.justificativa },
+  });
+}

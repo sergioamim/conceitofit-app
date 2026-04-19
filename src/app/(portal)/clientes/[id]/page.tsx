@@ -14,6 +14,7 @@ import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 import { formatBRL, formatDate } from "@/lib/formatters";
+import { bloquearAcessoApi, desbloquearAcessoApi, excluirDadosPessoaisApi, excluirDadosSensiveisApi } from "@/lib/api/alunos";
 import { useClienteWorkspace } from "./use-cliente-workspace";
 import { ClienteDialogs } from "./cliente-dialogs";
 import { ClienteSidebar } from "./cliente-sidebar";
@@ -106,15 +107,42 @@ export default function ClienteDetalhePage() {
         onChangeFoto={() => w.setPhotoModalOpen(true)}
         onSyncFace={aluno.foto ? w.handleSyncFace : undefined}
         onMesclar={() => setMesclarOpen(true)}
-        onExcluirDadosPessoais={() => {
-          if (confirm("Excluir dados pessoais deste cliente? Esta acao e irreversivel. Nome, email, telefone e CPF serao anonimizados.")) {
-            w.setActionError("Funcionalidade LGPD em desenvolvimento. Backend pendente.");
-          }
+        onBloquearAcesso={async () => {
+          const justificativa = prompt("Justificativa para bloquear acesso:");
+          if (!justificativa?.trim()) return;
+          try {
+            await bloquearAcessoApi({ tenantId: w.tenantId ?? "", id: aluno.id, justificativa });
+            w.setLiberarAcessoInfo("Acesso bloqueado com sucesso.");
+            await w.reload();
+          } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
         }}
-        onExcluirDadosSensiveis={() => {
-          if (confirm("Excluir dados sensiveis (anamnese, observacoes medicas)? Esta acao e irreversivel.")) {
-            w.setActionError("Funcionalidade LGPD em desenvolvimento. Backend pendente.");
-          }
+        onDesbloquearAcesso={async () => {
+          try {
+            await desbloquearAcessoApi({ tenantId: w.tenantId ?? "", id: aluno.id });
+            w.setLiberarAcessoInfo("Acesso desbloqueado com sucesso.");
+            await w.reload();
+          } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
+        }}
+        acessoBloqueado={aluno.status === "SUSPENSO" || aluno.bloqueioSistemaAtualId != null}
+        onExcluirDadosPessoais={async () => {
+          if (!confirm("Excluir dados pessoais deste cliente? Esta acao e IRREVERSIVEL. Nome, email, telefone e CPF serao anonimizados.")) return;
+          const justificativa = prompt("Justificativa (obrigatoria):");
+          if (!justificativa?.trim()) return;
+          try {
+            await excluirDadosPessoaisApi({ tenantId: w.tenantId ?? "", id: aluno.id, justificativa });
+            w.setLiberarAcessoInfo("Dados pessoais excluidos com sucesso (LGPD).");
+            await w.reload();
+          } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
+        }}
+        onExcluirDadosSensiveis={async () => {
+          if (!confirm("Excluir dados sensiveis (anamnese, observacoes medicas)? Esta acao e IRREVERSIVEL.")) return;
+          const justificativa = prompt("Justificativa (obrigatoria):");
+          if (!justificativa?.trim()) return;
+          try {
+            await excluirDadosSensiveisApi({ tenantId: w.tenantId ?? "", id: aluno.id, justificativa });
+            w.setLiberarAcessoInfo("Dados sensiveis excluidos com sucesso (LGPD).");
+            await w.reload();
+          } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
         }}
       />
 
