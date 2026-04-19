@@ -70,6 +70,20 @@ const ITEM_CLASS =
 const GROUP_HEADING_CLASS =
   "px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground";
 
+function normalizeForSearch(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function commandFilter(value: string, search: string): number {
+  const normalizedValue = normalizeForSearch(value);
+  const normalizedSearch = normalizeForSearch(search);
+  if (normalizedValue.includes(normalizedSearch)) return 1;
+  // Match each word of the search independently
+  const words = normalizedSearch.split(/\s+/).filter(Boolean);
+  if (words.length > 1 && words.every((w) => normalizedValue.includes(w))) return 1;
+  return 0;
+}
+
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -309,7 +323,7 @@ export function CommandPalette() {
         "fixed inset-0 z-50 flex items-start justify-center pt-[20vh]",
         MOTION_CLASSNAMES.fadeInOverlay,
       )}
-      shouldFilter={!isSearching}
+      filter={commandFilter}
     >
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
@@ -373,7 +387,7 @@ export function CommandPalette() {
                 {clienteResults.map((item) => (
                   <Command.Item
                     key={item.id}
-                    value={item.label}
+                    value={`${search} ${item.label}`}
                     onSelect={() => handleClienteSelect(item)}
                     className={ITEM_CLASS}
                   >
@@ -408,7 +422,7 @@ export function CommandPalette() {
                 {prospectResults.map((item) => (
                   <Command.Item
                     key={item.id}
-                    value={item.label}
+                    value={`${search} ${item.label}`}
                     onSelect={() => onSelect(item.href)}
                     className={ITEM_CLASS}
                   >
@@ -434,7 +448,7 @@ export function CommandPalette() {
                 {planoResults.map((item) => (
                   <Command.Item
                     key={item.id}
-                    value={item.label}
+                    value={`${search} ${item.label}`}
                     onSelect={() => onSelect(item.href)}
                     className={ITEM_CLASS}
                   >
@@ -460,9 +474,13 @@ export function CommandPalette() {
           <Command.Group heading="Navegação" className={GROUP_HEADING_CLASS}>
             {allNavItems.map((item) => {
               const Icon = item.icon;
+              const searchValue = [item.label, item.description, item.href.replace(/\//g, " ")]
+                .filter(Boolean)
+                .join(" ");
               return (
                 <Command.Item
                   key={item.href}
+                  value={searchValue}
                   onSelect={() => onSelect(item.href)}
                   className={ITEM_CLASS}
                 >

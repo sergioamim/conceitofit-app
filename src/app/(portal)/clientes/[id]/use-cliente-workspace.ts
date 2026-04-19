@@ -23,6 +23,7 @@ import {
   updateAlunoService,
 } from "@/lib/tenant/comercial/runtime";
 import { ApiRequestError } from "@/lib/api/http";
+import { sincronizarFaceClienteApi } from "@/lib/api/catraca";
 import { getNfseBloqueioMensagem } from "@/lib/domain/financeiro";
 import { isClientMigrationEnabled } from "@/lib/feature-flags";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
@@ -775,6 +776,21 @@ export function useClienteWorkspace() {
     }
   }
 
+  async function handleSyncFace() {
+    if (!aluno || !tenantId) return;
+    setActionError(null);
+    try {
+      const result = await sincronizarFaceClienteApi({ tenantId, pessoaId: aluno.id });
+      setLiberarAcessoInfo(
+        result.syncedDevices > 0
+          ? `Face sincronizada em ${result.syncedDevices} dispositivo(s)`
+          : result.message || "Nenhum dispositivo configurado para sync facial"
+      );
+    } catch (error) {
+      setActionError(normalizeErrorMessage(error));
+    }
+  }
+
   return {
     // Core data
     aluno,
@@ -884,6 +900,7 @@ export function useClienteWorkspace() {
     openLiberarAcesso,
     openExcluir,
     openMigracao,
+    handleSyncFace,
 
     // Context
     router,

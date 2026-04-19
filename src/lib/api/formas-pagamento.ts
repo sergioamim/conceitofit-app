@@ -18,11 +18,9 @@ export type CreateFormaPagamentoApiInput = Omit<FormaPagamento, "id" | "tenantId
 export type UpdateFormaPagamentoApiInput = Partial<Omit<FormaPagamento, "id" | "tenantId">>;
 
 function buildFormaPagamentoPayload(
-  tenantId: string,
   data: CreateFormaPagamentoApiInput | UpdateFormaPagamentoApiInput
 ): Record<string, unknown> {
   return {
-    tenantId,
     nome: data.nome,
     tipo: data.tipo,
     taxaPercentual: data.taxaPercentual ?? 0,
@@ -68,7 +66,7 @@ export async function createFormaPagamentoApi(input: {
     path: "/api/v1/gerencial/financeiro/formas-pagamento",
     method: "POST",
     query: { tenantId: input.tenantId },
-    body: buildFormaPagamentoPayload(input.tenantId, input.data),
+    body: buildFormaPagamentoPayload(input.data),
   });
   return {
     ...normalizeFormaPagamento(response),
@@ -86,7 +84,7 @@ export async function updateFormaPagamentoApi(input: {
     path: `/api/v1/gerencial/financeiro/formas-pagamento/${input.id}`,
     method: "PUT",
     query: { tenantId: input.tenantId },
-    body: buildFormaPagamentoPayload(input.tenantId, input.data),
+    body: buildFormaPagamentoPayload(input.data),
   });
   return {
     ...normalizeFormaPagamento(response),

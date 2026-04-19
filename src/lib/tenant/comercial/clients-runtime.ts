@@ -22,7 +22,7 @@ import {
   listCartoesClienteApi,
   setCartaoPadraoApi,
 } from "@/lib/api/cartoes";
-import { liberarAcessoCatracaApi, obterCatracaWsStatusPorTenantApi } from "@/lib/api/catraca";
+import { liberarAcessoAdminCatracaApi } from "@/lib/api/catraca";
 import { ApiRequestError } from "@/lib/api/http";
 import { trackAlunoCreated, trackMatriculaCreated } from "@/lib/shared/analytics";
 import type {
@@ -332,12 +332,6 @@ export async function deleteCartaoClienteService(input: {
   return deleteCartaoClienteApi(input);
 }
 
-function resolveOnlineAgentId(status: Awaited<ReturnType<typeof obterCatracaWsStatusPorTenantApi>>) {
-  const tenantStatus = status.tenants[0];
-  if (!tenantStatus) return undefined;
-  return tenantStatus.agents?.[0]?.agentId;
-}
-
 export async function liberarAcessoCatracaService(input: {
   tenantId: string;
   alunoId: string;
@@ -349,19 +343,9 @@ export async function liberarAcessoCatracaService(input: {
     throw new Error("A justificativa é obrigatória.");
   }
 
-  const status = await obterCatracaWsStatusPorTenantApi({
+  const response = await liberarAcessoAdminCatracaApi({
     tenantId: input.tenantId,
-  });
-  const agentId = resolveOnlineAgentId(status);
-  if (!agentId) {
-    throw new Error("Nenhum agente da catraca conectado para este tenant.");
-  }
-
-  const response = await liberarAcessoCatracaApi({
-    agentId,
-    memberId: input.alunoId,
-    reason,
-    issuedBy: input.issuedBy ?? "frontend",
+    pessoaId: input.alunoId,
   });
   return response.requestId;
 }

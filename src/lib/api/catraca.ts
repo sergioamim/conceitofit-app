@@ -323,6 +323,15 @@ export interface AdminCatracaDeviceResponse {
   ipLocal?: string;
   portaControle?: number;
   portaBiometria?: number;
+  controlIdBaseUrl?: string;
+  controlIdLogin?: string;
+  controlIdPasswordConfigured: boolean;
+  controlIdTimeoutMs?: number;
+  controlIdPortalId?: number;
+  controlIdGrantAction?: string;
+  controlIdGrantParameters?: string;
+  controlIdDestroyUserOnInvalidate: boolean;
+  controlIdUniqueFaceMatchRequired: boolean;
   maxFaces?: number;
   reservedFacesStaff?: number;
   ativo: boolean;
@@ -350,6 +359,16 @@ export interface AdminCatracaUpsertDeviceInput {
   ipLocal?: string;
   portaControle?: number;
   portaBiometria?: number;
+  controlIdBaseUrl?: string;
+  controlIdLogin?: string;
+  controlIdPassword?: string;
+  clearControlIdPassword?: boolean;
+  controlIdTimeoutMs?: number;
+  controlIdPortalId?: number;
+  controlIdGrantAction?: string;
+  controlIdGrantParameters?: string;
+  controlIdDestroyUserOnInvalidate?: boolean;
+  controlIdUniqueFaceMatchRequired?: boolean;
   maxFaces?: number;
   reservedFacesStaff?: number;
   ativo?: boolean;
@@ -372,6 +391,14 @@ export interface AdminCatracaSyncFacesResponse {
   skippedByCapacity: number;
   effectiveCapacity: number;
   mode: string;
+}
+
+export interface AdminCatracaRemoteCommandResponse {
+  requestId: string;
+  agentId: string;
+  tenantId: string;
+  deduplicated: boolean;
+  pendingAck: boolean;
 }
 
 /**
@@ -429,6 +456,20 @@ export async function sincronizarAdminCatracaClienteApi(input: {
 }): Promise<AdminCatracaSyncFacesResponse> {
   return apiRequest<AdminCatracaSyncFacesResponse>({
     path: `/api/v1/admin/unidades/${input.tenantId}/catraca/dispositivos/${input.deviceId}/clientes/${input.pessoaId}/sync-face`,
+    method: "POST",
+    body: {
+      agentId: input.agentId,
+    },
+  });
+}
+
+export async function aplicarAdminCatracaConfiguracaoApi(input: {
+  tenantId: string;
+  deviceId: string;
+  agentId?: string;
+}): Promise<AdminCatracaRemoteCommandResponse> {
+  return apiRequest<AdminCatracaRemoteCommandResponse>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/dispositivos/${input.deviceId}/refresh-config`,
     method: "POST",
     body: {
       agentId: input.agentId,
@@ -792,4 +833,89 @@ export async function listarAcessosCatracaDashboardApi(
     serieDiaria: normalizeSerieDiaria(payload),
     rankingFrequencia: normalizeRanking(payload),
   };
+}
+
+// ─── Admin: Credenciais de integração (System Tray) ─────────────────────────
+
+export type AdminCatracaCredentialCreatedResponse = {
+  id: string;
+  keyId: string;
+  secret: string;
+  bearerPlain: string;
+  bearerBase64: string;
+  scopes: string;
+  createdAt: string;
+};
+
+export type AdminCatracaCredentialResponse = {
+  id: string;
+  keyId: string;
+  systemName: string;
+  scopes: string;
+  ativo: boolean;
+  createdAt: string;
+  lastUsedAt?: string | null;
+  revokedAt?: string | null;
+};
+
+export async function gerarAdminCatracaCredencialApi(input: {
+  tenantId: string;
+}): Promise<AdminCatracaCredentialCreatedResponse> {
+  return apiRequest<AdminCatracaCredentialCreatedResponse>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/credenciais`,
+    method: "POST",
+  });
+}
+
+export async function listarAdminCatracaCredenciaisApi(input: {
+  tenantId: string;
+}): Promise<AdminCatracaCredentialResponse[]> {
+  return apiRequest<AdminCatracaCredentialResponse[]>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/credenciais`,
+  });
+}
+
+export async function revogarAdminCatracaCredencialApi(input: {
+  tenantId: string;
+  credentialId: string;
+}): Promise<void> {
+  return apiRequest<void>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/credenciais/${input.credentialId}`,
+    method: "DELETE",
+  });
+}
+
+export type AdminCatracaClienteSyncResult = {
+  tenantId: string;
+  pessoaId: string;
+  totalDevices: number;
+  syncedDevices: number;
+  message: string;
+};
+
+export async function sincronizarFaceClienteApi(input: {
+  tenantId: string;
+  pessoaId: string;
+}): Promise<AdminCatracaClienteSyncResult> {
+  return apiRequest<AdminCatracaClienteSyncResult>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/clientes/${input.pessoaId}/sync-face`,
+    method: "POST",
+  });
+}
+
+export type AdminCatracaLiberarAcessoResult = {
+  requestId: string;
+  agentId: string;
+  pessoaId: string;
+  message: string;
+};
+
+export async function liberarAcessoAdminCatracaApi(input: {
+  tenantId: string;
+  pessoaId: string;
+}): Promise<AdminCatracaLiberarAcessoResult> {
+  return apiRequest<AdminCatracaLiberarAcessoResult>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/clientes/${input.pessoaId}/liberar-acesso`,
+    method: "POST",
+  });
 }

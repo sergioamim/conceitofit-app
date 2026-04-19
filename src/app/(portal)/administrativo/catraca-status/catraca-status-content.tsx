@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Camera,
+  Check,
+  Copy,
   Cpu,
   ImageIcon,
+  Key,
   Network,
   RefreshCw,
   Save,
   ShieldCheck,
+  Trash2,
   Users,
   Wifi,
   WifiOff,
@@ -20,10 +24,17 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
+  aplicarAdminCatracaConfiguracaoApi,
+  gerarAdminCatracaCredencialApi,
+  listarAdminCatracaCredenciaisApi,
   obterAdminCatracaIntegracaoApi,
+  revogarAdminCatracaCredencialApi,
   salvarAdminCatracaDispositivoApi,
   sincronizarAdminCatracaFacesApi,
+  type AdminCatracaCredentialCreatedResponse,
+  type AdminCatracaCredentialResponse,
   type AdminCatracaDeviceResponse,
+  type AdminCatracaRemoteCommandResponse,
   type AdminCatracaSyncFacesResponse,
   type AdminCatracaUpsertDeviceInput,
 } from "@/lib/api/catraca";
@@ -33,7 +44,9 @@ import type { Academia, Tenant } from "@/lib/types";
 import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import { PageError } from "@/components/shared/page-error";
 
-type DeviceFormState = AdminCatracaUpsertDeviceInput;
+type DeviceFormState = AdminCatracaUpsertDeviceInput & {
+  controlIdPasswordConfigured?: boolean;
+};
 
 function createEmptyDeviceForm(): DeviceFormState {
   return {
@@ -44,6 +57,16 @@ function createEmptyDeviceForm(): DeviceFormState {
     ipLocal: "",
     portaControle: 80,
     portaBiometria: 80,
+    controlIdBaseUrl: "",
+    controlIdLogin: "admin",
+    controlIdPassword: "",
+    controlIdPasswordConfigured: false,
+    controlIdTimeoutMs: 5000,
+    controlIdPortalId: 1,
+    controlIdGrantAction: "sec_box",
+    controlIdGrantParameters: "id=65793, reason=1",
+    controlIdDestroyUserOnInvalidate: false,
+    controlIdUniqueFaceMatchRequired: true,
     maxFaces: 3000,
     reservedFacesStaff: 0,
     ativo: true,
@@ -65,6 +88,16 @@ function createFormFromDevice(device: AdminCatracaDeviceResponse): DeviceFormSta
     ipLocal: device.ipLocal ?? "",
     portaControle: device.portaControle,
     portaBiometria: device.portaBiometria,
+    controlIdBaseUrl: device.controlIdBaseUrl ?? "",
+    controlIdLogin: device.controlIdLogin ?? "admin",
+    controlIdPassword: "",
+    controlIdPasswordConfigured: device.controlIdPasswordConfigured,
+    controlIdTimeoutMs: device.controlIdTimeoutMs ?? 5000,
+    controlIdPortalId: device.controlIdPortalId ?? 1,
+    controlIdGrantAction: device.controlIdGrantAction ?? "sec_box",
+    controlIdGrantParameters: device.controlIdGrantParameters ?? "id=65793, reason=1",
+    controlIdDestroyUserOnInvalidate: device.controlIdDestroyUserOnInvalidate,
+    controlIdUniqueFaceMatchRequired: device.controlIdUniqueFaceMatchRequired,
     maxFaces: device.maxFaces,
     reservedFacesStaff: device.reservedFacesStaff,
     ativo: device.ativo,
@@ -88,6 +121,47 @@ function formatMutationError(error: unknown): string {
   return normalizeErrorMessage(error) || "Não foi possível concluir a operação.";
 }
 
+function trimToUndefined(value: string | undefined): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized ? normalized : undefined;
+}
+
+function toDevicePayload(deviceForm: DeviceFormState): AdminCatracaUpsertDeviceInput {
+  const payload: AdminCatracaUpsertDeviceInput = {
+    deviceId: deviceForm.deviceId.trim(),
+    agentId: trimToUndefined(deviceForm.agentId),
+    nome: trimToUndefined(deviceForm.nome),
+    fabricante: deviceForm.fabricante,
+    ipLocal: trimToUndefined(deviceForm.ipLocal),
+    portaControle: deviceForm.portaControle,
+    portaBiometria: deviceForm.portaBiometria,
+    maxFaces: deviceForm.maxFaces,
+    reservedFacesStaff: deviceForm.reservedFacesStaff,
+    ativo: deviceForm.ativo,
+    operationMode: deviceForm.operationMode,
+    supportsEmbeddedFace: deviceForm.supportsEmbeddedFace,
+    supportsEdgeFace: deviceForm.supportsEdgeFace,
+    supportsFingerprint: deviceForm.supportsFingerprint,
+    supportsQrCode: deviceForm.supportsQrCode,
+    supportsFaceTemplateSync: deviceForm.supportsFaceTemplateSync,
+  };
+
+  if (deviceForm.fabricante === "CONTROL_ID_IDFACE") {
+    payload.controlIdBaseUrl = trimToUndefined(deviceForm.controlIdBaseUrl);
+    payload.controlIdLogin = trimToUndefined(deviceForm.controlIdLogin);
+    payload.controlIdPassword = trimToUndefined(deviceForm.controlIdPassword);
+    payload.controlIdTimeoutMs = deviceForm.controlIdTimeoutMs;
+    payload.controlIdPortalId = deviceForm.controlIdPortalId;
+    payload.controlIdGrantAction = trimToUndefined(deviceForm.controlIdGrantAction);
+    payload.controlIdGrantParameters = trimToUndefined(deviceForm.controlIdGrantParameters);
+    payload.controlIdDestroyUserOnInvalidate = deviceForm.controlIdDestroyUserOnInvalidate;
+    payload.controlIdUniqueFaceMatchRequired = deviceForm.controlIdUniqueFaceMatchRequired;
+  }
+
+  return payload;
+}
+
 export function CatracaStatusContent() {
   const access = useAuthAccess();
   const queryClient = useQueryClient();
@@ -96,6 +170,7 @@ export function CatracaStatusContent() {
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [deviceForm, setDeviceForm] = useState<DeviceFormState>(createEmptyDeviceForm());
   const [lastSyncResult, setLastSyncResult] = useState<AdminCatracaSyncFacesResponse | null>(null);
+  const [lastConfigCommand, setLastConfigCommand] = useState<AdminCatracaRemoteCommandResponse | null>(null);
 
   const academiasQuery = useQuery<Academia[]>({
     queryKey: ["admin", "catraca-integracao", "academias"],
@@ -143,14 +218,15 @@ export function CatracaStatusContent() {
   });
 
   const integration = integrationQuery.data;
-  const devices = integration?.devices ?? [];
-  const agents = integration?.agents ?? [];
+  const devices = useMemo(() => integration?.devices ?? [], [integration]);
+  const agents = useMemo(() => integration?.agents ?? [], [integration]);
 
   useEffect(() => {
     if (!selectedTenantId) {
       setSelectedDeviceId("");
       setDeviceForm(createEmptyDeviceForm());
       setLastSyncResult(null);
+      setLastConfigCommand(null);
       return;
     }
 
@@ -163,11 +239,8 @@ export function CatracaStatusContent() {
       return;
     }
 
-    if (selectedDeviceId === "__new__") {
-      return;
-    }
-
-    const hasCurrentDevice = devices.some((device) => device.deviceId === selectedDeviceId);
+    const hasCurrentDevice = selectedDeviceId !== "__new__"
+      && devices.some((device) => device.deviceId === selectedDeviceId);
     if (!hasCurrentDevice) {
       const firstDevice = devices[0];
       setSelectedDeviceId(firstDevice.deviceId);
@@ -183,6 +256,7 @@ export function CatracaStatusContent() {
 
   const selectedAcademia = academias.find((item) => item.id === selectedAcademiaId);
   const selectedTenant = filteredTenants.find((item) => item.id === selectedTenantId);
+  const isControlIdDevice = deviceForm.fabricante === "CONTROL_ID_IDFACE";
 
   const effectiveCapacityPreview = Math.max(
     0,
@@ -203,11 +277,12 @@ export function CatracaStatusContent() {
     mutationFn: (payload: DeviceFormState) =>
       salvarAdminCatracaDispositivoApi({
         tenantId: selectedTenantId,
-        data: payload,
+        data: toDevicePayload(payload),
       }),
     onSuccess: async (device) => {
       setSelectedDeviceId(device.deviceId);
       setDeviceForm(createFormFromDevice(device));
+      setLastConfigCommand(null);
       await queryClient.invalidateQueries({ queryKey: ["admin", "catraca-integracao", selectedTenantId] });
     },
   });
@@ -225,6 +300,19 @@ export function CatracaStatusContent() {
     },
   });
 
+  const refreshConfigMutation = useMutation({
+    mutationFn: (payload: { deviceId: string; agentId?: string }) =>
+      aplicarAdminCatracaConfiguracaoApi({
+        tenantId: selectedTenantId,
+        deviceId: payload.deviceId,
+        agentId: payload.agentId,
+      }),
+    onSuccess: async (result) => {
+      setLastConfigCommand(result);
+      await queryClient.invalidateQueries({ queryKey: ["admin", "catraca-integracao", selectedTenantId] });
+    },
+  });
+
   const saveDisabled =
     !selectedTenantId
     || !deviceForm.deviceId.trim()
@@ -236,6 +324,13 @@ export function CatracaStatusContent() {
     || !deviceForm.deviceId.trim()
     || !deviceForm.agentId?.trim()
     || syncMutation.isPending
+    || saveMutation.isPending;
+
+  const refreshConfigDisabled =
+    !selectedTenantId
+    || !deviceForm.deviceId.trim()
+    || !deviceForm.agentId?.trim()
+    || refreshConfigMutation.isPending
     || saveMutation.isPending;
 
   return (
@@ -515,6 +610,98 @@ export function CatracaStatusContent() {
             </div>
           </div>
 
+          {isControlIdDevice ? (
+            <div className="mt-5 rounded-2xl border border-border/80 bg-secondary/20 p-4">
+              <div className="flex flex-col gap-2 border-b border-border/70 pb-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Control iD</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Estes dados são persistidos no backend e aplicados remotamente no agente da gestão de acesso.
+                  </p>
+                </div>
+                <Badge variant={deviceForm.controlIdPasswordConfigured ? "secondary" : "outline"}>
+                  {deviceForm.controlIdPasswordConfigured ? "Senha já configurada" : "Senha pendente"}
+                </Badge>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Base URL</label>
+                  <Input
+                    value={deviceForm.controlIdBaseUrl ?? ""}
+                    onChange={(event) =>
+                      setDeviceForm((current) => ({ ...current, controlIdBaseUrl: event.target.value }))
+                    }
+                    placeholder="http://192.168.0.25"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Login</label>
+                  <Input
+                    value={deviceForm.controlIdLogin ?? ""}
+                    onChange={(event) =>
+                      setDeviceForm((current) => ({ ...current, controlIdLogin: event.target.value }))
+                    }
+                    placeholder="admin"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Senha</label>
+                  <Input
+                    type="password"
+                    value={deviceForm.controlIdPassword ?? ""}
+                    onChange={(event) =>
+                      setDeviceForm((current) => ({ ...current, controlIdPassword: event.target.value }))
+                    }
+                    placeholder={deviceForm.controlIdPasswordConfigured ? "Preenchida no backend" : "Senha do leitor"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Timeout ms</label>
+                  <Input
+                    value={deviceForm.controlIdTimeoutMs ?? ""}
+                    onChange={(event) =>
+                      setDeviceForm((current) => ({ ...current, controlIdTimeoutMs: toOptionalNumber(event.target.value) }))
+                    }
+                    inputMode="numeric"
+                    placeholder="5000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Portal ID</label>
+                  <Input
+                    value={deviceForm.controlIdPortalId ?? ""}
+                    onChange={(event) =>
+                      setDeviceForm((current) => ({ ...current, controlIdPortalId: toOptionalNumber(event.target.value) }))
+                    }
+                    inputMode="numeric"
+                    placeholder="1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Grant action</label>
+                  <Input
+                    value={deviceForm.controlIdGrantAction ?? ""}
+                    onChange={(event) =>
+                      setDeviceForm((current) => ({ ...current, controlIdGrantAction: event.target.value }))
+                    }
+                    placeholder="sec_box"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Grant parameters</label>
+                  <Input
+                    value={deviceForm.controlIdGrantParameters ?? ""}
+                    onChange={(event) =>
+                      setDeviceForm((current) => ({ ...current, controlIdGrantParameters: event.target.value }))
+                    }
+                    placeholder="id=65793, reason=1"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-5 grid gap-3 rounded-2xl border border-border/80 bg-secondary/20 p-4 md:grid-cols-2">
             {[
               {
@@ -547,6 +734,20 @@ export function CatracaStatusContent() {
                 label: "Suporta QR Code",
                 description: "Usado para fallback operacional ou acesso eventual.",
               },
+              ...(isControlIdDevice
+                ? [
+                    {
+                      key: "controlIdDestroyUserOnInvalidate" as const,
+                      label: "Excluir usuário ao invalidar",
+                      description: "Remove o cadastro do equipamento quando a face deixa de ser elegível.",
+                    },
+                    {
+                      key: "controlIdUniqueFaceMatchRequired" as const,
+                      label: "Match facial único",
+                      description: "Envia o parâmetro de match único na API pública do Control iD.",
+                    },
+                  ]
+                : []),
             ].map((item) => (
               <div key={item.key} className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-background/70 p-3">
                 <div>
@@ -646,20 +847,45 @@ export function CatracaStatusContent() {
                   <p className="mt-2 text-2xl font-semibold">{effectiveCapacityPreview}</p>
                 </div>
               </div>
-              <Button
-                className="mt-4 w-full"
-                onClick={() =>
-                  syncMutation.mutate({
-                    deviceId: deviceForm.deviceId.trim(),
-                    agentId: deviceForm.agentId?.trim() || undefined,
-                  })
-                }
-                disabled={syncDisabled}
-              >
-                <Camera className="mr-2 size-4" />
-                {syncMutation.isPending ? "Enfileirando sync..." : "Sincronizar clientes ativos"}
-              </Button>
+              <div className="mt-4 grid gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    refreshConfigMutation.mutate({
+                      deviceId: deviceForm.deviceId.trim(),
+                      agentId: deviceForm.agentId?.trim() || undefined,
+                    })
+                  }
+                  disabled={refreshConfigDisabled}
+                >
+                  <RefreshCw className="mr-2 size-4" />
+                  {refreshConfigMutation.isPending ? "Aplicando configuração..." : "Aplicar configuração no agente"}
+                </Button>
+                <Button
+                  className="w-full"
+                  onClick={() =>
+                    syncMutation.mutate({
+                      deviceId: deviceForm.deviceId.trim(),
+                      agentId: deviceForm.agentId?.trim() || undefined,
+                    })
+                  }
+                  disabled={syncDisabled}
+                >
+                  <Camera className="mr-2 size-4" />
+                  {syncMutation.isPending ? "Enfileirando sync..." : "Sincronizar clientes ativos"}
+                </Button>
+              </div>
             </div>
+
+            {lastConfigCommand ? (
+              <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4">
+                <p className="text-sm font-semibold text-sky-100">Configuração enviada ao agente</p>
+                <p className="mt-2 text-sm text-sky-50/90">
+                  Request {lastConfigCommand.requestId} para {lastConfigCommand.agentId}.
+                  {lastConfigCommand.pendingAck ? " Aguardando ACK." : " Entrega concluída sem pendência."}
+                </p>
+              </div>
+            ) : null}
 
             {lastSyncResult ? (
               <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
@@ -695,9 +921,156 @@ export function CatracaStatusContent() {
                 {formatMutationError(syncMutation.error)}
               </div>
             ) : null}
+            {refreshConfigMutation.error ? (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {formatMutationError(refreshConfigMutation.error)}
+              </div>
+            ) : null}
           </div>
         </section>
       </div>
+
+      {selectedTenantId && access.canAccessElevatedModules ? (
+        <CredenciaisSection tenantId={selectedTenantId} />
+      ) : null}
     </div>
+  );
+}
+
+function CredenciaisSection({ tenantId }: { tenantId: string }) {
+  const queryClient = useQueryClient();
+  const [newCredential, setNewCredential] = useState<AdminCatracaCredentialCreatedResponse | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const credentialsQuery = useQuery<AdminCatracaCredentialResponse[]>({
+    queryKey: ["admin", "catraca-credenciais", tenantId],
+    queryFn: () => listarAdminCatracaCredenciaisApi({ tenantId }),
+    staleTime: 30_000,
+  });
+
+  const credentials = credentialsQuery.data ?? [];
+
+  const generateMutation = useMutation({
+    mutationFn: () => gerarAdminCatracaCredencialApi({ tenantId }),
+    onSuccess: async (result) => {
+      setNewCredential(result);
+      setCopied(false);
+      await queryClient.invalidateQueries({ queryKey: ["admin", "catraca-credenciais", tenantId] });
+    },
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (credentialId: string) => revogarAdminCatracaCredencialApi({ tenantId, credentialId }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "catraca-credenciais", tenantId] });
+    },
+  });
+
+  const copyToClipboard = useCallback(async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, []);
+
+  return (
+    <section className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-border pb-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Autenticação</p>
+          <h2 className="mt-1 text-lg font-semibold">Chaves do System Tray</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Gere uma chave e cole no System Tray para conectar o agente a esta unidade.
+          </p>
+        </div>
+        <Button
+          onClick={() => generateMutation.mutate()}
+          disabled={generateMutation.isPending}
+        >
+          <Key className="mr-2 size-4" />
+          {generateMutation.isPending ? "Gerando..." : "Gerar nova chave"}
+        </Button>
+      </div>
+
+      {generateMutation.error ? (
+        <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {normalizeErrorMessage(generateMutation.error)}
+        </div>
+      ) : null}
+
+      {newCredential ? (
+        <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Key className="size-4 text-emerald-400" />
+            <p className="text-sm font-semibold text-emerald-300">Chave gerada com sucesso</p>
+          </div>
+          <p className="text-xs text-emerald-200/80">
+            Copie a chave abaixo e cole no System Tray. Ela não será exibida novamente.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded-lg border border-emerald-500/30 bg-background/50 px-3 py-2 text-sm font-mono text-emerald-50 break-all select-all">
+              {newCredential.bearerBase64}
+            </code>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void copyToClipboard(newCredential.bearerBase64)}
+            >
+              {copied ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
+            </Button>
+          </div>
+          <div className="grid gap-2 text-xs text-emerald-200/70 sm:grid-cols-2">
+            <p>Key ID: <span className="font-mono text-emerald-50">{newCredential.keyId}</span></p>
+            <p>Scopes: <span className="font-mono text-emerald-50">{newCredential.scopes}</span></p>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-4 space-y-2">
+        {credentialsQuery.isLoading ? (
+          <p className="text-sm text-muted-foreground">Carregando chaves...</p>
+        ) : credentials.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma chave gerada para esta unidade.</p>
+        ) : (
+          credentials.map((cred) => (
+            <div
+              key={cred.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-secondary/20 p-3"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm text-foreground">{cred.keyId}</span>
+                  <Badge variant={cred.ativo ? "secondary" : "outline"}>
+                    {cred.ativo ? "Ativa" : "Revogada"}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                  <span>Criada: {new Date(cred.createdAt).toLocaleDateString("pt-BR")}</span>
+                  {cred.lastUsedAt ? (
+                    <span>Último uso: {new Date(cred.lastUsedAt).toLocaleDateString("pt-BR")}</span>
+                  ) : (
+                    <span>Nunca usada</span>
+                  )}
+                  {cred.revokedAt ? (
+                    <span className="text-destructive">Revogada: {new Date(cred.revokedAt).toLocaleDateString("pt-BR")}</span>
+                  ) : null}
+                </div>
+              </div>
+              {cred.ativo ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => revokeMutation.mutate(cred.id)}
+                  disabled={revokeMutation.isPending}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="mr-1 size-3" />
+                  Revogar
+                </Button>
+              ) : null}
+            </div>
+          ))
+        )}
+      </div>
+    </section>
   );
 }

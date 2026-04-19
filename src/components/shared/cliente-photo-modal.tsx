@@ -19,7 +19,7 @@ export function ClientePhotoModal({
   onSaved?: () => Promise<void> | void;
 }) {
   const [preview, setPreview] = useState(aluno.foto ?? "");
-  const [hasCaptured, setHasCaptured] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -48,8 +48,17 @@ export function ClientePhotoModal({
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => undefined);
       }
-    } catch {
-      setCameraError("Não foi possível acessar a câmera.");
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      if (name === "NotAllowedError") {
+        setCameraError("Permissão da câmera negada. Clique no ícone de câmera na barra de endereço do navegador e permita o acesso.");
+      } else if (name === "NotFoundError") {
+        setCameraError("Nenhuma câmera encontrada neste dispositivo.");
+      } else if (name === "NotReadableError") {
+        setCameraError("Câmera em uso por outro aplicativo. Feche outros apps que usam a câmera e tente novamente.");
+      } else {
+        setCameraError(`Não foi possível acessar a câmera: ${name || String(err)}`);
+      }
     }
   }, [stopCamera]);
 
@@ -59,15 +68,23 @@ export function ClientePhotoModal({
       return;
     }
     setPreview(aluno.foto ?? "");
-    setHasCaptured(false);
+    setCameraOpen(!(aluno.foto ?? "").trim());
     setSaving(false);
     setCameraError("");
     setSaveError("");
-    void startCamera();
     return () => {
       stopCamera();
     };
-  }, [open, aluno.foto, startCamera, stopCamera]);
+  }, [open, aluno.foto, stopCamera]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!cameraOpen) {
+      stopCamera();
+      return;
+    }
+    void startCamera();
+  }, [cameraOpen, open, startCamera, stopCamera]);
 
   const handleCapture = () => {
     const video = videoRef.current;
@@ -81,20 +98,20 @@ export function ClientePhotoModal({
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     setPreview(dataUrl);
-    setHasCaptured(true);
     stopCamera();
+    setCameraOpen(false);
   };
 
-  const handleRetake = () => {
-    setHasCaptured(false);
+  const handleOpenCamera = () => {
     setCameraError("");
-    void startCamera();
+    setSaveError("");
+    setCameraOpen(true);
   };
 
   const handleRemove = () => {
     setPreview("");
-    setHasCaptured(true);
     stopCamera();
+    setCameraOpen(false);
   };
 
   const handleSave = async () => {
@@ -118,71 +135,81 @@ export function ClientePhotoModal({
     }
   };
 
-  const canSave = hasCaptured || Boolean(preview) !== Boolean(aluno.foto);
+  const canSave = preview !== (aluno.foto ?? "");
+  const hasPreview = Boolean(preview);
+  const cameraPrimaryLabel = hasPreview ? "Trocar foto" : "Tirar foto";
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="bg-card border-border w-[96vw] max-w-4xl p-0">
         <DialogHeader>
           <DialogTitle className="px-6 pt-6 font-display text-lg">
-            Trocar foto do cliente
+            Foto do cliente
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 px-6 pb-6">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">
-            {hasCaptured ? "Pré-visualização da captura" : "Use a câmera para tirar uma nova foto"}
+            {cameraOpen
+              ? "Use a câmera para tirar uma nova foto"
+              : hasPreview
+                ? "Clique em trocar foto para abrir a câmera"
+                : "Cliente sem foto cadastrada"}
           </p>
           <div className="overflow-hidden rounded-xl border border-border bg-black/70">
-            {hasCaptured ? (
+            {cameraOpen ? (
+              cameraError ? (
+                <div className="flex h-[60vh] items-center justify-center p-4 text-sm text-gym-danger">
+                  {cameraError}
+                </div>
+              ) : (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="h-[60vh] w-full object-cover"
+                />
+              )
+            ) : (
               <div className="flex h-[60vh] w-full items-center justify-center">
-                {preview ? (
+                {hasPreview ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={preview}
-                    alt={`${aluno.nome} preview`}
+                    alt={`Foto de ${aluno.nome}`}
                     className="h-full w-full object-contain"
                   />
                 ) : (
-                  <span className="text-sm text-muted-foreground">Foto removida. Salve para confirmar.</span>
+                  <span className="text-sm text-muted-foreground">Nenhuma foto cadastrada para este cliente.</span>
                 )}
               </div>
-            ) : cameraError ? (
-              <div className="flex h-[60vh] items-center justify-center p-4 text-sm text-gym-danger">
-                {cameraError}
-              </div>
-            ) : (
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                className="h-[60vh] w-full object-cover"
-              />
             )}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {hasCaptured ? (
+            {cameraOpen ? (
               <>
-                <Button variant="outline" onClick={handleRetake} disabled={saving}>
-                  Tirar outra foto
+                <Button variant="outline" onClick={() => setCameraOpen(false)} disabled={saving}>
+                  Voltar
                 </Button>
-                <Button variant="outline" onClick={onClose} disabled={saving}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleSave} disabled={saving || !canSave}>
-                  {saving ? "Salvando..." : "Salvar foto"}
+                <Button onClick={handleCapture} disabled={!!cameraError}>
+                  Capturar foto
                 </Button>
               </>
             ) : (
               <>
-                <Button variant="outline" onClick={onClose}>
-                  Cancelar
+                {hasPreview ? (
+                  <Button variant="outline" onClick={handleRemove} disabled={saving}>
+                    Remover foto
+                  </Button>
+                ) : null}
+                <Button variant="outline" onClick={handleOpenCamera} disabled={saving}>
+                  {cameraPrimaryLabel}
                 </Button>
-                <Button variant="outline" onClick={handleRemove} disabled={!preview}>
-                  Remover foto atual
+                <Button variant="outline" onClick={onClose} disabled={saving}>
+                  Fechar
                 </Button>
-                <Button onClick={handleCapture} disabled={!!cameraError}>
-                  Capturar foto
+                <Button onClick={handleSave} disabled={saving || !canSave}>
+                  {saving ? "Salvando..." : "Salvar foto"}
                 </Button>
               </>
             )}

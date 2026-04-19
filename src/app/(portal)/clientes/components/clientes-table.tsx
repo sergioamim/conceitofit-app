@@ -91,7 +91,7 @@ export function ClientesTable({
         <>
           <td className="px-4 py-3">
             <div className="flex items-center gap-3">
-              <ClienteThumbnail nome={aluno.nome} foto={aluno.foto} size="sm" />
+              <ClienteThumbnail nome={aluno.nome} foto={(aluno as { fotoThumbnail?: string }).fotoThumbnail ?? aluno.foto} size="sm" />
               <div>
                 <div className="flex items-center gap-1.5">
                   <button

@@ -83,7 +83,9 @@ function normalizeAlunoStatus(value: unknown): StatusAluno {
   return "INATIVO";
 }
 
-function normalizeAlunoFotoUrl(input: Aluno): string | undefined {
+type FotoVariant = "facial" | "thumbnail";
+
+function buildAlunoFotoUrl(input: Aluno, variant?: FotoVariant): string | undefined {
   const rawFoto = typeof input.foto === "string" ? input.foto.trim() : "";
   if (!rawFoto) {
     return undefined;
@@ -92,6 +94,9 @@ function normalizeAlunoFotoUrl(input: Aluno): string | undefined {
   const params = new URLSearchParams();
   if (typeof input.tenantId === "string" && input.tenantId.trim()) {
     params.set("tenantId", input.tenantId.trim());
+  }
+  if (variant) {
+    params.set("variant", variant);
   }
 
   const version =
@@ -109,10 +114,31 @@ function normalizeAlunoFotoUrl(input: Aluno): string | undefined {
   return `/backend/api/v1/comercial/alunos/${encodeURIComponent(input.id)}/foto${query}`;
 }
 
-function normalizeAluno(input: Aluno): Aluno {
+function normalizeAlunoFotoUrl(input: Aluno): string | undefined {
+  return buildAlunoFotoUrl(input);
+}
+
+/**
+ * Retorna URL da thumbnail do aluno (para listagens, avatars).
+ * Se não tiver foto, retorna undefined.
+ */
+export function alunoThumbnailUrl(aluno: Pick<Aluno, "id" | "tenantId" | "foto" | "dataAtualizacao" | "dataCadastro">): string | undefined {
+  return buildAlunoFotoUrl(aluno as Aluno, "thumbnail");
+}
+
+/**
+ * Retorna URL da foto facial do aluno (para perfil, modal de foto, sync catraca).
+ * Se não tiver foto, retorna undefined.
+ */
+export function alunoFacialUrl(aluno: Pick<Aluno, "id" | "tenantId" | "foto" | "dataAtualizacao" | "dataCadastro">): string | undefined {
+  return buildAlunoFotoUrl(aluno as Aluno, "facial");
+}
+
+function normalizeAluno(input: Aluno): Aluno & { fotoThumbnail?: string } {
   return {
     ...input,
     foto: normalizeAlunoFotoUrl(input),
+    fotoThumbnail: buildAlunoFotoUrl(input, "thumbnail"),
     status: normalizeAlunoStatus((input as Aluno & { status?: unknown }).status),
   };
 }

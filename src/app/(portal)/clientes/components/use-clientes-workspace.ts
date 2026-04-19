@@ -75,10 +75,10 @@ export function useClientesWorkspace() {
     const result = data.alunos.filter((a) => {
       const matchStatus = filtro === FILTER_ALL || a.status === filtro;
       const matchBusca = !busca
-        || a.nome.toLowerCase().includes(busca.toLowerCase())
-        || a.email.toLowerCase().includes(busca.toLowerCase())
-        || (buscaDigits && a.cpf.replace(/\D/g, "").includes(buscaDigits))
-        || (buscaDigits && a.telefone.replace(/\D/g, "").includes(buscaDigits));
+        || a.nome?.toLowerCase().includes(busca.toLowerCase())
+        || a.email?.toLowerCase().includes(busca.toLowerCase())
+        || (buscaDigits && a.cpf?.replace(/\D/g, "").includes(buscaDigits))
+        || (buscaDigits && a.telefone?.replace(/\D/g, "").includes(buscaDigits));
       return matchStatus && matchBusca;
     });
     if (sortBy === "nome") {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Building2, ChevronDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_ACTIVE_TENANT_LABEL, DEFAULT_BASE_TENANT_LABEL } from "@/lib/tenant/hooks/use-session-context";
@@ -35,6 +36,9 @@ export function ActiveTenantSelector({
   disabled = false,
   onChange,
 }: ActiveTenantSelectorProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const hasTenantOptions = tenants.length > 0;
   const resolvedTenantName =
     ready && tenantName.trim() ? tenantName : DEFAULT_ACTIVE_TENANT_LABEL;
@@ -46,17 +50,19 @@ export function ActiveTenantSelector({
   const selectLabel = selectedTenant?.nome ?? "Selecionar unidade";
   const normalizedBaseTenantId = baseTenantId.trim();
   const hasDistinctBaseTenant =
-    Boolean(normalizedBaseTenantId) && normalizedBaseTenantId !== normalizedTenantId;
+    mounted && Boolean(normalizedBaseTenantId) && normalizedBaseTenantId !== normalizedTenantId;
   const scopeLabel = availableScopes.length > 0 ? availableScopes.join(" · ") : "UNIDADE";
-  const blockedSummary = blockedTenants
-    .slice(0, 2)
-    .map((tenant) => {
-      const reason = tenant.blockedReasons[0]?.message;
-      return reason
-        ? `${tenant.tenantName ?? tenant.tenantId}: ${reason}`
-        : (tenant.tenantName ?? tenant.tenantId);
-    })
-    .join(" • ");
+  const blockedSummary = mounted
+    ? blockedTenants
+        .slice(0, 2)
+        .map((tenant) => {
+          const reason = tenant.blockedReasons[0]?.message;
+          return reason
+            ? `${tenant.tenantName ?? tenant.tenantId}: ${reason}`
+            : (tenant.tenantName ?? tenant.tenantId);
+        })
+        .join(" • ")
+    : "";
   const showSwitch = ready && tenants.length > 1;
 
   return (

@@ -55,6 +55,19 @@ const ITEM_CLASS =
 const GROUP_HEADING_CLASS =
   "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground/60";
 
+function normalizeForSearch(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function commandFilter(value: string, search: string): number {
+  const normalizedValue = normalizeForSearch(value);
+  const normalizedSearch = normalizeForSearch(search);
+  if (normalizedValue.includes(normalizedSearch)) return 1;
+  const words = normalizedSearch.split(/\s+/).filter(Boolean);
+  if (words.length > 1 && words.every((w) => normalizedValue.includes(w))) return 1;
+  return 0;
+}
+
 interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
@@ -99,7 +112,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
         aria-hidden="true"
       />
       <div className="relative w-full max-w-lg rounded-xl border border-border/40 bg-card/80 backdrop-blur-xl shadow-2xl overflow-hidden">
-        <CmdkRoot label="Command palette" className="flex flex-col">
+        <CmdkRoot label="Command palette" filter={commandFilter} className="flex flex-col">
           <CommandInput
             placeholder="Navegar para..."
             className="border-b border-border/40 bg-transparent px-4 py-4 text-sm text-foreground outline-none placeholder:text-muted-foreground"
@@ -144,16 +157,22 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                 heading={group.label}
                 className={GROUP_HEADING_CLASS}
               >
-                {group.items.map((item) => (
-                  <CommandItem
-                    key={item.href}
-                    onSelect={() => handleNavigate(item.href, item.label)}
-                    className={ITEM_CLASS}
-                  >
-                    <item.icon className="size-4 shrink-0" />
-                    {item.label}
-                  </CommandItem>
-                ))}
+                {group.items.map((item) => {
+                  const searchValue = [item.label, item.description, group.label]
+                    .filter(Boolean)
+                    .join(" ");
+                  return (
+                    <CommandItem
+                      key={item.href}
+                      value={searchValue}
+                      onSelect={() => handleNavigate(item.href, item.label)}
+                      className={ITEM_CLASS}
+                    >
+                      <item.icon className="size-4 shrink-0" />
+                      {item.label}
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             ))}
           </CommandList>

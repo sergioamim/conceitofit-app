@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertCircle, RefreshCw, Copy, XCircle } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { AlertCircle, AlertTriangle, RefreshCw, Copy, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,9 +11,110 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { EvoImportEntidadeResumo as EntidadeResumo } from "@/lib/api/importacao-evo";
+import { type EvoImportRejeicaoResumoItem, listEvoImportJobRejeicaoResumoApi } from "@/lib/api/importacao-evo";
 import { formatDateTime } from "../date-time-format";
 import { ENTIDADE_TODAS, BLOCO_TODOS, COLABORADOR_BLOCO_CONFIG } from "../shared";
 import type { EvoImportPageState } from "../hooks/useEvoImportPage";
+
+const MOTIVO_DESCRICAO: Record<string, string> = {
+  "CPF duplicado no lote": "Mesmo CPF aparece mais de uma vez no CSV. O registro mais recente foi importado.",
+  "CPF invalido": "CPF com formato inválido (diferente de 11 dígitos).",
+  "CPF obrigatorio (sem justificativa de dependente/estrangeiro/exclusao)": "Cliente sem CPF e sem flag de dependente, estrangeiro ou excluído.",
+  "PASSAPORTE duplicado no lote": "Mesmo passaporte aparece mais de uma vez no CSV.",
+  "NOME obrigatorio": "Registro sem nome preenchido.",
+  "ID_FILIAL obrigatorio": "Registro sem filial de origem.",
+  "ID_RECEBIMENTO obrigatorio": "Recebimento sem identificador de origem.",
+  "ID_CLIENTE_PAGADOR obrigatorio": "Recebimento sem cliente pagador identificado.",
+  "VALOR invalido": "Valor do recebimento ausente ou não numérico.",
+  "Cliente pagador não encontrado para recebimento": "O cliente pagador referenciado não foi importado — dado órfão na origem.",
+  "Cliente de origem não encontrado para matrícula": "Matrícula referencia um cliente que não foi importado — cascata de rejeição.",
+  "ID_CONTRATO obrigatorio": "Matrícula sem contrato vinculado — dado incompleto na origem.",
+  "Contrato de origem não encontrado para matrícula": "Matrícula referencia um contrato que não foi importado.",
+  "ID_CLIENTE obrigatorio": "Registro sem identificador de cliente.",
+  "DESCRICAO obrigatoria": "Conta a pagar sem descrição — dado inutilizável.",
+  "DT_VENCIMENTO invalida": "Data de vencimento com formato não reconhecido.",
+  "Valor de contato ausente": "Linha de telefone sem número preenchido.",
+  "E-mail profissional duplicado no lote": "Mesmo e-mail profissional em dois funcionários do lote.",
+  "E-mail profissional já cadastrado em outro funcionário": "E-mail já em uso por outro funcionário no mesmo tenant.",
+  "Foto ausente": "Registro de foto sem URL de imagem.",
+  "Ator de destino ausente (ID_CLIENTE ou ID_PROSPECT ou ID_FUNCIONARIO)": "Foto/biometria sem vínculo a nenhuma pessoa.",
+  "Cliente do cartao nao encontrado/importado": "Cartão referencia cliente não importado.",
+  "Cartao de credito nao encontrado/importado": "Cartão de crédito referenciado não existe nos vínculos.",
+  "ID_HISTORICO_RECEBIMENTO obrigatorio": "Histórico sem identificador de origem.",
+  "SERIE nao encontrada nos vinculos": "Série de treino referencia um treino não importado.",
+  "EXERCICIO nao encontrado nos vinculos (importe EVO_EXERCICIOS antes)": "Exercício referenciado não foi importado.",
+  "Duplicata (treino+ordem)": "Combinação treino+ordem duplicada no lote.",
+  "Apelido duplicado no lote": "Mesmo apelido para duas contas bancárias.",
+  "Cliente nao importado para vinculo do responsavel": "Responsável referencia cliente que não foi importado.",
+};
+
+function RejeicaoResumoPanel({ jobId, tenantId }: { jobId: string; tenantId?: string }) {
+  const [resumo, setResumo] = useState<EvoImportRejeicaoResumoItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await listEvoImportJobRejeicaoResumoApi({ jobId, tenantId });
+      setResumo(data);
+    } catch {
+      setResumo([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [jobId, tenantId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-amber-400/30 bg-amber-500/5 p-4">
+        <p className="text-sm text-muted-foreground">Carregando resumo de rejeições...</p>
+      </div>
+    );
+  }
+
+  if (resumo.length === 0) return null;
+
+  const total = resumo.reduce((acc, r) => acc + r.quantidade, 0);
+
+  return (
+    <div className="rounded-lg border border-amber-400/30 bg-amber-500/5 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <AlertTriangle className="size-4 text-amber-400" />
+        <p className="text-sm font-semibold text-foreground">
+          {total} registro(s) rejeitado(s) em {resumo.length} categoria(s)
+        </p>
+      </div>
+      <div className="overflow-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs text-muted-foreground">
+              <th className="pb-2 pr-4">Entidade</th>
+              <th className="pb-2 pr-4 text-right">Qtd</th>
+              <th className="pb-2 pr-4">Motivo</th>
+              <th className="pb-2">Descrição</th>
+            </tr>
+          </thead>
+          <tbody>
+            {resumo.map((r, i) => (
+              <tr key={`${r.entidade}-${r.motivo}-${i}`} className="border-b border-border/50">
+                <td className="py-2 pr-4">
+                  <Badge variant="outline" className="text-xs">{r.entidade}</Badge>
+                </td>
+                <td className="py-2 pr-4 text-right font-semibold text-amber-400">{r.quantidade}</td>
+                <td className="py-2 pr-4 text-xs text-foreground">{r.motivo}</td>
+                <td className="py-2 text-xs text-muted-foreground">
+                  {MOTIVO_DESCRICAO[r.motivo] ?? "Dado incompleto ou inconsistente na origem."}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
   const {
@@ -131,6 +233,10 @@ export function EvoAcompanhamentoTab({ state }: { state: EvoImportPageState }) {
                       </div>
                     </div>
                   </div>
+
+                  {jobResumo?.status === "CONCLUIDO_COM_REJEICOES" && jobId && (
+                    <RejeicaoResumoPanel jobId={jobId} tenantId={jobTenantId ?? undefined} />
+                  )}
 
                   {jobResumo?.status === "FALHA" && (
                     <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">

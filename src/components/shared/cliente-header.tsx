@@ -5,7 +5,7 @@ import type { Aluno, Plano } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRightLeft, Camera, KeyRound, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowRightLeft, Camera, KeyRound, MoreVertical, Pencil, ScanFace, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/formatters";
 
 export function ClienteHeader({
@@ -26,6 +26,7 @@ export function ClienteHeader({
   onChangeFoto,
   onCompletarCadastro,
   onMigrarUnidadeBase,
+  onSyncFace,
 }: {
   aluno: Aluno;
   planoAtivo?: { dataFim: string } | null;
@@ -44,6 +45,7 @@ export function ClienteHeader({
   onChangeFoto?: () => void;
   onCompletarCadastro?: () => void;
   onMigrarUnidadeBase?: () => void;
+  onSyncFace?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -68,7 +70,13 @@ export function ClienteHeader({
     >
       <div className="flex items-start gap-4">
         <div className="relative">
-          <div className="relative h-16 w-16 overflow-hidden rounded-full border border-border bg-secondary shadow-inner">
+          <button
+            type="button"
+            className="relative block h-16 w-16 overflow-hidden rounded-full border border-border bg-secondary shadow-inner transition hover:border-gym-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+            onClick={onChangeFoto}
+            disabled={!onChangeFoto}
+            aria-label={onChangeFoto ? `Abrir foto de ${aluno.nome}` : undefined}
+          >
             {aluno.foto ? (
               <Image src={aluno.foto} alt={aluno.nome} fill unoptimized className="object-cover" />
             ) : (
@@ -76,7 +84,7 @@ export function ClienteHeader({
                 Foto
               </div>
             )}
-          </div>
+          </button>
           {onChangeFoto && (
             <Button
               variant="default"
@@ -194,6 +202,18 @@ export function ClienteHeader({
                 >
                   <ArrowRightLeft className="size-4" />
                   Migrar unidade-base
+                </button>
+              ) : null}
+              {onSyncFace ? (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onSyncFace();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
+                  <ScanFace className="size-4" />
+                  Sincronizar face
                 </button>
               ) : null}
             </div>
