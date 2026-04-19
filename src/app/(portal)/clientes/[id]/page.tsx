@@ -1,10 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import nextDynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
-import { ClienteEditForm } from "@/components/shared/cliente-edit-form";
 import { ClienteHeader } from "@/components/shared/cliente-header";
 import { ClienteCartoesPanel } from "@/components/shared/cliente-cartoes-panel";
 import { ClientePhotoModal } from "@/components/shared/cliente-photo-modal";
@@ -18,6 +18,7 @@ import { useClienteWorkspace } from "./use-cliente-workspace";
 import { ClienteDialogs } from "./cliente-dialogs";
 import { ClienteSidebar } from "./cliente-sidebar";
 import { ClienteStatusBanners } from "./cliente-status-banners";
+import { ClienteEditDrawer } from "./cliente-edit-drawer";
 
 const NovaMatriculaModal = nextDynamic(
   () => import("@/components/shared/nova-matricula-modal").then((mod) => mod.NovaMatriculaModal),
@@ -48,6 +49,7 @@ export default function ClienteDetalhePage() {
   if (!w.aluno) return <div className="text-sm text-muted-foreground">Cliente não encontrado para a unidade ativa.</div>;
 
   const aluno = w.aluno;
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -73,6 +75,7 @@ export default function ClienteDetalhePage() {
         }}
       />
       <ClientePhotoModal open={w.photoModalOpen} onClose={() => w.setPhotoModalOpen(false)} aluno={aluno} onSaved={() => w.reload()} />
+      <ClienteEditDrawer open={editDrawerOpen} aluno={aluno} onClose={() => setEditDrawerOpen(false)} onSaved={w.reload} />
       <ClienteDialogs {...w} />
 
       {/* Breadcrumb + Header */}
@@ -88,15 +91,25 @@ export default function ClienteDetalhePage() {
         onReativar={async () => {
           try { await w.handleReativar(); } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
         }}
-        onCompletarCadastro={() => w.setPhotoModalOpen(true)}
+        onCompletarCadastro={() => setEditDrawerOpen(true)}
         showCartoesAction={false}
         onLiberarAcesso={w.openLiberarAcesso}
         canDeleteCliente={w.canDeleteClient}
         onExcluir={w.openExcluir}
         onMigrarUnidadeBase={w.migracaoHabilitada && w.opcoesMigracao.length > 0 ? w.openMigracao : undefined}
-        onEdit={() => w.setPhotoModalOpen(true)}
+        onEdit={() => setEditDrawerOpen(true)}
         onChangeFoto={() => w.setPhotoModalOpen(true)}
         onSyncFace={aluno.foto ? w.handleSyncFace : undefined}
+        onExcluirDadosPessoais={() => {
+          if (confirm("Excluir dados pessoais deste cliente? Esta acao e irreversivel. Nome, email, telefone e CPF serao anonimizados.")) {
+            w.setActionError("Funcionalidade LGPD em desenvolvimento. Backend pendente.");
+          }
+        }}
+        onExcluirDadosSensiveis={() => {
+          if (confirm("Excluir dados sensiveis (anamnese, observacoes medicas)? Esta acao e irreversivel.")) {
+            w.setActionError("Funcionalidade LGPD em desenvolvimento. Backend pendente.");
+          }
+        }}
       />
 
       {/* Feedback banners */}
@@ -332,7 +345,7 @@ export default function ClienteDetalhePage() {
         <div className="space-y-4">
           <ClienteSidebar
             aluno={aluno}
-            onEdit={() => w.setPhotoModalOpen(true)}
+            onEdit={() => setEditDrawerOpen(true)}
           />
 
           {/* Contexto rede-unidade (compacto na sidebar) */}

@@ -5,8 +5,23 @@ import type { Aluno, Plano } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRightLeft, Camera, KeyRound, MoreVertical, Pencil, ScanFace, Trash2 } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Camera,
+  KeyRound,
+  Lock,
+  MessageCircle,
+  MoreVertical,
+  Pencil,
+  ScanFace,
+  Shield,
+  ShieldOff,
+  Trash2,
+  Unlock,
+  UserX,
+} from "lucide-react";
 import { formatDate } from "@/lib/formatters";
+import { Badge } from "@/components/ui/badge";
 
 export function ClienteHeader({
   aluno,
@@ -27,6 +42,11 @@ export function ClienteHeader({
   onCompletarCadastro,
   onMigrarUnidadeBase,
   onSyncFace,
+  onBloquearAcesso,
+  onDesbloquearAcesso,
+  onExcluirDadosPessoais,
+  onExcluirDadosSensiveis,
+  acessoBloqueado = false,
 }: {
   aluno: Aluno;
   planoAtivo?: { dataFim: string } | null;
@@ -46,6 +66,11 @@ export function ClienteHeader({
   onCompletarCadastro?: () => void;
   onMigrarUnidadeBase?: () => void;
   onSyncFace?: () => void;
+  onBloquearAcesso?: () => void;
+  onDesbloquearAcesso?: () => void;
+  onExcluirDadosPessoais?: () => void;
+  onExcluirDadosSensiveis?: () => void;
+  acessoBloqueado?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -61,6 +86,10 @@ export function ClienteHeader({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const whatsappUrl = aluno.telefone
+    ? `https://wa.me/55${aluno.telefone.replace(/\D/g, "")}`
+    : null;
+
   return (
     <div
       className={[
@@ -69,10 +98,11 @@ export function ClienteHeader({
       ].join(" ")}
     >
       <div className="flex items-start gap-4">
+        {/* W1.2 — Foto grande (100px) */}
         <div className="relative">
           <button
             type="button"
-            className="relative block h-16 w-16 overflow-hidden rounded-full border border-border bg-secondary shadow-inner transition hover:border-gym-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+            className="relative block size-24 overflow-hidden rounded-full border-2 border-border bg-secondary shadow-inner transition hover:border-gym-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card"
             onClick={onChangeFoto}
             disabled={!onChangeFoto}
             aria-label={onChangeFoto ? `Abrir foto de ${aluno.nome}` : undefined}
@@ -89,137 +119,151 @@ export function ClienteHeader({
             <Button
               variant="default"
               size="icon-sm"
-              className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full border-2 border-card bg-gym-accent p-0 text-background shadow-md hover:bg-gym-accent/90"
+              className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full border-2 border-card bg-gym-accent p-0 text-background shadow-md hover:bg-gym-accent/90"
               onClick={onChangeFoto}
               aria-label="Trocar foto"
             >
-              <Camera className="size-4" />
+              <Camera className="size-3.5" />
             </Button>
           )}
         </div>
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">
-            {aluno.nome}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-2xl font-bold tracking-tight">
+              {aluno.nome}
+            </h1>
+            {/* Badge de contrato */}
+            {planoAtivo ? (
+              <Badge variant="secondary" className="bg-gym-teal/15 text-gym-teal border-gym-teal/30 text-[11px]">
+                Contrato ativo
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-muted-foreground text-[11px]">
+                Sem contrato
+              </Badge>
+            )}
+          </div>
+          {/* ID do cliente */}
+          <p className="mt-0.5 text-xs text-muted-foreground font-mono">
+            ID: {aluno.id.substring(0, 8)}
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <span>
               Status: <StatusBadge status={aluno.status} />
             </span>
-            {aluno.pendenteComplementacao ? (
-              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-400">
-                Cadastro pendente
-              </span>
-            ) : null}
-            <span>
-              Plano:{" "}
-              {planoAtivo ? (
-                <span className="text-gym-teal">{planoAtivoInfo?.nome ?? "Ativo"}</span>
-              ) : (
-                <span className="text-gym-warning">Sem plano ativo</span>
-              )}
-            </span>
             {planoAtivoInfo && planoAtivo && (
-              <span className="text-muted-foreground">
-                Vigente até {formatDate(planoAtivo.dataFim)}
+              <span>
+                {planoAtivoInfo.nome} — vigente ate {formatDate(planoAtivo.dataFim)}
               </span>
             )}
           </div>
         </div>
       </div>
       <div className="flex items-start gap-2">
-        {onEdit && (
-          <Button variant="outline" className="h-9" onClick={onEdit}>
-            <Pencil className="size-4" />
-          </Button>
-        )}
-        {aluno.pendenteComplementacao && onCompletarCadastro && (
-          <Button variant="outline" className="h-9 border-gym-accent/50 text-gym-accent" onClick={onCompletarCadastro}>
-            Completar cadastro
-          </Button>
+        {/* W2.2 — Ações rápidas: WhatsApp */}
+        {whatsappUrl && (
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-transparent text-emerald-400 transition hover:bg-emerald-500/10 hover:border-emerald-500/40"
+            aria-label="Abrir WhatsApp"
+          >
+            <MessageCircle className="size-4" />
+          </a>
         )}
         {onLiberarAcesso && (
           <Button variant="outline" className="h-9 border-amber-500/40 text-amber-300" onClick={onLiberarAcesso}>
             <KeyRound className="mr-2 size-4" />
-            Liberar acesso (catraca)
+            Liberar acesso
           </Button>
         )}
         {!planoAtivo && (
           <Button onClick={onNovaVenda} className="h-9">
-            Nova contratação
+            Nova contratacao
           </Button>
         )}
         {showCartoesAction && (
           <Button variant="outline" className="h-9" onClick={onCartoes}>
-            Cartões
+            Cartoes
           </Button>
         )}
+        {/* Menu 3 pontinhos — W2.1 expandido */}
         <div className="relative" ref={menuRef}>
           <Button variant="outline" className="h-9 px-2" onClick={() => setMenuOpen((v) => !v)}>
             <MoreVertical className="size-4" />
           </Button>
           {menuOpen && (
-            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-40 rounded-md border border-border bg-card p-1 shadow-lg">
+            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-52 rounded-md border border-border bg-card p-1 shadow-lg">
+              {/* Suspender / Reativar */}
               {suspenso ? (
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onReativar();
-                  }}
-                  className="w-full rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  Reativar
-                </button>
+                <MenuButton icon={Unlock} label="Reativar" onClick={() => { setMenuOpen(false); onReativar(); }} />
               ) : (
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onSuspender();
-                  }}
-                  className="w-full rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  Suspender
-                </button>
+                <MenuButton icon={Lock} label="Suspender" onClick={() => { setMenuOpen(false); onSuspender(); }} />
               )}
-              {canDeleteCliente && onExcluir ? (
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onExcluir();
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-gym-danger hover:bg-secondary"
-                >
-                  <Trash2 className="size-4" />
-                  Excluir cliente
-                </button>
+
+              {/* Bloquear / Desbloquear acesso */}
+              {acessoBloqueado && onDesbloquearAcesso ? (
+                <MenuButton icon={ShieldOff} label="Desbloquear acesso" onClick={() => { setMenuOpen(false); onDesbloquearAcesso(); }} />
+              ) : onBloquearAcesso ? (
+                <MenuButton icon={Shield} label="Bloquear acesso" onClick={() => { setMenuOpen(false); onBloquearAcesso(); }} />
               ) : null}
-              {onMigrarUnidadeBase ? (
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onMigrarUnidadeBase();
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  <ArrowRightLeft className="size-4" />
-                  Migrar unidade-base
-                </button>
-              ) : null}
+
+              {/* Sincronizar face */}
               {onSyncFace ? (
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onSyncFace();
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  <ScanFace className="size-4" />
-                  Sincronizar face
-                </button>
+                <MenuButton icon={ScanFace} label="Sincronizar face" onClick={() => { setMenuOpen(false); onSyncFace(); }} />
+              ) : null}
+
+              {/* Migrar unidade-base */}
+              {onMigrarUnidadeBase ? (
+                <MenuButton icon={ArrowRightLeft} label="Migrar unidade-base" onClick={() => { setMenuOpen(false); onMigrarUnidadeBase(); }} />
+              ) : null}
+
+              {/* Separador */}
+              <div className="my-1 h-px bg-border" />
+
+              {/* Excluir cliente */}
+              {canDeleteCliente && onExcluir ? (
+                <MenuButton icon={Trash2} label="Excluir cliente" danger onClick={() => { setMenuOpen(false); onExcluir(); }} />
+              ) : null}
+
+              {/* LGPD */}
+              {onExcluirDadosPessoais ? (
+                <MenuButton icon={UserX} label="Excluir dados pessoais" danger onClick={() => { setMenuOpen(false); onExcluirDadosPessoais(); }} />
+              ) : null}
+              {onExcluirDadosSensiveis ? (
+                <MenuButton icon={Shield} label="Excluir dados sensiveis" danger onClick={() => { setMenuOpen(false); onExcluirDadosSensiveis(); }} />
               ) : null}
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function MenuButton({
+  icon: Icon,
+  label,
+  onClick,
+  danger = false,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm ${
+        danger
+          ? "text-gym-danger hover:bg-gym-danger/10"
+          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+      }`}
+    >
+      <Icon className="size-4" />
+      {label}
+    </button>
   );
 }
