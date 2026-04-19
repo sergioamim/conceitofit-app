@@ -486,3 +486,28 @@ export async function migrarClienteParaUnidadeApi(input: {
   });
   return normalizeClienteMigracaoResult(response);
 }
+
+export type MesclarClienteResponse = {
+  clienteDestinoId: string;
+  clienteOrigemId: string;
+  message: string;
+  pagamentosMigrados: number;
+  vinculosMigrados: number;
+};
+
+export async function mesclarClientesApi(input: {
+  tenantId: string;
+  clienteDestinoId: string;
+  clienteOrigemId: string;
+  justificativa: string;
+}): Promise<MesclarClienteResponse> {
+  return apiRequest<MesclarClienteResponse>({
+    path: `/api/v1/comercial/clientes/${input.clienteDestinoId}/mesclar`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: {
+      clienteOrigemId: input.clienteOrigemId,
+      justificativa: input.justificativa,
+    },
+  });
+}

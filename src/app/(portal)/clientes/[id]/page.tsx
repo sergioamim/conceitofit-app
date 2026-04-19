@@ -21,6 +21,7 @@ import { ClienteStatusBanners } from "./cliente-status-banners";
 import { ClienteEditDrawer } from "./cliente-edit-drawer";
 import { ClienteTabRelacionamento } from "./cliente-tab-relacionamento";
 import { ClienteTabAtividades } from "./cliente-tab-atividades";
+import { ClienteMesclarDialog } from "./cliente-mesclar-dialog";
 
 const NovaMatriculaModal = nextDynamic(
   () => import("@/components/shared/nova-matricula-modal").then((mod) => mod.NovaMatriculaModal),
@@ -46,6 +47,7 @@ const motivoOptions = [
 export default function ClienteDetalhePage() {
   const w = useClienteWorkspace();
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [mesclarOpen, setMesclarOpen] = useState(false);
 
   if (w.loading) return <div className="text-sm text-muted-foreground">Carregando cliente...</div>;
   if (w.loadError) return <div className="text-sm text-gym-danger">{w.loadError}</div>;
@@ -78,6 +80,7 @@ export default function ClienteDetalhePage() {
       />
       <ClientePhotoModal open={w.photoModalOpen} onClose={() => w.setPhotoModalOpen(false)} aluno={aluno} onSaved={() => w.reload()} />
       <ClienteEditDrawer open={editDrawerOpen} aluno={aluno} onClose={() => setEditDrawerOpen(false)} onSaved={w.reload} />
+      <ClienteMesclarDialog open={mesclarOpen} onClose={() => setMesclarOpen(false)} aluno={aluno} tenantId={w.tenantId ?? ""} onMerged={w.reload} />
       <ClienteDialogs {...w} />
 
       {/* Breadcrumb + Header */}
@@ -102,6 +105,7 @@ export default function ClienteDetalhePage() {
         onEdit={() => setEditDrawerOpen(true)}
         onChangeFoto={() => w.setPhotoModalOpen(true)}
         onSyncFace={aluno.foto ? w.handleSyncFace : undefined}
+        onMesclar={() => setMesclarOpen(true)}
         onExcluirDadosPessoais={() => {
           if (confirm("Excluir dados pessoais deste cliente? Esta acao e irreversivel. Nome, email, telefone e CPF serao anonimizados.")) {
             w.setActionError("Funcionalidade LGPD em desenvolvimento. Backend pendente.");

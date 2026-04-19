@@ -10,6 +10,7 @@ import {
   Camera,
   KeyRound,
   Lock,
+  Merge,
   MessageCircle,
   MoreVertical,
   Pencil,
@@ -44,6 +45,7 @@ export function ClienteHeader({
   onSyncFace,
   onBloquearAcesso,
   onDesbloquearAcesso,
+  onMesclar,
   onExcluirDadosPessoais,
   onExcluirDadosSensiveis,
   acessoBloqueado = false,
@@ -68,6 +70,7 @@ export function ClienteHeader({
   onSyncFace?: () => void;
   onBloquearAcesso?: () => void;
   onDesbloquearAcesso?: () => void;
+  onMesclar?: () => void;
   onExcluirDadosPessoais?: () => void;
   onExcluirDadosSensiveis?: () => void;
   acessoBloqueado?: boolean;
@@ -217,6 +220,11 @@ export function ClienteHeader({
               {/* Migrar unidade-base */}
               {onMigrarUnidadeBase ? (
                 <MenuButton icon={ArrowRightLeft} label="Migrar unidade-base" onClick={() => { setMenuOpen(false); onMigrarUnidadeBase(); }} />
+              ) : null}
+
+              {/* Mesclar com outro cliente */}
+              {onMesclar ? (
+                <MenuButton icon={Merge} label="Mesclar com outro cliente" onClick={() => { setMenuOpen(false); onMesclar(); }} />
               ) : null}
 
               {/* Separador */}
