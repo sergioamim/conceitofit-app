@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { CreditCard, AlertTriangle, FileText } from "lucide-react";
+import { CreditCard, AlertTriangle, FileText, Heart, Dumbbell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ClienteTabKey = "resumo" | "matriculas" | "financeiro" | "nfse" | "editar" | "cartoes";
+export type ClienteTabKey = "resumo" | "matriculas" | "financeiro" | "nfse" | "editar" | "cartoes" | "relacionamento" | "atividades";
 type ClienteTabItem = {
   key: ClienteTabKey;
   label: string;
@@ -26,8 +26,10 @@ export function ClienteTabs({
 }) {
   const base: ClienteTabItem[] = [
     { key: "resumo", label: "Dashboard" },
+    { key: "relacionamento", label: "Relacionamento", icon: Heart },
     { key: "matriculas", label: "Contratos" },
     { key: "financeiro", label: "Financeiro" },
+    { key: "atividades", label: "Atividades", icon: Dumbbell },
     { key: "nfse", label: "NFS-e", icon: FileText },
     { key: "cartoes", label: "Cartões", icon: CreditCard },
   ];

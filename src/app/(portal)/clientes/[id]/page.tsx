@@ -19,6 +19,8 @@ import { ClienteDialogs } from "./cliente-dialogs";
 import { ClienteSidebar } from "./cliente-sidebar";
 import { ClienteStatusBanners } from "./cliente-status-banners";
 import { ClienteEditDrawer } from "./cliente-edit-drawer";
+import { ClienteTabRelacionamento } from "./cliente-tab-relacionamento";
+import { ClienteTabAtividades } from "./cliente-tab-atividades";
 
 const NovaMatriculaModal = nextDynamic(
   () => import("@/components/shared/nova-matricula-modal").then((mod) => mod.NovaMatriculaModal),
@@ -43,13 +45,13 @@ const motivoOptions = [
 
 export default function ClienteDetalhePage() {
   const w = useClienteWorkspace();
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
   if (w.loading) return <div className="text-sm text-muted-foreground">Carregando cliente...</div>;
   if (w.loadError) return <div className="text-sm text-gym-danger">{w.loadError}</div>;
   if (!w.aluno) return <div className="text-sm text-muted-foreground">Cliente não encontrado para a unidade ativa.</div>;
 
   const aluno = w.aluno;
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -338,6 +340,21 @@ export default function ClienteDetalhePage() {
                 ))}
               </div>
             </div>
+          )}
+
+          {w.tab === "relacionamento" && (
+            <ClienteTabRelacionamento
+              aluno={aluno}
+              matriculas={w.matriculas}
+              pagamentos={w.pagamentos}
+            />
+          )}
+
+          {w.tab === "atividades" && (
+            <ClienteTabAtividades
+              alunoId={aluno.id}
+              tenantId={aluno.tenantId}
+            />
           )}
         </div>
 
