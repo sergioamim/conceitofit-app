@@ -11,17 +11,29 @@ describe("ClienteTabs", () => {
   };
 
   it("renders all default tabs", () => {
+    // Perfil v3 Wave 4: conjunto final de 10 abas (AC4.1/4.4-4.6).
+    // "Cartões" e "Edição" saíram do TabBar; "Dashboard" virou "Resumo";
+    // "Atividades" foi dissolvida em Frequência/Treinos/Avaliações.
     render(<ClienteTabs {...defaultProps} />);
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Resumo")).toBeInTheDocument();
+    expect(screen.getByText("Relacionamento")).toBeInTheDocument();
     expect(screen.getByText("Contratos")).toBeInTheDocument();
     expect(screen.getByText("Financeiro")).toBeInTheDocument();
     expect(screen.getByText("NFS-e")).toBeInTheDocument();
-    expect(screen.getByText("Cartões")).toBeInTheDocument();
+    expect(screen.getByText("Frequência")).toBeInTheDocument();
+    expect(screen.getByText("Treinos")).toBeInTheDocument();
+    expect(screen.getByText("Avaliações")).toBeInTheDocument();
+    expect(screen.getByText("Fidelidade")).toBeInTheDocument();
+    expect(screen.getByText("Documentos")).toBeInTheDocument();
+    expect(screen.queryByText("Cartões")).not.toBeInTheDocument();
+    expect(screen.queryByText("Edição")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
   });
 
-  it("renders edit tab when showEditTab is true", () => {
+  it("ignores showEditTab (deprecated in Wave 4)", () => {
     render(<ClienteTabs {...defaultProps} showEditTab={true} />);
-    expect(screen.getByText("Edição")).toBeInTheDocument();
+    // AC4.5: aba "Edição" foi removida; a prop ficou apenas por retrocompat.
+    expect(screen.queryByText("Edição")).not.toBeInTheDocument();
   });
 
   it("calls onSelect when a tab is clicked", () => {
@@ -48,6 +60,6 @@ describe("ClienteTabs", () => {
 
   it("renders as links when onSelect is not provided", () => {
     render(<ClienteTabs current="resumo" baseHref="/test" />);
-    expect(screen.getByText("Dashboard").closest("a")).toHaveAttribute("href", "/test");
+    expect(screen.getByText("Resumo").closest("a")).toHaveAttribute("href", "/test");
   });
 });

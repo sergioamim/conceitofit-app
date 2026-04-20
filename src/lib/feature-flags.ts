@@ -43,3 +43,8 @@ export function isReservasAulasEnabled(): boolean {
 export function isCrmCadenciasEnabled(): boolean {
   return readBooleanFlag(process.env.NEXT_PUBLIC_CRM_CADENCIAS_ENABLED, false);
 }
+
+/** Drawer "Próximas Ações" no perfil do cliente (Perfil v3 — Wave 2). */
+export function isPerfilDrawerAcoesEnabled(): boolean {
+  return readBooleanFlag(process.env.NEXT_PUBLIC_PERFIL_DRAWER_ACOES_ENABLED, true);
+}

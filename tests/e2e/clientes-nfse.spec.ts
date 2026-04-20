@@ -218,7 +218,14 @@ async function installClienteNfseMocks(page: Page) {
       return;
     }
 
-    if (path === "/api/v1/administrativo/nfse/configuracao-atual" && method === "GET") {
+    // Task #556: workspace migrou para o path novo `/nfse/configuracoes/base`
+    // quando `unidadeId` é passado. Interceptamos ambos para contar chamadas
+    // durante o período de migração.
+    if (
+      (path === "/api/v1/administrativo/nfse/configuracao-atual"
+        || path === "/api/v1/nfse/configuracoes/base")
+      && method === "GET"
+    ) {
       nfseConfiguracaoCalls += 1;
       await fulfillJson(route, {
         status: "ERRO",
@@ -256,7 +263,8 @@ test.describe("Perfil do cliente - aba NFS-e", () => {
     await expect(page.getByText("Emissão bloqueada")).toBeVisible();
     await expect(page.getByText("Emissão fiscal bloqueada: Certificado fiscal pendente")).toBeVisible();
 
-    await page.getByRole("button", { name: "Dashboard" }).click();
+    // Perfil v3 Wave 4 (AC4.4): "Dashboard" foi renomeada para "Resumo".
+    await page.getByRole("button", { name: "Resumo" }).click();
     await page.getByRole("button", { name: "NFS-e" }).click();
     await expect.poll(() => mocks.getNfseConfiguracaoCalls()).toBe(1);
   });

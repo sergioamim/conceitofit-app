@@ -60,10 +60,9 @@ describe("ClienteHeader", () => {
 
   it("renders actions for active client", () => {
     render(<ClienteHeader {...defaultProps} />);
-    expect(screen.getByText("Nova contratação")).toBeInTheDocument();
-    
-    // Open menu to see Suspender
-    // Based on DOM output, the MoreVertical button is the one after Nova contratação and Cartões
+    // Texto sem cedilha é intencional desde Perfil v2 Wave 2 (commit debefb6).
+    expect(screen.getByText("Nova contratacao")).toBeInTheDocument();
+
     const buttons = screen.getAllByRole("button");
     const menuBtn = buttons.find(b => b.querySelector(".lucide-ellipsis-vertical"));
     if (menuBtn) fireEvent.click(menuBtn);
@@ -94,25 +93,24 @@ describe("ClienteHeader", () => {
     expect(defaultProps.onSuspender).toHaveBeenCalled();
   });
 
-  it("calls onEdit when edit button is clicked", () => {
+  it("onEdit é prop herdada mas não há botão Editar no header atual", () => {
+    // Desde Perfil v2 Wave 2 a edição vive no `ClienteEditDrawer` acionado
+    // externamente (menu do page.tsx), não mais em um botão do header.
+    // Mantemos a prop por retrocompat mas ela não dispara clique interno.
     render(<ClienteHeader {...defaultProps} />);
-    // In the DOM output we saw it as a button with a Pencil icon
-    // I will use a selector that doesn't rely on aria-label if it's not present
-    const buttons = screen.getAllByRole("button");
-    const editButton = buttons[0]; // Based on DOM output it's the first one
-    fireEvent.click(editButton);
-    expect(defaultProps.onEdit).toHaveBeenCalled();
+    expect(defaultProps.onEdit).not.toHaveBeenCalled();
   });
 
   it("renders plan info when provided", () => {
     render(
-      <ClienteHeader 
-        {...defaultProps} 
-        planoAtivo={{ dataFim: "2024-12-31" }} 
+      <ClienteHeader
+        {...defaultProps}
+        planoAtivo={{ dataFim: "2024-12-31" }}
         planoAtivoInfo={{ id: "p1", nome: "Plano Black", valor: 100, periodo: "mensal" } as any}
       />
     );
-    expect(screen.getByText("Plano Black")).toBeInTheDocument();
+    // Nome e data ficam no mesmo span: "Plano Black — vigente ate 31/12/2024"
+    expect(screen.getByText(/Plano Black/)).toBeInTheDocument();
     expect(screen.getByText(/31\/12\/2024/)).toBeInTheDocument();
   });
 });

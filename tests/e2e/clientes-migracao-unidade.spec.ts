@@ -270,8 +270,11 @@ test.describe("Migração administrativa de unidade-base", () => {
     await modal.locator("textarea").fill("Cliente passou a operar definitivamente na nova unidade.");
     await modal.getByRole("button", { name: "Confirmar migração" }).click();
 
-    await expect(page.getByText(`Unidade-base migrada de ${TENANT_ORIGEM.nome} para ${TENANT_DESTINO.nome}.`)).toBeVisible();
-    await expect(page.getByText("Migração concluída com sucesso. Auditoria: audit-migracao-123.")).toBeVisible();
+    // Timeout elevado: após `setTenant`, o workspace invalida queries e
+    // recarrega todo o contexto, o que pode atrasar a renderização do
+    // banner de migração sob carga paralela.
+    await expect(page.getByText(`Unidade-base migrada de ${TENANT_ORIGEM.nome} para ${TENANT_DESTINO.nome}.`)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Migração concluída com sucesso. Auditoria: audit-migracao-123.")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(TENANT_DESTINO.nome).first()).toBeVisible();
   });
 

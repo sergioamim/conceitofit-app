@@ -283,10 +283,17 @@ test.describe("Exclusão controlada de clientes", () => {
       availableTenants: [{ tenantId: TENANT.id, defaultTenant: true }],
     });
 
+    // Perfil v3 Wave 4 (AC4.6/4.7): Cartões saiu do TabBar e virou drawer
+    // no ActionMenu; `?tab=cartoes` é deep-link que abre o drawer
+    // automaticamente. `exact: true` desambigua o heading do painel do
+    // SheetTitle sr-only.
     await page.goto(`/clientes/${ALUNO.id}?tab=cartoes`, { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(new RegExp(`/clientes/${ALUNO.id}\\?tab=cartoes$`));
-    await expect(page.getByRole("button", { name: "Cartões" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Cartões" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cartões", exact: true })).toBeVisible();
+
+    // Fecha o drawer de cartões (ESC) para liberar o ActionMenu do header.
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("heading", { name: "Cartões", exact: true })).toBeHidden();
 
     await page.locator("button.h-9.px-2").click();
     await expect(page.getByRole("button", { name: "Excluir cliente" })).toHaveCount(0);

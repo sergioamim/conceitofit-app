@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowRightLeft,
   Camera,
+  CreditCard,
   KeyRound,
   Lock,
   Merge,
@@ -17,12 +18,16 @@ import {
   ScanFace,
   Shield,
   ShieldOff,
+  Sparkles,
   Trash2,
   Unlock,
   UserX,
 } from "lucide-react";
 import { formatDate } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
+import { FotoAvisoBadge } from "@/components/shared/foto-aviso-badge";
+import { cn } from "@/lib/utils";
+import { getHaloRingClass, type HaloStatus } from "@/lib/domain/status-helpers";
 
 export function ClienteHeader({
   aluno,
@@ -49,6 +54,9 @@ export function ClienteHeader({
   onExcluirDadosPessoais,
   onExcluirDadosSensiveis,
   acessoBloqueado = false,
+  haloStatus,
+  onAcoesClick,
+  acoesCount,
 }: {
   aluno: Aluno;
   planoAtivo?: { dataFim: string } | null;
@@ -74,6 +82,9 @@ export function ClienteHeader({
   onExcluirDadosPessoais?: () => void;
   onExcluirDadosSensiveis?: () => void;
   acessoBloqueado?: boolean;
+  haloStatus?: HaloStatus;
+  onAcoesClick?: () => void;
+  acoesCount?: number;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -101,11 +112,14 @@ export function ClienteHeader({
       ].join(" ")}
     >
       <div className="flex items-start gap-4">
-        {/* W1.2 — Foto grande (100px) */}
+        {/* W1.2 — Foto grande (100px) + halo de status (Perfil v3 Wave 1) */}
         <div className="relative">
           <button
             type="button"
-            className="relative block size-24 overflow-hidden rounded-full border-2 border-border bg-secondary shadow-inner transition hover:border-gym-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+            className={cn(
+              "relative block size-24 overflow-hidden rounded-full border-2 border-border bg-secondary shadow-inner transition hover:border-gym-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card",
+              haloStatus ? `ring-2 ring-offset-2 ring-offset-card ${getHaloRingClass(haloStatus)}` : ""
+            )}
             onClick={onChangeFoto}
             disabled={!onChangeFoto}
             aria-label={onChangeFoto ? `Abrir foto de ${aluno.nome}` : undefined}
@@ -129,6 +143,16 @@ export function ClienteHeader({
               <Camera className="size-3.5" />
             </Button>
           )}
+          {aluno.fotoAptaCatraca === false || !aluno.foto ? (
+            <FotoAvisoBadge
+              motivo={
+                aluno.fotoMotivoInaptidao
+                ?? (!aluno.foto ? "Cliente sem foto cadastrada — solicite nova foto na recepcao" : null)
+              }
+              size="md"
+              className="absolute -left-1 -top-1 border-2 border-card"
+            />
+          ) : null}
         </div>
         <div>
           <div className="flex items-center gap-3">
@@ -175,6 +199,26 @@ export function ClienteHeader({
             <MessageCircle className="size-4" />
           </a>
         )}
+        {/* Perfil v3 Wave 2 — Drawer de próximas ações */}
+        {onAcoesClick && (
+          <Button
+            variant="outline"
+            className={cn(
+              "h-9 gap-2",
+              (acoesCount ?? 0) > 0 ? "border-gym-accent/40 text-gym-accent hover:bg-gym-accent/10" : ""
+            )}
+            onClick={onAcoesClick}
+            aria-label={`Abrir próximas ações${acoesCount ? ` (${acoesCount})` : ""}`}
+          >
+            <Sparkles className="size-4" />
+            Ações
+            {typeof acoesCount === "number" && acoesCount > 0 && (
+              <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-gym-accent px-1.5 py-0.5 text-[10px] font-bold text-background">
+                {acoesCount}
+              </span>
+            )}
+          </Button>
+        )}
         {onLiberarAcesso && (
           <Button variant="outline" className="h-9 border-amber-500/40 text-amber-300" onClick={onLiberarAcesso}>
             <KeyRound className="mr-2 size-4" />
@@ -198,6 +242,16 @@ export function ClienteHeader({
           </Button>
           {menuOpen && (
             <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-52 rounded-md border border-border bg-card p-1 shadow-lg">
+              {/* Perfil v3 Wave 4 (AC4.6): Cartões sai do TabBar e entra aqui */}
+              <MenuButton
+                icon={CreditCard}
+                label="Cartões"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onCartoes();
+                }}
+              />
+
               {/* Suspender / Reativar */}
               {suspenso ? (
                 <MenuButton icon={Unlock} label="Reativar" onClick={() => { setMenuOpen(false); onReativar(); }} />

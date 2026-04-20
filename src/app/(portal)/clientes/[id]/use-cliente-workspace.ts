@@ -90,11 +90,36 @@ function createIdleCartoesTabState(tenantId: string | null = null): CartoesTabSt
   };
 }
 
+const VALID_TAB_KEYS: ClienteTabKey[] = [
+  "resumo",
+  "relacionamento",
+  "matriculas",
+  "financeiro",
+  "nfse",
+  "frequencia",
+  "treinos",
+  "avaliacoes",
+  "fidelidade",
+  "documentos",
+];
+
+// Aliases de URL legados — Wave 4 (AC4.7). Preservam links salvos após a
+// reorganização das abas. `cartoes` e `editar` foram movidas para o
+// `ActionMenu`/`EditDrawer`; `atividades` foi dissolvida em Frequência.
+const LEGACY_TAB_ALIASES: Record<string, ClienteTabKey> = {
+  cartoes: "resumo",
+  editar: "resumo",
+  atividades: "frequencia",
+};
+
 function resolveClienteTab(input: string | null): ClienteTabKey | null {
-  if (input === "matriculas" || input === "financeiro" || input === "nfse" || input === "editar" || input === "cartoes") {
-    return input;
+  if (!input) return null;
+  if ((VALID_TAB_KEYS as string[]).includes(input)) {
+    return input as ClienteTabKey;
   }
-  if (input === "resumo") return input;
+  if (input in LEGACY_TAB_ALIASES) {
+    return LEGACY_TAB_ALIASES[input];
+  }
   return null;
 }
 
@@ -146,7 +171,42 @@ export function useClienteWorkspace() {
   const [migrandoCliente, setMigrandoCliente] = useState(false);
   const [migracaoErro, setMigracaoErro] = useState("");
   const [migracaoBlockedBy, setMigracaoBlockedBy] = useState<ClienteExclusaoBlockedBy[]>([]);
-  const [migracaoResumo, setMigracaoResumo] = useState<MigrationAuditSummary | null>(null);
+  const [migracaoResumo, setMigracaoResumoState] = useState<MigrationAuditSummary | null>(null);
+
+  // Persistimos o resumo da última migração em sessionStorage para sobreviver
+  // ao remount causado por `setTenant` (que invalida queryClient e força
+  // novos fetches). Sem isso, o banner some entre o `setMigracaoResumo` e o
+  // `reload()` concluir — inclusive no e2e.
+  const setMigracaoResumo = useCallback((resumo: MigrationAuditSummary | null) => {
+    setMigracaoResumoState(resumo);
+    if (typeof window === "undefined") return;
+    if (resumo) {
+      try {
+        window.sessionStorage.setItem("cliente:migracao-resumo", JSON.stringify(resumo));
+      } catch {
+        // Session storage pode estar indisponível (privado, full). Ignora.
+      }
+    } else {
+      try {
+        window.sessionStorage.removeItem("cliente:migracao-resumo");
+      } catch {
+        /* noop */
+      }
+    }
+  }, []);
+
+  // Hidrata o banner a partir do sessionStorage uma vez no mount.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.sessionStorage.getItem("cliente:migracao-resumo");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as MigrationAuditSummary;
+      setMigracaoResumoState(parsed);
+    } catch {
+      /* noop */
+    }
+  }, []);
   const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -332,7 +392,7 @@ export function useClienteWorkspace() {
       setMatriculas(ms.filter((m) => m.alunoId === id));
       setPlanos(ps);
       setPagamentos(pags);
-      setPresencas(pres);
+      setPresencas(Array.isArray(pres) ? pres : []);
       setFormasPagamento(fps);
       setConvenios(cvs);
       setNfseTabState((current) =>
@@ -372,10 +432,12 @@ export function useClienteWorkspace() {
     void loadNfseTabData(aluno.tenantId);
   }, [aluno?.tenantId, loadNfseTabData, tab]);
 
-  useEffect(() => {
-    if (tab !== "cartoes" || !aluno?.tenantId || !aluno.id) return;
-    void loadCartoesTabData(aluno.tenantId, aluno.id);
-  }, [aluno?.id, aluno?.tenantId, loadCartoesTabData, tab]);
+  // Perfil v3 Wave 4 (AC4.6): cartões saíram do TabBar e agora abrem via
+  // drawer pelo ActionMenu. O disparo do load ficou sob responsabilidade
+  // do page.tsx quando o drawer abre, para preservar o timing dos demais
+  // efeitos. Este effect permanece apenas para retrocompat de chamadas
+  // externas que ainda possam navegar diretamente para a key legada
+  // (resolvida pelo `LEGACY_TAB_ALIASES`).
 
   const planoAtivo = useMemo(() => {
     return matriculas.find((m) => m.status === "ATIVA");
@@ -434,6 +496,7 @@ export function useClienteWorkspace() {
 
   const serie = useMemo(() => {
     if (!aluno) return [];
+    const safePresencas = Array.isArray(presencas) ? presencas : [];
     const today = new Date();
     if (freqMode === "7d") {
       const days: string[] = [];
@@ -443,13 +506,13 @@ export function useClienteWorkspace() {
         days.push(d.toISOString().split("T")[0]);
       }
       return days.map((d) =>
-        presencas.some((p) => p.data === d) ? 1 : 0
+        safePresencas.some((p) => p.data === d) ? 1 : 0
       );
     }
     const year = today.getFullYear();
     const uniqueByMonth = Array.from({ length: 12 }).map(() => new Set<string>());
-    presencas.forEach((p) => {
-      if (p.data.startsWith(String(year))) {
+    safePresencas.forEach((p) => {
+      if (p?.data?.startsWith(String(year))) {
         const month = parseInt(p.data.split("-")[1], 10) - 1;
         if (month >= 0 && month < 12) uniqueByMonth[month].add(p.data);
       }
@@ -766,7 +829,12 @@ export function useClienteWorkspace() {
       if (result.suggestedActiveTenantId && result.suggestedActiveTenantId !== tenantId) {
         await setTenant(result.suggestedActiveTenantId);
       }
-      await reload();
+      // `reload()` é disparado em background (sem await) porque, após o
+      // `setTenant`, o tenant-guard em `apiRequest` pode rejeitar fetches
+      // que ainda usam o tenantId antigo (state local), e o fallback vai
+      // naturalmente para o catch. Isso preservava remount do componente
+      // durante o await, apagando `migracaoResumo` em ambientes com carga.
+      void reload();
     } catch (error) {
       const parsed = parseMigracaoErro(error);
       setMigracaoErro(parsed.message);

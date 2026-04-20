@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import nextDynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { ClienteHeader } from "@/components/shared/cliente-header";
 import { ClienteCartoesPanel } from "@/components/shared/cliente-cartoes-panel";
 import { ClientePhotoModal } from "@/components/shared/cliente-photo-modal";
 import { ClienteTabs } from "@/components/shared/cliente-tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
+import { isPagamentoEmAberto, getClienteHaloStatus } from "@/lib/domain/status-helpers";
+import { computeSugestoesCliente, type SugestaoAcao } from "@/lib/domain/sugestoes-cliente";
+import { isPerfilDrawerAcoesEnabled } from "@/lib/feature-flags";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 import { formatBRL, formatDate } from "@/lib/formatters";
@@ -19,9 +21,18 @@ import { useClienteWorkspace } from "./use-cliente-workspace";
 import { ClienteDialogs } from "./cliente-dialogs";
 import { ClienteSidebar } from "./cliente-sidebar";
 import { ClienteStatusBanners } from "./cliente-status-banners";
+import { ClienteSinaisRail, buildSinaisCliente } from "./cliente-sinais-rail";
+import { ClienteAcoesDrawer } from "./cliente-acoes-drawer";
+import { ClienteFrequenciaCard } from "./cliente-frequencia-card";
+import { ClientePlanoCard } from "./cliente-plano-card";
+import { ClienteRiscoCard } from "./cliente-risco-card";
 import { ClienteEditDrawer } from "./cliente-edit-drawer";
 import { ClienteTabRelacionamento } from "./cliente-tab-relacionamento";
-import { ClienteTabAtividades } from "./cliente-tab-atividades";
+import { ClienteTabFrequencia } from "./cliente-tab-frequencia";
+import { ClienteTabTreinos } from "./cliente-tab-treinos";
+import { ClienteTabAvaliacoes } from "./cliente-tab-avaliacoes";
+import { ClienteTabFidelidade } from "./cliente-tab-fidelidade";
+import { ClienteTabDocumentos } from "./cliente-tab-documentos";
 import { ClienteMesclarDialog } from "./cliente-mesclar-dialog";
 
 const NovaMatriculaModal = nextDynamic(
@@ -49,12 +60,101 @@ export default function ClienteDetalhePage() {
   const w = useClienteWorkspace();
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [mesclarOpen, setMesclarOpen] = useState(false);
+  const [acoesOpen, setAcoesOpen] = useState(false);
+  const [cartoesOpen, setCartoesOpen] = useState(false);
+
+  // Perfil v3 Wave 4 (AC4.7): deep-link `?tab=cartoes|editar` abre o
+  // drawer/painel correspondente para preservar bookmarks após a
+  // reorganização das abas. Lemos só no mount (window.location) para
+  // não re-disparar em navegações internas como `setTenant` pós-migração.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const alias = new URLSearchParams(window.location.search).get("tab");
+    if (alias === "cartoes") setCartoesOpen(true);
+    if (alias === "editar") setEditDrawerOpen(true);
+  }, []);
+
+  // Load cartões sob demanda apenas quando o drawer está aberto. Gatilha
+  // durante deep-link (mount) e também se o tenant muda com drawer aberto.
+  // Drawer fechado = sem load → não interfere em outros efeitos (migração).
+  useEffect(() => {
+    if (!cartoesOpen || !w.aluno?.tenantId) return;
+    if (w.cartoesTabState.status !== "idle") return;
+    void w.loadCartoesTabData(w.aluno.tenantId, w.aluno.id);
+  }, [cartoesOpen, w.aluno, w.cartoesTabState.status, w.loadCartoesTabData]);
 
   if (w.loading) return <div className="text-sm text-muted-foreground">Carregando cliente...</div>;
   if (w.loadError) return <div className="text-sm text-gym-danger">{w.loadError}</div>;
   if (!w.aluno) return <div className="text-sm text-muted-foreground">Cliente não encontrado para a unidade ativa.</div>;
 
   const aluno = w.aluno;
+  const acessoBloqueado =
+    aluno.status === "SUSPENSO" ||
+    (aluno as { bloqueioSistemaAtualId?: string | null }).bloqueioSistemaAtualId != null;
+
+  // Perfil v3 — Wave 1: halo do avatar + rail de sinais
+  const haloStatus = getClienteHaloStatus({
+    aluno,
+    suspenso: w.suspenso,
+    acessoBloqueado,
+    pendenteFinanceiro: w.pendenteFinanceiro,
+    planoAtivo: w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null,
+  });
+
+  const sinais = buildSinaisCliente({
+    planoAtivo: w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null,
+    planoAtivoInfo: w.planoAtivoInfo ?? null,
+    presencas: w.presencas,
+    pagamentos: w.pagamentos,
+    saldo: w.saldo,
+    recorrente: w.recorrente,
+  });
+
+  // Perfil v3 — Wave 2: drawer de próximas ações
+  const drawerAcoesEnabled = isPerfilDrawerAcoesEnabled();
+  const sugestoes: SugestaoAcao[] = drawerAcoesEnabled
+    ? computeSugestoesCliente({
+        aluno,
+        suspenso: w.suspenso,
+        acessoBloqueado,
+        pendenteFinanceiro: w.pendenteFinanceiro,
+        planoAtivo: w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null,
+        pagamentos: w.pagamentos,
+        presencas: w.presencas,
+      })
+    : [];
+
+  async function handleSugestaoAction(s: SugestaoAcao) {
+    switch (s.tipo) {
+      case "cobrar-pendencia":
+        w.setTab("financeiro");
+        return;
+      case "reativar-plano":
+        try {
+          await w.handleReativar();
+        } catch (e) {
+          w.setActionError(normalizeErrorMessage(e));
+        }
+        return;
+      case "renovar-plano":
+        w.setNovaMatriculaOpen(true);
+        return;
+      case "retencao-ativa":
+      case "parabens-aniversario": {
+        const telefone = aluno.telefone?.replace(/\D/g, "");
+        if (telefone) {
+          window.open(`https://wa.me/55${telefone}`, "_blank", "noopener,noreferrer");
+        }
+        return;
+      }
+      case "liberar-acesso":
+        if (w.openLiberarAcesso) w.openLiberarAcesso();
+        return;
+      case "solicitar-foto":
+        w.setPhotoModalOpen(true);
+        return;
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -83,6 +183,42 @@ export default function ClienteDetalhePage() {
       <ClienteEditDrawer open={editDrawerOpen} aluno={aluno} onClose={() => setEditDrawerOpen(false)} onSaved={w.reload} />
       <ClienteMesclarDialog open={mesclarOpen} onClose={() => setMesclarOpen(false)} aluno={aluno} tenantId={w.tenantId ?? ""} onMerged={w.reload} />
       <ClienteDialogs {...w} />
+      {drawerAcoesEnabled && (
+        <ClienteAcoesDrawer
+          open={acoesOpen}
+          onOpenChange={setAcoesOpen}
+          sugestoes={sugestoes}
+          onAction={handleSugestaoAction}
+        />
+      )}
+      {/* Perfil v3 Wave 4 (AC4.6): Cartões via drawer em vez de tab */}
+      <Sheet
+        open={cartoesOpen}
+        onOpenChange={(next) => {
+          setCartoesOpen(next);
+          // Carrega sob demanda ao abrir o drawer (preserva timing do
+          // workspace para não afetar outros efeitos como migração).
+          if (next && w.cartoesTabState.status === "idle" && aluno.tenantId) {
+            void w.loadCartoesTabData(aluno.tenantId, aluno.id);
+          }
+        }}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Cartões do cliente</SheetTitle>
+          </SheetHeader>
+          <ClienteCartoesPanel
+            cartoes={w.cartoesTabState.cartoes}
+            bandeiras={w.cartoesTabState.bandeiras}
+            loading={w.cartoesTabState.status === "loading" || w.cartoesTabState.status === "idle"}
+            error={w.cartoesTabState.status === "error" ? w.cartoesTabState.error : null}
+            onCreate={w.handleCreateCartao}
+            onDelete={w.handleDeleteCartao}
+            onReload={w.handleReloadCartoes}
+            onSetDefault={w.handleSetDefaultCartao}
+          />
+        </SheetContent>
+      </Sheet>
 
       {/* Breadcrumb + Header */}
       <Breadcrumb items={[{ label: "Clientes", href: "/clientes" }, { label: aluno.nome }]} />
@@ -91,7 +227,7 @@ export default function ClienteDetalhePage() {
         planoAtivo={w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null}
         planoAtivoInfo={w.planoAtivoInfo ?? null}
         suspenso={w.suspenso}
-        onCartoes={() => w.setTab("cartoes")}
+        onCartoes={() => setCartoesOpen(true)}
         onNovaVenda={() => w.setNovaMatriculaOpen(true)}
         onSuspender={() => w.setSuspenderOpen(true)}
         onReativar={async () => {
@@ -123,7 +259,10 @@ export default function ClienteDetalhePage() {
             await w.reload();
           } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
         }}
-        acessoBloqueado={aluno.status === "SUSPENSO" || aluno.bloqueioSistemaAtualId != null}
+        acessoBloqueado={acessoBloqueado}
+        haloStatus={haloStatus}
+        onAcoesClick={drawerAcoesEnabled ? () => setAcoesOpen(true) : undefined}
+        acoesCount={drawerAcoesEnabled ? sugestoes.length : undefined}
         onExcluirDadosPessoais={async () => {
           if (!confirm("Excluir dados pessoais deste cliente? Esta acao e IRREVERSIVEL. Nome, email, telefone e CPF serao anonimizados.")) return;
           const justificativa = prompt("Justificativa (obrigatoria):");
@@ -146,6 +285,9 @@ export default function ClienteDetalhePage() {
         }}
       />
 
+      {/* Perfil v3 Wave 1 — Rail de sinais de saúde do cliente */}
+      <ClienteSinaisRail sinais={sinais} />
+
       {/* Feedback banners */}
       {w.liberarAcessoInfo && <div className="rounded-xl border border-gym-accent/40 bg-gym-accent/10 p-3 text-sm text-gym-accent">{w.liberarAcessoInfo}</div>}
       {w.actionError && <div className="rounded-xl border border-gym-danger/40 bg-gym-danger/10 p-3 text-sm text-gym-danger">{w.actionError}</div>}
@@ -153,8 +295,7 @@ export default function ClienteDetalhePage() {
         <div className="rounded-xl border border-gym-teal/40 bg-gym-teal/10 p-3 text-sm text-gym-teal">
           <p className="font-medium">Unidade-base migrada de {w.migracaoResumo.tenantOrigemNome ?? "origem atual"} para {w.migracaoResumo.tenantDestinoNome ?? "destino informado"}.</p>
           <p className="mt-1 text-xs text-gym-teal/90">
-            {w.migracaoResumo.message ?? "A operação estrutural foi registrada com auditoria."}
-            {w.migracaoResumo.auditId ? ` Auditoria: ${w.migracaoResumo.auditId}.` : ""}
+            {`${w.migracaoResumo.message ?? "A operação estrutural foi registrada com auditoria."}${w.migracaoResumo.auditId ? ` Auditoria: ${w.migracaoResumo.auditId}.` : ""}`}
           </p>
         </div>
       )}
@@ -193,35 +334,27 @@ export default function ClienteDetalhePage() {
         <div className="space-y-4">
           {w.tab === "resumo" && (
             <>
-              {/* Cards de métricas (3 colunas, sem "Dados principais" que foi para sidebar) */}
+              {/* Perfil v3 Wave 3 — Cards de métricas: Frequência (14d) · Plano · Risco */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-xl border border-border bg-card p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Frequência</p>
-                    <div className="flex gap-1">
-                      <button onClick={() => w.setFreqMode("7d")} className={cn("rounded-md border px-2 py-0.5 text-[11px]", w.freqMode === "7d" ? "border-gym-accent bg-gym-accent/10 text-gym-accent" : "border-border text-muted-foreground")}>7 dias</button>
-                      <button onClick={() => w.setFreqMode("ano")} className={cn("rounded-md border px-2 py-0.5 text-[11px]", w.freqMode === "ano" ? "border-gym-accent bg-gym-accent/10 text-gym-accent" : "border-border text-muted-foreground")}>Anual</button>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-end gap-1.5 h-12">
-                    {w.serie.map((v, i) => (<div key={`${v}-${i}`} className="w-full rounded-sm bg-gym-accent/70" style={{ height: `${6 + v * 6}px` }} />))}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-border bg-card p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Saldo financeiro</p>
-                  <p className={cn("mt-2 font-display text-2xl font-extrabold", w.saldo >= 0 ? "text-gym-teal" : "text-gym-danger")}>{formatBRL(Math.abs(w.saldo))}</p>
-                  <p className="text-xs text-muted-foreground">{w.saldo >= 0 ? "Crédito" : "Devedor"}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-card p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Próxima cobrança</p>
-                  {w.recorrente ? (
-                    <>
-                      <p className="mt-2 text-sm font-semibold">{formatDate(w.recorrente.data)}</p>
-                      <p className="text-sm text-muted-foreground">{w.recorrente.plano.nome}</p>
-                      <p className="font-display text-lg font-bold text-gym-accent">{formatBRL(w.recorrente.valor)}</p>
-                    </>
-                  ) : (<p className="mt-2 text-sm text-muted-foreground">Sem cobrança recorrente</p>)}
-                </div>
+                <ClienteFrequenciaCard presencas={w.presencas} />
+                <ClientePlanoCard
+                  planoAtivo={w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null}
+                  planoAtivoInfo={w.planoAtivoInfo ?? null}
+                  recorrente={w.recorrente}
+                  onRenovar={() => w.setNovaMatriculaOpen(true)}
+                  onPausar={!w.suspenso ? () => w.setSuspenderOpen(true) : undefined}
+                />
+                <ClienteRiscoCard
+                  input={{
+                    aluno,
+                    suspenso: w.suspenso,
+                    pendenteFinanceiro: w.pendenteFinanceiro,
+                    planoAtivo: w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null,
+                    pagamentos: w.pagamentos,
+                    presencas: w.presencas,
+                  }}
+                  clienteNome={aluno.nome}
+                />
               </div>
 
               {/* Contratos */}
@@ -307,19 +440,6 @@ export default function ClienteDetalhePage() {
             </div>
           )}
 
-          {w.tab === "cartoes" && (
-            <ClienteCartoesPanel
-              cartoes={w.cartoesTabState.cartoes}
-              bandeiras={w.cartoesTabState.bandeiras}
-              loading={w.cartoesTabState.status === "loading" || w.cartoesTabState.status === "idle"}
-              error={w.cartoesTabState.status === "error" ? w.cartoesTabState.error : null}
-              onCreate={w.handleCreateCartao}
-              onDelete={w.handleDeleteCartao}
-              onReload={w.handleReloadCartoes}
-              onSetDefault={w.handleSetDefaultCartao}
-            />
-          )}
-
           {w.tab === "financeiro" && (
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="font-display text-base font-bold">Financeiro</h2>
@@ -382,12 +502,11 @@ export default function ClienteDetalhePage() {
             />
           )}
 
-          {w.tab === "atividades" && (
-            <ClienteTabAtividades
-              alunoId={aluno.id}
-              tenantId={aluno.tenantId}
-            />
-          )}
+          {w.tab === "frequencia" && <ClienteTabFrequencia presencas={w.presencas} />}
+          {w.tab === "treinos" && <ClienteTabTreinos />}
+          {w.tab === "avaliacoes" && <ClienteTabAvaliacoes />}
+          {w.tab === "fidelidade" && <ClienteTabFidelidade />}
+          {w.tab === "documentos" && <ClienteTabDocumentos />}
         </div>
 
         {/* Sidebar direita — sempre visível */}
@@ -422,3 +541,4 @@ export default function ClienteDetalhePage() {
     </div>
   );
 }
+
