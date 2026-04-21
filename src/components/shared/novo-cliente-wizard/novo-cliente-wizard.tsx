@@ -1,23 +1,29 @@
 "use client";
 
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, Link2, Save, ShoppingCart } from "lucide-react";
 import type { Aluno } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
 
-import { StepDot } from "./wizard-types";
 import { Step1Dados } from "./wizard-step-dados";
-import { Step2Plano } from "./wizard-step-plano";
-import { Step3Pagamento } from "./wizard-step-pagamento";
-import { StepSucesso } from "./wizard-step-sucesso";
-import { useClienteWizardState } from "./use-cliente-wizard-state";
+import { useClienteWizardState, type CreateOnlyOptions } from "./use-cliente-wizard-state";
 
-interface CreateOnlyOptions {
-  openSale?: boolean;
-}
+export type NovoClienteWizardOptions = CreateOnlyOptions;
 
+/**
+ * Wizard "Novo cliente" — VUN-5.1.
+ *
+ * Após VUN-5.1 o wizard tem **um único step** (Dados) e termina com 3 CTAs
+ * no footer:
+ *   1. Salvar             → cria Prospect e volta para listagem
+ *   2. Vender             → cria Prospect e redireciona para o cockpit
+ *   3. Vincular agregador → cria Prospect e abre modal VincularAgregador
+ *
+ * A navegação real (push, modal) fica a cargo do `onDone` no caller, que
+ * recebe o `Aluno` criado e o objeto `opts` com `openSale | linkAggregator`.
+ */
 export function NovoClienteWizard({
   open,
   onClose,
@@ -25,7 +31,7 @@ export function NovoClienteWizard({
 }: {
   open: boolean;
   onClose: () => void;
-  onDone?: (created?: Aluno, opts?: CreateOnlyOptions) => void | Promise<void>;
+  onDone?: (created?: Aluno, opts?: NovoClienteWizardOptions) => void | Promise<void>;
 }) {
   const w = useClienteWizardState({ onClose, onDone });
 
@@ -37,7 +43,7 @@ export function NovoClienteWizard({
       }
     }}>
       <RestoreDraftModal
-        hasDraft={w.draft.hasDraft && open && w.step === 1 && !w.result}
+        hasDraft={w.draft.hasDraft && open && !w.loading}
         onRestore={w.draft.restoreDraft}
         onDiscard={w.draft.discardDraft}
       />
@@ -51,68 +57,73 @@ export function NovoClienteWizard({
             </DialogHeader>
             <FormDraftIndicator lastModified={w.draft.lastModified} />
           </div>
-
-          {w.step <= 3 && (
-            <div className="flex items-center gap-4 text-sm mt-4">
-              {[1, 2, 3].map((s) => (
-                <div key={s} className="flex items-center gap-2">
-                  <StepDot step={s} current={w.step} />
-                  {s < 3 && <div className="h-px w-10 bg-border/70 hidden sm:block" />}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); w.handleNext(); }} className="flex flex-col min-h-0 flex-1">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            // Default do <form> = "Salvar". Vender / Vincular usam botões dedicados.
+            void w.handleCreateOnly();
+          }}
+          className="flex flex-col min-h-0 flex-1"
+        >
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {w.step === 1 && (
-              <Step1Dados
-                form={w.form}
-                showComplementary={w.showComplementary}
-                onToggleComplementary={() => w.setShowComplementary((v) => !v)}
-              />
-            )}
-            {w.step === 2 && <Step2Plano planos={w.planos} form={w.form} onSelectPlano={(p) => w.commercial.addPlanoToCart(p)} />}
-            {w.step === 3 && <Step3Pagamento fps={w.formas} form={w.form} commercial={w.commercial} />}
-            {w.step === 4 && w.result && <StepSucesso result={w.result} plano={w.planos.find((p) => p.id === w.form.getValues().selectedPlano)} onClose={() => void w.handleSuccessClose()} />}
+            <Step1Dados
+              form={w.form}
+              showComplementary={w.showComplementary}
+              onToggleComplementary={() => w.setShowComplementary((v) => !v)}
+            />
           </div>
 
-          {w.step <= 3 && (
-            <div className={cn("shrink-0 p-4 sm:px-6 border-t bg-card transition-colors duration-300", w.isDirty ? "border-t-gym-accent shadow-[0_-4px_15px_-4px_rgba(var(--gym-accent),0.25)]" : "border-border")}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className={cn(
+            "shrink-0 p-4 sm:px-6 border-t bg-card transition-colors duration-300",
+            w.isDirty ? "border-t-gym-accent shadow-[0_-4px_15px_-4px_rgba(var(--gym-accent),0.25)]" : "border-border",
+          )}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onClose()}
+                className="border-border"
+                disabled={w.loading}
+              >
+                <ArrowLeft className="size-3.5" />
+                Voltar
+              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void w.handleCreateOnly()}
+                  disabled={w.loading || !w.isValid}
+                  data-testid="wizard-cta-salvar"
+                >
+                  <Save className="size-3.5" />
+                  Salvar
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => (w.step === 1 ? onClose() : w.setStep((s) => s - 1))}
                   className="border-border"
+                  onClick={() => void w.handleCreateOnly({ openSale: true })}
+                  disabled={w.loading || !w.isValid}
+                  data-testid="wizard-cta-vender"
                 >
-                  <ArrowLeft className="size-3.5" />
-                  Voltar
+                  <ShoppingCart className="size-3.5" />
+                  Vender
                 </Button>
-                <div className="flex flex-wrap items-center gap-2">
-                  {w.step === 1 && (
-                    <>
-                      <Button type="button" variant="secondary" onClick={() => w.handleCreateOnly()} disabled={w.loading || !w.isValid}>
-                        Apenas pre-cadastro
-                      </Button>
-                      <Button type="button" variant="outline" onClick={() => w.handleCreateOnly({ openSale: true })} disabled={w.loading || !w.isValid} className="border-border">
-                        Pré-cadastro + venda
-                      </Button>
-                      <Button type="button" onClick={w.handleNext} disabled={w.loading || !w.isValid}>
-                        Continuar com plano <ArrowRight className="size-3.5" />
-                      </Button>
-                    </>
-                  )}
-                  {w.step > 1 && (
-                    <Button type="button" onClick={w.handleNext} disabled={w.loading}>
-                      {w.loading ? "Salvando..." : "Próximo"} <ArrowRight className="size-3.5" />
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  type="button"
+                  onClick={() => void w.handleCreateOnly({ linkAggregator: true })}
+                  disabled={w.loading || !w.isValid}
+                  data-testid="wizard-cta-vincular-agregador"
+                >
+                  <Link2 className="size-3.5" />
+                  Vincular agregador
+                </Button>
               </div>
             </div>
-          )}
+          </div>
         </form>
       </DialogContent>
     </Dialog>

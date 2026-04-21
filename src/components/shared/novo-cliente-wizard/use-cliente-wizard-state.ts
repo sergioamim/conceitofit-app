@@ -4,26 +4,28 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import {
-  createAlunoComMatriculaService,
-  createAlunoService,
-} from "@/lib/tenant/comercial/runtime";
-import { createCartaoClienteApi } from "@/lib/api/cartoes";
+import { createAlunoService } from "@/lib/tenant/comercial/runtime";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import type { Aluno, Sexo, TipoFormaPagamento } from "@/lib/types";
-import { logger } from "@/lib/shared/logger";
+import type { Aluno, Sexo } from "@/lib/types";
 import { useFormDraft } from "@/hooks/use-form-draft";
-import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
 
 import {
   clienteWizardSchema,
   type ClienteWizardForm,
-  type CriarAlunoComMatriculaResponse,
   normalizeDraftEmail,
 } from "./wizard-types";
 
-interface CreateOnlyOptions {
+/**
+ * Opções emitidas pelo wizard ao chamar `onDone`. Após VUN-5.1 o wizard tem
+ * 3 CTAs e cada uma indica o destino pretendido para o caller:
+ *
+ * - `openSale: true`        → caller redireciona para `/vendas/nova?clienteId=…`
+ * - `linkAggregator: true`  → caller abre o `<VincularAgregadorModal />`
+ * - sem flags               → "Salvar" (volta para listagem)
+ */
+export interface CreateOnlyOptions {
   openSale?: boolean;
+  linkAggregator?: boolean;
 }
 
 const DEFAULT_VALUES: ClienteWizardForm = {
@@ -77,18 +79,25 @@ function buildAlunoPayload(vals: ClienteWizardForm) {
   };
 }
 
+/**
+ * State hook do wizard "Novo cliente".
+ *
+ * VUN-5.1: o wizard agora **termina no Step 1** (dados do cliente). Os
+ * passos plano/pagamento/sucesso foram removidos do fluxo — substituídos
+ * pelos 3 CTAs:
+ *  - Salvar             → cria prospect e fecha
+ *  - Vender             → cria prospect + abre cockpit `/vendas/nova`
+ *  - Vincular agregador → cria prospect + abre modal VincularAgregador
+ *
+ * Toda a navegação pós-criação fica a cargo do `onDone(created, opts)`.
+ */
 export function useClienteWizardState(callbacks: {
   onClose: () => void;
   onDone?: (created?: Aluno, opts?: CreateOnlyOptions) => void | Promise<void>;
 }) {
   const { tenantId } = useTenantContext();
-  const [step, setStep] = useState(1);
   const [showComplementary, setShowComplementary] = useState(false);
-  const [result, setResult] = useState<CriarAlunoComMatriculaResponse | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const commercial = useCommercialFlow({ tenantId });
-  const { planos, formasPagamento: formas, clearCart, dryRun } = commercial;
 
   const form = useForm<ClienteWizardForm>({
     resolver: zodResolver(clienteWizardSchema),
@@ -100,89 +109,9 @@ export function useClienteWizardState(callbacks: {
   const { formState: { isDirty, isValid }, trigger, getValues, reset } = form;
 
   function fullReset() {
-    setStep(1);
     setShowComplementary(false);
     reset();
-    setResult(null);
-    clearCart();
     draft.clearDraft();
-  }
-
-  async function handleSuccessClose() {
-    const created = result?.aluno;
-    callbacks.onClose();
-    fullReset();
-    if (callbacks.onDone) {
-      await callbacks.onDone(created);
-    }
-  }
-
-  async function handleNext() {
-    if (step === 1) {
-      const ok = await trigger(["nome", "telefone", "cpf", "email"]);
-      if (!ok) return;
-      setStep(2);
-      return;
-    }
-    if (step === 2) {
-      const pId = getValues("selectedPlano");
-      if (!pId) return;
-      setStep(3);
-      return;
-    }
-    if (step === 3) {
-      if (!tenantId) return;
-      const ok = await trigger(["pagamento.formaPagamento", "pagamento.dataInicio"]);
-      if (!ok) return;
-
-      const vals = getValues();
-      const plano = planos.find((p) => p.id === vals.selectedPlano);
-      if (!plano || !vals.pagamento.formaPagamento || !dryRun) return;
-
-      setLoading(true);
-      try {
-        const resp = await createAlunoComMatriculaService({
-          tenantId,
-          data: {
-            ...buildAlunoPayload(vals),
-            planoId: dryRun?.planoContexto.planoId || (vals.selectedPlano as string),
-            dataInicio: dryRun?.planoContexto.dataInicio || (vals.pagamento.dataInicio as string),
-            formaPagamento: vals.pagamento.formaPagamento as TipoFormaPagamento,
-            desconto: dryRun?.descontoTotal ?? 0,
-          },
-        });
-
-        // Salvar cartão de crédito se recorrente e dados preenchidos
-        if (
-          vals.pagamento.formaPagamento === "RECORRENTE" &&
-          vals.pagamento.cartaoNumero?.trim() &&
-          resp.aluno?.id
-        ) {
-          try {
-            await createCartaoClienteApi({
-              tenantId,
-              alunoId: resp.aluno.id,
-              data: {
-                bandeiraId: "",
-                titular: vals.nome,
-                cpfTitular: vals.pagamento.cartaoCpfTitular || vals.cpf || undefined,
-                numeroCartao: vals.pagamento.cartaoNumero,
-                cvv: vals.pagamento.cartaoCvv || undefined,
-                validade: vals.pagamento.cartaoValidade || undefined,
-              },
-            });
-          } catch (cardError) {
-            logger.error("Falha ao salvar cartao do cliente", { module: "wizard", error: cardError });
-          }
-        }
-
-        setResult(resp);
-        setStep(4);
-        draft.clearDraft();
-      } finally {
-        setLoading(false);
-      }
-    }
   }
 
   async function handleCreateOnly(options?: CreateOnlyOptions) {
@@ -211,17 +140,12 @@ export function useClienteWizardState(callbacks: {
   }
 
   return {
-    step, setStep,
     showComplementary, setShowComplementary,
-    result,
     loading,
     form,
     draft,
     isDirty, isValid,
-    planos, formas, commercial,
     fullReset,
-    handleNext,
     handleCreateOnly,
-    handleSuccessClose,
   };
 }

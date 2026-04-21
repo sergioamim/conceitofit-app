@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { Plus, Users, UserPlus, TrendingUp, CreditCard, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
+import { VincularAgregadorModal } from "@/components/shared/vincular-agregador-modal";
 import { BiMetricCard } from "@/components/shared/bi-metric-card";
 import { ExportMenu, type ExportColumn, type ServerExportAction } from "@/components/shared/export-menu";
 import { exportarAlunosApi } from "@/lib/api/exportacao";
@@ -25,6 +26,10 @@ const EXPORT_COLUMNS: ExportColumn<import("@/lib/types").Aluno>[] = [
 
 function ClientesPageContent() {
   const ws = useClientesWorkspace();
+
+  // VUN-5.1/5.2: state local para o CTA "Vincular agregador" do wizard.
+  // Após criar o prospect, abrimos o modal passando o `alunoId` recém-criado.
+  const [vincularAgregadorAlunoId, setVincularAgregadorAlunoId] = useState<string | null>(null);
 
   const serverExportActions = useMemo<ServerExportAction[]>(() => {
     const statusParam = ws.filtro === "TODOS" ? undefined : ws.filtro;
@@ -56,7 +61,27 @@ function ClientesPageContent() {
               ws.router.push(`/vendas/nova?clienteId=${encodeURIComponent(created.id)}&prefill=1`);
               return;
             }
-            ws.router.push(`/clientes/${encodeURIComponent(created.id)}`);
+            if (opts?.linkAggregator) {
+              // VUN-5.1 + VUN-5.2: abre o modal de vínculo logo após o cadastro.
+              setVincularAgregadorAlunoId(created.id);
+              return;
+            }
+            // CTA "Salvar": permanece na listagem (já recarregada acima).
+          }}
+        />
+      ) : null}
+
+      {vincularAgregadorAlunoId ? (
+        <VincularAgregadorModal
+          open
+          onOpenChange={(next) => {
+            if (!next) setVincularAgregadorAlunoId(null);
+          }}
+          alunoId={vincularAgregadorAlunoId}
+          tenantId={ws.tenantId}
+          onSuccess={() => {
+            setVincularAgregadorAlunoId(null);
+            void ws.load();
           }}
         />
       ) : null}

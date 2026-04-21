@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
 
 // ── Mocks ──────────────────────────────────────────────────────────────
@@ -21,36 +21,10 @@ vi.mock("@/components/shared/novo-cliente-wizard/wizard-step-dados", () => ({
   Step1Dados: () => <div data-testid="step-dados">Step 1</div>,
 }));
 
-vi.mock("@/components/shared/novo-cliente-wizard/wizard-step-plano", () => ({
-  Step2Plano: () => <div data-testid="step-plano">Step 2</div>,
-}));
-
-vi.mock("@/components/shared/novo-cliente-wizard/wizard-step-pagamento", () => ({
-  Step3Pagamento: () => <div data-testid="step-pagamento">Step 3</div>,
-}));
-
-vi.mock("@/components/shared/novo-cliente-wizard/wizard-step-sucesso", () => ({
-  StepSucesso: () => <div data-testid="step-sucesso">Sucesso</div>,
-}));
-
-const mockPlanos = [
-  { id: "p1", nome: "Mensal Básico", tipo: "MENSAL", valor: 99, atividades: [], beneficios: [], ativo: true },
-  { id: "p2", nome: "Trimestral", tipo: "TRIMESTRAL", valor: 249, atividades: [], beneficios: [], ativo: true },
-];
-const mockFormas = [
-  { id: "fp1", tipo: "PIX", taxaPercentual: 0, parcelasMax: 1, prazoRecebimentoDias: 0, nome: "PIX", ativo: true },
-];
-
 const mockCreateAlunoService = vi.fn().mockResolvedValue({ id: "aluno-1", nome: "Maria Teste" });
-const mockCreateAlunoComMatriculaService = vi.fn().mockResolvedValue({
-  aluno: { id: "aluno-1", nome: "Maria Teste" },
-  matricula: { id: "m1" },
-  pagamento: { id: "pg1" },
-});
 
 vi.mock("@/lib/tenant/comercial/runtime", () => ({
   createAlunoService: (...args: unknown[]) => mockCreateAlunoService(...args),
-  createAlunoComMatriculaService: (...args: unknown[]) => mockCreateAlunoComMatriculaService(...args),
   checkAlunoDuplicidadeService: vi.fn().mockResolvedValue({ exists: false }),
 }));
 
@@ -59,19 +33,6 @@ vi.mock("@/lib/tenant/hooks/use-session-context", () => ({
     tenantId: "tenant-123",
     tenantResolved: true,
     activeTenantId: "tenant-123",
-  }),
-}));
-
-vi.mock("@/lib/tenant/hooks/use-commercial-flow", () => ({
-  useCommercialFlow: () => ({
-    planos: mockPlanos,
-    formasPagamento: mockFormas,
-    clearCart: vi.fn(),
-    addPlanoToCart: vi.fn(),
-    dryRun: {
-      planoContexto: { planoId: "p1", dataInicio: "2026-03-29" },
-      descontoTotal: 0,
-    },
   }),
 }));
 
@@ -101,14 +62,11 @@ vi.mock("@/components/shared/novo-cliente-wizard/use-cliente-wizard-state", () =
 
 function createWizardState(overrides: Record<string, unknown> = {}) {
   return {
-    step: 1,
-    setStep: vi.fn(),
     showComplementary: false,
     setShowComplementary: vi.fn(),
-    result: null,
     loading: false,
     form: {
-      getValues: vi.fn(() => ({ selectedPlano: "p1" })),
+      getValues: vi.fn(() => ({})),
     },
     draft: {
       hasDraft: false,
@@ -119,13 +77,7 @@ function createWizardState(overrides: Record<string, unknown> = {}) {
     },
     isDirty: false,
     isValid: false,
-    planos: mockPlanos,
-    formas: mockFormas,
-    commercial: {
-      addPlanoToCart: vi.fn(),
-    },
     fullReset: vi.fn(),
-    handleNext: vi.fn(),
     handleCreateOnly: vi.fn(),
     ...overrides,
   };
@@ -146,7 +98,7 @@ function renderWizard(
 
 // ── Tests ──────────────────────────────────────────────────────────────
 
-describe("NovoClienteWizard", () => {
+describe("NovoClienteWizard (VUN-5.1: 3 CTAs finais)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -164,69 +116,71 @@ describe("NovoClienteWizard", () => {
       expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
     });
 
-    it("exibe step indicators com step 1 ativo", () => {
-      renderWizard();
-      expect(screen.getByText("Dados")).toBeInTheDocument();
-      expect(screen.getByText("Plano")).toBeInTheDocument();
-      expect(screen.getByText("Pagamento")).toBeInTheDocument();
-    });
-
-    it("exibe campos do step 1 via testid", () => {
+    it("renderiza apenas o Step 1 (dados) — sem stepper Plano/Pagamento", () => {
       renderWizard();
       expect(screen.getByTestId("step-dados")).toBeInTheDocument();
+      // VUN-5.1: removido o stepper Dados/Plano/Pagamento.
+      expect(screen.queryByText("Plano")).not.toBeInTheDocument();
+      expect(screen.queryByText("Pagamento")).not.toBeInTheDocument();
     });
   });
 
-  describe("Navegação entre steps", () => {
-    it("botão 'Voltar' no step 1 fecha o wizard", () => {
+  describe("3 CTAs no footer (VUN-5.1)", () => {
+    it("renderiza os 3 CTAs: Salvar, Vender, Vincular agregador", () => {
+      renderWizard({}, { isValid: true });
+      expect(screen.getByTestId("wizard-cta-salvar")).toBeInTheDocument();
+      expect(screen.getByTestId("wizard-cta-vender")).toBeInTheDocument();
+      expect(screen.getByTestId("wizard-cta-vincular-agregador")).toBeInTheDocument();
+    });
+
+    it("desabilita os 3 CTAs quando o form é inválido", () => {
+      renderWizard();
+      expect(screen.getByTestId("wizard-cta-salvar")).toBeDisabled();
+      expect(screen.getByTestId("wizard-cta-vender")).toBeDisabled();
+      expect(screen.getByTestId("wizard-cta-vincular-agregador")).toBeDisabled();
+    });
+
+    it("habilita os 3 CTAs quando o form é válido", () => {
+      renderWizard({}, { isValid: true });
+      expect(screen.getByTestId("wizard-cta-salvar")).toBeEnabled();
+      expect(screen.getByTestId("wizard-cta-vender")).toBeEnabled();
+      expect(screen.getByTestId("wizard-cta-vincular-agregador")).toBeEnabled();
+    });
+
+    it("CTA 'Salvar' chama handleCreateOnly() sem opts", async () => {
+      const handleCreateOnly = vi.fn();
+      renderWizard({}, { isValid: true, handleCreateOnly });
+      fireEvent.click(screen.getByTestId("wizard-cta-salvar"));
+      await waitFor(() => {
+        expect(handleCreateOnly).toHaveBeenCalledWith();
+      });
+    });
+
+    it("CTA 'Vender' chama handleCreateOnly({ openSale: true })", async () => {
+      const handleCreateOnly = vi.fn();
+      renderWizard({}, { isValid: true, handleCreateOnly });
+      fireEvent.click(screen.getByTestId("wizard-cta-vender"));
+      await waitFor(() => {
+        expect(handleCreateOnly).toHaveBeenCalledWith({ openSale: true });
+      });
+    });
+
+    it("CTA 'Vincular agregador' chama handleCreateOnly({ linkAggregator: true })", async () => {
+      const handleCreateOnly = vi.fn();
+      renderWizard({}, { isValid: true, handleCreateOnly });
+      fireEvent.click(screen.getByTestId("wizard-cta-vincular-agregador"));
+      await waitFor(() => {
+        expect(handleCreateOnly).toHaveBeenCalledWith({ linkAggregator: true });
+      });
+    });
+  });
+
+  describe("Botão Voltar", () => {
+    it("botão 'Voltar' fecha o wizard", () => {
       const onClose = vi.fn();
       renderWizard({ onClose });
       fireEvent.click(screen.getByText("Voltar"));
       expect(onClose).toHaveBeenCalled();
-    });
-
-    it("exibe botão 'Continuar com plano' no step 1", () => {
-      renderWizard();
-      expect(screen.getByText(/continuar com plano/i)).toBeInTheDocument();
-    });
-
-    it("exibe botão 'Apenas pre-cadastro' no step 1", () => {
-      renderWizard();
-      expect(screen.getByText("Apenas pre-cadastro")).toBeInTheDocument();
-    });
-  });
-
-  describe("Validação por step", () => {
-    it("mantém as ações desabilitadas quando o estado do formulário é inválido", () => {
-      renderWizard();
-      expect(screen.getByText("Apenas pre-cadastro")).toBeDisabled();
-      expect(screen.getByText(/continuar com plano/i)).toBeDisabled();
-    });
-
-    it("botão Apenas pre-cadastro está desabilitado com formulário inválido", () => {
-      renderWizard();
-      const btn = screen.getByText("Apenas pre-cadastro");
-      expect(btn).toBeDisabled();
-    });
-  });
-
-  describe("Pré-cadastro (createOnly)", () => {
-    it("botão apenas pre-cadastro visível no step 1", () => {
-      renderWizard();
-      expect(screen.getByText("Apenas pre-cadastro")).toBeInTheDocument();
-      expect(screen.getByText(/continuar com plano/i)).toBeInTheDocument();
-    });
-
-    it("botões de ação desabilitados quando form inválido", () => {
-      renderWizard();
-      expect(screen.getByText("Apenas pre-cadastro")).toBeDisabled();
-      expect(screen.getByText(/continuar com plano/i)).toBeDisabled();
-    });
-
-    it("habilita as ações quando o estado do formulário é válido", () => {
-      renderWizard({}, { isValid: true });
-      expect(screen.getByText("Apenas pre-cadastro")).toBeEnabled();
-      expect(screen.getByText(/continuar com plano/i)).toBeEnabled();
     });
   });
 });
