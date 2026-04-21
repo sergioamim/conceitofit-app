@@ -8,7 +8,7 @@ import { useVendaWorkspace } from "./hooks/use-venda-workspace";
 import { CatalogTabs } from "./components/catalog-tabs";
 import { ClientAndItemSelector } from "./components/client-and-item-selector";
 import { CartItems } from "./components/cart-items";
-import { SaleSummary } from "./components/sale-summary";
+import { PaymentPanel } from "./components/payment-panel";
 import { ScannerDialog } from "./components/scanner-dialog";
 import { CockpitShell } from "./components/cockpit-shell";
 import { UniversalSearch } from "./components/universal-search";
@@ -123,7 +123,7 @@ function NovaVendaPageContent() {
         columnRight={
           <div className="flex flex-col gap-4 p-4">
             <CartItems workspace={workspace} />
-            <SaleSummary
+            <PaymentPanel
               workspace={workspace}
               handleConfirmPayment={handleConfirmPayment}
             />

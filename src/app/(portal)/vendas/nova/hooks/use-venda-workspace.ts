@@ -7,7 +7,7 @@ import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
-import type { PagamentoVenda, Plano, Tenant, TipoVenda } from "@/lib/types";
+import type { PagamentoVenda, Plano, Tenant, TipoFormaPagamento, TipoVenda } from "@/lib/types";
 import type { SuggestionOption } from "@/components/shared/suggestion-input";
 
 import { useBarcodeScanner } from "./use-barcode-scanner";
@@ -34,6 +34,7 @@ export function useVendaWorkspace() {
     dataInicioPlano, setDataInicioPlano,
     renovacaoAutomaticaPlano, setRenovacaoAutomaticaPlano,
     cart, addPlanoToCart, addItemToCart, clearCart, processSale,
+    total,
   } = flow;
 
   // Extracted hooks
@@ -154,6 +155,62 @@ export function useVendaWorkspace() {
     [cart]
   );
 
+  // ---------------------------------------------------------------------
+  // VUN-3.3 — Expansão do workspace: forma de pagamento, parcelas,
+  // autorização (NSU) e flag canFinalize consumidos pelo PaymentPanel.
+  // Estado aditivo: não altera o shape legado usado por SaleSummary.
+  // ---------------------------------------------------------------------
+  const [formaPagamento, setFormaPagamentoState] = useState<TipoFormaPagamento>("PIX");
+  const [parcelas, setParcelasState] = useState<number>(1);
+  const [autorizacao, setAutorizacaoState] = useState<string>("");
+
+  const setParcelas = useCallback((next: number) => {
+    const clamped = Math.min(12, Math.max(1, Math.floor(Number.isFinite(next) ? next : 1)));
+    setParcelasState(clamped);
+  }, []);
+
+  const setAutorizacao = useCallback((next: string) => {
+    setAutorizacaoState(String(next ?? "").replace(/\D/g, "").slice(0, 12));
+  }, []);
+
+  /**
+   * Setter combinado: ao trocar a forma de pagamento, cuida dos resets
+   * dependentes (parcelas → 1 se não for crédito; NSU → "" se não for
+   * crédito/débito). Evita useEffect-cascades e satisfaz a regra
+   * `react-hooks/set-state-in-effect`.
+   */
+  const setFormaPagamento = useCallback((next: TipoFormaPagamento) => {
+    setFormaPagamentoState(next);
+    if (next !== "CARTAO_CREDITO") {
+      setParcelasState(1);
+    }
+    if (next !== "CARTAO_CREDITO" && next !== "CARTAO_DEBITO") {
+      setAutorizacaoState("");
+    }
+  }, []);
+
+  const requiresNsu = formaPagamento === "CARTAO_CREDITO" || formaPagamento === "CARTAO_DEBITO";
+  const nsuValid = !requiresNsu || autorizacao.trim().length >= 4;
+  const valorParcela = useMemo(() => {
+    const n = Math.max(1, parcelas || 1);
+    return total > 0 ? total / n : 0;
+  }, [parcelas, total]);
+
+  /**
+   * canFinalize (RN-005 + RN-013):
+   *  - carrinho não-vazio e total > 0
+   *  - se requireCliente (plano/serviço), clienteId presente
+   *  - se crédito/débito, NSU ≥ 4 dígitos
+   *  - forma de pagamento selecionada (sempre true: state tem default PIX)
+   */
+  const canFinalize = useMemo(() => {
+    if (cart.length === 0) return false;
+    if (total <= 0) return false;
+    if (requireCliente && !clienteId) return false;
+    if (!nsuValid) return false;
+    return true;
+  }, [cart.length, total, requireCliente, clienteId, nsuValid]);
+
   function handleAddPlano(plano: Plano) {
     const maxParcelas = Math.max(1, Number(plano.parcelasMaxAnuidade ?? 1));
     const parcelas = Math.min(maxParcelas, Math.max(1, parseInt(parcelasAnuidade, 10) || 1));
@@ -188,10 +245,14 @@ export function useVendaWorkspace() {
       items.setSelectedItemId("");
       items.setItemQuery("");
       items.setQtd("1");
+      // VUN-3.3: reset dos extras do PaymentPanel após confirmação.
+      setFormaPagamentoState("PIX");
+      setParcelasState(1);
+      setAutorizacaoState("");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erro ao registrar venda");
     }
-  }, [alunos, clearCart, clienteId, flow.cupomAppliedCode, flow.cupomPercent, items, processSale, receipt, requireCliente, selectedPlano]);
+  }, [alunos, clearCart, clienteId, flow.cupomAppliedCode, flow.cupomPercent, items, processSale, queryClient, receipt, requireCliente, selectedPlano, tenantId]);
 
   return {
     ...flow,
@@ -227,5 +288,15 @@ export function useVendaWorkspace() {
     // Actions
     handleAddPlano,
     handleConfirmPayment,
+
+    // VUN-3.3 — Payment panel workspace extras
+    formaPagamento,
+    setFormaPagamento,
+    parcelas,
+    setParcelas,
+    autorizacao,
+    setAutorizacao,
+    valorParcela,
+    canFinalize,
   };
 }
