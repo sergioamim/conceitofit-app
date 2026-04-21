@@ -499,6 +499,7 @@ export default function ClienteDetalhePage() {
               aluno={aluno}
               matriculas={w.matriculas}
               pagamentos={w.pagamentos}
+              presencas={w.presencas}
             />
           )}
 

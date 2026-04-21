@@ -4,20 +4,19 @@ import { useMemo, useState } from "react";
 import { formatDate } from "@/lib/formatters";
 import { formatBRL } from "@/lib/shared/formatters";
 import {
-  CalendarDays,
+  Activity,
   CreditCard,
   FileText,
   Pause,
-  Play,
   ShoppingCart,
   UserPlus,
 } from "lucide-react";
-import type { Aluno, Matricula, Pagamento } from "@/lib/types";
+import type { Aluno, Matricula, Pagamento, Presenca } from "@/lib/types";
 
 type TimelineEvent = {
   id: string;
   date: string;
-  type: "contrato" | "pagamento" | "suspensao" | "cadastro" | "venda";
+  type: "contrato" | "pagamento" | "suspensao" | "cadastro" | "venda" | "checkin";
   title: string;
   description?: string;
   status?: string;
@@ -30,6 +29,7 @@ const EVENT_ICONS: Record<TimelineEvent["type"], React.ComponentType<{ className
   suspensao: Pause,
   cadastro: UserPlus,
   venda: ShoppingCart,
+  checkin: Activity,
 };
 
 const EVENT_COLORS: Record<TimelineEvent["type"], string> = {
@@ -38,15 +38,20 @@ const EVENT_COLORS: Record<TimelineEvent["type"], string> = {
   suspensao: "border-gym-warning/40 bg-gym-warning/10 text-gym-warning",
   cadastro: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
   venda: "border-violet-500/40 bg-violet-500/10 text-violet-400",
+  checkin: "border-sky-500/40 bg-sky-500/10 text-sky-400",
 };
 
 interface ClienteTabRelacionamentoProps {
   aluno: Aluno;
   matriculas: Matricula[];
   pagamentos: Pagamento[];
+  presencas?: Presenca[];
 }
 
-export function ClienteTabRelacionamento({ aluno, matriculas, pagamentos }: ClienteTabRelacionamentoProps) {
+// Perfil v3 Wave 4 (AC4.3): timeline unificada inclui check-ins além de
+// contratos/pagamentos/suspensão/cadastro. Tipos aula/avaliacao/comunicacao
+// previstos no PRD ficam aguardando backend dedicado (próxima iteração).
+export function ClienteTabRelacionamento({ aluno, matriculas, pagamentos, presencas = [] }: ClienteTabRelacionamentoProps) {
   const [filtro, setFiltro] = useState<TimelineEvent["type"] | "todos">("todos");
 
   const events = useMemo(() => {
@@ -99,19 +104,31 @@ export function ClienteTabRelacionamento({ aluno, matriculas, pagamentos }: Clie
       });
     }
 
+    // Check-ins (Wave 4 AC4.3)
+    for (const p of presencas) {
+      items.push({
+        id: `checkin-${p.id}`,
+        date: p.data,
+        type: "checkin",
+        title: "Check-in",
+        description: [p.origem, p.atividade, p.horario].filter(Boolean).join(" · ") || undefined,
+      });
+    }
+
     // Ordenar do mais recente para o mais antigo
     items.sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
 
     return items;
-  }, [aluno, matriculas, pagamentos]);
+  }, [aluno, matriculas, pagamentos, presencas]);
 
   const filtered = filtro === "todos" ? events : events.filter((e) => e.type === filtro);
 
   const filterOptions: { value: TimelineEvent["type"] | "todos"; label: string }[] = [
     { value: "todos", label: "Todos" },
+    { value: "checkin", label: "Check-ins" },
     { value: "contrato", label: "Contratos" },
     { value: "pagamento", label: "Pagamentos" },
-    { value: "suspensao", label: "Suspensoes" },
+    { value: "suspensao", label: "Suspensões" },
     { value: "cadastro", label: "Cadastro" },
   ];
 
