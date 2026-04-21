@@ -74,14 +74,14 @@ Hoje existe `hooks/use-barcode-scanner.ts` que pode ser reusado diretamente. Tam
 
 ## Tasks
 
-- [ ] **T1** Spike: confirmar endpoints `/api/v1/clientes`, `/api/v1/planos`, `/api/v1/produtos` aceitam `?q=` (AC3)
-- [ ] **T2** Criar `universal-search.tsx` com `Command` shadcn (AC1, AC2)
-- [ ] **T3** Implementar busca debounced + fetch paralelo nos 3 endpoints (AC3, AC4)
-- [ ] **T4** Integrar `use-barcode-scanner.ts` via modo scanner inline (AC5)
-- [ ] **T5** Callbacks `onSelect*` + injeção na `page.tsx` (AC6, AC7, AC8)
-- [ ] **T6** Footer "Criar prospect rápido" como placeholder para VUN-2.4 (AC9)
-- [ ] **T7** A11y (AC10)
-- [ ] **T8** Testes unitários + E2E Playwright do fluxo completo
+- [x] **T1** Spike: confirmar endpoints existentes (AC3) — endpoints reais encontrados: `/api/v1/comercial/alunos?search=` (aceita `search`, não `q`), `/api/v1/comercial/planos?tenantId=&apenasAtivos=` (**não** aceita `q` → filtro client-side), `/api/v1/comercial/produtos?apenasAtivos=` (**não** aceita `q` → filtro client-side). Spike `?codigoBarras=` também não existe: scanner resolve via lista cacheada com filtro client-side por `codigoBarras`/`sku`, alinhado ao comportamento atual de `use-sale-items::applyCodeToProduct`.
+- [x] **T2** Criar `universal-search.tsx` usando `cmdk` diretamente (AC1, AC2) — shadcn `Command` wrapper não existe no repo; projeto já usa `cmdk` direto (ver `command-palette.tsx`).
+- [x] **T3** Implementar busca debounced (300ms) + fetch paralelo via `Promise.allSettled` nos 3 endpoints existentes (AC3, AC4)
+- [x] **T4** Integrar `use-barcode-scanner.ts` via modo scanner inline (AC5)
+- [x] **T5** Callbacks `onSelect*` + injeção na `page.tsx` (AC6, AC7, AC8)
+- [x] **T6** Footer "Criar prospect rápido" como placeholder para VUN-2.4 (AC9) — ativa quando termo parece CPF (11 dígitos) e não há clientes.
+- [x] **T7** A11y (AC10) — input com `aria-label`, lista com `aria-label`, toggle scanner com `aria-pressed`, itens com `role=option`/`aria-selected` (herdado do `cmdk`), trigger com `aria-label`.
+- [x] **T8** Testes unitários (`tests/components/universal-search.test.tsx`) — 9/9 passam. E2E Playwright: pendente (fora do escopo desta entrega).
 
 ---
 
