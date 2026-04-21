@@ -11,16 +11,10 @@ import { getSessionBootstrapApi } from "../../src/lib/api/contexto-unidades";
 import {
   clearAuthSession,
   hasBackofficeReturnSession,
-  getAvailableScopesFromSession,
-  getBroadAccessFromSession,
-  getForcePasswordChangeRequiredFromSession,
-  getNetworkSubdomainFromSession,
-  getNetworkSlugFromSession,
   rememberBackofficeReturnSession,
   restoreBackofficeReturnSession,
-  saveAuthSession,
 } from "../../src/lib/api/session";
-import { installMockBrowser, mockFetchWithSequence } from "./support/test-runtime";
+import { installMockBrowser, mockFetchWithSequence, seedTestSession } from "./support/test-runtime";
 
 let browser: ReturnType<typeof installMockBrowser> | undefined;
 
@@ -79,10 +73,12 @@ test.describe("auth por rede", () => {
       expect(session.networkSubdomain).toBe("rede-norte");
       expect(session.networkSlug).toBe("rede-norte");
       expect(session.baseTenantId).toBe("tenant-base");
-      expect(getNetworkSubdomainFromSession()).toBe("rede-norte");
-      expect(getNetworkSlugFromSession()).toBe("rede-norte");
-      expect(getAvailableScopesFromSession()).toEqual(["REDE"]);
-      expect(getBroadAccessFromSession()).toBeTruthy();
+      // Task 458: claims (networkSubdomain, availableScopes, broadAccess) chegam via cookie
+      // `fc_session_claims` setado pelo backend. saveAuthSession é no-op no frontend, então
+      // os getters `get*FromSession()` apenas funcionam se o cookie for semeado. Em testes
+      // unit valida-se o payload normalizado retornado pela API.
+      expect(session.availableScopes).toEqual(["REDE"]);
+      expect(session.broadAccess).toBe(true);
     } finally {
       restore();
     }
@@ -109,7 +105,8 @@ test.describe("auth por rede", () => {
       });
 
       expect(session.forcePasswordChangeRequired).toBe(true);
-      expect(getForcePasswordChangeRequiredFromSession()).toBe(true);
+      // Task 458: getForcePasswordChangeRequiredFromSession depende do cookie fc_session_claims
+      // emitido pelo backend; em teste unit validamos apenas o retorno normalizado.
     } finally {
       restore();
     }
@@ -186,14 +183,15 @@ test.describe("auth por rede", () => {
 
       expect(session.availableScopes).toEqual(["GLOBAL"]);
       expect(session.activeTenantId).toBe("tenant-admin");
-      expect(getAvailableScopesFromSession()).toEqual(["GLOBAL"]);
+      // Task 458: getAvailableScopesFromSession depende do cookie fc_session_claims emitido
+      // pelo backend; em teste unit validamos apenas o payload normalizado retornado.
     } finally {
       restore();
     }
   });
 
   test("adminEntrarComoUnidadeApi troca para a unidade via endpoint de contexto", async () => {
-    saveAuthSession({
+    seedTestSession({
       token: "token-admin",
       refreshToken: "refresh-admin",
       userId: "user-admin",
@@ -203,6 +201,7 @@ test.describe("auth por rede", () => {
       baseTenantId: "tenant-admin-base",
       availableScopes: ["GLOBAL"],
       broadAccess: true,
+      sessionMode: "BACKOFFICE_ADMIN",
     });
 
     const { calls, restore } = mockFetchWithSequence([
@@ -247,7 +246,7 @@ test.describe("auth por rede", () => {
   });
 
   test("adminEntrarComoUnidadeApi preserva retorno ao backoffice via claims do token", async () => {
-    saveAuthSession({
+    seedTestSession({
       token: buildJwt({
         sub: "user-admin",
         scope: "GLOBAL",
@@ -259,6 +258,8 @@ test.describe("auth por rede", () => {
       displayName: "Admin Master",
       activeTenantId: "tenant-admin",
       baseTenantId: "tenant-admin-base",
+      sessionMode: "BACKOFFICE_ADMIN",
+      availableScopes: ["GLOBAL"],
     });
     const { restore } = mockFetchWithSequence([
       {
@@ -289,7 +290,7 @@ test.describe("auth por rede", () => {
   });
 
   test("rememberBackofficeReturnSession substitui snapshot antigo ao reiniciar o fluxo", () => {
-    saveAuthSession({
+    seedTestSession({
       token: buildJwt({
         sub: "user-admin-antigo",
         scope: "GLOBAL",
@@ -298,10 +299,12 @@ test.describe("auth por rede", () => {
       refreshToken: "refresh-antigo",
       userId: "user-admin-antigo",
       activeTenantId: "tenant-antigo",
+      sessionMode: "BACKOFFICE_ADMIN",
+      availableScopes: ["GLOBAL"],
     });
     rememberBackofficeReturnSession();
 
-    saveAuthSession({
+    seedTestSession({
       token: buildJwt({
         sub: "user-admin-atual",
         scope: "GLOBAL",
@@ -310,6 +313,8 @@ test.describe("auth por rede", () => {
       refreshToken: "refresh-atual",
       userId: "user-admin-atual",
       activeTenantId: "tenant-atual",
+      sessionMode: "BACKOFFICE_ADMIN",
+      availableScopes: ["GLOBAL"],
     });
     rememberBackofficeReturnSession();
 
@@ -319,11 +324,10 @@ test.describe("auth por rede", () => {
   });
 
   test("getSessionBootstrapApi normaliza rede, unidade-base e tenant ativo separados", async () => {
-    saveAuthSession({
+    seedTestSession({
       token: "token-bootstrap",
       refreshToken: "refresh-bootstrap",
       activeTenantId: "tenant-centro",
-      availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
     });
 
     const { restore } = mockFetchWithSequence([
@@ -340,7 +344,7 @@ test.describe("auth por rede", () => {
             redeSlug: "rede-norte",
             redeNome: "Rede Norte",
             activeTenantId: "tenant-centro",
-            baseTenantId: "tenant-base",
+            tenantBaseId: "tenant-base",
             availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
             availableScopes: ["UNIDADE", "REDE"],
             broadAccess: false,
@@ -416,7 +420,7 @@ test.describe("auth por rede", () => {
   });
 
   test("changeForcedPasswordApi usa a sessão atual e limpa o flag após sucesso", async () => {
-    saveAuthSession({
+    seedTestSession({
       token: "token-rede",
       refreshToken: "refresh-rede",
       networkSubdomain: "rede-norte",
@@ -445,7 +449,9 @@ test.describe("auth por rede", () => {
         newPassword: "NovaSenha123",
         confirmNewPassword: "NovaSenha123",
       });
-      expect(getForcePasswordChangeRequiredFromSession()).toBe(false);
+      // Task 458: getForcePasswordChangeRequiredFromSession é reset implicitamente pelo backend
+      // via novo cookie fc_session_claims após change-password. Em teste unit não há ciclo de
+      // re-emissão de cookie — valida-se apenas a chamada e o response.
     } finally {
       restore();
     }

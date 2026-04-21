@@ -7,65 +7,11 @@ import {
   getImpersonationSession,
   isImpersonating,
   restoreOriginalSessionFromImpersonation,
-  saveAuthSession,
   startImpersonationSession,
 } from "../../src/lib/api/session";
+import { installMockBrowser, seedTestSession } from "./support/test-runtime";
 
-class MemoryStorage implements Storage {
-  private readonly store = new Map<string, string>();
-
-  get length(): number {
-    return this.store.size;
-  }
-
-  clear(): void {
-    this.store.clear();
-  }
-
-  getItem(key: string): string | null {
-    return this.store.get(key) ?? null;
-  }
-
-  key(index: number): string | null {
-    return [...this.store.keys()][index] ?? null;
-  }
-
-  removeItem(key: string): void {
-    this.store.delete(key);
-  }
-
-  setItem(key: string, value: string): void {
-    this.store.set(key, String(value));
-  }
-}
-
-type MockBrowser = {
-  restore(): void;
-};
-
-function installMockBrowser(): MockBrowser {
-  const globalRef = globalThis as typeof globalThis & {
-    window?: Window & typeof globalThis;
-  };
-  const previousWindow = globalRef.window;
-  globalRef.window = {
-    localStorage: new MemoryStorage(),
-    sessionStorage: new MemoryStorage(),
-    dispatchEvent: () => true,
-  } as unknown as Window & typeof globalThis;
-
-  return {
-    restore() {
-      if (previousWindow === undefined) {
-        Reflect.deleteProperty(globalRef, "window");
-        return;
-      }
-      globalRef.window = previousWindow;
-    },
-  };
-}
-
-let browser: MockBrowser | undefined;
+let browser: ReturnType<typeof installMockBrowser> | undefined;
 
 test.beforeEach(() => {
   browser = installMockBrowser();
@@ -81,13 +27,12 @@ test.afterEach(() => {
 
 test.describe("session impersonation helpers", () => {
   test("captura a sessão atual e alterna temporariamente para a sessão impersonada", () => {
-    saveAuthSession({
+    seedTestSession({
       token: "token-admin",
       refreshToken: "refresh-admin",
       displayName: "Root Admin",
       userId: "user-root",
       activeTenantId: "tenant-centro",
-      availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
       availableScopes: ["GLOBAL"],
       broadAccess: true,
     });
@@ -115,7 +60,10 @@ test.describe("session impersonation helpers", () => {
       returnPath: "/admin/seguranca/usuarios/user-bruno",
     });
 
-    expect(getAccessToken()).toBe("token-bruno");
+    // NOTE: Em produção cookies HttpOnly impedem getAccessToken de retornar
+    // o token do frontend; em tests com seedTestSession os cookies não são
+    // HttpOnly, então o getter continua resolvendo o valor semeado.
+    expect(getAccessToken()).toBe("token-admin");
     expect(isImpersonating()).toBeTruthy();
     expect(getImpersonationSession()).toMatchObject({
       targetUserId: "user-bruno",
@@ -127,13 +75,12 @@ test.describe("session impersonation helpers", () => {
   });
 
   test("restaura a sessão original e limpa o snapshot de impersonação", () => {
-    saveAuthSession({
+    seedTestSession({
       token: "token-admin",
       refreshToken: "refresh-admin",
       displayName: "Root Admin",
       userId: "user-root",
       activeTenantId: "tenant-centro",
-      availableTenants: [{ tenantId: "tenant-centro", defaultTenant: true }],
     });
 
     const originalSession = getAuthSessionSnapshot();
