@@ -2,14 +2,14 @@
 
 import { Suspense, useCallback } from "react";
 import nextDynamic from "next/dynamic";
-import { formatBRL } from "@/lib/formatters";
+import { formatBRL, formatCpf } from "@/lib/formatters";
 import type { CartItem } from "@/lib/tenant/hooks/use-commercial-flow";
+import type { Prospect } from "@/lib/types";
 import { useVendaWorkspace } from "./hooks/use-venda-workspace";
-import { SaleTypeSelector } from "./components/sale-type-selector";
+import { CatalogTabs } from "./components/catalog-tabs";
 import { ClientAndItemSelector } from "./components/client-and-item-selector";
-import { PlanoDetails } from "./components/plano-details";
 import { CartItems } from "./components/cart-items";
-import { SaleSummary } from "./components/sale-summary";
+import { PaymentPanel } from "./components/payment-panel";
 import { ScannerDialog } from "./components/scanner-dialog";
 import { CockpitShell } from "./components/cockpit-shell";
 import { UniversalSearch } from "./components/universal-search";
@@ -65,6 +65,21 @@ function NovaVendaPageContent() {
     [addItemToCart]
   );
 
+  /**
+   * VUN-2.4 — após criação inline do prospect, reflete o nome+CPF no campo
+   * cliente do cockpit. Não chamamos `setClienteId` pois Prospect e Aluno
+   * são entidades distintas no backend; o operador ainda precisa converter
+   * o prospect para Aluno antes de fechar a venda de plano/serviço. A
+   * UI do campo cliente já serve como "selecionado visualmente".
+   */
+  const handleProspectCreatedFromSearch = useCallback(
+    (prospect: Prospect) => {
+      const cpfLabel = prospect.cpf ? formatCpf(prospect.cpf) : "sem CPF";
+      setClienteQuery(`${prospect.nome} · Prospect · CPF ${cpfLabel}`);
+    },
+    [setClienteQuery]
+  );
+
   return (
     <>
       <SaleReceiptModal
@@ -95,6 +110,7 @@ function NovaVendaPageContent() {
             onSelectCliente={handleSelectClienteFromSearch}
             onSelectPlano={handleAddPlano}
             onSelectProduto={handleSelectProdutoFromSearch}
+            onCreateProspect={handleProspectCreatedFromSearch}
           />
         }
         headerRight={
@@ -111,7 +127,6 @@ function NovaVendaPageContent() {
         }
         columnLeft={
           <div className="flex flex-col gap-4 p-4">
-            <SaleTypeSelector workspace={workspace} />
             <div className="rounded-xl border border-border bg-card p-4">
               <ClientAndItemSelector workspace={workspace} />
             </div>
@@ -119,13 +134,13 @@ function NovaVendaPageContent() {
         }
         columnCenter={
           <div className="flex flex-col gap-4 p-4">
-            <PlanoDetails workspace={workspace} />
+            <CatalogTabs workspace={workspace} />
           </div>
         }
         columnRight={
           <div className="flex flex-col gap-4 p-4">
             <CartItems workspace={workspace} />
-            <SaleSummary
+            <PaymentPanel
               workspace={workspace}
               handleConfirmPayment={handleConfirmPayment}
             />

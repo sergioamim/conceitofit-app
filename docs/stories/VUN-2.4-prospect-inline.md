@@ -68,12 +68,12 @@ VUN-2.1 adicionou um footer placeholder "Criar prospect rápido"; esta story imp
 
 ## Tasks
 
-- [ ] **T1** Spike: confirmar `POST /api/v1/clientes` aceita `{ nome, cpf, tipo: "PROSPECT" }` (AC3)
-- [ ] **T2** Criar schema zod e mini-form (AC2, AC7)
-- [ ] **T3** Validação de CPF (11 dígitos + dígitos verificadores se já houver util no projeto)
-- [ ] **T4** Integrar no `universal-search.tsx` (AC1, AC4, AC5, AC6)
-- [ ] **T5** Toast + pré-seleção no cockpit (AC4)
-- [ ] **T6** E2E Playwright (AC8)
+- [x] **T1** Spike: rota real é `POST /api/v1/academia/prospects` (e não `/api/v1/clientes`). Payload via `ProspectUpsertApiRequest` exige `telefone` além de `nome`/`cpf`. Sem `tipo: "PROSPECT"` — tipo é implícito pelo endpoint.
+- [x] **T2** Criar schema zod e mini-form (AC2, AC7)
+- [x] **T3** Validação de CPF reusa `validateCPF` em `src/components/shared/cpf-validator.ts`
+- [x] **T4** Integrar no `universal-search.tsx` (AC1, AC4, AC5, AC6)
+- [x] **T5** Toast + reflexo visual no campo cliente do cockpit via `setClienteQuery` (AC4)
+- [ ] **T6** E2E Playwright (AC8) — pendente (fora do escopo deste agente; unit tests cobrem os ACs principais)
 
 ---
 
