@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   CheckCircle2,
   FileDown,
@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Send,
 } from "lucide-react";
+import { z } from "zod";
 
 import {
   Dialog,
@@ -30,20 +31,32 @@ import type { TipoFormaPagamento } from "@/lib/shared/types/pagamento";
 import { cn } from "@/lib/utils";
 
 /**
- * Modal pós-venda (VUN-4.1): layout 820×560 em duas colunas.
+ * Modal pós-venda (VUN-4.1 + VUN-4.2).
  *
- * - **Esquerda**: `<ThermalReceipt variant="modal" />` — fonte única de verdade
- *   visual do recibo (RN-017: carrinho e modal NÃO divergem).
- * - **Direita**: badge "Venda Aprovada" + valor total + parcelamento + envio
- *   de recibo por e-mail + card de impressora + atalhos PDF/WhatsApp/2ª via +
- *   botão "Nova venda".
+ * VUN-4.1: layout 820×560 em duas colunas (esquerda = ThermalReceipt modal;
+ * direita = ações).
+ *
+ * VUN-4.2: a11y + ações:
+ *  - Handler mock e-mail (zod + delay 600ms) com `aria-live="polite"`.
+ *  - Handler mock print (delay 800ms) idem.
+ *  - Stubs PDF / WhatsApp / 2ª via com `aria-label` corretos.
+ *  - "Nova venda" dispatcha `CustomEvent("focus-universal-search")` no window
+ *    (baixo acoplamento com VUN-2.1 — o input escuta e foca).
+ *  - Foco inicial no botão "Enviar por e-mail" via `onOpenAutoFocus`.
+ *  - `onCloseAutoFocus` devolve foco ao elemento que abriu o modal (default
+ *    do Radix Dialog — preservamos).
  *
  * Responsivo: viewport < 860px cai em full-screen com layout empilhado.
- *
- * API externa preservada (consumidores como `/vendas/nova` continuam funcionando
- * sem mudanças). Wiring automático com `finalizar()` (VUN-3.3) fica para
- * integração em follow-up — aqui o modal aceita `venda: Venda | null`.
+ * API externa preservada.
  */
+
+// Evento global para foco no input da busca universal (VUN-2.1).
+// Quando o componente `UniversalSearch` estiver disponível nesta branch,
+// basta adicionar um listener em `window` que chame `.focus()` no input.
+export const FOCUS_UNIVERSAL_SEARCH_EVENT = "focus-universal-search";
+
+// Schema Zod para validar o e-mail antes do envio mockado.
+const emailSchema = z.string().trim().email();
 
 type MetodoThermal =
   | "DINHEIRO"
@@ -139,6 +152,9 @@ export function SaleReceiptModal({
   const [printing, setPrinting] = useState(false);
   // Status fictício da impressora (mock). Integração real é follow-up.
   const [printerOnline] = useState(true);
+  // Região aria-live para anúncios a11y (mudanças em tempo real).
+  const [liveMessage, setLiveMessage] = useState("");
+  const sendEmailButtonRef = useRef<HTMLButtonElement | null>(null);
   const formatBRL = useBRLFormatter();
 
   const emailValue = emailOverride ?? cliente?.email ?? "";
@@ -147,12 +163,14 @@ export function SaleReceiptModal({
     setEmailOverride(null);
     setSendingEmail(false);
     setPrinting(false);
+    setLiveMessage("");
     onClose();
   }
 
   async function handleSendEmail() {
-    const mail = emailValue.trim();
-    if (!mail || !mail.includes("@")) {
+    const parsed = emailSchema.safeParse(emailValue);
+    if (!parsed.success) {
+      setLiveMessage("E-mail inválido. Verifique e tente novamente.");
       toast({
         title: "E-mail inválido",
         description: "Informe um e-mail válido para o envio do recibo.",
@@ -160,10 +178,13 @@ export function SaleReceiptModal({
       });
       return;
     }
+    const mail = parsed.data;
     setSendingEmail(true);
+    setLiveMessage("Enviando e-mail…");
     // Mock: integração real com backend em follow-up.
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    await new Promise((resolve) => setTimeout(resolve, 600));
     setSendingEmail(false);
+    setLiveMessage("E-mail enviado");
     toast({
       title: "Recibo enviado",
       description: `Recibo enviado para ${mail}.`,
@@ -172,29 +193,61 @@ export function SaleReceiptModal({
 
   async function handlePrint() {
     setPrinting(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    setLiveMessage("Enviando para impressora…");
+    // Mock: integração real com hardware é follow-up.
+    await new Promise((resolve) => setTimeout(resolve, 800));
     setPrinting(false);
+    setLiveMessage("Enviado para impressora");
     toast({
       title: "Impressão enviada",
       description: "Recibo enviado para a impressora térmica.",
     });
   }
 
-  function handleShortcut(
-    tipo: "PDF" | "WHATSAPP" | "SEGUNDA_VIA",
-    label: string,
-  ) {
-    // Mock shortcuts — integrações reais são follow-up.
+  // Stubs AC3: integrações reais são follow-up; preservamos aria-label
+  // descritivo para leitores de tela.
+  function handleShortcutPDF() {
     toast({
-      title: label,
-      description: `Ação "${label}" acionada (mock).`,
+      title: "Baixar PDF",
+      description: "Geração de PDF ainda não disponível (mock).",
     });
-    // Usa o tipo em data-* para testes e telemetria.
-    void tipo;
+  }
+
+  function handleShortcutWhatsApp() {
+    toast({
+      title: "Enviar por WhatsApp",
+      description: "Envio por WhatsApp ainda não disponível (mock).",
+    });
+  }
+
+  function handleShortcutSegundaVia() {
+    toast({
+      title: "2ª via",
+      description: "Geração de 2ª via ainda não disponível (mock).",
+    });
   }
 
   function handleNovaVenda() {
+    // Fecha o modal (o consumidor em `page.tsx` usa isso para reabrir o
+    // fluxo de nova venda). O `useVendaWorkspace.handleConfirmPayment` já
+    // chama `clearCart()` após a venda; uma nova venda herdará workspace
+    // limpo. Campos de pagamento/autorização (quando vierem em VUN-3.2+3.3)
+    // são resetados dentro do próprio `CheckoutPayment` ao trocar venda.
     handleClose();
+    // Dispatch custom event para foco na busca universal (VUN-2.1). O
+    // `UniversalSearch` escuta e chama `focus()` no input. Usamos
+    // requestAnimationFrame para garantir que o close do Radix terminou
+    // antes do foco — evita focus trap residual.
+    if (typeof window !== "undefined") {
+      const dispatchFocus = () => {
+        window.dispatchEvent(new CustomEvent(FOCUS_UNIVERSAL_SEARCH_EVENT));
+      };
+      if (typeof window.requestAnimationFrame === "function") {
+        window.requestAnimationFrame(dispatchFocus);
+      } else {
+        dispatchFocus();
+      }
+    }
     toast({
       title: "Nova venda",
       description: "Iniciando nova venda.",
@@ -240,6 +293,17 @@ export function SaleReceiptModal({
           "border-border bg-card",
         )}
         showCloseButton
+        onOpenAutoFocus={(event) => {
+          // Foco inicial programaticamente no botão "Enviar por e-mail"
+          // (AC5). Cancelamos o autofoco default do Radix para evitar foco
+          // no botão "Fechar" (X) — que é a primeira tab stop.
+          if (sendEmailButtonRef.current) {
+            event.preventDefault();
+            sendEmailButtonRef.current.focus();
+          }
+        }}
+        // `onCloseAutoFocus` default do Radix já devolve o foco ao elemento
+        // que invocou o Dialog — não sobrescrevemos (AC5).
       >
         <DialogHeader className="sr-only">
           <DialogTitle>Recibo da venda</DialogTitle>
@@ -334,12 +398,15 @@ export function SaleReceiptModal({
                     placeholder="cliente@exemplo.com"
                     className="flex-1"
                     data-testid="sale-receipt-email-input"
+                    aria-label="E-mail do cliente"
                   />
                   <Button
+                    ref={sendEmailButtonRef}
                     type="button"
                     onClick={handleSendEmail}
                     disabled={sendingEmail}
                     data-testid="sale-receipt-send-email"
+                    aria-label="Enviar recibo por e-mail"
                   >
                     <Send className="size-4" aria-hidden />
                     {sendingEmail ? "Enviando..." : "Enviar por e-mail"}
@@ -379,6 +446,7 @@ export function SaleReceiptModal({
                     onClick={handlePrint}
                     disabled={!printerOnline || printing}
                     data-testid="sale-receipt-print-button"
+                    aria-label="Imprimir recibo na impressora térmica"
                   >
                     {printing ? "Imprimindo..." : "Imprimir"}
                   </Button>
@@ -394,8 +462,9 @@ export function SaleReceiptModal({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleShortcut("PDF", "Baixar PDF")}
+                    onClick={handleShortcutPDF}
                     data-testid="sale-receipt-shortcut-pdf"
+                    aria-label="Baixar recibo em PDF"
                   >
                     <FileDown className="size-4" aria-hidden />
                     PDF
@@ -403,8 +472,9 @@ export function SaleReceiptModal({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleShortcut("WHATSAPP", "WhatsApp")}
+                    onClick={handleShortcutWhatsApp}
                     data-testid="sale-receipt-shortcut-whatsapp"
+                    aria-label="Enviar recibo por WhatsApp"
                   >
                     <MessageCircle className="size-4" aria-hidden />
                     WhatsApp
@@ -412,8 +482,9 @@ export function SaleReceiptModal({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleShortcut("SEGUNDA_VIA", "2ª via")}
+                    onClick={handleShortcutSegundaVia}
                     data-testid="sale-receipt-shortcut-segunda-via"
+                    aria-label="Gerar 2ª via do recibo"
                   >
                     <RotateCcw className="size-4" aria-hidden />
                     2ª via
@@ -439,10 +510,22 @@ export function SaleReceiptModal({
                 onClick={handleNovaVenda}
                 className="w-full"
                 data-testid="sale-receipt-nova-venda"
+                aria-label="Iniciar nova venda"
               >
                 <Plus className="size-4" aria-hidden />
                 Nova venda
               </Button>
+
+              {/* Região aria-live para anúncios a11y (status de ações). */}
+              <div
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className="sr-only"
+                data-testid="sale-receipt-live-region"
+              >
+                {liveMessage}
+              </div>
             </div>
           </div>
         ) : (
