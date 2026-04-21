@@ -51,11 +51,34 @@ function getCached(subdomain: string): CacheEntry | null | undefined {
 // Resolução de tenant via API
 // ---------------------------------------------------------------------------
 
+const PLAYWRIGHT_BACKEND_BASE_COOKIE = "academia-e2e-backend-base-url";
+
+function resolveBackendBase(request: NextRequest): string {
+  // Em test env (PLAYWRIGHT_TEST=1) o backend Java pode estar ocupando a
+  // porta default — o mock do storefront sobe numa porta alternativa e
+  // injeta a URL via cookie para redirecionarmos o fetch.
+  if (process.env.PLAYWRIGHT_TEST === "1") {
+    const override = request.cookies.get(PLAYWRIGHT_BACKEND_BASE_COOKIE)?.value;
+    if (override) {
+      try {
+        const decoded = decodeURIComponent(override).trim();
+        return new URL(decoded).toString().replace(/\/$/, "");
+      } catch {
+        // cookie inválido — cai no default.
+      }
+    }
+  }
+  return BACKEND_BASE;
+}
+
 async function resolveTenant(
   subdomain: string,
+  request: NextRequest,
 ): Promise<CacheEntry | null> {
+  const isTestEnv = process.env.PLAYWRIGHT_TEST === "1";
   try {
-    const url = `${BACKEND_BASE}/api/v1/publico/storefront/resolve?subdomain=${encodeURIComponent(subdomain)}`;
+    const backendBase = resolveBackendBase(request);
+    const url = `${backendBase}/api/v1/publico/storefront/resolve?subdomain=${encodeURIComponent(subdomain)}`;
     const res = await fetch(url, {
       method: "GET",
       headers: { Accept: "application/json" },
@@ -63,7 +86,7 @@ async function resolveTenant(
     });
 
     if (!res.ok) {
-      resolveCache.set(subdomain, null);
+      if (!isTestEnv) resolveCache.set(subdomain, null);
       return null;
     }
 
@@ -75,7 +98,7 @@ async function resolveTenant(
     };
 
     if (!data.tenantId) {
-      resolveCache.set(subdomain, null);
+      if (!isTestEnv) resolveCache.set(subdomain, null);
       return null;
     }
 
@@ -85,7 +108,7 @@ async function resolveTenant(
       academiaSlug: data.academiaSlug ?? data.slug ?? subdomain,
       resolvedAt: Date.now(),
     };
-    resolveCache.set(subdomain, entry);
+    if (!isTestEnv) resolveCache.set(subdomain, entry);
     return entry;
   } catch {
     // Falha de rede: não cachear para permitir retry
@@ -208,12 +231,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Verificar cache
-  let tenant = getCached(subdomain);
+  // Em test env pulamos o cache — o backend base é recalculado por request
+  // com base em cookie, e respostas cacheadas durante um teste vazariam
+  // para o próximo. Em produção mantemos o cache normal.
+  const isTestEnv = process.env.PLAYWRIGHT_TEST === "1";
+  let tenant = isTestEnv ? undefined : getCached(subdomain);
 
   if (tenant === undefined) {
-    // Não cacheado: resolver via API
-    tenant = await resolveTenant(subdomain);
+    tenant = await resolveTenant(subdomain, request);
   }
 
   if (tenant === null) {

@@ -219,9 +219,56 @@ function handler(request: IncomingMessage, response: ServerResponse) {
   notFound(response);
 }
 
-export async function startStorefrontBackendMock(port = DEFAULT_PORT): Promise<Server> {
-  const server = createServer(handler);
+export interface StorefrontMockHandle {
+  server: Server;
+  port: number;
+  baseUrl: string;
+  /** True quando caímos em porta alternativa por causa de conflito. */
+  usedFallbackPort: boolean;
+}
 
+const FALLBACK_PORTS = [18080, 18081, 18082];
+
+/**
+ * Sobe o mock backend. Se a porta desejada já está sendo usada por outro
+ * serviço (ex.: backend Java real em 8080), tenta portas alternativas.
+ * Retorna handle com a porta efetiva + baseUrl — o teste injeta essa URL
+ * no browser via cookie `academia-e2e-backend-base-url` para fazer
+ * `serverFetch` desviar do host ocupado.
+ */
+export async function startStorefrontBackendMock(
+  desiredPort = DEFAULT_PORT,
+): Promise<StorefrontMockHandle> {
+  const candidates = [desiredPort, ...FALLBACK_PORTS.filter((p) => p !== desiredPort)];
+
+  // Se o porto desejado já tem alguém respondendo, pula direto para o
+  // fallback — evita race com bind IPv4 vs serviço IPv6.
+  const probed = await probeForeignService(desiredPort);
+  const portsToTry = probed ? candidates.slice(1) : candidates;
+
+  let lastError: unknown;
+  for (const port of portsToTry) {
+    try {
+      const server = await bindHandler(port);
+      return {
+        server,
+        port,
+        baseUrl: `http://127.0.0.1:${port}`,
+        usedFallbackPort: port !== desiredPort,
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw new Error(
+    `Storefront mock: não foi possível ligar em nenhuma porta candidata ` +
+      `[${portsToTry.join(", ")}]. Último erro: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+  );
+}
+
+async function bindHandler(port: number): Promise<Server> {
+  const server = createServer(handler);
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, "127.0.0.1", () => {
@@ -229,8 +276,27 @@ export async function startStorefrontBackendMock(port = DEFAULT_PORT): Promise<S
       resolve();
     });
   });
-
   return server;
+}
+
+/**
+ * HEAD probe no path conhecido do mock. Se qualquer serviço responder
+ * (independente de status), a porta está "ocupada" do ponto de vista
+ * do browser `fetch`. Timeout curto pra não atrasar o beforeAll.
+ */
+async function probeForeignService(port: number): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 800);
+    await fetch(`http://localhost:${port}/api/v1/publico/storefront/${DEFAULT_SLUG}`, {
+      method: "HEAD",
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function resolveStorefrontBackendMockPort(): number {
@@ -251,7 +317,10 @@ export function resolveStorefrontBackendMockPort(): number {
   }
 }
 
-export async function stopStorefrontBackendMock(server: Server): Promise<void> {
+export async function stopStorefrontBackendMock(
+  handleOrServer: StorefrontMockHandle | Server,
+): Promise<void> {
+  const server = "server" in handleOrServer ? handleOrServer.server : handleOrServer;
   await new Promise<void>((resolve, reject) => {
     server.close((error) => {
       if (error) {

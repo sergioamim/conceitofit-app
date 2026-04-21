@@ -1,4 +1,3 @@
-import type { Server } from "node:http";
 import { expect, test } from "@playwright/test";
 import { installE2EAuthSession } from "./support/auth-session";
 import { openAdminCrudPage } from "./support/admin-crud-helpers";
@@ -7,11 +6,12 @@ import {
   resolveStorefrontBackendMockPort,
   startStorefrontBackendMock,
   stopStorefrontBackendMock,
+  type StorefrontMockHandle,
 } from "./support/storefront-backend-mock";
 
 test.describe.configure({ mode: "serial" });
 
-let storefrontBackend: Server;
+let storefrontBackend: StorefrontMockHandle;
 const STOREFRONT_BACKEND_PORT = resolveStorefrontBackendMockPort();
 const PLAYWRIGHT_BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 const PLAYWRIGHT_BASE_ORIGIN = new URL(PLAYWRIGHT_BASE_URL);
@@ -24,7 +24,40 @@ test.afterAll(async () => {
   await stopStorefrontBackendMock(storefrontBackend);
 });
 
-test("mantém as superfícies públicas e de login canônicas", async ({ page }) => {
+/**
+ * Quando o mock teve que cair em porta alternativa (8080 ocupado por Java
+ * real), injetamos a URL override no cookie `academia-e2e-backend-base-url`
+ * pra que `serverFetch` e `proxy.ts` desviem do host padrão.
+ *
+ * O cookie precisa estar disponível tanto em `localhost` (rotas canônicas)
+ * quanto em `*.localhost` (subdomínios storefront). Cookies com
+ * `domain: .localhost` não são aceitos — portanto setamos múltiplas
+ * entradas explícitas cobrindo os hosts usados por este spec.
+ */
+async function seedMockBackendOverride(context: {
+  addCookies: (
+    cookies: Array<{ name: string; value: string; url: string }>,
+  ) => Promise<void>;
+}) {
+  if (!storefrontBackend?.usedFallbackPort) return;
+  const value = encodeURIComponent(storefrontBackend.baseUrl);
+  const port = PLAYWRIGHT_BASE_ORIGIN.port || "3400";
+  const origins = [
+    PLAYWRIGHT_BASE_URL,
+    `http://academia-demo.localhost:${port}`,
+    `http://nao-existe.localhost:${port}`,
+  ];
+  await context.addCookies(
+    origins.map((url) => ({
+      name: "academia-e2e-backend-base-url",
+      value,
+      url,
+    })),
+  );
+}
+
+test("mantém as superfícies públicas e de login canônicas", async ({ page, context }) => {
+  await seedMockBackendOverride(context);
   // Landing institucional — `/b2b` é o destino canônico do redirect de `/`.
   // Os error boundaries em `src/app/error.tsx` e `src/app/(portal)/error.tsx`
   // tratam `NEXT_REDIRECT` retornando `null` para não poluir o DOM; em test
@@ -135,7 +168,8 @@ test("preserva portal operacional e backoffice global", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Dashboard do backoffice" })).toBeVisible();
 });
 
-test("mantém storefront por slug, rewrite por subdomínio e not-found público", async ({ page }) => {
+test("mantém storefront por slug, rewrite por subdomínio e not-found público", async ({ page, context }) => {
+  await seedMockBackendOverride(context);
   await page.goto("/storefront/academia-demo", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Academia Demo" })).toBeVisible();
   await expect(page.getByText("Seu treino começa aqui.")).toBeVisible();

@@ -171,12 +171,22 @@ export function useClienteWorkspace() {
   const [migrandoCliente, setMigrandoCliente] = useState(false);
   const [migracaoErro, setMigracaoErro] = useState("");
   const [migracaoBlockedBy, setMigracaoBlockedBy] = useState<ClienteExclusaoBlockedBy[]>([]);
-  const [migracaoResumo, setMigracaoResumoState] = useState<MigrationAuditSummary | null>(null);
-
   // Persistimos o resumo da última migração em sessionStorage para sobreviver
   // ao remount causado por `setTenant` (que invalida queryClient e força
-  // novos fetches). Sem isso, o banner some entre o `setMigracaoResumo` e o
-  // `reload()` concluir — inclusive no e2e.
+  // novos fetches). Hidratamos sincronamente no initializer do `useState`
+  // para que não exista frame intermediário sem o banner — caso contrário
+  // o Playwright pode capturar o estado vazio entre asserts consecutivos.
+  const [migracaoResumo, setMigracaoResumoState] = useState<MigrationAuditSummary | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.sessionStorage.getItem("cliente:migracao-resumo");
+      if (!raw) return null;
+      return JSON.parse(raw) as MigrationAuditSummary;
+    } catch {
+      return null;
+    }
+  });
+
   const setMigracaoResumo = useCallback((resumo: MigrationAuditSummary | null) => {
     setMigracaoResumoState(resumo);
     if (typeof window === "undefined") return;
@@ -192,19 +202,6 @@ export function useClienteWorkspace() {
       } catch {
         /* noop */
       }
-    }
-  }, []);
-
-  // Hidrata o banner a partir do sessionStorage uma vez no mount.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = window.sessionStorage.getItem("cliente:migracao-resumo");
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as MigrationAuditSummary;
-      setMigracaoResumoState(parsed);
-    } catch {
-      /* noop */
     }
   }, []);
   const [actionError, setActionError] = useState<string | null>(null);
