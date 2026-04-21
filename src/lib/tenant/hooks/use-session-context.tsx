@@ -80,6 +80,17 @@ function buildUnprovidedTenantContextValue(): TenantContextValue {
 }
 
 function resolveUnprovidedTenantContextValue(): TenantContextValue {
+  // Decisão de arquitetura: o fallback usa `loading: false` para evitar
+  // spinner eterno quando um consumidor monta o hook fora do Provider
+  // (fail-fast). Em dev, avisamos no console para que o autor perceba o
+  // uso incorreto; em produção, a UI continua renderizando normalmente.
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.error(
+      "useTenantContext usado fora do Provider — checar montagem (TenantContextProvider ausente na árvore)."
+    );
+  }
+
   const snapshot = getOptimisticTenantContextSnapshot();
   const session = getAuthSessionSnapshot();
   const roles = getRolesFromSession();

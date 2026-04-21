@@ -1,10 +1,22 @@
 import { UUID, LocalDate, LocalDateTime, Sexo, Endereco, ContatoEmergencia, PaginatedResult } from './comum';
 
+/**
+ * Status operacional do aluno.
+ *
+ * Decisão de domínio (Task 458 follow-up):
+ *  - BLOQUEADO é estado distinto de INATIVO.
+ *    Ex.: BLOQUEADO = acesso suspenso por inadimplência;
+ *         INATIVO  = plano vencido sem atividade.
+ * Handlers exaustivos devem tratar "BLOQUEADO" explicitamente. UI que ainda
+ * não saiba renderizar deve cair no fallback neutro (ex.: badge muted), sem
+ * mapear para INATIVO (esse mapeamento perde informação de negócio).
+ */
 export type StatusAluno =
   | "ATIVO"
   | "INATIVO"
   | "SUSPENSO"
-  | "CANCELADO";
+  | "CANCELADO"
+  | "BLOQUEADO";
 
 export interface AlunoTotaisStatus {
   total: number;

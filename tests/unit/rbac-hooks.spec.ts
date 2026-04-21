@@ -111,26 +111,26 @@ test.afterEach(() => {
 });
 
 test.describe.serial("rbac hooks", () => {
-  // requer revisão: fallback de loading em useTenantContext sem provider.
-  // Usa renderHook sem provider; com a nova arquitetura de contexto o hook pode
-  // não entrar no estado `loading: true` esperado pelo teste.
-  test.fixme("useRbacTenant expõe fallback estável quando não há provider", async () => {
+  // Fallback sem provider: `loading: false` por design (fail-fast em dev
+  // com console.error, sem spinner eterno em prod). Ver
+  // resolveUnprovidedTenantContextValue em use-session-context.tsx.
+  test("useRbacTenant expõe fallback estável quando não há provider", async () => {
     const { result } = renderHook(() => useRbacTenant());
 
     expect(result.current.tenantId).toBe("");
     expect(result.current.tenantName).toBe("Unidade ativa");
     expect(result.current.availableTenants).toEqual([]);
-    expect(result.current.loading).toBe(true);
+    expect(result.current.loading).toBe(false);
     expect(typeof result.current.refreshTenant).toBe("function");
   });
 
-  // requer revisão: fallback de loading em useTenantContext sem provider.
-  test.fixme("useAuthAccess mantém o contrato básico de acesso", async () => {
+  // Fallback sem provider: `loading: false` por design (fail-fast). Ver comentário acima.
+  test("useAuthAccess mantém o contrato básico de acesso", async () => {
     const { result } = renderHook(() => useAuthAccess());
 
     expect(result.current.roles).toEqual([]);
     expect(result.current.canAccessElevatedModules).toBe(false);
-    expect(result.current.loading).toBe(true);
+    expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
     expect(typeof result.current.refresh).toBe("function");
   });

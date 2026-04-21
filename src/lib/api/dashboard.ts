@@ -102,7 +102,9 @@ function normalizeStatusAlunoCount(raw?: Record<string, unknown>): Record<string
     INATIVO: toNumber(source.INATIVO, 0),
     SUSPENSO: toNumber(source.SUSPENSO, 0),
     CANCELADO: toNumber(source.CANCELADO, 0),
-    ...(Object.fromEntries(Object.entries(source).filter(([key]) => !["ATIVO", "INATIVO", "SUSPENSO", "CANCELADO"].includes(key)))),
+    // Task 458 follow-up: BLOQUEADO preservado como status distinto de INATIVO.
+    BLOQUEADO: toNumber(source.BLOQUEADO, 0),
+    ...(Object.fromEntries(Object.entries(source).filter(([key]) => !["ATIVO", "INATIVO", "SUSPENSO", "CANCELADO", "BLOQUEADO"].includes(key)))),
   };
 }
 
@@ -159,6 +161,7 @@ function normalizeDashboard(response: DashboardApiResponse): DashboardData {
       INATIVO: toNumber(normalizeStatusAlunoCount(statusAlunoCountRaw).INATIVO, 0),
       SUSPENSO: toNumber(normalizeStatusAlunoCount(statusAlunoCountRaw).SUSPENSO, 0),
       CANCELADO: toNumber(normalizeStatusAlunoCount(statusAlunoCountRaw).CANCELADO, 0),
+      BLOQUEADO: toNumber(normalizeStatusAlunoCount(statusAlunoCountRaw).BLOQUEADO, 0),
     },
     prospectsEmAberto: toNumber(summaryPayload.prospectsEmAberto ?? payload.prospectsEmAberto),
     followupPendente: toNumber(summaryPayload.followupPendente ?? payload.followupPendente),

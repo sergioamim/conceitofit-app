@@ -37,6 +37,8 @@ const STATUS_MAP: Record<
   INATIVO: { label: "Inativo", className: "bg-muted/50 text-muted-foreground border-border/40" },
   SUSPENSO: { label: "Suspenso", className: "bg-gym-warning/10 text-gym-warning border-gym-warning/20" },
   CANCELADO: { label: "Cancelado", className: "bg-muted/50 text-muted-foreground border-border/40" },
+  // Bloqueado: acesso suspenso (ex.: inadimplência). Estado distinto de INATIVO/SUSPENSO.
+  BLOQUEADO: { label: "Bloqueado", className: "bg-gym-danger/10 text-gym-danger border-gym-danger/20" },
   // Matrícula
   ATIVA: { label: "Ativa", className: "bg-gym-teal/10 text-gym-teal border-gym-teal/20" },
   VENCIDA: { label: "Vencida", className: "bg-gym-danger/10 text-gym-danger border-gym-danger/20" },

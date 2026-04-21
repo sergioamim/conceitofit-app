@@ -74,11 +74,16 @@ type ListAlunosApiResponse = ClienteListEnvelopeResponse;
 type AlunoListPayload = Aluno[] | ClienteListEnvelopeResponse;
 
 function normalizeAlunoStatus(value: unknown): StatusAluno {
-  if (value === "ATIVO" || value === "INATIVO" || value === "SUSPENSO" || value === "CANCELADO") {
+  // Task 458 follow-up: BLOQUEADO é estado distinto (acesso suspenso por
+  // inadimplência) — NÃO pode ser colapsado em INATIVO (plano vencido).
+  if (
+    value === "ATIVO" ||
+    value === "INATIVO" ||
+    value === "SUSPENSO" ||
+    value === "CANCELADO" ||
+    value === "BLOQUEADO"
+  ) {
     return value;
-  }
-  if (value === "BLOQUEADO") {
-    return "INATIVO";
   }
   return "INATIVO";
 }
