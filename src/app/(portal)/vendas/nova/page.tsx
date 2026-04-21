@@ -2,8 +2,9 @@
 
 import { Suspense, useCallback } from "react";
 import nextDynamic from "next/dynamic";
-import { formatBRL } from "@/lib/formatters";
+import { formatBRL, formatCpf } from "@/lib/formatters";
 import type { CartItem } from "@/lib/tenant/hooks/use-commercial-flow";
+import type { Prospect } from "@/lib/types";
 import { useVendaWorkspace } from "./hooks/use-venda-workspace";
 import { CatalogTabs } from "./components/catalog-tabs";
 import { ClientAndItemSelector } from "./components/client-and-item-selector";
@@ -64,6 +65,21 @@ function NovaVendaPageContent() {
     [addItemToCart]
   );
 
+  /**
+   * VUN-2.4 — após criação inline do prospect, reflete o nome+CPF no campo
+   * cliente do cockpit. Não chamamos `setClienteId` pois Prospect e Aluno
+   * são entidades distintas no backend; o operador ainda precisa converter
+   * o prospect para Aluno antes de fechar a venda de plano/serviço. A
+   * UI do campo cliente já serve como "selecionado visualmente".
+   */
+  const handleProspectCreatedFromSearch = useCallback(
+    (prospect: Prospect) => {
+      const cpfLabel = prospect.cpf ? formatCpf(prospect.cpf) : "sem CPF";
+      setClienteQuery(`${prospect.nome} · Prospect · CPF ${cpfLabel}`);
+    },
+    [setClienteQuery]
+  );
+
   return (
     <>
       <SaleReceiptModal
@@ -94,6 +110,7 @@ function NovaVendaPageContent() {
             onSelectCliente={handleSelectClienteFromSearch}
             onSelectPlano={handleAddPlano}
             onSelectProduto={handleSelectProdutoFromSearch}
+            onCreateProspect={handleProspectCreatedFromSearch}
           />
         }
         headerRight={

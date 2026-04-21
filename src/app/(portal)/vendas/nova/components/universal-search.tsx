@@ -24,11 +24,13 @@ import {
   listPlanosApi,
   listProdutosApi,
 } from "@/lib/api/comercial-catalogo";
-import { formatBRL } from "@/lib/formatters";
+import { validateCPF } from "@/components/shared/cpf-validator";
+import { formatBRL, formatCpf } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import type { Aluno, Plano, Produto } from "@/lib/types";
+import type { Aluno, Plano, Produto, Prospect } from "@/lib/types";
 
 import { useBarcodeScanner } from "../hooks/use-barcode-scanner";
+import { ProspectInlineForm } from "./prospect-inline-form";
 
 /**
  * Busca universal do cockpit de venda (VUN-2.1).
@@ -62,10 +64,11 @@ export interface UniversalSearchProps {
   onSelectPlano?: (plano: Plano) => void;
   onSelectProduto?: (produto: Produto) => void;
   /**
-   * Placeholder da ação "Criar prospect rápido" (AC9). A execução real chega
-   * em VUN-2.4; por ora apenas registra o callback para integração progressiva.
+   * Disparado após a criação inline bem-sucedida de um Prospect
+   * (VUN-2.4, RN-014). Recebe o Prospect recém-criado — a página decide
+   * como refletir isso no cockpit (ex.: setar label do campo cliente).
    */
-  onCreateProspect?: (cpfOuTermo: string) => void;
+  onCreateProspect?: (prospect: Prospect) => void;
 }
 
 function normalizeText(value: string): string {
@@ -87,7 +90,8 @@ function matchesQuery(candidate: string, query: string): boolean {
 
 function looksLikeCpf(value: string): boolean {
   const digits = value.replace(/\D/g, "");
-  return digits.length === 11;
+  if (digits.length !== 11) return false;
+  return validateCPF(digits).valid;
 }
 
 interface SearchState {
@@ -116,6 +120,9 @@ export function UniversalSearch(props: UniversalSearchProps) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchState>(EMPTY_RESULTS);
   const [scannerMode, setScannerMode] = useState(false);
+  /** Quando preenchido, o diálogo renderiza o mini-form inline de prospect
+   * em vez da lista de resultados (VUN-2.4). */
+  const [prospectFormCpf, setProspectFormCpf] = useState<string | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const produtosCacheRef = useRef<Produto[] | null>(null);
@@ -179,6 +186,7 @@ export function UniversalSearch(props: UniversalSearchProps) {
     setScannerMode(false);
     setScannerOpen(false);
     setManualCode("");
+    setProspectFormCpf(null);
   }, [open, setScannerOpen, setManualCode]);
 
   // Sincroniza modo scanner com hook de câmera
@@ -286,9 +294,27 @@ export function UniversalSearch(props: UniversalSearchProps) {
     [onSelectProduto]
   );
 
-  const handleProspectClick = useCallback(() => {
-    onCreateProspect?.(query.trim());
-  }, [onCreateProspect, query]);
+  /** Abre o mini-form inline pré-preenchendo o CPF digitado (AC2). */
+  const handleOpenProspectForm = useCallback(() => {
+    const digits = query.replace(/\D/g, "");
+    if (digits.length !== 11) return;
+    setProspectFormCpf(digits);
+  }, [query]);
+
+  /** Sucesso no submit → toast interno do form já disparou; aqui apenas
+   * propagamos ao pai e fechamos a busca (AC4). */
+  const handleProspectCreated = useCallback(
+    (prospect: Prospect) => {
+      onCreateProspect?.(prospect);
+      setProspectFormCpf(null);
+      setOpen(false);
+    },
+    [onCreateProspect]
+  );
+
+  const handleProspectCancel = useCallback(() => {
+    setProspectFormCpf(null);
+  }, []);
 
   return (
     <>
@@ -325,7 +351,20 @@ export function UniversalSearch(props: UniversalSearchProps) {
         />
         <DialogTitle className="sr-only">Busca universal do cockpit</DialogTitle>
         <div className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
-          <div className="flex items-center gap-2 border-b border-border px-4">
+          {prospectFormCpf ? (
+            <ProspectInlineForm
+              cpf={prospectFormCpf}
+              tenantId={tenantId ?? ""}
+              onCreated={handleProspectCreated}
+              onCancel={handleProspectCancel}
+            />
+          ) : null}
+          <div
+            className={cn(
+              "flex items-center gap-2 border-b border-border px-4",
+              prospectFormCpf && "hidden"
+            )}
+          >
             <Search
               className="size-4 shrink-0 text-muted-foreground"
               aria-hidden
@@ -367,7 +406,7 @@ export function UniversalSearch(props: UniversalSearchProps) {
             </button>
           </div>
 
-          {scannerMode ? (
+          {scannerMode && !prospectFormCpf ? (
             <div
               className="space-y-3 border-b border-border p-4"
               data-testid="universal-search-scanner-panel"
@@ -408,7 +447,10 @@ export function UniversalSearch(props: UniversalSearchProps) {
           ) : null}
 
           <Command.List
-            className="max-h-[360px] overflow-y-auto p-2 scrollbar-thin"
+            className={cn(
+              "max-h-[360px] overflow-y-auto p-2 scrollbar-thin",
+              prospectFormCpf && "hidden"
+            )}
             aria-label="Resultados da busca"
           >
             {!scannerMode ? (
@@ -513,24 +555,23 @@ export function UniversalSearch(props: UniversalSearchProps) {
                   <Command.Separator className="my-2 h-px bg-border" />
                 ) : null}
                 <Command.Group
-                  heading="Ações"
+                  heading="Nenhum cliente encontrado"
                   className={GROUP_HEADING_CLASS}
                   data-testid="universal-search-group-prospect"
                 >
                   <Command.Item
                     value={`criar-prospect ${query}`}
-                    onSelect={handleProspectClick}
+                    onSelect={handleOpenProspectForm}
                     className={ITEM_CLASS}
                     data-testid="universal-search-create-prospect"
                   >
                     <UserPlus className="size-4 shrink-0" aria-hidden />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">
-                        Criar prospect rápido
+                        Criar prospect com CPF {formatCpf(query.trim())}
                       </p>
                       <p className="truncate text-xs text-muted-foreground">
-                        CPF {query.trim()} não encontrado — cadastro inline
-                        disponível em VUN-2.4.
+                        Cadastro rápido — nome e telefone.
                       </p>
                     </div>
                   </Command.Item>
@@ -539,7 +580,12 @@ export function UniversalSearch(props: UniversalSearchProps) {
             ) : null}
           </Command.List>
 
-          <div className="flex items-center justify-between border-t border-border bg-muted/50 px-4 py-2 text-[10px] text-muted-foreground">
+          <div
+            className={cn(
+              "flex items-center justify-between border-t border-border bg-muted/50 px-4 py-2 text-[10px] text-muted-foreground",
+              prospectFormCpf && "hidden"
+            )}
+          >
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <kbd className="rounded border border-border bg-card px-1 py-0.5">
