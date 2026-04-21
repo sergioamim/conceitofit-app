@@ -66,6 +66,7 @@ interface LoginApiResponse {
   redeNome?: string;
   activeTenantId?: string;
   tenantBaseId?: string;
+  baseTenantId?: string;
   availableTenants?: TenantAccessApiResponse[];
   availableScopes?: string[];
   broadAccess?: boolean;
@@ -190,6 +191,7 @@ function normalizeSession(
       (options?.preserveTenantContext ? getActiveTenantIdFromSession() : undefined),
     baseTenantId:
       scopedBaseTenantId ??
+      response.baseTenantId ??
       response.tenantBaseId ??
       tokenClaims.baseTenantId ??
       (options?.preserveTenantContext ? getBaseTenantIdFromSession() : undefined),
