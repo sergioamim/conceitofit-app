@@ -33,7 +33,13 @@ export type AnalyticsEventName =
   | "aluno_migrated"
   | "nfse_emitted"
   | "billing_config_saved"
-  | "billing_connection_tested";
+  | "billing_connection_tested"
+  // Perfil v3 — instrumentação das métricas de sucesso §7 do PRD.
+  | "perfil_drawer_acoes_open"
+  | "perfil_sugestao_click"
+  | "perfil_risco_detalhes_open"
+  | "perfil_tab_change"
+  | "perfil_cartoes_drawer_open";
 
 export type AnalyticsEvent = {
   name: AnalyticsEventName;
@@ -45,7 +51,12 @@ export type AnalyticsEvent = {
 
 // ─── Configuration ────────────────────────────────────────────────────────
 
-const isDev = typeof process !== "undefined" && process.env?.NODE_ENV === "development";
+// Reavaliado a cada chamada — permite ligar logging em testes via
+// `process.env.ANALYTICS_VERBOSE = "1"` sem depender do NODE_ENV.
+function isLoggingEnabled(): boolean {
+  if (typeof process === "undefined") return false;
+  return process.env?.NODE_ENV === "development" || process.env?.ANALYTICS_VERBOSE === "1";
+}
 
 const analyticsEndpoint =
   typeof process !== "undefined"
@@ -87,9 +98,8 @@ export function trackEvent(event: AnalyticsEvent): void {
     });
   }
 
-  // 2. Dev console
-  if (isDev) {
-    // eslint-disable-next-line no-console
+  // 2. Dev console (ou quando ANALYTICS_VERBOSE=1)
+  if (isLoggingEnabled()) {
     console.log("[analytics]", event.name, event.properties ?? {});
   }
 
@@ -179,5 +189,61 @@ export function trackBillingConfigSaved(tenantId: string, provedor: string) {
     name: "billing_config_saved",
     tenantId,
     properties: { provedor },
+  });
+}
+
+// ─── Perfil Cliente v3 ────────────────────────────────────────────────────
+// Instrumentação para as métricas §7 do PRD:
+//   - taxa de clique em sugestões do drawer (por tipo)
+//   - % de renovações originadas via drawer (atribuição via perfil_sugestao_click)
+//   - tempo médio de atendimento (pode ser inferido de perfil_tab_change + timestamps)
+
+export function trackPerfilDrawerAcoesOpen(tenantId: string, alunoId: string, totalSugestoes: number) {
+  trackEvent({
+    name: "perfil_drawer_acoes_open",
+    tenantId,
+    properties: { alunoId, totalSugestoes },
+  });
+}
+
+export function trackPerfilSugestaoClick(
+  tenantId: string,
+  alunoId: string,
+  tipo: string,
+  prioridade: "alta" | "media" | "baixa"
+) {
+  trackEvent({
+    name: "perfil_sugestao_click",
+    tenantId,
+    properties: { alunoId, tipo, prioridade },
+  });
+}
+
+export function trackPerfilRiscoDetalhesOpen(
+  tenantId: string,
+  alunoId: string,
+  score: number,
+  label: string
+) {
+  trackEvent({
+    name: "perfil_risco_detalhes_open",
+    tenantId,
+    properties: { alunoId, score, label },
+  });
+}
+
+export function trackPerfilTabChange(tenantId: string, alunoId: string, tab: string) {
+  trackEvent({
+    name: "perfil_tab_change",
+    tenantId,
+    properties: { alunoId, tab },
+  });
+}
+
+export function trackPerfilCartoesDrawerOpen(tenantId: string, alunoId: string) {
+  trackEvent({
+    name: "perfil_cartoes_drawer_open",
+    tenantId,
+    properties: { alunoId },
   });
 }

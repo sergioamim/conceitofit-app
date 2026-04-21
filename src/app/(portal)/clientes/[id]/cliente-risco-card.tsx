@@ -28,9 +28,14 @@ import {
 export function ClienteRiscoCard({
   input,
   clienteNome,
+  onDetalhesOpen,
 }: {
   input: RiscoEvasaoInput;
   clienteNome?: string;
+  /** Callback disparado quando o painel lateral de detalhes é aberto. Usado
+   * para telemetria (§7 PRD) — rastreia exposição do operador à justificativa
+   * do score. */
+  onDetalhesOpen?: (risco: { score: number; label: string }) => void;
 }) {
   const [detalheOpen, setDetalheOpen] = useState(false);
   const risco = computeRiscoEvasao(input);
@@ -93,7 +98,10 @@ export function ClienteRiscoCard({
               variant="ghost"
               size="sm"
               className="mt-3 h-7 w-full justify-between text-xs"
-              onClick={() => setDetalheOpen(true)}
+              onClick={() => {
+                setDetalheOpen(true);
+                onDetalhesOpen?.({ score: risco.score, label: risco.label });
+              }}
             >
               Ver detalhes
               <ChevronRight className="size-3.5" />

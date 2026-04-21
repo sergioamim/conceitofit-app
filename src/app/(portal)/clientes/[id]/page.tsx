@@ -13,6 +13,13 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { isPagamentoEmAberto, getClienteHaloStatus } from "@/lib/domain/status-helpers";
 import { computeSugestoesCliente, type SugestaoAcao } from "@/lib/domain/sugestoes-cliente";
 import { isPerfilDrawerAcoesEnabled } from "@/lib/feature-flags";
+import {
+  trackPerfilCartoesDrawerOpen,
+  trackPerfilDrawerAcoesOpen,
+  trackPerfilRiscoDetalhesOpen,
+  trackPerfilSugestaoClick,
+  trackPerfilTabChange,
+} from "@/lib/shared/analytics";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 import { formatBRL, formatDate } from "@/lib/formatters";
@@ -125,6 +132,14 @@ export default function ClienteDetalhePage() {
     : [];
 
   async function handleSugestaoAction(s: SugestaoAcao) {
+    // Telemetria §7 PRD — cada clique em sugestão é rastreado por tipo +
+    // prioridade. Atribuição de "renovações via drawer" é feita correlacionando
+    // `perfil_sugestao_click` com tipo renovar-plano/reativar-plano e o evento
+    // `matricula_created` subsequente.
+    if (aluno.tenantId) {
+      trackPerfilSugestaoClick(aluno.tenantId, aluno.id, s.tipo, s.prioridade);
+    }
+
     switch (s.tipo) {
       case "cobrar-pendencia":
         w.setTab("financeiro");
@@ -227,7 +242,12 @@ export default function ClienteDetalhePage() {
         planoAtivo={w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null}
         planoAtivoInfo={w.planoAtivoInfo ?? null}
         suspenso={w.suspenso}
-        onCartoes={() => setCartoesOpen(true)}
+        onCartoes={() => {
+          setCartoesOpen(true);
+          if (aluno.tenantId) {
+            trackPerfilCartoesDrawerOpen(aluno.tenantId, aluno.id);
+          }
+        }}
         onNovaVenda={() => w.setNovaMatriculaOpen(true)}
         onSuspender={() => w.setSuspenderOpen(true)}
         onReativar={async () => {
@@ -261,7 +281,16 @@ export default function ClienteDetalhePage() {
         }}
         acessoBloqueado={acessoBloqueado}
         haloStatus={haloStatus}
-        onAcoesClick={drawerAcoesEnabled ? () => setAcoesOpen(true) : undefined}
+        onAcoesClick={
+          drawerAcoesEnabled
+            ? () => {
+                setAcoesOpen(true);
+                if (aluno.tenantId) {
+                  trackPerfilDrawerAcoesOpen(aluno.tenantId, aluno.id, sugestoes.length);
+                }
+              }
+            : undefined
+        }
         acoesCount={drawerAcoesEnabled ? sugestoes.length : undefined}
         onExcluirDadosPessoais={async () => {
           if (!confirm("Excluir dados pessoais deste cliente? Esta acao e IRREVERSIVEL. Nome, email, telefone e CPF serao anonimizados.")) return;
@@ -326,7 +355,16 @@ export default function ClienteDetalhePage() {
       )}
 
       {/* Tabs */}
-      <ClienteTabs current={w.tab} baseHref={`/clientes/${aluno.id}`} onSelect={(next) => w.setTab(next)} pendenteFinanceiro={w.pendenteFinanceiro} showEditTab={false} />
+      <ClienteTabs
+        current={w.tab}
+        baseHref={`/clientes/${aluno.id}`}
+        onSelect={(next) => {
+          w.setTab(next);
+          if (aluno.tenantId) trackPerfilTabChange(aluno.tenantId, aluno.id, next);
+        }}
+        pendenteFinanceiro={w.pendenteFinanceiro}
+        showEditTab={false}
+      />
 
       {/* Layout 2 colunas: conteúdo + sidebar */}
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -354,6 +392,11 @@ export default function ClienteDetalhePage() {
                     presencas: w.presencas,
                   }}
                   clienteNome={aluno.nome}
+                  onDetalhesOpen={(r) => {
+                    if (aluno.tenantId) {
+                      trackPerfilRiscoDetalhesOpen(aluno.tenantId, aluno.id, r.score, r.label);
+                    }
+                  }}
                 />
               </div>
 

@@ -93,8 +93,12 @@ describe("api/formas-pagamento", () => {
         instrucoes: "teste",
       },
     });
-    const body = spy.mock.calls[0][0].body as Record<string, unknown>;
-    expect(body.tenantId).toBe("t1");
+    // `tenantId` agora é enviado via query string (não body) para bater
+    // com o contrato atual do backend de formas-pagamento.
+    const call = spy.mock.calls[0][0];
+    const body = call.body as Record<string, unknown>;
+    const query = call.query as Record<string, unknown>;
+    expect(query.tenantId).toBe("t1");
     expect(body.nome).toBe("PIX");
     expect(body.taxaPercentual).toBe(2);
   });
