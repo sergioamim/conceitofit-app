@@ -1,7 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import nextDynamic from "next/dynamic";
+import { formatBRL } from "@/lib/formatters";
+import type { CartItem } from "@/lib/tenant/hooks/use-commercial-flow";
 import { useVendaWorkspace } from "./hooks/use-venda-workspace";
 import { SaleTypeSelector } from "./components/sale-type-selector";
 import { ClientAndItemSelector } from "./components/client-and-item-selector";
@@ -10,6 +12,7 @@ import { CartItems } from "./components/cart-items";
 import { SaleSummary } from "./components/sale-summary";
 import { ScannerDialog } from "./components/scanner-dialog";
 import { CockpitShell } from "./components/cockpit-shell";
+import { UniversalSearch } from "./components/universal-search";
 
 const SaleReceiptModal = nextDynamic(
   () => import("@/components/shared/sale-receipt-modal").then((mod) => mod.SaleReceiptModal),
@@ -29,7 +32,38 @@ function NovaVendaPageContent() {
     receiptVoucherCodigo,
     receiptVoucherPercent,
     handleConfirmPayment,
+    setClienteId,
+    setClienteQuery,
+    handleAddPlano,
+    addItemToCart,
   } = workspace;
+
+  // Handlers da busca universal (VUN-2.1): traduzem o resultado selecionado em
+  // mutações no workspace sem que o `<UniversalSearch />` precise conhecer os
+  // detalhes internos do hook (`use-venda-workspace`).
+  const handleSelectClienteFromSearch = useCallback(
+    (cliente: { id: string; nome: string; cpf: string }) => {
+      setClienteId(cliente.id);
+      setClienteQuery(`${cliente.nome} · CPF ${cliente.cpf}`);
+    },
+    [setClienteId, setClienteQuery]
+  );
+
+  const handleSelectProdutoFromSearch = useCallback(
+    (produto: { id: string; nome: string; valorVenda: number }) => {
+      const item: CartItem = {
+        tipo: "PRODUTO",
+        referenciaId: produto.id,
+        descricao: produto.nome,
+        quantidade: 1,
+        valorUnitario: Number(produto.valorVenda ?? 0),
+        desconto: 0,
+        detalhes: `${formatBRL(Number(produto.valorVenda ?? 0))}`,
+      };
+      addItemToCart(item);
+    },
+    [addItemToCart]
+  );
 
   return (
     <>
@@ -55,6 +89,13 @@ function NovaVendaPageContent() {
               ponto de venda · carrinho unificado
             </span>
           </div>
+        }
+        headerCenter={
+          <UniversalSearch
+            onSelectCliente={handleSelectClienteFromSearch}
+            onSelectPlano={handleAddPlano}
+            onSelectProduto={handleSelectProdutoFromSearch}
+          />
         }
         headerRight={
           <div className="flex items-center gap-3 text-right leading-tight">
