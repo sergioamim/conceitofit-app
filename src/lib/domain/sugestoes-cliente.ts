@@ -197,14 +197,16 @@ export function computeSugestoesCliente(input: SugestoesInput): SugestaoAcao[] {
     });
   }
 
-  // 6. Foto inapta ou ausente
-  if (!aluno.foto || aluno.fotoAptaCatraca === false) {
+  // 6. Cliente sem foto cadastrada
+  // Nota: `fotoAptaCatraca` / `fotoMotivoInaptidao` deixaram de existir em
+  // `Aluno` após a Task 458; só detectamos ausência total da foto agora.
+  if (!aluno.foto) {
     out.push({
       id: "foto",
       tipo: "solicitar-foto",
       prioridade: "media",
-      titulo: aluno.foto ? "Foto inapta para catraca" : "Cliente sem foto",
-      descricao: aluno.fotoMotivoInaptidao ?? "Solicite nova foto para liberar acesso facial",
+      titulo: "Cliente sem foto",
+      descricao: "Solicite nova foto para liberar acesso facial",
       cta: "Trocar foto",
     });
   }

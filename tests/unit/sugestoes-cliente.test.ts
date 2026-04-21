@@ -17,7 +17,6 @@ function makeAluno(overrides: Partial<Aluno> = {}): Aluno {
     status: "ATIVO",
     dataCadastro: "2023-03-01T10:00:00",
     foto: "url://foto.jpg",
-    fotoAptaCatraca: true,
     ...overrides,
   };
 }
@@ -196,18 +195,19 @@ describe("computeSugestoesCliente", () => {
       expect(foto?.titulo).toBe("Cliente sem foto");
     });
 
-    it("foto inapta → sugere trocar foto com motivo no descritivo", () => {
+    it("cliente com foto cadastrada não recebe sugestão de foto", () => {
+      // Desde a Task 458 os campos `fotoAptaCatraca` / `fotoMotivoInaptidao`
+      // deixaram de existir em `Aluno`; a regra agora dispara apenas quando
+      // `aluno.foto` está ausente.
       const out = computeSugestoesCliente(
         baseInput({
           aluno: makeAluno({
-            fotoAptaCatraca: false,
-            fotoMotivoInaptidao: "Rosto parcialmente oculto",
+            foto: "url://foto-ok.jpg",
             dataNascimento: "1994-10-12",
           }),
         })
       );
-      const foto = out.find((s) => s.tipo === "solicitar-foto");
-      expect(foto?.descricao).toBe("Rosto parcialmente oculto");
+      expect(out.find((s) => s.tipo === "solicitar-foto")).toBeUndefined();
     });
   });
 

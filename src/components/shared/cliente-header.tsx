@@ -143,12 +143,9 @@ export function ClienteHeader({
               <Camera className="size-3.5" />
             </Button>
           )}
-          {aluno.fotoAptaCatraca === false || !aluno.foto ? (
+          {!aluno.foto ? (
             <FotoAvisoBadge
-              motivo={
-                aluno.fotoMotivoInaptidao
-                ?? (!aluno.foto ? "Cliente sem foto cadastrada — solicite nova foto na recepcao" : null)
-              }
+              motivo="Cliente sem foto cadastrada — solicite nova foto na recepcao"
               size="md"
               className="absolute -left-1 -top-1 border-2 border-card"
             />
