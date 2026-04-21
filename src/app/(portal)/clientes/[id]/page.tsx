@@ -42,10 +42,6 @@ import { ClienteTabFidelidade } from "./cliente-tab-fidelidade";
 import { ClienteTabDocumentos } from "./cliente-tab-documentos";
 import { ClienteMesclarDialog } from "./cliente-mesclar-dialog";
 
-const NovaMatriculaModal = nextDynamic(
-  () => import("@/components/shared/nova-matricula-modal").then((mod) => mod.NovaMatriculaModal),
-  { ssr: false }
-);
 const ReceberPagamentoModal = nextDynamic(
   () => import("@/components/shared/receber-pagamento-modal").then((mod) => mod.ReceberPagamentoModal),
   { ssr: false }
@@ -152,7 +148,7 @@ export default function ClienteDetalhePage() {
         }
         return;
       case "renovar-plano":
-        w.setNovaMatriculaOpen(true);
+        w.router.push(`/vendas/nova?clienteId=${encodeURIComponent(aluno.id)}&prefill=1`);
         return;
       case "retencao-ativa":
       case "parabens-aniversario": {
@@ -185,7 +181,6 @@ export default function ClienteDetalhePage() {
           }}
         />
       )}
-      <NovaMatriculaModal open={w.novaMatriculaOpen} onClose={() => w.setNovaMatriculaOpen(false)} onDone={w.reload} prefillClienteId={aluno.id} />
       <SuspenderClienteModal
         open={w.suspenderOpen}
         onClose={() => w.setSuspenderOpen(false)}
@@ -248,7 +243,7 @@ export default function ClienteDetalhePage() {
             trackPerfilCartoesDrawerOpen(aluno.tenantId, aluno.id);
           }
         }}
-        onNovaVenda={() => w.setNovaMatriculaOpen(true)}
+        onNovaVenda={() => w.router.push(`/vendas/nova?clienteId=${encodeURIComponent(aluno.id)}&prefill=1`)}
         onSuspender={() => w.setSuspenderOpen(true)}
         onReativar={async () => {
           try { await w.handleReativar(); } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
@@ -379,7 +374,7 @@ export default function ClienteDetalhePage() {
                   planoAtivo={w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null}
                   planoAtivoInfo={w.planoAtivoInfo ?? null}
                   recorrente={w.recorrente}
-                  onRenovar={() => w.setNovaMatriculaOpen(true)}
+                  onRenovar={() => w.router.push(`/vendas/nova?clienteId=${encodeURIComponent(aluno.id)}&prefill=1`)}
                   onPausar={!w.suspenso ? () => w.setSuspenderOpen(true) : undefined}
                 />
                 <ClienteRiscoCard

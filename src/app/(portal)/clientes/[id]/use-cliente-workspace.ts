@@ -151,7 +151,6 @@ export function useClienteWorkspace() {
   const [presencas, setPresencas] = useState<Presenca[]>([]);
   const [tab, setTab] = useState<ClienteTabKey>(requestedTab ?? "resumo");
   const [suspenderOpen, setSuspenderOpen] = useState(false);
-  const [novaMatriculaOpen, setNovaMatriculaOpen] = useState(false);
   const [recebendo, setRecebendo] = useState<Pagamento | null>(null);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [liberarAcessoOpen, setLiberarAcessoOpen] = useState(false);
@@ -899,8 +898,6 @@ export function useClienteWorkspace() {
     // Modal open/close state
     suspenderOpen,
     setSuspenderOpen,
-    novaMatriculaOpen,
-    setNovaMatriculaOpen,
     recebendo,
     setRecebendo,
     photoModalOpen,

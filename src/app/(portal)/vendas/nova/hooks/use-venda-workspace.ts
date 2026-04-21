@@ -158,7 +158,6 @@ export function useVendaWorkspace() {
   // ---------------------------------------------------------------------
   // VUN-3.3 — Expansão do workspace: forma de pagamento, parcelas,
   // autorização (NSU) e flag canFinalize consumidos pelo PaymentPanel.
-  // Estado aditivo: não altera o shape legado usado por SaleSummary.
   // ---------------------------------------------------------------------
   const [formaPagamento, setFormaPagamentoState] = useState<TipoFormaPagamento>("PIX");
   const [parcelas, setParcelasState] = useState<number>(1);
