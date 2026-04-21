@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { resolveAlunoTenantService } from "@/lib/tenant/comercial/runtime";
-import { getBusinessTodayIso } from "@/lib/business-date";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
 import { useQueryClient } from "@tanstack/react-query";
@@ -83,16 +82,14 @@ export function useVendaWorkspace() {
     clearCart();
   }, [tenantContext.tenant, tenantContext.tenantId, clearCart]);
 
-  // Tipo venda change resets item selection
+  // Tipo venda change resets item selection (RN-011 VUN-2.3: NÃO zerar carrinho).
+  // Troca de aba PLANO/SERVIÇO/PRODUTO é filtro de catálogo — carrinho preserva
+  // itens anteriores para permitir combo livre.
   useEffect(() => {
     items.setSelectedItemId("");
     items.setItemQuery("");
     items.setQtd("1");
-    if (tipoVenda !== "PLANO") {
-      clearCart();
-      setDataInicioPlano(getBusinessTodayIso());
-    }
-  }, [tipoVenda, clearCart, setDataInicioPlano]);
+  }, [tipoVenda]);
 
   // Prefill client from URL
   useEffect(() => {
