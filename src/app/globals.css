@@ -46,6 +46,9 @@
   --color-gym-warning: var(--gym-warning);
   --color-surface: var(--surface);
   --color-surface2: var(--surface-2);
+  /* Cockpit de vendas (VUN) */
+  --color-ink: var(--ink);
+  --color-receipt-paper: var(--receipt-paper);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -92,6 +95,8 @@
   --gym-warning: #e09020;
   --surface: #ffffff;
   --surface-2: #f0f1f4;
+  --ink: #111418;
+  --receipt-paper: #faf8f3;
 }
 
 /* Dark theme */
@@ -133,6 +138,8 @@
   --gym-warning: #ffb347;
   --surface: #16181c;
   --surface-2: #1e2026;
+  --ink: #0a0b0d;
+  /* --receipt-paper é constante (papel cru, sem override no .dark) */
 }
 
 @layer base {
