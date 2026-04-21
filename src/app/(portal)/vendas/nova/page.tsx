@@ -3,9 +3,8 @@
 import { Suspense } from "react";
 import nextDynamic from "next/dynamic";
 import { useVendaWorkspace } from "./hooks/use-venda-workspace";
-import { SaleTypeSelector } from "./components/sale-type-selector";
+import { CatalogTabs } from "./components/catalog-tabs";
 import { ClientAndItemSelector } from "./components/client-and-item-selector";
-import { PlanoDetails } from "./components/plano-details";
 import { CartItems } from "./components/cart-items";
 import { SaleSummary } from "./components/sale-summary";
 import { ScannerDialog } from "./components/scanner-dialog";
@@ -70,7 +69,6 @@ function NovaVendaPageContent() {
         }
         columnLeft={
           <div className="flex flex-col gap-4 p-4">
-            <SaleTypeSelector workspace={workspace} />
             <div className="rounded-xl border border-border bg-card p-4">
               <ClientAndItemSelector workspace={workspace} />
             </div>
@@ -78,7 +76,7 @@ function NovaVendaPageContent() {
         }
         columnCenter={
           <div className="flex flex-col gap-4 p-4">
-            <PlanoDetails workspace={workspace} />
+            <CatalogTabs workspace={workspace} />
           </div>
         }
         columnRight={
