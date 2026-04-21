@@ -25,6 +25,7 @@ import {
   listProdutosApi,
 } from "@/lib/api/comercial-catalogo";
 import { validateCPF } from "@/components/shared/cpf-validator";
+import { FOCUS_UNIVERSAL_SEARCH_EVENT } from "@/components/shared/sale-receipt-modal";
 import { formatBRL, formatCpf } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { Aluno, Plano, Produto, Prospect } from "@/lib/types";
@@ -175,6 +176,26 @@ export function UniversalSearch(props: UniversalSearchProps) {
     }
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
+  }, []);
+
+  // Escuta FOCUS_UNIVERSAL_SEARCH_EVENT (disparado pelo modal de recibo no
+  // handler "Nova venda" — VUN-4.2). Abre a busca universal e foca o input.
+  useEffect(() => {
+    function handler() {
+      setOpen(true);
+      // Em dois rAFs para (1) esperar o Radix montar o DialogContent quando
+      // estava fechado e (2) garantir que o Command.Input esteja no DOM.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const input =
+            document.querySelector<HTMLInputElement>('[cmdk-input=""]');
+          input?.focus();
+        });
+      });
+    }
+    window.addEventListener(FOCUS_UNIVERSAL_SEARCH_EVENT, handler);
+    return () =>
+      window.removeEventListener(FOCUS_UNIVERSAL_SEARCH_EVENT, handler);
   }, []);
 
   // Reset ao fechar

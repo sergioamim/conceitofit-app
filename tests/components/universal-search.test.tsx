@@ -342,4 +342,22 @@ describe("UniversalSearch (VUN-2.1)", () => {
     expect(screen.getByLabelText("Termo de busca")).toBeInTheDocument();
     expect(screen.getByLabelText("Resultados da busca")).toBeInTheDocument();
   });
+
+  it("abre o palette e tenta focar o input quando recebe FOCUS_UNIVERSAL_SEARCH_EVENT (integração com VUN-4.2)", async () => {
+    render(<UniversalSearch />);
+
+    // Dialog começa fechado
+    expect(screen.queryByTestId("universal-search-dialog")).not.toBeInTheDocument();
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("focus-universal-search"));
+      // Aguarda os dois rAFs do handler
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    // Dialog abriu
+    expect(screen.getByTestId("universal-search-dialog")).toBeInTheDocument();
+    // Input presente (com autoFocus) — simula o consumo real do evento
+    expect(screen.getByTestId("cmdk-input")).toBeInTheDocument();
+  });
 });
