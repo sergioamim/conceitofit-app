@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Activity } from "lucide-react";
 
@@ -8,23 +9,44 @@ import { Activity } from "lucide-react";
  * Mini-barras verticais para cada um dos últimos 14 dias — preenchida quando
  * houve presença, esmaecida quando não. Leitura abaixo: {mes}/{meta} treinos
  * + última visita.
+ *
+ * Normaliza o campo `data` (aceita `YYYY-MM-DD` ou qualquer ISO string com
+ * hora) para evitar dessincronização com o retorno do backend.
  */
 export function ClienteFrequenciaCard({
   presencas,
   metaMensal = 12,
   hoje,
+  debug = false,
 }: {
   presencas: Array<{ data: string }>;
   metaMensal?: number;
   hoje?: Date;
+  /** Log temporário no console para diagnóstico de acessos/frequência. */
+  debug?: boolean;
 }) {
   const referencia = hoje ?? new Date();
-  const dias = buildUltimos14Dias(presencas, referencia);
-  const treinosMes = countTreinosNoMes(presencas, referencia);
-  const ultima = ultimaVisita(presencas);
+  const datasNormalizadas = presencas.map((p) => normalizeDateOnly(p.data)).filter(Boolean) as string[];
+  const dias = buildUltimos14Dias(datasNormalizadas, referencia);
+  const treinosMes = countTreinosNoMes(datasNormalizadas, referencia);
+  const ultima = ultimaVisita(datasNormalizadas);
   const diasSemVisita = ultima
     ? Math.floor((referencia.getTime() - parseLocalDate(ultima).getTime()) / 86400000)
     : null;
+
+  useEffect(() => {
+    if (!debug) return;
+    // eslint-disable-next-line no-console
+    console.log("[ClienteFrequenciaCard DEBUG]", {
+      total: presencas.length,
+      raw: presencas.slice(0, 5).map((p) => p.data),
+      normalizadas: datasNormalizadas.slice(0, 5),
+      treinosMes,
+      ultima,
+      diasSemVisita,
+      janela14: dias,
+    });
+  }, [debug, presencas, datasNormalizadas, dias, treinosMes, ultima, diasSemVisita]);
 
   const percMeta = Math.min(100, Math.round((treinosMes / Math.max(1, metaMensal)) * 100));
   const tomMeta =
@@ -80,19 +102,31 @@ export function ClienteFrequenciaCard({
   );
 }
 
+/**
+ * Extrai `YYYY-MM-DD` de strings como `2026-04-21`, `2026-04-21T10:30:00Z`,
+ * `2026-04-21 10:30:00`. Retorna `null` quando o valor não bate no padrão.
+ */
+function normalizeDateOnly(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
 function parseLocalDate(dateStr: string): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
   return new Date(year, month - 1, day);
 }
 
-function buildUltimos14Dias(presencas: Array<{ data: string }>, referencia: Date): boolean[] {
+function buildUltimos14Dias(datas: string[], referencia: Date): boolean[] {
   const out: boolean[] = [];
-  const datas = new Set(presencas.map((p) => p.data));
+  const set = new Set(datas);
   for (let i = 13; i >= 0; i -= 1) {
     const d = new Date(referencia);
     d.setDate(d.getDate() - i);
     const iso = toISODate(d);
-    out.push(datas.has(iso));
+    out.push(set.has(iso));
   }
   return out;
 }
@@ -104,16 +138,16 @@ function toISODate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function countTreinosNoMes(presencas: Array<{ data: string }>, referencia: Date): number {
+function countTreinosNoMes(datas: string[], referencia: Date): number {
   const ano = referencia.getFullYear();
   const mes = referencia.getMonth();
-  return presencas.filter((p) => {
-    const d = parseLocalDate(p.data);
+  return datas.filter((data) => {
+    const d = parseLocalDate(data);
     return d.getFullYear() === ano && d.getMonth() === mes;
   }).length;
 }
 
-function ultimaVisita(presencas: Array<{ data: string }>): string | null {
-  if (presencas.length === 0) return null;
-  return presencas.reduce((latest, p) => (p.data > latest.data ? p : latest)).data;
+function ultimaVisita(datas: string[]): string | null {
+  if (datas.length === 0) return null;
+  return datas.reduce((latest, data) => (data > latest ? data : latest));
 }
