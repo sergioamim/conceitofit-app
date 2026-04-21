@@ -101,16 +101,19 @@ describe("AjusteModal (CXO-302)", () => {
       /5\/10/,
     );
 
-    // Submeter o form dispara validação; confirmação NUNCA deve abrir
+    // Submeter o form dispara validação; confirmação NUNCA deve abrir.
+    // Usamos `waitFor` (em vez de `setTimeout`) para aguardar a promessa
+    // de validação do Zod/RHF resolver dentro do ciclo do teste — caso
+    // contrário a rejeição vira `unhandledRejection` e derruba o runner
+    // de testes com exit code 1.
     fireEvent.click(screen.getByRole("button", { name: /confirmar ajuste/i }));
 
-    // Aguarda tempo suficiente para resolver/rerender do RHF
-    await new Promise((resolve) => setTimeout(resolve, 200));
-
-    expect(
-      screen.queryByRole("button", { name: /^Confirmar$/ }),
-    ).not.toBeInTheDocument();
-    expect(ajusteAdminMock).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(ajusteAdminMock).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("button", { name: /^Confirmar$/ }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("valida que valor deve ser maior que zero", async () => {
@@ -124,12 +127,12 @@ describe("AjusteModal (CXO-302)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /confirmar ajuste/i }));
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
-
-    expect(
-      screen.queryByRole("button", { name: /^Confirmar$/ }),
-    ).not.toBeInTheDocument();
-    expect(ajusteAdminMock).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(ajusteAdminMock).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("button", { name: /^Confirmar$/ }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("submete OK: abre confirmação, chama API e dispara onSuccess", async () => {

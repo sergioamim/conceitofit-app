@@ -1,55 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { getGradeMuralSnapshotApi } from "../../src/lib/api/grade-mural";
-import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
-
-class MemoryStorage implements Storage {
-  private readonly store = new Map<string, string>();
-
-  get length(): number {
-    return this.store.size;
-  }
-
-  clear(): void {
-    this.store.clear();
-  }
-
-  getItem(key: string): string | null {
-    return this.store.get(key) ?? null;
-  }
-
-  key(index: number): string | null {
-    return [...this.store.keys()][index] ?? null;
-  }
-
-  removeItem(key: string): void {
-    this.store.delete(key);
-  }
-
-  setItem(key: string, value: string): void {
-    this.store.set(key, String(value));
-  }
-}
-
-function installMockBrowser() {
-  const globalRef = globalThis as typeof globalThis & {
-    window?: Window & typeof globalThis;
-  };
-  const previousWindow = globalRef.window;
-  const storage = new MemoryStorage();
-  globalRef.window = {
-    localStorage: storage,
-  } as unknown as Window & typeof globalThis;
-
-  return {
-    restore() {
-      if (previousWindow === undefined) {
-        Reflect.deleteProperty(globalRef, "window");
-        return;
-      }
-      globalRef.window = previousWindow;
-    },
-  };
-}
+import { clearAuthSession } from "../../src/lib/api/session";
+import { installMockBrowser, seedTestSession } from "./support/test-runtime";
 
 function mockFetch(body: unknown) {
   const calls: Array<{ url: string; method: string }> = [];
@@ -98,11 +50,10 @@ test.afterEach(() => {
 
 test.describe("grade mural api", () => {
   test("normaliza o mural semanal usando a unidade ativa da sessão", async () => {
-    saveAuthSession({
+    seedTestSession({
       token: "access-token",
       refreshToken: "refresh-token",
       activeTenantId: "tn-1",
-      availableTenants: [{ tenantId: "tn-1", defaultTenant: true }],
     });
 
     const { calls, restore } = mockFetch({

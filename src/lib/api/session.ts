@@ -111,7 +111,10 @@ export const AUTH_SESSION_CLEARED_EVENT = "academia-session-cleared";
 export const IMPERSONATION_SESSION_UPDATED_EVENT = "academia-impersonation-updated";
 
 function isBrowser(): boolean {
-  return typeof window !== "undefined";
+  // Em ambientes de teste (ex: playwright unit config) `window` pode existir
+  // sem `window.location` — guardamos ambos para não quebrar os call-sites
+  // que usam `window.location.protocol` após o early return.
+  return typeof window !== "undefined" && typeof window.location !== "undefined";
 }
 
 function notifyAuthSessionUpdated(): void {

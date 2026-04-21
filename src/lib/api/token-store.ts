@@ -19,7 +19,9 @@ const SESSION_CLAIMS_COOKIE = "fc_session_claims";
 const SESSION_ACTIVE_FLAG_COOKIE = "fc_session_active";
 
 function isBrowser(): boolean {
-  return typeof window !== "undefined";
+  // Em ambientes de teste `window` pode existir sem `document` — precisamos
+  // validar ambos porque os call-sites leem `document.cookie` após o guard.
+  return typeof window !== "undefined" && typeof document !== "undefined";
 }
 
 /**

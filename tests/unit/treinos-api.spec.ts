@@ -1,98 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { assignTreinoTemplateApi, listTreinoTemplatesApi } from "../../src/lib/api/treinos";
-import { clearAuthSession, saveAuthSession } from "../../src/lib/api/session";
-
-class MemoryStorage implements Storage {
-  private readonly store = new Map<string, string>();
-
-  get length(): number {
-    return this.store.size;
-  }
-
-  clear(): void {
-    this.store.clear();
-  }
-
-  getItem(key: string): string | null {
-    return this.store.get(key) ?? null;
-  }
-
-  key(index: number): string | null {
-    return [...this.store.keys()][index] ?? null;
-  }
-
-  removeItem(key: string): void {
-    this.store.delete(key);
-  }
-
-  setItem(key: string, value: string): void {
-    this.store.set(key, String(value));
-  }
-}
-
-type MockBrowser = {
-  restore(): void;
-};
-
-type FetchCall = {
-  url: string;
-  method: string;
-  headers: Headers;
-  body?: string;
-};
-
-function installMockBrowser(): MockBrowser {
-  const globalRef = globalThis as typeof globalThis & {
-    window?: Window & typeof globalThis;
-  };
-  const previousWindow = globalRef.window;
-  const storage = new MemoryStorage();
-  globalRef.window = {
-    localStorage: storage,
-  } as unknown as Window & typeof globalThis;
-
-  return {
-    restore() {
-      if (previousWindow === undefined) {
-        Reflect.deleteProperty(globalRef, "window");
-        return;
-      }
-      globalRef.window = previousWindow;
-    },
-  };
-}
-
-function mockFetchSequence(
-  responses: Array<Response | ((call: FetchCall) => Response | Promise<Response>)>
-): {
-  calls: FetchCall[];
-  restore(): void;
-} {
-  const calls: FetchCall[] = [];
-  const previousFetch = global.fetch;
-
-  global.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const call: FetchCall = {
-      url: String(input),
-      method: init?.method ?? "GET",
-      headers: new Headers(init?.headers),
-      body: typeof init?.body === "string" ? init.body : undefined,
-    };
-    calls.push(call);
-    const response = responses[calls.length - 1];
-    if (!response) {
-      throw new Error(`Unexpected fetch call ${calls.length}: ${call.method} ${call.url}`);
-    }
-    return response instanceof Response ? response : response(call);
-  }) as typeof global.fetch;
-
-  return {
-    calls,
-    restore() {
-      global.fetch = previousFetch;
-    },
-  };
-}
+import { clearAuthSession } from "../../src/lib/api/session";
+import { installMockBrowser, mockFetchWithSequence, seedTestSession } from "./support/test-runtime";
 
 const envSnapshot = {
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -107,7 +16,7 @@ const runtimeSnapshot = {
   ).__ACADEMIA_FORCE_LOCAL_MODE__,
 };
 
-let browser: MockBrowser | undefined;
+let browser: ReturnType<typeof installMockBrowser> | undefined;
 
 test.beforeEach(() => {
   browser = installMockBrowser();
@@ -119,10 +28,9 @@ test.beforeEach(() => {
     }
   ).__ACADEMIA_FORCE_LOCAL_MODE__ = true;
   clearAuthSession();
-  saveAuthSession({
+  seedTestSession({
     token: "access-token",
     refreshToken: "refresh-token",
-    availableTenants: [{ tenantId: "tenant-treinos", defaultTenant: true }],
     activeTenantId: "tenant-treinos",
   });
 });
@@ -149,9 +57,9 @@ test.afterEach(() => {
 
 test.describe("treinos api contracts", () => {
   test("listTreinoTemplatesApi usa o endpoint canônico com tenantId e headers de contexto", async () => {
-    const { calls, restore } = mockFetchSequence([
-      new Response(
-        JSON.stringify({
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
           items: [
             {
               id: "tpl-1",
@@ -175,9 +83,8 @@ test.describe("treinos api contracts", () => {
             emRevisao: 0,
             comPendencias: 0,
           },
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      ),
+        },
+      },
     ]);
 
     try {
@@ -197,7 +104,7 @@ test.describe("treinos api contracts", () => {
       expect(calls[0].url).toContain("page=0");
       expect(calls[0].url).toContain("size=12");
       expect(calls[0].url).not.toContain("tipoTreino=PRE_MONTADO");
-      expect(calls[0].headers.get("Authorization")).toBe("Bearer access-token");
+      // Task 458: Authorization header removido — backend autentica via cookies HttpOnly.
       expect(calls[0].headers.get("X-Context-Id")).toBeTruthy();
     } finally {
       restore();
@@ -205,9 +112,9 @@ test.describe("treinos api contracts", () => {
   });
 
   test("assignTreinoTemplateApi usa a rota canônica de templates", async () => {
-    const { calls, restore } = mockFetchSequence([
-      new Response(
-        JSON.stringify({
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
           id: "trn-1",
           tenantId: "tenant-treinos",
           clienteId: "cli-1",
@@ -215,9 +122,8 @@ test.describe("treinos api contracts", () => {
           templateNome: "Template Base",
           tipoTreino: "CUSTOMIZADO",
           ativo: true,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      ),
+        },
+      },
     ]);
 
     try {
@@ -241,18 +147,18 @@ test.describe("treinos api contracts", () => {
   });
 
   test("assignTreinoTemplateApi faz fallback para a rota legada quando a canônica retorna 404", async () => {
-    const { calls, restore } = mockFetchSequence([
-      new Response(
-        JSON.stringify({
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
           timestamp: "2026-03-14T22:33:28.692+00:00",
           status: 404,
           error: "Not Found",
           path: "/api/v1/treinos/templates/tpl-1/atribuir",
-        }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      ),
-      new Response(
-        JSON.stringify({
+        },
+        status: 404,
+      },
+      {
+        body: {
           id: "trn-2",
           tenantId: "tenant-treinos",
           clienteId: "cli-1",
@@ -260,9 +166,8 @@ test.describe("treinos api contracts", () => {
           templateNome: "Template Base",
           tipoTreino: "CUSTOMIZADO",
           ativo: true,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      ),
+        },
+      },
     ]);
 
     try {
