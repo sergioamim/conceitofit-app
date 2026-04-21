@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { 
   Plus, 
   Search, 
@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
+import { VincularAgregadorModal } from "@/components/shared/vincular-agregador-modal";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
   Select,
@@ -87,10 +88,13 @@ function MetricCardV2({ label, value, icon: Icon, tone, description }: any) {
 function ClientesV2PageContent() {
   const ws = useClientesWorkspace();
 
+  // VUN-5.1/5.2: state local para o CTA "Vincular agregador" do wizard.
+  const [vincularAgregadorAlunoId, setVincularAgregadorAlunoId] = useState<string | null>(null);
+
   return (
     <div className="space-y-8 pb-10">
       {ws.ConfirmDialog}
-      
+
       {ws.wizard.isOpen ? (
         <NovoClienteWizard
           open
@@ -102,7 +106,26 @@ function ClientesV2PageContent() {
               ws.router.push(`/vendas/nova?clienteId=${encodeURIComponent(created.id)}&prefill=1`);
               return;
             }
-            ws.router.push(`/clientes/${encodeURIComponent(created.id)}`);
+            if (opts?.linkAggregator) {
+              setVincularAgregadorAlunoId(created.id);
+              return;
+            }
+            // CTA "Salvar": permanece na listagem.
+          }}
+        />
+      ) : null}
+
+      {vincularAgregadorAlunoId ? (
+        <VincularAgregadorModal
+          open
+          onOpenChange={(next) => {
+            if (!next) setVincularAgregadorAlunoId(null);
+          }}
+          alunoId={vincularAgregadorAlunoId}
+          tenantId={ws.tenantId}
+          onSuccess={() => {
+            setVincularAgregadorAlunoId(null);
+            void ws.load();
           }}
         />
       ) : null}
