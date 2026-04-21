@@ -13,6 +13,8 @@ import { PaymentPanel } from "./components/payment-panel";
 import { ScannerDialog } from "./components/scanner-dialog";
 import { CockpitShell } from "./components/cockpit-shell";
 import { UniversalSearch } from "./components/universal-search";
+import { useCheckinPendenteStream } from "@/hooks/use-checkin-pendente-stream";
+import { CheckinPendenteStack } from "@/components/cockpit/checkin-pendente-toast";
 
 const SaleReceiptModal = nextDynamic(
   () => import("@/components/shared/sale-receipt-modal").then((mod) => mod.SaleReceiptModal),
@@ -37,6 +39,14 @@ function NovaVendaPageContent() {
     handleAddPlano,
     addItemToCart,
   } = workspace;
+
+  // VUN-5.8 — stream SSE de check-ins pendentes (Gympass/TotalPass) pra recepção.
+  // Hook só conecta quando o cockpit está montado + tenant resolvido; limpa no unmount.
+  const {
+    pendentes: checkinPendentes,
+    pendentesOcultos: checkinPendentesOcultos,
+    dismissPendente: dismissCheckinPendente,
+  } = useCheckinPendenteStream({ tenantId: tenant?.id });
 
   // Handlers da busca universal (VUN-2.1): traduzem o resultado selecionado em
   // mutações no workspace sem que o `<UniversalSearch />` precise conhecer os
@@ -149,6 +159,13 @@ function NovaVendaPageContent() {
       />
 
       <ScannerDialog workspace={workspace} />
+
+      {/* VUN-5.8 — toasts laterais de check-in pendente (Gympass/TotalPass) */}
+      <CheckinPendenteStack
+        pendentes={checkinPendentes}
+        pendentesOcultos={checkinPendentesOcultos}
+        onDismiss={dismissCheckinPendente}
+      />
     </>
   );
 }
