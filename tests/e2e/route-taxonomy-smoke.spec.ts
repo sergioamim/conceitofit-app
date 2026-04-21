@@ -25,18 +25,19 @@ test.afterAll(async () => {
 });
 
 test("mantém as superfícies públicas e de login canônicas", async ({ page }) => {
-  // Landing institucional — `/b2b` é o destino canônico do redirect de `/`
-  // para visitantes públicos. Testamos `/b2b` diretamente porque o redirect
-  // server-side em ambiente de teste materializa-se como NEXT_REDIRECT
-  // exception no DOM (comportamento do App Router em dev/test mode).
+  // Landing institucional — `/b2b` é o destino canônico do redirect de `/`.
+  // Os error boundaries em `src/app/error.tsx` e `src/app/(portal)/error.tsx`
+  // tratam `NEXT_REDIRECT` retornando `null` para não poluir o DOM; em test
+  // env o dev overlay do Next ainda pode materializar a exception quando a
+  // rota `/` dispara um redirect server-side, então o teste vai direto em
+  // `/b2b` (mesmo destino, sem goto intermediário).
   await page.goto("/b2b", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /próximo nível/i })).toBeVisible();
 
-  // TODO: a landing `/adesao` está materializando NEXT_REDIRECT no DOM
-  // durante o fetch server-side do contexto público em ambiente de teste
-  // (ver `src/app/(public)/adesao/page.tsx`). Issue separada do Perfil v3;
-  // assertions de `/adesao` ficam desativadas até o server component ser
-  // estabilizado em modo test (provável ajuste em `getPublicJourneyContextServer`).
+  // TODO: `/adesao?tenant=...` depende do server component `AdesaoLandingServer`
+  // consumir mocks via `serverFetch` no host correto. Em test env atual o
+  // backend mock do storefront não cobre `/api/v1/unidades`, causando 404 e
+  // fallback para notFound. Issue separada do Perfil v3.
 
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   // Heading canônico do /login é "Conceito Fit" (marca institucional) com
